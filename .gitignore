@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build scripts (generated, not needed)
+write_*.js
+write_*.py
+fix_*.js
+implement_*.js

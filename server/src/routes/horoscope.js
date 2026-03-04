@@ -1,0 +1,665 @@
+/**
+ * Horoscope Routes
+ * 
+ * Endpoints:
+ * - GET /api/horoscope/daily/:sign - Get daily horoscope by zodiac sign
+ * - POST /api/horoscope/birth-chart - Generate birth chart summary
+ */
+
+const express = require('express');
+const router = express.Router();
+const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getSunLongitude, getLagna, getAllPlanetPositions, buildHouseChart, buildNavamshaChart, buildShadvarga, calculateDrishtis, analyzePushkara, calculateAshtakavarga, buildBhavaChalit, detectYogas, getPlanetStrengths, calculateVimshottari, generateDetailedReport, RASHIS } = require('../engine/astrology');
+const { chat } = require('../engine/chat');
+
+/**
+ * Detailed Lagna Palapala (ලග්න පලාපල) - traditional Sri Lankan interpretations
+ * Based on classical Vedic texts and Sri Lankan astrological tradition
+ */
+const LAGNA_PALAPALA = {
+  'Mesha': {
+    english: 'Aries Lagna',
+    sinhala: 'මේෂ ලග්නය',
+    description: 'Born under Mesha Lagna, you are a natural leader with fiery courage and pioneering spirit. Mars (Kuja) as your Lagna lord blesses you with energy, determination, and a warrior\'s heart.',
+    descriptionSi: 'මේෂ ලග්නයෙන් උපන් ඔබ ස්වභාවික නායකයෙකි. කුජ ග්‍රහයා ලග්නාධිපති වන බැවින් ධෛර්යය, අධිෂ්ඨානය සහ සටන්කාමී ස්වභාවය ඔබේ ලක්ෂණයකි.',
+    traits: ['Leadership & courage', 'Quick decision-maker', 'Athletic build', 'Short temper but forgiving'],
+    traitsSi: ['නායකත්ව හා ධෛර්යය', 'ඉක්මන් තීරණ ගන්නා', 'ක්‍රියාශීලී ශරීර ගොඩනැගිල්ල', 'කෝපය ඇති නමුත් සමාව දෙන'],
+    bodyType: 'Medium to tall, sharp features, reddish complexion',
+    career: 'Military, sports, engineering, surgery, entrepreneurship',
+    careerSi: 'හමුදා, ක්‍රීඩා, ඉංජිනේරු, ශල්‍ය වෛද්‍ය, ව්‍යාපාර',
+    gem: 'Red Coral (රතු පබළු)',
+    luckyColor: 'Red, Orange',
+    luckyDay: 'Tuesday (අඟහරුවාදා)',
+  },
+  'Vrishabha': {
+    english: 'Taurus Lagna',
+    sinhala: 'වෘෂභ ලග්නය',
+    description: 'Vrishabha Lagna natives are blessed by Venus (Shukra), the planet of beauty and luxury. You possess remarkable patience, artistic talent, and a deep love of comfort and stability.',
+    descriptionSi: 'වෘෂභ ලග්නයෙන් උපන් ඔබට සිකුරු ග්‍රහයාගේ ආශීර්වාදය ලැබේ. ඉවසීම, කලාත්මක හැකියාව, සහ සුඛෝපභෝගී ජීවිතයට ඇල්මක් ඔබේ විශේෂ ලක්ෂණයි.',
+    traits: ['Patient & reliable', 'Artistic & musical talent', 'Love of luxury & comfort', 'Strong willpower'],
+    traitsSi: ['ඉවසීම සහ විශ්වාසදායක', 'කලාත්මක හා සංගීත හැකියාව', 'සුඛෝපභෝගී ජීවිතයට ප්‍රේමය', 'ශක්තිමත් කැමැත්ත'],
+    bodyType: 'Solid build, beautiful features, pleasant voice',
+    career: 'Finance, arts, agriculture, hospitality, music',
+    careerSi: 'මූල්‍ය, කලා, කෘෂිකර්මය, ආතිථ්‍ය, සංගීතය',
+    gem: 'Diamond (දියමන්ති)',
+    luckyColor: 'White, Cream, Pink',
+    luckyDay: 'Friday (සිකුරාදා)',
+  },
+  'Mithuna': {
+    english: 'Gemini Lagna',
+    sinhala: 'මිථුන ලග්නය',
+    description: 'Mercury (Budha) as your Lagna lord makes you highly intellectual, communicative, and versatile. Mithuna Lagna people are natural storytellers and quick learners.',
+    descriptionSi: 'බුධ ග්‍රහයා ලග්නාධිපති වන බැවින් ඔබ බුද්ධිමත්, සන්නිවේදනයට දක්ෂ සහ බහුමුඛ පුද්ගලයෙකි. මිථුන ලග්නයේ අය ස්වභාවික කතාකරුවන් ය.',
+    traits: ['Intellectual & curious', 'Excellent communicator', 'Adaptable & versatile', 'Restless mind'],
+    traitsSi: ['බුද්ධිමත් හා කුතුහලකාරී', 'විශිෂ්ට සන්නිවේදක', 'අනුවර්තනය වන හා බහුමුඛ', 'නොසන්සුන් මනස'],
+    bodyType: 'Slim, youthful appearance, bright eyes',
+    career: 'Writing, journalism, teaching, trade, IT',
+    careerSi: 'ලේඛනය, මාධ්‍ය, ඉගැන්වීම, වෙළඳාම, තොරතුරු තාක්ෂණය',
+    gem: 'Emerald (මරකත)',
+    luckyColor: 'Green, Light Yellow',
+    luckyDay: 'Wednesday (බදාදා)',
+  },
+  'Kataka': {
+    english: 'Cancer Lagna',
+    sinhala: 'කටක ලග්නය',
+    description: 'The Moon (Chandra) rules your Lagna, making you deeply emotional, intuitive, and nurturing. Kataka natives have a powerful connection to home, family, and their motherland.',
+    descriptionSi: 'චන්ද්‍ර ග්‍රහයා ඔබේ ලග්නාධිපති වන බැවින් ඔබ ගැඹුරු හැඟීම්කාරී, අවබෝධශීලී සහ සත්කාරශීලී පුද්ගලයෙකි. නිවස, පවුල සහ මව්බිම ඔබට ඉතා වැදගත්.',
+    traits: ['Deeply emotional & caring', 'Strong intuition', 'Home & family oriented', 'Protective nature'],
+    traitsSi: ['ගැඹුරු හැඟීම්කාරී හා සත්කාරශීලී', 'ශක්තිමත් අවබෝධය', 'නිවස හා පවුල් නැඹුරු', 'ආරක්ෂණ ස්වභාවය'],
+    bodyType: 'Round face, fair complexion, medium height',
+    career: 'Healthcare, hospitality, real estate, psychology, food industry',
+    careerSi: 'සෞඛ්‍ය, ආතිථ්‍ය, නිවාස, මනෝවිද්‍යාව, ආහාර කර්මාන්තය',
+    gem: 'Pearl (මුතු)',
+    luckyColor: 'White, Silver',
+    luckyDay: 'Monday (සඳුදා)',
+  },
+  'Simha': {
+    english: 'Leo Lagna',
+    sinhala: 'සිංහ ලග්නය',
+    description: 'The Sun (Surya) as your Lagna lord bestows royal dignity, confidence, and natural authority. Simha Lagna natives command respect and have a magnetic personality.',
+    descriptionSi: 'සූර්ය ග්‍රහයා ලග්නාධිපති වන බැවින් රාජ ගෞරවය, ආත්ම විශ්වාසය සහ ස්වභාවික බලය ඔබට හිමි වේ. සිංහ ලග්නයේ අය ගෞරවය දිනාගෙන ආකර්ෂණීය පෞරුෂයක් ඇත.',
+    traits: ['Natural leader & authority', 'Generous & warm-hearted', 'Strong self-confidence', 'Proud & dignified'],
+    traitsSi: ['ස්වභාවික නායක හා බලය', 'උදාර හා උණුසුම් හදවත', 'ශක්තිමත් ආත්ම විශ්වාසය', 'ආඩම්බර හා ගෞරවනීය'],
+    bodyType: 'Commanding presence, broad chest, thick hair',
+    career: 'Government, politics, administration, entertainment, management',
+    careerSi: 'රජය, දේශපාලනය, පරිපාලනය, විනෝදාස්වාදය, කළමනාකරණය',
+    gem: 'Ruby (මාණික්‍ය)',
+    luckyColor: 'Gold, Orange, Red',
+    luckyDay: 'Sunday (ඉරිදා)',
+  },
+  'Kanya': {
+    english: 'Virgo Lagna',
+    sinhala: 'කන්‍යා ලග්නය',
+    description: 'Mercury (Budha) governs your Lagna, giving you exceptional analytical ability, attention to detail, and a service-oriented nature. Kanya natives excel in precision work.',
+    descriptionSi: 'බුධ ග්‍රහයා ඔබේ ලග්නය පාලනය කරන බැවින් විශ්ලේෂණ හැකියාව, විස්තර කෙරෙහි අවධානය සහ සේවා නැඹුරු ස්වභාවය ඔබේ ලක්ෂණයි.',
+    traits: ['Analytical & detail-oriented', 'Practical & organized', 'Health-conscious', 'Perfectionist tendencies'],
+    traitsSi: ['විශ්ලේෂණාත්මක හා විස්තර නැඹුරු', 'ප්‍රායෝගික හා සංවිධානාත්මක', 'සෞඛ්‍ය සැලකිලිමත්', 'පරිපූර්ණතාවාදී ප්‍රවණතා'],
+    bodyType: 'Slim, delicate features, youthful look',
+    career: 'Medicine, accounting, research, editing, nutrition',
+    careerSi: 'වෛද්‍ය, ගණකාධිකරණය, පර්යේෂණ, සංස්කරණය, පෝෂණය',
+    gem: 'Emerald (මරකත)',
+    luckyColor: 'Green, Earthy tones',
+    luckyDay: 'Wednesday (බදාදා)',
+  },
+  'Tula': {
+    english: 'Libra Lagna',
+    sinhala: 'තුලා ලග්නය',
+    description: 'Venus (Shukra) rules your Lagna, blessing you with charm, diplomacy, and a deep sense of justice. Tula natives naturally seek balance and harmony in all things.',
+    descriptionSi: 'සිකුරු ග්‍රහයා ඔබේ ලග්නය පාලනය කරන බැවින් ආකර්ෂණීයත්වය, රාජ්‍ය තාන්ත්‍රිකත්වය සහ යුක්තිය පිළිබඳ ගැඹුරු හැඟීමක් ඔබට ලැබේ.',
+    traits: ['Diplomatic & fair-minded', 'Charming & sociable', 'Artistic sensibility', 'Seeks balance in all things'],
+    traitsSi: ['රාජ්‍ය තාන්ත්‍රික හා සාධාරණ', 'ආකර්ෂණීය හා සමාජශීලී', 'කලාත්මක සංවේදීතාව', 'සියල්ලෙහි සමතුලිතතාවය සොයයි'],
+    bodyType: 'Attractive appearance, symmetrical features, graceful',
+    career: 'Law, fashion, art, diplomacy, public relations',
+    careerSi: 'නීතිය, විලාසිතා, කලාව, රාජ්‍ය තාන්ත්‍රිකත්වය, මහජන සම්බන්ධතා',
+    gem: 'Diamond (දියමන්ති)',
+    luckyColor: 'White, Pastel shades',
+    luckyDay: 'Friday (සිකුරාදා)',
+  },
+  'Vrischika': {
+    english: 'Scorpio Lagna',
+    sinhala: 'වෘශ්චික ලග්නය',
+    description: 'Mars (Kuja) as your Lagna lord gives you intense willpower, magnetic charisma, and deep transformative energy. Vrischika natives are fearless investigators who see beneath the surface.',
+    descriptionSi: 'කුජ ග්‍රහයා ලග්නාධිපති වන බැවින් තීව්‍ර කැමැත්ත, ආකර්ෂණීය පෞරුෂය සහ ගැඹුරු පරිවර්තන ශක්තිය ඔබට ලැබේ. වෘශ්චික ලග්නයේ අය නිර්භීත පර්යේෂකයන් වන අතර පෘෂ්ඨය යට බලති.',
+    traits: ['Intense willpower', 'Magnetic personality', 'Deep & mysterious', 'Resilient & transformative'],
+    traitsSi: ['තීව්‍ර කැමැත්ත', 'ආකර්ෂණීය පෞරුෂය', 'ගැඹුරු හා අභිරහස්', 'ප්‍රතිරෝධී හා පරිවර්තනශීලී'],
+    bodyType: 'Sharp eyes, intense gaze, medium build, magnetic presence',
+    career: 'Research, investigation, surgery, psychology, occult sciences',
+    careerSi: 'පර්යේෂණ, විමර්ශන, ශල්‍ය කර්ම, මනෝවිද්‍යාව, ගුප්ත විද්‍යා',
+    gem: 'Red Coral (රතු පබළු)',
+    luckyColor: 'Deep Red, Maroon',
+    luckyDay: 'Tuesday (අඟහරුවාදා)',
+  },
+  'Dhanus': {
+    english: 'Sagittarius Lagna',
+    sinhala: 'ධනු ලග්නය',
+    description: 'Jupiter (Guru) as your Lagna lord bestows wisdom, optimism, and spiritual inclination. Dhanus natives are philosophical seekers and natural teachers.',
+    descriptionSi: 'ගුරු ග්‍රහයා ලග්නාධිපති වන බැවින් ප්‍රඥාව, ශුභවාදය සහ ආධ්‍යාත්මික නැඹුරුව ඔබට ලැබේ. ධනු ලග්නයේ අය දාර්ශනික ගවේෂකයන් සහ ස්වභාවික ගුරුවරුන් වේ.',
+    traits: ['Wise & philosophical', 'Optimistic & adventurous', 'Love of learning & travel', 'Honest & straightforward'],
+    traitsSi: ['ප්‍රඥාවන්ත හා දාර්ශනික', 'ශුභවාදී හා සාහසික', 'ඉගෙනීම හා ගමන් කිරීමට ප්‍රේමය', 'අවංක හා කෙළින්ම'],
+    bodyType: 'Tall, well-proportioned, jovial expression',
+    career: 'Education, law, religion, philosophy, publishing',
+    careerSi: 'අධ්‍යාපනය, නීතිය, ආගම, දර්ශනය, ප්‍රකාශනය',
+    gem: 'Yellow Sapphire (පුෂ්පරාග)',
+    luckyColor: 'Yellow, Gold',
+    luckyDay: 'Thursday (බ්‍රහස්පතින්දා)',
+  },
+  'Makara': {
+    english: 'Capricorn Lagna',
+    sinhala: 'මකර ලග්නය',
+    description: 'Saturn (Shani) governs your Lagna, granting you tremendous discipline, patience, and ambition. Makara natives build empires slowly but surely through persistent effort.',
+    descriptionSi: 'සෙනසුරු ග්‍රහයා ඔබේ ලග්නය පාලනය කරන බැවින් අති විශාල විනය, ඉවසීම සහ අභිලාෂය ඔබට ලැබේ. මකර ලග්නයේ අය සෙමින් නමුත් තහවුරුව අධිරාජ්‍යයන් ගොඩනඟති.',
+    traits: ['Disciplined & ambitious', 'Extremely patient', 'Practical & responsible', 'Traditional values'],
+    traitsSi: ['විනයගරුක හා අභිලාෂකාමී', 'අතිශයින් ඉවසිලිවන්ත', 'ප්‍රායෝගික හා වගකීම්සහගත', 'සාම්ප්‍රදායික වටිනාකම්'],
+    bodyType: 'Lean, angular features, serious expression, ages well',
+    career: 'Administration, engineering, mining, construction, politics',
+    careerSi: 'පරිපාලනය, ඉංජිනේරු, පතල්කරණය, ඉදිකිරීම්, දේශපාලනය',
+    gem: 'Blue Sapphire (නිල මැණික)',
+    luckyColor: 'Dark Blue, Black',
+    luckyDay: 'Saturday (සෙනසුරාදා)',
+  },
+  'Kumbha': {
+    english: 'Aquarius Lagna',
+    sinhala: 'කුම්භ ලග්නය',
+    description: 'Saturn (Shani) rules your Lagna, combined with Rahu\'s influence giving you an unconventional, progressive, and humanitarian outlook. Kumbha natives think ahead of their time.',
+    descriptionSi: 'සෙනසුරු ග්‍රහයා ඔබේ ලග්නය පාලනය කරන අතර රාහුගේ බලපෑම සමඟ ඔබට සාම්ප්‍රදායික නොවන, ප්‍රගතිශීලී සහ මානවවාදී දැක්මක් ලැබේ.',
+    traits: ['Progressive & innovative', 'Humanitarian spirit', 'Independent thinker', 'Detached yet friendly'],
+    traitsSi: ['ප්‍රගතිශීලී හා නවෝත්පාදන', 'මානවවාදී ආත්මය', 'ස්වාධීන චින්තකයා', 'විඩබරව නමුත් මිත්‍රශීලී'],
+    bodyType: 'Tall, distinctive appearance, striking features',
+    career: 'Technology, social work, aviation, electronics, astrology',
+    careerSi: 'තාක්ෂණය, සමාජ සේවය, ගුවන් සේවය, ඉලෙක්ට්‍රොනිකය, ජ්‍යෝතිෂය',
+    gem: 'Blue Sapphire (නිල මැණික)',
+    luckyColor: 'Blue, Electric Blue',
+    luckyDay: 'Saturday (සෙනසුරාදා)',
+  },
+  'Meena': {
+    english: 'Pisces Lagna',
+    sinhala: 'මීන ලග්නය',
+    description: 'Jupiter (Guru) as your Lagna lord grants you deep spirituality, compassion, and artistic genius. Meena natives are empathic dreamers with a strong connection to the divine.',
+    descriptionSi: 'ගුරු ග්‍රහයා ලග්නාධිපති වන බැවින් ගැඹුරු ආධ්‍යාත්මිකත්වය, කරුණාව සහ කලාත්මක ප්‍රතිභාව ඔබට ලැබේ. මීන ලග්නයේ අය දිව්‍ය සම්බන්ධතාවයක් ඇති සහානුභූතික සිහින දකින්නන් වේ.',
+    traits: ['Spiritually inclined', 'Deeply compassionate', 'Artistic & creative', 'Dreamy & imaginative'],
+    traitsSi: ['ආධ්‍යාත්මික නැඹුරු', 'ගැඹුරු කරුණාව', 'කලාත්මක හා නිර්මාණශීලී', 'සිහින බහුල හා සිතුවිලි'],
+    bodyType: 'Soft features, dreamy eyes, medium build',
+    career: 'Spirituality, arts, healing, music, film, charity',
+    careerSi: 'ආධ්‍යාත්මිකත්වය, කලාව, සුව කිරීම, සංගීතය, චිත්‍රපට, දානශීලී',
+    gem: 'Yellow Sapphire (පුෂ්පරාග)',
+    luckyColor: 'Yellow, Sea Green',
+    luckyDay: 'Thursday (බ්‍රහස්පතින්දා)',
+  },
+};
+
+/**
+ * GET /api/horoscope/daily/:sign
+ * 
+ * Params:
+ * - sign: Zodiac sign name (e.g., "aries", "mesha", "mesha")
+ */
+router.get('/daily/:sign', (req, res) => {
+  try {
+    const signInput = req.params.sign.toLowerCase();
+
+    // Find the rashi by English name or Vedic name
+    const rashi = RASHIS.find(r =>
+      r.english.toLowerCase() === signInput ||
+      r.name.toLowerCase() === signInput
+    );
+
+    if (!rashi) {
+      return res.status(400).json({
+        error: 'Invalid zodiac sign.',
+        validSigns: RASHIS.map(r => ({ vedic: r.name, western: r.english })),
+      });
+    }
+
+    const today = new Date();
+    const panchanga = getPanchanga(today);
+
+    // Generate daily insights based on current transits
+    const moonTransit = panchanga.moonSign;
+    const sunTransit = panchanga.sunSign;
+
+    // Calculate relationship between current transits and the queried sign
+    const moonDistance = ((moonTransit.id - rashi.id + 12) % 12) + 1;
+    const sunDistance = ((sunTransit.id - rashi.id + 12) % 12) + 1;
+
+    // Determine areas affected
+    const HOUSE_MEANINGS = {
+      1: { area: 'Self & Personality', luck: 'high' },
+      2: { area: 'Wealth & Family', luck: 'medium' },
+      3: { area: 'Communication & Courage', luck: 'high' },
+      4: { area: 'Home & Comfort', luck: 'medium' },
+      5: { area: 'Romance & Creativity', luck: 'high' },
+      6: { area: 'Health & Service', luck: 'low' },
+      7: { area: 'Partnerships & Marriage', luck: 'high' },
+      8: { area: 'Transformation & Occult', luck: 'low' },
+      9: { area: 'Fortune & Spirituality', luck: 'high' },
+      10: { area: 'Career & Status', luck: 'high' },
+      11: { area: 'Gains & Aspirations', luck: 'high' },
+      12: { area: 'Expenses & Liberation', luck: 'low' },
+    };
+
+    const moonHouse = HOUSE_MEANINGS[moonDistance];
+    const sunHouse = HOUSE_MEANINGS[sunDistance];
+
+    // Lucky elements for the day
+    const luckyNumbers = [(rashi.id * 3 + today.getDate()) % 9 + 1, (rashi.id * 7 + today.getDate()) % 9 + 1];
+    const colors = ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Indigo', 'Violet', 'Gold', 'Silver', 'White', 'Pink', 'Maroon'];
+    const luckyColor = colors[(rashi.id + today.getDay()) % colors.length];
+
+    res.json({
+      success: true,
+      data: {
+        sign: {
+          vedic: rashi.name,
+          english: rashi.english,
+          sinhala: rashi.sinhala,
+          tamil: rashi.tamil,
+          lord: rashi.lord,
+        },
+        date: today.toISOString().split('T')[0],
+        currentTransits: {
+          moonIn: `${moonTransit.english} (${moonTransit.name})`,
+          sunIn: `${sunTransit.english} (${sunTransit.name})`,
+          moonHouseFromSign: moonDistance,
+          sunHouseFromSign: sunDistance,
+        },
+        focus: {
+          moonArea: moonHouse.area,
+          sunArea: sunHouse.area,
+        },
+        overall: moonHouse.luck === 'high' && sunHouse.luck === 'high' ? 'Excellent'
+          : moonHouse.luck === 'high' || sunHouse.luck === 'high' ? 'Good'
+            : 'Challenging',
+        luckyNumbers: [...new Set(luckyNumbers)],
+        luckyColor,
+        nakshatra: panchanga.nakshatra.name,
+        tithi: panchanga.tithi.name,
+      },
+    });
+  } catch (error) {
+    console.error('Error generating horoscope:', error);
+    res.status(500).json({ error: 'Failed to generate horoscope', details: error.message });
+  }
+});
+
+/**
+ * POST /api/horoscope/birth-chart
+ * 
+ * Body:
+ * {
+ *   birthDate: "1995-03-15T08:30:00Z",
+ *   lat: 6.9271,
+ *   lng: 79.8612
+ * }
+ */
+router.post('/birth-chart', (req, res) => {
+  try {
+    const { birthDate, lat, lng } = req.body;
+
+    if (!birthDate) {
+      return res.status(400).json({ error: 'Birth date is required (ISO 8601 format).' });
+    }
+
+    const date = new Date(birthDate);
+    if (isNaN(date.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format.' });
+    }
+
+    const birthLat = parseFloat(lat) || 6.9271;
+    const birthLng = parseFloat(lng) || 79.8612;
+
+    const panchanga = getPanchanga(date, birthLat, birthLng);
+    const moonSidereal = toSidereal(getMoonLongitude(date), date);
+    const sunSidereal = toSidereal(getSunLongitude(date), date);
+    const lagna = getLagna(date, birthLat, birthLng);
+    const houseChart = buildHouseChart(date, birthLat, birthLng);
+    const navamshaChart = buildNavamshaChart(date, birthLat, birthLng);
+    const yogas = detectYogas(date, birthLat, birthLng);
+    const planetStrengths = getPlanetStrengths(date, birthLat, birthLng);
+    const drishtis = calculateDrishtis(houseChart.houses);
+    const pushkara = analyzePushkara(houseChart.planets);
+    const ashtakavarga = calculateAshtakavarga(date, birthLat, birthLng);
+    const bhavaChalit = buildBhavaChalit(date, birthLat, birthLng);
+
+    const moonNakshatra = getNakshatra(moonSidereal);
+    const moonRashi = getRashi(moonSidereal);
+    const sunRashi = getRashi(sunSidereal);
+
+    // Get Lagna Palapala (detailed interpretation)
+    const lagnaDetails = LAGNA_PALAPALA[lagna.rashi.name] || {};
+
+    // Standard D1 Rashi Chart (Ordered by Rashi ID 1-12 for South Indian Grid)
+    const d1Chart = [];
+    const allPlanets = houseChart.planets;
+    
+    // Create an array required by the grid: index 0 = Aries, 1 = Taurus, etc.
+    for (let i = 0; i < 12; i++) {
+      const rashiId = i + 1; // 1 = Mesha
+      const r = RASHIS[i];
+      const planetsInRashi = [];
+      
+      // Find planets in this Rashi
+      for (const [key, p] of Object.entries(allPlanets)) {
+        if (p.rashiId === rashiId) {
+          planetsInRashi.push({ key, name: p.name, sinhala: p.sinhala, degree: p.degreeInSign });
+        }
+      }
+      
+      // Check if Lagna is in this Rashi
+      const isLagna = lagna.rashi.id === rashiId;
+      if (isLagna) {
+          // Add 'Lagna' marker if desired, but frontend usually handles it via separate Lagna display.
+          // However, putting 'Lgna' in the planets list is a common way to show it in the box.
+          planetsInRashi.unshift({ name: 'Lagna', sinhala: 'ලග්න' });
+      }
+
+      d1Chart.push({
+        rashiId, rashi: r.name,
+        rashiEnglish: r.english, rashiSinhala: r.sinhala, rashiLord: r.lord,
+        planets: planetsInRashi,
+      });
+    }
+
+    // Determine personality traits based on Nakshatra and Rashi
+    const RASHI_TRAITS = {
+      'Mesha': ['Courageous', 'Energetic', 'Independent', 'Impulsive'],
+      'Vrishabha': ['Patient', 'Reliable', 'Devoted', 'Stubborn'],
+      'Mithuna': ['Versatile', 'Communicative', 'Witty', 'Restless'],
+      'Kataka': ['Intuitive', 'Protective', 'Caring', 'Moody'],
+      'Simha': ['Confident', 'Ambitious', 'Generous', 'Proud'],
+      'Kanya': ['Analytical', 'Practical', 'Diligent', 'Critical'],
+      'Tula': ['Diplomatic', 'Graceful', 'Idealistic', 'Indecisive'],
+      'Vrischika': ['Passionate', 'Resourceful', 'Determined', 'Secretive'],
+      'Dhanus': ['Optimistic', 'Philosophical', 'Adventurous', 'Careless'],
+      'Makara': ['Disciplined', 'Responsible', 'Patient', 'Reserved'],
+      'Kumbha': ['Progressive', 'Original', 'Humanitarian', 'Detached'],
+      'Meena': ['Intuitive', 'Compassionate', 'Artistic', 'Escapist'],
+    };
+
+    res.json({
+      success: true,
+      data: {
+        birthInfo: {
+          date: date.toISOString(),
+          location: { lat: birthLat, lng: birthLng },
+        },
+        lagna: {
+          ...lagna.rashi,
+          rashiId: lagna.rashi.id,
+          degree: lagna.sidereal % 30,
+          siderealDegree: lagna.sidereal,
+        },
+        lagnaDetails,
+        moonSign: { ...moonRashi, degree: moonSidereal % 30 },
+        sunSign: { ...sunRashi, degree: sunSidereal % 30 },
+        nakshatra: moonNakshatra,
+        houseChart: houseChart.houses,
+        rashiChart: d1Chart,
+        navamshaChart: navamshaChart.houses,
+        navamshaLagna: navamshaChart.lagna,
+        planets: houseChart.planets,
+        planetStrengths,
+        drishtis,
+        pushkara,
+        ashtakavarga,
+        bhavaChalit,
+        yogas,
+        panchanga,
+        personality: {
+          lagnaTraits: RASHI_TRAITS[lagna.rashi.name] || [],
+          moonTraits: RASHI_TRAITS[moonRashi.name] || [],
+          sunTraits: RASHI_TRAITS[sunRashi.name] || [],
+        },
+        report: generateDetailedReport(lagna.rashi, moonRashi, sunRashi, houseChart.houses),
+        dasaPeriods: calculateVimshottari(moonSidereal, date),
+      },
+    });
+  } catch (error) {
+    console.error('Error generating birth chart:', error);
+    res.status(500).json({ error: 'Failed to generate birth chart', details: error.message });
+  }
+});
+
+/**
+ * POST /api/horoscope/ai-analysis
+ * Uses Gemini AI to generate a deeply personal, addictive analysis
+ * based on ALL chart data (Lagna, Rashi, Navamsha, Yogas, Planet Strengths)
+ */
+router.post('/ai-analysis', async (req, res) => {
+  try {
+    const { birthDate, lat, lng, language = 'en' } = req.body;
+
+    if (!birthDate) {
+      return res.status(400).json({ error: 'Birth date is required.' });
+    }
+
+    const date = new Date(birthDate);
+    if (isNaN(date.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format.' });
+    }
+
+    const birthLat = parseFloat(lat) || 6.9271;
+    const birthLng = parseFloat(lng) || 79.8612;
+
+    // Gather ALL chart data
+    const lagna = getLagna(date, birthLat, birthLng);
+    const moonSidereal = toSidereal(getMoonLongitude(date), date);
+    const sunSidereal = toSidereal(getSunLongitude(date), date);
+    const moonRashi = getRashi(moonSidereal);
+    const sunRashi = getRashi(sunSidereal);
+    const moonNakshatra = getNakshatra(moonSidereal);
+    const houseChart = buildHouseChart(date, birthLat, birthLng);
+    const navamshaChart = buildNavamshaChart(date, birthLat, birthLng);
+    const yogas = detectYogas(date, birthLat, birthLng);
+    const planetStrengths = getPlanetStrengths(date, birthLat, birthLng);
+    const panchanga = getPanchanga(date, birthLat, birthLng);
+    const drishtis = calculateDrishtis(houseChart.houses);
+    const pushkara = analyzePushkara(houseChart.planets);
+    const ashtakavarga = calculateAshtakavarga(date, birthLat, birthLng);
+
+    // Build detailed planet positions text
+    const planetPositions = Object.entries(houseChart.planets)
+      .map(([key, p]) => `${p.name} (${p.sinhala}): ${p.rashiEnglish} at ${p.degreeInSign.toFixed(1)}° - House ${houseChart.houses.findIndex(h => h.planets.some(hp => hp.key === key)) + 1}`)
+      .join('\n');
+
+    // Build strength text
+    const strengthText = Object.entries(planetStrengths)
+      .filter(([k]) => k !== 'rahu' && k !== 'ketu')
+      .map(([_, s]) => `${s.name}: ${s.status} (${s.score}/100) in house ${s.house}`)
+      .join('\n');
+
+    // Build yoga text
+    const yogaText = yogas.length > 0
+      ? yogas.map(y => `${y.icon} ${y.name} (${y.sinhala}): ${y.description}`).join('\n')
+      : 'No major yogas detected';
+
+    // Build navamsha text
+    const navamshaText = Object.entries(navamshaChart.planets)
+      .map(([key, p]) => `${p.name}: Navamsha ${p.navamshaRashiEnglish}`)
+      .join(', ');
+
+    const langInstruction = language === 'si'
+      ? 'Respond ENTIRELY in Sinhala (සිංහල). Use traditional Sinhala astrological terminology. Make it deeply personal and emotionally resonant.'
+      : 'Respond in English. Make it deeply personal and emotionally resonant. Use some Sinhala/Pali terms for authenticity.';
+
+    const aiPrompt = `You are the most gifted Vedic astrologer in Sri Lanka, known for readings so accurate they give people chills. You have been given a person's complete birth chart data. Create an INTENSELY personal, deeply specific, almost eerily accurate astrological personality & life analysis.
+
+${langInstruction}
+
+BIRTH DATA:
+- Birth: ${date.toISOString()}
+- Lagna (Ascendant): ${lagna.rashi.english} (${lagna.rashi.sinhala}) at ${(lagna.sidereal % 30).toFixed(1)}°
+- Moon Sign: ${moonRashi.english} (${moonRashi.sinhala}) at ${(moonSidereal % 30).toFixed(1)}°
+- Sun Sign: ${sunRashi.english} (${sunRashi.sinhala}) at ${(sunSidereal % 30).toFixed(1)}°
+- Nakshatra: ${moonNakshatra.name} (${moonNakshatra.sinhala}) Pada ${moonNakshatra.pada}, Lord: ${moonNakshatra.lord}
+- Birth Tithi: ${panchanga.tithi.name} (${panchanga.tithi.pakshaName})
+
+PLANETARY POSITIONS (Sidereal):
+${planetPositions}
+
+PLANET STRENGTHS:
+${strengthText}
+
+YOGAS & DOSHAS:
+${yogaText}
+
+NAVAMSHA (D9):
+Navamsha Lagna: ${navamshaChart.lagna.rashi.english} (${navamshaChart.lagna.rashi.sinhala})
+${navamshaText}
+
+PLANETARY ASPECTS (DRISHTIS):
+${Object.entries(drishtis.planetAspects || {}).map(([planet, data]) => `${planet}: aspects houses ${(data.aspectsHouses || []).join(', ')}`).join('\n')}
+
+ASHTAKAVARGA STRENGTHS:
+Strongest sign: ${ashtakavarga.summary?.strongestSign?.[0] || 'N/A'} (${ashtakavarga.summary?.strongestSign?.[1]?.bindus || 0} bindus)
+Weakest sign: ${ashtakavarga.summary?.weakestSign?.[0] || 'N/A'} (${ashtakavarga.summary?.weakestSign?.[1]?.bindus || 0} bindus)
+Sarvashtakavarga: ${(ashtakavarga.sarvashtakavarga || []).map((pts, i) => `${['Mesha','Vrishabha','Mithuna','Karka','Simha','Kanya','Tula','Vrischika','Dhanu','Makara','Kumbha','Meena'][i]}=${pts}`).join(', ')}
+
+PUSHKARA STATUS:
+${Object.entries(pushkara || {}).filter(([, p]) => p.inPushkaraNavamsha || p.inPushkaraBhaga).map(([name, p]) => `${name}: ${p.inPushkaraNavamsha ? 'Pushkara Navamsha ✨' : ''} ${p.inPushkaraBhaga ? 'Pushkara Bhaga ✨' : ''}`).join('\n') || 'No planets in Pushkara positions'}
+
+ANALYSIS FORMAT - Create these sections with emojis, make each deeply personal:
+
+1. 🔮 SOUL BLUEPRINT (ආත්ම සැලැස්ම) - Who they TRULY are at the deepest level. Their core essence based on Lagna+Moon+Nakshatra combination. Be specific about their inner contradictions, secret desires, and hidden strengths.
+
+2. 💝 LOVE & RELATIONSHIPS (ප්‍රේමය හා සබඳතා) - Based on 7th house, Venus, Navamsha D9. Be very specific about what type of partner they attract, their romantic patterns, when they'll find deep love, marriage timing indicators.
+
+3. 💰 WEALTH & CAREER (ධනය හා වෘත්තිය) - Based on 10th house, 2nd house, 11th house lords, Dhana yogas. Specific career paths that WILL succeed, money patterns, best investment times.
+
+4. ⚡ HIDDEN POWERS & YOGAS (සැඟවුණු බලයන්) - Their yogas explained dramatically. What makes them special. Their secret superpower that most people don't see.
+
+5. ⚠️ SHADOW & CHALLENGES (අභියෝග) - Doshas, weak planets, what to watch for. But ALWAYS end with specific remedies and hope.
+
+6. 🌟 DESTINY & TIMING (ඉරණම) - Key life periods, current planetary period effects, what's coming next. Make it exciting and specific.
+
+7. 💎 PERSONAL REMEDIES (පිළියම්) - Specific gemstones, mantras, colors, days, temples to visit (Sri Lankan temples), specific rituals.
+
+CRITICAL RULES:
+- Be SPECIFIC, not generic. Reference exact planetary positions.
+- Make it feel like you're reading their soul, not a textbook.
+- Use dramatic, engaging language that makes them want to share it.
+- Every sentence should feel personally tailored.
+- Include specific predictions with timeframes.
+- Reference their Nakshatra pada for extra specificity.
+- Maximum 2000 words. Dense with insights.`;
+
+    const aiResponse = await chat(aiPrompt, {
+      birthDate: birthDate,
+      birthLat: birthLat,
+      birthLng: birthLng,
+      language: language,
+      provider: 'gemini',
+    });
+
+    res.json({
+      success: true,
+      data: {
+        analysis: aiResponse.message,
+        lagna: lagna.rashi.english,
+        lagnaSinhala: lagna.rashi.sinhala,
+        moonSign: moonRashi.english,
+        nakshatra: moonNakshatra.name,
+        yogaCount: yogas.length,
+        yogas: yogas.map(y => ({ name: y.name, sinhala: y.sinhala, icon: y.icon, strength: y.strength })),
+        planetStrengths: Object.entries(planetStrengths)
+          .filter(([k]) => k !== 'rahu' && k !== 'ketu')
+          .map(([k, s]) => ({ key: k, name: s.name, sinhala: s.sinhala, score: s.score, status: s.status, strength: s.strength })),
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Error generating AI analysis:', error);
+    res.status(500).json({ error: 'Failed to generate analysis', details: error.message });
+  }
+});
+
+/**
+ * GET /api/horoscope/birth-chart/data
+ * 
+ * Query Params:
+ * - date: Birth date (ISO 8601 format)
+ * - lat: Latitude (optional)
+ * - lng: Longitude (optional)
+ */
+router.get('/birth-chart/data', async (req, res) => {
+  try {
+    const { date, lat, lng } = req.query;
+    if (!date) return res.status(400).json({ error: 'Date is required' });
+
+    const birthDate = new Date(date);
+    const birthLat = parseFloat(lat) || 6.9271;
+    const birthLng = parseFloat(lng) || 79.8612;
+
+    const houseChart = buildHouseChart(birthDate, birthLat, birthLng);
+    const navamshaChart = buildNavamshaChart(birthDate, birthLat, birthLng);
+    const shadvarga = buildShadvarga(birthDate, birthLat, birthLng);
+    
+    // Calculate Panchanga
+    const panchanga = getPanchanga(birthDate, birthLat, birthLng);
+
+    // New advanced calculations
+    const drishtis = calculateDrishtis(houseChart.houses);
+    const pushkara = analyzePushkara(houseChart.planets);
+    const ashtakavarga = calculateAshtakavarga(birthDate, birthLat, birthLng);
+    const bhavaChalit = buildBhavaChalit(birthDate, birthLat, birthLng);
+
+    // Flatten lagna for client: client expects rashiId, lord, degree, english, name, etc. at top level
+    const lagna = houseChart.lagna;
+    const flatLagna = {
+      ...lagna.rashi,             // id, name, english, sinhala, lord, degree
+      rashiId: lagna.rashi.id,    // explicit rashiId
+      rashiSinhala: lagna.rashi.sinhala,
+      degree: lagna.sidereal % 30,
+      siderealDegree: lagna.sidereal,
+      tropical: lagna.tropical,
+      sidereal: lagna.sidereal,
+    };
+
+    // Add Lagna marker to house 1's planets so the chart grid shows ASC
+    const houses = houseChart.houses.map(h => {
+      if (h.houseNumber === 1) {
+        return {
+          ...h,
+          planets: [{ name: 'Lagna', sinhala: 'ලග්න' }, ...h.planets],
+        };
+      }
+      return h;
+    });
+
+    // Build planets array for the Planets tab (client expects an array with name, rashiId, degree)
+    const planetsArray = Object.entries(houseChart.planets).map(([key, p]) => ({
+      key,
+      name: p.name,
+      sinhala: p.sinhala,
+      rashiId: p.rashiId,
+      rashi: p.rashi,
+      rashiEnglish: p.rashiEnglish,
+      rashiSinhala: p.rashiSinhala,
+      degree: p.degreeInSign,
+      tropical: p.tropical,
+      sidereal: p.sidereal,
+      isRetrograde: p.isRetrograde || false,
+    }));
+
+    res.json({
+        success: true,
+        data: {
+            houseChart: houses,           // House-ordered (house 1 = lagna rashi)
+            rashiChart: houses,           // Same data, for backward compat
+            navamshaChart: navamshaChart.houses,
+            shadvarga: shadvarga.vargaPositions,
+            specialLords: shadvarga.specialLords,
+            lagna: flatLagna,
+            planets: planetsArray,
+            panchanga: panchanga,
+            drishtis: drishtis,
+            pushkara: pushkara,
+            ashtakavarga: ashtakavarga,
+            bhavaChalit: bhavaChalit
+        }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+module.exports = router;
