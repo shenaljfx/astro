@@ -1,0 +1,171 @@
+/**
+ * User Routes
+ * 
+ * Endpoints:
+ * - POST /api/user/profile     — Create/update user profile
+ * - GET  /api/user/profile      — Get current user profile
+ * - PUT  /api/user/birth-data   — Update birth data
+ * - PUT  /api/user/preferences  — Update preferences
+ * - GET  /api/user/reports      — Get saved reports
+ * - GET  /api/user/chats        — Get chat history
+ * - GET  /api/user/porondam     — Get porondam history
+ */
+
+const express = require('express');
+const router = express.Router();
+const { requireAuth } = require('../middleware/auth');
+const {
+  upsertUser,
+  getUser,
+  updateBirthData,
+  updatePreferences,
+  getUserReports,
+  getUserChats,
+  getUserPorondamHistory,
+} = require('../models/firestore');
+
+/**
+ * POST /api/user/profile
+ * Create or update user profile after sign-in
+ */
+router.post('/profile', requireAuth, async (req, res) => {
+  try {
+    const user = await upsertUser(req.user.uid, {
+      displayName: req.user.displayName || req.body.displayName,
+      email: req.user.email || req.body.email,
+      photoURL: req.user.photoURL || req.body.photoURL,
+      birthData: req.body.birthData || null,
+      location: req.body.location || null,
+      language: req.body.language || 'en',
+    });
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error('Profile update error:', err);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+/**
+ * GET /api/user/profile
+ * Get current user's profile
+ */
+router.get('/profile', requireAuth, async (req, res) => {
+  try {
+    const user = await getUser(req.user.uid);
+    if (!user) {
+      // Auto-create profile on first fetch
+      const newUser = await upsertUser(req.user.uid, {
+        displayName: req.user.displayName,
+        email: req.user.email,
+        photoURL: req.user.photoURL,
+      });
+      return res.json({ success: true, user: newUser });
+    }
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error('Profile fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+/**
+ * PUT /api/user/birth-data
+ * Update user's birth data (date, time, location)
+ */
+router.put('/birth-data', requireAuth, async (req, res) => {
+  try {
+    const { dateTime, lat, lng, locationName, timezone } = req.body;
+    if (!dateTime) {
+      return res.status(400).json({ error: 'dateTime is required' });
+    }
+    await updateBirthData(req.user.uid, {
+      dateTime,
+      lat: lat || 6.9271,
+      lng: lng || 79.8612,
+      locationName: locationName || '',
+      timezone: timezone || 'Asia/Colombo',
+    });
+    res.json({ success: true, message: 'Birth data updated' });
+  } catch (err) {
+    console.error('Birth data update error:', err);
+    res.status(500).json({ error: 'Failed to update birth data' });
+  }
+});
+
+/**
+ * PUT /api/user/preferences
+ * Update user preferences (language, notifications, theme)
+ */
+router.put('/preferences', requireAuth, async (req, res) => {
+  try {
+    await updatePreferences(req.user.uid, req.body);
+    res.json({ success: true, message: 'Preferences updated' });
+  } catch (err) {
+    console.error('Preferences update error:', err);
+    res.status(500).json({ error: 'Failed to update preferences' });
+  }
+});
+
+/**
+ * GET /api/user/reports
+ * Get user's saved AI reports
+ */
+router.get('/reports', requireAuth, async (req, res) => {
+  try {
+    const reports = await getUserReports(req.user.uid);
+    // Return lightweight list (no full sections)
+    const list = reports.map(r => ({
+      id: r.id,
+      birthDate: r.birthDate,
+      language: r.language,
+      type: r.type,
+      generationTime: r.generationTime,
+      createdAt: r.createdAt,
+      sectionCount: r.sections?.length || 0,
+    }));
+    res.json({ success: true, reports: list });
+  } catch (err) {
+    console.error('Reports fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch reports' });
+  }
+});
+
+/**
+ * GET /api/user/chats
+ * Get user's chat history
+ */
+router.get('/chats', requireAuth, async (req, res) => {
+  try {
+    const chats = await getUserChats(req.user.uid, parseInt(req.query.limit) || 10);
+    // Return lightweight list
+    const list = chats.map(c => ({
+      id: c.id,
+      topic: c.topic,
+      language: c.language,
+      messageCount: c.messageCount,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      lastMessage: c.messages?.length > 0 ? c.messages[c.messages.length - 1].content?.substring(0, 100) : '',
+    }));
+    res.json({ success: true, chats: list });
+  } catch (err) {
+    console.error('Chats fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch chats' });
+  }
+});
+
+/**
+ * GET /api/user/porondam
+ * Get user's porondam (compatibility) history
+ */
+router.get('/porondam', requireAuth, async (req, res) => {
+  try {
+    const results = await getUserPorondamHistory(req.user.uid, parseInt(req.query.limit) || 10);
+    res.json({ success: true, results });
+  } catch (err) {
+    console.error('Porondam history error:', err);
+    res.status(500).json({ error: 'Failed to fetch porondam history' });
+  }
+});
+
+module.exports = router;

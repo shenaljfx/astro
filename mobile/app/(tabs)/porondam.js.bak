@@ -1,0 +1,674 @@
+﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
+import {
+  View, Text, ScrollView, TextInput, TouchableOpacity,
+  StyleSheet, Platform, ActivityIndicator, Share, Alert,
+  LayoutAnimation, UIManager, Dimensions,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  FadeInDown, FadeIn, FadeOut, SlideInLeft, SlideInRight,
+  ZoomIn, FadeInUp, BounceIn,
+  useSharedValue, useAnimatedStyle, withTiming, withSpring,
+  withDelay, withSequence, withRepeat, Easing,
+  interpolate, runOnJS,
+} from 'react-native-reanimated';
+import CosmicBackground from '../../components/CosmicBackground';
+import SriLankanChart from '../../components/SriLankanChart';
+import { useLanguage } from '../../contexts/LanguageContext';
+import api from '../../services/api';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+var SCREEN_W = Dimensions.get('window').width;
+var IS_WIDE = SCREEN_W >= 700; // desktop / tablet
+
+// ─── Shared Styled Box ────────────────────────────────────────
+function AuraBox({ children, style }) {
+  return (
+    <View style={[gs.box, style]}>
+      <LinearGradient
+        colors={['rgba(80, 20, 50, 0.4)', 'rgba(30, 10, 30, 0.6)']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      />
+      <View style={gs.innerGlow} />
+      {children}
+    </View>
+  );
+}
+var gs = StyleSheet.create({
+  box: {
+    borderRadius: 24, overflow: 'hidden', borderWidth: 1,
+    borderColor: 'rgba(244, 63, 94, 0.15)',
+    paddingHorizontal: IS_WIDE ? 20 : 14, paddingVertical: IS_WIDE ? 20 : 16,
+    marginBottom: 16,
+    shadowColor: '#f43f5e', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1, shadowRadius: 12, elevation: 5,
+  },
+  innerGlow: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderRadius: 24,
+  }
+});
+
+// ─── Score Ring ───────────────────────────────────────────────
+function ScoreRing({ score, maxScore }) {
+  var pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+  var color = pct >= 75 ? '#34d399' : pct >= 50 ? '#fbbf24' : '#ef4444';
+  return (
+    <View style={s.scoreRing}>
+      <View style={s.ringCircle}>
+        <LinearGradient colors={['rgba(244, 63, 94, 0.2)', 'transparent']} style={StyleSheet.absoluteFill} />
+        <Text style={[s.scoreNum, { color: color }]}>{pct}%</Text>
+        <Text style={s.scoreLabel}>{score}/{maxScore}</Text>
+      </View>
+    </View>
+  );
+}
+
+// ─── Text labels ──────────────────────────────────────────────
+var L = {
+  en: {
+    title: 'Porondam Check',
+    subtitle: 'Sri Lankan Marriage Compatibility',
+    brideLabel: '👰 Bride Details',
+    groomLabel: '🤵 Groom Details',
+    yearPh: 'Year (e.g. 1995)',
+    monthPh: 'Month (1-12)',
+    dayPh: 'Day (1-31)',
+    hourPh: 'Hour (0-23)',
+    minutePh: 'Minute (0-59)',
+    dateLabel: 'Birth Date',
+    timeLabel: 'Birth Time',
+    timeHint: 'Check birth certificate for exact time',
+    checkBtn: '💍 Check Porondam',
+    checking: 'Calculating compatibility...',
+    brideChart: "Bride's Rashi Kendara",
+    groomChart: "Groom's Rashi Kendara",
+    factorsTitle: 'Porondam Factors (7 Factors / 20 Points)',
+    doshasTitle: '⚠️ Doshas Found',
+    reportTitle: '📋 Detailed Report',
+    reportLangQ: 'Which language do you want the report in?',
+    reportSi: 'සිංහල',
+    reportEn: 'English',
+    generating: 'AI is writing your report...',
+    shareBtn: 'Share Result',
+    overall: 'Overall',
+    brideName: 'Bride Name (optional)',
+    groomName: 'Groom Name (optional)',
+    missingTitle: 'Missing Info',
+    missingMsg: 'Please enter birth dates for both bride and groom',
+    editDetails: '✏️ Edit Birth Details',
+    calculating: 'Reading the stars...',
+  },
+  si: {
+    title: 'පොරොන්දම් පරීක්ෂාව',
+    subtitle: 'විවාහ ගැලපීම් — සාම්ප්‍රදායික ක්‍රමය',
+    brideLabel: '👰 මනාලියගේ විස්තර',
+    groomLabel: '🤵 මනාලයාගේ විස්තර',
+    yearPh: 'අවුරුද්ද (උදා: 1995)',
+    monthPh: 'මාසය (1-12)',
+    dayPh: 'දිනය (1-31)',
+    hourPh: 'පැය (0-23)',
+    minutePh: 'මිනිත්තු (0-59)',
+    dateLabel: 'උපන් දිනය',
+    timeLabel: 'උපන් වේලාව',
+    timeHint: 'උප්පැන්න පත්‍රයේ වේලාව බලන්න',
+    checkBtn: '💍 පොරොන්දම් බලන්න',
+    checking: 'ගණනය කරමින්...',
+    brideChart: 'මනාලියගේ රාශි කේන්ද්‍රය',
+    groomChart: 'මනාලයාගේ රාශි කේන්ද්‍රය',
+    factorsTitle: 'පොරොන්දම් සාධක (සාධක 7 / ලකුණු 20)',
+    doshasTitle: '⚠️ දෝෂ හමු විය',
+    reportTitle: '📋 සම්පූර්ණ වාර්තාව',
+    reportLangQ: 'වාර්තාව කුමන භාෂාවෙන් ඕනද?',
+    reportSi: 'සිංහල',
+    reportEn: 'English',
+    generating: 'AI එකෙන් වාර්තාව ලියමින්...',
+    shareBtn: 'යවන්න',
+    overall: 'මුළු ලකුණු',
+    brideName: 'මනාලියගේ නම (අවශ්‍ය නම්)',
+    groomName: 'මනාලයාගේ නම (අවශ්‍ය නම්)',
+    missingTitle: 'අවුලක්',
+    missingMsg: 'දෙදෙනාගේම උපන් දිනය දාන්න',
+    editDetails: '✏️ විස්තර වෙනස් කරන්න',
+    calculating: 'නැකත් බලමින්...',
+  },
+};
+
+// ─── Birth Input Component ────────────────────────────────────
+function BirthInput({ label, year, month, day, hour, minute, setYear, setMonth, setDay, setHour, setMinute, T }) {
+  if (IS_WIDE) {
+    // Desktop: all fields in a single row — plenty of space
+    return (
+      <AuraBox>
+        <Text style={s.sectionLabel}>{label}</Text>
+        <View style={s.desktopFieldsRow}>
+          <View style={s.desktopFieldGroup}>
+            <Text style={s.fieldLabel}>{T.dateLabel}</Text>
+            <View style={s.dateRow}>
+              <TextInput style={[s.input, s.inputYear]} value={year} onChangeText={setYear} placeholder={T.yearPh} placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="number-pad" maxLength={4} />
+              <TextInput style={[s.input, s.inputSmall]} value={month} onChangeText={setMonth} placeholder={T.monthPh} placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="number-pad" maxLength={2} />
+              <TextInput style={[s.input, s.inputSmall]} value={day} onChangeText={setDay} placeholder={T.dayPh} placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="number-pad" maxLength={2} />
+            </View>
+          </View>
+          <View style={s.desktopFieldGroup}>
+            <Text style={s.fieldLabel}>{T.timeLabel}</Text>
+            <View style={s.dateRow}>
+              <TextInput style={[s.input, s.inputSmall]} value={hour} onChangeText={setHour} placeholder={T.hourPh} placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="number-pad" maxLength={2} />
+              <Text style={s.timeSep}>:</Text>
+              <TextInput style={[s.input, s.inputSmall]} value={minute} onChangeText={setMinute} placeholder={T.minutePh} placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="number-pad" maxLength={2} />
+            </View>
+          </View>
+        </View>
+        <Text style={s.hint}>{T.timeHint}</Text>
+      </AuraBox>
+    );
+  }
+
+  // Mobile: stacked layout with full-width rows
+  return (
+    <AuraBox>
+      <Text style={s.sectionLabel}>{label}</Text>
+
+      <Text style={s.fieldLabel}>{T.dateLabel}</Text>
+      <View style={s.mobileRow}>
+        <TextInput style={[s.input, { flex: 2, minWidth: 0 }]} value={year} onChangeText={setYear} placeholder={T.yearPh} placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="number-pad" maxLength={4} />
+        <TextInput style={[s.input, { flex: 1, minWidth: 0 }]} value={month} onChangeText={setMonth} placeholder={T.monthPh} placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="number-pad" maxLength={2} />
+        <TextInput style={[s.input, { flex: 1, minWidth: 0 }]} value={day} onChangeText={setDay} placeholder={T.dayPh} placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="number-pad" maxLength={2} />
+      </View>
+
+      <Text style={s.fieldLabel}>{T.timeLabel}</Text>
+      <View style={s.mobileRow}>
+        <TextInput style={[s.input, { flex: 1, minWidth: 0 }]} value={hour} onChangeText={setHour} placeholder={T.hourPh} placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="number-pad" maxLength={2} />
+        <Text style={s.timeSep}>:</Text>
+        <TextInput style={[s.input, { flex: 1, minWidth: 0 }]} value={minute} onChangeText={setMinute} placeholder={T.minutePh} placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="number-pad" maxLength={2} />
+      </View>
+      <Text style={s.hint}>{T.timeHint}</Text>
+    </AuraBox>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN SCREEN
+// ═══════════════════════════════════════════════════════════════
+export default function PorondamScreen() {
+  var { language } = useLanguage();
+  var T = L[language] || L.en;
+
+  // Bride
+  var [bYear, setBYear] = useState('');
+  var [bMonth, setBMonth] = useState('');
+  var [bDay, setBDay] = useState('');
+  var [bHour, setBHour] = useState('');
+  var [bMinute, setBMinute] = useState('');
+  var [bName, setBName] = useState('');
+
+  // Groom
+  var [gYear, setGYear] = useState('');
+  var [gMonth, setGMonth] = useState('');
+  var [gDay, setGDay] = useState('');
+  var [gHour, setGHour] = useState('');
+  var [gMinute, setGMinute] = useState('');
+  var [gName, setGName] = useState('');
+
+  var [data, setData] = useState(null);
+  var [loading, setLoading] = useState(false);
+  var [error, setError] = useState(null);
+  var [inputCollapsed, setInputCollapsed] = useState(false);
+  var scrollRef = useRef(null);
+
+  // Animated pulse for loading
+  var pulseAnim = useSharedValue(1);
+  var rotateAnim = useSharedValue(0);
+
+  useEffect(function() {
+    if (loading) {
+      pulseAnim.value = withRepeat(
+        withSequence(
+          withTiming(1.15, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.95, { duration: 800, easing: Easing.inOut(Easing.ease) })
+        ), -1, true
+      );
+      rotateAnim.value = withRepeat(
+        withTiming(360, { duration: 3000, easing: Easing.linear }), -1, false
+      );
+    } else {
+      pulseAnim.value = withTiming(1, { duration: 300 });
+      rotateAnim.value = 0;
+    }
+  }, [loading]);
+
+  var pulseStyle = useAnimatedStyle(function() {
+    return { transform: [{ scale: pulseAnim.value }] };
+  });
+  var spinStyle = useAnimatedStyle(function() {
+    return { transform: [{ rotate: rotateAnim.value + 'deg' }] };
+  });
+
+  // AI Report
+  var [report, setReport] = useState(null);
+  var [reportLoading, setReportLoading] = useState(false);
+  var [reportLang, setReportLang] = useState(null);
+
+  // Build ISO date from fields
+  function buildDate(y, m, d, h, min) {
+    var yr = parseInt(y) || 1990;
+    var mo = (parseInt(m) || 1) - 1;
+    var dy = parseInt(d) || 1;
+    var hr = parseInt(h) || 12;
+    var mi = parseInt(min) || 0;
+    return new Date(yr, mo, dy, hr, mi).toISOString();
+  }
+
+  var check = useCallback(async function() {
+    if (!bYear || !bMonth || !bDay || !gYear || !gMonth || !gDay) {
+      Alert.alert(T.missingTitle, T.missingMsg);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      setData(null);
+      setReport(null);
+      setReportLang(null);
+
+      var brideDate = buildDate(bYear, bMonth, bDay, bHour, bMinute);
+      var groomDate = buildDate(gYear, gMonth, gDay, gHour, gMinute);
+
+      var res = await api.checkPorondam(
+        { birthDate: brideDate, lat: 6.9271, lng: 79.8612 },
+        { birthDate: groomDate, lat: 6.9271, lng: 79.8612 }
+      );
+      setData(res.data);
+      // Collapse inputs with animation
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setInputCollapsed(true);
+      // Scroll to top to see results
+      setTimeout(function() {
+        if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true });
+      }, 300);
+    } catch (err) {
+      setError(err.message || 'Failed');
+    } finally {
+      setLoading(false);
+    }
+  }, [bYear, bMonth, bDay, bHour, bMinute, gYear, gMonth, gDay, gHour, gMinute, T]);
+
+  var generateReport = useCallback(async function(lang) {
+    if (!data) return;
+    try {
+      setReportLang(lang);
+      setReportLoading(true);
+      var res = await api.getPorondamReport(data, lang, bName || undefined, gName || undefined);
+      setReport(res.report);
+    } catch (err) {
+      setReport(lang === 'si' ? 'වාර්තාව හදන්න බැරි වුනා. ආයි බලන්න.' : 'Failed to generate report. Please try again.');
+    } finally {
+      setReportLoading(false);
+    }
+  }, [data, bName, gName]);
+
+  var shareResult = async function() {
+    if (!data) return;
+    try {
+      var msg = language === 'si'
+        ? 'පොරොන්දම් ලකුණු: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) - ' + (data.ratingSinhala || data.rating) + '\n\nNakath AI එකෙන් බැලුවා 💍'
+        : 'Porondam Score: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) - ' + data.rating + '\n\nChecked with Nakath AI 💍';
+      await Share.share({ message: msg });
+    } catch (e) {}
+  };
+
+  return (
+    <CosmicBackground>
+      <ScrollView ref={scrollRef} style={s.flex} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+
+        {/* Title */}
+        <Animated.View entering={FadeInDown.delay(100).duration(800)}>
+          <Text style={s.title}>{T.title}</Text>
+          <Text style={s.subtitle}>{T.subtitle}</Text>
+        </Animated.View>
+
+        {/* ═══════ COLLAPSIBLE INPUT SECTION ═══════ */}
+        {!inputCollapsed && (
+          <View>
+            <View style={IS_WIDE ? s.inputRowWide : undefined}>
+              {/* Bride Input */}
+              <Animated.View entering={FadeInDown.delay(150).duration(800)} exiting={FadeOut.duration(400)} style={IS_WIDE ? s.inputColWide : undefined}>
+                <TextInput style={[s.input, { marginBottom: 8 }]} value={bName} onChangeText={setBName} placeholder={T.brideName} placeholderTextColor="rgba(255,255,255,0.3)" />
+                <BirthInput
+                  label={T.brideLabel}
+                  year={bYear} month={bMonth} day={bDay} hour={bHour} minute={bMinute}
+                  setYear={setBYear} setMonth={setBMonth} setDay={setBDay} setHour={setBHour} setMinute={setBMinute}
+                  T={T}
+                />
+              </Animated.View>
+
+              {/* Groom Input */}
+              <Animated.View entering={FadeInDown.delay(200).duration(800)} exiting={FadeOut.duration(400)} style={IS_WIDE ? s.inputColWide : undefined}>
+                <TextInput style={[s.input, { marginBottom: 8 }]} value={gName} onChangeText={setGName} placeholder={T.groomName} placeholderTextColor="rgba(255,255,255,0.3)" />
+                <BirthInput
+                  label={T.groomLabel}
+                  year={gYear} month={gMonth} day={gDay} hour={gHour} minute={gMinute}
+                  setYear={setGYear} setMonth={setGMonth} setDay={setGDay} setHour={setGHour} setMinute={setGMinute}
+                  T={T}
+                />
+              </Animated.View>
+            </View>
+
+            {/* Check Button */}
+            <Animated.View entering={FadeInDown.delay(250).duration(800)}>
+              <TouchableOpacity style={s.btn} onPress={check} disabled={loading}>
+                <LinearGradient colors={['#f43f5e', '#be123c']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>{T.checkBtn}</Text>}
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        )}
+
+        {/* ═══════ EXPAND / EDIT BUTTON ═══════ */}
+        {inputCollapsed && !loading && (
+          <Animated.View entering={FadeIn.delay(200).duration(500)}>
+            <TouchableOpacity
+              style={s.editBtn}
+              onPress={function() {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setInputCollapsed(false);
+              }}
+            >
+              <LinearGradient
+                colors={['rgba(244, 63, 94, 0.15)', 'rgba(244, 63, 94, 0.05)']}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              />
+              <Ionicons name="create-outline" size={18} color="#fda4af" />
+              <Text style={s.editBtnText}>{T.editDetails}</Text>
+              <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.4)" />
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {/* ═══════ BEAUTIFUL LOADING STATE ═══════ */}
+        {loading && (
+          <Animated.View entering={ZoomIn.duration(600)} style={s.loadingWrap}>
+            <AuraBox style={s.loadingBox}>
+              <Animated.View style={[s.loadingRing, spinStyle]}>
+                <LinearGradient
+                  colors={['#f43f5e', '#a855f7', '#3b82f6', '#f43f5e']}
+                  style={StyleSheet.absoluteFill}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                />
+              </Animated.View>
+              <Animated.View style={[s.loadingInner, pulseStyle]}>
+                <Text style={s.loadingEmoji}>💍</Text>
+              </Animated.View>
+              <Text style={s.loadingText}>{T.calculating}</Text>
+              <View style={s.loadingDots}>
+                <Animated.View entering={FadeIn.delay(0).duration(400)} style={s.dot} />
+                <Animated.View entering={FadeIn.delay(200).duration(400)} style={s.dot} />
+                <Animated.View entering={FadeIn.delay(400).duration(400)} style={s.dot} />
+              </View>
+            </AuraBox>
+          </Animated.View>
+        )}
+
+        {error && <AuraBox><Text style={s.errorText}>{error}</Text></AuraBox>}
+
+        {/* ═══════ RESULTS ═══════ */}
+        {data && !loading && (
+          <View>
+            {/* Score — bounces in */}
+            <Animated.View entering={ZoomIn.springify().damping(12).stiffness(100).delay(100)}>
+              <AuraBox>
+                <ScoreRing score={data.totalScore} maxScore={data.maxPossibleScore} />
+                <Text style={s.ratingText}>{data.ratingEmoji || ''} {data.ratingSinhala && language === 'si' ? data.ratingSinhala : data.rating}</Text>
+                <TouchableOpacity style={s.shareBtn} onPress={shareResult}>
+                  <Ionicons name="share-social" size={16} color="#fda4af" />
+                  <Text style={s.shareBtnText}>{T.shareBtn}</Text>
+                </TouchableOpacity>
+              </AuraBox>
+            </Animated.View>
+
+            {/* ═══ CHARTS — side by side on desktop, stacked on mobile ═══ */}
+            <View style={[s.chartsContainer, IS_WIDE && s.chartsContainerWide]}>
+              {/* Bride Chart — slides from LEFT */}
+              {data.brideChart && (
+                <Animated.View entering={SlideInLeft.springify().damping(14).stiffness(90).delay(300)} style={IS_WIDE && s.chartCol}>
+                  <AuraBox>
+                    <Text style={s.chartLabel}>{T.brideChart}</Text>
+                    <SriLankanChart
+                      rashiChart={data.brideChart.rashiChart}
+                      lagnaRashiId={data.brideChart.lagnaRashiId}
+                      language={language}
+                      chartSize={IS_WIDE ? Math.min(320, (SCREEN_W - 120) / 2) : 280}
+                    />
+                  </AuraBox>
+                </Animated.View>
+              )}
+
+              {/* Connecting hearts animation */}
+              <Animated.View entering={ZoomIn.delay(600).duration(800)} style={[s.heartConnect, IS_WIDE && s.heartConnectWide]}>
+                <Text style={s.heartEmoji}>💕</Text>
+              </Animated.View>
+
+              {/* Groom Chart — slides from RIGHT */}
+              {data.groomChart && (
+                <Animated.View entering={SlideInRight.springify().damping(14).stiffness(90).delay(500)} style={IS_WIDE && s.chartCol}>
+                  <AuraBox>
+                    <Text style={s.chartLabel}>{T.groomChart}</Text>
+                    <SriLankanChart
+                      rashiChart={data.groomChart.rashiChart}
+                      lagnaRashiId={data.groomChart.lagnaRashiId}
+                      language={language}
+                      chartSize={IS_WIDE ? Math.min(320, (SCREEN_W - 120) / 2) : 280}
+                    />
+                  </AuraBox>
+                </Animated.View>
+              )}
+            </View>
+
+            {/* Factors */}
+            {data.factors && data.factors.length > 0 && (
+              <Animated.View entering={FadeInUp.delay(700).duration(800).springify()}>
+                <AuraBox>
+                  <Text style={s.secTitle}>{T.factorsTitle}</Text>
+                  {data.factors.map(function(f, i) {
+                    var pct = f.maxScore > 0 ? (f.score / f.maxScore) : 0;
+                    var barColor = pct >= 0.75 ? '#34d399' : pct >= 0.5 ? '#fbbf24' : '#ef4444';
+                    return (
+                      <View key={i} style={s.factorRow}>
+                        <View style={s.factorHeader}>
+                          <Text style={s.factorName}>{f.name} {f.sinhala ? '(' + f.sinhala + ')' : ''}</Text>
+                          <Text style={s.factorScore}>{f.score}/{f.maxScore}</Text>
+                        </View>
+                        <View style={s.barBg}>
+                          <View style={[s.barFill, { width: (pct * 100) + '%', backgroundColor: barColor }]} />
+                        </View>
+                        <Text style={s.factorDesc}>
+                          {language === 'si' && f.descriptionSinhala ? f.descriptionSinhala : f.description}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </AuraBox>
+              </Animated.View>
+            )}
+
+            {/* Doshas */}
+            {data.doshas && data.doshas.length > 0 && (
+              <Animated.View entering={FadeInUp.delay(900).duration(800)}>
+                <AuraBox>
+                  <Text style={s.secTitle}>{T.doshasTitle}</Text>
+                  {data.doshas.map(function(d, i) {
+                    return (
+                      <View key={i} style={s.doshaRow}>
+                        <Ionicons name="warning" size={18} color="#ef4444" style={{ marginTop: 2 }} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.doshaName}>{d.name} {d.sinhala ? '(' + d.sinhala + ')' : ''}</Text>
+                          <Text style={s.doshaText}>
+                            {language === 'si' && d.descriptionSinhala ? d.descriptionSinhala : d.description}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </AuraBox>
+              </Animated.View>
+            )}
+
+            {/* AI Report - Language Selection */}
+            <Animated.View entering={FadeInUp.delay(1100).duration(800)}>
+              <AuraBox>
+                <Text style={s.secTitle}>{T.reportTitle}</Text>
+                <Text style={s.reportQuestion}>{T.reportLangQ}</Text>
+                <View style={s.langRow}>
+                  <TouchableOpacity
+                    style={[s.langBtn, reportLang === 'si' && s.langBtnActive]}
+                    onPress={function() { generateReport('si'); }}
+                    disabled={reportLoading}
+                  >
+                    <Text style={[s.langBtnText, reportLang === 'si' && s.langBtnTextActive]}>{T.reportSi}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.langBtn, reportLang === 'en' && s.langBtnActive]}
+                    onPress={function() { generateReport('en'); }}
+                    disabled={reportLoading}
+                  >
+                    <Text style={[s.langBtnText, reportLang === 'en' && s.langBtnTextActive]}>{T.reportEn}</Text>
+                  </TouchableOpacity>
+                </View>
+                {reportLoading && (
+                  <View style={s.reportLoading}>
+                    <ActivityIndicator color="#fda4af" size="small" />
+                    <Text style={s.reportLoadingText}>{T.generating}</Text>
+                  </View>
+                )}
+                {report && !reportLoading && (
+                  <Text style={s.reportText}>{report}</Text>
+                )}
+              </AuraBox>
+            </Animated.View>
+          </View>
+        )}
+
+        <View style={{ height: 120 }} />
+      </ScrollView>
+    </CosmicBackground>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STYLES
+// ═══════════════════════════════════════════════════════════════
+var s = StyleSheet.create({
+  flex: { flex: 1 },
+  content: {
+    paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 110 : 90,
+    ...(IS_WIDE ? { maxWidth: 960, alignSelf: 'center', width: '100%' } : {}),
+  },
+  title: { fontSize: 28, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  subtitle: { fontSize: 14, color: '#fda4af', marginBottom: 20, fontWeight: '500' },
+  sectionLabel: { fontSize: 17, fontWeight: '700', color: '#fda4af', marginBottom: 12 },
+  fieldLabel: { fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, marginTop: 8 },
+  dateRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  mobileRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  input: {
+    backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 14,
+    paddingHorizontal: IS_WIDE ? 12 : 8, paddingVertical: IS_WIDE ? 12 : 10,
+    color: '#fff', fontSize: IS_WIDE ? 15 : 13, borderWidth: 1, borderColor: 'rgba(244, 63, 94, 0.2)',
+  },
+  inputYear: { flex: 2, minWidth: 0 },
+  inputSmall: { flex: 1, minWidth: 0 },
+  timeSep: { color: '#fff', fontSize: 24, fontWeight: '700' },
+  hint: { fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 6, fontStyle: 'italic' },
+
+  // Desktop field layout
+  desktopFieldsRow: { flexDirection: 'row', gap: 20 },
+  desktopFieldGroup: { flex: 1 },
+  btn: { borderRadius: 999, padding: 16, alignItems: 'center', overflow: 'hidden', marginBottom: 20 },
+  btnText: { color: '#fff', fontWeight: '800', fontSize: 16, letterSpacing: 1 },
+  errorText: { color: '#ef4444', fontSize: 14, textAlign: 'center' },
+
+  // Desktop / wide input layout
+  inputRowWide: { flexDirection: 'row', gap: 16 },
+  inputColWide: { flex: 1 },
+
+  // Edit / Expand button
+  editBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderRadius: 16, padding: 14, marginBottom: 20, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(244, 63, 94, 0.25)',
+  },
+  editBtnText: { color: '#fda4af', fontWeight: '700', fontSize: 14 },
+
+  // Loading animation
+  loadingWrap: { alignItems: 'center', marginVertical: 30 },
+  loadingBox: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 30 },
+  loadingRing: {
+    width: 100, height: 100, borderRadius: 50, opacity: 0.3,
+    position: 'absolute', top: 30,
+  },
+  loadingInner: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: 'rgba(30, 10, 30, 0.8)',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(244, 63, 94, 0.4)',
+  },
+  loadingEmoji: { fontSize: 32 },
+  loadingText: { color: '#fda4af', fontSize: 16, fontWeight: '700', marginTop: 20, letterSpacing: 0.5 },
+  loadingDots: { flexDirection: 'row', gap: 6, marginTop: 12 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#f43f5e', opacity: 0.6 },
+
+  // Charts
+  chartsContainer: { marginBottom: 8 },
+  chartsContainerWide: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+  },
+  chartCol: { flex: 1, maxWidth: 420 },
+  heartConnect: { alignItems: 'center', marginVertical: -4, zIndex: 10 },
+  heartConnectWide: { marginVertical: 0, marginHorizontal: -8 },
+  heartEmoji: { fontSize: 28 },
+
+  scoreRing: { alignItems: 'center', marginBottom: 16 },
+  ringCircle: {
+    width: 130, height: 130, borderRadius: 65, borderWidth: 2, borderColor: 'rgba(244,63,94,0.3)',
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+  },
+  scoreNum: { fontSize: 40, fontWeight: '900' },
+  scoreLabel: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 2, fontWeight: '700' },
+  ratingText: { fontSize: 22, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 16 },
+  shareBtn: {
+    flexDirection: 'row', alignSelf: 'center', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(244, 63, 94, 0.2)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999,
+    borderWidth: 1, borderColor: 'rgba(244, 63, 94, 0.4)',
+  },
+  shareBtnText: { color: '#fda4af', fontWeight: '700', fontSize: 13 },
+  chartLabel: { fontSize: 15, fontWeight: '700', color: '#fda4af', marginBottom: 12, textAlign: 'center' },
+  secTitle: { fontSize: 17, fontWeight: '700', color: '#fda4af', marginBottom: 16 },
+  factorRow: { marginBottom: 16 },
+  factorHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  factorName: { fontSize: 14, color: '#fff', fontWeight: '700' },
+  factorScore: { fontSize: 14, color: '#fda4af', fontWeight: '800' },
+  barBg: { height: 8, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 4, overflow: 'hidden' },
+  barFill: { height: 8, borderRadius: 4 },
+  factorDesc: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 6, lineHeight: 20 },
+  doshaRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(244,63,94,0.1)' },
+  doshaName: { fontSize: 15, color: '#ef4444', fontWeight: '700', marginBottom: 4 },
+  doshaText: { fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 20 },
+  reportQuestion: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 12 },
+  langRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  langBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 16, alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(244, 63, 94, 0.3)', backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  langBtnActive: { borderColor: '#f43f5e', backgroundColor: 'rgba(244, 63, 94, 0.2)' },
+  langBtnText: { color: 'rgba(255,255,255,0.6)', fontSize: 15, fontWeight: '700' },
+  langBtnTextActive: { color: '#fff' },
+  reportLoading: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
+  reportLoadingText: { color: '#fda4af', fontSize: 14 },
+  reportText: { color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 24 },
+});

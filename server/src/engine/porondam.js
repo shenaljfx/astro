@@ -107,6 +107,9 @@ function calculateDinaPorondam(brideNakshatra, groomNakshatra) {
     description: isGood
       ? 'Good day compatibility - promotes health and well-being'
       : 'Day compatibility is unfavorable',
+    descriptionSinhala: isGood
+      ? 'යහපත් දින ගැලපීමක් - සෞඛ්‍යය සහ යහපැවැත්ම සදහා උපකාරී වේ'
+      : 'දින පොරොන්දම ගැලපීම අවාසිදායකය',
   };
 }
 
@@ -121,19 +124,24 @@ function calculateGanaPorondam(brideNakshatra, groomNakshatra) {
 
   let score = 0;
   let description = '';
+  let descriptionSinhala = '';
 
   if (brideGana === groomGana) {
     score = 2;
     description = 'Same temperament - excellent compatibility';
+    descriptionSinhala = 'එකම ගණයේ ගැලපීම - ඉතා උසස් ගැලපීමකි';
   } else if (
     (brideGana === 'Deva' && groomGana === 'Manushya') ||
-    (brideGana === 'Manushya' && groomGana === 'Deva')
+    (brideGana === 'Manushya' && groomGana === 'Deva') ||
+    (brideGana === 'Deva' && groomGana === 'Rakshasa')
   ) {
     score = 1;
-    description = 'Good temperament compatibility';
+    description = 'Moderate temperament compatibility';
+    descriptionSinhala = 'සාමාන්‍ය ගණ ගැලපීමකි';
   } else {
     score = 0;
     description = 'Different temperaments - may cause friction';
+    descriptionSinhala = 'වෙනස් ගණ ගැලපීමකි - මත ගැටුම් ඇති විය හැක';
   }
 
   return {
@@ -145,6 +153,7 @@ function calculateGanaPorondam(brideNakshatra, groomNakshatra) {
     brideGana,
     groomGana,
     description,
+    descriptionSinhala,
   };
 }
 
@@ -159,10 +168,12 @@ function calculateYoniPorondam(brideNakshatra, groomNakshatra) {
 
   let score = 0;
   let description = '';
+  let descriptionSinhala = '';
 
   if (brideYoni === groomYoni) {
     score = 3;
     description = 'Same yoni - excellent physical compatibility';
+    descriptionSinhala = 'එකම යෝනි ගැලපීම - ඉතා උසස් කායික ගැලපීමකි';
   } else {
     const isEnemy = ENEMY_YONIS.some(
       ([a, b]) => (brideYoni === a && groomYoni === b) || (brideYoni === b && groomYoni === a)
@@ -170,9 +181,11 @@ function calculateYoniPorondam(brideNakshatra, groomNakshatra) {
     if (isEnemy) {
       score = 0;
       description = 'Enemy yonis - physical incompatibility';
+      descriptionSinhala = 'සතුරු යෝනි - කායික ගැලපීම අවාසිදායකය';
     } else {
       score = 2;
       description = 'Friendly yonis - good physical compatibility';
+      descriptionSinhala = 'මිතුරු යෝනි - යහපත් කායික ගැලපීමකි';
     }
   }
 
@@ -185,6 +198,7 @@ function calculateYoniPorondam(brideNakshatra, groomNakshatra) {
     brideYoni,
     groomYoni,
     description,
+    descriptionSinhala,
   };
 }
 
@@ -199,17 +213,21 @@ function calculateRashiPorondam(brideRashi, groomRashi) {
 
   let score = 0;
   let description = '';
+  let descriptionSinhala = '';
 
   // 1, 7 (kendras), 5, 9 (trikonas) are good
   if ([1, 5, 7, 9].includes(normalizedDiff + 1) || normalizedDiff === 0) {
     score = 2;
     description = 'Good sign compatibility - emotional harmony';
+    descriptionSinhala = 'යහපත් රාශි ගැලපීමක් - මානසික එකඟතාවය ඇත';
   } else if ([2, 12].includes(normalizedDiff + 1)) {
     score = 0;
     description = '2-12 relationship - financial concerns';
+    descriptionSinhala = '2-12 සම්බන්ධතාවය - මූල්‍යමය ගැටළු ඇති විය හැක';
   } else {
     score = 1;
     description = 'Moderate sign compatibility';
+    descriptionSinhala = 'සාමාන්‍ය රාශි ගැලපීමකි';
   }
 
   return {
@@ -219,6 +237,7 @@ function calculateRashiPorondam(brideRashi, groomRashi) {
     score,
     maxScore: 2,
     description,
+    descriptionSinhala,
   };
 }
 
@@ -236,16 +255,20 @@ function calculateVasyaPorondam(brideRashi, groomRashi) {
 
   let score = 0;
   let description = '';
+  let descriptionSinhala = '';
 
   if (brideVasya.includes(groomName) || groomVasya.includes(brideName)) {
     score = 1;
     description = 'Vasya compatibility present - mutual attraction';
+    descriptionSinhala = 'වශ්‍ය ගැලපීම ඇත - අන්‍යෝන්‍ය ආකර්ෂණය ඇත';
   } else if (brideName === groomName) {
     score = 1;
     description = 'Same sign - natural attraction';
+    descriptionSinhala = 'එකම රාශිය - ස්වාභාවික ආකර්ෂණය ඇත';
   } else {
     score = 0;
     description = 'No Vasya compatibility';
+    descriptionSinhala = 'වශ්‍ය ගැලපීමක් නැත';
   }
 
   return {
@@ -255,6 +278,7 @@ function calculateVasyaPorondam(brideRashi, groomRashi) {
     score,
     maxScore: 1,
     description,
+    descriptionSinhala,
   };
 }
 
@@ -269,13 +293,16 @@ function calculateNadiPorondam(brideNakshatra, groomNakshatra) {
 
   let score = 0;
   let description = '';
+  let descriptionSinhala = '';
 
   if (brideNadi !== groomNadi) {
     score = 8;
     description = 'Different Nadi - excellent health compatibility for offspring';
+    descriptionSinhala = 'වෙනස් නාඩි - දරුවන්ගේ සෞඛ්‍යය සදහා ඉතා යහපත්';
   } else {
     score = 0;
     description = 'Same Nadi (Nadi Dosha) - potential health concerns for offspring. Remedies may be recommended.';
+    descriptionSinhala = 'එකම නාඩි (නාඩි දෝෂය) - දරුවන්ගේ සෞඛ්‍යය ගැන සැලකිලිමත් වන්න. ශාන්තිකර්ම අවශ්‍ය විය හැක.';
   }
 
   return {
@@ -287,6 +314,7 @@ function calculateNadiPorondam(brideNakshatra, groomNakshatra) {
     brideNadi,
     groomNadi,
     description,
+    descriptionSinhala,
     isDosha: brideNadi === groomNadi,
   };
 }
@@ -309,6 +337,9 @@ function calculateMahendraPorondam(brideNakshatra, groomNakshatra) {
     description: isGood
       ? 'Mahendra compatible - promotes prosperity and progeny'
       : 'Mahendra not compatible',
+    descriptionSinhala: isGood
+      ? 'මහේන්ද්‍ර ගැලපීම ඇත - දරුවන් සහ සමෘද්ධිය සදහා යහපත්'
+      : 'මහේන්ද්‍ර ගැලපීමක් නැත',
   };
 }
 
@@ -381,6 +412,7 @@ function calculatePorondam(brideBirthDate, groomBirthDate) {
       sinhala: 'නාඩි දෝෂය',
       severity: 'high',
       description: 'Same Nadi indicates potential health issues for children. Traditional remedies available.',
+      descriptionSinhala: 'එකම නාඩි ගැලපීම දරුවන්ගේ සෞඛ්‍ය ගැටළු පෙන්නුම් කරයි.',
     });
   }
 
