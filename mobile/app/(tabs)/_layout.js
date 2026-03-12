@@ -7,12 +7,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 var TABS = [
-  { name: 'index', title: 'Cosmos', titleSi: 'අද දිනය', icon: 'sparkles-outline', iconFocused: 'sparkles' },
-  { name: 'kendara', title: 'Chart', titleSi: 'කේන්දරය', icon: 'compass-outline', iconFocused: 'compass' },
-  { name: 'horoscope', title: 'Horoscope', titleSi: 'පලාඵල', icon: 'moon-outline', iconFocused: 'moon' },
+  { name: 'index', title: 'Today', titleSi: 'ගෙදර', icon: 'sparkles-outline', iconFocused: 'sparkles' },
+  { name: 'kendara', title: 'Chart', titleSi: 'කේන්දරේ', icon: 'compass-outline', iconFocused: 'compass' },
+  { name: 'report', title: 'Report', titleSi: 'රිපෝට්', icon: 'document-text-outline', iconFocused: 'document-text' },
   { name: 'porondam', title: 'Match', titleSi: 'පොරොන්දම්', icon: 'heart-outline', iconFocused: 'heart' },
-  { name: 'chat', title: 'Guide', titleSi: 'AI සහාය', icon: 'rose-outline', iconFocused: 'rose' },
-  { name: 'profile', title: 'Aura', titleSi: 'පැතිකඩ', icon: 'color-wand-outline', iconFocused: 'color-wand' },
+  { name: 'chat', title: 'Guide', titleSi: 'චැට්', icon: 'rose-outline', iconFocused: 'rose' },
+  { name: 'profile', title: 'Aura', titleSi: 'මම', icon: 'color-wand-outline', iconFocused: 'color-wand' },
 ];function HeaderTitle({ title }) {
   return (
     <View style={s.headerTitleContainer}>
@@ -36,7 +36,7 @@ export default function TabLayout() {
           let tabKey = 'tabHome';
           if (route.name === 'porondam') tabKey = 'tabPorondam';
           if (route.name === 'kendara') tabKey = 'tabKendara';
-          if (route.name === 'horoscope') tabKey = 'tabHoroscope';
+          if (route.name === 'report') tabKey = 'tabReport';
           if (route.name === 'chat') tabKey = 'tabChat';
           if (route.name === 'profile') tabKey = 'tabProfile';
           
@@ -88,7 +88,7 @@ export default function TabLayout() {
             key={tab.name}
             name={tab.name}
             options={{
-              title: t('language') === 'si' ? tab.titleSi : tab.title,
+              title: language === 'si' ? tab.titleSi : tab.title,
               tabBarIcon: function({ focused, color, size }) {
                 return (
                   <Ionicons

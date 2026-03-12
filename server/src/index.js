@@ -4,11 +4,17 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
+// Firebase initialization
+const { initFirebase } = require('./config/firebase');
+initFirebase();
+
 const nakathRoutes = require('./routes/nakath');
 const porondamRoutes = require('./routes/porondam');
 const chatRoutes = require('./routes/chat');
 const horoscopeRoutes = require('./routes/horoscope');
 const shareRoutes = require('./routes/share');
+const userRoutes = require('./routes/user');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -40,6 +46,8 @@ app.use('/api/porondam', porondamRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/horoscope', horoscopeRoutes);
 app.use('/api/share', shareRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/auth', authRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

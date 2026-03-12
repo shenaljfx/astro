@@ -1565,57 +1565,49 @@ function generateDetailedReport(lagna, moonSign, sunSign, houses) {
   };
   
   const getHouseLord = (houseNum) => {
-    // Simply return the ruler of the sign in that house
     return houses[houseNum-1]?.rashiLord || 'Unknown';
   };
 
-  // 1. Character
   const fireSigns = ['Mesha', 'Simha', 'Dhanu'];
   const earthSigns = ['Vrishabha', 'Kanya', 'Makara'];
   const airSigns = ['Mithuna', 'Tula', 'Kumbha'];
   const waterSigns = ['Kataka', 'Vrischika', 'Meena'];
   
   let character = `You are born with ${lagna.english} Lagna. `;
-  if (fireSigns.includes(lagna.english)) character += "You have a fiery, energetic, and leadership-oriented personality. ";
-  else if (earthSigns.includes(lagna.english)) character += "You are practical, grounded, and value stability. ";
-  else if (airSigns.includes(lagna.english)) character += "You are intellectual, communicative, and social. ";
+  if (fireSigns.includes(lagna.name)) character += "You have a fiery, energetic, and leadership-oriented personality. ";
+  else if (earthSigns.includes(lagna.name)) character += "You are practical, grounded, and value stability. ";
+  else if (airSigns.includes(lagna.name)) character += "You are intellectual, communicative, and social. ";
   else character += "You are emotional, intuitive, and sensitive. ";
   
   character += `Your mind (Moon) is in ${moonSign.english}, making you feel things deeply. `;
   
-  // 2. Marriage (7th House)
   const lord7 = getHouseLord(7);
   const planetsIn7 = houses[6].planets.map(p => p.name).join(', ');
   let marriage = `The 7th house is ruled by ${lord7}. `;
   if (planetsIn7) marriage += `With ${planetsIn7} in the house of marriage, relationships are a key focus. `;
   else marriage += "The 7th house has no planets, indicating the ruler's position is most important. ";
   
-  // 3. Wealth & Career
   const lord2 = getHouseLord(2);
   const lord11 = getHouseLord(11);
   const lord10 = getHouseLord(10);
-  const sunHouse = getPlanetHouse('Sun');
   
   let wealth = `Wealth: Governed by ${lord2} (Accumulation) and ${lord11} (Gains). `;
   wealth += `Career: Your 10th house of profession is ruled by ${lord10}. `;
   
-  // Simple check for business vs service
   if (['Sun', 'Mars', 'Jupiter'].includes(lord10)) {
      wealth += "Planetary influences suggest potential for leadership or independent business. ";
   } else {
      wealth += "You may excel in service-oriented or stable professional roles. ";
   }
 
-  // 4. Children (5th)
   const lord5 = getHouseLord(5);
   let children = `The 5th house of creativity and children is ruled by ${lord5}. `;
   
-  // 5. Deep Insights
   const deepInsights = {
     'Education': `4th House Lord is ${getHouseLord(4)}. Mercury is in House ${getPlanetHouse('Mercury')}. Good for analytical subjects.`,
     'Property': `4th House governs home. Mars in House ${getPlanetHouse('Mars')} influences land ownership.`,
-    'LuckyGem': lagna.english === 'Mesha' ? 'Red Coral' : lagna.english === 'Vrishabha' ? 'Diamond' : 'Consult an astrologer',
-    'LuckyColor': lagna.english === 'Mesha' ? 'Red' : lagna.english === 'Vrishabha' ? 'White' : 'Yellow',
+    'LuckyGem': lagna.name === 'Mesha' ? 'Red Coral' : lagna.name === 'Vrishabha' ? 'Diamond' : 'Consult an astrologer',
+    'LuckyColor': lagna.name === 'Mesha' ? 'Red' : lagna.name === 'Vrishabha' ? 'White' : 'Yellow',
   };
   
   return {
@@ -1625,6 +1617,882 @@ function generateDetailedReport(lagna, moonSign, sunSign, houses) {
     children,
     future: "Your current Dasa period will determine the specific timing of events. Check the timeline below.",
     deepInsights
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// COMPREHENSIVE JYOTISH REPORT ENGINE
+// Based on: BPHS (Brihat Parashara Hora Shastra), Phaladeepika,
+//           Jataka Parijata, Sri Lankan Nimithi tradition
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * House significance data — what each bhava governs (BPHS Ch.11)
+ */
+const HOUSE_SIGNIFICATIONS = {
+  1: { name: 'Tanu Bhava', sinhala: 'තනු භාවය', governs: 'Self, body, personality, health, head, appearance, temperament' },
+  2: { name: 'Dhana Bhava', sinhala: 'ධන භාවය', governs: 'Wealth, family, speech, food, right eye, face, early education' },
+  3: { name: 'Sahaja Bhava', sinhala: 'සහජ භාවය', governs: 'Siblings, courage, short journeys, communication, arms, ears' },
+  4: { name: 'Bandhu Bhava', sinhala: 'බන්ධු භාවය', governs: 'Mother, home, land, vehicles, education, chest, emotional happiness' },
+  5: { name: 'Putra Bhava', sinhala: 'පුත්‍ර භාවය', governs: 'Children, intelligence, creativity, romance, past-life merit, stomach' },
+  6: { name: 'Ari Bhava', sinhala: 'අරි භාවය', governs: 'Enemies, debts, disease, service, maternal uncle, digestive system' },
+  7: { name: 'Yuvati Bhava', sinhala: 'යුවතී භාවය', governs: 'Marriage, spouse, partnerships, business, reproductive organs' },
+  8: { name: 'Randhra Bhava', sinhala: 'රන්ධ්‍ර භාවය', governs: 'Longevity, obstacles, inheritance, occult, chronic illness, transformation' },
+  9: { name: 'Dharma Bhava', sinhala: 'ධර්ම භාවය', governs: 'Fortune, father, guru, dharma, higher learning, long journeys, thighs' },
+  10: { name: 'Karma Bhava', sinhala: 'කර්ම භාවය', governs: 'Career, profession, status, government, authority, knees' },
+  11: { name: 'Labha Bhava', sinhala: 'ලාභ භාවය', governs: 'Gains, income, elder siblings, aspirations, friends, ankles' },
+  12: { name: 'Vyaya Bhava', sinhala: 'ව්‍යය භාවය', governs: 'Expenses, losses, foreign lands, liberation, feet, sleep, left eye' },
+};
+
+/**
+ * Planet natural significations (Naisargika Karakattwa)
+ */
+const PLANET_KARAKAS = {
+  'Sun':     { karaka: 'Atma (Soul)', governs: 'Father, authority, government, vitality, ego, right eye, heart', gem: 'Ruby (මාණික්‍ය)', color: 'Copper/Red', day: 'Sunday' },
+  'Moon':    { karaka: 'Manas (Mind)', governs: 'Mother, mind, emotions, public, fluids, left eye, blood', gem: 'Pearl (මුතු)', color: 'White', day: 'Monday' },
+  'Mars':    { karaka: 'Bhumi (Land)', governs: 'Siblings, courage, property, surgery, police/military, blood, muscles', gem: 'Red Coral (රතු පබළු)', color: 'Red', day: 'Tuesday' },
+  'Mercury': { karaka: 'Vidya (Knowledge)', governs: 'Education, speech, trade, intellect, friends, skin, nervous system', gem: 'Emerald (මරකත)', color: 'Green', day: 'Wednesday' },
+  'Jupiter': { karaka: 'Jnana (Wisdom)', governs: 'Guru, children, wealth, dharma, husband (for women), liver, fat', gem: 'Yellow Sapphire (පුෂ්පරාග)', color: 'Yellow', day: 'Thursday' },
+  'Venus':   { karaka: 'Kama (Desire)', governs: 'Wife (for men), marriage, luxury, vehicles, art, kidneys, reproductive', gem: 'Diamond (දියමන්ති)', color: 'White/Rainbow', day: 'Friday' },
+  'Saturn':  { karaka: 'Ayus (Longevity)', governs: 'Discipline, service, delay, sorrow, old age, bones, teeth, chronic disease', gem: 'Blue Sapphire (නිල මැණික)', color: 'Black/Blue', day: 'Saturday' },
+  'Rahu':    { karaka: 'Maya (Illusion)', governs: 'Foreign, unconventional, obsession, technology, poison, paternal grandfather', gem: 'Hessonite (ගෝමේද)', color: 'Smoke/Ultraviolet', day: 'Saturday' },
+  'Ketu':    { karaka: 'Moksha (Liberation)', governs: 'Spirituality, detachment, past life, occult, maternal grandfather', gem: 'Cat\'s Eye (වෛඩූර්ය)', color: 'Grey/Brown', day: 'Tuesday' },
+};
+
+/**
+ * Functional benefic/malefic determination for each Lagna (BPHS Ch.34)
+ */
+const FUNCTIONAL_STATUS = {
+  'Mesha':     { yogaKaraka: 'Saturn', benefics: ['Sun','Moon','Jupiter'], malefics: ['Mercury','Venus'], neutrals: ['Saturn','Mars'] },
+  'Vrishabha': { yogaKaraka: 'Saturn', benefics: ['Sun','Mercury','Saturn'], malefics: ['Jupiter','Moon','Venus'], neutrals: ['Mars'] },
+  'Mithuna':   { yogaKaraka: null, benefics: ['Venus','Saturn'], malefics: ['Mars','Jupiter','Sun'], neutrals: ['Moon','Mercury'] },
+  'Kataka':    { yogaKaraka: 'Mars', benefics: ['Moon','Mars','Jupiter'], malefics: ['Venus','Saturn','Mercury'], neutrals: ['Sun'] },
+  'Simha':     { yogaKaraka: 'Mars', benefics: ['Sun','Mars','Jupiter'], malefics: ['Venus','Saturn','Mercury'], neutrals: ['Moon'] },
+  'Kanya':     { yogaKaraka: null, benefics: ['Mercury','Venus'], malefics: ['Mars','Moon','Jupiter'], neutrals: ['Sun','Saturn'] },
+  'Tula':      { yogaKaraka: 'Saturn', benefics: ['Venus','Mercury','Saturn'], malefics: ['Sun','Mars','Jupiter'], neutrals: ['Moon'] },
+  'Vrischika': { yogaKaraka: null, benefics: ['Moon','Jupiter','Sun'], malefics: ['Mercury','Venus','Saturn'], neutrals: ['Mars'] },
+  'Dhanus':    { yogaKaraka: null, benefics: ['Sun','Mars','Jupiter'], malefics: ['Venus','Saturn','Mercury'], neutrals: ['Moon'] },
+  'Makara':    { yogaKaraka: 'Venus', benefics: ['Venus','Mercury','Saturn'], malefics: ['Mars','Moon','Jupiter'], neutrals: ['Sun'] },
+  'Kumbha':    { yogaKaraka: 'Venus', benefics: ['Venus','Saturn'], malefics: ['Moon','Mars','Jupiter'], neutrals: ['Sun','Mercury'] },
+  'Meena':     { yogaKaraka: null, benefics: ['Moon','Mars','Jupiter'], malefics: ['Sun','Mercury','Venus','Saturn'], neutrals: [] },
+};
+
+/**
+ * Career significations by planet ruling or placed in 10th house
+ */
+const CAREER_BY_PLANET = {
+  'Sun':     ['Government service', 'Administration', 'Medicine', 'Politics', 'Management', 'Temple/religious work'],
+  'Moon':    ['Nursing', 'Hotel/catering', 'Shipping', 'Dairy', 'Public relations', 'Counseling'],
+  'Mars':    ['Military/Police', 'Engineering', 'Surgery', 'Real estate', 'Sports', 'Construction', 'Fire dept'],
+  'Mercury': ['Accounting', 'Writing/Journalism', 'IT/Software', 'Teaching', 'Commerce', 'Astrology'],
+  'Jupiter': ['Education/Professor', 'Law/Judge', 'Banking', 'Religious leader', 'Consulting', 'Finance'],
+  'Venus':   ['Art/Music/Cinema', 'Fashion', 'Luxury goods', 'Tourism', 'Beauty industry', 'Interior design'],
+  'Saturn':  ['Mining', 'Agriculture', 'Labor unions', 'Iron/steel', 'Judiciary', 'Oil/petroleum', 'Democracy/politics'],
+  'Rahu':    ['Foreign companies', 'Technology/IT', 'Aviation', 'Research', 'Diplomacy', 'Pharmaceuticals'],
+  'Ketu':    ['Spiritual/religious', 'Alternative medicine', 'Mathematics', 'Computer science', 'Investigation'],
+};
+
+/**
+ * Dasha effects for each planet as Mahadasha lord (simplified BPHS/Phaladeepika)
+ */
+const DASHA_EFFECTS = {
+  'Sun': {
+    general: 'Government favor, fame, authority gains, health vitality. Possible ego conflicts and father-related events.',
+    sinhala: 'රාජ්‍ය අනුග්‍රහය, කීර්තිය, බලය ලැබීම. පිය සම්බන්ධ සිදුවීම්.',
+    career: 'Promotion, government job, leadership role',
+    health: 'Heart, eyes, bones — may need attention',
+    relationship: 'Dominance in relationships, respect from spouse',
+  },
+  'Moon': {
+    general: 'Emotional growth, mother\'s influence, travel, public popularity, mental peace or disturbance based on Moon\'s strength.',
+    sinhala: 'මානසික වර්ධනය, මව්ගේ බලපෑම, ගමන්, ජනප්‍රියත්වය.',
+    career: 'Public-facing roles, transfers, liquid investments',
+    health: 'Mental health, blood, fluids, sleep issues',
+    relationship: 'Deep emotional bonds, possible mood swings affecting family',
+  },
+  'Mars': {
+    general: 'Energy, courage, property acquisition, sibling matters. Risk of accidents, surgery, or conflicts.',
+    sinhala: 'ශක්තිය, ධෛර්යය, දේපළ ලැබීම. අනතුරු, ශල්‍ය කර්ම අවදානම.',
+    career: 'Technical roles, property dealings, competitive success',
+    health: 'Blood pressure, injuries, fever, inflammation',
+    relationship: 'Passionate but possible arguments, sibling events',
+  },
+  'Mercury': {
+    general: 'Education, business growth, communication skills, intellectual pursuits. Travel and trade flourish.',
+    sinhala: 'අධ්‍යාපනය, ව්‍යාපාර වර්ධනය, බුද්ධිමය කටයුතු. වෙළඳාම සමෘද්ධි.',
+    career: 'Business expansion, writing, commerce, education sector',
+    health: 'Nervous system, skin, respiratory issues',
+    relationship: 'Good communication, friendships, networking',
+  },
+  'Jupiter': {
+    general: 'Wisdom, wealth accumulation, spiritual growth, children events, guru blessings. Most auspicious period.',
+    sinhala: 'ප්‍රඥාව, ධන සමුච්චය, ආධ්‍යාත්මික වර්ධනය, දරු සම්පත්.',
+    career: 'Major promotions, wealth gain, banking, teaching, legal success',
+    health: 'Liver, obesity, diabetes risk — but generally healthy period',
+    relationship: 'Marriage, children, guru-disciple bonds, domestic happiness',
+  },
+  'Saturn': {
+    general: 'Hard work, discipline, karma lessons, delays then gains. Property through effort, elder support.',
+    sinhala: 'වෙහෙස, විනය, කර්ම පාඩම්, ප්‍රමාදය නමුත් ලාභ. දේපළ.',
+    career: 'Slow but steady rise, labor-intensive roles, authority through perseverance',
+    health: 'Joint pain, teeth, chronic conditions, aging effects',
+    relationship: 'Delayed marriage or responsibilities, loyalty tested',
+  },
+  'Venus': {
+    general: 'Luxury, romance, art, vehicles, marriage, comfort. Material abundance and sensual pleasures.',
+    sinhala: 'සුඛෝපභෝගය, ප්‍රේමය, කලාව, වාහන, විවාහය. භෞතික සමෘද්ධිය.',
+    career: 'Entertainment, beauty, luxury business, creative arts success',
+    health: 'Reproductive system, kidneys, blood sugar',
+    relationship: 'Marriage, romance, beauty, domestic harmony',
+  },
+  'Rahu': {
+    general: 'Sudden gains/losses, foreign connections, unconventional paths, technology, obsessions. Illusion & ambition.',
+    sinhala: 'හදිසි ලාභ/අලාභ, විදේශ සම්බන්ධතා, අසාමාන්‍ය මාර්ග, තාක්ෂණය.',
+    career: 'Foreign job, IT/tech, research, sudden career change',
+    health: 'Mysterious ailments, poison, mental anxiety, addictions',
+    relationship: 'Unconventional relationships, foreign spouse possible',
+  },
+  'Ketu': {
+    general: 'Spiritual awakening, detachment, past-life karma, mystical experiences. Losses leading to growth.',
+    sinhala: 'ආධ්‍යාත්මික අවබෝධය, විරාගය, පෙර කර්ම, අභිරහස් අත්දැකීම්.',
+    career: 'Spiritual vocation, research, sudden changes, endings',
+    health: 'Mysterious diseases, surgery, past-life health karma',
+    relationship: 'Detachment, separation risk, spiritual partner',
+  },
+};
+
+/**
+ * Helper: Determine functional relationship of a planet for a given Lagna
+ */
+function getFunctionalNature(lagnaName, planetName) {
+  const status = FUNCTIONAL_STATUS[lagnaName];
+  if (!status) return 'neutral';
+  if (status.yogaKaraka === planetName) return 'yogaKaraka';
+  if (status.benefics.includes(planetName)) return 'benefic';
+  if (status.malefics.includes(planetName)) return 'malefic';
+  return 'neutral';
+}
+
+/**
+ * Calculate Vimshottari Dasha with Antardashas (sub-periods)
+ * Returns Mahadasha + Antardasha breakdown
+ */
+function calculateVimshottariDetailed(moonLongitude, birthDate) {
+  const DASA_LORDS = ['Ketu', 'Venus', 'Sun', 'Moon', 'Mars', 'Rahu', 'Jupiter', 'Saturn', 'Mercury'];
+  const DASA_YEARS = { 'Ketu': 7, 'Venus': 20, 'Sun': 6, 'Moon': 10, 'Mars': 7, 'Rahu': 18, 'Jupiter': 16, 'Saturn': 19, 'Mercury': 17 };
+  const TOTAL_YEARS = 120;
+
+  const nakshatraSpan = 13.333333;
+  const nakshatraIndex = Math.floor(moonLongitude / nakshatraSpan);
+  const degreesInNakshatra = moonLongitude % nakshatraSpan;
+  const percentageRemaining = 1 - (degreesInNakshatra / nakshatraSpan);
+
+  const startDasaIndex = nakshatraIndex % 9;
+
+  // Helper to add fractional years to a date precisely
+  const addYears = (date, years) => {
+    const d = new Date(date);
+    const days = years * 365.25;
+    d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+    return d;
+  };
+
+  const periods = [];
+  let currentDate = new Date(birthDate);
+
+  for (let i = 0; i < 9; i++) {
+    const idx = (startDasaIndex + i) % 9;
+    const lord = DASA_LORDS[idx];
+    const totalYears = DASA_YEARS[lord];
+    const duration = i === 0 ? totalYears * percentageRemaining : totalYears;
+
+    const startDate = new Date(currentDate);
+    const endDate = addYears(currentDate, duration);
+
+    // Calculate Antardashas within this Mahadasha
+    const antardashas = [];
+    let adDate = new Date(startDate);
+    for (let j = 0; j < 9; j++) {
+      const adIdx = (idx + j) % 9;
+      const adLord = DASA_LORDS[adIdx];
+      const adYears = (DASA_YEARS[lord] * DASA_YEARS[adLord]) / TOTAL_YEARS;
+      const adDuration = i === 0 ? adYears * percentageRemaining : adYears;
+      // For the first mahadasha, only include antardashas that haven't passed
+      // Actually, all antardashas proportionally shrink for the first period
+      const adStart = new Date(adDate);
+      const adEnd = addYears(adDate, i === 0 ? adDuration : adYears);
+
+      antardashas.push({
+        lord: adLord,
+        start: adStart.toISOString().split('T')[0],
+        endDate: adEnd.toISOString().split('T')[0],
+        years: i === 0 ? adDuration : adYears,
+      });
+      adDate = adEnd;
+    }
+
+    periods.push({
+      type: 'Mahadasha',
+      lord,
+      start: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+      years: duration,
+      effects: DASHA_EFFECTS[lord] || {},
+      antardashas,
+    });
+
+    currentDate = endDate;
+  }
+
+  return periods;
+}
+
+/**
+ * Analyze a specific house deeply
+ * @param {number} houseNum - 1-12
+ * @param {Array} houses - D1 house chart
+ * @param {Object} planets - All planet positions
+ * @param {Object} drishtis - Planetary aspects
+ * @param {string} lagnaName - Lagna rashi name
+ * @returns {Object} Deep analysis of the house
+ */
+function analyzeHouse(houseNum, houses, planets, drishtis, lagnaName) {
+  const house = houses[houseNum - 1];
+  if (!house) return null;
+
+  const rashiLord = house.rashiLord || RASHIS[(house.rashiId || 1) - 1]?.lord || 'Unknown';
+  const planetsInHouse = house.planets.filter(p => !['Lagna'].includes(p.name));
+  const planetNames = planetsInHouse.map(p => p.name);
+
+  // Find which house the lord sits in
+  const lordHouse = houses.findIndex(h => h.planets.some(p => p.name === rashiLord)) + 1;
+
+  // Aspects on this house
+  const aspectingPlanets = drishtis?.houseAspectedBy?.[houseNum] || [];
+
+  // Strength assessment
+  let strength = 'moderate';
+  const lordNature = getFunctionalNature(lagnaName, rashiLord);
+
+  if (lordNature === 'yogaKaraka' || lordNature === 'benefic') strength = 'strong';
+  if (lordNature === 'malefic') strength = 'challenged';
+
+  // Check if lord is in kendra/trikona from this house
+  if (lordHouse) {
+    const dist = ((lordHouse - houseNum + 12) % 12) + 1;
+    if ([1, 4, 7, 10].includes(dist)) strength = 'very strong';
+    if ([6, 8, 12].includes(dist)) strength = 'weak';
+  }
+
+  // Check benefic/malefic planets in house
+  const beneficsIn = planetNames.filter(p => getFunctionalNature(lagnaName, p) === 'benefic');
+  const maleficsIn = planetNames.filter(p => getFunctionalNature(lagnaName, p) === 'malefic');
+
+  if (beneficsIn.length > 0 && maleficsIn.length === 0) strength = 'very strong';
+  if (maleficsIn.length > 0 && beneficsIn.length === 0 && strength !== 'very strong') strength = 'challenged';
+
+  return {
+    houseNumber: houseNum,
+    signification: HOUSE_SIGNIFICATIONS[houseNum],
+    rashi: house.rashi,
+    rashiEnglish: house.rashiEnglish,
+    rashiLord,
+    lordHouse,
+    planetsInHouse: planetNames,
+    aspectingPlanets,
+    strength,
+    lordNature,
+    beneficsIn,
+    maleficsIn,
+  };
+}
+
+/**
+ * Generate comprehensive Jyotish report
+ * This is the master report function that produces a full professional-grade reading
+ * 
+ * @param {Date} birthDate
+ * @param {number} lat
+ * @param {number} lng
+ * @returns {Object} Complete structured report with all 12 sections
+ */
+function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612) {
+  // ── Gather all chart data ──────────────────────────────────────
+  const date = new Date(birthDate);
+  const lagna = getLagna(date, lat, lng);
+  const lagnaName = lagna.rashi.name;
+  const moonSidereal = toSidereal(getMoonLongitude(date), date);
+  const sunSidereal = toSidereal(getSunLongitude(date), date);
+  const moonRashi = getRashi(moonSidereal);
+  const sunRashi = getRashi(sunSidereal);
+  const moonNakshatra = getNakshatra(moonSidereal);
+  const houseChart = buildHouseChart(date, lat, lng);
+  const houses = houseChart.houses;
+  const planets = houseChart.planets;
+  const navamsha = buildNavamshaChart(date, lat, lng);
+  const drishtis = calculateDrishtis(houses);
+  const ashtakavarga = calculateAshtakavarga(date, lat, lng);
+  const yogas = detectYogas(date, lat, lng);
+  const planetStrengths = getPlanetStrengths(date, lat, lng);
+  const panchanga = getPanchanga(date, lat, lng);
+  const dasaPeriods = calculateVimshottariDetailed(moonSidereal, date);
+  const functionalStatus = FUNCTIONAL_STATUS[lagnaName] || {};
+
+  // Helper functions
+  const getPlanetHouse = (planetName) => {
+    const h = houses.find(h => h.planets.some(p => p.name === planetName));
+    return h ? h.houseNumber : 0;
+  };
+
+  const getHouseLord = (houseNum) => {
+    const h = houses[houseNum - 1];
+    if (!h) return 'Unknown';
+    return h.rashiLord || RASHIS[(h.rashiId || 1) - 1]?.lord || 'Unknown';
+  };
+
+  const isInKendra = (h) => [1, 4, 7, 10].includes(h);
+  const isInTrikona = (h) => [1, 5, 9].includes(h);
+  const isInDusthana = (h) => [6, 8, 12].includes(h);
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 1: YOGAS — Planetary Alignments
+  // ══════════════════════════════════════════════════════════════
+  const yogaAnalysis = {
+    title: 'Planetary Alignments (Yoga)',
+    sinhala: 'ග්‍රහ යෝග විශ්ලේෂණය',
+    yogas: yogas.map(y => ({
+      ...y,
+      impact: y.strength === 'Very Strong' ? 'Life-defining' : y.strength === 'Strong' ? 'Significant' : 'Moderate',
+    })),
+    summary: yogas.length === 0
+      ? 'No major classical yogas detected. Individual planet strengths and house placements are the primary indicators.'
+      : `${yogas.length} yoga(s) identified. ${yogas.filter(y => y.strength === 'Very Strong' || y.strength === 'Strong').length} are considered powerful.`,
+    functionalBenefics: functionalStatus.benefics || [],
+    functionalMalefics: functionalStatus.malefics || [],
+    yogaKaraka: functionalStatus.yogaKaraka || 'None',
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 2: PERSONALITY & CHARACTER
+  // ══════════════════════════════════════════════════════════════
+  const h1 = analyzeHouse(1, houses, planets, drishtis, lagnaName);
+  const lagnaLordHouse = getPlanetHouse(lagna.rashi.lord);
+
+  // Element analysis
+  const ELEMENTS = { fire: ['Mesha','Simha','Dhanus'], earth: ['Vrishabha','Kanya','Makara'], air: ['Mithuna','Tula','Kumbha'], water: ['Kataka','Vrischika','Meena'] };
+  const lagnaElement = Object.entries(ELEMENTS).find(([, signs]) => signs.includes(lagnaName))?.[0] || 'mixed';
+  const moonElement = Object.entries(ELEMENTS).find(([, signs]) => signs.includes(moonRashi.name))?.[0] || 'mixed';
+
+  const ELEMENT_TRAITS = {
+    fire: { en: 'Dynamic, courageous, leader, impulsive, energetic', si: 'ගතික, ධෛර්යවන්ත, නායක, ශක්තිමත්' },
+    earth: { en: 'Practical, stable, materialistic, patient, reliable', si: 'ප්‍රායෝගික, ස්ථාවර, ඉවසිලිවන්ත, විශ්වාසවන්ත' },
+    air: { en: 'Intellectual, communicative, social, adaptable, analytical', si: 'බුද්ධිමත්, සමාජශීලී, අනුවර්තනය වන' },
+    water: { en: 'Emotional, intuitive, nurturing, sensitive, artistic', si: 'හැඟීම්බර, අවබෝධශීලී, සත්කාරශීලී' },
+  };
+
+  const personality = {
+    title: 'Personality & Character',
+    sinhala: 'පෞරුෂය හා චරිතය',
+    lagna: { name: lagnaName, english: lagna.rashi.english, sinhala: lagna.rashi.sinhala, lord: lagna.rashi.lord, degree: (lagna.sidereal % 30).toFixed(2) },
+    moonSign: { name: moonRashi.name, english: moonRashi.english, sinhala: moonRashi.sinhala },
+    sunSign: { name: sunRashi.name, english: sunRashi.english, sinhala: sunRashi.sinhala },
+    nakshatra: { name: moonNakshatra.name, sinhala: moonNakshatra.sinhala, pada: moonNakshatra.pada, lord: moonNakshatra.lord },
+    lagnaElement: { element: lagnaElement, traits: ELEMENT_TRAITS[lagnaElement] || {} },
+    moonElement: { element: moonElement, traits: ELEMENT_TRAITS[moonElement] || {} },
+    lagnaLordPosition: { house: lagnaLordHouse, interpretation: lagnaLordHouse ? `Lagna lord ${lagna.rashi.lord} in ${HOUSE_SIGNIFICATIONS[lagnaLordHouse]?.name} — focuses life energy on ${HOUSE_SIGNIFICATIONS[lagnaLordHouse]?.governs?.split(',').slice(0, 3).join(', ')}` : '' },
+    planetsIn1st: h1?.planetsInHouse || [],
+    aspectsOn1st: h1?.aspectingPlanets || [],
+    overallStrength: h1?.strength || 'moderate',
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 3: MARRIAGE & RELATIONSHIPS
+  // ══════════════════════════════════════════════════════════════
+  const h7 = analyzeHouse(7, houses, planets, drishtis, lagnaName);
+  const lord7Name = getHouseLord(7);
+  const lord7House = getPlanetHouse(lord7Name);
+  const venusHouse = getPlanetHouse('Venus');
+  const navVenus = navamsha.planets?.venus;
+
+  // Manglik/Kuja Dosha check (Mars in 1,2,4,7,8,12 from Lagna or Moon)
+  const marsHouse = getPlanetHouse('Mars');
+  const marsFromMoon = houses.findIndex(h => h.planets.some(p => p.name === 'Mars')) + 1;
+  const moonHouseIdx = getPlanetHouse('Moon');
+  const marsDistFromMoon = marsHouse && moonHouseIdx ? ((marsHouse - moonHouseIdx + 12) % 12) + 1 : 0;
+  const kujaDosha = [1, 2, 4, 7, 8, 12].includes(marsHouse) || [1, 2, 4, 7, 8, 12].includes(marsDistFromMoon);
+
+  // Marriage timing — 7th lord dasha or Venus dasha indicates marriage period
+  const marriageTimingDasas = dasaPeriods.filter(d =>
+    d.lord === lord7Name || d.lord === 'Venus' || d.lord === 'Jupiter'
+  ).map(d => `${d.lord} Mahadasha: ${d.start} to ${d.endDate}`);
+
+  const marriage = {
+    title: 'Marriage & Relationships',
+    sinhala: 'විවාහය හා සබඳතා',
+    seventhHouse: h7,
+    seventhLord: { name: lord7Name, house: lord7House, interpretation: lord7House ? `7th lord ${lord7Name} in house ${lord7House} (${HOUSE_SIGNIFICATIONS[lord7House]?.name})` : '' },
+    venus: { house: venusHouse, rashi: planets.venus?.rashi, navamshaRashi: navVenus?.navamshaRashiEnglish },
+    kujaDosha: { present: kujaDosha, marsHouse, note: kujaDosha ? 'Manglik Dosha present. Should be matched with another Manglik or dosha-cancellation checked.' : 'No Kuja Dosha. Marriage prospects are unobstructed by Mars.' },
+    marriageTimingIndicators: marriageTimingDasas,
+    spouseQualities: `7th house in ${h7?.rashiEnglish || ''} ruled by ${lord7Name}. ${h7?.planetsInHouse?.length ? 'Planets in 7th (' + h7.planetsInHouse.join(', ') + ') directly influence spouse character.' : 'No planets in 7th — lord\'s position is the primary indicator.'}`,
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 4: CAREER & FINANCIAL STATUS
+  // ══════════════════════════════════════════════════════════════
+  const h10 = analyzeHouse(10, houses, planets, drishtis, lagnaName);
+  const h2 = analyzeHouse(2, houses, planets, drishtis, lagnaName);
+  const h11 = analyzeHouse(11, houses, planets, drishtis, lagnaName);
+  const lord10Name = getHouseLord(10);
+  const lord2Name = getHouseLord(2);
+  const lord11Name = getHouseLord(11);
+
+  // Determine career suggestions based on 10th house lord and planets
+  const careerPlanets = [lord10Name, ...(h10?.planetsInHouse || [])];
+  const suggestedCareers = [...new Set(careerPlanets.flatMap(p => CAREER_BY_PLANET[p] || []))];
+
+  // Dhana (wealth) yogas check
+  const dhanaYogas = [];
+  // 2nd lord in kendra/trikona
+  const lord2House = getPlanetHouse(lord2Name);
+  if (lord2House && (isInKendra(lord2House) || isInTrikona(lord2House))) {
+    dhanaYogas.push(`${lord2Name} (2nd lord) in house ${lord2House} — wealth accumulation supported`);
+  }
+  // 11th lord in kendra
+  const lord11House = getPlanetHouse(lord11Name);
+  if (lord11House && isInKendra(lord11House)) {
+    dhanaYogas.push(`${lord11Name} (11th lord) in Kendra — strong income gains`);
+  }
+  // 9th lord (fortune) + 10th lord connection
+  const lord9Name = getHouseLord(9);
+  const lord9House = getPlanetHouse(lord9Name);
+  const lord10House = getPlanetHouse(lord10Name);
+  if (lord9House && lord10House && lord9House === lord10House) {
+    dhanaYogas.push(`Raja Yoga: 9th lord (${lord9Name}) and 10th lord (${lord10Name}) conjoin — fortune through career`);
+  }
+
+  const career = {
+    title: 'Career & Financial Status',
+    sinhala: 'වෘත්තිය හා මූල්‍ය තත්ත්වය',
+    tenthHouse: h10,
+    tenthLord: { name: lord10Name, house: lord10House },
+    secondHouse: h2,
+    eleventhHouse: h11,
+    suggestedCareers,
+    dhanaYogas,
+    wealthStrength: ashtakavarga?.sarvashtakavarga ? (() => {
+      // Check bindus in 2nd and 11th house signs
+      const h2RashiIdx = (houses[1]?.rashiId || 1) - 1;
+      const h11RashiIdx = (houses[10]?.rashiId || 1) - 1;
+      const h2Bindus = ashtakavarga.sarvashtakavarga[h2RashiIdx] || 0;
+      const h11Bindus = ashtakavarga.sarvashtakavarga[h11RashiIdx] || 0;
+      return { house2Bindus: h2Bindus, house11Bindus: h11Bindus, assessment: (h2Bindus + h11Bindus) >= 56 ? 'Strong wealth potential' : (h2Bindus + h11Bindus) >= 48 ? 'Moderate wealth' : 'Wealth requires effort' };
+    })() : null,
+    businessVsService: isInKendra(lord10House) ? 'Strong potential for independent business or leadership roles' : isInDusthana(lord10House) ? 'Service-oriented or behind-the-scenes roles may suit better' : 'A balanced mix of initiative and cooperative work',
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 5: CHILDREN & FAMILY
+  // ══════════════════════════════════════════════════════════════
+  const h5 = analyzeHouse(5, houses, planets, drishtis, lagnaName);
+  const lord5Name = getHouseLord(5);
+  const lord5House = getPlanetHouse(lord5Name);
+  const jupiterHouse = getPlanetHouse('Jupiter');
+
+  const children = {
+    title: 'Children & Family',
+    sinhala: 'දරු සම්පත් හා පවුල',
+    fifthHouse: h5,
+    fifthLord: { name: lord5Name, house: lord5House },
+    jupiter: { house: jupiterHouse, note: 'Jupiter is the natural karaka (significator) for children' },
+    assessment: h5?.strength === 'very strong' || h5?.strength === 'strong'
+      ? 'Strong indications for children. The 5th house is well-disposed.'
+      : h5?.strength === 'challenged' || h5?.strength === 'weak'
+        ? 'Some challenges related to children may arise. Remedial measures recommended.'
+        : 'Moderate indications. Timing through Dasha of 5th lord is important.',
+    childrenTimingDasas: dasaPeriods.filter(d => d.lord === lord5Name || d.lord === 'Jupiter').map(d => `${d.lord}: ${d.start} to ${d.endDate}`),
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 6: LIFELONG FUTURE PREDICTIONS
+  // ══════════════════════════════════════════════════════════════
+  const currentDate = new Date();
+  const currentDasha = dasaPeriods.find(d => new Date(d.start) <= currentDate && new Date(d.endDate) >= currentDate);
+  const currentAntardasha = currentDasha?.antardashas?.find(ad => new Date(ad.start) <= currentDate && new Date(ad.endDate) >= currentDate);
+  const nextDasha = dasaPeriods.find(d => new Date(d.start) > currentDate);
+
+  const lifePredictions = {
+    title: 'Lifelong Future Predictions',
+    sinhala: 'ජීවිත කාලීන අනාවැකි',
+    currentDasha: currentDasha ? {
+      lord: currentDasha.lord,
+      period: `${currentDasha.start} to ${currentDasha.endDate}`,
+      effects: currentDasha.effects,
+    } : null,
+    currentAntardasha: currentAntardasha ? {
+      lord: currentAntardasha.lord,
+      period: `${currentAntardasha.start} to ${currentAntardasha.endDate}`,
+    } : null,
+    nextDasha: nextDasha ? {
+      lord: nextDasha.lord,
+      period: `${nextDasha.start} to ${nextDasha.endDate}`,
+      effects: nextDasha.effects,
+    } : null,
+    lifePhaseSummary: dasaPeriods.map(d => ({
+      lord: d.lord,
+      period: `${d.start} to ${d.endDate}`,
+      years: d.years.toFixed(1),
+      theme: DASHA_EFFECTS[d.lord]?.general || '',
+      isCurrent: currentDasha?.lord === d.lord,
+    })),
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 7: INTELLECTUAL & MENTAL HEALTH
+  // ══════════════════════════════════════════════════════════════
+  const h4 = analyzeHouse(4, houses, planets, drishtis, lagnaName);
+  const lord4Name = getHouseLord(4);
+  const mercuryHouse = getPlanetHouse('Mercury');
+  const moonHouse = getPlanetHouse('Moon');
+  const mercuryStrength = planetStrengths.mercury || {};
+  const moonStrength = planetStrengths.moon || {};
+
+  const mentalHealth = {
+    title: 'Intellectual & Mental Health',
+    sinhala: 'බුද්ධිය හා මානසික සෞඛ්‍යය',
+    fourthHouse: h4,
+    mercury: { house: mercuryHouse, strength: mercuryStrength.strength, score: mercuryStrength.score, note: 'Mercury governs intellect, analytical ability, and communication' },
+    moon: { house: moonHouse, strength: moonStrength.strength, score: moonStrength.score, note: 'Moon governs mind, emotions, and mental stability' },
+    education: {
+      fourthLord: lord4Name,
+      fourthLordHouse: getPlanetHouse(lord4Name),
+      fifthLord: lord5Name,
+      fifthLordHouse: lord5House,
+      assessment: mercuryStrength.score >= 60 && moonStrength.score >= 50
+        ? 'Strong intellectual capacity. Education will be a source of success.'
+        : mercuryStrength.score >= 40
+          ? 'Good learning ability. Focused effort in education will yield results.'
+          : 'Education may face some obstacles. Structured learning approach recommended.',
+    },
+    mentalStability: moonStrength.score >= 70
+      ? 'Emotionally stable with good mental resilience'
+      : moonStrength.score >= 50
+        ? 'Generally stable but may experience emotional fluctuations during Moon-related dashas'
+        : 'Mental health needs attention. Meditation, mantra japa, and Moon remedies recommended',
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 8: BUSINESS GROWTH
+  // ══════════════════════════════════════════════════════════════
+  const h7ForBiz = analyzeHouse(7, houses, planets, drishtis, lagnaName); // 7th = partnerships/biz
+  const h3 = analyzeHouse(3, houses, planets, drishtis, lagnaName); // 3rd = initiative, courage
+
+  // Best business periods based on 10th lord, 7th lord (partnerships), 11th lord (gains)
+  const businessDasas = dasaPeriods.filter(d =>
+    d.lord === lord10Name || d.lord === lord11Name || d.lord === lord7Name
+  );
+
+  // Ashtakavarga strength of 10th house sign
+  const h10RashiIdx = (houses[9]?.rashiId || 1) - 1;
+  const h10Bindus = ashtakavarga?.sarvashtakavarga?.[h10RashiIdx] || 0;
+
+  const business = {
+    title: 'Business Growth',
+    sinhala: 'ව්‍යාපාර වර්ධනය',
+    bestBusinessTypes: suggestedCareers.slice(0, 5),
+    partnershipHouse: h7ForBiz,
+    initiativeHouse: h3,
+    tenthHouseStrength: { bindus: h10Bindus, assessment: h10Bindus >= 30 ? 'Excellent career/business sign' : h10Bindus >= 25 ? 'Good potential' : 'Requires extra effort' },
+    bestPeriods: businessDasas.map(d => ({
+      lord: d.lord,
+      period: `${d.start} to ${d.endDate}`,
+      reason: d.lord === lord10Name ? '10th lord dasha — career peak' : d.lord === lord11Name ? '11th lord dasha — maximum gains' : '7th lord dasha — partnership opportunities',
+    })),
+    businessVsPartnership: h7ForBiz?.strength === 'strong' || h7ForBiz?.strength === 'very strong'
+      ? 'Partnership business is favored. Collaborate with others for maximum gains.'
+      : 'Independent business or solo ventures may be more suitable.',
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 9: SHORT-TERM TRANSITS (Gochara)
+  // ══════════════════════════════════════════════════════════════
+  const today = new Date();
+  const transitPlanets = getAllPlanetPositions(today);
+  const transitSun = transitPlanets.sun;
+  const transitJupiter = transitPlanets.jupiter;
+  const transitSaturn = transitPlanets.saturn;
+
+  const getTransitHouse = (transitRashiId) => {
+    const lagnaRashiId = lagna.rashi.id;
+    return ((transitRashiId - lagnaRashiId + 12) % 12) + 1;
+  };
+
+  const TRANSIT_HOUSE_EFFECTS = {
+    1: 'Focus on self, health, new beginnings',
+    2: 'Financial matters, family events',
+    3: 'Communication, short journeys, siblings',
+    4: 'Home, property, mother, emotional matters',
+    5: 'Romance, creativity, children, speculative gains',
+    6: 'Health challenges, competition, service',
+    7: 'Relationships, partnerships, marriage events',
+    8: 'Transformation, obstacles, inheritance',
+    9: 'Fortune, travel, higher learning, dharma',
+    10: 'Career peak, public recognition, authority',
+    11: 'Gains, income increase, fulfilled aspirations',
+    12: 'Expenses, foreign travel, spiritual growth',
+  };
+
+  const transits = {
+    title: 'Short-term Transits (Gochara)',
+    sinhala: 'ගෝචර ග්‍රහ සංක්‍රමණ',
+    date: today.toISOString().split('T')[0],
+    sun: {
+      currentSign: transitSun.rashiEnglish,
+      houseFromLagna: getTransitHouse(transitSun.rashiId),
+      effect: TRANSIT_HOUSE_EFFECTS[getTransitHouse(transitSun.rashiId)] || '',
+      duration: '~30 days per sign',
+    },
+    jupiter: {
+      currentSign: transitJupiter.rashiEnglish,
+      houseFromLagna: getTransitHouse(transitJupiter.rashiId),
+      effect: TRANSIT_HOUSE_EFFECTS[getTransitHouse(transitJupiter.rashiId)] || '',
+      duration: '~13 months per sign',
+      note: 'Jupiter transits are among the most important in Vedic astrology',
+    },
+    saturn: {
+      currentSign: transitSaturn.rashiEnglish,
+      houseFromLagna: getTransitHouse(transitSaturn.rashiId),
+      effect: TRANSIT_HOUSE_EFFECTS[getTransitHouse(transitSaturn.rashiId)] || '',
+      duration: '~2.5 years per sign',
+      sadheSati: (() => {
+        const satFromMoon = ((transitSaturn.rashiId - moonRashi.id + 12) % 12) + 1;
+        if (satFromMoon === 12) return { active: true, phase: 'Rising (ආරෝහණ)', note: 'Saturn entering 12th from Moon — Sade Sati beginning. Emotional challenges and transformation ahead.' };
+        if (satFromMoon === 1) return { active: true, phase: 'Peak (උච්ච)', note: 'Saturn over natal Moon — Peak Sade Sati. Maximum pressure but also maximum growth.' };
+        if (satFromMoon === 2) return { active: true, phase: 'Setting (අවරෝහණ)', note: 'Saturn in 2nd from Moon — Final phase of Sade Sati. Financial adjustments.' };
+        return { active: false, phase: 'Not active', note: 'Sade Sati is not currently active.' };
+      })(),
+    },
+    ashtakavargaTransit: {
+      jupiterSignBindus: ashtakavarga?.sarvashtakavarga?.[transitJupiter.rashiId - 1] || 0,
+      saturnSignBindus: ashtakavarga?.sarvashtakavarga?.[transitSaturn.rashiId - 1] || 0,
+      note: 'Transits through signs with 28+ Sarvashtakavarga bindus give favorable results',
+    },
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 10: REAL ESTATE & ASSETS
+  // ══════════════════════════════════════════════════════════════
+  const lord4House = getPlanetHouse(lord4Name);
+
+  const realEstate = {
+    title: 'Real Estate & Assets',
+    sinhala: 'නිශ්චල දේපළ හා වත්කම්',
+    fourthHouse: h4,
+    fourthLord: { name: lord4Name, house: lord4House },
+    mars: { house: marsHouse, note: 'Mars is the natural karaka for land and property' },
+    saturn: { house: getPlanetHouse('Saturn'), note: 'Saturn governs construction, buildings, and enduring structures' },
+    propertyYoga: (() => {
+      const checks = [];
+      if (isInKendra(lord4House) || isInTrikona(lord4House)) checks.push(`4th lord ${lord4Name} well-placed in house ${lord4House} — property acquisition supported`);
+      if (isInKendra(marsHouse) || isInTrikona(marsHouse)) checks.push(`Mars in house ${marsHouse} — land ownership indicated`);
+      if (h4?.beneficsIn?.length > 0) checks.push(`Benefic planets in 4th house (${h4.beneficsIn.join(', ')}) — comfort and property blessed`);
+      if (checks.length === 0) checks.push('Property matters require careful timing. Consult Dasha periods of 4th lord and Mars.');
+      return checks;
+    })(),
+    bestPeriodsForProperty: dasaPeriods.filter(d => d.lord === lord4Name || d.lord === 'Mars' || d.lord === 'Saturn').map(d => ({
+      lord: d.lord,
+      period: `${d.start} to ${d.endDate}`,
+      reason: d.lord === lord4Name ? '4th lord dasha — prime time for home/property' : d.lord === 'Mars' ? 'Mars dasha — land acquisition period' : 'Saturn dasha — construction, long-term property investment',
+    })),
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 11: EMPLOYMENT & PROMOTIONS
+  // ══════════════════════════════════════════════════════════════
+  const lord6Name = getHouseLord(6);
+  const h6 = analyzeHouse(6, houses, planets, drishtis, lagnaName);
+
+  const employment = {
+    title: 'Employment & Promotions',
+    sinhala: 'රැකියා හා උසස්වීම්',
+    tenthHouse: h10,
+    sixthHouse: h6, // 6th = service, daily work
+    tenthLord: { name: lord10Name, house: lord10House },
+    careerPaths: suggestedCareers,
+    promotionPeriods: dasaPeriods.filter(d => d.lord === lord10Name || d.lord === lord9Name || d.lord === 'Sun').map(d => ({
+      lord: d.lord,
+      period: `${d.start} to ${d.endDate}`,
+      reason: d.lord === lord10Name ? '10th lord dasha — career advancement' : d.lord === lord9Name ? '9th lord dasha — fortune and recognition' : 'Sun dasha — authority and government favor',
+    })),
+    jobChangePeriods: dasaPeriods.filter(d => d.lord === 'Rahu' || d.lord === 'Ketu' || d.lord === lord6Name).map(d => ({
+      lord: d.lord,
+      period: `${d.start} to ${d.endDate}`,
+      reason: d.lord === 'Rahu' ? 'Rahu dasha — sudden changes, foreign opportunities' : d.lord === 'Ketu' ? 'Ketu dasha — endings and spiritual shifts' : '6th lord dasha — service sector changes',
+    })),
+    serviceVsAuthority: getPlanetHouse('Sun') && isInKendra(getPlanetHouse('Sun'))
+      ? 'Leadership and authority roles are naturally suited. Government or managerial positions.'
+      : 'Service-oriented or specialized professional roles may bring greater stability.',
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 12: FINANCIAL MANAGEMENT
+  // ══════════════════════════════════════════════════════════════
+  const h8 = analyzeHouse(8, houses, planets, drishtis, lagnaName);
+  const h12 = analyzeHouse(12, houses, planets, drishtis, lagnaName);
+  const lord8Name = getHouseLord(8);
+  const lord12Name = getHouseLord(12);
+
+  const financial = {
+    title: 'Financial Management',
+    sinhala: 'මූල්‍ය කළමනාකරණය',
+    income: {
+      secondHouse: h2,
+      eleventhHouse: h11,
+      secondLord: { name: lord2Name, house: lord2House },
+      eleventhLord: { name: lord11Name, house: lord11House },
+      dhanaYogas,
+    },
+    expenses: {
+      twelfthHouse: h12,
+      twelfthLord: { name: lord12Name, house: getPlanetHouse(lord12Name) },
+      note: h12?.maleficsIn?.length > 0
+        ? `Malefic planets in 12th house (${h12.maleficsIn.join(', ')}) — unexpected expenses possible. Budget carefully.`
+        : 'Expenses are manageable with proper planning.',
+    },
+    losses: {
+      eighthHouse: h8,
+      eighthLord: { name: lord8Name, house: getPlanetHouse(lord8Name) },
+      riskPeriods: dasaPeriods.filter(d => d.lord === lord8Name || d.lord === lord12Name).map(d => ({
+        lord: d.lord,
+        period: `${d.start} to ${d.endDate}`,
+        reason: d.lord === lord8Name ? '8th lord dasha — watch for unexpected losses, insurance claims' : '12th lord dasha — expenses may increase, foreign travel spending',
+      })),
+    },
+    investmentAdvice: (() => {
+      const tips = [];
+      if (h2?.strength === 'strong' || h2?.strength === 'very strong') tips.push('Savings and fixed deposits will grow well');
+      if (h11?.strength === 'strong' || h11?.strength === 'very strong') tips.push('Stock market and speculative investments can be profitable');
+      if (jupiterHouse && (isInKendra(jupiterHouse) || isInTrikona(jupiterHouse))) tips.push('Gold, precious metals, and traditional investments are favored');
+      if (marsHouse && (isInKendra(marsHouse) || [2, 4, 11].includes(marsHouse))) tips.push('Real estate investment will bring good returns');
+      if (tips.length === 0) tips.push('Conservative investments and savings are recommended. Avoid speculative ventures during malefic dashas.');
+      return tips;
+    })(),
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 13: 25-YEAR TIMELINE (Dasha Timeline)
+  // ══════════════════════════════════════════════════════════════
+  const timelineStart = new Date();
+  const timelineEnd = new Date(timelineStart);
+  timelineEnd.setFullYear(timelineEnd.getFullYear() + 25);
+
+  const timeline25 = {
+    title: '25-Year Predictive Timeline',
+    sinhala: 'වසර 25 අනාවැකි කාල සටහන',
+    from: timelineStart.toISOString().split('T')[0],
+    to: timelineEnd.toISOString().split('T')[0],
+    periods: [],
+  };
+
+  // Build the 25-year timeline with Mahadasha + Antardasha breakdowns
+  for (const dasha of dasaPeriods) {
+    const dashaStart = new Date(dasha.start);
+    const dashaEnd = new Date(dasha.endDate);
+
+    // Skip periods entirely before now or after 25 years
+    if (dashaEnd < timelineStart || dashaStart > timelineEnd) continue;
+
+    const effectiveStart = dashaStart < timelineStart ? timelineStart : dashaStart;
+    const effectiveEnd = dashaEnd > timelineEnd ? timelineEnd : dashaEnd;
+
+    const dashaLordStrength = planetStrengths[dasha.lord.toLowerCase()]?.strength || 'Medium';
+    const dashaLordNature = getFunctionalNature(lagnaName, dasha.lord);
+
+    // Filter antardashas within the 25-year window
+    const relevantADs = (dasha.antardashas || []).filter(ad => {
+      const adEnd = new Date(ad.endDate);
+      const adStart = new Date(ad.start);
+      return adEnd >= timelineStart && adStart <= timelineEnd;
+    }).map(ad => {
+      const adLordNature = getFunctionalNature(lagnaName, ad.lord);
+      const adEffects = DASHA_EFFECTS[ad.lord] || {};
+      return {
+        lord: ad.lord,
+        period: `${ad.start} to ${ad.endDate}`,
+        nature: adLordNature,
+        theme: adEffects.general?.split('.')[0] || '',
+        career: adEffects.career || '',
+        health: adEffects.health || '',
+        relationship: adEffects.relationship || '',
+      };
+    });
+
+    timeline25.periods.push({
+      mahadasha: dasha.lord,
+      period: `${effectiveStart.toISOString().split('T')[0]} to ${effectiveEnd.toISOString().split('T')[0]}`,
+      nature: dashaLordNature,
+      strength: dashaLordStrength,
+      effects: dasha.effects,
+      antardashas: relevantADs,
+      overallTone: dashaLordNature === 'benefic' || dashaLordNature === 'yogaKaraka'
+        ? 'Favorable period overall. Growth and positive developments expected.'
+        : dashaLordNature === 'malefic'
+          ? 'Challenging period. Careful planning and remedial measures recommended.'
+          : 'Mixed results. Outcomes depend on sub-periods and transits.',
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // REMEDIES & GEM RECOMMENDATIONS
+  // ══════════════════════════════════════════════════════════════
+  const weakPlanets = Object.entries(planetStrengths)
+    .filter(([k, v]) => v.score < 45 && !['rahu', 'ketu'].includes(k))
+    .map(([k, v]) => ({ planet: v.name, score: v.score, gem: PLANET_KARAKAS[v.name]?.gem, color: PLANET_KARAKAS[v.name]?.color, day: PLANET_KARAKAS[v.name]?.day }));
+
+  const remedies = {
+    title: 'Remedies & Recommendations',
+    sinhala: 'පිළියම් හා නිර්දේශ',
+    lagnaGem: PLANET_KARAKAS[lagna.rashi.lord]?.gem || '',
+    lagnaColor: PLANET_KARAKAS[lagna.rashi.lord]?.color || '',
+    lagnaDay: PLANET_KARAKAS[lagna.rashi.lord]?.day || '',
+    weakPlanetRemedies: weakPlanets,
+    yogaKaraka: functionalStatus.yogaKaraka ? {
+      planet: functionalStatus.yogaKaraka,
+      gem: PLANET_KARAKAS[functionalStatus.yogaKaraka]?.gem,
+      note: `Wearing ${PLANET_KARAKAS[functionalStatus.yogaKaraka]?.gem} is highly recommended as ${functionalStatus.yogaKaraka} is your Yoga Karaka planet.`,
+    } : null,
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // ASSEMBLE FINAL REPORT
+  // ══════════════════════════════════════════════════════════════
+  return {
+    generatedAt: new Date().toISOString(),
+    birthData: {
+      date: date.toISOString(),
+      lat, lng,
+      lagna: personality.lagna,
+      moonSign: personality.moonSign,
+      sunSign: personality.sunSign,
+      nakshatra: personality.nakshatra,
+      panchanga: { tithi: panchanga.tithi?.name, yoga: panchanga.yoga?.name, karana: panchanga.karana?.name, vaara: panchanga.vaara?.name },
+    },
+    sections: {
+      yogaAnalysis,
+      personality,
+      marriage,
+      career,
+      children,
+      lifePredictions,
+      mentalHealth,
+      business,
+      transits,
+      realEstate,
+      employment,
+      financial,
+      timeline25,
+      remedies,
+    },
   };
 }
 
@@ -1870,6 +2738,9 @@ module.exports = {
   RASHIS,
   PLANETS,
   WEEKDAYS,
+  HOUSE_SIGNIFICATIONS,
+  PLANET_KARAKAS,
+  FUNCTIONAL_STATUS,
   calculateRahuKalaya,
   calculateSunriseSunset,
   getMoonLongitude,
@@ -1898,5 +2769,9 @@ module.exports = {
   getDailyNakath,
   dateToJD,
   calculateVimshottari,
-  generateDetailedReport
+  calculateVimshottariDetailed,
+  generateDetailedReport,
+  generateFullReport,      // Comprehensive 13-section Jyotish report
+  getFunctionalNature,
+  analyzeHouse,
 };

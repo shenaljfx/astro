@@ -8,8 +8,8 @@
 
 const express = require('express');
 const router = express.Router();
-const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getSunLongitude, getLagna, getAllPlanetPositions, buildHouseChart, buildNavamshaChart, buildShadvarga, calculateDrishtis, analyzePushkara, calculateAshtakavarga, buildBhavaChalit, detectYogas, getPlanetStrengths, calculateVimshottari, generateDetailedReport, RASHIS } = require('../engine/astrology');
-const { chat } = require('../engine/chat');
+const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getSunLongitude, getLagna, getAllPlanetPositions, buildHouseChart, buildNavamshaChart, buildShadvarga, calculateDrishtis, analyzePushkara, calculateAshtakavarga, buildBhavaChalit, detectYogas, getPlanetStrengths, calculateVimshottari, generateDetailedReport, generateFullReport, RASHIS } = require('../engine/astrology');
+const { chat, generateAINarrativeReport } = require('../engine/chat');
 
 /**
  * Detailed Lagna Palapala (ලග්න පලාපල) - traditional Sri Lankan interpretations
@@ -410,6 +410,118 @@ router.post('/birth-chart', (req, res) => {
         },
         report: generateDetailedReport(lagna.rashi, moonRashi, sunRashi, houseChart.houses),
         dasaPeriods: calculateVimshottari(moonSidereal, date),
+        genderPrediction: (function() {
+          // ── Comprehensive Gender Energy Prediction ──────────────
+          // Uses multiple Vedic indicators for a fun "magic trick" guess.
+          // This is entertainment — NOT a deterministic tool.
+          const lagnaRashiId = lagna.rashi.id;
+          const moonP = houseChart.planets.moon || houseChart.planets.Moon;
+          const sunP = houseChart.planets.sun || houseChart.planets.Sun;
+          const marsP = houseChart.planets.mars || houseChart.planets.Mars;
+          const jupiterP = houseChart.planets.jupiter || houseChart.planets.Jupiter;
+          const venusP = houseChart.planets.venus || houseChart.planets.Venus;
+          const saturnP = houseChart.planets.saturn || houseChart.planets.Saturn;
+          const navLagnaId = navamshaChart.lagna?.rashi?.id || 1;
+
+          let mScore = 0;
+          let total = 0;
+
+          // ── Factor 1: Masculine planets (Sun, Mars, Jupiter) in Lagna or aspecting Lagna (weight 4)
+          // If masculine planets influence the 1st house, masculine energy dominates
+          const lagnaHouse = houseChart.houses.find(function(h) { return h.houseNumber === 1; });
+          const lagnaPlNames = (lagnaHouse ? lagnaHouse.planets : []).map(function(p) { return (p.name || '').toLowerCase(); });
+          const mascInLagna = ['sun', 'mars', 'jupiter'].filter(function(n) { return lagnaPlNames.includes(n); }).length;
+          const femInLagna = ['moon', 'venus'].filter(function(n) { return lagnaPlNames.includes(n); }).length;
+          mScore += mascInLagna * 2;
+          total += (mascInLagna + femInLagna) * 2 || 2; // at least 2
+
+          // ── Factor 2: Lagna lord — is it a masculine or feminine planet? (weight 3)
+          // Masculine lords: Sun, Mars, Jupiter. Feminine: Moon, Venus. Neutral: Mercury, Saturn.
+          const lagnaLord = (lagna.rashi.lord || '').toLowerCase();
+          const mascLords = ['sun', 'mars', 'jupiter'];
+          const femLords = ['moon', 'venus'];
+          if (mascLords.includes(lagnaLord)) mScore += 3;
+          else if (femLords.includes(lagnaLord)) { /* 0 */ }
+          else mScore += 1.5; // neutral (Mercury, Saturn) = half
+          total += 3;
+
+          // ── Factor 3: Sun's house placement — angular houses (1,4,7,10) = strong masculine (weight 2)
+          if (sunP) {
+            const sunHouse = houseChart.houses.findIndex(function(h) { return h.planets.some(function(p) { return (p.key || p.name || '').toLowerCase() === 'sun'; }); }) + 1;
+            if ([1, 4, 7, 10].includes(sunHouse)) mScore += 2; // Sun angular = strong masc
+            else if ([5, 9].includes(sunHouse)) mScore += 1.5; // Sun trikona = moderate
+            else mScore += 0.5;
+          }
+          total += 2;
+
+          // ── Factor 4: Mars strong? Mars in own/exalt = masculine boost (weight 2)
+          if (marsP) {
+            const marsOwn = [1, 8].includes(marsP.rashiId); // Aries or Scorpio
+            const marsExalt = marsP.rashiId === 10; // Capricorn
+            if (marsOwn || marsExalt) mScore += 2;
+            else if (marsP.rashiId % 2 === 1) mScore += 1.5; // odd rashi
+            else mScore += 0.5;
+          }
+          total += 2;
+
+          // ── Factor 5: Moon vs Sun — which is stronger by house position (weight 2)
+          if (sunP && moonP) {
+            const sunH = houseChart.houses.findIndex(function(h) { return h.planets.some(function(p) { return (p.key || p.name || '').toLowerCase() === 'sun'; }); }) + 1;
+            const moonH = houseChart.houses.findIndex(function(h) { return h.planets.some(function(p) { return (p.key || p.name || '').toLowerCase() === 'moon'; }); }) + 1;
+            const sunAngular = [1, 4, 7, 10].includes(sunH);
+            const moonAngular = [1, 4, 7, 10].includes(moonH);
+            if (sunAngular && !moonAngular) mScore += 2;
+            else if (!sunAngular && moonAngular) mScore += 0.5;
+            else mScore += 1; // tie
+          }
+          total += 2;
+
+          // ── Factor 5b: Mars house placement — Mars in Kendra/Trikona = strong masculine (weight 2)
+          if (marsP) {
+            const marsH = houseChart.houses.findIndex(function(h) { return h.planets.some(function(p) { return (p.key || p.name || '').toLowerCase() === 'mars'; }); }) + 1;
+            if ([1, 4, 7, 10].includes(marsH)) mScore += 2;
+            else if ([5, 9].includes(marsH)) mScore += 1.5;
+            else mScore += 0.5;
+          }
+          total += 2;
+
+          // ── Factor 6: Nakshatra gender — each nakshatra has a gender (weight 2)
+          // Male nakshatras: Ashwini, Bharani, Krittika, Mrigashira, Punarvasu, Pushya,
+          //   Magha, Purva Phalguni, Hasta, Chitra, Anuradha, Jyeshtha, Purva Ashadha,
+          //   Shravana, Dhanishta, Purva Bhadrapada, Revati
+          const maleNakshatras = [1, 2, 3, 5, 7, 8, 10, 11, 13, 14, 17, 18, 20, 22, 23, 25, 27];
+          const nakshatraId = moonNakshatra ? (moonNakshatra.id || moonNakshatra.index || 0) : 0;
+          if (maleNakshatras.includes(nakshatraId)) mScore += 2;
+          total += 2;
+
+          // ── Factor 7: Jupiter placement — Jupiter strong = masculine wisdom (weight 1)
+          if (jupiterP) {
+            const jupOwn = [9, 12].includes(jupiterP.rashiId); // Sagittarius or Pisces
+            const jupExalt = jupiterP.rashiId === 4; // Cancer
+            if (jupOwn || jupExalt) mScore += 1;
+            else mScore += 0.5;
+          }
+          total += 1;
+
+          // ── Factor 8: Odd/even Lagna (classical rule but lower weight) (weight 1)
+          if (lagnaRashiId % 2 === 1) mScore += 1;
+          total += 1;
+
+          // ── Factor 9: Navamsha lagna odd/even (weight 1)
+          if (navLagnaId % 2 === 1) mScore += 1;
+          total += 1;
+
+          const malePct = Math.round((mScore / total) * 100);
+          // Clamp confidence between 55-90 so it never feels absurd
+          const rawConf = Math.abs(malePct - 50) + 50;
+          const confidence = Math.min(90, Math.max(55, rawConf));
+          return {
+            predicted: malePct >= 50 ? 'male' : 'female',
+            confidence: confidence,
+            maleEnergy: malePct,
+            femaleEnergy: 100 - malePct,
+          };
+        })(),
       },
     });
   } catch (error) {
@@ -639,11 +751,107 @@ router.get('/birth-chart/data', async (req, res) => {
       isRetrograde: p.isRetrograde || false,
     }));
 
+    // ── Gender Energy Prediction (comprehensive Vedic indicators) ─────────
+    const moonPlanet = houseChart.planets.moon || houseChart.planets.Moon;
+    const sunPlanet = houseChart.planets.sun || houseChart.planets.Sun;
+    const marsPlanet = houseChart.planets.mars || houseChart.planets.Mars;
+    const jupiterPlanet = houseChart.planets.jupiter || houseChart.planets.Jupiter;
+
+    const genderPrediction = (function() {
+      const lagnaId = flatLagna.rashiId;
+      const navLagId = navamshaChart.lagna?.rashi?.id || navamshaChart.houses?.[0]?.rashiId || 1;
+
+      let mS = 0;
+      let tS = 0;
+
+      // Factor 1: Masculine planets in lagna house (weight ~4)
+      const lagnaH = houseChart.houses.find(function(h) { return h.houseNumber === 1; });
+      const lagnaNames = (lagnaH ? lagnaH.planets : []).map(function(p) { return (p.name || '').toLowerCase(); });
+      const mascIn = ['sun', 'mars', 'jupiter'].filter(function(n) { return lagnaNames.includes(n); }).length;
+      const femIn = ['moon', 'venus'].filter(function(n) { return lagnaNames.includes(n); }).length;
+      mS += mascIn * 2;
+      tS += (mascIn + femIn) * 2 || 2;
+
+      // Factor 2: Lagna lord masculine/feminine (weight 3)
+      const lord = (flatLagna.lord || '').toLowerCase();
+      if (['sun', 'mars', 'jupiter'].includes(lord)) mS += 3;
+      else if (['moon', 'venus'].includes(lord)) { }
+      else mS += 1.5;
+      tS += 3;
+
+      // Factor 3: Sun angular (weight 2)
+      if (sunPlanet) {
+        const sH = houseChart.houses.findIndex(function(h) { return h.planets.some(function(p) { return (p.key || p.name || '').toLowerCase() === 'sun'; }); }) + 1;
+        if ([1, 4, 7, 10].includes(sH)) mS += 2;
+        else if ([5, 9].includes(sH)) mS += 1.5;
+        else mS += 0.5;
+      }
+      tS += 2;
+
+      // Factor 4: Mars strong (weight 2)
+      if (marsPlanet) {
+        if ([1, 8].includes(marsPlanet.rashiId) || marsPlanet.rashiId === 10) mS += 2;
+        else if (marsPlanet.rashiId % 2 === 1) mS += 1.5;
+        else mS += 0.5;
+      }
+      tS += 2;
+
+      // Factor 5: Sun vs Moon house strength (weight 2)
+      if (sunPlanet && moonPlanet) {
+        const sH2 = houseChart.houses.findIndex(function(h) { return h.planets.some(function(p) { return (p.key || p.name || '').toLowerCase() === 'sun'; }); }) + 1;
+        const mH2 = houseChart.houses.findIndex(function(h) { return h.planets.some(function(p) { return (p.key || p.name || '').toLowerCase() === 'moon'; }); }) + 1;
+        if ([1, 4, 7, 10].includes(sH2) && ![1, 4, 7, 10].includes(mH2)) mS += 2;
+        else if (![1, 4, 7, 10].includes(sH2) && [1, 4, 7, 10].includes(mH2)) mS += 0.5;
+        else mS += 1;
+      }
+      tS += 2;
+
+      // Factor 5b: Mars house placement — angular = strong masculine (weight 2)
+      if (marsPlanet) {
+        const marsH = houseChart.houses.findIndex(function(h) { return h.planets.some(function(p) { return (p.key || p.name || '').toLowerCase() === 'mars'; }); }) + 1;
+        if ([1, 4, 7, 10].includes(marsH)) mS += 2;
+        else if ([5, 9].includes(marsH)) mS += 1.5;
+        else mS += 0.5;
+      }
+      tS += 2;
+
+      // Factor 6: Nakshatra gender (weight 2)
+      const moonSid = toSidereal(getMoonLongitude(birthDate), birthDate);
+      const nak = getNakshatra(moonSid);
+      const maleNaks = [1, 2, 3, 5, 7, 8, 10, 11, 13, 14, 17, 18, 20, 22, 23, 25, 27];
+      if (maleNaks.includes(nak ? (nak.id || nak.index || 0) : 0)) mS += 2;
+      tS += 2;
+
+      // Factor 7: Jupiter strong (weight 1)
+      if (jupiterPlanet) {
+        if ([9, 12].includes(jupiterPlanet.rashiId) || jupiterPlanet.rashiId === 4) mS += 1;
+        else mS += 0.5;
+      }
+      tS += 1;
+
+      // Factor 8: Lagna odd/even (weight 1)
+      if (lagnaId % 2 === 1) mS += 1;
+      tS += 1;
+
+      // Factor 9: Navamsha lagna odd/even (weight 1)
+      if (navLagId % 2 === 1) mS += 1;
+      tS += 1;
+
+      const malePct = Math.round((mS / tS) * 100);
+      const rawConf = Math.abs(malePct - 50) + 50;
+      return {
+        predicted: malePct >= 50 ? 'male' : 'female',
+        confidence: Math.min(90, Math.max(55, rawConf)),
+        maleEnergy: malePct,
+        femaleEnergy: 100 - malePct,
+      };
+    })();
+
     res.json({
         success: true,
         data: {
-            houseChart: houses,           // House-ordered (house 1 = lagna rashi)
-            rashiChart: houses,           // Same data, for backward compat
+            houseChart: houses,
+            rashiChart: houses,
             navamshaChart: navamshaChart.houses,
             shadvarga: shadvarga.vargaPositions,
             specialLords: shadvarga.specialLords,
@@ -653,12 +861,137 @@ router.get('/birth-chart/data', async (req, res) => {
             drishtis: drishtis,
             pushkara: pushkara,
             ashtakavarga: ashtakavarga,
-            bhavaChalit: bhavaChalit
+            bhavaChalit: bhavaChalit,
+            genderPrediction: genderPrediction,
         }
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/horoscope/full-report
+// Comprehensive 13-section Jyotish report
+// Body: { birthDate, lat?, lng? }
+// ═══════════════════════════════════════════════════════════════════
+router.post('/full-report', (req, res) => {
+  try {
+    const { birthDate, lat = 6.9271, lng = 79.8612 } = req.body;
+
+    if (!birthDate) {
+      return res.status(400).json({ error: 'birthDate is required (ISO format or parseable date string)' });
+    }
+
+    const date = new Date(birthDate);
+    if (isNaN(date.getTime())) {
+      return res.status(400).json({ error: 'Invalid birthDate format. Use ISO format e.g. 1998-10-09T09:16:00' });
+    }
+
+    console.log(`[Full Report] Generating for ${date.toISOString()} at (${lat}, ${lng})`);
+    const startTime = Date.now();
+
+    const report = generateFullReport(date, parseFloat(lat), parseFloat(lng));
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[Full Report] Generated in ${elapsed}ms — ${Object.keys(report.sections).length} sections`);
+
+    res.json({
+      success: true,
+      generationTime: `${elapsed}ms`,
+      data: report,
+    });
+  } catch (error) {
+    console.error('[Full Report] Error:', error);
+    res.status(500).json({ error: error.message, stack: process.env.NODE_ENV === 'development' ? error.stack : undefined });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/horoscope/full-report-ai
+// AI-powered narrative report — addictive, personal, no jargon
+// Body: { birthDate, lat?, lng?, language? }
+// Optional auth: if logged in, caches report & returns cached if available
+// ═══════════════════════════════════════════════════════════════════
+const { optionalAuth } = require('../middleware/auth');
+const { saveReport, getCachedReport } = require('../models/firestore');
+
+router.post('/full-report-ai', optionalAuth, async (req, res) => {
+  try {
+    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null } = req.body;
+
+    if (!birthDate) {
+      return res.status(400).json({ error: 'birthDate is required (ISO format or parseable date string)' });
+    }
+
+    const date = new Date(birthDate);
+    if (isNaN(date.getTime())) {
+      return res.status(400).json({ error: 'Invalid birthDate format. Use ISO format e.g. 1998-10-09T09:16:00' });
+    }
+
+    // Check for cached report if user is authenticated
+    if (req.user && !req.user.anonymous && !req.query.forceRegenerate) {
+      try {
+        const cached = await getCachedReport(req.user.uid, birthDate, language);
+        if (cached) {
+          console.log(`[AI Report] Returning cached report ${cached.id} for user ${req.user.uid}`);
+          return res.json({
+            success: true,
+            cached: true,
+            generationTime: '0ms',
+            data: {
+              generatedAt: cached.createdAt,
+              language: cached.language,
+              birthData: cached.birthInfo,
+              rashiChart: cached.rashiChart,
+              narrativeSections: cached.sections,
+            },
+          });
+        }
+      } catch (e) {
+        console.warn('[AI Report] Cache check failed:', e.message);
+      }
+    }
+
+    console.log(`[AI Report] Generating narrative report for ${date.toISOString()} at (${lat}, ${lng}) in ${language}`);
+    const startTime = Date.now();
+
+    const report = await generateAINarrativeReport(date, parseFloat(lat), parseFloat(lng), language, birthLocation, userName, userGender);
+
+    const elapsed = Date.now() - startTime;
+    const sectionCount = Object.keys(report.narrativeSections).length;
+    console.log(`[AI Report] Complete in ${elapsed}ms — ${sectionCount} narrative sections`);
+
+    // Save report to Firestore if user is authenticated
+    if (req.user && !req.user.anonymous) {
+      try {
+        const reportId = await saveReport(req.user.uid, {
+          birthDate,
+          lat: parseFloat(lat),
+          lng: parseFloat(lng),
+          language,
+          type: 'ai-narrative',
+          sections: report.narrativeSections,
+          rashiChart: report.rashiChart,
+          birthInfo: report.birthData,
+          generationTime: `${elapsed}ms`,
+        });
+        console.log(`[AI Report] Saved to Firestore: ${reportId}`);
+      } catch (e) {
+        console.warn('[AI Report] Failed to cache report:', e.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      cached: false,
+      generationTime: `${elapsed}ms`,
+      data: report,
+    });
+  } catch (error) {
+    console.error('[AI Report] Error:', error);
+    res.status(500).json({ error: error.message, stack: process.env.NODE_ENV === 'development' ? error.stack : undefined });
   }
 });
 
