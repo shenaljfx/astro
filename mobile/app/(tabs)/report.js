@@ -5,12 +5,12 @@
  * collapsible cards, color-coded indicators, timeline view,
  * and cosmic design language.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  StyleSheet, Platform, Dimensions,
+  StyleSheet, Platform, Alert, ActivityIndicator,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
 import CosmicBackground from '../../components/CosmicBackground';
@@ -19,47 +19,58 @@ import SriLankanChart from '../../components/SriLankanChart';
 import { useLanguage } from '../../contexts/LanguageContext';
 import api from '../../services/api';
 
-var { width: SCREEN_W } = Dimensions.get('window');
-
 // ──────────────────────────────────────────
 // Section icons & gradient colors
 // ──────────────────────────────────────────
 var SECTION_META = {
-  yogaAnalysis:     { icon: 'planet-outline',       iconLib: 'ion', colors: ['#9333EA', '#581C87'], emoji: '🪐' },
-  personality:      { icon: 'person-outline',        iconLib: 'ion', colors: ['#3B82F6', '#1E3A8A'], emoji: '✨' },
-  marriage:         { icon: 'heart-outline',         iconLib: 'ion', colors: ['#EC4899', '#831843'], emoji: '💍' },
-  career:           { icon: 'briefcase-outline',     iconLib: 'ion', colors: ['#F59E0B', '#92400E'], emoji: '💼' },
-  children:         { icon: 'people-outline',        iconLib: 'ion', colors: ['#10B981', '#064E3B'], emoji: '👶' },
-  lifePredictions:  { icon: 'telescope-outline',     iconLib: 'ion', colors: ['#8B5CF6', '#4C1D95'], emoji: '🔮' },
-  mentalHealth:     { icon: 'bulb-outline',          iconLib: 'ion', colors: ['#06B6D4', '#0E7490'], emoji: '🧠' },
-  business:         { icon: 'trending-up-outline',   iconLib: 'ion', colors: ['#F97316', '#9A3412'], emoji: '📈' },
-  transits:         { icon: 'navigate-outline',      iconLib: 'ion', colors: ['#14B8A6', '#134E4A'], emoji: '🌍' },
-  realEstate:       { icon: 'home-outline',          iconLib: 'ion', colors: ['#84CC16', '#365314'], emoji: '🏠' },
-  employment:       { icon: 'ribbon-outline',        iconLib: 'ion', colors: ['#EAB308', '#713F12'], emoji: '🏅' },
-  financial:        { icon: 'wallet-outline',        iconLib: 'ion', colors: ['#22C55E', '#14532D'], emoji: '💰' },
-  timeline25:       { icon: 'time-outline',          iconLib: 'ion', colors: ['#6366F1', '#312E81'], emoji: '📅' },
-  remedies:         { icon: 'diamond-outline',       iconLib: 'ion', colors: ['#FBBF24', '#78350F'], emoji: '💎' },
+  personality:      { colors: ['#3B82F6', '#1E3A8A'], emoji: '🪞', gradient: ['#818CF8', '#3B82F6'] },
+  yogaAnalysis:     { colors: ['#9333EA', '#581C87'], emoji: '⚡', gradient: ['#C084FC', '#9333EA'] },
+  lifePredictions:  { colors: ['#8B5CF6', '#4C1D95'], emoji: '🔮', gradient: ['#A78BFA', '#8B5CF6'] },
+  career:           { colors: ['#F59E0B', '#92400E'], emoji: '💼', gradient: ['#FBBF24', '#F59E0B'] },
+  marriage:         { colors: ['#EC4899', '#831843'], emoji: '💍', gradient: ['#F9A8D4', '#EC4899'] },
+  marriedLife:      { colors: ['#E11D48', '#881337'], emoji: '🏠', gradient: ['#FDA4AF', '#E11D48'] },
+  financial:        { colors: ['#22C55E', '#14532D'], emoji: '💰', gradient: ['#4ADE80', '#22C55E'] },
+  children:         { colors: ['#10B981', '#064E3B'], emoji: '👨‍👩‍👧', gradient: ['#34D399', '#10B981'] },
+  health:           { colors: ['#EF4444', '#7F1D1D'], emoji: '🏥', gradient: ['#FCA5A5', '#EF4444'] },
+  mentalHealth:     { colors: ['#06B6D4', '#0E7490'], emoji: '🧠', gradient: ['#67E8F9', '#06B6D4'] },
+  foreignTravel:    { colors: ['#6366F1', '#312E81'], emoji: '✈️', gradient: ['#A5B4FC', '#6366F1'] },
+  education:        { colors: ['#7C3AED', '#4C1D95'], emoji: '🎓', gradient: ['#A78BFA', '#7C3AED'] },
+  luck:             { colors: ['#FBBF24', '#78350F'], emoji: '🎰', gradient: ['#FDE68A', '#FBBF24'] },
+  legal:            { colors: ['#64748B', '#1E293B'], emoji: '⚖️', gradient: ['#94A3B8', '#64748B'] },
+  spiritual:        { colors: ['#A855F7', '#581C87'], emoji: '🙏', gradient: ['#D8B4FE', '#A855F7'] },
+  realEstate:       { colors: ['#84CC16', '#365314'], emoji: '🏠', gradient: ['#BEF264', '#84CC16'] },
+  transits:         { colors: ['#14B8A6', '#134E4A'], emoji: '🌍', gradient: ['#5EEAD4', '#14B8A6'] },
+  surpriseInsights: { colors: ['#F97316', '#9A3412'], emoji: '🤯', gradient: ['#FDBA74', '#F97316'] },
+  timeline25:       { colors: ['#6366F1', '#312E81'], emoji: '📅', gradient: ['#A5B4FC', '#6366F1'] },
+  remedies:         { colors: ['#FBBF24', '#78350F'], emoji: '💎', gradient: ['#FDE68A', '#FBBF24'] },
 };
 
+
 var SECTION_KEYS = [
-  'yogaAnalysis', 'personality', 'marriage', 'career', 'children',
-  'lifePredictions', 'mentalHealth', 'business', 'transits',
-  'realEstate', 'employment', 'financial', 'timeline25', 'remedies',
+  'personality', 'yogaAnalysis', 'lifePredictions', 'career', 'marriage', 'marriedLife', 'financial',
+  'children', 'health', 'mentalHealth', 'foreignTravel', 'education', 'luck', 'legal',
+  'spiritual', 'realEstate', 'transits', 'surpriseInsights', 'timeline25', 'remedies',
 ];
 
 var SECTION_TITLES = {
-  yogaAnalysis: 'reportYogas',
   personality: 'reportPersonality',
-  marriage: 'reportMarriage',
-  career: 'reportCareer',
-  children: 'reportChildren',
+  yogaAnalysis: 'reportYogas',
   lifePredictions: 'reportLifePredictions',
-  mentalHealth: 'reportMentalHealth',
-  business: 'reportBusiness',
-  transits: 'reportTransits',
-  realEstate: 'reportRealEstate',
-  employment: 'reportEmployment',
+  career: 'reportCareer',
+  marriage: 'reportMarriage',
+  marriedLife: 'reportMarriedLife',
   financial: 'reportFinancial',
+  children: 'reportChildren',
+  health: 'reportHealth',
+  mentalHealth: 'reportMentalHealth',
+  foreignTravel: 'reportForeignTravel',
+  education: 'reportEducation',
+  luck: 'reportLuck',
+  legal: 'reportLegal',
+  spiritual: 'reportSpiritual',
+  realEstate: 'reportRealEstate',
+  transits: 'reportTransits',
+  surpriseInsights: 'reportSurpriseInsights',
   timeline25: 'reportTimeline',
   remedies: 'reportRemedies',
 };
@@ -94,513 +105,19 @@ var gs = StyleSheet.create({
   },
 });
 
-// ──────────────────────────────────────────
-// Strength badge
-// ──────────────────────────────────────────
-function StrengthBadge({ strength }) {
-  var colors = {
-    'very strong': { bg: 'rgba(16,185,129,0.2)', text: '#10B981', label: 'Very Strong' },
-    'strong':      { bg: 'rgba(59,130,246,0.2)', text: '#3B82F6', label: 'Strong' },
-    'moderate':    { bg: 'rgba(251,191,36,0.2)', text: '#FBBF24', label: 'Moderate' },
-    'weak':        { bg: 'rgba(239,68,68,0.15)', text: '#EF4444', label: 'Weak' },
-    'challenged':  { bg: 'rgba(249,115,22,0.15)', text: '#F97316', label: 'Challenged' },
-  };
-  var c = colors[strength] || colors.moderate;
-  return (
-    <View style={[bs.badge, { backgroundColor: c.bg }]}>
-      <Text style={[bs.badgeText, { color: c.text }]}>{c.label}</Text>
-    </View>
-  );
-}
-var bs = StyleSheet.create({
-  badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
-  badgeText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-});
-
-// ──────────────────────────────────────────
-// Key-value info row
-// ──────────────────────────────────────────
-function InfoRow({ label, value, color, icon }) {
-  return (
-    <View style={ir.row}>
-      {icon && <Ionicons name={icon} size={14} color={color || '#94A3B8'} style={{ marginRight: 6 }} />}
-      <Text style={ir.label}>{label}</Text>
-      <Text style={[ir.value, color && { color }]} numberOfLines={2}>{value || '—'}</Text>
-    </View>
-  );
-}
-var ir = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  label: { color: '#94A3B8', fontSize: 12, fontWeight: '500', width: 110 },
-  value: { color: '#F1F5F9', fontSize: 12, fontWeight: '600', flex: 1, textAlign: 'right' },
-});
-
-// ──────────────────────────────────────────
-// Tag pill
-// ──────────────────────────────────────────
-function TagPill({ text, color }) {
-  return (
-    <View style={[tp.pill, { backgroundColor: (color || 'rgba(147,51,234,0.2)') }]}>
-      <Text style={tp.text}>{text}</Text>
-    </View>
-  );
-}
-var tp = StyleSheet.create({
-  pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginRight: 6, marginBottom: 6 },
-  text: { color: '#E2E8F0', fontSize: 11, fontWeight: '600' },
-});
-
-// ──────────────────────────────────────────
-// Dasha timeline bar
-// ──────────────────────────────────────────
-function DashaBar({ lord, period, nature, isCurrent }) {
-  var barColor = nature === 'benefic' ? '#10B981' : nature === 'malefic' ? '#EF4444' : nature === 'yogaKaraka' ? '#FBBF24' : '#6366F1';
-  return (
-    <View style={[db.bar, isCurrent && db.currentBar]}>
-      <LinearGradient
-        colors={[barColor + '30', 'transparent']}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-      />
-      <View style={db.row}>
-        <View style={[db.dot, { backgroundColor: barColor }]} />
-        <Text style={db.lord}>{lord}</Text>
-        {isCurrent && <Text style={db.current}>● NOW</Text>}
-      </View>
-      <Text style={db.period}>{period}</Text>
-    </View>
-  );
-}
-var db = StyleSheet.create({
-  bar: { padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
-  currentBar: { borderColor: 'rgba(251,191,36,0.3)', backgroundColor: 'rgba(251,191,36,0.05)' },
-  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  dot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  lord: { color: '#F1F5F9', fontSize: 14, fontWeight: '700', flex: 1 },
-  current: { color: '#FBBF24', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
-  period: { color: '#94A3B8', fontSize: 11, marginLeft: 16 },
-});
-
-// ══════════════════════════════════════════
-// SECTION RENDERERS
-// ══════════════════════════════════════════
-
-function renderYogas(data) {
-  if (!data) return null;
-  return (
-    <View>
-      <Text style={cs.summary}>{data.summary}</Text>
-      {data.yogaKaraka && data.yogaKaraka !== 'None' && (
-        <View style={cs.highlight}>
-          <Text style={cs.highlightLabel}>⭐ Yoga Karaka</Text>
-          <Text style={cs.highlightValue}>{data.yogaKaraka}</Text>
-        </View>
-      )}
-      {(data.yogas || []).map(function(y, i) {
-        return (
-          <View key={i} style={cs.yogaCard}>
-            <View style={cs.yogaHeader}>
-              <Text style={cs.yogaName}>{y.name}</Text>
-              <StrengthBadge strength={y.strength === 'Very Strong' ? 'very strong' : y.strength === 'Strong' ? 'strong' : 'moderate'} />
-            </View>
-            <Text style={cs.yogaDesc}>{y.description}</Text>
-          </View>
-        );
-      })}
-      {data.functionalBenefics && data.functionalBenefics.length > 0 && (
-        <View style={cs.tagRow}>
-          <Text style={cs.tagLabel}>Benefics: </Text>
-          {data.functionalBenefics.map(function(p, i) { return <TagPill key={i} text={p} color="rgba(16,185,129,0.2)" />; })}
-        </View>
-      )}
-      {data.functionalMalefics && data.functionalMalefics.length > 0 && (
-        <View style={cs.tagRow}>
-          <Text style={cs.tagLabel}>Malefics: </Text>
-          {data.functionalMalefics.map(function(p, i) { return <TagPill key={i} text={p} color="rgba(239,68,68,0.15)" />; })}
-        </View>
-      )}
-    </View>
-  );
-}
-
-function renderPersonality(data) {
-  if (!data) return null;
-  return (
-    <View>
-      <View style={cs.row3}>
-        <View style={cs.miniCard}>
-          <Text style={cs.miniLabel}>Lagna</Text>
-          <Text style={cs.miniValue}>{data.lagna?.english}</Text>
-          <Text style={cs.miniSub}>{data.lagna?.sinhala}</Text>
-        </View>
-        <View style={cs.miniCard}>
-          <Text style={cs.miniLabel}>Moon</Text>
-          <Text style={cs.miniValue}>{data.moonSign?.english}</Text>
-          <Text style={cs.miniSub}>{data.moonSign?.sinhala}</Text>
-        </View>
-        <View style={cs.miniCard}>
-          <Text style={cs.miniLabel}>Sun</Text>
-          <Text style={cs.miniValue}>{data.sunSign?.english}</Text>
-          <Text style={cs.miniSub}>{data.sunSign?.sinhala}</Text>
-        </View>
-      </View>
-      <InfoRow label="Nakshatra" value={data.nakshatra?.name + ' (Pada ' + data.nakshatra?.pada + ')'} icon="star-outline" />
-      <InfoRow label="Nak. Lord" value={data.nakshatra?.lord} icon="flash-outline" color="#FBBF24" />
-      <InfoRow label="Lagna Element" value={(data.lagnaElement?.element || '').toUpperCase()} icon="flame-outline" />
-      <InfoRow label="Traits" value={data.lagnaElement?.traits?.en || ''} icon="sparkles-outline" />
-      <InfoRow label="Lagna Lord" value={data.lagnaLordPosition?.interpretation || ''} icon="locate-outline" color="#C084FC" />
-      {data.overallStrength && (
-        <View style={[cs.tagRow, { marginTop: 8 }]}>
-          <Text style={cs.tagLabel}>1st House: </Text>
-          <StrengthBadge strength={data.overallStrength} />
-        </View>
-      )}
-    </View>
-  );
-}
-
-function renderMarriage(data) {
-  if (!data) return null;
-  var h7 = data.seventhHouse;
-  return (
-    <View>
-      <InfoRow label="7th House" value={(h7?.rashiEnglish || '') + ' (' + (h7?.rashi || '') + ')'} icon="heart-outline" color="#EC4899" />
-      <InfoRow label="7th Lord" value={data.seventhLord?.name + ' in H' + data.seventhLord?.house} icon="locate-outline" />
-      <InfoRow label="Venus" value={'House ' + (data.venus?.house || '?') + ' — ' + (data.venus?.rashi || '')} icon="rose-outline" color="#F9A8D4" />
-      {h7 && <InfoRow label="Strength" value={h7.strength} icon="shield-checkmark-outline" />}
-      <View style={[cs.alertBox, data.kujaDosha?.present ? cs.alertDanger : cs.alertSuccess]}>
-        <Ionicons name={data.kujaDosha?.present ? 'warning-outline' : 'checkmark-circle-outline'} size={18} color={data.kujaDosha?.present ? '#EF4444' : '#10B981'} />
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={cs.alertTitle}>{data.kujaDosha?.present ? 'Kuja Dosha Detected' : 'No Kuja Dosha'}</Text>
-          <Text style={cs.alertText}>{data.kujaDosha?.note}</Text>
-        </View>
-      </View>
-      <Text style={cs.sectionLabel}>Spouse Qualities</Text>
-      <Text style={cs.bodyText}>{data.spouseQualities}</Text>
-      {data.marriageTimingIndicators && data.marriageTimingIndicators.length > 0 && (
-        <View style={{ marginTop: 10 }}>
-          <Text style={cs.sectionLabel}>Marriage Timing Indicators</Text>
-          {data.marriageTimingIndicators.map(function(t, i) { return <Text key={i} style={cs.listItem}>• {t}</Text>; })}
-        </View>
-      )}
-    </View>
-  );
-}
-
-function renderCareer(data) {
-  if (!data) return null;
-  return (
-    <View>
-      <InfoRow label="10th Lord" value={data.tenthLord?.name + ' in H' + data.tenthLord?.house} icon="briefcase-outline" color="#F59E0B" />
-      <InfoRow label="2nd Lord" value={(data.secondHouse?.rashiLord || '') + ' (wealth)'} icon="cash-outline" />
-      <InfoRow label="11th Lord" value={(data.eleventhHouse?.rashiLord || '') + ' (gains)'} icon="trending-up-outline" color="#22C55E" />
-      {data.businessVsService && <Text style={[cs.bodyText, { marginTop: 8 }]}>📋 {data.businessVsService}</Text>}
-      {data.suggestedCareers && data.suggestedCareers.length > 0 && (
-        <View style={{ marginTop: 10 }}>
-          <Text style={cs.sectionLabel}>Suggested Career Paths</Text>
-          <View style={cs.tagWrap}>
-            {data.suggestedCareers.slice(0, 8).map(function(c, i) { return <TagPill key={i} text={c} color="rgba(245,158,11,0.15)" />; })}
-          </View>
-        </View>
-      )}
-      {data.dhanaYogas && data.dhanaYogas.length > 0 && (
-        <View style={{ marginTop: 8 }}>
-          <Text style={cs.sectionLabel}>💰 Dhana Yogas (Wealth)</Text>
-          {data.dhanaYogas.map(function(d, i) { return <Text key={i} style={cs.listItem}>• {d}</Text>; })}
-        </View>
-      )}
-    </View>
-  );
-}
-
-function renderChildren(data) {
-  if (!data) return null;
-  return (
-    <View>
-      <InfoRow label="5th Lord" value={data.fifthLord?.name + ' in H' + data.fifthLord?.house} icon="people-outline" color="#10B981" />
-      <InfoRow label="Jupiter" value={'House ' + (data.jupiter?.house || '?')} icon="star-outline" color="#FBBF24" />
-      <Text style={[cs.bodyText, { marginTop: 8 }]}>{data.assessment}</Text>
-      {data.childrenTimingDasas && data.childrenTimingDasas.length > 0 && (
-        <View style={{ marginTop: 10 }}>
-          <Text style={cs.sectionLabel}>Timing Indicators</Text>
-          {data.childrenTimingDasas.map(function(d, i) { return <Text key={i} style={cs.listItem}>• {d}</Text>; })}
-        </View>
-      )}
-    </View>
-  );
-}
-
-function renderLifePredictions(data) {
-  if (!data) return null;
-  return (
-    <View>
-      {data.currentDasha && (
-        <View style={cs.highlight}>
-          <Text style={cs.highlightLabel}>🔮 Current Mahadasha</Text>
-          <Text style={cs.highlightValue}>{data.currentDasha.lord}</Text>
-          <Text style={cs.highlightSub}>{data.currentDasha.period}</Text>
-        </View>
-      )}
-      {data.currentDasha?.effects?.general && <Text style={cs.bodyText}>{data.currentDasha.effects.general}</Text>}
-      {data.currentDasha?.effects?.career && <InfoRow label="Career" value={data.currentDasha.effects.career} icon="briefcase-outline" color="#F59E0B" />}
-      {data.currentDasha?.effects?.health && <InfoRow label="Health" value={data.currentDasha.effects.health} icon="fitness-outline" color="#EF4444" />}
-      {data.currentDasha?.effects?.relationship && <InfoRow label="Relations" value={data.currentDasha.effects.relationship} icon="heart-outline" color="#EC4899" />}
-      {data.currentAntardasha && (
-        <View style={[cs.highlight, { marginTop: 10, backgroundColor: 'rgba(99,102,241,0.1)', borderColor: 'rgba(99,102,241,0.2)' }]}>
-          <Text style={cs.highlightLabel}>⏱ Current Antardasha (Sub-Period)</Text>
-          <Text style={cs.highlightValue}>{data.currentAntardasha.lord}</Text>
-          <Text style={cs.highlightSub}>{data.currentAntardasha.period}</Text>
-        </View>
-      )}
-      {data.lifePhaseSummary && data.lifePhaseSummary.length > 0 && (
-        <View style={{ marginTop: 12 }}>
-          <Text style={cs.sectionLabel}>Life Phases</Text>
-          {data.lifePhaseSummary.map(function(p, i) {
-            return <DashaBar key={i} lord={p.lord + ' (' + p.years + ' yrs)'} period={p.period} nature={p.isCurrent ? 'yogaKaraka' : 'neutral'} isCurrent={p.isCurrent} />;
-          })}
-        </View>
-      )}
-    </View>
-  );
-}
-
-function renderMentalHealth(data) {
-  if (!data) return null;
-  return (
-    <View>
-      <InfoRow label="Mercury" value={'H' + (data.mercury?.house || '?') + ' — Score: ' + (data.mercury?.score || '?') + '/100'} icon="bulb-outline" color="#06B6D4" />
-      <InfoRow label="Moon" value={'H' + (data.moon?.house || '?') + ' — Score: ' + (data.moon?.score || '?') + '/100'} icon="moon-outline" color="#C7D2FE" />
-      <InfoRow label="4th Lord" value={data.education?.fourthLord + ' in H' + data.education?.fourthLordHouse} icon="school-outline" />
-      <Text style={[cs.bodyText, { marginTop: 8 }]}>📚 {data.education?.assessment}</Text>
-      <Text style={[cs.bodyText, { marginTop: 6 }]}>🧘 {data.mentalStability}</Text>
-    </View>
-  );
-}
-
-function renderBusiness(data) {
-  if (!data) return null;
-  return (
-    <View>
-      {data.tenthHouseStrength && <InfoRow label="10th H Bindus" value={data.tenthHouseStrength.bindus + ' — ' + data.tenthHouseStrength.assessment} icon="analytics-outline" color="#F97316" />}
-      <Text style={[cs.bodyText, { marginTop: 6 }]}>{data.businessVsPartnership}</Text>
-      {data.bestBusinessTypes && data.bestBusinessTypes.length > 0 && (
-        <View style={{ marginTop: 10 }}>
-          <Text style={cs.sectionLabel}>Best Business Types</Text>
-          <View style={cs.tagWrap}>
-            {data.bestBusinessTypes.map(function(b, i) { return <TagPill key={i} text={b} color="rgba(249,115,22,0.15)" />; })}
-          </View>
-        </View>
-      )}
-      {data.bestPeriods && data.bestPeriods.length > 0 && (
-        <View style={{ marginTop: 8 }}>
-          <Text style={cs.sectionLabel}>Best Periods</Text>
-          {data.bestPeriods.map(function(p, i) { return <Text key={i} style={cs.listItem}>• {p.lord}: {p.period} — {p.reason}</Text>; })}
-        </View>
-      )}
-    </View>
-  );
-}
-
-function renderTransits(data) {
-  if (!data) return null;
-  return (
-    <View>
-      <Text style={cs.dateBadge}>As of {data.date}</Text>
-      {data.sun && (
-        <View style={cs.transitRow}>
-          <Text style={[cs.transitPlanet, { color: '#FBBF24' }]}>☉ Sun</Text>
-          <Text style={cs.transitSign}>{data.sun.currentSign} → H{data.sun.houseFromLagna}</Text>
-          <Text style={cs.transitEffect}>{data.sun.effect}</Text>
-        </View>
-      )}
-      {data.jupiter && (
-        <View style={cs.transitRow}>
-          <Text style={[cs.transitPlanet, { color: '#FDE047' }]}>♃ Jupiter</Text>
-          <Text style={cs.transitSign}>{data.jupiter.currentSign} → H{data.jupiter.houseFromLagna}</Text>
-          <Text style={cs.transitEffect}>{data.jupiter.effect}</Text>
-        </View>
-      )}
-      {data.saturn && (
-        <View style={cs.transitRow}>
-          <Text style={[cs.transitPlanet, { color: '#A5B4FC' }]}>♄ Saturn</Text>
-          <Text style={cs.transitSign}>{data.saturn.currentSign} → H{data.saturn.houseFromLagna}</Text>
-          <Text style={cs.transitEffect}>{data.saturn.effect}</Text>
-        </View>
-      )}
-      {data.saturn?.sadheSati && (
-        <View style={[cs.alertBox, data.saturn.sadheSati.active ? cs.alertDanger : cs.alertSuccess]}>
-          <Ionicons name={data.saturn.sadheSati.active ? 'alert-circle-outline' : 'shield-checkmark-outline'} size={18} color={data.saturn.sadheSati.active ? '#EF4444' : '#10B981'} />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={cs.alertTitle}>Sade Sati: {data.saturn.sadheSati.phase}</Text>
-            <Text style={cs.alertText}>{data.saturn.sadheSati.note}</Text>
-          </View>
-        </View>
-      )}
-    </View>
-  );
-}
-
-function renderRealEstate(data) {
-  if (!data) return null;
-  return (
-    <View>
-      <InfoRow label="4th Lord" value={data.fourthLord?.name + ' in H' + data.fourthLord?.house} icon="home-outline" color="#84CC16" />
-      <InfoRow label="Mars" value={'House ' + (data.mars?.house || '?')} icon="hammer-outline" color="#F87171" />
-      <InfoRow label="Saturn" value={'House ' + (data.saturn?.house || '?')} icon="construct-outline" color="#A5B4FC" />
-      {data.propertyYoga && data.propertyYoga.length > 0 && (
-        <View style={{ marginTop: 8 }}>
-          <Text style={cs.sectionLabel}>🏗 Property Indicators</Text>
-          {data.propertyYoga.map(function(p, i) { return <Text key={i} style={cs.listItem}>• {p}</Text>; })}
-        </View>
-      )}
-      {data.bestPeriodsForProperty && data.bestPeriodsForProperty.length > 0 && (
-        <View style={{ marginTop: 8 }}>
-          <Text style={cs.sectionLabel}>Best Periods for Property</Text>
-          {data.bestPeriodsForProperty.map(function(p, i) { return <Text key={i} style={cs.listItem}>• {p.lord}: {p.period}</Text>; })}
-        </View>
-      )}
-    </View>
-  );
-}
-
-function renderEmployment(data) {
-  if (!data) return null;
-  return (
-    <View>
-      <InfoRow label="10th Lord" value={data.tenthLord?.name + ' in H' + data.tenthLord?.house} icon="ribbon-outline" color="#EAB308" />
-      <Text style={[cs.bodyText, { marginTop: 8 }]}>{data.serviceVsAuthority}</Text>
-      {data.careerPaths && data.careerPaths.length > 0 && (
-        <View style={{ marginTop: 10 }}>
-          <Text style={cs.sectionLabel}>Career Paths</Text>
-          <View style={cs.tagWrap}>
-            {data.careerPaths.slice(0, 6).map(function(c, i) { return <TagPill key={i} text={c} color="rgba(234,179,8,0.15)" />; })}
-          </View>
-        </View>
-      )}
-      {data.promotionPeriods && data.promotionPeriods.length > 0 && (
-        <View style={{ marginTop: 8 }}>
-          <Text style={cs.sectionLabel}>🚀 Promotion Periods</Text>
-          {data.promotionPeriods.map(function(p, i) { return <Text key={i} style={cs.listItem}>• {p.lord}: {p.period} — {p.reason}</Text>; })}
-        </View>
-      )}
-    </View>
-  );
-}
-
-function renderFinancial(data) {
-  if (!data) return null;
-  return (
-    <View>
-      <InfoRow label="Income (2nd)" value={data.income?.secondLord?.name + ' in H' + data.income?.secondLord?.house} icon="cash-outline" color="#22C55E" />
-      <InfoRow label="Gains (11th)" value={data.income?.eleventhLord?.name + ' in H' + data.income?.eleventhLord?.house} icon="trending-up-outline" color="#10B981" />
-      <InfoRow label="Expenses (12th)" value={data.expenses?.twelfthLord?.name} icon="arrow-down-outline" color="#F97316" />
-      {data.expenses?.note && <Text style={[cs.bodyText, { marginTop: 6 }]}>💸 {data.expenses.note}</Text>}
-      {data.investmentAdvice && data.investmentAdvice.length > 0 && (
-        <View style={{ marginTop: 10 }}>
-          <Text style={cs.sectionLabel}>💡 Investment Advice</Text>
-          {data.investmentAdvice.map(function(a, i) { return <Text key={i} style={cs.listItem}>• {a}</Text>; })}
-        </View>
-      )}
-      {data.losses?.riskPeriods && data.losses.riskPeriods.length > 0 && (
-        <View style={{ marginTop: 8 }}>
-          <Text style={cs.sectionLabel}>⚠️ Risk Periods</Text>
-          {data.losses.riskPeriods.map(function(p, i) { return <Text key={i} style={cs.listItem}>• {p.lord}: {p.period} — {p.reason}</Text>; })}
-        </View>
-      )}
-    </View>
-  );
-}
-
-function renderTimeline(data) {
-  if (!data) return null;
-  return (
-    <View>
-      <Text style={cs.dateBadge}>{data.from} → {data.to}</Text>
-      {(data.periods || []).map(function(p, i) {
-        return (
-          <View key={i} style={{ marginBottom: 12 }}>
-            <DashaBar lord={p.mahadasha + ' Mahadasha'} period={p.period} nature={p.nature} isCurrent={i === 0} />
-            <Text style={[cs.bodyText, { marginLeft: 16, marginBottom: 4 }]}>{p.overallTone}</Text>
-            {(p.antardashas || []).slice(0, 4).map(function(ad, j) {
-              return (
-                <View key={j} style={cs.adRow}>
-                  <View style={[cs.adDot, { backgroundColor: ad.nature === 'benefic' ? '#10B981' : ad.nature === 'malefic' ? '#EF4444' : '#6366F1' }]} />
-                  <Text style={cs.adLord}>{ad.lord}</Text>
-                  <Text style={cs.adPeriod}>{ad.period}</Text>
-                </View>
-              );
-            })}
-            {(p.antardashas || []).length > 4 && <Text style={cs.moreText}>+ {p.antardashas.length - 4} more sub-periods</Text>}
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-function renderRemedies(data) {
-  if (!data) return null;
-  return (
-    <View>
-      <View style={cs.highlight}>
-        <Text style={cs.highlightLabel}>💎 Lagna Gemstone</Text>
-        <Text style={cs.highlightValue}>{data.lagnaGem}</Text>
-      </View>
-      <InfoRow label="Lucky Color" value={data.lagnaColor} icon="color-palette-outline" color="#FBBF24" />
-      <InfoRow label="Lucky Day" value={data.lagnaDay} icon="calendar-outline" color="#C084FC" />
-      {data.yogaKaraka && (
-        <View style={[cs.alertBox, cs.alertSuccess, { marginTop: 10 }]}>
-          <Ionicons name="star-outline" size={18} color="#FBBF24" />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={cs.alertTitle}>Yoga Karaka: {data.yogaKaraka.planet}</Text>
-            <Text style={cs.alertText}>{data.yogaKaraka.note}</Text>
-          </View>
-        </View>
-      )}
-      {data.weakPlanetRemedies && data.weakPlanetRemedies.length > 0 && (
-        <View style={{ marginTop: 10 }}>
-          <Text style={cs.sectionLabel}>🔧 Weak Planet Remedies</Text>
-          {data.weakPlanetRemedies.map(function(r, i) {
-            return (
-              <View key={i} style={cs.remedyCard}>
-                <Text style={cs.remedyPlanet}>{r.planet} (Score: {r.score}/100)</Text>
-                <InfoRow label="Gem" value={r.gem} icon="diamond-outline" />
-                <InfoRow label="Color" value={r.color} icon="color-palette-outline" />
-                <InfoRow label="Day" value={r.day} icon="calendar-outline" />
-              </View>
-            );
-          })}
-        </View>
-      )}
-    </View>
-  );
-}
-
-var RENDERERS = {
-  yogaAnalysis: renderYogas,
-  personality: renderPersonality,
-  marriage: renderMarriage,
-  career: renderCareer,
-  children: renderChildren,
-  lifePredictions: renderLifePredictions,
-  mentalHealth: renderMentalHealth,
-  business: renderBusiness,
-  transits: renderTransits,
-  realEstate: renderRealEstate,
-  employment: renderEmployment,
-  financial: renderFinancial,
-  timeline25: renderTimeline,
-  remedies: renderRemedies,
-};
-
 // ══════════════════════════════════════════
 // COLLAPSIBLE SECTION CARD
 // ══════════════════════════════════════════
-function SectionCard({ sectionKey, data, index, t, aiNarrative, viewMode }) {
+function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang }) {
   var [expanded, setExpanded] = useState(index < 3); // First 3 open by default
   var meta = SECTION_META[sectionKey] || {};
-  var title = aiNarrative?.title || t(SECTION_TITLES[sectionKey]) || sectionKey;
-  var renderer = RENDERERS[sectionKey];
+  var isSi = reportLang === 'si';
+  // When Sinhala, always use i18n title; otherwise prefer AI title, fallback to i18n
+  var i18nTitle = t(SECTION_TITLES[sectionKey]);
+  var title = isSi ? (i18nTitle || aiNarrative?.title || sectionKey) : (aiNarrative?.title || i18nTitle || sectionKey);
+
+  // If no AI narrative available, skip this section entirely
+  if (!aiNarrative?.narrative) return null;
 
   return (
     <Animated.View entering={FadeInDown.delay(100 + index * 60).duration(600)}>
@@ -609,31 +126,26 @@ function SectionCard({ sectionKey, data, index, t, aiNarrative, viewMode }) {
           {/* Header */}
           <View style={sc.header}>
             <LinearGradient
-              colors={meta.colors || ['#333', '#111']}
+              colors={meta.gradient || meta.colors || ['#333', '#111']}
               style={sc.iconBg}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             >
               <Text style={sc.emoji}>{meta.emoji || '📋'}</Text>
             </LinearGradient>
             <View style={{ flex: 1 }}>
-              <Text style={sc.title}>{title}</Text>
-              {data?.sinhala && <Text style={sc.sinhala}>{data.sinhala}</Text>}
+              <Text style={sc.title} numberOfLines={2}>{title}</Text>
             </View>
-            <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={20} color="rgba(255,255,255,0.5)" />
+            <View style={[sc.chevronBg, expanded && sc.chevronBgActive]}>
+              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={expanded ? '#C084FC' : 'rgba(255,255,255,0.4)'} />
+            </View>
           </View>
-          {/* Content */}
+          {/* Content — AI Narrative Only */}
           {expanded && (
             <View style={sc.content}>
               <View style={sc.divider} />
-              {/* AI Narrative Mode */}
-              {viewMode === 'ai' && aiNarrative?.narrative ? (
-                <View style={sc.narrativeWrap}>
-                  <MarkdownText>{aiNarrative.narrative}</MarkdownText>
-                </View>
-              ) : (
-                /* Technical Mode - original renderers */
-                renderer ? renderer(data) : null
-              )}
+              <View style={sc.narrativeWrap}>
+                <MarkdownText>{aiNarrative.narrative}</MarkdownText>
+              </View>
             </View>
           )}
         </AuraBox>
@@ -644,13 +156,13 @@ function SectionCard({ sectionKey, data, index, t, aiNarrative, viewMode }) {
 
 var sc = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', padding: 16 },
-  iconBg: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  emoji: { fontSize: 20 },
-  title: { color: '#F1F5F9', fontSize: 15, fontWeight: '700' },
-  sinhala: { color: '#94A3B8', fontSize: 11, marginTop: 2 },
+  iconBg: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  emoji: { fontSize: 22 },
+  title: { color: '#F1F5F9', fontSize: 15, fontWeight: '700', lineHeight: 21 },
+  chevronBg: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
+  chevronBgActive: { backgroundColor: 'rgba(147,51,234,0.15)' },
   content: { paddingHorizontal: 16, paddingBottom: 16 },
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginBottom: 12 },
-  narrative: { color: '#CBD5E1', fontSize: 14, lineHeight: 24, letterSpacing: 0.2 },
   narrativeWrap: {
     backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12, padding: 14,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)',
@@ -662,18 +174,18 @@ var sc = StyleSheet.create({
 // ══════════════════════════════════════════
 var LOADING_STAGES = {
   en: [
-    { text: '🌌 Reading the celestial map...', sub: 'Mapping planetary positions at your birth moment' },
-    { text: '🪐 Analyzing planetary alignments...', sub: 'Calculating aspects, yogas & dasha periods' },
-    { text: '✨ The stars are revealing secrets...', sub: 'AI is weaving your personal narrative' },
-    { text: '🔮 Channeling ancient wisdom...', sub: 'Blending Vedic knowledge with your unique chart' },
-    { text: '📜 Writing your cosmic story...', sub: 'Almost there — crafting each chapter of your life' },
+    { text: '🌌 Looking into your birth moment...', sub: 'The sky tells a story about the second you arrived' },
+    { text: '🪐 Discovering your hidden patterns...', sub: 'Finding the invisible threads that shape your life' },
+    { text: '✨ Your life story is taking shape...', sub: 'Weaving together your past, present, and future' },
+    { text: '🔮 Uncovering what the future holds...', sub: 'Reading the chapters of your life not yet written' },
+    { text: '📜 Writing your personal story...', sub: 'Almost there — every word is written just for you' },
   ],
   si: [
-    { text: '🌌 ග්‍රහ මණ්ඩලය කියවමින්...', sub: 'ඔයාගේ උපන් මොහොතේ ග්‍රහ පිහිටීම් සොයමින්' },
-    { text: '🪐 ග්‍රහ පිහිටීම් විශ්ලේෂණය කරමින්...', sub: 'යෝග, දශා සහ දෘෂ්ටි ගණනය කරමින්' },
-    { text: '✨ තරු රහස් හෙළිදරව් කරමින්...', sub: 'AI එකෙන් ඔයාගේ කතාව ලියමින්' },
-    { text: '🔮 පුරාණ ඥානය නාලිකා ගත කරමින්...', sub: 'වෛදික ඥානය ඔයාගේ කේන්දරේ එක්ක මිශ්‍ර කරමින්' },
-    { text: '📜 ඔයාගේ තාරකා කතාව ලියමින්...', sub: 'ඉවරවෙන්න ආසන්නයි — ජීවිතේ සෑම පරිච්ඡේදයක්ම ලියමින්' },
+    { text: '🌌 ඔයා ඉපදුන මොහොත බලමින්...', sub: 'ඔයා ලෝකෙට ආපු තත්පරයේ අහස මොකද කියන්නේ' },
+    { text: '🪐 ඔයාගේ සැඟවුණු රටා සොයමින්...', sub: 'ඔයාගේ ජීවිතය හැඩගස්වන නොපෙනෙන නූල් සොයමින්' },
+    { text: '✨ ඔයාගේ ජීවිත කතාව හැදෙමින්...', sub: 'ඔයාගේ අතීතය, වර්තමානය, අනාගතය එක් කරමින්' },
+    { text: '🔮 අනාගතයේ මොකද තියෙන්නේ කියා සොයමින්...', sub: 'තවම ලියැවෙන්නට ඇති පරිච්ඡේද කියවමින්' },
+    { text: '📜 ඔයාගේ කතාව ලියමින්...', sub: 'ඉවරවෙන්න ආසන්නයි — හැම වචනයක්ම ඔයාට විතරක්' },
   ],
 };
 
@@ -732,8 +244,8 @@ function CosmicLoader({ progress, userName, language }) {
   var stage = stages[stageIndex];
 
   var personalMsg = lang === 'si'
-    ? (userName ? 'පොඩ්ඩක් ඉන්න ' + userName + '! ඔයාගේ කේන්දර කතාව ලියමින්... ✨' : 'ඔයාගේ කේන්දර කතාව ලියමින්... ✨')
-    : (userName ? 'Hold tight, ' + userName + '! Your cosmic blueprint is being written... ✨' : 'Your cosmic blueprint is being written... ✨');
+    ? (userName ? 'පොඩ්ඩක් ඉන්න ' + userName + '! ඔයාගේ ජීවිත කතාව ලියමින්... ✨' : 'ඔයාගේ ජීවිත කතාව ලියමින්... ✨')
+    : (userName ? 'Hold tight, ' + userName + '! Your life story is being written... ✨' : 'Your life story is being written... ✨');
 
   var timeMsg = lang === 'si' ? 'තත්පර 20-40ක් ගතවේ' : 'This takes 20-40 seconds';
 
@@ -1012,13 +524,13 @@ var gg = StyleSheet.create({
 // MAIN REPORT SCREEN
 // ══════════════════════════════════════════
 export default function ReportScreen() {
-  var { t, language: appLanguage } = useLanguage();
+  var { t, language } = useLanguage();
   var [birthDate, setBirthDate] = useState('1998-10-09');
   var [birthTime, setBirthTime] = useState('09:16');
   var [birthLocation, setBirthLocation] = useState('Colombo');
   var [birthLat, setBirthLat] = useState(6.9271);
   var [birthLng, setBirthLng] = useState(79.8612);
-  var [reportLang, setReportLang] = useState('en');
+  var [reportLang, setReportLang] = useState(language || 'en');
   var [userName, setUserName] = useState('');
   var [userGender, setUserGender] = useState(null);
   var [report, setReport] = useState(null);
@@ -1026,10 +538,20 @@ export default function ReportScreen() {
   var [chartData, setChartData] = useState(null);
   var [loading, setLoading] = useState(false);
   var [error, setError] = useState(null);
-  var [viewMode, setViewMode] = useState('ai');
   // Flow states: 'form' -> 'gender-guess' -> 'loading' -> 'report'
   var [screenState, setScreenState] = useState('form');
   var [genderPrediction, setGenderPrediction] = useState(null);
+  // Saved reports
+  var [savedReports, setSavedReports] = useState([]);
+  var [savedReportsLoading, setSavedReportsLoading] = useState(false);
+  var [loadingReportId, setLoadingReportId] = useState(null);
+
+  // Sync report language when app language changes (only on form screen)
+  useEffect(function() {
+    if (screenState === 'form') {
+      setReportLang(language || 'en');
+    }
+  }, [language, screenState]);
 
   // ── Core generation function (defined first to avoid stale closures) ──
   var startFullGeneration = async function(dateStr, gender) {
@@ -1039,7 +561,7 @@ export default function ReportScreen() {
 
       // Fire raw report + AI in parallel (chart already fetched)
       var [rawRes, aiRes] = await Promise.all([
-        api.getFullReport(dateStr, birthLat, birthLng),
+        api.getFullReport(dateStr, birthLat, birthLng, reportLang),
         api.getAIReport(dateStr, birthLat, birthLng, reportLang, birthLocation, userName || null, gender),
       ]);
 
@@ -1053,9 +575,6 @@ export default function ReportScreen() {
       setReport(rawRes.data);
       if (aiRes.data) {
         setAiReport(aiRes.data);
-        setViewMode('ai');
-      } else {
-        setViewMode('technical');
       }
       setScreenState('report');
     } catch (err) {
@@ -1082,7 +601,7 @@ export default function ReportScreen() {
       var dateStr = birthDate + 'T' + birthTime + ':00';
 
       // Quick call to get birth chart + gender prediction
-      var chartRes = await api.getBirthChart(dateStr, birthLat, birthLng);
+      var chartRes = await api.getBirthChart(dateStr, birthLat, birthLng, reportLang);
       if (chartRes.data) {
         setChartData(chartRes.data);
         if (chartRes.data.genderPrediction) {
@@ -1118,6 +637,86 @@ export default function ReportScreen() {
     setScreenState('form');
   };
 
+  // ── SAVED REPORTS ──────────────────────────────────────
+  var fetchSavedReports = useCallback(async function() {
+    try {
+      setSavedReportsLoading(true);
+      var res = await api.getMyHoroscopeReports();
+      if (res.data && res.data.reports) {
+        setSavedReports(res.data.reports);
+      }
+    } catch (err) {
+      // Silently fail — user may not be logged in
+      console.log('Could not fetch saved reports:', err.message);
+    } finally {
+      setSavedReportsLoading(false);
+    }
+  }, []);
+
+  useEffect(function() {
+    if (screenState === 'form') {
+      fetchSavedReports();
+    }
+  }, [screenState, fetchSavedReports]);
+
+  var handleLoadSavedReport = async function(reportItem) {
+    try {
+      setLoadingReportId(reportItem.id);
+      var res = await api.getSavedReport(reportItem.id);
+      if (res.data) {
+        var saved = res.data;
+        // Restore birth date & time from saved report
+        if (saved.birthDate) {
+          var parts = saved.birthDate.split('T');
+          if (parts[0]) setBirthDate(parts[0]);
+          if (parts[1]) setBirthTime(parts[1].substring(0, 5));
+        }
+        if (saved.birthLocation) setBirthLocation(saved.birthLocation);
+        if (saved.lat) setBirthLat(saved.lat);
+        if (saved.lng) setBirthLng(saved.lng);
+        if (saved.language) setReportLang(saved.language);
+        if (saved.userName) setUserName(saved.userName);
+        if (saved.userGender) setUserGender(saved.userGender);
+        // Build report object from server response
+        setReport({ birthData: saved.birthData || null });
+        setAiReport({ narrativeSections: saved.narrativeSections || null });
+        setChartData(saved.rashiChart ? { rashiChart: saved.rashiChart, lagna: saved.birthData?.lagna || null } : null);
+        setScreenState('report');
+      } else {
+        setError(reportLang === 'si' ? 'වාර්තාව පූරණය කිරීමට නොහැක' : 'Could not load report');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to load saved report');
+    } finally {
+      setLoadingReportId(null);
+    }
+  };
+
+  var handleDeleteSavedReport = function(reportItem) {
+    var title = reportLang === 'si' ? 'වාර්තාව මකන්නද?' : 'Delete Report?';
+    var msg = reportLang === 'si'
+      ? 'මෙම වාර්තාව ස්ථිරවම මකනු ලැබේ. ඔබට විශ්වාසද?'
+      : 'This report will be permanently deleted. Are you sure?';
+    var cancel = reportLang === 'si' ? 'අවලංගු' : 'Cancel';
+    var del = reportLang === 'si' ? 'මකන්න' : 'Delete';
+
+    Alert.alert(title, msg, [
+      { text: cancel, style: 'cancel' },
+      {
+        text: del,
+        style: 'destructive',
+        onPress: async function() {
+          try {
+            await api.deleteSavedReport(reportItem.id);
+            setSavedReports(function(prev) { return prev.filter(function(r) { return r.id !== reportItem.id; }); });
+          } catch (err) {
+            setError(err.message || 'Failed to delete report');
+          }
+        },
+      },
+    ]);
+  };
+
   // ── GENDER GUESS SCREEN ───────────────────────────────────
   if (screenState === 'gender-guess' && genderPrediction) {
     return (
@@ -1150,8 +749,8 @@ export default function ReportScreen() {
           <Animated.View entering={FadeInDown.delay(50).duration(600)}>
             <Text style={s.title}>{
               reportLang === 'si'
-                ? (userName ? userName + 'ගේ කේන්දර වාර්තාව ✨' : '✨ ඔයාගේ කේන්දර වාර්තාව')
-                : (userName ? userName + '\'s Cosmic Report' : '✨ Your Cosmic Report')
+                ? (userName ? userName + 'ගේ ජීවිත කතාව ✨' : '✨ ඔයාගේ ජීවිත කතාව')
+                : (userName ? userName + '\'s Life Story' : '✨ Your Life Story')
             }</Text>
             <Text style={s.subtitle}>{birthLocation} • {birthDate} • {birthTime}</Text>
           </Animated.View>
@@ -1160,37 +759,13 @@ export default function ReportScreen() {
           <Animated.View entering={FadeIn.delay(100).duration(400)}>
             <TouchableOpacity style={s.newReportBtn} onPress={handleNewReport} activeOpacity={0.8}>
               <Ionicons name="refresh" size={16} color="#C084FC" style={{ marginRight: 6 }} />
-              <Text style={s.newReportText}>{reportLang === 'si' ? 'අලුත් රිපෝට් එකක්' : 'Generate New Report'}</Text>
+              <Text style={s.newReportText}>{reportLang === 'si' ? 'අලුත් කතාවක් ලියන්න' : 'Write a New Story'}</Text>
             </TouchableOpacity>
           </Animated.View>
 
-          {/* View Mode Toggle */}
-          {aiReport && (
-            <Animated.View entering={FadeIn.delay(150).duration(400)}>
-              <View style={s.toggleRow}>
-                <TouchableOpacity
-                  style={[s.toggleBtn, viewMode === 'ai' && s.toggleActive]}
-                  onPress={function() { setViewMode('ai'); }}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="sparkles" size={16} color={viewMode === 'ai' ? '#fff' : '#94A3B8'} />
-                  <Text style={[s.toggleText, viewMode === 'ai' && s.toggleTextActive]}>{reportLang === 'si' ? 'ඔයාගේ කතාව' : 'Your Story'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[s.toggleBtn, viewMode === 'technical' && s.toggleActive]}
-                  onPress={function() { setViewMode('technical'); }}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="analytics" size={16} color={viewMode === 'technical' ? '#fff' : '#94A3B8'} />
-                  <Text style={[s.toggleText, viewMode === 'technical' && s.toggleTextActive]}>{reportLang === 'si' ? 'තාක්ෂණික' : 'Technical'}</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          )}
-
           {/* Birth Summary Header */}
           {report.birthData && (
-            <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+            <Animated.View entering={FadeInDown.delay(150).duration(600)}>
               <AuraBox style={{ borderColor: 'rgba(251,191,36,0.2)' }}>
                 <LinearGradient
                   colors={['rgba(251,191,36,0.08)', 'transparent']}
@@ -1202,64 +777,58 @@ export default function ReportScreen() {
                     <Text style={{ fontSize: 28 }}>🪐</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.birthLagna}>{userName ? userName + ' — ' : ''}{report.birthData.lagna?.english} Lagna</Text>
-                    <Text style={s.birthSinhala}>{report.birthData.lagna?.sinhala} ලග්නය</Text>
+                    <Text style={s.birthLagna}>{userName || '✨'}</Text>
+                    <Text style={s.birthSinhala}>{
+                      reportLang === 'si'
+                        ? (report.birthData.lagna?.sinhala ? report.birthData.lagna.sinhala + ' බලය යටතේ උපන්නා' : '')
+                        : (report.birthData.lagna?.english ? 'Born under the power of ' + report.birthData.lagna.english : '')
+                    }</Text>
                     <Text style={s.birthSub}>
-                      Moon: {report.birthData.moonSign?.english} • Sun: {report.birthData.sunSign?.english}
-                    </Text>
-                    <Text style={s.birthSub}>
-                      {report.birthData.nakshatra?.name} Nakshatra (Pada {report.birthData.nakshatra?.pada})
+                      {reportLang === 'si' ? 'උපන් ස්ථානය: ' : 'Born: '}{birthLocation} • {birthDate} • {birthTime}
                     </Text>
                   </View>
                 </View>
-                {report.birthData.panchanga && (
-                  <View style={s.panchangaRow}>
-                    <View style={s.panchangaItem}>
-                      <Text style={s.panchangaLabel}>Tithi</Text>
-                      <Text style={s.panchangaValue}>{report.birthData.panchanga.tithi}</Text>
-                    </View>
-                    <View style={s.panchangaItem}>
-                      <Text style={s.panchangaLabel}>Yoga</Text>
-                      <Text style={s.panchangaValue}>{report.birthData.panchanga.yoga}</Text>
-                    </View>
-                    <View style={s.panchangaItem}>
-                      <Text style={s.panchangaLabel}>Karana</Text>
-                      <Text style={s.panchangaValue}>{report.birthData.panchanga.karana}</Text>
-                    </View>
-                    <View style={s.panchangaItem}>
-                      <Text style={s.panchangaLabel}>Vaara</Text>
-                      <Text style={s.panchangaValue}>{report.birthData.panchanga.vaara}</Text>
-                    </View>
+                <View style={s.panchangaRow}>
+                  <View style={s.panchangaItem}>
+                    <Text style={s.panchangaLabel}>{reportLang === 'si' ? '🌙 චන්ද්‍ර ශක්තිය' : '🌙 Moon Energy'}</Text>
+                    <Text style={s.panchangaValue}>{reportLang === 'si' ? (report.birthData.moonSign?.sinhala || report.birthData.moonSign?.english || '') : (report.birthData.moonSign?.english || '')}</Text>
                   </View>
-                )}
+                  <View style={s.panchangaItem}>
+                    <Text style={s.panchangaLabel}>{reportLang === 'si' ? '☀️ සූර්ය ශක්තිය' : '☀️ Sun Energy'}</Text>
+                    <Text style={s.panchangaValue}>{reportLang === 'si' ? (report.birthData.sunSign?.sinhala || report.birthData.sunSign?.english || '') : (report.birthData.sunSign?.english || '')}</Text>
+                  </View>
+                  <View style={s.panchangaItem}>
+                    <Text style={s.panchangaLabel}>{reportLang === 'si' ? '⭐ උපන් තරුව' : '⭐ Birth Star'}</Text>
+                    <Text style={s.panchangaValue}>{reportLang === 'si' ? (report.birthData.nakshatra?.sinhala || report.birthData.nakshatra?.name || '') : (report.birthData.nakshatra?.name || '')}</Text>
+                  </View>
+                </View>
               </AuraBox>
             </Animated.View>
           )}
 
           {/* Birth Chart (Sri Lankan Kendara) */}
           {chartData && chartData.rashiChart && (
-            <Animated.View entering={FadeInDown.delay(300).duration(700)}>
+            <Animated.View entering={FadeInDown.delay(250).duration(700)}>
               <AuraBox style={{ borderColor: 'rgba(147,51,234,0.2)' }}>
                 <View style={s.chartHeader}>
-                  <Text style={s.chartTitle}>🏛️ Rashi Kendara Chart</Text>
-                  <Text style={s.chartSub}>Traditional Sri Lankan birth chart</Text>
+                  <Text style={s.chartTitle}>{reportLang === 'si' ? '🏛️ ඔයාගේ උපන් සිතියම' : '🏛️ Your Birth Map'}</Text>
+                  <Text style={s.chartSub}>{reportLang === 'si' ? 'ඔයා ඉපදුන මොහොතේ අහස පෙනුන හැටි' : 'How the sky looked the moment you were born'}</Text>
                 </View>
                 <SriLankanChart
                   rashiChart={chartData.rashiChart}
                   lagnaRashiId={chartData.lagna?.rashiId || chartData.rashiChart?.[0]?.rashiId || 1}
-                  language={appLanguage}
+                  language={language}
                 />
               </AuraBox>
             </Animated.View>
           )}
 
-          {/* Report Sections */}
-          {report.sections && (
+          {/* AI Narrative Sections — No technical data shown */}
+          {aiReport && aiReport.narrativeSections && (
             SECTION_KEYS.map(function(key, index) {
-              var sectionData = report.sections[key];
-              if (!sectionData) return null;
-              var aiNarrative = aiReport?.narrativeSections?.[key] || null;
-              return <SectionCard key={key} sectionKey={key} data={sectionData} index={index} t={t} aiNarrative={aiNarrative} viewMode={aiReport ? viewMode : 'technical'} />;
+              var aiNarrative = aiReport.narrativeSections[key] || null;
+              if (!aiNarrative || !aiNarrative.narrative) return null;
+              return <SectionCard key={key} sectionKey={key} data={null} index={index} t={t} aiNarrative={aiNarrative} reportLang={reportLang} />;
             })
           )}
 
@@ -1389,54 +958,78 @@ export default function ReportScreen() {
           </Animated.View>
         )}
 
+        {/* ── SAVED REPORTS LIST ── */}
+        {savedReports.length > 0 && (
+          <Animated.View entering={FadeInDown.delay(300).duration(800)}>
+            <AuraBox style={{ borderColor: 'rgba(251,191,36,0.15)' }}>
+              <View style={sr.header}>
+                <View style={sr.headerLeft}>
+                  <Ionicons name="library" size={20} color="#FBBF24" style={{ marginRight: 8 }} />
+                  <Text style={sr.headerTitle}>{reportLang === 'si' ? 'සුරකින ලද වාර්තා' : 'Saved Reports'}</Text>
+                </View>
+                <Text style={sr.headerCount}>{savedReports.length}</Text>
+              </View>
+
+              {savedReportsLoading ? (
+                <ActivityIndicator color="#9333EA" style={{ paddingVertical: 20 }} />
+              ) : (
+                savedReports.map(function(item, idx) {
+                  var dateLabel = '';
+                  try {
+                    var d = new Date(item.createdAt);
+                    dateLabel = d.toLocaleDateString('en-LK', { year: 'numeric', month: 'short', day: 'numeric' });
+                  } catch (e) { dateLabel = item.createdAt || ''; }
+                  var birthLabel = item.birthDate ? item.birthDate.split('T')[0] : '';
+                  var langEmoji = item.language === 'si' ? '🇱🇰' : '🇬🇧';
+                  var isLoading = loadingReportId === item.id;
+                  var displayName = item.userName || birthLabel;
+                  var locationLabel = item.birthLocation ? (' • ' + item.birthLocation) : '';
+
+                  return (
+                    <View key={item.id || idx} style={sr.card}>
+                      <TouchableOpacity
+                        style={sr.cardMain}
+                        onPress={function() { handleLoadSavedReport(item); }}
+                        activeOpacity={0.7}
+                        disabled={isLoading}
+                      >
+                        <View style={sr.cardIcon}>
+                          {isLoading ? (
+                            <ActivityIndicator color="#9333EA" size="small" />
+                          ) : (
+                            <Text style={{ fontSize: 24 }}>📜</Text>
+                          )}
+                        </View>
+                        <View style={sr.cardInfo}>
+                          <Text style={sr.cardName}>{displayName}</Text>
+                          <Text style={sr.cardBirth}>{langEmoji} {birthLabel}{locationLabel}</Text>
+                          <Text style={sr.cardDate}>{reportLang === 'si' ? 'සාදන ලද: ' : 'Created: '}{dateLabel}</Text>
+                          {item.sectionCount ? (
+                            <Text style={sr.cardSections}>{item.sectionCount} {reportLang === 'si' ? 'කොටස්' : 'sections'}</Text>
+                          ) : null}
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={sr.deleteBtn}
+                        onPress={function() { handleDeleteSavedReport(item); }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })
+              )}
+            </AuraBox>
+          </Animated.View>
+        )}
+
         <View style={{ height: 120 }} />
       </ScrollView>
     </CosmicBackground>
   );
 }
-
-// ══════════════════════════════════════════
-// CONTENT STYLES (shared across renderers)
-// ══════════════════════════════════════════
-var cs = StyleSheet.create({
-  summary: { color: '#CBD5E1', fontSize: 13, lineHeight: 20, marginBottom: 10 },
-  highlight: { backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(251,191,36,0.15)' },
-  highlightLabel: { color: '#94A3B8', fontSize: 11, fontWeight: '600', marginBottom: 4 },
-  highlightValue: { color: '#FBBF24', fontSize: 20, fontWeight: '800' },
-  highlightSub: { color: '#94A3B8', fontSize: 11, marginTop: 4 },
-  yogaCard: { backgroundColor: 'rgba(147,51,234,0.08)', borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(147,51,234,0.12)' },
-  yogaHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
-  yogaName: { color: '#C084FC', fontSize: 14, fontWeight: '700' },
-  yogaDesc: { color: '#94A3B8', fontSize: 12, lineHeight: 18 },
-  tagRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 4 },
-  tagLabel: { color: '#64748B', fontSize: 11, fontWeight: '600', marginRight: 6 },
-  tagWrap: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 },
-  sectionLabel: { color: '#CBD5E1', fontSize: 13, fontWeight: '700', marginBottom: 8 },
-  bodyText: { color: '#94A3B8', fontSize: 12, lineHeight: 19 },
-  listItem: { color: '#94A3B8', fontSize: 12, lineHeight: 20, paddingLeft: 4, marginBottom: 4 },
-  row3: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  miniCard: { flex: 1, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 10, marginHorizontal: 3 },
-  miniLabel: { color: '#64748B', fontSize: 10, fontWeight: '600', marginBottom: 4 },
-  miniValue: { color: '#F1F5F9', fontSize: 14, fontWeight: '700' },
-  miniSub: { color: '#94A3B8', fontSize: 10, marginTop: 2 },
-  alertBox: { flexDirection: 'row', alignItems: 'flex-start', padding: 14, borderRadius: 14, marginTop: 10, borderWidth: 1 },
-  alertDanger: { backgroundColor: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.2)' },
-  alertSuccess: { backgroundColor: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.2)' },
-  alertTitle: { color: '#F1F5F9', fontSize: 13, fontWeight: '700', marginBottom: 4 },
-  alertText: { color: '#94A3B8', fontSize: 11, lineHeight: 17 },
-  dateBadge: { color: '#64748B', fontSize: 11, fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.04)', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginBottom: 10 },
-  transitRow: { marginBottom: 10 },
-  transitPlanet: { fontSize: 14, fontWeight: '800', marginBottom: 2 },
-  transitSign: { color: '#CBD5E1', fontSize: 12, fontWeight: '600', marginBottom: 2 },
-  transitEffect: { color: '#94A3B8', fontSize: 11 },
-  adRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4, paddingLeft: 24 },
-  adDot: { width: 6, height: 6, borderRadius: 3, marginRight: 8 },
-  adLord: { color: '#CBD5E1', fontSize: 12, fontWeight: '600', width: 70 },
-  adPeriod: { color: '#64748B', fontSize: 11, flex: 1 },
-  moreText: { color: '#475569', fontSize: 11, fontStyle: 'italic', paddingLeft: 38, marginTop: 2 },
-  remedyCard: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  remedyPlanet: { color: '#F1F5F9', fontSize: 13, fontWeight: '700', marginBottom: 6 },
-});
 
 // ══════════════════════════════════════════
 // MAIN STYLES
@@ -1476,11 +1069,6 @@ var s = StyleSheet.create({
   locationChipTextActive: { color: '#C084FC' },
   newReportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginBottom: 12, backgroundColor: 'rgba(147,51,234,0.1)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(147,51,234,0.25)' },
   newReportText: { color: '#C084FC', fontSize: 13, fontWeight: '700' },
-  toggleRow: { flexDirection: 'row', marginBottom: 16, backgroundColor: 'rgba(15,10,35,0.6)', borderRadius: 14, padding: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 11, gap: 6 },
-  toggleActive: { backgroundColor: 'rgba(147,51,234,0.3)', borderWidth: 1, borderColor: 'rgba(147,51,234,0.4)' },
-  toggleText: { color: '#94A3B8', fontSize: 13, fontWeight: '600' },
-  toggleTextActive: { color: '#fff' },
   birthHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   birthIconBg: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(251,191,36,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
   birthLagna: { color: '#FBBF24', fontSize: 20, fontWeight: '900' },
@@ -1493,4 +1081,23 @@ var s = StyleSheet.create({
   chartHeader: { alignItems: 'center', marginBottom: 12 },
   chartTitle: { color: '#F1F5F9', fontSize: 16, fontWeight: '800' },
   chartSub: { color: '#64748B', fontSize: 11, marginTop: 4 },
+});
+
+// ──────────────────────────────────────────
+// Saved Reports styles
+// ──────────────────────────────────────────
+var sr = StyleSheet.create({
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center' },
+  headerTitle: { color: '#FBBF24', fontSize: 15, fontWeight: '800' },
+  headerCount: { color: '#64748B', fontSize: 12, fontWeight: '700', backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
+  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  cardMain: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 12 },
+  cardIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(147,51,234,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  cardInfo: { flex: 1 },
+  cardName: { color: '#FBBF24', fontSize: 15, fontWeight: '800' },
+  cardBirth: { color: '#F1F5F9', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  cardDate: { color: '#64748B', fontSize: 11, marginTop: 2 },
+  cardSections: { color: '#9333EA', fontSize: 10, fontWeight: '600', marginTop: 2 },
+  deleteBtn: { paddingHorizontal: 14, paddingVertical: 16, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.05)' },
 });

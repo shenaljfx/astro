@@ -79,7 +79,11 @@ export default function HomeScreen() {
   var [chartLoading, setChartLoading] = useState(false);
   var [error, setError] = useState(null);
 
-  var hasBirthData = user && user.birthData && user.birthData.dateTime;
+  // Extract stable primitive values to avoid re-fetching on every user object change
+  var birthDateTime = user?.birthData?.dateTime || null;
+  var birthLat = user?.birthData?.lat || 6.9271;
+  var birthLng = user?.birthData?.lng || 79.8612;
+  var hasBirthData = !!birthDateTime;
   var displayName = user?.displayName || 'Cosmic Seeker';
 
   var fetchData = useCallback(async function() {
@@ -96,24 +100,31 @@ export default function HomeScreen() {
     }
   }, [t]);
 
-  var fetchBirthChart = useCallback(async function() {
+  var fetchBirthChart = useCallback(async function(cancelled) {
     if (!hasBirthData) return;
     try {
       setChartLoading(true);
-      var bd = user.birthData;
-      var res = await api.getBirthChart(bd.dateTime, bd.lat || 6.9271, bd.lng || 79.8612);
-      if (res.success) {
+      var res = await api.getBirthChartBasic(birthDateTime, birthLat, birthLng, language);
+      if (!cancelled.current && res.success) {
         setChartData(res.data);
       }
     } catch (err) {
+      if (cancelled.current) return;
+      if (err && (err.name === 'AbortError' || (err.message && err.message.indexOf('abort') !== -1))) return;
       console.warn('Birth chart fetch failed:', err.message);
     } finally {
-      setChartLoading(false);
+      if (!cancelled.current) {
+        setChartLoading(false);
+      }
     }
-  }, [hasBirthData, user]);
+  }, [hasBirthData, birthDateTime, birthLat, birthLng, language]);
 
   useEffect(function() { fetchData(); }, [fetchData]);
-  useEffect(function() { fetchBirthChart(); }, [fetchBirthChart]);
+  useEffect(function() {
+    var cancelled = { current: false };
+    fetchBirthChart(cancelled);
+    return function() { cancelled.current = true; };
+  }, [fetchBirthChart]);
 
   var getGreeting = function() {
     var h = new Date().getHours();
@@ -225,7 +236,7 @@ export default function HomeScreen() {
           <View style={s.secHeader}>
             <Text style={{ fontSize: 20 }}>🔮</Text>
             <Text style={s.secTitle}>
-              {ld.sinhala || ld.english || 'Lagna Palapala'}
+              {language === 'si' ? (ld.sinhala || ld.english || 'ලග්න පලාපල') : (ld.english || ld.sinhala || 'Lagna Palapala')}
             </Text>
           </View>
           <Text style={s.palapalaText}>
@@ -461,15 +472,17 @@ export default function HomeScreen() {
                     var label = item[0];
                     var entry = item[1];
                     if (!entry) return null;
-                    var displayName = typeof entry === 'string' ? entry
+                    var englishName = typeof entry === 'string' ? entry
                       : (entry.english || entry.name || String(entry));
                     var sinhalaName = typeof entry === 'object' ? entry.sinhala : null;
+                    var displayName = (language === 'si' && sinhalaName) ? sinhalaName : englishName;
+                    var subName = (language === 'si') ? null : sinhalaName;
                     return (
                       <View key={i} style={s.pRow}>
                         <Text style={s.pLabel}>  {label}</Text>
                         <View style={{ alignItems: 'flex-end' }}>
                           <Text style={s.pValue}>{displayName}</Text>
-                          {sinhalaName ? <Text style={s.pSinhala}>{sinhalaName}</Text> : null}
+                          {subName ? <Text style={s.pSinhala}>{subName}</Text> : null}
                         </View>
                       </View>
                     );

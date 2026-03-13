@@ -100,9 +100,28 @@ export function AuthProvider({ children }) {
       });
       var json = await res.json();
       if (json.success && json.user) {
-        setUser(json.user);
+        // Preserve onboardingComplete — never lose it during refresh
+        setUser(function(prev) {
+          var serverUser = json.user;
+          var merged = {
+            ...serverUser,
+            onboardingComplete: serverUser.onboardingComplete || prev?.onboardingComplete || false,
+          };
+          // Preserve local birthData if server doesn't have it yet (race condition after onboarding)
+          if (prev?.birthData?.dateTime && !serverUser.birthData?.dateTime) {
+            merged.birthData = prev.birthData;
+          }
+          // Skip update if nothing meaningful changed (prevents re-render cascade)
+          if (prev && JSON.stringify(prev.birthData) === JSON.stringify(merged.birthData) &&
+              prev.onboardingComplete === merged.onboardingComplete &&
+              prev.displayName === merged.displayName &&
+              JSON.stringify(prev.subscription) === JSON.stringify(merged.subscription)) {
+            return prev; // Same reference = no re-render
+          }
+          AsyncStorage.setItem(STORAGE_USER, JSON.stringify(merged));
+          return merged;
+        });
         setSubscription(json.user.subscription || null);
-        await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(json.user));
       }
     } catch (err) {
       console.warn('Profile refresh failed:', err.message);
@@ -268,7 +287,7 @@ export function AuthProvider({ children }) {
         body: JSON.stringify(birthData),
       });
       setUser(function(prev) {
-        var updated = { ...prev, birthData: birthData };
+        var updated = { ...prev, birthData: birthData, onboardingComplete: true };
         AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
         return updated;
       });

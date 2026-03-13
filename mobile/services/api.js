@@ -26,22 +26,36 @@ export function setAuthTokenGetter(fn) {
 async function request(path, opts) {
   if (!opts) opts = {};
   var timeout = opts._timeout || 12000;
+  var retries = opts._retries || 0;
   delete opts._timeout;
+  delete opts._retries;
   var url = BASE + path;
-  console.log('[API] Request:', url);
+  var method = opts.method || 'GET';
+  var startMs = Date.now();
+  console.log('[API] ▶ ' + method + ' ' + url + (retries > 0 ? ' (retry ' + retries + ')' : '') + ' timeout=' + timeout + 'ms');
   var controller = new AbortController();
-  var timer = setTimeout(function() { controller.abort(); }, timeout);
+  var timer = setTimeout(function() {
+    console.log('[API] ⏰ TIMEOUT after ' + timeout + 'ms: ' + url);
+    controller.abort('Request timeout');
+  }, timeout);
 
   // Build headers
   var headers = { 'Content-Type': 'application/json' };
   
   // Attach auth token if available
+  var hasToken = false;
   if (_getToken) {
     try {
       var token = await _getToken();
-      if (token) headers['Authorization'] = 'Bearer ' + token;
-    } catch (e) { /* continue without auth */ }
+      if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+        hasToken = true;
+      }
+    } catch (e) {
+      console.log('[API] ⚠ Token getter failed:', e.message);
+    }
   }
+  console.log('[API]   auth=' + (hasToken ? 'yes' : 'no') + ' body=' + (opts.body ? opts.body.length + 'b' : 'none'));
 
   try {
     var res = await fetch(url, {
@@ -50,11 +64,39 @@ async function request(path, opts) {
       ...opts,
     });
     clearTimeout(timer);
-    var json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'HTTP ' + res.status);
+    var elapsed = Date.now() - startMs;
+    console.log('[API] ◀ ' + res.status + ' ' + url + ' (' + elapsed + 'ms)');
+    var text = await res.text();
+    var json;
+    try {
+      json = JSON.parse(text);
+    } catch (parseErr) {
+      console.error('[API] ✖ JSON parse failed for ' + url + ':', text.substring(0, 200));
+      throw new Error('Invalid server response (not JSON)');
+    }
+    if (!res.ok) {
+      console.error('[API] ✖ HTTP ' + res.status + ' ' + url + ':', json.error || text.substring(0, 200));
+      throw new Error(json.error || 'HTTP ' + res.status);
+    }
+    console.log('[API] ✔ success=' + json.success + ' hasData=' + !!(json.data));
     return json;
   } catch (err) {
     clearTimeout(timer);
+    var elapsed2 = Date.now() - startMs;
+    // Detect abort (timeout or manual cancel)
+    if (err && (err.name === 'AbortError' || (err.message && err.message.indexOf('abort') !== -1))) {
+      console.log('[API] ✖ ABORT ' + url + ' after ' + elapsed2 + 'ms: ' + (err.message || 'no reason'));
+      var abortErr = new Error('Request timeout — server took too long (' + elapsed2 + 'ms)');
+      abortErr.name = 'AbortError';
+      throw abortErr;
+    }
+    // Network errors (e.g. "Network request failed") — retry once
+    if (retries < 1 && err && err.message && (err.message.indexOf('Network') !== -1 || err.message.indexOf('network') !== -1 || err.message.indexOf('Failed to fetch') !== -1)) {
+      console.log('[API] ✖ NETWORK ERROR ' + url + ' after ' + elapsed2 + 'ms: ' + err.message + ' — retrying in 2s...');
+      await new Promise(function(r) { setTimeout(r, 2000); });
+      return request(path, { ...opts, _timeout: timeout, _retries: retries + 1 });
+    }
+    console.error('[API] ✖ ERROR ' + url + ' after ' + elapsed2 + 'ms:', err.name, err.message);
     throw err;
   }
 }
@@ -67,14 +109,19 @@ export var getDailyHoroscope = function(sign) {
   return request('/api/horoscope/daily/' + sign);
 };
 
-export var getBirthChartData = function(birthDate, lat, lng) {
-  return request('/api/horoscope/birth-chart/data?date=' + birthDate + '&lat=' + lat + '&lng=' + lng);
+export var getBirthChartData = function(birthDate, lat, lng, language) {
+  return request('/api/horoscope/birth-chart/data?date=' + encodeURIComponent(birthDate) + '&lat=' + lat + '&lng=' + lng + '&language=' + (language || 'en'));
 };
 
-export var getBirthChart = function(birthDate, lat, lng) {
+export var getBirthChartBasic = function(birthDate, lat, lng, language) {
+  return request('/api/horoscope/birth-chart/data?date=' + encodeURIComponent(birthDate) + '&lat=' + lat + '&lng=' + lng + '&language=' + (language || 'en') + '&basic=true');
+};
+
+export var getBirthChart = function(birthDate, lat, lng, language) {
   return request('/api/horoscope/birth-chart', {
     method: 'POST',
-    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en' }),
+    _timeout: 35000, // Increased timeout to 35s for slow responses
   });
 };
 
@@ -108,10 +155,10 @@ export var createVibeLink = function(name, birthDate) {
   });
 };
 
-export var getFullReport = function(birthDate, lat, lng) {
+export var getFullReport = function(birthDate, lat, lng, language) {
   return request('/api/horoscope/full-report', {
     method: 'POST',
-    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en' }),
   });
 };
 
@@ -152,6 +199,18 @@ export var updatePreferences = function(prefs) {
 
 export var getUserReports = function() {
   return request('/api/user/reports');
+};
+
+export var getMyHoroscopeReports = function() {
+  return request('/api/horoscope/my-reports');
+};
+
+export var getSavedReport = function(reportId) {
+  return request('/api/horoscope/saved-report/' + reportId);
+};
+
+export var deleteSavedReport = function(reportId) {
+  return request('/api/horoscope/saved-report/' + reportId, { method: 'DELETE' });
 };
 
 export var getUserChats = function(limit) {
@@ -207,6 +266,7 @@ export default {
   getDailyNakath: getDailyNakath,
   getDailyHoroscope: getDailyHoroscope,
   getBirthChart: getBirthChart,
+  getBirthChartBasic: getBirthChartBasic,
   getBirthChartData: getBirthChartData,
   checkPorondam: checkPorondam,
   getPorondamReport: getPorondamReport,
@@ -220,6 +280,9 @@ export default {
   saveBirthData: saveBirthData,
   updatePreferences: updatePreferences,
   getUserReports: getUserReports,
+  getMyHoroscopeReports: getMyHoroscopeReports,
+  getSavedReport: getSavedReport,
+  deleteSavedReport: deleteSavedReport,
   getUserChats: getUserChats,
   getUserPorondamHistory: getUserPorondamHistory,
   sendOtp: sendOtp,

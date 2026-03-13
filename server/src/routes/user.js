@@ -61,6 +61,11 @@ router.get('/profile', requireAuth, async (req, res) => {
       });
       return res.json({ success: true, user: newUser });
     }
+    // Ensure onboardingComplete is always present in the response
+    if (user.onboardingComplete === undefined) {
+      // If user has birthData set, they've completed onboarding
+      user.onboardingComplete = !!(user.birthData && user.birthData.dateTime);
+    }
     res.json({ success: true, user });
   } catch (err) {
     console.error('Profile fetch error:', err);

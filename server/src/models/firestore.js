@@ -79,6 +79,7 @@ async function updateBirthData(uid, birthData) {
       locationName: birthData.locationName || '',
       timezone: birthData.timezone || 'Asia/Colombo',
     },
+    onboardingComplete: true,
     updatedAt: new Date().toISOString(),
   });
   return true;
@@ -125,6 +126,9 @@ async function saveReport(uid, reportData) {
     rashiChart: reportData.rashiChart || null,
     birthInfo: reportData.birthInfo || null,
     generationTime: reportData.generationTime || null,
+    userName: reportData.userName || null,
+    userGender: reportData.userGender || null,
+    birthLocation: reportData.birthLocation || null,
     createdAt: new Date().toISOString(),
     expiresAt: reportData.expiresAt || null, // null = never expires
   };
@@ -184,7 +188,7 @@ async function getCachedReport(uid, birthDate, language) {
 }
 
 /**
- * Get all reports for a user
+ * Get all AI narrative reports for a user (excludes chart explanations, translations, etc.)
  */
 async function getUserReports(uid) {
   const db = getDb();
@@ -192,6 +196,7 @@ async function getUserReports(uid) {
 
   const snapshot = await db.collection(COLLECTIONS.REPORTS)
     .where('uid', '==', uid)
+    .where('type', '==', 'ai-narrative')
     .orderBy('createdAt', 'desc')
     .limit(20)
     .get();
@@ -398,6 +403,90 @@ async function getUserPorondamHistory(uid, limit = 10) {
   }));
 }
 
+// ─── CHART EXPLANATION CACHE ────────────────────────────────────
+
+/**
+ * Save AI-generated chart explanations keyed by uid + birthDate + language.
+ * Overwrites any existing explanation for the same combo.
+ */
+async function saveChartExplanation(uid, birthDate, language, explanations) {
+  const db = getDb();
+  if (!db) return null;
+
+  // Deterministic doc ID so we can overwrite on birthday change
+  const docId = `${uid}_${birthDate}_${language}`;
+
+  const doc = {
+    uid,
+    birthDate,
+    language: language || 'en',
+    explanations, // the JSON object from AI
+    createdAt: new Date().toISOString(),
+  };
+
+  await db.collection(COLLECTIONS.REPORTS).doc(docId).set(doc);
+  return docId;
+}
+
+/**
+ * Get cached chart explanation for a uid + birthDate + language combo.
+ * Returns null if not found (triggers AI regeneration).
+ */
+async function getCachedChartExplanation(uid, birthDate, language) {
+  const db = getDb();
+  if (!db) return null;
+
+  try {
+    const docId = `${uid}_${birthDate}_${language}`;
+    const docRef = await db.collection(COLLECTIONS.REPORTS).doc(docId).get();
+    if (!docRef.exists) return null;
+    return docRef.data().explanations || null;
+  } catch (err) {
+    console.error('getCachedChartExplanation error:', err.message);
+    return null;
+  }
+}
+
+// ─── SINHALA TRANSLATION CACHE ──────────────────────────────────
+
+/**
+ * Save translated advancedAnalysis keyed by uid + birthDate.
+ * Birth data is deterministic so same inputs always produce same analysis.
+ */
+async function saveTranslationCache(uid, birthDate, translatedAnalysis) {
+  const db = getDb();
+  if (!db) return null;
+
+  const docId = `tr_${uid}_${birthDate}`;
+  await db.collection(COLLECTIONS.REPORTS).doc(docId).set({
+    uid,
+    birthDate,
+    type: 'si-translation',
+    translatedAnalysis,
+    createdAt: new Date().toISOString(),
+  });
+  return docId;
+}
+
+/**
+ * Get cached Sinhala translation for advancedAnalysis.
+ * Returns null if not found.
+ */
+async function getCachedTranslation(uid, birthDate) {
+  const db = getDb();
+  if (!db) return null;
+
+  try {
+    const docId = `tr_${uid}_${birthDate}`;
+    const docRef = await db.collection(COLLECTIONS.REPORTS).doc(docId).get();
+    if (!docRef.exists) return null;
+    return docRef.data().translatedAnalysis || null;
+  } catch (err) {
+    console.error('getCachedTranslation error:', err.message);
+    return null;
+  }
+}
+
 module.exports = {
   upsertUser,
   getUser,
@@ -414,4 +503,8 @@ module.exports = {
   updatePorondamReport,
   getPorondamById,
   getUserPorondamHistory,
+  saveChartExplanation,
+  getCachedChartExplanation,
+  saveTranslationCache,
+  getCachedTranslation,
 };

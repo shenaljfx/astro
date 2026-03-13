@@ -10,6 +10,7 @@ import CosmicBackground from '../components/CosmicBackground';
 function AppGate() {
   var { isLoggedIn, loading, authReady, user } = useAuth();
   var [showOnboarding, setShowOnboarding] = useState(null); // null = checking
+  var [onboardingPassed, setOnboardingPassed] = useState(false);
 
   // Derive whether onboarding is complete from user profile
   var onboardingDone = user?.onboardingComplete === true;
@@ -19,12 +20,16 @@ function AppGate() {
 
     if (!isLoggedIn) {
       // Not logged in — show onboarding (starts at welcome/phone/OTP)
+      setOnboardingPassed(false);
       setShowOnboarding(true);
-    } else if (!onboardingDone) {
+    } else if (!onboardingDone && !onboardingPassed) {
       // Logged in but hasn't finished onboarding (name/birth data step)
+      // Only redirect if user hasn't already completed onboarding this session
       setShowOnboarding(true);
     } else {
       // Logged in and onboarding complete — show main app
+      // Once passed, never go back to onboarding (until sign out)
+      setOnboardingPassed(true);
       setShowOnboarding(false);
     }
   }, [isLoggedIn, authReady, onboardingDone]);
@@ -43,7 +48,7 @@ function AppGate() {
   // Show onboarding
   if (showOnboarding) {
     return (
-      <OnboardingScreen onComplete={function() { setShowOnboarding(false); }} />
+      <OnboardingScreen onComplete={function() { setOnboardingPassed(true); setShowOnboarding(false); }} />
     );
   }
 

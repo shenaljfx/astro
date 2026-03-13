@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
   StyleSheet, ActivityIndicator, Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import CosmicBackground from '../../components/CosmicBackground';
 import SriLankanChart from '../../components/SriLankanChart';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -23,6 +25,14 @@ const RASHI_EN = {
   1: 'Aries', 2: 'Taurus', 3: 'Gemini', 4: 'Cancer',
   5: 'Leo', 6: 'Virgo', 7: 'Libra', 8: 'Scorpio',
   9: 'Sagittarius', 10: 'Capricorn', 11: 'Aquarius', 12: 'Pisces'
+};
+
+const TITHI_SI = {
+  'Pratipada': 'ප්‍රතිපදා', 'Dwitiya': 'ද්විතීයා', 'Tritiya': 'තෘතීයා',
+  'Chaturthi': 'චතුර්ථී', 'Panchami': 'පංචමී', 'Shashthi': 'ෂෂ්ඨී',
+  'Saptami': 'සප්තමී', 'Ashtami': 'අෂ්ටමී', 'Navami': 'නවමී',
+  'Dashami': 'දශමී', 'Ekadashi': 'ඒකාදශී', 'Dwadashi': 'ද්වාදශී',
+  'Trayodashi': 'ත්‍රයෝදශී', 'Chaturdashi': 'චතුර්දශී', 'Purnima/Amavasya': 'පුර්ණිමා/අමාවාසි'
 };
 
 const PLANET_INFO = {
@@ -77,58 +87,151 @@ export default function KendaraScreen() {
 
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState(null);
+  const stepTimers = useRef([]);
 
-  const hasBirthData = user && user.birthData && user.birthData.dateTime;
+  // Extract stable values so useCallback/useEffect don't re-trigger on every user object change
+  const birthDateTime = user?.birthData?.dateTime || null;
+  const birthLat = user?.birthData?.lat || 6.9271;
+  const birthLng = user?.birthData?.lng || 79.8612;
+  const hasBirthData = !!birthDateTime;
 
-  const fetchBirthChart = useCallback(async () => {
+  const clearStepTimers = useCallback(() => {
+    stepTimers.current.forEach(t => clearTimeout(t));
+    stepTimers.current = [];
+  }, []);
+
+  const fetchBirthChart = useCallback(async (cancelled) => {
     if (!hasBirthData) { setChartData(null); return; }
     try {
       setLoading(true);
       setError(null);
-      const bd = user.birthData;
-      const lat = bd.lat || 6.9271;
-      const lng = bd.lng || 79.8612;
-      const res = await api.getBirthChart(bd.dateTime, lat, lng);
+      setLoadingStep(1);
+      clearStepTimers();
+
+      // Progress steps timed to match fast server response (~200ms)
+      stepTimers.current.push(setTimeout(() => { if (!cancelled.current) setLoadingStep(2); }, 150));
+      stepTimers.current.push(setTimeout(() => { if (!cancelled.current) setLoadingStep(3); }, 350));
+      stepTimers.current.push(setTimeout(() => { if (!cancelled.current) setLoadingStep(4); }, 550));
+
+      const res = await api.getBirthChart(birthDateTime, birthLat, birthLng, language);
+      if (cancelled.current) return;
+
+      clearStepTimers();
+      setLoadingStep(5); // All done!
+
       if (res.success) {
+        await new Promise(r => setTimeout(r, 500));
+        if (cancelled.current) return;
         setChartData(res.data);
       } else {
         throw new Error(res.error || 'Failed to calculate chart');
       }
     } catch (err) {
+      if (cancelled.current) return;
+      if (err && (err.name === 'AbortError' || (err.message && err.message.indexOf('abort') !== -1))) return;
       setError(err.message || t('failedToLoadChart'));
     } finally {
-      setLoading(false);
+      if (!cancelled.current) {
+        setLoading(false);
+        setLoadingStep(0);
+      }
     }
-  }, [hasBirthData, user, t]);
+  }, [hasBirthData, birthDateTime, birthLat, birthLng, language, clearStepTimers]);
 
-  useEffect(() => { fetchBirthChart(); }, [fetchBirthChart]);
-  const onRefresh = useCallback(() => { fetchBirthChart(); }, [fetchBirthChart]);
+  useEffect(() => {
+    var cancelled = { current: false };
+    fetchBirthChart(cancelled);
+    return () => { cancelled.current = true; clearStepTimers(); };
+  }, [fetchBirthChart, clearStepTimers]);
+  const onRefresh = useCallback(() => { fetchBirthChart({ current: false }); }, [fetchBirthChart]);
 
   const renderContent = () => {
     if (!hasBirthData) {
       return (
         <View style={styles.emptyState}>
           <Ionicons name="planet-outline" size={64} color="rgba(251,191,36,0.5)" />
-          <Text style={styles.emptyTitle}>{t('birthDataMissing') || 'Birth Details Needed'}</Text>
+          <Text style={styles.emptyTitle}>{t('kpBirthNeeded') || 'Birth Details Needed'}</Text>
           <Text style={styles.emptyText}>{t('setBirthDataPrompt')}</Text>
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(tabs)/profile')}>
-            <Text style={styles.actionButtonText}>{t('goToProfile') || 'Go to Profile'}</Text>
+            <Text style={styles.actionButtonText}>{t('goToProfile') || (language === 'si' ? 'ප්‍රොෆයිල් එකට යන්න' : 'Go to Profile')}</Text>
           </TouchableOpacity>
         </View>
       );
     }
 
     if (loading && !chartData) {
-      return <View style={styles.center}><ActivityIndicator size="large" color="#fbbf24" /></View>;
+      const STEPS = language === 'si' ? [
+        { icon: 'globe-outline', text: 'සේවාදායකයට සම්බන්ධ වෙමින්...', key: 1 },
+        { icon: 'planet-outline', text: 'ග්‍රහ ස්ථාන ගණනය කරමින්...', key: 2 },
+        { icon: 'language-outline', text: 'සිංහලට පරිවර්තනය කරමින්...', key: 3 },
+        { icon: 'sparkles-outline', text: 'ජ්‍යෝතිෂ විශ්ලේෂණය සකසමින්...', key: 4 },
+        { icon: 'checkmark-circle-outline', text: 'සූදානම්!', key: 5 },
+      ] : [
+        { icon: 'globe-outline', text: 'Connecting to server...', key: 1 },
+        { icon: 'planet-outline', text: 'Calculating planet positions...', key: 2 },
+        { icon: 'telescope-outline', text: 'Analyzing yogas & doshas...', key: 3 },
+        { icon: 'sparkles-outline', text: 'Building your chart...', key: 4 },
+        { icon: 'checkmark-circle-outline', text: 'Ready!', key: 5 },
+      ];
+      return (
+        <View style={styles.loadingContainer}>
+          <Animated.View entering={FadeIn.duration(400)} style={styles.loadingCard}>
+            <LinearGradient
+              colors={['rgba(50,20,80,0.6)', 'rgba(20,10,40,0.8)']}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            />
+            <Text style={styles.loadingTitle}>
+              {language === 'si' ? '✦ කේන්දරය සකසමින් ✦' : '✦ Preparing Your Chart ✦'}
+            </Text>
+            <View style={styles.stepsContainer}>
+              {STEPS.map((step) => {
+                const isActive = loadingStep === step.key;
+                const isDone = loadingStep > step.key;
+                const isPending = loadingStep < step.key;
+                return (
+                  <Animated.View
+                    key={step.key}
+                    entering={FadeInDown.delay(step.key * 100).duration(300)}
+                    style={[styles.stepRow, isActive && styles.stepRowActive]}
+                  >
+                    <View style={[styles.stepIconWrap, isDone && styles.stepIconDone, isActive && styles.stepIconActive]}>
+                      {isDone ? (
+                        <Ionicons name="checkmark" size={16} color="#10b981" />
+                      ) : isActive ? (
+                        <ActivityIndicator size="small" color="#fbbf24" />
+                      ) : (
+                        <Ionicons name={step.icon} size={16} color="rgba(255,255,255,0.3)" />
+                      )}
+                    </View>
+                    <Text style={[
+                      styles.stepText,
+                      isDone && styles.stepTextDone,
+                      isActive && styles.stepTextActive,
+                      isPending && styles.stepTextPending,
+                    ]}>
+                      {step.text}
+                    </Text>
+                  </Animated.View>
+                );
+              })}
+            </View>
+            <View style={styles.loadingBarTrack}>
+              <Animated.View style={[styles.loadingBarFill, { width: (loadingStep / 5 * 100) + '%' }]} />
+            </View>
+          </Animated.View>
+        </View>
+      );
     }
 
     if (error) {
       return (
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={fetchBirthChart}>
-            <Text style={{ color: '#fbbf24', marginTop: 10 }}>Retry</Text>
+          <TouchableOpacity onPress={onRefresh}>
+            <Text style={{ color: '#fbbf24', marginTop: 10 }}>{t('kpRetry') || 'Try Again'}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -143,7 +246,7 @@ export default function KendaraScreen() {
         <View style={styles.headerRow}>
           <Ionicons name="grid-outline" size={20} color="#fbbf24" />
           <Text style={styles.sectionTitle}>
-            {language === 'si' ? '\u0DBB\u0DCF\u0DC1\u0DD2 \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA' : 'Rashi Kendara'}
+            {t('kpBirthChart') || 'Birth Chart'}
           </Text>
         </View>
 
@@ -156,9 +259,9 @@ export default function KendaraScreen() {
         </View>
 
         <View style={styles.detailsCard}>
-          <Text style={styles.cardTitle}>{t('chart_details') || 'Chart Details'}</Text>
+          <Text style={styles.cardTitle}>{t('kpChartDetails') || 'Chart Summary'}</Text>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('lagna') || 'Lagna'}:</Text>
+            <Text style={styles.infoLabel}>{t('kpRisingStar') || 'Rising Star'}:</Text>
             <Text style={styles.infoValue}>
               {language === 'si'
                 ? (chartData.lagna && (chartData.lagna.sinhala || chartData.lagna.name))
@@ -166,20 +269,27 @@ export default function KendaraScreen() {
             </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('nakshatra') || 'Nakshatra'}:</Text>
+            <Text style={styles.infoLabel}>{t('kpBirthStar') || 'Birth Star'}:</Text>
             <Text style={styles.infoValue}>
-              {(chartData.panchanga && chartData.panchanga.nakshatra && chartData.panchanga.nakshatra.name) ||
-               (chartData.nakshatra && chartData.nakshatra.name) || '--'}
+              {(() => {
+                var nak = (chartData.panchanga && chartData.panchanga.nakshatra) || chartData.nakshatra;
+                if (!nak) return '--';
+                return language === 'si' ? (nak.sinhala || nak.name || '--') : (nak.name || '--');
+              })()}
             </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('tithi') || 'Tithi'}:</Text>
+            <Text style={styles.infoLabel}>{t('kpMoonPhase') || 'Moon Phase'}:</Text>
             <Text style={styles.infoValue}>
-              {(chartData.panchanga && chartData.panchanga.tithi && chartData.panchanga.tithi.name) || '--'}
+              {(() => {
+                var tithiName = (chartData.panchanga && chartData.panchanga.tithi && chartData.panchanga.tithi.name) || '--';
+                if (tithiName === '--') return '--';
+                return language === 'si' ? (TITHI_SI[tithiName] || tithiName) : tithiName;
+              })()}
             </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{language === 'si' ? '\u0DA0\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB \u0DBB\u0DCF\u0DC1\u0DD2\u0DBA' : 'Moon Sign'}:</Text>
+            <Text style={styles.infoLabel}>{t('kpMoonSign') || 'Moon Sign'}:</Text>
             <Text style={styles.infoValue}>
               {language === 'si'
                 ? (chartData.moonSign && (chartData.moonSign.sinhala || chartData.moonSign.name))
@@ -187,7 +297,7 @@ export default function KendaraScreen() {
             </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{language === 'si' ? '\u0DC3\u0DD6\u0DBB\u0DCA\u0DBA \u0DBB\u0DCF\u0DC1\u0DD2\u0DBA' : 'Sun Sign'}:</Text>
+            <Text style={styles.infoLabel}>{t('kpSunSign') || 'Sun Sign'}:</Text>
             <Text style={styles.infoValue}>
               {language === 'si'
                 ? (chartData.sunSign && (chartData.sunSign.sinhala || chartData.sunSign.name))
@@ -198,7 +308,7 @@ export default function KendaraScreen() {
 
         <View style={[styles.detailsCard, { marginTop: 12 }]}>
           <Text style={styles.cardTitle}>
-            {language === 'si' ? '\u0D9C\u0DCA\u200D\u0DBB\u0DC4 \u0DC3\u0DCA\u0DAE\u0DCF\u0DB1' : 'Planet Positions'}
+            {t('kpPlanetPositions') || 'Where Your Planets Are'}
           </Text>
           {chartData.rashiChart && chartData.rashiChart.map(function(entry) {
             if (!entry.planets || entry.planets.length === 0) return null;
@@ -229,7 +339,7 @@ export default function KendaraScreen() {
             <View style={styles.headerRow}>
               <Ionicons name="apps-outline" size={20} color="#fbbf24" />
               <Text style={styles.sectionTitle}>
-                {language === 'si' ? '\u0DB1\u0DC0\u0DCF\u0D82\u0DC1 \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA' : 'Navamsa Chart'}
+                {t('kpNavamsaChart') || 'Marriage & Soul Chart'}
               </Text>
             </View>
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -241,6 +351,321 @@ export default function KendaraScreen() {
             </View>
           </View>
         ) : null}
+
+        {/* ═══ ADVANCED ANALYSIS ═══ */}
+        {chartData.advancedAnalysis && (
+          <View style={{ marginTop: 8 }}>
+
+            {/* ── AI OVERALL SUMMARY ── */}
+            {chartData.chartExplanations?.overall && (
+              <Animated.View entering={FadeInDown.delay(150).duration(600)}>
+                <View style={[styles.advCard, { borderColor: 'rgba(147,51,234,0.25)', marginBottom: 12 }]}>
+                  <LinearGradient colors={['rgba(147,51,234,0.12)', 'rgba(251,191,36,0.06)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                    <Ionicons name="sparkles" size={20} color="#c084fc" />
+                    <Text style={{ color: '#c084fc', fontSize: 14, fontWeight: '700', letterSpacing: 0.5 }}>
+                      {language === 'si' ? '✨ ඔබේ කේන්දරයේ සාරාංශය' : '✨ Your Chart at a Glance'}
+                    </Text>
+                  </View>
+                  <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 22, fontStyle: 'italic' }}>
+                    {chartData.chartExplanations.overall}
+                  </Text>
+                </View>
+              </Animated.View>
+            )}
+
+            {/* ── DOSHAS ── */}
+            {chartData.advancedAnalysis.tier1?.doshas?.items?.length > 0 && (
+              <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+                <View style={styles.headerRow}>
+                  <Ionicons name="alert-circle-outline" size={20} color="#f87171" />
+                  <Text style={styles.sectionTitle}>
+                    {t('kpDoshaTitle') || 'Challenges to Watch Out For'}
+                  </Text>
+                </View>
+                <View style={styles.advCard}>
+                  {chartData.advancedAnalysis.tier1.doshas.items.map(function(d, i) {
+                    var sevColor = d.severity === 'Severe' ? '#ef4444' : d.severity === 'Moderate' ? '#f59e0b' : '#10b981';
+                    var sevLabel = d.severity === 'Severe' ? t('kpSevere') : d.severity === 'Moderate' ? t('kpModerate') : t('kpMild');
+                    return (
+                      <View key={i} style={styles.doshaRow}>
+                        <View style={[styles.doshaDot, { backgroundColor: d.cancelled ? '#6b7280' : sevColor }]} />
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                            <Text style={[styles.doshaName, d.cancelled && { textDecorationLine: 'line-through', color: 'rgba(255,255,255,0.3)' }]}>{d.name}</Text>
+                            {d.cancelled ? (
+                              <View style={styles.cancelBadge}>
+                                <Text style={styles.cancelText}>{t('kpCancelled') || 'CANCELLED'}</Text>
+                              </View>
+                            ) : (
+                              <View style={[styles.sevBadge, { backgroundColor: sevColor + '20', borderColor: sevColor + '50' }]}>
+                                <Text style={[styles.sevText, { color: sevColor }]}>{sevLabel || d.severity}</Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text style={styles.doshaDesc}>{d.description}</Text>
+                          {d.cancellationReason && <Text style={styles.cancelReason}>↳ {d.cancellationReason}</Text>}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </Animated.View>
+            )}
+
+            {/* Dosha AI explanation */}
+            {chartData.chartExplanations?.doshas && chartData.chartExplanations.doshas !== 'N/A' && (
+              <View style={styles.aiExplainBox}>
+                <Ionicons name="bulb-outline" size={14} color="#fbbf24" />
+                <Text style={styles.aiExplainText}>{chartData.chartExplanations.doshas}</Text>
+              </View>
+            )}
+
+            {/* ── ADVANCED YOGAS ── */}
+            {chartData.advancedAnalysis.tier1?.advancedYogas?.items?.length > 0 && (
+              <Animated.View entering={FadeInDown.delay(300).duration(600)}>
+                <View style={styles.headerRow}>
+                  <Ionicons name="star-outline" size={20} color="#fbbf24" />
+                  <Text style={styles.sectionTitle}>
+                    {t('kpYogaTitle') || 'Your Special Gifts & Blessings'}
+                  </Text>
+                  <View style={styles.countBadge}>
+                    <Text style={styles.countText}>{chartData.advancedAnalysis.tier1.advancedYogas.found}</Text>
+                  </View>
+                </View>
+                <View style={styles.advCard}>
+                  {chartData.advancedAnalysis.tier1.advancedYogas.items.map(function(y, i) {
+                    var catColor = y.category === 'Raja Yoga' ? '#c084fc' : y.category === 'Dhana Yoga' ? '#fbbf24' : y.category?.includes('Dosha') ? '#f87171' : '#60a5fa';
+                    var strColor = y.strength === 'Very Strong' ? '#10b981' : y.strength === 'Strong' ? '#34d399' : '#6b7280';
+                    var strLabel = y.strength === 'Very Strong' ? t('kpVeryStrong') : y.strength === 'Strong' ? t('kpStrong') : t('kpModerate');
+                    var catLabel = language === 'si'
+                      ? (y.category === 'Raja Yoga' ? 'රාජ යෝගය' : y.category === 'Dhana Yoga' ? 'ධන යෝගය' : y.category?.includes('Dosha') ? 'දෝෂ යෝගය' : 'විශේෂ යෝගය')
+                      : y.category;
+                    return (
+                      <View key={i} style={styles.yogaItem}>
+                        <View style={styles.yogaTop}>
+                          <View style={[styles.catDot, { backgroundColor: catColor }]} />
+                          <Text style={styles.yogaName}>{y.name}</Text>
+                          <View style={[styles.strBadge, { borderColor: strColor + '60' }]}>
+                            <Text style={[styles.strText, { color: strColor }]}>{strLabel || y.strength}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.yogaCat}>{catLabel}</Text>
+                        <Text style={styles.yogaDesc}>{y.description}</Text>
+                        {y.planets && <Text style={styles.yogaPlanets}>🪐 {y.planets.map(function(p) { var pi = PLANET_INFO[p]; return language === 'si' && pi ? pi.si : p; }).join(', ')}</Text>}
+                      </View>
+                    );
+                  })}
+                </View>
+              </Animated.View>
+            )}
+
+            {/* Yoga AI explanation */}
+            {chartData.chartExplanations?.yogas && chartData.chartExplanations.yogas !== 'N/A' && (
+              <View style={styles.aiExplainBox}>
+                <Ionicons name="bulb-outline" size={14} color="#fbbf24" />
+                <Text style={styles.aiExplainText}>{chartData.chartExplanations.yogas}</Text>
+              </View>
+            )}
+
+            {/* ── JAIMINI KARAKAS ── */}
+            {chartData.advancedAnalysis.tier1?.jaimini && (
+              <Animated.View entering={FadeInDown.delay(400).duration(600)}>
+                <View style={styles.headerRow}>
+                  <Ionicons name="compass-outline" size={20} color="#c084fc" />
+                  <Text style={styles.sectionTitle}>
+                    {t('kpJaiminiTitle') || 'Your Soul\'s Purpose'}
+                  </Text>
+                </View>
+                <View style={styles.advCard}>
+                  {chartData.advancedAnalysis.tier1.jaimini.atmakaraka && (
+                    <View style={styles.jaiminiHighlight}>
+                      <LinearGradient colors={['rgba(192,132,252,0.12)', 'rgba(192,132,252,0.03)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                      <Text style={styles.jaiminiLabel}>{t('kpSoulPlanet') || 'Your Soul Planet'}</Text>
+                      <Text style={styles.jaiminiValue}>{(() => { var p = chartData.advancedAnalysis.tier1.jaimini.atmakaraka.planet || ''; var pi = PLANET_INFO[p]; return language === 'si' && pi ? pi.si : p; })()}</Text>
+                      {chartData.advancedAnalysis.tier1.jaimini.karakas && (
+                        <Text style={styles.jaiminiSub}>
+                          {Object.values(chartData.advancedAnalysis.tier1.jaimini.karakas).map(function(k) { var pi = PLANET_INFO[k.planet]; var pName = language === 'si' && pi ? pi.si : k.planet; return pName + ' → ' + k.role; }).join('  •  ')}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                  <View style={styles.jaiminiGrid}>
+                    {chartData.advancedAnalysis.tier1.jaimini.karakamsha && (
+                      <View style={styles.jaiminiMini}>
+                        <Text style={styles.jmLabel}>{t('kpKarakamshaLabel') || 'Soul\'s Destination'}</Text>
+                        <Text style={styles.jmValue}>{chartData.advancedAnalysis.tier1.jaimini.karakamsha.rashi || 'N/A'}</Text>
+                        {chartData.advancedAnalysis.tier1.jaimini.karakamsha.interpretation && (
+                          <Text style={styles.jmDesc}>{chartData.advancedAnalysis.tier1.jaimini.karakamsha.interpretation}</Text>
+                        )}
+                      </View>
+                    )}
+                    {chartData.advancedAnalysis.tier1.jaimini.arudhaLagna && (
+                      <View style={styles.jaiminiMini}>
+                        <Text style={styles.jmLabel}>{t('kpArudhaLabel') || 'How Others See You'}</Text>
+                        <Text style={styles.jmValue}>{chartData.advancedAnalysis.tier1.jaimini.arudhaLagna.rashi || 'N/A'}</Text>
+                      </View>
+                    )}
+                    {chartData.advancedAnalysis.tier1.jaimini.upapadaLagna && (
+                      <View style={styles.jaiminiMini}>
+                        <Text style={styles.jmLabel}>{t('kpUpapadaLabel') || 'Marriage Indicator'}</Text>
+                        <Text style={styles.jmValue}>{chartData.advancedAnalysis.tier1.jaimini.upapadaLagna.rashi || 'N/A'}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </Animated.View>
+            )}
+
+            {/* Soul Purpose AI explanation */}
+            {chartData.chartExplanations?.soulPurpose && chartData.chartExplanations.soulPurpose !== 'N/A' && (
+              <View style={styles.aiExplainBox}>
+                <Ionicons name="bulb-outline" size={14} color="#fbbf24" />
+                <Text style={styles.aiExplainText}>{chartData.chartExplanations.soulPurpose}</Text>
+              </View>
+            )}
+
+            {/* ── SHADBALA ── */}
+            {chartData.advancedAnalysis.tier2?.shadbala && typeof chartData.advancedAnalysis.tier2.shadbala === 'object' && (
+              <Animated.View entering={FadeInDown.delay(500).duration(600)}>
+                <View style={styles.headerRow}>
+                  <Ionicons name="bar-chart-outline" size={20} color="#60a5fa" />
+                  <Text style={styles.sectionTitle}>
+                    {t('kpShadbalaTitle') || 'Your Planet Power Levels'}
+                  </Text>
+                </View>
+                <View style={styles.advCard}>
+                  {Object.values(chartData.advancedAnalysis.tier2.shadbala).map(function(sb, i) {
+                    var pInfo = PLANET_INFO[sb.name] || {};
+                    var pct = Math.min((sb.totalRupas || 0) / 300, 1);
+                    var barColor = sb.isAdequate ? '#10b981' : '#f59e0b';
+                    var strengthLabel = sb.isAdequate ? (t('kpStrong') || 'Strong') : (t('kpWeak') || 'Needs Attention');
+                    return (
+                      <View key={i} style={styles.sbRow}>
+                        <View style={styles.sbTop}>
+                          <Text style={[styles.sbPlanet, { color: pInfo.color || '#fff' }]}>
+                            {language === 'si' ? (sb.sinhala || pInfo.si || sb.name) : sb.name}
+                          </Text>
+                          <Text style={styles.sbRupas}>{(sb.percentage || 0)}%</Text>
+                          <View style={[styles.sbBadge, { backgroundColor: sb.isAdequate ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', borderColor: sb.isAdequate ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)' }]}>
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: sb.isAdequate ? '#10b981' : '#f59e0b' }}>
+                              {strengthLabel}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.sbBarTrack}>
+                          <View style={[styles.sbBarFill, { width: (pct * 100) + '%', backgroundColor: barColor }]} />
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </Animated.View>
+            )}
+
+            {/* Planet Power AI explanation */}
+            {chartData.chartExplanations?.planetPower && chartData.chartExplanations.planetPower !== 'N/A' && (
+              <View style={styles.aiExplainBox}>
+                <Ionicons name="bulb-outline" size={14} color="#fbbf24" />
+                <Text style={styles.aiExplainText}>{chartData.chartExplanations.planetPower}</Text>
+              </View>
+            )}
+
+            {/* ── BHRIGU BINDU ── */}
+            {chartData.advancedAnalysis.tier2?.bhriguBindu && (
+              <Animated.View entering={FadeInDown.delay(600).duration(600)}>
+                <View style={styles.headerRow}>
+                  <Ionicons name="locate-outline" size={20} color="#fbbf24" />
+                  <Text style={styles.sectionTitle}>
+                    {t('kpBhriguTitle') || 'Your Destiny Point'}
+                  </Text>
+                </View>
+                <View style={[styles.advCard, { borderColor: 'rgba(251,191,36,0.15)' }]}>
+                  <LinearGradient colors={['rgba(251,191,36,0.08)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                    <View style={styles.bbCircle}>
+                      <Text style={styles.bbDeg}>{Number(chartData.advancedAnalysis.tier2.bhriguBindu.degree || 0).toFixed(1)}°</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.bbRashi}>{chartData.advancedAnalysis.tier2.bhriguBindu.rashi || ''}</Text>
+                      <Text style={styles.bbNak}>{chartData.advancedAnalysis.tier2.bhriguBindu.nakshatra || ''}</Text>
+                    </View>
+                  </View>
+                  {chartData.advancedAnalysis.tier2.bhriguBindu.interpretation && (
+                    <Text style={styles.bbInterp}>{chartData.advancedAnalysis.tier2.bhriguBindu.interpretation}</Text>
+                  )}
+                </View>
+              </Animated.View>
+            )}
+
+            {/* Destiny Point AI explanation */}
+            {chartData.chartExplanations?.destinyPoint && chartData.chartExplanations.destinyPoint !== 'N/A' && (
+              <View style={styles.aiExplainBox}>
+                <Ionicons name="bulb-outline" size={14} color="#fbbf24" />
+                <Text style={styles.aiExplainText}>{chartData.chartExplanations.destinyPoint}</Text>
+              </View>
+            )}
+
+            {/* ── PAST LIFE ── */}
+            {chartData.advancedAnalysis.tier3?.pastLife && (
+              <Animated.View entering={FadeInDown.delay(700).duration(600)}>
+                <View style={styles.headerRow}>
+                  <Ionicons name="time-outline" size={20} color="#a78bfa" />
+                  <Text style={styles.sectionTitle}>
+                    {t('kpPastLifeTitle') || 'Your Past Life Story'}
+                  </Text>
+                </View>
+                <View style={[styles.advCard, { borderColor: 'rgba(167,139,250,0.15)' }]}>
+                  <LinearGradient colors={['rgba(167,139,250,0.08)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} />
+                  {chartData.advancedAnalysis.tier3.pastLife.pastLife?.pastLifeStory && (
+                    <View style={styles.plRow}>
+                      <Text style={styles.plLabel}>{t('kpPastLifeStory') || 'Past Life Story'}</Text>
+                      <Text style={styles.plValue}>{chartData.advancedAnalysis.tier3.pastLife.pastLife.pastLifeStory}</Text>
+                    </View>
+                  )}
+                  {chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection?.direction && (
+                    <View style={styles.plRow}>
+                      <Text style={styles.plLabel}>{t('kpLifeDirection') || 'This Life\'s Purpose'}</Text>
+                      <Text style={styles.plValue}>{chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.direction}</Text>
+                    </View>
+                  )}
+                  {chartData.advancedAnalysis.tier3.pastLife.karmaBalance && (
+                    <View style={styles.plRow}>
+                      <Text style={styles.plLabel}>{t('kpKarmaBalance') || 'Karma Balance'}</Text>
+                      <Text style={styles.plValue}>
+                        {t('kpGood') || 'Good'}: {chartData.advancedAnalysis.tier3.pastLife.karmaBalance.good || 0}
+                        {'  •  '}
+                        {t('kpChallenging') || 'Challenging'}: {chartData.advancedAnalysis.tier3.pastLife.karmaBalance.challenging || 0}
+                      </Text>
+                    </View>
+                  )}
+                  {chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit?.assessment && (
+                    <View style={styles.plRow}>
+                      <Text style={styles.plLabel}>{t('kpPastLifeMerit') || 'Past Life Merit'}</Text>
+                      <Text style={styles.plValue}>{chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment}</Text>
+                    </View>
+                  )}
+                </View>
+              </Animated.View>
+            )}
+
+            {/* Past Life AI explanation */}
+            {chartData.chartExplanations?.pastLife && chartData.chartExplanations.pastLife !== 'N/A' && (
+              <View style={styles.aiExplainBox}>
+                <Ionicons name="bulb-outline" size={14} color="#fbbf24" />
+                <Text style={styles.aiExplainText}>{chartData.chartExplanations.pastLife}</Text>
+              </View>
+            )}
+
+            {/* ── ENGINE FOOTER ── */}
+            <Animated.View entering={FadeIn.delay(800).duration(400)}>
+              <Text style={styles.engineFooter}>
+                {chartData.advancedAnalysis.engineVersion} • {chartData.advancedAnalysis.computeTimeMs}ms
+              </Text>
+            </Animated.View>
+
+          </View>
+        )}
       </View>
     );
   };
@@ -250,7 +675,7 @@ export default function KendaraScreen() {
       <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#fbbf24" />}>
         <View style={styles.content}>
           <Text style={styles.pageTitle}>
-            {language === 'si' ? '\u0D94\u0DB6\u0D9C\u0DDA \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA' : 'Your Horoscope'}
+            {t('kpYourHoroscope') || 'Your Horoscope'}
           </Text>
           <Text style={styles.pageSubtitle}>
             {user && user.birthData && user.birthData.dateTime
@@ -278,10 +703,191 @@ const styles = StyleSheet.create({
   errorText: { color: '#ef4444' },
   chartContainer: { marginBottom: 20 },
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { color: '#fff', fontSize: 18, marginLeft: 10, fontWeight: '600' },
+  sectionTitle: { color: '#fff', fontSize: 18, marginLeft: 10, fontWeight: '600', flex: 1 },
   detailsCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16, borderRadius: 12, marginTop: 10 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   infoLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
   infoValue: { color: '#fff', fontWeight: '500', fontSize: 14 },
   cardTitle: { color: '#fbbf24', marginBottom: 12, fontWeight: '600' },
+
+  // Advanced Analysis styles
+  advCard: {
+    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', marginBottom: 16, overflow: 'hidden',
+  },
+  countBadge: {
+    backgroundColor: 'rgba(251,191,36,0.15)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2,
+    borderWidth: 1, borderColor: 'rgba(251,191,36,0.3)',
+  },
+  countText: { color: '#fbbf24', fontSize: 12, fontWeight: '800' },
+
+  // Dosha styles
+  doshaRow: { flexDirection: 'row', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
+  doshaDot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
+  doshaName: { color: '#e0e7ff', fontSize: 14, fontWeight: '700' },
+  doshaDesc: { color: 'rgba(255,255,255,0.45)', fontSize: 12, lineHeight: 18, marginTop: 3 },
+  cancelBadge: { backgroundColor: 'rgba(16,185,129,0.15)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)' },
+  cancelText: { color: '#10b981', fontSize: 9, fontWeight: '800' },
+  cancelReason: { color: 'rgba(16,185,129,0.6)', fontSize: 11, fontStyle: 'italic', marginTop: 3 },
+  sevBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1 },
+  sevText: { fontSize: 9, fontWeight: '800' },
+
+  // Yoga styles
+  yogaItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
+  yogaTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  catDot: { width: 8, height: 8, borderRadius: 4 },
+  yogaName: { color: '#e0e7ff', fontSize: 14, fontWeight: '700', flex: 1 },
+  yogaCat: { color: 'rgba(192,132,252,0.6)', fontSize: 11, fontWeight: '600', marginTop: 3 },
+  yogaDesc: { color: 'rgba(255,255,255,0.45)', fontSize: 12, lineHeight: 18, marginTop: 3 },
+  yogaPlanets: { color: 'rgba(251,191,36,0.6)', fontSize: 11, marginTop: 4 },
+  strBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  strText: { fontSize: 10, fontWeight: '700' },
+
+  // Jaimini styles
+  jaiminiHighlight: {
+    borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1,
+    borderColor: 'rgba(192,132,252,0.15)', overflow: 'hidden',
+  },
+  jaiminiLabel: { color: 'rgba(192,132,252,0.7)', fontSize: 11, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
+  jaiminiValue: { color: '#c084fc', fontSize: 22, fontWeight: '900' },
+  jaiminiSub: { color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 8, lineHeight: 18 },
+  jaiminiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  jaiminiMini: { flex: 1, minWidth: 90, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 10, alignItems: 'center' },
+  jmLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '600', marginBottom: 4, textAlign: 'center' },
+  jmValue: { color: '#e0e7ff', fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  jmDesc: { color: 'rgba(255,255,255,0.35)', fontSize: 10, textAlign: 'center', marginTop: 4 },
+
+  // Shadbala styles
+  sbRow: { marginBottom: 14 },
+  sbTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  sbPlanet: { fontSize: 14, fontWeight: '700', width: 70 },
+  sbRupas: { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '600', flex: 1 },
+  sbBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1 },
+  sbBarTrack: { height: 5, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
+  sbBarFill: { height: 5, borderRadius: 3 },
+
+  // Bhrigu Bindu styles
+  bbCircle: {
+    width: 60, height: 60, borderRadius: 30, borderWidth: 2,
+    borderColor: 'rgba(251,191,36,0.3)', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(251,191,36,0.05)',
+  },
+  bbDeg: { color: '#fbbf24', fontSize: 16, fontWeight: '800' },
+  bbRashi: { color: '#e0e7ff', fontSize: 16, fontWeight: '700' },
+  bbNak: { color: 'rgba(255,255,255,0.45)', fontSize: 12, marginTop: 2 },
+  bbInterp: { color: 'rgba(255,255,255,0.45)', fontSize: 12, lineHeight: 18, marginTop: 12 },
+
+  // Past Life styles
+  plRow: { marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
+  plLabel: { color: 'rgba(167,139,250,0.7)', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  plValue: { color: '#e0e7ff', fontSize: 13, lineHeight: 20 },
+  plIndicator: { color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 20, paddingLeft: 4 },
+
+  // Engine footer
+  engineFooter: { color: 'rgba(255,255,255,0.15)', fontSize: 10, textAlign: 'center', marginTop: 4, marginBottom: 10 },
+
+  // AI explanation inline box
+  aiExplainBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: 'rgba(251,191,36,0.06)',
+    borderLeftWidth: 3,
+    borderLeftColor: 'rgba(251,191,36,0.4)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginHorizontal: 2,
+    marginBottom: 10,
+    marginTop: -4,
+  },
+  aiExplainText: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 13,
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+
+  // Loading screen styles
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  loadingCard: {
+    width: '100%',
+    borderRadius: 24,
+    padding: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.15)',
+    overflow: 'hidden',
+  },
+  loadingTitle: {
+    color: '#fbbf24',
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 24,
+    letterSpacing: 1,
+  },
+  stepsContainer: {
+    gap: 6,
+    marginBottom: 24,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    gap: 12,
+  },
+  stepRowActive: {
+    backgroundColor: 'rgba(251,191,36,0.06)',
+  },
+  stepIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  stepIconDone: {
+    backgroundColor: 'rgba(16,185,129,0.12)',
+    borderColor: 'rgba(16,185,129,0.3)',
+  },
+  stepIconActive: {
+    backgroundColor: 'rgba(251,191,36,0.1)',
+    borderColor: 'rgba(251,191,36,0.3)',
+  },
+  stepText: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  stepTextDone: {
+    color: 'rgba(16,185,129,0.7)',
+  },
+  stepTextActive: {
+    color: '#fbbf24',
+    fontWeight: '700',
+  },
+  stepTextPending: {
+    color: 'rgba(255,255,255,0.25)',
+  },
+  loadingBarTrack: {
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  loadingBarFill: {
+    height: 4,
+    backgroundColor: '#fbbf24',
+    borderRadius: 2,
+  },
 });
