@@ -9,7 +9,9 @@
  * - Dasha Porondam (10 compatibility factors scored out of 20)
  */
 
-const { getNakshatra, getRashi, toSidereal, getMoonLongitude, getAyanamsha } = require('./astrology');
+const { getNakshatra, getRashi, toSidereal, getMoonLongitude, getAyanamsha,
+  getAllPlanetPositions, buildHouseChart, buildNavamshaChart, getLagna,
+  calculateVimshottariDetailed, calculateDrishtis, getPlanetStrengths } = require('./astrology');
 
 /**
  * Gana (Temperament) classification for each Nakshatra
@@ -447,8 +449,431 @@ function calculatePorondam(brideBirthDate, groomBirthDate) {
   };
 }
 
+/**
+ * ═══════════════════════════════════════════════════════════
+ * PORONDAM+ Advanced Compatibility Analysis
+ * Goes beyond the 7-factor traditional system with:
+ * - Cross-chart Dasha phase compatibility
+ * - Navamsha (D9) marriage chart comparison
+ * - Mangala Dosha cross-check
+ * - Venus/7th lord strength comparison
+ * - Composite transit timing recommendation
+ * ═══════════════════════════════════════════════════════════
+ */
+
+/**
+ * Analyze cross-chart Dasha compatibility
+ * Checks if both people are in harmonious life phases
+ */
+function analyzeDashaCompatibility(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng) {
+  try {
+    const now = new Date();
+    const brideMoonSid = toSidereal(getMoonLongitude(brideBirthDate), brideBirthDate);
+    const groomMoonSid = toSidereal(getMoonLongitude(groomBirthDate), groomBirthDate);
+    
+    const brideDashas = calculateVimshottariDetailed(brideMoonSid, brideBirthDate);
+    const groomDashas = calculateVimshottariDetailed(groomMoonSid, groomBirthDate);
+    
+    // Find current dasha for each
+    const findCurrentDasha = (dashas) => {
+      const nowTime = now.getTime();
+      for (const d of dashas) {
+        const start = new Date(d.start).getTime();
+        const end = new Date(d.endDate).getTime();
+        if (nowTime >= start && nowTime <= end) return d;
+      }
+      return dashas[0];
+    };
+    
+    const brideCurrent = findCurrentDasha(brideDashas);
+    const groomCurrent = findCurrentDasha(groomDashas);
+    
+    // Natural friend/enemy relationships
+    const FRIENDS = {
+      Sun: ['Moon', 'Mars', 'Jupiter'], Moon: ['Sun', 'Mercury'],
+      Mars: ['Sun', 'Moon', 'Jupiter'], Mercury: ['Sun', 'Venus'],
+      Jupiter: ['Sun', 'Moon', 'Mars'], Venus: ['Mercury', 'Saturn'],
+      Saturn: ['Mercury', 'Venus'], Rahu: ['Mercury', 'Venus', 'Saturn'],
+      Ketu: ['Mars', 'Jupiter'],
+    };
+    const ENEMIES = {
+      Sun: ['Venus', 'Saturn'], Moon: [], Mars: ['Mercury'],
+      Mercury: ['Moon'], Jupiter: ['Mercury', 'Venus'],
+      Venus: ['Sun', 'Moon'], Saturn: ['Sun', 'Moon', 'Mars'],
+      Rahu: ['Sun', 'Moon'], Ketu: ['Moon'],
+    };
+    
+    const brideLord = brideCurrent?.lord || 'Unknown';
+    const groomLord = groomCurrent?.lord || 'Unknown';
+    
+    let dashaHarmony = 'neutral';
+    let dashaScore = 1;
+    
+    if (FRIENDS[brideLord]?.includes(groomLord) || FRIENDS[groomLord]?.includes(brideLord)) {
+      dashaHarmony = 'harmonious';
+      dashaScore = 2;
+    } else if (ENEMIES[brideLord]?.includes(groomLord) || ENEMIES[groomLord]?.includes(brideLord)) {
+      dashaHarmony = 'conflicting';
+      dashaScore = 0;
+    }
+    
+    // Check if both are in benefic vs malefic periods
+    const beneficLords = ['Jupiter', 'Venus', 'Mercury', 'Moon'];
+    const brideInBenefic = beneficLords.includes(brideLord);
+    const groomInBenefic = beneficLords.includes(groomLord);
+    
+    return {
+      bride: { currentDasha: brideLord, period: `${brideCurrent?.start} to ${brideCurrent?.endDate}`, isBeneficPeriod: brideInBenefic },
+      groom: { currentDasha: groomLord, period: `${groomCurrent?.start} to ${groomCurrent?.endDate}`, isBeneficPeriod: groomInBenefic },
+      harmony: dashaHarmony,
+      score: dashaScore,
+      maxScore: 2,
+      bothInBeneficPeriod: brideInBenefic && groomInBenefic,
+      description: dashaHarmony === 'harmonious'
+        ? 'Both partners are in compatible life phases — the timing for this union is favorable.'
+        : dashaHarmony === 'conflicting'
+          ? 'The current life phases may create friction — a later date could be more harmonious.'
+          : 'Neutral life phase compatibility — neither strongly for nor against.',
+    };
+  } catch (e) {
+    return { harmony: 'unknown', score: 1, maxScore: 2, error: e.message };
+  }
+}
+
+/**
+ * Compare D9 (Navamsha) charts for marriage compatibility
+ * The Navamsha is THE marriage chart in Vedic astrology
+ */
+function analyzeNavamshaCompatibility(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng) {
+  try {
+    const brideD9 = buildNavamshaChart(brideBirthDate, brideLat, brideLng);
+    const groomD9 = buildNavamshaChart(groomBirthDate, groomLat, groomLng);
+    
+    let score = 0;
+    const insights = [];
+    
+    // 1. Check if D9 Lagna signs are compatible (trine/same/7th)
+    const brideD9Lagna = brideD9.houses?.[0]?.rashiId || 1;
+    const groomD9Lagna = groomD9.houses?.[0]?.rashiId || 1;
+    const d9LagnaDiff = Math.abs(brideD9Lagna - groomD9Lagna);
+    const normalizedDiff = Math.min(d9LagnaDiff, 12 - d9LagnaDiff);
+    
+    if (normalizedDiff === 0) {
+      score += 3;
+      insights.push('Same marriage chart rising sign — exceptional soul-level connection');
+    } else if ([4, 8].includes(normalizedDiff)) {
+      score += 2;
+      insights.push('Harmonious marriage chart alignment — natural rapport');
+    } else if (normalizedDiff === 6) {
+      score += 1;
+      insights.push('Opposite marriage chart signs — magnetic attraction but requires adjustment');
+    }
+    
+    // 2. Check Venus placement in each other's D9
+    const findPlanetInD9 = (d9Chart, planetName) => {
+      for (const h of (d9Chart.houses || [])) {
+        const found = h.planets.find(p => p.name === planetName);
+        if (found) return { house: h.houseNumber, rashi: h.rashiEnglish || h.rashi };
+      }
+      return null;
+    };
+    
+    const brideVenusD9 = findPlanetInD9(brideD9, 'Venus');
+    const groomVenusD9 = findPlanetInD9(groomD9, 'Venus');
+    
+    if (brideVenusD9 && groomVenusD9) {
+      if (brideVenusD9.rashi === groomVenusD9.rashi) {
+        score += 2;
+        insights.push('Venus in the same sign in both marriage charts — strong romantic alignment');
+      }
+    }
+    
+    // 3. Check Jupiter (husband karaka for bride) and Venus (wife karaka for groom)
+    const brideJupiterD9 = findPlanetInD9(brideD9, 'Jupiter');
+    const groomMarsD9 = findPlanetInD9(groomD9, 'Mars');
+    
+    if (brideJupiterD9 && [1, 4, 5, 7, 9, 10].includes(brideJupiterD9.house)) {
+      score += 1;
+      insights.push('Bride\'s Jupiter well-placed in marriage chart — her husband will be supportive');
+    }
+    if (groomVenusD9 && [1, 4, 5, 7, 9, 10].includes(groomVenusD9.house)) {
+      score += 1;
+      insights.push('Groom\'s Venus well-placed in marriage chart — his wife will bring harmony');
+    }
+    
+    return {
+      brideD9Lagna: brideD9.houses?.[0]?.rashiEnglish || 'Unknown',
+      groomD9Lagna: groomD9.houses?.[0]?.rashiEnglish || 'Unknown',
+      score,
+      maxScore: 7,
+      insights,
+      description: score >= 5
+        ? 'Excellent marriage chart compatibility — deep soul-level connection likely.'
+        : score >= 3
+          ? 'Good marriage chart alignment — the relationship has strong spiritual support.'
+          : 'Moderate marriage chart compatibility — the bond will grow with effort and understanding.',
+    };
+  } catch (e) {
+    return { score: 0, maxScore: 7, insights: [], error: e.message };
+  }
+}
+
+/**
+ * Cross-check Mangala (Mars) Dosha between both charts
+ * If both have it, it cancels out. If only one has it, it's a concern.
+ */
+function analyzeMangalaDosha(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng) {
+  try {
+    const checkMangala = (birthDate, lat, lng) => {
+      const houseChart = buildHouseChart(birthDate, lat, lng);
+      const marsHouse = (() => {
+        for (const h of houseChart.houses) {
+          if (h.planets.find(p => p.name === 'Mars')) return h.houseNumber;
+        }
+        return 0;
+      })();
+      // Mars in 1st, 2nd, 4th, 7th, 8th, or 12th house = Mangala Dosha
+      const doshaHouses = [1, 2, 4, 7, 8, 12];
+      const hasDosha = doshaHouses.includes(marsHouse);
+      
+      // Check for cancellations
+      let cancelled = false;
+      let cancellationReason = '';
+      if (hasDosha) {
+        // Mars in own sign (Aries/Scorpio) or exalted (Capricorn) — cancelled
+        const marsRashi = houseChart.houses[marsHouse - 1]?.rashiId;
+        if ([1, 8, 10].includes(marsRashi)) {
+          cancelled = true;
+          cancellationReason = 'Mars is in own sign or exalted — dosha is neutralized';
+        }
+        // Jupiter aspects Mars — cancelled
+        const jupiterHouse = (() => {
+          for (const h of houseChart.houses) {
+            if (h.planets.find(p => p.name === 'Jupiter')) return h.houseNumber;
+          }
+          return 0;
+        })();
+        if (jupiterHouse > 0) {
+          const jupAspects = [jupiterHouse, ((jupiterHouse + 4) % 12) + 1, ((jupiterHouse + 6) % 12) + 1, ((jupiterHouse + 8) % 12) + 1];
+          if (jupAspects.includes(marsHouse)) {
+            cancelled = true;
+            cancellationReason = 'Jupiter aspects Mars — dosha is neutralized by Jupiter\'s grace';
+          }
+        }
+      }
+      
+      return { hasDosha, marsHouse, cancelled, cancellationReason };
+    };
+    
+    const brideMangala = checkMangala(brideBirthDate, brideLat, brideLng);
+    const groomMangala = checkMangala(groomBirthDate, groomLat, groomLng);
+    
+    let severity = 'none';
+    let description = '';
+    let score = 2;
+    
+    if (brideMangala.hasDosha && groomMangala.hasDosha) {
+      severity = 'cancelled';
+      description = 'Both partners have Mars influence — it cancels out! This is actually favorable.';
+      score = 2;
+    } else if (!brideMangala.hasDosha && !groomMangala.hasDosha) {
+      severity = 'none';
+      description = 'Neither partner has Mars influence concerns — clean compatibility.';
+      score = 2;
+    } else if (brideMangala.cancelled || groomMangala.cancelled) {
+      severity = 'mild';
+      description = 'One partner has Mars influence but it is neutralized by other factors.';
+      score = 1.5;
+    } else {
+      severity = 'present';
+      description = 'One partner has Mars influence while the other doesn\'t — may cause friction in temperament. Remedies recommended.';
+      score = 0.5;
+    }
+    
+    return {
+      bride: brideMangala,
+      groom: groomMangala,
+      severity,
+      score,
+      maxScore: 2,
+      description,
+    };
+  } catch (e) {
+    return { severity: 'unknown', score: 1, maxScore: 2, error: e.message };
+  }
+}
+
+/**
+ * Analyze Venus and 7th lord strength for both partners
+ * Strong Venus + 7th lord = better marriage potential
+ */
+function analyzeMarriagePlanetStrength(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng) {
+  try {
+    const analyzeOne = (birthDate, lat, lng, label) => {
+      const strengths = getPlanetStrengths(birthDate, lat, lng);
+      const houseChart = buildHouseChart(birthDate, lat, lng);
+      const lagnaRashiId = houseChart.lagna?.rashi?.id || 1;
+      const seventhRashiId = ((lagnaRashiId - 1 + 6) % 12) + 1;
+      const RASHI_LORDS = { 1: 'Venus', 2: 'Mars', 3: 'Jupiter', 4: 'Saturn', 5: 'Saturn', 6: 'Jupiter', 7: 'Mars', 8: 'Venus', 9: 'Mercury', 10: 'Moon', 11: 'Sun', 12: 'Mercury' };
+      // Correct lord mapping
+      const lords = { 1: 'Mars', 2: 'Venus', 3: 'Mercury', 4: 'Moon', 5: 'Sun', 6: 'Mercury', 7: 'Venus', 8: 'Mars', 9: 'Jupiter', 10: 'Saturn', 11: 'Saturn', 12: 'Jupiter' };
+      const seventhLord = lords[seventhRashiId] || 'Unknown';
+      
+      const venusStrength = strengths.venus?.score || 50;
+      const seventhLordKey = seventhLord.toLowerCase();
+      const seventhLordStrength = strengths[seventhLordKey]?.score || 50;
+      
+      return {
+        label,
+        venusStrength,
+        venusAssessment: venusStrength >= 70 ? 'Strong' : venusStrength >= 40 ? 'Moderate' : 'Weak',
+        seventhLord,
+        seventhLordStrength,
+        seventhLordAssessment: seventhLordStrength >= 70 ? 'Strong' : seventhLordStrength >= 40 ? 'Moderate' : 'Weak',
+        combinedScore: Math.round((venusStrength + seventhLordStrength) / 2),
+      };
+    };
+    
+    const bride = analyzeOne(brideBirthDate, brideLat, brideLng, 'Bride');
+    const groom = analyzeOne(groomBirthDate, groomLat, groomLng, 'Groom');
+    
+    const avgCombined = Math.round((bride.combinedScore + groom.combinedScore) / 2);
+    
+    return {
+      bride,
+      groom,
+      overallMarriageStrength: avgCombined,
+      assessment: avgCombined >= 65 ? 'Strong marriage potential for both partners' : avgCombined >= 45 ? 'Moderate marriage potential — some areas need attention' : 'Marriage planets are weak — relationship will need conscious effort',
+      score: avgCombined >= 65 ? 3 : avgCombined >= 45 ? 2 : 1,
+      maxScore: 3,
+    };
+  } catch (e) {
+    return { score: 1.5, maxScore: 3, error: e.message };
+  }
+}
+
+/**
+ * Find the best wedding date window based on both charts
+ */
+function findBestWeddingWindow(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng) {
+  try {
+    const brideMoonSid = toSidereal(getMoonLongitude(brideBirthDate), brideBirthDate);
+    const groomMoonSid = toSidereal(getMoonLongitude(groomBirthDate), groomBirthDate);
+    
+    const brideDashas = calculateVimshottariDetailed(brideMoonSid, brideBirthDate);
+    const groomDashas = calculateVimshottariDetailed(groomMoonSid, groomBirthDate);
+    
+    const now = new Date();
+    const nextTwoYears = new Date(now.getTime() + 2 * 365.25 * 24 * 60 * 60 * 1000);
+    
+    // Find favorable dasha periods for marriage within the next 2 years
+    const beneficForMarriage = ['Venus', 'Jupiter', 'Moon', 'Mercury'];
+    
+    const findFavorablePeriods = (dashas, label) => {
+      const periods = [];
+      for (const d of dashas) {
+        const start = new Date(d.start);
+        const end = new Date(d.endDate);
+        if (end < now || start > nextTwoYears) continue;
+        if (beneficForMarriage.includes(d.lord)) {
+          periods.push({
+            lord: d.lord,
+            start: start > now ? start.toISOString().split('T')[0] : now.toISOString().split('T')[0],
+            end: end < nextTwoYears ? end.toISOString().split('T')[0] : nextTwoYears.toISOString().split('T')[0],
+          });
+        }
+      }
+      return periods;
+    };
+    
+    const brideFavorable = findFavorablePeriods(brideDashas, 'Bride');
+    const groomFavorable = findFavorablePeriods(groomDashas, 'Groom');
+    
+    // Find overlapping periods
+    const overlaps = [];
+    for (const bp of brideFavorable) {
+      for (const gp of groomFavorable) {
+        const overlapStart = new Date(Math.max(new Date(bp.start).getTime(), new Date(gp.start).getTime()));
+        const overlapEnd = new Date(Math.min(new Date(bp.end).getTime(), new Date(gp.end).getTime()));
+        if (overlapStart < overlapEnd) {
+          overlaps.push({
+            start: overlapStart.toISOString().split('T')[0],
+            end: overlapEnd.toISOString().split('T')[0],
+            brideDashaLord: bp.lord,
+            groomDashaLord: gp.lord,
+            reason: `${bp.lord} period for bride + ${gp.lord} period for groom — both in favorable phases`,
+          });
+        }
+      }
+    }
+    
+    return {
+      favorableWindows: overlaps.length > 0 ? overlaps : [{ start: 'No overlapping favorable period found in next 2 years', end: '', reason: 'Consider consulting for specific muhurtha dates' }],
+      bridePeriods: brideFavorable,
+      groomPeriods: groomFavorable,
+    };
+  } catch (e) {
+    return { favorableWindows: [], error: e.message };
+  }
+}
+
+/**
+ * MASTER: Calculate Advanced Porondam+ compatibility
+ * Combines traditional 20-point + advanced factors
+ */
+function calculateAdvancedPorondam(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng) {
+  // Traditional 20-point system
+  const traditional = calculatePorondam(brideBirthDate, groomBirthDate);
+  
+  // Advanced factors
+  const dashaCompat = analyzeDashaCompatibility(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng);
+  const navamshaCompat = analyzeNavamshaCompatibility(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng);
+  const mangalaDosha = analyzeMangalaDosha(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng);
+  const marriageStrength = analyzeMarriagePlanetStrength(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng);
+  const weddingWindows = findBestWeddingWindow(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng);
+  
+  // Calculate advanced total score (out of 14)
+  const advancedScore = (dashaCompat.score || 0) + (navamshaCompat.score || 0) + (mangalaDosha.score || 0) + (marriageStrength.score || 0);
+  const advancedMax = (dashaCompat.maxScore || 2) + (navamshaCompat.maxScore || 7) + (mangalaDosha.maxScore || 2) + (marriageStrength.maxScore || 3);
+  
+  // Combined score: traditional (out of 20) + advanced (out of 14) = out of 34
+  const combinedScore = traditional.totalScore + advancedScore;
+  const combinedMax = traditional.maxPossibleScore + advancedMax;
+  const combinedPercentage = Math.round((combinedScore / combinedMax) * 100);
+  
+  // Combined rating
+  let combinedRating, combinedRatingEmoji;
+  if (combinedPercentage >= 80) { combinedRating = 'Exceptional'; combinedRatingEmoji = '💫✨'; }
+  else if (combinedPercentage >= 65) { combinedRating = 'Very Good'; combinedRatingEmoji = '🌟'; }
+  else if (combinedPercentage >= 50) { combinedRating = 'Good'; combinedRatingEmoji = '✨'; }
+  else if (combinedPercentage >= 35) { combinedRating = 'Average'; combinedRatingEmoji = '⭐'; }
+  else { combinedRating = 'Below Average'; combinedRatingEmoji = '🔮'; }
+  
+  return {
+    ...traditional,
+    advanced: {
+      dashaCompatibility: dashaCompat,
+      navamshaCompatibility: navamshaCompat,
+      mangalaDosha,
+      marriagePlanetStrength: marriageStrength,
+      weddingWindows,
+      advancedScore,
+      advancedMaxScore: advancedMax,
+      advancedPercentage: Math.round((advancedScore / advancedMax) * 100),
+    },
+    combined: {
+      score: combinedScore,
+      maxScore: combinedMax,
+      percentage: combinedPercentage,
+      rating: combinedRating,
+      ratingEmoji: combinedRatingEmoji,
+    },
+  };
+}
+
 module.exports = {
   calculatePorondam,
+  calculateAdvancedPorondam,
   GANA_MAP,
   YONI_MAP,
   NADI_MAP,

@@ -9,9 +9,11 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
-const { calculatePorondam } = require('../engine/porondam');
+const { calculatePorondam, calculateAdvancedPorondam } = require('../engine/porondam');
 const { buildHouseChart } = require('../engine/astrology');
+const { generateAdvancedAnalysis } = require('../engine/advanced');
 const { chat } = require('../engine/chat');
+const { parseSLT } = require('../utils/dateUtils');
 const { optionalAuth } = require('../middleware/auth');
 const { savePorondamResult, updatePorondamReport } = require('../models/firestore');
 
@@ -41,10 +43,10 @@ router.post('/check', optionalAuth, async (req, res) => {
       });
     }
 
-    const brideBirthDate = new Date(bride.birthDate);
-    const groomBirthDate = new Date(groom.birthDate);
+    const brideBirthDate = parseSLT(bride.birthDate);
+    const groomBirthDate = parseSLT(groom.birthDate);
 
-    if (isNaN(brideBirthDate.getTime()) || isNaN(groomBirthDate.getTime())) {
+    if (!brideBirthDate || isNaN(brideBirthDate.getTime()) || !groomBirthDate || isNaN(groomBirthDate.getTime())) {
       return res.status(400).json({ error: 'Invalid date format. Use ISO 8601.' });
     }
 
@@ -55,9 +57,17 @@ router.post('/check', optionalAuth, async (req, res) => {
 
     const result = calculatePorondam(brideBirthDate, groomBirthDate);
 
+    // Advanced Porondam+ compatibility analysis (cross-chart, D9, Mangala, etc.)
+    let advancedPorondam = null;
+    try {
+      advancedPorondam = calculateAdvancedPorondam(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng);
+    } catch (e) { console.error('Advanced porondam error:', e.message); }
+
     // Build rashi charts for both
     let brideChart = null;
     let groomChart = null;
+    let brideAdvanced = null;
+    let groomAdvanced = null;
     try {
       const brideHouse = buildHouseChart(brideBirthDate, brideLat, brideLng);
       const brideLagnaId = brideHouse.lagna ? brideHouse.lagna.rashi.id : 1;
@@ -70,10 +80,19 @@ router.post('/check', optionalAuth, async (req, res) => {
       groomChart = { rashiChart: groomHouse.houses, lagnaRashiId: groomLagnaId };
     } catch (e) { console.error('Groom chart error:', e.message); }
 
+    // Advanced analysis for both parties
+    try { brideAdvanced = generateAdvancedAnalysis(brideBirthDate, brideLat, brideLng); }
+    catch (e) { console.error('Bride advanced analysis error:', e.message); }
+    try { groomAdvanced = generateAdvancedAnalysis(groomBirthDate, groomLat, groomLng); }
+    catch (e) { console.error('Groom advanced analysis error:', e.message); }
+
     const responseData = {
       ...result,
+      advancedPorondam,
       brideChart,
       groomChart,
+      brideAdvanced,
+      groomAdvanced,
     };
 
     // Save to Firestore in background (don't block response)
@@ -86,6 +105,9 @@ router.post('/check', optionalAuth, async (req, res) => {
           groom: { ...result.groom, name: groom.name || 'Groom' },
           brideChart,
           groomChart,
+          brideAdvanced,
+          groomAdvanced,
+          advancedPorondam,
         });
       } catch (e) { console.error('Save porondam error:', e.message); }
     }
@@ -122,15 +144,38 @@ router.post('/report', optionalAuth, async (req, res) => {
     }
 
     const langInstruction = language === 'si'
-      ? `ඔබ ශ්‍රී ලංකාවේ ප්‍රසිද්ධ ජ්‍යෝතිෂවේදියෙක්. මේ පොරොන්දම් පරීක්ෂාවේ ප්‍රතිඵල ගැන සිංහලෙන් ලියන්න. 
-හිතවත්, පැහැදිලි, කෙළින්ම කියන විදියට ලියන්න — "ගුඩ් මෝනින්" වගේ ඉංග්‍රීසි වචන සිංහල අකුරින් ලියන්න එපා. 
-සිංහල ජ්‍යෝතිෂ වචන (දින, ගණ, යෝනි, නාඩි, වශ්‍ය, රාශි, මහේන්ද්‍ර) use කරන්න, ඒත් ඒවා මොකක්ද කියලා සරල සිංහලෙන් explain කරන්න. 
-sugar-coat කරන්න එපා. අවුල් තියෙනවා නම් කෙළින්ම කියන්න, ඒත් විසඳුම් (remedy) දෙන්න. 
-යාලුවෙක් කතා කරනවා වගේ ලියන්න — formal වචන use කරන්න එපා.`
-      : `You are a renowned Sri Lankan astrologer. Write a Porondam (marriage compatibility) report based on the data below.
-Be HONEST and DIRECT — do not sugarcoat. If there are problems, say so clearly, but always provide remedies and practical advice.
-Explain every technical term (Dina, Gana, Yoni, Nadi, Vasya, Rashi, Mahendra) in simple words anyone can understand.
-Write like a wise friend giving advice — not a textbook.`;
+      ? `ඔබ ශ්‍රී ලංකාවේ ප්‍රසිද්ධ විවාහ ගැළපුම් උපදේශකයෙක්. මේ යුවලයාගේ ගැළපීම ගැන සිංහලෙන් ලියන්න.
+
+100% සිංහල වචන පමණක් — ඉංග්‍රීසි වචන සිංහල අකුරින් ලියන්න එපා ("use", "score", "remedy", "factor" වගේ ඉංග්‍රීසි words එපා).
+"දින පොරොන්දම", "ගණ", "යෝනි", "නාඩි", "වශ්‍ය", "රාශි", "මහේන්ද්‍ර", "ලග්නය", "නක්ෂත්‍ර", "දෝෂ", "යෝග" වගේ ජ්‍යෝතිෂ වචන ලියන්න එපා.
+ඒ වෙනුවට සරල සිංහලෙන් කියන්න:
+- "දින පොරොන්දම" → "දෛනික ගැළපීම" හෝ "එදිනෙදා ජීවිතයේ ගැළපීම"
+- "ගණ පොරොන්දම" → "ස්වභාවයේ ගැළපීම"
+- "යෝනි පොරොන්දම" → "ශාරීරික හා හැඟීම්වල ගැළපීම"
+- "නාඩි පොරොන්දම" → "සෞඛ්‍ය ගැළපීම"
+- "වශ්‍ය පොරොන්දම" → "ආකර්ශනය හා බැඳීම"
+- "රාශි පොරොන්දම" → "මනස හා චින්තනයේ ගැළපීම"
+- "මහේන්ද්‍ර පොරොන්දම" → "දිගු කාලීන සමෘද්ධිය"
+- "දෝෂ" → "අභියෝග" හෝ "බාධක"
+- "ග්‍රහ" → "අහස්හි බලපෑම්"
+sugar-coat කරන්න එපා. අවුල් තියෙනවා නම් කෙළින්ම කියන්න, ඒත් විසඳුම් දෙන්න.
+හිතවත් යාලුවෙක් කතා කරනවා වගේ ලියන්න.`
+      : `You are a wise marriage compatibility advisor. Write a compatibility report for this couple based on the data below.
+
+ABSOLUTE LANGUAGE RULES:
+- NEVER use these words: Porondam, Nakshatra, Rashi, Lagna, Dasha, Dosha, Yoga, Graha, Bhukti, Pada, Ayanamsha, Bhava, Karakamsha, Atmakaraka, Upapada, Dina, Gana, Yoni, Nadi, Vasya, Mahendra, Tithi, Karana, Panchanga
+- Instead use: "birth star", "moon sign", "rising sign", "life phases", "challenges", "special strengths", "planets", "compatibility factor"
+- For the 7 factors, translate them to human concepts:
+  * Dina → "Daily Life Harmony" (how well they sync day-to-day)
+  * Gana → "Temperament Match" (are they both calm/fierce/gentle?)  
+  * Yoni → "Physical & Emotional Chemistry" (intimacy and attraction)
+  * Nadi → "Health & Genetic Compatibility" (biological harmony)
+  * Vasya → "Mutual Attraction & Bonding" (natural pull toward each other)
+  * Rashi → "Mental & Emotional Wavelength" (do they think alike?)
+  * Mahendra → "Long-term Prosperity" (wealth and growth together)
+- Be HONEST and DIRECT — do not sugarcoat. If there are problems, say so clearly, but always provide remedies and practical advice.
+- Write like a wise friend giving advice — not a textbook.
+- The reader knows NOTHING about astrology. Explain everything in simple everyday words.`;
 
     const brideLabel = brideName || (language === 'si' ? 'මනාලිය' : 'Bride');
     const groomLabel = groomName || (language === 'si' ? 'මනාලයා' : 'Groom');
@@ -178,27 +223,84 @@ ${(porondamData.factors || []).map(f =>
 
 DOSHAS: ${porondamData.doshas?.length ? porondamData.doshas.map(d => d.name + ': ' + d.description).join(', ') : 'None found'}
 
-CRITICAL RULE: Use ONLY the rashi, nakshatra, lagna, and planet data provided above. Do NOT invent or guess any planetary positions, rashis, or nakshatras. Every astrological detail you mention MUST come from the data above.
+ADVANCED ANALYSIS — ${brideLabel.toUpperCase()}:
+${porondamData.brideAdvanced ? `Doshas: ${(porondamData.brideAdvanced.tier1?.doshas?.items || []).map(d => d.name + ' (' + d.severity + ')' + (d.cancelled ? ' [CANCELLED]' : '')).join(', ') || 'None'}
+Yogas: ${(porondamData.brideAdvanced.tier1?.advancedYogas?.items || []).slice(0, 10).map(y => y.name + ' (' + y.strength + ')').join(', ') || 'None'}
+Jaimini Atmakaraka: ${porondamData.brideAdvanced.tier1?.jaimini?.atmakaraka?.planet || 'N/A'} — Karakamsha: ${porondamData.brideAdvanced.tier1?.jaimini?.karakamsha?.rashi || 'N/A'}
+Upapada Lagna: ${porondamData.brideAdvanced.tier1?.jaimini?.upapadaLagna?.rashi || 'N/A'} (marriage indicator)
+Past Life Karma: ${porondamData.brideAdvanced.tier3?.pastLife?.pastLife?.pastLifeStory || 'N/A'}
+Karma Balance: Good — ${porondamData.brideAdvanced.tier3?.pastLife?.karmaBalance?.good || 'N/A'}, Challenging — ${porondamData.brideAdvanced.tier3?.pastLife?.karmaBalance?.challenging || 'N/A'}` : 'Not available'}
+
+ADVANCED ANALYSIS — ${groomLabel.toUpperCase()}:
+${porondamData.groomAdvanced ? `Doshas: ${(porondamData.groomAdvanced.tier1?.doshas?.items || []).map(d => d.name + ' (' + d.severity + ')' + (d.cancelled ? ' [CANCELLED]' : '')).join(', ') || 'None'}
+Yogas: ${(porondamData.groomAdvanced.tier1?.advancedYogas?.items || []).slice(0, 10).map(y => y.name + ' (' + y.strength + ')').join(', ') || 'None'}
+Jaimini Atmakaraka: ${porondamData.groomAdvanced.tier1?.jaimini?.atmakaraka?.planet || 'N/A'} — Karakamsha: ${porondamData.groomAdvanced.tier1?.jaimini?.karakamsha?.rashi || 'N/A'}
+Upapada Lagna: ${porondamData.groomAdvanced.tier1?.jaimini?.upapadaLagna?.rashi || 'N/A'} (marriage indicator)
+Past Life Karma: ${porondamData.groomAdvanced.tier3?.pastLife?.pastLife?.pastLifeStory || 'N/A'}
+Karma Balance: Good — ${porondamData.groomAdvanced.tier3?.pastLife?.karmaBalance?.good || 'N/A'}, Challenging — ${porondamData.groomAdvanced.tier3?.pastLife?.karmaBalance?.challenging || 'N/A'}` : 'Not available'}
+
+${porondamData.advancedPorondam?.advanced ? `═══ PORONDAM+ ADVANCED ANALYSIS ═══
+COMBINED SCORE: ${porondamData.advancedPorondam.combined?.score || 'N/A'}/${porondamData.advancedPorondam.combined?.maxScore || 'N/A'} (${porondamData.advancedPorondam.combined?.percentage || 'N/A'}%) — ${porondamData.advancedPorondam.combined?.rating || 'N/A'} ${porondamData.advancedPorondam.combined?.ratingEmoji || ''}
+
+DASHA (LIFE PHASE) COMPATIBILITY:
+- ${brideLabel} current phase: ${porondamData.advancedPorondam.advanced.dashaCompatibility?.bride?.currentDasha || 'N/A'} (${porondamData.advancedPorondam.advanced.dashaCompatibility?.bride?.isBeneficPeriod ? 'Benefic' : 'Challenging'})
+- ${groomLabel} current phase: ${porondamData.advancedPorondam.advanced.dashaCompatibility?.groom?.currentDasha || 'N/A'} (${porondamData.advancedPorondam.advanced.dashaCompatibility?.groom?.isBeneficPeriod ? 'Benefic' : 'Challenging'})
+- Harmony: ${porondamData.advancedPorondam.advanced.dashaCompatibility?.harmony || 'N/A'}
+- Score: ${porondamData.advancedPorondam.advanced.dashaCompatibility?.score || 0}/${porondamData.advancedPorondam.advanced.dashaCompatibility?.maxScore || 2}
+- ${porondamData.advancedPorondam.advanced.dashaCompatibility?.description || ''}
+
+NAVAMSHA (MARRIAGE CHART D9) COMPATIBILITY:
+- ${brideLabel} D9 Rising: ${porondamData.advancedPorondam.advanced.navamshaCompatibility?.brideD9Lagna || 'N/A'}
+- ${groomLabel} D9 Rising: ${porondamData.advancedPorondam.advanced.navamshaCompatibility?.groomD9Lagna || 'N/A'}
+- Score: ${porondamData.advancedPorondam.advanced.navamshaCompatibility?.score || 0}/${porondamData.advancedPorondam.advanced.navamshaCompatibility?.maxScore || 7}
+- Insights: ${(porondamData.advancedPorondam.advanced.navamshaCompatibility?.insights || []).join('; ') || 'None'}
+- ${porondamData.advancedPorondam.advanced.navamshaCompatibility?.description || ''}
+
+MANGALA (MARS) DOSHA CROSS-CHECK:
+- ${brideLabel}: ${porondamData.advancedPorondam.advanced.mangalaDosha?.bride?.hasDosha ? 'Mars Dosha present (House ' + porondamData.advancedPorondam.advanced.mangalaDosha.bride.marsHouse + ')' + (porondamData.advancedPorondam.advanced.mangalaDosha.bride.cancelled ? ' [CANCELLED: ' + porondamData.advancedPorondam.advanced.mangalaDosha.bride.cancellationReason + ']' : '') : 'No Mars Dosha'}
+- ${groomLabel}: ${porondamData.advancedPorondam.advanced.mangalaDosha?.groom?.hasDosha ? 'Mars Dosha present (House ' + porondamData.advancedPorondam.advanced.mangalaDosha.groom.marsHouse + ')' + (porondamData.advancedPorondam.advanced.mangalaDosha.groom.cancelled ? ' [CANCELLED: ' + porondamData.advancedPorondam.advanced.mangalaDosha.groom.cancellationReason + ']' : '') : 'No Mars Dosha'}
+- Severity: ${porondamData.advancedPorondam.advanced.mangalaDosha?.severity || 'N/A'}
+- Score: ${porondamData.advancedPorondam.advanced.mangalaDosha?.score || 0}/${porondamData.advancedPorondam.advanced.mangalaDosha?.maxScore || 2}
+- ${porondamData.advancedPorondam.advanced.mangalaDosha?.description || ''}
+
+MARRIAGE PLANET STRENGTH:
+- ${brideLabel}: Venus ${porondamData.advancedPorondam.advanced.marriagePlanetStrength?.bride?.venusAssessment || 'N/A'} (${porondamData.advancedPorondam.advanced.marriagePlanetStrength?.bride?.venusStrength || 'N/A'}%), 7th Lord (${porondamData.advancedPorondam.advanced.marriagePlanetStrength?.bride?.seventhLord || 'N/A'}) ${porondamData.advancedPorondam.advanced.marriagePlanetStrength?.bride?.seventhLordAssessment || 'N/A'}
+- ${groomLabel}: Venus ${porondamData.advancedPorondam.advanced.marriagePlanetStrength?.groom?.venusAssessment || 'N/A'} (${porondamData.advancedPorondam.advanced.marriagePlanetStrength?.groom?.venusStrength || 'N/A'}%), 7th Lord (${porondamData.advancedPorondam.advanced.marriagePlanetStrength?.groom?.seventhLord || 'N/A'}) ${porondamData.advancedPorondam.advanced.marriagePlanetStrength?.groom?.seventhLordAssessment || 'N/A'}
+- Score: ${porondamData.advancedPorondam.advanced.marriagePlanetStrength?.score || 0}/${porondamData.advancedPorondam.advanced.marriagePlanetStrength?.maxScore || 3}
+- ${porondamData.advancedPorondam.advanced.marriagePlanetStrength?.assessment || ''}
+
+BEST WEDDING WINDOWS:
+${(porondamData.advancedPorondam.advanced.weddingWindows?.favorableWindows || []).map(w => '- ' + w.start + ' to ' + w.end + ': ' + w.reason).join('\n') || 'No favorable windows found'}
+` : ''}
+CRITICAL RULE: Use ONLY the data provided above for your analysis. Do NOT invent or guess any details. Every insight you share MUST come from the data above.
+
+ABSOLUTE OUTPUT RULE: All the data labels above (Nakshatra, Rashi, Lagna, House, Lord, Atmakaraka, Upapada, etc.) are FOR YOUR REFERENCE ONLY. NEVER write these technical terms in your output. Translate everything to simple human language.
 
 FORMAT RULES: Use Markdown formatting throughout:
-- Use ## for main section headings (e.g. ## 💍 Overall Verdict)
+- Use ## for main section headings (e.g. ## 💍 The Big Picture)
 - Use ### for sub-sections
-- Use **bold** for key terms, scores, planet names, and important words
+- Use **bold** for key insights and important words
 - Use *italic* for emphasis and explanations
-- Use - bullet lists for remedies, advice lists, and key points
-- Use > blockquotes for important warnings, doshas, or key insights
+- Use - bullet lists for advice, tips, and key points
+- Use > blockquotes for important warnings or key insights
 - Use --- to separate major sections
-- Start each of the 7 factor sections with ### and include the score prominently in **bold**
 - Use emojis liberally in headings: ✨ 🌟 💫 💍 ⚠️ 🔮 💎 🙏 ❤️ 🌙
 
 WRITE THE REPORT:
-1. Start with a warm intro about the couple and their star signs — mention their EXACT nakshatras, rashis, and lagnas from the data above
-2. Briefly describe each person's chart: their lagna, key planet placements, and what these mean for their personality
-3. Explain EACH of the 7 factors one by one in detail — what it means in real life, what score they got, and what that means for their marriage. Give specific examples.
-4. Highlight any doshas (problems) honestly and explain remedies in detail (temple visits, mantras, rituals, gemstones etc.)
-5. Give an overall verdict — be brutally honest but compassionate
-6. End with practical advice for the couple — things they can do to strengthen their bond
-7. Write at least 600-1000 words. Be thorough and detailed. Do NOT give a short summary — this is a full professional astrology report.`;
+1. Start with a warm, personal intro about this couple — describe each person's core personality based on their birth stars and chart data. Make them feel seen and understood.
+2. Go through EACH of the 7 compatibility factors one by one — but use HUMAN names (Daily Life Harmony, Temperament Match, Physical & Emotional Chemistry, Health Compatibility, Mutual Attraction, Mental Wavelength, Long-term Prosperity). For each factor: explain what it means in real married life, what score they got, and give specific real-life examples of how this will show up in their relationship.
+3. Highlight any challenges HONESTLY — if there are problems, say them clearly in plain language. But always immediately follow with solutions (temple visits, specific prayers, rituals, gemstones, behavioral advice etc.)
+4. Discuss how their individual charts complement or clash — using everyday language (e.g., "Her chart shows she's naturally independent and career-driven, while his chart shows deep family attachment — this could cause friction about priorities")
+5. If PORONDAM+ ADVANCED data is available, include a DEEP DIVE section covering:
+   a. Current life phase compatibility — are both partners in harmonious or conflicting life phases right now?
+   b. Marriage chart (D9) comparison — what the soul-level connection looks like
+   c. Mars energy cross-check — any temperament friction concerns and whether they cancel out
+   d. Marriage planet strength — how strong is each person's capacity for partnership
+   e. Best wedding timing — when the stars align for both of them to tie the knot
+6. Give an overall verdict using the COMBINED score (traditional + advanced) — be brutally honest but compassionate. Tell them their percentage and what it realistically means.
+7. End with PRACTICAL relationship advice — specific things they can do together to strengthen their bond
+8. Write at least 800-1200 words. Be thorough and detailed. This is a full professional report that should feel like a wise elder sat with this couple for an hour.
+9. NEVER use any technical astrology terms in your output — everything should be in simple everyday language that someone with ZERO astrology knowledge can understand and find valuable.`;
 
     const result = await chat(prompt, {
       language,
@@ -331,8 +433,8 @@ router.post('/vibe-check/:linkId', (req, res) => {
     }
 
     const result = calculatePorondam(
-      new Date(vibeLink.senderBirthDate),
-      new Date(receiverBirthDate)
+      parseSLT(vibeLink.senderBirthDate),
+      parseSLT(receiverBirthDate)
     );
 
     // Mark link as used

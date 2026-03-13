@@ -508,11 +508,13 @@ function BirthDataStep({ onComplete, lang }) {
         if (ampm === 'AM' && h === 12) h = 0;
         var m = parseInt(minute) || 0;
         
-        // Construct Date object (interpret as local device time)
-        var dateObj = new Date(parseInt(year), month, parseInt(day), h, m);
+        // Store as naive SL time string (no UTC conversion)
+        // Format: "YYYY-MM-DDThh:mm:00" — always interpreted as Asia/Colombo
+        var pad = function(n) { return n.toString().padStart(2, '0'); };
+        var dateTime = parseInt(year) + '-' + pad(month + 1) + '-' + pad(parseInt(day)) + 'T' + pad(h) + ':' + pad(m) + ':00';
         
         birthData = {
-          dateTime: dateObj.toISOString(),
+          dateTime: dateTime,
           lat: selectedCity ? selectedCity.lat : 6.9271,
           lng: selectedCity ? selectedCity.lng : 79.8612,
           locationName: selectedCity ? selectedCity.name : 'Colombo',
