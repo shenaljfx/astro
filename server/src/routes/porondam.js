@@ -15,7 +15,10 @@ const { generateAdvancedAnalysis } = require('../engine/advanced');
 const { chat } = require('../engine/chat');
 const { parseSLT } = require('../utils/dateUtils');
 const { optionalAuth } = require('../middleware/auth');
+const { phoneAuth } = require('../middleware/subscription');
+const { requireTokens } = require('../middleware/tokens');
 const { savePorondamResult, updatePorondamReport } = require('../models/firestore');
+const { getDb, COLLECTIONS } = require('../config/firebase');
 
 // In-memory store for vibe-check links (use Redis/DB in production)
 const vibeLinks = new Map();
@@ -135,9 +138,25 @@ router.post('/check', optionalAuth, async (req, res) => {
  *   groomName: "optional"
  * }
  */
-router.post('/report', optionalAuth, async (req, res) => {
+router.post('/report', phoneAuth, requireTokens(10, 'Porondam Report'), async (req, res) => {
   try {
     const { porondamData, language = 'en', brideName, groomName, porondamId } = req.body;
+
+    if (!porondamData) {
+      return res.status(400).json({ error: 'porondamData is required' });
+    }
+
+    // Deduct LKR 10 before AI generation
+    let newBalance = req.tokenBalanceBefore;
+    try {
+      const deduction = await req.deductTokens();
+      newBalance = deduction.newBalance;
+    } catch (e) {
+      if (e.code === 'INSUFFICIENT_BALANCE') {
+        return res.status(402).json({ error: 'Insufficient token balance', balance: e.balance, required: e.required, topUpRequired: true });
+      }
+      throw e;
+    }
 
     if (!porondamData) {
       return res.status(400).json({ error: 'porondamData is required' });
@@ -332,6 +351,8 @@ WRITE THE REPORT:
       success: true,
       report: result.message,
       language,
+      tokenCost: req.tokenCost,
+      balance: newBalance,
       porondamId: savedPorondamId,
     });
   } catch (error) {
@@ -452,6 +473,36 @@ router.post('/vibe-check/:linkId', (req, res) => {
   } catch (error) {
     console.error('Error processing vibe check:', error);
     res.status(500).json({ error: 'Failed to process vibe check', details: error.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// DELETE /api/porondam/history/:id
+// Delete a saved porondam result
+// ═══════════════════════════════════════════════════════════════════
+router.delete('/history/:id', phoneAuth, async (req, res) => {
+  try {
+    if (!req.user || !req.user.uid) {
+      return res.status(401).json({ error: 'Login required to delete records' });
+    }
+    const db = getDb();
+    if (!db) return res.status(503).json({ error: 'Database unavailable' });
+
+    const docRef = db.collection(COLLECTIONS.PORONDAM).doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Record not found' });
+
+    // Security: only the owner can delete
+    if (doc.data().uid !== req.user.uid) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    await docRef.delete();
+    console.log(`[delete-porondam] Deleted ${req.params.id} for user ${req.user.uid}`);
+    res.json({ success: true, message: 'Record deleted' });
+  } catch (error) {
+    console.error('[delete-porondam] Error:', error.message);
+    res.status(500).json({ error: 'Failed to delete record' });
   }
 });
 

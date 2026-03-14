@@ -1,93 +1,248 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet, Platform, TextInput, Alert, ActivityIndicator, Modal, FlatList } from 'react-native';
+import {
+  View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet,
+  Platform, TextInput, Alert, ActivityIndicator, Modal, FlatList,
+  Dimensions, StatusBar,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown, FadeIn,
+  useSharedValue, useAnimatedStyle,
+  withRepeat, withSequence, withTiming, withSpring,
+  interpolate, Easing,
+} from 'react-native-reanimated';
+import Svg, { Circle, Path, G, Defs, RadialGradient as SvgRadialGradient, Stop } from 'react-native-svg';
 import CosmicBackground from '../../components/CosmicBackground';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 
-const SRI_LANKAN_CITIES = [
-  { name: 'Colombo', lat: '6.9271', lng: '79.8612' },
-  { name: 'Kandy', lat: '7.2906', lng: '80.6337' },
-  { name: 'Galle', lat: '6.0535', lng: '80.2210' },
-  { name: 'Jaffna', lat: '9.6615', lng: '80.0255' },
-  { name: 'Matara', lat: '5.9549', lng: '80.5550' },
-  { name: 'Anuradhapura', lat: '8.3114', lng: '80.4037' },
-  { name: 'Trincomalee', lat: '8.5874', lng: '81.2152' },
-  { name: 'Kurunegala', lat: '7.4863', lng: '80.3647' },
-  { name: 'Ratnapura', lat: '6.7056', lng: '80.3847' },
-  { name: 'Batticaloa', lat: '7.7310', lng: '81.6747' },
-  { name: 'Badulla', lat: '6.9897', lng: '81.0557' },
-  { name: 'Nuwara Eliya', lat: '6.9497', lng: '80.7891' },
-  { name: 'Puttalam', lat: '8.0362', lng: '79.8283' },
-  { name: 'Hambantota', lat: '6.1429', lng: '81.1185' },
-  { name: 'Gampaha', lat: '7.0840', lng: '79.9939' }
+var SW = Dimensions.get('window').width;
+var SH = Dimensions.get('window').height;
+
+// ─────────────────────────────────────────────────────────────────────
+//  CITY DATA
+// ─────────────────────────────────────────────────────────────────────
+var SRI_LANKAN_CITIES = [
+  { name: 'Colombo',      nameSi: 'කොළඹ',         lat: '6.9271',  lng: '79.8612' },
+  { name: 'Kandy',        nameSi: 'මහනුවර',        lat: '7.2906',  lng: '80.6337' },
+  { name: 'Galle',        nameSi: 'ගාල්ල',          lat: '6.0535',  lng: '80.2210' },
+  { name: 'Jaffna',       nameSi: 'යාපනය',         lat: '9.6615',  lng: '80.0255' },
+  { name: 'Matara',       nameSi: 'මාතර',           lat: '5.9549',  lng: '80.5550' },
+  { name: 'Anuradhapura', nameSi: 'අනුරාධපුරය',    lat: '8.3114',  lng: '80.4037' },
+  { name: 'Trincomalee',  nameSi: 'ත්‍රිකුණාමලය',  lat: '8.5874',  lng: '81.2152' },
+  { name: 'Kurunegala',   nameSi: 'කුරුණෑගල',      lat: '7.4863',  lng: '80.3647' },
+  { name: 'Ratnapura',    nameSi: 'රත්නපුරය',       lat: '6.7056',  lng: '80.3847' },
+  { name: 'Batticaloa',   nameSi: 'මඩකලපුව',        lat: '7.7310',  lng: '81.6747' },
+  { name: 'Badulla',      nameSi: 'බදුල්ල',         lat: '6.9897',  lng: '81.0557' },
+  { name: 'Nuwara Eliya', nameSi: 'නුවරඑළිය',       lat: '6.9497',  lng: '80.7891' },
+  { name: 'Puttalam',     nameSi: 'පුත්තලම',        lat: '8.0362',  lng: '79.8283' },
+  { name: 'Hambantota',   nameSi: 'හම්බන්තොට',      lat: '6.1429',  lng: '81.1185' },
+  { name: 'Gampaha',      nameSi: 'ගම්පහ',          lat: '7.0840',  lng: '79.9939' },
 ];
 
-function AuraBox({ children, style }) {
-  return (
-    <View style={[gs.box, style]}>
-      <LinearGradient
-        colors={['rgba(20, 80, 150, 0.3)', 'rgba(10, 30, 80, 0.4)']}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+// ─────────────────────────────────────────────────────────────────────
+//  BIRTH MANDALA — animated SVG aura
+// ─────────────────────────────────────────────────────────────────────
+function BirthMandala({ lagnaIndex, moonIndex, size }) {
+  lagnaIndex = lagnaIndex || 0;
+  moonIndex  = moonIndex  || 4;
+  size       = size       || 130;
+
+  var rot   = useSharedValue(0);
+  var pulse = useSharedValue(0.65);
+  useEffect(function () {
+    rot.value   = withRepeat(withTiming(360, { duration: 26000, easing: Easing.linear }), -1, false);
+    pulse.value = withRepeat(
+      withSequence(withTiming(1, { duration: 2600 }), withTiming(0.65, { duration: 2600 })), -1
+    );
+  }, []);
+  var spinStyle = useAnimatedStyle(function () { return { transform: [{ rotate: rot.value + 'deg' }] }; });
+  var glowStyle = useAnimatedStyle(function () { return { opacity: pulse.value }; });
+
+  var r = size / 2;
+  var palette = ['#9333EA','#C084FC','#FBBF24','#F59E0B','#34D399','#4CC9F0','#FF6B9D','#A78BFA'];
+  var lc = palette[lagnaIndex % palette.length];
+  var mc = palette[moonIndex  % palette.length];
+  var petals = [];
+  var n = 8 + (lagnaIndex % 4);
+  for (var i = 0; i < n; i++) {
+    var a = (i / n) * 2 * Math.PI;
+    var px = r + Math.cos(a) * r * 0.42;
+    var py = r + Math.sin(a) * r * 0.42;
+    var cx1 = r + Math.cos(a - 0.4) * r * 0.55;
+    var cy1 = r + Math.sin(a - 0.4) * r * 0.55;
+    var cx2 = r + Math.cos(a + 0.4) * r * 0.55;
+    var cy2 = r + Math.sin(a + 0.4) * r * 0.55;
+    petals.push(
+      <Path key={i}
+        d={'M ' + r + ' ' + r + ' Q ' + cx1 + ' ' + cy1 + ' ' + px + ' ' + py + ' Q ' + cx2 + ' ' + cy2 + ' ' + r + ' ' + r}
+        fill={i % 2 === 0 ? lc + '55' : mc + '33'}
+        stroke={i % 2 === 0 ? lc : mc}
+        strokeWidth="0.5" strokeOpacity="0.6"
       />
-      <View style={gs.innerGlow} />
-      {children}
+    );
+  }
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.View style={[{ position: 'absolute', width: size, height: size }, glowStyle]}>
+        <Svg width={size} height={size}>
+          <Defs>
+            <SvgRadialGradient id="aura" cx="50%" cy="50%" r="50%">
+              <Stop offset="0%"   stopColor={lc} stopOpacity="0.4" />
+              <Stop offset="100%" stopColor={lc} stopOpacity="0"   />
+            </SvgRadialGradient>
+          </Defs>
+          <Circle cx={r} cy={r} r={r} fill="url(#aura)" />
+        </Svg>
+      </Animated.View>
+      <Animated.View style={[{ position: 'absolute', width: size, height: size }, spinStyle]}>
+        <Svg width={size} height={size}>
+          <G>{petals}</G>
+          <Circle cx={r} cy={r} r={r * 0.62} fill="none" stroke={lc} strokeWidth="0.5" strokeOpacity="0.3" strokeDasharray="3 4" />
+          <Circle cx={r} cy={r} r={r * 0.38} fill="none" stroke={mc} strokeWidth="0.5" strokeOpacity="0.4" />
+        </Svg>
+      </Animated.View>
     </View>
   );
 }
-var gs = StyleSheet.create({
-  box: {
-    borderRadius: 24, overflow: 'hidden', borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.15)', padding: 20, marginBottom: 16,
-    shadowColor: '#38bdf8', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1, shadowRadius: 10, elevation: 5,
-  },
-  innerGlow: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderRadius: 24,
-  }
+
+// ── Upgraded AuraBox ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────
+//  GLASS CARD
+// ─────────────────────────────────────────────────────────────────────
+function GCard({ children, style, accent }) {
+  var ac = accent || '#9333EA';
+  return (
+    <View style={[gc.card, { borderColor: ac + '35' }, style]}>
+      <LinearGradient colors={['rgba(6,3,18,0.95)', 'rgba(4,2,14,0.98)']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[ac + '22', ac + '0A']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <LinearGradient colors={['rgba(255,255,255,0.06)','transparent']} style={{ position:'absolute',top:0,left:0,right:0,height:'45%',borderTopLeftRadius:22,borderTopRightRadius:22 }} />
+      <View style={gc.inner}>{children}</View>
+    </View>
+  );
+}
+var gc = StyleSheet.create({
+  card:  { borderRadius: 22, overflow: 'hidden', borderWidth: 1, marginBottom: 14, shadowColor: '#9333EA', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 14, elevation: 6 },
+  inner: { padding: 18 },
 });
 
-function SettingItem({ icon, title, value, type = 'nav', onPress, onToggle }) {
+// ─────────────────────────────────────────────────────────────────────
+//  SECTION HEADER
+// ─────────────────────────────────────────────────────────────────────
+function SectionHeader({ icon, title, subtitle, color }) {
+  var c = color || '#A78BFA';
   return (
-    <TouchableOpacity style={s.settingRow} onPress={onPress} disabled={type === 'switch'}>
-      <View style={s.settingIconWrapper}>
-        <LinearGradient colors={['rgba(56, 189, 248, 0.2)', 'transparent']} style={StyleSheet.absoluteFill} />
-        <Ionicons name={icon} size={20} color="#7dd3fc" />
+    <View style={sh.row}>
+      <View style={[sh.iconBox, { backgroundColor: c + '20' }]}>
+        <Ionicons name={icon} size={17} color={c} />
       </View>
-      <View style={s.settingLeft}>
-        <Text style={s.settingTitle}>{title}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[sh.title, { color: c }]}>{title}</Text>
+        {subtitle ? <Text style={sh.sub}>{subtitle}</Text> : null}
       </View>
-      {type === 'nav' ? (
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.4)" />
+    </View>
+  );
+}
+var sh = StyleSheet.create({
+  row:    { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  iconBox:{ width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  title:  { fontSize: 14, fontWeight: '800' },
+  sub:    { fontSize: 11, color: 'rgba(255,255,255,0.38)', marginTop: 2 },
+});
+
+// ─────────────────────────────────────────────────────────────────────
+//  SETTINGS ROW
+// ─────────────────────────────────────────────────────────────────────
+function SettingRow({ icon, label, type, value, onPress, onToggle, iconColor, last }) {
+  var ic = iconColor || '#7dd3fc';
+  return (
+    <TouchableOpacity style={[sr.row, !last && sr.rowBorder]} onPress={onPress} disabled={type === 'switch'} activeOpacity={0.7}>
+      <View style={[sr.iconWrap, { backgroundColor: ic + '20' }]}>
+        <Ionicons name={icon} size={17} color={ic} />
+      </View>
+      <Text style={sr.label}>{label}</Text>
+      {type === 'switch' ? (
+        <Switch value={value} onValueChange={onToggle} trackColor={{ false: 'rgba(255,255,255,0.08)', true: ic + 'AA' }} thumbColor={value ? ic : '#94a3b8'} />
       ) : (
-        <Switch
-          value={value}
-          onValueChange={onToggle}
-          trackColor={{ false: 'rgba(255,255,255,0.1)', true: 'rgba(56, 189, 248, 0.5)' }}
-          thumbColor={value ? '#38bdf8' : '#cbd5e1'}
-        />
+        <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.22)" />
       )}
     </TouchableOpacity>
   );
 }
+var sr = StyleSheet.create({
+  row:      { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
+  rowBorder:{ borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+  iconWrap: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  label:    { flex: 1, fontSize: 14, color: '#E2E8F0', fontWeight: '500' },
+});
 
-// ─── Auth Form Component ────────────────────────────────────────
-function PhoneAuthForm({ onSuccess }) {
-  var [phone, setPhone] = useState('');
-  var [otp, setOtp] = useState('');
-  var [referenceNo, setReferenceNo] = useState(null);
-  var [devOtp, setDevOtp] = useState(null);
-  var [step, setStep] = useState('phone'); // 'phone' or 'otp'
-  var [loading, setLoading] = useState(false);
-  var [error, setError] = useState('');
+// ─────────────────────────────────────────────────────────────────────
+//  LANGUAGE PICKER
+// ─────────────────────────────────────────────────────────────────────
+function LangPicker({ language, onSwitch }) {
+  var LANGS = [{ key: 'en', label: 'English', flag: '🇬🇧' }, { key: 'si', label: 'සිංහල', flag: '🇱🇰' }];
+  return (
+    <View style={lp.wrap}>
+      {LANGS.map(function (l) {
+        var active = language === l.key;
+        return (
+          <TouchableOpacity key={l.key} style={[lp.pill, active && lp.pillActive]} onPress={function () { onSwitch(l.key); }} activeOpacity={0.8}>
+            {active && <LinearGradient colors={['rgba(147,51,234,0.75)','rgba(99,102,241,0.75)']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />}
+            <Text style={lp.flag}>{l.flag}</Text>
+            <Text style={[lp.text, active && lp.textActive]}>{l.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+var lp = StyleSheet.create({
+  wrap:       { flexDirection: 'row', gap: 10 },
+  pill:       { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 14, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  pillActive: { borderColor: 'rgba(147,51,234,0.45)' },
+  flag:       { fontSize: 18 },
+  text:       { fontSize: 14, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
+  textActive: { color: '#fff', fontWeight: '800' },
+});
+
+// ─────────────────────────────────────────────────────────────────────
+//  STAT PILL
+// ─────────────────────────────────────────────────────────────────────
+function StatPill({ value, label, icon, color }) {
+  var c = color || '#A78BFA';
+  return (
+    <View style={[sp.pill, { borderColor: c + '28' }]}>
+      <LinearGradient colors={[c + '18', c + '08']} style={StyleSheet.absoluteFill} />
+      <Ionicons name={icon} size={16} color={c} style={{ marginBottom: 4 }} />
+      <Text style={[sp.value, { color: c }]}>{value}</Text>
+      <Text style={sp.label}>{label}</Text>
+    </View>
+  );
+}
+var sp = StyleSheet.create({
+  pill:  { flex: 1, alignItems: 'center', paddingVertical: 14, paddingHorizontal: 6, borderRadius: 18, overflow: 'hidden', borderWidth: 1 },
+  value: { fontSize: 20, fontWeight: '900', marginBottom: 2 },
+  label: { fontSize: 10, color: 'rgba(255,255,255,0.38)', fontWeight: '600', textAlign: 'center' },
+});
+
+// ─────────────────────────────────────────────────────────────────────
+//  PHONE AUTH FORM
+// ─────────────────────────────────────────────────────────────────────
+function PhoneAuthForm() {
+  var { t } = useLanguage();
   var { sendOtp, verifyAndLogin } = useAuth();
+  var [phone,       setPhone]       = useState('');
+  var [otp,         setOtp]         = useState('');
+  var [referenceNo, setReferenceNo] = useState(null);
+  var [devOtp,      setDevOtp]      = useState(null);
+  var [step,        setStep]        = useState('phone');
+  var [loading,     setLoading]     = useState(false);
+  var [error,       setError]       = useState('');
 
   async function handleSendOtp() {
-    if (!phone || phone.length < 9) { setError('Enter a valid phone number'); return; }
+    if (!phone || phone.length < 9) { setError(t('enterPhone')); return; }
     setError(''); setLoading(true);
     try {
       var result = await sendOtp(phone);
@@ -95,36 +250,36 @@ function PhoneAuthForm({ onSuccess }) {
       if (result._devOtp) setDevOtp(result._devOtp);
       setStep('otp');
     } catch (err) {
-      setError(err.message || 'Failed to send OTP');
+      setError(err.message || t('error'));
     } finally { setLoading(false); }
   }
 
   async function handleVerify() {
-    if (!otp || otp.length < 4) { setError('Enter the OTP code'); return; }
+    if (!otp || otp.length < 4) { setError(t('enterCode')); return; }
     setError(''); setLoading(true);
-    try {
-      await verifyAndLogin(phone, otp, referenceNo);
-      if (onSuccess) onSuccess();
-    } catch (err) {
-      setError(err.message || 'Verification failed');
-    } finally { setLoading(false); }
+    try { await verifyAndLogin(phone, otp, referenceNo); }
+    catch (err) { setError(err.message || t('error')); }
+    finally { setLoading(false); }
   }
 
   return (
-    <AuraBox>
-      <View style={s.authHeader}>
-        <Ionicons name="sparkles" size={28} color="#c084fc" />
-        <Text style={s.authTitle}>{step === 'phone' ? 'Sign In' : 'Verify OTP'}</Text>
-        <Text style={s.authSubtitle}>{step === 'phone' ? 'Enter your phone number' : 'Enter the code sent to ' + phone}</Text>
+    <GCard accent="#9333EA">
+      <View style={af.header}>
+        <View style={af.iconRing}>
+          <LinearGradient colors={['#7C3AED','#9333EA']} style={StyleSheet.absoluteFill} />
+          <Ionicons name="sparkles" size={26} color="#fff" />
+        </View>
+        <Text style={af.title}>{step === 'phone' ? t('signIn') : t('verifyOtp')}</Text>
+        <Text style={af.sub}>{step === 'phone' ? t('enterPhone') : (t('enterCode') + ' ' + phone)}</Text>
       </View>
 
       {step === 'phone' && (
         <>
-          <TextInput style={s.input} placeholder="07X XXX XXXX" placeholderTextColor="rgba(255,255,255,0.3)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={12} />
-          {error ? <Text style={s.errorText}>{error}</Text> : null}
-          <TouchableOpacity style={s.authButton} onPress={handleSendOtp} disabled={loading}>
-            <LinearGradient colors={['#7c3aed', '#6366f1']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.authButtonText}>📱 Send OTP</Text>}
+          <TextInput style={af.input} placeholder="07X XXX XXXX" placeholderTextColor="rgba(255,255,255,0.28)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={12} />
+          {error ? <Text style={af.error}>{error}</Text> : null}
+          <TouchableOpacity style={af.btn} onPress={handleSendOtp} disabled={loading} activeOpacity={0.85}>
+            <LinearGradient colors={['#7C3AED','#6366F1']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={af.btnText}>{t('sendOtp')}</Text>}
           </TouchableOpacity>
         </>
       )}
@@ -132,434 +287,578 @@ function PhoneAuthForm({ onSuccess }) {
       {step === 'otp' && (
         <>
           {devOtp && (
-            <View style={{ backgroundColor: 'rgba(251,191,36,0.15)', padding: 10, borderRadius: 10, marginBottom: 12, alignItems: 'center' }}>
-              <Text style={{ color: '#fbbf24', fontSize: 12 }}>🧪 Dev OTP: {devOtp}</Text>
+            <View style={af.devBanner}>
+              <Text style={af.devText}>🧪 Dev OTP: {devOtp}</Text>
             </View>
           )}
-          <TextInput style={[s.input, { fontSize: 24, letterSpacing: 6, textAlign: 'center', fontWeight: '800' }]} placeholder="Enter OTP" placeholderTextColor="rgba(255,255,255,0.3)" value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} />
-          {error ? <Text style={s.errorText}>{error}</Text> : null}
-          <TouchableOpacity style={s.authButton} onPress={handleVerify} disabled={loading}>
-            <LinearGradient colors={['#059669', '#10b981']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.authButtonText}>✓ Verify & Sign In</Text>}
+          <TextInput style={[af.input, { fontSize: 28, letterSpacing: 10, textAlign: 'center', fontWeight: '900' }]} placeholder="——————" placeholderTextColor="rgba(255,255,255,0.2)" value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} />
+          {error ? <Text style={af.error}>{error}</Text> : null}
+          <TouchableOpacity style={af.btn} onPress={handleVerify} disabled={loading} activeOpacity={0.85}>
+            <LinearGradient colors={['#059669','#10B981']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={af.btnText}>{t('verifySignIn')}</Text>}
           </TouchableOpacity>
-          <TouchableOpacity style={s.switchModeBtn} onPress={function() { setStep('phone'); setOtp(''); setError(''); }}>
-            <Text style={s.switchModeText}>← Change phone number</Text>
+          <TouchableOpacity style={af.back} onPress={function () { setStep('phone'); setOtp(''); setError(''); }}>
+            <Ionicons name="arrow-back" size={14} color="#A78BFA" />
+            <Text style={af.backText}>{t('changePhone')}</Text>
           </TouchableOpacity>
         </>
       )}
-    </AuraBox>
+    </GCard>
   );
 }
+var af = StyleSheet.create({
+  header:    { alignItems: 'center', marginBottom: 22 },
+  iconRing:  { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 14, borderWidth: 2, borderColor: 'rgba(196,132,252,0.35)' },
+  title:     { fontSize: 22, fontWeight: '900', color: '#fff', marginBottom: 6 },
+  sub:       { fontSize: 13, color: 'rgba(255,255,255,0.42)', textAlign: 'center', lineHeight: 19 },
+  input:     { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 16, color: '#fff', fontSize: 17, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(147,51,234,0.22)' },
+  btn:       { borderRadius: 16, paddingVertical: 16, alignItems: 'center', overflow: 'hidden', marginTop: 4, marginBottom: 4 },
+  btnText:   { color: '#fff', fontSize: 16, fontWeight: '800' },
+  error:     { color: '#F87171', fontSize: 13, textAlign: 'center', marginBottom: 10 },
+  back:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
+  backText:  { color: '#A78BFA', fontSize: 13, fontWeight: '600' },
+  devBanner: { backgroundColor: 'rgba(251,191,36,0.12)', padding: 10, borderRadius: 12, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(251,191,36,0.2)' },
+  devText:   { color: '#FBBF24', fontSize: 12, fontWeight: '600' },
+});
 
-// ─── Birth Data Form ────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────
+//  BIRTH DATA FORM
+// ─────────────────────────────────────────────────────────────────────
 function BirthDataForm({ currentData, onSave }) {
-  var [day, setDay] = useState('');
-  var [month, setMonth] = useState('');
-  var [year, setYear] = useState('');
-  var [hour, setHour] = useState('');
+  var { t, language } = useLanguage();
+  var [day,    setDay]    = useState('');
+  var [month,  setMonth]  = useState('');
+  var [year,   setYear]   = useState('');
+  var [hour,   setHour]   = useState('');
   var [minute, setMinute] = useState('');
-  
   var [location, setLocation] = useState(currentData?.locationName || '');
-  var [lat, setLat] = useState(currentData?.lat || 6.9271);
-  var [lng, setLng] = useState(currentData?.lng || 79.8612);
+  var [lat,    setLat]    = useState(currentData?.lat || 6.9271);
+  var [lng,    setLng]    = useState(currentData?.lng || 79.8612);
   var [saving, setSaving] = useState(false);
-  var [showCityModal, setShowCityModal] = useState(false);
+  var [showModal, setShowModal] = useState(false);
 
-  useEffect(function() {
+  useEffect(function () {
     if (currentData && currentData.dateTime) {
       try {
-        var parts = currentData.dateTime.split('T');
-        var dParts = parts[0].split('-');
-        var tParts = parts[1].substring(0, 5).split(':');
-        setYear(dParts[0] || '');
-        setMonth(dParts[1] || '');
-        setDay(dParts[2] || '');
-        setHour(tParts[0] || '');
-        setMinute(tParts[1] || '');
-        
+        var pts  = currentData.dateTime.split('T');
+        var dpts = pts[0].split('-');
+        var tpts = pts[1].substring(0, 5).split(':');
+        setYear(dpts[0] || '');  setMonth(dpts[1] || '');  setDay(dpts[2] || '');
+        setHour(tpts[0] || '');  setMinute(tpts[1] || '');
         setLocation(currentData.locationName || '');
         setLat(currentData.lat || 6.9271);
         setLng(currentData.lng || 79.8612);
-      } catch (e) {
-        console.log('Error parsing date', e);
-      }
+      } catch (e) {}
     }
   }, [currentData]);
 
-  async function handleSave() {
-    if (!day || !month || !year) { Alert.alert('Required', 'Please enter your birth date'); return; }
-    
-    // Simple validation
-    var d = parseInt(day);
-    var m = parseInt(month);
-    var y = parseInt(year);
-    if (d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > 2100) {
-      Alert.alert('Invalid Date', 'Please enter a valid date'); return;
-    }
+  function pad(n) { return n.toString().padStart(2, '0'); }
 
+  async function handleSave() {
+    if (!day || !month || !year) { Alert.alert(t('required'), t('requiredDate')); return; }
+    var d = parseInt(day), m = parseInt(month), y = parseInt(year);
+    if (d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > 2100) {
+      Alert.alert(t('invalidDate'), t('invalidDateMsg')); return;
+    }
     setSaving(true);
     try {
-      // Pad single digits
-      var pad = (n) => n.toString().padStart(2, '0');
-      var dateStr = `${year}-${pad(month)}-${pad(day)}`;
-      var timeStr = `${pad(hour || 0)}:${pad(minute || 0)}`;
-      var dateTime = dateStr + 'T' + timeStr + ':00';
-      
-      await onSave({ 
-        dateTime: dateTime, 
-        lat: lat, 
-        lng: lng, 
-        locationName: location || 'Colombo', 
-        timezone: 'Asia/Colombo' 
-      });
-      Alert.alert('✨ Saved', 'Your birth data has been saved!');
-    } catch (err) { Alert.alert('Error', 'Failed to save birth data'); }
+      var dt = year + '-' + pad(month) + '-' + pad(day) + 'T' + pad(hour || 0) + ':' + pad(minute || 0) + ':00';
+      await onSave({ dateTime: dt, lat, lng, locationName: location || 'Colombo', timezone: 'Asia/Colombo' });
+      Alert.alert(t('saved'), t('savedMsg'));
+    } catch (e) { Alert.alert('Error', t('errorSaving')); }
     finally { setSaving(false); }
   }
 
-  function handleSelectCity(city) {
-    setLocation(city.name);
-    setLat(city.lat);
-    setLng(city.lng);
-    setShowCityModal(false);
+  function getCityLabel(name) {
+    if (!name) return '';
+    var city = SRI_LANKAN_CITIES.find(function (c) { return c.name === name; });
+    return (city && language === 'si' && city.nameSi) ? city.nameSi : name;
   }
 
   return (
-    <AuraBox>
-      <Text style={s.sectionTitle}>🌟 Your Birth Details</Text>
-      <Text style={s.sectionHint}>This personalizes all your readings and reports</Text>
-      
-      <Text style={s.inputLabel}>Birth Date (DD / MM / YYYY)</Text>
-      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
-        <TextInput 
-          style={[s.input, { flex: 1, marginBottom: 0, textAlign: 'center' }]} 
-          placeholder="DD" 
-          placeholderTextColor="rgba(255,255,255,0.3)" 
-          value={day} 
-          onChangeText={setDay} 
-          keyboardType="number-pad" 
-          maxLength={2}
-        />
-        <TextInput 
-          style={[s.input, { flex: 1, marginBottom: 0, textAlign: 'center' }]} 
-          placeholder="MM" 
-          placeholderTextColor="rgba(255,255,255,0.3)" 
-          value={month} 
-          onChangeText={setMonth} 
-          keyboardType="number-pad" 
-          maxLength={2}
-        />
-        <TextInput 
-          style={[s.input, { flex: 1.5, marginBottom: 0, textAlign: 'center' }]} 
-          placeholder="YYYY" 
-          placeholderTextColor="rgba(255,255,255,0.3)" 
-          value={year} 
-          onChangeText={setYear} 
-          keyboardType="number-pad" 
-          maxLength={4}
-        />
+    <GCard accent="#34D399">
+      <SectionHeader icon="calendar-outline" title={t('birthDetails')} subtitle={t('birthDetailsHint')} color="#34D399" />
+
+      {/* Date row */}
+      <Text style={bf.fieldLabel}>{t('birthDateLabel')}</Text>
+      <View style={bf.row}>
+        <View style={bf.inputWrap}>
+          <Text style={bf.inputHint}>DD</Text>
+          <TextInput style={bf.segInput} placeholder="09" placeholderTextColor="rgba(255,255,255,0.22)" value={day}   onChangeText={setDay}   keyboardType="number-pad" maxLength={2} />
+        </View>
+        <Text style={bf.sep}>/</Text>
+        <View style={bf.inputWrap}>
+          <Text style={bf.inputHint}>MM</Text>
+          <TextInput style={bf.segInput} placeholder="03" placeholderTextColor="rgba(255,255,255,0.22)" value={month} onChangeText={setMonth} keyboardType="number-pad" maxLength={2} />
+        </View>
+        <Text style={bf.sep}>/</Text>
+        <View style={[bf.inputWrap, { flex: 2 }]}>
+          <Text style={bf.inputHint}>YYYY</Text>
+          <TextInput style={bf.segInput} placeholder="1995" placeholderTextColor="rgba(255,255,255,0.22)" value={year}  onChangeText={setYear}  keyboardType="number-pad" maxLength={4} />
+        </View>
       </View>
 
-      <Text style={s.inputLabel}>Birth Time (HH : MM - 24hr format)</Text>
-      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
-        <TextInput 
-          style={[s.input, { flex: 1, marginBottom: 0, textAlign: 'center' }]} 
-          placeholder="HH" 
-          placeholderTextColor="rgba(255,255,255,0.3)" 
-          value={hour} 
-          onChangeText={setHour} 
-          keyboardType="number-pad" 
-          maxLength={2}
-        />
-        <Text style={{ color: '#fff', fontSize: 24, alignSelf: 'center', fontWeight: 'bold' }}>:</Text>
-        <TextInput 
-          style={[s.input, { flex: 1, marginBottom: 0, textAlign: 'center' }]} 
-          placeholder="MM" 
-          placeholderTextColor="rgba(255,255,255,0.3)" 
-          value={minute} 
-          onChangeText={setMinute} 
-          keyboardType="number-pad" 
-          maxLength={2}
-        />
+      {/* Time row */}
+      <Text style={bf.fieldLabel}>{t('birthTimeLabel')}</Text>
+      <View style={bf.row}>
+        <View style={bf.inputWrap}>
+          <Text style={bf.inputHint}>HH</Text>
+          <TextInput style={bf.segInput} placeholder="08" placeholderTextColor="rgba(255,255,255,0.22)" value={hour}   onChangeText={setHour}   keyboardType="number-pad" maxLength={2} />
+        </View>
+        <Text style={bf.sep}>:</Text>
+        <View style={bf.inputWrap}>
+          <Text style={bf.inputHint}>MM</Text>
+          <TextInput style={bf.segInput} placeholder="30" placeholderTextColor="rgba(255,255,255,0.22)" value={minute} onChangeText={setMinute} keyboardType="number-pad" maxLength={2} />
+        </View>
+        <View style={{ flex: 2 }} />
       </View>
-      
-      <Text style={s.inputLabel}>Birth Place</Text>
-      <TouchableOpacity onPress={() => setShowCityModal(true)} style={[s.input, { justifyContent: 'center' }]}>
-        <Text style={{ color: location ? '#fff' : 'rgba(255,255,255,0.3)', fontSize: 16 }}>
-          {location || 'Select City...'}
-        </Text>
-        <Ionicons name="chevron-down" size={20} color="rgba(255,255,255,0.4)" style={{ position: 'absolute', right: 12 }} />
+
+      {/* City picker */}
+      <Text style={bf.fieldLabel}>{t('birthPlaceLabel')}</Text>
+      <TouchableOpacity style={bf.cityBtn} onPress={function () { setShowModal(true); }} activeOpacity={0.8}>
+        <Ionicons name="location-outline" size={18} color="#34D399" />
+        <Text style={[bf.cityBtnText, !location && bf.cityBtnPlaceholder]}>{getCityLabel(location) || t('selectCity')}</Text>
+        <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.3)" />
       </TouchableOpacity>
 
-      <TouchableOpacity style={s.saveButton} onPress={handleSave} disabled={saving}>
-        <LinearGradient colors={['#059669', '#10b981']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
-        {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.saveButtonText}>💾 Save Birth Data</Text>}
+      {/* Save */}
+      <TouchableOpacity style={bf.saveBtn} onPress={handleSave} disabled={saving} activeOpacity={0.85}>
+        <LinearGradient colors={['#059669','#10B981']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
+        <LinearGradient colors={['rgba(255,255,255,0.18)','transparent']} style={{ position:'absolute',top:0,left:0,right:0,height:'60%',borderTopLeftRadius:16,borderTopRightRadius:16 }} />
+        {saving
+          ? <ActivityIndicator color="#fff" />
+          : <><Ionicons name="save-outline" size={17} color="#fff" /><Text style={bf.saveBtnText}>{t('saveBirthData')}</Text></>
+        }
       </TouchableOpacity>
 
-      <Modal visible={showCityModal} animationType="slide" transparent>
-        <View style={s.modalOverlay}>
-          <View style={s.modalContent}>
-            <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Select Birth City</Text>
-              <TouchableOpacity onPress={() => setShowCityModal(false)}>
-                <Ionicons name="close-circle" size={28} color="#94a3b8" />
+      {/* City bottom-sheet modal */}
+      <Modal visible={showModal} animationType="slide" transparent>
+        <View style={cm.overlay}>
+          <View style={cm.sheet}>
+            <View style={cm.handle} />
+            <View style={cm.header}>
+              <Text style={cm.title}>{t('selectCityTitle')}</Text>
+              <TouchableOpacity onPress={function () { setShowModal(false); }} style={cm.closeBtn}>
+                <Ionicons name="close" size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
             <FlatList
               data={SRI_LANKAN_CITIES}
-              keyExtractor={item => item.name}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={s.cityItem} onPress={() => handleSelectCity(item)}>
-                  <Ionicons name="location-sharp" size={18} color="#fbbf24" style={{ marginRight: 12 }} />
-                  <Text style={s.cityText}>{item.name}</Text>
-                  {location === item.name && <Ionicons name="checkmark" size={18} color="#10b981" style={{ marginLeft: 'auto' }} />}
-                </TouchableOpacity>
-              )}
-              ItemSeparatorComponent={() => <View style={s.separator} />}
+              keyExtractor={function (item) { return item.name; }}
+              renderItem={function ({ item }) {
+                var active = location === item.name;
+                return (
+                  <TouchableOpacity
+                    style={[cm.cityRow, active && cm.cityRowActive]}
+                    onPress={function () { setLocation(item.name); setLat(item.lat); setLng(item.lng); setShowModal(false); }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[cm.cityDot, active && { backgroundColor: '#34D399' }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[cm.cityName, active && { color: '#34D399' }]}>
+                        {language === 'si' && item.nameSi ? item.nameSi : item.name}
+                      </Text>
+                      {language === 'si' && item.nameSi && (
+                        <Text style={cm.cityEn}>{item.name}</Text>
+                      )}
+                    </View>
+                    {active && <Ionicons name="checkmark-circle" size={20} color="#34D399" />}
+                  </TouchableOpacity>
+                );
+              }}
+              ItemSeparatorComponent={function () { return <View style={cm.sep} />; }}
+              contentContainerStyle={{ paddingBottom: 36 }}
             />
           </View>
         </View>
       </Modal>
-    </AuraBox>
+    </GCard>
   );
 }
+var bf = StyleSheet.create({
+  fieldLabel:         { fontSize: 11, color: '#A78BFA', fontWeight: '700', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 },
+  row:                { flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginBottom: 16 },
+  inputWrap:          { flex: 1, alignItems: 'center' },
+  inputHint:          { fontSize: 9, color: 'rgba(255,255,255,0.28)', fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
+  segInput:           { width: '100%', backgroundColor: 'rgba(255,255,255,0.09)', borderRadius: 14, paddingVertical: 13, color: '#fff', fontSize: 20, fontWeight: '900', textAlign: 'center', borderWidth: 1, borderColor: 'rgba(52,211,153,0.25)' },
+  sep:                { color: 'rgba(255,255,255,0.25)', fontSize: 20, fontWeight: '200', paddingBottom: 12 },
+  cityBtn:            { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(52,211,153,0.2)' },
+  cityBtnText:        { flex: 1, color: '#fff', fontSize: 15, fontWeight: '600' },
+  cityBtnPlaceholder: { color: 'rgba(255,255,255,0.28)' },
+  saveBtn:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 15, overflow: 'hidden', marginTop: 2 },
+  saveBtnText:        { color: '#fff', fontSize: 15, fontWeight: '800' },
+});
+var cm = StyleSheet.create({
+  overlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
+  sheet:        { backgroundColor: '#0A0618', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: SH * 0.72, borderWidth: 1, borderColor: 'rgba(147,51,234,0.3)', borderBottomWidth: 0, paddingTop: 10 },
+  handle:       { width: 36, height: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 2, alignSelf: 'center', marginBottom: 14 },
+  header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
+  title:        { fontSize: 17, fontWeight: '800', color: '#fff' },
+  closeBtn:     { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
+  cityRow:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
+  cityRowActive:{ backgroundColor: 'rgba(52,211,153,0.06)' },
+  cityDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.18)', marginRight: 14 },
+  cityName:     { fontSize: 15, color: '#E2E8F0', fontWeight: '600' },
+  cityEn:       { fontSize: 11, color: 'rgba(255,255,255,0.32)', marginTop: 2 },
+  sep:          { height: 1, backgroundColor: 'rgba(255,255,255,0.04)', marginLeft: 42 },
+});
 
-// ─── Main Profile Screen ────────────────────────────────────────
-export default function ProfileScreen() {
+// ─────────────────────────────────────────────────────────────────────
+//  MAIN SCREEN
+// ─────────────────────────────────────────────────────────────────────
+function ProfileScreen() {
   var { language, switchLanguage, t } = useLanguage();
-  var { user, profile, loading, isLoggedIn, subscription, isSubscribed,
-        signOut, saveBirthData, activateSubscription, cancelSubscription, renewSubscription } = useAuth();
+  var {
+    user, loading, isLoggedIn, subscription, isSubscribed,
+    signOut, saveBirthData, activateSubscription, cancelSubscription, renewSubscription,
+  } = useAuth();
 
   if (loading) {
     return (
       <CosmicBackground>
-        <View style={s.loadingContainer}>
-          <ActivityIndicator size="large" color="#7dd3fc" />
-          <Text style={s.loadingText}>Loading your cosmic profile...</Text>
+        <View style={s.centered}>
+          <ActivityIndicator size="large" color="#C084FC" />
+          <Text style={s.loadText}>{t('loading')}</Text>
         </View>
       </CosmicBackground>
     );
   }
 
   var displayName = user?.displayName || t('seeker');
-  var phone = user?.phone || '';
-  var birthData = user?.birthData || null;
+  var phone       = user?.phone || '';
+  var birthData   = user?.birthData || null;
   var reportCount = user?.reportCount || 0;
-  var chatCount = user?.chatCount || 0;
-  var subStatus = subscription?.status || 'none';
+  var chatCount   = user?.chatCount   || 0;
+  var subStatus   = subscription?.status || 'none';
+  var lagnaIdx    = birthData ? (new Date(birthData.dateTime).getMonth() % 12) : 0;
+  var moonIdx     = birthData ? (new Date(birthData.dateTime).getDate()  % 8)  : 4;
 
   return (
     <CosmicBackground>
-      <ScrollView style={s.flex} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.delay(100).duration(800)}>
-          <Text style={s.title}>{t('tabProfile')}</Text>
-          <Text style={s.subtitle}>{isLoggedIn ? 'Your cosmic identity' : t('manageIdentity')}</Text>
+      <StatusBar barStyle="light-content" />
+      <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+
+        {/* ═══ HERO CARD ══════════════════════════════════════════════ */}
+        <Animated.View entering={FadeIn.duration(900)} style={s.heroCard}>
+          {/* Deep space bg */}
+          <LinearGradient
+            colors={['#0D0720', '#08041A', '#050210']}
+            style={StyleSheet.absoluteFill}
+          />
+          {/* Purple nebula top-left */}
+          <LinearGradient
+            colors={['rgba(147,51,234,0.38)', 'rgba(99,102,241,0.15)', 'transparent']}
+            style={{ position:'absolute', top:-30, left:-30, width:200, height:200, borderRadius:100 }}
+          />
+          {/* Gold nebula bottom-right */}
+          <LinearGradient
+            colors={['rgba(251,191,36,0.18)', 'rgba(245,158,11,0.08)', 'transparent']}
+            style={{ position:'absolute', bottom:-20, right:-20, width:160, height:160, borderRadius:80 }}
+          />
+          {/* Star dots */}
+          {[[18,22],[55,14],[78,35],[30,58],[88,12],[12,78],[68,65],[42,80],[92,50]].map(function(pos, i) {
+            return <View key={i} style={{ position:'absolute', left:pos[0]+'%', top:pos[1]+'%', width: i%3===0?3:i%3===1?2:1.5, height:i%3===0?3:i%3===1?2:1.5, borderRadius:2, backgroundColor:'rgba(255,255,255,'+(0.15+i*0.04)+')' }} />;
+          })}
+          {/* Chromatic top border */}
+          <LinearGradient
+            colors={['transparent','rgba(147,51,234,0.8)','rgba(251,191,36,0.6)','rgba(99,102,241,0.5)','transparent']}
+            style={{ position:'absolute', top:0, left:0, right:0, height:1.5 }}
+            start={{ x:0, y:0.5 }} end={{ x:1, y:0.5 }}
+          />
+
+          {!isLoggedIn ? (
+            /* ── LOGGED OUT STATE ── */
+            <View style={s.heroLoggedOut}>
+              <View style={s.guestOrbWrap}>
+                <LinearGradient colors={['rgba(147,51,234,0.3)','rgba(99,102,241,0.2)']} style={StyleSheet.absoluteFill} />
+                <View style={s.guestOrb}>
+                  <LinearGradient colors={['#7C3AED','#6366F1','#4F46E5']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
+                  <LinearGradient colors={['rgba(255,255,255,0.3)','transparent']} style={{position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:38,borderTopRightRadius:38}} />
+                  <Ionicons name="person-outline" size={38} color="rgba(255,255,255,0.85)" />
+                </View>
+              </View>
+              <Text style={s.guestTitle}>{t('signIn')}</Text>
+              <Text style={s.guestSub}>{t('enterPhone')}</Text>
+              <View style={s.guestArrow}>
+                <Ionicons name="chevron-down" size={16} color="rgba(192,132,252,0.6)" />
+              </View>
+            </View>
+          ) : (
+            /* ── LOGGED IN STATE ── */
+            <View style={s.heroContent}>
+
+              {/* Mandala + avatar */}
+              <View style={s.mandalaContainer}>
+                <BirthMandala lagnaIndex={lagnaIdx} moonIndex={moonIdx} size={150} />
+                {/* Outer ring */}
+                <View style={s.avatarRing} />
+                {/* Avatar core */}
+                <View style={s.avatarCore}>
+                  <LinearGradient colors={['#1A0A3E','#0E0521']} style={StyleSheet.absoluteFill} />
+                  <LinearGradient colors={['rgba(192,132,252,0.25)','transparent']} style={{position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:32,borderTopRightRadius:32}} />
+                  <Ionicons name="person" size={34} color="#C4B5FD" />
+                </View>
+                {/* Subscription badge */}
+                <View style={[s.badge, isSubscribed ? s.badgePremium : s.badgeFree]}>
+                  <LinearGradient
+                    colors={isSubscribed ? ['#F59E0B','#D97706'] : ['#6D28D9','#5B21B6']}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <Ionicons name={isSubscribed ? 'star' : 'person'} size={12} color="#fff" />
+                </View>
+              </View>
+
+              {/* Name */}
+              <Text style={s.heroName}>{displayName}</Text>
+
+              {/* Phone with icon badge */}
+              {phone ? (
+                <View style={s.phonePill}>
+                  <View style={s.phoneIcon}>
+                    <LinearGradient colors={['#9333EA','#6366F1']} style={StyleSheet.absoluteFill} />
+                    <Ionicons name="call-outline" size={11} color="#fff" />
+                  </View>
+                  <Text style={s.phoneText}>{phone}</Text>
+                </View>
+              ) : null}
+
+              {/* Birth data — 3 chips in a row */}
+              {birthData && (
+                <View style={s.birthRow}>
+                  <View style={s.birthChip}>
+                    <LinearGradient colors={['rgba(147,51,234,0.25)','rgba(99,102,241,0.12)']} style={StyleSheet.absoluteFill} />
+                    <Ionicons name="calendar-outline" size={13} color="#C084FC" />
+                    <View>
+                      <Text style={s.birthChipLabel}>{t('birthDateLabel') || 'Date'}</Text>
+                      <Text style={s.birthChipValue}>{birthData.dateTime?.split('T')[0]}</Text>
+                    </View>
+                  </View>
+                  <View style={s.birthChip}>
+                    <LinearGradient colors={['rgba(251,191,36,0.2)','rgba(245,158,11,0.08)']} style={StyleSheet.absoluteFill} />
+                    <Ionicons name="time-outline" size={13} color="#FBBF24" />
+                    <View>
+                      <Text style={s.birthChipLabel}>{t('birthTimeLabel') || 'Time'}</Text>
+                      <Text style={[s.birthChipValue, { color: '#FBBF24' }]}>{birthData.dateTime?.split('T')[1]?.substring(0,5)}</Text>
+                    </View>
+                  </View>
+                  <View style={s.birthChip}>
+                    <LinearGradient colors={['rgba(52,211,153,0.2)','rgba(16,185,129,0.08)']} style={StyleSheet.absoluteFill} />
+                    <Ionicons name="location-outline" size={13} color="#34D399" />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={s.birthChipLabel}>{t('birthPlaceLabel') || 'City'}</Text>
+                      <Text style={[s.birthChipValue, { color: '#34D399' }]} numberOfLines={1}>
+                        {language === 'si'
+                          ? (SRI_LANKAN_CITIES.find(function (c) { return c.name === birthData.locationName; })?.nameSi || birthData.locationName || 'Colombo')
+                          : (birthData.locationName || 'Colombo')}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Premium badge ribbon */}
+              {isSubscribed && (
+                <View style={s.premiumRibbon}>
+                  <LinearGradient colors={['rgba(245,158,11,0.22)','rgba(251,191,36,0.1)']} style={StyleSheet.absoluteFill} />
+                  <Ionicons name="diamond-outline" size={13} color="#FBBF24" />
+                  <Text style={s.premiumText}>Premium Member</Text>
+                  <Ionicons name="diamond-outline" size={13} color="#FBBF24" />
+                </View>
+              )}
+            </View>
+          )}
         </Animated.View>
 
+        {/* ═══ NOT LOGGED IN — auth form ═════════════════════════════ */}
         {!isLoggedIn && (
-          <Animated.View entering={FadeInDown.delay(200).duration(800)}>
+          <Animated.View entering={FadeInDown.delay(180).duration(700)}>
             <PhoneAuthForm />
           </Animated.View>
         )}
 
+        {/* ═══ LOGGED IN ═════════════════════════════════════════════ */}
         {isLoggedIn && (
           <>
-            <Animated.View entering={FadeInDown.delay(200).duration(800)}>
-              <View style={s.avatarContainer}>
-                <LinearGradient colors={['#7c3aed', '#c084fc']} style={s.avatarOuterRing} />
-                <View style={s.avatarInner}>
-                  <Ionicons name="person" size={40} color="#bae6fd" />
-                </View>
-                <View style={[s.editBadge, { backgroundColor: isSubscribed ? '#10b981' : '#f59e0b' }]}>
-                  <Ionicons name={isSubscribed ? 'checkmark' : 'star'} size={14} color="#fff" />
-                </View>
-              </View>
-              <Text style={s.userName}>{displayName}</Text>
-              <Text style={s.userConstellation}>{phone ? '📱 ' + phone : ''}</Text>
-              {birthData && (
-                <Text style={s.birthDataBadge}>
-                  🌙 Born: {birthData.dateTime?.split('T')[0]} at {birthData.dateTime?.split('T')[1]?.substring(0,5)} • {birthData.locationName || 'Colombo'}
-                </Text>
-              )}
+            {/* ── STATS ── */}
+            <Animated.View entering={FadeInDown.delay(120).duration(700)} style={s.statsRow}>
+              <StatPill value={reportCount} label={t('report')}  icon="document-text-outline" color="#C084FC" />
+              <StatPill value={chatCount}   label={t('tabChat')} icon="chatbubble-outline"     color="#FBBF24" />
+              <StatPill
+                value={birthData ? '✓' : '—'}
+                label={t('birthDetails')?.replace('🌟 ', '')?.split(' ')[0] || 'Birth'}
+                icon="planet-outline"
+                color="#34D399"
+              />
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(250).duration(800)}>
-              <View style={s.statsRow}>
-                <View style={s.statItem}><Text style={s.statNumber}>{reportCount}</Text><Text style={s.statLabel}>Reports</Text></View>
-                <View style={s.statDivider} />
-                <View style={s.statItem}><Text style={s.statNumber}>{chatCount}</Text><Text style={s.statLabel}>Chats</Text></View>
-                <View style={s.statDivider} />
-                <View style={s.statItem}><Text style={s.statNumber}>{birthData ? '✓' : '—'}</Text><Text style={s.statLabel}>Birth Data</Text></View>
-              </View>
-            </Animated.View>
-
-            {/* Subscription Status */}
-            <Animated.View entering={FadeInDown.delay(280).duration(800)}>
-              <AuraBox>
-                <Text style={s.sectionTitle}>💎 Subscription</Text>
+            {/* ── SUBSCRIPTION ── */}
+            <Animated.View entering={FadeInDown.delay(180).duration(700)}>
+              <GCard accent={isSubscribed ? '#F59E0B' : '#7C3AED'}>
+                <SectionHeader
+                  icon={isSubscribed ? 'star' : 'star-outline'}
+                  title={t('subscription')}
+                  subtitle={isSubscribed ? t('subChargedBy') : t('subPromo')}
+                  color={isSubscribed ? '#FBBF24' : '#A78BFA'}
+                />
                 {subStatus === 'active' && (
-                  <View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                      <Ionicons name="checkmark-circle" size={20} color="#10b981" />
-                      <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 15, marginLeft: 8 }}>Active — LKR {subscription?.amount || 8}/day</Text>
+                  <>
+                    <View style={s.subActiveRow}>
+                      <Ionicons name="checkmark-circle" size={16} color="#34D399" />
+                      <Text style={s.subActiveText}>
+                        {t('subActive').replace('{{amount}}', subscription?.amount || '8')}
+                      </Text>
                     </View>
-                    <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginBottom: 16 }}>
-                      Charged from your mobile credit
-                    </Text>
-                    <TouchableOpacity style={[s.guestButton, { borderColor: 'rgba(248,113,113,0.3)' }]} onPress={function() {
+                    <TouchableOpacity style={s.cancelBtn} onPress={function () {
                       if (Platform.OS === 'web') {
-                        if (window.confirm('Are you sure you want to cancel your subscription?')) {
-                          cancelSubscription();
-                        }
+                        if (window.confirm('Cancel?')) cancelSubscription();
                       } else {
-                        Alert.alert('Cancel Subscription', 'Are you sure you want to cancel?', [
-                          { text: 'Keep', style: 'cancel' },
-                          { text: 'Cancel', style: 'destructive', onPress: function() { cancelSubscription(); } },
+                        Alert.alert(t('subCancel'), t('confirm'), [
+                          { text: t('cancel'), style: 'cancel' },
+                          { text: t('confirm'), style: 'destructive', onPress: cancelSubscription },
                         ]);
                       }
                     }}>
-                      <Text style={{ color: '#f87171', fontWeight: '600', fontSize: 13 }}>Cancel Subscription</Text>
+                      <Text style={s.cancelBtnText}>{t('subCancel')}</Text>
                     </TouchableOpacity>
-                  </View>
+                  </>
                 )}
-                {(subStatus === 'expired' || subStatus === 'none' || subStatus === 'pending' || subStatus === 'cancelled') && (
-                  <View>
-                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, marginBottom: 16 }}>
-                      {subStatus === 'expired' ? 'Your subscription has expired.' : subStatus === 'cancelled' ? 'Subscription cancelled.' : 'Subscribe for full access to all features.'}
-                    </Text>
-                    <TouchableOpacity style={s.authButton} onPress={function() {
-                      (subStatus === 'expired' ? renewSubscription() : activateSubscription())
-                        .then(function(r) { if (r.success) Alert.alert('✨ Success', r.message || 'Subscribed!'); })
-                        .catch(function(e) { Alert.alert('Payment Failed', e.message || 'Insufficient mobile credit'); });
-                    }}>
-                      <LinearGradient colors={['#f59e0b', '#f97316']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
-                      <Text style={s.authButtonText}>{subStatus === 'expired' ? '🔄 Renew — LKR 8' : '💳 Subscribe — LKR 8/day'}</Text>
-                    </TouchableOpacity>
-                  </View>
+                {subStatus !== 'active' && (
+                  <TouchableOpacity style={s.subBtn} onPress={function () {
+                    (subStatus === 'expired' ? renewSubscription() : activateSubscription())
+                      .then(function (r) { if (r.success) Alert.alert('✨', r.message || 'Subscribed!'); })
+                      .catch(function (e) { Alert.alert('Payment Failed', e.message || 'Insufficient credit'); });
+                  }} activeOpacity={0.85}>
+                    <LinearGradient colors={['#F59E0B','#F97316']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
+                    <LinearGradient colors={['rgba(255,255,255,0.18)','transparent']} style={{ position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:14,borderTopRightRadius:14 }} />
+                    <Ionicons name="diamond-outline" size={17} color="#fff" />
+                    <Text style={s.subBtnText}>{subStatus === 'expired' ? t('subRenew') : t('subSubscribe')}</Text>
+                  </TouchableOpacity>
                 )}
-              </AuraBox>
+              </GCard>
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(300).duration(800)}>
+            {/* ── BIRTH DATA ── */}
+            <Animated.View entering={FadeInDown.delay(240).duration(700)}>
               <BirthDataForm currentData={birthData} onSave={saveBirthData} />
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(400).duration(800)}>
-              <AuraBox>
-                <Text style={s.sectionTitle}>{t('language')}</Text>
-                <View style={s.langContainer}>
-                  <TouchableOpacity style={[s.langBtn, language === 'en' && s.langBtnActive]} onPress={function() { switchLanguage('en'); }}>
-                    {language === 'en' && <LinearGradient colors={['#38bdf8', '#818cf8']} style={StyleSheet.absoluteFill} />}
-                    <Text style={[s.langText, language === 'en' && s.langTextActive]}>English</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[s.langBtn, language === 'si' && s.langBtnActive]} onPress={function() { switchLanguage('si'); }}>
-                    {language === 'si' && <LinearGradient colors={['#38bdf8', '#818cf8']} style={StyleSheet.absoluteFill} />}
-                    <Text style={[s.langText, language === 'si' && s.langTextActive]}>සිංහල</Text>
-                  </TouchableOpacity>
-                </View>
-              </AuraBox>
+            {/* ── LANGUAGE ── */}
+            <Animated.View entering={FadeInDown.delay(300).duration(700)}>
+              <GCard accent="#9333EA">
+                <SectionHeader icon="language-outline" title={t('language')} color="#A78BFA" />
+                <LangPicker language={language} onSwitch={switchLanguage} />
+              </GCard>
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(500).duration(800)}>
-              <AuraBox>
-                <Text style={s.sectionTitle}>{t('notifications')}</Text>
-                <SettingItem icon="notifications" title={t('dailyCelestialPush')} type="switch" value={true} />
-                <SettingItem icon="moon" title={t('rahuKalayaAlerts')} type="switch" value={true} />
-                <SettingItem icon="location" title={t('syncHoroscopeLocation')} type="switch" value={false} />
-              </AuraBox>
+            {/* ── NOTIFICATIONS ── */}
+            <Animated.View entering={FadeInDown.delay(360).duration(700)}>
+              <GCard accent="#4CC9F0">
+                <SectionHeader icon="notifications-outline" title={t('notifications')} color="#4CC9F0" />
+                <SettingRow icon="sunny-outline"    label={t('dailyCelestialPush')}    type="switch" value={true}  iconColor="#FBBF24" />
+                <SettingRow icon="moon-outline"     label={t('rahuKalayaAlerts')}      type="switch" value={true}  iconColor="#A78BFA" />
+                <SettingRow icon="location-outline" label={t('syncHoroscopeLocation')} type="switch" value={false} iconColor="#34D399" last />
+              </GCard>
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(600).duration(800)}>
-              <AuraBox>
-                <Text style={s.sectionTitle}>{t('about')}</Text>
-                <SettingItem icon="star" title={t('rateCosmicAlignment')} />
-                <SettingItem icon="document-text" title={t('sacredScrolls')} />
-                <SettingItem icon="shield-checkmark" title={t('privacyPolicy')} />
-              </AuraBox>
+            {/* ── ABOUT ── */}
+            <Animated.View entering={FadeInDown.delay(420).duration(700)}>
+              <GCard accent="#FBBF24">
+                <SectionHeader icon="information-circle-outline" title={t('about')} color="#FBBF24" />
+                <SettingRow icon="star-outline"              label={t('rateCosmicAlignment')} iconColor="#FBBF24" />
+                <SettingRow icon="document-text-outline"     label={t('sacredScrolls')}       iconColor="#C4B5FD" />
+                <SettingRow icon="shield-checkmark-outline"  label={t('privacyPolicy')}       iconColor="#34D399" last />
+              </GCard>
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(700).duration(800)}>
-              <TouchableOpacity style={s.signOutButton} onPress={function() {
+            {/* ── SIGN OUT ── */}
+            <Animated.View entering={FadeInDown.delay(480).duration(700)}>
+              <TouchableOpacity style={s.signOutBtn} onPress={function () {
                 if (Platform.OS === 'web') {
-                  if (window.confirm('Are you sure you want to sign out?')) {
-                    signOut();
-                  }
+                  if (window.confirm(t('signOut') + '?')) signOut();
                 } else {
-                  Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Sign Out', style: 'destructive', onPress: signOut },
+                  Alert.alert(t('signOut'), t('confirm'), [
+                    { text: t('cancel'), style: 'cancel' },
+                    { text: t('signOut'), style: 'destructive', onPress: signOut },
                   ]);
                 }
-              }}>
-                <Ionicons name="log-out-outline" size={20} color="#f87171" />
-                <Text style={s.signOutText}>Sign Out</Text>
+              }} activeOpacity={0.75}>
+                <LinearGradient colors={['rgba(248,113,113,0.1)','rgba(239,68,68,0.05)']} style={StyleSheet.absoluteFill} />
+                <Ionicons name="log-out-outline" size={18} color="#F87171" />
+                <Text style={s.signOutText}>{t('signOut')}</Text>
               </TouchableOpacity>
             </Animated.View>
           </>
         )}
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
     </CosmicBackground>
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────
+//  STYLES
+// ─────────────────────────────────────────────────────────────────────
 var s = StyleSheet.create({
-  flex: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 70 : 50 },
-  title: { fontSize: 32, fontWeight: '800', color: '#fff', marginBottom: 4, textShadowColor: 'rgba(56,189,248,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
-  subtitle: { fontSize: 16, color: '#7dd3fc', marginBottom: 30, letterSpacing: 0.5 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { color: '#7dd3fc', marginTop: 16, fontSize: 16 },
-  avatarContainer: { alignSelf: 'center', width: 100, height: 100, marginBottom: 16 },
-  avatarOuterRing: { ...StyleSheet.absoluteFillObject, borderRadius: 50, opacity: 0.8 },
-  avatarInner: { flex: 1, margin: 3, backgroundColor: '#0f172a', borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
-  editBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#38bdf8', width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#0f172a' },
-  userName: { fontSize: 24, fontWeight: '700', color: '#fff', textAlign: 'center', marginBottom: 4 },
-  userConstellation: { fontSize: 14, color: '#7dd3fc', textAlign: 'center', marginBottom: 8, fontWeight: '500' },
-  birthDataBadge: { fontSize: 12, color: '#c084fc', textAlign: 'center', marginBottom: 24, fontWeight: '500', backgroundColor: 'rgba(192,132,252,0.1)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, alignSelf: 'center', overflow: 'hidden' },
-  statsRow: { flexDirection: 'row', backgroundColor: 'rgba(15,23,42,0.6)', borderRadius: 20, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(56,189,248,0.1)' },
-  statItem: { flex: 1, alignItems: 'center' },
-  statNumber: { fontSize: 24, fontWeight: '800', color: '#c084fc', marginBottom: 4 },
-  statLabel: { fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
-  statDivider: { width: 1, backgroundColor: 'rgba(56,189,248,0.15)', marginVertical: 4 },
-  authHeader: { alignItems: 'center', marginBottom: 20 },
-  authTitle: { fontSize: 22, fontWeight: '800', color: '#fff', marginTop: 8 },
-  authSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.5)', marginTop: 4 },
-  input: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, color: '#fff', fontSize: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(56,189,248,0.1)' },
-  inputLabel: { fontSize: 12, color: '#7dd3fc', fontWeight: '700', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 },
-  errorText: { color: '#f87171', fontSize: 13, marginBottom: 12, textAlign: 'center' },
-  authButton: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', overflow: 'hidden', marginTop: 4 },
-  authButtonText: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  switchModeBtn: { alignItems: 'center', paddingVertical: 12 },
-  switchModeText: { color: '#7dd3fc', fontSize: 14, fontWeight: '600' },
-  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' },
-  dividerText: { color: 'rgba(255,255,255,0.3)', marginHorizontal: 16, fontSize: 12, fontWeight: '600' },
-  guestButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(56,189,248,0.2)' },
-  guestButtonText: { color: '#7dd3fc', fontSize: 15, fontWeight: '600', marginLeft: 8 },
-  sectionTitle: { fontSize: 14, color: 'rgba(125, 211, 252, 0.7)', fontWeight: '700', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1.5 },
-  sectionHint: { fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 16, lineHeight: 18 },
-  saveButton: { borderRadius: 14, paddingVertical: 14, alignItems: 'center', overflow: 'hidden', marginTop: 4 },
-  saveButtonText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  langContainer: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 16, padding: 4 },
-  langBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 12, overflow: 'hidden' },
-  langBtnActive: {},
-  langText: { color: 'rgba(255,255,255,0.6)', fontWeight: '600', fontSize: 15 },
-  langTextActive: { color: '#fff', fontWeight: '800' },
-  settingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(56,189,248,0.1)' },
-  settingIconWrapper: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginRight: 12 },
-  settingLeft: { flex: 1 },
-  settingTitle: { fontSize: 15, color: '#f8fafc', fontWeight: '600' },
-  signOutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, marginBottom: 8 },
-  signOutText: { color: '#f87171', fontSize: 16, fontWeight: '700', marginLeft: 8 },
-  
-  // Modal Styles
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#1e1b4b', borderRadius: 24, maxHeight: '80%', borderWidth: 1, borderColor: 'rgba(56,189,248,0.3)', overflow: 'hidden' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
-  modalTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
-  cityItem: { flexDirection: 'row', alignItems: 'center', padding: 16 },
-  cityText: { fontSize: 16, color: '#e2e8f0', fontWeight: '500' },
-  separator: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginLeft: 46 },
+  scroll:  { flex: 1 },
+  content: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 76 : 56 },
+  centered:{ flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadText:{ color: '#C4B5FD', marginTop: 16, fontSize: 15 },
+
+  // ── Hero card ──────────────────────────────────────────────────────
+  heroCard: {
+    borderRadius: 32, overflow: 'hidden', marginBottom: 16,
+    borderWidth: 1, borderColor: 'rgba(147,51,234,0.35)',
+    shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.45, shadowRadius: 30, elevation: 16,
+  },
+
+  // ── Logged-out hero ────────────────────────────────────────────────
+  heroLoggedOut: { alignItems: 'center', paddingTop: 42, paddingBottom: 36, paddingHorizontal: 28 },
+  guestOrbWrap:  { width: 100, height: 100, borderRadius: 50, overflow:'hidden', alignItems:'center', justifyContent:'center', marginBottom: 20, borderWidth: 1.5, borderColor: 'rgba(192,132,252,0.25)' },
+  guestOrb:      { width: 88, height: 88, borderRadius: 44, overflow:'hidden', alignItems:'center', justifyContent:'center' },
+  guestTitle:    { fontSize: 24, fontWeight: '900', color: '#fff', marginBottom: 8, textShadowColor:'rgba(192,132,252,0.5)', textShadowOffset:{width:0,height:2}, textShadowRadius:10 },
+  guestSub:      { fontSize: 13, color: 'rgba(255,255,255,0.38)', textAlign: 'center', lineHeight: 20 },
+  guestArrow:    { marginTop: 18, width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(192,132,252,0.2)', alignItems: 'center', justifyContent: 'center' },
+
+  // ── Logged-in hero ─────────────────────────────────────────────────
+  heroContent:      { alignItems: 'center', paddingTop: 36, paddingBottom: 28, paddingHorizontal: 20 },
+  mandalaContainer: { width: 150, height: 150, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  avatarRing:       { position:'absolute', width: 86, height: 86, borderRadius: 43, borderWidth: 1.5, borderColor: 'rgba(192,132,252,0.3)', borderStyle: 'dashed' },
+  avatarCore:       { position:'absolute', width: 66, height: 66, borderRadius: 33, alignItems:'center', justifyContent:'center', overflow:'hidden', borderWidth: 2, borderColor: 'rgba(196,181,253,0.45)' },
+  badge:            { position:'absolute', bottom: 8, right: 8, width: 28, height: 28, borderRadius: 14, alignItems:'center', justifyContent:'center', overflow:'hidden', borderWidth: 2, borderColor: '#0D0720' },
+  badgePremium:     {},
+  badgeFree:        {},
+
+  heroName:  { fontSize: 28, fontWeight: '900', color: '#fff', marginBottom: 6, textAlign: 'center', letterSpacing: 0.5, textShadowColor: 'rgba(192,132,252,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 12 },
+  phonePill: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 18, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(147,51,234,0.2)' },
+  phoneIcon: { width: 20, height: 20, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  phoneText: { fontSize: 13, color: '#A78BFA', fontWeight: '600', letterSpacing: 0.5 },
+
+  // Birth chips row
+  birthRow:       { flexDirection: 'row', gap: 8, marginBottom: 16, width: '100%' },
+  birthChip:      { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7, overflow: 'hidden', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 10, borderWidth: 1, borderColor: 'rgba(147,51,234,0.2)' },
+  birthChipLabel: { fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2 },
+  birthChipValue: { fontSize: 12, color: '#C084FC', fontWeight: '800' },
+
+  // Premium ribbon
+  premiumRibbon: { flexDirection: 'row', alignItems: 'center', gap: 8, overflow: 'hidden', borderRadius: 999, paddingVertical: 7, paddingHorizontal: 18, borderWidth: 1, borderColor: 'rgba(251,191,36,0.3)' },
+  premiumText:   { fontSize: 12, color: '#FBBF24', fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' },
+
+  // ── Stats row ──────────────────────────────────────────────────────
+  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+
+  // ── Subscription ───────────────────────────────────────────────────
+  subActiveRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  subActiveText: { color: '#34D399', fontWeight: '700', fontSize: 14 },
+  subBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14, overflow: 'hidden' },
+  subBtnText:    { color: '#fff', fontSize: 15, fontWeight: '800' },
+  cancelBtn:     { paddingVertical: 11, alignItems: 'center', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)' },
+  cancelBtnText: { color: '#F87171', fontWeight: '600', fontSize: 13 },
+
+  // ── Sign out ────────────────────────────────────────────────────────
+  signOutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 15, marginBottom: 8, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(248,113,113,0.18)' },
+  signOutText:{ color: '#F87171', fontSize: 15, fontWeight: '700' },
 });
+
+export default ProfileScreen;

@@ -1,249 +1,458 @@
 /**
- * Onboarding Flow - Fully Personalised by Language
- * Step -1: Language Selection (Sinhala or English)
- * Step 0: Welcome
- * Step 1: Phone Number
- * Step 2: OTP Verification
- * Step 3: Subscription
- * Step 4: Name & Birth Data (multi-page wizard)
- * Step 5: Complete
+ * Onboarding Flow — Mobile-First Cosmic Design
+ * Step -1: Language Selection (Sinhala / English)
+ * Step 0:  Welcome
+ * Step 1:  Phone Number
+ * Step 2:  OTP Verification
+ * Step 3:  Subscription
+ * Step 4:  Birth Data (multi-page wizard: Name → Date → Time → Place)
+ * Step 5:  Complete
  */
 
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Platform,
   Dimensions, ActivityIndicator, Alert, KeyboardAvoidingView, ScrollView,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown, FadeInUp, FadeIn } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown, FadeInUp, FadeIn,
+  useSharedValue, useAnimatedStyle, withRepeat, withTiming,
+  withSpring, withSequence, withDelay, interpolate, Easing,
+} from 'react-native-reanimated';
 import CosmicBackground from '../components/CosmicBackground';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { BASE } from '../services/api';
 
-var { width } = Dimensions.get('window');
+var { width: SW, height: SH } = Dimensions.get('window');
+
+// ═══════════════════════════════════════════════════════════════════════
+//  TRANSLATIONS
+// ═══════════════════════════════════════════════════════════════════════
 
 var OB = {
   en: {
     welcomeSubtitle: "Sri Lanka's #1 Astrology App",
-    welcomeDesc: "Your personal Vedic astrologer.\nDaily, Weekly & Monthly Palapala\nKendara Balima \u2022 Porondam Galapima\nFull Life Report \u2022 Rahu Kalaya",
-    welcomeBtn: "\u2728 Begin Your Cosmic Journey",
-    welcomeHint: "Only LKR 8/day from your mobile credit",
-    phoneTitle: "Enter Your Phone Number",
-    phoneSubtitle: "We'll send you a verification code via SMS",
+    welcomeDesc: "Your personal Vedic astrologer\nDaily Palapala & Kendara Balima\nPorondam Galapima & Full Life Report",
+    welcomeBtn: "Begin Your Cosmic Journey",
+    welcomeHint: "Only LKR 8/day from your mobile credit \u2014 required for access",
+    phoneTitle: "Your Phone Number",
+    phoneSubtitle: "We'll send a verification code via SMS",
     phonePlaceholder: "7X XXX XXXX",
     phoneError: "Please enter a valid phone number",
-    phoneNetwork: "Works with Dialog, Mobitel, Hutch & Airtel",
-    phoneSendOtp: "Send OTP \u2192",
+    phoneNetwork: "Dialog \u2022 Mobitel \u2022 Hutch \u2022 Airtel",
+    phoneSendOtp: "Send OTP",
     phoneFailedOtp: "Failed to send OTP",
-    otpTitle: "Enter Verification Code",
+    otpTitle: "Verification Code",
     otpSubtitle: "We sent a code to",
-    otpPlaceholder: "Enter 6-digit code",
     otpError: "Please enter the OTP code",
-    otpResend: "\ud83d\udce9 Resend OTP",
-    otpHint: "Code valid for 60 minutes \u2022 Max 3 attempts",
-    otpVerify: "\u2713 Verify & Continue",
+    otpResend: "Resend Code",
+    otpHint: "Code valid for 60 minutes",
+    otpVerify: "Verify & Continue",
     otpFailed: "Verification failed. Try resending the code.",
     otpResendFailed: "Failed to resend OTP",
-    otpDevLabel: "\ud83e\uddea Dev Mode OTP:",
-    subTitle: "Activate Your Cosmic Access",
-    subSubtitle: "Full access to all features",
+    otpDevLabel: "\uD83E\uDDEA Dev Mode OTP:",
+    subTitle: "Unlock Premium",
+    subSubtitle: "Full access to all cosmic features",
     subFeature1: "Daily, Weekly & Monthly Palapala",
-    subFeature2: "Full Vedic Birth Chart (Kendara Balima)",
-    subFeature3: "Marriage Compatibility (Porondam Galapima)",
-    subFeature4: "Complete Life Report with AI Analysis",
-    subFeature5: "Daily Nakath & Rahu Kalaya Alerts",
-    subFeature6: "Personalised Horoscope Predictions",
-    subPerDay: "per day",
-    subNote: "Charged from your mobile credit",
+    subFeature2: "Full Vedic Birth Chart (Kendara)",
+    subFeature3: "Marriage Compatibility (Porondam)",
+    subFeature4: "Complete Life Report with AI",
+    subFeature5: "Daily Nakath & Rahu Alerts",
+    subFeature6: "Personalised Predictions",
+    subPerDay: "/day",
+    subNote: "Charged from mobile credit",
     subNetworks: "Dialog \u2022 Mobitel \u2022 Hutch \u2022 Airtel",
-    subBtn: "\ud83d\udcb3 Subscribe \u2014 LKR 8/day",
-    subSkip: "Maybe later \u2014 Continue with free features",
-    subPayFail: "Payment failed. Please ensure you have enough mobile credit.",
+    subBtn: "Subscribe \u2014 LKR 8/day",
+    subPayFail: "Payment failed. Please ensure you have enough credit.",
     subFailed: "Subscription failed",
     nameTitle: "What's Your Name?",
     nameSubtitle: "We'll personalise everything for you",
-    nameLabel: "YOUR NAME *",
-    namePlaceholder: "Enter your name here",
-    nameError: "Please enter your name (minimum 2 characters)",
-    dateTitle: "When Were You Born?",
-    dateSubtitle: "Optional but recommended for accurate readings",
+    nameLabel: "YOUR NAME",
+    namePlaceholder: "Enter your name",
+    nameError: "Please enter your name (min 2 chars)",
+    dateTitle: "Birth Date",
+    dateSubtitle: "For accurate Vedic readings",
     yearLabel: "YEAR",
-    yearPlaceholder: "e.g. 1995",
+    yearPlaceholder: "1995",
     monthLabel: "MONTH",
     dayLabel: "DAY",
-    dayPlaceholder: "e.g. 15",
+    dayPlaceholder: "15",
     dateError: "Please enter a valid birth date",
-    dateHint: "\ud83d\udca1 Birth date helps us calculate your Lagna chart",
-    timeTitle: "What Time Were You Born?",
+    dateHint: "Birth date helps us calculate your Lagna chart",
+    timeTitle: "Birth Time",
     timeSubtitle: "Check your birth certificate",
     hourLabel: "HOUR",
     minuteLabel: "MINUTE",
-    timeHint: "\ud83d\udca1 Exact birth time makes your Lagna chart precise.\nIf unknown, skip \u2014 we'll use 12:00 PM.",
-    placeTitle: "Where Were You Born?",
+    timeHint: "Exact time = precise Lagna chart.\nIf unknown, skip \u2014 we'll use 12:00 PM.",
+    placeTitle: "Birth Place",
     placeSubtitle: "Select your birth city",
-    placeSearch: "\ud83d\udd0d Search city...",
-    placeHint: "\ud83d\udca1 Birth location affects your Lagna (Ascendant).\nDefault: Colombo if not selected.",
+    placeSearch: "Search city...",
+    placeHint: "Birth location affects your Ascendant.\nDefault: Colombo",
     subProgressName: "Name",
     subProgressDate: "Date",
     subProgressTime: "Time",
     subProgressPlace: "Place",
-    back: "\u2190 Back",
-    continueBtn: "Continue \u2192",
-    completeSetup: "\u2728 Complete Setup",
-    skipBirth: "Skip birth details \u2014 add later in Profile",
+    back: "Back",
+    continueBtn: "Continue",
+    completeSetup: "Complete Setup",
+    skipBirth: "Skip \u2014 add later in Profile",
     saveFailed: "Failed to save. Please try again.",
-    completeTitle: "Welcome to the Cosmos!",
+    completeTitle: "You're All Set!",
     completeSubtitle: "Your cosmic journey begins now",
-    completeLoading: "Loading your stars...",
-    months: ["January","February","March","April","May","June","July","August","September","October","November","December"],
+    completeLoading: "Calculating your stars...",
+    months: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
   },
   si: {
-    welcomeSubtitle: "ලංකාවේ අංක 1 ජ්‍යෝතිෂ App එක \uD83C\uDDF1\uD83C\uDDF0",
-    welcomeDesc: "ඔයාගේම පෞද්ගලික ජ්‍යෝතිෂවේදියා. \uD83D\uDD2E\nදවසෙ පලාපල, කේන්දරේ, පොරොන්දම් ඔක්කොම එකම තැනකින්.",
-    welcomeBtn: "\u2728 වැඩේ පටන් ගන්න \u2014 මෙතන ඔබන්න",
-    welcomeHint: "දවසට රු. 8යි යන්නේ (ගාණ අඩු කළා)",
-    phoneTitle: "ඔයාගේ ෆෝන් නම්බර් එක?",
-    phoneSubtitle: "අපිට නම්බර් එක දෙන්නකෝ",
+    welcomeSubtitle: "\u0dbd\u0d82\u0d9a\u0dcf\u0dc0\u0dda \u0d85\u0d82\u0d9a 1 \u0da2\u0dca\u200d\u0dba\u0ddd\u0dad\u0dd2\u0dc2 App \u0d91\u0d9a \uD83C\uDDF1\uD83C\uDDF0",
+    welcomeDesc: "ඔයාගේම පෞද්ගලික ජ්‍යෝතිෂවේදියා \uD83D\uDD2E\nපලාපල \u2022 කේන්දරේ \u2022 පොරොන්දම්",
+    welcomeBtn: "\u0dc0\u0dd0\u0da9\u0dda \u0db4\u0da7\u0db1\u0dca \u0d9c\u0db1\u0dca\u0db1",
+    welcomeHint: "\u0daf\u0dc0\u0dc3\u0da7 \u0dbb\u0dd4. 8\u0dba\u0dd2 (\u0d9c\u0dcf\u0dab \u0d85\u0da9\u0dd4 \u0d9a\u0dc5\u0dcf)",
+    phoneTitle: "\u0d94\u0dba\u0dcf\u0d9c\u0dda \u0dc6\u0ddd\u0db1\u0dca \u0db1\u0db8\u0dca\u0db6\u0dbb\u0dca",
+    phoneSubtitle: "SMS \u0d91\u0d9a\u0d9a\u0dd2\u0db1\u0dca \u0d9a\u0ddd\u0da9\u0dca \u0d91\u0d9a\u0d9a\u0dca \u0d91\u0dc0\u0db1\u0dc0\u0dcf",
     phonePlaceholder: "07X XXX XXXX",
-    phoneError: "නම්බර් එක පොඩ්ඩක් වැරදියි වගේ",
-    phoneNetwork: "Dialog, Mobitel, Hutch & Airtel ඕන එකක් වැඩ \uD83D\uDCF6",
-    phoneSendOtp: "OTP කෝඩ් එක එවන්න \u2192",
-    phoneFailedOtp: "OTP එක ආවේ නෑ. ආයි බලමු.",
-    otpTitle: "කෝඩ් එක ගහන්න",
-    otpSubtitle: "අපි SMS එකක් දැම්මා. පොඩ්ඩක් බලන්න:",
-    otpPlaceholder: "ඉලක්කම් 6 කෝඩ් එක",
-    otpError: "කෝඩ් එක වැරදියි වගේ",
-    otpResend: "\uD83D\uDCE9 කෝඩ් එක ආවේ නැද්ද? ආයි එවන්න",
-    otpHint: "විනාඩියක් ඇතුලත ගහන්න ඕන",
-    otpVerify: "\u2713 හරි, ඉස්සරහට යමු",
-    otpFailed: "වැඩේ හරිගියේ නෑ. කෝඩ් එක ආයි බලන්න.",
-    otpResendFailed: "කෝඩ් එක එවන්න බැරි වුනා",
-    otpDevLabel: "\uD83E\uDDEA ටෙස්ට් කෝඩ් එක:",
-    subTitle: "Nakath AI Premium දාගන්න \uD83D\uDC51",
-    subSubtitle: "ඔයාගේ අනාගතේ ගැන ඔක්කොම දැනගන්න පුලුවන්",
-    subFeature1: "හැමදාම උදේට එන පලාපල",
-    subFeature2: "ඔයාගේ කේන්දරේ සම්පූර්ණ විස්තරේ",
-    subFeature3: "පොරොන්දම් ගැලපීම් (Love Match)",
-    subFeature4: "AI එකෙන් අහලා දැනගන්න",
-    subFeature5: "නැකැත් සහ රාහු කාලේ දැනුම්දීම්",
-    subFeature6: "ඔයාටම හරියන අනාවැකි",
-    subPerDay: "දවසට",
-    subNote: "ෆෝන් බිලට තමයි එකතු වෙන්නේ \u26A1",
+    phoneError: "\u0db1\u0db8\u0dca\u0db6\u0dbb\u0dca \u0d91\u0d9a \u0db4\u0ddc\u0da9\u0dca\u0da9\u0d9a\u0dca \u0dc0\u0dd0\u0dbb\u0daf\u0dd2\u0dba\u0dd2 \u0dc0\u0d9c\u0dda",
+    phoneNetwork: "Dialog \u2022 Mobitel \u2022 Hutch \u2022 Airtel \uD83D\uDCF6",
+    phoneSendOtp: "OTP \u0d91\u0dc0\u0db1\u0dca\u0db1",
+    phoneFailedOtp: "OTP \u0d86\u0dc0\u0dda \u0db1\u0dd1. \u0d86\u0dba\u0dd2 \u0db6\u0dbd\u0db8\u0dd4.",
+    otpTitle: "\u0d9a\u0ddd\u0da9\u0dca \u0d91\u0d9a \u0d9c\u0dc4\u0db1\u0dca\u0db1",
+    otpSubtitle: "SMS \u0d91\u0d9a\u0d9a\u0dca \u0daf\u0dd0\u0db8\u0dca\u0db8\u0dcf:",
+    otpError: "\u0d9a\u0ddd\u0da9\u0dca \u0d91\u0d9a \u0dc0\u0dd0\u0dbb\u0daf\u0dd2\u0dba\u0dd2 \u0dc0\u0d9c\u0dda",
+    otpResend: "\u0d86\u0dba\u0dd2 \u0d91\u0dc0\u0db1\u0dca\u0db1",
+    otpHint: "\u0dc0\u0dd2\u0db1\u0dcf\u0da9\u0dd2\u0dba\u0d9a\u0dca \u0d87\u0dad\u0dd4\u0dbd\u0dad \u0d9c\u0dc4\u0db1\u0dca\u0db1",
+    otpVerify: "\u0dc4\u0dbb\u0dd2, \u0d89\u0dc3\u0dca\u0dc3\u0dbb\u0dc4\u0da7 \u0dba\u0db8\u0dd4",
+    otpFailed: "\u0dc0\u0dd0\u0da9\u0dda \u0dc4\u0dbb\u0dd2\u0d9c\u0dd2\u0dba\u0dda \u0db1\u0dd1. \u0d86\u0dba\u0dd2 \u0db6\u0dbd\u0db1\u0dca\u0db1.",
+    otpResendFailed: "\u0d9a\u0ddd\u0da9\u0dca \u0d91\u0d9a \u0d91\u0dc0\u0db1\u0dca\u0db1 \u0db6\u0dd0\u0dbb\u0dd2 \u0dc0\u0dd4\u0db1\u0dcf",
+    otpDevLabel: "\uD83E\uDDEA \u0da7\u0dd9\u0dc3\u0dca\u0da7\u0dca \u0d9a\u0ddd\u0da9\u0dca:",
+    subTitle: "Premium \u0daf\u0dcf\u0d9c\u0db1\u0dca\u0db1 \uD83D\uDC51",
+    subSubtitle: "\u0d85\u0db1\u0dcf\u0d9c\u0dad\u0dda \u0d9c\u0dd0\u0db1 \u0d94\u0d9a\u0dca\u0d9a\u0ddc\u0db8 \u0daf\u0dd0\u0db1\u0d9c\u0db1\u0dca\u0db1",
+    subFeature1: "\u0dc4\u0dd0\u0db8\u0daf\u0dcf\u0db8 \u0d89\u0daf\u0dda\u0da7 \u0d91\u0db1 \u0db4\u0dbd\u0dcf\u0db4\u0dbd",
+    subFeature2: "\u0dc3\u0db8\u0dca\u0db4\u0dd6\u0dbb\u0dca\u0dab \u0d9a\u0dda\u0db1\u0dca\u0daf\u0dbb\u0dda",
+    subFeature3: "\u0db4\u0ddc\u0dbb\u0ddc\u0db1\u0dca\u0daf\u0db8\u0dca \u0d9c\u0dd0\u0dbd\u0db4\u0dd3\u0db8",
+    subFeature4: "AI \u0d91\u0d9a\u0dd9\u0db1\u0dca \u0d85\u0dc4\u0dbd\u0dcf \u0daf\u0dd0\u0db1\u0d9c\u0db1\u0dca\u0db1",
+    subFeature5: "\u0db1\u0dd0\u0d9a\u0dd0\u0dad\u0dca \u0dc3\u0dc4 \u0dbb\u0dcf\u0dc4\u0dd4 \u0d9a\u0dcf\u0dbd\u0dda",
+    subFeature6: "\u0d94\u0dba\u0dcf\u0da7\u0db8 \u0dc4\u0dbb\u0dd2\u0dba\u0db1 \u0d85\u0db1\u0dcf\u0dc0\u0dd0\u0d9a\u0dd2",
+    subPerDay: "/\u0daf\u0dc0\u0dc3\u0da7",
+    subNote: "\u0dc6\u0ddd\u0db1\u0dca \u0db6\u0dd2\u0dbd\u0da7 \u0d91\u0d9a\u0dad\u0dd4 \u0dc0\u0dd9\u0db1\u0dc0\u0dcf \u26A1",
     subNetworks: "Dialog \u2022 Mobitel \u2022 Hutch \u2022 Airtel",
-    subBtn: "\uD83D\uDCB3 දැන්ම ඇක්ටිව් කරගන්න \u2014 දවසට රු. 8යි",
-    subSkip: "දැනට එපා \u2014 නිකන් තියෙන ටික ඇති",
-    subPayFail: "සල්ලි කැපුනේ නෑ. ක්‍රෙඩිට් ඉවරද බලන්න.",
-    subFailed: "ඇක්ටිව් වුනේ නෑ",
-    nameTitle: "ඔයාගේ නම මොකක්ද?",
-    nameSubtitle: "කේන්දරේ හදන්න නම ඕන වෙනවා",
-    nameLabel: "නම *",
-    namePlaceholder: "නම මෙතන ගහන්න",
-    nameError: "නම දාලා ඉන්නකෝ",
-    dateTitle: "උපන් දිනය කවදද?",
-    dateSubtitle: "අනාවැකි හරියටම කියන්න මේක ඕන",
-    yearLabel: "අවුරුද්ද",
-    yearPlaceholder: "උදා: 1995",
-    monthLabel: "මාසය",
-    dayLabel: "දිනය",
-    dayPlaceholder: "උදා: 15",
-    dateError: "උපන් දිනය හරියට දාන්න",
-    dateHint: "\uD83D\uDCA1 නැකැත්, ලග්න බලන්න මේක ඕනමයි",
-    timeTitle: "ඉපදුන වෙලාව?",
-    timeSubtitle: "උප්පැන්නෙ තියෙන වෙලාව තමයි හොඳම",
-    hourLabel: "පැය",
-    minuteLabel: "මිනිත්තු",
-    timeHint: "\uD83D\uDCA1 වෙලාව වැරදුනොත් පලාපල වෙනස් වෙන්න පුලුවන්.\nදන්නේ නැත්නම් හිස්ව තියන්න. (අපි 12:00 PM කියලා ගන්නම්)",
-    placeTitle: "ඉපදුන ගම?",
-    placeSubtitle: "රෝහල තිබුන නගරය දුන්නනම් හරි",
-    placeSearch: "\uD83D\uDD0D ටවුමේ නම ගහන්න...",
-    placeHint: "\uD83D\uDCA1 ඉපදුන තැන අනුවත් කේන්දරේ වෙනස් වෙනවා.\nහරියට දන්නේ නැත්නම් 'Colombo' කියලා දාන්න.",
-    subProgressName: "නම",
-    subProgressDate: "උපන් දිනය",
-    subProgressTime: "වෙලාව",
-    subProgressPlace: "ගම",
-    back: "\u2190 පස්සට",
-    continueBtn: "ඉස්සරහට \u2192",
-    completeSetup: "\u2728 ඔක්කොම හරි",
-    skipBirth: "විස්තර පස්සේ දාන්නම්",
-    saveFailed: "සේව් වුනේ නෑ. ආයි බලන්න.",
-    completeTitle: "ඔයාගේ ගමන පටන් ගමු!",
-    completeSubtitle: "ඔයාගේ ජ්‍යෝතිෂ ගමන ආරම්භයි",
-    completeLoading: "තරු රටා ගණනය කරමින්...",
-    months: ["ජනවාරි","පෙබරවාරි","මාර්තු"," අප්‍රේල්","මැයි","ජූනි","ජූලි","අගෝස්තු"," සැප්තැම්බර්","ඔක්තෝබර්","නොවැම්බර්","දෙසැම්බර්"],
+    subBtn: "\u0d87\u0d9a\u0dca\u0da7\u0dd2\u0dc0\u0dca \u0d9a\u0dbb\u0d9c\u0db1\u0dca\u0db1 \u2014 \u0daf\u0dc0\u0dc3\u0da7 \u0dbb\u0dd4. 8",
+    subPayFail: "\u0dc3\u0dbd\u0dca\u0dbd\u0dd2 \u0d9a\u0dd0\u0db4\u0dd4\u0db1\u0dda \u0db1\u0dd1. \u0d9a\u0dca\u200d\u0dbb\u0dd9\u0da9\u0dd2\u0da7\u0dca \u0d89\u0dc0\u0dbb\u0daf \u0db6\u0dbd\u0db1\u0dca\u0db1.",
+    subFailed: "\u0d87\u0d9a\u0dca\u0da7\u0dd2\u0dc0\u0dca \u0dc0\u0dd4\u0db1\u0dda \u0db1\u0dd1",
+    nameTitle: "\u0d94\u0dba\u0dcf\u0d9c\u0dda \u0db1\u0db8?",
+    nameSubtitle: "\u0d9a\u0dda\u0db1\u0dca\u0daf\u0dbb\u0dda \u0dc4\u0daf\u0db1\u0dca\u0db1 \u0db1\u0db8 \u0d95\u0db1",
+    nameLabel: "\u0db1\u0db8",
+    namePlaceholder: "\u0db1\u0db8 \u0db8\u0dd9\u0dad\u0db1 \u0d9c\u0dc4\u0db1\u0dca\u0db1",
+    nameError: "\u0db1\u0db8 \u0daf\u0dcf\u0dbd\u0dcf \u0d89\u0db1\u0dca\u0db1\u0d9a\u0ddd",
+    dateTitle: "\u0d89\u0db4\u0daf\u0dd4\u0db1 \u0daf\u0dd2\u0db1\u0dba",
+    dateSubtitle: "\u0d85\u0db1\u0dcf\u0dc0\u0dd0\u0d9a\u0dd2 \u0dc4\u0dbb\u0dd2\u0dba\u0da7\u0db8 \u0d9a\u0dd2\u0dba\u0db1\u0dca\u0db1 \u0db8\u0dda\u0d9a \u0d95\u0db1",
+    yearLabel: "\u0d85\u0dc0\u0dd4\u0dbb\u0dd4\u0daf\u0dca\u0daf",
+    yearPlaceholder: "1995",
+    monthLabel: "\u0db8\u0dcf\u0dc3\u0dba",
+    dayLabel: "\u0daf\u0dd2\u0db1\u0dba",
+    dayPlaceholder: "15",
+    dateError: "\u0d89\u0db4\u0daf\u0dd4\u0db1 \u0daf\u0dd2\u0db1\u0dba \u0dc4\u0dbb\u0dd2\u0dba\u0da7 \u0daf\u0dcf\u0db1\u0dca\u0db1",
+    dateHint: "\u0db1\u0dd0\u0d9a\u0dd0\u0dad\u0dca, \u0dbd\u0d9c\u0dca\u0db1 \u0db6\u0dbd\u0db1\u0dca\u0db1 \u0db8\u0dda\u0d9a \u0d95\u0db1\u0db8\u0dba\u0dd2",
+    timeTitle: "\u0d89\u0db4\u0daf\u0dd4\u0db1 \u0dc0\u0dd9\u0dbd\u0dcf\u0dc0",
+    timeSubtitle: "\u0d89\u0db4\u0dca\u0db4\u0dd0\u0db1\u0dca\u0db1\u0dd9 \u0dad\u0dd2\u0dba\u0dd9\u0db1 \u0dc0\u0dd9\u0dbd\u0dcf\u0dc0",
+    hourLabel: "\u0db4\u0dd0\u0dba",
+    minuteLabel: "\u0db8\u0dd2\u0db1\u0dd2\u0dad\u0dca\u0dad\u0dd4",
+    timeHint: "\u0dc0\u0dd9\u0dbd\u0dcf\u0dc0 \u0dc4\u0dbb\u0dd2\u0dba\u0da7 \u0daf\u0db1\u0dca\u0db1\u0dc0\u0db1\u0db8\u0dca \u0d9c\u0dc4\u0db1\u0dca\u0db1.\n\u0daf\u0db1\u0dca\u0db1\u0dda \u0db1\u0dd0\u0dad\u0dca\u0db1\u0db8\u0dca \u0dc4\u0dd2\u0dc3\u0dca\u0dc0 \u0dad\u0dd2\u0dba\u0db1\u0dca\u0db1.",
+    placeTitle: "\u0d89\u0db4\u0daf\u0dd4\u0db1 \u0d9c\u0db8?",
+    placeSubtitle: "\u0dbb\u0ddd\u0dc4\u0dbd \u0dad\u0dd2\u0db6\u0dd4\u0db1 \u0db1\u0d9c\u0dbb\u0dba",
+    placeSearch: "\u0da7\u0dc0\u0dd4\u0db8\u0dda \u0db1\u0db8 \u0d9c\u0dc4\u0db1\u0dca\u0db1...",
+    placeHint: "\u0d89\u0db4\u0daf\u0dd4\u0db1 \u0dad\u0dd0\u0db1 \u0d85\u0db1\u0dd4\u0dc0\u0dad\u0dca \u0d9a\u0dda\u0db1\u0dca\u0daf\u0dbb\u0dda \u0dc0\u0dd9\u0db1\u0dc3\u0dca \u0dc0\u0dd9\u0db1\u0dc0\u0dcf.\n\u0daf\u0db1\u0dca\u0db1\u0dda \u0db1\u0dd0\u0dad\u0dca\u0db1\u0db8\u0dca Colombo \u0daf\u0dcf\u0db1\u0dca\u0db1.",
+    subProgressName: "\u0db1\u0db8",
+    subProgressDate: "\u0daf\u0dd2\u0db1\u0dba",
+    subProgressTime: "\u0dc0\u0dd9\u0dbd\u0dcf\u0dc0",
+    subProgressPlace: "\u0d9c\u0db8",
+    back: "\u0db4\u0dc3\u0dca\u0dc3\u0da7",
+    continueBtn: "\u0d89\u0dc3\u0dca\u0dc3\u0dbb\u0dc4\u0da7",
+    completeSetup: "\u0d94\u0d9a\u0dca\u0d9a\u0ddc\u0db8 \u0dc4\u0dbb\u0dd2",
+    skipBirth: "\u0dc0\u0dd2\u0dc3\u0dca\u0dad\u0dbb \u0db4\u0dc3\u0dca\u0dc3\u0dda \u0daf\u0dcf\u0db1\u0dca\u0db1\u0db8\u0dca",
+    saveFailed: "\u0dc3\u0dda\u0dc0\u0dca \u0dc0\u0dd4\u0db1\u0dda \u0db1\u0dd1. \u0d86\u0dba\u0dd2 \u0db6\u0dbd\u0db1\u0dca\u0db1.",
+    completeTitle: "\u0d9c\u0db8\u0db1 \u0db4\u0da7\u0db1\u0dca \u0d9c\u0db8\u0dd4! \uD83C\uDF1F",
+    completeSubtitle: "\u0d94\u0dba\u0dcf\u0d9c\u0dda \u0da2\u0dca\u200d\u0dba\u0ddd\u0dad\u0dd2\u0dc2 \u0d9c\u0db8\u0db1 \u0d86\u0dbb\u0db8\u0dca\u0db7\u0dba\u0dd2",
+    completeLoading: "\u0dad\u0dbb\u0dd4 \u0dbb\u0da7\u0dcf \u0d9c\u0dab\u0db1\u0dba \u0d9a\u0dbb\u0db8\u0dd2\u0db1\u0dca...",
+    months: ["\u0da2\u0db1","\u0db4\u0dd9\u0db6","\u0db8\u0dcf\u0dbb\u0dca","\u0d85\u0db4\u0dca\u200d","\u0db8\u0dd0","\u0da2\u0dd6","\u0da2\u0dd6\u0dbd\u0dd2","\u0d85\u0d9c\u0ddd","\u0dc3\u0dd0\u0db4\u0dca","\u0d94\u0d9a\u0dca","\u0db1\u0ddc","\u0daf\u0dd9"],
   },
 };
 
 var SL_CITIES = [
-  { name: 'Colombo', sinhala: '\u0d9a\u0ddc\u0dc5\u0db9', lat: 6.9271, lng: 79.8612 },
-  { name: 'Kandy', sinhala: '\u0db8\u0dc4\u0db1\u0dd4\u0dc0\u0dbb', lat: 7.2906, lng: 80.6337 },
-  { name: 'Galle', sinhala: '\u0d9c\u0dcf\u0dbd\u0dca\u0dbd', lat: 6.0535, lng: 80.2210 },
-  { name: 'Jaffna', sinhala: '\u0dba\u0dcf\u0db4\u0db1\u0dba', lat: 9.6615, lng: 80.0255 },
-  { name: 'Matara', sinhala: '\u0db8\u0dcf\u0dad\u0dbb', lat: 5.9549, lng: 80.5350 },
-  { name: 'Negombo', sinhala: '\u0db8\u0dd3\u0d9c\u0db8\u0dd4\u0dc0', lat: 7.2089, lng: 79.8400 },
-  { name: 'Anuradhapura', sinhala: '\u0d85\u0db1\u0dd4\u0dbb\u0dcf\u0db0\u0db4\u0dd4\u0dbb', lat: 8.3114, lng: 80.4037 },
-  { name: 'Kurunegala', sinhala: '\u0d9a\u0dd4\u0dbb\u0dd4\u0dab\u0dd1\u0d9c\u0dbd', lat: 7.4863, lng: 80.3647 },
-  { name: 'Ratnapura', sinhala: '\u0dbb\u0dad\u0dca\u0db1\u0db4\u0dd4\u0dbb', lat: 6.6828, lng: 80.3992 },
-  { name: 'Badulla', sinhala: '\u0db6\u0daf\u0dd4\u0dbd\u0dca\u0dbd', lat: 6.9934, lng: 81.0550 },
-  { name: 'Trincomalee', sinhala: '\u0dad\u0dca\u200d\u0dbb\u0dd2\u0d9a\u0dd4\u0dab\u0dcf\u0db8\u0dbd\u0dba', lat: 8.5874, lng: 81.2152 },
-  { name: 'Batticaloa', sinhala: '\u0db8\u0da9\u0d9a\u0dbd\u0db4\u0dd4\u0dc0', lat: 7.7310, lng: 81.6934 },
-  { name: 'Nuwara Eliya', sinhala: '\u0db1\u0dd4\u0dc0\u0dbb\u0d91\u0dc5\u0dd2\u0dba', lat: 6.9497, lng: 80.7891 },
-  { name: 'Hambantota', sinhala: '\u0dc4\u0db8\u0dca\u0db6\u0db1\u0dca\u0dad\u0ddc\u0da7', lat: 6.1429, lng: 81.1212 },
-  { name: 'Polonnaruwa', sinhala: '\u0db4\u0ddc\u0dc5\u0ddc\u0db1\u0dca\u0db1\u0dbb\u0dd4\u0dc0', lat: 7.9403, lng: 81.0188 },
-  { name: 'Kegalle', sinhala: '\u0d9a\u0dd1\u0d9c\u0dbd\u0dca\u0dbd', lat: 7.2524, lng: 80.3467 },
-  { name: 'Ampara', sinhala: '\u0d85\u0db8\u0dca\u0db4\u0dcf\u0dbb', lat: 7.2976, lng: 81.6720 },
-  { name: 'Matale', sinhala: '\u0db8\u0dcf\u0dad\u0dbd\u0dda', lat: 7.4675, lng: 80.6234 },
-  { name: 'Kalutara', sinhala: '\u0d9a\u0dc5\u0dd4\u0dad\u0dbb', lat: 6.5854, lng: 79.9607 },
-  { name: 'Gampaha', sinhala: '\u0d9c\u0db8\u0dca\u0db4\u0dc4', lat: 7.0840, lng: 80.0098 },
-  { name: 'Puttalam', sinhala: '\u0db4\u0dd4\u0dad\u0dca\u0dad\u0dbd\u0db8', lat: 8.0362, lng: 79.8283 },
-  { name: 'Chilaw', sinhala: '\u0dc4\u0dbd\u0dcf\u0dc0\u0dad', lat: 7.5758, lng: 79.7953 },
-  { name: 'Dambulla', sinhala: '\u0daf\u0db9\u0dd4\u0dbd\u0dca\u0dbd', lat: 7.8600, lng: 80.6517 },
-  { name: 'Panadura', sinhala: '\u0db4\u0dcf\u0db1\u0daf\u0dd4\u0dbb', lat: 6.7133, lng: 79.9046 },
-  { name: 'Moratuwa', sinhala: '\u0db8\u0ddc\u0dbb\u0da7\u0dd4\u0dc0', lat: 6.7731, lng: 79.8824 },
+  { name: 'Colombo', si: '\u0d9a\u0ddc\u0dc5\u0db9', lat: 6.9271, lng: 79.8612 },
+  { name: 'Kandy', si: '\u0db8\u0dc4\u0db1\u0dd4\u0dc0\u0dbb', lat: 7.2906, lng: 80.6337 },
+  { name: 'Galle', si: '\u0d9c\u0dcf\u0dbd\u0dca\u0dbd', lat: 6.0535, lng: 80.2210 },
+  { name: 'Jaffna', si: '\u0dba\u0dcf\u0db4\u0db1\u0dba', lat: 9.6615, lng: 80.0255 },
+  { name: 'Matara', si: '\u0db8\u0dcf\u0dad\u0dbb', lat: 5.9549, lng: 80.5350 },
+  { name: 'Negombo', si: '\u0db8\u0dd3\u0d9c\u0db8\u0dd4\u0dc0', lat: 7.2089, lng: 79.8400 },
+  { name: 'Anuradhapura', si: '\u0d85\u0db1\u0dd4\u0dbb\u0dcf\u0db0\u0db4\u0dd4\u0dbb', lat: 8.3114, lng: 80.4037 },
+  { name: 'Kurunegala', si: '\u0d9a\u0dd4\u0dbb\u0dd4\u0dab\u0dd1\u0d9c\u0dbd', lat: 7.4863, lng: 80.3647 },
+  { name: 'Ratnapura', si: '\u0dbb\u0dad\u0dca\u0db1\u0db4\u0dd4\u0dbb', lat: 6.6828, lng: 80.3992 },
+  { name: 'Badulla', si: '\u0db6\u0daf\u0dd4\u0dbd\u0dca\u0dbd', lat: 6.9934, lng: 81.0550 },
+  { name: 'Trincomalee', si: '\u0dad\u0dca\u200d\u0dbb\u0dd2\u0d9a\u0dd4\u0dab\u0dcf\u0db8\u0dbd\u0dba', lat: 8.5874, lng: 81.2152 },
+  { name: 'Batticaloa', si: '\u0db8\u0da9\u0d9a\u0dbd\u0db4\u0dd4\u0dc0', lat: 7.7310, lng: 81.6934 },
+  { name: 'Nuwara Eliya', si: '\u0db1\u0dd4\u0dc0\u0dbb\u0d91\u0dc5\u0dd2\u0dba', lat: 6.9497, lng: 80.7891 },
+  { name: 'Hambantota', si: '\u0dc4\u0db8\u0dca\u0db6\u0db1\u0dca\u0dad\u0ddc\u0da7', lat: 6.1429, lng: 81.1212 },
+  { name: 'Polonnaruwa', si: '\u0db4\u0ddc\u0dc5\u0ddc\u0db1\u0dca\u0db1\u0dbb\u0dd4\u0dc0', lat: 7.9403, lng: 81.0188 },
+  { name: 'Kegalle', si: '\u0d9a\u0dd1\u0d9c\u0dbd\u0dca\u0dbd', lat: 7.2524, lng: 80.3467 },
+  { name: 'Ampara', si: '\u0d85\u0db8\u0dca\u0db4\u0dcf\u0dbb', lat: 7.2976, lng: 81.6720 },
+  { name: 'Matale', si: '\u0db8\u0dcf\u0dad\u0dbd\u0dda', lat: 7.4675, lng: 80.6234 },
+  { name: 'Kalutara', si: '\u0d9a\u0dc5\u0dd4\u0dad\u0dbb', lat: 6.5854, lng: 79.9607 },
+  { name: 'Gampaha', si: '\u0d9c\u0db8\u0dca\u0db4\u0dc4', lat: 7.0840, lng: 80.0098 },
+  { name: 'Puttalam', si: '\u0db4\u0dd4\u0dad\u0dca\u0dad\u0dbd\u0db8', lat: 8.0362, lng: 79.8283 },
+  { name: 'Chilaw', si: '\u0dc4\u0dbd\u0dcf\u0dc0\u0dad', lat: 7.5758, lng: 79.7953 },
+  { name: 'Dambulla', si: '\u0daf\u0db9\u0dd4\u0dbd\u0dca\u0dbd', lat: 7.8600, lng: 80.6517 },
+  { name: 'Panadura', si: '\u0db4\u0dcf\u0db1\u0daf\u0dd4\u0dbb', lat: 6.7133, lng: 79.9046 },
+  { name: 'Moratuwa', si: '\u0db8\u0ddc\u0dbb\u0da7\u0dd4\u0dc0', lat: 6.7731, lng: 79.8824 },
 ];
 
 
-/* ──────────── STEP -1: LANGUAGE SELECTION ──────────── */
-function LanguageStep({ onSelect }) {
-  return (
-    <View style={styles.stepContainer}>
-      <Animated.View entering={FadeInDown.duration(800)} style={styles.languageContainer}>
-        <Text style={styles.languageTitle}>{'\u0db7\u0dcf\u0dc2\u0dcf\u0dc0 \u0dad\u0ddd\u0dbb\u0db1\u0dca\u0db1'}</Text>
-        <Text style={styles.languageTitleEn}>Select Your Language</Text>
-        <View style={{ height: 30 }} />
+// ═══════════════════════════════════════════════════════════════════════
+//  SHARED UI ATOMS — with micro-animations + vibrant gradients
+// ═══════════════════════════════════════════════════════════════════════
 
-        <TouchableOpacity
-          style={styles.languageBtn}
-          onPress={function() { onSelect('si'); }}
-          activeOpacity={0.8}
+/* Animated floating particles behind steps */
+function FloatingOrbs() {
+  var orb1 = useSharedValue(0);
+  var orb2 = useSharedValue(0);
+  var orb3 = useSharedValue(0);
+  useEffect(function () {
+    orb1.value = withRepeat(withTiming(1, { duration: 6000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    orb2.value = withRepeat(withTiming(1, { duration: 8000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    orb3.value = withRepeat(withTiming(1, { duration: 5000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+  var s1 = useAnimatedStyle(function () {
+    return { transform: [{ translateY: interpolate(orb1.value, [0, 1], [-20, 20]) }, { translateX: interpolate(orb1.value, [0, 1], [10, -10]) }], opacity: interpolate(orb1.value, [0, 0.5, 1], [0.15, 0.35, 0.15]) };
+  });
+  var s2 = useAnimatedStyle(function () {
+    return { transform: [{ translateY: interpolate(orb2.value, [0, 1], [15, -25]) }, { translateX: interpolate(orb2.value, [0, 1], [-15, 20]) }], opacity: interpolate(orb2.value, [0, 0.5, 1], [0.1, 0.25, 0.1]) };
+  });
+  var s3 = useAnimatedStyle(function () {
+    return { transform: [{ translateY: interpolate(orb3.value, [0, 1], [-12, 18]) }], opacity: interpolate(orb3.value, [0, 0.5, 1], [0.12, 0.3, 0.12]) };
+  });
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <Animated.View style={[{ position: 'absolute', top: '15%', left: '10%', width: 120, height: 120, borderRadius: 60, backgroundColor: '#FF6B00' }, s1]} />
+      <Animated.View style={[{ position: 'absolute', top: '55%', right: '5%', width: 90, height: 90, borderRadius: 45, backgroundColor: '#E040FB' }, s2]} />
+      <Animated.View style={[{ position: 'absolute', bottom: '20%', left: '30%', width: 70, height: 70, borderRadius: 35, backgroundColor: '#FBBF24' }, s3]} />
+    </View>
+  );
+}
+
+/* Shimmer animated border for focused inputs */
+function AnimatedBorderCard({ children, style, focused }) {
+  var shimmer = useSharedValue(0);
+  useEffect(function () {
+    shimmer.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.linear }), -1, false);
+  }, []);
+  var borderStyle = useAnimatedStyle(function () {
+    var c = interpolate(shimmer.value, [0, 0.33, 0.66, 1], [0, 1, 2, 3]);
+    return {
+      borderColor: focused
+        ? (c < 1 ? 'rgba(255,107,0,0.5)' : c < 2 ? 'rgba(224,64,251,0.5)' : 'rgba(251,191,36,0.5)')
+        : 'rgba(255,255,255,0.06)',
+    };
+  });
+  return (
+    <Animated.View style={[g.card, style, borderStyle]}>
+      {children}
+    </Animated.View>
+  );
+}
+
+/* Primary action button — hot gradient with bounce */
+function PrimaryButton({ label, onPress, loading, disabled, icon }) {
+  var isOff = disabled || loading;
+  var btnScale = useSharedValue(1);
+  var glow = useSharedValue(0);
+
+  useEffect(function () {
+    glow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+
+  var glowStyle = useAnimatedStyle(function () {
+    return {
+      shadowOpacity: isOff ? 0 : interpolate(glow.value, [0, 1], [0.3, 0.7]),
+      shadowRadius: interpolate(glow.value, [0, 1], [8, 20]),
+      transform: [{ scale: btnScale.value }],
+    };
+  });
+
+  function onPressIn() { btnScale.value = withSpring(0.96, { damping: 15, stiffness: 400 }); }
+  function onPressOut() { btnScale.value = withSpring(1, { damping: 10, stiffness: 300 }); }
+
+  return (
+    <Animated.View style={[g.primaryBtn, glowStyle]}>
+      <TouchableOpacity
+        onPress={onPress} disabled={isOff} activeOpacity={0.85}
+        onPressIn={onPressIn} onPressOut={onPressOut}
+        style={{ borderRadius: 16, overflow: 'hidden', opacity: isOff ? 0.4 : 1 }}
+      >
+        <LinearGradient
+          colors={isOff ? ['#444', '#555'] : ['#FF6B00', '#E040FB', '#9333EA']}
+          style={g.primaryGrad}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         >
-          <LinearGradient
-            colors={['#FF6B00', '#FF8C33']}
-            style={styles.languageBtnGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <Text style={styles.languageBtnText}>{'\u0dc3\u0dd2\u0d82\u0dc4\u0dbd'}</Text>
-            <Text style={styles.languageBtnSub}>Sinhala</Text>
+          {loading ? (
+            <ActivityIndicator color="#FFF" size="small" />
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {icon ? <Ionicons name={icon} size={18} color="#FFF" /> : null}
+              <Text style={g.primaryText}>{label}</Text>
+            </View>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+function GhostButton({ label, onPress }) {
+  return (
+    <TouchableOpacity onPress={onPress} style={g.ghostBtn} activeOpacity={0.6}>
+      <Text style={g.ghostText}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function StepHeader({ icon, iconColor, title, subtitle }) {
+  var iconBounce = useSharedValue(0);
+  var iconGlow = useSharedValue(0);
+  useEffect(function () {
+    iconBounce.value = withSequence(
+      withDelay(300, withSpring(1, { damping: 8, stiffness: 200 }))
+    );
+    iconGlow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+  var iconAnim = useAnimatedStyle(function () {
+    return {
+      transform: [{ scale: interpolate(iconBounce.value, [0, 1], [0.3, 1]) }],
+      opacity: iconBounce.value,
+    };
+  });
+  var glowAnim = useAnimatedStyle(function () {
+    return {
+      shadowOpacity: interpolate(iconGlow.value, [0, 1], [0.2, 0.6]),
+      shadowRadius: interpolate(iconGlow.value, [0, 1], [8, 20]),
+    };
+  });
+
+  return (
+    <Animated.View entering={FadeInDown.duration(500)} style={g.headerWrap}>
+      {icon ? (
+        <Animated.View style={[g.headerIconBg, { borderColor: (iconColor || '#FF6B00') + '50', shadowColor: iconColor || '#FF6B00' }, iconAnim, glowAnim]}>
+          <Ionicons name={icon} size={28} color={iconColor || '#FF6B00'} />
+        </Animated.View>
+      ) : null}
+      <Text style={g.headerTitle}>{title}</Text>
+      {subtitle ? <Text style={g.headerSub}>{subtitle}</Text> : null}
+    </Animated.View>
+  );
+}
+
+function GlowCard({ children, style }) {
+  return <View style={[g.card, style]}>{children}</View>;
+}
+
+function StepDots({ current, total }) {
+  return (
+    <View style={g.dotsRow}>
+      {Array.from({ length: total }).map(function (_, i) {
+        var isCurrent = i === current;
+        var isActive = i <= current;
+        return (
+          <Animated.View key={i} entering={FadeIn.delay(i * 50).duration(200)} style={[
+            g.dot,
+            isActive && g.dotActive,
+            isCurrent && g.dotCurrent,
+          ]}>
+            {isCurrent ? (
+              <LinearGradient
+                colors={['#FF6B00', '#E040FB']}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              />
+            ) : null}
+          </Animated.View>
+        );
+      })}
+    </View>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+//  STEP -1: LANGUAGE SELECTION
+// ═══════════════════════════════════════════════════════════════════════
+
+function LanguageStep({ onSelect }) {
+  var glow = useSharedValue(0);
+  var float = useSharedValue(0);
+  var titleScale = useSharedValue(0);
+  useEffect(function () {
+    glow.value = withRepeat(withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sin) }), -1, true);
+    float.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    titleScale.value = withDelay(400, withSpring(1, { damping: 12, stiffness: 120 }));
+  }, []);
+  var glowStyle = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(glow.value, [0, 1], [0.5, 1]),
+      transform: [{ scale: interpolate(glow.value, [0, 1], [0.95, 1.05]) }],
+    };
+  });
+  var floatStyle = useAnimatedStyle(function () {
+    return { transform: [{ translateY: interpolate(float.value, [0, 1], [-8, 8]) }] };
+  });
+  var titleAnim = useAnimatedStyle(function () {
+    return { transform: [{ scale: titleScale.value }], opacity: titleScale.value };
+  });
+
+  return (
+    <View style={g.center}>
+      <FloatingOrbs />
+      <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center', marginBottom: 40 }}>
+        <Animated.View style={floatStyle}>
+          <Animated.Text style={[{ fontSize: 64, marginBottom: 8 }, glowStyle]}>{'\u2726'}</Animated.Text>
+        </Animated.View>
+        <Animated.View style={titleAnim}>
+          <Text style={ls.mainTitle}>Nakath AI</Text>
+        </Animated.View>
+        <View style={ls.divider}>
+          <LinearGradient colors={['transparent', '#FF6B00', '#E040FB', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+        </View>
+        <Text style={ls.siTitle}>{'\u0db7\u0dcf\u0dc2\u0dcf\u0dc0 \u0dad\u0ddd\u0dbb\u0db1\u0dca\u0db1'}</Text>
+        <Text style={ls.enTitle}>Select Your Language</Text>
+      </Animated.View>
+
+      <Animated.View entering={FadeInUp.delay(300).duration(600)} style={{ width: '100%' }}>
+        <TouchableOpacity style={ls.langBtn} onPress={function () { onSelect('si'); }} activeOpacity={0.85}>
+          <LinearGradient colors={['#FF6B00', '#E040FB']} style={ls.langGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <View style={ls.langInner}>
+              <Text style={ls.langFlag}>{'\uD83C\uDDF1\uD83C\uDDF0'}</Text>
+              <View>
+                <Text style={ls.langLabel}>{'\u0dc3\u0dd2\u0d82\u0dc4\u0dbd'}</Text>
+                <Text style={ls.langSub}>Sinhala</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.7)" />
           </LinearGradient>
         </TouchableOpacity>
 
-        <View style={{ height: 20 }} />
+        <View style={{ height: 14 }} />
 
-        <TouchableOpacity
-          style={styles.languageBtn}
-          onPress={function() { onSelect('en'); }}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={['#6C63FF', '#8B85FF']}
-            style={styles.languageBtnGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <Text style={styles.languageBtnText}>English</Text>
-            <Text style={styles.languageBtnSub}>{'\u0d89\u0d82\u0d9c\u0dca\u200d\u0dbb\u0dd3\u0dc3\u0dd2'}</Text>
+        <TouchableOpacity style={ls.langBtn} onPress={function () { onSelect('en'); }} activeOpacity={0.85}>
+          <LinearGradient colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)']} style={ls.langGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <View style={ls.langInner}>
+              <Text style={ls.langFlag}>{'\uD83C\uDF10'}</Text>
+              <View>
+                <Text style={ls.langLabel}>English</Text>
+                <Text style={ls.langSub}>{'\u0d89\u0d82\u0d9c\u0dca\u200d\u0dbb\u0dd3\u0dc3\u0dd2'}</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.4)" />
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
@@ -251,43 +460,125 @@ function LanguageStep({ onSelect }) {
   );
 }
 
-/* ──────────── STEP 0: WELCOME ──────────── */
+var ls = StyleSheet.create({
+  mainTitle: { fontSize: 42, fontWeight: '900', color: '#FBBF24', letterSpacing: 4, textShadowColor: 'rgba(255,107,0,0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 20 },
+  divider: { width: 60, height: 3, borderRadius: 2, marginVertical: 16, overflow: 'hidden' },
+  siTitle: { fontSize: 22, fontWeight: '700', color: '#FF8C33', marginBottom: 4 },
+  enTitle: { fontSize: 15, color: 'rgba(255,255,255,0.5)' },
+  langBtn: { borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  langGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 22, paddingHorizontal: 22, borderRadius: 18 },
+  langInner: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  langFlag: { fontSize: 34 },
+  langLabel: { fontSize: 24, fontWeight: '700', color: '#FFF' },
+  langSub: { fontSize: 13, color: 'rgba(255,255,255,0.55)', marginTop: 2 },
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════
+//  STEP 0: WELCOME
+// ═══════════════════════════════════════════════════════════════════════
+
 function WelcomeStep({ onContinue, lang }) {
   var T = OB[lang] || OB.en;
+  var pulse = useSharedValue(0);
+  var haloRotate = useSharedValue(0);
+  useEffect(function () {
+    pulse.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    haloRotate.value = withRepeat(withTiming(360, { duration: 15000, easing: Easing.linear }), -1, false);
+  }, []);
+  var pulseStyle = useAnimatedStyle(function () {
+    return {
+      transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.1]) }],
+      opacity: interpolate(pulse.value, [0, 1], [0.85, 1]),
+    };
+  });
+  var haloStyle = useAnimatedStyle(function () {
+    return { transform: [{ rotate: haloRotate.value + 'deg' }] };
+  });
+
   return (
-    <View style={styles.stepContainer}>
-      <Animated.View entering={FadeInDown.duration(800)}>
-        <Text style={styles.welcomeEmoji}>{'\u2728\ud83c\udf1f\u2728'}</Text>
-        <Text style={styles.welcomeTitle}>Nakath AI</Text>
-        <Text style={styles.welcomeSubtitle}>{T.welcomeSubtitle}</Text>
-        <Text style={styles.welcomeDesc}>{T.welcomeDesc}</Text>
-      </Animated.View>
-      <Animated.View entering={FadeInUp.delay(400).duration(800)} style={styles.bottomSection}>
-        <TouchableOpacity style={styles.primaryBtn} onPress={onContinue} activeOpacity={0.8}>
+    <View style={g.center}>
+      <FloatingOrbs />
+      <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center' }}>
+        {/* Rotating halo ring */}
+        <Animated.View style={[ws.haloRing, haloStyle]}>
           <LinearGradient
-            colors={['#FF6B00', '#FF8C33']}
-            style={styles.btnGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+            colors={['#FF6B00', '#E040FB', '#FBBF24', '#FF6B00']}
+            style={ws.haloGrad}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          />
+        </Animated.View>
+        <Animated.View style={[ws.logoRing, pulseStyle]}>
+          <LinearGradient
+            colors={['rgba(255,107,0,0.25)', 'rgba(224,64,251,0.15)', 'rgba(251,191,36,0.1)']}
+            style={ws.logoInner}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           >
-            <Text style={styles.btnText}>{T.welcomeBtn}</Text>
+            <Text style={{ fontSize: 48 }}>{'\u2726'}</Text>
           </LinearGradient>
-        </TouchableOpacity>
-        <Text style={styles.hintText}>{T.welcomeHint}</Text>
+        </Animated.View>
+
+        <Text style={ws.title}>Nakath AI</Text>
+        <Text style={ws.subtitle}>{T.welcomeSubtitle}</Text>
+
+        <View style={ws.featureList}>
+          {T.welcomeDesc.split('\n').map(function (line, i) {
+            return (
+              <Animated.View key={i} entering={FadeInDown.delay(500 + i * 150).duration(400)} style={ws.featureLine}>
+                <LinearGradient colors={['#FF6B00', '#E040FB']} style={ws.featureDot} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                <Text style={ws.featureText}>{line.replace(/[•&]/g, '').trim()}</Text>
+              </Animated.View>
+            );
+          })}
+        </View>
+      </Animated.View>
+
+      <Animated.View entering={FadeInUp.delay(900).duration(600)} style={{ width: '100%', marginTop: 40 }}>
+        <PrimaryButton label={T.welcomeBtn} onPress={onContinue} icon="sparkles" />
+        <Text style={g.hint}>{T.welcomeHint}</Text>
       </Animated.View>
     </View>
   );
 }
 
-/* ──────────── STEP 1: PHONE ──────────── */
-function PhoneStep({ onContinue, lang }) {
+var ws = StyleSheet.create({
+  haloRing: { position: 'absolute', top: -12, width: 124, height: 124, borderRadius: 62, overflow: 'hidden' },
+  haloGrad: { width: '100%', height: '100%', borderRadius: 62, opacity: 0.25 },
+  logoRing: { width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: 'rgba(255,107,0,0.4)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  logoInner: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 38, fontWeight: '900', color: '#FBBF24', letterSpacing: 4, textShadowColor: 'rgba(255,107,0,0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16, marginBottom: 6 },
+  subtitle: { fontSize: 15, fontWeight: '600', color: '#FF8C33', marginBottom: 4 },
+  featureList: { marginTop: 28, alignSelf: 'stretch', gap: 12 },
+  featureLine: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 8 },
+  featureDot: { width: 8, height: 8, borderRadius: 4 },
+  featureText: { fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 22 },
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════
+//  STEP 1: PHONE NUMBER
+// ═══════════════════════════════════════════════════════════════════════
+
+function PhoneStep({ onContinue, onBack, lang }) {
   var T = OB[lang] || OB.en;
   var [phone, setPhone] = useState('');
   var [loading, setLoading] = useState(false);
   var [error, setError] = useState('');
   var { sendOtp } = useAuth();
+  var inputRef = useRef(null);
+  var borderShimmer = useSharedValue(0);
 
-  var handleSend = async function() {
+  useEffect(function () {
+    var t = setTimeout(function () { if (inputRef.current) inputRef.current.focus(); }, 500);
+    borderShimmer.value = withRepeat(withTiming(1, { duration: 2400, easing: Easing.linear }), -1, true);
+    return function () { clearTimeout(t); };
+  }, []);
+
+  var shimmerBorder = useAnimatedStyle(function () {
+    return { opacity: interpolate(borderShimmer.value, [0, 0.5, 1], [0.3, 0.7, 0.3]) };
+  });
+
+  var handleSend = async function () {
     var cleaned = phone.replace(/\D/g, '');
     if (cleaned.length < 9) { setError(T.phoneError); return; }
     setLoading(true); setError('');
@@ -302,39 +593,76 @@ function PhoneStep({ onContinue, lang }) {
   };
 
   return (
-    <View style={styles.stepContainer}>
-      <Animated.View entering={FadeInDown.duration(600)}>
-        <Ionicons name="phone-portrait-outline" size={48} color="#FF6B00" style={{ alignSelf: 'center', marginBottom: 16 }} />
-        <Text style={styles.stepTitle}>{T.phoneTitle}</Text>
-        <Text style={styles.stepSubtitle}>{T.phoneSubtitle}</Text>
-      </Animated.View>
-      <Animated.View entering={FadeInUp.delay(200).duration(600)} style={{ marginTop: 30 }}>
-        <View style={styles.phoneRow}>
-          <View style={styles.prefixBox}><Text style={styles.prefixText}>+94</Text></View>
-          <TextInput
-            style={styles.phoneInput}
-            placeholder={T.phonePlaceholder}
-            placeholderTextColor="#666"
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={function(t) { setPhone(t); setError(''); }}
-            maxLength={12}
-          />
+    <View style={g.stepWrap}>
+      <FloatingOrbs />
+      <StepHeader icon="call-outline" iconColor="#FF6B00" title={T.phoneTitle} subtitle={T.phoneSubtitle} />
+
+      <Animated.View entering={FadeInUp.delay(200).duration(500)} style={{ marginTop: 32 }}>
+        <AnimatedBorderCard>
+          <Text style={g.inputLabel}>{lang === 'si' ? '\u0daf\u0dd4\u0dbb\u0d9a\u0dad\u0db1 \u0d85\u0d82\u0d9a\u0dba' : 'PHONE NUMBER'}</Text>
+
+          {/* Country code label — separate row, no overlap */}
+          <View style={ps.countryRow}>
+            <LinearGradient colors={['rgba(255,107,0,0.15)', 'rgba(224,64,251,0.08)']} style={ps.countryBadge} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <Text style={ps.flagText}>{'\uD83C\uDDF1\uD83C\uDDF0'}</Text>
+              <Text style={ps.countryCode}>Sri Lanka  +94</Text>
+            </LinearGradient>
+          </View>
+
+          {/* Phone input — full-width, no prefix competition */}
+          <Animated.View style={shimmerBorder}>
+            <LinearGradient
+              colors={['#FF6B00', '#E040FB', '#9333EA', '#FF6B00']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={ps.inputGlow}
+            >
+              <View style={ps.inputInner}>
+                <TextInput
+                  ref={inputRef}
+                  style={ps.input}
+                  placeholder={T.phonePlaceholder}
+                  placeholderTextColor="rgba(255,255,255,0.2)"
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={function (t) { setPhone(t); setError(''); }}
+                  maxLength={12}
+                  selectionColor="#FF6B00"
+                />
+              </View>
+            </LinearGradient>
+          </Animated.View>
+
+          {error ? <Text style={g.error}>{error}</Text> : null}
+          <Text style={ps.networks}>{T.phoneNetwork}</Text>
+        </AnimatedBorderCard>
+
+        <View style={{ marginTop: 24 }}>
+          <PrimaryButton label={T.phoneSendOtp} onPress={handleSend} loading={loading} icon="arrow-forward" />
         </View>
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        <Text style={styles.networkText}>{T.phoneNetwork}</Text>
-        <TouchableOpacity style={styles.primaryBtn} onPress={handleSend} disabled={loading} activeOpacity={0.8}>
-          <LinearGradient colors={['#FF6B00', '#FF8C33']} style={styles.btnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-            {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.btnText}>{T.phoneSendOtp}</Text>}
-          </LinearGradient>
-        </TouchableOpacity>
       </Animated.View>
+
+      <GhostButton label={T.back || 'Back'} onPress={onBack} />
     </View>
   );
 }
 
-/* ──────────── STEP 2: OTP ──────────── */
-function OtpStep({ phone, referenceNo, onContinue, lang }) {
+var ps = StyleSheet.create({
+  countryRow: { marginTop: 4, marginBottom: 12, alignSelf: 'flex-start' },
+  countryBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,107,0,0.2)' },
+  flagText: { fontSize: 16 },
+  countryCode: { color: '#FF8C33', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
+  inputGlow: { borderRadius: 16, padding: 1.5 },
+  inputInner: { backgroundColor: 'rgba(4,3,12,0.9)', borderRadius: 15 },
+  input: { paddingHorizontal: 18, paddingVertical: 16, color: '#FFF', fontSize: 20, fontWeight: '700', letterSpacing: 2 },
+  networks: { fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginTop: 14 },
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════
+//  STEP 2: OTP VERIFICATION
+// ═══════════════════════════════════════════════════════════════════════
+
+function OtpStep({ phone, referenceNo, onContinue, onBack, lang }) {
   var T = OB[lang] || OB.en;
   var [otp, setOtp] = useState('');
   var [currentRef, setCurrentRef] = useState(referenceNo);
@@ -342,20 +670,34 @@ function OtpStep({ phone, referenceNo, onContinue, lang }) {
   var [error, setError] = useState('');
   var [devOtp, setDevOtp] = useState(null);
   var { verifyAndLogin, sendOtp: resendOtp } = useAuth();
-  
-  // Update ref if prop changes (rare case but good practice)
-  useEffect(function() { setCurrentRef(referenceNo); }, [referenceNo]);
+  var inputRef = useRef(null);
+  var shieldPulse = useSharedValue(0);
 
-  useEffect(function() {
+  useEffect(function () { setCurrentRef(referenceNo); }, [referenceNo]);
+
+  useEffect(function () {
+    shieldPulse.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+
+  var shieldGlow = useAnimatedStyle(function () {
+    return { opacity: interpolate(shieldPulse.value, [0, 1], [0.4, 1]) };
+  });
+
+  useEffect(function () {
     if (__DEV__ && phone) {
       fetch(BASE + '/api/auth/dev-otp/' + encodeURIComponent(phone))
-        .then(function(r) { return r.json(); })
-        .then(function(d) { if (d.otp) setDevOtp(d.otp); })
-        .catch(function() {});
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (d.otp) setDevOtp(d.otp); })
+        .catch(function () {});
     }
   }, [phone]);
 
-  var handleVerify = async function() {
+  useEffect(function () {
+    var t = setTimeout(function () { if (inputRef.current) inputRef.current.focus(); }, 500);
+    return function () { clearTimeout(t); };
+  }, []);
+
+  var handleVerify = async function () {
     if (!otp || otp.length < 4) { setError(T.otpError); return; }
     setLoading(true); setError('');
     try {
@@ -366,67 +708,106 @@ function OtpStep({ phone, referenceNo, onContinue, lang }) {
     finally { setLoading(false); }
   };
 
-  var handleResend = async function() {
-    try { 
+  var handleResend = async function () {
+    try {
       var res = await resendOtp(phone);
       if (res && res.referenceNo) setCurrentRef(res.referenceNo);
-      Alert.alert('', T.otpResend); 
-    }
-    catch (e) { Alert.alert('', T.otpResendFailed); }
+      Alert.alert('', T.otpResend);
+    } catch (e) { Alert.alert('', T.otpResendFailed); }
   };
 
+  var maskedPhone = phone ? phone.slice(0, -3).replace(/./g, '\u2022') + phone.slice(-3) : '';
+
   return (
-    <View style={styles.stepContainer}>
-      <Animated.View entering={FadeInDown.duration(600)}>
-        <Ionicons name="shield-checkmark-outline" size={48} color="#FF6B00" style={{ alignSelf: 'center', marginBottom: 16 }} />
-        <Text style={styles.stepTitle}>{T.otpTitle}</Text>
-        <Text style={styles.stepSubtitle}>{T.otpSubtitle} {phone}</Text>
-      </Animated.View>
-      <Animated.View entering={FadeInUp.delay(200).duration(600)} style={{ marginTop: 30 }}>
+    <View style={g.stepWrap}>
+      <FloatingOrbs />
+      <StepHeader icon="shield-checkmark-outline" iconColor="#FBBF24" title={T.otpTitle} subtitle={T.otpSubtitle + ' ' + maskedPhone} />
+
+      <Animated.View entering={FadeInUp.delay(200).duration(500)} style={{ marginTop: 28 }}>
         {devOtp ? (
-          <View style={styles.devOtpBox}>
-            <Text style={styles.devOtpLabel}>{T.otpDevLabel}</Text>
-            <Text style={styles.devOtpCode}>{devOtp}</Text>
-          </View>
+          <Animated.View entering={FadeInDown.duration(400)} style={os.devBox}>
+            <Text style={os.devLabel}>{T.otpDevLabel}</Text>
+            <Text style={os.devCode}>{devOtp}</Text>
+          </Animated.View>
         ) : null}
-        <TextInput
-          style={styles.otpInput}
-          placeholder={T.otpPlaceholder}
-          placeholderTextColor="#666"
-          keyboardType="number-pad"
-          value={otp}
-          onChangeText={function(t) { setOtp(t); setError(''); }}
-          maxLength={6}
-        />
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        <TouchableOpacity onPress={handleResend}><Text style={styles.resendText}>{T.otpResend}</Text></TouchableOpacity>
-        <Text style={styles.hintText}>{T.otpHint}</Text>
-        <TouchableOpacity style={styles.primaryBtn} onPress={handleVerify} disabled={loading} activeOpacity={0.8}>
-          <LinearGradient colors={['#FF6B00', '#FF8C33']} style={styles.btnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-            {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.btnText}>{T.otpVerify}</Text>}
-          </LinearGradient>
-        </TouchableOpacity>
+
+        <AnimatedBorderCard>
+          <Animated.View style={[{ alignItems: 'center', marginBottom: 8 }, shieldGlow]}>
+            <Text style={{ fontSize: 28 }}>{'\uD83D\uDD12'}</Text>
+          </Animated.View>
+          <Text style={[g.inputLabel, { textAlign: 'center' }]}>
+            {lang === 'si' ? '\u0dc3\u0dad\u0dca\u200d\u0dba\u0dcf\u0db0\u0db1 \u0d9a\u0dda\u0dad\u0dba' : 'VERIFICATION CODE'}
+          </Text>
+          <TextInput
+            ref={inputRef}
+            style={os.input}
+            placeholder="0  0  0  0  0  0"
+            placeholderTextColor="rgba(255,255,255,0.2)"
+            keyboardType="number-pad"
+            value={otp}
+            onChangeText={function (t) { setOtp(t); setError(''); }}
+            maxLength={6}
+            selectionColor="#FBBF24"
+          />
+          {error ? <Text style={g.error}>{error}</Text> : null}
+        </AnimatedBorderCard>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16 }}>
+          <TouchableOpacity onPress={handleResend} style={os.resendBtn}>
+            <Ionicons name="refresh" size={15} color="#FF8C33" />
+            <Text style={os.resendText}>{T.otpResend}</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={g.hint}>{T.otpHint}</Text>
+
+        <View style={{ marginTop: 20 }}>
+          <PrimaryButton label={T.otpVerify} onPress={handleVerify} loading={loading} icon="checkmark-circle" />
+        </View>
       </Animated.View>
+
+      <GhostButton label={T.back || 'Back'} onPress={onBack} />
     </View>
   );
 }
 
-/* ──────────── STEP 3: SUBSCRIPTION ──────────── */
+var os = StyleSheet.create({
+  input: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 18, color: '#FBBF24', fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: 12, borderWidth: 1.5, borderColor: 'rgba(251,191,36,0.2)', marginTop: 12 },
+  resendBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 16 },
+  resendText: { color: '#FF8C33', fontSize: 13, fontWeight: '600' },
+  devBox: { backgroundColor: 'rgba(0,255,100,0.08)', borderRadius: 14, padding: 14, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,255,100,0.2)' },
+  devLabel: { color: 'rgba(0,255,100,0.7)', fontSize: 11 },
+  devCode: { color: '#00FF64', fontSize: 30, fontWeight: '800', letterSpacing: 8, marginTop: 4 },
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════
+//  STEP 3: SUBSCRIPTION
+// ═══════════════════════════════════════════════════════════════════════
+
 function SubscriptionStep({ onContinue, lang }) {
   var T = OB[lang] || OB.en;
   var [loading, setLoading] = useState(false);
   var { activateSubscription } = useAuth();
+  var priceGlow = useSharedValue(0);
+
+  useEffect(function () {
+    priceGlow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+
+  var priceStyle = useAnimatedStyle(function () {
+    return { transform: [{ scale: interpolate(priceGlow.value, [0, 1], [1, 1.05]) }] };
+  });
 
   var features = [
-    { icon: 'calendar', text: T.subFeature1 },
-    { icon: 'planet', text: T.subFeature2 },
-    { icon: 'heart', text: T.subFeature3 },
-    { icon: 'document-text', text: T.subFeature4 },
-    { icon: 'time', text: T.subFeature5 },
-    { icon: 'star', text: T.subFeature6 },
+    { icon: 'calendar-outline', text: T.subFeature1, color: '#FF6B00' },
+    { icon: 'planet-outline', text: T.subFeature2, color: '#E040FB' },
+    { icon: 'heart-outline', text: T.subFeature3, color: '#FF4081' },
+    { icon: 'sparkles-outline', text: T.subFeature4, color: '#FBBF24' },
+    { icon: 'notifications-outline', text: T.subFeature5, color: '#06D6A0' },
+    { icon: 'star-outline', text: T.subFeature6, color: '#FF8C33' },
   ];
 
-  var handleSub = async function() {
+  var handleSub = async function () {
     setLoading(true);
     try {
       await activateSubscription();
@@ -437,42 +818,63 @@ function SubscriptionStep({ onContinue, lang }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.stepContainer}>
-      <Animated.View entering={FadeInDown.duration(600)}>
-        <Ionicons name="diamond" size={48} color="#FFD700" style={{ alignSelf: 'center', marginBottom: 16 }} />
-        <Text style={styles.stepTitle}>{T.subTitle}</Text>
-        <Text style={styles.stepSubtitle}>{T.subSubtitle}</Text>
-      </Animated.View>
-      <Animated.View entering={FadeInUp.delay(200).duration(600)} style={{ marginTop: 20 }}>
-        {features.map(function(f, i) {
-          return (
-            <View key={i} style={styles.featureRow}>
-              <Ionicons name={f.icon} size={22} color="#FF6B00" />
-              <Text style={styles.featureText}>{f.text}</Text>
-            </View>
-          );
-        })}
-        <View style={styles.priceBox}>
-          <Text style={styles.priceAmount}>LKR 8</Text>
-          <Text style={styles.priceLabel}>{T.subPerDay}</Text>
-        </View>
-        <Text style={styles.priceNote}>{T.subNote}</Text>
-        <Text style={styles.networkText}>{T.subNetworks}</Text>
-        <TouchableOpacity style={styles.primaryBtn} onPress={handleSub} disabled={loading} activeOpacity={0.8}>
-          <LinearGradient colors={['#FF6B00', '#FF8C33']} style={styles.btnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-            {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.btnText}>{T.subBtn}</Text>}
+    <ScrollView contentContainerStyle={g.stepWrap} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ backgroundColor: 'transparent' }} bounces={false} overScrollMode="never">
+      <FloatingOrbs />
+      <StepHeader icon="diamond-outline" iconColor="#FBBF24" title={T.subTitle} subtitle={T.subSubtitle} />
+
+      <Animated.View entering={FadeInUp.delay(200).duration(500)} style={{ marginTop: 20 }}>
+        <AnimatedBorderCard>
+          {features.map(function (f, i) {
+            return (
+              <Animated.View key={i} entering={FadeInDown.delay(300 + i * 80).duration(300)} style={ss.featureRow}>
+                <LinearGradient colors={[f.color + '20', f.color + '08']} style={ss.featureIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                  <Ionicons name={f.icon} size={18} color={f.color} />
+                </LinearGradient>
+                <Text style={ss.featureText}>{f.text}</Text>
+              </Animated.View>
+            );
+          })}
+        </AnimatedBorderCard>
+
+        <Animated.View entering={FadeInUp.delay(700).duration(500)} style={[ss.priceBadge, priceStyle]}>
+          <LinearGradient
+            colors={['rgba(255,107,0,0.2)', 'rgba(224,64,251,0.12)', 'rgba(251,191,36,0.1)']}
+            style={ss.priceGrad}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          >
+            <Text style={ss.priceLabel}>LKR</Text>
+            <Text style={ss.priceAmount}>8</Text>
+            <Text style={ss.pricePer}>{T.subPerDay}</Text>
           </LinearGradient>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onContinue}>
-          <Text style={styles.skipText}>{T.subSkip}</Text>
-        </TouchableOpacity>
+        </Animated.View>
+
+        <Text style={[g.hint, { marginTop: 8 }]}>{T.subNote}</Text>
+        <Text style={[g.hint, { marginTop: 4, opacity: 0.4 }]}>{T.subNetworks}</Text>
+
+        <View style={{ marginTop: 24 }}>
+          <PrimaryButton label={T.subBtn} onPress={handleSub} loading={loading} icon="flash" />
+        </View>
       </Animated.View>
     </ScrollView>
   );
 }
 
+var ss = StyleSheet.create({
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 10 },
+  featureIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  featureText: { color: 'rgba(255,255,255,0.85)', fontSize: 14, flex: 1, lineHeight: 20 },
+  priceBadge: { marginTop: 20, borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,107,0,0.25)', alignSelf: 'center' },
+  priceGrad: { flexDirection: 'row', alignItems: 'baseline', paddingVertical: 14, paddingHorizontal: 32, gap: 4 },
+  priceLabel: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.5)' },
+  priceAmount: { fontSize: 42, fontWeight: '900', color: '#FBBF24', textShadowColor: 'rgba(255,107,0,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
+  pricePer: { fontSize: 14, color: 'rgba(255,255,255,0.5)', marginLeft: 2 },
+});
 
-/* ──────────── STEP 4: BIRTH DATA (multi-page wizard) ──────────── */
+
+// ═══════════════════════════════════════════════════════════════════════
+//  STEP 4: BIRTH DATA — 4-page wizard
+// ═══════════════════════════════════════════════════════════════════════
+
 function BirthDataStep({ onComplete, lang }) {
   var T = OB[lang] || OB.en;
   var [page, setPage] = useState(0);
@@ -489,15 +891,15 @@ function BirthDataStep({ onComplete, lang }) {
   var [error, setError] = useState('');
   var { completeOnboarding } = useAuth();
 
-  var filteredCities = SL_CITIES.filter(function(c) {
+  var filteredCities = SL_CITIES.filter(function (c) {
     if (!citySearch) return true;
     var q = citySearch.toLowerCase();
-    return c.name.toLowerCase().includes(q) || c.sinhala.includes(citySearch);
+    return c.name.toLowerCase().includes(q) || c.si.includes(citySearch);
   });
 
   var progressLabels = [T.subProgressName, T.subProgressDate, T.subProgressTime, T.subProgressPlace];
 
-  var handleSubmit = async function() {
+  var handleSubmit = async function () {
     if (displayName.trim().length < 2) { setError(T.nameError); setPage(0); return; }
     setLoading(true); setError('');
     try {
@@ -507,18 +909,14 @@ function BirthDataStep({ onComplete, lang }) {
         if (ampm === 'PM' && h < 12) h += 12;
         if (ampm === 'AM' && h === 12) h = 0;
         var m = parseInt(minute) || 0;
-        
-        // Store as naive SL time string (no UTC conversion)
-        // Format: "YYYY-MM-DDThh:mm:00" — always interpreted as Asia/Colombo
-        var pad = function(n) { return n.toString().padStart(2, '0'); };
+        var pad = function (n) { return n.toString().padStart(2, '0'); };
         var dateTime = parseInt(year) + '-' + pad(month + 1) + '-' + pad(parseInt(day)) + 'T' + pad(h) + ':' + pad(m) + ':00';
-        
         birthData = {
           dateTime: dateTime,
           lat: selectedCity ? selectedCity.lat : 6.9271,
           lng: selectedCity ? selectedCity.lng : 79.8612,
           locationName: selectedCity ? selectedCity.name : 'Colombo',
-          timezone: 'Asia/Colombo', // Default to SL
+          timezone: 'Asia/Colombo',
         };
       }
       await completeOnboarding(displayName.trim(), Object.keys(birthData).length > 0 ? birthData : null);
@@ -527,174 +925,202 @@ function BirthDataStep({ onComplete, lang }) {
     finally { setLoading(false); }
   };
 
-  /* Sub-page: Name */
-  var renderNamePage = function() {
+  /* Progress bar */
+  var renderProgress = function () {
     return (
-      <Animated.View key="name" entering={FadeIn.duration(400)}>
-        <Ionicons name="person-circle-outline" size={48} color="#FF6B00" style={{ alignSelf: 'center', marginBottom: 16 }} />
-        <Text style={styles.stepTitle}>{T.nameTitle}</Text>
-        <Text style={styles.stepSubtitle}>{T.nameSubtitle}</Text>
-        <View style={{ marginTop: 30 }}>
-          <Text style={styles.inputLabel}>{T.nameLabel}</Text>
+      <View style={bd.progressRow}>
+        {progressLabels.map(function (label, i) {
+          var active = i <= page;
+          var current = i === page;
+          return (
+            <TouchableOpacity
+              key={i} style={bd.progressItem}
+              onPress={function () { if (i < page) setPage(i); }}
+              disabled={i >= page} activeOpacity={0.7}
+            >
+              <View style={[bd.progressLine, active && bd.progressLineActive, current && bd.progressLineCurrent]} />
+              <Text style={[bd.progressLabel, active && bd.progressLabelActive]}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
+
+  /* PAGE 0: Name */
+  var renderNamePage = function () {
+    return (
+      <Animated.View key="name" entering={FadeIn.duration(300)}>
+        <StepHeader icon="person-circle-outline" iconColor="#FBBF24" title={T.nameTitle} subtitle={T.nameSubtitle} />
+        <GlowCard style={{ marginTop: 24 }}>
+          <Text style={g.inputLabel}>{T.nameLabel}</Text>
           <TextInput
-            style={styles.textInput}
+            style={g.textInput}
             placeholder={T.namePlaceholder}
-            placeholderTextColor="#666"
+            placeholderTextColor="rgba(255,255,255,0.2)"
             value={displayName}
-            onChangeText={function(t) { setDisplayName(t); setError(''); }}
+            onChangeText={function (t) { setDisplayName(t); setError(''); }}
             autoFocus
+            selectionColor="#FF6B00"
           />
-          {error && page === 0 ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error && page === 0 ? <Text style={g.error}>{error}</Text> : null}
+        </GlowCard>
+        <View style={{ marginTop: 24 }}>
+          <PrimaryButton
+            label={T.continueBtn}
+            onPress={function () { if (displayName.trim().length >= 2) setPage(1); else setError(T.nameError); }}
+            disabled={displayName.trim().length < 2}
+            icon="arrow-forward"
+          />
         </View>
-        <TouchableOpacity
-          style={[styles.primaryBtn, displayName.trim().length < 2 && styles.disabledBtn]}
-          onPress={function() { if (displayName.trim().length >= 2) setPage(1); else setError(T.nameError); }}
-          disabled={displayName.trim().length < 2}
-          activeOpacity={0.8}
-        >
-          <LinearGradient colors={displayName.trim().length >= 2 ? ['#FF6B00', '#FF8C33'] : ['#444', '#555']} style={styles.btnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-            <Text style={styles.btnText}>{T.continueBtn}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
       </Animated.View>
     );
   };
 
-  /* Sub-page: Date */
-  var renderDatePage = function() {
+  /* PAGE 1: Date */
+  var renderDatePage = function () {
     return (
-      <Animated.View key="date" entering={FadeIn.duration(400)}>
-        <Text style={styles.stepTitle}>{T.dateTitle}</Text>
-        <Text style={styles.stepSubtitle}>{T.dateSubtitle}</Text>
-        <View style={{ marginTop: 20 }}>
-          <Text style={styles.inputLabel}>{T.yearLabel}</Text>
-          <TextInput style={styles.textInput} placeholder={T.yearPlaceholder} placeholderTextColor="#666" keyboardType="number-pad" value={year} onChangeText={setYear} maxLength={4} />
-          <Text style={[styles.inputLabel, { marginTop: 16 }]}>{T.monthLabel}</Text>
-          <View style={styles.monthGrid}>
-            {T.months.map(function(m, i) {
+      <Animated.View key="date" entering={FadeIn.duration(300)}>
+        <StepHeader icon="calendar-outline" iconColor="#E040FB" title={T.dateTitle} subtitle={T.dateSubtitle} />
+
+        <GlowCard style={{ marginTop: 20 }}>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={g.inputLabel}>{T.yearLabel}</Text>
+              <TextInput style={g.textInput} placeholder={T.yearPlaceholder} placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={year} onChangeText={setYear} maxLength={4} selectionColor="#FF6B00" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={g.inputLabel}>{T.dayLabel}</Text>
+              <TextInput style={g.textInput} placeholder={T.dayPlaceholder} placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={day} onChangeText={setDay} maxLength={2} selectionColor="#FF6B00" />
+            </View>
+          </View>
+
+          <Text style={[g.inputLabel, { marginTop: 18 }]}>{T.monthLabel}</Text>
+          <View style={bd.monthGrid}>
+            {T.months.map(function (m, i) {
+              var sel = month === i;
               return (
-                <TouchableOpacity key={i} style={[styles.monthChip, month === i && styles.monthChipActive]} onPress={function() { setMonth(i); }}>
-                  <Text style={[styles.monthChipText, month === i && styles.monthChipTextActive]}>{m.slice(0, 3)}</Text>
+                <TouchableOpacity key={i} style={[bd.monthChip, sel && bd.monthChipSel]} onPress={function () { setMonth(i); }} activeOpacity={0.7}>
+                  <Text style={[bd.monthText, sel && bd.monthTextSel]}>{m}</Text>
                 </TouchableOpacity>
               );
             })}
           </View>
-          <Text style={[styles.inputLabel, { marginTop: 16 }]}>{T.dayLabel}</Text>
-          <TextInput style={styles.textInput} placeholder={T.dayPlaceholder} placeholderTextColor="#666" keyboardType="number-pad" value={day} onChangeText={setDay} maxLength={2} />
-          <Text style={styles.hintText}>{T.dateHint}</Text>
-        </View>
-        <View style={styles.navRow}>
-          <TouchableOpacity onPress={function() { setPage(0); }}><Text style={styles.backText}>{T.back}</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.primaryBtnSmall} onPress={function() { setPage(2); }} activeOpacity={0.8}>
-            <LinearGradient colors={['#FF6B00', '#FF8C33']} style={styles.btnGradientSmall} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-              <Text style={styles.btnTextSmall}>{T.continueBtn}</Text>
-            </LinearGradient>
+        </GlowCard>
+
+        <Text style={[g.hint, { marginTop: 10 }]}>{'\uD83D\uDCA1'} {T.dateHint}</Text>
+
+        <View style={bd.navRow}>
+          <TouchableOpacity onPress={function () { setPage(0); }} style={bd.backBtn}>
+            <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.5)" />
+            <Text style={bd.backText}>{T.back}</Text>
           </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <PrimaryButton label={T.continueBtn} onPress={function () { setPage(2); }} icon="arrow-forward" />
+          </View>
         </View>
       </Animated.View>
     );
   };
 
-  /* Sub-page: Time */
-  var renderTimePage = function() {
+  /* PAGE 2: Time */
+  var renderTimePage = function () {
     return (
-      <Animated.View key="time" entering={FadeIn.duration(400)}>
-        <Text style={styles.stepTitle}>{T.timeTitle}</Text>
-        <Text style={styles.stepSubtitle}>{T.timeSubtitle}</Text>
-        <View style={{ marginTop: 20 }}>
-          <View style={styles.timeRow}>
+      <Animated.View key="time" entering={FadeIn.duration(300)}>
+        <StepHeader icon="time-outline" iconColor="#06B6D4" title={T.timeTitle} subtitle={T.timeSubtitle} />
+
+        <GlowCard style={{ marginTop: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.inputLabel}>{T.hourLabel}</Text>
-              <TextInput style={styles.textInput} placeholder="12" placeholderTextColor="#666" keyboardType="number-pad" value={hour} onChangeText={setHour} maxLength={2} />
+              <Text style={g.inputLabel}>{T.hourLabel}</Text>
+              <TextInput style={[g.textInput, { textAlign: 'center', fontSize: 24, fontWeight: '700' }]} placeholder="12" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={hour} onChangeText={setHour} maxLength={2} selectionColor="#06B6D4" />
             </View>
-            <Text style={styles.timeSeparator}>:</Text>
+            <Text style={{ color: '#FBBF24', fontSize: 32, fontWeight: '800', marginTop: 16 }}>:</Text>
             <View style={{ flex: 1 }}>
-              <Text style={styles.inputLabel}>{T.minuteLabel}</Text>
-              <TextInput style={styles.textInput} placeholder="00" placeholderTextColor="#666" keyboardType="number-pad" value={minute} onChangeText={setMinute} maxLength={2} />
+              <Text style={g.inputLabel}>{T.minuteLabel}</Text>
+              <TextInput style={[g.textInput, { textAlign: 'center', fontSize: 24, fontWeight: '700' }]} placeholder="00" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={minute} onChangeText={setMinute} maxLength={2} selectionColor="#06B6D4" />
             </View>
           </View>
-          <View style={styles.ampmRow}>
-            <TouchableOpacity style={[styles.ampmBtn, ampm === 'AM' && styles.ampmActive]} onPress={function() { setAmpm('AM'); }}>
-              <Text style={[styles.ampmText, ampm === 'AM' && styles.ampmActiveText]}>AM</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.ampmBtn, ampm === 'PM' && styles.ampmActive]} onPress={function() { setAmpm('PM'); }}>
-              <Text style={[styles.ampmText, ampm === 'PM' && styles.ampmActiveText]}>PM</Text>
-            </TouchableOpacity>
+
+          <View style={bd.ampmRow}>
+            {['AM', 'PM'].map(function (v) {
+              var sel = ampm === v;
+              return (
+                <TouchableOpacity key={v} style={[bd.ampmBtn, sel && bd.ampmSel]} onPress={function () { setAmpm(v); }} activeOpacity={0.7}>
+                  <Text style={[bd.ampmText, sel && bd.ampmTextSel]}>{v}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          <Text style={styles.hintText}>{T.timeHint}</Text>
-        </View>
-        <View style={styles.navRow}>
-          <TouchableOpacity onPress={function() { setPage(1); }}><Text style={styles.backText}>{T.back}</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.primaryBtnSmall} onPress={function() { setPage(3); }} activeOpacity={0.8}>
-            <LinearGradient colors={['#FF6B00', '#FF8C33']} style={styles.btnGradientSmall} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-              <Text style={styles.btnTextSmall}>{T.continueBtn}</Text>
-            </LinearGradient>
+        </GlowCard>
+
+        <Text style={[g.hint, { marginTop: 10 }]}>{'\uD83D\uDCA1'} {T.timeHint}</Text>
+
+        <View style={bd.navRow}>
+          <TouchableOpacity onPress={function () { setPage(1); }} style={bd.backBtn}>
+            <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.5)" />
+            <Text style={bd.backText}>{T.back}</Text>
           </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <PrimaryButton label={T.continueBtn} onPress={function () { setPage(3); }} icon="arrow-forward" />
+          </View>
         </View>
       </Animated.View>
     );
   };
 
-  /* Sub-page: Place */
-  var renderPlacePage = function() {
+  /* PAGE 3: Place */
+  var renderPlacePage = function () {
     return (
-      <Animated.View key="place" entering={FadeIn.duration(400)}>
-        <Text style={styles.stepTitle}>{T.placeTitle}</Text>
-        <Text style={styles.stepSubtitle}>{T.placeSubtitle}</Text>
-        <View style={{ marginTop: 20 }}>
+      <Animated.View key="place" entering={FadeIn.duration(300)}>
+        <StepHeader icon="location-outline" iconColor="#F472B6" title={T.placeTitle} subtitle={T.placeSubtitle} />
+
+        <GlowCard style={{ marginTop: 20 }}>
           <TextInput
-            style={styles.textInput}
+            style={[g.textInput, { marginBottom: 12 }]}
             placeholder={T.placeSearch}
-            placeholderTextColor="#666"
+            placeholderTextColor="rgba(255,255,255,0.2)"
             value={citySearch}
             onChangeText={setCitySearch}
+            selectionColor="#F472B6"
           />
-          <ScrollView style={styles.cityList} nestedScrollEnabled>
-            {filteredCities.map(function(city, i) {
-              var isSelected = selectedCity && selectedCity.name === city.name;
+          <ScrollView style={bd.cityList} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+            {filteredCities.map(function (city, i) {
+              var isSel = selectedCity && selectedCity.name === city.name;
               return (
-                <TouchableOpacity key={i} style={[styles.cityItem, isSelected && styles.cityItemActive]} onPress={function() { setSelectedCity(city); }}>
-                  <Text style={[styles.cityName, isSelected && styles.cityNameActive]}>
-                    {lang === 'si' ? city.sinhala : city.name}
-                  </Text>
-                  <Text style={styles.citySub}>
-                    {lang === 'si' ? city.name : city.sinhala}
-                  </Text>
-                  {isSelected ? <Ionicons name="checkmark-circle" size={20} color="#FF6B00" /> : null}
+                <TouchableOpacity key={i} style={[bd.cityItem, isSel && bd.citySel]} onPress={function () { setSelectedCity(city); }} activeOpacity={0.7}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[bd.cityName, isSel && { color: '#FBBF24' }]}>
+                      {lang === 'si' ? city.si : city.name}
+                    </Text>
+                    <Text style={bd.citySub}>{lang === 'si' ? city.name : city.si}</Text>
+                  </View>
+                  {isSel ? <Ionicons name="checkmark-circle" size={22} color="#FBBF24" /> : null}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
-          <Text style={styles.hintText}>{T.placeHint}</Text>
-        </View>
-        <View style={styles.navRow}>
-          <TouchableOpacity onPress={function() { setPage(2); }}><Text style={styles.backText}>{T.back}</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.primaryBtnSmall} onPress={handleSubmit} disabled={loading} activeOpacity={0.8}>
-            <LinearGradient colors={['#FF6B00', '#FF8C33']} style={styles.btnGradientSmall} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-              {loading ? <ActivityIndicator color="#FFF" size="small" /> : <Text style={styles.btnTextSmall}>{T.completeSetup}</Text>}
-            </LinearGradient>
+        </GlowCard>
+
+        <Text style={[g.hint, { marginTop: 8 }]}>{'\uD83D\uDCA1'} {T.placeHint}</Text>
+
+        <View style={bd.navRow}>
+          <TouchableOpacity onPress={function () { setPage(2); }} style={bd.backBtn}>
+            <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.5)" />
+            <Text style={bd.backText}>{T.back}</Text>
           </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <PrimaryButton label={T.completeSetup} onPress={handleSubmit} loading={loading} icon="checkmark-done" />
+          </View>
         </View>
-        <TouchableOpacity onPress={handleSubmit} disabled={loading}>
-          <Text style={styles.skipText}>{T.skipBirth}</Text>
-        </TouchableOpacity>
+        <GhostButton label={T.skipBirth} onPress={handleSubmit} />
       </Animated.View>
     );
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.stepContainer} keyboardShouldPersistTaps="handled">
-      {/* Progress bar */}
-      <View style={styles.progressRow}>
-        {progressLabels.map(function(label, i) {
-          return (
-            <View key={i} style={styles.progressItem}>
-              <View style={[styles.progressDot, i <= page && styles.progressDotActive]} />
-              <Text style={[styles.progressLabel, i <= page && styles.progressLabelActive]}>{label}</Text>
-            </View>
-          );
-        })}
-      </View>
+    <ScrollView contentContainerStyle={g.stepWrap} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ backgroundColor: 'transparent' }} bounces={false} overScrollMode="never">
+      {renderProgress()}
       {page === 0 ? renderNamePage()
         : page === 1 ? renderDatePage()
         : page === 2 ? renderTimePage()
@@ -703,45 +1129,130 @@ function BirthDataStep({ onComplete, lang }) {
   );
 }
 
-/* ──────────── STEP 5: COMPLETE ──────────── */
+var bd = StyleSheet.create({
+  progressRow: { flexDirection: 'row', gap: 8, marginBottom: 24 },
+  progressItem: { flex: 1, alignItems: 'center' },
+  progressLine: { width: '100%', height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 6 },
+  progressLineActive: { backgroundColor: 'rgba(255,107,0,0.5)' },
+  progressLineCurrent: { backgroundColor: '#FF6B00' },
+  progressLabel: { fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  progressLabelActive: { color: '#FF8C33' },
+  monthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
+  monthChip: { width: (SW - 24 * 2 - 40 - 8 * 3) / 4, paddingVertical: 11, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  monthChipSel: { backgroundColor: 'rgba(255,107,0,0.15)', borderColor: '#FF6B00' },
+  monthText: { color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '600' },
+  monthTextSel: { color: '#FF8C33', fontWeight: '700' },
+  ampmRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 18, gap: 14 },
+  ampmBtn: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  ampmSel: { backgroundColor: 'rgba(255,107,0,0.15)', borderColor: '#FF6B00' },
+  ampmText: { color: 'rgba(255,255,255,0.5)', fontSize: 17, fontWeight: '700' },
+  ampmTextSel: { color: '#FF8C33' },
+  cityList: { maxHeight: 200 },
+  cityItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', marginBottom: 6, borderWidth: 1, borderColor: 'transparent' },
+  citySel: { backgroundColor: 'rgba(255,107,0,0.1)', borderColor: 'rgba(255,107,0,0.3)' },
+  cityName: { color: '#FFF', fontSize: 15, fontWeight: '600' },
+  citySub: { color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 2 },
+  navRow: { flexDirection: 'row', alignItems: 'center', marginTop: 24, gap: 12 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 14, paddingHorizontal: 6 },
+  backText: { color: 'rgba(255,255,255,0.5)', fontSize: 14, fontWeight: '500' },
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════
+//  STEP 5: COMPLETE
+// ═══════════════════════════════════════════════════════════════════════
+
 function CompleteStep({ lang }) {
   var T = OB[lang] || OB.en;
+  var scale = useSharedValue(0.3);
+  var rotate = useSharedValue(0);
+  var ringPulse = useSharedValue(0);
+  var confetti1 = useSharedValue(0);
+  var confetti2 = useSharedValue(0);
+  var confetti3 = useSharedValue(0);
+
+  useEffect(function () {
+    scale.value = withSequence(
+      withSpring(1.3, { damping: 8, stiffness: 180 }),
+      withSpring(1, { damping: 12, stiffness: 120 })
+    );
+    rotate.value = withRepeat(withTiming(360, { duration: 12000, easing: Easing.linear }), -1, false);
+    ringPulse.value = withRepeat(withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sin) }), -1, true);
+    confetti1.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.linear }), -1, false);
+    confetti2.value = withDelay(500, withRepeat(withTiming(1, { duration: 3500, easing: Easing.linear }), -1, false));
+    confetti3.value = withDelay(1000, withRepeat(withTiming(1, { duration: 2800, easing: Easing.linear }), -1, false));
+  }, []);
+
+  var starStyle = useAnimatedStyle(function () {
+    return { transform: [{ scale: scale.value }, { rotate: rotate.value + 'deg' }] };
+  });
+  var ringStyle = useAnimatedStyle(function () {
+    return {
+      transform: [{ scale: interpolate(ringPulse.value, [0, 1], [1, 1.2]) }],
+      opacity: interpolate(ringPulse.value, [0, 1], [0.5, 0.15]),
+    };
+  });
+  var c1 = useAnimatedStyle(function () { return { transform: [{ translateY: interpolate(confetti1.value, [0, 1], [0, -180]) }, { translateX: interpolate(confetti1.value, [0, 0.5, 1], [0, 30, -10]) }], opacity: interpolate(confetti1.value, [0, 0.3, 1], [0, 1, 0]) }; });
+  var c2 = useAnimatedStyle(function () { return { transform: [{ translateY: interpolate(confetti2.value, [0, 1], [0, -200]) }, { translateX: interpolate(confetti2.value, [0, 0.5, 1], [0, -40, 15]) }], opacity: interpolate(confetti2.value, [0, 0.3, 1], [0, 1, 0]) }; });
+  var c3 = useAnimatedStyle(function () { return { transform: [{ translateY: interpolate(confetti3.value, [0, 1], [0, -160]) }, { translateX: interpolate(confetti3.value, [0, 0.5, 1], [0, 50, -20]) }], opacity: interpolate(confetti3.value, [0, 0.3, 1], [0, 1, 0]) }; });
+
   return (
-    <View style={[styles.stepContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+    <View style={g.center}>
+      <FloatingOrbs />
       <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center' }}>
-        <Text style={{ fontSize: 60, marginBottom: 20 }}>{'\ud83c\udf1f'}</Text>
-        <Text style={styles.stepTitle}>{T.completeTitle}</Text>
-        <Text style={styles.stepSubtitle}>{T.completeSubtitle}</Text>
-        <ActivityIndicator size="large" color="#FF6B00" style={{ marginTop: 30 }} />
-        <Text style={[styles.hintText, { marginTop: 16 }]}>{T.completeLoading}</Text>
+        <View style={{ width: 120, height: 120, alignItems: 'center', justifyContent: 'center' }}>
+          {/* Pulsing rings */}
+          <Animated.View style={[{ position: 'absolute', width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: '#FF6B00' }, ringStyle]} />
+          <Animated.View style={[{ position: 'absolute', width: 100, height: 100, borderRadius: 50, borderWidth: 1.5, borderColor: '#E040FB' }, ringStyle]} />
+          {/* Confetti particles */}
+          <Animated.Text style={[{ position: 'absolute', fontSize: 14 }, c1]}>{'\u2728'}</Animated.Text>
+          <Animated.Text style={[{ position: 'absolute', fontSize: 12 }, c2]}>{'\uD83C\uDF1F'}</Animated.Text>
+          <Animated.Text style={[{ position: 'absolute', fontSize: 10 }, c3]}>{'\u2B50'}</Animated.Text>
+          {/* Main star */}
+          <Animated.Text style={[{ fontSize: 56 }, starStyle]}>{'\uD83C\uDF1F'}</Animated.Text>
+        </View>
+
+        <Text style={[g.headerTitle, { fontSize: 28, marginTop: 16, color: '#FBBF24', textShadowColor: 'rgba(255,107,0,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16 }]}>{T.completeTitle}</Text>
+        <Text style={[g.headerSub, { color: '#FF8C33' }]}>{T.completeSubtitle}</Text>
+
+        <View style={{ marginTop: 32, alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#FF6B00" />
+          <Text style={[g.hint, { marginTop: 16, fontSize: 13, color: '#FF8C33' }]}>{T.completeLoading}</Text>
+        </View>
       </Animated.View>
     </View>
   );
 }
 
 
-/* ──────────── MAIN ONBOARDING SCREEN ──────────── */
+// ═══════════════════════════════════════════════════════════════════════
+//  MAIN ONBOARDING SCREEN
+// ═══════════════════════════════════════════════════════════════════════
+
 export default function OnboardingScreen() {
   var [step, setStep] = useState(-1);
   var [phone, setPhone] = useState('');
   var [referenceNo, setReferenceNo] = useState(null);
   var [lang, setLang] = useState('en');
   var { switchLanguage } = useLanguage();
+  var insets = useSafeAreaInsets();
 
-  var handleLanguageSelect = function(selectedLang) {
+  var handleLanguageSelect = function (selectedLang) {
     setLang(selectedLang);
     switchLanguage(selectedLang);
     setStep(0);
   };
 
-  var renderStep = function() {
+  var TOTAL_MAIN_STEPS = 6;
+
+  var renderStep = function () {
     switch (step) {
       case -1: return <LanguageStep onSelect={handleLanguageSelect} />;
-      case 0: return <WelcomeStep onContinue={function() { setStep(1); }} lang={lang} />;
-      case 1: return <PhoneStep onContinue={function(ph, ref) { setPhone(ph); setReferenceNo(ref); setStep(2); }} lang={lang} />;
-      case 2: return <OtpStep phone={phone} referenceNo={referenceNo} onContinue={function() { setStep(3); }} lang={lang} />;
-      case 3: return <SubscriptionStep onContinue={function() { setStep(4); }} lang={lang} />;
-      case 4: return <BirthDataStep onComplete={function() { setStep(5); }} lang={lang} />;
+      case 0: return <WelcomeStep onContinue={function () { setStep(1); }} lang={lang} />;
+      case 1: return <PhoneStep onContinue={function (ph, ref) { setPhone(ph); setReferenceNo(ref); setStep(2); }} onBack={function () { setStep(0); }} lang={lang} />;
+      case 2: return <OtpStep phone={phone} referenceNo={referenceNo} onContinue={function () { setStep(3); }} onBack={function () { setStep(1); }} lang={lang} />;
+      case 3: return <SubscriptionStep onContinue={function () { setStep(4); }} lang={lang} />;
+      case 4: return <BirthDataStep onComplete={function () { setStep(5); }} lang={lang} />;
       case 5: return <CompleteStep lang={lang} />;
       default: return <LanguageStep onSelect={handleLanguageSelect} />;
     }
@@ -749,411 +1260,49 @@ export default function OnboardingScreen() {
 
   return (
     <CosmicBackground>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        {renderStep()}
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: '#030014', overflow: 'hidden' }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <View style={{ flex: 1, paddingTop: insets.top + 8, paddingBottom: Math.max(insets.bottom, 12), overflow: 'hidden' }}>
+          {step >= 0 ? (
+            <View style={{ paddingHorizontal: 24, paddingTop: 4 }}>
+              <StepDots current={step} total={TOTAL_MAIN_STEPS} />
+            </View>
+          ) : null}
+          {renderStep()}
+        </View>
       </KeyboardAvoidingView>
     </CosmicBackground>
   );
 }
 
-/* ──────────── STYLES ──────────── */
-var styles = StyleSheet.create({
-  stepContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
-  languageContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  languageTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#FFD700',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  languageTitleEn: {
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  languageBtn: {
-    width: '100%',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  languageBtnGradient: {
-    paddingVertical: 24,
-    alignItems: 'center',
-    borderRadius: 16,
-  },
-  languageBtnText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  languageBtnSub: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 4,
-  },
-  welcomeEmoji: {
-    fontSize: 40,
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  welcomeTitle: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: '#FFD700',
-    textAlign: 'center',
-  },
-  welcomeSubtitle: {
-    fontSize: 16,
-    color: '#FF6B00',
-    textAlign: 'center',
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  welcomeDesc: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'center',
-    marginTop: 20,
-    lineHeight: 24,
-  },
-  bottomSection: {
-    marginTop: 40,
-  },
-  stepTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFF',
-    textAlign: 'center',
-  },
-  stepSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  primaryBtn: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginTop: 24,
-  },
-  btnGradient: {
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderRadius: 14,
-  },
-  btnText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  disabledBtn: {
-    opacity: 0.5,
-  },
-  hintText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
-    textAlign: 'center',
-    marginTop: 12,
-    lineHeight: 18,
-  },
-  phoneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  prefixBox: {
-    backgroundColor: 'rgba(255,107,0,0.15)',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,107,0,0.3)',
-    marginRight: 10,
-  },
-  prefixText: {
-    color: '#FF6B00',
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  phoneInput: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#FFF',
-    fontSize: 17,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  networkText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  errorText: {
-    color: '#FF4444',
-    fontSize: 13,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  otpInput: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#FFF',
-    fontSize: 24,
-    textAlign: 'center',
-    letterSpacing: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  resendText: {
-    color: '#FF6B00',
-    textAlign: 'center',
-    marginTop: 16,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  devOtpBox: {
-    backgroundColor: 'rgba(0,255,0,0.1)',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,255,0,0.3)',
-  },
-  devOtpLabel: {
-    color: '#00FF00',
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  devOtpCode: {
-    color: '#00FF00',
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: 6,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 10,
-    marginBottom: 8,
-  },
-  featureText: {
-    color: '#FFF',
-    fontSize: 14,
-    marginLeft: 12,
-    flex: 1,
-  },
-  priceBox: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  priceAmount: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: '#FFD700',
-  },
-  priceLabel: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.6)',
-    marginLeft: 8,
-  },
-  priceNote: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  skipText: {
-    color: 'rgba(255,255,255,0.5)',
-    textAlign: 'center',
-    marginTop: 16,
-    fontSize: 13,
-  },
-  inputLabel: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 6,
-    letterSpacing: 1,
-  },
-  textInput: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#FFF',
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  monthGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  monthChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  monthChipActive: {
-    backgroundColor: 'rgba(255,107,0,0.2)',
-    borderColor: '#FF6B00',
-  },
-  monthChipText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  monthChipTextActive: {
-    color: '#FF6B00',
-    fontWeight: '700',
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timeSeparator: {
-    color: '#FF6B00',
-    fontSize: 28,
-    fontWeight: '700',
-    marginHorizontal: 12,
-    marginTop: 20,
-  },
-  ampmRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 16,
-    gap: 12,
-  },
-  ampmBtn: {
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  ampmActive: {
-    backgroundColor: 'rgba(255,107,0,0.2)',
-    borderColor: '#FF6B00',
-  },
-  ampmText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  ampmActiveText: {
-    color: '#FF6B00',
-  },
-  cityList: {
-    maxHeight: 220,
-    marginTop: 12,
-  },
-  cityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  cityItemActive: {
-    backgroundColor: 'rgba(255,107,0,0.15)',
-    borderColor: 'rgba(255,107,0,0.4)',
-  },
-  cityName: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '500',
-    flex: 1,
-  },
-  cityNameActive: {
-    color: '#FF6B00',
-    fontWeight: '700',
-  },
-  citySub: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 12,
-    marginRight: 8,
-  },
-  navRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  backText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 15,
-  },
-  primaryBtnSmall: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  btnGradientSmall: {
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    borderRadius: 12,
-  },
-  btnTextSmall: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  progressRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 30,
-    gap: 20,
-  },
-  progressItem: {
-    alignItems: 'center',
-  },
-  progressDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    marginBottom: 4,
-  },
-  progressDotActive: {
-    backgroundColor: '#FF6B00',
-  },
-  progressLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.3)',
-  },
-  progressLabelActive: {
-    color: '#FF6B00',
-    fontWeight: '600',
-  },
+
+// ═══════════════════════════════════════════════════════════════════════
+//  GLOBAL STYLES
+// ═══════════════════════════════════════════════════════════════════════
+
+var g = StyleSheet.create({
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 20 },
+  stepWrap: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 20 },
+  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 4 },
+  dot: { width: 8, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.1)' },
+  dotActive: { backgroundColor: 'rgba(255,107,0,0.4)', width: 8 },
+  dotCurrent: { backgroundColor: '#FF6B00', width: 20 },
+  headerWrap: { alignItems: 'center', marginBottom: 4 },
+  headerIconBg: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,107,0,0.08)', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1 },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#FFF', textAlign: 'center', lineHeight: 30 },
+  headerSub: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 6, lineHeight: 20 },
+  card: { backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(255,107,0,0.08)' },
+  inputLabel: { color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '700', marginBottom: 8, letterSpacing: 1.2, textTransform: 'uppercase' },
+  textInput: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 15 : 13, color: '#FFF', fontSize: 16, fontWeight: '500', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  primaryBtn: { borderRadius: 16, overflow: 'hidden', shadowColor: '#FF6B00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 10 },
+  primaryGrad: { paddingVertical: 16, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
+  primaryText: { fontSize: 16, fontWeight: '800', color: '#FFF', letterSpacing: 0.5 },
+  ghostBtn: { alignItems: 'center', paddingVertical: 14, marginTop: 8 },
+  ghostText: { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: '500' },
+  error: { color: '#FF6B6B', fontSize: 12, marginTop: 8, textAlign: 'center', fontWeight: '500' },
+  hint: { fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginTop: 12, lineHeight: 17 },
 });

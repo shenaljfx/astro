@@ -16,6 +16,8 @@ const shareRoutes = require('./routes/share');
 const userRoutes = require('./routes/user');
 const authRoutes = require('./routes/auth');
 const rectificationRoutes = require('./routes/rectification');
+const predictionRoutes = require('./routes/predictions');
+const tokensRoutes = require('./routes/tokens');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,6 +52,8 @@ app.use('/api/share', shareRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/rectification', rectificationRoutes);
+app.use('/api/predictions', predictionRoutes);
+app.use('/api/tokens', tokensRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

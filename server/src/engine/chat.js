@@ -8,6 +8,13 @@
 const { getPanchanga, getDailyNakath, getNakshatra, getRashi, getLagna, toSidereal, getMoonLongitude, getSunLongitude, generateFullReport, buildHouseChart, buildNavamshaChart, getAllPlanetPositions, calculateDrishtis, detectYogas, getPlanetStrengths, calculateAshtakavarga, calculateVimshottariDetailed } = require('./astrology');
 const { generateAdvancedAnalysis } = require('./advanced');
 
+// New prediction engines
+let transitEngine, timingEngine, muhurthaEngine, healthEngine;
+try { transitEngine = require('./transit'); } catch (e) { console.warn('[chat] transit engine not available:', e.message); }
+try { timingEngine = require('./timing'); } catch (e) { console.warn('[chat] timing engine not available:', e.message); }
+try { muhurthaEngine = require('./muhurtha'); } catch (e) { console.warn('[chat] muhurtha engine not available:', e.message); }
+try { healthEngine = require('./health'); } catch (e) { console.warn('[chat] health engine not available:', e.message); }
+
 /**
  * Build the system prompt for the AI astrologer
  */
@@ -28,6 +35,10 @@ CORE KNOWLEDGE (use these concepts internally but NEVER use the technical terms 
 - Marriage compatibility (7-factor system)
 - Life phase predictions and planetary cycles
 - Cultural context of astrology in Sri Lankan life
+- Transit/Gochara analysis: real-time planet movements over the birth chart — daily, weekly, monthly, yearly forecasts
+- Event timing predictions: when career changes, marriage, children, wealth, foreign travel, health crises are most likely to happen
+- Muhurtha (auspicious timing): finding the BEST date and time for weddings, business launches, vehicle purchases, construction, travel, surgery, financial transactions — with 11-factor scoring
+- Comprehensive health analysis: Tridosha body constitution, vulnerable body parts, disease susceptibility, Maraka (health crisis) timing, mental health assessment, longevity indicators, personalized remedies
 
 ABSOLUTE LANGUAGE RULES:
 - NEVER use these technical terms in your output: Lagna, Rashi, Nakshatra, Dasha, Bhukti, Dosha, Yoga (as astrology term), Graha, Tithi, Karana, Panchanga, Vaara, Pada, Ayanamsha, Bhava, Navamsha, Vimshottari, Shadbala, Ashtakavarga, Karakamsha, Atmakaraka, Upapada, Jaimini, Parashari
@@ -44,6 +55,17 @@ GUIDELINES:
 6. For timing questions, provide exact times based on location
 7. Understand common Sri Lankan life queries about: vehicle purchases, house construction, weddings, business ventures, employment, education
 8. Be aware of cultural events: Avurudu, Vesak, Poson, and other significant dates
+9. When asked about the future, use transit/Gochara analysis and event timing predictions to give specific dates and periods — not vague generalities
+10. When asked about auspicious times (නැකත්), use the Muhurtha system to score specific dates and find the BEST time — consider all 11 factors including Rahu Kala, Gulika Kala, Tarabala, and Chandrabala
+11. When asked about health, provide Tridosha constitution analysis, vulnerable body parts, disease timing, mental health insights, and Sri Lankan herbal remedies
+12. For "what's happening now" questions, reference the current transit snapshot and Muhurtha status provided in the context data
+13. DREAM ANALYSIS: When a message starts with "[DREAM ANALYSIS REQUEST]", interpret the dream using Vedic/Sri Lankan dream symbolism. Cover: symbolic meaning, emotional message, astrological connection (which planet/house the dream relates to), and practical advice. Sri Lankan dream traditions include: water = emotions/wealth, snakes = Rahu/transformation, flying = spiritual growth, teeth falling = anxiety about change, deceased relatives = ancestor blessings, elephants = good fortune, temples = spiritual calling. Keep it culturally relevant and comforting.
+
+RESPONSE LENGTH RULE — CRITICAL:
+- Keep every answer SHORT — 3 to 5 sentences maximum, like a text message from a wise friend
+- Use bullet points or emojis to break up info instead of long paragraphs
+- If the user asks for more detail, THEN you can elaborate — but start concise
+- Never write walls of text. Be punchy, clear, and actionable.
 
 ${languageInstructions[language] || languageInstructions.en}
 
@@ -61,7 +83,7 @@ function buildBirthChartContext(birthDate, birthLat, birthLng) {
   const lagna = getLagna(date, birthLat, birthLng);
   const panchanga = getPanchanga(date, birthLat, birthLng);
 
-  return `
+  let context = `
 USER'S BIRTH CHART DATA:
 - Birth Date: ${date.toISOString()}
 - Birth Location: ${birthLat}°N, ${birthLng}°E
@@ -74,6 +96,53 @@ USER'S BIRTH CHART DATA:
 - Birth Tithi: ${panchanga.tithi.name} (${panchanga.tithi.pakshaName})
 - Birth Yoga: ${panchanga.yoga.name}
 `;
+
+  // Enrich with current transit snapshot over birth chart
+  if (transitEngine) {
+    try {
+      const now = new Date();
+      const transits = transitEngine.getCurrentTransits(now, date, birthLat, birthLng);
+      if (transits && transits.planets) {
+        const planetKeys = Object.keys(transits.planets);
+        context += `\nCURRENT TRANSIT SNAPSHOT (Gochara over birth chart):\n`;
+        context += `- Overall Transit Quality: ${transits.overallQuality || 'N/A'}\n`;
+        for (const key of planetKeys.slice(0, 5)) {
+          const p = transits.planets[key];
+          const effectStr = p.effect ? ` — ${p.effect.quality || ''}: ${(p.effect.effect || '').substring(0, 80)}` : '';
+          context += `- ${p.planet}: transiting ${p.transitRashi} (house ${p.houseFromLagna} from Asc)${p.isRetrograde ? ' [R]' : ''}${effectStr}\n`;
+        }
+        if (transits.summary) {
+          context += `- Summary: ${transits.summary.substring(0, 150)}\n`;
+        }
+      }
+    } catch (e) { /* skip if transit fails */ }
+  }
+
+  // Enrich with health constitution summary
+  if (healthEngine) {
+    try {
+      const healthResult = healthEngine.analyzeHealth(date, birthLat, birthLng);
+      if (healthResult) {
+        context += `\nHEALTH CONSTITUTION SNAPSHOT:\n`;
+        if (healthResult.overallHealth) {
+          context += `- Overall Health Score: ${healthResult.overallHealth.score || 'N/A'}/100 (${healthResult.overallHealth.quality || ''})\n`;
+        }
+        if (healthResult.constitution) {
+          const c = healthResult.constitution;
+          context += `- Body Type: ${c.primary || c.type} dominant (Vata:${c.vata}% Pitta:${c.pitta}% Kapha:${c.kapha}%)\n`;
+        }
+        if (healthResult.mentalHealth) {
+          context += `- Mental Health Score: ${healthResult.mentalHealth.score || 'N/A'}/100\n`;
+        }
+        if (healthResult.vulnerableBodyParts && healthResult.vulnerableBodyParts.length > 0) {
+          const topParts = healthResult.vulnerableBodyParts.slice(0, 3).map(v => v.bodyPart || v).join(', ');
+          context += `- Top Vulnerable Areas: ${topParts}\n`;
+        }
+      }
+    } catch (e) { /* skip if health fails */ }
+  }
+
+  return context;
 }
 
 /**
@@ -84,7 +153,7 @@ function buildTransitContext(lat = 6.9271, lng = 79.8612) {
   const dailyNakath = getDailyNakath(now, lat, lng);
   const panchanga = dailyNakath.panchanga;
 
-  return `
+  let context = `
 CURRENT PLANETARY TRANSITS (${now.toISOString()}):
 - Current Nakshatra: ${panchanga.nakshatra.name} (${panchanga.nakshatra.sinhala})
 - Current Tithi: ${panchanga.tithi.name} (${panchanga.tithi.pakshaName})
@@ -95,6 +164,45 @@ CURRENT PLANETARY TRANSITS (${now.toISOString()}):
 - Sunrise: ${dailyNakath.sunrise.toISOString()}
 - Sunset: ${dailyNakath.sunset.toISOString()}
 `;
+
+  // Add muhurtha "Is now a good time?" context
+  if (muhurthaEngine) {
+    try {
+      const nowCheck = muhurthaEngine.isGoodTimeNow(lat, lng);
+      if (nowCheck) {
+        context += `\nCURRENT MUHURTHA STATUS:\n`;
+        context += `- Good Time Now: ${nowCheck.isGood ? 'YES ✅' : 'NO ⚠️'}\n`;
+        if (nowCheck.warnings && nowCheck.warnings.length > 0) {
+          context += `- Active Warnings: ${nowCheck.warnings.join(', ')}\n`;
+        }
+        if (nowCheck.score !== undefined) {
+          context += `- Current Muhurtha Score: ${nowCheck.score}/100\n`;
+        }
+      }
+    } catch (e) { /* skip */ }
+  }
+
+  // Add retrograde planets context
+  if (transitEngine) {
+    try {
+      const retros = transitEngine.getRetrogradePeriods(now.getFullYear());
+      if (retros && retros.length > 0) {
+        const currentRetros = retros.filter(r => {
+          const start = new Date(r.start);
+          const end = new Date(r.end);
+          return now >= start && now <= end;
+        });
+        if (currentRetros.length > 0) {
+          context += `\nCURRENTLY RETROGRADE PLANETS:\n`;
+          for (const r of currentRetros) {
+            context += `- ${r.planet} retrograde (${r.start} to ${r.end})\n`;
+          }
+        }
+      }
+    } catch (e) { /* skip */ }
+  }
+
+  return context;
 }
 
 /**
@@ -126,7 +234,7 @@ function buildChatMessages(userMessage, birthDate, birthLat, birthLng, language 
 /**
  * Call OpenAI API
  */
-async function callOpenAI(messages, maxTokens = 1024) {
+async function callOpenAI(messages, maxTokens = 4096) {
   const OpenAI = require('openai');
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -145,7 +253,7 @@ async function callOpenAI(messages, maxTokens = 1024) {
 /**
  * Call Gemini API
  */
-async function callGemini(messages, maxTokens = 1024, temperature = 0.7) {
+async function callGemini(messages, maxTokens = 4096, temperature = 0.7) {
   const apiKey = process.env.GEMINI_API_KEY;
   // Use GEMINI_MODEL env var or default to gemini-2.5-flash
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
@@ -192,7 +300,7 @@ async function chat(userMessage, options = {}) {
     language = 'en',
     chatHistory = [],
     provider = process.env.AI_PROVIDER || 'openai',
-    maxTokens = 1024,
+    maxTokens = 4096,
   } = options;
 
   const messages = buildChatMessages(userMessage, birthDate, birthLat, birthLng, language, chatHistory);

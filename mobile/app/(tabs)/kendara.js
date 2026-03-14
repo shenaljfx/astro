@@ -5,13 +5,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing, interpolate } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import CosmicBackground from '../../components/CosmicBackground';
 import SriLankanChart from '../../components/SriLankanChart';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
+import { Colors, Typography } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -74,6 +75,53 @@ function toSLT(isoOrObj) {
   const ampm = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 || 12;
   return String(h12).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+}
+
+// ── Chart Glow Aura wrapper ──────────────────────────────────────────
+function ChartGlowAura({ lagnaColor, children }) {
+  var glow = useSharedValue(0.5);
+  useEffect(function () {
+    glow.value = withRepeat(withSequence(withTiming(1, { duration: 3200 }), withTiming(0.5, { duration: 3200 })), -1);
+  }, []);
+  var glowStyle = useAnimatedStyle(function () { return { opacity: glow.value }; });
+  var color = lagnaColor || '#9333EA';
+  return (
+    <View style={{ alignItems: 'center', marginBottom: 20 }}>
+      <Animated.View style={[StyleSheet.absoluteFill, glowStyle, { alignItems: 'center', justifyContent: 'center' }]}>
+        <View style={{
+          width: SCREEN_WIDTH * 0.82, height: SCREEN_WIDTH * 0.82, borderRadius: SCREEN_WIDTH * 0.41,
+          backgroundColor: color + '18',
+          shadowColor: color, shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.6, shadowRadius: 40, elevation: 0,
+        }} />
+      </Animated.View>
+      <View style={{
+        borderRadius: 16, overflow: 'hidden', padding: 3,
+        borderWidth: 1, borderColor: color + '40',
+        shadowColor: color, shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.3, shadowRadius: 18, elevation: 8,
+      }}>
+        <LinearGradient
+          colors={[color + '22', 'rgba(10,5,25,0.9)', color + '10']}
+          style={{ padding: 2, borderRadius: 14 }}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        >
+          {children}
+        </LinearGradient>
+      </View>
+    </View>
+  );
+}
+
+// ── Yoga Badge pill ──────────────────────────────────────────────────
+function YogaBadge({ name, category }) {
+  var catColor = category === 'Raja Yoga' ? '#C084FC' : category === 'Dhana Yoga' ? '#FBBF24' : category?.includes('Dosha') ? '#F87171' : '#60A5FA';
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: catColor + '50', backgroundColor: catColor + '12', marginRight: 6, marginBottom: 6 }}>
+      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: catColor, marginRight: 5 }} />
+      <Text style={{ color: catColor, fontSize: 11, fontWeight: '700' }}>{name}</Text>
+    </View>
+  );
 }
 
 // ============================================================
@@ -241,22 +289,38 @@ export default function KendaraScreen() {
 
     const lagnaRashiId = chartData.lagna ? (chartData.lagna.rashiId || chartData.lagna.id || 1) : 1;
 
+    // Pick a lagna color for glow
+    var lagnaColors = ['#9333EA','#EC4899','#F59E0B','#34D399','#60A5FA','#F87171','#A78BFA','#FBBF24','#4CC9F0','#34D399','#818CF8','#F472B6'];
+    var lagnaGlowColor = lagnaColors[(lagnaRashiId - 1) % lagnaColors.length];
+
+    // Collect top yogas for badges
+    var topYogas = (chartData.advancedAnalysis?.tier1?.advancedYogas?.items || []).filter(function(y) {
+      return y.strength === 'Very Strong' || y.strength === 'Strong';
+    }).slice(0, 5);
+
     return (
       <View style={styles.chartContainer}>
         <View style={styles.headerRow}>
-          <Ionicons name="grid-outline" size={20} color="#fbbf24" />
+          <Ionicons name="grid-outline" size={20} color="#FBBF24" />
           <Text style={styles.sectionTitle}>
             {t('kpBirthChart') || 'Birth Chart'}
           </Text>
         </View>
 
-        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+        {/* Yoga badges strip */}
+        {topYogas.length > 0 && (
+          <Animated.View entering={FadeIn.duration(600)} style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
+            {topYogas.map(function (y, i) { return <YogaBadge key={i} name={y.name} category={y.category} />; })}
+          </Animated.View>
+        )}
+
+        <ChartGlowAura lagnaColor={lagnaGlowColor}>
           <SriLankanChart
             rashiChart={chartData.rashiChart}
             lagnaRashiId={lagnaRashiId}
             language={language}
           />
-        </View>
+        </ChartGlowAura>
 
         <View style={styles.detailsCard}>
           <Text style={styles.cardTitle}>{t('kpChartDetails') || 'Chart Summary'}</Text>
@@ -317,15 +381,18 @@ export default function KendaraScreen() {
               .map(function(p, idx) {
                 var info = PLANET_INFO[p.name];
                 var pLabel = info ? (language === 'si' ? info.si : p.name) : p.name;
+                var pColor = info ? info.color : '#fff';
                 var rashiLabel = language === 'si'
                   ? (RASHI_SI[entry.rashiId] || entry.rashi)
                   : (entry.rashiEnglish || entry.rashi);
                 return (
-                  <View key={entry.rashiId + '-' + idx} style={styles.infoRow}>
-                    <Text style={[styles.infoLabel, { color: info ? info.color : '#fff' }]}>
-                      {pLabel}
-                    </Text>
-                    <Text style={styles.infoValue}>
+                  <View key={entry.rashiId + '-' + idx} style={styles.planetRow}>
+                    <View style={[styles.planetDot, { backgroundColor: pColor }]} />
+                    <Text style={[styles.planetName, { color: pColor }]}>{pLabel}</Text>
+                    <View style={styles.planetBarTrack}>
+                      <View style={[styles.planetBarFill, { backgroundColor: pColor, width: (30 + Math.random() * 60) + '%' }]} />
+                    </View>
+                    <Text style={styles.planetRashi}>
                       {rashiLabel} {p.degree != null ? formatDegree(p.degree) : ''}
                     </Text>
                   </View>
@@ -343,11 +410,13 @@ export default function KendaraScreen() {
               </Text>
             </View>
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
-              <SriLankanChart
-                rashiChart={chartData.navamsaChart || chartData.navamshaChart}
-                lagnaRashiId={(chartData.navamshaLagna && chartData.navamshaLagna.rashi && chartData.navamshaLagna.rashi.id) || (chartData.navamsaLagna && chartData.navamsaLagna.rashi && chartData.navamsaLagna.rashi.id) || lagnaRashiId}
-                language={language}
-              />
+              <ChartGlowAura lagnaColor="#A78BFA">
+                <SriLankanChart
+                  rashiChart={chartData.navamsaChart || chartData.navamshaChart}
+                  lagnaRashiId={(chartData.navamshaLagna && chartData.navamshaLagna.rashi && chartData.navamshaLagna.rashi.id) || (chartData.navamsaLagna && chartData.navamsaLagna.rashi && chartData.navamsaLagna.rashi.id) || lagnaRashiId}
+                  language={language}
+                />
+              </ChartGlowAura>
             </View>
           </View>
         ) : null}
@@ -672,19 +741,29 @@ export default function KendaraScreen() {
 
   return (
     <CosmicBackground>
-      <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#fbbf24" />}>
+      <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#FBBF24" />}>
         <View style={styles.content}>
-          <Text style={styles.pageTitle}>
-            {t('kpYourHoroscope') || 'Your Horoscope'}
-          </Text>
-          <Text style={styles.pageSubtitle}>
-            {user && user.birthData && user.birthData.dateTime
-              ? new Date(user.birthData.dateTime).toLocaleDateString() + '  ' + toSLT(user.birthData.dateTime)
-              : ''}
-          </Text>
+          <Animated.View entering={FadeIn.duration(700)} style={styles.pageTitleRow}>
+            <View>
+              <Text style={styles.pageTitle}>
+                {t('kpYourHoroscope') || 'Your Horoscope'}
+              </Text>
+              <Text style={styles.pageSubtitle}>
+                {user && user.birthData && user.birthData.dateTime
+                  ? new Date(user.birthData.dateTime).toLocaleDateString() + '  ' + toSLT(user.birthData.dateTime)
+                  : ''}
+              </Text>
+            </View>
+            {user?.birthData && (
+              <View style={styles.lagnaOrb}>
+                <LinearGradient colors={['#9333EA', '#6D28D9']} style={StyleSheet.absoluteFill} />
+                <Ionicons name="planet" size={22} color="#FBBF24" />
+              </View>
+            )}
+          </Animated.View>
           {renderContent()}
         </View>
-        <View style={{ height: 100 }} />
+        <View style={{ height: 110 }} />
       </ScrollView>
     </CosmicBackground>
   );
@@ -692,43 +771,57 @@ export default function KendaraScreen() {
 
 const styles = StyleSheet.create({
   content: { padding: 20, paddingTop: 60 },
-  pageTitle: { fontSize: 28, fontWeight: 'bold', color: '#fbbf24', marginBottom: 4 },
-  pageSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.6)', marginBottom: 24 },
+  pageTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
+  pageTitle: { fontSize: 30, fontWeight: '800', color: '#FBBF24', marginBottom: 3, textShadowColor: 'rgba(251,191,36,0.3)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
+  pageSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '500' },
+  lagnaOrb: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(251,191,36,0.35)', shadowColor: '#9333EA', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 6 },
   center: { alignItems: 'center', justifyContent: 'center', height: 300 },
-  emptyState: { alignItems: 'center', padding: 40, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20 },
-  emptyTitle: { color: '#fbbf24', fontSize: 18, marginVertical: 16 },
-  emptyText: { color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginBottom: 20 },
-  actionButton: { backgroundColor: '#fbbf24', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
-  actionButtonText: { fontWeight: 'bold' },
-  errorText: { color: '#ef4444' },
+  emptyState: { alignItems: 'center', padding: 40, backgroundColor: 'rgba(147,51,234,0.07)', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(147,51,234,0.2)' },
+  emptyTitle: { color: '#FBBF24', fontSize: 18, marginVertical: 16, fontWeight: '700' },
+  emptyText: { color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginBottom: 20, lineHeight: 22 },
+  actionButton: { backgroundColor: '#FBBF24', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20 },
+  actionButtonText: { fontWeight: '800', color: '#1A1040' },
+  errorText: { color: '#F87171', fontSize: 14 },
   chartContainer: { marginBottom: 20 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { color: '#fff', fontSize: 18, marginLeft: 10, fontWeight: '600', flex: 1 },
-  detailsCard: { backgroundColor: 'rgba(255,255,255,0.05)', padding: 16, borderRadius: 12, marginTop: 10 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  infoLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
-  infoValue: { color: '#fff', fontWeight: '500', fontSize: 14 },
-  cardTitle: { color: '#fbbf24', marginBottom: 12, fontWeight: '600' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  sectionTitle: { color: '#fff', fontSize: 17, marginLeft: 10, fontWeight: '700', flex: 1 },
+  detailsCard: {
+    backgroundColor: 'rgba(255,255,255,0.04)', padding: 16, borderRadius: 18, marginTop: 10,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+    shadowColor: '#9333EA', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
+  },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  infoLabel: { color: 'rgba(255,255,255,0.55)', fontSize: 13 },
+  infoValue: { color: '#F1F5F9', fontWeight: '600', fontSize: 13 },
+  cardTitle: { color: '#FBBF24', marginBottom: 14, fontWeight: '700', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 },
+
+  // Planet Positions — bar style
+  planetRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)', gap: 8 },
+  planetDot: { width: 8, height: 8, borderRadius: 4 },
+  planetName: { fontSize: 13, fontWeight: '700', width: 52 },
+  planetBarTrack: { flex: 1, height: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' },
+  planetBarFill: { height: 4, borderRadius: 2, opacity: 0.7 },
+  planetRashi: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '500', width: 90, textAlign: 'right' },
 
   // Advanced Analysis styles
   advCard: {
-    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16, padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 18, padding: 14,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', marginBottom: 16, overflow: 'hidden',
   },
   countBadge: {
     backgroundColor: 'rgba(251,191,36,0.15)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2,
     borderWidth: 1, borderColor: 'rgba(251,191,36,0.3)',
   },
-  countText: { color: '#fbbf24', fontSize: 12, fontWeight: '800' },
+  countText: { color: '#FBBF24', fontSize: 12, fontWeight: '800' },
 
   // Dosha styles
   doshaRow: { flexDirection: 'row', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   doshaDot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
-  doshaName: { color: '#e0e7ff', fontSize: 14, fontWeight: '700' },
-  doshaDesc: { color: 'rgba(255,255,255,0.45)', fontSize: 12, lineHeight: 18, marginTop: 3 },
-  cancelBadge: { backgroundColor: 'rgba(16,185,129,0.15)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)' },
-  cancelText: { color: '#10b981', fontSize: 9, fontWeight: '800' },
-  cancelReason: { color: 'rgba(16,185,129,0.6)', fontSize: 11, fontStyle: 'italic', marginTop: 3 },
+  doshaName: { color: '#E0E7FF', fontSize: 14, fontWeight: '700' },
+  doshaDesc: { color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 18, marginTop: 3 },
+  cancelBadge: { backgroundColor: 'rgba(52,211,153,0.15)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(52,211,153,0.3)' },
+  cancelText: { color: '#34D399', fontSize: 9, fontWeight: '800' },
+  cancelReason: { color: 'rgba(52,211,153,0.6)', fontSize: 11, fontStyle: 'italic', marginTop: 3 },
   sevBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1 },
   sevText: { fontSize: 9, fontWeight: '800' },
 
@@ -736,26 +829,23 @@ const styles = StyleSheet.create({
   yogaItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   yogaTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   catDot: { width: 8, height: 8, borderRadius: 4 },
-  yogaName: { color: '#e0e7ff', fontSize: 14, fontWeight: '700', flex: 1 },
+  yogaName: { color: '#E0E7FF', fontSize: 14, fontWeight: '700', flex: 1 },
   yogaCat: { color: 'rgba(192,132,252,0.6)', fontSize: 11, fontWeight: '600', marginTop: 3 },
-  yogaDesc: { color: 'rgba(255,255,255,0.45)', fontSize: 12, lineHeight: 18, marginTop: 3 },
+  yogaDesc: { color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 18, marginTop: 3 },
   yogaPlanets: { color: 'rgba(251,191,36,0.6)', fontSize: 11, marginTop: 4 },
   strBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   strText: { fontSize: 10, fontWeight: '700' },
 
   // Jaimini styles
-  jaiminiHighlight: {
-    borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1,
-    borderColor: 'rgba(192,132,252,0.15)', overflow: 'hidden',
-  },
+  jaiminiHighlight: { borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(192,132,252,0.15)', overflow: 'hidden' },
   jaiminiLabel: { color: 'rgba(192,132,252,0.7)', fontSize: 11, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
-  jaiminiValue: { color: '#c084fc', fontSize: 22, fontWeight: '900' },
-  jaiminiSub: { color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 8, lineHeight: 18 },
+  jaiminiValue: { color: '#C084FC', fontSize: 22, fontWeight: '900' },
+  jaiminiSub: { color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 8, lineHeight: 18 },
   jaiminiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   jaiminiMini: { flex: 1, minWidth: 90, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 10, alignItems: 'center' },
-  jmLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '600', marginBottom: 4, textAlign: 'center' },
-  jmValue: { color: '#e0e7ff', fontSize: 14, fontWeight: '700', textAlign: 'center' },
-  jmDesc: { color: 'rgba(255,255,255,0.35)', fontSize: 10, textAlign: 'center', marginTop: 4 },
+  jmLabel: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: '600', marginBottom: 4, textAlign: 'center' },
+  jmValue: { color: '#E0E7FF', fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  jmDesc: { color: 'rgba(255,255,255,0.3)', fontSize: 10, textAlign: 'center', marginTop: 4 },
 
   // Shadbala styles
   sbRow: { marginBottom: 14 },
@@ -763,131 +853,49 @@ const styles = StyleSheet.create({
   sbPlanet: { fontSize: 14, fontWeight: '700', width: 70 },
   sbRupas: { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '600', flex: 1 },
   sbBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1 },
-  sbBarTrack: { height: 5, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
-  sbBarFill: { height: 5, borderRadius: 3 },
+  sbBarTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
+  sbBarFill: { height: 6, borderRadius: 3 },
 
   // Bhrigu Bindu styles
-  bbCircle: {
-    width: 60, height: 60, borderRadius: 30, borderWidth: 2,
-    borderColor: 'rgba(251,191,36,0.3)', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(251,191,36,0.05)',
-  },
-  bbDeg: { color: '#fbbf24', fontSize: 16, fontWeight: '800' },
-  bbRashi: { color: '#e0e7ff', fontSize: 16, fontWeight: '700' },
-  bbNak: { color: 'rgba(255,255,255,0.45)', fontSize: 12, marginTop: 2 },
-  bbInterp: { color: 'rgba(255,255,255,0.45)', fontSize: 12, lineHeight: 18, marginTop: 12 },
+  bbCircle: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: 'rgba(251,191,36,0.35)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(251,191,36,0.06)' },
+  bbDeg: { color: '#FBBF24', fontSize: 16, fontWeight: '800' },
+  bbRashi: { color: '#E0E7FF', fontSize: 16, fontWeight: '700' },
+  bbNak: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 2 },
+  bbInterp: { color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 18, marginTop: 12 },
 
   // Past Life styles
   plRow: { marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   plLabel: { color: 'rgba(167,139,250,0.7)', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  plValue: { color: '#e0e7ff', fontSize: 13, lineHeight: 20 },
-  plIndicator: { color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 20, paddingLeft: 4 },
+  plValue: { color: '#E0E7FF', fontSize: 13, lineHeight: 20 },
+  plIndicator: { color: 'rgba(255,255,255,0.35)', fontSize: 12, lineHeight: 20, paddingLeft: 4 },
 
   // Engine footer
-  engineFooter: { color: 'rgba(255,255,255,0.15)', fontSize: 10, textAlign: 'center', marginTop: 4, marginBottom: 10 },
+  engineFooter: { color: 'rgba(255,255,255,0.12)', fontSize: 10, textAlign: 'center', marginTop: 4, marginBottom: 10 },
 
   // AI explanation inline box
   aiExplainBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    backgroundColor: 'rgba(251,191,36,0.06)',
-    borderLeftWidth: 3,
-    borderLeftColor: 'rgba(251,191,36,0.4)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginHorizontal: 2,
-    marginBottom: 10,
-    marginTop: -4,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: 'rgba(251,191,36,0.05)',
+    borderLeftWidth: 3, borderLeftColor: 'rgba(251,191,36,0.4)',
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10,
+    marginHorizontal: 2, marginBottom: 10, marginTop: -4,
   },
-  aiExplainText: {
-    flex: 1,
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 13,
-    lineHeight: 20,
-    fontStyle: 'italic',
-  },
+  aiExplainText: { flex: 1, color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 20, fontStyle: 'italic' },
 
   // Loading screen styles
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingCard: {
-    width: '100%',
-    borderRadius: 24,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(251,191,36,0.15)',
-    overflow: 'hidden',
-  },
-  loadingTitle: {
-    color: '#fbbf24',
-    fontSize: 18,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: 24,
-    letterSpacing: 1,
-  },
-  stepsContainer: {
-    gap: 6,
-    marginBottom: 24,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    gap: 12,
-  },
-  stepRowActive: {
-    backgroundColor: 'rgba(251,191,36,0.06)',
-  },
-  stepIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  stepIconDone: {
-    backgroundColor: 'rgba(16,185,129,0.12)',
-    borderColor: 'rgba(16,185,129,0.3)',
-  },
-  stepIconActive: {
-    backgroundColor: 'rgba(251,191,36,0.1)',
-    borderColor: 'rgba(251,191,36,0.3)',
-  },
-  stepText: {
-    fontSize: 14,
-    fontWeight: '500',
-    flex: 1,
-  },
-  stepTextDone: {
-    color: 'rgba(16,185,129,0.7)',
-  },
-  stepTextActive: {
-    color: '#fbbf24',
-    fontWeight: '700',
-  },
-  stepTextPending: {
-    color: 'rgba(255,255,255,0.25)',
-  },
-  loadingBarTrack: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  loadingBarFill: {
-    height: 4,
-    backgroundColor: '#fbbf24',
-    borderRadius: 2,
-  },
+  loadingContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  loadingCard: { width: '100%', borderRadius: 24, padding: 28, borderWidth: 1, borderColor: 'rgba(251,191,36,0.15)', overflow: 'hidden' },
+  loadingTitle: { color: '#FBBF24', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 24, letterSpacing: 1 },
+  stepsContainer: { gap: 6, marginBottom: 24 },
+  stepRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12, gap: 12 },
+  stepRowActive: { backgroundColor: 'rgba(251,191,36,0.06)' },
+  stepIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  stepIconDone: { backgroundColor: 'rgba(52,211,153,0.12)', borderColor: 'rgba(52,211,153,0.3)' },
+  stepIconActive: { backgroundColor: 'rgba(251,191,36,0.1)', borderColor: 'rgba(251,191,36,0.3)' },
+  stepText: { fontSize: 14, fontWeight: '500', flex: 1 },
+  stepTextDone: { color: 'rgba(52,211,153,0.7)' },
+  stepTextActive: { color: '#FBBF24', fontWeight: '700' },
+  stepTextPending: { color: 'rgba(255,255,255,0.22)' },
+  loadingBarTrack: { height: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' },
+  loadingBarFill: { height: 4, backgroundColor: '#FBBF24', borderRadius: 2 },
 });

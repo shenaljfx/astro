@@ -540,5 +540,5 @@ export default function CosmicBackground({ children, showScrollHint = false }) {
 export { ZODIAC_CONSTELLATIONS, ZodiacConstellationLayer };
 
 const bgS = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#030014' },
+  container: { flex: 1, backgroundColor: '#030014', overflow: 'hidden' },
 });
