@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  StyleSheet, Platform, Alert, ActivityIndicator,
+  StyleSheet, Platform, Alert, ActivityIndicator, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +17,7 @@ import CosmicBackground from '../../components/CosmicBackground';
 import MarkdownText from '../../components/MarkdownText';
 import SriLankanChart from '../../components/SriLankanChart';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 
 // ──────────────────────────────────────────
@@ -362,6 +363,65 @@ var BIRTH_LOCATIONS = [
 ];
 
 // ══════════════════════════════════════════
+// TOP-UP MODAL
+// ══════════════════════════════════════════
+var TOP_UP_PACKAGES = [15, 30, 50];
+
+function TopUpModal({ visible, onClose, onTopUp, loading, language }) {
+  var isSi = language === 'si';
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+        <LinearGradient
+          colors={['rgba(13,7,32,0.99)', 'rgba(4,3,12,1)']}
+          style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(147,51,234,0.3)' }}
+        >
+          <Text style={{ color: '#FBBF24', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
+            {isSi ? '💳 ශේෂය රිචාජ්' : '💳 Top Up Balance'}
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
+            {isSi ? 'ඔබේ දුරකතන ක්‍රෙඩිට් එකෙන් ගෙවේ' : 'Charged to your mobile credit via Ideamart'}
+          </Text>
+
+          {TOP_UP_PACKAGES.map(function(amt) {
+            return (
+              <TouchableOpacity
+                key={amt}
+                onPress={function() { onTopUp(amt); }}
+                disabled={loading}
+                activeOpacity={0.8}
+                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
+              >
+                <LinearGradient
+                  colors={amt === 15 ? ['#4C1D95', '#7C3AED'] : amt === 30 ? ['#1E3A5F', '#3B82F6'] : ['#065F46', '#10B981']}
+                  style={{ paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                >
+                  <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700' }}>
+                    {isSi ? 'රු ' + amt + ' රිචාජ්' : 'Add LKR ' + amt}
+                  </Text>
+                  {loading ? (
+                    <ActivityIndicator color="#FFF" size="small" />
+                  ) : (
+                    <Ionicons name="add-circle" size={22} color="rgba(255,255,255,0.8)" />
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            );
+          })}
+
+          <TouchableOpacity onPress={onClose} style={{ paddingVertical: 14, alignItems: 'center', marginTop: 4 }}>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
+              {isSi ? 'වසන්න' : 'Close'}
+            </Text>
+          </TouchableOpacity>
+        </LinearGradient>
+      </View>
+    </Modal>
+  );
+}
+
+// ══════════════════════════════════════════
 // GENDER GUESS SCREEN (Magic!)
 // ══════════════════════════════════════════
 function GenderGuessScreen({ prediction, userName, onConfirm, language }) {
@@ -525,6 +585,7 @@ var gg = StyleSheet.create({
 // ══════════════════════════════════════════
 export default function ReportScreen() {
   var { t, language } = useLanguage();
+  var { user } = useAuth();
   var [birthDate, setBirthDate] = useState('1998-10-09');
   var [birthTime, setBirthTime] = useState('09:16');
   var [birthLocation, setBirthLocation] = useState('Colombo');
@@ -538,13 +599,33 @@ export default function ReportScreen() {
   var [chartData, setChartData] = useState(null);
   var [loading, setLoading] = useState(false);
   var [error, setError] = useState(null);
-  // Flow states: 'form' -> 'gender-guess' -> 'loading' -> 'report'
+  // Flow states: 'form' -> 'gender-guess' -> 'confirm-charge' -> 'loading' -> 'report'
   var [screenState, setScreenState] = useState('form');
   var [genderPrediction, setGenderPrediction] = useState(null);
+  // Token balance
+  var [tokenBalance, setTokenBalance] = useState(null);
+  var [showTopUp, setShowTopUp] = useState(false);
+  var [topUpLoading, setTopUpLoading] = useState(false);
   // Saved reports
   var [savedReports, setSavedReports] = useState([]);
   var [savedReportsLoading, setSavedReportsLoading] = useState(false);
   var [loadingReportId, setLoadingReportId] = useState(null);
+
+  // Fetch token balance when on form
+  var fetchBalance = useCallback(async function() {
+    try {
+      var res = await api.getTokenBalance();
+      if (res && res.balance !== undefined) {
+        setTokenBalance(res.balance);
+      }
+    } catch (e) {
+      // Not logged in or dev mode — ignore
+    }
+  }, []);
+
+  useEffect(function() {
+    if (screenState === 'form') fetchBalance();
+  }, [screenState, fetchBalance]);
 
   // Sync report language when app language changes (only on form screen)
   useEffect(function() {
@@ -575,11 +656,20 @@ export default function ReportScreen() {
       setReport(rawRes.data);
       if (aiRes.data) {
         setAiReport(aiRes.data);
+        // Update balance if server returned new balance
+        if (aiRes.balance !== undefined) setTokenBalance(aiRes.balance);
       }
       setScreenState('report');
     } catch (err) {
-      setError(err.message || 'Failed to generate report');
-      setScreenState('form');
+      var msg = err.message || '';
+      if (err.status === 402 || msg.includes('Insufficient') || msg.includes('balance')) {
+        setTokenBalance(err.balance || 0);
+        setShowTopUp(true);
+        setScreenState('form');
+      } else {
+        setError(msg || 'Failed to generate report');
+        setScreenState('form');
+      }
     } finally {
       setLoading(false);
     }
@@ -608,8 +698,8 @@ export default function ReportScreen() {
           setGenderPrediction(chartRes.data.genderPrediction);
           setScreenState('gender-guess');
         } else {
-          // No prediction available, skip to loading
-          startFullGeneration(dateStr, null);
+          // No prediction available, skip to confirm charge
+          setScreenState('confirm-charge');
         }
       } else {
         setError('Failed to read birth chart');
@@ -619,11 +709,16 @@ export default function ReportScreen() {
     }
   };
 
-  // Step 2: Gender confirmed → fire full AI generation
+  // Step 2: Gender confirmed → show charge confirmation
   var handleGenderConfirm = function(confirmedGender) {
     setUserGender(confirmedGender);
+    setScreenState('confirm-charge');
+  };
+
+  // Step 3: User confirms charge → fire full generation
+  var handleChargeConfirm = function() {
     var dateStr = birthDate + 'T' + birthTime + ':00';
-    startFullGeneration(dateStr, confirmedGender);
+    startFullGeneration(dateStr, userGender);
   };
 
   var handleNewReport = function() {
@@ -635,6 +730,25 @@ export default function ReportScreen() {
     setUserGender(null);
     setGenderPrediction(null);
     setScreenState('form');
+  };
+
+  // ── TOP-UP MODAL ────────────────────────────────────────
+  var handleTopUp = async function(amount) {
+    try {
+      setTopUpLoading(true);
+      var res = await api.topUpTokens(amount);
+      if (res && res.success) {
+        setTokenBalance(res.newBalance);
+        setShowTopUp(false);
+        Alert.alert('✅', t('tokenTopUpSuccess') + ' LKR ' + amount + ' added. Balance: LKR ' + res.newBalance);
+      } else {
+        Alert.alert('❌', t('tokenTopUpFail'));
+      }
+    } catch (e) {
+      Alert.alert('❌', e.message || t('tokenTopUpFail'));
+    } finally {
+      setTopUpLoading(false);
+    }
   };
 
   // ── SAVED REPORTS ──────────────────────────────────────
@@ -726,6 +840,115 @@ export default function ReportScreen() {
         onConfirm={handleGenderConfirm}
         language={reportLang}
       />
+    );
+  }
+
+  // ── CONFIRM CHARGE SCREEN ─────────────────────────────────
+  if (screenState === 'confirm-charge') {
+    var bal = tokenBalance !== null ? tokenBalance : '—';
+    var afterBal = tokenBalance !== null ? parseFloat((tokenBalance - 15).toFixed(2)) : '—';
+    var hasEnough = tokenBalance !== null && tokenBalance >= 15;
+    return (
+      <CosmicBackground>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 28 }}>
+          <Animated.View entering={FadeInDown.duration(500)} style={{ width: '100%', maxWidth: 380 }}>
+            <LinearGradient
+              colors={['rgba(147,51,234,0.18)', 'rgba(4,3,12,0.96)']}
+              style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: 'rgba(147,51,234,0.3)' }}
+            >
+              <Text style={{ fontSize: 38, textAlign: 'center', marginBottom: 12 }}>📜</Text>
+              <Text style={{ color: '#FBBF24', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 6, letterSpacing: 1 }}>
+                {reportLang === 'si' ? 'ජීවිත කතාව' : 'Full Life Report'}
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
+                {reportLang === 'si' ? 'AI ලියන ලද, ඔබ ගැන පමණයි' : 'AI-written, personalised just for you'}
+              </Text>
+
+              {/* Cost row */}
+              <View style={{ backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: 14, padding: 16, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
+                  {reportLang === 'si' ? 'ගෙවීම' : 'Charge'}
+                </Text>
+                <Text style={{ color: '#FBBF24', fontSize: 20, fontWeight: '800' }}>LKR 15</Text>
+              </View>
+
+              {/* Balance row */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 4 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>
+                  {reportLang === 'si' ? 'වත්මන් ශේෂය' : 'Current balance'}
+                </Text>
+                <Text style={{ color: hasEnough ? '#4ADE80' : '#F87171', fontSize: 12, fontWeight: '700' }}>
+                  LKR {bal}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 24 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>
+                  {reportLang === 'si' ? 'ඉතිරි ශේෂය' : 'Balance after'}
+                </Text>
+                <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600' }}>
+                  LKR {afterBal}
+                </Text>
+              </View>
+
+              {hasEnough ? (
+                <TouchableOpacity
+                  onPress={handleChargeConfirm}
+                  activeOpacity={0.85}
+                  style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
+                >
+                  <LinearGradient
+                    colors={['#FBBF24', '#F59E0B', '#9333EA']}
+                    style={{ paddingVertical: 15, alignItems: 'center', borderRadius: 14 }}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 }}>
+                      {reportLang === 'si' ? '✨ LKR 15 ගෙවා ලියන්න' : '✨ Confirm & Generate — LKR 15'}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <View style={{ backgroundColor: 'rgba(248,113,113,0.12)', borderRadius: 12, padding: 12, marginBottom: 14 }}>
+                    <Text style={{ color: '#F87171', fontSize: 13, textAlign: 'center' }}>
+                      {reportLang === 'si' ? '⚠️ ශේෂය මදිි. රිචාජ් කරන්න.' : '⚠️ Insufficient balance. Please top up.'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={function() { setShowTopUp(true); }}
+                    activeOpacity={0.85}
+                    style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
+                  >
+                    <LinearGradient
+                      colors={['#7C3AED', '#6366F1']}
+                      style={{ paddingVertical: 15, alignItems: 'center', borderRadius: 14 }}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    >
+                      <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '800' }}>
+                        {reportLang === 'si' ? '💳 ශේෂය රිචාජ් කරන්න' : '💳 Top Up Balance'}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              <TouchableOpacity onPress={handleNewReport} style={{ paddingVertical: 10, alignItems: 'center' }}>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
+                  {reportLang === 'si' ? 'අවලංගු' : 'Cancel'}
+                </Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          </Animated.View>
+        </View>
+
+        {/* Top-up modal */}
+        <TopUpModal
+          visible={showTopUp}
+          onClose={function() { setShowTopUp(false); }}
+          onTopUp={handleTopUp}
+          loading={topUpLoading}
+          language={reportLang}
+        />
+      </CosmicBackground>
     );
   }
 
@@ -940,8 +1163,39 @@ export default function ReportScreen() {
                 <Text style={s.generateText}>{t('reportGenerate')}</Text>
               </LinearGradient>
             </TouchableOpacity>
+
+            {/* Token balance row */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingHorizontal: 2 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="wallet-outline" size={13} color="rgba(251,191,36,0.7)" />
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>
+                  {reportLang === 'si' ? 'ශේෂය' : 'Balance'}{': '}
+                  <Text style={{ color: tokenBalance !== null && tokenBalance >= 15 ? '#4ADE80' : '#F87171', fontWeight: '700' }}>
+                    {tokenBalance !== null ? 'LKR ' + tokenBalance : '—'}
+                  </Text>
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="pricetag-outline" size={12} color="rgba(251,191,36,0.6)" />
+                <Text style={{ color: '#FBBF24', fontSize: 12, fontWeight: '700' }}>LKR 15</Text>
+                <TouchableOpacity onPress={function() { setShowTopUp(true); }} style={{ marginLeft: 8, backgroundColor: 'rgba(147,51,234,0.25)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 }}>
+                  <Text style={{ color: '#C084FC', fontSize: 11, fontWeight: '700' }}>
+                    {reportLang === 'si' ? 'රිචාජ්' : 'Top Up'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </AuraBox>
         </Animated.View>
+
+        {/* Top-up modal */}
+        <TopUpModal
+          visible={showTopUp}
+          onClose={function() { setShowTopUp(false); }}
+          onTopUp={handleTopUp}
+          loading={topUpLoading}
+          language={reportLang}
+        />
 
         {/* Error */}
         {error && (

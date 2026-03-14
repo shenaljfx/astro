@@ -2,15 +2,15 @@
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, Platform, ActivityIndicator, Share, Alert,
-  LayoutAnimation, UIManager, Dimensions,
+  LayoutAnimation, UIManager, Dimensions, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeInDown, FadeIn, FadeOut, SlideInLeft, SlideInRight,
   ZoomIn, FadeInUp,
-  useSharedValue, useAnimatedStyle, withTiming,
-  withSequence, withRepeat, Easing,
+  useSharedValue, useAnimatedStyle, withTiming, withSpring,
+  withSequence, withRepeat, Easing, interpolate,
 } from 'react-native-reanimated';
 import CosmicBackground from '../../components/CosmicBackground';
 import SriLankanChart from '../../components/SriLankanChart';
@@ -18,6 +18,7 @@ import MarkdownText from '../../components/MarkdownText';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
+import { Colors, Typography } from '../../constants/theme';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -59,24 +60,70 @@ function NumField({ value, onChangeText, placeholder, maxLength, flex, style }) 
   );
 }
 
-// Score Gauge
+// Binary Star Orbit Animation ─────────────────────────────────────────
+function BinaryStarOrbit({ pct, color }) {
+  var orbit = useSharedValue(0);
+  var pulse = useSharedValue(0.7);
+  useEffect(function () {
+    orbit.value = withRepeat(withTiming(360, { duration: 6000, easing: Easing.linear }), -1, false);
+    pulse.value = withRepeat(withSequence(withTiming(1, { duration: 1800 }), withTiming(0.7, { duration: 1800 })), -1);
+  }, []);
+  var star1Style = useAnimatedStyle(function () {
+    var rad = orbit.value * Math.PI / 180;
+    return { transform: [{ translateX: Math.cos(rad) * 34 }, { translateY: Math.sin(rad) * 14 }] };
+  });
+  var star2Style = useAnimatedStyle(function () {
+    var rad = (orbit.value + 180) * Math.PI / 180;
+    return { transform: [{ translateX: Math.cos(rad) * 34 }, { translateY: Math.sin(rad) * 14 }] };
+  });
+  var glowStyle = useAnimatedStyle(function () { return { opacity: pulse.value }; });
+
+  return (
+    <View style={{ width: 110, height: 110, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Orbit ring */}
+      <View style={{ position: 'absolute', width: 92, height: 38, borderRadius: 46, borderWidth: 1, borderColor: color + '30', borderStyle: 'dashed' }} />
+      {/* Glow */}
+      <Animated.View style={[{ position: 'absolute', width: 60, height: 60, borderRadius: 30, backgroundColor: color + '18' }, glowStyle]} />
+      {/* Center */}
+      <View style={{ width: 40, height: 40, borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: color + '60' }}>
+        <LinearGradient colors={[color + '40', 'rgba(15,5,25,0.9)']} style={StyleSheet.absoluteFill} />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: color, fontSize: 13, fontWeight: '900' }}>{pct}<Text style={{ fontSize: 7 }}>%</Text></Text>
+        </View>
+      </View>
+      {/* Bride star */}
+      <Animated.View style={[{ position: 'absolute', width: 14, height: 14, borderRadius: 7, backgroundColor: '#F9A8D4', shadowColor: '#F9A8D4', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 6, elevation: 4 }, star1Style]} />
+      {/* Groom star */}
+      <Animated.View style={[{ position: 'absolute', width: 14, height: 14, borderRadius: 7, backgroundColor: '#93C5FD', shadowColor: '#93C5FD', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 6, elevation: 4 }, star2Style]} />
+    </View>
+  );
+}
+
+// Score Gauge ─────────────────────────────────────────────────────────
 function ScoreGauge({ score, maxScore, rating, ratingEmoji, ratingSinhala, language, onShare, T }) {
   var pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-  var color = pct >= 75 ? '#34d399' : pct >= 50 ? '#fbbf24' : '#f87171';
+  var color = pct >= 75 ? '#34D399' : pct >= 50 ? '#FBBF24' : pct >= 30 ? '#F97316' : '#F87171';
+
+  // Enhanced color-coded compatibility labels
+  var cosmicLabel = pct >= 75
+    ? (language === 'si' ? '✨ දිව්‍ය ගැළපීම' : '✨ Celestial Union')
+    : pct >= 50
+    ? (language === 'si' ? '💫 තාරකා ගැළපීම' : '💫 Star-Crossed Harmony')
+    : pct >= 30
+    ? (language === 'si' ? '🌅 බ්‍රහ්මාණ්ඩ ගාථාව' : '🌅 Cosmic Journey')
+    : (language === 'si' ? '⚔️ ජ්‍යෝතිෂ අභියෝගය' : '⚔️ Galactic Challenge');
+
   var label = language === 'si' && ratingSinhala ? ratingSinhala : rating;
   return (
     <Glass accent>
       <View style={sty.gaugeRow}>
-        <View style={sty.gaugeCircle}>
-          <LinearGradient colors={[color + '30', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
-          <Text style={[sty.gaugePct, { color: color }]}>{pct}<Text style={sty.gaugePctSign}>%</Text></Text>
-          <Text style={sty.gaugeOf}>{score}/{maxScore}</Text>
-        </View>
+        <BinaryStarOrbit pct={pct} color={color} />
         <View style={sty.gaugeInfo}>
-          <Text style={sty.gaugeRating}>{ratingEmoji || '\uD83D\uDC8D'} {label}</Text>
-          <Text style={sty.gaugeHint}>{T.overall}</Text>
+          <Text style={[sty.gaugeCosmicLabel, { color: color }]}>{cosmicLabel}</Text>
+          <Text style={sty.gaugeRating}>{ratingEmoji || '💍'} {label}</Text>
+          <Text style={sty.gaugeScoreText}>{score}/{maxScore} {T.overall}</Text>
           <TouchableOpacity style={sty.shareChip} onPress={onShare} activeOpacity={0.7}>
-            <Ionicons name="share-social-outline" size={14} color="#c084fc" />
+            <Ionicons name="share-social-outline" size={14} color="#C084FC" />
             <Text style={sty.shareChipText}>{T.shareBtn}</Text>
           </TouchableOpacity>
         </View>
@@ -85,25 +132,27 @@ function ScoreGauge({ score, maxScore, rating, ratingEmoji, ratingSinhala, langu
   );
 }
 
-// Factor Bar
+// Factor Bar ──────────────────────────────────────────────────────────
 function FactorBar({ f, index, language }) {
   var pct = f.maxScore > 0 ? f.score / f.maxScore : 0;
-  var color = pct >= 0.75 ? '#34d399' : pct >= 0.5 ? '#fbbf24' : '#f87171';
+  var color = pct >= 0.75 ? '#34D399' : pct >= 0.5 ? '#FBBF24' : pct >= 0.25 ? '#F97316' : '#F87171';
   var desc = language === 'si' && f.descriptionSinhala ? f.descriptionSinhala : f.description;
   return (
     <Animated.View entering={FadeInUp.delay(100 * index).duration(500)} style={sty.factorItem}>
       <View style={sty.factorTop}>
         <View style={sty.factorNameRow}>
-          <View style={[sty.factorDot, { backgroundColor: color }]} />
+          <View style={[sty.factorDot, { backgroundColor: color, shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 4 }]} />
           <Text style={sty.factorName}>{f.name}</Text>
           {f.sinhala ? <Text style={sty.factorSinhala}>{f.sinhala}</Text> : null}
         </View>
-        <View style={[sty.factorBadge, { backgroundColor: color + '25', borderColor: color + '40' }]}>
+        <View style={[sty.factorBadge, { backgroundColor: color + '22', borderColor: color + '45' }]}>
           <Text style={[sty.factorBadgeText, { color: color }]}>{f.score}/{f.maxScore}</Text>
         </View>
       </View>
       <View style={sty.barTrack}>
-        <Animated.View entering={FadeIn.delay(200 + 100 * index).duration(800)} style={[sty.barFill, { width: (pct * 100) + '%', backgroundColor: color }]} />
+        <Animated.View entering={FadeIn.delay(200 + 100 * index).duration(800)} style={[sty.barFill, { width: (pct * 100) + '%' }]}>
+          <LinearGradient colors={[color, color + 'AA']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+        </Animated.View>
       </View>
       {desc ? <Text style={sty.factorDesc}>{desc}</Text> : null}
     </Animated.View>
@@ -149,15 +198,15 @@ var L = {
     noWindows: 'No overlapping favorable window found',
   },
   si: {
-    title: '\u0DB4\u0DCA\u200D\u0DBB\u0DDD\u0DBB\u0DDD\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA', subtitle: '\u0DC0\u0DD2\u0DC0\u0DCF\u0DC4 \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8\u0DCA \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF\u0DC0',
+    title: '\u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA', subtitle: '\u0DC0\u0DD2\u0DC0\u0DCF\u0DC4 \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8\u0DCA \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF\u0DC0',
     bride: '\uD83D\uDC70 \u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA', groom: '\uD83E\uDD35 \u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF',
     namePh: '\u0DB1\u0DB8 (\u0D85\u0DC0\u0DC1\u0DCA\u200D\u0DBA \u0DB1\u0DB8\u0DCA)',
     yearPh: 'YYYY', monthPh: 'MM', dayPh: 'DD', hourPh: 'HH', minutePh: 'MM',
     date: '\u0D89\u0DB4\u0DB1\u0DCA \u0DAF\u0DD2\u0DB1\u0DBA', time: '\u0DC0\u0DDA\u0DBD\u0DCF\u0DC0',
     timeHint: '* \u0D89\u0DB4\u0DCA\u0DB4\u0DD0\u0DB1\u0DCA\u0DB1 \u0DB4\u0DAD\u0DCA\u200D\u0DBB\u0DBA\u0DDA \u0DC0\u0DDA\u0DBD\u0DCF\u0DC0 \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1',
-    checkBtn: '\uD83D\uDC8D \u0DB4\u0DCA\u200D\u0DBB\u0DDD\u0DBB\u0DDD\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1',
+    checkBtn: '\uD83D\uDC8D \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1',
     brideChart: '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA\u0D9C\u0DDA \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA', groomChart: '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF\u0D9C\u0DDA \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA',
-    factors: '\u0DB4\u0DCA\u200D\u0DBB\u0DDD\u0DBB\u0DDD\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DC3\u0DCF\u0DB0\u0D9A', factorsSub: '\u0DC3\u0DCF\u0DB0\u0D9A 7 \u00B7 \u0DBD\u0D9A\u0DD4\u0DAB\u0DD4 20',
+    factors: '\u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DC3\u0DCF\u0DB0\u0D9A', factorsSub: '\u0DC3\u0DCF\u0DB0\u0D9A 7 \u00B7 \u0DBD\u0D9A\u0DD4\u0DAB\u0DD4 20',
     doshas: '\u0DAF\u0DDD\u0DC2', report: 'AI \u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0',
     reportQ: '\u0DC3\u0DC0\u0DD2\u0DC3\u0DCA\u0DAD\u0DBB \u0DC0\u0DD2\u0DC1\u0DCA\u0DBD\u0DDA\u0DC2\u0DAB\u0DBA:',
     si: '\u0DC3\u0DD2\u0D82\u0DC4\u0DBD', en: 'English',
@@ -241,6 +290,20 @@ export default function PorondamScreen() {
   var [porondamId, setPorondamId] = useState(null);
   var [history, setHistory] = useState([]);
   var [historyLoading, setHistoryLoading] = useState(false);
+  // Token balance
+  var [tokenBalance, setTokenBalance] = useState(null);
+  var [showTopUp, setShowTopUp] = useState(false);
+  var [topUpLoading, setTopUpLoading] = useState(false);
+  var [pendingReportLang, setPendingReportLang] = useState(null);
+  var [showConfirm, setShowConfirm] = useState(false);
+
+  // Fetch token balance when logged in
+  useEffect(function() {
+    if (!isLoggedIn) return;
+    api.getTokenBalance()
+      .then(function(res) { if (res && res.balance !== undefined) setTokenBalance(res.balance); })
+      .catch(function() {});
+  }, [isLoggedIn]);
 
   // Load saved porondam history on mount (if logged in)
   useEffect(function() {
@@ -298,20 +361,50 @@ export default function PorondamScreen() {
     finally { setLoading(false); }
   }, [bYear, bMonth, bDay, bHour, bMinute, gYear, gMonth, gDay, gHour, gMinute, T, isLoggedIn]);
 
+  // Show charge confirmation before generating AI report
+  var requestReport = useCallback(function(lang) {
+    setPendingReportLang(lang);
+    setShowConfirm(true);
+  }, []);
+
   var genReport = useCallback(async function(lang) {
     if (!data) return;
     try {
       setReportLang(lang); setReportLoading(true);
       var res = await api.getPorondamReport(data, lang, bName || undefined, gName || undefined, porondamId || undefined);
       setReport(res.report);
+      if (res.balance !== undefined) setTokenBalance(res.balance);
       if (res.porondamId) setPorondamId(res.porondamId);
       // Refresh history after report saved
       if (isLoggedIn) {
         api.getUserPorondamHistory(20).then(function(h) { setHistory(h.results || []); }).catch(function() {});
       }
-    } catch (e) { setReport(lang === 'si' ? '\u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0 \u0DC4\u0DAF\u0DB1\u0DCA\u0DB1 \u0DB6\u0DD0\u0DBB\u0DD2 \u0DC0\u0DD4\u0DB1\u0DCF.' : 'Failed to generate report.'); }
-    finally { setReportLoading(false); }
+    } catch (e) {
+      var msg = e.message || '';
+      if (e.status === 402 || msg.includes('Insufficient') || msg.includes('balance')) {
+        setTokenBalance(e.balance || 0);
+        setShowTopUp(true);
+      } else {
+        setReport(lang === 'si' ? 'වාර්තාව හදන්න බැරි වුනා.' : 'Failed to generate report.');
+      }
+    } finally { setReportLoading(false); }
   }, [data, bName, gName, porondamId, isLoggedIn]);
+
+  var handleTopUp = async function(amount) {
+    try {
+      setTopUpLoading(true);
+      var res = await api.topUpTokens(amount);
+      if (res && res.success) {
+        setTokenBalance(res.newBalance);
+        setShowTopUp(false);
+        Alert.alert('✅', (language === 'si' ? 'ශේෂය එකතු විය! රු ' : 'Balance topped up! LKR ') + amount);
+      } else {
+        Alert.alert('❌', language === 'si' ? 'රිචාජ් අසාර්ථකයි' : 'Top-up failed');
+      }
+    } catch (e) {
+      Alert.alert('❌', e.message || 'Top-up failed');
+    } finally { setTopUpLoading(false); }
+  };
 
   var loadSaved = useCallback(function(item) {
     // Reconstruct the data shape that the UI expects from a saved DB record
@@ -344,11 +437,37 @@ export default function PorondamScreen() {
     setTimeout(function() { if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true }); }, 300);
   }, []);
 
+  var handleDeletePorondam = function(item) {
+    Alert.alert(
+      language === 'si' ? 'මකන්නද?' : 'Delete Record?',
+      language === 'si' ? 'මෙම ගැළපුම් සටහන ස්ථිරවම මකනු ලැබේ.' : 'This compatibility record will be permanently deleted.',
+      [
+        { text: language === 'si' ? 'අවලංගු' : 'Cancel', style: 'cancel' },
+        {
+          text: language === 'si' ? 'මකන්න' : 'Delete',
+          style: 'destructive',
+          onPress: async function() {
+            try {
+              await api.deletePorondamRecord(item.id);
+              setHistory(function(prev) { return prev.filter(function(r) { return r.id !== item.id; }); });
+              if (porondamId === item.id) {
+                setData(null); setReport(null); setReportLang(null); setPorondamId(null);
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setCollapsed(false);
+              }
+            } catch (err) {
+              Alert.alert('\u274C', err.message || (language === 'si' ? 'මකීම අසාර්ථකයි' : 'Failed to delete'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
   var shareResult = async function() {
-    if (!data) return;
     try {
       var msg = language === 'si'
-        ? '\u0DB4\u0DCA\u200D\u0DBB\u0DDD\u0DBB\u0DDD\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) \u2014 ' + (data.ratingSinhala || data.rating) + '\n\nNakath AI \uD83D\uDC8D'
+        ? '\u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) \u2014 ' + (data.ratingSinhala || data.rating) + '\n\nNakath AI \uD83D\uDC8D'
         : 'Porondam: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) \u2014 ' + data.rating + '\n\nNakath AI \uD83D\uDC8D';
       await Share.share({ message: msg });
     } catch (e) {}
@@ -362,7 +481,6 @@ export default function PorondamScreen() {
           <Text style={sty.title}>{T.title}</Text>
           <Text style={sty.subtitle}>{T.subtitle}</Text>
         </Animated.View>
-
         {!collapsed && (
           <View>
             <View style={WIDE ? sty.formRow : undefined}>
@@ -903,14 +1021,30 @@ export default function PorondamScreen() {
                     <Text style={sty.secTitle}>{'\uD83D\uDD2E'} {T.report}</Text>
                     <Text style={sty.secSub}>{T.reportQ}</Text>
                   </View>
+                  {/* Token balance pill */}
+                  {tokenBalance !== null && (
+                    <TouchableOpacity onPress={function() { setShowTopUp(true); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(147,51,234,0.18)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }}>
+                      <Ionicons name="wallet-outline" size={12} color="#FBBF24" />
+                      <Text style={{ color: tokenBalance >= 10 ? '#4ADE80' : '#F87171', fontSize: 12, fontWeight: '700' }}>
+                        {'LKR ' + tokenBalance}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <View style={sty.langRow}>
-                  <TouchableOpacity style={[sty.langChip, reportLang === 'si' && sty.langChipActive]} onPress={function() { genReport('si'); }} disabled={reportLoading} activeOpacity={0.7}>
+                  <TouchableOpacity style={[sty.langChip, reportLang === 'si' && sty.langChipActive]} onPress={function() { requestReport('si'); }} disabled={reportLoading} activeOpacity={0.7}>
                     <Text style={[sty.langChipText, reportLang === 'si' && sty.langChipTextActive]}>{T.si}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[sty.langChip, reportLang === 'en' && sty.langChipActive]} onPress={function() { genReport('en'); }} disabled={reportLoading} activeOpacity={0.7}>
+                  <TouchableOpacity style={[sty.langChip, reportLang === 'en' && sty.langChipActive]} onPress={function() { requestReport('en'); }} disabled={reportLoading} activeOpacity={0.7}>
                     <Text style={[sty.langChipText, reportLang === 'en' && sty.langChipTextActive]}>{T.en}</Text>
                   </TouchableOpacity>
+                </View>
+                {/* Cost note */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8, marginTop: -4 }}>
+                  <Ionicons name="pricetag-outline" size={11} color="rgba(251,191,36,0.6)" />
+                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
+                    {language === 'si' ? 'වාර්තාව: රු 10' : 'Report: LKR 10'}
+                  </Text>
                 </View>
                 {reportLoading && (
                   <View style={sty.reportLoadRow}>
@@ -967,29 +1101,39 @@ export default function PorondamScreen() {
                   dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                 } catch(e) {}
                 return (
-                  <TouchableOpacity key={item.id || idx} style={[sty.historyItem, isActive && sty.historyItemActive]}
-                    activeOpacity={0.7} onPress={function() { loadSaved(item); }}>
-                    <View style={[sty.historyPctCircle, { borderColor: color + '60' }]}>
-                      <Text style={[sty.historyPctText, { color: color }]}>{pct}%</Text>
-                    </View>
-                    <View style={sty.historyInfo}>
-                      <Text style={sty.historyNames} numberOfLines={1}>
-                        {item.bride?.name || 'Bride'} & {item.groom?.name || 'Groom'}
-                      </Text>
-                      <Text style={sty.historyMeta}>
-                        {item.score}/{item.maxScore} {'\u2022'} {item.ratingEmoji || ''} {language === 'si' && item.ratingSinhala ? item.ratingSinhala : (item.rating || '')}
-                      </Text>
-                      {dateStr ? <Text style={sty.historyDate}>{dateStr}</Text> : null}
-                    </View>
-                    <View style={sty.historyRight}>
-                      {item.report ? (
-                        <View style={sty.historyReportBadge}>
-                          <Ionicons name="document-text" size={12} color="#34d399" />
-                        </View>
-                      ) : null}
-                      <Ionicons name="chevron-forward" size={16} color="rgba(192,132,252,0.5)" />
-                    </View>
-                  </TouchableOpacity>
+                  <View key={item.id || idx} style={[sty.historyItem, isActive && sty.historyItemActive]}>
+                    <TouchableOpacity
+                      style={sty.historyMainTouch}
+                      activeOpacity={0.7} onPress={function() { loadSaved(item); }}>
+                      <View style={[sty.historyPctCircle, { borderColor: color + '60' }]}>
+                        <Text style={[sty.historyPctText, { color: color }]}>{pct}%</Text>
+                      </View>
+                      <View style={sty.historyInfo}>
+                        <Text style={sty.historyNames} numberOfLines={1}>
+                          {item.bride?.name || 'Bride'} & {item.groom?.name || 'Groom'}
+                        </Text>
+                        <Text style={sty.historyMeta}>
+                          {item.score}/{item.maxScore} {'\u2022'} {item.ratingEmoji || ''} {language === 'si' && item.ratingSinhala ? item.ratingSinhala : (item.rating || '')}
+                        </Text>
+                        {dateStr ? <Text style={sty.historyDate}>{dateStr}</Text> : null}
+                      </View>
+                      <View style={sty.historyRight}>
+                        {item.report ? (
+                          <View style={sty.historyReportBadge}>
+                            <Ionicons name="document-text" size={12} color="#34d399" />
+                          </View>
+                        ) : null}
+                        <Ionicons name="chevron-forward" size={16} color="rgba(192,132,252,0.5)" />
+                      </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={sty.historyDeleteBtn}
+                      activeOpacity={0.7}
+                      onPress={function() { handleDeletePorondam(item); }}
+                    >
+                      <Ionicons name="trash-outline" size={15} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
                 );
               })}
             </Glass>
@@ -998,6 +1142,121 @@ export default function PorondamScreen() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Charge confirmation modal */}
+      <Modal visible={showConfirm} transparent animationType="slide" onRequestClose={function() { setShowConfirm(false); }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <LinearGradient
+            colors={['rgba(13,7,32,0.99)', 'rgba(4,3,12,1)']}
+            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(147,51,234,0.3)' }}
+          >
+            <Text style={{ color: '#FBBF24', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
+              {language === 'si' ? '💍 ගැළපුම් වාර්තාව' : '💍 Compatibility Report'}
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 22 }}>
+              {language === 'si' ? 'AI ලියන ලද, ගැඹුරු විශ්ලේෂණය' : 'AI-written deep analysis'}
+            </Text>
+            <View style={{ backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
+                {language === 'si' ? 'ගෙවීම' : 'Charge'}
+              </Text>
+              <Text style={{ color: '#FBBF24', fontSize: 20, fontWeight: '800' }}>LKR 10</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 24 }}>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>{language === 'si' ? 'ශේෂය' : 'Balance'}</Text>
+              <Text style={{ color: tokenBalance !== null && tokenBalance >= 10 ? '#4ADE80' : '#F87171', fontSize: 12, fontWeight: '700' }}>
+                {'LKR ' + (tokenBalance !== null ? tokenBalance : '—')}
+              </Text>
+            </View>
+            {tokenBalance === null || tokenBalance >= 10 ? (
+              <TouchableOpacity
+                onPress={function() { setShowConfirm(false); genReport(pendingReportLang || 'en'); }}
+                activeOpacity={0.85}
+                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
+              >
+                <LinearGradient
+                  colors={['#FBBF24', '#F59E0B', '#9333EA']}
+                  style={{ paddingVertical: 15, alignItems: 'center', borderRadius: 14 }}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                >
+                  <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '800' }}>
+                    {language === 'si' ? '✨ රු 10 ගෙවා ලියන්න' : '✨ Confirm & Generate — LKR 10'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={function() { setShowConfirm(false); setShowTopUp(true); }}
+                activeOpacity={0.85}
+                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
+              >
+                <LinearGradient
+                  colors={['#7C3AED', '#6366F1']}
+                  style={{ paddingVertical: 15, alignItems: 'center', borderRadius: 14 }}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                >
+                  <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '800' }}>
+                    {language === 'si' ? '💳 ශේෂය රිචාජ් කරන්න' : '💳 Top Up Balance'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={function() { setShowConfirm(false); }} style={{ paddingVertical: 12, alignItems: 'center' }}>
+              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
+                {language === 'si' ? 'අවලංගු' : 'Cancel'}
+              </Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </View>
+      </Modal>
+
+      {/* Top-up modal */}
+      <Modal visible={showTopUp} transparent animationType="slide" onRequestClose={function() { setShowTopUp(false); }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <LinearGradient
+            colors={['rgba(13,7,32,0.99)', 'rgba(4,3,12,1)']}
+            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(147,51,234,0.3)' }}
+          >
+            <Text style={{ color: '#FBBF24', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
+              {language === 'si' ? '💳 ශේෂය රිචාජ්' : '💳 Top Up Balance'}
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
+              {language === 'si' ? 'ඔබේ දුරකතන ක්‍රෙඩිට් එකෙන් ගෙවේ' : 'Charged to your mobile credit via Ideamart'}
+            </Text>
+            {[15, 30, 50].map(function(amt) {
+              return (
+                <TouchableOpacity
+                  key={amt}
+                  onPress={function() { handleTopUp(amt); }}
+                  disabled={topUpLoading}
+                  activeOpacity={0.8}
+                  style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
+                >
+                  <LinearGradient
+                    colors={amt === 15 ? ['#4C1D95', '#7C3AED'] : amt === 30 ? ['#1E3A5F', '#3B82F6'] : ['#065F46', '#10B981']}
+                    style={{ paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700' }}>
+                      {language === 'si' ? 'රු ' + amt + ' රිචාජ්' : 'Add LKR ' + amt}
+                    </Text>
+                    {topUpLoading ? (
+                      <ActivityIndicator color="#FFF" size="small" />
+                    ) : (
+                      <Ionicons name="add-circle" size={22} color="rgba(255,255,255,0.8)" />
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity onPress={function() { setShowTopUp(false); }} style={{ paddingVertical: 14, alignItems: 'center' }}>
+              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
+                {language === 'si' ? 'වසන්න' : 'Close'}
+              </Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </View>
+      </Modal>
     </CosmicBackground>
   );
 }
@@ -1012,7 +1271,10 @@ var sty = StyleSheet.create({
     alignSelf: WIDE ? 'center' : undefined,
     width: WIDE ? '100%' : undefined,
   },
-  title: { fontSize: WIDE ? 36 : 28, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
+  title: {
+    fontSize: WIDE ? 36 : 30, fontWeight: '900', color: '#fff', letterSpacing: -0.5,
+    textShadowColor: 'rgba(192,38,211,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10,
+  },
   subtitle: { fontSize: 14, color: 'rgba(192,132,252,0.8)', marginBottom: 24, fontWeight: '500', letterSpacing: 0.3 },
 
   glass: {
@@ -1024,11 +1286,11 @@ var sty = StyleSheet.create({
   formRow: { flexDirection: 'row', gap: 14 },
   formCol: { flex: 1 },
   personCard: { paddingBottom: WIDE ? 20 : 14 },
-  personLabel: { fontSize: 16, fontWeight: '800', color: '#e0e7ff', marginBottom: 14, letterSpacing: 0.3 },
+  personLabel: { fontSize: 16, fontWeight: '800', color: '#E0E7FF', marginBottom: 14, letterSpacing: 0.3 },
   nameInput: {
     backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 12 : 10,
-    color: '#fff', fontSize: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 12,
+    color: '#fff', fontSize: 14, borderWidth: 1, borderColor: 'rgba(147,51,234,0.2)', marginBottom: 12,
   },
   fieldTag: { fontSize: 10, fontWeight: '700', color: 'rgba(192,132,252,0.7)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6, marginTop: 4 },
   fieldRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
@@ -1036,11 +1298,11 @@ var sty = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 10,
     paddingHorizontal: 10, paddingVertical: Platform.OS === 'ios' ? 11 : 8,
     color: '#fff', fontSize: 14, fontWeight: '600',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', textAlign: 'center', minWidth: 0,
+    borderWidth: 1, borderColor: 'rgba(147,51,234,0.18)', textAlign: 'center', minWidth: 0,
   },
   sep: { color: 'rgba(255,255,255,0.2)', fontSize: 16, fontWeight: '300' },
   timeSep: { color: 'rgba(192,132,252,0.6)', fontSize: 20, fontWeight: '700' },
-  timeHint: { fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 16, fontStyle: 'italic', textAlign: 'center' },
+  timeHint: { fontSize: 11, color: 'rgba(255,255,255,0.28)', marginBottom: 16, fontStyle: 'italic', textAlign: 'center' },
 
   cta: { borderRadius: 16, paddingVertical: 16, alignItems: 'center', overflow: 'hidden', marginBottom: 8 },
   ctaText: { color: '#fff', fontWeight: '800', fontSize: 16, letterSpacing: 0.5 },
@@ -1048,78 +1310,73 @@ var sty = StyleSheet.create({
   editBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 12, marginBottom: 14, borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(192,132,252,0.15)', backgroundColor: 'rgba(192,132,252,0.06)',
+    borderWidth: 1, borderColor: 'rgba(192,132,252,0.18)', backgroundColor: 'rgba(192,132,252,0.06)',
   },
-  editText: { color: '#c084fc', fontWeight: '600', fontSize: 13 },
+  editText: { color: '#C084FC', fontWeight: '600', fontSize: 13 },
 
   loadCenter: { alignItems: 'center', marginVertical: 30 },
-  loadCard: { alignItems: 'center', paddingVertical: 44, paddingHorizontal: 40, borderColor: 'rgba(192,132,252,0.15)' },
-  loadRing: { width: 90, height: 90, borderRadius: 45, opacity: 0.25, position: 'absolute', top: 34 },
+  loadCard: { alignItems: 'center', paddingVertical: 44, paddingHorizontal: 40, borderColor: 'rgba(192,132,252,0.2)' },
+  loadRing: { width: 90, height: 90, borderRadius: 45, opacity: 0.22, position: 'absolute', top: 34 },
   loadInner: {
     width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(15,5,25,0.9)',
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(192,132,252,0.3)',
   },
-  loadText: { color: '#c084fc', fontSize: 15, fontWeight: '700', marginTop: 22, letterSpacing: 0.5 },
-  errorText: { color: '#f87171', fontSize: 14, textAlign: 'center' },
+  loadText: { color: '#C084FC', fontSize: 15, fontWeight: '700', marginTop: 22, letterSpacing: 0.5 },
+  errorText: { color: '#F87171', fontSize: 14, textAlign: 'center' },
 
+  // Score Gauge — binary star orbit
   gaugeRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  gaugeCircle: {
-    width: 110, height: 110, borderRadius: 55, borderWidth: 2,
-    borderColor: 'rgba(192,132,252,0.3)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-  },
-  gaugePct: { fontSize: 36, fontWeight: '900' },
-  gaugePctSign: { fontSize: 18, fontWeight: '700' },
-  gaugeOf: { fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: '700', marginTop: 2 },
   gaugeInfo: { flex: 1 },
-  gaugeRating: { fontSize: 18, fontWeight: '800', color: '#e0e7ff', marginBottom: 4 },
-  gaugeHint: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '500', marginBottom: 12 },
+  gaugeCosmicLabel: { fontSize: 14, fontWeight: '800', marginBottom: 3, letterSpacing: 0.3 },
+  gaugeRating: { fontSize: 16, fontWeight: '700', color: '#E0E7FF', marginBottom: 3 },
+  gaugeScoreText: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '600', marginBottom: 12 },
   shareChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
     paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999,
-    backgroundColor: 'rgba(192,132,252,0.1)', borderWidth: 1, borderColor: 'rgba(192,132,252,0.2)',
+    backgroundColor: 'rgba(192,132,252,0.1)', borderWidth: 1, borderColor: 'rgba(192,132,252,0.25)',
   },
-  shareChipText: { color: '#c084fc', fontSize: 12, fontWeight: '700' },
+  shareChipText: { color: '#C084FC', fontSize: 12, fontWeight: '700' },
 
   charts: { marginBottom: 6 },
   chartsWide: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   chartCol: { flex: 1, maxWidth: 440 },
   chartCard: { alignItems: 'center', paddingVertical: WIDE ? 20 : 16 },
-  chartTitle: { fontSize: 14, fontWeight: '700', color: '#c084fc', marginBottom: 12, letterSpacing: 0.3 },
+  chartTitle: { fontSize: 14, fontWeight: '700', color: '#C084FC', marginBottom: 12, letterSpacing: 0.3 },
   heartBridge: { alignItems: 'center', marginVertical: -6, zIndex: 10 },
   heartBridgeWide: { marginVertical: 0, marginHorizontal: -10 },
 
   section: { marginBottom: 14 },
   secHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  secTitle: { fontSize: 17, fontWeight: '800', color: '#e0e7ff', letterSpacing: 0.2 },
+  secTitle: { fontSize: 16, fontWeight: '800', color: '#E0E7FF', letterSpacing: 0.2 },
   secSub: { fontSize: 12, color: 'rgba(192,132,252,0.6)', fontWeight: '500', marginTop: 2 },
 
   factorItem: { marginBottom: 16 },
   factorTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   factorNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   factorDot: { width: 8, height: 8, borderRadius: 4 },
-  factorName: { fontSize: 14, color: '#e0e7ff', fontWeight: '700' },
+  factorName: { fontSize: 14, color: '#E0E7FF', fontWeight: '700' },
   factorSinhala: { fontSize: 12, color: 'rgba(192,132,252,0.5)', fontWeight: '500' },
   factorBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
   factorBadgeText: { fontSize: 12, fontWeight: '800' },
-  barTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
-  barFill: { height: 6, borderRadius: 3 },
-  factorDesc: { fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 6, lineHeight: 18 },
+  barTrack: { height: 7, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' },
+  barFill: { height: 7, borderRadius: 4, overflow: 'hidden' },
+  factorDesc: { fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 6, lineHeight: 18 },
 
   doshaItem: { flexDirection: 'row', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   doshaIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(248,113,113,0.1)', alignItems: 'center', justifyContent: 'center' },
-  doshaName: { fontSize: 14, color: '#fca5a5', fontWeight: '700', marginBottom: 3 },
-  doshaDesc: { fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 18 },
+  doshaName: { fontSize: 14, color: '#FCA5A5', fontWeight: '700', marginBottom: 3 },
+  doshaDesc: { fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 },
 
   langRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   langChip: {
     flex: 1, paddingVertical: 11, borderRadius: 12, alignItems: 'center',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  langChipActive: { borderColor: '#c026d3', backgroundColor: 'rgba(192,38,211,0.15)' },
+  langChipActive: { borderColor: '#C026D3', backgroundColor: 'rgba(192,38,211,0.15)' },
   langChipText: { color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: '700' },
-  langChipTextActive: { color: '#e879f9' },
+  langChipTextActive: { color: '#E879F9' },
   reportLoadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
-  reportLoadText: { color: '#c084fc', fontSize: 13 },
+  reportLoadText: { color: '#C084FC', fontSize: 13 },
   reportBody: {
     backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 16,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)',
@@ -1130,10 +1387,10 @@ var sty = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999,
     backgroundColor: 'rgba(192,38,211,0.12)', borderWidth: 1, borderColor: 'rgba(192,38,211,0.25)',
   },
-  newCheckText: { color: '#e879f9', fontSize: 12, fontWeight: '700' },
+  newCheckText: { color: '#E879F9', fontSize: 12, fontWeight: '700' },
   historyLoadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
   historyLoadText: { color: 'rgba(192,132,252,0.6)', fontSize: 13 },
-  historyEmpty: { color: 'rgba(255,255,255,0.3)', fontSize: 13, textAlign: 'center', paddingVertical: 20 },
+  historyEmpty: { color: 'rgba(255,255,255,0.28)', fontSize: 13, textAlign: 'center', paddingVertical: 20 },
   historyItem: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 12, paddingHorizontal: 4,
@@ -1150,9 +1407,20 @@ var sty = StyleSheet.create({
   },
   historyPctText: { fontSize: 13, fontWeight: '800' },
   historyInfo: { flex: 1 },
-  historyNames: { fontSize: 14, fontWeight: '700', color: '#e0e7ff', marginBottom: 2 },
-  historyMeta: { fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: '500' },
-  historyDate: { fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 2 },
+  historyNames: { fontSize: 14, fontWeight: '700', color: '#E0E7FF', marginBottom: 2 },
+  historyMeta: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '500' },
+  historyDate: { fontSize: 10, color: 'rgba(255,255,255,0.22)', marginTop: 2 },
+  historyMainTouch: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  historyDeleteBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   historyRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   historyReportBadge: {
     width: 22, height: 22, borderRadius: 11,

@@ -12,6 +12,8 @@ const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getS
 const { generateAdvancedAnalysis } = require('../engine/advanced');
 const { chat, generateAINarrativeReport, translateAdvancedForDisplay, explainChartSimple } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
+const { phoneAuth } = require('../middleware/subscription');
+const { requireTokens, deductTokenBalance } = require('../middleware/tokens');
 const { saveReport, getCachedReport, saveChartExplanation, getCachedChartExplanation, saveTranslationCache, getCachedTranslation, getUserReports } = require('../models/firestore');
 const { parseSLT } = require('../utils/dateUtils');
 
@@ -1227,7 +1229,7 @@ router.post('/full-report', (req, res) => {
 // Optional auth: if logged in, caches report & returns cached if available
 // ═══════════════════════════════════════════════════════════════════
 
-router.post('/full-report-ai', optionalAuth, async (req, res) => {
+router.post('/full-report-ai', phoneAuth, requireTokens(15, 'Full AI Report'), async (req, res) => {
   try {
     const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null } = req.body;
 
@@ -1240,7 +1242,7 @@ router.post('/full-report-ai', optionalAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid birthDate format. Use ISO format e.g. 1998-10-09T09:16:00' });
     }
 
-    // Check for cached report if user is authenticated
+    // Check for cached report — cache hits are FREE (no token deduction)
     if (req.user && !req.user.anonymous && !req.query.forceRegenerate) {
       try {
         const cached = await getCachedReport(req.user.uid, birthDate, language);
@@ -1249,6 +1251,8 @@ router.post('/full-report-ai', optionalAuth, async (req, res) => {
           return res.json({
             success: true,
             cached: true,
+            tokenCost: 0,
+            balance: req.tokenBalanceBefore,
             generationTime: '0ms',
             data: {
               generatedAt: cached.createdAt,
@@ -1262,6 +1266,18 @@ router.post('/full-report-ai', optionalAuth, async (req, res) => {
       } catch (e) {
         console.warn('[AI Report] Cache check failed:', e.message);
       }
+    }
+
+    // Deduct LKR 15 BEFORE generation
+    let newBalance = req.tokenBalanceBefore;
+    try {
+      const deduction = await req.deductTokens();
+      newBalance = deduction.newBalance;
+    } catch (e) {
+      if (e.code === 'INSUFFICIENT_BALANCE') {
+        return res.status(402).json({ error: 'Insufficient token balance', balance: e.balance, required: e.required, topUpRequired: true });
+      }
+      throw e;
     }
 
     console.log(`[AI Report] Generating narrative report for ${date.toISOString()} at (${lat}, ${lng}) in ${language}`);
@@ -1299,6 +1315,8 @@ router.post('/full-report-ai', optionalAuth, async (req, res) => {
     res.json({
       success: true,
       cached: false,
+      tokenCost: req.tokenCost,
+      balance: newBalance,
       generationTime: `${elapsed}ms`,
       data: report,
     });
@@ -1387,9 +1405,9 @@ router.get('/saved-report/:id', optionalAuth, async (req, res) => {
 // DELETE /api/horoscope/saved-report/:id
 // Delete a saved report
 // ═══════════════════════════════════════════════════════════════════
-router.delete('/saved-report/:id', optionalAuth, async (req, res) => {
+router.delete('/saved-report/:id', phoneAuth, async (req, res) => {
   try {
-    if (!req.user || req.user.anonymous) {
+    if (!req.user || !req.user.uid) {
       return res.status(401).json({ error: 'Login required to delete reports' });
     }
     const { getDb, COLLECTIONS } = require('../config/firebase');

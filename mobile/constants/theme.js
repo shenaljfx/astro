@@ -1,5 +1,6 @@
 /**
- * Nakath AI - World-Class Celestial Design System
+ * Nakath AI - World-Class Celestial Design System v2.0
+ * "Cosmic Silk" — deep materiality, glow physics, chromatic depth
  * Premium dark theme with refined color science, depth layers, & micro-design tokens
  */
 
@@ -27,6 +28,25 @@ export const Colors = {
   teal: '#06B6D4',
   tealLight: '#22D3EE',
   tealDark: '#0E7490',
+
+  // ── NEW: Extended palette ──────────────────────────────────
+  // Cosmic Rose — Venus & love tones
+  cosmicRose: '#FF6B9D',
+  cosmicRoseGlow: 'rgba(255,107,157,0.3)',
+  // Deep Void — AMOLED true black pockets
+  deepVoid: '#010108',
+  // Aurora Green — Rahu/Ketu & auspicious states
+  auroraGreen: '#00FFB3',
+  auroraGreenGlow: 'rgba(0,255,179,0.25)',
+  // Plasma Blue — transit highlights
+  plasmaBlue: '#4CC9F0',
+  plasmaBlueGlow: 'rgba(76,201,240,0.3)',
+  // Solar Amber — Rahu Kalaya active state
+  solarAmber: '#FF8C00',
+  solarAmberGlow: 'rgba(255,140,0,0.35)',
+  // Stardust Silver — subtle highlights
+  stardustSilver: 'rgba(226,232,240,0.12)',
+  // ────────────────────────────────────────────────────────────
 
   // Background layers
   background: '#04030C',
@@ -171,4 +191,48 @@ export const Animations = {
   springSmooth: { damping: 20, stiffness: 120, mass: 1 },
   pressIn: { damping: 15, stiffness: 300 },
   pressOut: { damping: 12, stiffness: 200 },
+};
+
+/**
+ * Typography System — "Celestial Type"
+ * Display: Cinzel-like bold serif feel (fallback to system)
+ * Body:    Inter / system-ui clean
+ * Stats:   Space Grotesk geometric
+ * Sinhala: Noto Serif Sinhala
+ */
+export const Typography = {
+  // Display — hero headlines
+  displayXXL: { fontSize: 40, fontWeight: '900', letterSpacing: 3, lineHeight: 48 },
+  displayXL:  { fontSize: 32, fontWeight: '800', letterSpacing: 2, lineHeight: 38 },
+  // Section titles — Cinzel feel
+  title1: { fontSize: 26, fontWeight: '800', letterSpacing: 1.5, lineHeight: 32 },
+  title2: { fontSize: 22, fontWeight: '700', letterSpacing: 1,   lineHeight: 28 },
+  title3: { fontSize: 18, fontWeight: '700', letterSpacing: 0.8, lineHeight: 24 },
+  // Body
+  body:   { fontSize: 15, fontWeight: '400', letterSpacing: 0.2, lineHeight: 24 },
+  bodyMd: { fontSize: 14, fontWeight: '400', letterSpacing: 0.1, lineHeight: 22 },
+  bodySm: { fontSize: 13, fontWeight: '400', letterSpacing: 0,   lineHeight: 20 },
+  // Captions & labels
+  label:  { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, lineHeight: 16, textTransform: 'uppercase' },
+  caption:{ fontSize: 10, fontWeight: '500', letterSpacing: 0.8, lineHeight: 14 },
+  // Stat numbers — Space Grotesk feel
+  statLg: { fontSize: 36, fontWeight: '800', letterSpacing: -0.5, lineHeight: 42 },
+  statMd: { fontSize: 28, fontWeight: '700', letterSpacing: -0.3, lineHeight: 34 },
+  statSm: { fontSize: 20, fontWeight: '700', letterSpacing: 0,    lineHeight: 26 },
+};
+
+/**
+ * Gradient presets for consistent chromatic borders & fills
+ */
+export const Gradients = {
+  nebulaPurple:  ['#9333EA', '#6366F1', '#3B82F6'],
+  celestialGold: ['#FBBF24', '#F59E0B', '#D97706'],
+  auroraRise:    ['#00FFB3', '#4CC9F0', '#9333EA'],
+  sunriseFire:   ['#FF8C00', '#FBBF24', '#FDE68A'],
+  cosmicRose:    ['#FF6B9D', '#9333EA', '#6366F1'],
+  deepSpace:     ['rgba(9,5,28,0.95)', 'rgba(20,10,50,0.9)', 'rgba(4,3,12,0.98)'],
+  cardSheen:     ['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.01)'],
+  glassBlue:     ['rgba(37,34,80,0.65)', 'rgba(20,18,55,0.5)'],
+  glassPurple:   ['rgba(60,20,100,0.5)', 'rgba(20,10,50,0.45)'],
+  glassGold:     ['rgba(80,50,10,0.4)',  'rgba(20,12,4,0.5)'],
 };

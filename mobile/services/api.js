@@ -144,7 +144,15 @@ export var askAstrologer = function(message, options) {
   if (!options) options = {};
   return request('/api/chat/ask', {
     method: 'POST',
-    body: JSON.stringify({ message: message, language: options.language || 'en', chatHistory: options.chatHistory || [] }),
+    body: JSON.stringify({
+      message: message,
+      language: options.language || 'en',
+      chatHistory: options.chatHistory || [],
+      birthDate: options.birthDate || null,
+      birthLat: options.birthLat || null,
+      birthLng: options.birthLng || null,
+    }),
+    _timeout: 30000,
   });
 };
 
@@ -221,6 +229,10 @@ export var getUserPorondamHistory = function(limit) {
   return request('/api/user/porondam?limit=' + (limit || 10));
 };
 
+export var deletePorondamRecord = function(recordId) {
+  return request('/api/porondam/history/' + recordId, { method: 'DELETE' });
+};
+
 // ─── Phone Auth / OTP API ───────────────────────────────────────
 
 export var sendOtp = function(phone) {
@@ -262,6 +274,131 @@ export var renewSubscription = function() {
   return request('/api/auth/renew', { method: 'POST' });
 };
 
+// ─── Predictions API — Transit, Timing, Muhurtha, Health ────────
+
+export var getCurrentTransits = function(birthDate, birthTime, lat, lng, transitDate) {
+  return request('/api/predictions/transit/current', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, birthTime: birthTime || null, lat: lat || 6.9271, lng: lng || 79.8612, transitDate: transitDate || null }),
+    _timeout: 15000,
+  });
+};
+
+export var getDailyTransitForecast = function(birthDate, birthTime, lat, lng, forecastDate) {
+  return request('/api/predictions/transit/daily', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, birthTime: birthTime || null, lat: lat || 6.9271, lng: lng || 79.8612, forecastDate: forecastDate || null }),
+    _timeout: 15000,
+  });
+};
+
+export var getWeeklyTransitForecast = function(birthDate, birthTime, lat, lng, weekStart) {
+  return request('/api/predictions/transit/weekly', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, birthTime: birthTime || null, lat: lat || 6.9271, lng: lng || 79.8612, weekStart: weekStart || null }),
+    _timeout: 20000,
+  });
+};
+
+export var getMonthlyTransitForecast = function(birthDate, birthTime, lat, lng, month, year) {
+  return request('/api/predictions/transit/monthly', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, birthTime: birthTime || null, lat: lat || 6.9271, lng: lng || 79.8612, month: month || null, year: year || null }),
+    _timeout: 25000,
+  });
+};
+
+export var getYearlyTransitForecast = function(birthDate, birthTime, lat, lng, year) {
+  return request('/api/predictions/transit/yearly', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, birthTime: birthTime || null, lat: lat || 6.9271, lng: lng || 79.8612, year: year || null }),
+    _timeout: 30000,
+  });
+};
+
+export var getRetrogradePeriods = function(year) {
+  return request('/api/predictions/transit/retrogrades?year=' + (year || new Date().getFullYear()));
+};
+
+export var predictEventTiming = function(birthDate, birthTime, lat, lng, eventType) {
+  return request('/api/predictions/timing/event', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, birthTime: birthTime || null, lat: lat || 6.9271, lng: lng || 79.8612, eventType: eventType }),
+    _timeout: 15000,
+  });
+};
+
+export var predictAllEventTiming = function(birthDate, birthTime, lat, lng) {
+  return request('/api/predictions/timing/all', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, birthTime: birthTime || null, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    _timeout: 25000,
+  });
+};
+
+export var scoreMuhurtha = function(datetime, activity, lat, lng, birthDate, birthTime) {
+  return request('/api/predictions/muhurtha/score', {
+    method: 'POST',
+    body: JSON.stringify({ datetime: datetime, activity: activity, lat: lat || 6.9271, lng: lng || 79.8612, birthDate: birthDate || null, birthTime: birthTime || null }),
+    _timeout: 15000,
+  });
+};
+
+export var findBestMuhurtha = function(activity, startDate, endDate, lat, lng, birthDate, birthTime) {
+  return request('/api/predictions/muhurtha/find', {
+    method: 'POST',
+    body: JSON.stringify({ activity: activity, startDate: startDate, endDate: endDate, lat: lat || 6.9271, lng: lng || 79.8612, birthDate: birthDate || null, birthTime: birthTime || null }),
+    _timeout: 30000,
+  });
+};
+
+export var getInauspiciousPeriods = function(date, lat, lng) {
+  return request('/api/predictions/muhurtha/inauspicious', {
+    method: 'POST',
+    body: JSON.stringify({ date: date, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    _timeout: 10000,
+  });
+};
+
+export var isGoodTimeNow = function(lat, lng) {
+  return request('/api/predictions/muhurtha/now?lat=' + (lat || 6.9271) + '&lng=' + (lng || 79.8612));
+};
+
+export var getMuhurthaActivities = function() {
+  return request('/api/predictions/muhurtha/activities');
+};
+
+export var analyzeHealth = function(birthDate, birthTime, lat, lng) {
+  return request('/api/predictions/health/analyze', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, birthTime: birthTime || null, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    _timeout: 20000,
+  });
+};
+
+// ─── Token / Micro-transaction API ──────────────────────────────────────────
+
+export var getTokenBalance = function() {
+  return request('/api/tokens/balance');
+};
+
+export var topUpTokens = function(amount) {
+  return request('/api/tokens/topup', {
+    method: 'POST',
+    body: JSON.stringify({ amount: amount }),
+  });
+};
+
+export var getTokenHistory = function() {
+  return request('/api/tokens/history');
+};
+
+// ─── Chat Quota API ──────────────────────────────────────────────────────────
+
+export var getChatQuota = function() {
+  return request('/api/chat/quota');
+};
+
 export default {
   getDailyNakath: getDailyNakath,
   getDailyHoroscope: getDailyHoroscope,
@@ -285,6 +422,7 @@ export default {
   deleteSavedReport: deleteSavedReport,
   getUserChats: getUserChats,
   getUserPorondamHistory: getUserPorondamHistory,
+  deletePorondamRecord: deletePorondamRecord,
   sendOtp: sendOtp,
   verifyOtp: verifyOtp,
   completeOnboarding: completeOnboarding,
@@ -292,4 +430,28 @@ export default {
   unsubscribe: unsubscribe,
   getSubscriptionStatus: getSubscriptionStatus,
   renewSubscription: renewSubscription,
+  // Predictions — Transit
+  getCurrentTransits: getCurrentTransits,
+  getDailyTransitForecast: getDailyTransitForecast,
+  getWeeklyTransitForecast: getWeeklyTransitForecast,
+  getMonthlyTransitForecast: getMonthlyTransitForecast,
+  getYearlyTransitForecast: getYearlyTransitForecast,
+  getRetrogradePeriods: getRetrogradePeriods,
+  // Predictions — Event Timing
+  predictEventTiming: predictEventTiming,
+  predictAllEventTiming: predictAllEventTiming,
+  // Predictions — Muhurtha
+  scoreMuhurtha: scoreMuhurtha,
+  findBestMuhurtha: findBestMuhurtha,
+  getInauspiciousPeriods: getInauspiciousPeriods,
+  isGoodTimeNow: isGoodTimeNow,
+  getMuhurthaActivities: getMuhurthaActivities,
+  // Predictions — Health
+  analyzeHealth: analyzeHealth,
+  // Tokens / Micro-transactions
+  getTokenBalance: getTokenBalance,
+  topUpTokens: topUpTokens,
+  getTokenHistory: getTokenHistory,
+  // Chat quota
+  getChatQuota: getChatQuota,
 };
