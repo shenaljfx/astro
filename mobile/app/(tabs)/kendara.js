@@ -1,18 +1,25 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Dimensions
+  StyleSheet, ActivityIndicator, Dimensions, Platform
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing, interpolate } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import CosmicBackground from '../../components/CosmicBackground';
+import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
 import SriLankanChart from '../../components/SriLankanChart';
+import SpringPressable from '../../components/effects/SpringPressable';
+import CosmicLoader from '../../components/effects/CosmicLoader';
+import PinchableView from '../../components/effects/PinchableView';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { Colors, Typography } from '../../constants/theme';
+
+const CHART_CACHE_KEY = '@nakath_chart_cache';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -132,14 +139,21 @@ export default function KendaraScreen() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const router = useRouter();
+  var isDesktop = useDesktopCtx();
 
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  
   const stepTimers = useRef([]);
+  const lastFetchedBirth = useRef(null);
+  const chartDataRef = useRef(null);
+  const fetchingRef = useRef(false);
+  const langRef = useRef(language);
+  langRef.current = language;
 
-  // Extract stable values so useCallback/useEffect don't re-trigger on every user object change
   const birthDateTime = user?.birthData?.dateTime || null;
   const birthLat = user?.birthData?.lat || 6.9271;
   const birthLng = user?.birthData?.lng || 79.8612;
@@ -150,50 +164,91 @@ export default function KendaraScreen() {
     stepTimers.current = [];
   }, []);
 
-  const fetchBirthChart = useCallback(async (cancelled) => {
-    if (!hasBirthData) { setChartData(null); return; }
-    try {
-      setLoading(true);
-      setError(null);
-      setLoadingStep(1);
-      clearStepTimers();
-
-      // Progress steps timed to match fast server response (~200ms)
-      stepTimers.current.push(setTimeout(() => { if (!cancelled.current) setLoadingStep(2); }, 150));
-      stepTimers.current.push(setTimeout(() => { if (!cancelled.current) setLoadingStep(3); }, 350));
-      stepTimers.current.push(setTimeout(() => { if (!cancelled.current) setLoadingStep(4); }, 550));
-
-      const res = await api.getBirthChart(birthDateTime, birthLat, birthLng, language);
-      if (cancelled.current) return;
-
-      clearStepTimers();
-      setLoadingStep(5); // All done!
-
-      if (res.success) {
-        await new Promise(r => setTimeout(r, 500));
-        if (cancelled.current) return;
-        setChartData(res.data);
-      } else {
-        throw new Error(res.error || 'Failed to calculate chart');
-      }
-    } catch (err) {
-      if (cancelled.current) return;
-      if (err && (err.name === 'AbortError' || (err.message && err.message.indexOf('abort') !== -1))) return;
-      setError(err.message || t('failedToLoadChart'));
-    } finally {
-      if (!cancelled.current) {
-        setLoading(false);
-        setLoadingStep(0);
-      }
-    }
-  }, [hasBirthData, birthDateTime, birthLat, birthLng, language, clearStepTimers]);
-
   useEffect(() => {
-    var cancelled = { current: false };
-    fetchBirthChart(cancelled);
-    return () => { cancelled.current = true; clearStepTimers(); };
-  }, [fetchBirthChart, clearStepTimers]);
-  const onRefresh = useCallback(() => { fetchBirthChart({ current: false }); }, [fetchBirthChart]);
+    if (!hasBirthData) { setChartData(null); chartDataRef.current = null; return; }
+
+    // Already have data for this birth time — skip
+    if (chartDataRef.current && lastFetchedBirth.current === birthDateTime) return;
+
+    var cancelled = false;
+
+    (async () => {
+      // Try local cache first (instant, no network)
+      try {
+        var raw = await AsyncStorage.getItem(CHART_CACHE_KEY);
+        if (raw) {
+          var cached = JSON.parse(raw);
+          if (cached && cached.birthDateTime === birthDateTime && cached.data) {
+            if (!cancelled) {
+              setChartData(cached.data);
+              chartDataRef.current = cached.data;
+              lastFetchedBirth.current = birthDateTime;
+            }
+            return;
+          }
+        }
+      } catch (_) { /* ignore cache miss */ }
+
+      // Guard against concurrent fetches
+      if (fetchingRef.current) return;
+      fetchingRef.current = true;
+
+      try {
+        if (!cancelled) {
+          setLoading(true);
+          setError(null);
+          setLoadingStep(1);
+        }
+        clearStepTimers();
+
+        stepTimers.current.push(setTimeout(() => { if (!cancelled) setLoadingStep(2); }, 150));
+        stepTimers.current.push(setTimeout(() => { if (!cancelled) setLoadingStep(3); }, 350));
+        stepTimers.current.push(setTimeout(() => { if (!cancelled) setLoadingStep(4); }, 550));
+
+        var res = await api.getBirthChart(birthDateTime, birthLat, birthLng, langRef.current);
+        if (cancelled) return;
+
+        clearStepTimers();
+        setLoadingStep(5);
+
+        if (res.success) {
+          await new Promise(r => setTimeout(r, 400));
+          if (cancelled) return;
+          setChartData(res.data);
+          chartDataRef.current = res.data;
+          lastFetchedBirth.current = birthDateTime;
+          try {
+            await AsyncStorage.setItem(CHART_CACHE_KEY, JSON.stringify({ birthDateTime: birthDateTime, data: res.data, savedAt: Date.now() }));
+          } catch (_) { /* ignore */ }
+        } else {
+          throw new Error(res.error || 'Failed to calculate chart');
+        }
+      } catch (err) {
+        if (cancelled) return;
+        if (err && (err.name === 'AbortError' || (err.message && err.message.indexOf('abort') !== -1))) return;
+        setError(err.message || 'Failed to load chart');
+      } finally {
+        fetchingRef.current = false;
+        if (!cancelled) {
+          setLoading(false);
+          setLoadingStep(0);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; clearStepTimers(); };
+  }, [hasBirthData, birthDateTime, birthLat, birthLng, clearStepTimers, refreshKey]);
+
+  // Pull-to-refresh: clear caches and force the effect to re-run
+  const onRefresh = useCallback(() => {
+    if (fetchingRef.current) return;
+    lastFetchedBirth.current = null;
+    chartDataRef.current = null;
+    AsyncStorage.removeItem(CHART_CACHE_KEY).catch(() => {});
+    setChartData(null);
+    setError(null);
+    setRefreshKey(function (k) { return k + 1; });
+  }, []);
 
   const renderContent = () => {
     if (!hasBirthData) {
@@ -201,10 +256,10 @@ export default function KendaraScreen() {
         <View style={styles.emptyState}>
           <Ionicons name="planet-outline" size={64} color="rgba(251,191,36,0.5)" />
           <Text style={styles.emptyTitle}>{t('kpBirthNeeded') || 'Birth Details Needed'}</Text>
-          <Text style={styles.emptyText}>{t('setBirthDataPrompt')}</Text>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(tabs)/profile')}>
-            <Text style={styles.actionButtonText}>{t('goToProfile') || (language === 'si' ? 'ප්‍රොෆයිල් එකට යන්න' : 'Go to Profile')}</Text>
-          </TouchableOpacity>
+          <Text style={styles.emptyText}>{t('setBirthDataPrompt') || 'Please set your birth date and time in your profile to see your chart.'}</Text>
+          <SpringPressable style={styles.actionButton} onPress={() => router.push('/(tabs)/profile')} haptic="medium">
+            <Text style={styles.actionButtonText}>{t('goToProfile') || 'Go to Profile'}</Text>
+          </SpringPressable>
         </View>
       );
     }
@@ -232,7 +287,7 @@ export default function KendaraScreen() {
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             />
             <Text style={styles.loadingTitle}>
-              {language === 'si' ? '✦ කේන්දරය සකසමින් ✦' : '✦ Preparing Your Chart ✦'}
+              {'✦ ' + (t('kpPreparingChart') || 'Preparing Your Chart') + ' ✦'}
             </Text>
             <View style={styles.stepsContainer}>
               {STEPS.map((step) => {
@@ -249,7 +304,7 @@ export default function KendaraScreen() {
                       {isDone ? (
                         <Ionicons name="checkmark" size={16} color="#10b981" />
                       ) : isActive ? (
-                        <ActivityIndicator size="small" color="#fbbf24" />
+                        <CosmicLoader size={20} color="#fbbf24" />
                       ) : (
                         <Ionicons name={step.icon} size={16} color="rgba(255,255,255,0.3)" />
                       )}
@@ -278,9 +333,9 @@ export default function KendaraScreen() {
       return (
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={onRefresh}>
+          <SpringPressable onPress={onRefresh} haptic="light">
             <Text style={{ color: '#fbbf24', marginTop: 10 }}>{t('kpRetry') || 'Try Again'}</Text>
-          </TouchableOpacity>
+          </SpringPressable>
         </View>
       );
     }
@@ -310,17 +365,19 @@ export default function KendaraScreen() {
         {/* Yoga badges strip */}
         {topYogas.length > 0 && (
           <Animated.View entering={FadeIn.duration(600)} style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
-            {topYogas.map(function (y, i) { return <YogaBadge key={i} name={y.name} category={y.category} />; })}
+            {topYogas.map(function (y, i) { return <YogaBadge key={i} name={language === 'si' ? (y.sinhala || y.name) : y.name} category={y.category} />; })}
           </Animated.View>
         )}
 
-        <ChartGlowAura lagnaColor={lagnaGlowColor}>
-          <SriLankanChart
-            rashiChart={chartData.rashiChart}
-            lagnaRashiId={lagnaRashiId}
-            language={language}
-          />
-        </ChartGlowAura>
+        <PinchableView minScale={1} maxScale={2.5}>
+          <ChartGlowAura lagnaColor={lagnaGlowColor}>
+            <SriLankanChart
+              rashiChart={chartData.rashiChart}
+              lagnaRashiId={lagnaRashiId}
+              language={language}
+            />
+          </ChartGlowAura>
+        </PinchableView>
 
         <View style={styles.detailsCard}>
           <Text style={styles.cardTitle}>{t('kpChartDetails') || 'Chart Summary'}</Text>
@@ -410,13 +467,15 @@ export default function KendaraScreen() {
               </Text>
             </View>
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
-              <ChartGlowAura lagnaColor="#A78BFA">
-                <SriLankanChart
-                  rashiChart={chartData.navamsaChart || chartData.navamshaChart}
-                  lagnaRashiId={(chartData.navamshaLagna && chartData.navamshaLagna.rashi && chartData.navamshaLagna.rashi.id) || (chartData.navamsaLagna && chartData.navamsaLagna.rashi && chartData.navamsaLagna.rashi.id) || lagnaRashiId}
-                  language={language}
-                />
-              </ChartGlowAura>
+              <PinchableView minScale={1} maxScale={2.5}>
+                <ChartGlowAura lagnaColor="#A78BFA">
+                  <SriLankanChart
+                    rashiChart={chartData.navamsaChart || chartData.navamshaChart}
+                    lagnaRashiId={(chartData.navamshaLagna && chartData.navamshaLagna.rashi && chartData.navamshaLagna.rashi.id) || (chartData.navamsaLagna && chartData.navamsaLagna.rashi && chartData.navamsaLagna.rashi.id) || lagnaRashiId}
+                    language={language}
+                  />
+                </ChartGlowAura>
+              </PinchableView>
             </View>
           </View>
         ) : null}
@@ -433,7 +492,7 @@ export default function KendaraScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
                     <Ionicons name="sparkles" size={20} color="#c084fc" />
                     <Text style={{ color: '#c084fc', fontSize: 14, fontWeight: '700', letterSpacing: 0.5 }}>
-                      {language === 'si' ? '✨ ඔබේ කේන්දරයේ සාරාංශය' : '✨ Your Chart at a Glance'}
+                      {'✨ ' + (t('kpChartAtGlance') || 'Your Chart at a Glance')}
                     </Text>
                   </View>
                   <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 22, fontStyle: 'italic' }}>
@@ -461,7 +520,7 @@ export default function KendaraScreen() {
                         <View style={[styles.doshaDot, { backgroundColor: d.cancelled ? '#6b7280' : sevColor }]} />
                         <View style={{ flex: 1 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                            <Text style={[styles.doshaName, d.cancelled && { textDecorationLine: 'line-through', color: 'rgba(255,255,255,0.3)' }]}>{d.name}</Text>
+                            <Text style={[styles.doshaName, d.cancelled && { textDecorationLine: 'line-through', color: 'rgba(255,255,255,0.3)' }]}>{language === 'si' ? (d.sinhala || d.name) : d.name}</Text>
                             {d.cancelled ? (
                               <View style={styles.cancelBadge}>
                                 <Text style={styles.cancelText}>{t('kpCancelled') || 'CANCELLED'}</Text>
@@ -472,8 +531,8 @@ export default function KendaraScreen() {
                               </View>
                             )}
                           </View>
-                          <Text style={styles.doshaDesc}>{d.description}</Text>
-                          {d.cancellationReason && <Text style={styles.cancelReason}>↳ {d.cancellationReason}</Text>}
+                          <Text style={styles.doshaDesc}>{language === 'si' ? (d.descriptionSi || d.description) : d.description}</Text>
+                          {(d.cancellationReason || d.details?.cancellationReason) && <Text style={styles.cancelReason}>↳ {language === 'si' ? (d.cancellationReasonSi || d.cancellationReason || d.details?.cancellationReason) : (d.cancellationReason || d.details?.cancellationReason)}</Text>}
                         </View>
                       </View>
                     );
@@ -514,13 +573,13 @@ export default function KendaraScreen() {
                       <View key={i} style={styles.yogaItem}>
                         <View style={styles.yogaTop}>
                           <View style={[styles.catDot, { backgroundColor: catColor }]} />
-                          <Text style={styles.yogaName}>{y.name}</Text>
+                          <Text style={styles.yogaName}>{language === 'si' ? (y.sinhala || y.name) : y.name}</Text>
                           <View style={[styles.strBadge, { borderColor: strColor + '60' }]}>
                             <Text style={[styles.strText, { color: strColor }]}>{strLabel || y.strength}</Text>
                           </View>
                         </View>
                         <Text style={styles.yogaCat}>{catLabel}</Text>
-                        <Text style={styles.yogaDesc}>{y.description}</Text>
+                        <Text style={styles.yogaDesc}>{language === 'si' ? (y.descriptionSi || y.description) : y.description}</Text>
                         {y.planets && <Text style={styles.yogaPlanets}>🪐 {y.planets.map(function(p) { var pi = PLANET_INFO[p]; return language === 'si' && pi ? pi.si : p; }).join(', ')}</Text>}
                       </View>
                     );
@@ -554,7 +613,7 @@ export default function KendaraScreen() {
                       <Text style={styles.jaiminiValue}>{(() => { var p = chartData.advancedAnalysis.tier1.jaimini.atmakaraka.planet || ''; var pi = PLANET_INFO[p]; return language === 'si' && pi ? pi.si : p; })()}</Text>
                       {chartData.advancedAnalysis.tier1.jaimini.karakas && (
                         <Text style={styles.jaiminiSub}>
-                          {Object.values(chartData.advancedAnalysis.tier1.jaimini.karakas).map(function(k) { var pi = PLANET_INFO[k.planet]; var pName = language === 'si' && pi ? pi.si : k.planet; return pName + ' → ' + k.role; }).join('  •  ')}
+                          {Object.values(chartData.advancedAnalysis.tier1.jaimini.karakas).map(function(k) { var pi = PLANET_INFO[k.planet]; var pName = language === 'si' && pi ? pi.si : k.planet; var rName = language === 'si' ? (k.roleSinhala || k.role) : k.role; return pName + ' → ' + rName; }).join('  •  ')}
                         </Text>
                       )}
                     </View>
@@ -563,22 +622,22 @@ export default function KendaraScreen() {
                     {chartData.advancedAnalysis.tier1.jaimini.karakamsha && (
                       <View style={styles.jaiminiMini}>
                         <Text style={styles.jmLabel}>{t('kpKarakamshaLabel') || 'Soul\'s Destination'}</Text>
-                        <Text style={styles.jmValue}>{chartData.advancedAnalysis.tier1.jaimini.karakamsha.rashi || 'N/A'}</Text>
+                        <Text style={styles.jmValue}>{language === 'si' ? (chartData.advancedAnalysis.tier1.jaimini.karakamsha.sinhala || chartData.advancedAnalysis.tier1.jaimini.karakamsha.rashi || 'N/A') : (chartData.advancedAnalysis.tier1.jaimini.karakamsha.rashi || 'N/A')}</Text>
                         {chartData.advancedAnalysis.tier1.jaimini.karakamsha.interpretation && (
-                          <Text style={styles.jmDesc}>{chartData.advancedAnalysis.tier1.jaimini.karakamsha.interpretation}</Text>
+                          <Text style={styles.jmDesc}>{language === 'si' ? (chartData.advancedAnalysis.tier1.jaimini.karakamsha.interpretationSi || chartData.advancedAnalysis.tier1.jaimini.karakamsha.interpretation) : chartData.advancedAnalysis.tier1.jaimini.karakamsha.interpretation}</Text>
                         )}
                       </View>
                     )}
                     {chartData.advancedAnalysis.tier1.jaimini.arudhaLagna && (
                       <View style={styles.jaiminiMini}>
                         <Text style={styles.jmLabel}>{t('kpArudhaLabel') || 'How Others See You'}</Text>
-                        <Text style={styles.jmValue}>{chartData.advancedAnalysis.tier1.jaimini.arudhaLagna.rashi || 'N/A'}</Text>
+                        <Text style={styles.jmValue}>{language === 'si' ? (chartData.advancedAnalysis.tier1.jaimini.arudhaLagna.sinhala || chartData.advancedAnalysis.tier1.jaimini.arudhaLagna.rashi || 'N/A') : (chartData.advancedAnalysis.tier1.jaimini.arudhaLagna.rashi || 'N/A')}</Text>
                       </View>
                     )}
                     {chartData.advancedAnalysis.tier1.jaimini.upapadaLagna && (
                       <View style={styles.jaiminiMini}>
                         <Text style={styles.jmLabel}>{t('kpUpapadaLabel') || 'Marriage Indicator'}</Text>
-                        <Text style={styles.jmValue}>{chartData.advancedAnalysis.tier1.jaimini.upapadaLagna.rashi || 'N/A'}</Text>
+                        <Text style={styles.jmValue}>{language === 'si' ? (chartData.advancedAnalysis.tier1.jaimini.upapadaLagna.sinhala || chartData.advancedAnalysis.tier1.jaimini.upapadaLagna.rashi || 'N/A') : (chartData.advancedAnalysis.tier1.jaimini.upapadaLagna.rashi || 'N/A')}</Text>
                       </View>
                     )}
                   </View>
@@ -656,12 +715,12 @@ export default function KendaraScreen() {
                       <Text style={styles.bbDeg}>{Number(chartData.advancedAnalysis.tier2.bhriguBindu.degree || 0).toFixed(1)}°</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.bbRashi}>{chartData.advancedAnalysis.tier2.bhriguBindu.rashi || ''}</Text>
-                      <Text style={styles.bbNak}>{chartData.advancedAnalysis.tier2.bhriguBindu.nakshatra || ''}</Text>
+                      <Text style={styles.bbRashi}>{language === 'si' ? (chartData.advancedAnalysis.tier2.bhriguBindu.sinhala || chartData.advancedAnalysis.tier2.bhriguBindu.rashi || '') : (chartData.advancedAnalysis.tier2.bhriguBindu.rashi || '')}</Text>
+                      <Text style={styles.bbNak}>{language === 'si' ? (chartData.advancedAnalysis.tier2.bhriguBindu.nakshatraSinhala || chartData.advancedAnalysis.tier2.bhriguBindu.nakshatra || '') : (chartData.advancedAnalysis.tier2.bhriguBindu.nakshatra || '')}</Text>
                     </View>
                   </View>
                   {chartData.advancedAnalysis.tier2.bhriguBindu.interpretation && (
-                    <Text style={styles.bbInterp}>{chartData.advancedAnalysis.tier2.bhriguBindu.interpretation}</Text>
+                    <Text style={styles.bbInterp}>{language === 'si' ? (chartData.advancedAnalysis.tier2.bhriguBindu.interpretationSi || chartData.advancedAnalysis.tier2.bhriguBindu.interpretation) : chartData.advancedAnalysis.tier2.bhriguBindu.interpretation}</Text>
                   )}
                 </View>
               </Animated.View>
@@ -689,13 +748,13 @@ export default function KendaraScreen() {
                   {chartData.advancedAnalysis.tier3.pastLife.pastLife?.pastLifeStory && (
                     <View style={styles.plRow}>
                       <Text style={styles.plLabel}>{t('kpPastLifeStory') || 'Past Life Story'}</Text>
-                      <Text style={styles.plValue}>{chartData.advancedAnalysis.tier3.pastLife.pastLife.pastLifeStory}</Text>
+                      <Text style={styles.plValue}>{language === 'si' ? (chartData.advancedAnalysis.tier3.pastLife.pastLife.pastLifeStorySi || chartData.advancedAnalysis.tier3.pastLife.pastLife.pastLifeStory) : chartData.advancedAnalysis.tier3.pastLife.pastLife.pastLifeStory}</Text>
                     </View>
                   )}
                   {chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection?.direction && (
                     <View style={styles.plRow}>
                       <Text style={styles.plLabel}>{t('kpLifeDirection') || 'This Life\'s Purpose'}</Text>
-                      <Text style={styles.plValue}>{chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.direction}</Text>
+                      <Text style={styles.plValue}>{language === 'si' ? (chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.directionSi || chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.direction) : chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.direction}</Text>
                     </View>
                   )}
                   {chartData.advancedAnalysis.tier3.pastLife.karmaBalance && (
@@ -711,7 +770,7 @@ export default function KendaraScreen() {
                   {chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit?.assessment && (
                     <View style={styles.plRow}>
                       <Text style={styles.plLabel}>{t('kpPastLifeMerit') || 'Past Life Merit'}</Text>
-                      <Text style={styles.plValue}>{chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment}</Text>
+                      <Text style={styles.plValue}>{language === 'si' ? (chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessmentSi || chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment) : chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment}</Text>
                     </View>
                   )}
                 </View>
@@ -740,9 +799,10 @@ export default function KendaraScreen() {
   };
 
   return (
+    <DesktopScreenWrapper routeName="kendara">
     <CosmicBackground>
       <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#FBBF24" />}>
-        <View style={styles.content}>
+        <View style={[styles.content, isDesktop && styles.contentDesktop]}>
           <Animated.View entering={FadeIn.duration(700)} style={styles.pageTitleRow}>
             <View>
               <Text style={styles.pageTitle}>
@@ -763,14 +823,16 @@ export default function KendaraScreen() {
           </Animated.View>
           {renderContent()}
         </View>
-        <View style={{ height: 110 }} />
+        <View style={{ height: isDesktop ? 32 : 110 }} />
       </ScrollView>
     </CosmicBackground>
+    </DesktopScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 20, paddingTop: 60 },
+  content: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 100 : 80 },
+  contentDesktop: { paddingTop: 20, paddingHorizontal: 28, maxWidth: 900, alignSelf: 'center', width: '100%' },
   pageTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   pageTitle: { fontSize: 30, fontWeight: '800', color: '#FBBF24', marginBottom: 3, textShadowColor: 'rgba(251,191,36,0.3)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
   pageSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '500' },
@@ -898,4 +960,5 @@ const styles = StyleSheet.create({
   stepTextPending: { color: 'rgba(255,255,255,0.22)' },
   loadingBarTrack: { height: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' },
   loadingBarFill: { height: 4, backgroundColor: '#FBBF24', borderRadius: 2 },
+  
 });

@@ -71,13 +71,19 @@ router.post('/topup', phoneAuth, async (req, res) => {
   // Fetch subscriberId from user doc (stored during phone auth)
   const db = getDb();
   let subscriberId = null;
+  console.log('[tokens/topup] uid=' + req.user.uid + ' amount=' + parsed);
   if (db) {
     try {
       const doc = await db.collection(COLLECTIONS.USERS).doc(req.user.uid).get();
       if (doc.exists) {
         subscriberId = doc.data().subscriberId || null;
+        console.log('[tokens/topup] user found, subscriberId=' + (subscriberId || 'null'));
+      } else {
+        console.warn('[tokens/topup] ✖ User doc NOT FOUND at users/' + req.user.uid);
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      console.error('[tokens/topup] ✖ DB lookup error:', e.message);
+    }
   }
 
   // In mock/dev mode, subscriberId is not required

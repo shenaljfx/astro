@@ -9,6 +9,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@swisseph/node": "^1.2.2",
     "astronomia": "^4.2.0",
     "axios": "^1.13.6",
     "cors": "^2.8.5",

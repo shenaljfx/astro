@@ -31,6 +31,7 @@ const { scoreMuhurtha, findMuhurtha, getInauspiciousPeriods, isGoodTimeNow, ACTI
 const { analyzeHealth } = require('../engine/health');
 const { optionalAuth } = require('../middleware/auth');
 const { parseSLT } = require('../utils/dateUtils');
+const { parseBirthDateTime } = require('../services/timezone');
 
 /** Combine separate birthDate + birthTime into a single parseable string */
 function combineDatetime(dateStr, timeStr) {
@@ -56,9 +57,9 @@ router.post('/transit/current', optionalAuth, async (req, res) => {
 
     const tDate = transitDate ? new Date(transitDate) : new Date();
     const bDateStr = birthTime ? `${birthDate.split('T')[0]}T${birthTime}` : birthDate;
-    const bDate = parseSLT(bDateStr);
-    const latitude = lat || 6.9271;
-    const longitude = lng || 79.8612;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(bDateStr, latitude, longitude).catch(() => parseSLT(bDateStr));
 
     const result = getCurrentTransits(tDate, bDate, latitude, longitude);
     res.json({ success: true, data: result });
@@ -80,9 +81,9 @@ router.post('/transit/daily', optionalAuth, async (req, res) => {
     }
 
     const targetDate = date ? new Date(date) : new Date();
-    const bDate = parseSLT(combineDatetime(birthDate, birthTime));
-    const latitude = lat || 6.9271;
-    const longitude = lng || 79.8612;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(combineDatetime(birthDate, birthTime), latitude, longitude).catch(() => parseSLT(combineDatetime(birthDate, birthTime)));
 
     const result = getDailyForecast(targetDate, bDate, latitude, longitude);
     res.json({ success: true, data: result });
@@ -104,9 +105,9 @@ router.post('/transit/weekly', optionalAuth, async (req, res) => {
     }
 
     const start = startDate ? new Date(startDate) : new Date();
-    const bDate = parseSLT(combineDatetime(birthDate, birthTime));
-    const latitude = lat || 6.9271;
-    const longitude = lng || 79.8612;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(combineDatetime(birthDate, birthTime), latitude, longitude).catch(() => parseSLT(combineDatetime(birthDate, birthTime)));
 
     const result = getWeeklyForecast(start, bDate, latitude, longitude);
     res.json({ success: true, data: result });
@@ -130,9 +131,9 @@ router.post('/transit/monthly', optionalAuth, async (req, res) => {
     const now = new Date();
     const m = month || (now.getMonth() + 1);
     const y = year || now.getFullYear();
-    const bDate = parseSLT(combineDatetime(birthDate, birthTime));
-    const latitude = lat || 6.9271;
-    const longitude = lng || 79.8612;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(combineDatetime(birthDate, birthTime), latitude, longitude).catch(() => parseSLT(combineDatetime(birthDate, birthTime)));
 
     const result = getMonthlyForecast(m, y, bDate, latitude, longitude);
     res.json({ success: true, data: result });
@@ -154,9 +155,9 @@ router.post('/transit/yearly', optionalAuth, async (req, res) => {
     }
 
     const y = year || new Date().getFullYear();
-    const bDate = parseSLT(combineDatetime(birthDate, birthTime));
-    const latitude = lat || 6.9271;
-    const longitude = lng || 79.8612;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(combineDatetime(birthDate, birthTime), latitude, longitude).catch(() => parseSLT(combineDatetime(birthDate, birthTime)));
 
     const result = getYearlyForecast(y, bDate, latitude, longitude);
     res.json({ success: true, data: result });
@@ -198,9 +199,9 @@ router.post('/timing/event', optionalAuth, async (req, res) => {
       return res.status(400).json({ error: 'eventType and birthDate are required' });
     }
 
-    const bDate = parseSLT(combineDatetime(birthDate, birthTime));
-    const latitude = lat || 6.9271;
-    const longitude = lng || 79.8612;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(combineDatetime(birthDate, birthTime), latitude, longitude).catch(() => parseSLT(combineDatetime(birthDate, birthTime)));
 
     const birthInfo = { date: bDate, lat: latitude, lng: longitude };
     const result = predictEventTiming(eventType, birthInfo, latitude, longitude);
@@ -222,9 +223,9 @@ router.post('/timing/all', optionalAuth, async (req, res) => {
       return res.status(400).json({ error: 'birthDate is required' });
     }
 
-    const bDate = parseSLT(combineDatetime(birthDate, birthTime));
-    const latitude = lat || 6.9271;
-    const longitude = lng || 79.8612;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(combineDatetime(birthDate, birthTime), latitude, longitude).catch(() => parseSLT(combineDatetime(birthDate, birthTime)));
 
     const birthInfo = { date: bDate, lat: latitude, lng: longitude };
     const result = predictAllEvents(birthInfo, latitude, longitude);
@@ -379,9 +380,9 @@ router.post('/health/analyze', optionalAuth, async (req, res) => {
     }
 
     const bDateStr = birthTime ? `${birthDate.split('T')[0]}T${birthTime}` : birthDate;
-    const bDate = parseSLT(bDateStr);
-    const latitude = lat || 6.9271;
-    const longitude = lng || 79.8612;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(bDateStr, latitude, longitude).catch(() => parseSLT(bDateStr));
 
     const result = analyzeHealth(bDate, latitude, longitude);
     res.json({ success: true, data: result });

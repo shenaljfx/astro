@@ -38,7 +38,7 @@ async function upsertUser(uid, data) {
       birthData: data.birthData || null,
       location: data.location || { lat: 6.9271, lng: 79.8612, name: 'Colombo' },
       preferences: {
-        language: data.language || 'en',
+        language: data.language || 'si',
         notifications: true,
         theme: 'cosmic',
         ...(data.preferences || {}),
@@ -407,40 +407,40 @@ async function getUserPorondamHistory(uid, limit = 10) {
 
 /**
  * Save AI-generated chart explanations keyed by uid + birthDate + language.
- * Overwrites any existing explanation for the same combo.
+ * Data is stored as a JSON string to avoid Firestore serialization issues
+ * with undefined/NaN/Infinity values in deeply nested astrology objects.
  */
 async function saveChartExplanation(uid, birthDate, language, explanations) {
   const db = getDb();
   if (!db) return null;
 
-  // Deterministic doc ID so we can overwrite on birthday change
-  const docId = `${uid}_${birthDate}_${language}`;
+  const docId = `expl_${uid}_${language}`;
 
-  const doc = {
+  await db.collection(COLLECTIONS.REPORTS).doc(docId).set({
     uid,
     birthDate,
     language: language || 'en',
-    explanations, // the JSON object from AI
+    type: 'chart-explanation',
+    dataJSON: JSON.stringify(explanations),
     createdAt: new Date().toISOString(),
-  };
-
-  await db.collection(COLLECTIONS.REPORTS).doc(docId).set(doc);
+  });
   return docId;
 }
 
 /**
  * Get cached chart explanation for a uid + birthDate + language combo.
- * Returns null if not found (triggers AI regeneration).
  */
 async function getCachedChartExplanation(uid, birthDate, language) {
   const db = getDb();
   if (!db) return null;
 
   try {
-    const docId = `${uid}_${birthDate}_${language}`;
+    const docId = `expl_${uid}_${language}`;
     const docRef = await db.collection(COLLECTIONS.REPORTS).doc(docId).get();
     if (!docRef.exists) return null;
-    return docRef.data().explanations || null;
+    const d = docRef.data();
+    if (d.birthDate !== birthDate) return null;
+    return d.dataJSON ? JSON.parse(d.dataJSON) : null;
   } catch (err) {
     console.error('getCachedChartExplanation error:', err.message);
     return null;
@@ -450,19 +450,19 @@ async function getCachedChartExplanation(uid, birthDate, language) {
 // ─── SINHALA TRANSLATION CACHE ──────────────────────────────────
 
 /**
- * Save translated advancedAnalysis keyed by uid + birthDate.
- * Birth data is deterministic so same inputs always produce same analysis.
+ * Save translated advancedAnalysis keyed by uid.
+ * Stored as JSON string for safe Firestore serialization.
  */
 async function saveTranslationCache(uid, birthDate, translatedAnalysis) {
   const db = getDb();
   if (!db) return null;
 
-  const docId = `tr_${uid}_${birthDate}`;
+  const docId = `tr_${uid}`;
   await db.collection(COLLECTIONS.REPORTS).doc(docId).set({
     uid,
     birthDate,
     type: 'si-translation',
-    translatedAnalysis,
+    dataJSON: JSON.stringify(translatedAnalysis),
     createdAt: new Date().toISOString(),
   });
   return docId;
@@ -470,19 +470,64 @@ async function saveTranslationCache(uid, birthDate, translatedAnalysis) {
 
 /**
  * Get cached Sinhala translation for advancedAnalysis.
- * Returns null if not found.
  */
 async function getCachedTranslation(uid, birthDate) {
   const db = getDb();
   if (!db) return null;
 
   try {
-    const docId = `tr_${uid}_${birthDate}`;
+    const docId = `tr_${uid}`;
     const docRef = await db.collection(COLLECTIONS.REPORTS).doc(docId).get();
     if (!docRef.exists) return null;
-    return docRef.data().translatedAnalysis || null;
+    const d = docRef.data();
+    if (d.birthDate !== birthDate) return null;
+    return d.dataJSON ? JSON.parse(d.dataJSON) : null;
   } catch (err) {
     console.error('getCachedTranslation error:', err.message);
+    return null;
+  }
+}
+
+// ─── BIRTH CHART CACHE ─────────────────────────────────────────
+
+/**
+ * Save computed birth chart data for a user.
+ * Keyed by uid — one chart per user. Overwritten when birth time changes.
+ * Stored as JSON string to avoid Firestore serialization failures with
+ * deeply nested objects containing undefined/NaN/Infinity values.
+ */
+async function saveBirthChartCache(uid, birthDate, chartData) {
+  const db = getDb();
+  if (!db) return null;
+
+  const docId = `chart_${uid}`;
+  await db.collection(COLLECTIONS.REPORTS).doc(docId).set({
+    uid,
+    birthDate,
+    type: 'birth-chart-cache',
+    dataJSON: JSON.stringify(chartData),
+    createdAt: new Date().toISOString(),
+  });
+  return docId;
+}
+
+/**
+ * Get cached birth chart. Returns { birthDate, chartData } or null.
+ * Caller compares birthDate to decide if cache is stale.
+ */
+async function getCachedBirthChart(uid) {
+  const db = getDb();
+  if (!db) return null;
+
+  try {
+    const docId = `chart_${uid}`;
+    const docRef = await db.collection(COLLECTIONS.REPORTS).doc(docId).get();
+    if (!docRef.exists) return null;
+    const d = docRef.data();
+    if (d.type !== 'birth-chart-cache') return null;
+    return { birthDate: d.birthDate, chartData: d.dataJSON ? JSON.parse(d.dataJSON) : null, createdAt: d.createdAt };
+  } catch (err) {
+    console.error('getCachedBirthChart error:', err.message);
     return null;
   }
 }
@@ -507,4 +552,6 @@ module.exports = {
   getCachedChartExplanation,
   saveTranslationCache,
   getCachedTranslation,
+  saveBirthChartCache,
+  getCachedBirthChart,
 };

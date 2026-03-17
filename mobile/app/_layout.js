@@ -1,11 +1,12 @@
 import { Stack } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import OnboardingScreen from './onboarding';
 import CosmicBackground from '../components/CosmicBackground';
+import CosmicLoader from '../components/effects/CosmicLoader';
 
 // Fix white background on web — inject CSS into html/body
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -46,7 +47,7 @@ function AppGate() {
     return (
       <CosmicBackground>
         <View style={gs.loadingContainer}>
-          <ActivityIndicator size="large" color="#7dd3fc" />
+          <CosmicLoader size={56} color="#7dd3fc" />
         </View>
       </CosmicBackground>
     );

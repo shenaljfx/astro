@@ -69,7 +69,7 @@ export default function GlassCard({
   };
 
   const handlePressOut = () => {
-    pressScale.value = withSpring(1, { damping: 12, stiffness: 200 });
+    pressScale.value = withSpring(1, { damping: 10, stiffness: 200, overshootClamping: false });
     glowOp.value = withTiming(0, { duration: 250 });
   };
 

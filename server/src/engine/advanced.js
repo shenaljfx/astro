@@ -93,6 +93,9 @@ function detectDoshas(date, lat, lng) {
       description: mangalCancelled
         ? 'Mangala Dosha is present but cancelled by mitigating factors. Marriage is not obstructed.'
         : `Mangala Dosha is present (${severity}). Mars in house ${marsHouse} from Lagna creates intensity in marriage. Partner matching with another Manglik or performing remedies is recommended.`,
+      descriptionSi: mangalCancelled
+        ? 'මංගල දෝෂය පවතින නමුත් සමනය කරන සාධක මගින් වලංගු නොවේ. විවාහයට බාධාවක් නැත.'
+        : `මංගල දෝෂය (${severity === 'Severe' ? 'බරපතල' : severity === 'Moderate' ? 'මධ්‍යම' : 'සුළු'}) පවතී. ලග්නයෙන් ${marsHouse} වන භාවයේ කුජ හේතුවෙන් විවාහයේ තීව්‍රතාවයක් ඇතිවේ. මංගලික සහකරු/සහකාරියක් සමඟ ගැළපීම හෝ පිළියම් නිර්දේශ කෙරේ.`,
       remedies: [
         'Perform Kuja Shanti pooja',
         'Visit Navagraha temple on Tuesdays',
@@ -100,6 +103,14 @@ function detectDoshas(date, lat, lng) {
         'Recite Hanuman Chalisa or Mangala Stotram',
         'Wear Red Coral (Pavizham) on right ring finger (consult astrologer first)',
         'Marry after age 28 for natural mitigation',
+      ],
+      remediesSi: [
+        'කුජ ශාන්ති පූජාවක් කරන්න',
+        'අඟහරුවාදා නවග්‍රහ කෝවිලට යන්න',
+        'අඟහරුවාදා රතු පරිප්පු දන් දෙන්න',
+        'මංගල ස්තෝත්‍රය හෝ හනුමාන් චාලීසා කියවන්න',
+        'රතු පබළු මුද්ද දකුණු අත ඇඟිල්ලේ පලඳින්න (ජ්‍යෝතිෂවේදියාගෙන් අසන්න)',
+        'වයස 28ට පසු විවාහය ස්වාභාවික සමනයට හේතුවේ',
       ],
     });
   }
@@ -179,6 +190,7 @@ function detectDoshas(date, lat, lng) {
           effect: kaalSarpType.effect,
         },
         description: `All planets are hemmed between Rahu (house ${rahuHouse}) and Ketu (house ${ketuHouse}). This creates ${kaalSarpType.name} Kaal Sarp Dosha: ${kaalSarpType.effect}. Life experiences sudden ups and downs like a serpent's coil.`,
+        descriptionSi: `සියලුම ග්‍රහයන් රාහු (${rahuHouse} වන භාවය) සහ කේතු (${ketuHouse} වන භාවය) අතර සීමා වී ඇත. මෙය ${kaalSarpType.sinhala} කාල සර්ප දෝෂය ඇති කරයි. ජීවිතයේ හදිසි උච්චාවචන අත්විඳිය හැක.`,
         remedies: [
           'Perform Kaal Sarp Dosha Shanti Pooja at Trimbakeshwar or Navagraha temple',
           'Recite Rahu Kavach stotra daily',
@@ -202,9 +214,9 @@ function detectDoshas(date, lat, lng) {
     const satFromMoon = ((transitSaturnRashiId - natalMoonRashiId + 12) % 12) + 1;
     let sadeSatiPhase = null;
 
-    if (satFromMoon === 12) sadeSatiPhase = { phase: 'Rising (ආරෝහණ)', severity: 'Beginning', description: 'Saturn entering 12th from natal Moon — Sade Sati is beginning. Emotional and financial caution needed.' };
-    if (satFromMoon === 1) sadeSatiPhase = { phase: 'Peak (උච්ච)', severity: 'Maximum', description: 'Saturn directly over natal Moon — Peak Sade Sati. Maximum karmic pressure. This is the hardest but most transformative period.' };
-    if (satFromMoon === 2) sadeSatiPhase = { phase: 'Setting (අවරෝහණ)', severity: 'Ending', description: 'Saturn in 2nd from natal Moon — Final phase of Sade Sati. Financial adjustments and family matters dominate.' };
+    if (satFromMoon === 12) sadeSatiPhase = { phase: 'Rising (ආරෝහණ)', severity: 'Beginning', description: 'Saturn entering 12th from natal Moon — Sade Sati is beginning. Emotional and financial caution needed.', descriptionSi: 'සෙනසුරු චන්ද්‍රයෙන් 12 වන ස්ථානයට පිවිසීම — සාඩේ සාති ආරම්භ වේ. හැඟීම් හා මූල්‍ය සැලකිලිමත් බව අවශ්‍යයි.' };
+    if (satFromMoon === 1) sadeSatiPhase = { phase: 'Peak (උච්ච)', severity: 'Maximum', description: 'Saturn directly over natal Moon — Peak Sade Sati. Maximum karmic pressure. This is the hardest but most transformative period.', descriptionSi: 'සෙනසුරු කෙලින්ම චන්ද්‍රයා මත — උච්ච සාඩේ සාති. උපරිම කර්ම පීඩනය. මෙය වඩාත් දුෂ්කර නමුත් පරිවර්තනශීලී කාලයයි.' };
+    if (satFromMoon === 2) sadeSatiPhase = { phase: 'Setting (අවරෝහණ)', severity: 'Ending', description: 'Saturn in 2nd from natal Moon — Final phase of Sade Sati. Financial adjustments and family matters dominate.', descriptionSi: 'සෙනසුරු චන්ද්‍රයෙන් 2 වන ස්ථානයේ — සාඩේ සාතිහි අවසාන අවධිය. මූල්‍ය සකස්කිරීම් සහ පවුල් කටයුතු ප්‍රමුඛ වේ.' };
 
     if (sadeSatiPhase) {
       doshas.push({
@@ -219,6 +231,7 @@ function detectDoshas(date, lat, lng) {
           transitSaturnSign: RASHIS[transitSaturnRashiId - 1]?.english,
         },
         description: sadeSatiPhase.description,
+        descriptionSi: sadeSatiPhase.descriptionSi,
         remedies: [
           'Worship Shani Bhagavan on Saturdays',
           'Light sesame oil lamp at a Shani temple',
@@ -266,6 +279,7 @@ function detectDoshas(date, lat, lng) {
       severity: pitruDetails.length >= 3 ? 'Severe' : pitruDetails.length >= 2 ? 'Moderate' : 'Mild',
       details: pitruDetails,
       description: 'Pitru Dosha indicates unresolved karma from the paternal ancestral lineage. This can manifest as delays in fortune, father-related struggles, or obstacles in dharmic pursuits.',
+      descriptionSi: 'පිතෘ දෝෂය පියා පැත්තේ පරම්පරාවෙන් එන නොවිසඳුණු කර්මය පෙන්වයි. වාසනාව ප්‍රමාදවීම, පියා සම්බන්ධ අරගල, හෝ ධාර්මික කටයුතුවල බාධා ලෙස මෙය ප්‍රකාශ විය හැකිය.',
       remedies: [
         'Perform Pitru Tarpana on Amavasya (new moon) days',
         'Offer water to the Sun during sunrise facing east',
@@ -287,6 +301,7 @@ function detectDoshas(date, lat, lng) {
       present: true,
       severity: sunHouse === rahuHouse ? 'Strong' : 'Moderate',
       description: 'Sun conjunct shadow planet — father\'s health, government matters, and ego face challenges. Authority may be undermined.',
+      descriptionSi: 'සූර්යයා සෙවනැලි ග්‍රහයා සමඟ — පියාගේ සෞඛ්‍යය, රාජ්‍ය කටයුතු, සහ ආත්ම ගෞරවයට අභියෝග. බලය අඩපණ විය හැක.',
       remedies: ['Recite Aditya Hridayam', 'Offer water to Sun at sunrise', 'Donate wheat and jaggery on Sundays'],
     });
   }
@@ -299,6 +314,7 @@ function detectDoshas(date, lat, lng) {
       present: true,
       severity: moonHouse === rahuHouse ? 'Strong' : 'Moderate',
       description: 'Moon conjunct shadow planet — mother\'s health, mental peace, and emotional stability face challenges. Anxiety and overthinking are common.',
+      descriptionSi: 'චන්ද්‍ර සෙවනැලි ග්‍රහයා සමඟ — මවගේ සෞඛ්‍යය, මානසික සාමය, සහ හැඟීම් ස්ථාවරත්වයට අභියෝග. කනස්සල්ල හා අධික සිතීම සුලබයි.',
       remedies: ['Worship Chandra Bhagavan on Mondays', 'Wear Pearl (Muthu) on little finger', 'Donate white rice and milk on Mondays', 'Recite Chandra Kavach'],
     });
   }
@@ -323,6 +339,9 @@ function detectDoshas(date, lat, lng) {
       description: vishCancelled
         ? `Moon-Saturn conjunction in house ${moonHouse} — Vish Yoga is present but mitigated by Jupiter's benefic aspect. Emotional challenges exist but are manageable with awareness.`
         : `Moon-Saturn conjunction in house ${moonHouse} — this is Vish Yoga (Poison Combination). It indicates deep emotional suffering, childhood trauma, difficult relationship with mother, depression, and emotional suppression. The native often carries unexpressed grief from early life. Mother may have been emotionally unavailable, strict, or the native experienced separation/coldness in the maternal bond.`,
+      descriptionSi: vishCancelled
+        ? `${moonHouse} වන භාවයේ චන්ද්‍ර-ශනි සංයෝගය — විෂ යෝගය පවතින නමුත් ගුරුගේ ශුභ දෘෂ්ටිය මඟින් සමනය වී ඇත. හැඟීම් අභියෝග ඇති නමුත් නිවැරදි අවබෝධයෙන් පාලනය කළ හැකිය.`
+        : `${moonHouse} වන භාවයේ චන්ද්‍ර-ශනි සංයෝගය — මෙය විෂ යෝගයයි. ගැඹුරු හැඟීම් වේදනාව, ළමා කාලයේ කම්පා, මව සමඟ දුෂ්කර සබඳතාවය, මානසික අවපීඩනය සහ හැඟීම් මර්දනය පෙන්වයි.`,
       remedies: [
         'Worship Lord Shiva on Mondays — Shiva neutralizes Saturn\'s harshness on Moon',
         'Recite Chandra Kavach or Shiv Panchakshari mantra daily',
@@ -346,6 +365,7 @@ function detectDoshas(date, lat, lng) {
       severity: 'Severe',
       details: { house: saturnHouse },
       description: `Saturn and Rahu conjunct in house ${saturnHouse} — indicates a curse from a past life. This combination brings sudden obstacles, chronic delays, and karmic debts that feel inexplicable.`,
+      descriptionSi: `${saturnHouse} වන භාවයේ ශනි-රාහු සංයෝගය — පූර්ව ජන්මයක ශාපයක් පෙන්නුම් කරයි. හදිසි බාධා, නිරන්තර ප්‍රමාදයන් සහ පැහැදිලි කළ නොහැකි කර්ම ණය ගෙන එයි.`,
       remedies: [
         'Perform Shrapit Dosha Nivaran Pooja',
         'Recite Maha Mrityunjaya Mantra 108 times daily',
@@ -368,6 +388,7 @@ function detectDoshas(date, lat, lng) {
       severity: withNode === 'Rahu' ? 'Strong' : 'Moderate',
       details: { jupiterHouse, withNode },
       description: `Jupiter conjunct ${withNode} in house ${jupiterHouse} — the guru (wisdom planet) is corrupted by the shadow. This can create confusion in dharma, wrong teachers/advisors, and misguided beliefs. However, it also grants unconventional wisdom and research ability.`,
+      descriptionSi: `${jupiterHouse} වන භාවයේ ගුරු ${withNode === 'Rahu' ? 'රාහු' : 'කේතු'} සමඟ — ප්‍රඥා ග්‍රහයා සෙවනැල්ලෙන් කිලිටි වේ. ධර්මයේ ව්‍යාකූලත්වය, වැරදි ගුරුවරුන්/උපදේශකයින් ඇතිවිය හැක. නමුත් අසාමාන්‍ය ප්‍රඥාව හා පර්යේෂණ හැකියාවද ලබා දේ.`,
       remedies: [
         'Worship Lord Vishnu on Thursdays',
         'Donate yellow items (turmeric, yellow cloth, gold) on Thursdays',
@@ -396,6 +417,7 @@ function detectDoshas(date, lat, lng) {
       present: true,
       severity: 'Moderate',
       description: `Both wealth lords (2nd: ${lord2Name}, 11th: ${lord11Name}) are in difficult houses. Financial growth requires extra effort and karmic remedies.`,
+      descriptionSi: `ධන භාවාධිපතීන් දෙදෙනාම (2 වන: ${lord2Name}, 11 වන: ${lord11Name}) දුෂ්කර භාවවල සිටී. මූල්‍ය වර්ධනය සඳහා අමතර උත්සාහය හා කර්ම පිළියම් අවශ්‍යයි.`,
       remedies: [
         'Worship Goddess Lakshmi on Fridays',
         'Recite Shri Suktam daily',
@@ -962,6 +984,21 @@ function calculateJaiminiKarakas(date, lat, lng) {
     12: 'Soul desires liberation (moksha), spiritual practice, foreign lands, and transcendence of material world.',
   };
 
+  const KARAKAMSHA_INTERPRETATIONS_SI = {
+    1: 'ආත්මය නායකත්වය, ස්වාධීනත්වය සහ නව මාර්ග සොයා යාම ප්‍රාර්ථනා කරයි. සටන්කාමී ආත්මය.',
+    2: 'ආත්මය භෞතික ආරක්ෂාව, සෞන්දර්යය, සුඛෝපභෝගී සහ කලාත්මක ස්වභාවය ප්‍රාර්ථනා කරයි.',
+    3: 'ආත්මය දැනුම, සන්නිවේදනය, බුද්ධිමය ප්‍රාවීණ්‍යතාව සොයයි. ලේඛක/ගුරුවර ස්වභාවය.',
+    4: 'ආත්මය හැඟීම් ආරක්ෂාව, නිවස, පෝෂණ සබඳතා සොයයි.',
+    5: 'ආත්මය නිර්මාණශීලී ප්‍රකාශනය, කීර්තිය, බලය සහ පිළිගැනීම ප්‍රාර්ථනා කරයි.',
+    6: 'ආත්මය සේවය, සුව කිරීම, ගැටලු විසඳීම කෙරෙහි ආකර්ෂිත වේ. විශ්ලේෂණ මනස.',
+    7: 'ආත්මය සාමය, හවුල්කාරිත්වය, යුක්තිය සහ සෞන්දර්යාත්මක පරිපූර්ණතාව සොයයි.',
+    8: 'ආත්මය පරිවර්තනය, ගුප්ත දැනුම, සැඟවුණු සත්‍ය සොයයි. පර්යේෂක ස්වභාවය.',
+    9: 'ආත්මය ප්‍රඥාව, ආධ්‍යාත්මික වර්ධනය, ගමන්, ඉගැන්වීම සොයයි. දාර්ශනික ස්වභාවය.',
+    10: 'ආත්මය ජයග්‍රහණය, ව්‍යුහය, බලය සහ කල්පවතින උරුමයක් සොයයි.',
+    11: 'ආත්මය නවෝත්පාදනය, මානවවාදී සේවය සහ සීමා බිඳීම ප්‍රාර්ථනා කරයි.',
+    12: 'ආත්මය මෝක්ෂය, ආධ්‍යාත්මික පුහුණුව, සහ භෞතික ලෝකය ඉක්මවා යාම ප්‍රාර්ථනා කරයි.',
+  };
+
   // ── ARUDHA LAGNA (AL) — External Image ────────────────────────
   // The sign as far from the Lagna lord as the Lagna lord is from the Lagna
   const lagnaRashiId = lagna.rashi.id;
@@ -1004,6 +1041,7 @@ function calculateJaiminiKarakas(date, lat, lng) {
       rashiName: karakamshaRashi.name,
       sinhala: karakamshaRashi.sinhala,
       interpretation: KARAKAMSHA_INTERPRETATIONS[karakamshaRashiId] || '',
+      interpretationSi: KARAKAMSHA_INTERPRETATIONS_SI[karakamshaRashiId] || '',
     } : null,
     arudhaLagna: arudhaLagnaId ? {
       rashiId: arudhaLagnaId,
@@ -1287,6 +1325,9 @@ function calculateBhriguBindu(date) {
     nakshatraSinhala: bbNakshatra.sinhala,
     degreeInSign: (bhriguBindu % 30).toFixed(2),
     meaning: 'The Bhrigu Bindu is the destiny point — when any planet transits this degree, major life events are triggered. It is the karmic trigger point of the soul.',
+    meaningSi: 'භ්‍රිගු බින්දුව ඉරණම් ලක්ෂ්‍යයි — ඕනෑම ග්‍රහයෙක් මෙම අංශය හරහා ගමන් කරන විට ජීවිතයේ ප්‍රධාන සිදුවීම් ඇති කෙරේ. මෙය ආත්මයේ කර්ම ප්‍රේරක ලක්ෂ්‍යයි.',
+    interpretation: `Bhrigu Bindu falls in ${bbRashi.english} at ${(bhriguBindu % 30).toFixed(1)}° in ${bbNakshatra.name} nakshatra. ${activations.length > 0 ? 'Currently ACTIVATED by ' + activations.map(a => a.planet).join(', ') + ' — significant events unfolding.' : 'Currently not activated by transit planets.'}`,
+    interpretationSi: `භ්‍රිගු බින්දුව ${bbRashi.sinhala} රාශියේ ${(bhriguBindu % 30).toFixed(1)}° ${bbNakshatra.sinhala} නැකතේ පිහිටයි. ${activations.length > 0 ? 'දැනට ' + activations.map(a => { const pi = { Sun: 'රවි', Moon: 'චන්ද්‍ර', Mars: 'කුජ', Mercury: 'බුධ', Jupiter: 'ගුරු', Venus: 'සිකුරු', Saturn: 'ශනි' }; return pi[a.planet] || a.planet; }).join(', ') + ' මගින් සක්‍රිය — වැදගත් සිදුවීම් සිදු වෙමින්.' : 'දැනට ග්‍රහ ගමන් මඟින් සක්‍රිය නොවේ.'}`,
     currentActivations: activations,
     isCurrentlyActive: activations.length > 0,
   };
@@ -1752,6 +1793,21 @@ function analyzePastLife(date, lat, lng) {
     12: 'You were a monk, hermit, spiritual seeker, or someone who lived in isolation or foreign lands. Liberation (moksha) was your past-life goal.',
   };
 
+  const KETU_HOUSE_PAST_LIFE_SI = {
+    1: 'ඔබ ශක්තිමත්, ස්වාධීන නායකයෙක් විය — සමහරවිට සටන්කරුවෙක්, රජෙක් හෝ ස්වයං-නිර්මාණ පුරෝගාමියෙක්. ඔබ තනිව ජීවත් වන හැටි දැනටමත් දනී.',
+    2: 'ඔබ පෙර ජන්මයේ ධනවත් වූ අතර පවුලට/දේපල වලට බැඳී සිටියේය. ඔබේ වචනයට බලයක් තිබුණි.',
+    3: 'ඔබ නිර්භීත සන්නිවේදකයෙක් විය — ලේඛකයෙක්, දූතයෙක් හෝ ගමන් කරන වෙළෙන්දෙක්.',
+    4: 'ඔබේ මව්බිමේ ගැඹුරු මූලයන් තිබුණි — සමහරවිට ඉඩම් හිමියෙක්, ගොවියෙක් හෝ ප්‍රජා ප්‍රධානියෙක්.',
+    5: 'ඔබ නිර්මාණශීලී ප්‍රතිභාවන්තයෙක්, විද්වතෙක් හෝ ආධ්‍යාත්මික සාධකයෙක් විය.',
+    6: 'ඔබ වෛද්‍යවරයෙක්, සේවකයෙක් හෝ සතුරන්ට හා රෝගවලට එරෙහිව සටන් කළ කෙනෙක් විය.',
+    7: 'ඔබේ පෙර ජීවිතය සහකරු/සහකාරිය වටා කැරකුණි — කර්ම ආත්ම සහකරු සබඳතා.',
+    8: 'ඔබ ගුප්ත විද්‍යාවේ පර්යේෂකයෙක් විය. මරණය, පරිවර්තනය සම්බන්ධයෙන් ක්‍රියා කළේය.',
+    9: 'ඔබ ආධ්‍යාත්මික ගුරුවරයෙක්, දාර්ශනිකයෙක් හෝ දුර ගමන්කරුවෙක් විය.',
+    10: 'ඔබ බලයේ පුද්ගලයෙක් විය — රජෙක්, පරිපාලකයෙක් හෝ මහජන පුද්ගලයෙක්.',
+    11: 'ඔබ ප්‍රජාවක හෝ සමූහයක කොටසක් විය. සාමූහික අභිලාෂයන් ඉටුකරන ජීවිතයක්.',
+    12: 'ඔබ භික්ෂුවක්, තාපසයෙක් හෝ ආධ්‍යාත්මික ගවේෂකයෙක් විය. මෝක්ෂය ඔබේ ඉලක්කය විය.',
+  };
+
   // ── 2. 5th HOUSE — Purva Punya (Past-Life Merit) ─────────────
   const lord5 = getHouseLord(5);
   const lord5House = lord5 ? getPlanetHouse(lord5) : null;
@@ -1791,6 +1847,21 @@ function analyzePastLife(date, lat, lng) {
     12: 'Soul wants to transcend material attachments, develop spirituality, and find liberation.',
   };
 
+  const RAHU_HOUSE_DIRECTION_SI = {
+    1: 'ආත්මය ශක්තිමත් තනි පුද්ගල අනන්‍යතාවයක් වර්ධනය කිරීමට කැමතියි — සබඳතා මත යැපීමෙන් නිදහස් වන්න.',
+    2: 'ආත්මය තමන්ගේම ධනය ගොඩනැගීමට සහ තමන්ගේම හඬ සොයා ගැනීමට කැමතියි.',
+    3: 'ආත්මය නිර්භීතකම, සන්නිවේදන හැකියාව සහ මුලපිරීම වර්ධනය කරන්න කැමතියි.',
+    4: 'ආත්මය ස්ථාවර නිවසක් නිර්මාණය කිරීමට සහ අභ්‍යන්තර ආරක්ෂාව වර්ධනය කිරීමට කැමතියි.',
+    5: 'ආත්මය නිර්මාණශීලීත්වය ප්‍රකාශ කිරීමට, දරුවන් ලැබීමට සහ ආදරය අත්විඳීමට කැමතියි.',
+    6: 'ආත්මය අන් අයට සේවය කිරීමට, ගැටලු විසඳීමට සහ ප්‍රායෝගික කුසලතා වර්ධනය කිරීමට කැමතියි.',
+    7: 'ආත්මය හවුල්කාරිත්වය, සම්මුතිය සහ සබඳතා කලාව ඉගෙන ගැනීමට කැමතියි.',
+    8: 'ආත්මය ජීවිතයේ අභිරහස්, පරිවර්තනය සහ හවුල් සම්පත් ගවේෂණය කිරීමට කැමතියි.',
+    9: 'ආත්මය උසස් දැනුම, ගමන් සහ දාර්ශනික ප්‍රඥාව වර්ධනය කිරීමට කැමතියි.',
+    10: 'ආත්මය මහජන තත්ත්වය, වෘත්තීය සාර්ථකත්වය සහ උරුමයක් තැබීමට කැමතියි.',
+    11: 'ආත්මය ප්‍රජාව සමඟ සම්බන්ධ වීමට, අභිලාෂයන් ඉටු කිරීමට සහ මනුෂ්‍යත්වයට සේවය කිරීමට කැමතියි.',
+    12: 'ආත්මය භෞතික බැඳීම් ඉක්මවා ආධ්‍යාත්මිකත්වය වර්ධනය කිරීමට සහ මෝක්ෂය සොයාගැනීමට කැමතියි.',
+  };
+
   return {
     title: 'Past Life & Karmic Analysis',
     sinhala: 'පෙර ජන්ම හා කර්ම විශ්ලේෂණය',
@@ -1799,6 +1870,7 @@ function analyzePastLife(date, lat, lng) {
       ketuHouse,
       ketuRashi,
       pastLifeStory: KETU_HOUSE_PAST_LIFE[ketuHouse] || 'Past life analysis requires precise birth time.',
+      pastLifeStorySi: KETU_HOUSE_PAST_LIFE_SI[ketuHouse] || 'පෙර ජන්ම විශ්ලේෂණයට නිවැරදි උපන් වේලාව අවශ්‍යයි.',
     },
 
     pastLifeMerit: {
@@ -1806,6 +1878,11 @@ function analyzePastLife(date, lat, lng) {
       benefics: beneficsIn5,
       malefics: maleficsIn5,
       assessment: pastLifeMerit,
+      assessmentSi: pastLifeMerit === 'Highly Meritorious — you have accumulated significant good karma'
+        ? 'ඉතා පුණ්‍යකර — ඔබ සැලකිය යුතු යහපත් කර්ම රැස් කර ඇත'
+        : pastLifeMerit === 'Karmic Debts — past-life actions require resolution in this life'
+          ? 'කර්ම ණය — පෙර ජන්ම ක්‍රියා මෙම ජීවිතයේ විසඳිය යුතුය'
+          : 'මිශ්‍ර කර්ම — පෙර ජන්ම වලින් පුණ්‍ය හා ණය දෙකම',
       lord5: { name: lord5, house: lord5House },
     },
 
@@ -1813,6 +1890,7 @@ function analyzePastLife(date, lat, lng) {
       rahuHouse,
       rahuRashi,
       direction: RAHU_HOUSE_DIRECTION[rahuHouse] || '',
+      directionSi: RAHU_HOUSE_DIRECTION_SI[rahuHouse] || '',
       note: 'Rahu shows where your soul wants to GO in this life — the unfamiliar territory you must master.',
     },
 

@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform, StyleSheet, Dimensions,
@@ -13,6 +13,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CosmicBackground from '../../components/CosmicBackground';
+import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
+import SpringPressable from '../../components/effects/SpringPressable';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -49,58 +51,68 @@ async function incrementUsage(uid) {
   return newUsage;
 }
 
-// Thinking Dots animation
+// Thinking Dots — cosmic orbiting particles indicator
 function ThinkingDots() {
-  var d1 = useSharedValue(0);
-  var d2 = useSharedValue(0);
-  var d3 = useSharedValue(0);
+  var COLORS = ['#FF6B00', '#E040FB', '#FBBF24', '#C084FC', '#34D399'];
+  var dots = [];
+  for (var _i = 0; _i < 5; _i++) { dots.push(useSharedValue(0)); }
+  var orbit = useSharedValue(0);
   useEffect(function () {
-    d1.value = withRepeat(withSequence(withTiming(1, { duration: 500 }), withTiming(0, { duration: 500 })), -1);
-    setTimeout(function () {
-      d2.value = withRepeat(withSequence(withTiming(1, { duration: 500 }), withTiming(0, { duration: 500 })), -1);
-    }, 180);
-    setTimeout(function () {
-      d3.value = withRepeat(withSequence(withTiming(1, { duration: 500 }), withTiming(0, { duration: 500 })), -1);
-    }, 360);
+    for (var di = 0; di < 5; di++) {
+      (function (idx) {
+        setTimeout(function () {
+          dots[idx].value = withRepeat(withSequence(withTiming(1, { duration: 600 }), withTiming(0, { duration: 600 })), -1);
+        }, idx * 120);
+      })(di);
+    }
+    orbit.value = withRepeat(withTiming(1, { duration: 2000 }), -1);
   }, []);
-  var a1 = useAnimatedStyle(function () {
-    return { opacity: interpolate(d1.value, [0, 1], [0.25, 1]), transform: [{ translateY: interpolate(d1.value, [0, 1], [0, -4]) }] };
-  });
-  var a2 = useAnimatedStyle(function () {
-    return { opacity: interpolate(d2.value, [0, 1], [0.25, 1]), transform: [{ translateY: interpolate(d2.value, [0, 1], [0, -4]) }] };
-  });
-  var a3 = useAnimatedStyle(function () {
-    return { opacity: interpolate(d3.value, [0, 1], [0.25, 1]), transform: [{ translateY: interpolate(d3.value, [0, 1], [0, -4]) }] };
+  var anims = dots.map(function (d, i) {
+    return useAnimatedStyle(function () {
+      return {
+        opacity: interpolate(d.value, [0, 1], [0.2, 1]),
+        transform: [
+          { translateY: interpolate(d.value, [0, 1], [0, -3]) },
+          { scale: interpolate(d.value, [0, 1], [0.7, 1.2]) },
+        ],
+      };
+    });
   });
   return (
-    <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 14 }}>
-      <Animated.View style={[{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#FF6B00' }, a1]} />
-      <Animated.View style={[{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#E040FB' }, a2]} />
-      <Animated.View style={[{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#FBBF24' }, a3]} />
+    <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 14 }}>
+      {COLORS.map(function (c, i) {
+        return <Animated.View key={i} style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: c, shadowColor: c, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 4 }, anims[i]]} />;
+      })}
     </View>
   );
 }
 
 // Chat Bubble
-function ChatBubble({ msg }) {
+function ChatBubble({ msg, isDesktop }) {
   var isAi = msg.role === 'assistant';
   if (!isAi) {
     return (
-      <Animated.View entering={FadeInUp.duration(250).springify()} style={s.userWrap}>
-        <LinearGradient colors={['#FF6B00', '#E040FB']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.userBubble}>
-          <Text style={s.userText}>{msg.content}</Text>
+      <Animated.View entering={FadeInUp.duration(250).springify()} style={[s.userWrap, isDesktop && sd.userWrapD]}>
+        <LinearGradient colors={['#FF6B00', '#E040FB', '#9333EA']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.userBubble}>
+          <LinearGradient colors={['rgba(255,255,255,0.12)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 20, borderTopRightRadius: 20 }} />
+          <Text style={[s.userText, isDesktop && { fontSize: 15 }]}>{msg.content}</Text>
         </LinearGradient>
       </Animated.View>
     );
   }
   return (
-    <Animated.View entering={FadeInUp.duration(300).springify()} style={s.aiWrap}>
+    <Animated.View entering={FadeInUp.duration(300).springify()} style={[s.aiWrap, isDesktop && sd.aiWrapD]}>
       <View style={s.aiDot}>
-        <LinearGradient colors={['#FF6B00', '#FBBF24']} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={['#FF6B00', '#E040FB', '#9333EA']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
         <Text style={{ fontSize: 10 }}>{'\u2726'}</Text>
       </View>
-      <View style={s.aiBubble}>
-        <Text style={s.aiText}>{msg.content}</Text>
+      <View style={[s.aiBubble, isDesktop && sd.aiBubbleD]}>
+        <LinearGradient
+          colors={['rgba(147,51,234,0.06)', 'rgba(255,107,0,0.03)', 'transparent']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        />
+        <Text style={[s.aiText, isDesktop && { fontSize: 15, lineHeight: 23 }]}>{msg.content}</Text>
       </View>
     </Animated.View>
   );
@@ -210,12 +222,12 @@ function QuickChips({ onSelect, language, mode }) {
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipsRow}>
       {chips.map(function (ch, i) {
         return (
-          <TouchableOpacity key={i} onPress={function () { onSelect(ch.label); }} activeOpacity={0.7}>
+          <SpringPressable key={i} onPress={function () { onSelect(ch.label); }} haptic="light" scalePressed={0.92}>
             <LinearGradient colors={chipColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.chip, { borderColor: chipBorder }]}>
               <Ionicons name={ch.icon} size={14} color={chipIconColor} />
               <Text style={s.chipLabel}>{ch.label}</Text>
             </LinearGradient>
-          </TouchableOpacity>
+          </SpringPressable>
         );
       })}
     </ScrollView>
@@ -227,6 +239,7 @@ export default function ChatScreen() {
   var { t, language } = useLanguage();
   var { user } = useAuth();
   var insets = useSafeAreaInsets();
+  var isDesktop = useDesktopCtx();
   var [msg, setMsg] = useState('');
   var [msgs, setMsgs] = useState([]);
   var [loading, setLoading] = useState(false);
@@ -246,25 +259,21 @@ export default function ChatScreen() {
   }, [language]);
 
   useEffect(function () {
-    // First load local count (instant), then sync with server (authoritative)
     getUsageToday(user?.uid).then(function (u) {
       var today = new Date().toISOString().slice(0, 10);
       var used = u.date === today ? u.count : 0;
       setRemaining(Math.max(0, DAILY_LIMIT - used));
     });
-
-    // Fetch authoritative server quota — resets local if server says more/less
     api.getChatQuota()
       .then(function(res) {
         if (res && typeof res.remaining === 'number') {
           setRemaining(res.remaining);
-          // Sync local storage to match server state (handles new-day reset on server side)
           var today = new Date().toISOString().slice(0, 10);
           var used = DAILY_LIMIT - res.remaining;
           AsyncStorage.setItem(usageKey(user?.uid), JSON.stringify({ date: today, count: used })).catch(function() {});
         }
       })
-      .catch(function() { /* server unreachable — use local count */ });
+      .catch(function() {});
   }, [user]);
 
   var send = useCallback(async function (text) {
@@ -274,8 +283,6 @@ export default function ChatScreen() {
       setMsgs(function (p) { return p.concat([{ role: 'assistant', content: t('chatLimitMsg') }]); });
       return;
     }
-
-    // Prefix dream context if in dream mode
     var finalContent = content;
     if (mode === 'dream') {
       var dreamPrefix = language === 'si'
@@ -283,14 +290,11 @@ export default function ChatScreen() {
         : '[DREAM ANALYSIS REQUEST] User dreamed: ';
       finalContent = dreamPrefix + content;
     }
-
     setMsgs(function (p) { return p.concat([{ role: 'user', content: content }]); });
     setMsg('');
     setLoading(true);
     try {
-      // Build last 10 messages as chat history (exclude the welcome message at index 0)
       var history = msgs.slice(1).map(function (m) { return { role: m.role, content: m.content }; });
-
       var res = await api.askAstrologer(finalContent, {
         language:    language,
         chatHistory: history,
@@ -300,7 +304,6 @@ export default function ChatScreen() {
       });
       var reply = (res.data && (res.data.message || res.data.response)) || t('starsClouded');
       setMsgs(function (p) { return p.concat([{ role: 'assistant', content: reply }]); });
-      // Use server-authoritative remaining count when available, otherwise local
       if (typeof res.remaining === 'number') {
         setRemaining(res.remaining);
         var today = new Date().toISOString().slice(0, 10);
@@ -321,10 +324,141 @@ export default function ChatScreen() {
     setTimeout(function () { if (scroll.current) scroll.current.scrollToEnd({ animated: true }); }, 120);
   }, [msgs, loading]);
 
-  var topPad = Math.max(insets.top, 10) + 6;
-  var bottomPad = Math.max(insets.bottom, 6) + 68;
+  var topPad = isDesktop ? 0 : Math.max(insets.top, 10) + 6;
+  var bottomPad = isDesktop ? 0 : Math.max(insets.bottom, 6) + 68;
 
+  // ── DESKTOP LAYOUT ────────────────────────────────────────────────
+  if (isDesktop) {
+    return (
+      <DesktopScreenWrapper routeName="chat">
+        <CosmicBackground>
+          <View style={sd.shell}>
+            <View style={sd.panel}>
+
+              {/* ── Panel header ── */}
+              <View style={sd.panelHeader}>
+                <View style={sd.panelHeaderLeft}>
+                  <View style={[sd.avatarLg, { borderColor: mode === 'dream' ? 'rgba(192,132,252,0.5)' : 'rgba(255,107,0,0.5)' }]}>
+                    <LinearGradient colors={mode === 'dream' ? ['#7C3AED', '#E040FB'] : ['#FF6B00', '#E040FB']} style={StyleSheet.absoluteFill} />
+                    <Ionicons name={mode === 'dream' ? 'moon' : 'sparkles'} size={22} color="#FFF" />
+                  </View>
+                  <View>
+                    <Text style={sd.panelTitle}>{mode === 'dream' ? t('chatDreamTitle') : t('chatTitle')}</Text>
+                    <View style={sd.statusRow}>
+                      <View style={[sd.statusDot, { backgroundColor: loading ? '#FBBF24' : '#34D399' }]} />
+                      <Text style={sd.statusText}>{loading ? t('consultingCosmos') : t('askUniverse')}</Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={sd.panelHeaderRight}>
+                  <View style={[sd.birthBadge, { backgroundColor: birthDate ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.05)', borderColor: birthDate ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)' }]}>
+                    <Ionicons name={birthDate ? 'planet' : 'planet-outline'} size={13} color={birthDate ? '#34D399' : 'rgba(255,255,255,0.3)'} />
+                    <Text style={[sd.birthBadgeText, { color: birthDate ? '#34D399' : 'rgba(255,255,255,0.3)' }]}>
+                      {birthDate ? t('chartLoaded') || 'Chart ✓' : t('noBirthData') || 'No chart'}
+                    </Text>
+                  </View>
+                  <View style={sd.modeToggleRow}>
+                    <TouchableOpacity onPress={function () { setMode('chat'); }} activeOpacity={0.7}
+                      style={[sd.modeChip, mode === 'chat' && sd.modeChipActive]}>
+                      <LinearGradient
+                        colors={mode === 'chat' ? ['#FF6B00', '#E040FB'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.06)']}
+                        style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      />
+                      <Ionicons name="chatbubble-ellipses" size={13} color={mode === 'chat' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
+                      <Text style={[sd.modeChipText, mode === 'chat' && { color: '#FFF' }]}>{t('chatModeChat')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={function () { setMode('dream'); }} activeOpacity={0.7}
+                      style={[sd.modeChip, mode === 'dream' && sd.modeChipActive]}>
+                      <LinearGradient
+                        colors={mode === 'dream' ? ['#7C3AED', '#E040FB'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.06)']}
+                        style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      />
+                      <Ionicons name="moon" size={13} color={mode === 'dream' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
+                      <Text style={[sd.modeChipText, mode === 'dream' && { color: '#FFF' }]}>{t('chatModeDream')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* ── Separator ── */}
+              <View style={sd.separator} />
+
+              {/* ── Limit bar ── */}
+              <View style={sd.limitBar}>
+                <Ionicons
+                  name={remaining > 0 ? 'chatbubble-ellipses-outline' : 'lock-closed-outline'}
+                  size={13} color={remaining > 0 ? '#FF8C33' : '#FF6B6B'}
+                />
+                <Text style={[sd.limitText, remaining <= 0 && { color: '#FF6B6B' }]}>
+                  {remaining > 0 ? remaining + ' ' + t('chatQuestionsLeft') : t('chatNoQuestions')}
+                </Text>
+                <View style={sd.limitDots}>
+                  {Array.from({ length: DAILY_LIMIT }).map(function (_, i) {
+                    return <View key={i} style={[sd.dot, i < (DAILY_LIMIT - remaining) ? sd.dotUsed : sd.dotFree]} />;
+                  })}
+                </View>
+              </View>
+
+              {/* ── Messages + chips + input ── */}
+              <KeyboardAvoidingView style={{ flex: 1, minHeight: 0 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={sd.msgList}
+                  showsVerticalScrollIndicator={false} overScrollMode="never" bounces={false}>
+                  {msgs.map(function (m, i) { return <ChatBubble key={i} msg={m} isDesktop />; })}
+                  {loading && (
+                    <Animated.View entering={FadeInUp.duration(200)} style={sd.thinkRow}>
+                      <View style={sd.aiDotSm}>
+                        <LinearGradient colors={['#FF6B00', '#FBBF24']} style={StyleSheet.absoluteFill} />
+                        <Text style={{ fontSize: 10 }}>{'\u2726'}</Text>
+                      </View>
+                      <View style={sd.thinkBubble}><ThinkingDots /></View>
+                    </Animated.View>
+                  )}
+                  <View style={{ height: 16 }} />
+                </ScrollView>
+
+                {msgs.length <= 2 && !loading && remaining > 0 && (
+                  <QuickChips onSelect={send} language={language} mode={mode} />
+                )}
+
+                <View style={sd.inputArea}>
+                  <View style={sd.inputRow}>
+                    <TextInput
+                      style={sd.input}
+                      value={msg}
+                      onChangeText={setMsg}
+                      placeholder={remaining > 0 ? (mode === 'dream' ? t('chatDreamPlaceholder') : t('chatPlaceholder')) : t('chatNoQuestions')}
+                      placeholderTextColor="rgba(255,255,255,0.25)"
+                      multiline
+                      maxLength={250}
+                      editable={remaining > 0}
+                      selectionColor="#FF6B00"
+                      onSubmitEditing={function () { send(); }}
+                    />
+                    <TouchableOpacity
+                      onPress={function () { send(); }}
+                      disabled={loading || !msg.trim() || remaining <= 0}
+                      activeOpacity={0.7}
+                      style={[sd.sendBtn, (!msg.trim() || loading || remaining <= 0) && { opacity: 0.3 }]}
+                    >
+                      <LinearGradient colors={loading ? ['#333', '#444'] : ['#FF6B00', '#E040FB']}
+                        style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                      <Ionicons name={loading ? 'hourglass' : 'send'} size={17} color="#FFF" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={sd.inputHint}>Press Enter or tap Send · {msg.length}/250</Text>
+                </View>
+              </KeyboardAvoidingView>
+
+            </View>
+          </View>
+        </CosmicBackground>
+      </DesktopScreenWrapper>
+    );
+  }
+
+  // ── MOBILE LAYOUT ──────────────────────────────────────────────────
   return (
+    <DesktopScreenWrapper routeName="chat">
     <CosmicBackground>
       <View style={[s.header, { paddingTop: topPad }]}>
         <View style={s.avatar}>
@@ -338,7 +472,6 @@ export default function ChatScreen() {
             <Text style={s.statusText}>{loading ? t('consultingCosmos') : t('askUniverse')}</Text>
           </View>
         </View>
-        {/* Birth data awareness indicator */}
         <View style={[s.birthBadge, { backgroundColor: birthDate ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.05)', borderColor: birthDate ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)' }]}>
           <Ionicons name={birthDate ? 'planet' : 'planet-outline'} size={13} color={birthDate ? '#34D399' : 'rgba(255,255,255,0.3)'} />
           <Text style={[s.birthBadgeText, { color: birthDate ? '#34D399' : 'rgba(255,255,255,0.3)' }]}>
@@ -380,19 +513,21 @@ export default function ChatScreen() {
               editable={remaining > 0}
               selectionColor="#FF6B00"
             />
-            <TouchableOpacity
+            <SpringPressable
               onPress={function () { send(); }}
               disabled={loading || !msg.trim() || remaining <= 0}
-              activeOpacity={0.7}
+              haptic="medium"
+              scalePressed={0.88}
               style={[s.sendBtn, (!msg.trim() || loading || remaining <= 0) && { opacity: 0.3 }]}
             >
               <LinearGradient colors={loading ? ['#333', '#444'] : ['#FF6B00', '#E040FB']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
               <Ionicons name={loading ? 'hourglass' : 'send'} size={16} color="#FFF" />
-            </TouchableOpacity>
+            </SpringPressable>
           </View>
         </View>
       </KeyboardAvoidingView>
     </CosmicBackground>
+    </DesktopScreenWrapper>
   );
 }
 
@@ -420,10 +555,10 @@ var s = StyleSheet.create({
   dotFree: { backgroundColor: '#FF6B00' },
 
   msgList: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 10 },
-  userWrap: { alignSelf: 'flex-end', maxWidth: SW * 0.78, marginBottom: 8 },
+  userWrap: { alignSelf: 'flex-end', maxWidth: '78%', marginBottom: 8 },
   userBubble: { borderRadius: 18, borderBottomRightRadius: 4, paddingHorizontal: 14, paddingVertical: 10 },
   userText: { fontSize: 14, lineHeight: 20, color: '#FFF', fontWeight: '500' },
-  aiWrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, maxWidth: SW * 0.85, marginBottom: 8, alignSelf: 'flex-start' },
+  aiWrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, maxWidth: '85%', marginBottom: 8, alignSelf: 'flex-start' },
   aiDot: { width: 22, height: 22, borderRadius: 11, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 2, borderWidth: 1, borderColor: 'rgba(255,107,0,0.3)' },
   aiBubble: { flex: 1, borderRadius: 18, borderBottomLeftRadius: 4, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 13, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   aiText: { fontSize: 14, lineHeight: 21, color: 'rgba(255,255,255,0.88)' },
@@ -438,4 +573,112 @@ var s = StyleSheet.create({
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(255,107,0,0.12)' },
   input: { flex: 1, minHeight: 36, maxHeight: 90, color: '#FFF', fontSize: 14, paddingTop: 8, paddingBottom: 8 },
   sendBtn: { width: 34, height: 34, borderRadius: 17, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 1 },
+});
+
+// ── DESKTOP CHAT STYLES ──────────────────────────────────────────────
+var sd = StyleSheet.create({
+  // Outer shell: fills all space, centres the panel horizontally
+  shell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 24,
+  },
+  // The chat panel — max width 820, full height, glass card
+  panel: {
+    flex: 1,
+    maxWidth: 820,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.025)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 32,
+    flexDirection: 'column',
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  panelHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  panelHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1, flexWrap: 'wrap', justifyContent: 'flex-end' },
+  avatarLg: {
+    width: 46, height: 46, borderRadius: 23,
+    overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5,
+  },
+  panelTitle: { fontSize: 16, fontWeight: '800', color: '#F1F5F9', letterSpacing: 0.3 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
+  statusDot: { width: 7, height: 7, borderRadius: 3.5 },
+  statusText: { fontSize: 11, color: 'rgba(255,255,255,0.42)', fontWeight: '500' },
+  birthBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 10, borderWidth: 1,
+  },
+  birthBadgeText: { fontSize: 10.5, fontWeight: '700' },
+  modeToggleRow: { flexDirection: 'row', gap: 6 },
+  modeChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 10, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+  },
+  modeChipActive: { borderColor: 'transparent' },
+  modeChipText: { fontSize: 11.5, fontWeight: '700', color: 'rgba(255,255,255,0.38)' },
+  separator: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)' },
+  limitBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 24, paddingVertical: 8,
+    backgroundColor: 'rgba(255,107,0,0.03)',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+  },
+  limitText: { fontSize: 11, color: '#FF8C33', fontWeight: '600', flex: 1 },
+  limitDots: { flexDirection: 'row', gap: 3 },
+  dot: { width: 7, height: 7, borderRadius: 3.5 },
+  dotUsed: { backgroundColor: 'rgba(255,255,255,0.1)' },
+  dotFree: { backgroundColor: '#FF6B00' },
+  // Messages list padding
+  msgList: { paddingHorizontal: 28, paddingTop: 20, paddingBottom: 12 },
+  // Desktop bubble overrides — constrained to readable width
+  userWrapD: { maxWidth: 580 },
+  aiWrapD:   { maxWidth: 680 },
+  aiBubbleD: { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.08)' },
+  // Thinking row
+  thinkRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 10, alignSelf: 'flex-start', marginBottom: 8 },
+  aiDotSm:   { width: 26, height: 26, borderRadius: 13, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,107,0,0.3)' },
+  thinkBubble: { borderRadius: 18, borderBottomLeftRadius: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
+  // Input area
+  inputArea: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.015)',
+  },
+  inputRow: {
+    flexDirection: 'row', alignItems: 'flex-end', gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 16, paddingHorizontal: 16, paddingVertical: 6,
+    borderWidth: 1, borderColor: 'rgba(255,107,0,0.15)',
+  },
+  input: { flex: 1, minHeight: 40, maxHeight: 120, color: '#FFF', fontSize: 14.5, paddingTop: 8, paddingBottom: 8 },
+  sendBtn: {
+    width: 38, height: 38, borderRadius: 12, overflow: 'hidden',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 1, flexShrink: 0,
+  },
+  inputHint: {
+    fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 6,
+    textAlign: 'right', letterSpacing: 0.3,
+  },
 });

@@ -1,49 +1,70 @@
 /**
  * Language Context - provides app-wide language state
  * Allows all screens to reactively update when language changes
+ *
+ * Priority: AsyncStorage('appLanguage') > user.preferences.language > 'en'
  */
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setLanguage as setI18nLanguage, getLanguage, t as translate } from '../services/i18n';
 
 const LanguageContext = createContext();
+const STORAGE_KEY = 'appLanguage';
 
 export function LanguageProvider({ children }) {
-  const [language, setLang] = useState(getLanguage());
+  const [language, setLang] = useState('si');
   const [isReady, setIsReady] = useState(false);
 
-  // Load saved language on mount before rendering children
   useEffect(() => {
-    AsyncStorage.getItem('appLanguage').then((saved) => {
-      if (saved && (saved === 'en' || saved === 'si')) {
-        setI18nLanguage(saved);
-        setLang(saved);
+    (async () => {
+      try {
+        // 1) Check AsyncStorage first (user's explicit choice)
+        var saved = await AsyncStorage.getItem(STORAGE_KEY);
+
+        // 2) If nothing saved, check user profile from AuthContext storage
+        if (!saved) {
+          try {
+            var userRaw = await AsyncStorage.getItem('nakath_user_profile');
+            if (userRaw) {
+              var userData = JSON.parse(userRaw);
+              if (userData?.preferences?.language) {
+                saved = userData.preferences.language;
+              }
+            }
+          } catch (_) { /* ignore */ }
+        }
+
+        // 3) Default to Sinhala for Sri Lankan audience
+        var lang = (saved === 'en' || saved === 'si') ? saved : 'si';
+        setI18nLanguage(lang);
+        setLang(lang);
+        await AsyncStorage.setItem(STORAGE_KEY, lang);
+      } catch (_) {
+        setI18nLanguage('si');
+        setLang('si');
       }
       setIsReady(true);
-    }).catch(() => {
-      setIsReady(true);
-    });
+    })();
   }, []);
 
   const switchLanguage = useCallback((lang) => {
+    if (lang !== 'en' && lang !== 'si') return;
     setI18nLanguage(lang);
     setLang(lang);
-    AsyncStorage.setItem('appLanguage', lang);
+    AsyncStorage.setItem(STORAGE_KEY, lang);
   }, []);
 
   const toggleLanguage = useCallback(() => {
     const next = language === 'en' ? 'si' : 'en';
     setI18nLanguage(next);
     setLang(next);
-    AsyncStorage.setItem('appLanguage', next);
+    AsyncStorage.setItem(STORAGE_KEY, next);
   }, [language]);
 
-  // t() that triggers re-render on language change
   const t = useCallback((key) => {
     return translate(key);
   }, [language]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Don't render until saved language is loaded
   if (!isReady) return null;
 
   return (

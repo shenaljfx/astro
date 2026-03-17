@@ -98,7 +98,8 @@ router.post('/check', optionalAuth, async (req, res) => {
       groomAdvanced,
     };
 
-    // Save to Firestore in background (don't block response)
+    // Save to Firestore — DISABLED
+    /*
     let porondamId = null;
     if (req.user?.uid) {
       try {
@@ -114,6 +115,8 @@ router.post('/check', optionalAuth, async (req, res) => {
         });
       } catch (e) { console.error('Save porondam error:', e.message); }
     }
+    */
+    let porondamId = null;
 
     res.json({
       success: true,
@@ -327,15 +330,14 @@ WRITE THE REPORT:
       maxTokens: 165288,
     });
 
-    // Save report to Firestore in background
+    // Save report to Firestore — DISABLED
+    /*
     let savedPorondamId = porondamId || null;
     if (req.user?.uid && result.message) {
       try {
         if (porondamId) {
-          // Update existing porondam record with the AI report
           await updatePorondamReport(porondamId, result.message, language);
         } else {
-          // No existing record — save a new full record with the report
           savedPorondamId = await savePorondamResult(req.user.uid, {
             ...porondamData,
             bride: { ...porondamData.bride, name: brideName || 'Bride' },
@@ -346,6 +348,8 @@ WRITE THE REPORT:
         }
       } catch (e) { console.error('Save porondam report error:', e.message); }
     }
+    */
+    let savedPorondamId = porondamId || null;
 
     res.json({
       success: true,
@@ -354,6 +358,13 @@ WRITE THE REPORT:
       tokenCost: req.tokenCost,
       balance: newBalance,
       porondamId: savedPorondamId,
+      tokenUsage: result.usage ? {
+        model: result.model,
+        inputTokens: result.usage.promptTokenCount || result.usage.prompt_tokens || 0,
+        outputTokens: result.usage.candidatesTokenCount || result.usage.completion_tokens || 0,
+        thinkingTokens: result.usage.thoughtsTokenCount || 0,
+        totalTokens: result.usage.totalTokenCount || result.usage.total_tokens || 0,
+      } : null,
     });
   } catch (error) {
     console.error('Error generating porondam report:', error);

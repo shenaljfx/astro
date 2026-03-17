@@ -1,23 +1,27 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Tabs, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   View, StyleSheet, Platform, Text, Dimensions,
-  TouchableOpacity,
+  TouchableOpacity, Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming,
-  withSequence, interpolate,
+  withSequence, interpolate, Easing,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { Colors } from '../../constants/theme';
+import DesktopSidebar, { SIDEBAR_W_EXPANDED, SIDEBAR_W_COLLAPSED, DesktopTopBar } from '../../components/DesktopLayout';
+import useIsDesktop from '../../hooks/useIsDesktop';
 
 var { width: SW } = Dimensions.get('window');
+var LOGO = require('../../assets/logo.png');
 
 // ===========================================================================
 //  TAB CONFIGURATION  -  all 6 shown in the bar, evenly spread
@@ -46,35 +50,58 @@ function TabButton({ tabConfig, focused, onPress, routeKey, label }) {
   var scale  = useSharedValue(1);
   var pill   = useSharedValue(0);
   var iconY  = useSharedValue(0);
+  var glowPulse = useSharedValue(0);
+  var labelOpacity = useSharedValue(focused ? 1 : 0.28);
+  var labelTransY  = useSharedValue(focused ? 0 : 4);
   var prev   = useRef(false);
 
   useEffect(function () {
     if (focused && !prev.current) {
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
       scale.value = withSequence(
-        withSpring(1.18, { damping: 7, stiffness: 400 }),
-        withSpring(1,    { damping: 14 })
+        withSpring(1.22, { damping: 6, stiffness: 420 }),
+        withSpring(1,    { damping: 12 })
       );
       iconY.value = withSequence(
-        withSpring(-4, { damping: 8, stiffness: 420 }),
-        withSpring(0,  { damping: 14 })
+        withSpring(-5, { damping: 7, stiffness: 440 }),
+        withSpring(0,  { damping: 12 })
       );
-      pill.value = withSpring(1, { damping: 15, stiffness: 180 });
+      pill.value = withSpring(1, { damping: 14, stiffness: 180 });
+      labelOpacity.value = withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) });
+      labelTransY.value  = withSpring(0, { damping: 14, stiffness: 200 });
+      glowPulse.value = withTiming(1, { duration: 350 });
     } else if (!focused && prev.current) {
       scale.value = withSpring(1,  { damping: 14 });
       iconY.value = withSpring(0,  { damping: 14 });
       pill.value  = withSpring(0,  { damping: 18, stiffness: 160 });
+      labelOpacity.value = withTiming(0.28, { duration: 200 });
+      labelTransY.value  = withTiming(4, { duration: 200 });
+      glowPulse.value = withTiming(0, { duration: 200 });
     }
     prev.current = focused;
   }, [focused]);
 
   var iconAnim = useAnimatedStyle(function () {
-    return { transform: [{ scale: scale.value }, { translateY: iconY.value }] };
+    return {
+      transform: [{ scale: scale.value }, { translateY: iconY.value }],
+      shadowOpacity: interpolate(glowPulse.value, [0, 1], [0, 0.9]),
+      shadowRadius: interpolate(glowPulse.value, [0, 1], [0, 14]),
+    };
   });
 
   var pillAnim = useAnimatedStyle(function () {
     return {
       opacity:   interpolate(pill.value, [0, 1], [0, 1]),
-      transform: [{ scaleX: interpolate(pill.value, [0, 1], [0.35, 1]) }],
+      transform: [{ scaleX: interpolate(pill.value, [0, 1], [0.3, 1]) }, { scaleY: interpolate(pill.value, [0, 1], [0.6, 1]) }],
+    };
+  });
+
+  var labelAnim = useAnimatedStyle(function () {
+    return {
+      opacity: labelOpacity.value,
+      transform: [{ translateY: labelTransY.value }],
     };
   });
 
@@ -99,7 +126,7 @@ function TabButton({ tabConfig, focused, onPress, routeKey, label }) {
         <View style={[tb.activePillBorder, { borderColor: tabConfig.gradient[0] + '50' }]} />
       </Animated.View>
 
-      <Animated.View style={iconAnim}>
+      <Animated.View style={[iconAnim, { shadowColor: tabConfig.gradient[0], shadowOffset: { width: 0, height: 0 } }]}>
         <Ionicons
           name={focused ? tabConfig.iconFocused : tabConfig.icon}
           size={22}
@@ -107,12 +134,12 @@ function TabButton({ tabConfig, focused, onPress, routeKey, label }) {
         />
       </Animated.View>
 
-      <Text
+      <Animated.Text
         numberOfLines={1}
-        style={[tb.label, focused && { color: tabConfig.gradient[0], opacity: 1 }]}
+        style={[tb.label, focused && { color: tabConfig.gradient[0] }, labelAnim]}
       >
         {label}
-      </Text>
+      </Animated.Text>
     </TouchableOpacity>
   );
 }
@@ -125,6 +152,28 @@ function CosmicTabBar({ state, descriptors, navigation }) {
   var { language } = useLanguage();
   var insets = useSafeAreaInsets();
   var bottomPad = Math.max(insets.bottom, 4);
+
+  var tabCount = TABS.length;
+  var barInnerWidth = SW - BAR_MX * 2 - 4;
+  var tabW = barInnerWidth / tabCount;
+
+  var indicatorX = useSharedValue(state.index * tabW);
+
+  useEffect(function () {
+    indicatorX.value = withSpring(state.index * tabW, {
+      damping: 18,
+      stiffness: 180,
+      mass: 0.8,
+    });
+  }, [state.index, tabW]);
+
+  var currentTab = TABS[state.index] || TABS[0];
+
+  var indicatorStyle = useAnimatedStyle(function () {
+    return {
+      transform: [{ translateX: indicatorX.value }],
+    };
+  });
 
   return (
     <View style={[tb.outerWrap, { paddingBottom: bottomPad }]}>
@@ -147,6 +196,17 @@ function CosmicTabBar({ state, descriptors, navigation }) {
           style={tb.topEdge}
           start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
         />
+
+        {/* Sliding glow indicator */}
+        <Animated.View style={[tb.slideIndicator, { width: tabW }, indicatorStyle]}>
+          <View style={tb.slideIndicatorDot}>
+            <LinearGradient
+              colors={currentTab.gradient}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            />
+          </View>
+        </Animated.View>
 
         <View style={tb.row}>
           {TABS.map(function (tabConfig) {
@@ -239,6 +299,23 @@ var tb = StyleSheet.create({
     marginTop: 3,
     textTransform: 'uppercase',
   },
+  slideIndicator: {
+    position: 'absolute',
+    top: 0,
+    left: 2,
+    height: BAR_H,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 2,
+    zIndex: 0,
+  },
+  slideIndicatorDot: {
+    width: 20,
+    height: 3,
+    borderRadius: 1.5,
+    overflow: 'hidden',
+    opacity: 0.7,
+  },
 });
 
 // ===========================================================================
@@ -248,9 +325,8 @@ var tb = StyleSheet.create({
 function HeaderTitle({ title }) {
   return (
     <View style={hs.wrap}>
-      <Text style={hs.star}>{'\u2736'}</Text>
+      <Image source={LOGO} style={hs.logoIcon} resizeMode="contain" />
       <Text style={hs.title}>{title}</Text>
-      <Text style={hs.star}>{'\u2736'}</Text>
     </View>
   );
 }
@@ -269,13 +345,52 @@ function BalancePill({ balance }) {
 }
 
 // ===========================================================================
+//  DESKTOP SIDEBAR STANDALONE
+//  Drives navigation via useRouter/usePathname — lives outside <Tabs>
+// ===========================================================================
+
+function DesktopSidebarStandalone({ balance, language, onToggleLanguage, onCollapseChange }) {
+  var router   = useRouter();
+  var pathname = usePathname();
+
+  // Build a minimal state/navigation shim for DesktopSidebar
+  var routeIndex = TABS.findIndex(function (t) {
+    var seg = pathname === '/' ? 'index' : pathname.replace(/^\//, '').split('/')[0];
+    return t.name === seg || (seg === '' && t.name === 'index');
+  });
+  var activeIndex = routeIndex < 0 ? 0 : routeIndex;
+
+  var fakeState = {
+    index: activeIndex,
+    routes: TABS.map(function (t) { return { name: t.name, key: t.name }; }),
+  };
+  var fakeNavigation = {
+    emit: function () { return { defaultPrevented: false }; },
+    navigate: function (name) { router.push('/' + (name === 'index' ? '' : name)); },
+  };
+
+  return (
+    <DesktopSidebar
+      state={fakeState}
+      navigation={fakeNavigation}
+      balance={balance}
+      language={language}
+      onToggleLanguage={onToggleLanguage}
+      onCollapseChange={onCollapseChange}
+    />
+  );
+}
+
+// ===========================================================================
 //  TAB LAYOUT
 // ===========================================================================
 
 export default function TabLayout() {
-  var { t, language } = useLanguage();
+  var { t, language, toggleLanguage } = useLanguage();
   var { user } = useAuth();
   var [tokenBalance, setTokenBalance] = useState(null);
+  var [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  var isDesktop = useIsDesktop();
 
   var refreshBalance = useCallback(function () {
     api.getTokenBalance()
@@ -291,6 +406,43 @@ export default function TabLayout() {
 
   var TAB_BAR_HEIGHT = BAR_H + BAR_MB + 16;
 
+  // ── Desktop: true flex-row shell ────────────────────────────────────
+  // DesktopSidebar is rendered as a real flex sibling OUTSIDE Tabs so it
+  // occupies its own column.  The Tabs sceneContainer gets paddingLeft equal
+  // to the live sidebar width so content never slides under the panel.
+  if (isDesktop) {
+    return (
+      <View style={ds.shell}>
+        {/* Sidebar lives here, outside Tabs, as a true left column */}
+        <DesktopSidebarStandalone
+          balance={tokenBalance}
+          language={language}
+          onToggleLanguage={toggleLanguage}
+          onCollapseChange={setSidebarCollapsed}
+        />
+        {/* Content column — offset by sidebar width */}
+        <View style={ds.contentCol}>
+          <Tabs
+            tabBar={function () { return null; }}
+            sceneContainerStyle={ds.sceneContainer}
+            screenOptions={{ headerShown: false }}
+          >
+            {TABS.map(function (tab) {
+              return (
+                <Tabs.Screen
+                  key={tab.name}
+                  name={tab.name}
+                  options={{ title: language === 'si' ? tab.titleSi : tab.title }}
+                />
+              );
+            })}
+          </Tabs>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Mobile / tablet: original tab bar ──────────────────────────────
   return (
     <Tabs
       tabBar={function (props) { return <CosmicTabBar {...props} />; }}
@@ -301,6 +453,8 @@ export default function TabLayout() {
           headerTransparent: true,
           headerTitleAlign: 'center',
           tabBarStyle: { height: TAB_BAR_HEIGHT },
+          animation: 'fade',
+          animationDuration: 200,
           headerTitle: function () {
             var tabKey = 'tabHome';
             if (route.name === 'porondam') tabKey = 'tabPorondam';
@@ -360,16 +514,16 @@ var hs = StyleSheet.create({
     backgroundColor: 'rgba(251,191,36,0.18)',
   },
   wrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+  },
+  logoIcon: {
+    width: 22, height: 22, borderRadius: 6,
   },
   title: {
     fontSize: 16, fontWeight: '800', color: '#FBBF24',
     letterSpacing: 2.5, textTransform: 'uppercase',
     textShadowColor: 'rgba(251,191,36,0.6)',
     textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10,
-  },
-  star: {
-    fontSize: 10, color: '#C084FC',
   },
   balancePill: {
     flexDirection: 'row',
@@ -386,5 +540,32 @@ var hs = StyleSheet.create({
   balanceText: {
     fontSize: 11, fontWeight: '700',
     color: '#FBBF24', letterSpacing: 0.3,
+  },
+});
+
+// ===========================================================================
+//  DESKTOP SHELL STYLES
+// ===========================================================================
+
+var ds = StyleSheet.create({
+  // Outer row: sidebar on the left, content column on the right
+  shell: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#04030C',
+    overflow: 'hidden',
+  },
+  // The right-hand column that fills space next to the sidebar
+  contentCol: {
+    flex: 1,
+    flexDirection: 'column',
+    backgroundColor: '#04030C',
+    overflow: 'hidden',
+  },
+  // The Expo Router sceneContainer — fills all space inside contentCol
+  sceneContainer: {
+    flex: 1,
+    backgroundColor: '#04030C',
+    overflow: 'hidden',
   },
 });

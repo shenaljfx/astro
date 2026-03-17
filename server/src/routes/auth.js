@@ -27,6 +27,7 @@ const {
   MOCK_MODE,
 } = require('../services/ideamart');
 const { getDb, COLLECTIONS } = require('../config/firebase');
+const { addTokenBalance } = require('../middleware/tokens');
 
 // JWT secret — in production, use a strong random secret from env
 const JWT_SECRET = process.env.JWT_SECRET || 'nakath-ai-cosmic-secret-2025-dev';
@@ -61,14 +62,33 @@ async function findUserByPhone(phone) {
   if (!db) return null;
 
   const normalized = normalizePhone(phone);
-  const snapshot = await db.collection(COLLECTIONS.USERS)
-    .where('phone', '==', normalized)
-    .limit(1)
-    .get();
 
-  if (snapshot.empty) return null;
-  const doc = snapshot.docs[0];
-  return { uid: doc.id, ...doc.data() };
+  // Direct doc lookup by deterministic ID (fast, no index needed)
+  const docId = 'phone_' + normalized;
+  try {
+    const docRef = await db.collection(COLLECTIONS.USERS).doc(docId).get();
+    if (docRef.exists) {
+      return { uid: docRef.id, ...docRef.data() };
+    }
+  } catch (e) {
+    console.warn('[findUserByPhone] direct lookup failed:', e.message);
+  }
+
+  // Fallback: query by phone field (requires index)
+  try {
+    const snapshot = await db.collection(COLLECTIONS.USERS)
+      .where('phone', '==', normalized)
+      .limit(1)
+      .get();
+    if (!snapshot.empty) {
+      const doc = snapshot.docs[0];
+      return { uid: doc.id, ...doc.data() };
+    }
+  } catch (e) {
+    console.warn('[findUserByPhone] query fallback failed:', e.message);
+  }
+
+  return null;
 }
 
 async function createPhoneUser(phone, subscriberId) {
@@ -86,7 +106,7 @@ async function createPhoneUser(phone, subscriberId) {
     birthData: null,
     location: { lat: 6.9271, lng: 79.8612, name: 'Colombo' },
     preferences: {
-      language: 'en',
+      language: 'si',
       notifications: true,
       theme: 'cosmic',
     },
@@ -100,6 +120,7 @@ async function createPhoneUser(phone, subscriberId) {
       expiresAt: null,
     },
     onboardingComplete: false,
+    tokenBalance: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     reportCount: 0,
@@ -325,10 +346,22 @@ router.post('/subscribe', async (req, res) => {
     // Record charge
     await recordCharge(decoded.uid, chargeResult);
 
+    // Credit token balance with the subscription amount
+    let tokenResult = null;
+    try {
+      tokenResult = await addTokenBalance(
+        decoded.uid, DAILY_CHARGE, chargeResult.transactionId,
+        'Daily subscription — LKR ' + DAILY_CHARGE
+      );
+      console.log('[subscribe] ✔ Credited LKR ' + DAILY_CHARGE + ' tokens to ' + decoded.uid + ' (balance: ' + tokenResult.newBalance + ')');
+    } catch (tokenErr) {
+      console.error('[subscribe] ✖ Failed to credit tokens:', tokenErr.message);
+    }
+
     // Update subscription status
     const now = new Date();
     const expiresAt = new Date(now);
-    expiresAt.setHours(23, 59, 59, 999); // Expires end of today
+    expiresAt.setHours(23, 59, 59, 999);
 
     const subscription = {
       status: 'active',
@@ -344,8 +377,9 @@ router.post('/subscribe', async (req, res) => {
 
     res.json({
       success: true,
-      message: `Subscribed! LKR ${DAILY_CHARGE} charged from your mobile credit.`,
+      message: `Subscribed! LKR ${DAILY_CHARGE} charged. Tokens credited.`,
       subscription,
+      tokenBalance: tokenResult ? tokenResult.newBalance : null,
       charge: {
         amount: chargeResult.amount,
         currency: 'LKR',
@@ -466,6 +500,18 @@ router.post('/renew', async (req, res) => {
 
     await recordCharge(decoded.uid, chargeResult);
 
+    // Credit token balance with renewal amount
+    let tokenResult = null;
+    try {
+      tokenResult = await addTokenBalance(
+        decoded.uid, DAILY_CHARGE, chargeResult.transactionId,
+        'Daily renewal — LKR ' + DAILY_CHARGE
+      );
+      console.log('[renew] ✔ Credited LKR ' + DAILY_CHARGE + ' tokens to ' + decoded.uid);
+    } catch (tokenErr) {
+      console.error('[renew] ✖ Failed to credit tokens:', tokenErr.message);
+    }
+
     const now = new Date();
     const expiresAt = new Date(now);
     expiresAt.setHours(23, 59, 59, 999);
@@ -484,8 +530,9 @@ router.post('/renew', async (req, res) => {
 
     res.json({
       success: true,
-      message: `Renewed! LKR ${DAILY_CHARGE} charged.`,
+      message: `Renewed! LKR ${DAILY_CHARGE} charged. Tokens credited.`,
       subscription,
+      tokenBalance: tokenResult ? tokenResult.newBalance : null,
     });
   } catch (err) {
     console.error('Renew error:', err);
@@ -503,7 +550,7 @@ router.post('/onboarding-complete', async (req, res) => {
     const decoded = extractUser(req);
     if (!decoded) return res.status(401).json({ error: 'Authentication required' });
 
-    const { displayName, birthData } = req.body;
+    const { displayName, birthData, language } = req.body;
     const db = getDb();
 
     if (db) {
@@ -512,6 +559,9 @@ router.post('/onboarding-complete', async (req, res) => {
         updatedAt: new Date().toISOString(),
       };
       if (displayName) updates.displayName = displayName;
+      if (language && (language === 'en' || language === 'si')) {
+        updates['preferences.language'] = language;
+      }
       if (birthData) {
         updates.birthData = {
           dateTime: birthData.dateTime,

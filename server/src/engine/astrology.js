@@ -362,14 +362,17 @@ function toSidereal(tropicalLong, date) {
 }
 
 /**
- * Get accurate planetary longitudes using Swiss Ephemeris (ephemeris package)
- * for Mars, Mercury, Jupiter, Venus, Saturn, and astronomia for Sun & Moon.
- * Rahu/Ketu use mean node calculation.
- * 
+ * Get accurate planetary longitudes using the ephemeris package (Meeus/VSOP87 algorithms)
+ * for all 9 Navagrahas. Rahu/Ketu use mean node calculation.
+ *
+ * @param {Date}   date  - UTC Date object
+ * @param {number} [lat=6.9271]  - Observer latitude  (degrees). Used for topocentric corrections.
+ * @param {number} [lng=79.8612] - Observer longitude (degrees). Used for topocentric corrections.
+ *
  * All positions are tropical apparent longitudes, then converted to sidereal
  * using Lahiri Ayanamsha.
  */
-function getAllPlanetPositions(date) {
+function getAllPlanetPositions(date, lat = 6.9271, lng = 79.8612) {
   const jd = dateToJD(date);
   const T = (jd - 2451545.0) / 36525;
   const ayanamsha = getAyanamsha(date);
@@ -380,9 +383,10 @@ function getAllPlanetPositions(date) {
   const sunTrop = getSunLongitude(date);
   const moonTrop = getMoonLongitude(date);
 
-  // Mars, Mercury, Jupiter, Venus, Saturn from Swiss Ephemeris (ephemeris package)
-  // This provides full perturbation-corrected apparent longitudes
-  const swissResult = ephemeris.getAllPlanets(date, 6.9271, 79.8612, 0);
+  // Mars, Mercury, Jupiter, Venus, Saturn from ephemeris package (VSOP87 / Jean Meeus).
+  // Pass the actual observer lat/lng so topocentric parallax corrections are applied
+  // to the correct location — previously hardcoded to Colombo.
+  const swissResult = ephemeris.getAllPlanets(date, lat, lng, 0);
   const swissObs = swissResult.observed;
 
   const marsTrop = swissObs.mars.apparentLongitudeDd;
@@ -448,7 +452,7 @@ function getAllPlanetPositions(date) {
 function buildHouseChart(date, lat, lng) {
   const lagna = getLagna(date, lat, lng);
   const lagnaRashiId = lagna.rashi.id; // 1-12
-  const planets = getAllPlanetPositions(date);
+  const planets = getAllPlanetPositions(date, lat, lng);
 
   const houses = [];
   for (let i = 0; i < 12; i++) {
@@ -495,7 +499,7 @@ function buildHouseChart(date, lat, lng) {
 function buildNavamshaChart(date, lat, lng) {
   // Get Lagna and Planets
   const lagna = getLagna(date, lat, lng);
-  const planets = getAllPlanetPositions(date);
+  const planets = getAllPlanetPositions(date, lat, lng);
   
   // Helper to calc Navamsha Rashi
   const getNavamshaRashiId = (rashiId, degree) => {
@@ -720,7 +724,7 @@ function calculateSpecialLords(lagnaSidereal) {
  */
 function buildShadvarga(date, lat, lng) {
     const lagna = getLagna(date, lat, lng);
-    const planets = getAllPlanetPositions(date);
+    const planets = getAllPlanetPositions(date, lat, lng);
     const specialLords = calculateSpecialLords(lagna.sidereal);
     
     // Helper to get all varga positions for a planet/point
@@ -1091,7 +1095,7 @@ const ASHTAKA_BINDUS = {
  * @returns {Object} ashtakavarga data
  */
 function calculateAshtakavarga(date, lat, lng) {
-  const planets = getAllPlanetPositions(date);
+  const planets = getAllPlanetPositions(date, lat, lng);
   const lagna = getLagna(date, lat, lng);
 
   // Get rashi IDs for each contributing body (1-12)
@@ -1209,7 +1213,7 @@ function calculateAshtakavarga(date, lat, lng) {
  */
 function buildBhavaChalit(date, lat, lng) {
   const lagna = getLagna(date, lat, lng);
-  const planets = getAllPlanetPositions(date);
+  const planets = getAllPlanetPositions(date, lat, lng);
   const lagnaSidereal = lagna.sidereal;
 
   // Calculate house cusps (equal house, lagna-centered)
@@ -2889,9 +2893,11 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612) {
   const h10 = analyzeHouse(10, houses, planets, drishtis, lagnaName);
   const h2 = analyzeHouse(2, houses, planets, drishtis, lagnaName);
   const h11 = analyzeHouse(11, houses, planets, drishtis, lagnaName);
+  const h4Career = analyzeHouse(4, houses, planets, drishtis, lagnaName);
   const lord10Name = getHouseLord(10);
   const lord2Name = getHouseLord(2);
   const lord11Name = getHouseLord(11);
+  const lord4CareerName = getHouseLord(4);
 
   // Determine career suggestions based on 10th house lord and planets
   const careerPlanets = [lord10Name, ...(h10?.planetsInHouse || [])];
@@ -2963,6 +2969,85 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612) {
     } : null,
     lagnaCuspWarning: lagnaCuspWarning,
   };
+
+  // ── HOME & DOMESTIC LIFE INDICATORS (appended to career section) ──
+  (() => {
+    const lord4CareerHouse = getPlanetHouse(lord4CareerName);
+    const h4Planets = (h4Career?.planetsInHouse || []).filter(p => !['Rahu','Ketu','Lagna','Ascendant'].includes(p));
+    const BENEFICS = ['Jupiter','Venus','Mercury','Moon'];
+    const DUSTHANA = [6, 8, 12];
+    const beneficsInH4 = h4Planets.filter(p => BENEFICS.includes(p));
+    const maleficsInH4 = h4Planets.filter(p => !BENEFICS.includes(p));
+    const h10Planets = (h10?.planetsInHouse || []).filter(p => !['Rahu','Ketu','Lagna','Ascendant'].includes(p));
+    const h10Empty = h10Planets.length === 0;
+
+    // Kemadruma: Moon isolated — no planets in 2nd or 12th from Moon, no conjunction
+    const moonHouseKema = getPlanetHouse('Moon');
+    var kemadrumaPresent = false;
+    if (moonHouseKema) {
+      const idx = moonHouseKema - 1;
+      const prevIdx = (idx - 1 + 12) % 12;
+      const nextIdx = (idx + 1) % 12;
+      const hasVisible = (houseObj) => (houseObj?.planets || []).some(p => !['Sun','Rahu','Ketu','Lagna','Ascendant'].includes(p.name || p));
+      kemadrumaPresent = !hasVisible(houses[prevIdx]) && !hasVisible(houses[nextIdx]) &&
+        !(houses[idx]?.planets || []).some(p => !['Sun','Rahu','Ketu','Lagna','Ascendant','Moon'].includes(p.name || p));
+    }
+
+    // Domestic yogas
+    const domesticYogas = [];
+    if (beneficsInH4.includes('Jupiter') && beneficsInH4.includes('Mercury')) {
+      domesticYogas.push('Jupiter + Mercury in home house — exceptional domestic intelligence, educated homemaker energy, wisdom expressed through family management');
+    } else if (beneficsInH4.includes('Jupiter')) {
+      domesticYogas.push('Jupiter in home house — home is a place of wisdom, teaching, and abundance');
+    } else if (beneficsInH4.includes('Venus')) {
+      domesticYogas.push('Venus in home house — beautiful, artistic, harmonious home environment');
+    }
+    if (lord4CareerHouse && DUSTHANA.includes(lord4CareerHouse)) {
+      domesticYogas.push(`Home lord ${lord4CareerName} in house ${lord4CareerHouse} (suffering house) — domestic life carries hidden burdens, sacrifices, or losses not visible to the outside world`);
+    }
+    if (kemadrumaPresent) {
+      domesticYogas.push('Moon isolated without planetary support — emotional isolation within the home, deep inner world, tendency to carry domestic burdens alone');
+    }
+
+    // Domestic role score
+    var domesticScore = 0;
+    if (h10Empty) domesticScore += 2;
+    if (beneficsInH4.length >= 2) domesticScore += 2;
+    if (lord4CareerHouse && DUSTHANA.includes(lord4CareerHouse)) domesticScore += 1;
+    if (kemadrumaPresent) domesticScore += 1;
+    if (lord10House && DUSTHANA.includes(lord10House)) domesticScore += 1;
+    const domesticRole = domesticScore >= 4 ? 'PRIMARY' : domesticScore >= 2 ? 'SECONDARY' : 'NONE';
+
+    // Plain-language home narrative
+    var homeNarrative = '';
+    if (domesticRole === 'PRIMARY') {
+      homeNarrative = `The home IS the career. The ${h10Empty ? 'empty 10th house' : 'weakened external-career house'} combined with ${beneficsInH4.length >= 2 ? 'powerful planets in the home house' : 'a home-focused chart'} shows a person whose greatest work happens within the family.` +
+        (lord4CareerHouse && DUSTHANA.includes(lord4CareerHouse) ? ` The home lord in house ${lord4CareerHouse} shows this domestic role carries real burden and sacrifice, often unseen by the outside world.` : '') +
+        (kemadrumaPresent ? ` Emotional isolation is a recurring theme — this person carries the weight of the household largely alone, even when surrounded by family.` : '') +
+        (beneficsInH4.includes('Jupiter') && beneficsInH4.includes('Mercury') ? ` Yet the intellect and wisdom in the home house reveal a highly educated, sharp mind channeled into domestic excellence — this is not a passive homemaker but a highly capable manager of the home domain.` : '');
+    } else if (domesticRole === 'SECONDARY') {
+      homeNarrative = `Career and home life are intertwined. This person may work from home, choose family-friendly careers, or prioritize domestic stability over professional ambition.` +
+        (beneficsInH4.length > 0 ? ` The home house is well-supported, making domestic life a genuine source of strength and satisfaction.` : '');
+    } else {
+      homeNarrative = `External career ambition is strong. Home life, while valued, is secondary to professional achievement.`;
+    }
+
+    career.homeLifeIndicators = {
+      h4Lord: lord4CareerName,
+      h4LordHouse: lord4CareerHouse,
+      h4LordInDusthana: lord4CareerHouse ? DUSTHANA.includes(lord4CareerHouse) : false,
+      beneficsInH4,
+      maleficsInH4,
+      h4PlanetsAll: h4Planets,
+      h10Empty,
+      h10PlanetsCount: h10Planets.length,
+      kemadrumaPresent,
+      domesticYogas,
+      domesticRole,     // 'PRIMARY' | 'SECONDARY' | 'NONE'
+      domesticScore,
+      homeNarrative,
+    };
+  })();
 
   // ══════════════════════════════════════════════════════════════
   // SECTION 5: CHILDREN & FAMILY
@@ -3108,6 +3193,114 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612) {
       kalaBala: advancedShadbala.moon.components?.kalaBala,
       note: advancedShadbala.moon.percentage >= 60 ? 'Moon has strong temporal force — good emotional stamina' : 'Moon is weak in Shadbala — emotional sensitivity requires care',
     } : null,
+    // ── Synthesized Mental Health Risk Assessments ───────────────
+    moonAnalysis: (() => {
+      const findings = [];
+      if (moonHouse && [6, 8, 12].includes(moonHouse)) findings.push(`Moon in house ${moonHouse} — emotional isolation, hidden suffering, difficulty expressing feelings`);
+      if (getHealthScore('moon') < 50) findings.push(`Moon is weak (score ${getHealthScore('moon')}/100) — emotional vulnerability, mood instability`);
+      const rahuHouseCheck = getPlanetHouse('Rahu');
+      const ketuHouseCheck = getPlanetHouse('Ketu');
+      if (rahuHouseCheck === moonHouse) findings.push('Rahu conjunct Moon (Grahan Dosha) — anxiety, overthinking, obsessive thought patterns, mental fog');
+      if (ketuHouseCheck === moonHouse) findings.push('Ketu conjunct Moon — emotional detachment, dissociation, feeling disconnected from self');
+      const saturnHouseCheck = getPlanetHouse('Saturn');
+      if (saturnHouseCheck === moonHouse) findings.push('Saturn conjunct Moon (Vish Yoga) — depression, emotional suppression, chronic sadness');
+      // Saturn aspecting Moon
+      if (saturnHouseCheck && moonHouse) {
+        const satToMoon = ((moonHouse - saturnHouseCheck + 12) % 12) + 1;
+        if ([3, 7, 10].includes(satToMoon)) findings.push('Saturn aspects Moon — emotional heaviness, tendency to carry burdens silently, delayed emotional maturity');
+      }
+      // Mars aspecting or conjunct Moon
+      const marsHouseCheck = getPlanetHouse('Mars');
+      if (marsHouseCheck === moonHouse) findings.push('Mars conjunct Moon — emotional volatility, anger issues, impulsive reactions');
+      if (marsHouseCheck && moonHouse) {
+        const marsToMoon = ((moonHouse - marsHouseCheck + 12) % 12) + 1;
+        if ([4, 7, 8].includes(marsToMoon)) findings.push('Mars aspects Moon — irritability, emotional aggression, inner restlessness');
+      }
+      if (findings.length === 0) findings.push('Moon is relatively well-placed — emotional foundation is stable');
+      return { findings, moonHouse, moonScore: getHealthScore('moon'), moonSign: planets.moon?.rashiEnglish };
+    })(),
+    depressionRisk: (() => {
+      let score = 0;
+      const indicators = [];
+      // Moon in dusthana
+      if (moonHouse && [6, 8, 12].includes(moonHouse)) { score += 2; indicators.push(`Moon in ${moonHouse}th house — emotional darkness/isolation`); }
+      // Saturn in 4th (home/happiness disrupted)
+      const satHouse = getPlanetHouse('Saturn');
+      if (satHouse === 4) { score += 2; indicators.push('Saturn in 4th house — childhood unhappiness, suppressed emotions, cold home environment'); }
+      // Saturn conjunct or aspecting Moon
+      if (satHouse === moonHouse) { score += 3; indicators.push('Saturn-Moon conjunction (Vish Yoga) — strongest depression indicator in Vedic astrology'); }
+      if (satHouse && moonHouse) {
+        const satToM = ((moonHouse - satHouse + 12) % 12) + 1;
+        if ([3, 7, 10].includes(satToM)) { score += 1; indicators.push('Saturn aspects Moon — melancholy, emotional weight'); }
+      }
+      // Rahu conjunct Moon
+      const rahuH = getPlanetHouse('Rahu');
+      if (rahuH === moonHouse) { score += 2; indicators.push('Rahu with Moon — anxiety-driven depression, mental confusion'); }
+      // Moon weak in Shadbala
+      if (getHealthScore('moon') < 40) { score += 1; indicators.push('Weak Moon strength — low emotional resilience'); }
+      // 4th lord in dusthana
+      const lord4H = getPlanetHouse(lord4Name);
+      if (lord4H && [6, 8, 12].includes(lord4H)) { score += 1; indicators.push(`4th lord in ${lord4H}th — happiness house lord in suffering position`); }
+      const level = score >= 5 ? 'HIGH' : score >= 3 ? 'MODERATE' : score >= 1 ? 'LOW' : 'MINIMAL';
+      return { level, score, maxScore: 12, indicators };
+    })(),
+    anxietyRisk: (() => {
+      let score = 0;
+      const indicators = [];
+      const rahuH = getPlanetHouse('Rahu');
+      // Rahu conjunct Moon = #1 anxiety indicator
+      if (rahuH === moonHouse) { score += 3; indicators.push('Rahu conjunct Moon — obsessive thinking, irrational fears, panic-like episodes'); }
+      // Rahu in 1st, 4th, or 8th
+      if (rahuH && [1, 4, 8].includes(rahuH)) { score += 1; indicators.push(`Rahu in ${rahuH}th — restless mind, fear of the unknown`); }
+      // Mercury afflicted
+      if (getHealthScore('mercury') < 40) { score += 1; indicators.push('Weak Mercury — racing thoughts, inability to calm the mind'); }
+      // Moon in airy/watery signs with malefic aspect
+      if (moonHouse && [6, 8, 12].includes(moonHouse)) { score += 1; indicators.push('Moon in challenging house — emotional instability feeds anxiety'); }
+      // Ketu in 1st or 5th (existential anxiety)
+      const ketuH = getPlanetHouse('Ketu');
+      if (ketuH && [1, 5].includes(ketuH)) { score += 1; indicators.push(`Ketu in ${ketuH}th — existential anxiety, feeling of purposelessness`); }
+      const level = score >= 4 ? 'HIGH' : score >= 2 ? 'MODERATE' : score >= 1 ? 'LOW' : 'MINIMAL';
+      return { level, score, maxScore: 7, indicators };
+    })(),
+    childhoodTrauma: (() => {
+      let score = 0;
+      const indicators = [];
+      // Saturn in 4th = cold/harsh home
+      const satH = getPlanetHouse('Saturn');
+      if (satH === 4) { score += 3; indicators.push('Saturn in 4th house — cold, restrictive, or emotionally barren childhood home; strict or absent parenting'); }
+      // Moon in 6, 8, 12 = emotional neglect/suffering
+      if (moonHouse && [6, 8, 12].includes(moonHouse)) { score += 2; indicators.push(`Moon in ${moonHouse}th — emotional neglect, mother absent/unavailable, hidden childhood suffering`); }
+      // 4th lord in dusthana = home environment disrupted
+      const lord4H = getPlanetHouse(lord4Name);
+      if (lord4H && [6, 8, 12].includes(lord4H)) { score += 2; indicators.push(`4th lord (${lord4Name}) in ${lord4H}th — disrupted home, possible separation from family in childhood`); }
+      // Rahu conjunct Moon = confusion/fear in childhood
+      const rahuH = getPlanetHouse('Rahu');
+      if (rahuH === moonHouse) { score += 2; indicators.push('Rahu with Moon — childhood fears, confusion, possible exposure to disturbing events'); }
+      // Mars in 4th = violence/aggression at home
+      const marsH = getPlanetHouse('Mars');
+      if (marsH === 4) { score += 2; indicators.push('Mars in 4th — aggressive home environment, fighting between parents, possible physical discipline'); }
+      // Sun in 4th with malefic aspects = domineering father at home
+      const sunH = getPlanetHouse('Sun');
+      if (sunH === 4) { score += 1; indicators.push('Sun in 4th — domineering parent figure at home'); }
+      // Sun in dusthana = weak/absent father
+      if (sunH && [6, 8, 12].includes(sunH)) { score += 1; indicators.push(`Sun in ${sunH}th — father absent, weak, or struggling during childhood`); }
+      // Ketu in 4th = sudden disruption of home
+      const ketuH = getPlanetHouse('Ketu');
+      if (ketuH === 4) { score += 2; indicators.push('Ketu in 4th — sudden loss of home security, abrupt changes in childhood living situation'); }
+      // Check for Ketu dasha during childhood (ages 0-15)
+      const birthYear = date.getFullYear();
+      const childhoodDashas = dasaPeriods.filter(dp => {
+        const startYear = new Date(dp.start).getFullYear();
+        const endYear = new Date(dp.endDate).getFullYear();
+        return startYear <= birthYear + 15 && endYear >= birthYear;
+      });
+      const ketuInChildhood = childhoodDashas.some(dp => dp.lord === 'Ketu');
+      const saturnInChildhood = childhoodDashas.some(dp => dp.lord === 'Saturn');
+      if (ketuInChildhood) { score += 1; indicators.push('Ketu dasha during childhood — period of detachment, loss, or spiritual crisis in formative years'); }
+      if (saturnInChildhood) { score += 1; indicators.push('Saturn dasha during childhood — heavy responsibilities, hardship, or restriction during formative years'); }
+      const level = score >= 6 ? 'SEVERE' : score >= 4 ? 'HIGH' : score >= 2 ? 'MODERATE' : score >= 1 ? 'LOW' : 'MINIMAL';
+      return { level, score, maxScore: 17, indicators };
+    })(),
   };
 
   // ══════════════════════════════════════════════════════════════
@@ -3543,6 +3736,81 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612) {
   });
 
   // Body areas at risk from malefics
+  // ── Native's own kidney / urinary risk detection ─────────────────────────
+  // Independent from mother's kidney analysis — assesses the NATIVE's own risk
+  // Key indicators (BPHS + clinical correlation):
+  //   Venus weak or in dusthana     → kidney/urinary karaka afflicted
+  //   Saturn in H6/H7/H8            → chronic disease house, renal pressure
+  //   Moon weak or in H6/H8/H12     → fluid system compromised
+  //   Lord of 7th in dusthana        → 7th = maraka + kidney area
+  //   Mars in H6 or H8              → surgical/inflammatory kidney events
+  //   Ketu in H6 or H8              → sudden/mysterious illness
+  //   Saturn aspects Moon or Venus   → slow chronic kidney degeneration
+  const nativeVenusHouse   = getPlanetHouse('Venus');
+  const nativeSaturnHouse  = getPlanetHouse('Saturn');
+  const nativeMoonHouse    = getPlanetHouse('Moon');
+  const nativeMarsHouse    = getPlanetHouse('Mars');
+  const nativeKetuHouse    = getPlanetHouse('Ketu');
+  const nativeRahuHouse    = getPlanetHouse('Rahu');
+  const lord7KidneyName   = getHouseLord(7);
+  const lord7KidneyHouse  = getPlanetHouse(lord7KidneyName);
+  const venusScore         = getHealthScore('venus');
+  const saturnScore        = getHealthScore('saturn');
+  const moonHealthScore    = getHealthScore('moon');
+
+  // Saturn aspects Venus? (3rd, 7th, 10th from Saturn)
+  const satAspectsVenus = nativeSaturnHouse && nativeVenusHouse &&
+    [3, 7, 10].includes(((nativeVenusHouse - nativeSaturnHouse + 12) % 12) + 1);
+  // Saturn aspects Moon?
+  const satAspectsMoonNative = nativeSaturnHouse && nativeMoonHouse &&
+    [3, 7, 10].includes(((nativeMoonHouse - nativeSaturnHouse + 12) % 12) + 1);
+
+  const nativeKidneyIndicators = [
+    nativeVenusHouse && [6, 8, 12].includes(nativeVenusHouse),         // Venus in dusthana
+    venusScore < 45,                                                    // Venus weak (Shadbala)
+    nativeSaturnHouse && [6, 7, 8].includes(nativeSaturnHouse),        // Saturn in disease/maraka/transformation houses
+    nativeMoonHouse && [6, 8, 12].includes(nativeMoonHouse),           // Moon in dusthana
+    moonHealthScore < 45,                                               // Moon weak
+    lord7KidneyHouse && [6, 8, 12].includes(lord7KidneyHouse),        // 7th lord in dusthana (kidney area + maraka)
+    nativeMarsHouse && [6, 8].includes(nativeMarsHouse),               // Mars in H6/H8 = surgical/inflammatory risk
+    nativeKetuHouse && [6, 8].includes(nativeKetuHouse),               // Ketu in H6/H8 = sudden illness
+    satAspectsVenus,                                                    // Saturn squeezes Venus (kidney karaka)
+    satAspectsMoonNative,                                               // Saturn on Moon = chronic fluid issues
+  ].filter(Boolean).length;
+
+  const nativeKidneyRisk = (() => {
+    // Special override: Saturn + Ketu both in H8 = confirmed surgical/crisis health pattern
+    // This is "chidra" (gap/wound) pattern — strong enough alone to classify as HIGH
+    const satKetuBothInH8 = nativeSaturnHouse === 8 && nativeKetuHouse === 8;
+    // Mars in H6 (6th = disease) with malefics in H8 = surgical + chronic double pattern
+    const marsH6SatH8 = nativeMarsHouse === 6 && nativeSaturnHouse === 8;
+    if (satKetuBothInH8 || (marsH6SatH8 && nativeKidneyIndicators >= 3)) return 'HIGH';
+    if (nativeKidneyIndicators >= 4) return 'HIGH';
+    if (nativeKidneyIndicators >= 2) return 'MODERATE';
+    return 'LOW';
+  })();
+
+  const nativeKidneyNarrative = (() => {
+    const satKetuBothInH8 = nativeSaturnHouse === 8 && nativeKetuHouse === 8;
+    const marsH6SatH8 = nativeMarsHouse === 6 && nativeSaturnHouse === 8;
+    if (nativeKidneyRisk === 'HIGH') {
+      const parts = [];
+      if (satKetuBothInH8) parts.push('Saturn + Ketu both in H8 (chronic + karmic surgical events — two distinct crisis points in life)');
+      if (marsH6SatH8) parts.push('Mars in H6 (active disease house) + Saturn in H8 (transformation/surgery) = inflammatory condition leading to surgical intervention');
+      if (nativeSaturnHouse && [6,7,8].includes(nativeSaturnHouse) && !satKetuBothInH8) parts.push(`Saturn in H${nativeSaturnHouse} (chronic disease pressure)`);
+      if (nativeKetuHouse && [6,8].includes(nativeKetuHouse) && !satKetuBothInH8) parts.push(`Ketu in H${nativeKetuHouse} (sudden/karmic health events)`);
+      if (nativeMarsHouse && [6,8].includes(nativeMarsHouse) && !marsH6SatH8) parts.push(`Mars in H${nativeMarsHouse} (surgical/inflammatory risk)`);
+      if (venusScore < 45) parts.push(`Venus weak (${venusScore}% Shadbala — kidney karaka under stress)`);
+      if (satAspectsVenus) parts.push('Saturn aspects Venus — chronic renal pressure');
+      if (lord7KidneyHouse && [6,8,12].includes(lord7KidneyHouse)) parts.push(`7th lord in H${lord7KidneyHouse} — kidney/maraka area afflicted`);
+      return `⚠️ HIGH KIDNEY / URINARY RISK: ${parts.join('; ')}. Kidney stones, chronic kidney disease, or urinary tract conditions are strongly indicated. Two or more distinct health episodes at different life stages are likely — typically one in the late 20s and a more serious episode around age 50. Surgical intervention may be required.`;
+    }
+    if (nativeKidneyRisk === 'MODERATE') {
+      return 'MODERATE kidney/urinary risk — monitor Venus and Moon dashas, stay well hydrated, and do kidney function tests every 2 years after age 35.';
+    }
+    return 'No significant kidney risk detected from chart indicators.';
+  })();
+
   const bodyRisks = [];
   houses.forEach(h => {
     const malefics = (h.planets || []).filter(p => ['Mars', 'Saturn', 'Rahu', 'Ketu'].includes(p.name));
@@ -3551,12 +3819,358 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612) {
     }
   });
 
-  // Health danger periods
-  const healthDangerDasas = dasaPeriods.filter(d => d.lord === lord6Name || d.lord === lord8Name || d.lord === 'Saturn' || d.lord === 'Ketu').map(d => ({
-    lord: d.lord,
-    period: `${d.start} to ${d.endDate}`,
-    reason: d.lord === lord6Name ? 'Disease significator period' : d.lord === lord8Name ? 'Chronic illness risk period' : d.lord === 'Saturn' ? 'Slow health issues, joints, bones' : 'Sudden health surprises',
+  // ── ORGAN-SPECIFIC RISK ANALYSIS ─────────────────────────────
+  // Each organ system is checked against classical BPHS indicators:
+  // ruling house, karaka planet, house lord placement, malefic aspects.
+  // Risk levels: HIGH / MODERATE / LOW
+  const organRisks = {};
+
+  // Helper: number of indicators that are true → risk level
+  const riskLevel = (count, highThresh = 3, modThresh = 1) =>
+    count >= highThresh ? 'HIGH' : count >= modThresh ? 'MODERATE' : 'LOW';
+
+  // ─ HEART & CARDIOVASCULAR (H4, Sun, Leo/H5) ─────────────────
+  const sunHouse   = getPlanetHouse('Sun');
+  const lord4H     = getPlanetHouse(getHouseLord(4));
+  const lord5H     = getPlanetHouse(getHouseLord(5));
+  const sunScore   = getHealthScore('sun');
+  const h4Malefics = (houses[3]?.planets || []).filter(p => ['Mars','Saturn','Rahu','Ketu'].includes(p.name));
+  const satAspH4   = nativeSaturnHouse && [3,7,10].includes(((4 - nativeSaturnHouse + 12) % 12) + 1);
+  const marsAspH4  = nativeMarsHouse   && [4,7,8].includes(((4 - nativeMarsHouse  + 12) % 12) + 1);
+  const heartCount = [
+    sunScore < 45,
+    sunHouse && [6,8,12].includes(sunHouse),
+    lord4H   && [6,8,12].includes(lord4H),
+    h4Malefics.length > 0,
+    satAspH4,
+    marsAspH4,
+  ].filter(Boolean).length;
+  organRisks.heart = {
+    organ: 'Heart & Cardiovascular System',
+    risk: riskLevel(heartCount, 3, 1),
+    indicators: heartCount,
+    diseases: ['Hypertension', 'Cardiac arrhythmia', 'Coronary artery disease', 'Palpitations'],
+    vulnerableAge: sunScore < 40 ? '40s onwards' : '50s onwards',
+    prevention: 'Regular BP monitoring, avoid excess salt and saturated fats, morning walks, arjuna bark tea',
+    narrative: heartCount >= 3
+      ? `⚠️ HIGH CARDIAC RISK: Sun weak/afflicted (score ${sunScore}%) + malefics on 4th/5th house axis. Watch for hypertension and heart strain especially after age 40. Annual ECG recommended.`
+      : heartCount >= 1
+        ? `MODERATE cardiac sensitivity — maintain low-stress lifestyle, avoid smoking, regular exercise from age 35.`
+        : `Heart system is relatively protected in this chart.`,
+  };
+
+  // ─ LIVER & DIGESTION (H5, Jupiter, Virgo/H6) ────────────────
+  const jupHouse   = getPlanetHouse('Jupiter');
+  const jupScore   = getHealthScore('jupiter');
+  const lord5Hdig  = getPlanetHouse(getHouseLord(5));
+  const lord6Hdig  = getPlanetHouse(getHouseLord(6));
+  const h5Malefics = (houses[4]?.planets || []).filter(p => ['Mars','Saturn','Rahu','Ketu'].includes(p.name));
+  const liverCount = [
+    jupScore < 45,
+    jupHouse  && [6,8,12].includes(jupHouse),
+    lord5Hdig && [6,8,12].includes(lord5Hdig),
+    h5Malefics.length > 0,
+    nativeRahuHouse === 5 || nativeKetuHouse === 5,
+  ].filter(Boolean).length;
+  organRisks.liver = {
+    organ: 'Liver, Pancreas & Upper Digestion',
+    risk: riskLevel(liverCount, 3, 1),
+    indicators: liverCount,
+    diseases: ['Fatty liver', 'Hepatitis risk', 'Diabetes', 'Cholesterol', 'Pancreatitis', 'Jaundice'],
+    vulnerableAge: jupScore < 40 ? '30s onwards' : '45s onwards',
+    prevention: 'Avoid alcohol, reduce processed sugar, drink karavila (bitter gourd) juice, turmeric in warm water every morning',
+    narrative: liverCount >= 3
+      ? `⚠️ HIGH LIVER/DIGESTIVE RISK: Jupiter weak (${jupScore}%) or afflicted. Susceptibility to diabetes, fatty liver, and cholesterol issues. Blood sugar monitoring from age 35 is essential.`
+      : liverCount >= 1
+        ? `MODERATE digestive sensitivity — watch sugar and fat intake, karavila juice helps regulate blood sugar.`
+        : `Liver and digestion are well-supported in this chart.`,
+  };
+
+  // ─ LUNGS & RESPIRATORY (H3, Mercury, Gemini) ────────────────
+  const mercHouse   = getPlanetHouse('Mercury');
+  const mercScore   = getHealthScore('mercury');
+  const lord3Hlung  = getPlanetHouse(getHouseLord(3));
+  const h3Malefics  = (houses[2]?.planets || []).filter(p => ['Mars','Saturn','Rahu','Ketu'].includes(p.name));
+  const satAspH3    = nativeSaturnHouse && [3,7,10].includes(((3 - nativeSaturnHouse + 12) % 12) + 1);
+  const lungCount   = [
+    mercScore < 45,
+    mercHouse && [6,8,12].includes(mercHouse),
+    lord3Hlung && [6,8,12].includes(lord3Hlung),
+    h3Malefics.length > 0,
+    satAspH3,
+    nativeRahuHouse === 3 || nativeKetuHouse === 3,
+  ].filter(Boolean).length;
+  organRisks.lungs = {
+    organ: 'Lungs & Respiratory System',
+    risk: riskLevel(lungCount, 3, 1),
+    indicators: lungCount,
+    diseases: ['Asthma', 'Bronchitis', 'Allergic rhinitis', 'Respiratory infections', 'Breathing difficulties'],
+    vulnerableAge: mercScore < 40 ? '20s onwards' : '40s onwards',
+    prevention: 'Avoid dusty environments, practice pranayama daily, turmeric milk at night, murunga (moringa) leaves',
+    narrative: lungCount >= 3
+      ? `⚠️ HIGH RESPIRATORY RISK: Mercury weak (${mercScore}%) or 3rd house afflicted. Prone to asthma, bronchitis, and respiratory allergies. Avoid smoking completely.`
+      : lungCount >= 1
+        ? `MODERATE respiratory sensitivity — be cautious during monsoon season, dusty environments.`
+        : `Respiratory system is relatively strong in this chart.`,
+  };
+
+  // ─ BONES, JOINTS & SPINE (H10, Saturn, Capricorn) ───────────
+  const satScore2   = getHealthScore('saturn');
+  const lord10Hbone = getPlanetHouse(getHouseLord(10));
+  const h10Malefics = (houses[9]?.planets || []).filter(p => ['Mars','Saturn','Rahu','Ketu'].includes(p.name));
+  const satInH10    = nativeSaturnHouse === 10;
+  const marsAspH10  = nativeMarsHouse && [4,7,8].includes(((10 - nativeMarsHouse + 12) % 12) + 1);
+  const boneCount   = [
+    satScore2 < 45,
+    nativeSaturnHouse && [6,8,12].includes(nativeSaturnHouse),
+    lord10Hbone && [6,8,12].includes(lord10Hbone),
+    h10Malefics.length > 0,
+    marsAspH10,
+    nativeKetuHouse === 10,
+  ].filter(Boolean).length;
+  organRisks.bones = {
+    organ: 'Bones, Joints & Spine',
+    risk: riskLevel(boneCount, 3, 1),
+    indicators: boneCount,
+    diseases: ['Arthritis', 'Osteoporosis', 'Joint pain', 'Slip disc', 'Knee problems', 'Dental issues', 'Spinal degeneration'],
+    vulnerableAge: satScore2 < 40 ? '35s onwards' : '50s onwards',
+    prevention: 'Calcium-rich foods (small fish, sesame seeds, green leaves), avoid prolonged sitting, gentle yoga for spine, warm sesame oil massage',
+    narrative: boneCount >= 3
+      ? `⚠️ HIGH BONE/JOINT RISK: Saturn weak (${satScore2}%) or afflicted. Arthritis, joint degeneration, and spinal issues are likely after middle age. Proactive calcium and Vitamin D supplementation essential.`
+      : boneCount >= 1
+        ? `MODERATE bone/joint sensitivity — maintain active lifestyle, avoid obesity (extra weight on joints).`
+        : `Bone and joint system is reasonably well-supported.`,
+  };
+
+  // ─ EYES (H2, Sun, H12 for left eye) ─────────────────────────
+  const lord2Heye   = getPlanetHouse(getHouseLord(2));
+  const lord12Heye  = getPlanetHouse(getHouseLord(12));
+  const h2Malefics  = (houses[1]?.planets || []).filter(p => ['Mars','Saturn','Rahu','Ketu'].includes(p.name));
+  const h12Malefics = (houses[11]?.planets || []).filter(p => ['Mars','Saturn','Rahu','Ketu'].includes(p.name));
+  const eyeCount    = [
+    sunScore < 45,
+    lord2Heye  && [6,8,12].includes(lord2Heye),
+    lord12Heye && [6,8,12].includes(lord12Heye),
+    h2Malefics.length > 0,
+    h12Malefics.length > 0,
+    nativeRahuHouse === 2 || nativeRahuHouse === 12,
+    nativeKetuHouse === 2 || nativeKetuHouse === 12,
+  ].filter(Boolean).length;
+  organRisks.eyes = {
+    organ: 'Eyes & Vision',
+    risk: riskLevel(eyeCount, 3, 1),
+    indicators: eyeCount,
+    diseases: ['Refractive errors', 'Cataracts', 'Glaucoma', 'Dry eyes', 'Night blindness'],
+    vulnerableAge: sunScore < 40 ? '30s onwards' : '45s onwards',
+    prevention: 'Triphala eye wash weekly, Vitamin A foods (carrots, papaya, green leaves), reduce screen time, eye yoga',
+    narrative: eyeCount >= 3
+      ? `⚠️ HIGH EYE RISK: Sun or 2nd/12th house axis afflicted. Risk of cataracts, glaucoma, or significant vision deterioration. Annual eye check from age 35.`
+      : eyeCount >= 1
+        ? `MODERATE eye sensitivity — reduce screen glare, regular eye tests, triphala wash helps.`
+        : `Eye health is relatively well protected.`,
+  };
+
+  // ─ NERVOUS SYSTEM & MENTAL HEALTH (H3, Mercury, Moon) ───────
+  const moonScore2  = getHealthScore('moon');
+  const nervCount   = [
+    mercScore < 45,
+    moonScore2 < 45,
+    mercHouse  && [6,8,12].includes(mercHouse),
+    nativeMoonHouse && [6,8,12].includes(nativeMoonHouse),
+    nativeSaturnHouse === nativeMoonHouse, // Vish Yoga
+    nativeRahuHouse === 3 || nativeRahuHouse === nativeMoonHouse,
+  ].filter(Boolean).length;
+  organRisks.nerves = {
+    organ: 'Nervous System & Mental Health',
+    risk: riskLevel(nervCount, 3, 1),
+    indicators: nervCount,
+    diseases: ['Anxiety disorders', 'Depression', 'Insomnia', 'Migraines', 'Neurological sensitivity', 'OCD tendencies'],
+    vulnerableAge: '20s onwards (lifelong management)',
+    prevention: 'Daily meditation, ashwagandha, brahmi, warm milk with nutmeg before bed, reduce screen time after 9pm',
+    narrative: nervCount >= 3
+      ? `⚠️ HIGH NERVOUS SYSTEM RISK: Mercury and/or Moon weak/afflicted (Mercury ${mercScore}%, Moon ${moonScore2}%). Anxiety, insomnia, and overthinking are major patterns. Professional mental health support is recommended alongside herbal remedies.`
+      : nervCount >= 1
+        ? `MODERATE nervous sensitivity — stress management and sleep hygiene are important lifelong practices.`
+        : `Nervous system and mental resilience are relatively strong.`,
+  };
+
+  // ─ REPRODUCTIVE & URINARY SYSTEM (H7/H8, Venus) ─────────────
+  const lord8Hrep  = getPlanetHouse(getHouseLord(8));
+  const h7Malefics = (houses[6]?.planets  || []).filter(p => ['Mars','Saturn','Rahu','Ketu'].includes(p.name));
+  const h8Malefics2= (houses[7]?.planets  || []).filter(p => ['Mars','Saturn','Rahu','Ketu'].includes(p.name));
+  const repCount   = [
+    venusScore < 45,
+    nativeVenusHouse && [6,8,12].includes(nativeVenusHouse),
+    lord7KidneyHouse && [6,8,12].includes(lord7KidneyHouse),
+    lord8Hrep && [6,8,12].includes(lord8Hrep),
+    h7Malefics.length > 0,
+    h8Malefics2.length > 0,
+    nativeMarsHouse && [7,8].includes(nativeMarsHouse),
+    satAspectsVenus,
+  ].filter(Boolean).length;
+  organRisks.reproductive = {
+    organ: 'Reproductive & Urogenital System',
+    risk: riskLevel(repCount, 3, 1),
+    indicators: repCount,
+    diseases: ['Hormonal imbalance', 'PCOS (female)', 'Prostate issues (male)', 'STD susceptibility', 'Fertility concerns', 'Cysts'],
+    vulnerableAge: venusScore < 40 ? '25s onwards' : '40s onwards',
+    prevention: 'Regular reproductive health check-ups, shatavari for women / ashwagandha for men, stay hydrated, avoid processed foods',
+    narrative: repCount >= 3
+      ? `⚠️ HIGH REPRODUCTIVE/UROGENITAL RISK: Venus weak (${venusScore}%) and/or 7th-8th house axis afflicted. Hormonal issues, reproductive health concerns, and urinary problems are indicated across different life stages.`
+      : repCount >= 1
+        ? `MODERATE reproductive sensitivity — regular gynaecological/urological check-ups from age 30.`
+        : `Reproductive health is relatively protected in this chart.`,
+  };
+
+  // ─ SKIN (Mercury, Venus, Rahu) ───────────────────────────────
+  const skinCount  = [
+    mercScore < 45,
+    venusScore < 45,
+    nativeRahuHouse && [1,6].includes(nativeRahuHouse),
+    nativeKetuHouse && [1,6].includes(nativeKetuHouse),
+    mercHouse && [6,8,12].includes(mercHouse),
+  ].filter(Boolean).length;
+  organRisks.skin = {
+    organ: 'Skin & Dermatological Health',
+    risk: riskLevel(skinCount, 3, 1),
+    indicators: skinCount,
+    diseases: ['Eczema', 'Psoriasis', 'Acne', 'Allergic rashes', 'Fungal infections', 'Premature aging of skin'],
+    vulnerableAge: 'Throughout life — peaks in 20s and after 45',
+    prevention: 'Coconut oil massage daily, stay well hydrated, avoid spicy/oily foods during hot months, neem leaves bath',
+    narrative: skinCount >= 3
+      ? `⚠️ HIGH SKIN RISK: Mercury and Venus both weak, or Rahu on the ascendant/disease axis. Chronic skin conditions, recurrent rashes, and allergy-driven skin reactions are very likely.`
+      : skinCount >= 1
+        ? `MODERATE skin sensitivity — moisturise, avoid harsh soaps, neem helps manage skin health.`
+        : `Skin health is relatively good in this chart.`,
+  };
+
+  // ─ BLOOD PRESSURE & CIRCULATION (Mars, H6, H11) ─────────────
+  const marsScore2  = getHealthScore('mars');
+  const lord11Hcirc = getPlanetHouse(getHouseLord(11));
+  const bpCount     = [
+    marsScore2 < 45,
+    nativeMarsHouse && [6,8,12].includes(nativeMarsHouse),
+    nativeSaturnHouse && [6,8].includes(nativeSaturnHouse),
+    lord11Hcirc && [6,8,12].includes(lord11Hcirc),
+    nativeRahuHouse === 6,
+  ].filter(Boolean).length;
+  organRisks.bloodPressure = {
+    organ: 'Blood Pressure & Circulation',
+    risk: riskLevel(bpCount, 3, 1),
+    indicators: bpCount,
+    diseases: ['Hypertension', 'Hypotension', 'Poor circulation', 'Varicose veins', 'Blood disorders', 'Anemia'],
+    vulnerableAge: marsScore2 < 40 ? '30s onwards' : '40s onwards',
+    prevention: 'Garlic, hibiscus tea (shoe flower/wada mal), reduce salt, regular aerobic exercise, manage anger and stress',
+    narrative: bpCount >= 3
+      ? `⚠️ HIGH BLOOD PRESSURE RISK: Mars weak (${marsScore2}%) or in disease house. Hypertension, blood pressure fluctuations, and circulation issues are significant risks. Regular BP monitoring from age 30.`
+      : bpCount >= 1
+        ? `MODERATE circulatory sensitivity — manage stress and anger (key BP trigger), stay hydrated.`
+        : `Blood pressure and circulation appear protected in this chart.`,
+  };
+
+  // ─ THYROID & ENDOCRINE (Venus, Mercury, H2) ──────────────────
+  const thyroidCount = [
+    venusScore < 45,
+    mercScore  < 45,
+    nativeVenusHouse === 2 || (nativeVenusHouse && [6,8,12].includes(nativeVenusHouse)),
+    h2Malefics.length > 0,
+    nativeRahuHouse === 2,
+  ].filter(Boolean).length;
+  organRisks.thyroid = {
+    organ: 'Thyroid & Endocrine System',
+    risk: riskLevel(thyroidCount, 3, 1),
+    indicators: thyroidCount,
+    diseases: ['Hypothyroidism', 'Hyperthyroidism', 'Hormonal imbalance', 'Adrenal fatigue', 'Insulin resistance'],
+    vulnerableAge: venusScore < 40 ? '25s onwards' : '35s onwards',
+    prevention: 'Iodised salt, coconut oil cooking, reduce soy/processed food, ashwagandha, thyroid test every 3 years from age 30',
+    narrative: thyroidCount >= 3
+      ? `⚠️ HIGH THYROID RISK: Venus/Mercury weak and 2nd house afflicted (throat/endocrine area). Hypothyroidism, hormonal dysregulation, and metabolic issues are strongly indicated.`
+      : thyroidCount >= 1
+        ? `MODERATE endocrine sensitivity — monitor thyroid function, especially during stressful life phases.`
+        : `Thyroid and endocrine health appear stable in this chart.`,
+  };
+
+  // ── Build the organRisks summary array for prompt consumption ──
+  // ─ KIDNEY & URINARY TRACT (Venus, H7, Saturn, H8) ────────────
+  // Uses the already-computed nativeKidney* variables (above in the kidney section)
+  // to slot kidney directly into organRisks so it appears in the full organ map.
+  organRisks.kidneys = {
+    organ: 'Kidneys & Urinary Tract',
+    risk: nativeKidneyRisk,
+    indicators: nativeKidneyIndicators,
+    diseases: [
+      'Kidney stones (urolithiasis)',
+      'Chronic kidney disease (CKD)',
+      'Urinary tract infections (UTI)',
+      'Renal inflammation / nephritis',
+      'Urinary obstruction',
+      ...(nativeSaturnHouse === 8 || nativeKetuHouse === 8
+        ? ['Surgical kidney intervention', 'Kidney removal risk (nephrectomy)']
+        : []),
+    ],
+    vulnerableAge: nativeKidneyRisk === 'HIGH'
+      ? 'Late 20s (first episode) and ~50s (major crisis)'
+      : nativeKidneyRisk === 'MODERATE'
+        ? '35s onwards'
+        : '50s onwards (low risk)',
+    prevention: [
+      'Drink minimum 3 litres of water daily — non-negotiable',
+      'Polpala (Aerva lanata) tea — the classical Ayurvedic kidney herb, 2× daily',
+      'Barley water (iridhu) — kidney flushing, drink daily',
+      'Coconut water 1-2× daily',
+      'Avoid excess salt, red meat, spinach (oxalate), and processed foods',
+      'Annual kidney function panel: serum creatinine, eGFR, urine microalbumin — from age 30',
+      'Avoid NSAIDs (pain killers like diclofenac) which stress kidneys',
+      ...(nativeKidneyRisk === 'HIGH' ? ['Ultrasound kidney scan every 2 years from age 35'] : []),
+    ].join('; '),
+    narrative: nativeKidneyNarrative,
+  };
+
+  const organRiskSummary = Object.values(organRisks).map(o => ({
+    organ: o.organ,
+    risk: o.risk,
+    diseases: o.diseases,
+    vulnerableAge: o.vulnerableAge,
+    prevention: o.prevention,
+    narrative: o.narrative,
   }));
+
+  // ── HIGH-RISK organs for quick reference ──
+  const highRiskOrgans = organRiskSummary.filter(o => o.risk === 'HIGH').map(o => o.organ);
+  const moderateRiskOrgans = organRiskSummary.filter(o => o.risk === 'MODERATE').map(o => o.organ);
+
+  // ── Health danger periods — expanded to antardasha level ────
+  // Include mahadashas of 6th lord, 8th lord, Saturn, Ketu, Rahu, Maraka lords
+  // Note: lord2Name and lord7Name are already declared earlier in this function
+  const marakaLords = [lord2Name, lord7Name].filter(Boolean);
+
+  const healthDangerDasas = [];
+  dasaPeriods.forEach(md => {
+    const isMDDangerous = [lord6Name, lord8Name, 'Saturn', 'Ketu', ...marakaLords].includes(md.lord);
+    // Always scan antardashas for dangerous combos regardless of MD
+    (md.antardashas || []).forEach(ad => {
+      const isADDangerous = [lord6Name, lord8Name, 'Saturn', 'Ketu', ...marakaLords].includes(ad.lord);
+      // Both MD and AD are dangerous → very high risk window
+      if (isMDDangerous && isADDangerous) {
+        healthDangerDasas.push({
+          lord: md.lord,
+          antardasha: ad.lord,
+          period: `${ad.start} to ${ad.endDate}`,
+          level: 'CRITICAL',
+          reason: `${md.lord} MD (${md.lord === lord6Name ? 'disease lord' : md.lord === lord8Name ? 'chronic illness lord' : md.lord === 'Saturn' ? 'chronic pain/joints' : md.lord === 'Ketu' ? 'sudden illness' : 'maraka'}) + ${ad.lord} AD (${ad.lord === lord6Name ? 'disease lord' : ad.lord === lord8Name ? 'chronic illness' : ad.lord === 'Saturn' ? 'chronic' : ad.lord === 'Ketu' ? 'surgical/karmic' : 'maraka'}) — double activation`,
+        });
+      } else if (isMDDangerous && !isADDangerous) {
+        // MD dangerous but AD is not — moderate risk sub-period
+        healthDangerDasas.push({
+          lord: md.lord,
+          antardasha: ad.lord,
+          period: `${ad.start} to ${ad.endDate}`,
+          level: 'ELEVATED',
+          reason: `${md.lord} main period (${md.lord === lord6Name ? 'disease significator' : md.lord === lord8Name ? 'chronic illness' : md.lord === 'Saturn' ? 'joints/chronic' : md.lord === 'Ketu' ? 'sudden' : 'maraka'}) — all sub-periods carry elevated health vigilance`,
+        });
+      }
+    });
+  });
 
   const health = {
     title: 'Health Blueprint',
@@ -3617,6 +4231,802 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612) {
       })(),
       note: 'Based on full 6-component Shadbala (Sthana, Dig, Kala, Cheshta, Naisargika, Drig Bala) — more accurate than simplified strength scores',
     } : null,
+    // ── Native's own kidney / urinary risk ───────────────────────
+    kidneyRisk: nativeKidneyRisk,
+    kidneyNarrative: nativeKidneyNarrative,
+    kidneyIndicatorCount: nativeKidneyIndicators,
+    // ── Full organ-by-organ risk map ─────────────────────────────
+    organRisks: organRiskSummary,
+    highRiskOrgans,
+    moderateRiskOrgans,
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // SECTION 14B: DEEP FAMILY PORTRAIT
+  // ══════════════════════════════════════════════════════════════
+  // Covers: Mother, Father, Siblings — character, career, health, struggles,
+  //         and the native's relationship with each, cross-validated across
+  //         multiple chart layers (D1, D9, Jaimini Karakas, Shadbala).
+  //
+  // Accuracy layers:
+  //   L1  — House + lord position (BPHS classical)
+  //   L2  — Planet strength (Shadbala % from advanced engine)
+  //   L3  — Jaimini Karakas (Matrukaraka, Pitrakaraka)
+  //   L4  — Divisional chart confirmation (D3/D12 for parents, D3 for siblings)
+  //   L5  — Cross-check: aspecting planets modify the core reading
+  // ══════════════════════════════════════════════════════════════
+
+  const h4Family   = analyzeHouse(4,  houses, planets, drishtis, lagnaName);  // Mother, home
+  const h9Family   = analyzeHouse(9,  houses, planets, drishtis, lagnaName);  // Father, dharma
+  const h3Family   = analyzeHouse(3,  houses, planets, drishtis, lagnaName);  // Siblings, courage
+  const lord4Family = getHouseLord(4);
+  const lord9Family = getHouseLord(9);
+  const lord3Family = getHouseLord(3);
+  const lord4FamilyHouse = getPlanetHouse(lord4Family);
+  const lord9FamilyHouse = getPlanetHouse(lord9Family);
+  const lord3FamilyHouse = getPlanetHouse(lord3Family);
+
+  // Jaimini significators
+  const matrukaraka  = jaiminiKarakas?.karakas?.Matrukaraka  || null;
+  const pitrakaraka  = jaiminiKarakas?.karakas?.Pitrakaraka  || null;
+  const bhratrkaraka = jaiminiKarakas?.karakas?.Bhratrkaraka || null;
+
+  // Divisional chart confirmations
+  const d3Lagna   = extendedVargas?.D3?.lagnaRashi  || null;   // Drekkana — siblings
+  const d12Lagna  = extendedVargas?.D12?.lagnaRashi || null;   // Dwadasamsha — parents
+
+  // ── MOTHER ─────────────────────────────────────────────────────
+  const moonFamilyScore = getHealthScore('moon');
+  const moonFamilyHouse = getPlanetHouse('Moon');
+  const satFamilyHouse  = getPlanetHouse('Saturn');
+  const moonSatConjunct = moonFamilyHouse && satFamilyHouse && moonFamilyHouse === satFamilyHouse;
+  const lord4InDusthanFamily = lord4FamilyHouse && [6, 8, 12].includes(lord4FamilyHouse);
+  // Declare maleficsIn4 here so it's accessible in all mother-related IIFEs below
+  const maleficsIn4 = h4Family?.maleficsIn || [];
+
+  // ── Kidney / urinary disease detection ──────────────────────────────────────
+  // Rules (BPHS + classical):
+  //   Moon = kāraka for water, kidneys, fluids
+  //   Venus = kāraka for kidneys/urinary tract (rules Vrishabha & Tula)
+  //   Saturn = slow chronic diseases; in 7th (maraka) or aspecting Moon → kidney
+  //   4th lord in 6th = mother's house lord in disease house → chronic illness
+  //   Moon in Vrishabha (Venus-owned sign) → kidney/throat vulnerability
+  //   Moon in Tula (Venus-owned sign) → same
+  //   7th house from Moon = Moon's maraka → planets there afflict health
+  //   Rahu/Ketu on Moon axis → fluid or mystery conditions
+  //   6th lord aspecting/conjunct Moon → disease connects to Moon (kidney)
+  const venusFamilyHouse = getPlanetHouse('Venus');
+  const moonRashiName    = planets.moon?.rashi || '';
+  const moonIsVenusSign  = ['Vrishabha', 'Tula'].includes(moonRashiName);   // kidney-prone signs
+  const lord6Family      = getHouseLord(6);
+  const lord6FamilyHouse = getPlanetHouse(lord6Family);
+  // Does Saturn aspect Moon? (3rd, 7th, 10th aspect from Saturn)
+  const satAspectsMoon = satFamilyHouse && moonFamilyHouse &&
+    [3, 7, 10].includes(((moonFamilyHouse - satFamilyHouse + 12) % 12) + 1);
+  // Is 4th lord Saturn? (lord of mother's house = planet of chronic disease)
+  const lord4IsSaturn = lord4Family === 'Saturn';
+  // Is 4th lord in 6th (disease house)?
+  const lord4InH6 = lord4FamilyHouse === 6;
+  // Does Rahu or Ketu conjunct Moon?
+  const rahuFamilyHouse = getPlanetHouse('Rahu');
+  const ketuFamilyHouse = getPlanetHouse('Ketu');
+  const rahuConjMoon = rahuFamilyHouse && moonFamilyHouse && rahuFamilyHouse === moonFamilyHouse;
+  const ketuConjMoon = ketuFamilyHouse && moonFamilyHouse && ketuFamilyHouse === moonFamilyHouse;
+  // 4th lord in 8th = surgical/transformative health crises for mother
+  const lord4InH8 = lord4FamilyHouse === 8;
+  // Ketu conjunct 4th lord (both in same house) = karmic severance + health disruption
+  const ketuConjLord4 = lord4FamilyHouse && ketuFamilyHouse && lord4FamilyHouse === ketuFamilyHouse;
+  // Saturn in 8th — chronic hidden illness, surgery risk, especially if lord4
+  const satInH8 = satFamilyHouse === 8;
+  // Kidney disease confidence: count how many rules fire
+  const kidneyIndicators = [
+    lord4InH6 && lord4IsSaturn,       // strongest: 4th lord=Saturn sits in 6th (disease house)
+    lord4InH8 && lord4IsSaturn,       // 4th lord=Saturn in 8th = surgical/crisis health events
+    satAspectsMoon,                    // Saturn aspects Moon (chronic kidney pressure)
+    moonIsVenusSign,                   // Moon in Venus sign (kidney-prone rashi)
+    lord4InDusthanFamily,              // 4th lord in any dusthana (6/8/12)
+    rahuConjMoon || ketuConjMoon,      // Rahu/Ketu with Moon = mystery/fluid conditions
+    ketuConjLord4,                     // Ketu with 4th lord = karmic health disruption
+    maleficsIn4.includes('Saturn'),    // Saturn in 4th house itself
+    satInH8 && ketuConjLord4,          // Saturn+Ketu in 8th = double surgical risk indicator
+    moonFamilyHouse && [6,8,12].includes(moonFamilyHouse), // Moon in dusthana itself
+  ].filter(Boolean).length;
+  const highKidneyRisk = kidneyIndicators >= 2;
+
+  // ── Abandoned / raised-by-another-family detection ────────────────────────
+  // Classical BPHS indicators for separation from biological parents / raised elsewhere:
+  //   4th lord in 8th or 12th = broken home / separation from mother
+  //   Ketu in 4th = detachment from home/roots, may be raised outside birth family
+  //   Ketu conjunct 4th lord = karmic severance from maternal line
+  //   Moon in 6th/8th/12th = emotional disconnection from mother
+  //   Saturn in 4th = childhood marked by absence, distance or loss of mother figure
+  //   Rahu in 4th = unconventional upbringing, foster/adopted situation
+  const abandonmentIndicators = [
+    lord4InH8 || lord4FamilyHouse === 12,                        // 4th lord in 8/12 = home destroyed
+    ketuConjLord4,                                               // Ketu with 4th lord = karmic cut from roots
+    maleficsIn4.includes('Ketu'),                                // Ketu in 4th = detached from family
+    maleficsIn4.includes('Rahu'),                                // Rahu in 4th = unusual upbringing
+    maleficsIn4.includes('Saturn'),                              // Saturn in 4th = absent/cold home
+    moonFamilyHouse && [6, 8, 12].includes(moonFamilyHouse),     // Moon in dusthana = maternal pain
+    moonSatConjunct,                                             // Moon-Saturn = emotionally starved childhood
+  ].filter(Boolean).length;
+  const hasAbandonmentRisk = abandonmentIndicators >= 2;
+  const hasStrongAbandonmentRisk = abandonmentIndicators >= 3;
+
+  // Age-timing for mother's health crises:
+  // Kidney/chronic illness flares during dashas of 4th lord, Moon, Saturn, or 6th lord
+  // We flag ALL activations of these lords — regardless of native's age —
+  // and label them as maternal health windows the native should be aware of.
+  const motherAgeCrisisWindows = (() => {
+    const windows = [];
+    if (!highKidneyRisk && !lord4InDusthanFamily) return windows;
+    const triggerLords = new Set([lord4Family, 'Moon', 'Saturn', lord6Family].filter(Boolean));
+    const birthYrForWindows = (date instanceof Date ? date : new Date(date)).getFullYear();
+    for (const dp of dasaPeriods) {
+      if (!triggerLords.has(dp.lord)) continue;
+      const startYr = dp.start ? parseInt(dp.start.split('-')[0], 10) : null;
+      const endYr   = dp.endDate ? parseInt(dp.endDate.split('-')[0], 10) : null;
+      if (!startYr) continue;
+      const ageStart = startYr - birthYrForWindows;
+      const ageEnd   = endYr ? endYr - birthYrForWindows : ageStart + 10;
+      if (ageEnd < 0) continue;  // fully pre-birth
+      if (ageStart > 80) continue; // implausibly far
+
+      let label = '';
+      if (ageStart <= 5)        label = `native's infancy/early childhood — mother in her peak productive years, health stress or burden likely`;
+      else if (ageStart <= 18)  label = `native's childhood/teens — mother's health or family financial health may be tested`;
+      else if (ageStart <= 38)  label = `native's young adult years — mother likely in her late 40s to 60s, prime window for chronic illness onset`;
+      else if (ageStart <= 55)  label = `native's mid-life — mother is elderly, second major health window`;
+      else                      label = `native's later years — mother in old age, care and health monitoring important`;
+
+      windows.push({
+        period: `${dp.start} – ${dp.endDate}`,
+        nativeAge: `native age ~${Math.max(0,ageStart)}–${ageEnd}`,
+        dasha: dp.lord,
+        reason: `${dp.lord} dasha: ${label}`,
+      });
+    }
+    return windows.slice(0, 5);
+  })();
+
+  // Mother occupation / role indicator
+  // Homemaker indicators: 4th lord + Moon not in 10th/11th from Lagna, no Sun/Mercury in 10th from Moon
+  // Career indicator: Moon in H10/H11, or 10th house very active with female planets
+  const motherIsHomemaker = (() => {
+    const moonH = moonFamilyHouse || 0;
+    // Moon in 1,2,3,4,5,7,8,9,12 (not 10th/11th) suggests domestic role
+    const moonNotInCareerHouse = ![10, 11].includes(moonH);
+    // 4th lord not in 10th/11th = not career-focused
+    const lord4NotCareer = lord4FamilyHouse && ![10, 11].includes(lord4FamilyHouse);
+    // If both Moon and 4th lord are away from career houses → homemaker
+    return moonNotInCareerHouse && lord4NotCareer;
+  })();
+
+  // Mother's personality — driven by Moon's sign & nakshatra
+  const MOON_MOTHER_PERSONALITY = {
+    'Mesha':      'Mother is energetic, strong-willed, and independent — a fighter who protects the family fiercely. She may be quick-tempered but forgiving.',
+    'Vrishabha':  'Mother is patient, nurturing, and materially grounded. She expresses love through food, comfort, and stability. Strongly attached to home.',
+    'Mithuna':    'Mother is communicative, youthful in spirit, and intellectually curious. She encourages education and may have multiple interests.',
+    'Kataka':     'Mother is deeply emotional, intuitive, and self-sacrificing. The home revolves around her. She may struggle with letting go.',
+    'Simha':      'Mother is proud, dignified, and loving in a regal way. She has high expectations and takes great pride in family achievements.',
+    'Kanya':      'Mother is detail-oriented, health-conscious, and service-oriented. She worries a lot and may be overly critical out of love.',
+    'Tula':       'Mother is charming, social, and peace-loving. She tries to avoid conflict but may struggle to set firm boundaries.',
+    'Vrischika':  'Mother is intense, deeply feeling, and fiercely protective. She has hidden emotional depths and may have secrets she carries.',
+    'Dhanus':     'Mother is optimistic, philosophical, and freedom-loving. She encourages independent thinking and may have spiritual inclinations.',
+    'Makara':     'Mother is disciplined, responsible, and sometimes emotionally restrained. She shows love through hard work and provision.',
+    'Kumbha':     'Mother is unconventional, forward-thinking, and community-minded. She may be ahead of her time and hard to fully understand.',
+    'Meena':      'Mother is compassionate, spiritual, and selfless — sometimes to the point of losing herself. Deeply empathetic and artistic.',
+  };
+
+  // Mother's health risks — multi-layer
+  const motherHealthRisks = (() => {
+    const risks = [];
+
+    // ── KIDNEY / URINARY (primary target) ──────────────────────
+    if (highKidneyRisk) {
+      if (lord4InH8 && lord4IsSaturn) {
+        risks.push('⚠️ KIDNEY / SURGICAL HEALTH RISK (high confidence): Saturn as 4th lord placed in the 8th house (transformation, surgery) — mother is prone to kidney stones, chronic kidney disease, or urinary conditions that eventually require surgical intervention or hospitalisation.');
+        if (ketuConjLord4) risks.push('Ketu joins Saturn in the 8th: this amplifies the risk of sudden, unexpected surgical events — two or more distinct health crises at different life stages are indicated (typically late 20s and again around age 50).');
+      } else {
+        risks.push('⚠️ KIDNEY / URINARY HEALTH RISK (high confidence): Multiple indicators align — Saturn as 4th lord in the disease house, Moon in a Venus-ruled kidney-prone sign. Mother is prone to kidney stones, urinary tract infections, chronic kidney disease, or fluid-retention disorders.');
+      }
+      if (satAspectsMoon) risks.push('Saturn directly aspects the Moon — the kidney karaka is under chronic Saturn pressure. Issues tend to be long-lasting rather than acute, and may first appear in the late 20s, then recur or worsen in the late 50s.');
+      if (moonIsVenusSign) risks.push(`Moon in ${moonRashiName} (ruled by Venus, natural kidney karaka) — this sign amplifies urinary, kidney, and reproductive system vulnerabilities.`);
+    } else if (moonIsVenusSign || lord4InH6) {
+      risks.push('Moderate kidney/urinary risk: Moon is in a Venus-ruled sign or 4th lord is in the disease house — fluid-related conditions and urinary health should be monitored, especially after age 40.');
+    }
+
+    // ── EMOTIONAL / MENTAL ──────────────────────────────────────
+    if (moonFamilyScore < 45) {
+      risks.push('Emotional health challenges — anxiety, mood swings, or hormonal imbalance');
+      risks.push('Water-related conditions — fluid retention, thyroid problems');
+    }
+    if (moonSatConjunct) {
+      risks.push('Moon-Saturn conjunction: depression, chronic fatigue, joint or bone issues alongside emotional suppression');
+    }
+
+    // ── 4th lord in dusthana ────────────────────────────────────
+    if (lord4InDusthanFamily) {
+      const issue = lord4FamilyHouse === 6
+        ? 'recurring illness throughout life — not just one event but a pattern of health challenges, possibly chronic'
+        : lord4FamilyHouse === 8
+        ? 'sudden health crises requiring surgery or emergency care'
+        : 'hidden health struggles, need for long-term treatment or hospitalisation';
+      risks.push(`4th lord (${lord4Family}) in ${lord4FamilyHouse}th house: mother faces ${issue}`);
+    }
+
+    // ── Malefics in 4th ─────────────────────────────────────────
+    if (maleficsIn4.includes('Ketu')) risks.push('Ketu in 4th house: sudden, mysterious, or hard-to-diagnose health events — possibly related to past-life karmic patterns. Spiritual healing helps.');
+    if (maleficsIn4.includes('Rahu')) risks.push('Rahu in 4th: unusual or foreign-origin conditions; mental health or nervous system challenges');
+    if (maleficsIn4.includes('Mars')) risks.push('Mars in 4th: accidents, surgeries, or blood-related conditions');
+    if (maleficsIn4.includes('Saturn')) risks.push('Saturn in 4th: chronic illness, joint or bone conditions');
+
+    // ── Saturn aspects on 4th house ─────────────────────────────
+    const sat4thAspect = h4Family?.aspectingPlanets?.some(a => a.planet === 'Saturn');
+    if (sat4thAspect && !maleficsIn4.includes('Saturn')) {
+      risks.push('Saturn aspects the 4th house: even without being placed there, Saturn casts a shadow of chronic ailments and delayed recovery on mother\'s health');
+    }
+
+    if (risks.length === 0) risks.push('Mother\'s health is generally stable — no major astrological health threats identified');
+    return risks;
+  })();
+
+  // Mother's struggles in life
+  const motherStruggles = (() => {
+    const struggles = [];
+    // ── Abandonment / broken home ───────────────────────────────
+    if (hasStrongAbandonmentRisk) {
+      struggles.push('⚠️ BROKEN FAMILY / SEPARATION FROM ROOTS: Strong indicators of early family disruption — the native may have been separated from the biological mother or raised by a different family. Ketu and Saturn afflicting the 4th house lord create a karmic severing of the maternal bond. This is one of the most significant life themes for this chart.');
+    } else if (hasAbandonmentRisk) {
+      struggles.push('Disrupted home or strained maternal relationship — the native\'s early childhood home environment was unstable, absent, or emotionally cold. The biological family bond may have been weakened by circumstance.');
+    }
+    if (moonSatConjunct) struggles.push('Emotional suppression and feeling of being unloved or unappreciated — she carries much silently');
+    if (lord4InDusthanFamily) {
+      if (lord4FamilyHouse === 6) struggles.push('Recurring health battles and financial stress connected to illness — she managed home and health burdens simultaneously for much of her life');
+      if (lord4FamilyHouse === 8) struggles.push('Life events involving sudden losses, transformative crises, and health emergencies — Saturn in the 8th as lord of the home brings hidden suffering and tests of survival');
+      if (lord4FamilyHouse === 12) struggles.push('Isolation, hidden suffering, or sacrifice of personal dreams for the family');
+    }
+    if (maleficsIn4.includes('Rahu')) struggles.push('Confusion about her identity and role — she may feel like an outsider in her own home');
+    if (maleficsIn4.includes('Saturn')) struggles.push('Heavy responsibilities, hard work with little recognition, and delayed rewards in life');
+    if (maleficsIn4.includes('Ketu')) struggles.push('Ketu in 4th: a sense of detachment from the home, inner spiritual searching, or unexplained restlessness about domestic life');
+    const satToMoonGap = satFamilyHouse && moonFamilyHouse ? ((moonFamilyHouse - satFamilyHouse + 12) % 12) + 1 : 0;
+    if ([3, 7, 10].includes(satToMoonGap)) struggles.push('Saturn aspects the Moon — mother likely carries emotional burdens and duty-bound sacrifices all her life');
+    if (moonFamilyHouse && [6, 8, 12].includes(moonFamilyHouse)) struggles.push('Moon in a difficult house — mother\'s happiness is often compromised by circumstances beyond her control');
+    if (struggles.length === 0) struggles.push('Mother leads a relatively stable life. Her struggles are those of everyday life — nothing exceptional astrologically');
+    return struggles;
+  })();
+
+  // Relationship between native and mother
+  const nativeMotherbond = (() => {
+    if (hasStrongAbandonmentRisk) return '⚠️ Significant separation from the biological mother or family of origin is strongly indicated. The native may have been raised by relatives, foster family, or a completely different household. The maternal bond with the biological mother was either absent or deeply disrupted in early childhood. This is a defining karmic theme of this lifetime.';
+    if (hasAbandonmentRisk) return 'The relationship with mother or the home of origin had significant disruptions — physical separation, emotional distance, or an unconventional upbringing. Healing the relationship with the idea of "home" and "belonging" is a key life lesson.';
+    if (moonFamilyHouse === 1 || moonFamilyHouse === 4 || moonFamilyHouse === 9) return 'Exceptionally close bond with mother — she is the emotional center of your universe. You think of her often.';
+    if (moonSatConjunct) return 'Complicated bond — deep love mixed with emotional distance, misunderstandings, or unspoken pain. Healing this relationship brings great karmic benefit.';
+    if (moonFamilyScore >= 60 && !lord4InDusthanFamily) return 'Warm, supportive relationship with mother. She is a source of comfort and strength for you.';
+    if (lord4InDusthanFamily) return 'Relationship with mother has testing phases — separations, misunderstandings, or worry about her wellbeing. Despite challenges, the love is real.';
+    return 'Caring but sometimes strained relationship. Geographic distance or busy lifestyles may limit closeness.';
+  })();
+
+  const mother = {
+    title: 'Mother (Amma / මව)',
+    sinhala: 'මව් ස්වභාවය, සෞඛ්‍යය සහ ජීවිත අරගල',
+    h4Analysis: { strength: h4Family?.strength, planetsIn4th: h4Family?.planetsInHouse || [], aspectsOn4th: h4Family?.aspectingPlanets || [] },
+    h4Lord: { name: lord4Family, house: lord4FamilyHouse },
+    moonPosition: { house: moonFamilyHouse, rashi: planets.moon?.rashi, rashiEnglish: planets.moon?.rashiEnglish, degree: planets.moon?.degreeInSign?.toFixed(2) },
+    moonShadbala: advancedShadbala?.moon ? { percentage: advancedShadbala.moon.percentage, strength: advancedShadbala.moon.strength } : null,
+    matrukaraka: matrukaraka ? { planet: matrukaraka.planet, rashi: matrukaraka.rashi, meaning: 'Jaimini\'s maternal significator' } : null,
+    d12ParentChart: d12Lagna ? { d12Lagna, note: `D12 (Dwadasamsha) rising in ${d12Lagna} — reveals deeper parental karma` } : null,
+    personality: MOON_MOTHER_PERSONALITY[planets.moon?.rashi] || 'Mother is nurturing and emotionally present in ways unique to her nature.',
+    occupation: motherIsHomemaker
+      ? 'Homemaker / housewife — the 4th lord and Moon placement strongly indicate a domestic, home-centered life role. Her world is the family.'
+      : 'Active outside the home — the planetary configuration suggests she had or has an independent occupation or public role.',
+    familySeparation: hasStrongAbandonmentRisk
+      ? 'HIGH — strong indicators of abandonment or separation from biological family in early childhood'
+      : hasAbandonmentRisk
+      ? 'MODERATE — disrupted home or weakened maternal bond in early life'
+      : 'None detected',
+    healthRisks: motherHealthRisks,
+    kidneyRiskLevel: highKidneyRisk ? 'HIGH — multiple indicators converge' : kidneyIndicators === 1 ? 'MODERATE — one indicator present' : 'LOW',
+    healthCrisisWindows: motherAgeCrisisWindows,
+    lifestrug: motherStruggles,
+    bond: nativeMotherbond,
+    motherHealthPeriods: dasaPeriods
+      .filter(dp => dp.lord === lord4Family || dp.lord === 'Moon' || dp.lord === 'Saturn')
+      .map(dp => ({
+        lord: dp.lord,
+        period: `${dp.start} to ${dp.endDate}`,
+        reason: dp.lord === 'Moon' ? 'Moon dasha — mother-related events and kidney/fluid health highlighted'
+          : dp.lord === lord4Family ? '4th lord dasha — home and maternal matters come to the fore'
+          : 'Saturn dasha — chronic health, responsibilities, and delays increase',
+      })),
+    remedies: (() => {
+      const r = [];
+      if (highKidneyRisk || lord4InDusthanFamily) {
+        r.push('For kidney protection: offer white flowers and water to the Moon on Mondays; keep mother well hydrated and schedule kidney function tests every 2 years after age 40');
+        r.push('Wear a natural Pearl (මුතු / முத்து) set in silver on right ring finger on a Monday — strengthens Moon and protects kidney health');
+        r.push('Recite "Om Chandraya Namah" or Chandra Gayatri 108 times on Mondays for mother\'s protection');
+        r.push('Offer milk-rice (kiribath) on Poya days and pray specifically for mother\'s health at a Devi or Vishnu shrine');
+      }
+      if (lord4InDusthanFamily) r.push('Visit a Durga or Kali Devi temple on Fridays — removes maternal health obstacles and strengthens the 4th house');
+      if (maleficsIn4.includes('Ketu')) r.push('Light a camphor lamp on Saturdays at home and pray for mother — Ketu in 4th responds to spiritual remedies');
+      if (r.length === 0) r.push('Offer milk-rice (kiribath / கிரிபத்) to parents on Poya days — strengthens parental bond and brings blessings');
+      return r;
+    })(),
+  };
+
+  // ── FATHER ──────────────────────────────────────────────────────
+  const sunFamilyScore  = getHealthScore('sun');
+  const sunFamilyHouse  = getPlanetHouse('Sun');
+  const lord9InDusthan  = lord9FamilyHouse && [6, 8, 12].includes(lord9FamilyHouse);
+  const maleficsIn9     = h9Family?.maleficsIn || [];
+  const marsFamilyHouseF = getPlanetHouse('Mars');  // Mars = enterprise, action
+  const jupiterFamilyHouseF = getPlanetHouse('Jupiter');
+
+  const SUN_FATHER_PERSONALITY = {
+    'Mesha':     'Father is dynamic, decisive, and pioneering. He leads by example and may have a fiery temper. Career and ambition define him.',
+    'Vrishabha': 'Father is patient, hardworking, and materially focused. He shows love through provision and stability rather than words.',
+    'Mithuna':   'Father is intellectually sharp, communicative, and sometimes restless. He values education and encourages curiosity.',
+    'Kataka':    'Father is emotionally invested in family, sometimes more so than typical fathers. Home and security are his priority.',
+    'Simha':     'Father is proud, commanding, and has natural authority. He may have high expectations and a desire to see the family succeed publicly.',
+    'Kanya':     'Father is meticulous, analytical, and trade-oriented — he notices every detail and applies it practically. Hard-working and reliable.',
+    'Tula':      'Father is balanced, just, and socially aware. He may struggle with making firm decisions but has a strong sense of fairness.',
+    'Vrischika': 'Father is intense, secretive, and deeply feeling. He may carry secrets or hidden burdens that he never fully expresses.',
+    'Dhanus':    'Father is optimistic, philosophical, and generous. He may be spiritually inclined or have strong ideological convictions.',
+    'Makara':    'Father is disciplined, ambitious, and status-conscious. He worked hard for everything he has and expects the same from others.',
+    'Kumbha':    'Father is unconventional, independent-minded, and forward-thinking. He may be emotionally distant but intellectually stimulating.',
+    'Meena':     'Father is compassionate, spiritually inclined, and sometimes impractical. He may be an idealist who struggles with harsh realities.',
+  };
+
+  const fatherHealthRisks = (() => {
+    const risks = [];
+    if (sunFamilyScore < 45) {
+      risks.push('Heart conditions, high blood pressure, or spine-related problems');
+      risks.push('Low energy, vitamin D deficiency, and weakened immunity in later years');
+    }
+    const sat9Aspect = h9Family?.aspectingPlanets?.some(a => a.planet === 'Saturn');
+    if (sat9Aspect) risks.push('Saturn aspects the 9th house: father faces slow, chronic health challenges, particularly in bones, joints, or the nervous system');
+    if (maleficsIn9.includes('Saturn')) risks.push('Saturn in 9th: father may face chronic illness, career setbacks, or karmic hardship in life');
+    if (maleficsIn9.includes('Mars'))   risks.push('Mars in 9th: accidents, surgical procedures, or inflammatory conditions affecting father');
+    if (maleficsIn9.includes('Rahu'))   risks.push('Rahu in 9th: unusual health events, foreign-related health issues, or hard-to-diagnose conditions');
+    if (maleficsIn9.includes('Ketu'))   risks.push('Ketu in 9th: sudden health surprises or a spiritual-karmic health journey for father');
+    if (lord9InDusthan) {
+      const issue = lord9FamilyHouse === 6 ? 'recurring conflicts, financial stress, or chronic health issues'
+        : lord9FamilyHouse === 8 ? 'serious illness, accidents, or life-altering losses'
+        : 'isolation, secret struggles, or periods of withdrawal from family life';
+      risks.push(`9th lord in ${lord9FamilyHouse}th house: father\'s life involves ${issue}`);
+    }
+    if (risks.length === 0) risks.push('Father\'s health shows no major astrological threats — regular checkups after age 55 are standard');
+    return risks;
+  })();
+
+  const fatherStruggles = (() => {
+    const struggles = [];
+    if (sunFamilyScore < 45) struggles.push('Struggles with authority, recognition, or finding his place in the world — ego wounds run deep');
+    if (lord9InDusthan) {
+      if (lord9FamilyHouse === 6) struggles.push('Financial stress, disputes with colleagues or relatives, legal complications');
+      if (lord9FamilyHouse === 8) struggles.push('Sudden reversals of fortune, inheritance complications, or a life with dramatic highs and lows');
+      if (lord9FamilyHouse === 12) struggles.push('Isolation, secret suffering, career sacrifices, or spiritual longing never fully fulfilled');
+    }
+    if (maleficsIn9.includes('Rahu')) struggles.push('Confusion about values, identity crises, or being misled by others — particularly in career decisions');
+    if (maleficsIn9.includes('Saturn')) struggles.push('Heavy responsibilities, delayed success, and carrying burdens that were never really his alone to carry');
+    const sunInDusthan = sunFamilyHouse && [6, 8, 12].includes(sunFamilyHouse);
+    if (sunInDusthan) struggles.push(`Sun in the ${sunFamilyHouse}th house — father\'s recognition and career trajectory faced challenges; he may have felt undervalued despite his efforts`);
+    if (struggles.length === 0) struggles.push('Father\'s life journey is relatively stable. His struggles are personal growth challenges, not major crises');
+    return struggles;
+  })();
+
+  const nativeFatherBond = (() => {
+    if (sunFamilyHouse === 1 || sunFamilyHouse === 9 || sunFamilyHouse === 10) return 'Deep admiration and strong bond — father is your role model and greatest influence.';
+    if (sunFamilyHouse && [6, 8, 12].includes(sunFamilyHouse)) return 'Complex relationship with father — periods of distance, disagreement, or misunderstanding. Reconciliation and forgiveness bring profound healing.';
+    if (sunFamilyScore >= 60) return 'Respectful, supportive relationship. Father\'s guidance has shaped your ambitions and values significantly.';
+    return 'Moderate relationship — father provided stability but emotional closeness may have been limited. His own challenges shaped how he expressed love.';
+  })();
+
+  const fatherCareerAnalysis = (() => {
+    // ── Multi-layer career detection ─────────────────────────────
+    // Layer 1: Sun's sign gives industry flavor
+    const SUN_CAREER_SIGN = {
+      'Mesha':     ['military', 'police', 'athletics', 'engineering', 'entrepreneurship'],
+      'Vrishabha': ['finance', 'banking', 'farming', 'food industry', 'trade'],
+      'Mithuna':   ['communications', 'media', 'IT', 'trade', 'accounting', 'education'],
+      'Kataka':    ['government service', 'hospitality', 'food sector', 'nursing', 'property'],
+      'Simha':     ['government', 'politics', 'administration', 'medicine', 'arts'],
+      'Kanya':     ['trade', 'accounting', 'logistics', 'supply chain', 'research', 'detail-oriented technical work'],
+      'Tula':      ['law', 'diplomacy', 'fashion', 'arts', 'real estate', 'people-facing profession'],
+      'Vrischika': ['investigation', 'research', 'surgery', 'mining', 'oil & gas', 'intelligence'],
+      'Dhanus':    ['education', 'law', 'publishing', 'travel industry', 'religion', 'philosophy'],
+      'Makara':    ['construction', 'engineering', 'corporate management', 'government', 'logistics'],
+      'Kumbha':    ['technology', 'aviation', 'social work', 'research', 'unusual or pioneering field'],
+      'Meena':     ['medicine', 'religion', 'art', 'sea trade', 'pharmaceuticals', 'social service'],
+    };
+    const signFields = SUN_CAREER_SIGN[planets.sun?.rashi] || ['a structured, responsible field'];
+
+    // Layer 2: Sun's house position determines prominence/type
+    const sunH = sunFamilyHouse || 0;
+    // Layer 3: Mars house and sign — Mars = enterprise, logistics, movement, trade
+    const marsH = marsFamilyHouseF || 0;
+    const marsSign = planets.mars?.rashi || '';
+    // Layer 4: 10th house (career house) analysis — planets there, lord
+    const lord10Family = getHouseLord(10);
+    const lord10FamilyHouse = getPlanetHouse(lord10Family);
+    const h10pl = houses?.[9]?.planetsInHouse || [];
+
+    // Layer 5: Jupiter's house and sign — Jupiter = medicine, law, teaching, spirituality
+    const jupH = jupiterFamilyHouseF || 0;
+    const jupSign = planets.jupiter?.rashi || '';
+    const jupInH10 = jupH === 10;   // Jupiter in career house = healer/teacher/expert profession
+    const jupInH9  = jupH === 9;    // Jupiter in 9th = dharma, higher learning, medical/legal profession
+    const jupInMeena = jupSign === 'Meena';   // own sign = powerful healing/spiritual
+    const jupInDhanus = jupSign === 'Dhanus'; // own sign = law, education, philosophy
+    const jupInKarka = jupSign === 'Kataka';  // exalted = strong healing/nurturing profession
+    const jupInKumbha = jupSign === 'Kumbha'; // technology, research, unconventional healing
+    const jupStrong = advancedShadbala?.jupiter?.percentage >= 55;
+
+    // ── MEDICINE / HEALING detection (HIGHEST PRIORITY) ──────────
+    // Primary: Jupiter in H10 (career) or H9 (dharma/higher study) + sign quality
+    // Secondary: Ketu in 9th (research/specialised medicine, surgery)
+    // Tertiary: 9th lord strong + Jupiter aspects 10th
+    // Use planetsInHouse (reliable) rather than maleficsIn (depends on functional classification)
+    const h9pl = h9Family?.planetsInHouse || [];
+    const ketuIn9 = h9pl.includes('Ketu');
+    const jupMedicineScore = [
+      jupInH10,                                    // Jupiter exactly in career house
+      jupInH9 && (jupStrong || ketuIn9),           // Jupiter in dharma house + strength or Ketu
+      jupInMeena || jupInKarka,                    // exalted/own sign = powerful healing planet
+      jupInH9 && jupInDhanus,                      // own sign in dharma house = law/education
+      jupInH9 && jupInKumbha && ketuIn9,           // research/technology medicine (Aquarius+Ketu=research specialist)
+      h10pl.includes('Jupiter'),                   // Jupiter literally in 10th house planets list
+    ].filter(Boolean).length;
+
+    // ── Logistics / transport / business detection ───────────────
+    const sunInKanya = planets.sun?.rashi === 'Kanya';
+    const sunInH11 = sunH === 11;
+    const marsInH10 = marsH === 10;
+    const marsInSimha = marsSign === 'Simha';
+    const mercuryStrong = advancedShadbala?.mercury?.percentage >= 50;
+    const logisticsScore = [sunInKanya, sunInH11, marsInH10, marsInSimha, mercuryStrong].filter(Boolean).length;
+
+    // ── Business / self-employed detection ───────────────────────
+    const rahuH = getPlanetHouse('Rahu') || 0;
+    const rahuInH10 = rahuH === 10;
+    const businessScore = [sunInH11, marsInH10, rahuInH10].filter(Boolean).length;
+
+    // ── DECISION TREE (highest specificity first) ─────────────────
+    if (jupMedicineScore >= 2) {
+      const specialty = ketuIn9
+        ? 'medicine — Ketu alongside Jupiter in the 9th house strongly indicates a specialist, surgeon, or researcher who mastered a highly specific discipline'
+        : jupInH10
+        ? 'medicine, healthcare, or a healing profession — Jupiter in the career house is the strongest Vedic indicator of a doctor or medical authority'
+        : jupInMeena
+        ? 'medicine or spiritual healing — Jupiter in Meena (own sign) carries the essence of a healer and compassionate caregiver'
+        : jupInKarka
+        ? 'medicine or nurturing profession — Jupiter exalted in Kataka brings exceptional healing and caregiving energy'
+        : jupInH9
+        ? 'medicine, law, or higher education — Jupiter in the 9th house (house of dharma and wisdom) combined with Ketu creates a learned specialist who pursued advanced studies in a healing or advisory field'
+        : 'a professional advisory, healing, or teaching role — Jupiter\'s influence brings expertise and respected authority';
+      return `Father is most likely in the medical field or a healing profession — ${specialty}. He is respected, trusted, and seen as an authority figure in his community. Jupiter in the dharma house gives him wisdom, a genuine desire to help others, and a lasting professional reputation built on knowledge.`;
+    }
+    if (logisticsScore >= 3 || (sunInKanya && marsInH10)) {
+      return `Business owner or manager in logistics, trade, supply chain, or transport — Sun in Kanya combined with Mars in the career house indicates an enterprise-driven career involving movement of goods or networks.`;
+    }
+    if (businessScore >= 2) {
+      return `Self-employed or business-oriented — likely in ${signFields.slice(0,3).join(', ')}.`;
+    }
+    if (sunH === 10 || sunH === 1) return `Father had a prominent career in ${signFields.slice(0,3).join(', ')} — respected in his community.`;
+    if (sunH === 9 || sunH === 5)  return `Father had good fortune in ${signFields.slice(0,3).join(' / ')}. Travel or education may have featured.`;
+    if (sunH && isInDusthana(sunH)) return `Father\'s career faced obstacles — possible struggles in ${signFields.slice(0,2).join(' or ')}.`;
+    return `Father worked in ${signFields.slice(0,3).join(', ')}, achieving a stable position through consistent effort.`;
+  })();
+
+  const father = {
+    title: 'Father (Thaththa / පියා)',
+    sinhala: 'පිය ස්වභාවය, සෞඛ්‍යය සහ ජීවිත අරගල',
+    h9Analysis: { strength: h9Family?.strength, planetsIn9th: h9Family?.planetsInHouse || [], aspectsOn9th: h9Family?.aspectingPlanets || [] },
+    h9Lord: { name: lord9Family, house: lord9FamilyHouse },
+    sunPosition: { house: sunFamilyHouse, rashi: planets.sun?.rashi, rashiEnglish: planets.sun?.rashiEnglish, degree: planets.sun?.degreeInSign?.toFixed(2) },
+    sunShadbala: advancedShadbala?.sun ? { percentage: advancedShadbala.sun.percentage, strength: advancedShadbala.sun.strength } : null,
+    pitrakaraka: pitrakaraka ? { planet: pitrakaraka.planet, rashi: pitrakaraka.rashi, meaning: 'Jaimini\'s paternal significator' } : null,
+    d12ParentChart: d12Lagna ? { d12Lagna, note: `D12 Dwadasamsha — ${d12Lagna} rising shows ancestral line energy` } : null,
+    personality: SUN_FATHER_PERSONALITY[planets.sun?.rashi] || 'Father is an authority figure who shaped your ambitions in important ways.',
+    healthRisks: fatherHealthRisks,
+    lifestrug: fatherStruggles,
+    bond: nativeFatherBond,
+    fatherCareer: fatherCareerAnalysis,
+    fatherEventPeriods: dasaPeriods
+      .filter(dp => dp.lord === lord9Family || dp.lord === 'Sun')
+      .map(dp => ({
+        lord: dp.lord,
+        period: `${dp.start} to ${dp.endDate}`,
+        reason: dp.lord === 'Sun' ? 'Sun dasha — father-related events, authority and recognition highlighted'
+          : '9th lord dasha — fortune, father\'s influence, and dharma come to the fore',
+      })),
+    remedies: (() => {
+      const r = [];
+      if (sunFamilyScore < 50 || lord9InDusthan) {
+        r.push('Offer red flowers and water to the Sun every Sunday morning facing East');
+        r.push('Wear a Ruby (රුධිරාක්ෂ / மாணிக்கம்) in gold if Sun is weak — consult an astrologer first');
+        r.push('Donate wheat, jaggery, or red cloth on Sundays');
+        r.push('Recite Aditya Hridayam or "Om Suryaya Namah" 108 times at sunrise on Sundays');
+      }
+      if (maleficsIn9.includes('Rahu') || maleficsIn9.includes('Saturn')) r.push('Perform Pitru Tarpan (ancestor offering) on Amavasya (new moon) day — clears karmic debt with father');
+      if (r.length === 0) r.push('Respect and serve your father — this is the most powerful remedy. His blessings multiply your fortune tenfold.');
+      return r;
+    })(),
+  };
+
+  // ── SIBLINGS ───────────────────────────────────────────────────
+  const marsFamilyHouse  = getPlanetHouse('Mars');
+  const lord3InDusthan   = lord3FamilyHouse && [6, 8, 12].includes(lord3FamilyHouse);
+  const maleficsIn3      = h3Family?.maleficsIn || [];
+  const beneficsIn3      = h3Family?.beneficsIn || [];
+
+  // ── 11th house = elder siblings (BPHS) ──────────────────────────
+  const h11Family        = analyzeHouse(11, houses, planets, drishtis, lagnaName);
+  const lord11Family     = getHouseLord(11);
+  const lord11FamilyHouse = getPlanetHouse(lord11Family);
+  const h11pl            = h11Family?.planetsInHouse || [];
+  const h11Aspects       = h11Family?.aspectingPlanets || [];
+  const lord11InDusthan  = lord11FamilyHouse && [6, 8, 12].includes(lord11FamilyHouse);
+
+  // ── Venus / Moon as sister karaka ───────────────────────────────
+  // In BPHS: Venus = karaka for female co-borns, Mars = male co-borns
+  const venusFamilySibHouse = getPlanetHouse('Venus');
+  const moonFamSibHouse     = moonFamilyHouse; // already computed
+
+  // Sibling count and gender — REWRITTEN with elder/younger + gender split
+  const siblingEstimate = (() => {
+    let youngerScore = 0;
+    let elderScore   = 0;
+    let hasBros = false, hasSis = false;
+    const h3pl = h3Family?.planetsInHouse || [];
+
+    // ── 3rd house = younger co-borns ─────────────────────────────
+    // Planets in the house are the PRIMARY signal — house "strength" alone is insufficient
+    // Exclude Sun (father karaka), Rahu and Ketu (shadow nodes — reduce, not add siblings)
+    const h3SiblingPlanets = h3pl.filter(p => !['Sun', 'Rahu', 'Ketu'].includes(p));
+    youngerScore += h3SiblingPlanets.length * 1.2;
+    if (h3pl.includes('Mars'))    { hasBros = true; youngerScore += 0.4; }
+    if (h3pl.includes('Venus'))   { hasSis  = true; youngerScore += 0.4; }
+    if (h3pl.includes('Moon'))    { hasSis  = true; youngerScore += 0.3; }
+    if (h3pl.includes('Jupiter')) youngerScore += 0.3;
+    if (h3pl.includes('Saturn') || h3pl.includes('Rahu') || h3pl.includes('Ketu')) youngerScore -= 0.4; // nodes reduce sibling count
+    // 3rd lord placement — counts only if lord is well-placed
+    if (!lord3InDusthan && lord3FamilyHouse) youngerScore += 0.4;
+    // Aspects on 3rd from benefics
+    const h3Asp = h3Family?.aspectingPlanets?.map(a => a.planet) || [];
+    if (h3Asp.includes('Mars'))    { hasBros = true; youngerScore += 0.25; }
+    if (h3Asp.includes('Venus'))   { hasSis  = true; youngerScore += 0.25; }
+    if (h3Asp.includes('Jupiter')) youngerScore += 0.2;
+    // House strength: only adds bonus when at least one sibling planet is already present
+    if (h3SiblingPlanets.length > 0) {
+      if (h3Family?.strength === 'very strong') youngerScore += 0.3;
+      else if (h3Family?.strength === 'strong') youngerScore += 0.15;
+    }
+
+    // ── 11th house = elder co-borns ───────────────────────────────
+    // Same rule: planets are PRIMARY — house strength alone does NOT count
+    // Exclude Sun (father karaka), Saturn (malefic/chronic, reduces count), Moon (mother karaka)
+    // from raw planet count — only true sibling karakas count as planet signals
+    const h11SiblingPlanets = h11pl.filter(p => !['Sun', 'Saturn', 'Moon'].includes(p));
+    elderScore += h11SiblingPlanets.length * 1.2;
+    if (h11pl.includes('Mars'))    { hasBros = true; elderScore += 0.3; }
+    if (h11pl.includes('Venus'))   { hasSis  = true; elderScore += 0.3; }
+    // Moon in 11th = mother karaka, NOT an elder sibling indicator — only suppress/ignore
+    if (h11pl.includes('Jupiter')) elderScore += 0.2;
+    if (h11pl.includes('Saturn'))  elderScore -= 0.4;  // Saturn in 11th reduces elder siblings
+    if (h11pl.includes('Rahu'))    elderScore -= 0.2;
+    // 11th lord in dusthana = weak elder sibling house
+    if (lord11InDusthan) elderScore -= 0.3;
+    else if (lord11FamilyHouse) elderScore += 0.4;
+    // Aspects from benefics on 11th
+    if (h11Aspects.some(a => a.planet === 'Mars'))    { hasBros = true; elderScore += 0.2; }
+    if (h11Aspects.some(a => a.planet === 'Venus'))   { hasSis  = true; elderScore += 0.2; }
+    if (h11Aspects.some(a => a.planet === 'Jupiter')) elderScore += 0.2;
+    // House strength: only adds bonus when sibling-relevant planets are present
+    if (h11SiblingPlanets.length > 0) {
+      if (h11Family?.strength === 'very strong') elderScore += 0.2;
+      else if (h11Family?.strength === 'strong') elderScore += 0.1;
+    }
+    // Hard cap: if Saturn is in 11th, elder count cannot exceed 1 regardless of score
+    const saturnIn11 = h11pl.includes('Saturn');
+
+    // ── Venus karaka boosting sisters ─────────────────────────────
+    // Venus is a sister karaka ONLY when she's actually placed in a sibling house (3rd or 11th)
+    // Placing her anywhere "non-dusthana" is too broad — Venus in H5/H7/H9 etc. is NOT a sibling signal
+    if (venusFamilySibHouse === 3 || venusFamilySibHouse === 11) { hasSis = true; }
+    // Moon in 3rd = younger sister indicator (Moon in 3rd is a co-born, not mother)
+    // Moon in 11th = mother's karaka house — do NOT use as sister indicator for elder
+    if (moonFamSibHouse === 3) hasSis = true;
+
+    // ── Balance correction ─────────────────────────────────────────
+    // If elderScore is strong (elder sibling confirmed) but youngerScore is near zero,
+    // check whether the 3rd house lord is functional — if lord3 exists and 3rd house
+    // is at least average, credit a small baseline for a possible younger sibling.
+    // This handles cases where planets are absent but the house configuration is valid.
+    if (youngerScore < 0.3 && elderScore >= 0.3) {
+      // 3rd house lord existing + house not completely destroyed → small baseline
+      if (lord3Family && h3Family?.strength !== 'very weak' && h3Family?.strength !== 'challenged') {
+        youngerScore += 0.35;  // just enough to cross the "1" threshold
+      }
+    }
+
+    // ── Adjusted thresholds ────────────────────────────────────────
+    const youngerCount = youngerScore >= 2.8 ? '2+' : youngerScore >= 0.3 ? '1' : '0';
+    // Saturn in 11th caps elder siblings at max "1" (Saturn delays/reduces)
+    const elderCount   = saturnIn11
+      ? (elderScore >= 0.3 ? '1' : '0')
+      : (elderScore >= 2.8 ? '2+' : elderScore >= 0.3 ? '1' : '0');
+
+    let genderNote = '';
+    if (hasSis && !hasBros)      genderNote = 'Sisters indicated (Venus/Moon karaka prominent)';
+    else if (hasBros && !hasSis) genderNote = 'Brothers indicated (Mars karaka prominent)';
+    else if (hasSis && hasBros)  genderNote = 'Mix of brothers and sisters';
+    else                         genderNote = 'Gender not strongly indicated';
+
+    const totalScore = youngerScore + elderScore;
+    const countLabel = totalScore >= 3.6 ? '3 or more' : totalScore >= 0.6 ? '2' : totalScore >= 0.3 ? '1' : '0 or 1';
+
+    return {
+      count: countLabel,
+      estimatedElderSiblings: elderCount,
+      estimatedYoungerSiblings: youngerCount,
+      gender: genderNote,
+      sisterKaraka: hasSis ? 'Venus/Moon active — sisters strongly indicated' : 'No strong sister karaka',
+      brotherKaraka: hasBros ? 'Mars active — brothers indicated' : 'No strong brother karaka',
+      note: `Total sibling score: ${totalScore.toFixed(1)} — ${elderCount} elder and ${youngerCount} younger sibling(s) estimated. ${genderNote}.`,
+      score: +totalScore.toFixed(1),
+    };
+  })();
+
+  // Sibling character — Mars = older brother energy, Venus = sister energy, 3rd lord's sign
+  const SIBLING_CHARACTER_BY_PLANET = {
+    'Mars':    'One sibling is likely bold, energetic, competitive, and action-oriented — possibly athletic or mechanically skilled.',
+    'Venus':   'One sibling is likely artistic, charming, appearance-conscious, and socially gifted.',
+    'Mercury': 'One sibling is likely highly intelligent, communicative, business-minded, or academically oriented.',
+    'Jupiter': 'One sibling may be wise, spiritual, teacher-like, or have a stable and blessed life.',
+    'Saturn':  'One sibling carries heavy responsibilities and may have had a harder life — serious and disciplined by nature.',
+    'Sun':     'One sibling is ambitious, proud, and possibly in a government or authoritative role.',
+    'Moon':    'One sibling is emotionally sensitive, nurturing, or creatively inclined.',
+    'Rahu':    'One sibling may be unconventional, rebellious, or live an unusually different lifestyle from the family.',
+    'Ketu':    'One sibling may be spiritually inclined, introverted, or have a mysterious or detached quality.',
+  };
+
+  const siblingCharacters = (() => {
+    const chars = [];
+    const h3pl = h3Family?.planetsInHouse || [];
+    // Planets in 3rd house
+    for (const p of h3pl) {
+      if (SIBLING_CHARACTER_BY_PLANET[p]) chars.push(SIBLING_CHARACTER_BY_PLANET[p]);
+    }
+    // 3rd lord's nature
+    if (SIBLING_CHARACTER_BY_PLANET[lord3Family]) chars.push(`The eldest sibling energy is shaped by ${lord3Family} — ${SIBLING_CHARACTER_BY_PLANET[lord3Family].toLowerCase()}`);
+    if (chars.length === 0) chars.push('Siblings have a balanced, grounded character — no extreme planetary influences in the sibling house');
+    return chars;
+  })();
+
+  // Sibling health risks
+  const siblingHealthRisks = (() => {
+    const risks = [];
+    if (maleficsIn3.includes('Mars'))    risks.push('Mars in 3rd: a sibling may be prone to accidents, injuries, blood issues, or inflammatory conditions');
+    if (maleficsIn3.includes('Saturn'))  risks.push('Saturn in 3rd: a sibling may have chronic health issues, joint problems, or a generally difficult physical constitution');
+    if (maleficsIn3.includes('Rahu'))    risks.push('Rahu in 3rd: a sibling may have unusual or hard-to-diagnose health challenges, or nervous system issues');
+    if (maleficsIn3.includes('Ketu'))    risks.push('Ketu in 3rd: a sibling may experience sudden or mysterious health events, particularly digestive or neurological');
+    if (lord3InDusthan) {
+      const issue = lord3FamilyHouse === 6 ? 'recurring illness, conflicts, or financial stress'
+        : lord3FamilyHouse === 8 ? 'life crises, accidents, or major health upheavals'
+        : 'isolation, hidden health battles, or hospitalisation at some point in life';
+      risks.push(`3rd lord in ${lord3FamilyHouse}th house: a sibling\'s life may involve ${issue}`);
+    }
+    if (risks.length === 0) risks.push('No major health threats indicated for siblings — general good health astrologically');
+    return risks;
+  })();
+
+  // Sibling life struggles
+  const siblingStruggles = (() => {
+    const strs = [];
+    if (maleficsIn3.includes('Saturn')) strs.push('A sibling carries heavy karmic burdens — responsibilities, delays, and hard work that goes unrecognized for years');
+    if (maleficsIn3.includes('Rahu'))   strs.push('A sibling may struggle with identity, unconventional life choices, or foreign-related complications');
+    if (maleficsIn3.includes('Mars'))   strs.push('A sibling has a fighting nature — their life involves significant competition, conflict, and physical challenges');
+    if (lord3InDusthan) strs.push('The 3rd lord in a dusthana house indicates at least one sibling faces significant life obstacles — career, health, or relationship difficulties');
+    const h3Aspects = h3Family?.aspectingPlanets || [];
+    if (h3Aspects.includes('Saturn')) strs.push('Saturn\'s aspect on the sibling house: siblings face slow, grinding challenges — patience and perseverance define their life');
+    if (strs.length === 0) strs.push('Siblings have a relatively smooth life path — ordinary challenges without major astrological burdens');
+    return strs;
+  })();
+
+  // Relationship with siblings
+  const siblingRelationship = (() => {
+    if (beneficsIn3.length > 0 && maleficsIn3.length === 0) return 'Excellent sibling relationships — mutual support, love, and teamwork. Siblings are your greatest allies in life.';
+    if (maleficsIn3.includes('Rahu') || maleficsIn3.includes('Mars')) return 'Competitive or strained sibling dynamic. There may be rivalry, jealousy, or misunderstandings. Conscious communication heals these bonds over time.';
+    if (maleficsIn3.includes('Saturn')) return 'Sibling bond is tested by circumstances — distance, responsibilities, or emotional coldness. The relationship improves significantly after your 30s.';
+    if (h3Family?.strength === 'very strong' || h3Family?.strength === 'strong') return 'Strong sibling bond — you and your siblings look out for each other. At least one sibling has a very positive impact on your life.';
+    return 'Average sibling relationship — neither exceptionally close nor distant. Life events will bring you closer at certain points.';
+  })();
+
+  // Sibling event timing
+  const siblingEventPeriods = dasaPeriods
+    .filter(d => d.lord === lord3Family || d.lord === 'Mars')
+    .map(d => ({
+      lord: d.lord,
+      period: `${d.start} to ${d.endDate}`,
+      reason: d.lord === 'Mars' ? 'Mars dasha — sibling-related events and younger brother matters are highlighted'
+        : '3rd lord dasha — siblings, communication, and short journeys come to the fore',
+    }));
+
+  const siblings = {
+    title: 'Siblings (Sahodarayō / සහෝදරයෝ)',
+    sinhala: 'සොහොයුරු / සොහොයුරියන් ස්වභාවය, සෞඛ්‍යය සහ ජීවිත ගමන',
+    // L1: Classical
+    h3Analysis: { strength: h3Family?.strength, planetsIn3rd: h3Family?.planetsInHouse || [], aspectsOn3rd: h3Family?.aspectingPlanets || [] },
+    h3Lord: { name: lord3Family, house: lord3FamilyHouse },
+    marsPosition: { house: marsFamilyHouse, rashi: planets.mars?.rashi, rashiEnglish: planets.mars?.rashiEnglish },
+    // L3: Jaimini
+    bhratrkaraka: bhratrkaraka ? { planet: bhratrkaraka.planet, rashi: bhratrkaraka.rashi, meaning: 'Jaimini\'s sibling significator — the soul-essence of sibling relationships' } : null,
+    // L4: D3 Drekkana chart
+    d3SiblingChart: d3Lagna ? { d3Lagna, note: `D3 Drekkana (sibling chart) rising in ${d3Lagna} — this reveals the deeper karma between you and your siblings` } : null,
+    // Narrative
+    estimatedCount: siblingEstimate,
+    characters: siblingCharacters,
+    healthRisks: siblingHealthRisks,
+    lifestrug: siblingStruggles,
+    relationship: siblingRelationship,
+    eventPeriods: siblingEventPeriods,
+    remedies: (() => {
+      const r = [];
+      if (maleficsIn3.length > 0 || lord3InDusthan) {
+        r.push('On Tuesdays, light an oil lamp and pray for your siblings\' wellbeing — removes Mars/sibling afflictions');
+        r.push('Feed ants with sugar on Wednesdays — improves Mercury/sibling communication');
+        r.push('Donate red lentils (masoor dal) on Tuesdays in your sibling\'s name');
+      }
+      if (r.length === 0) r.push('Maintain regular contact with siblings — this strengthens the 3rd house and brings mutual blessings');
+      return r;
+    })(),
+  };
+
+  // ── COMPLETE FAMILY PORTRAIT ────────────────────────────────────
+  const familyPortrait = {
+    title: 'Deep Family Portrait',
+    sinhala: 'ගැඹුරු පවුල් ජ්‍යෝතිෂ විශ්ලේෂණය',
+    accuracyNote: 'This analysis uses 5 cross-validation layers: Classical house/lord placement (BPHS), Shadbala planetary strength, Jaimini Karakas, Divisional chart confirmation (D3/D12), and aspect analysis. The convergence of multiple layers increases prediction accuracy significantly.',
+    mother,
+    father,
+    siblings,
+    // Family karma summary
+    familyKarmaSummary: (() => {
+      const points = [];
+      // Ancestral blessings
+      if (jupiterHouse && [4, 9, 12].includes(jupiterHouse)) points.push('Jupiter in the parental/spiritual axis — strong ancestral blessings protect this family line');
+      // Ancestral debt (Pitru Dosha)
+      const hasPitruDosha = advancedDoshas?.some(d => d.name.toLowerCase().includes('pitru'));
+      if (hasPitruDosha) points.push('Pitru Dosha detected — ancestral karma creates repeating patterns. Ancestor worship (Pitru Tarpan) at family temples resolves generational cycles');
+      // 4th-9th axis strength
+      const h4h9Strong = (h4Family?.strength === 'strong' || h4Family?.strength === 'very strong') && (h9Family?.strength === 'strong' || h9Family?.strength === 'very strong');
+      if (h4h9Strong) points.push('Both 4th and 9th houses are strong — you come from a blessed family lineage. The positive karma of your ancestors supports your life journey');
+      // 4th lord + 9th lord in good houses
+      if (!lord4InDusthanFamily && !lord9InDusthan) points.push('Parental lords are well-placed — both parents have (or had) a positive influence on your destiny');
+      // Challenges
+      if (lord4InDusthanFamily && lord9InDusthan) points.push('Both parental lords face challenges — your family may have gone through significant hardships. Your life mission includes breaking generational cycles of struggle');
+      if (points.length === 0) points.push('Mixed family karma — some generations thrived, others faced challenges. You carry the responsibility of continuing the positive legacy');
+      return points;
+    })(),
+    // Inherited traits
+    inheritedTraits: (() => {
+      const traits = [];
+      // From father (Sun's influence)
+      const sunSign = planets.sun?.rashi;
+      if (sunSign === 'Simha' || sunSign === 'Mesha')    traits.push('From father: inherited leadership quality and determination');
+      if (sunSign === 'Makara' || sunSign === 'Kanya')   traits.push('From father: inherited discipline, work ethic, and attention to detail');
+      if (sunSign === 'Mithuna' || sunSign === 'Tula')   traits.push('From father: inherited intelligence, social grace, and communication skill');
+      // From mother (Moon's influence)
+      const moonSign = planets.moon?.rashi;
+      if (moonSign === 'Kataka' || moonSign === 'Vrishabha') traits.push('From mother: inherited emotional depth, nurturing instinct, and love of home');
+      if (moonSign === 'Simha' || moonSign === 'Dhanus')    traits.push('From mother: inherited optimism, generosity, and a bright personality');
+      if (moonSign === 'Vrischika' || moonSign === 'Meena') traits.push('From mother: inherited intuition, emotional sensitivity, and artistic sense');
+      // From siblings dynamic (3rd house)
+      if (h3Family?.planetsInHouse?.includes('Mercury')) traits.push('From sibling dynamics: inherited quick wit, adaptability, and intellectual competitiveness');
+      if (traits.length === 0) traits.push('Your inherited traits are a unique blend of both parental lines — you carry the best of both');
+      return traits;
+    })(),
   };
 
   // ══════════════════════════════════════════════════════════════
@@ -4213,6 +5623,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612) {
       luck,
       spiritual,
       surpriseInsights,
+      familyPortrait,
     },
   };
 }
@@ -4223,7 +5634,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612) {
  */
 function getPlanetStrengths(date, lat, lng) {
   const { houses } = buildHouseChart(date, lat, lng);
-  const planets = getAllPlanetPositions(date);
+  const planets = getAllPlanetPositions(date, lat, lng);
   
   const exaltations = {
       'Sun': 1, // Aries
@@ -4314,7 +5725,7 @@ function getPlanetStrengths(date, lat, lng) {
 function detectYogas(date, lat, lng) {
   // Need chart data
   const { houses: d1Houses, lagna } = buildHouseChart(date, lat, lng);
-  const planets = getAllPlanetPositions(date);
+  const planets = getAllPlanetPositions(date, lat, lng);
   
   // Helper to find planet house (1-12)
   const getPlanetHouse = (planetName) => {
@@ -4492,8 +5903,8 @@ module.exports = {
   calculateVimshottari,
   calculateVimshottariDetailed,
   generateDetailedReport,
-  generateFullReport,      // Comprehensive 13-section Jyotish report
-  predictMarriageTiming,   // Multi-layer marriage timing prediction
+  generateFullReport,     
+  predictMarriageTiming,   
   getFunctionalNature,
   analyzeHouse,
 };

@@ -13,7 +13,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Platform,
   Dimensions, ActivityIndicator, Alert, KeyboardAvoidingView, ScrollView,
-  StatusBar,
+  StatusBar, Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,11 +24,14 @@ import Animated, {
   withSpring, withSequence, withDelay, interpolate, Easing,
 } from 'react-native-reanimated';
 import CosmicBackground from '../components/CosmicBackground';
+import SpringPressable from '../components/effects/SpringPressable';
+import CosmicLoader from '../components/effects/CosmicLoader';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { BASE } from '../services/api';
 
 var { width: SW, height: SH } = Dimensions.get('window');
+var LOGO = require('../assets/logo.png');
 
 // ═══════════════════════════════════════════════════════════════════════
 //  TRANSLATIONS
@@ -214,15 +217,21 @@ var SL_CITIES = [
 //  SHARED UI ATOMS — with micro-animations + vibrant gradients
 // ═══════════════════════════════════════════════════════════════════════
 
-/* Animated floating particles behind steps */
+/* Animated floating particles + cosmic sparkles behind steps */
 function FloatingOrbs() {
   var orb1 = useSharedValue(0);
   var orb2 = useSharedValue(0);
   var orb3 = useSharedValue(0);
+  var orb4 = useSharedValue(0);
+  var orb5 = useSharedValue(0);
+  var starTwinkle = useSharedValue(0);
   useEffect(function () {
     orb1.value = withRepeat(withTiming(1, { duration: 6000, easing: Easing.inOut(Easing.sin) }), -1, true);
     orb2.value = withRepeat(withTiming(1, { duration: 8000, easing: Easing.inOut(Easing.sin) }), -1, true);
     orb3.value = withRepeat(withTiming(1, { duration: 5000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    orb4.value = withRepeat(withTiming(1, { duration: 7000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    orb5.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    starTwinkle.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
   }, []);
   var s1 = useAnimatedStyle(function () {
     return { transform: [{ translateY: interpolate(orb1.value, [0, 1], [-20, 20]) }, { translateX: interpolate(orb1.value, [0, 1], [10, -10]) }], opacity: interpolate(orb1.value, [0, 0.5, 1], [0.15, 0.35, 0.15]) };
@@ -233,11 +242,29 @@ function FloatingOrbs() {
   var s3 = useAnimatedStyle(function () {
     return { transform: [{ translateY: interpolate(orb3.value, [0, 1], [-12, 18]) }], opacity: interpolate(orb3.value, [0, 0.5, 1], [0.12, 0.3, 0.12]) };
   });
+  var s4 = useAnimatedStyle(function () {
+    return { transform: [{ translateY: interpolate(orb4.value, [0, 1], [-18, 14]) }, { translateX: interpolate(orb4.value, [0, 1], [8, -16]) }, { scale: interpolate(orb4.value, [0, 0.5, 1], [0.8, 1.1, 0.8]) }], opacity: interpolate(orb4.value, [0, 0.5, 1], [0.08, 0.2, 0.08]) };
+  });
+  var s5 = useAnimatedStyle(function () {
+    return { transform: [{ translateY: interpolate(orb5.value, [0, 1], [10, -22]) }, { rotate: interpolate(orb5.value, [0, 1], [0, 180]) + 'deg' }], opacity: interpolate(orb5.value, [0, 0.5, 1], [0.06, 0.18, 0.06]) };
+  });
+  var starStyle = useAnimatedStyle(function () {
+    return { opacity: interpolate(starTwinkle.value, [0, 0.5, 1], [0.2, 0.8, 0.2]) };
+  });
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <Animated.View style={[{ position: 'absolute', top: '15%', left: '10%', width: 120, height: 120, borderRadius: 60, backgroundColor: '#FF6B00' }, s1]} />
       <Animated.View style={[{ position: 'absolute', top: '55%', right: '5%', width: 90, height: 90, borderRadius: 45, backgroundColor: '#E040FB' }, s2]} />
       <Animated.View style={[{ position: 'absolute', bottom: '20%', left: '30%', width: 70, height: 70, borderRadius: 35, backgroundColor: '#FBBF24' }, s3]} />
+      <Animated.View style={[{ position: 'absolute', top: '35%', right: '20%', width: 50, height: 50, borderRadius: 25, backgroundColor: '#9333EA' }, s4]} />
+      <Animated.View style={[{ position: 'absolute', bottom: '35%', left: '8%', width: 40, height: 40, borderRadius: 20, backgroundColor: '#06B6D4' }, s5]} />
+      {/* Twinkling star dots */}
+      <Animated.View style={[{ position: 'absolute', top: '10%', right: '15%', width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#FFF' }, starStyle]} />
+      <Animated.View style={[{ position: 'absolute', top: '25%', left: '25%', width: 2, height: 2, borderRadius: 1, backgroundColor: '#FBBF24' }, starStyle]} />
+      <Animated.View style={[{ position: 'absolute', top: '45%', left: '5%', width: 2.5, height: 2.5, borderRadius: 1.25, backgroundColor: '#FFF' }, starStyle]} />
+      <Animated.View style={[{ position: 'absolute', bottom: '15%', right: '25%', width: 2, height: 2, borderRadius: 1, backgroundColor: '#E040FB' }, starStyle]} />
+      <Animated.View style={[{ position: 'absolute', bottom: '40%', right: '10%', width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#FFF' }, starStyle]} />
+      <Animated.View style={[{ position: 'absolute', top: '65%', left: '45%', width: 2, height: 2, borderRadius: 1, backgroundColor: '#FBBF24' }, starStyle]} />
     </View>
   );
 }
@@ -266,7 +293,6 @@ function AnimatedBorderCard({ children, style, focused }) {
 /* Primary action button — hot gradient with bounce */
 function PrimaryButton({ label, onPress, loading, disabled, icon }) {
   var isOff = disabled || loading;
-  var btnScale = useSharedValue(1);
   var glow = useSharedValue(0);
 
   useEffect(function () {
@@ -277,18 +303,13 @@ function PrimaryButton({ label, onPress, loading, disabled, icon }) {
     return {
       shadowOpacity: isOff ? 0 : interpolate(glow.value, [0, 1], [0.3, 0.7]),
       shadowRadius: interpolate(glow.value, [0, 1], [8, 20]),
-      transform: [{ scale: btnScale.value }],
     };
   });
 
-  function onPressIn() { btnScale.value = withSpring(0.96, { damping: 15, stiffness: 400 }); }
-  function onPressOut() { btnScale.value = withSpring(1, { damping: 10, stiffness: 300 }); }
-
   return (
     <Animated.View style={[g.primaryBtn, glowStyle]}>
-      <TouchableOpacity
-        onPress={onPress} disabled={isOff} activeOpacity={0.85}
-        onPressIn={onPressIn} onPressOut={onPressOut}
+      <SpringPressable
+        onPress={onPress} disabled={isOff} haptic="heavy" scalePressed={0.96}
         style={{ borderRadius: 16, overflow: 'hidden', opacity: isOff ? 0.4 : 1 }}
       >
         <LinearGradient
@@ -297,7 +318,7 @@ function PrimaryButton({ label, onPress, loading, disabled, icon }) {
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         >
           {loading ? (
-            <ActivityIndicator color="#FFF" size="small" />
+            <CosmicLoader size={26} color="#FFF" />
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {icon ? <Ionicons name={icon} size={18} color="#FFF" /> : null}
@@ -305,16 +326,16 @@ function PrimaryButton({ label, onPress, loading, disabled, icon }) {
             </View>
           )}
         </LinearGradient>
-      </TouchableOpacity>
+      </SpringPressable>
     </Animated.View>
   );
 }
 
 function GhostButton({ label, onPress }) {
   return (
-    <TouchableOpacity onPress={onPress} style={g.ghostBtn} activeOpacity={0.6}>
+    <SpringPressable onPress={onPress} style={g.ghostBtn} haptic="light" scalePressed={0.96}>
       <Text style={g.ghostText}>{label}</Text>
-    </TouchableOpacity>
+    </SpringPressable>
   );
 }
 
@@ -415,10 +436,13 @@ function LanguageStep({ onSelect }) {
       <FloatingOrbs />
       <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center', marginBottom: 40 }}>
         <Animated.View style={floatStyle}>
-          <Animated.Text style={[{ fontSize: 64, marginBottom: 8 }, glowStyle]}>{'\u2726'}</Animated.Text>
+          <Animated.View style={[ls.logoWrap, glowStyle]}>
+            <Image source={LOGO} style={ls.logoImg} resizeMode="contain" />
+          </Animated.View>
         </Animated.View>
         <Animated.View style={titleAnim}>
-          <Text style={ls.mainTitle}>Nakath AI</Text>
+          <Text style={ls.mainTitleSi}>{'\u0db1\u0dd0\u0d9a\u0dad\u0dca AI'}</Text>
+          <Text style={ls.mainTitleEn}>Nekath AI</Text>
         </Animated.View>
         <View style={ls.divider}>
           <LinearGradient colors={['transparent', '#FF6B00', '#E040FB', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
@@ -428,7 +452,7 @@ function LanguageStep({ onSelect }) {
       </Animated.View>
 
       <Animated.View entering={FadeInUp.delay(300).duration(600)} style={{ width: '100%' }}>
-        <TouchableOpacity style={ls.langBtn} onPress={function () { onSelect('si'); }} activeOpacity={0.85}>
+        <SpringPressable style={ls.langBtn} onPress={function () { onSelect('si'); }} haptic="medium" scalePressed={0.95}>
           <LinearGradient colors={['#FF6B00', '#E040FB']} style={ls.langGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <View style={ls.langInner}>
               <Text style={ls.langFlag}>{'\uD83C\uDDF1\uD83C\uDDF0'}</Text>
@@ -439,11 +463,11 @@ function LanguageStep({ onSelect }) {
             </View>
             <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.7)" />
           </LinearGradient>
-        </TouchableOpacity>
+        </SpringPressable>
 
         <View style={{ height: 14 }} />
 
-        <TouchableOpacity style={ls.langBtn} onPress={function () { onSelect('en'); }} activeOpacity={0.85}>
+        <SpringPressable style={ls.langBtn} onPress={function () { onSelect('en'); }} haptic="medium" scalePressed={0.95}>
           <LinearGradient colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)']} style={ls.langGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <View style={ls.langInner}>
               <Text style={ls.langFlag}>{'\uD83C\uDF10'}</Text>
@@ -454,14 +478,17 @@ function LanguageStep({ onSelect }) {
             </View>
             <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.4)" />
           </LinearGradient>
-        </TouchableOpacity>
+        </SpringPressable>
       </Animated.View>
     </View>
   );
 }
 
 var ls = StyleSheet.create({
-  mainTitle: { fontSize: 42, fontWeight: '900', color: '#FBBF24', letterSpacing: 4, textShadowColor: 'rgba(255,107,0,0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 20 },
+  logoWrap: { width: 90, height: 90, borderRadius: 24, overflow: 'hidden', marginBottom: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(4,3,12,0.6)', borderWidth: 1.5, borderColor: 'rgba(251,191,36,0.25)' },
+  logoImg:  { width: 80, height: 80, borderRadius: 20 },
+  mainTitleSi: { fontSize: 44, fontWeight: '900', color: '#FBBF24', letterSpacing: 2, textShadowColor: 'rgba(255,107,0,0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 20, textAlign: 'center' },
+  mainTitleEn: { fontSize: 16, fontWeight: '600', color: 'rgba(255,255,255,0.35)', letterSpacing: 4, marginTop: 2, textAlign: 'center' },
   divider: { width: 60, height: 3, borderRadius: 2, marginVertical: 16, overflow: 'hidden' },
   siTitle: { fontSize: 22, fontWeight: '700', color: '#FF8C33', marginBottom: 4 },
   enTitle: { fontSize: 15, color: 'rgba(255,255,255,0.5)' },
@@ -514,11 +541,12 @@ function WelcomeStep({ onContinue, lang }) {
             style={ws.logoInner}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           >
-            <Text style={{ fontSize: 48 }}>{'\u2726'}</Text>
+            <Image source={LOGO} style={ws.logoImg} resizeMode="contain" />
           </LinearGradient>
         </Animated.View>
 
-        <Text style={ws.title}>Nakath AI</Text>
+        <Text style={ws.titleSi}>{'\u0db1\u0dd0\u0d9a\u0dad\u0dca AI'}</Text>
+        <Text style={ws.titleEn}>Nekath AI</Text>
         <Text style={ws.subtitle}>{T.welcomeSubtitle}</Text>
 
         <View style={ws.featureList}>
@@ -546,7 +574,9 @@ var ws = StyleSheet.create({
   haloGrad: { width: '100%', height: '100%', borderRadius: 62, opacity: 0.25 },
   logoRing: { width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: 'rgba(255,107,0,0.4)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
   logoInner: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 38, fontWeight: '900', color: '#FBBF24', letterSpacing: 4, textShadowColor: 'rgba(255,107,0,0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16, marginBottom: 6 },
+  logoImg:  { width: 72, height: 72, borderRadius: 36 },
+  titleSi: { fontSize: 40, fontWeight: '900', color: '#FBBF24', letterSpacing: 2, textShadowColor: 'rgba(255,107,0,0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16, marginBottom: 2, textAlign: 'center' },
+  titleEn: { fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.3)', letterSpacing: 4, marginBottom: 6, textAlign: 'center' },
   subtitle: { fontSize: 15, fontWeight: '600', color: '#FF8C33', marginBottom: 4 },
   featureList: { marginTop: 28, alignSelf: 'stretch', gap: 12 },
   featureLine: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 8 },
@@ -919,7 +949,7 @@ function BirthDataStep({ onComplete, lang }) {
           timezone: 'Asia/Colombo',
         };
       }
-      await completeOnboarding(displayName.trim(), Object.keys(birthData).length > 0 ? birthData : null);
+      await completeOnboarding(displayName.trim(), Object.keys(birthData).length > 0 ? birthData : null, lang);
       onComplete();
     } catch (e) { setError(T.saveFailed); }
     finally { setLoading(false); }
@@ -1216,8 +1246,7 @@ function CompleteStep({ lang }) {
         <Text style={[g.headerSub, { color: '#FF8C33' }]}>{T.completeSubtitle}</Text>
 
         <View style={{ marginTop: 32, alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#FF6B00" />
-          <Text style={[g.hint, { marginTop: 16, fontSize: 13, color: '#FF8C33' }]}>{T.completeLoading}</Text>
+          <CosmicLoader size={56} color="#FF6B00" text={T.completeLoading} textColor="#FF8C33" />
         </View>
       </Animated.View>
     </View>
@@ -1233,8 +1262,8 @@ export default function OnboardingScreen() {
   var [step, setStep] = useState(-1);
   var [phone, setPhone] = useState('');
   var [referenceNo, setReferenceNo] = useState(null);
-  var [lang, setLang] = useState('en');
-  var { switchLanguage } = useLanguage();
+  var { language: ctxLang, switchLanguage } = useLanguage();
+  var [lang, setLang] = useState(ctxLang || 'si');
   var insets = useSafeAreaInsets();
 
   var handleLanguageSelect = function (selectedLang) {

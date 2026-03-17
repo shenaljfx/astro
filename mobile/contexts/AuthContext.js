@@ -186,9 +186,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Complete onboarding with name and birth data
-  var completeOnboarding = useCallback(async function(displayName, birthData) {
+  var completeOnboarding = useCallback(async function(displayName, birthData, language) {
     try {
-      await apiCompleteOnboarding({ displayName: displayName, birthData: birthData });
+      await apiCompleteOnboarding({ displayName: displayName, birthData: birthData, language: language || null });
 
       setUser(function(prev) {
         var updated = {
@@ -197,6 +197,9 @@ export function AuthProvider({ children }) {
           birthData: birthData || prev?.birthData,
           onboardingComplete: true,
         };
+        if (language) {
+          updated.preferences = { ...(prev?.preferences || {}), language: language };
+        }
         AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
         return updated;
       });
@@ -274,11 +277,11 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Save birth data
+  // Save birth data (once per day limit enforced server-side)
   var saveBirthData = useCallback(async function(birthData) {
     if (!token) return;
     try {
-      await fetch(getBaseUrl() + '/api/user/birth-data', {
+      var res = await fetch(getBaseUrl() + '/api/user/birth-data', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -286,6 +289,13 @@ export function AuthProvider({ children }) {
         },
         body: JSON.stringify(birthData),
       });
+      var json = await res.json();
+      if (res.status === 429) {
+        throw new Error(json.errorSi || json.error || 'Birth time can only be updated once per day.');
+      }
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to update birth data');
+      }
       setUser(function(prev) {
         var updated = { ...prev, birthData: birthData, onboardingComplete: true };
         AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));

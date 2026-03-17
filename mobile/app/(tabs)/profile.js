@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet,
   Platform, TextInput, Alert, ActivityIndicator, Modal, FlatList,
@@ -14,6 +14,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Path, G, Defs, RadialGradient as SvgRadialGradient, Stop } from 'react-native-svg';
 import CosmicBackground from '../../components/CosmicBackground';
+import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
+import SpringPressable from '../../components/effects/SpringPressable';
+import CosmicLoader from '../../components/effects/CosmicLoader';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -158,7 +161,7 @@ var sh = StyleSheet.create({
 function SettingRow({ icon, label, type, value, onPress, onToggle, iconColor, last }) {
   var ic = iconColor || '#7dd3fc';
   return (
-    <TouchableOpacity style={[sr.row, !last && sr.rowBorder]} onPress={onPress} disabled={type === 'switch'} activeOpacity={0.7}>
+    <SpringPressable style={[sr.row, !last && sr.rowBorder]} onPress={onPress} disabled={type === 'switch'} haptic="light" scalePressed={0.97}>
       <View style={[sr.iconWrap, { backgroundColor: ic + '20' }]}>
         <Ionicons name={icon} size={17} color={ic} />
       </View>
@@ -168,7 +171,7 @@ function SettingRow({ icon, label, type, value, onPress, onToggle, iconColor, la
       ) : (
         <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.22)" />
       )}
-    </TouchableOpacity>
+    </SpringPressable>
   );
 }
 var sr = StyleSheet.create({
@@ -279,7 +282,7 @@ function PhoneAuthForm() {
           {error ? <Text style={af.error}>{error}</Text> : null}
           <TouchableOpacity style={af.btn} onPress={handleSendOtp} disabled={loading} activeOpacity={0.85}>
             <LinearGradient colors={['#7C3AED','#6366F1']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={af.btnText}>{t('sendOtp')}</Text>}
+            {loading ? <CosmicLoader size={24} color="#fff" /> : <Text style={af.btnText}>{t('sendOtp')}</Text>}
           </TouchableOpacity>
         </>
       )}
@@ -295,7 +298,7 @@ function PhoneAuthForm() {
           {error ? <Text style={af.error}>{error}</Text> : null}
           <TouchableOpacity style={af.btn} onPress={handleVerify} disabled={loading} activeOpacity={0.85}>
             <LinearGradient colors={['#059669','#10B981']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={af.btnText}>{t('verifySignIn')}</Text>}
+            {loading ? <CosmicLoader size={24} color="#fff" /> : <Text style={af.btnText}>{t('verifySignIn')}</Text>}
           </TouchableOpacity>
           <TouchableOpacity style={af.back} onPress={function () { setStep('phone'); setOtp(''); setError(''); }}>
             <Ionicons name="arrow-back" size={14} color="#A78BFA" />
@@ -422,14 +425,14 @@ function BirthDataForm({ currentData, onSave }) {
       </TouchableOpacity>
 
       {/* Save */}
-      <TouchableOpacity style={bf.saveBtn} onPress={handleSave} disabled={saving} activeOpacity={0.85}>
+      <SpringPressable style={bf.saveBtn} onPress={handleSave} disabled={saving} haptic="heavy" scalePressed={0.93}>
         <LinearGradient colors={['#059669','#10B981']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
         <LinearGradient colors={['rgba(255,255,255,0.18)','transparent']} style={{ position:'absolute',top:0,left:0,right:0,height:'60%',borderTopLeftRadius:16,borderTopRightRadius:16 }} />
         {saving
-          ? <ActivityIndicator color="#fff" />
+          ? <CosmicLoader size={24} color="#fff" />
           : <><Ionicons name="save-outline" size={17} color="#fff" /><Text style={bf.saveBtnText}>{t('saveBirthData')}</Text></>
         }
-      </TouchableOpacity>
+      </SpringPressable>
 
       {/* City bottom-sheet modal */}
       <Modal visible={showModal} animationType="slide" transparent>
@@ -508,6 +511,7 @@ var cm = StyleSheet.create({
 // ─────────────────────────────────────────────────────────────────────
 function ProfileScreen() {
   var { language, switchLanguage, t } = useLanguage();
+  var isDesktop = useDesktopCtx();
   var {
     user, loading, isLoggedIn, subscription, isSubscribed,
     signOut, saveBirthData, activateSubscription, cancelSubscription, renewSubscription,
@@ -517,8 +521,7 @@ function ProfileScreen() {
     return (
       <CosmicBackground>
         <View style={s.centered}>
-          <ActivityIndicator size="large" color="#C084FC" />
-          <Text style={s.loadText}>{t('loading')}</Text>
+          <CosmicLoader size={56} color="#C084FC" text={t('loading')} textColor="#C084FC" />
         </View>
       </CosmicBackground>
     );
@@ -534,9 +537,10 @@ function ProfileScreen() {
   var moonIdx     = birthData ? (new Date(birthData.dateTime).getDate()  % 8)  : 4;
 
   return (
+    <DesktopScreenWrapper routeName="profile">
     <CosmicBackground>
       <StatusBar barStyle="light-content" />
-      <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
 
         {/* ═══ HERO CARD ══════════════════════════════════════════════ */}
         <Animated.View entering={FadeIn.duration(900)} style={s.heroCard}>
@@ -772,7 +776,7 @@ function ProfileScreen() {
 
             {/* ── SIGN OUT ── */}
             <Animated.View entering={FadeInDown.delay(480).duration(700)}>
-              <TouchableOpacity style={s.signOutBtn} onPress={function () {
+              <SpringPressable style={s.signOutBtn} onPress={function () {
                 if (Platform.OS === 'web') {
                   if (window.confirm(t('signOut') + '?')) signOut();
                 } else {
@@ -781,18 +785,19 @@ function ProfileScreen() {
                     { text: t('signOut'), style: 'destructive', onPress: signOut },
                   ]);
                 }
-              }} activeOpacity={0.75}>
+              }} haptic="heavy" scalePressed={0.95}>
                 <LinearGradient colors={['rgba(248,113,113,0.1)','rgba(239,68,68,0.05)']} style={StyleSheet.absoluteFill} />
                 <Ionicons name="log-out-outline" size={18} color="#F87171" />
                 <Text style={s.signOutText}>{t('signOut')}</Text>
-              </TouchableOpacity>
+              </SpringPressable>
             </Animated.View>
           </>
         )}
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: isDesktop ? 32 : 120 }} />
       </ScrollView>
     </CosmicBackground>
+    </DesktopScreenWrapper>
   );
 }
 
@@ -802,6 +807,7 @@ function ProfileScreen() {
 var s = StyleSheet.create({
   scroll:  { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 76 : 56 },
+  contentDesktop: { paddingTop: 20, paddingHorizontal: 28, maxWidth: 800, alignSelf: 'center', width: '100%' },
   centered:{ flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadText:{ color: '#C4B5FD', marginTop: 16, fontSize: 15 },
 

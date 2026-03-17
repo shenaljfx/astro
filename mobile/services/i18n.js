@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Internationalization (i18n) - Multi-language support
  * Sinhala, Tamil, English
  */
@@ -79,6 +79,7 @@ const translations = {
     reportMarriedLife: 'Your Married Life',
     reportCareer: 'Your Career & Money Path',
     reportChildren: 'Children & Family Life',
+    reportFamilyPortrait: 'Your Family Portrait',
     reportLifePredictions: 'Your Life Journey',
     reportSoulPurpose: 'Why You Were Born',
     reportPastLife: 'Your Past Life Story',
@@ -294,6 +295,13 @@ const translations = {
     kpAdequate: 'Good',
     kpInadequate: 'Weak',
     kpVeryStrong: 'Very Strong',
+    kpClassic: 'Classic',
+    kp3D: '3D',
+    setBirthDataPrompt: 'Please set your birth date and time in your profile to see your chart.',
+    goToProfile: 'Go to Profile',
+    failedToLoadChart: 'Failed to load chart',
+    kpPreparingChart: 'Preparing Your Chart',
+    kpChartAtGlance: 'Your Chart at a Glance',
 
     // Profile
     seeker: 'Seeker',
@@ -416,6 +424,7 @@ const translations = {
     reportMarriedLife: '🏠 විවාහ ජීවිතය',
     reportCareer: '💼 රැකියාව සහ සල්ලි',
     reportChildren: '👶 දරුවෝ සහ පවුලේ ජීවිතය',
+    reportFamilyPortrait: '👨‍👩‍👧‍👦 ඔයාගේ පවුලේ චිත්‍රය',
     reportLifePredictions: '🔮 ඔයාගේ ජීවිත ගමන',
     reportSoulPurpose: '🧭 ඔයා ඉපදුනේ ඇයි?',
     reportPastLife: '🕰️ ඔයාගේ පූර්ව ජන්ම කතාව',
@@ -631,6 +640,13 @@ const translations = {
     kpAdequate: 'හොඳයි',
     kpInadequate: 'දුර්වලයි',
     kpVeryStrong: 'ඉතා ශක්තිමත්',
+    kpClassic: 'සම්ප්‍රදායික',
+    kp3D: '3D',
+    setBirthDataPrompt: 'ඔබේ කේන්දරය බැලීමට ප්‍රොෆයිල් එකේ උපන් දිනය සහ වේලාව සකසන්න.',
+    goToProfile: 'ප්‍රොෆයිල් එකට යන්න',
+    failedToLoadChart: 'කේන්දරය ලබා ගැනීමට අපොහොසත් විය',
+    kpPreparingChart: 'කේන්දරය සකසමින්',
+    kpChartAtGlance: 'ඔබේ කේන්දරයේ සාරාංශය',
 
     // Rashi Names - Sinhala (Keeping formal names as they are standard terms)
     mesha: 'මේෂ',
@@ -782,7 +798,7 @@ const translations = {
   }
 };
 
-let currentLanguage = 'en';
+let currentLanguage = 'si';
 let listeners = [];
 
 export const setLanguage = (lang) => {

@@ -44,7 +44,6 @@ async function getTokenBalance(uid) {
 async function deductTokenBalance(uid, amount, description = 'Service charge') {
   const db = getDb();
   if (!db) {
-    // No Firestore (dev mode) — allow free usage
     console.warn(`[tokens] No DB — skipping deduction of LKR ${amount} for ${uid} (${description})`);
     return { success: true, newBalance: 999, mock: true };
   }
@@ -53,10 +52,7 @@ async function deductTokenBalance(uid, amount, description = 'Service charge') {
 
   return db.runTransaction(async (tx) => {
     const doc = await tx.get(userRef);
-    if (!doc.exists) {
-      throw new Error('User not found');
-    }
-    const current = parseFloat(doc.data().tokenBalance) || 0;
+    const current = doc.exists ? (parseFloat(doc.data().tokenBalance) || 0) : 0;
     if (current < amount) {
       const err = new Error('Insufficient token balance');
       err.code = 'INSUFFICIENT_BALANCE';
@@ -65,12 +61,14 @@ async function deductTokenBalance(uid, amount, description = 'Service charge') {
       throw err;
     }
     const newBalance = parseFloat((current - amount).toFixed(2));
-    tx.update(userRef, {
-      tokenBalance: newBalance,
-      updatedAt: new Date().toISOString(),
-    });
 
-    // Append to transaction log (best-effort, inside same transaction)
+    if (doc.exists) {
+      tx.update(userRef, {
+        tokenBalance: newBalance,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
     const logRef = db.collection('tokenTransactions').doc();
     tx.set(logRef, {
       uid,
@@ -81,6 +79,7 @@ async function deductTokenBalance(uid, amount, description = 'Service charge') {
       createdAt: new Date().toISOString(),
     });
 
+    console.log(`[tokens] ✔ Deducted LKR ${amount} from ${uid} — new balance: LKR ${newBalance}`);
     return { success: true, newBalance };
   });
 }
@@ -88,6 +87,7 @@ async function deductTokenBalance(uid, amount, description = 'Service charge') {
 /**
  * Add `amount` LKR to a user's balance.
  * Used after a successful Ideamart direct-debit top-up.
+ * Creates the user doc with tokenBalance if it doesn't exist yet.
  */
 async function addTokenBalance(uid, amount, txId = null, description = 'Top-up') {
   const db = getDb();
@@ -100,15 +100,22 @@ async function addTokenBalance(uid, amount, txId = null, description = 'Top-up')
 
   return db.runTransaction(async (tx) => {
     const doc = await tx.get(userRef);
-    if (!doc.exists) {
-      throw new Error('User not found');
-    }
-    const current = parseFloat(doc.data().tokenBalance) || 0;
+    const current = doc.exists ? (parseFloat(doc.data().tokenBalance) || 0) : 0;
     const newBalance = parseFloat((current + amount).toFixed(2));
-    tx.update(userRef, {
-      tokenBalance: newBalance,
-      updatedAt: new Date().toISOString(),
-    });
+
+    if (doc.exists) {
+      tx.update(userRef, {
+        tokenBalance: newBalance,
+        updatedAt: new Date().toISOString(),
+      });
+    } else {
+      tx.set(userRef, {
+        uid,
+        tokenBalance: newBalance,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }
 
     const logRef = db.collection('tokenTransactions').doc();
     tx.set(logRef, {
@@ -121,6 +128,7 @@ async function addTokenBalance(uid, amount, txId = null, description = 'Top-up')
       createdAt: new Date().toISOString(),
     });
 
+    console.log(`[tokens] ✔ Added LKR ${amount} to ${uid} — new balance: LKR ${newBalance}`);
     return { success: true, newBalance };
   });
 }

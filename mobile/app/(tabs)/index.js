@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
   StyleSheet, Platform, ActivityIndicator, Dimensions,
@@ -7,11 +7,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeInDown, FadeInUp, ZoomIn,
-  useSharedValue, useAnimatedStyle,
+  useSharedValue, useAnimatedStyle, useAnimatedScrollHandler,
   withRepeat, withSequence, withTiming, withSpring,
   interpolate, Easing,
 } from 'react-native-reanimated';
 import CosmicBackground from '../../components/CosmicBackground';
+import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
+import SpringPressable from '../../components/effects/SpringPressable';
+import CosmicLoader from '../../components/effects/CosmicLoader';
+import PinchableView from '../../components/effects/PinchableView';
+import CelestialCanvas from '../../components/3d/CelestialCanvas';
+import SolarSystemScene from '../../components/3d/SolarSystemHero';
+import StarField from '../../components/3d/StarField';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -152,22 +159,16 @@ function EnergyRing({ score, label }) {
 
 // ── Quick Action Tile ─────────────────────────────────────────────────
 function QuickTile({ icon, label, colors: gc, onPress }) {
-  var scale = useSharedValue(1);
-  function onIn() { scale.value = withSpring(0.94, { damping: 12, stiffness: 300 }); }
-  function onOut() { scale.value = withSpring(1, { damping: 10, stiffness: 200 }); }
-  var scaleStyle = useAnimatedStyle(function () { return { transform: [{ scale: scale.value }] }; });
   return (
-    <Animated.View style={[s.quickTile, scaleStyle]}>
-      <TouchableOpacity onPress={onPress} onPressIn={onIn} onPressOut={onOut} activeOpacity={1} style={{ flex: 1 }}>
-        <LinearGradient colors={gc} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-        <LinearGradient colors={['rgba(255,255,255,0.1)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%' }} />
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 26, marginBottom: 6 }}>{icon}</Text>
-          <Text style={s.quickTileLabel}>{label}</Text>
-        </View>
-        <View style={s.quickTileBorder} />
-      </TouchableOpacity>
-    </Animated.View>
+    <SpringPressable onPress={onPress} haptic="light" scalePressed={0.94} style={s.quickTile}>
+      <LinearGradient colors={gc} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <LinearGradient colors={['rgba(255,255,255,0.1)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%' }} />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 26, marginBottom: 6 }}>{icon}</Text>
+        <Text style={s.quickTileLabel}>{label}</Text>
+      </View>
+      <View style={s.quickTileBorder} />
+    </SpringPressable>
   );
 }
 
@@ -206,11 +207,29 @@ function RahuPulseRing() {
 export default function HomeScreen() {
   var { t, language } = useLanguage();
   var { user } = useAuth();
+  var isDesktop = useDesktopCtx();
   var [data, setData] = useState(null);
   var [chartData, setChartData] = useState(null);
   var [loading, setLoading] = useState(true);
   var [chartLoading, setChartLoading] = useState(false);
   var [error, setError] = useState(null);
+
+  // ─── Scroll-linked parallax ────────────────────────────────────
+  var scrollY = useSharedValue(0);
+  var scrollHandler = useAnimatedScrollHandler({
+    onScroll: function (event) {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+  var heroParallax = useAnimatedStyle(function () {
+    return {
+      transform: [
+        { translateY: interpolate(scrollY.value, [0, 200], [0, -30], 'clamp') },
+        { scale: interpolate(scrollY.value, [0, 200], [1, 0.95], 'clamp') },
+      ],
+      opacity: interpolate(scrollY.value, [0, 300], [1, 0.7], 'clamp'),
+    };
+  });
 
   // ─── All animation hooks must be declared at the top level ────
   // Sky Portal Hero breathe animation
@@ -310,12 +329,14 @@ export default function HomeScreen() {
     var miniSize = Math.min(SCREEN_WIDTH - 80, 260);
     return (
       <View style={{ alignItems: 'center' }}>
-        <SriLankanChart
-          rashiChart={chartData.rashiChart}
-          lagnaRashiId={lagnaRashiId}
-          language={language}
-          chartSize={miniSize}
-        />
+        <PinchableView minScale={1} maxScale={2}>
+          <SriLankanChart
+            rashiChart={chartData.rashiChart}
+            lagnaRashiId={lagnaRashiId}
+            language={language}
+            chartSize={miniSize}
+          />
+        </PinchableView>
       </View>
     );
   }
@@ -340,6 +361,19 @@ export default function HomeScreen() {
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
+          {/* 3D Solar System backdrop */}
+          <View style={s.hero3dBackdrop} pointerEvents="none">
+            <CelestialCanvas
+              width={200}
+              height={200}
+              cameraPosition={[0, 2, 6]}
+              cameraFov={40}
+              fallback={null}
+            >
+              <SolarSystemScene />
+              <StarField count={200} spread={15} speed={0.01} />
+            </CelestialCanvas>
+          </View>
           {/* Top shimmer */}
           <LinearGradient
             colors={['rgba(255,255,255,0.1)', 'transparent']}
@@ -666,12 +700,15 @@ export default function HomeScreen() {
   }
 
   return (
+    <DesktopScreenWrapper routeName="index">
     <CosmicBackground>
-      <ScrollView
+      <Animated.ScrollView
         style={[s.flex, { backgroundColor: 'transparent' }]}
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
         showsVerticalScrollIndicator={false}
         overScrollMode="never"
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
             refreshing={loading}
@@ -686,7 +723,7 @@ export default function HomeScreen() {
           <View style={s.center}>
             <View style={s.orreryLoader}>
               <LinearGradient colors={['rgba(147,51,234,0.3)', 'transparent']} style={StyleSheet.absoluteFill} />
-              <ActivityIndicator size="large" color="#FBBF24" />
+              <CosmicLoader size={56} color="#FBBF24" />
             </View>
             <Text style={s.loadingText}>{t('channelingEnergies')}</Text>
           </View>
@@ -711,17 +748,25 @@ export default function HomeScreen() {
         {data && !loading && (
           <View>
             {/* ── Sky Portal Hero ── */}
-            {renderSkyPortalHero()}
+            <Animated.View style={heroParallax}>
+              {renderSkyPortalHero()}
+            </Animated.View>
 
             {/* ── Rahu Kalaya Banner ── */}
             {renderRahuBanner()}
 
             {/* ── Tri-Panel Cosmic Stats ── */}
-            <Animated.View entering={FadeInDown.delay(200).springify()} style={s.statRow}>
-              <MysticStatCard icon="sunny"  label={t('sunrise')}   value={sunriseVal}   color="#FBBF24" />
-              <MysticStatCard icon="moon"   label={t('sunset')}    value={sunsetVal}    color="#A78BFA" />
-              <MysticStatCard icon="star"   label={t('nakshatra')} value={nakshatraVal} color="#34D399" />
-            </Animated.View>
+            <View style={s.statRow}>
+              <Animated.View entering={FadeInDown.delay(150).springify()} style={{ flex: 1 }}>
+                <MysticStatCard icon="sunny"  label={t('sunrise')}   value={sunriseVal}   color="#FBBF24" />
+              </Animated.View>
+              <Animated.View entering={FadeInDown.delay(250).springify()} style={{ flex: 1 }}>
+                <MysticStatCard icon="moon"   label={t('sunset')}    value={sunsetVal}    color="#A78BFA" />
+              </Animated.View>
+              <Animated.View entering={FadeInDown.delay(350).springify()} style={{ flex: 1 }}>
+                <MysticStatCard icon="star"   label={t('nakshatra')} value={nakshatraVal} color="#34D399" />
+              </Animated.View>
+            </View>
 
             {/* ── Quick Actions ── */}
             {renderQuickActions()}
@@ -734,13 +779,12 @@ export default function HomeScreen() {
             {hasBirthData && chartLoading && (
               <AuraBox>
                 <View style={{ alignItems: 'center', paddingVertical: 30 }}>
-                  <View style={s.orreryLoader}>
-                    <LinearGradient colors={['rgba(251,191,36,0.2)', 'transparent']} style={StyleSheet.absoluteFill} />
-                    <ActivityIndicator size="large" color="#FBBF24" />
-                  </View>
-                  <Text style={{ color: '#FBBF24', marginTop: 14, fontStyle: 'italic', fontSize: 14, letterSpacing: 0.5 }}>
-                    {language === 'si' ? 'කේන්දරය සකසමින් පවතී...' : 'Calculating your birth chart...'}
-                  </Text>
+                  <CosmicLoader
+                    size={56}
+                    color="#FBBF24"
+                    text={language === 'si' ? 'කේන්දරය සකසමින් පවතී...' : 'Calculating your birth chart...'}
+                    textColor="#FBBF24"
+                  />
                 </View>
               </AuraBox>
             )}
@@ -834,11 +878,12 @@ export default function HomeScreen() {
               </Animated.View>
             )}
 
-            <View style={{ height: 140 }} />
+            <View style={{ height: isDesktop ? 32 : 140 }} />
           </View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
     </CosmicBackground>
+    </DesktopScreenWrapper>
   );
 }
 
@@ -847,6 +892,7 @@ var chartCellSize = (SCREEN_WIDTH - 72) / 4;
 var s = StyleSheet.create({
   flex: { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 108 : 88 },
+  contentDesktop: { paddingTop: 20, paddingHorizontal: 28, maxWidth: 900, alignSelf: 'center', width: '100%' },
   center: { alignItems: 'center', justifyContent: 'center', paddingTop: 120 },
 
   // ── Loading / Error ──────────────────────────────────────
@@ -876,6 +922,11 @@ var s = StyleSheet.create({
     shadowColor: '#9333EA', shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.4, shadowRadius: 28, elevation: 12,
     backgroundColor: 'rgba(20,8,50,0.85)',
+  },
+  hero3dBackdrop: {
+    position: 'absolute', top: -10, right: -20,
+    opacity: 0.5,
+    zIndex: 0,
   },
   heroCardBorder: {
     ...StyleSheet.absoluteFillObject, borderRadius: 32,

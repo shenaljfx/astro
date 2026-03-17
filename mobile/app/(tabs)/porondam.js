@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, Platform, ActivityIndicator, Share, Alert,
@@ -12,9 +12,15 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, withSpring,
   withSequence, withRepeat, Easing, interpolate,
 } from 'react-native-reanimated';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import CosmicBackground from '../../components/CosmicBackground';
+import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
+import { DatePickerField, TimePickerField } from '../../components/CosmicDateTimePicker';
 import SriLankanChart from '../../components/SriLankanChart';
 import MarkdownText from '../../components/MarkdownText';
+import SpringPressable from '../../components/effects/SpringPressable';
+import CosmicLoader from '../../components/effects/CosmicLoader';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -42,21 +48,6 @@ function Glass({ children, style, accent }) {
       />
       {children}
     </View>
-  );
-}
-
-// Compact number input
-function NumField({ value, onChangeText, placeholder, maxLength, flex, style }) {
-  return (
-    <TextInput
-      style={[sty.numInput, flex && { flex }, style]}
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor="rgba(255,255,255,0.25)"
-      keyboardType="number-pad"
-      maxLength={maxLength}
-    />
   );
 }
 
@@ -235,26 +226,16 @@ var L = {
   },
 };
 
-// Person Input Card
-function PersonCard({ label, name, setName, year, month, day, hour, minute, setYear, setMonth, setDay, setHour, setMinute, T }) {
+// Person Input Card (with cosmic date/time pickers)
+function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTimeStr, T, lang }) {
   return (
     <Glass style={sty.personCard}>
       <Text style={sty.personLabel}>{label}</Text>
       <TextInput style={sty.nameInput} value={name} onChangeText={setName} placeholder={T.namePh} placeholderTextColor="rgba(255,255,255,0.2)" />
       <Text style={sty.fieldTag}>{T.date}</Text>
-      <View style={sty.fieldRow}>
-        <NumField value={year} onChangeText={setYear} placeholder={T.yearPh} maxLength={4} flex={1.6} />
-        <Text style={sty.sep}>/</Text>
-        <NumField value={month} onChangeText={setMonth} placeholder={T.monthPh} maxLength={2} flex={1} />
-        <Text style={sty.sep}>/</Text>
-        <NumField value={day} onChangeText={setDay} placeholder={T.dayPh} maxLength={2} flex={1} />
-      </View>
-      <Text style={sty.fieldTag}>{T.time}</Text>
-      <View style={sty.fieldRow}>
-        <NumField value={hour} onChangeText={setHour} placeholder={T.hourPh} maxLength={2} flex={1} />
-        <Text style={sty.timeSep}>:</Text>
-        <NumField value={minute} onChangeText={setMinute} placeholder={T.minutePh} maxLength={2} flex={1} />
-      </View>
+      <DatePickerField value={dateStr} onChange={setDateStr} lang={lang} />
+      <Text style={[sty.fieldTag, { marginTop: 12 }]}>{T.time}</Text>
+      <TimePickerField value={timeStr} onChange={setTimeStr} lang={lang} />
     </Glass>
   );
 }
@@ -264,19 +245,14 @@ export default function PorondamScreen() {
   var { language } = useLanguage();
   var { isLoggedIn } = useAuth();
   var T = L[language] || L.en;
+  var isDesktop = useDesktopCtx();
 
-  var [bYear, setBYear] = useState('');
-  var [bMonth, setBMonth] = useState('');
-  var [bDay, setBDay] = useState('');
-  var [bHour, setBHour] = useState('');
-  var [bMinute, setBMinute] = useState('');
+  var [bDate, setBDate] = useState('1998-01-15');
+  var [bTime, setBTime] = useState('08:30');
   var [bName, setBName] = useState('');
 
-  var [gYear, setGYear] = useState('');
-  var [gMonth, setGMonth] = useState('');
-  var [gDay, setGDay] = useState('');
-  var [gHour, setGHour] = useState('');
-  var [gMinute, setGMinute] = useState('');
+  var [gDate, setGDate] = useState('1998-06-20');
+  var [gTime, setGTime] = useState('10:00');
   var [gName, setGName] = useState('');
 
   var [data, setData] = useState(null);
@@ -288,8 +264,6 @@ export default function PorondamScreen() {
   var [reportLoading, setReportLoading] = useState(false);
   var [reportLang, setReportLang] = useState(null);
   var [porondamId, setPorondamId] = useState(null);
-  var [history, setHistory] = useState([]);
-  var [historyLoading, setHistoryLoading] = useState(false);
   // Token balance
   var [tokenBalance, setTokenBalance] = useState(null);
   var [showTopUp, setShowTopUp] = useState(false);
@@ -303,16 +277,6 @@ export default function PorondamScreen() {
     api.getTokenBalance()
       .then(function(res) { if (res && res.balance !== undefined) setTokenBalance(res.balance); })
       .catch(function() {});
-  }, [isLoggedIn]);
-
-  // Load saved porondam history on mount (if logged in)
-  useEffect(function() {
-    if (!isLoggedIn) { setHistory([]); return; }
-    setHistoryLoading(true);
-    api.getUserPorondamHistory(20)
-      .then(function(res) { setHistory(res.results || []); })
-      .catch(function() { setHistory([]); })
-      .finally(function() { setHistoryLoading(false); });
   }, [isLoggedIn]);
 
   var pulse = useSharedValue(1);
@@ -334,32 +298,28 @@ export default function PorondamScreen() {
   var pulseStyle = useAnimatedStyle(function() { return { transform: [{ scale: pulse.value }] }; });
   var spinStyle = useAnimatedStyle(function() { return { transform: [{ rotate: spin.value + 'deg' }] }; });
 
-  function buildDate(y, m, d, h, min) {
-    return new Date(parseInt(y) || 1990, (parseInt(m) || 1) - 1, parseInt(d) || 1, parseInt(h) || 12, parseInt(min) || 0).toISOString();
+  function buildDateISO(dateStr, timeStr) {
+    return dateStr + 'T' + (timeStr || '12:00') + ':00';
   }
 
   var check = useCallback(async function() {
-    if (!bYear || !bMonth || !bDay || !gYear || !gMonth || !gDay) {
+    if (!bDate || !gDate) {
       Alert.alert('', T.missing); return;
     }
     try {
       setLoading(true); setError(null); setData(null); setReport(null); setReportLang(null); setPorondamId(null);
       var res = await api.checkPorondam(
-        { birthDate: buildDate(bYear, bMonth, bDay, bHour, bMinute), lat: 6.9271, lng: 79.8612, name: bName || undefined },
-        { birthDate: buildDate(gYear, gMonth, gDay, gHour, gMinute), lat: 6.9271, lng: 79.8612, name: gName || undefined }
+        { birthDate: buildDateISO(bDate, bTime), lat: 6.9271, lng: 79.8612, name: bName || undefined },
+        { birthDate: buildDateISO(gDate, gTime), lat: 6.9271, lng: 79.8612, name: gName || undefined }
       );
       setData(res.data);
       if (res.porondamId) setPorondamId(res.porondamId);
-      // Refresh history after saving
-      if (isLoggedIn) {
-        api.getUserPorondamHistory(20).then(function(h) { setHistory(h.results || []); }).catch(function() {});
-      }
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setCollapsed(true);
       setTimeout(function() { if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true }); }, 300);
     } catch (e) { setError(e.message || 'Error'); }
     finally { setLoading(false); }
-  }, [bYear, bMonth, bDay, bHour, bMinute, gYear, gMonth, gDay, gHour, gMinute, T, isLoggedIn]);
+  }, [bDate, bTime, gDate, gTime, T, isLoggedIn]);
 
   // Show charge confirmation before generating AI report
   var requestReport = useCallback(function(lang) {
@@ -375,10 +335,6 @@ export default function PorondamScreen() {
       setReport(res.report);
       if (res.balance !== undefined) setTokenBalance(res.balance);
       if (res.porondamId) setPorondamId(res.porondamId);
-      // Refresh history after report saved
-      if (isLoggedIn) {
-        api.getUserPorondamHistory(20).then(function(h) { setHistory(h.results || []); }).catch(function() {});
-      }
     } catch (e) {
       var msg = e.message || '';
       if (e.status === 402 || msg.includes('Insufficient') || msg.includes('balance')) {
@@ -406,62 +362,175 @@ export default function PorondamScreen() {
     } finally { setTopUpLoading(false); }
   };
 
-  var loadSaved = useCallback(function(item) {
-    // Reconstruct the data shape that the UI expects from a saved DB record
-    var restoredData = {
-      totalScore: item.score || 0,
-      maxPossibleScore: item.maxScore || 20,
-      percentage: item.percentage || 0,
-      rating: item.rating || '',
-      ratingEmoji: item.ratingEmoji || '',
-      ratingSinhala: item.ratingSinhala || '',
-      bride: item.bride || {},
-      groom: item.groom || {},
-      factors: item.factors || [],
-      doshas: item.doshas || [],
-      brideChart: item.brideChart || null,
-      groomChart: item.groomChart || null,
-      brideAdvanced: item.brideAdvanced || null,
-      groomAdvanced: item.groomAdvanced || null,
-      advancedPorondam: item.advancedPorondam || null,
-    };
-    setData(restoredData);
-    setPorondamId(item.id);
-    setReport(item.report || null);
-    setReportLang(item.reportLanguage || null);
-    setError(null);
-    setBName(item.bride?.name || '');
-    setGName(item.groom?.name || '');
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setCollapsed(true);
-    setTimeout(function() { if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true }); }, 300);
-  }, []);
+  // ── DOWNLOAD PORONDAM AS PDF ──────────────────────────────
+  var handleDownloadPDF = async function() {
+    if (!data) return;
+    try {
+      var isSi = language === 'si';
+      var brideName = bName || (isSi ? 'මනාලිය' : 'Bride');
+      var groomName = gName || (isSi ? 'මනාලයා' : 'Groom');
+      var pct = data.maxPossibleScore > 0 ? Math.round((data.totalScore / data.maxPossibleScore) * 100) : 0;
+      var scoreColor = pct >= 75 ? '#16a34a' : pct >= 50 ? '#ca8a04' : pct >= 30 ? '#ea580c' : '#dc2626';
+      var scoreGlow = pct >= 75 ? 'rgba(22,163,74,0.2)' : pct >= 50 ? 'rgba(202,138,4,0.2)' : 'rgba(220,38,38,0.2)';
 
-  var handleDeletePorondam = function(item) {
-    Alert.alert(
-      language === 'si' ? 'මකන්නද?' : 'Delete Record?',
-      language === 'si' ? 'මෙම ගැළපුම් සටහන ස්ථිරවම මකනු ලැබේ.' : 'This compatibility record will be permanently deleted.',
-      [
-        { text: language === 'si' ? 'අවලංගු' : 'Cancel', style: 'cancel' },
-        {
-          text: language === 'si' ? 'මකන්න' : 'Delete',
-          style: 'destructive',
-          onPress: async function() {
-            try {
-              await api.deletePorondamRecord(item.id);
-              setHistory(function(prev) { return prev.filter(function(r) { return r.id !== item.id; }); });
-              if (porondamId === item.id) {
-                setData(null); setReport(null); setReportLang(null); setPorondamId(null);
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                setCollapsed(false);
-              }
-            } catch (err) {
-              Alert.alert('\u274C', err.message || (language === 'si' ? 'මකීම අසාර්ථකයි' : 'Failed to delete'));
-            }
-          },
-        },
-      ]
-    );
+      var factorsHtml = '';
+      if (data.factors && data.factors.length > 0) {
+        factorsHtml = '<div class="por-section"><h2 class="por-sec-title">📊 ' + (isSi ? 'ගැලපීම් සාධක (සාධක 7 • ලකුණු 20)' : 'Compatibility Factors (7 Factors • 20 Points)') + '</h2>';
+        data.factors.forEach(function(f) {
+          var fPct = f.maxScore > 0 ? Math.round((f.score / f.maxScore) * 100) : 0;
+          var fColor = fPct >= 75 ? '#16a34a' : fPct >= 50 ? '#ca8a04' : '#dc2626';
+          var desc = isSi && f.descriptionSinhala ? f.descriptionSinhala : (f.description || '');
+          var fName = isSi && f.sinhala ? f.sinhala : f.name;
+          factorsHtml += '<div class="factor-card" style="border-left-color:' + fColor + ';">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+            + '<strong>' + fName + '</strong>'
+            + '<span class="factor-score" style="color:' + fColor + ';">' + f.score + '/' + f.maxScore + '</span></div>'
+            + '<div class="factor-bar-track"><div class="factor-bar-fill" style="width:' + fPct + '%;background:' + fColor + ';"></div></div>'
+            + (desc ? '<p class="factor-desc">' + desc + '</p>' : '')
+            + '</div>';
+        });
+        factorsHtml += '</div>';
+      }
+
+      var doshasHtml = '';
+      if (data.doshas && data.doshas.length > 0) {
+        doshasHtml = '<div class="por-section"><h2 class="por-sec-title" style="color:#dc2626;border-color:#fecaca;">⚠️ ' + (isSi ? 'දෝෂ' : 'Doshas') + '</h2>';
+        data.doshas.forEach(function(d) {
+          var desc = isSi && d.descriptionSinhala ? d.descriptionSinhala : (d.description || '');
+          var dName = isSi && d.sinhala ? d.sinhala : d.name;
+          doshasHtml += '<div class="dosha-card">'
+            + '<strong>' + dName + '</strong>'
+            + (desc ? '<p class="factor-desc">' + desc + '</p>' : '')
+            + '</div>';
+        });
+        doshasHtml += '</div>';
+      }
+
+      var reportHtml = '';
+      if (report) {
+        var bodyText = report.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/\n/g, '<br/>');
+        reportHtml = '<div class="por-section"><h2 class="por-sec-title">🔮 ' + (isSi ? 'විස්තරාත්මක ජ්‍යෝතිෂ වාර්තාව' : 'Detailed Astrology Report') + '</h2>'
+          + '<div class="por-report-body">' + bodyText + '</div></div>';
+      }
+
+      var html = '<!DOCTYPE html><html><head><meta charset="utf-8"/>'
+        + '<style>'
+        + '@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@300;400;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap");'
+        + '@page{margin:0;size:A4;}'
+        + '*{box-sizing:border-box;margin:0;padding:0;}'
+        + 'body{font-family:"Inter","Noto Sans Sinhala",sans-serif;color:#1F2937;line-height:1.7;font-size:13px;background:#fff;}'
+        // Watermark
+        + '.watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);font-size:80px;font-weight:900;color:rgba(236,72,153,0.03);letter-spacing:16px;white-space:nowrap;z-index:0;pointer-events:none;}'
+        // Ornamental corners
+        + '.orn-tl,.orn-tr,.orn-bl,.orn-br{position:fixed;width:40px;height:40px;z-index:5;}'
+        + '.orn-tl{top:6px;left:6px;border-top:2px solid rgba(236,72,153,0.12);border-left:2px solid rgba(236,72,153,0.12);}'
+        + '.orn-tr{top:6px;right:6px;border-top:2px solid rgba(236,72,153,0.12);border-right:2px solid rgba(236,72,153,0.12);}'
+        + '.orn-bl{bottom:6px;left:6px;border-bottom:2px solid rgba(236,72,153,0.12);border-left:2px solid rgba(236,72,153,0.12);}'
+        + '.orn-br{bottom:6px;right:6px;border-bottom:2px solid rgba(236,72,153,0.12);border-right:2px solid rgba(236,72,153,0.12);}'
+        // Header/Footer
+        + '.pg-header{position:fixed;top:0;left:0;right:0;height:32px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;font-size:8px;color:rgba(236,72,153,0.4);letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid rgba(236,72,153,0.06);}'
+        + '.pg-footer{position:fixed;bottom:0;left:0;right:0;height:28px;display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(236,72,153,0.3);letter-spacing:1.5px;border-top:1px solid rgba(236,72,153,0.06);}'
+        // Cover page
+        + '.cover{width:100%;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#831843 0%,#be185d 30%,#ec4899 60%,#f9a8d4 100%);color:#fff;position:relative;overflow:hidden;page-break-after:always;}'
+        + '.cover::before{content:"";position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 30% 50%,rgba(251,191,36,0.12) 0%,transparent 50%),radial-gradient(ellipse at 70% 30%,rgba(255,255,255,0.08) 0%,transparent 50%);}'
+        + '.cover-inner{position:relative;z-index:2;text-align:center;padding:40px;}'
+        + '.cover-hearts{font-size:56px;margin-bottom:12px;}'
+        + '.cover-brand{font-size:12px;font-weight:700;color:rgba(251,191,36,0.9);letter-spacing:6px;text-transform:uppercase;margin-bottom:8px;}'
+        + '.cover-title{font-size:32px;font-weight:900;margin-bottom:8px;text-shadow:0 2px 20px rgba(0,0,0,0.2);}'
+        + '.cover-sub{font-size:15px;color:rgba(255,255,255,0.7);margin-bottom:36px;font-weight:300;}'
+        + '.cover-divider{width:100px;height:2px;background:linear-gradient(90deg,transparent,rgba(251,191,36,0.5),transparent);margin:0 auto 28px;}'
+        + '.cover-names{font-size:26px;font-weight:800;color:#FDE68A;text-shadow:0 0 30px rgba(251,191,36,0.3);}'
+        + '.cover-and{display:block;font-size:14px;color:rgba(255,255,255,0.5);margin:6px 0;font-weight:400;}'
+        + '.cover-foot{position:absolute;bottom:28px;left:0;right:0;text-align:center;font-size:8px;color:rgba(255,255,255,0.2);letter-spacing:3px;text-transform:uppercase;}'
+        // Score card
+        + '.score-card{text-align:center;padding:32px;background:linear-gradient(135deg,#fdf2f8,#fef3c7,#f5f3ff);border-radius:20px;margin:48px 48px 28px;border:1px solid rgba(236,72,153,0.15);position:relative;overflow:hidden;}'
+        + '.score-card::after{content:"💍";position:absolute;top:-15px;right:-15px;font-size:80px;opacity:0.04;}'
+        + '.score-val{font-size:64px;font-weight:900;line-height:1;}'
+        + '.score-label{color:#555;font-size:17px;font-weight:700;margin:10px 0 4px;}'
+        + '.score-sub{color:#888;font-size:13px;}'
+        // Content area
+        + '.content{padding:0 48px 44px;}'
+        + '.por-section{margin-bottom:28px;page-break-inside:avoid;}'
+        + '.por-sec-title{color:#be185d;font-size:16px;font-weight:800;margin-bottom:12px;border-bottom:2px solid #fce7f3;padding-bottom:6px;}'
+        + '.factor-card{margin-bottom:10px;padding:12px 16px;background:#fdf2f8;border-radius:10px;border-left:4px solid #ccc;}'
+        + '.factor-card strong{color:#333;font-size:13px;}'
+        + '.factor-score{font-weight:800;font-size:16px;}'
+        + '.factor-bar-track{height:4px;background:rgba(0,0,0,0.06);border-radius:2px;margin-top:6px;}'
+        + '.factor-bar-fill{height:4px;border-radius:2px;transition:width 0.3s;}'
+        + '.factor-desc{color:#666;font-size:11px;margin:5px 0 0;line-height:1.6;}'
+        + '.dosha-card{margin-bottom:8px;padding:10px 14px;background:#fff5f5;border-radius:10px;border-left:4px solid #dc2626;}'
+        + '.dosha-card strong{color:#333;font-size:13px;}'
+        + '.por-report-body{color:#374151;font-size:12.5px;line-height:1.85;background:#fdf2f8;padding:20px;border-radius:12px;border:1px solid #fce7f3;}'
+        + '.por-report-body strong{color:#1F2937;}'
+        + '.por-report-body em{color:#be185d;}'
+        // End page
+        + '.end-page{width:100%;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#831843,#be185d,#ec4899);color:#fff;text-align:center;page-break-before:always;}'
+        + '.end-page .end-sym{font-size:48px;margin-bottom:8px;}'
+        + '.end-page .end-brand{font-size:11px;letter-spacing:6px;color:rgba(251,191,36,0.7);text-transform:uppercase;font-weight:700;}'
+        + '.end-page .end-line{width:80px;height:2px;background:linear-gradient(90deg,transparent,rgba(251,191,36,0.5),transparent);margin:16px auto;}'
+        + '.end-page .end-tag{font-size:13px;color:rgba(255,255,255,0.5);font-style:italic;}'
+        + '.end-page .end-url{font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:2px;margin-top:16px;}'
+        + '.end-page .end-disc{max-width:380px;font-size:8px;color:rgba(255,255,255,0.18);line-height:1.6;margin-top:24px;}'
+        + '@media print{.cover{page-break-after:always;}.por-section{page-break-inside:avoid;}.end-page{page-break-before:always;}}'
+        + '</style></head><body>'
+        + '<div class="watermark">නැකත් AI</div>'
+        + '<div class="orn-tl"></div><div class="orn-tr"></div><div class="orn-bl"></div><div class="orn-br"></div>'
+        + '<div class="pg-header"><span style="font-weight:800;color:#be185d;">නැකත් AI</span><span>' + (isSi ? 'පොරොන්දම් වාර්තාව' : 'Porondam Report') + '</span></div>'
+        + '<div class="pg-footer">නැකත් AI &bull; www.nekath.ai &bull; ' + new Date().toLocaleDateString() + '</div>'
+        // Cover
+        + '<div class="cover">'
+        + '<div class="cover-inner">'
+        + '<div class="cover-hearts">💍</div>'
+        + '<div class="cover-brand">නැකත් AI</div>'
+        + '<div class="cover-title">' + (isSi ? 'සම්පූර්ණ පොරොන්දම් වාර්තාව' : 'Complete Compatibility Report') + '</div>'
+        + '<div class="cover-sub">' + (isSi ? 'වෛදික ජ්‍යෝතිෂ ගැලපීම් විශ්ලේෂණය' : 'Vedic Astrology Compatibility Analysis') + '</div>'
+        + '<div class="cover-divider"></div>'
+        + '<div class="cover-names">' + brideName + '<span class="cover-and">' + (isSi ? 'සහ' : '&') + '</span>' + groomName + '</div>'
+        + '</div>'
+        + '<div class="cover-foot">' + new Date().toLocaleDateString() + '</div>'
+        + '</div>'
+        // Score
+        + '<div class="score-card">'
+        + '<div class="score-val" style="color:' + scoreColor + ';text-shadow:0 0 30px ' + scoreGlow + ';">' + pct + '%</div>'
+        + '<p class="score-label">' + (data.ratingEmoji || '💍') + ' ' + (isSi && data.ratingSinhala ? data.ratingSinhala : data.rating) + '</p>'
+        + '<p class="score-sub">' + data.totalScore + '/' + data.maxPossibleScore + ' ' + (isSi ? 'ගැලපීම් ලකුණු' : 'Compatibility Score') + '</p>'
+        + '</div>'
+        // Content
+        + '<div class="content">'
+        + factorsHtml
+        + doshasHtml
+        + reportHtml
+        + '</div>'
+        // End page
+        + '<div class="end-page">'
+        + '<div class="end-sym">💍</div>'
+        + '<div class="end-brand">නැකත් AI</div>'
+        + '<div class="end-line"></div>'
+        + '<div class="end-tag">' + (isSi ? 'ඔබේ ජීවිතයේ තරු බලන්න' : 'Read the Stars of Your Life') + '</div>'
+        + '<div class="end-url">www.nekath.ai</div>'
+        + '<div class="end-disc">' + (isSi
+          ? 'මෙම වාර්තාව AI සහ සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වේ. මෙය දැනගැනීම් සඳහා පමණි.'
+          : 'This report is AI-powered and based on traditional Vedic astrology. For informational purposes only.')
+        + '</div>'
+        + '</div>'
+        + '</body></html>';
+
+      var fileName = 'NekathAI_Porondam_' + (bName || 'Bride').replace(/\s+/g, '_') + '_' + (gName || 'Groom').replace(/\s+/g, '_') + '.pdf';
+
+      if (Platform.OS === 'web') {
+        var printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.print();
+        }
+      } else {
+        var result = await Print.printToFileAsync({ html: html, base64: false });
+        await Sharing.shareAsync(result.uri, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: fileName });
+      }
+    } catch (err) {
+      Alert.alert('❌', err.message || (isSi ? 'PDF සැකසීමට අසමත් විය' : 'Failed to generate PDF'));
+    }
   };
 
   var shareResult = async function() {
@@ -474,8 +543,10 @@ export default function PorondamScreen() {
   };
 
   return (
+    <DesktopScreenWrapper routeName="porondam">
     <CosmicBackground>
-      <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={sty.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop]} showsVerticalScrollIndicator={false}>
+        <View style={[sty.scrollInner, isDesktop && sty.scrollInnerDesktop]}>
 
         <Animated.View entering={FadeInDown.duration(600)}>
           <Text style={sty.title}>{T.title}</Text>
@@ -486,32 +557,32 @@ export default function PorondamScreen() {
             <View style={WIDE ? sty.formRow : undefined}>
               <Animated.View entering={FadeInDown.delay(100).duration(600)} exiting={FadeOut.duration(300)} style={WIDE ? sty.formCol : undefined}>
                 <PersonCard label={T.bride} name={bName} setName={setBName}
-                  year={bYear} month={bMonth} day={bDay} hour={bHour} minute={bMinute}
-                  setYear={setBYear} setMonth={setBMonth} setDay={setBDay} setHour={setBHour} setMinute={setBMinute} T={T} />
+                  dateStr={bDate} setDateStr={setBDate} timeStr={bTime} setTimeStr={setBTime}
+                  T={T} lang={language} />
               </Animated.View>
               <Animated.View entering={FadeInDown.delay(180).duration(600)} exiting={FadeOut.duration(300)} style={WIDE ? sty.formCol : undefined}>
                 <PersonCard label={T.groom} name={gName} setName={setGName}
-                  year={gYear} month={gMonth} day={gDay} hour={gHour} minute={gMinute}
-                  setYear={setGYear} setMonth={setGMonth} setDay={setGDay} setHour={setGHour} setMinute={setGMinute} T={T} />
+                  dateStr={gDate} setDateStr={setGDate} timeStr={gTime} setTimeStr={setGTime}
+                  T={T} lang={language} />
               </Animated.View>
             </View>
             <Text style={sty.timeHint}>{T.timeHint}</Text>
             <Animated.View entering={FadeInDown.delay(250).duration(600)}>
-              <TouchableOpacity style={sty.cta} onPress={check} disabled={loading} activeOpacity={0.8}>
+              <SpringPressable style={sty.cta} onPress={check} disabled={loading} haptic="heavy" scalePressed={0.93}>
                 <LinearGradient colors={['#c026d3', '#db2777', '#f43f5e']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={sty.ctaText}>{T.checkBtn}</Text>}
-              </TouchableOpacity>
+                {loading ? <CosmicLoader size={28} color="#fff" /> : <Text style={sty.ctaText}>{T.checkBtn}</Text>}
+              </SpringPressable>
             </Animated.View>
           </View>
         )}
 
         {collapsed && !loading && (
           <Animated.View entering={FadeIn.delay(200).duration(400)}>
-            <TouchableOpacity style={sty.editBtn} activeOpacity={0.7}
+            <SpringPressable style={sty.editBtn} haptic="light"
               onPress={function() { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setCollapsed(false); }}>
               <Ionicons name="pencil" size={14} color="#c084fc" />
               <Text style={sty.editText}>{T.edit}</Text>
-            </TouchableOpacity>
+            </SpringPressable>
           </Animated.View>
         )}
 
@@ -538,6 +609,29 @@ export default function PorondamScreen() {
                 rating={data.rating} ratingEmoji={data.ratingEmoji}
                 ratingSinhala={data.ratingSinhala} language={language}
                 onShare={shareResult} T={T} />
+            </Animated.View>
+
+            {/* Action buttons row */}
+            <Animated.View entering={FadeIn.delay(200).duration(400)}>
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(192,132,252,0.25)', backgroundColor: 'rgba(192,132,252,0.06)' }}
+                  activeOpacity={0.7}
+                  onPress={function() {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setCollapsed(false); setData(null); setReport(null); setReportLang(null); setPorondamId(null); setError(null);
+                  }}>
+                  <Ionicons name="refresh" size={15} color="#C084FC" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#C084FC', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'අලුත් පරීක්ෂාව' : 'New Check'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(251,191,36,0.35)', backgroundColor: 'rgba(251,191,36,0.08)' }}
+                  activeOpacity={0.7}
+                  onPress={handleDownloadPDF}>
+                  <Ionicons name="download-outline" size={15} color="#FBBF24" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#FBBF24', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'PDF බාගන්න' : 'Download PDF'}</Text>
+                </TouchableOpacity>
+              </View>
             </Animated.View>
 
             <View style={[sty.charts, WIDE && sty.chartsWide]}>
@@ -1048,7 +1142,7 @@ export default function PorondamScreen() {
                 </View>
                 {reportLoading && (
                   <View style={sty.reportLoadRow}>
-                    <ActivityIndicator color="#c084fc" size="small" />
+                    <CosmicLoader size={24} color="#c084fc" />
                     <Text style={sty.reportLoadText}>{T.generating}</Text>
                   </View>
                 )}
@@ -1064,83 +1158,8 @@ export default function PorondamScreen() {
           </View>
         )}
 
-        {/* ─── SAVED HISTORY ─── */}
-        {isLoggedIn && !loading && (
-          <Animated.View entering={FadeInUp.delay(data ? 1200 : 400).duration(700)}>
-            <Glass style={sty.section}>
-              <View style={sty.secHeader}>
-                <View>
-                  <Text style={sty.secTitle}>{'\uD83D\uDCCB'} {T.history}</Text>
-                </View>
-                {data && (
-                  <TouchableOpacity style={sty.newCheckChip} activeOpacity={0.7}
-                    onPress={function() {
-                      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                      setCollapsed(false); setData(null); setReport(null); setReportLang(null); setPorondamId(null); setError(null);
-                    }}>
-                    <Text style={sty.newCheckText}>{T.newCheck}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              {historyLoading && (
-                <View style={sty.historyLoadRow}>
-                  <ActivityIndicator color="#c084fc" size="small" />
-                  <Text style={sty.historyLoadText}>{T.historyLoading}</Text>
-                </View>
-              )}
-              {!historyLoading && history.length === 0 && (
-                <Text style={sty.historyEmpty}>{T.historyEmpty}</Text>
-              )}
-              {!historyLoading && history.map(function(item, idx) {
-                var pct = item.maxScore > 0 ? Math.round((item.score / item.maxScore) * 100) : 0;
-                var color = pct >= 75 ? '#34d399' : pct >= 50 ? '#fbbf24' : '#f87171';
-                var isActive = porondamId === item.id;
-                var dateStr = '';
-                try {
-                  var d = new Date(item.createdAt);
-                  dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                } catch(e) {}
-                return (
-                  <View key={item.id || idx} style={[sty.historyItem, isActive && sty.historyItemActive]}>
-                    <TouchableOpacity
-                      style={sty.historyMainTouch}
-                      activeOpacity={0.7} onPress={function() { loadSaved(item); }}>
-                      <View style={[sty.historyPctCircle, { borderColor: color + '60' }]}>
-                        <Text style={[sty.historyPctText, { color: color }]}>{pct}%</Text>
-                      </View>
-                      <View style={sty.historyInfo}>
-                        <Text style={sty.historyNames} numberOfLines={1}>
-                          {item.bride?.name || 'Bride'} & {item.groom?.name || 'Groom'}
-                        </Text>
-                        <Text style={sty.historyMeta}>
-                          {item.score}/{item.maxScore} {'\u2022'} {item.ratingEmoji || ''} {language === 'si' && item.ratingSinhala ? item.ratingSinhala : (item.rating || '')}
-                        </Text>
-                        {dateStr ? <Text style={sty.historyDate}>{dateStr}</Text> : null}
-                      </View>
-                      <View style={sty.historyRight}>
-                        {item.report ? (
-                          <View style={sty.historyReportBadge}>
-                            <Ionicons name="document-text" size={12} color="#34d399" />
-                          </View>
-                        ) : null}
-                        <Ionicons name="chevron-forward" size={16} color="rgba(192,132,252,0.5)" />
-                      </View>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={sty.historyDeleteBtn}
-                      activeOpacity={0.7}
-                      onPress={function() { handleDeletePorondam(item); }}
-                    >
-                      <Ionicons name="trash-outline" size={15} color="#EF4444" />
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </Glass>
-          </Animated.View>
-        )}
-
-        <View style={{ height: 120 }} />
+        <View style={{ height: isDesktop ? 32 : 120 }} />
+        </View>
       </ScrollView>
 
       {/* Charge confirmation modal */}
@@ -1241,7 +1260,7 @@ export default function PorondamScreen() {
                       {language === 'si' ? 'රු ' + amt + ' රිචාජ්' : 'Add LKR ' + amt}
                     </Text>
                     {topUpLoading ? (
-                      <ActivityIndicator color="#FFF" size="small" />
+                      <CosmicLoader size={22} color="#FFF" />
                     ) : (
                       <Ionicons name="add-circle" size={22} color="rgba(255,255,255,0.8)" />
                     )}
@@ -1258,6 +1277,7 @@ export default function PorondamScreen() {
         </View>
       </Modal>
     </CosmicBackground>
+    </DesktopScreenWrapper>
   );
 }
 
@@ -1267,10 +1287,11 @@ var sty = StyleSheet.create({
   scroll: {
     paddingHorizontal: WIDE ? 32 : 16,
     paddingTop: Platform.OS === 'ios' ? 100 : 80,
-    maxWidth: WIDE ? 960 : undefined,
-    alignSelf: WIDE ? 'center' : undefined,
-    width: WIDE ? '100%' : undefined,
   },
+  scrollDesktop: { paddingTop: 24, paddingHorizontal: 0 },
+  // Inner centring wrapper — applied on desktop inside the scroll
+  scrollInner: { width: '100%' },
+  scrollInnerDesktop: { maxWidth: 960, alignSelf: 'center', paddingHorizontal: 32 },
   title: {
     fontSize: WIDE ? 36 : 30, fontWeight: '900', color: '#fff', letterSpacing: -0.5,
     textShadowColor: 'rgba(192,38,211,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10,
@@ -1380,51 +1401,6 @@ var sty = StyleSheet.create({
   reportBody: {
     backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 16,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)',
-  },
-
-  // History styles
-  newCheckChip: {
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999,
-    backgroundColor: 'rgba(192,38,211,0.12)', borderWidth: 1, borderColor: 'rgba(192,38,211,0.25)',
-  },
-  newCheckText: { color: '#E879F9', fontSize: 12, fontWeight: '700' },
-  historyLoadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
-  historyLoadText: { color: 'rgba(192,132,252,0.6)', fontSize: 13 },
-  historyEmpty: { color: 'rgba(255,255,255,0.28)', fontSize: 13, textAlign: 'center', paddingVertical: 20 },
-  historyItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 12, paddingHorizontal: 4,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
-  },
-  historyItemActive: {
-    backgroundColor: 'rgba(192,132,252,0.08)', borderRadius: 12,
-    paddingHorizontal: 10, marginHorizontal: -6,
-  },
-  historyPctCircle: {
-    width: 44, height: 44, borderRadius: 22,
-    borderWidth: 2, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-  },
-  historyPctText: { fontSize: 13, fontWeight: '800' },
-  historyInfo: { flex: 1 },
-  historyNames: { fontSize: 14, fontWeight: '700', color: '#E0E7FF', marginBottom: 2 },
-  historyMeta: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '500' },
-  historyDate: { fontSize: 10, color: 'rgba(255,255,255,0.22)', marginTop: 2 },
-  historyMainTouch: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  historyDeleteBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  historyRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  historyReportBadge: {
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: 'rgba(52,211,153,0.12)', alignItems: 'center', justifyContent: 'center',
   },
   reportText: { color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 24 },
 });
