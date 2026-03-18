@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -23,37 +23,26 @@ import useIsDesktop from '../../hooks/useIsDesktop';
 var { width: SW } = Dimensions.get('window');
 var LOGO = require('../../assets/logo.png');
 
-// ===========================================================================
-//  TAB CONFIGURATION  -  all 6 shown in the bar, evenly spread
-// ===========================================================================
-
 var TABS = [
-  { name: 'index',    title: 'Today',  titleSi: 'අද',        icon: 'sunny-outline',         iconFocused: 'sunny',          gradient: ['#FBBF24', '#F59E0B'] },
-  { name: 'kendara',  title: 'Chart',  titleSi: 'කේන්දරේ',  icon: 'planet-outline',        iconFocused: 'planet',         gradient: ['#C084FC', '#9333EA'] },
+  { name: 'index',    title: 'Today',  titleSi: 'අද',        icon: 'sunny-outline',         iconFocused: 'sunny',          gradient: ['#FFB800', '#F59E0B'] },
+  { name: 'kendara',  title: 'Chart',  titleSi: 'කේන්දරේ',  icon: 'planet-outline',        iconFocused: 'planet',         gradient: ['#B47AFF', '#9333EA'] },
   { name: 'report',   title: 'Report', titleSi: 'වාර්තාව',  icon: 'document-text-outline', iconFocused: 'document-text',  gradient: ['#34D399', '#059669'] },
-  { name: 'chat',     title: 'Guide',  titleSi: 'මාර්ගය',   icon: 'sparkles-outline',      iconFocused: 'sparkles',       gradient: ['#FBBF24', '#9333EA'] },
+  { name: 'chat',     title: 'Guide',  titleSi: 'මාර්ගය',   icon: 'sparkles-outline',      iconFocused: 'sparkles',       gradient: ['#FFB800', '#9333EA'] },
   { name: 'porondam', title: 'Match',  titleSi: 'පොරොන්දම', icon: 'heart-circle-outline',  iconFocused: 'heart-circle',   gradient: ['#F472B6', '#DB2777'] },
   { name: 'profile',  title: 'Aura',   titleSi: 'මම',        icon: 'person-circle-outline', iconFocused: 'person-circle',  gradient: ['#4CC9F0', '#3B82F6'] },
 ];
 
-// Bar dimensions
-var BAR_H      = 62;   // tab bar height
-var BAR_RADIUS = 24;   // floating pill corner radius
-var BAR_MX     = 10;   // horizontal gap from screen edge
-var BAR_MB     = 8;    // gap above home-indicator / screen bottom
+var BAR_H = 64;
+var BAR_MX = 12;
+var BAR_MB = 8;
+var BAR_RADIUS = 22;
 
-// ===========================================================================
-//  TAB BUTTON  -  icon + label, animated pill bg on active
-// ===========================================================================
-
+/* ── Tab Button ── */
 function TabButton({ tabConfig, focused, onPress, routeKey, label }) {
-  var scale  = useSharedValue(1);
-  var pill   = useSharedValue(0);
-  var iconY  = useSharedValue(0);
-  var glowPulse = useSharedValue(0);
-  var labelOpacity = useSharedValue(focused ? 1 : 0.28);
-  var labelTransY  = useSharedValue(focused ? 0 : 4);
-  var prev   = useRef(false);
+  var scale = useSharedValue(1);
+  var dotScale = useSharedValue(0);
+  var labelOpacity = useSharedValue(focused ? 1 : 0.55);
+  var prev = useRef(false);
 
   useEffect(function () {
     if (focused && !prev.current) {
@@ -61,51 +50,35 @@ function TabButton({ tabConfig, focused, onPress, routeKey, label }) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
       scale.value = withSequence(
-        withSpring(1.22, { damping: 6, stiffness: 420 }),
-        withSpring(1,    { damping: 12 })
+        withSpring(1.15, { damping: 8, stiffness: 380 }),
+        withSpring(1, { damping: 12, stiffness: 200 })
       );
-      iconY.value = withSequence(
-        withSpring(-5, { damping: 7, stiffness: 440 }),
-        withSpring(0,  { damping: 12 })
-      );
-      pill.value = withSpring(1, { damping: 14, stiffness: 180 });
-      labelOpacity.value = withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) });
-      labelTransY.value  = withSpring(0, { damping: 14, stiffness: 200 });
-      glowPulse.value = withTiming(1, { duration: 350 });
+      dotScale.value = withSpring(1, { damping: 14, stiffness: 200 });
+      labelOpacity.value = withTiming(1, { duration: 200 });
     } else if (!focused && prev.current) {
-      scale.value = withSpring(1,  { damping: 14 });
-      iconY.value = withSpring(0,  { damping: 14 });
-      pill.value  = withSpring(0,  { damping: 18, stiffness: 160 });
-      labelOpacity.value = withTiming(0.28, { duration: 200 });
-      labelTransY.value  = withTiming(4, { duration: 200 });
-      glowPulse.value = withTiming(0, { duration: 200 });
+      scale.value = withSpring(1, { damping: 14 });
+      dotScale.value = withSpring(0, { damping: 18, stiffness: 160 });
+      labelOpacity.value = withTiming(0.55, { duration: 200 });
     }
     prev.current = focused;
   }, [focused]);
 
   var iconAnim = useAnimatedStyle(function () {
-    return {
-      transform: [{ scale: scale.value }, { translateY: iconY.value }],
-      shadowOpacity: interpolate(glowPulse.value, [0, 1], [0, 0.9]),
-      shadowRadius: interpolate(glowPulse.value, [0, 1], [0, 14]),
-    };
+    return { transform: [{ scale: scale.value }] };
   });
 
-  var pillAnim = useAnimatedStyle(function () {
+  var dotAnim = useAnimatedStyle(function () {
     return {
-      opacity:   interpolate(pill.value, [0, 1], [0, 1]),
-      transform: [{ scaleX: interpolate(pill.value, [0, 1], [0.3, 1]) }, { scaleY: interpolate(pill.value, [0, 1], [0.6, 1]) }],
+      opacity: interpolate(dotScale.value, [0, 1], [0, 0.85]),
+      transform: [{ scaleX: dotScale.value }],
     };
   });
 
   var labelAnim = useAnimatedStyle(function () {
-    return {
-      opacity: labelOpacity.value,
-      transform: [{ translateY: labelTransY.value }],
-    };
+    return { opacity: labelOpacity.value };
   });
 
-  var iconColor = focused ? tabConfig.gradient[0] : 'rgba(255,255,255,0.36)';
+  var iconColor = focused ? tabConfig.gradient[0] : 'rgba(255,255,255,0.40)';
 
   return (
     <TouchableOpacity
@@ -117,19 +90,10 @@ function TabButton({ tabConfig, focused, onPress, routeKey, label }) {
       accessibilityState={focused ? { selected: true } : {}}
       accessibilityLabel={label}
     >
-      <Animated.View style={[tb.activePill, pillAnim]}>
-        <LinearGradient
-          colors={[tabConfig.gradient[0] + '30', tabConfig.gradient[1] + '16']}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        />
-        <View style={[tb.activePillBorder, { borderColor: tabConfig.gradient[0] + '50' }]} />
-      </Animated.View>
-
-      <Animated.View style={[iconAnim, { shadowColor: tabConfig.gradient[0], shadowOffset: { width: 0, height: 0 } }]}>
+      <Animated.View style={iconAnim}>
         <Ionicons
           name={focused ? tabConfig.iconFocused : tabConfig.icon}
-          size={22}
+          size={21}
           color={iconColor}
         />
       </Animated.View>
@@ -140,73 +104,43 @@ function TabButton({ tabConfig, focused, onPress, routeKey, label }) {
       >
         {label}
       </Animated.Text>
+
+      {/* Gradient dot under active tab */}
+      <Animated.View style={[tb.dot, dotAnim]}>
+        <LinearGradient
+          colors={tabConfig.gradient}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+        />
+      </Animated.View>
     </TouchableOpacity>
   );
 }
 
-// ===========================================================================
-//  CUSTOM TAB BAR  -  floating pill, 6 tabs evenly spread
-// ===========================================================================
-
+/* ── Tab Bar ── */
 function CosmicTabBar({ state, descriptors, navigation }) {
   var { language } = useLanguage();
   var insets = useSafeAreaInsets();
   var bottomPad = Math.max(insets.bottom, 4);
 
-  var tabCount = TABS.length;
-  var barInnerWidth = SW - BAR_MX * 2 - 4;
-  var tabW = barInnerWidth / tabCount;
-
-  var indicatorX = useSharedValue(state.index * tabW);
-
-  useEffect(function () {
-    indicatorX.value = withSpring(state.index * tabW, {
-      damping: 18,
-      stiffness: 180,
-      mass: 0.8,
-    });
-  }, [state.index, tabW]);
-
-  var currentTab = TABS[state.index] || TABS[0];
-
-  var indicatorStyle = useAnimatedStyle(function () {
-    return {
-      transform: [{ translateX: indicatorX.value }],
-    };
-  });
-
   return (
     <View style={[tb.outerWrap, { paddingBottom: bottomPad }]}>
       <View style={tb.pill}>
-
         {Platform.OS !== 'web' ? (
           <View style={[StyleSheet.absoluteFill, { borderRadius: BAR_RADIUS, overflow: 'hidden' }]}>
-            <BlurView intensity={75} tint="dark" style={StyleSheet.absoluteFill} />
-            <LinearGradient
-              colors={['rgba(12,6,32,0.95)', 'rgba(5,3,16,0.98)']}
-              style={StyleSheet.absoluteFill}
-            />
+            <BlurView intensity={70} tint="dark" style={StyleSheet.absoluteFill} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(8,4,24,0.92)' }]} />
           </View>
         ) : (
-          <View style={[StyleSheet.absoluteFill, { borderRadius: BAR_RADIUS, backgroundColor: 'rgba(8,4,20,0.98)' }]} />
+          <View style={[StyleSheet.absoluteFill, { borderRadius: BAR_RADIUS, backgroundColor: 'rgba(8,4,24,0.96)' }]} />
         )}
 
+        {/* Subtle top glow line */}
         <LinearGradient
-          colors={['rgba(251,191,36,0.6)', 'rgba(147,51,234,0.7)', 'rgba(76,201,240,0.5)']}
+          colors={['rgba(180,122,255,0.35)', 'rgba(255,184,0,0.30)', 'rgba(76,201,240,0.30)']}
           style={tb.topEdge}
           start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
         />
-
-        {/* Sliding glow indicator */}
-        <Animated.View style={[tb.slideIndicator, { width: tabW }, indicatorStyle]}>
-          <View style={tb.slideIndicatorDot}>
-            <LinearGradient
-              colors={currentTab.gradient}
-              style={StyleSheet.absoluteFill}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            />
-          </View>
-        </Animated.View>
 
         <View style={tb.row}>
           {TABS.map(function (tabConfig) {
@@ -235,10 +169,6 @@ function CosmicTabBar({ state, descriptors, navigation }) {
   );
 }
 
-// ===========================================================================
-//  STYLES
-// ===========================================================================
-
 var tb = StyleSheet.create({
   outerWrap: {
     position: 'absolute',
@@ -250,20 +180,22 @@ var tb = StyleSheet.create({
     height: BAR_H,
     borderRadius: BAR_RADIUS,
     overflow: 'visible',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.40,
-    shadowRadius: 18,
-    elevation: 22,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.04)',
+    shadowColor: 'rgba(0,0,0,0.6)',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 1,
+    shadowRadius: 14,
+    elevation: 16,
   },
   topEdge: {
     position: 'absolute',
     top: 0,
     left: BAR_RADIUS,
     right: BAR_RADIUS,
-    height: 1.5,
-    borderRadius: 1,
-    opacity: 0.9,
+    height: 1,
+    borderRadius: 0.5,
+    opacity: 0.8,
   },
   row: {
     flex: 1,
@@ -276,52 +208,31 @@ var tb = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: BAR_H,
-    paddingVertical: 7,
+    paddingTop: 5,
+    paddingBottom: 4,
     minWidth: 0,
-  },
-  activePill: {
-    position: 'absolute',
-    top: 8, bottom: 8,
-    left: 3, right: 3,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  activePillBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 14,
-    borderWidth: 1,
+    overflow: 'visible',
   },
   label: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.28)',
-    letterSpacing: 0.35,
-    marginTop: 3,
-    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.55)',
+    letterSpacing: 0.4,
+    marginTop: 4,
+    lineHeight: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  slideIndicator: {
-    position: 'absolute',
-    top: 0,
-    left: 2,
-    height: BAR_H,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: 2,
-    zIndex: 0,
-  },
-  slideIndicatorDot: {
-    width: 20,
+  dot: {
+    width: 16,
     height: 3,
     borderRadius: 1.5,
     overflow: 'hidden',
-    opacity: 0.7,
+    marginTop: 2,
   },
 });
 
-// ===========================================================================
-//  HEADER COMPONENTS
-// ===========================================================================
-
+/* ── Header Components ── */
 function HeaderTitle({ title }) {
   return (
     <View style={hs.wrap}>
@@ -336,7 +247,7 @@ function BalancePill({ balance }) {
   var isLow = balance < 10;
   return (
     <View style={[hs.balancePill, isLow && { borderColor: 'rgba(248,113,113,0.35)', backgroundColor: 'rgba(248,113,113,0.1)' }]}>
-      <Ionicons name="wallet-outline" size={11} color={isLow ? '#F87171' : '#FBBF24'} />
+      <Ionicons name="wallet-outline" size={11} color={isLow ? '#F87171' : '#FFB800'} />
       <Text style={[hs.balanceText, isLow && { color: '#F87171' }]}>
         {'LKR ' + balance}
       </Text>
@@ -344,16 +255,11 @@ function BalancePill({ balance }) {
   );
 }
 
-// ===========================================================================
-//  DESKTOP SIDEBAR STANDALONE
-//  Drives navigation via useRouter/usePathname — lives outside <Tabs>
-// ===========================================================================
-
+/* ── Desktop Sidebar ── */
 function DesktopSidebarStandalone({ balance, language, onToggleLanguage, onCollapseChange }) {
-  var router   = useRouter();
+  var router = useRouter();
   var pathname = usePathname();
 
-  // Build a minimal state/navigation shim for DesktopSidebar
   var routeIndex = TABS.findIndex(function (t) {
     var seg = pathname === '/' ? 'index' : pathname.replace(/^\//, '').split('/')[0];
     return t.name === seg || (seg === '' && t.name === 'index');
@@ -381,10 +287,7 @@ function DesktopSidebarStandalone({ balance, language, onToggleLanguage, onColla
   );
 }
 
-// ===========================================================================
-//  TAB LAYOUT
-// ===========================================================================
-
+/* ── Tab Layout ── */
 export default function TabLayout() {
   var { t, language, toggleLanguage } = useLanguage();
   var { user } = useAuth();
@@ -406,21 +309,15 @@ export default function TabLayout() {
 
   var TAB_BAR_HEIGHT = BAR_H + BAR_MB + 16;
 
-  // ── Desktop: true flex-row shell ────────────────────────────────────
-  // DesktopSidebar is rendered as a real flex sibling OUTSIDE Tabs so it
-  // occupies its own column.  The Tabs sceneContainer gets paddingLeft equal
-  // to the live sidebar width so content never slides under the panel.
   if (isDesktop) {
     return (
       <View style={ds.shell}>
-        {/* Sidebar lives here, outside Tabs, as a true left column */}
         <DesktopSidebarStandalone
           balance={tokenBalance}
           language={language}
           onToggleLanguage={toggleLanguage}
           onCollapseChange={setSidebarCollapsed}
         />
-        {/* Content column — offset by sidebar width */}
         <View style={ds.contentCol}>
           <Tabs
             tabBar={function () { return null; }}
@@ -442,11 +339,10 @@ export default function TabLayout() {
     );
   }
 
-  // ── Mobile / tablet: original tab bar ──────────────────────────────
   return (
     <Tabs
       tabBar={function (props) { return <CosmicTabBar {...props} />; }}
-      sceneContainerStyle={{ backgroundColor: '#030014' }}
+      sceneContainerStyle={{ backgroundColor: Colors.deepVoid }}
       screenOptions={function ({ route }) {
         return {
           headerShown: true,
@@ -467,9 +363,9 @@ export default function TabLayout() {
           headerBackground: function () {
             if (Platform.OS === 'web') return <View style={hs.webBg} />;
             return (
-              <BlurView intensity={55} tint="dark" style={StyleSheet.absoluteFill}>
+              <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill}>
                 <LinearGradient
-                  colors={['rgba(9,5,28,0.92)', 'rgba(4,3,12,0.50)']}
+                  colors={['rgba(2,0,16,0.92)', 'rgba(12,6,40,0.50)']}
                   style={StyleSheet.absoluteFill}
                 />
                 <View style={hs.borderLine} />
@@ -497,21 +393,17 @@ export default function TabLayout() {
   );
 }
 
-// ===========================================================================
-//  HEADER STYLES
-// ===========================================================================
-
 var hs = StyleSheet.create({
   webBg: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(9,5,28,0.96)',
+    backgroundColor: 'rgba(2,0,16,0.96)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(251,191,36,0.12)',
+    borderBottomColor: 'rgba(180,122,255,0.10)',
   },
   borderLine: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     height: 1,
-    backgroundColor: 'rgba(251,191,36,0.18)',
+    backgroundColor: 'rgba(180,122,255,0.12)',
   },
   wrap: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -520,18 +412,18 @@ var hs = StyleSheet.create({
     width: 22, height: 22, borderRadius: 6,
   },
   title: {
-    fontSize: 16, fontWeight: '800', color: '#FBBF24',
+    fontSize: 16, fontWeight: '800', color: '#FFB800',
     letterSpacing: 2.5, textTransform: 'uppercase',
-    textShadowColor: 'rgba(251,191,36,0.6)',
-    textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10,
+    textShadowColor: 'rgba(255,184,0,0.5)',
+    textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
   },
   balancePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(251,191,36,0.1)',
+    backgroundColor: 'rgba(255,184,0,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(251,191,36,0.28)',
+    borderColor: 'rgba(255,184,0,0.22)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
@@ -539,33 +431,26 @@ var hs = StyleSheet.create({
   },
   balanceText: {
     fontSize: 11, fontWeight: '700',
-    color: '#FBBF24', letterSpacing: 0.3,
+    color: '#FFB800', letterSpacing: 0.3,
   },
 });
 
-// ===========================================================================
-//  DESKTOP SHELL STYLES
-// ===========================================================================
-
 var ds = StyleSheet.create({
-  // Outer row: sidebar on the left, content column on the right
   shell: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#04030C',
+    backgroundColor: Colors.deepVoid,
     overflow: 'hidden',
   },
-  // The right-hand column that fills space next to the sidebar
   contentCol: {
     flex: 1,
     flexDirection: 'column',
-    backgroundColor: '#04030C',
+    backgroundColor: Colors.deepVoid,
     overflow: 'hidden',
   },
-  // The Expo Router sceneContainer — fills all space inside contentCol
   sceneContainer: {
     flex: 1,
-    backgroundColor: '#04030C',
+    backgroundColor: Colors.deepVoid,
     overflow: 'hidden',
   },
 });

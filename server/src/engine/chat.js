@@ -16,6 +16,15 @@ try { timingEngine = require('./timing'); } catch (e) { console.warn('[chat] tim
 try { muhurthaEngine = require('./muhurtha'); } catch (e) { console.warn('[chat] muhurtha engine not available:', e.message); }
 try { healthEngine = require('./health'); } catch (e) { console.warn('[chat] health engine not available:', e.message); }
 
+// Tier 3-5 advanced prediction engines
+let dashaEngine, kpEngine, varshphalEngine, confidenceEngine, classicalTextsEngine, aiAgentsEngine;
+try { dashaEngine = require('./dasha'); } catch (e) { console.warn('[chat] dasha engine not available:', e.message); }
+try { kpEngine = require('./kp'); } catch (e) { console.warn('[chat] KP engine not available:', e.message); }
+try { varshphalEngine = require('./varshphal'); } catch (e) { console.warn('[chat] varshphal engine not available:', e.message); }
+try { confidenceEngine = require('./confidence'); } catch (e) { console.warn('[chat] confidence engine not available:', e.message); }
+try { classicalTextsEngine = require('./classical-texts'); } catch (e) { console.warn('[chat] classical texts engine not available:', e.message); }
+try { aiAgentsEngine = require('./ai-agents'); } catch (e) { console.warn('[chat] AI agents engine not available:', e.message); }
+
 /**
  * Build the system prompt for the AI astrologer
  */
@@ -117,6 +126,35 @@ USER'S BIRTH CHART DATA:
         }
       }
     } catch (e) { /* skip if transit fails */ }
+  }
+
+  // Enrich with multi-dasha cross-validation
+  if (dashaEngine) {
+    try {
+      const dPeriods = calculateVimshottariDetailed(moonSidereal, date);
+      const crossVal = dashaEngine.crossValidateDashas(date, birthLat, birthLng, new Date(), dPeriods);
+      if (crossVal) {
+        context += `\nMULTI-DASHA CROSS-VALIDATION:\n`;
+        context += `- Dasha Agreement Confidence: ${crossVal.confidenceScore}%\n`;
+        if (crossVal.activeVimshottari) context += `- Current Vimshottari: ${crossVal.activeVimshottari.lord}\n`;
+        if (crossVal.activeYogini) context += `- Current Yogini: ${crossVal.activeYogini.lord || crossVal.activeYogini.planet || ''}\n`;
+        if (crossVal.activeChara) context += `- Current Chara: ${crossVal.activeChara.signEnglish || crossVal.activeChara.sign || ''}\n`;
+      }
+    } catch (e) { /* skip */ }
+  }
+
+  // Enrich with KP key event predictions
+  if (kpEngine) {
+    try {
+      const kpEvents = ['marriage', 'career_change', 'wealth_gain', 'foreign_travel'];
+      context += `\nKP EVENT PREDICTIONS:\n`;
+      for (const ev of kpEvents) {
+        try {
+          const pred = kpEngine.predictEvent(ev, date, birthLat, birthLng);
+          context += `- ${ev}: ${pred.prediction} (${pred.confidence}% confidence)\n`;
+        } catch (_) {}
+      }
+    } catch (e) { /* skip */ }
   }
 
   // Enrich with health constitution summary
@@ -2968,6 +3006,113 @@ ${nadiSummary}
 ═══ SARVATOBHADRA CHAKRA (TRANSIT VEDHA) ═══
 ${svbSummary}`;
   }
+
+  // ── Tier 3-5 Engine Data for Report ──────────────────────────
+  let tier35Block = '';
+  try {
+    const reportEngineStart = Date.now();
+    const pieces = [];
+
+    // Multi-Dasha cross-validation
+    if (dashaEngine) {
+      try {
+        const yoginiDasha = dashaEngine.calculateYoginiDasha(moonSidereal, date);
+        const charaDasha = dashaEngine.calculateCharaDasha(date, lat, lng);
+        const crossVal = dashaEngine.crossValidateDashas(birthDate, lat, lng, new Date(), dasaPeriods);
+        const activeYogini = yoginiDasha.dashas.find(d => {
+          const s = new Date(d.start), e = new Date(d.end);
+          return new Date() >= s && new Date() < e;
+        });
+        const activeChara = charaDasha.dashas.find(d => {
+          const s = new Date(d.start), e = new Date(d.end);
+          return new Date() >= s && new Date() < e;
+        });
+        pieces.push(`═══ MULTI-DASHA CROSS-VALIDATION ═══
+Current Yogini Dasha: ${activeYogini ? activeYogini.lord + ' (' + activeYogini.years + ' years)' : 'N/A'}
+Current Chara Dasha: ${activeChara ? activeChara.signEnglish + ' (' + activeChara.years + ' years)' : 'N/A'}
+Dasha Agreement Confidence: ${crossVal.confidenceScore}%
+Systems Agreeing: ${crossVal.agreements || 0} / ${crossVal.totalPairs || 0}
+${crossVal.activeVimshottari ? 'Vimshottari: ' + crossVal.activeVimshottari.lord : ''}
+${crossVal.activeYogini ? 'Yogini: ' + crossVal.activeYogini.lord : ''}
+${crossVal.activeChara ? 'Chara: ' + crossVal.activeChara.signEnglish : ''}`);
+      } catch (e) { console.warn('[AI Report] Multi-dasha failed:', e.message); }
+    }
+
+    // KP Event Predictions
+    if (kpEngine) {
+      try {
+        const kpEvents = ['marriage', 'career_change', 'children', 'foreign_travel', 'wealth_gain', 'property', 'health_crisis'];
+        const kpResults = kpEvents.map(ev => {
+          try { return kpEngine.predictEvent(ev, date, lat, lng); } catch (_) { return null; }
+        }).filter(Boolean);
+        if (kpResults.length > 0) {
+          pieces.push(`═══ KP EVENT PREDICTIONS (YES/NO) ═══
+${kpResults.map(r => `${r.event}: ${r.prediction} (${r.confidence}% confidence)${r.reasons ? ' — ' + r.reasons.slice(0, 2).join('; ') : ''}`).join('\n')}`);
+        }
+      } catch (e) { console.warn('[AI Report] KP predictions failed:', e.message); }
+    }
+
+    // Varshphal Annual Forecast
+    if (varshphalEngine) {
+      try {
+        const currentYear = new Date().getFullYear();
+        const annual = varshphalEngine.getAnnualForecast(birthDate, currentYear, lat, lng);
+        pieces.push(`═══ ANNUAL FORECAST ${currentYear} (VARSHPHAL/TAJAKA) ═══
+Year Score: ${annual.yearScore}/100 — ${annual.yearOutlook}
+Solar Return: ${annual.solarReturnDate ? new Date(annual.solarReturnDate).toISOString().split('T')[0] : 'N/A'}
+Muntha: ${annual.muntha?.munthaSign || 'N/A'} in House ${annual.muntha?.munthaHouse || 'N/A'} — ${annual.muntha?.effect || ''}
+Tajaka Yogas: ${annual.tajakaYogas?.length > 0 ? annual.tajakaYogas.map(y => y.name + ': ' + y.effect).join('; ') : 'None detected'}
+Mudda Dasha: ${annual.muddaDasha?.slice(0, 3).map(d => d.lord + ' (' + d.days + ' days)').join(', ') || 'N/A'}`);
+      } catch (e) { console.warn('[AI Report] Varshphal failed:', e.message); }
+    }
+
+    // Confidence Scores for key events
+    if (confidenceEngine) {
+      try {
+        const confAll = confidenceEngine.calculateAllConfidences({
+          birthDate: birthDate, lat, lng, birthTimeQuality: 'approximate',
+        });
+        const confEntries = Object.entries(confAll).slice(0, 6);
+        if (confEntries.length > 0) {
+          pieces.push(`═══ PREDICTION CONFIDENCE SCORES ═══
+${confEntries.map(([ev, c]) => `${ev}: ${c.confidenceScore}% (${c.label})`).join('\n')}`);
+        }
+      } catch (e) { console.warn('[AI Report] Confidence scoring failed:', e.message); }
+    }
+
+    // Enhanced Transits with Ashtakavarga Scoring
+    if (transitEngine && transitEngine.getEnhancedTransits) {
+      try {
+        const enhanced = transitEngine.getEnhancedTransits(null, birthDate, lat, lng);
+        const planetTransits = Object.entries(enhanced.planets || {}).slice(0, 5);
+        pieces.push(`═══ ASHTAKAVARGA-WEIGHTED TRANSITS ═══
+Composite Transit Score: ${enhanced.compositeAshtakavargaScore || '--'} — ${enhanced.compositeLabel || 'Mixed'}
+${enhanced.doubleTransits?.length > 0 ? 'Double Transit (Jupiter+Saturn): Houses ' + enhanced.doubleTransits.map(dt => dt.house).join(', ') : 'No double transit active'}
+${planetTransits.map(([k, p]) => `${p.planet}: ${p.transitRashi} (Score: ${p.ashtakavargaScore || '--'}/100)${p.kakshya ? ' Kakshya: ' + p.kakshya.kakshyaLord : ''}`).join('\n')}`);
+      } catch (e) { console.warn('[AI Report] Enhanced transits failed:', e.message); }
+    }
+
+    // Classical Text RAG
+    if (classicalTextsEngine) {
+      try {
+        const chartFeatures = { yogas: yogas.map(y => y.name), dashaLord: dasaPeriods?.[0]?.lord };
+        const verses = classicalTextsEngine.getVersesForChart(chartFeatures);
+        if (verses && verses.length > 0) {
+          pieces.push(`═══ CLASSICAL TEXT REFERENCES ═══
+${verses.slice(0, 3).map(v => `[${v.source}] ${v.topic}: "${v.text}"`).join('\n')}`);
+        }
+      } catch (e) { console.warn('[AI Report] Classical texts failed:', e.message); }
+    }
+
+    if (pieces.length > 0) {
+      tier35Block = '\n\n' + pieces.join('\n\n');
+      console.log(`[AI Report] Tier 3-5 engine data gathered in ${Date.now() - reportEngineStart}ms — ${pieces.length} blocks`);
+    }
+  } catch (outerErr) {
+    console.warn('[AI Report] Tier 3-5 engine block failed (continuing without):', outerErr.message);
+  }
+
+  advancedBlock += tier35Block;
 
   const rashiContext = {
     lagnaEnglish: houseChart.lagna?.rashi?.english || '',

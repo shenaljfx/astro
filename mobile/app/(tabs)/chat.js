@@ -53,7 +53,7 @@ async function incrementUsage(uid) {
 
 // Thinking Dots — cosmic orbiting particles indicator
 function ThinkingDots() {
-  var COLORS = ['#FF6B00', '#E040FB', '#FBBF24', '#C084FC', '#34D399'];
+  var COLORS = ['#FF6B00', '#E040FB', '#FFB800', '#B47AFF', '#34D399'];
   var dots = [];
   for (var _i = 0; _i < 5; _i++) { dots.push(useSharedValue(0)); }
   var orbit = useSharedValue(0);
@@ -216,7 +216,7 @@ function QuickChips({ onSelect, language, mode }) {
     ? ['rgba(124,58,237,0.15)', 'rgba(224,64,251,0.08)']
     : ['rgba(255,107,0,0.12)', 'rgba(224,64,251,0.06)'];
   var chipBorder = mode === 'dream' ? 'rgba(124,58,237,0.25)' : 'rgba(255,107,0,0.18)';
-  var chipIconColor = mode === 'dream' ? '#C084FC' : '#FF8C33';
+  var chipIconColor = mode === 'dream' ? '#B47AFF' : '#FF8C33';
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipsRow}>
@@ -345,7 +345,7 @@ export default function ChatScreen() {
                   <View>
                     <Text style={sd.panelTitle}>{mode === 'dream' ? t('chatDreamTitle') : t('chatTitle')}</Text>
                     <View style={sd.statusRow}>
-                      <View style={[sd.statusDot, { backgroundColor: loading ? '#FBBF24' : '#34D399' }]} />
+                      <View style={[sd.statusDot, { backgroundColor: loading ? '#FFB800' : '#34D399' }]} />
                       <Text style={sd.statusText}>{loading ? t('consultingCosmos') : t('askUniverse')}</Text>
                     </View>
                   </View>
@@ -407,7 +407,7 @@ export default function ChatScreen() {
                   {loading && (
                     <Animated.View entering={FadeInUp.duration(200)} style={sd.thinkRow}>
                       <View style={sd.aiDotSm}>
-                        <LinearGradient colors={['#FF6B00', '#FBBF24']} style={StyleSheet.absoluteFill} />
+                        <LinearGradient colors={['#FF6B00', '#FFB800']} style={StyleSheet.absoluteFill} />
                         <Text style={{ fontSize: 10 }}>{'\u2726'}</Text>
                       </View>
                       <View style={sd.thinkBubble}><ThinkingDots /></View>
@@ -468,7 +468,7 @@ export default function ChatScreen() {
         <View style={{ flex: 1 }}>
           <Text style={s.title}>{mode === 'dream' ? t('chatDreamTitle') : t('chatTitle')}</Text>
           <View style={s.statusRow}>
-            <View style={[s.statusDot, { backgroundColor: loading ? '#FBBF24' : '#34D399' }]} />
+            <View style={[s.statusDot, { backgroundColor: loading ? '#FFB800' : '#34D399' }]} />
             <Text style={s.statusText}>{loading ? t('consultingCosmos') : t('askUniverse')}</Text>
           </View>
         </View>
@@ -489,7 +489,7 @@ export default function ChatScreen() {
           {loading && (
             <Animated.View entering={FadeInUp.duration(200)} style={s.thinkRow}>
               <View style={s.aiDot}>
-                <LinearGradient colors={['#FF6B00', '#FBBF24']} style={StyleSheet.absoluteFill} />
+                <LinearGradient colors={['#FF6B00', '#FFB800']} style={StyleSheet.absoluteFill} />
                 <Text style={{ fontSize: 10 }}>{'\u2726'}</Text>
               </View>
               <View style={s.thinkBubble}><ThinkingDots /></View>

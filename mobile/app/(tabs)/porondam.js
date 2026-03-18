@@ -41,8 +41,8 @@ function Glass({ children, style, accent }) {
       <LinearGradient
         pointerEvents="none"
         colors={accent
-          ? ['rgba(244,63,94,0.12)', 'rgba(139,92,246,0.08)', 'rgba(15,5,25,0.6)']
-          : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.02)', 'rgba(15,5,25,0.4)']}
+          ? ['rgba(244,63,94,0.10)', 'rgba(180,122,255,0.08)', 'rgba(12,6,28,0.6)']
+          : ['rgba(20,12,50,0.55)', 'rgba(10,6,28,0.45)', 'rgba(8,4,20,0.55)']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       />
@@ -93,7 +93,7 @@ function BinaryStarOrbit({ pct, color }) {
 // Score Gauge ─────────────────────────────────────────────────────────
 function ScoreGauge({ score, maxScore, rating, ratingEmoji, ratingSinhala, language, onShare, T }) {
   var pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-  var color = pct >= 75 ? '#34D399' : pct >= 50 ? '#FBBF24' : pct >= 30 ? '#F97316' : '#F87171';
+  var color = pct >= 75 ? '#34D399' : pct >= 50 ? '#FFB800' : pct >= 30 ? '#F97316' : '#F87171';
 
   // Enhanced color-coded compatibility labels
   var cosmicLabel = pct >= 75
@@ -114,7 +114,7 @@ function ScoreGauge({ score, maxScore, rating, ratingEmoji, ratingSinhala, langu
           <Text style={sty.gaugeRating}>{ratingEmoji || '💍'} {label}</Text>
           <Text style={sty.gaugeScoreText}>{score}/{maxScore} {T.overall}</Text>
           <TouchableOpacity style={sty.shareChip} onPress={onShare} activeOpacity={0.7}>
-            <Ionicons name="share-social-outline" size={14} color="#C084FC" />
+            <Ionicons name="share-social-outline" size={14} color="#B47AFF" />
             <Text style={sty.shareChipText}>{T.shareBtn}</Text>
           </TouchableOpacity>
         </View>
@@ -126,7 +126,7 @@ function ScoreGauge({ score, maxScore, rating, ratingEmoji, ratingSinhala, langu
 // Factor Bar ──────────────────────────────────────────────────────────
 function FactorBar({ f, index, language }) {
   var pct = f.maxScore > 0 ? f.score / f.maxScore : 0;
-  var color = pct >= 0.75 ? '#34D399' : pct >= 0.5 ? '#FBBF24' : pct >= 0.25 ? '#F97316' : '#F87171';
+  var color = pct >= 0.75 ? '#34D399' : pct >= 0.5 ? '#FFB800' : pct >= 0.25 ? '#F97316' : '#F87171';
   var desc = language === 'si' && f.descriptionSinhala ? f.descriptionSinhala : f.description;
   return (
     <Animated.View entering={FadeInUp.delay(100 * index).duration(500)} style={sty.factorItem}>
@@ -439,7 +439,7 @@ export default function PorondamScreen() {
         + '.cover-title{font-size:32px;font-weight:900;margin-bottom:8px;text-shadow:0 2px 20px rgba(0,0,0,0.2);}'
         + '.cover-sub{font-size:15px;color:rgba(255,255,255,0.7);margin-bottom:36px;font-weight:300;}'
         + '.cover-divider{width:100px;height:2px;background:linear-gradient(90deg,transparent,rgba(251,191,36,0.5),transparent);margin:0 auto 28px;}'
-        + '.cover-names{font-size:26px;font-weight:800;color:#FDE68A;text-shadow:0 0 30px rgba(251,191,36,0.3);}'
+        + '.cover-names{font-size:26px;font-weight:800;color:#FFD666;text-shadow:0 0 30px rgba(251,191,36,0.3);}'
         + '.cover-and{display:block;font-size:14px;color:rgba(255,255,255,0.5);margin:6px 0;font-weight:400;}'
         + '.cover-foot{position:absolute;bottom:28px;left:0;right:0;text-align:center;font-size:8px;color:rgba(255,255,255,0.2);letter-spacing:3px;text-transform:uppercase;}'
         // Score card
@@ -615,21 +615,21 @@ export default function PorondamScreen() {
             <Animated.View entering={FadeIn.delay(200).duration(400)}>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
                 <TouchableOpacity
-                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(192,132,252,0.25)', backgroundColor: 'rgba(192,132,252,0.06)' }}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(180,122,255,0.25)', backgroundColor: 'rgba(180,122,255,0.06)' }}
                   activeOpacity={0.7}
                   onPress={function() {
                     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                     setCollapsed(false); setData(null); setReport(null); setReportLang(null); setPorondamId(null); setError(null);
                   }}>
-                  <Ionicons name="refresh" size={15} color="#C084FC" style={{ marginRight: 6 }} />
-                  <Text style={{ color: '#C084FC', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'අලුත් පරීක්ෂාව' : 'New Check'}</Text>
+                  <Ionicons name="refresh" size={15} color="#B47AFF" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#B47AFF', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'අලුත් පරීක්ෂාව' : 'New Check'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(251,191,36,0.35)', backgroundColor: 'rgba(251,191,36,0.08)' }}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,184,0,0.35)', backgroundColor: 'rgba(255,184,0,0.08)' }}
                   activeOpacity={0.7}
                   onPress={handleDownloadPDF}>
-                  <Ionicons name="download-outline" size={15} color="#FBBF24" style={{ marginRight: 6 }} />
-                  <Text style={{ color: '#FBBF24', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'PDF බාගන්න' : 'Download PDF'}</Text>
+                  <Ionicons name="download-outline" size={15} color="#FFB800" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#FFB800', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'PDF බාගන්න' : 'Download PDF'}</Text>
                 </TouchableOpacity>
               </View>
             </Animated.View>
@@ -796,7 +796,7 @@ export default function PorondamScreen() {
                       <View key={pi} style={{ marginBottom: 14 }}>
                         <Text style={[sty.doshaName, { color: person.color, marginBottom: 8 }]}>{person.emoji} {person.label}</Text>
                         {person.yogas.slice(0, 6).map(function(y, yi) {
-                          var catColor = y.category === 'Raja Yoga' ? '#c084fc' : y.category === 'Dhana Yoga' ? '#fbbf24' : '#60a5fa';
+                          var catColor = y.category === 'Raja Yoga' ? '#c084fc' : y.category === 'Dhana Yoga' ? '#FFB800' : '#60a5fa';
                           return (
                             <View key={yi} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8, paddingLeft: 4 }}>
                               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: catColor, marginTop: 5 }} />
@@ -869,7 +869,7 @@ export default function PorondamScreen() {
                   </View>
                   <View style={{ alignItems: 'center', paddingVertical: 10 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
-                      <Text style={{ fontSize: 42, fontWeight: '900', color: data.advancedPorondam.combined.percentage >= 65 ? '#34d399' : data.advancedPorondam.combined.percentage >= 45 ? '#fbbf24' : '#f87171' }}>
+                      <Text style={{ fontSize: 42, fontWeight: '900', color: data.advancedPorondam.combined.percentage >= 65 ? '#34d399' : data.advancedPorondam.combined.percentage >= 45 ? '#FFB800' : '#f87171' }}>
                         {data.advancedPorondam.combined.percentage}<Text style={{ fontSize: 20 }}>%</Text>
                       </Text>
                     </View>
@@ -903,8 +903,8 @@ export default function PorondamScreen() {
                     <View>
                       <Text style={sty.secTitle}>{T.dashaTitle}</Text>
                     </View>
-                    <View style={{ backgroundColor: (data.advancedPorondam.advanced.dashaCompatibility.harmony === 'harmonious' ? '#34d399' : data.advancedPorondam.advanced.dashaCompatibility.harmony === 'conflicting' ? '#f87171' : '#fbbf24') + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                      <Text style={{ color: data.advancedPorondam.advanced.dashaCompatibility.harmony === 'harmonious' ? '#34d399' : data.advancedPorondam.advanced.dashaCompatibility.harmony === 'conflicting' ? '#f87171' : '#fbbf24', fontSize: 11, fontWeight: '800' }}>
+                    <View style={{ backgroundColor: (data.advancedPorondam.advanced.dashaCompatibility.harmony === 'harmonious' ? '#34d399' : data.advancedPorondam.advanced.dashaCompatibility.harmony === 'conflicting' ? '#f87171' : '#FFB800') + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                      <Text style={{ color: data.advancedPorondam.advanced.dashaCompatibility.harmony === 'harmonious' ? '#34d399' : data.advancedPorondam.advanced.dashaCompatibility.harmony === 'conflicting' ? '#f87171' : '#FFB800', fontSize: 11, fontWeight: '800' }}>
                         {data.advancedPorondam.advanced.dashaCompatibility.score}/{data.advancedPorondam.advanced.dashaCompatibility.maxScore}
                       </Text>
                     </View>
@@ -944,8 +944,8 @@ export default function PorondamScreen() {
                     <View>
                       <Text style={sty.secTitle}>{T.navamshaTitle}</Text>
                     </View>
-                    <View style={{ backgroundColor: (data.advancedPorondam.advanced.navamshaCompatibility.score >= 5 ? '#34d399' : data.advancedPorondam.advanced.navamshaCompatibility.score >= 3 ? '#fbbf24' : '#f87171') + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                      <Text style={{ color: data.advancedPorondam.advanced.navamshaCompatibility.score >= 5 ? '#34d399' : data.advancedPorondam.advanced.navamshaCompatibility.score >= 3 ? '#fbbf24' : '#f87171', fontSize: 11, fontWeight: '800' }}>
+                    <View style={{ backgroundColor: (data.advancedPorondam.advanced.navamshaCompatibility.score >= 5 ? '#34d399' : data.advancedPorondam.advanced.navamshaCompatibility.score >= 3 ? '#FFB800' : '#f87171') + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                      <Text style={{ color: data.advancedPorondam.advanced.navamshaCompatibility.score >= 5 ? '#34d399' : data.advancedPorondam.advanced.navamshaCompatibility.score >= 3 ? '#FFB800' : '#f87171', fontSize: 11, fontWeight: '800' }}>
                         {data.advancedPorondam.advanced.navamshaCompatibility.score}/{data.advancedPorondam.advanced.navamshaCompatibility.maxScore}
                       </Text>
                     </View>
@@ -983,8 +983,8 @@ export default function PorondamScreen() {
                     <View>
                       <Text style={sty.secTitle}>{T.mangalaTitle}</Text>
                     </View>
-                    <View style={{ backgroundColor: (data.advancedPorondam.advanced.mangalaDosha.severity === 'none' || data.advancedPorondam.advanced.mangalaDosha.severity === 'cancelled' ? '#34d399' : data.advancedPorondam.advanced.mangalaDosha.severity === 'mild' ? '#fbbf24' : '#f87171') + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                      <Text style={{ color: data.advancedPorondam.advanced.mangalaDosha.severity === 'none' || data.advancedPorondam.advanced.mangalaDosha.severity === 'cancelled' ? '#34d399' : data.advancedPorondam.advanced.mangalaDosha.severity === 'mild' ? '#fbbf24' : '#f87171', fontSize: 11, fontWeight: '800' }}>
+                    <View style={{ backgroundColor: (data.advancedPorondam.advanced.mangalaDosha.severity === 'none' || data.advancedPorondam.advanced.mangalaDosha.severity === 'cancelled' ? '#34d399' : data.advancedPorondam.advanced.mangalaDosha.severity === 'mild' ? '#FFB800' : '#f87171') + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                      <Text style={{ color: data.advancedPorondam.advanced.mangalaDosha.severity === 'none' || data.advancedPorondam.advanced.mangalaDosha.severity === 'cancelled' ? '#34d399' : data.advancedPorondam.advanced.mangalaDosha.severity === 'mild' ? '#FFB800' : '#f87171', fontSize: 11, fontWeight: '800' }}>
                         {data.advancedPorondam.advanced.mangalaDosha.score}/{data.advancedPorondam.advanced.mangalaDosha.maxScore}
                       </Text>
                     </View>
@@ -1033,8 +1033,8 @@ export default function PorondamScreen() {
                     <View>
                       <Text style={sty.secTitle}>{T.marriageStrTitle}</Text>
                     </View>
-                    <View style={{ backgroundColor: (data.advancedPorondam.advanced.marriagePlanetStrength.score >= 3 ? '#34d399' : data.advancedPorondam.advanced.marriagePlanetStrength.score >= 2 ? '#fbbf24' : '#f87171') + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                      <Text style={{ color: data.advancedPorondam.advanced.marriagePlanetStrength.score >= 3 ? '#34d399' : data.advancedPorondam.advanced.marriagePlanetStrength.score >= 2 ? '#fbbf24' : '#f87171', fontSize: 11, fontWeight: '800' }}>
+                    <View style={{ backgroundColor: (data.advancedPorondam.advanced.marriagePlanetStrength.score >= 3 ? '#34d399' : data.advancedPorondam.advanced.marriagePlanetStrength.score >= 2 ? '#FFB800' : '#f87171') + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                      <Text style={{ color: data.advancedPorondam.advanced.marriagePlanetStrength.score >= 3 ? '#34d399' : data.advancedPorondam.advanced.marriagePlanetStrength.score >= 2 ? '#FFB800' : '#f87171', fontSize: 11, fontWeight: '800' }}>
                         {data.advancedPorondam.advanced.marriagePlanetStrength.score}/{data.advancedPorondam.advanced.marriagePlanetStrength.maxScore}
                       </Text>
                     </View>
@@ -1045,8 +1045,8 @@ export default function PorondamScreen() {
                       { label: gName || (language === 'si' ? 'මනාලයා' : 'Groom'), emoji: '\uD83E\uDD35', color: '#93c5fd', d: data.advancedPorondam.advanced.marriagePlanetStrength.groom },
                     ].map(function(p, i) {
                       if (!p.d) return null;
-                      var venusColor = p.d.venusAssessment === 'Strong' ? '#34d399' : p.d.venusAssessment === 'Moderate' ? '#fbbf24' : '#f87171';
-                      var lordColor = p.d.seventhLordAssessment === 'Strong' ? '#34d399' : p.d.seventhLordAssessment === 'Moderate' ? '#fbbf24' : '#f87171';
+                      var venusColor = p.d.venusAssessment === 'Strong' ? '#34d399' : p.d.venusAssessment === 'Moderate' ? '#FFB800' : '#f87171';
+                      var lordColor = p.d.seventhLordAssessment === 'Strong' ? '#34d399' : p.d.seventhLordAssessment === 'Moderate' ? '#FFB800' : '#f87171';
                       return (
                         <View key={i} style={{ flex: 1, backgroundColor: p.color + '08', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: p.color + '15' }}>
                           <Text style={{ color: p.color, fontSize: 11, fontWeight: '700', marginBottom: 8 }}>{p.emoji} {p.label}</Text>
@@ -1117,8 +1117,8 @@ export default function PorondamScreen() {
                   </View>
                   {/* Token balance pill */}
                   {tokenBalance !== null && (
-                    <TouchableOpacity onPress={function() { setShowTopUp(true); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(147,51,234,0.18)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }}>
-                      <Ionicons name="wallet-outline" size={12} color="#FBBF24" />
+                    <TouchableOpacity onPress={function() { setShowTopUp(true); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(180,122,255,0.18)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }}>
+                      <Ionicons name="wallet-outline" size={12} color="#FFB800" />
                       <Text style={{ color: tokenBalance >= 10 ? '#4ADE80' : '#F87171', fontSize: 12, fontWeight: '700' }}>
                         {'LKR ' + tokenBalance}
                       </Text>
@@ -1167,19 +1167,19 @@ export default function PorondamScreen() {
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <LinearGradient
             colors={['rgba(13,7,32,0.99)', 'rgba(4,3,12,1)']}
-            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(147,51,234,0.3)' }}
+            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(180,122,255,0.3)' }}
           >
-            <Text style={{ color: '#FBBF24', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
+            <Text style={{ color: '#FFB800', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
               {language === 'si' ? '💍 ගැළපුම් වාර්තාව' : '💍 Compatibility Report'}
             </Text>
             <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 22 }}>
               {language === 'si' ? 'AI ලියන ලද, ගැඹුරු විශ්ලේෂණය' : 'AI-written deep analysis'}
             </Text>
-            <View style={{ backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={{ backgroundColor: 'rgba(255,184,0,0.08)', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
                 {language === 'si' ? 'ගෙවීම' : 'Charge'}
               </Text>
-              <Text style={{ color: '#FBBF24', fontSize: 20, fontWeight: '800' }}>LKR 10</Text>
+              <Text style={{ color: '#FFB800', fontSize: 20, fontWeight: '800' }}>LKR 10</Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 24 }}>
               <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>{language === 'si' ? 'ශේෂය' : 'Balance'}</Text>
@@ -1194,7 +1194,7 @@ export default function PorondamScreen() {
                 style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
               >
                 <LinearGradient
-                  colors={['#FBBF24', '#F59E0B', '#9333EA']}
+                  colors={['#FFB800', '#F59E0B', '#9333EA']}
                   style={{ paddingVertical: 15, alignItems: 'center', borderRadius: 14 }}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 >
@@ -1234,9 +1234,9 @@ export default function PorondamScreen() {
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <LinearGradient
             colors={['rgba(13,7,32,0.99)', 'rgba(4,3,12,1)']}
-            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(147,51,234,0.3)' }}
+            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(180,122,255,0.3)' }}
           >
-            <Text style={{ color: '#FBBF24', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
+            <Text style={{ color: '#FFB800', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
               {language === 'si' ? '💳 ශේෂය රිචාජ්' : '💳 Top Up Balance'}
             </Text>
             <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
@@ -1296,7 +1296,7 @@ var sty = StyleSheet.create({
     fontSize: WIDE ? 36 : 30, fontWeight: '900', color: '#fff', letterSpacing: -0.5,
     textShadowColor: 'rgba(192,38,211,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10,
   },
-  subtitle: { fontSize: 14, color: 'rgba(192,132,252,0.8)', marginBottom: 24, fontWeight: '500', letterSpacing: 0.3 },
+  subtitle: { fontSize: 14, color: 'rgba(180,122,255,0.8)', marginBottom: 24, fontWeight: '500', letterSpacing: 0.3 },
 
   glass: {
     borderRadius: 20, overflow: 'hidden', borderWidth: 1,
@@ -1311,18 +1311,18 @@ var sty = StyleSheet.create({
   nameInput: {
     backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 12 : 10,
-    color: '#fff', fontSize: 14, borderWidth: 1, borderColor: 'rgba(147,51,234,0.2)', marginBottom: 12,
+    color: '#fff', fontSize: 14, borderWidth: 1, borderColor: 'rgba(180,122,255,0.2)', marginBottom: 12,
   },
-  fieldTag: { fontSize: 10, fontWeight: '700', color: 'rgba(192,132,252,0.7)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6, marginTop: 4 },
+  fieldTag: { fontSize: 10, fontWeight: '700', color: 'rgba(180,122,255,0.7)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6, marginTop: 4 },
   fieldRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   numInput: {
     backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 10,
     paddingHorizontal: 10, paddingVertical: Platform.OS === 'ios' ? 11 : 8,
     color: '#fff', fontSize: 14, fontWeight: '600',
-    borderWidth: 1, borderColor: 'rgba(147,51,234,0.18)', textAlign: 'center', minWidth: 0,
+    borderWidth: 1, borderColor: 'rgba(180,122,255,0.18)', textAlign: 'center', minWidth: 0,
   },
   sep: { color: 'rgba(255,255,255,0.2)', fontSize: 16, fontWeight: '300' },
-  timeSep: { color: 'rgba(192,132,252,0.6)', fontSize: 20, fontWeight: '700' },
+  timeSep: { color: 'rgba(180,122,255,0.6)', fontSize: 20, fontWeight: '700' },
   timeHint: { fontSize: 11, color: 'rgba(255,255,255,0.28)', marginBottom: 16, fontStyle: 'italic', textAlign: 'center' },
 
   cta: { borderRadius: 16, paddingVertical: 16, alignItems: 'center', overflow: 'hidden', marginBottom: 8 },
@@ -1331,18 +1331,18 @@ var sty = StyleSheet.create({
   editBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 12, marginBottom: 14, borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(192,132,252,0.18)', backgroundColor: 'rgba(192,132,252,0.06)',
+    borderWidth: 1, borderColor: 'rgba(180,122,255,0.18)', backgroundColor: 'rgba(180,122,255,0.06)',
   },
-  editText: { color: '#C084FC', fontWeight: '600', fontSize: 13 },
+  editText: { color: '#B47AFF', fontWeight: '600', fontSize: 13 },
 
   loadCenter: { alignItems: 'center', marginVertical: 30 },
-  loadCard: { alignItems: 'center', paddingVertical: 44, paddingHorizontal: 40, borderColor: 'rgba(192,132,252,0.2)' },
+  loadCard: { alignItems: 'center', paddingVertical: 44, paddingHorizontal: 40, borderColor: 'rgba(180,122,255,0.2)' },
   loadRing: { width: 90, height: 90, borderRadius: 45, opacity: 0.22, position: 'absolute', top: 34 },
   loadInner: {
     width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(15,5,25,0.9)',
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(192,132,252,0.3)',
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(180,122,255,0.3)',
   },
-  loadText: { color: '#C084FC', fontSize: 15, fontWeight: '700', marginTop: 22, letterSpacing: 0.5 },
+  loadText: { color: '#B47AFF', fontSize: 15, fontWeight: '700', marginTop: 22, letterSpacing: 0.5 },
   errorText: { color: '#F87171', fontSize: 14, textAlign: 'center' },
 
   // Score Gauge — binary star orbit
@@ -1354,29 +1354,29 @@ var sty = StyleSheet.create({
   shareChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
     paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999,
-    backgroundColor: 'rgba(192,132,252,0.1)', borderWidth: 1, borderColor: 'rgba(192,132,252,0.25)',
+    backgroundColor: 'rgba(180,122,255,0.1)', borderWidth: 1, borderColor: 'rgba(180,122,255,0.25)',
   },
-  shareChipText: { color: '#C084FC', fontSize: 12, fontWeight: '700' },
+  shareChipText: { color: '#B47AFF', fontSize: 12, fontWeight: '700' },
 
   charts: { marginBottom: 6 },
   chartsWide: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   chartCol: { flex: 1, maxWidth: 440 },
   chartCard: { alignItems: 'center', paddingVertical: WIDE ? 20 : 16 },
-  chartTitle: { fontSize: 14, fontWeight: '700', color: '#C084FC', marginBottom: 12, letterSpacing: 0.3 },
+  chartTitle: { fontSize: 14, fontWeight: '700', color: '#B47AFF', marginBottom: 12, letterSpacing: 0.3 },
   heartBridge: { alignItems: 'center', marginVertical: -6, zIndex: 10 },
   heartBridgeWide: { marginVertical: 0, marginHorizontal: -10 },
 
   section: { marginBottom: 14 },
   secHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
   secTitle: { fontSize: 16, fontWeight: '800', color: '#E0E7FF', letterSpacing: 0.2 },
-  secSub: { fontSize: 12, color: 'rgba(192,132,252,0.6)', fontWeight: '500', marginTop: 2 },
+  secSub: { fontSize: 12, color: 'rgba(180,122,255,0.6)', fontWeight: '500', marginTop: 2 },
 
   factorItem: { marginBottom: 16 },
   factorTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   factorNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   factorDot: { width: 8, height: 8, borderRadius: 4 },
   factorName: { fontSize: 14, color: '#E0E7FF', fontWeight: '700' },
-  factorSinhala: { fontSize: 12, color: 'rgba(192,132,252,0.5)', fontWeight: '500' },
+  factorSinhala: { fontSize: 12, color: 'rgba(180,122,255,0.5)', fontWeight: '500' },
   factorBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
   factorBadgeText: { fontSize: 12, fontWeight: '800' },
   barTrack: { height: 7, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' },
@@ -1397,7 +1397,7 @@ var sty = StyleSheet.create({
   langChipText: { color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: '700' },
   langChipTextActive: { color: '#E879F9' },
   reportLoadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
-  reportLoadText: { color: '#C084FC', fontSize: 13 },
+  reportLoadText: { color: '#B47AFF', fontSize: 13 },
   reportBody: {
     backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 16,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)',

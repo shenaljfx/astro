@@ -195,7 +195,7 @@ function LangToggle({ language, onToggle, collapsed }) {
 }
 
 // ── Top bar (exported, used inside each tab screen on desktop) ─────
-export function DesktopTopBar({ routeName, language, balance }) {
+export function DesktopTopBar({ routeName, language, balance, onToggleLanguage }) {
   var activeItem = NAV_ITEMS.find(function (n) { return n.name === routeName; });
   var [timeStr, setTimeStr] = useState('');
   useEffect(function () {
@@ -219,6 +219,8 @@ export function DesktopTopBar({ routeName, language, balance }) {
         <LinearGradient colors={activeItem.gradient} style={top.accentStripe} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} />
       )}
       <View style={top.leftGroup}>
+        <Text style={top.logoText}>Nakath AI</Text>
+        <View style={top.leftDivider} />
         {activeItem && (
           <View style={[top.iconCircle, { backgroundColor: activeItem.gradient[0] + '1A' }]}>
             <Ionicons name={activeItem.iconFocused} size={16} color={activeItem.gradient[0]} />
@@ -235,6 +237,12 @@ export function DesktopTopBar({ routeName, language, balance }) {
             <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.38)" />
             <Text style={top.clockText}>{timeStr}</Text>
           </View>
+        )}
+        {onToggleLanguage && (
+          <TouchableOpacity onPress={onToggleLanguage} style={top.langToggle}>
+            <Ionicons name="language-outline" size={14} color="rgba(255,255,255,0.5)" />
+            <Text style={top.langToggleText}>{language === 'si' ? 'EN' : 'SI'}</Text>
+          </TouchableOpacity>
         )}
         {balance !== null && balance !== undefined && (
           <View style={[top.balancePill, balance < 10 && { borderColor: 'rgba(248,113,113,0.4)' }]}>
@@ -395,6 +403,8 @@ var top = StyleSheet.create({
     paddingRight: 24, position: 'relative', overflow: 'hidden',
   },
   accentStripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, opacity: 0.8 },
+  logoText: { fontSize: 12, fontWeight: '800', color: '#FBBF24', letterSpacing: 2, textTransform: 'uppercase' },
+  leftDivider: { width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.08)', marginHorizontal: 4 },
   leftGroup: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingLeft: 20, gap: 12 },
   iconCircle: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   sectionTitle: {
@@ -416,5 +426,12 @@ var top = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(251,191,36,0.28)',
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
   },
+  langToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
+  },
+  langToggleText: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '700', letterSpacing: 0.5 },
   balanceVal: { fontSize: 11, fontWeight: '700', color: '#FBBF24', letterSpacing: 0.3 },
 });

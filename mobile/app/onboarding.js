@@ -253,18 +253,18 @@ function FloatingOrbs() {
   });
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Animated.View style={[{ position: 'absolute', top: '15%', left: '10%', width: 120, height: 120, borderRadius: 60, backgroundColor: '#FF6B00' }, s1]} />
-      <Animated.View style={[{ position: 'absolute', top: '55%', right: '5%', width: 90, height: 90, borderRadius: 45, backgroundColor: '#E040FB' }, s2]} />
-      <Animated.View style={[{ position: 'absolute', bottom: '20%', left: '30%', width: 70, height: 70, borderRadius: 35, backgroundColor: '#FBBF24' }, s3]} />
-      <Animated.View style={[{ position: 'absolute', top: '35%', right: '20%', width: 50, height: 50, borderRadius: 25, backgroundColor: '#9333EA' }, s4]} />
+      <Animated.View style={[{ position: 'absolute', top: '15%', left: '10%', width: 120, height: 120, borderRadius: 60, backgroundColor: '#FFB800' }, s1]} />
+      <Animated.View style={[{ position: 'absolute', top: '55%', right: '5%', width: 90, height: 90, borderRadius: 45, backgroundColor: '#D186FF' }, s2]} />
+      <Animated.View style={[{ position: 'absolute', bottom: '20%', left: '30%', width: 70, height: 70, borderRadius: 35, backgroundColor: '#FFB800' }, s3]} />
+      <Animated.View style={[{ position: 'absolute', top: '35%', right: '20%', width: 50, height: 50, borderRadius: 25, backgroundColor: '#B47AFF' }, s4]} />
       <Animated.View style={[{ position: 'absolute', bottom: '35%', left: '8%', width: 40, height: 40, borderRadius: 20, backgroundColor: '#06B6D4' }, s5]} />
       {/* Twinkling star dots */}
       <Animated.View style={[{ position: 'absolute', top: '10%', right: '15%', width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#FFF' }, starStyle]} />
-      <Animated.View style={[{ position: 'absolute', top: '25%', left: '25%', width: 2, height: 2, borderRadius: 1, backgroundColor: '#FBBF24' }, starStyle]} />
+      <Animated.View style={[{ position: 'absolute', top: '25%', left: '25%', width: 2, height: 2, borderRadius: 1, backgroundColor: '#FFB800' }, starStyle]} />
       <Animated.View style={[{ position: 'absolute', top: '45%', left: '5%', width: 2.5, height: 2.5, borderRadius: 1.25, backgroundColor: '#FFF' }, starStyle]} />
-      <Animated.View style={[{ position: 'absolute', bottom: '15%', right: '25%', width: 2, height: 2, borderRadius: 1, backgroundColor: '#E040FB' }, starStyle]} />
+      <Animated.View style={[{ position: 'absolute', bottom: '15%', right: '25%', width: 2, height: 2, borderRadius: 1, backgroundColor: '#D186FF' }, starStyle]} />
       <Animated.View style={[{ position: 'absolute', bottom: '40%', right: '10%', width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#FFF' }, starStyle]} />
-      <Animated.View style={[{ position: 'absolute', top: '65%', left: '45%', width: 2, height: 2, borderRadius: 1, backgroundColor: '#FBBF24' }, starStyle]} />
+      <Animated.View style={[{ position: 'absolute', top: '65%', left: '45%', width: 2, height: 2, borderRadius: 1, backgroundColor: '#FFB800' }, starStyle]} />
     </View>
   );
 }
@@ -279,7 +279,7 @@ function AnimatedBorderCard({ children, style, focused }) {
     var c = interpolate(shimmer.value, [0, 0.33, 0.66, 1], [0, 1, 2, 3]);
     return {
       borderColor: focused
-        ? (c < 1 ? 'rgba(255,107,0,0.5)' : c < 2 ? 'rgba(224,64,251,0.5)' : 'rgba(251,191,36,0.5)')
+        ? (c < 1 ? 'rgba(255,184,0,0.5)' : c < 2 ? 'rgba(180,122,255,0.5)' : 'rgba(255,184,0,0.5)')
         : 'rgba(255,255,255,0.06)',
     };
   });
@@ -313,7 +313,7 @@ function PrimaryButton({ label, onPress, loading, disabled, icon }) {
         style={{ borderRadius: 16, overflow: 'hidden', opacity: isOff ? 0.4 : 1 }}
       >
         <LinearGradient
-          colors={isOff ? ['#444', '#555'] : ['#FF6B00', '#E040FB', '#9333EA']}
+          colors={isOff ? ['#444', '#555'] : ['#FFB800', '#D186FF', '#B47AFF']}
           style={g.primaryGrad}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         >
@@ -364,8 +364,8 @@ function StepHeader({ icon, iconColor, title, subtitle }) {
   return (
     <Animated.View entering={FadeInDown.duration(500)} style={g.headerWrap}>
       {icon ? (
-        <Animated.View style={[g.headerIconBg, { borderColor: (iconColor || '#FF6B00') + '50', shadowColor: iconColor || '#FF6B00' }, iconAnim, glowAnim]}>
-          <Ionicons name={icon} size={28} color={iconColor || '#FF6B00'} />
+        <Animated.View style={[g.headerIconBg, { borderColor: (iconColor || '#FFB800') + '50', shadowColor: iconColor || '#FFB800' }, iconAnim, glowAnim]}>
+          <Ionicons name={icon} size={28} color={iconColor || '#FFB800'} />
         </Animated.View>
       ) : null}
       <Text style={g.headerTitle}>{title}</Text>
@@ -378,28 +378,29 @@ function GlowCard({ children, style }) {
   return <View style={[g.card, style]}>{children}</View>;
 }
 
-function StepDots({ current, total }) {
+var STEP_LABELS_EN = ['Welcome', 'Phone', 'Verify', 'Subscribe', 'Birth Info', 'Done'];
+var STEP_LABELS_SI = ['සාදරයෙන්', 'දුරකතන', 'සත්‍යාපන', 'දායකත්ව', 'උපන් දත්ත', 'සම්පූර්ණ'];
+
+function StepProgressBar({ current, total, lang }) {
+  var labels = lang === 'si' ? STEP_LABELS_SI : STEP_LABELS_EN;
+  var progress = total > 1 ? current / (total - 1) : 0;
   return (
-    <View style={g.dotsRow}>
-      {Array.from({ length: total }).map(function (_, i) {
-        var isCurrent = i === current;
-        var isActive = i <= current;
-        return (
-          <Animated.View key={i} entering={FadeIn.delay(i * 50).duration(200)} style={[
-            g.dot,
-            isActive && g.dotActive,
-            isCurrent && g.dotCurrent,
-          ]}>
-            {isCurrent ? (
-              <LinearGradient
-                colors={['#FF6B00', '#E040FB']}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              />
-            ) : null}
-          </Animated.View>
-        );
-      })}
+    <View style={g.progressWrap}>
+      <View style={g.progressTrack}>
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          style={[g.progressFill, { width: (progress * 100) + '%' }]}
+        >
+          <LinearGradient
+            colors={['#FFB800', '#D186FF']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          />
+        </Animated.View>
+      </View>
+      <Text style={g.progressLabel}>
+        {(current + 1) + ' / ' + total + (labels[current] ? ' — ' + labels[current] : '')}
+      </Text>
     </View>
   );
 }
@@ -445,7 +446,7 @@ function LanguageStep({ onSelect }) {
           <Text style={ls.mainTitleEn}>Nekath AI</Text>
         </Animated.View>
         <View style={ls.divider}>
-          <LinearGradient colors={['transparent', '#FF6B00', '#E040FB', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+          <LinearGradient colors={['transparent', '#FFB800', '#D186FF', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
         </View>
         <Text style={ls.siTitle}>{'\u0db7\u0dcf\u0dc2\u0dcf\u0dc0 \u0dad\u0ddd\u0dbb\u0db1\u0dca\u0db1'}</Text>
         <Text style={ls.enTitle}>Select Your Language</Text>
@@ -453,7 +454,7 @@ function LanguageStep({ onSelect }) {
 
       <Animated.View entering={FadeInUp.delay(300).duration(600)} style={{ width: '100%' }}>
         <SpringPressable style={ls.langBtn} onPress={function () { onSelect('si'); }} haptic="medium" scalePressed={0.95}>
-          <LinearGradient colors={['#FF6B00', '#E040FB']} style={ls.langGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <LinearGradient colors={['#FFB800', '#D186FF']} style={ls.langGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <View style={ls.langInner}>
               <Text style={ls.langFlag}>{'\uD83C\uDDF1\uD83C\uDDF0'}</Text>
               <View>
@@ -485,12 +486,12 @@ function LanguageStep({ onSelect }) {
 }
 
 var ls = StyleSheet.create({
-  logoWrap: { width: 90, height: 90, borderRadius: 24, overflow: 'hidden', marginBottom: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(4,3,12,0.6)', borderWidth: 1.5, borderColor: 'rgba(251,191,36,0.25)' },
+  logoWrap: { width: 90, height: 90, borderRadius: 24, overflow: 'hidden', marginBottom: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(20,12,50,0.6)', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.25)' },
   logoImg:  { width: 80, height: 80, borderRadius: 20 },
-  mainTitleSi: { fontSize: 44, fontWeight: '900', color: '#FBBF24', letterSpacing: 2, textShadowColor: 'rgba(255,107,0,0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 20, textAlign: 'center' },
+  mainTitleSi: { fontSize: 44, fontWeight: '900', color: '#FFB800', letterSpacing: 2, textShadowColor: 'rgba(255,184,0,0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 20, textAlign: 'center' },
   mainTitleEn: { fontSize: 16, fontWeight: '600', color: 'rgba(255,255,255,0.35)', letterSpacing: 4, marginTop: 2, textAlign: 'center' },
   divider: { width: 60, height: 3, borderRadius: 2, marginVertical: 16, overflow: 'hidden' },
-  siTitle: { fontSize: 22, fontWeight: '700', color: '#FF8C33', marginBottom: 4 },
+  siTitle: { fontSize: 22, fontWeight: '700', color: '#FFD666', marginBottom: 4 },
   enTitle: { fontSize: 15, color: 'rgba(255,255,255,0.5)' },
   langBtn: { borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   langGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 22, paddingHorizontal: 22, borderRadius: 18 },
@@ -530,14 +531,14 @@ function WelcomeStep({ onContinue, lang }) {
         {/* Rotating halo ring */}
         <Animated.View style={[ws.haloRing, haloStyle]}>
           <LinearGradient
-            colors={['#FF6B00', '#E040FB', '#FBBF24', '#FF6B00']}
+            colors={['#FFB800', '#D186FF', '#FFB800', '#FFB800']}
             style={ws.haloGrad}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
         </Animated.View>
         <Animated.View style={[ws.logoRing, pulseStyle]}>
           <LinearGradient
-            colors={['rgba(255,107,0,0.25)', 'rgba(224,64,251,0.15)', 'rgba(251,191,36,0.1)']}
+            colors={['rgba(255,184,0,0.25)', 'rgba(180,122,255,0.15)', 'rgba(255,184,0,0.1)']}
             style={ws.logoInner}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           >
@@ -553,7 +554,7 @@ function WelcomeStep({ onContinue, lang }) {
           {T.welcomeDesc.split('\n').map(function (line, i) {
             return (
               <Animated.View key={i} entering={FadeInDown.delay(500 + i * 150).duration(400)} style={ws.featureLine}>
-                <LinearGradient colors={['#FF6B00', '#E040FB']} style={ws.featureDot} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                <LinearGradient colors={['#FFB800', '#D186FF']} style={ws.featureDot} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                 <Text style={ws.featureText}>{line.replace(/[•&]/g, '').trim()}</Text>
               </Animated.View>
             );
@@ -572,12 +573,12 @@ function WelcomeStep({ onContinue, lang }) {
 var ws = StyleSheet.create({
   haloRing: { position: 'absolute', top: -12, width: 124, height: 124, borderRadius: 62, overflow: 'hidden' },
   haloGrad: { width: '100%', height: '100%', borderRadius: 62, opacity: 0.25 },
-  logoRing: { width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: 'rgba(255,107,0,0.4)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  logoRing: { width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: 'rgba(255,184,0,0.4)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
   logoInner: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
   logoImg:  { width: 72, height: 72, borderRadius: 36 },
-  titleSi: { fontSize: 40, fontWeight: '900', color: '#FBBF24', letterSpacing: 2, textShadowColor: 'rgba(255,107,0,0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16, marginBottom: 2, textAlign: 'center' },
+  titleSi: { fontSize: 40, fontWeight: '900', color: '#FFB800', letterSpacing: 2, textShadowColor: 'rgba(255,184,0,0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16, marginBottom: 2, textAlign: 'center' },
   titleEn: { fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.3)', letterSpacing: 4, marginBottom: 6, textAlign: 'center' },
-  subtitle: { fontSize: 15, fontWeight: '600', color: '#FF8C33', marginBottom: 4 },
+  subtitle: { fontSize: 15, fontWeight: '600', color: '#FFD666', marginBottom: 4 },
   featureList: { marginTop: 28, alignSelf: 'stretch', gap: 12 },
   featureLine: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 8 },
   featureDot: { width: 8, height: 8, borderRadius: 4 },
@@ -625,7 +626,7 @@ function PhoneStep({ onContinue, onBack, lang }) {
   return (
     <View style={g.stepWrap}>
       <FloatingOrbs />
-      <StepHeader icon="call-outline" iconColor="#FF6B00" title={T.phoneTitle} subtitle={T.phoneSubtitle} />
+      <StepHeader icon="call-outline" iconColor="#FFB800" title={T.phoneTitle} subtitle={T.phoneSubtitle} />
 
       <Animated.View entering={FadeInUp.delay(200).duration(500)} style={{ marginTop: 32 }}>
         <AnimatedBorderCard>
@@ -633,7 +634,7 @@ function PhoneStep({ onContinue, onBack, lang }) {
 
           {/* Country code label — separate row, no overlap */}
           <View style={ps.countryRow}>
-            <LinearGradient colors={['rgba(255,107,0,0.15)', 'rgba(224,64,251,0.08)']} style={ps.countryBadge} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <LinearGradient colors={['rgba(255,184,0,0.15)', 'rgba(180,122,255,0.08)']} style={ps.countryBadge} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
               <Text style={ps.flagText}>{'\uD83C\uDDF1\uD83C\uDDF0'}</Text>
               <Text style={ps.countryCode}>Sri Lanka  +94</Text>
             </LinearGradient>
@@ -642,7 +643,7 @@ function PhoneStep({ onContinue, onBack, lang }) {
           {/* Phone input — full-width, no prefix competition */}
           <Animated.View style={shimmerBorder}>
             <LinearGradient
-              colors={['#FF6B00', '#E040FB', '#9333EA', '#FF6B00']}
+              colors={['#FFB800', '#D186FF', '#B47AFF', '#FFB800']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               style={ps.inputGlow}
             >
@@ -656,7 +657,7 @@ function PhoneStep({ onContinue, onBack, lang }) {
                   value={phone}
                   onChangeText={function (t) { setPhone(t); setError(''); }}
                   maxLength={12}
-                  selectionColor="#FF6B00"
+                  selectionColor="#FFB800"
                 />
               </View>
             </LinearGradient>
@@ -678,9 +679,9 @@ function PhoneStep({ onContinue, onBack, lang }) {
 
 var ps = StyleSheet.create({
   countryRow: { marginTop: 4, marginBottom: 12, alignSelf: 'flex-start' },
-  countryBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,107,0,0.2)' },
+  countryBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,184,0,0.2)' },
   flagText: { fontSize: 16 },
-  countryCode: { color: '#FF8C33', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
+  countryCode: { color: '#FFD666', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
   inputGlow: { borderRadius: 16, padding: 1.5 },
   inputInner: { backgroundColor: 'rgba(4,3,12,0.9)', borderRadius: 15 },
   input: { paddingHorizontal: 18, paddingVertical: 16, color: '#FFF', fontSize: 20, fontWeight: '700', letterSpacing: 2 },
@@ -751,7 +752,7 @@ function OtpStep({ phone, referenceNo, onContinue, onBack, lang }) {
   return (
     <View style={g.stepWrap}>
       <FloatingOrbs />
-      <StepHeader icon="shield-checkmark-outline" iconColor="#FBBF24" title={T.otpTitle} subtitle={T.otpSubtitle + ' ' + maskedPhone} />
+      <StepHeader icon="shield-checkmark-outline" iconColor="#FFB800" title={T.otpTitle} subtitle={T.otpSubtitle + ' ' + maskedPhone} />
 
       <Animated.View entering={FadeInUp.delay(200).duration(500)} style={{ marginTop: 28 }}>
         {devOtp ? (
@@ -777,14 +778,14 @@ function OtpStep({ phone, referenceNo, onContinue, onBack, lang }) {
             value={otp}
             onChangeText={function (t) { setOtp(t); setError(''); }}
             maxLength={6}
-            selectionColor="#FBBF24"
+            selectionColor="#FFB800"
           />
           {error ? <Text style={g.error}>{error}</Text> : null}
         </AnimatedBorderCard>
 
         <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16 }}>
           <TouchableOpacity onPress={handleResend} style={os.resendBtn}>
-            <Ionicons name="refresh" size={15} color="#FF8C33" />
+            <Ionicons name="refresh" size={15} color="#FFD666" />
             <Text style={os.resendText}>{T.otpResend}</Text>
           </TouchableOpacity>
         </View>
@@ -801,9 +802,9 @@ function OtpStep({ phone, referenceNo, onContinue, onBack, lang }) {
 }
 
 var os = StyleSheet.create({
-  input: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 18, color: '#FBBF24', fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: 12, borderWidth: 1.5, borderColor: 'rgba(251,191,36,0.2)', marginTop: 12 },
+  input: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 18, color: '#FFB800', fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: 12, borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.2)', marginTop: 12 },
   resendBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 16 },
-  resendText: { color: '#FF8C33', fontSize: 13, fontWeight: '600' },
+  resendText: { color: '#FFD666', fontSize: 13, fontWeight: '600' },
   devBox: { backgroundColor: 'rgba(0,255,100,0.08)', borderRadius: 14, padding: 14, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,255,100,0.2)' },
   devLabel: { color: 'rgba(0,255,100,0.7)', fontSize: 11 },
   devCode: { color: '#00FF64', fontSize: 30, fontWeight: '800', letterSpacing: 8, marginTop: 4 },
@@ -829,12 +830,12 @@ function SubscriptionStep({ onContinue, lang }) {
   });
 
   var features = [
-    { icon: 'calendar-outline', text: T.subFeature1, color: '#FF6B00' },
-    { icon: 'planet-outline', text: T.subFeature2, color: '#E040FB' },
+    { icon: 'calendar-outline', text: T.subFeature1, color: '#FFB800' },
+    { icon: 'planet-outline', text: T.subFeature2, color: '#D186FF' },
     { icon: 'heart-outline', text: T.subFeature3, color: '#FF4081' },
-    { icon: 'sparkles-outline', text: T.subFeature4, color: '#FBBF24' },
+    { icon: 'sparkles-outline', text: T.subFeature4, color: '#FFB800' },
     { icon: 'notifications-outline', text: T.subFeature5, color: '#06D6A0' },
-    { icon: 'star-outline', text: T.subFeature6, color: '#FF8C33' },
+    { icon: 'star-outline', text: T.subFeature6, color: '#FFD666' },
   ];
 
   var handleSub = async function () {
@@ -850,17 +851,29 @@ function SubscriptionStep({ onContinue, lang }) {
   return (
     <ScrollView contentContainerStyle={g.stepWrap} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ backgroundColor: 'transparent' }} bounces={false} overScrollMode="never">
       <FloatingOrbs />
-      <StepHeader icon="diamond-outline" iconColor="#FBBF24" title={T.subTitle} subtitle={T.subSubtitle} />
+      <StepHeader icon="diamond-outline" iconColor="#FFB800" title={T.subTitle} subtitle={T.subSubtitle} />
 
       <Animated.View entering={FadeInUp.delay(200).duration(500)} style={{ marginTop: 20 }}>
+        {/* Comparison Table: Free vs Premium */}
         <AnimatedBorderCard>
+          <View style={ss.compareHeader}>
+            <View style={{ flex: 2 }} />
+            <Text style={ss.compareColLabel}>{lang === 'si' ? 'නොමිලේ' : 'Free'}</Text>
+            <Text style={[ss.compareColLabel, { color: '#FFB800' }]}>Premium</Text>
+          </View>
           {features.map(function (f, i) {
             return (
-              <Animated.View key={i} entering={FadeInDown.delay(300 + i * 80).duration(300)} style={ss.featureRow}>
-                <LinearGradient colors={[f.color + '20', f.color + '08']} style={ss.featureIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                  <Ionicons name={f.icon} size={18} color={f.color} />
-                </LinearGradient>
-                <Text style={ss.featureText}>{f.text}</Text>
+              <Animated.View key={i} entering={FadeInDown.delay(300 + i * 60).duration(300)} style={ss.compareRow}>
+                <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Ionicons name={f.icon} size={16} color={f.color} />
+                  <Text style={ss.featureText}>{f.text}</Text>
+                </View>
+                <View style={ss.compareCell}>
+                  <Ionicons name={i < 2 ? 'remove-outline' : 'close'} size={14} color="rgba(255,255,255,0.25)" />
+                </View>
+                <View style={ss.compareCell}>
+                  <Ionicons name="checkmark" size={16} color="#34D399" />
+                </View>
               </Animated.View>
             );
           })}
@@ -868,7 +881,7 @@ function SubscriptionStep({ onContinue, lang }) {
 
         <Animated.View entering={FadeInUp.delay(700).duration(500)} style={[ss.priceBadge, priceStyle]}>
           <LinearGradient
-            colors={['rgba(255,107,0,0.2)', 'rgba(224,64,251,0.12)', 'rgba(251,191,36,0.1)']}
+            colors={['rgba(255,184,0,0.2)', 'rgba(180,122,255,0.12)', 'rgba(255,184,0,0.1)']}
             style={ss.priceGrad}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           >
@@ -890,13 +903,15 @@ function SubscriptionStep({ onContinue, lang }) {
 }
 
 var ss = StyleSheet.create({
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 10 },
-  featureIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  featureText: { color: 'rgba(255,255,255,0.85)', fontSize: 14, flex: 1, lineHeight: 20 },
-  priceBadge: { marginTop: 20, borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,107,0,0.25)', alignSelf: 'center' },
+  compareHeader: { flexDirection: 'row', alignItems: 'center', paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)', marginBottom: 4 },
+  compareColLabel: { width: 56, textAlign: 'center', fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 0.5 },
+  compareRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' },
+  compareCell: { width: 56, alignItems: 'center' },
+  featureText: { color: 'rgba(255,255,255,0.85)', fontSize: 13, flex: 1, lineHeight: 18 },
+  priceBadge: { marginTop: 20, borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.25)', alignSelf: 'center' },
   priceGrad: { flexDirection: 'row', alignItems: 'baseline', paddingVertical: 14, paddingHorizontal: 32, gap: 4 },
   priceLabel: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.5)' },
-  priceAmount: { fontSize: 42, fontWeight: '900', color: '#FBBF24', textShadowColor: 'rgba(255,107,0,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
+  priceAmount: { fontSize: 42, fontWeight: '900', color: '#FFB800', textShadowColor: 'rgba(255,184,0,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
   pricePer: { fontSize: 14, color: 'rgba(255,255,255,0.5)', marginLeft: 2 },
 });
 
@@ -981,7 +996,7 @@ function BirthDataStep({ onComplete, lang }) {
   var renderNamePage = function () {
     return (
       <Animated.View key="name" entering={FadeIn.duration(300)}>
-        <StepHeader icon="person-circle-outline" iconColor="#FBBF24" title={T.nameTitle} subtitle={T.nameSubtitle} />
+        <StepHeader icon="person-circle-outline" iconColor="#FFB800" title={T.nameTitle} subtitle={T.nameSubtitle} />
         <GlowCard style={{ marginTop: 24 }}>
           <Text style={g.inputLabel}>{T.nameLabel}</Text>
           <TextInput
@@ -991,7 +1006,7 @@ function BirthDataStep({ onComplete, lang }) {
             value={displayName}
             onChangeText={function (t) { setDisplayName(t); setError(''); }}
             autoFocus
-            selectionColor="#FF6B00"
+            selectionColor="#FFB800"
           />
           {error && page === 0 ? <Text style={g.error}>{error}</Text> : null}
         </GlowCard>
@@ -1011,17 +1026,17 @@ function BirthDataStep({ onComplete, lang }) {
   var renderDatePage = function () {
     return (
       <Animated.View key="date" entering={FadeIn.duration(300)}>
-        <StepHeader icon="calendar-outline" iconColor="#E040FB" title={T.dateTitle} subtitle={T.dateSubtitle} />
+        <StepHeader icon="calendar-outline" iconColor="#D186FF" title={T.dateTitle} subtitle={T.dateSubtitle} />
 
         <GlowCard style={{ marginTop: 20 }}>
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <View style={{ flex: 1 }}>
               <Text style={g.inputLabel}>{T.yearLabel}</Text>
-              <TextInput style={g.textInput} placeholder={T.yearPlaceholder} placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={year} onChangeText={setYear} maxLength={4} selectionColor="#FF6B00" />
+              <TextInput style={g.textInput} placeholder={T.yearPlaceholder} placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={year} onChangeText={setYear} maxLength={4} selectionColor="#FFB800" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={g.inputLabel}>{T.dayLabel}</Text>
-              <TextInput style={g.textInput} placeholder={T.dayPlaceholder} placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={day} onChangeText={setDay} maxLength={2} selectionColor="#FF6B00" />
+              <TextInput style={g.textInput} placeholder={T.dayPlaceholder} placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={day} onChangeText={setDay} maxLength={2} selectionColor="#FFB800" />
             </View>
           </View>
 
@@ -1039,6 +1054,17 @@ function BirthDataStep({ onComplete, lang }) {
         </GlowCard>
 
         <Text style={[g.hint, { marginTop: 10 }]}>{'\uD83D\uDCA1'} {T.dateHint}</Text>
+
+        {/* Chart preview teaser */}
+        {year && month !== null && day ? (
+          <Animated.View entering={FadeInDown.duration(400)} style={bd.chartPreview}>
+            <LinearGradient colors={['rgba(180,122,255,0.12)', 'rgba(180,122,255,0.04)']} style={StyleSheet.absoluteFill} />
+            <Text style={bd.chartPreviewIcon}>🪐</Text>
+            <Text style={bd.chartPreviewText}>
+              {lang === 'si' ? 'ඔබේ කේන්දරය ගණනය කිරීමට සූදානම්...' : 'Ready to calculate your chart...'}
+            </Text>
+          </Animated.View>
+        ) : null}
 
         <View style={bd.navRow}>
           <TouchableOpacity onPress={function () { setPage(0); }} style={bd.backBtn}>
@@ -1065,7 +1091,7 @@ function BirthDataStep({ onComplete, lang }) {
               <Text style={g.inputLabel}>{T.hourLabel}</Text>
               <TextInput style={[g.textInput, { textAlign: 'center', fontSize: 24, fontWeight: '700' }]} placeholder="12" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={hour} onChangeText={setHour} maxLength={2} selectionColor="#06B6D4" />
             </View>
-            <Text style={{ color: '#FBBF24', fontSize: 32, fontWeight: '800', marginTop: 16 }}>:</Text>
+            <Text style={{ color: '#FFB800', fontSize: 32, fontWeight: '800', marginTop: 16 }}>:</Text>
             <View style={{ flex: 1 }}>
               <Text style={g.inputLabel}>{T.minuteLabel}</Text>
               <TextInput style={[g.textInput, { textAlign: 'center', fontSize: 24, fontWeight: '700' }]} placeholder="00" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={minute} onChangeText={setMinute} maxLength={2} selectionColor="#06B6D4" />
@@ -1120,12 +1146,12 @@ function BirthDataStep({ onComplete, lang }) {
               return (
                 <TouchableOpacity key={i} style={[bd.cityItem, isSel && bd.citySel]} onPress={function () { setSelectedCity(city); }} activeOpacity={0.7}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[bd.cityName, isSel && { color: '#FBBF24' }]}>
+                    <Text style={[bd.cityName, isSel && { color: '#FFB800' }]}>
                       {lang === 'si' ? city.si : city.name}
                     </Text>
                     <Text style={bd.citySub}>{lang === 'si' ? city.name : city.si}</Text>
                   </View>
-                  {isSel ? <Ionicons name="checkmark-circle" size={22} color="#FBBF24" /> : null}
+                  {isSel ? <Ionicons name="checkmark-circle" size={22} color="#FFB800" /> : null}
                 </TouchableOpacity>
               );
             })}
@@ -1144,6 +1170,9 @@ function BirthDataStep({ onComplete, lang }) {
           </View>
         </View>
         <GhostButton label={T.skipBirth} onPress={handleSubmit} />
+        <Text style={[g.hint, { marginTop: 2 }]}>
+          {lang === 'si' ? 'පසුව Profile තුළ එක් කළ හැක' : 'You can add this later in Profile'}
+        </Text>
       </Animated.View>
     );
   };
@@ -1163,25 +1192,28 @@ var bd = StyleSheet.create({
   progressRow: { flexDirection: 'row', gap: 8, marginBottom: 24 },
   progressItem: { flex: 1, alignItems: 'center' },
   progressLine: { width: '100%', height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 6 },
-  progressLineActive: { backgroundColor: 'rgba(255,107,0,0.5)' },
-  progressLineCurrent: { backgroundColor: '#FF6B00' },
+  progressLineActive: { backgroundColor: 'rgba(255,184,0,0.5)' },
+  progressLineCurrent: { backgroundColor: '#FFB800' },
   progressLabel: { fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  progressLabelActive: { color: '#FF8C33' },
+  progressLabelActive: { color: '#FFD666' },
   monthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
   monthChip: { width: (SW - 24 * 2 - 40 - 8 * 3) / 4, paddingVertical: 11, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  monthChipSel: { backgroundColor: 'rgba(255,107,0,0.15)', borderColor: '#FF6B00' },
+  monthChipSel: { backgroundColor: 'rgba(255,184,0,0.15)', borderColor: '#FFB800' },
   monthText: { color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '600' },
-  monthTextSel: { color: '#FF8C33', fontWeight: '700' },
+  monthTextSel: { color: '#FFD666', fontWeight: '700' },
   ampmRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 18, gap: 14 },
   ampmBtn: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  ampmSel: { backgroundColor: 'rgba(255,107,0,0.15)', borderColor: '#FF6B00' },
+  ampmSel: { backgroundColor: 'rgba(255,184,0,0.15)', borderColor: '#FFB800' },
   ampmText: { color: 'rgba(255,255,255,0.5)', fontSize: 17, fontWeight: '700' },
-  ampmTextSel: { color: '#FF8C33' },
+  ampmTextSel: { color: '#FFD666' },
   cityList: { maxHeight: 200 },
   cityItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', marginBottom: 6, borderWidth: 1, borderColor: 'transparent' },
-  citySel: { backgroundColor: 'rgba(255,107,0,0.1)', borderColor: 'rgba(255,107,0,0.3)' },
+  citySel: { backgroundColor: 'rgba(255,184,0,0.1)', borderColor: 'rgba(255,184,0,0.3)' },
   cityName: { color: '#FFF', fontSize: 15, fontWeight: '600' },
   citySub: { color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 2 },
+  chartPreview: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 14, marginTop: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(180,122,255,0.15)' },
+  chartPreviewIcon: { fontSize: 24 },
+  chartPreviewText: { color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '500', fontStyle: 'italic', flex: 1 },
   navRow: { flexDirection: 'row', alignItems: 'center', marginTop: 24, gap: 12 },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 14, paddingHorizontal: 6 },
   backText: { color: 'rgba(255,255,255,0.5)', fontSize: 14, fontWeight: '500' },
@@ -1232,8 +1264,8 @@ function CompleteStep({ lang }) {
       <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center' }}>
         <View style={{ width: 120, height: 120, alignItems: 'center', justifyContent: 'center' }}>
           {/* Pulsing rings */}
-          <Animated.View style={[{ position: 'absolute', width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: '#FF6B00' }, ringStyle]} />
-          <Animated.View style={[{ position: 'absolute', width: 100, height: 100, borderRadius: 50, borderWidth: 1.5, borderColor: '#E040FB' }, ringStyle]} />
+          <Animated.View style={[{ position: 'absolute', width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: '#FFB800' }, ringStyle]} />
+          <Animated.View style={[{ position: 'absolute', width: 100, height: 100, borderRadius: 50, borderWidth: 1.5, borderColor: '#D186FF' }, ringStyle]} />
           {/* Confetti particles */}
           <Animated.Text style={[{ position: 'absolute', fontSize: 14 }, c1]}>{'\u2728'}</Animated.Text>
           <Animated.Text style={[{ position: 'absolute', fontSize: 12 }, c2]}>{'\uD83C\uDF1F'}</Animated.Text>
@@ -1242,11 +1274,11 @@ function CompleteStep({ lang }) {
           <Animated.Text style={[{ fontSize: 56 }, starStyle]}>{'\uD83C\uDF1F'}</Animated.Text>
         </View>
 
-        <Text style={[g.headerTitle, { fontSize: 28, marginTop: 16, color: '#FBBF24', textShadowColor: 'rgba(255,107,0,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16 }]}>{T.completeTitle}</Text>
-        <Text style={[g.headerSub, { color: '#FF8C33' }]}>{T.completeSubtitle}</Text>
+        <Text style={[g.headerTitle, { fontSize: 28, marginTop: 16, color: '#FFB800', textShadowColor: 'rgba(255,184,0,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16 }]}>{T.completeTitle}</Text>
+        <Text style={[g.headerSub, { color: '#FFD666' }]}>{T.completeSubtitle}</Text>
 
         <View style={{ marginTop: 32, alignItems: 'center' }}>
-          <CosmicLoader size={56} color="#FF6B00" text={T.completeLoading} textColor="#FF8C33" />
+          <CosmicLoader size={56} color="#FFB800" text={T.completeLoading} textColor="#FFD666" />
         </View>
       </Animated.View>
     </View>
@@ -1291,14 +1323,14 @@ export default function OnboardingScreen() {
     <CosmicBackground>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: '#030014', overflow: 'hidden' }}
+        style={{ flex: 1, backgroundColor: '#020010', overflow: 'hidden' }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <View style={{ flex: 1, paddingTop: insets.top + 8, paddingBottom: Math.max(insets.bottom, 12), overflow: 'hidden' }}>
           {step >= 0 ? (
             <View style={{ paddingHorizontal: 24, paddingTop: 4 }}>
-              <StepDots current={step} total={TOTAL_MAIN_STEPS} />
+              <StepProgressBar current={step} total={TOTAL_MAIN_STEPS} lang={lang} />
             </View>
           ) : null}
           {renderStep()}
@@ -1316,18 +1348,18 @@ export default function OnboardingScreen() {
 var g = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 20 },
   stepWrap: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 20 },
-  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 4 },
-  dot: { width: 8, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.1)' },
-  dotActive: { backgroundColor: 'rgba(255,107,0,0.4)', width: 8 },
-  dotCurrent: { backgroundColor: '#FF6B00', width: 20 },
+  progressWrap: { marginBottom: 8 },
+  progressTrack: { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 2 },
+  progressLabel: { fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: '600', textAlign: 'center', marginTop: 6, letterSpacing: 0.5 },
   headerWrap: { alignItems: 'center', marginBottom: 4 },
-  headerIconBg: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,107,0,0.08)', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1 },
+  headerIconBg: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(180,122,255,0.08)', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1 },
   headerTitle: { fontSize: 24, fontWeight: '800', color: '#FFF', textAlign: 'center', lineHeight: 30 },
   headerSub: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 6, lineHeight: 20 },
-  card: { backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(255,107,0,0.08)' },
+  card: { backgroundColor: 'rgba(20,12,50,0.55)', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   inputLabel: { color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '700', marginBottom: 8, letterSpacing: 1.2, textTransform: 'uppercase' },
   textInput: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 15 : 13, color: '#FFF', fontSize: 16, fontWeight: '500', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  primaryBtn: { borderRadius: 16, overflow: 'hidden', shadowColor: '#FF6B00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 10 },
+  primaryBtn: { borderRadius: 16, overflow: 'hidden', shadowColor: 'rgba(255,184,0,0.40)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 14, elevation: 10 },
   primaryGrad: { paddingVertical: 16, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
   primaryText: { fontSize: 16, fontWeight: '800', color: '#FFF', letterSpacing: 0.5 },
   ghostBtn: { alignItems: 'center', paddingVertical: 14, marginTop: 8 },

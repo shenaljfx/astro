@@ -32,9 +32,9 @@ import api from '../../services/api';
 // ──────────────────────────────────────────
 var SECTION_META = {
   personality:      { colors: ['#3B82F6', '#1E3A8A'], emoji: '✨', gradient: ['#818CF8', '#3B82F6'] },
-  yogaAnalysis:     { colors: ['#9333EA', '#581C87'], emoji: '⚡', gradient: ['#C084FC', '#9333EA'] },
+  yogaAnalysis:     { colors: ['#9333EA', '#581C87'], emoji: '⚡', gradient: ['#B47AFF', '#9333EA'] },
   lifePredictions:  { colors: ['#8B5CF6', '#4C1D95'], emoji: '🔮', gradient: ['#A78BFA', '#8B5CF6'] },
-  career:           { colors: ['#F59E0B', '#92400E'], emoji: '💼', gradient: ['#FBBF24', '#F59E0B'] },
+  career:           { colors: ['#F59E0B', '#92400E'], emoji: '💼', gradient: ['#FFB800', '#F59E0B'] },
   marriage:         { colors: ['#EC4899', '#831843'], emoji: '💍', gradient: ['#F9A8D4', '#EC4899'] },
   marriedLife:      { colors: ['#E11D48', '#881337'], emoji: '🏠', gradient: ['#FDA4AF', '#E11D48'] },
   financial:        { colors: ['#22C55E', '#14532D'], emoji: '💰', gradient: ['#4ADE80', '#22C55E'] },
@@ -44,14 +44,14 @@ var SECTION_META = {
   mentalHealth:     { colors: ['#06B6D4', '#0E7490'], emoji: '🧠', gradient: ['#67E8F9', '#06B6D4'] },
   foreignTravel:    { colors: ['#6366F1', '#312E81'], emoji: '✈️', gradient: ['#A5B4FC', '#6366F1'] },
   education:        { colors: ['#7C3AED', '#4C1D95'], emoji: '🎓', gradient: ['#A78BFA', '#7C3AED'] },
-  luck:             { colors: ['#FBBF24', '#78350F'], emoji: '🎰', gradient: ['#FDE68A', '#FBBF24'] },
+  luck:             { colors: ['#FFB800', '#78350F'], emoji: '🎰', gradient: ['#FDE68A', '#FFB800'] },
   legal:            { colors: ['#64748B', '#1E293B'], emoji: '⚖️', gradient: ['#94A3B8', '#64748B'] },
   spiritual:        { colors: ['#A855F7', '#581C87'], emoji: '🙏', gradient: ['#D8B4FE', '#A855F7'] },
   realEstate:       { colors: ['#84CC16', '#365314'], emoji: '🏡', gradient: ['#BEF264', '#84CC16'] },
   transits:         { colors: ['#14B8A6', '#134E4A'], emoji: '🌍', gradient: ['#5EEAD4', '#14B8A6'] },
   surpriseInsights: { colors: ['#F97316', '#9A3412'], emoji: '🤯', gradient: ['#FDBA74', '#F97316'] },
   timeline25:       { colors: ['#6366F1', '#312E81'], emoji: '📅', gradient: ['#A5B4FC', '#6366F1'] },
-  remedies:         { colors: ['#FBBF24', '#78350F'], emoji: '💎', gradient: ['#FDE68A', '#FBBF24'] },
+  remedies:         { colors: ['#FFB800', '#78350F'], emoji: '💎', gradient: ['#FDE68A', '#FFB800'] },
 };
 
 var SECTION_KEYS = [
@@ -91,7 +91,7 @@ function AuraBox({ children, style }) {
   return (
     <View style={[gs.box, style]}>
       <LinearGradient
-        colors={['rgba(30, 20, 60, 0.5)', 'rgba(15, 10, 35, 0.6)']}
+        colors={['rgba(20, 12, 50, 0.55)', 'rgba(10, 6, 28, 0.65)']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         pointerEvents="none"
@@ -104,7 +104,7 @@ function AuraBox({ children, style }) {
 var gs = StyleSheet.create({
   box: {
     borderRadius: 20, overflow: 'hidden', borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.12)', padding: 16, marginBottom: 12,
+    borderColor: 'rgba(255, 184, 0, 0.10)', padding: 16, marginBottom: 12,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 10, elevation: 5,
   },
@@ -145,7 +145,7 @@ function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang }) {
               <Text style={sc.title} numberOfLines={2}>{title}</Text>
             </View>
             <View style={[sc.chevronBg, expanded && sc.chevronBgActive]}>
-              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={expanded ? '#C084FC' : 'rgba(255,255,255,0.4)'} />
+              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={expanded ? '#B47AFF' : 'rgba(255,255,255,0.4)'} />
             </View>
           </View>
           {/* Content — AI Narrative Only */}
@@ -169,7 +169,7 @@ var sc = StyleSheet.create({
   emoji: { fontSize: 22 },
   title: { color: '#F1F5F9', fontSize: 15, fontWeight: '700', lineHeight: 21 },
   chevronBg: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
-  chevronBgActive: { backgroundColor: 'rgba(147,51,234,0.15)' },
+  chevronBgActive: { backgroundColor: 'rgba(180,122,255,0.15)' },
   content: { paddingHorizontal: 16, paddingBottom: 16 },
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginBottom: 12 },
   narrativeWrap: {
@@ -268,7 +268,7 @@ function CosmicLoader({ progress, userName, language }) {
         {/* Center sun */}
         <Animated.View style={[cl.centerOrb, spinStyle]}>
           <LinearGradient
-            colors={['#FBBF24', '#F59E0B', '#D97706']}
+            colors={['#FFB800', '#F59E0B', '#D97706']}
             style={cl.centerGrad}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
@@ -306,7 +306,7 @@ function CosmicLoader({ progress, userName, language }) {
       <View style={cl.progressRow}>
         <View style={cl.progressBar}>
           <LinearGradient
-            colors={['#9333EA', '#FBBF24']}
+            colors={['#9333EA', '#FFB800']}
             style={[cl.progressFill, { width: ((stageIndex + 1) / stages.length * 100) + '%' }]}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
           />
@@ -320,10 +320,10 @@ function CosmicLoader({ progress, userName, language }) {
 var cl = StyleSheet.create({
   container: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20 },
   orbitContainer: { width: 200, height: 200, alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
-  glowCircle: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(251,191,36,0.15)' },
+  glowCircle: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,184,0,0.15)' },
   centerOrb: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', zIndex: 10 },
   centerGrad: { flex: 1, borderRadius: 20 },
-  orbitRing: { position: 'absolute', borderRadius: 999, borderWidth: 1, borderColor: 'rgba(147,51,234,0.15)', borderStyle: 'dashed' },
+  orbitRing: { position: 'absolute', borderRadius: 999, borderWidth: 1, borderColor: 'rgba(180,122,255,0.15)', borderStyle: 'dashed' },
   planet: { position: 'absolute', zIndex: 5 },
   planet1: {},
   planet2: {},
@@ -331,7 +331,7 @@ var cl = StyleSheet.create({
   textWrap: { alignItems: 'center', marginBottom: 20 },
   stageText: { color: '#F1F5F9', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
   stageSub: { color: '#94A3B8', fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  personalText: { color: '#C084FC', fontSize: 14, fontWeight: '600', textAlign: 'center', marginBottom: 24, fontStyle: 'italic' },
+  personalText: { color: '#B47AFF', fontSize: 14, fontWeight: '600', textAlign: 'center', marginBottom: 24, fontStyle: 'italic' },
   progressRow: { width: '100%', alignItems: 'center' },
   progressBar: { width: '80%', height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: 8 },
   progressFill: { height: '100%', borderRadius: 2 },
@@ -382,9 +382,9 @@ function TopUpModal({ visible, onClose, onTopUp, loading, language }) {
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
         <LinearGradient
           colors={['rgba(13,7,32,0.99)', 'rgba(4,3,12,1)']}
-          style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(147,51,234,0.3)' }}
+          style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(180,122,255,0.3)' }}
         >
-          <Text style={{ color: '#FBBF24', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
+          <Text style={{ color: '#FFB800', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
             {isSi ? '💳 ශේෂය රිචාජ්' : '💳 Top Up Balance'}
           </Text>
           <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
@@ -646,11 +646,11 @@ export default function ReportScreen() {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 28 }}>
           <Animated.View entering={FadeInDown.duration(500)} style={{ width: '100%', maxWidth: 380 }}>
             <LinearGradient
-              colors={['rgba(147,51,234,0.18)', 'rgba(4,3,12,0.96)']}
-              style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: 'rgba(147,51,234,0.3)' }}
+              colors={['rgba(180,122,255,0.18)', 'rgba(4,3,12,0.96)']}
+              style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: 'rgba(180,122,255,0.3)' }}
             >
               <Text style={{ fontSize: 38, textAlign: 'center', marginBottom: 12 }}>📜</Text>
-              <Text style={{ color: '#FBBF24', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 6, letterSpacing: 1 }}>
+              <Text style={{ color: '#FFB800', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 6, letterSpacing: 1 }}>
                 {reportLang === 'si' ? 'ජීවිත කතාව' : 'Full Life Report'}
               </Text>
               <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
@@ -658,11 +658,11 @@ export default function ReportScreen() {
               </Text>
 
               {/* Cost row */}
-              <View style={{ backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: 14, padding: 16, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ backgroundColor: 'rgba(255,184,0,0.08)', borderRadius: 14, padding: 16, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
                   {reportLang === 'si' ? 'ගෙවීම' : 'Charge'}
                 </Text>
-                <Text style={{ color: '#FBBF24', fontSize: 20, fontWeight: '800' }}>LKR 15</Text>
+                <Text style={{ color: '#FFB800', fontSize: 20, fontWeight: '800' }}>LKR 15</Text>
               </View>
 
               {/* Balance row */}
@@ -690,7 +690,7 @@ export default function ReportScreen() {
                   style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
                 >
                   <LinearGradient
-                    colors={['#FBBF24', '#F59E0B', '#9333EA']}
+                    colors={['#FFB800', '#F59E0B', '#9333EA']}
                     style={{ paddingVertical: 15, alignItems: 'center', borderRadius: 14 }}
                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                   >
@@ -777,12 +777,12 @@ export default function ReportScreen() {
           <Animated.View entering={FadeIn.delay(100).duration(400)}>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
               <SpringPressable style={[s.newReportBtn, { flex: 1, marginBottom: 0 }]} onPress={handleNewReport} haptic="medium">
-                <Ionicons name="refresh" size={16} color="#C084FC" style={{ marginRight: 6 }} />
+                <Ionicons name="refresh" size={16} color="#B47AFF" style={{ marginRight: 6 }} />
                 <Text style={s.newReportText}>{reportLang === 'si' ? 'අලුත් කතාවක්' : 'New Report'}</Text>
               </SpringPressable>
-              <SpringPressable style={[s.newReportBtn, { flex: 1, marginBottom: 0, borderColor: 'rgba(251,191,36,0.35)', backgroundColor: 'rgba(251,191,36,0.08)' }]} onPress={handleDownloadPDF} haptic="medium">
-                <Ionicons name="download-outline" size={16} color="#FBBF24" style={{ marginRight: 6 }} />
-                <Text style={[s.newReportText, { color: '#FBBF24' }]}>{reportLang === 'si' ? 'PDF බාගන්න' : 'Download PDF'}</Text>
+              <SpringPressable style={[s.newReportBtn, { flex: 1, marginBottom: 0, borderColor: 'rgba(255,184,0,0.35)', backgroundColor: 'rgba(255,184,0,0.08)' }]} onPress={handleDownloadPDF} haptic="medium">
+                <Ionicons name="download-outline" size={16} color="#FFB800" style={{ marginRight: 6 }} />
+                <Text style={[s.newReportText, { color: '#FFB800' }]}>{reportLang === 'si' ? 'PDF බාගන්න' : 'Download PDF'}</Text>
               </SpringPressable>
             </View>
           </Animated.View>
@@ -790,9 +790,9 @@ export default function ReportScreen() {
           {/* Birth Summary Header */}
           {report.birthData && (
             <Animated.View entering={FadeInDown.delay(150).duration(600)}>
-              <AuraBox style={{ borderColor: 'rgba(251,191,36,0.2)' }}>
+              <AuraBox style={{ borderColor: 'rgba(255,184,0,0.2)' }}>
                 <LinearGradient
-                  colors={['rgba(251,191,36,0.08)', 'transparent']}
+                  colors={['rgba(255,184,0,0.08)', 'transparent']}
                   style={StyleSheet.absoluteFill}
                   start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
                 />
@@ -833,7 +833,7 @@ export default function ReportScreen() {
           {/* Birth Chart (Sri Lankan Kendara) */}
           {chartData && chartData.rashiChart && (
             <Animated.View entering={FadeInDown.delay(250).duration(700)}>
-              <AuraBox style={{ borderColor: 'rgba(147,51,234,0.2)' }}>
+              <AuraBox style={{ borderColor: 'rgba(180,122,255,0.2)' }}>
                 <View style={s.chartHeader}>
                   <Text style={s.chartTitle}>{reportLang === 'si' ? '🏛️ ඔයාගේ උපන් සිතියම' : '🏛️ Your Birth Map'}</Text>
                   <Text style={s.chartSub}>{reportLang === 'si' ? 'ඔයා ඉපදුන මොහොතේ අහස පෙනුන හැටි' : 'How the sky looked the moment you were born'}</Text>
@@ -995,9 +995,9 @@ export default function ReportScreen() {
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Ionicons name="pricetag-outline" size={12} color="rgba(251,191,36,0.6)" />
-                <Text style={{ color: '#FBBF24', fontSize: 12, fontWeight: '700' }}>LKR 15</Text>
-                <TouchableOpacity onPress={function() { setShowTopUp(true); }} style={{ marginLeft: 8, backgroundColor: 'rgba(147,51,234,0.25)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 }}>
-                  <Text style={{ color: '#C084FC', fontSize: 11, fontWeight: '700' }}>
+                <Text style={{ color: '#FFB800', fontSize: 12, fontWeight: '700' }}>LKR 15</Text>
+                <TouchableOpacity onPress={function() { setShowTopUp(true); }} style={{ marginLeft: 8, backgroundColor: 'rgba(180,122,255,0.25)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 }}>
+                  <Text style={{ color: '#B47AFF', fontSize: 11, fontWeight: '700' }}>
                     {reportLang === 'si' ? 'රිචාජ්' : 'Top Up'}
                   </Text>
                 </TouchableOpacity>
@@ -1061,7 +1061,7 @@ var s = StyleSheet.create({
   generateGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14 },
   generateText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   errorText: { color: '#F87171', fontSize: 13, flex: 1 },
-  aiProgressText: { color: '#C084FC', fontSize: 14, fontWeight: '700' },
+  aiProgressText: { color: '#B47AFF', fontSize: 14, fontWeight: '700' },
   aiProgressSub: { color: '#64748B', fontSize: 11, marginTop: 4 },
   genderRow: { flexDirection: 'row', gap: 10, marginBottom: 16, marginTop: 6 },
   genderBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(24,30,72,0.4)' },
@@ -1072,21 +1072,21 @@ var s = StyleSheet.create({
   genderTextActive: { color: '#FFF' },
   langRow: { flexDirection: 'row', gap: 10, marginBottom: 16, marginTop: 6 },
   langBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(24,30,72,0.4)' },
-  langBtnActive: { borderColor: 'rgba(147,51,234,0.6)', backgroundColor: 'rgba(147,51,234,0.15)' },
+  langBtnActive: { borderColor: 'rgba(180,122,255,0.6)', backgroundColor: 'rgba(180,122,255,0.15)' },
   langFlag: { fontSize: 20 },
   langText: { color: '#64748B', fontSize: 14, fontWeight: '700' },
-  langTextActive: { color: '#C084FC' },
+  langTextActive: { color: '#B47AFF' },
   locationRow: { marginBottom: 16, marginTop: 4 },
   locationScroll: { flexGrow: 0 },
   locationChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(24,30,72,0.4)', marginRight: 8 },
-  locationChipActive: { borderColor: 'rgba(147,51,234,0.6)', backgroundColor: 'rgba(147,51,234,0.15)' },
+  locationChipActive: { borderColor: 'rgba(180,122,255,0.6)', backgroundColor: 'rgba(180,122,255,0.15)' },
   locationChipText: { color: '#64748B', fontSize: 12, fontWeight: '700' },
-  locationChipTextActive: { color: '#C084FC' },
-  newReportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginBottom: 12, backgroundColor: 'rgba(147,51,234,0.1)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(147,51,234,0.25)' },
-  newReportText: { color: '#C084FC', fontSize: 13, fontWeight: '700' },
+  locationChipTextActive: { color: '#B47AFF' },
+  newReportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginBottom: 12, backgroundColor: 'rgba(180,122,255,0.1)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(180,122,255,0.25)' },
+  newReportText: { color: '#B47AFF', fontSize: 13, fontWeight: '700' },
   birthHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  birthIconBg: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(251,191,36,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
-  birthLagna: { color: '#FBBF24', fontSize: 20, fontWeight: '900' },
+  birthIconBg: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,184,0,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  birthLagna: { color: '#FFB800', fontSize: 20, fontWeight: '900' },
   birthSinhala: { color: '#94A3B8', fontSize: 12, marginTop: 2 },
   birthSub: { color: '#64748B', fontSize: 11, marginTop: 2 },
   panchangaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },

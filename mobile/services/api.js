@@ -399,6 +399,44 @@ export var getChatQuota = function() {
   return request('/api/chat/quota');
 };
 
+// ─── Enhanced Prediction APIs (Tier 3-5) ──────────────────────────────────
+
+export var getEnhancedTransits = function(data) {
+  return request('/api/predictions/transit/enhanced', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var kpPredictEvent = function(data) {
+  return request('/api/predictions/kp/predict', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var kpPredictAll = function(data) {
+  return request('/api/predictions/kp/all', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var kpChartAnalysis = function(data) {
+  return request('/api/predictions/kp/chart', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getAnnualForecast = function(data) {
+  return request('/api/predictions/annual', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getConfidence = function(data) {
+  return request('/api/predictions/confidence', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getAllConfidences = function(data) {
+  return request('/api/predictions/confidence/all', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var recordFeedback = function(data) {
+  return request('/api/predictions/feedback/record', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getPendingFeedback = function() {
+  return request('/api/predictions/feedback/pending');
+};
+
 export default {
   getDailyNakath: getDailyNakath,
   getDailyHoroscope: getDailyHoroscope,
@@ -432,6 +470,7 @@ export default {
   renewSubscription: renewSubscription,
   // Predictions — Transit
   getCurrentTransits: getCurrentTransits,
+  getEnhancedTransits: getEnhancedTransits,
   getDailyTransitForecast: getDailyTransitForecast,
   getWeeklyTransitForecast: getWeeklyTransitForecast,
   getMonthlyTransitForecast: getMonthlyTransitForecast,
@@ -440,6 +479,15 @@ export default {
   // Predictions — Event Timing
   predictEventTiming: predictEventTiming,
   predictAllEventTiming: predictAllEventTiming,
+  // Predictions — KP System
+  kpPredictEvent: kpPredictEvent,
+  kpPredictAll: kpPredictAll,
+  kpChartAnalysis: kpChartAnalysis,
+  // Predictions — Annual Forecast
+  getAnnualForecast: getAnnualForecast,
+  // Predictions — Confidence
+  getConfidence: getConfidence,
+  getAllConfidences: getAllConfidences,
   // Predictions — Muhurtha
   scoreMuhurtha: scoreMuhurtha,
   findBestMuhurtha: findBestMuhurtha,
@@ -448,6 +496,9 @@ export default {
   getMuhurthaActivities: getMuhurthaActivities,
   // Predictions — Health
   analyzeHealth: analyzeHealth,
+  // Predictions — Feedback
+  recordFeedback: recordFeedback,
+  getPendingFeedback: getPendingFeedback,
   // Tokens / Micro-transactions
   getTokenBalance: getTokenBalance,
   topUpTokens: topUpTokens,

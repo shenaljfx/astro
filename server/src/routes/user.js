@@ -90,29 +90,10 @@ router.put('/birth-data', requireAuth, async (req, res) => {
     const existingUser = await getUser(uid);
     const existingBirth = existingUser?.birthData;
 
-    // If user already has birth data, enforce once-per-day limit
-    if (existingBirth && existingBirth.dateTime && !force) {
-      const lastUpdated = existingUser.updatedAt || existingUser.createdAt;
-      if (lastUpdated) {
-        const lastDate = new Date(lastUpdated);
-        const now = new Date();
-        const sameDay = lastDate.getUTCFullYear() === now.getUTCFullYear()
-          && lastDate.getUTCMonth() === now.getUTCMonth()
-          && lastDate.getUTCDate() === now.getUTCDate();
-
-        // If birth data is the same, just return success without updating
-        if (existingBirth.dateTime === dateTime) {
-          return res.json({ success: true, message: 'Birth data unchanged' });
-        }
-
-        if (sameDay) {
-          return res.status(429).json({
-            error: 'Birth time can only be updated once per day. Try again tomorrow.',
-            errorSi: 'උපන් වේලාව දිනකට එක් වරක් පමණක් යාවත්කාලීන කළ හැකිය. හෙට නැවත උත්සාහ කරන්න.',
-            code: 'BIRTH_UPDATE_LIMIT',
-          });
-        }
-      }
+    // If birth data is the same, just return success without updating
+    if (existingBirth && existingBirth.dateTime === dateTime
+        && existingBirth.lat == lat && existingBirth.lng == lng) {
+      return res.json({ success: true, message: 'Birth data unchanged' });
     }
 
     await updateBirthData(uid, {

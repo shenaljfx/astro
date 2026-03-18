@@ -64,7 +64,7 @@ function BirthMandala({ lagnaIndex, moonIndex, size }) {
   var glowStyle = useAnimatedStyle(function () { return { opacity: pulse.value }; });
 
   var r = size / 2;
-  var palette = ['#9333EA','#C084FC','#FBBF24','#F59E0B','#34D399','#4CC9F0','#FF6B9D','#A78BFA'];
+  var palette = ['#9333EA','#B47AFF','#FFB800','#F59E0B','#34D399','#4CC9F0','#FF6B9D','#A78BFA'];
   var lc = palette[lagnaIndex % palette.length];
   var mc = palette[moonIndex  % palette.length];
   var petals = [];
@@ -116,18 +116,18 @@ function BirthMandala({ lagnaIndex, moonIndex, size }) {
 //  GLASS CARD
 // ─────────────────────────────────────────────────────────────────────
 function GCard({ children, style, accent }) {
-  var ac = accent || '#9333EA';
+  var ac = accent || '#B47AFF';
   return (
-    <View style={[gc.card, { borderColor: ac + '35' }, style]}>
-      <LinearGradient colors={['rgba(6,3,18,0.95)', 'rgba(4,2,14,0.98)']} style={StyleSheet.absoluteFill} />
-      <LinearGradient colors={[ac + '22', ac + '0A']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-      <LinearGradient colors={['rgba(255,255,255,0.06)','transparent']} style={{ position:'absolute',top:0,left:0,right:0,height:'45%',borderTopLeftRadius:22,borderTopRightRadius:22 }} />
+    <View style={[gc.card, { borderColor: ac + '30' }, style]}>
+      <LinearGradient colors={['rgba(20,12,50,0.65)', 'rgba(10,6,28,0.75)']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[ac + '18', ac + '06']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <LinearGradient colors={['rgba(255,255,255,0.04)','transparent']} style={{ position:'absolute',top:0,left:0,right:0,height:'45%',borderTopLeftRadius:22,borderTopRightRadius:22 }} />
       <View style={gc.inner}>{children}</View>
     </View>
   );
 }
 var gc = StyleSheet.create({
-  card:  { borderRadius: 22, overflow: 'hidden', borderWidth: 1, marginBottom: 14, shadowColor: '#9333EA', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 14, elevation: 6 },
+  card:  { borderRadius: 22, overflow: 'hidden', borderWidth: 1, marginBottom: 14, shadowColor: 'rgba(180,122,255,0.20)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 14, elevation: 6 },
   inner: { padding: 18 },
 });
 
@@ -192,7 +192,7 @@ function LangPicker({ language, onSwitch }) {
         var active = language === l.key;
         return (
           <TouchableOpacity key={l.key} style={[lp.pill, active && lp.pillActive]} onPress={function () { onSwitch(l.key); }} activeOpacity={0.8}>
-            {active && <LinearGradient colors={['rgba(147,51,234,0.75)','rgba(99,102,241,0.75)']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />}
+            {active && <LinearGradient colors={['rgba(180,122,255,0.75)','rgba(99,102,241,0.75)']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />}
             <Text style={lp.flag}>{l.flag}</Text>
             <Text style={[lp.text, active && lp.textActive]}>{l.label}</Text>
           </TouchableOpacity>
@@ -204,7 +204,7 @@ function LangPicker({ language, onSwitch }) {
 var lp = StyleSheet.create({
   wrap:       { flexDirection: 'row', gap: 10 },
   pill:       { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 14, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  pillActive: { borderColor: 'rgba(147,51,234,0.45)' },
+  pillActive: { borderColor: 'rgba(180,122,255,0.45)' },
   flag:       { fontSize: 18 },
   text:       { fontSize: 14, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
   textActive: { color: '#fff', fontWeight: '800' },
@@ -314,14 +314,14 @@ var af = StyleSheet.create({
   iconRing:  { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 14, borderWidth: 2, borderColor: 'rgba(196,132,252,0.35)' },
   title:     { fontSize: 22, fontWeight: '900', color: '#fff', marginBottom: 6 },
   sub:       { fontSize: 13, color: 'rgba(255,255,255,0.42)', textAlign: 'center', lineHeight: 19 },
-  input:     { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 16, color: '#fff', fontSize: 17, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(147,51,234,0.22)' },
+  input:     { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 16, color: '#fff', fontSize: 17, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(180,122,255,0.22)' },
   btn:       { borderRadius: 16, paddingVertical: 16, alignItems: 'center', overflow: 'hidden', marginTop: 4, marginBottom: 4 },
   btnText:   { color: '#fff', fontSize: 16, fontWeight: '800' },
   error:     { color: '#F87171', fontSize: 13, textAlign: 'center', marginBottom: 10 },
   back:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
   backText:  { color: '#A78BFA', fontSize: 13, fontWeight: '600' },
-  devBanner: { backgroundColor: 'rgba(251,191,36,0.12)', padding: 10, borderRadius: 12, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(251,191,36,0.2)' },
-  devText:   { color: '#FBBF24', fontSize: 12, fontWeight: '600' },
+  devBanner: { backgroundColor: 'rgba(255,184,0,0.12)', padding: 10, borderRadius: 12, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,184,0,0.2)' },
+  devText:   { color: '#FFB800', fontSize: 12, fontWeight: '600' },
 });
 
 // ─────────────────────────────────────────────────────────────────────
@@ -493,7 +493,7 @@ var bf = StyleSheet.create({
 });
 var cm = StyleSheet.create({
   overlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
-  sheet:        { backgroundColor: '#0A0618', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: SH * 0.72, borderWidth: 1, borderColor: 'rgba(147,51,234,0.3)', borderBottomWidth: 0, paddingTop: 10 },
+  sheet:        { backgroundColor: '#0A0618', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: SH * 0.72, borderWidth: 1, borderColor: 'rgba(180,122,255,0.3)', borderBottomWidth: 0, paddingTop: 10 },
   handle:       { width: 36, height: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 2, alignSelf: 'center', marginBottom: 14 },
   header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
   title:        { fontSize: 17, fontWeight: '800', color: '#fff' },
@@ -521,7 +521,7 @@ function ProfileScreen() {
     return (
       <CosmicBackground>
         <View style={s.centered}>
-          <CosmicLoader size={56} color="#C084FC" text={t('loading')} textColor="#C084FC" />
+          <CosmicLoader size={56} color="#B47AFF" text={t('loading')} textColor="#B47AFF" />
         </View>
       </CosmicBackground>
     );
@@ -551,12 +551,12 @@ function ProfileScreen() {
           />
           {/* Purple nebula top-left */}
           <LinearGradient
-            colors={['rgba(147,51,234,0.38)', 'rgba(99,102,241,0.15)', 'transparent']}
+            colors={['rgba(180,122,255,0.38)', 'rgba(99,102,241,0.15)', 'transparent']}
             style={{ position:'absolute', top:-30, left:-30, width:200, height:200, borderRadius:100 }}
           />
           {/* Gold nebula bottom-right */}
           <LinearGradient
-            colors={['rgba(251,191,36,0.18)', 'rgba(245,158,11,0.08)', 'transparent']}
+            colors={['rgba(255,184,0,0.18)', 'rgba(245,158,11,0.08)', 'transparent']}
             style={{ position:'absolute', bottom:-20, right:-20, width:160, height:160, borderRadius:80 }}
           />
           {/* Star dots */}
@@ -565,7 +565,7 @@ function ProfileScreen() {
           })}
           {/* Chromatic top border */}
           <LinearGradient
-            colors={['transparent','rgba(147,51,234,0.8)','rgba(251,191,36,0.6)','rgba(99,102,241,0.5)','transparent']}
+            colors={['transparent','rgba(180,122,255,0.8)','rgba(255,184,0,0.6)','rgba(99,102,241,0.5)','transparent']}
             style={{ position:'absolute', top:0, left:0, right:0, height:1.5 }}
             start={{ x:0, y:0.5 }} end={{ x:1, y:0.5 }}
           />
@@ -574,7 +574,7 @@ function ProfileScreen() {
             /* ── LOGGED OUT STATE ── */
             <View style={s.heroLoggedOut}>
               <View style={s.guestOrbWrap}>
-                <LinearGradient colors={['rgba(147,51,234,0.3)','rgba(99,102,241,0.2)']} style={StyleSheet.absoluteFill} />
+                <LinearGradient colors={['rgba(180,122,255,0.3)','rgba(99,102,241,0.2)']} style={StyleSheet.absoluteFill} />
                 <View style={s.guestOrb}>
                   <LinearGradient colors={['#7C3AED','#6366F1','#4F46E5']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
                   <LinearGradient colors={['rgba(255,255,255,0.3)','transparent']} style={{position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:38,borderTopRightRadius:38}} />
@@ -599,7 +599,7 @@ function ProfileScreen() {
                 {/* Avatar core */}
                 <View style={s.avatarCore}>
                   <LinearGradient colors={['#1A0A3E','#0E0521']} style={StyleSheet.absoluteFill} />
-                  <LinearGradient colors={['rgba(192,132,252,0.25)','transparent']} style={{position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:32,borderTopRightRadius:32}} />
+                  <LinearGradient colors={['rgba(180,122,255,0.25)','transparent']} style={{position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:32,borderTopRightRadius:32}} />
                   <Ionicons name="person" size={34} color="#C4B5FD" />
                 </View>
                 {/* Subscription badge */}
@@ -630,19 +630,19 @@ function ProfileScreen() {
               {birthData && (
                 <View style={s.birthRow}>
                   <View style={s.birthChip}>
-                    <LinearGradient colors={['rgba(147,51,234,0.25)','rgba(99,102,241,0.12)']} style={StyleSheet.absoluteFill} />
-                    <Ionicons name="calendar-outline" size={13} color="#C084FC" />
+                    <LinearGradient colors={['rgba(180,122,255,0.25)','rgba(99,102,241,0.12)']} style={StyleSheet.absoluteFill} />
+                    <Ionicons name="calendar-outline" size={13} color="#B47AFF" />
                     <View>
                       <Text style={s.birthChipLabel}>{t('birthDateLabel') || 'Date'}</Text>
                       <Text style={s.birthChipValue}>{birthData.dateTime?.split('T')[0]}</Text>
                     </View>
                   </View>
                   <View style={s.birthChip}>
-                    <LinearGradient colors={['rgba(251,191,36,0.2)','rgba(245,158,11,0.08)']} style={StyleSheet.absoluteFill} />
-                    <Ionicons name="time-outline" size={13} color="#FBBF24" />
+                    <LinearGradient colors={['rgba(255,184,0,0.2)','rgba(245,158,11,0.08)']} style={StyleSheet.absoluteFill} />
+                    <Ionicons name="time-outline" size={13} color="#FFB800" />
                     <View>
                       <Text style={s.birthChipLabel}>{t('birthTimeLabel') || 'Time'}</Text>
-                      <Text style={[s.birthChipValue, { color: '#FBBF24' }]}>{birthData.dateTime?.split('T')[1]?.substring(0,5)}</Text>
+                      <Text style={[s.birthChipValue, { color: '#FFB800' }]}>{birthData.dateTime?.split('T')[1]?.substring(0,5)}</Text>
                     </View>
                   </View>
                   <View style={s.birthChip}>
@@ -663,10 +663,10 @@ function ProfileScreen() {
               {/* Premium badge ribbon */}
               {isSubscribed && (
                 <View style={s.premiumRibbon}>
-                  <LinearGradient colors={['rgba(245,158,11,0.22)','rgba(251,191,36,0.1)']} style={StyleSheet.absoluteFill} />
-                  <Ionicons name="diamond-outline" size={13} color="#FBBF24" />
+                  <LinearGradient colors={['rgba(245,158,11,0.22)','rgba(255,184,0,0.1)']} style={StyleSheet.absoluteFill} />
+                  <Ionicons name="diamond-outline" size={13} color="#FFB800" />
                   <Text style={s.premiumText}>Premium Member</Text>
-                  <Ionicons name="diamond-outline" size={13} color="#FBBF24" />
+                  <Ionicons name="diamond-outline" size={13} color="#FFB800" />
                 </View>
               )}
             </View>
@@ -685,8 +685,8 @@ function ProfileScreen() {
           <>
             {/* ── STATS ── */}
             <Animated.View entering={FadeInDown.delay(120).duration(700)} style={s.statsRow}>
-              <StatPill value={reportCount} label={t('report')}  icon="document-text-outline" color="#C084FC" />
-              <StatPill value={chatCount}   label={t('tabChat')} icon="chatbubble-outline"     color="#FBBF24" />
+              <StatPill value={reportCount} label={t('report')}  icon="document-text-outline" color="#B47AFF" />
+              <StatPill value={chatCount}   label={t('tabChat')} icon="chatbubble-outline"     color="#FFB800" />
               <StatPill
                 value={birthData ? '✓' : '—'}
                 label={t('birthDetails')?.replace('🌟 ', '')?.split(' ')[0] || 'Birth'}
@@ -702,7 +702,7 @@ function ProfileScreen() {
                   icon={isSubscribed ? 'star' : 'star-outline'}
                   title={t('subscription')}
                   subtitle={isSubscribed ? t('subChargedBy') : t('subPromo')}
-                  color={isSubscribed ? '#FBBF24' : '#A78BFA'}
+                  color={isSubscribed ? '#FFB800' : '#A78BFA'}
                 />
                 {subStatus === 'active' && (
                   <>
@@ -758,7 +758,7 @@ function ProfileScreen() {
             <Animated.View entering={FadeInDown.delay(360).duration(700)}>
               <GCard accent="#4CC9F0">
                 <SectionHeader icon="notifications-outline" title={t('notifications')} color="#4CC9F0" />
-                <SettingRow icon="sunny-outline"    label={t('dailyCelestialPush')}    type="switch" value={true}  iconColor="#FBBF24" />
+                <SettingRow icon="sunny-outline"    label={t('dailyCelestialPush')}    type="switch" value={true}  iconColor="#FFB800" />
                 <SettingRow icon="moon-outline"     label={t('rahuKalayaAlerts')}      type="switch" value={true}  iconColor="#A78BFA" />
                 <SettingRow icon="location-outline" label={t('syncHoroscopeLocation')} type="switch" value={false} iconColor="#34D399" last />
               </GCard>
@@ -766,9 +766,9 @@ function ProfileScreen() {
 
             {/* ── ABOUT ── */}
             <Animated.View entering={FadeInDown.delay(420).duration(700)}>
-              <GCard accent="#FBBF24">
-                <SectionHeader icon="information-circle-outline" title={t('about')} color="#FBBF24" />
-                <SettingRow icon="star-outline"              label={t('rateCosmicAlignment')} iconColor="#FBBF24" />
+              <GCard accent="#FFB800">
+                <SectionHeader icon="information-circle-outline" title={t('about')} color="#FFB800" />
+                <SettingRow icon="star-outline"              label={t('rateCosmicAlignment')} iconColor="#FFB800" />
                 <SettingRow icon="document-text-outline"     label={t('sacredScrolls')}       iconColor="#C4B5FD" />
                 <SettingRow icon="shield-checkmark-outline"  label={t('privacyPolicy')}       iconColor="#34D399" last />
               </GCard>
@@ -814,42 +814,42 @@ var s = StyleSheet.create({
   // ── Hero card ──────────────────────────────────────────────────────
   heroCard: {
     borderRadius: 32, overflow: 'hidden', marginBottom: 16,
-    borderWidth: 1, borderColor: 'rgba(147,51,234,0.35)',
+    borderWidth: 1, borderColor: 'rgba(180,122,255,0.35)',
     shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.45, shadowRadius: 30, elevation: 16,
   },
 
   // ── Logged-out hero ────────────────────────────────────────────────
   heroLoggedOut: { alignItems: 'center', paddingTop: 42, paddingBottom: 36, paddingHorizontal: 28 },
-  guestOrbWrap:  { width: 100, height: 100, borderRadius: 50, overflow:'hidden', alignItems:'center', justifyContent:'center', marginBottom: 20, borderWidth: 1.5, borderColor: 'rgba(192,132,252,0.25)' },
+  guestOrbWrap:  { width: 100, height: 100, borderRadius: 50, overflow:'hidden', alignItems:'center', justifyContent:'center', marginBottom: 20, borderWidth: 1.5, borderColor: 'rgba(180,122,255,0.25)' },
   guestOrb:      { width: 88, height: 88, borderRadius: 44, overflow:'hidden', alignItems:'center', justifyContent:'center' },
-  guestTitle:    { fontSize: 24, fontWeight: '900', color: '#fff', marginBottom: 8, textShadowColor:'rgba(192,132,252,0.5)', textShadowOffset:{width:0,height:2}, textShadowRadius:10 },
+  guestTitle:    { fontSize: 24, fontWeight: '900', color: '#fff', marginBottom: 8, textShadowColor:'rgba(180,122,255,0.5)', textShadowOffset:{width:0,height:2}, textShadowRadius:10 },
   guestSub:      { fontSize: 13, color: 'rgba(255,255,255,0.38)', textAlign: 'center', lineHeight: 20 },
-  guestArrow:    { marginTop: 18, width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(192,132,252,0.2)', alignItems: 'center', justifyContent: 'center' },
+  guestArrow:    { marginTop: 18, width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(180,122,255,0.2)', alignItems: 'center', justifyContent: 'center' },
 
   // ── Logged-in hero ─────────────────────────────────────────────────
   heroContent:      { alignItems: 'center', paddingTop: 36, paddingBottom: 28, paddingHorizontal: 20 },
   mandalaContainer: { width: 150, height: 150, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
-  avatarRing:       { position:'absolute', width: 86, height: 86, borderRadius: 43, borderWidth: 1.5, borderColor: 'rgba(192,132,252,0.3)', borderStyle: 'dashed' },
+  avatarRing:       { position:'absolute', width: 86, height: 86, borderRadius: 43, borderWidth: 1.5, borderColor: 'rgba(180,122,255,0.3)', borderStyle: 'dashed' },
   avatarCore:       { position:'absolute', width: 66, height: 66, borderRadius: 33, alignItems:'center', justifyContent:'center', overflow:'hidden', borderWidth: 2, borderColor: 'rgba(196,181,253,0.45)' },
   badge:            { position:'absolute', bottom: 8, right: 8, width: 28, height: 28, borderRadius: 14, alignItems:'center', justifyContent:'center', overflow:'hidden', borderWidth: 2, borderColor: '#0D0720' },
   badgePremium:     {},
   badgeFree:        {},
 
-  heroName:  { fontSize: 28, fontWeight: '900', color: '#fff', marginBottom: 6, textAlign: 'center', letterSpacing: 0.5, textShadowColor: 'rgba(192,132,252,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 12 },
-  phonePill: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 18, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(147,51,234,0.2)' },
+  heroName:  { fontSize: 28, fontWeight: '900', color: '#fff', marginBottom: 6, textAlign: 'center', letterSpacing: 0.5, textShadowColor: 'rgba(180,122,255,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 12 },
+  phonePill: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 18, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(180,122,255,0.2)' },
   phoneIcon: { width: 20, height: 20, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   phoneText: { fontSize: 13, color: '#A78BFA', fontWeight: '600', letterSpacing: 0.5 },
 
   // Birth chips row
   birthRow:       { flexDirection: 'row', gap: 8, marginBottom: 16, width: '100%' },
-  birthChip:      { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7, overflow: 'hidden', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 10, borderWidth: 1, borderColor: 'rgba(147,51,234,0.2)' },
+  birthChip:      { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7, overflow: 'hidden', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 10, borderWidth: 1, borderColor: 'rgba(180,122,255,0.2)' },
   birthChipLabel: { fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2 },
-  birthChipValue: { fontSize: 12, color: '#C084FC', fontWeight: '800' },
+  birthChipValue: { fontSize: 12, color: '#B47AFF', fontWeight: '800' },
 
   // Premium ribbon
-  premiumRibbon: { flexDirection: 'row', alignItems: 'center', gap: 8, overflow: 'hidden', borderRadius: 999, paddingVertical: 7, paddingHorizontal: 18, borderWidth: 1, borderColor: 'rgba(251,191,36,0.3)' },
-  premiumText:   { fontSize: 12, color: '#FBBF24', fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' },
+  premiumRibbon: { flexDirection: 'row', alignItems: 'center', gap: 8, overflow: 'hidden', borderRadius: 999, paddingVertical: 7, paddingHorizontal: 18, borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)' },
+  premiumText:   { fontSize: 12, color: '#FFB800', fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' },
 
   // ── Stats row ──────────────────────────────────────────────────────
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },

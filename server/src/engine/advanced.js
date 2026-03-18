@@ -1273,6 +1273,92 @@ function calculateShadbala(date, lat, lng) {
   return results;
 }
 
+/**
+ * Calculate Ishta Phala (benefic potential) and Kashta Phala (malefic potential)
+ * from Shadbala components. Per BPHS:
+ *   Ishta Phala = Uchcha Bala × Cheshta Bala  (geometric mean, in Virupas)
+ *   Kashta Phala = complement based on total minus Ishta
+ * These indicate how well a planet can deliver its promised results.
+ */
+function calculateIshtaKashta(date, lat, lng) {
+  const shadbala = calculateShadbala(date, lat, lng);
+  const planets = getAllPlanetPositions(date);
+  const EXALT_DEGREES = { Sun: 10, Moon: 33, Mars: 298, Mercury: 165, Jupiter: 95, Venus: 357, Saturn: 200 };
+
+  const results = {};
+  for (const [key, sb] of Object.entries(shadbala)) {
+    const name = sb.name;
+    const p = planets[key];
+    if (!p) continue;
+
+    // Uchcha Bala (0-60 virupas) — from sthanaBala component approximation
+    const exaltDeg = EXALT_DEGREES[name];
+    let ucchaBala = 30;
+    if (exaltDeg !== undefined) {
+      const dist = Math.abs(p.sidereal - exaltDeg);
+      const normDist = dist > 180 ? 360 - dist : dist;
+      ucchaBala = Math.max(0, (180 - normDist) / 3);
+    }
+
+    const cheshtaBala = sb.components.cheshtaBala;
+
+    // Ishta Phala = sqrt(Uchcha Bala × Cheshta Bala) per BPHS
+    const ishtaPhala = Math.sqrt(Math.max(0, ucchaBala) * Math.max(0, cheshtaBala));
+    // Kashta Phala = sqrt((60 - Uchcha) × (60 - Cheshta))
+    const kashtaPhala = Math.sqrt(Math.max(0, 60 - ucchaBala) * Math.max(0, 60 - cheshtaBala));
+
+    // Net benefic ratio
+    const netBenefic = ishtaPhala - kashtaPhala;
+
+    results[key] = {
+      name,
+      ishtaPhala: Math.round(ishtaPhala * 100) / 100,
+      kashtaPhala: Math.round(kashtaPhala * 100) / 100,
+      netBenefic: Math.round(netBenefic * 100) / 100,
+      tendency: netBenefic > 10 ? 'Strongly Benefic' : netBenefic > 0 ? 'Mildly Benefic' : netBenefic > -10 ? 'Mildly Malefic' : 'Strongly Malefic',
+      shadbalaRupas: sb.totalRupas,
+      shadbalaStrength: sb.strength,
+    };
+  }
+  return results;
+}
+
+/**
+ * Weight Dasha predictions by Shadbala — a Dasha lord with high Shadbala
+ * delivers results more reliably and prominently.
+ *
+ * Returns a multiplier (0.5 - 1.5) for each Dasha lord's prediction weight.
+ */
+function getShadbalaWeightsForDasha(date, lat, lng) {
+  const shadbala = calculateShadbala(date, lat, lng);
+  const ishtaKashta = calculateIshtaKashta(date, lat, lng);
+
+  const weights = {};
+  const PLANET_NAMES = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+  // Rahu/Ketu use their sign dispositor's strength
+  const RAHU_KETU_DISPOSITORS = {};
+
+  for (const name of PLANET_NAMES) {
+    const key = name.toLowerCase();
+    const sb = shadbala[key];
+    const ik = ishtaKashta[key];
+    if (!sb) continue;
+
+    // Base weight from Shadbala percentage (0-100 → 0.5-1.5 range)
+    const sbWeight = 0.5 + (sb.percentage / 100);
+    // Ishta/Kashta modifier
+    const ikMod = ik ? (ik.netBenefic > 0 ? 1.1 : ik.netBenefic < -10 ? 0.85 : 0.95) : 1;
+
+    weights[name] = Math.round(Math.min(1.5, Math.max(0.5, sbWeight * ikMod)) * 100) / 100;
+  }
+
+  // Rahu and Ketu inherit their dispositor's weight
+  weights['Rahu'] = weights['Saturn'] || 1.0;
+  weights['Ketu'] = weights['Mars'] || 1.0;
+
+  return weights;
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  TIER 2-B: BHRIGU BINDU, AVASTHA, EXTRA DIVISIONAL CHARTS
@@ -1473,12 +1559,90 @@ function buildExtendedVargas(date, lat, lng) {
     return ((rashiId + part - 1) % 12) + 1;
   };
 
+  // D2 (Hora) — Wealth
+  const d2Rules = (rashiId, degree) => {
+    const isOdd = rashiId % 2 !== 0;
+    const firstHalf = degree < 15;
+    if (isOdd) return firstHalf ? 5 : 4; // Leo / Cancer
+    return firstHalf ? 4 : 5;            // Cancer / Leo
+  };
+
+  // D3 (Drekkana) — Siblings, courage
+  const d3Rules = (rashiId, degree) => {
+    const part = Math.floor(degree / 10); // 0,1,2
+    return ((rashiId - 1 + part * 4) % 12) + 1;
+  };
+
+  // D4 (Chaturthamsha) — Property, fortune
+  const d4Rules = (rashiId, degree) => {
+    const part = Math.floor(degree / 7.5); // 0-3
+    return ((rashiId - 1 + part * 3) % 12) + 1;
+  };
+
+  // D12 (Dwadasamsha) — Parents
+  const d12Rules = (rashiId, degree) => {
+    const part = Math.floor(degree / 2.5); // 0-11
+    return ((rashiId - 1 + part) % 12) + 1;
+  };
+
+  // D16 (Shodasamsha) — Vehicles, happiness
+  const d16Rules = (rashiId, degree) => {
+    const part = Math.floor(degree / (30 / 16)); // 0-15
+    const isMovable = [1, 4, 7, 10].includes(rashiId);
+    const isFixed = [2, 5, 8, 11].includes(rashiId);
+    const startSign = isMovable ? 1 : isFixed ? 5 : 9;
+    return ((startSign - 1 + part) % 12) + 1;
+  };
+
+  // D20 (Vimsamsha) — Spiritual life
+  const d20Rules = (rashiId, degree) => {
+    const part = Math.floor(degree / 1.5); // 0-19
+    const isMovable = [1, 4, 7, 10].includes(rashiId);
+    const isFixed = [2, 5, 8, 11].includes(rashiId);
+    const startSign = isMovable ? 1 : isFixed ? 9 : 5;
+    return ((startSign - 1 + part) % 12) + 1;
+  };
+
+  // D27 (Saptavimsamsha) — Strength
+  const d27Rules = (rashiId, degree) => {
+    const part = Math.floor(degree / (30 / 27)); // 0-26
+    const element = (rashiId - 1) % 4; // 0=fire, 1=earth, 2=air, 3=water
+    const startSign = element === 0 ? 1 : element === 1 ? 4 : element === 2 ? 7 : 10;
+    return ((startSign - 1 + part) % 12) + 1;
+  };
+
+  // D40 (Khavedamsha) — Auspicious/inauspicious effects
+  const d40Rules = (rashiId, degree) => {
+    const part = Math.floor(degree / 0.75); // 0-39
+    const isOdd = rashiId % 2 !== 0;
+    const startSign = isOdd ? 1 : 7;
+    return ((startSign - 1 + part) % 12) + 1;
+  };
+
+  // D45 (Akshavedamsha) — General well-being
+  const d45Rules = (rashiId, degree) => {
+    const part = Math.floor(degree / (30 / 45)); // 0-44
+    const isMovable = [1, 4, 7, 10].includes(rashiId);
+    const isFixed = [2, 5, 8, 11].includes(rashiId);
+    const startSign = isMovable ? 1 : isFixed ? 5 : 9;
+    return ((startSign - 1 + part) % 12) + 1;
+  };
+
   const charts = {};
   const divisions = [
-    { key: 'D7', name: 'Saptamsha', sinhala: 'සප්තාංශ', governs: 'Children, progeny, creative output', rules: d7Rules },
-    { key: 'D10', name: 'Dasamsha', sinhala: 'දශාංශ', governs: 'Career, profession, public status, achievements', rules: d10Rules },
-    { key: 'D24', name: 'Chaturvimshamsha', sinhala: 'චතුර්විංශාංශ', governs: 'Education, academic success, learning ability', rules: d24Rules },
-    { key: 'D60', name: 'Shashtiamsha', sinhala: 'ෂෂ්ඨිඅංශ', governs: 'Past life karma, deepest karmic patterns, soul\'s journey across lifetimes', rules: d60Rules },
+    { key: 'D2',  name: 'Hora',              sinhala: 'හෝරා',          governs: 'Wealth, financial prosperity', rules: d2Rules },
+    { key: 'D3',  name: 'Drekkana',          sinhala: 'ද්‍රේක්කාණ',     governs: 'Siblings, courage, initiative', rules: d3Rules },
+    { key: 'D4',  name: 'Chaturthamsha',     sinhala: 'චතුර්තාංශ',     governs: 'Property, fortune, fixed assets', rules: d4Rules },
+    { key: 'D7',  name: 'Saptamsha',         sinhala: 'සප්තාංශ',       governs: 'Children, progeny, creative output', rules: d7Rules },
+    { key: 'D10', name: 'Dasamsha',          sinhala: 'දශාංශ',         governs: 'Career, profession, public status', rules: d10Rules },
+    { key: 'D12', name: 'Dwadasamsha',       sinhala: 'ද්වාදශාංශ',     governs: 'Parents, lineage, ancestry', rules: d12Rules },
+    { key: 'D16', name: 'Shodasamsha',       sinhala: 'ෂෝඩශාංශ',      governs: 'Vehicles, conveyances, happiness', rules: d16Rules },
+    { key: 'D20', name: 'Vimsamsha',         sinhala: 'විංශාංශ',       governs: 'Spiritual life, upasana, worship', rules: d20Rules },
+    { key: 'D24', name: 'Chaturvimshamsha',  sinhala: 'චතුර්විංශාංශ',  governs: 'Education, academic success', rules: d24Rules },
+    { key: 'D27', name: 'Saptavimsamsha',    sinhala: 'සප්තවිංශාංශ',   governs: 'Strength, stamina, physical ability', rules: d27Rules },
+    { key: 'D40', name: 'Khavedamsha',       sinhala: 'ඛවේදාංශ',      governs: 'Auspicious and inauspicious effects', rules: d40Rules },
+    { key: 'D45', name: 'Akshavedamsha',     sinhala: 'අක්ෂවේදාංශ',    governs: 'General well-being, paternal legacy', rules: d45Rules },
+    { key: 'D60', name: 'Shashtiamsha',      sinhala: 'ෂෂ්ඨිඅංශ',     governs: 'Past life karma, deepest karmic patterns', rules: d60Rules },
   ];
 
   for (const div of divisions) {
@@ -1505,6 +1669,44 @@ function buildExtendedVargas(date, lat, lng) {
       positions,
     };
   }
+
+  // Varga Visesha Bala — how well a planet performs across divisional charts
+  // A planet in its own sign, exaltation, or moolatrikona in a varga gets points.
+  const SIGN_LORDS_MAP = {
+    1: 'Mars', 2: 'Venus', 3: 'Mercury', 4: 'Moon',
+    5: 'Sun', 6: 'Mercury', 7: 'Venus', 8: 'Mars',
+    9: 'Jupiter', 10: 'Saturn', 11: 'Saturn', 12: 'Jupiter',
+  };
+  const EXALTATION_SIGNS = { Sun: 1, Moon: 2, Mars: 10, Mercury: 6, Jupiter: 4, Venus: 12, Saturn: 7 };
+
+  const vargaVisheshaBala = {};
+  const PLANET_KEYS = ['sun', 'moon', 'mars', 'mercury', 'jupiter', 'venus', 'saturn'];
+  for (const pKey of PLANET_KEYS) {
+    const pName = planets[pKey]?.name;
+    let score = 0;
+    let details = [];
+    for (const [dKey, chart] of Object.entries(charts)) {
+      const vRashi = chart.positions[pKey]?.vargaRashiId;
+      if (!vRashi) continue;
+      const signLord = SIGN_LORDS_MAP[vRashi];
+      if (signLord === pName) {
+        score += 1;
+        details.push({ varga: dKey, dignity: 'own_sign' });
+      } else if (EXALTATION_SIGNS[pName] === vRashi) {
+        score += 1.5;
+        details.push({ varga: dKey, dignity: 'exalted' });
+      }
+    }
+    vargaVisheshaBala[pKey] = {
+      planet: pName,
+      totalScore: Math.round(score * 10) / 10,
+      maxPossible: divisions.length * 1.5,
+      percentage: Math.round(score / (divisions.length * 1.5) * 100),
+      details,
+    };
+  }
+
+  charts._vargaVisheshaBala = vargaVisheshaBala;
 
   return charts;
 }
@@ -2059,6 +2261,8 @@ module.exports = {
 
   // Tier 2
   calculateShadbala,
+  calculateIshtaKashta,
+  getShadbalaWeightsForDasha,
   calculateBhriguBindu,
   calculateAvasthas,
   buildExtendedVargas,

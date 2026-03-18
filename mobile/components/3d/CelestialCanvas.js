@@ -1,7 +1,7 @@
 /**
  * CelestialCanvas — R3F <Canvas> wrapper with expo-gl context,
- * camera defaults, ambient + directional lighting, and a 2D fallback
- * for devices that can't create a GL context.
+ * camera defaults, lighting, transparent-background support,
+ * and a 2D fallback for devices that can't create a GL context.
  */
 import React, { useState, useCallback, Suspense } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
@@ -24,32 +24,48 @@ export default function CelestialCanvas({
   fallback = null,
   style,
   onCreated,
+  alpha = false,
+  frameloop = 'always',
+  dpr,
+  noLights = false,
 }) {
   const [glFailed, setGlFailed] = useState(false);
 
   const handleCreated = useCallback(
     (state) => {
+      if (alpha) {
+        state.gl.setClearColor(0x000000, 0);
+      }
       if (onCreated) onCreated(state);
     },
-    [onCreated]
+    [onCreated, alpha]
   );
 
   if (glFailed) {
     return <FallbackBox width={width} height={height}>{fallback}</FallbackBox>;
   }
 
+  const glConfig = { preserveDrawingBuffer: true };
+  if (alpha) glConfig.alpha = true;
+
   return (
     <View style={[{ width, height }, style]}>
       <Canvas
         style={{ width, height }}
         camera={{ position: cameraPosition, fov: cameraFov, near: 0.1, far: 1000 }}
-        gl={{ preserveDrawingBuffer: true }}
+        gl={glConfig}
+        frameloop={frameloop}
+        dpr={dpr || (Platform.OS === 'web' ? Math.min(window.devicePixelRatio, 1.5) : 1.5)}
         onCreated={handleCreated}
         onError={() => setGlFailed(true)}
       >
-        <ambientLight intensity={0.3} />
-        <directionalLight position={[5, 5, 5]} intensity={0.8} />
-        <pointLight position={[-5, -3, 3]} intensity={0.4} color="#C084FC" />
+        {!noLights && (
+          <>
+            <ambientLight intensity={0.3} />
+            <directionalLight position={[5, 5, 5]} intensity={0.8} />
+            <pointLight position={[-5, -3, 3]} intensity={0.4} color="#C084FC" />
+          </>
+        )}
         <Suspense fallback={null}>
           {children}
         </Suspense>

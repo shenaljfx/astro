@@ -19,13 +19,50 @@
 const { moonposition, solar, julian, base, nutation: nutationMod } = require('astronomia');
 const ephemeris = require('ephemeris');
 
-// Lahiri Ayanamsha reference values (from Lahiri's Indian Ephemeris)
-// These are well-established reference points for Lahiri Ayanamsha
-const LAHIRI_AYANAMSHA_J2000 = 23.853056; // degrees at J2000.0 (Jan 1, 2000 12:00 TT)
-const AYANAMSHA_RATE = 0.0137222; // degrees per year (50.29" per year precession rate)
+// ---------------------------------------------------------------------------
+// Swiss Ephemeris — high-precision planetary calculation engine (0.001 arcsec)
+// Replaces Moshier/Meeus for all critical calculations while keeping the old
+// libraries as fallback.
+// ---------------------------------------------------------------------------
+const swe = require('@swisseph/node');
+const {
+  Planet: SwePlanet,
+  LunarPoint: SweLunarPoint,
+  HouseSystem: SweHouseSystem,
+  SiderealMode: SweSiderealMode,
+  CalculationFlag: SweFlag,
+} = swe;
 
-// IAU 2000A nutation coefficients (top 15 terms for sub-arcsecond accuracy)
-// Each: [multipliers for l, l', F, D, Ω, S_coeff, C_coeff] in 0.0001 arcsec
+// Initialize sidereal mode to Lahiri (standard for Sri Lankan / Vedic astrology)
+swe.setSiderealMode(SweSiderealMode.Lahiri);
+
+// Supported ayanamsha systems — user can select via options
+const AYANAMSHA_MODES = {
+  lahiri: SweSiderealMode.Lahiri,
+  krishnamurti: SweSiderealMode.Krishnamurti,
+  raman: SweSiderealMode.Raman,
+  yukteshwar: SweSiderealMode.Yukteshwar,
+  fagan_bradley: SweSiderealMode.FaganBradley,
+};
+
+let _currentAyanamshaMode = 'lahiri';
+
+function setAyanamshaMode(mode) {
+  const m = (mode || 'lahiri').toLowerCase();
+  if (AYANAMSHA_MODES[m] !== undefined) {
+    _currentAyanamshaMode = m;
+    swe.setSiderealMode(AYANAMSHA_MODES[m]);
+  }
+}
+
+function getCurrentAyanamshaMode() {
+  return _currentAyanamshaMode;
+}
+
+// Legacy constants kept for any downstream code that references them
+const LAHIRI_AYANAMSHA_J2000 = 23.853056;
+const AYANAMSHA_RATE = 0.0137222;
+
 const NUTATION_COEFFS = [
   [0, 0, 0, 0, 1, -171996, -174.2, 92025, 8.9],
   [-2, 0, 0, 2, 2, -13187, -1.6, 5736, -3.1],
@@ -287,69 +324,69 @@ function calculateRahuKalaya(date, lat = 6.9271, lng = 79.8612) {
 }
 
 /**
- * Get accurate Moon longitude using astronomia library (Meeus algorithms)
+ * Get accurate Moon longitude using Swiss Ephemeris (JPL precision ~0.001")
+ * Falls back to astronomia (Meeus) if Swiss Ephemeris fails.
  * Returns tropical ecliptic longitude in degrees (0-360)
  */
 function getMoonLongitude(date) {
-  const jde = dateToJD(date);
-  const pos = moonposition.position(jde);
-  // pos.lon is in radians, convert to degrees
-  let lon = pos.lon * 180 / Math.PI;
-  return ((lon % 360) + 360) % 360;
+  try {
+    const jd = swe.dateToJulianDay(date);
+    const pos = swe.calculatePosition(jd, SwePlanet.Moon, SweFlag.SwissEphemeris | SweFlag.Speed);
+    return ((pos.longitude % 360) + 360) % 360;
+  } catch (_) {
+    const jde = dateToJD(date);
+    const pos = moonposition.position(jde);
+    let lon = pos.lon * 180 / Math.PI;
+    return ((lon % 360) + 360) % 360;
+  }
 }
 
 /**
- * Get accurate Sun longitude using astronomia library (Meeus algorithms)
+ * Get accurate Sun longitude using Swiss Ephemeris (JPL precision ~0.001")
+ * Falls back to astronomia (Meeus) if Swiss Ephemeris fails.
  * Returns apparent tropical ecliptic longitude in degrees (0-360)
  */
 function getSunLongitude(date) {
-  const jde = dateToJD(date);
-  const T = base.J2000Century(jde);
-  // solar.apparentLongitude returns radians
-  let lon = solar.apparentLongitude(T) * 180 / Math.PI;
-  return ((lon % 360) + 360) % 360;
+  try {
+    const jd = swe.dateToJulianDay(date);
+    const pos = swe.calculatePosition(jd, SwePlanet.Sun, SweFlag.SwissEphemeris | SweFlag.Speed);
+    return ((pos.longitude % 360) + 360) % 360;
+  } catch (_) {
+    const jde = dateToJD(date);
+    const T = base.J2000Century(jde);
+    let lon = solar.apparentLongitude(T) * 180 / Math.PI;
+    return ((lon % 360) + 360) % 360;
+  }
 }
 
 /**
- * Calculate Lahiri Ayanamsha with nutation correction
- * Uses IAU 2000A nutation model (top 15 terms) for sub-arcsecond accuracy
- * instead of the simple linear approximation.
- * 
- * Lahiri ayanamsha = general precession in longitude - nutation in longitude
- * This corrects the ~1° error that accumulates with the linear formula.
+ * Calculate ayanamsha using Swiss Ephemeris (full IAU precession + nutation).
+ * Supports multiple ayanamsha systems via setAyanamshaMode().
+ * Falls back to manual calculation if Swiss Ephemeris unavailable.
  */
 function getAyanamsha(date) {
-  const jd = dateToJD(date);
-  const T = (jd - 2451545.0) / 36525; // Julian centuries from J2000.0
-  const yearsFromJ2000 = (jd - 2451545.0) / 365.25;
-  
-  // General precession in longitude (IAU 2006, Capitaine et al.)
-  // More accurate than constant rate — includes quadratic and cubic terms
-  const precession = (5028.796195 * T + 1.1054348 * T * T + 0.00007964 * T * T * T) / 3600; // degrees
-  
-  // Fundamental arguments for nutation (in degrees)
-  const l  = (485868.249036 + 1717915923.2178 * T) / 3600 % 360; // mean anomaly of Moon
-  const lp = (1287104.79305 + 129596581.0481 * T) / 3600 % 360;  // mean anomaly of Sun
-  const F  = (335779.526232 + 1739527262.8478 * T) / 3600 % 360;  // mean arg of latitude of Moon
-  const D  = (1072260.70369 + 1602961601.2090 * T) / 3600 % 360;  // mean elongation Moon-Sun
-  const Om = (450160.398036 - 6962890.5431 * T) / 3600 % 360;     // longitude of ascending node
-  
-  // Calculate nutation in longitude (ΔΨ) using IAU coefficients
-  let nutationLon = 0; // in 0.0001 arcseconds
-  const deg2rad = Math.PI / 180;
-  for (const coeff of NUTATION_COEFFS) {
-    const arg = (coeff[0] * l + coeff[1] * lp + coeff[2] * F + coeff[3] * D + coeff[4] * Om) * deg2rad;
-    nutationLon += (coeff[5] + coeff[6] * T) * Math.sin(arg);
+  try {
+    const jd = swe.dateToJulianDay(date);
+    return swe.getAyanamsa(jd);
+  } catch (_) {
+    // Legacy fallback — linear approximation with IAU nutation
+    const jd = dateToJD(date);
+    const T = (jd - 2451545.0) / 36525;
+    const yearsFromJ2000 = (jd - 2451545.0) / 365.25;
+    const l  = (485868.249036 + 1717915923.2178 * T) / 3600 % 360;
+    const lp = (1287104.79305 + 129596581.0481 * T) / 3600 % 360;
+    const F  = (335779.526232 + 1739527262.8478 * T) / 3600 % 360;
+    const D  = (1072260.70369 + 1602961601.2090 * T) / 3600 % 360;
+    const Om = (450160.398036 - 6962890.5431 * T) / 3600 % 360;
+    let nutationLon = 0;
+    const deg2rad = Math.PI / 180;
+    for (const coeff of NUTATION_COEFFS) {
+      const arg = (coeff[0] * l + coeff[1] * lp + coeff[2] * F + coeff[3] * D + coeff[4] * Om) * deg2rad;
+      nutationLon += (coeff[5] + coeff[6] * T) * Math.sin(arg);
+    }
+    const nutationDeg = nutationLon / (3600 * 10000);
+    return LAHIRI_AYANAMSHA_J2000 + AYANAMSHA_RATE * yearsFromJ2000 + nutationDeg;
   }
-  const nutationDeg = nutationLon / (3600 * 10000); // convert 0.0001" to degrees
-  
-  // Lahiri Ayanamsha = base at J2000 + precession since J2000 + nutation correction
-  // The official Lahiri value at J2000 is 23.853056°
-  // Total ayanamsha = ayanamsha_base + precession_since_base
-  // But since we use J2000 as base, ayanamsha = base + precession_rate * T + nutation
-  const ayanamsha = LAHIRI_AYANAMSHA_J2000 + AYANAMSHA_RATE * yearsFromJ2000 + nutationDeg;
-  
-  return ayanamsha;
 }
 
 /**
@@ -362,80 +399,134 @@ function toSidereal(tropicalLong, date) {
 }
 
 /**
- * Get accurate planetary longitudes using the ephemeris package (Meeus/VSOP87 algorithms)
- * for all 9 Navagrahas. Rahu/Ketu use mean node calculation.
+ * Get accurate planetary longitudes for all 9 Navagrahas.
+ *
+ * PRIMARY: Swiss Ephemeris (JPL DE431, ~0.001" precision, True Node for Rahu/Ketu)
+ * FALLBACK: astronomia + ephemeris (Moshier/Meeus, ~0.1" precision, Mean Node)
  *
  * @param {Date}   date  - UTC Date object
- * @param {number} [lat=6.9271]  - Observer latitude  (degrees). Used for topocentric corrections.
- * @param {number} [lng=79.8612] - Observer longitude (degrees). Used for topocentric corrections.
- *
- * All positions are tropical apparent longitudes, then converted to sidereal
- * using Lahiri Ayanamsha.
+ * @param {number} [lat=6.9271]  - Observer latitude  (degrees)
+ * @param {number} [lng=79.8612] - Observer longitude (degrees)
+ * @param {object} [opts]  - Options: { topocentric: bool, ayanamshaMode: string }
  */
-function getAllPlanetPositions(date, lat = 6.9271, lng = 79.8612) {
-  const jd = dateToJD(date);
-  const T = (jd - 2451545.0) / 36525;
+function getAllPlanetPositions(date, lat = 6.9271, lng = 79.8612, opts = {}) {
   const ayanamsha = getAyanamsha(date);
-
   const norm = (deg) => ((deg % 360) + 360) % 360;
 
-  // Sun & Moon from astronomia (Meeus algorithms - already highly accurate)
-  const sunTrop = getSunLongitude(date);
-  const moonTrop = getMoonLongitude(date);
+  try {
+    // -------- Swiss Ephemeris path (high precision) --------
+    const jd = swe.dateToJulianDay(date);
+    let flags = SweFlag.SwissEphemeris | SweFlag.Speed;
 
-  // Mars, Mercury, Jupiter, Venus, Saturn from ephemeris package (VSOP87 / Jean Meeus).
-  // Pass the actual observer lat/lng so topocentric parallax corrections are applied
-  // to the correct location — previously hardcoded to Colombo.
-  const swissResult = ephemeris.getAllPlanets(date, lat, lng, 0);
-  const swissObs = swissResult.observed;
-
-  const marsTrop = swissObs.mars.apparentLongitudeDd;
-  const mercTrop = swissObs.mercury.apparentLongitudeDd;
-  const jupTrop = swissObs.jupiter.apparentLongitudeDd;
-  const venTrop = swissObs.venus.apparentLongitudeDd;
-  const satTrop = swissObs.saturn.apparentLongitudeDd;
-
-  // Rahu (Mean North Node) - moves retrograde ~19.355° per year
-  // This is the standard Vedic mean node; true node varies ±1.5° but
-  // Sri Lankan tradition predominantly uses the mean node.
-  let rahuTrop = norm(125.044 - 1934.1362 * T);
-
-  // Ketu = Rahu + 180°
-  let ketuTrop = norm(rahuTrop + 180);
-
-  const planets = {
-    sun:     { name: 'Sun',     sinhala: 'ඉර',     tamil: 'சூரியன்',   tropical: sunTrop,   sidereal: norm(sunTrop - ayanamsha) },
-    moon:    { name: 'Moon',    sinhala: 'හඳ',     tamil: 'சந்திரன்',  tropical: moonTrop,  sidereal: norm(moonTrop - ayanamsha) },
-    mars:    { name: 'Mars',    sinhala: 'කුජ',    tamil: 'செவ்வாய்',  tropical: marsTrop,  sidereal: norm(marsTrop - ayanamsha) },
-    mercury: { name: 'Mercury', sinhala: 'බුධ',    tamil: 'புதன்',     tropical: mercTrop,  sidereal: norm(mercTrop - ayanamsha) },
-    jupiter: { name: 'Jupiter', sinhala: 'ගුරු',   tamil: 'குரு',      tropical: jupTrop,   sidereal: norm(jupTrop - ayanamsha) },
-    venus:   { name: 'Venus',   sinhala: 'සිකුරු', tamil: 'சுக்கிரன்', tropical: venTrop,   sidereal: norm(venTrop - ayanamsha) },
-    saturn:  { name: 'Saturn',  sinhala: 'සෙනසුරු', tamil: 'சனி',      tropical: satTrop,   sidereal: norm(satTrop - ayanamsha) },
-    rahu:    { name: 'Rahu',    sinhala: 'රාහු',   tamil: 'ராகு',      tropical: rahuTrop,  sidereal: norm(rahuTrop - ayanamsha) },
-    ketu:    { name: 'Ketu',    sinhala: 'කේතු',   tamil: 'கேது',      tropical: ketuTrop,  sidereal: norm(ketuTrop - ayanamsha) },
-  };
-
-  // Add rashi and retrograde info for each planet
-  for (const key of Object.keys(planets)) {
-    const p = planets[key];
-    const rashi = getRashi(p.sidereal);
-    p.rashiId = rashi.id;
-    p.rashi = rashi.name;
-    p.rashiEnglish = rashi.english;
-    p.rashiSinhala = rashi.sinhala;
-    p.degreeInSign = p.sidereal % 30;
-    // Add retrograde status from Swiss Ephemeris (where available)
-    if (swissObs[key]) {
-      p.isRetrograde = swissObs[key].is_retrograde === true;
-    } else {
-      p.isRetrograde = false;
+    if (opts.topocentric) {
+      swe.setTopocentric(lng, lat, 0);
+      flags |= SweFlag.Topocentric;
     }
-  }
-  // Rahu is always retrograde in Vedic astrology
-  planets.rahu.isRetrograde = true;
-  planets.ketu.isRetrograde = true;
 
-  return planets;
+    const sunPos  = swe.calculatePosition(jd, SwePlanet.Sun, flags);
+    const moonPos = swe.calculatePosition(jd, SwePlanet.Moon, flags);
+    const marsPos = swe.calculatePosition(jd, SwePlanet.Mars, flags);
+    const mercPos = swe.calculatePosition(jd, SwePlanet.Mercury, flags);
+    const jupPos  = swe.calculatePosition(jd, SwePlanet.Jupiter, flags);
+    const venPos  = swe.calculatePosition(jd, SwePlanet.Venus, flags);
+    const satPos  = swe.calculatePosition(jd, SwePlanet.Saturn, flags);
+    // True Node provides the osculating (actual) lunar node position
+    const rahuPos = swe.calculatePosition(jd, SweLunarPoint.TrueNode, flags);
+
+    const sunTrop  = norm(sunPos.longitude);
+    const moonTrop = norm(moonPos.longitude);
+    const marsTrop = norm(marsPos.longitude);
+    const mercTrop = norm(mercPos.longitude);
+    const jupTrop  = norm(jupPos.longitude);
+    const venTrop  = norm(venPos.longitude);
+    const satTrop  = norm(satPos.longitude);
+    const rahuTrop = norm(rahuPos.longitude);
+    const ketuTrop = norm(rahuTrop + 180);
+
+    const planets = {
+      sun:     { name: 'Sun',     sinhala: 'ඉර',     tamil: 'சூரியன்',   tropical: sunTrop,   sidereal: norm(sunTrop - ayanamsha) },
+      moon:    { name: 'Moon',    sinhala: 'හඳ',     tamil: 'சந்திரன்',  tropical: moonTrop,  sidereal: norm(moonTrop - ayanamsha) },
+      mars:    { name: 'Mars',    sinhala: 'කුජ',    tamil: 'செவ்வாய்',  tropical: marsTrop,  sidereal: norm(marsTrop - ayanamsha) },
+      mercury: { name: 'Mercury', sinhala: 'බුධ',    tamil: 'புதன்',     tropical: mercTrop,  sidereal: norm(mercTrop - ayanamsha) },
+      jupiter: { name: 'Jupiter', sinhala: 'ගුරු',   tamil: 'குரு',      tropical: jupTrop,   sidereal: norm(jupTrop - ayanamsha) },
+      venus:   { name: 'Venus',   sinhala: 'සිකුරු', tamil: 'சுக்கிரன்', tropical: venTrop,   sidereal: norm(venTrop - ayanamsha) },
+      saturn:  { name: 'Saturn',  sinhala: 'සෙනසුරු', tamil: 'சனி',      tropical: satTrop,   sidereal: norm(satTrop - ayanamsha) },
+      rahu:    { name: 'Rahu',    sinhala: 'රාහු',   tamil: 'ராகு',      tropical: rahuTrop,  sidereal: norm(rahuTrop - ayanamsha) },
+      ketu:    { name: 'Ketu',    sinhala: 'කේතු',   tamil: 'கேது',      tropical: ketuTrop,  sidereal: norm(ketuTrop - ayanamsha) },
+    };
+
+    const speedMap = {
+      sun: sunPos, moon: moonPos, mars: marsPos, mercury: mercPos,
+      jupiter: jupPos, venus: venPos, saturn: satPos,
+    };
+
+    for (const key of Object.keys(planets)) {
+      const p = planets[key];
+      const rashi = getRashi(p.sidereal);
+      p.rashiId = rashi.id;
+      p.rashi = rashi.name;
+      p.rashiEnglish = rashi.english;
+      p.rashiSinhala = rashi.sinhala;
+      p.degreeInSign = p.sidereal % 30;
+      if (speedMap[key]) {
+        p.isRetrograde = speedMap[key].longitudeSpeed < 0;
+        p.speed = speedMap[key].longitudeSpeed;
+      } else {
+        p.isRetrograde = false;
+      }
+    }
+    planets.rahu.isRetrograde = true;
+    planets.ketu.isRetrograde = true;
+    return planets;
+
+  } catch (_sweErr) {
+    // -------- Fallback: astronomia + ephemeris (Moshier) --------
+    const jd = dateToJD(date);
+    const T = (jd - 2451545.0) / 36525;
+
+    const sunTrop = getSunLongitude(date);
+    const moonTrop = getMoonLongitude(date);
+
+    const swissResult = ephemeris.getAllPlanets(date, lat, lng, 0);
+    const swissObs = swissResult.observed;
+    const marsTrop = swissObs.mars.apparentLongitudeDd;
+    const mercTrop = swissObs.mercury.apparentLongitudeDd;
+    const jupTrop  = swissObs.jupiter.apparentLongitudeDd;
+    const venTrop  = swissObs.venus.apparentLongitudeDd;
+    const satTrop  = swissObs.saturn.apparentLongitudeDd;
+    let rahuTrop = norm(125.044 - 1934.1362 * T);
+    let ketuTrop = norm(rahuTrop + 180);
+
+    const planets = {
+      sun:     { name: 'Sun',     sinhala: 'ඉර',     tamil: 'சூரியன்',   tropical: sunTrop,   sidereal: norm(sunTrop - ayanamsha) },
+      moon:    { name: 'Moon',    sinhala: 'හඳ',     tamil: 'சந்திரன்',  tropical: moonTrop,  sidereal: norm(moonTrop - ayanamsha) },
+      mars:    { name: 'Mars',    sinhala: 'කුජ',    tamil: 'செவ்வாய்',  tropical: marsTrop,  sidereal: norm(marsTrop - ayanamsha) },
+      mercury: { name: 'Mercury', sinhala: 'බුධ',    tamil: 'புதன்',     tropical: mercTrop,  sidereal: norm(mercTrop - ayanamsha) },
+      jupiter: { name: 'Jupiter', sinhala: 'ගුරු',   tamil: 'குரு',      tropical: jupTrop,   sidereal: norm(jupTrop - ayanamsha) },
+      venus:   { name: 'Venus',   sinhala: 'සිකුරු', tamil: 'சுக்கிரன்', tropical: venTrop,   sidereal: norm(venTrop - ayanamsha) },
+      saturn:  { name: 'Saturn',  sinhala: 'සෙනසුරු', tamil: 'சனி',      tropical: satTrop,   sidereal: norm(satTrop - ayanamsha) },
+      rahu:    { name: 'Rahu',    sinhala: 'රාහු',   tamil: 'ராகු',      tropical: rahuTrop,  sidereal: norm(rahuTrop - ayanamsha) },
+      ketu:    { name: 'Ketu',    sinhala: 'කේතු',   tamil: 'கேது',      tropical: ketuTrop,  sidereal: norm(ketuTrop - ayanamsha) },
+    };
+
+    for (const key of Object.keys(planets)) {
+      const p = planets[key];
+      const rashi = getRashi(p.sidereal);
+      p.rashiId = rashi.id;
+      p.rashi = rashi.name;
+      p.rashiEnglish = rashi.english;
+      p.rashiSinhala = rashi.sinhala;
+      p.degreeInSign = p.sidereal % 30;
+      if (swissObs[key]) {
+        p.isRetrograde = swissObs[key].is_retrograde === true;
+      } else {
+        p.isRetrograde = false;
+      }
+    }
+    planets.rahu.isRetrograde = true;
+    planets.ketu.isRetrograde = true;
+    return planets;
+  }
 }
 
 /**
@@ -1384,49 +1475,55 @@ function getKarana(date) {
 /**
  * Calculate Lagna (Ascendant) - the rising sign at the eastern horizon
  * This is what most Sri Lankans call their "horoscope sign" (ලග්නය)
- * 
- * Uses the formula: RAMC = LST * 15, then Ascendant from RAMC + obliquity + latitude
- * 
+ *
+ * PRIMARY: Swiss Ephemeris calculateHouses() — uses apparent sidereal time (GAST)
+ *          with full nutation, providing sub-arcsecond Ascendant accuracy.
+ * FALLBACK: Manual GMST-based calculation (Meeus).
+ *
  * @param {Date} date - Date/time in UTC
  * @param {number} lat - Latitude in degrees
  * @param {number} lng - Longitude in degrees
  * @returns {object} Lagna rashi and degree
  */
 function getLagna(date, lat = 6.9271, lng = 79.8612) {
-  const jd = dateToJD(date);
-  const T = (jd - 2451545.0) / 36525;
-
-  // Mean sidereal time at Greenwich (in degrees)
-  let GMST = 280.46061837 + 360.98564736629 * (jd - 2451545.0)
-    + 0.000387933 * T * T - T * T * T / 38710000;
-  GMST = ((GMST % 360) + 360) % 360;
-
-  // Local Sidereal Time (degrees)
-  let LST = GMST + lng;
-  LST = ((LST % 360) + 360) % 360;
-
-  // Obliquity of the ecliptic (Meeus)
-  const eps = 23.4392911 - 0.0130042 * T - 1.64e-7 * T * T + 5.036e-7 * T * T * T;
-  const epsRad = eps * Math.PI / 180;
-  const latRad = lat * Math.PI / 180;
-
-  // RAMC in radians
-  const ramcRad = LST * Math.PI / 180;
-
-  // Ascendant formula
-  const y = Math.cos(ramcRad);
-  const x = -(Math.sin(ramcRad) * Math.cos(epsRad) + Math.tan(latRad) * Math.sin(epsRad));
-  let ascendant = Math.atan2(y, x) * 180 / Math.PI;
-  ascendant = ((ascendant % 360) + 360) % 360;
-
-  // Convert to sidereal
-  const siderealAsc = toSidereal(ascendant, date);
-
-  return {
-    tropical: ascendant,
-    sidereal: siderealAsc,
-    rashi: getRashi(siderealAsc),
-  };
+  try {
+    const jd = swe.dateToJulianDay(date);
+    const houses = swe.calculateHouses(jd, lat, lng, SweHouseSystem.WholeSign);
+    const tropAsc = houses.ascendant;
+    const siderealAsc = toSidereal(tropAsc, date);
+    return {
+      tropical: tropAsc,
+      sidereal: siderealAsc,
+      rashi: getRashi(siderealAsc),
+      mc: houses.mc,
+      armc: houses.armc,
+      vertex: houses.vertex,
+      cusps: houses.cusps,
+    };
+  } catch (_) {
+    // Fallback: manual calculation
+    const jd = dateToJD(date);
+    const T = (jd - 2451545.0) / 36525;
+    let GMST = 280.46061837 + 360.98564736629 * (jd - 2451545.0)
+      + 0.000387933 * T * T - T * T * T / 38710000;
+    GMST = ((GMST % 360) + 360) % 360;
+    let LST = GMST + lng;
+    LST = ((LST % 360) + 360) % 360;
+    const eps = 23.4392911 - 0.0130042 * T - 1.64e-7 * T * T + 5.036e-7 * T * T * T;
+    const epsRad = eps * Math.PI / 180;
+    const latRad = lat * Math.PI / 180;
+    const ramcRad = LST * Math.PI / 180;
+    const y = Math.cos(ramcRad);
+    const x = -(Math.sin(ramcRad) * Math.cos(epsRad) + Math.tan(latRad) * Math.sin(epsRad));
+    let ascendant = Math.atan2(y, x) * 180 / Math.PI;
+    ascendant = ((ascendant % 360) + 360) % 360;
+    const siderealAsc = toSidereal(ascendant, date);
+    return {
+      tropical: ascendant,
+      sidereal: siderealAsc,
+      rashi: getRashi(siderealAsc),
+    };
+  }
 }
 
 /**
@@ -2193,17 +2290,14 @@ function getSaturnLongitude(date) {
 function getRahuLongitude(date) {
   try {
     const allPositions = getAllPlanetPositions(date);
-    const rahu = allPositions.find(p => p.name === 'Rahu');
-    return rahu ? rahu.longitude : 0;
+    return allPositions.rahu.sidereal;
   } catch (e) {
-    // Simplified Rahu mean node
-    const { julian } = require('astronomia');
-    const jd = julian.CalendarGregorianToJD(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate() + date.getUTCHours() / 24);
+    const jd = dateToJD(date);
     const T = (jd - 2451545.0) / 36525;
     let omega = 125.04452 - 1934.136261 * T;
-    omega = omega % 360;
-    if (omega < 0) omega += 360;
-    return omega;
+    omega = ((omega % 360) + 360) % 360;
+    const ayanamsha = getAyanamsha(date);
+    return ((omega - ayanamsha) % 360 + 360) % 360;
   }
 }
 
@@ -5873,11 +5967,14 @@ module.exports = {
   HOUSE_SIGNIFICATIONS,
   PLANET_KARAKAS,
   FUNCTIONAL_STATUS,
+  AYANAMSHA_MODES,
   calculateRahuKalaya,
   calculateSunriseSunset,
   getMoonLongitude,
   getSunLongitude,
   getAyanamsha,
+  setAyanamshaMode,
+  getCurrentAyanamshaMode,
   toSidereal,
   getNakshatra,
   getRashi,
@@ -5889,12 +5986,12 @@ module.exports = {
   buildHouseChart,
   buildNavamshaChart,
   buildShadvarga,
-  calculateDrishtis,       // Vedic planetary aspects
-  analyzePushkara,         // Pushkara Navamsha & Bhaga analysis
+  calculateDrishtis,
+  analyzePushkara,
   checkPushkaraNavamsha,
   checkPushkaraBhaga,
-  calculateAshtakavarga,   // Ashtakavarga transit strength
-  buildBhavaChalit,        // Bhava Chalit unequal house chart
+  calculateAshtakavarga,
+  buildBhavaChalit,
   detectYogas,
   getPlanetStrengths,
   getPanchanga,
@@ -5903,8 +6000,9 @@ module.exports = {
   calculateVimshottari,
   calculateVimshottariDetailed,
   generateDetailedReport,
-  generateFullReport,     
-  predictMarriageTiming,   
+  generateFullReport,
+  predictMarriageTiming,
   getFunctionalNature,
   analyzeHouse,
+  getRahuLongitude,
 };

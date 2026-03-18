@@ -38,7 +38,7 @@ export function useDesktopCtx() { return useContext(DesktopCtx); }
 
 export default function DesktopScreenWrapper({ routeName, balance, children }) {
   var isDesktop = useIsDesktop();
-  var { language } = useLanguage();
+  var { language, toggleLanguage } = useLanguage();
 
   if (!isDesktop) {
     return (
@@ -54,7 +54,7 @@ export default function DesktopScreenWrapper({ routeName, balance, children }) {
       <View style={dw.root}>
         {/* ── Top bar: 64px, never scrolls ── */}
         <View style={dw.topBarSlot}>
-          <DesktopTopBar routeName={routeName} language={language} balance={balance || null} />
+          <DesktopTopBar routeName={routeName} language={language} balance={balance || null} onToggleLanguage={toggleLanguage} />
         </View>
         {/* ── Content area: fills all remaining height ── */}
         <View style={dw.contentSlot}>

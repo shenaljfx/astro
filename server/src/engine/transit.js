@@ -941,15 +941,148 @@ function ordinal(n) {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  KAKSHYA (SUB-DIVISIONAL) TRANSIT ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════════
+// Each sign is divided into 8 Kakshyas of 3°45' each.
+// The Kakshya lord determines the quality of transit within that portion.
+
+const KAKSHYA_LORDS = ['Saturn', 'Jupiter', 'Mars', 'Sun', 'Venus', 'Mercury', 'Moon', 'Lagna'];
+const KAKSHYA_SPAN = 3.75; // 30° / 8 = 3.75° per Kakshya
+
+/**
+ * Determine which Kakshya a planet is transiting within its current sign,
+ * and whether that Kakshya lord has benefic bindus in the natal Ashtakavarga.
+ */
+function getKakshyaTransit(transitPlanet, natalAshtakavarga) {
+  const degInSign = transitPlanet.sidereal % 30;
+  const kakshyaIdx = Math.min(7, Math.floor(degInSign / KAKSHYA_SPAN));
+  const kakshyaLord = KAKSHYA_LORDS[kakshyaIdx];
+
+  let kakshyaStrength = 'neutral';
+  if (natalAshtakavarga) {
+    const pName = transitPlanet.name;
+    const bavTable = natalAshtakavarga.prastarashtakavarga?.[pName];
+    if (bavTable) {
+      const bindus = bavTable[transitPlanet.rashiId] || 0;
+      kakshyaStrength = bindus >= 5 ? 'strong' : bindus >= 3 ? 'moderate' : 'weak';
+    }
+  }
+
+  return {
+    kakshyaIndex: kakshyaIdx + 1,
+    kakshyaLord,
+    degreeInKakshya: degInSign - kakshyaIdx * KAKSHYA_SPAN,
+    kakshyaStrength,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ASHTAKAVARGA-WEIGHTED TRANSIT SCORING
+// ═══════════════════════════════════════════════════════════════════════════
+// Combines BAV bindus, SAV totals, Vedha, Kakshya, and retrograde status
+// into a single 0-100 transit score per planet.
+
+/**
+ * Compute an Ashtakavarga-weighted transit score for a single planet.
+ * @param {object} transitResult - Single planet result from getCurrentTransits()
+ * @param {object} kakshya - Kakshya info from getKakshyaTransit()
+ * @returns {number} Score 0-100
+ */
+function computeAshtakavargaTransitScore(transitResult, kakshya) {
+  let score = 50; // base
+
+  // BAV contribution (0-8 bindus → -24 to +24)
+  if (transitResult.bavScore !== null) {
+    score += (transitResult.bavScore - 4) * 6;
+  }
+
+  // SAV contribution (avg ~28, range 18-38 → -10 to +10)
+  if (transitResult.savScore !== null) {
+    score += (transitResult.savScore - 28) * 1;
+  }
+
+  // Transit effect quality
+  if (transitResult.effect.quality === 'good') score += 10;
+  else if (transitResult.effect.quality === 'bad') score -= 10;
+
+  // Vedha blocks positive effects
+  if (transitResult.vedhaBlocked) score -= 15;
+
+  // Kakshya lord quality
+  if (kakshya.kakshyaStrength === 'strong') score += 8;
+  else if (kakshya.kakshyaStrength === 'weak') score -= 8;
+
+  // Retrograde penalty (delays/complications)
+  if (transitResult.isRetrograde) score -= 5;
+
+  // Combust penalty
+  if (transitResult.isCombust) score -= 10;
+
+  // Conjunction with natal planet (activation)
+  if (transitResult.conjunctsNatal) score += 5;
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+/**
+ * Enhanced transit analysis: combines standard Gochara with
+ * Ashtakavarga-weighted scores, Kakshya analysis, and double transit.
+ */
+function getEnhancedTransits(transitDate, birthDate, lat, lng) {
+  const base = getCurrentTransits(transitDate, birthDate, lat, lng);
+  if (!base) return null;
+
+  let ashtakavarga = null;
+  try { ashtakavarga = calculateAshtakavarga(new Date(birthDate), lat, lng); } catch (_) {}
+
+  const transitPlanets = getAllPlanetPositions(transitDate ? new Date(transitDate) : new Date());
+  const enhancedPlanets = {};
+
+  for (const [key, result] of Object.entries(base.planets)) {
+    const tp = transitPlanets[key];
+    const kakshya = tp ? getKakshyaTransit(tp, ashtakavarga) : null;
+    const aavScore = kakshya ? computeAshtakavargaTransitScore(result, kakshya) : null;
+
+    enhancedPlanets[key] = {
+      ...result,
+      kakshya,
+      ashtakavargaScore: aavScore,
+      scoreLabel: aavScore !== null
+        ? (aavScore >= 75 ? 'Excellent' : aavScore >= 60 ? 'Good' : aavScore >= 40 ? 'Average' : aavScore >= 25 ? 'Weak' : 'Difficult')
+        : null,
+    };
+  }
+
+  // Compute composite daily score from all planet Ashtakavarga scores
+  const scores = Object.values(enhancedPlanets).map(p => p.ashtakavargaScore).filter(s => s !== null);
+  const compositeScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+
+  return {
+    ...base,
+    planets: enhancedPlanets,
+    compositeAshtakavargaScore: compositeScore,
+    compositeLabel: compositeScore !== null
+      ? (compositeScore >= 70 ? 'Very Favourable' : compositeScore >= 55 ? 'Favourable' : compositeScore >= 40 ? 'Mixed' : 'Challenging')
+      : null,
+  };
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  EXPORTS
 // ═══════════════════════════════════════════════════════════════════════════
 
 module.exports = {
   // Core transit
   getCurrentTransits,
+  getEnhancedTransits,
   TRANSIT_EFFECTS,
   VEDHA_TABLE,
   COMBUSTION_DEGREES,
+
+  // Ashtakavarga-weighted
+  getKakshyaTransit,
+  computeAshtakavargaTransitScore,
 
   // Forecasts
   getDailyForecast,

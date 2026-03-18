@@ -393,4 +393,184 @@ router.post('/health/analyze', optionalAuth, async (req, res) => {
 });
 
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  ENHANCED PREDICTION ENDPOINTS (Tier 3-5)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const { getEnhancedTransits } = require('../engine/transit');
+const { predictEvent: kpPredict, predictAllEvents: kpPredictAll, getKPChartAnalysis } = require('../engine/kp');
+const { getAnnualForecast } = require('../engine/varshphal');
+const { calculateConfidence, calculateAllConfidences } = require('../engine/confidence');
+const { crossValidateDashas } = require('../engine/dasha');
+const { recordPrediction, recordOutcome, getPendingFeedback } = require('../engine/feedback');
+
+/**
+ * POST /api/predictions/transit/enhanced
+ * Ashtakavarga-weighted transit scoring with Kakshya analysis.
+ */
+router.post('/transit/enhanced', optionalAuth, async (req, res) => {
+  try {
+    const { transitDate, birthDate, birthTime, lat, lng } = req.body;
+    if (!birthDate) return res.status(400).json({ error: 'birthDate is required' });
+    const bDateStr = birthTime ? `${birthDate.split('T')[0]}T${birthTime}` : birthDate;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(bDateStr, latitude, longitude).catch(() => parseSLT(bDateStr));
+    const result = getEnhancedTransits(transitDate, bDate, latitude, longitude);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ error: 'Enhanced transit analysis failed', message: error.message });
+  }
+});
+
+/**
+ * POST /api/predictions/kp/predict
+ * KP YES/NO event prediction.
+ * Body: { eventType, birthDate, birthTime?, lat?, lng? }
+ */
+router.post('/kp/predict', optionalAuth, async (req, res) => {
+  try {
+    const { eventType, birthDate, birthTime, lat, lng } = req.body;
+    if (!birthDate || !eventType) return res.status(400).json({ error: 'birthDate and eventType are required' });
+    const bDateStr = birthTime ? `${birthDate.split('T')[0]}T${birthTime}` : birthDate;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(bDateStr, latitude, longitude).catch(() => parseSLT(bDateStr));
+    const result = kpPredict(eventType, bDate, latitude, longitude);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ error: 'KP prediction failed', message: error.message });
+  }
+});
+
+/**
+ * POST /api/predictions/kp/all
+ * KP predictions for all supported events.
+ */
+router.post('/kp/all', optionalAuth, async (req, res) => {
+  try {
+    const { birthDate, birthTime, lat, lng } = req.body;
+    if (!birthDate) return res.status(400).json({ error: 'birthDate is required' });
+    const bDateStr = birthTime ? `${birthDate.split('T')[0]}T${birthTime}` : birthDate;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(bDateStr, latitude, longitude).catch(() => parseSLT(bDateStr));
+    const result = kpPredictAll(bDate, latitude, longitude);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ error: 'KP all predictions failed', message: error.message });
+  }
+});
+
+/**
+ * POST /api/predictions/kp/chart
+ * Full KP chart analysis.
+ */
+router.post('/kp/chart', optionalAuth, async (req, res) => {
+  try {
+    const { birthDate, birthTime, lat, lng } = req.body;
+    if (!birthDate) return res.status(400).json({ error: 'birthDate is required' });
+    const bDateStr = birthTime ? `${birthDate.split('T')[0]}T${birthTime}` : birthDate;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(bDateStr, latitude, longitude).catch(() => parseSLT(bDateStr));
+    const result = getKPChartAnalysis(bDate, latitude, longitude);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ error: 'KP chart analysis failed', message: error.message });
+  }
+});
+
+/**
+ * POST /api/predictions/annual
+ * Varshphal/Tajaka annual forecast.
+ * Body: { birthDate, birthTime?, year?, lat?, lng? }
+ */
+router.post('/annual', optionalAuth, async (req, res) => {
+  try {
+    const { birthDate, birthTime, year, lat, lng } = req.body;
+    if (!birthDate) return res.status(400).json({ error: 'birthDate is required' });
+    const bDateStr = birthTime ? `${birthDate.split('T')[0]}T${birthTime}` : birthDate;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(bDateStr, latitude, longitude).catch(() => parseSLT(bDateStr));
+    const targetYear = year || new Date().getFullYear();
+    const result = getAnnualForecast(bDate, targetYear, latitude, longitude);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ error: 'Annual forecast failed', message: error.message });
+  }
+});
+
+/**
+ * POST /api/predictions/confidence
+ * Confidence scoring for a specific event.
+ * Body: { eventType, birthDate, birthTime?, lat?, lng?, birthTimeQuality? }
+ */
+router.post('/confidence', optionalAuth, async (req, res) => {
+  try {
+    const { eventType, birthDate, birthTime, lat, lng, birthTimeQuality } = req.body;
+    if (!birthDate || !eventType) return res.status(400).json({ error: 'birthDate and eventType are required' });
+    const bDateStr = birthTime ? `${birthDate.split('T')[0]}T${birthTime}` : birthDate;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(bDateStr, latitude, longitude).catch(() => parseSLT(bDateStr));
+    const result = calculateConfidence({ eventType, birthDate: bDate, lat: latitude, lng: longitude, birthTimeQuality });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ error: 'Confidence calculation failed', message: error.message });
+  }
+});
+
+/**
+ * POST /api/predictions/confidence/all
+ * Confidence scores for all events.
+ */
+router.post('/confidence/all', optionalAuth, async (req, res) => {
+  try {
+    const { birthDate, birthTime, lat, lng, birthTimeQuality } = req.body;
+    if (!birthDate) return res.status(400).json({ error: 'birthDate is required' });
+    const bDateStr = birthTime ? `${birthDate.split('T')[0]}T${birthTime}` : birthDate;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const bDate = await parseBirthDateTime(bDateStr, latitude, longitude).catch(() => parseSLT(bDateStr));
+    const result = calculateAllConfidences(bDate, latitude, longitude, birthTimeQuality);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ error: 'Confidence calculation failed', message: error.message });
+  }
+});
+
+/**
+ * POST /api/predictions/feedback/record
+ * Record user feedback on a prediction.
+ * Body: { predictionId, didHappen, notes? }
+ */
+router.post('/feedback/record', optionalAuth, async (req, res) => {
+  try {
+    const { predictionId, didHappen, notes } = req.body;
+    if (!predictionId || didHappen === undefined) return res.status(400).json({ error: 'predictionId and didHappen are required' });
+    const success = await recordOutcome(predictionId, didHappen, notes);
+    res.json({ success, message: success ? 'Feedback recorded' : 'Failed to record feedback' });
+  } catch (error) {
+    res.status(500).json({ error: 'Feedback recording failed', message: error.message });
+  }
+});
+
+/**
+ * GET /api/predictions/feedback/pending
+ * Get predictions awaiting user feedback.
+ */
+router.get('/feedback/pending', optionalAuth, async (req, res) => {
+  try {
+    const userId = req.user?.uid;
+    if (!userId) return res.json({ success: true, data: [] });
+    const pending = await getPendingFeedback(userId);
+    res.json({ success: true, data: pending });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get pending feedback', message: error.message });
+  }
+});
+
+
 module.exports = router;
