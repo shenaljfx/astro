@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grahachara — Sri Lanka's #1 Vedic Astrology App</title>
+  <meta name="description" content="Sri Lanka's #1 Vedic astrology app. Rahu Kalaya, Porondam, birth charts, personal astrologer chat, and more — in Sinhala & English." />
+  <meta name="keywords" content="Grahachara, astrology, Sri Lanka, Vedic, Rahu Kalaya, Nakath, Porondam, astrologer, ග්‍රහචාර, ජ්‍යෝතිෂය" />
+  <meta name="theme-color" content="#04030C" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Grahachara — Sri Lanka's #1 Vedic Astrology App" />
+  <meta property="og:description" content="Your personal astrologer in your pocket. Daily Nakath, Porondam, birth chart reports & more." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://grahachara.lk" />
+  <meta property="og:image" content="https://grahachara.lk/assets/og-card.png" />
+
+  <!-- Fonts (English + Sinhala) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+Sinhala:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- ═══ 3D COSMIC SCENE (Three.js WebGL — planets, milky way, stars) ═══ -->
+  <div id="cosmos3d" aria-hidden="true" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;"></div>
+
+  <!-- ═══ 2D FALLBACK CANVAS (if WebGL unavailable) ═══ -->
+  <canvas id="cosmos" aria-hidden="true"></canvas>
+
+  <!-- ═══ AURORA STAR LANE — S-shaped aurora ribbon with bright stars & comets ═══ -->
+  <canvas id="auroraLane" class="aurora-lane" aria-hidden="true"></canvas>
+
+  <!-- ═══ NAVIGATION ═══ -->
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="#" class="nav__logo">
+        <img src="assets/logo.png" alt="Grahachara" class="nav__logo-img" />
+        <span class="nav__logo-text">Grahachara</span>
+      </a>
+      <div class="nav__links" id="navLinks">
+        <a href="#features" class="nav__link" data-i18n="nav.features">Features</a>
+        <a href="#how-it-works" class="nav__link" data-i18n="nav.howItWorks">How It Works</a>
+        <a href="#screenshots" class="nav__link" data-i18n="nav.screenshots">Screenshots</a>
+        <a href="#pricing" class="nav__link" data-i18n="nav.pricing">Pricing</a>
+        <a href="#testimonials" class="nav__link" data-i18n="nav.reviews">Reviews</a>
+        <a href="#faq" class="nav__link" data-i18n="nav.faq">FAQ</a>
+        <div class="nav__mobile-socials">
+          <a href="https://www.facebook.com/share/1FBBur8QZf/?mibextid=wwXIfr" target="_blank" rel="noopener" aria-label="Facebook" class="nav__social">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <a href="https://www.instagram.com/grahachara_astro?igsh=MXRrbHV4d2gzdzY2eQ%3D%3D&utm_source=qr" target="_blank" rel="noopener" aria-label="Instagram" class="nav__social">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+          </a>
+          <a href="https://www.tiktok.com/@grahachara_astro?_r=1&_t=ZS-94xmnlkGGnt" target="_blank" rel="noopener" aria-label="TikTok" class="nav__social">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+          </a>
+        </div>
+        <a href="#download" class="nav__link nav__link--mobile-cta" data-i18n="nav.downloadMobile">Download Now</a>
+      </div>
+      <div class="nav__right">
+        <button class="lang-toggle" id="langToggle" aria-label="Switch Language" title="Switch Language">
+          <span class="lang-toggle__icon">🌐</span>
+          <span class="lang-toggle__label">සිං</span>
+        </button>
+        <a href="https://www.facebook.com/share/1FBBur8QZf/?mibextid=wwXIfr" target="_blank" rel="noopener" aria-label="Facebook" class="nav__social nav__social--desktop">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        </a>
+        <a href="https://www.instagram.com/grahachara_astro?igsh=MXRrbHV4d2gzdzY2eQ%3D%3D&utm_source=qr" target="_blank" rel="noopener" aria-label="Instagram" class="nav__social nav__social--desktop">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+        </a>
+        <a href="https://www.tiktok.com/@grahachara_astro?_r=1&_t=ZS-94xmnlkGGnt" target="_blank" rel="noopener" aria-label="TikTok" class="nav__social nav__social--desktop">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+        </a>
+        <a href="#download" class="nav__cta" data-i18n="nav.download">Download Now</a>
+        <button class="nav__burger" id="navBurger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══ HERO ═══ -->
+  <header class="hero" id="hero">
+    <div class="hero__content">
+      <div class="hero__badge">
+        <span class="hero__badge-dot"></span>
+        <span data-i18n="hero.badge">Sri Lanka's #1 Astrology App</span>
+      </div>
+      <h1 class="hero__title">
+        <span class="hero__title-line" data-i18n="hero.titleLine1">Your Stars,</span>
+        <span class="hero__title-accent" data-i18n="hero.titleAccent">Your Grahachara</span>
+      </h1>
+      <p class="hero__subtitle" data-i18n="hero.subtitle">
+        Ancient Vedic wisdom meets modern technology. Get real-time Rahu Kalaya alerts, 
+        personalized birth chart reports, marriage compatibility scores, and chat 
+        with your personal astrologer — all in <strong>Sinhala</strong> & <strong>English</strong>.
+      </p>
+      <div class="hero__actions">
+        <a href="#download" class="btn btn--primary btn--glow">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span data-i18n="hero.btnDownload">Download Now</span>
+        </a>
+        <a href="#features" class="btn btn--ghost">
+          <span data-i18n="hero.btnExplore">Explore Features</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="hero__visual">
+      <div class="hero__phone">
+        <div class="phone-mockup">
+          <div class="phone-mockup__bezel">
+            <div class="phone-mockup__notch"></div>
+            <div class="phone-mockup__screen">
+              <img src="assets/adamainpage.png" alt="Grahachara Home Screen" />
+            </div>
+            <div class="phone-mockup__chin"></div>
+          </div>
+        </div>
+        <!-- Floating elements around phone -->
+        <div class="hero__orb hero__orb--1"></div>
+        <div class="hero__orb hero__orb--2"></div>
+        <div class="hero__orb hero__orb--3"></div>
+      </div>
+    </div>
+    <div class="hero__scroll-hint">
+      <div class="hero__scroll-mouse">
+        <div class="hero__scroll-dot"></div>
+      </div>
+      <span data-i18n="hero.scroll">Scroll to explore</span>
+    </div>
+  </header>
+
+  <!-- ═══ SOCIAL PROOF BANNER ═══ -->
+  <section class="trust-strip" data-aos="fade-up">
+    <div class="container">
+      <div class="trust-strip__inner">
+        <span class="trust-strip__item" data-i18n="trust.madeIn">🇱🇰 Made in Sri Lanka</span>
+        <span class="trust-strip__dot">·</span>
+        <span class="trust-strip__item" data-i18n="trust.privacy">🛡️ Privacy First — No data sold</span>
+        <span class="trust-strip__dot">·</span>
+        <span class="trust-strip__item" data-i18n="trust.ayanamsha">🔮 Lahiri Ayanamsha (Traditional)</span>
+        <span class="trust-strip__dot">·</span>
+        <span class="trust-strip__item" data-i18n="trust.nakshatras">📿 27 Nakshatras · 12 Rashis · 9 Grahas</span>
+        <span class="trust-strip__dot">·</span>
+        <span class="trust-strip__item" data-i18n="trust.price">💰 Just LKR 8/day — All features</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FEATURES ═══ -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label" data-i18n="features.label">Features</span>
+        <h2 class="section-title" data-i18n="features.title">Everything the Stars Reveal</h2>
+        <p class="section-desc" data-i18n="features.desc">Six powerful tools in one beautifully crafted app — from daily auspicious times to deep life analysis.</p>
+      </div>
+
+      <div class="features__grid">
+        <!-- Feature 1 -->
+        <div class="feature-card" data-aos="fade-up">
+          <div class="feature-card__icon" style="--glow: rgba(255,184,0,0.3)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFB800" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <h3 class="feature-card__title" data-i18n="feat1.title">Rahu Kalaya & Daily Nakath</h3>
+          <p class="feature-card__desc" data-i18n="feat1.desc">Real-time Rahu Kalaya tracking with push notifications. Full Panchanga — Tithi, Nakshatra, Yoga, Karana — updated for your exact GPS location.</p>
+          <ul class="feature-card__tags">
+            <li data-i18n="feat1.tag1">GPS-based</li><li data-i18n="feat1.tag2">Push alerts</li><li data-i18n="feat1.tag3">Panchanga</li>
+          </ul>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="feature-card" data-aos="fade-up" data-aos-delay="100">
+          <div class="feature-card__icon" style="--glow: rgba(147,51,234,0.3)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B47AFF" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+          <h3 class="feature-card__title" data-i18n="feat2.title">Porondam — Marriage Match</h3>
+          <p class="feature-card__desc" data-i18n="feat2.desc">Traditional 20-point compatibility engine. Check Dina, Gana, Yoni, Rashi, Vasya, Nadi & Mahendra kūta with detailed interpretation.</p>
+          <ul class="feature-card__tags">
+            <li data-i18n="feat2.tag1">7 Factors</li><li data-i18n="feat2.tag2">20 Points</li><li data-i18n="feat2.tag3">Dosha Check</li>
+          </ul>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="feature-card" data-aos="fade-up" data-aos-delay="200">
+          <div class="feature-card__icon" style="--glow: rgba(76,201,240,0.3)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4CC9F0" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h3 class="feature-card__title" data-i18n="feat3.title">Grahachara Chat</h3>
+          <p class="feature-card__desc" data-i18n="feat3.desc">Ask anything — career, love, health, lucky times. Grahachara reads your birth chart and current transits to give deeply personal answers.</p>
+          <ul class="feature-card__tags">
+            <li data-i18n="feat3.tag1">Personal</li><li data-i18n="feat3.tag2">Birth-chart aware</li><li data-i18n="feat3.tag3">Dream reader</li>
+          </ul>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="feature-card" data-aos="fade-up" data-aos-delay="300">
+          <div class="feature-card__icon" style="--glow: rgba(0,255,179,0.3)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00FFB3" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <h3 class="feature-card__title" data-i18n="feat4.title">Complete Life Report</h3>
+          <p class="feature-card__desc" data-i18n="feat4.desc">22-section detailed narrative covering personality, career, marriage, children, health, finances, past life, spiritual path & 25-year timeline.</p>
+          <ul class="feature-card__tags">
+            <li data-i18n="feat4.tag1">22 Sections</li><li data-i18n="feat4.tag2">LKR 350</li><li data-i18n="feat4.tag3">PDF Export</li>
+          </ul>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="feature-card" data-aos="fade-up" data-aos-delay="400">
+          <div class="feature-card__icon" style="--glow: rgba(255,107,157,0.3)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF6B9D" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+          </div>
+          <h3 class="feature-card__title" data-i18n="feat5.title">Kendara — Birth Chart</h3>
+          <p class="feature-card__desc" data-i18n="feat5.desc">Traditional Sri Lankan Kendara chart with all 9 Grahas, Lagna, Navamsha D9, KP sub-lords, Dasha timeline & Maraka Apala engine.</p>
+          <ul class="feature-card__tags">
+            <li data-i18n="feat5.tag1">Rashi + Navamsha</li><li data-i18n="feat5.tag2">KP System</li><li data-i18n="feat5.tag3">Dasha</li>
+          </ul>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="feature-card" data-aos="fade-up" data-aos-delay="500">
+          <div class="feature-card__icon" style="--glow: rgba(255,140,0,0.3)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF8C00" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <h3 class="feature-card__title" data-i18n="feat6.title">Sinhala & English</h3>
+          <p class="feature-card__desc" data-i18n="feat6.desc">Full Sinhala (සිංහල) and English support. Every screen, every report, every response — in your preferred language.</p>
+          <ul class="feature-card__tags">
+            <li data-i18n="feat6.tag1">සිංහල</li><li data-i18n="feat6.tag2">English</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ HOW IT WORKS ═══ -->
+  <section class="how" id="how-it-works">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label" data-i18n="how.label">How It Works</span>
+        <h2 class="section-title" data-i18n="how.title">3 Steps to Cosmic Clarity</h2>
+      </div>
+      <div class="how__steps">
+        <div class="how__step" data-aos="fade-right">
+          <div class="how__step-num">01</div>
+          <div class="how__step-content">
+            <h3 data-i18n="how.step1.title">Enter Your Birth Details</h3>
+            <p data-i18n="how.step1.desc">Date, time, and place of birth. We use the Lahiri Ayanamsha — the traditional standard across Sri Lanka — to calculate your sidereal chart with sub-arcminute accuracy.</p>
+          </div>
+        </div>
+        <div class="how__step" data-aos="fade-right" data-aos-delay="150">
+          <div class="how__step-num">02</div>
+          <div class="how__step-content">
+            <h3 data-i18n="how.step2.title">Grahachara Reads Your Stars</h3>
+            <p data-i18n="how.step2.desc">Our engine computes planetary positions, house placements, Yogas, Doshas, and Dasha periods — then weaves this data into deeply personal, human-readable insights you can actually understand.</p>
+          </div>
+        </div>
+        <div class="how__step" data-aos="fade-right" data-aos-delay="300">
+          <div class="how__step-num">03</div>
+          <div class="how__step-content">
+            <h3 data-i18n="how.step3.title">Live Daily Guidance</h3>
+            <p data-i18n="how.step3.desc">Get real-time Rahu Kalaya alerts, daily Nakath, transit updates, and chat with your personal astrologer anytime — like having a Gurunnanse in your pocket.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ APP SCREENSHOTS ═══ -->
+  <section class="screenshots" id="screenshots">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label" data-i18n="screenshots.label">Screenshots</span>
+        <h2 class="section-title" data-i18n="screenshots.title">A Glimpse Inside</h2>
+        <p class="section-desc" data-i18n="screenshots.desc">Dark cosmic design that feels alive. Every pixel crafted for the Sri Lankan user.</p>
+      </div>
+      <div class="screenshots__carousel">
+        <div class="screenshots__track" id="screenshotsTrack">
+          <div class="screenshot-card">
+            <span class="screenshot-card__label" data-i18n="scr.home">Home — Daily Nakath</span>
+            <div class="phone-mockup phone-mockup--sm">
+              <div class="phone-mockup__bezel">
+                <div class="phone-mockup__notch"></div>
+                <div class="phone-mockup__screen"><img src="assets/adamainpage.png" alt="Home Screen" /></div>
+                <div class="phone-mockup__chin"></div>
+              </div>
+            </div>
+          </div>
+          <div class="screenshot-card">
+            <span class="screenshot-card__label" data-i18n="scr.chat">Grahachara Chat</span>
+            <div class="phone-mockup phone-mockup--sm">
+              <div class="phone-mockup__bezel">
+                <div class="phone-mockup__notch"></div>
+                <div class="phone-mockup__screen"><img src="assets/aichatpage.png" alt="Grahachara Chat" /></div>
+                <div class="phone-mockup__chin"></div>
+              </div>
+            </div>
+          </div>
+          <div class="screenshot-card">
+            <span class="screenshot-card__label" data-i18n="scr.kendara1">Kendara — Birth Chart</span>
+            <div class="phone-mockup phone-mockup--sm">
+              <div class="phone-mockup__bezel">
+                <div class="phone-mockup__notch"></div>
+                <div class="phone-mockup__screen"><img src="assets/kendarapage1.png" alt="Kendara Chart" /></div>
+                <div class="phone-mockup__chin"></div>
+              </div>
+            </div>
+          </div>
+          <div class="screenshot-card">
+            <span class="screenshot-card__label" data-i18n="scr.kendara2">Kendara — Planets</span>
+            <div class="phone-mockup phone-mockup--sm">
+              <div class="phone-mockup__bezel">
+                <div class="phone-mockup__notch"></div>
+                <div class="phone-mockup__screen"><img src="assets/kendarapage2.png" alt="Kendara Planets" /></div>
+                <div class="phone-mockup__chin"></div>
+              </div>
+            </div>
+          </div>
+          <div class="screenshot-card">
+            <span class="screenshot-card__label" data-i18n="scr.kendara3">Kendara — Navamsha</span>
+            <div class="phone-mockup phone-mockup--sm">
+              <div class="phone-mockup__bezel">
+                <div class="phone-mockup__notch"></div>
+                <div class="phone-mockup__screen"><img src="assets/kendarapag3.png" alt="Kendara Navamsha" /></div>
+                <div class="phone-mockup__chin"></div>
+              </div>
+            </div>
+          </div>
+          <div class="screenshot-card">
+            <span class="screenshot-card__label" data-i18n="scr.kendara4">Kendara — Dasha</span>
+            <div class="phone-mockup phone-mockup--sm">
+              <div class="phone-mockup__bezel">
+                <div class="phone-mockup__notch"></div>
+                <div class="phone-mockup__screen"><img src="assets/kendarapage4.png" alt="Kendara Dasha" /></div>
+                <div class="phone-mockup__chin"></div>
+              </div>
+            </div>
+          </div>
+          <div class="screenshot-card">
+            <span class="screenshot-card__label" data-i18n="scr.report">Life Report</span>
+            <div class="phone-mockup phone-mockup--sm">
+              <div class="phone-mockup__bezel">
+                <div class="phone-mockup__notch"></div>
+                <div class="phone-mockup__screen"><img src="assets/reportpage1.png" alt="Life Report" /></div>
+                <div class="phone-mockup__chin"></div>
+              </div>
+            </div>
+          </div>
+          <div class="screenshot-card">
+            <span class="screenshot-card__label" data-i18n="scr.porondam">Porondam Matching</span>
+            <div class="phone-mockup phone-mockup--sm">
+              <div class="phone-mockup__bezel">
+                <div class="phone-mockup__notch"></div>
+                <div class="phone-mockup__screen"><img src="assets/porondampage.png" alt="Porondam Matching" /></div>
+                <div class="phone-mockup__chin"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="screenshots__nav">
+          <button class="screenshots__btn screenshots__btn--prev" id="scrPrev" aria-label="Previous">‹</button>
+          <div class="screenshots__dots" id="scrDots"></div>
+          <button class="screenshots__btn screenshots__btn--next" id="scrNext" aria-label="Next">›</button>
+        </div>
+        <div class="screenshots__swipe-hint" id="swipeHint">
+          <span data-i18n="scr.swipe">← Swipe to explore →</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PRICING ═══ -->
+  <section class="pricing" id="pricing">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label" data-i18n="pricing.label">Pricing</span>
+        <h2 class="section-title" data-i18n="pricing.title">Simple. Affordable. Sri Lankan.</h2>
+        <p class="section-desc" data-i18n="pricing.desc">Everything for just Rs. 8 a day — less than a cup of tea. No hidden fees, cancel anytime.</p>
+      </div>
+      <div class="pricing__grid">
+        <!-- Daily Plan — LKR 8/day (Main) -->
+        <div class="pricing-card pricing-card--featured" data-aos="fade-up">
+          <div class="pricing-card__badge pricing-card__badge--gold" data-i18n="price1.badge">⭐ All Features</div>
+          <div class="pricing-card__price">
+            <span class="pricing-card__amount" data-i18n="price1.amount">LKR 8</span>
+            <span class="pricing-card__period" data-i18n="price1.period">/ day</span>
+          </div>
+          <div class="pricing-card__savings" data-i18n="price1.savings">That's just Rs. 240/month — less than a cup of tea ☕</div>
+          <ul class="pricing-card__features">
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f1">Daily Rahu Kalaya & Nakath</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f2">Full Panchanga</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f3">Birth Chart (Kendara)</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f4"><strong>10 chat questions per day</strong></li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f5">Push notifications</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f6">Dream interpretation</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f7">Advanced transit alerts</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f8">No ads, ever</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f9">Cancel anytime — no lock-in</li>
+          </ul>
+          <a href="#download" class="btn btn--primary btn--glow" data-i18n="price1.cta">Get Started — LKR 8/day</a>
+        </div>
+        <!-- Life Report -->
+        <div class="pricing-card" data-aos="fade-up" data-aos-delay="150">
+          <div class="pricing-card__badge" data-i18n="price2.badge">Life Report</div>
+          <div class="pricing-card__price">
+            <span class="pricing-card__amount" data-i18n="price2.amount">LKR 350</span>
+            <span class="pricing-card__period" data-i18n="price2.period">per report</span>
+          </div>
+          <ul class="pricing-card__features">
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price2.f1"><strong>22-section Life Report</strong></li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price2.f2">Personality, Career, Marriage</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price2.f3">25-Year Life Timeline</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price2.f4">Health Blueprint</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price2.f5">Past Life & Spiritual Journey</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price2.f6">PDF Export & Share</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price2.f7">Permanent access</li>
+          </ul>
+          <a href="#download" class="btn btn--outline" data-i18n="price2.cta">Generate Report</a>
+        </div>
+        <!-- Porondam -->
+        <div class="pricing-card" data-aos="fade-up" data-aos-delay="300">
+          <div class="pricing-card__badge" data-i18n="price3.badge">Porondam</div>
+          <div class="pricing-card__price">
+            <span class="pricing-card__amount" data-i18n="price3.amount">LKR 50</span>
+            <span class="pricing-card__period" data-i18n="price3.period">per report</span>
+          </div>
+          <ul class="pricing-card__features">
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price3.f1">7-Factor Kūta Analysis</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price3.f2">20-Point Compatibility Score</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price3.f3">Dosha Detection</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price3.f4">Detailed Interpretation</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price3.f5">WhatsApp "Vibe Check" Link</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price3.f6">Remedies & Suggestions</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price3.f7">Shareable Results</li>
+          </ul>
+          <a href="#download" class="btn btn--outline" data-i18n="price3.cta">Check Match</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ TESTIMONIALS ═══ -->
+  <section class="testimonials" id="testimonials">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label" data-i18n="testimonials.label">Reviews</span>
+        <h2 class="section-title" data-i18n="testimonials.title">Loved Across Sri Lanka</h2>
+      </div>
+      <div class="testimonials__grid">
+        <div class="testimonial-card" data-aos="fade-up">
+          <div class="testimonial-card__stars">★★★★★</div>
+          <p class="testimonial-card__text" data-i18n="review1.text">"Porondam score was exactly what our family astrologer said — 18/20! The explanation was even more detailed. Amazing app. 🙏"</p>
+          <div class="testimonial-card__author">
+            <div class="testimonial-card__avatar">N</div>
+            <div>
+              <span class="testimonial-card__name" data-i18n="review1.name">Nimesha</span>
+              <span class="testimonial-card__loc" data-i18n="review1.loc">Kandy</span>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card" data-aos="fade-up" data-aos-delay="100">
+          <div class="testimonial-card__stars">★★★★★</div>
+          <p class="testimonial-card__text" data-i18n="review2.text">"I check Rahu Kalaya every morning before leaving home. The Sinhala interface is perfect — finally an astrology app that actually feels Sri Lankan!"</p>
+          <div class="testimonial-card__author">
+            <div class="testimonial-card__avatar">S</div>
+            <div>
+              <span class="testimonial-card__name" data-i18n="review2.name">Sandun</span>
+              <span class="testimonial-card__loc" data-i18n="review2.loc">Colombo</span>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card" data-aos="fade-up" data-aos-delay="200">
+          <div class="testimonial-card__stars">★★★★★</div>
+          <p class="testimonial-card__text" data-i18n="review3.text">"The life report blew my mind. It knew things about my career path that I never told anyone. Worth every rupee — better than visiting an astrologer in person."</p>
+          <div class="testimonial-card__author">
+            <div class="testimonial-card__avatar">K</div>
+            <div>
+              <span class="testimonial-card__name" data-i18n="review3.name">Kavindi</span>
+              <span class="testimonial-card__loc" data-i18n="review3.loc">Galle</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FAQ ═══ -->
+  <section class="faq" id="faq">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label" data-i18n="faq.label">FAQ</span>
+        <h2 class="section-title" data-i18n="faq.title">Frequently Asked Questions</h2>
+      </div>
+      <div class="faq__list">
+        <details class="faq__item" data-aos="fade-up">
+          <summary class="faq__question" data-i18n="faq1.q">How much does it cost?</summary>
+          <div class="faq__answer" data-i18n="faq1.a">Grahachara gives you access to all features — Rahu Kalaya, Nakath, Panchanga, birth charts, 10 daily chat questions, push notifications, dream interpretation and more — for just LKR 8/day (about Rs. 240/month). Premium add-ons like the full Life Report (LKR 350) and Porondam matching (LKR 50) are one-time pay-per-use. No hidden fees, cancel anytime.</div>
+        </details>
+        <details class="faq__item" data-aos="fade-up" data-aos-delay="50">
+          <summary class="faq__question" data-i18n="faq2.q">Which Ayanamsha does it use?</summary>
+          <div class="faq__answer" data-i18n="faq2.a">We use the Lahiri Ayanamsha — the traditional standard used across Sri Lanka and India. All calculations are sidereal (not tropical/Western), matching what your family astrologer uses.</div>
+        </details>
+        <details class="faq__item" data-aos="fade-up" data-aos-delay="100">
+          <summary class="faq__question" data-i18n="faq3.q">How accurate are the calculations?</summary>
+          <div class="faq__answer" data-i18n="faq3.a">Our engine uses the Meeus astronomical algorithms and ephemeris data for planetary positions. We verified Lagna accuracy against multiple known birth charts with exact matches. The Panchanga is calculated for your exact GPS coordinates.</div>
+        </details>
+        <details class="faq__item" data-aos="fade-up" data-aos-delay="150">
+          <summary class="faq__question" data-i18n="faq4.q">Is my data private?</summary>
+          <div class="faq__answer" data-i18n="faq4.a">Absolutely. Your birth data is stored securely and never sold or shared. We don't run ads or sell user profiles. Your cosmic data stays between you and the stars. 🌟</div>
+        </details>
+        <details class="faq__item" data-aos="fade-up" data-aos-delay="200">
+          <summary class="faq__question" data-i18n="faq5.q">What languages are supported?</summary>
+          <div class="faq__answer" data-i18n="faq5.a">The entire app — every screen, button, and response — is available in සිංහල (Sinhala) and English. You choose your language during onboarding and can switch anytime from settings.</div>
+        </details>
+        <details class="faq__item" data-aos="fade-up" data-aos-delay="250">
+          <summary class="faq__question" data-i18n="faq6.q">How does the Grahachara astrologer chat work?</summary>
+          <div class="faq__answer" data-i18n="faq6.a">When you ask a question, Grahachara reads your birth chart (planet positions, house placements, current Dasha period) and combines it with real-time planetary transits to generate a deeply personal, context-aware response — not generic horoscopes.</div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CTA / DOWNLOAD ═══ -->
+  <section class="download" id="download">
+    <div class="container">
+      <div class="download__inner" data-aos="zoom-in">
+        <div class="download__glow"></div>
+        <img src="assets/logo.png" alt="Grahachara" class="download__logo" />
+        <h2 class="download__title" data-i18n="download.title">Ready to Read Your Stars?</h2>
+        <p class="download__desc" data-i18n="download.desc">Download Grahachara now. Enter your birth details. Let the cosmos guide you.</p>
+        <div class="download__buttons">
+          <a href="#" class="store-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.52-3.23 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.32 2.32-1.55 4.22-3.74 4.25z"/></svg>
+            <div>
+              <small data-i18n="download.appstoreSub">Download on the</small>
+              <strong data-i18n="download.appstore">App Store</strong>
+            </div>
+          </a>
+          <a href="#" class="store-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.74c-.36-.18-.68-.49-.84-.92L13.42 12 2.34 1.18c.16-.43.48-.74.84-.92l12.42 11.24c.26.24.4.55.4.88s-.14.64-.4.88L3.18 23.74zM20.16 13.77l-3.38 1.93-3-2.72 3-2.72 3.38 1.93c.88.5.88 1.08 0 1.58z"/><path d="M16.78 15.7l-11.5 6.55c-.42.24-.88.24-1.1-.51l11.6-10.52 1 .91-1 .91 1 3.66zM5.18 1.49c.22-.75.68-.75 1.1-.51l11.5 6.55-1 3.66-1-.91 1-.91L5.18 1.49z"/></svg>
+            <div>
+              <small data-i18n="download.playstoreSub">Get it on</small>
+              <strong data-i18n="download.playstore">Google Play</strong>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__top">
+        <div class="footer__brand">
+          <div class="footer__logo"><img src="assets/logo.png" alt="Grahachara" class="footer__logo-img" /> Grahachara</div>
+          <span class="footer__logo-si" data-i18n="footer.taglineSi">ග්‍රහචාර — ඔබේ පුද්ගලික ජ්‍යෝතිෂවේදියා</span>
+          <p class="footer__tagline" data-i18n="footer.tagline">Ancient Vedic wisdom, modern technology.<br>Made with ❤️ in Sri Lanka 🇱🇰</p>
+        </div>
+        <div class="footer__col">
+          <h4 data-i18n="footer.product">Product</h4>
+          <a href="#features" data-i18n="footer.features">Features</a>
+          <a href="#pricing" data-i18n="footer.pricing">Pricing</a>
+          <a href="#screenshots" data-i18n="footer.screenshots">Screenshots</a>
+          <a href="#download" data-i18n="footer.download">Download</a>
+        </div>
+        <div class="footer__col">
+          <h4 data-i18n="footer.resources">Resources</h4>
+          <a href="#" data-i18n="footer.apiDocs">API Docs</a>
+          <a href="#" data-i18n="footer.blog">Blog</a>
+          <a href="#" data-i18n="footer.changelog">Changelog</a>
+          <a href="#" data-i18n="footer.status">Status</a>
+        </div>
+        <div class="footer__col">
+          <h4 data-i18n="footer.legal">Legal</h4>
+          <a href="#" data-i18n="footer.privacy">Privacy Policy</a>
+          <a href="#" data-i18n="footer.terms">Terms of Service</a>
+          <a href="#" data-i18n="footer.cookies">Cookie Policy</a>
+          <a href="#" data-i18n="footer.contact">Contact</a>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <span data-i18n="footer.copyright">© 2026 Grahachara. All rights reserved.</span>
+        <div class="footer__socials">
+          <a href="https://www.facebook.com/share/1FBBur8QZf/?mibextid=wwXIfr" target="_blank" rel="noopener" aria-label="Facebook">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <a href="https://www.instagram.com/grahachara_astro?igsh=MXRrbHV4d2gzdzY2eQ%3D%3D&utm_source=qr" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+          </a>
+          <a href="https://www.tiktok.com/@grahachara_astro?_r=1&_t=ZS-94xmnlkGGnt" target="_blank" rel="noopener" aria-label="TikTok">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/three.min.js"></script>
+  <script src="js/cosmos3d.js"></script>
+  <script src="js/cosmos.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/i18n.js"></script>
+</body>
+</html>

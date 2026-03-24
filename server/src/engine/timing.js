@@ -20,7 +20,7 @@
  *
  * Based on: BPHS, Phaladeepika, Sarvartha Chintamani, KP principles
  *
- * Author: Nakath AI Engine v4.0
+ * Author: Grahachara Engine v4.0
  */
 
 const {

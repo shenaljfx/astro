@@ -1,4 +1,4 @@
-# 🪐 Nakath AI - Sri Lankan Astrology App
+# 🪐 Grahachara (ග්‍රහචාර) - Sri Lankan Astrology App
 
 > Your Personal AI Astrologer — AI-powered Vedic astrology and Nakath (auspicious time) app for the Sri Lankan market.
 

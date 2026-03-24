@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 export function getBaseUrl() {
-  if (!__DEV__) return 'https://api.nakath.ai';
+  if (!__DEV__) return 'https://api.grahachara.lk';
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return 'http://' + window.location.hostname + ':3000';
   }
@@ -170,10 +170,10 @@ export var getFullReport = function(birthDate, lat, lng, language) {
   });
 };
 
-export var getAIReport = function(birthDate, lat, lng, language, birthLocation, userName, userGender) {
+export var getAIReport = function(birthDate, lat, lng, language, birthLocation, userName, userGender, userReligion) {
   return request('/api/horoscope/full-report-ai', {
     method: 'POST',
-    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en', birthLocation: birthLocation || null, userName: userName || null, userGender: userGender || null }),
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en', birthLocation: birthLocation || null, userName: userName || null, userGender: userGender || null, userReligion: userReligion || null }),
     _timeout: 120000,
   });
 };
@@ -272,6 +272,37 @@ export var getSubscriptionStatus = function() {
 
 export var renewSubscription = function() {
   return request('/api/auth/renew', { method: 'POST' });
+};
+
+// ─── PayHere Payment API ────────────────────────────────────────
+
+export var initiateSubscription = function(data) {
+  return request('/api/payhere/initiate-subscription', {
+    method: 'POST',
+    body: JSON.stringify(data || {}),
+  });
+};
+
+export var initiateTopUp = function(amount) {
+  return request('/api/payhere/initiate-topup', {
+    method: 'POST',
+    body: JSON.stringify({ amount: amount }),
+  });
+};
+
+export var confirmPayment = function(paymentId, orderId, type) {
+  return request('/api/payhere/confirm-payment', {
+    method: 'POST',
+    body: JSON.stringify({ paymentId: paymentId, orderId: orderId, type: type }),
+  });
+};
+
+export var cancelPayHereSubscription = function() {
+  return request('/api/payhere/cancel', { method: 'POST' });
+};
+
+export var getPayHereStatus = function() {
+  return request('/api/payhere/status');
 };
 
 // ─── Predictions API — Transit, Timing, Muhurtha, Health ────────
@@ -399,6 +430,61 @@ export var getChatQuota = function() {
   return request('/api/chat/quota');
 };
 
+// ─── Notification API ────────────────────────────────────────────────────────
+
+export var registerPushToken = function(pushToken, platform) {
+  return request('/api/notifications/register', {
+    method: 'POST',
+    body: JSON.stringify({ pushToken: pushToken, platform: platform || 'unknown' }),
+  });
+};
+
+export var unregisterPushToken = function() {
+  return request('/api/notifications/unregister', { method: 'POST' });
+};
+
+export var getNotificationHistory = function(limit) {
+  return request('/api/notifications/history?limit=' + (limit || 30));
+};
+
+export var markNotificationsRead = function(notificationIds) {
+  return request('/api/notifications/read', {
+    method: 'POST',
+    body: JSON.stringify({ notificationIds: notificationIds }),
+  });
+};
+
+export var getUnreadNotificationCount = function() {
+  return request('/api/notifications/unread-count');
+};
+
+export var updateNotificationPreferences = function(prefs) {
+  return request('/api/notifications/preferences', {
+    method: 'PUT',
+    body: JSON.stringify(prefs),
+  });
+};
+
+export var getMarakaApala = function(years) {
+  return request('/api/notifications/maraka-apala?years=' + (years || 3));
+};
+
+export var getMarakaApalaFull = function(birthDate, lat, lng, yearsAhead) {
+  return request('/api/notifications/maraka-apala/full', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, lat: lat, lng: lng, yearsAhead: yearsAhead || 5 }),
+    _timeout: 30000,
+  });
+};
+
+export var getTodayDashboard = function(lat, lng) {
+  return request('/api/notifications/today?lat=' + (lat || 6.9271) + '&lng=' + (lng || 79.8612));
+};
+
+export var sendTestNotification = function() {
+  return request('/api/notifications/test', { method: 'POST' });
+};
+
 // ─── Enhanced Prediction APIs (Tier 3-5) ──────────────────────────────────
 
 export var getEnhancedTransits = function(data) {
@@ -468,6 +554,12 @@ export default {
   unsubscribe: unsubscribe,
   getSubscriptionStatus: getSubscriptionStatus,
   renewSubscription: renewSubscription,
+  // PayHere Payment
+  initiateSubscription: initiateSubscription,
+  initiateTopUp: initiateTopUp,
+  confirmPayment: confirmPayment,
+  cancelPayHereSubscription: cancelPayHereSubscription,
+  getPayHereStatus: getPayHereStatus,
   // Predictions — Transit
   getCurrentTransits: getCurrentTransits,
   getEnhancedTransits: getEnhancedTransits,
@@ -505,4 +597,15 @@ export default {
   getTokenHistory: getTokenHistory,
   // Chat quota
   getChatQuota: getChatQuota,
+  // Notifications
+  registerPushToken: registerPushToken,
+  unregisterPushToken: unregisterPushToken,
+  getNotificationHistory: getNotificationHistory,
+  markNotificationsRead: markNotificationsRead,
+  getUnreadNotificationCount: getUnreadNotificationCount,
+  updateNotificationPreferences: updateNotificationPreferences,
+  getMarakaApala: getMarakaApala,
+  getMarakaApalaFull: getMarakaApalaFull,
+  getTodayDashboard: getTodayDashboard,
+  sendTestNotification: sendTestNotification,
 };

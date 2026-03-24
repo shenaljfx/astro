@@ -6,13 +6,13 @@
  * 2. User enters OTP code → verifyAndLogin() → receives JWT + user profile
  * 3. JWT stored in AsyncStorage for persistent login
  * 4. Onboarding: name + birth data (skippable)
- * 5. Subscription: LKR 8/day charged from mobile credit
+ * 5. Subscription: LKR 240/month via PayHere (card/bank)
  * 
  * Provides:
  * - user, token, loading, isLoggedIn, subscription
  * - sendOtp(phone), verifyAndLogin(phone, otp, referenceNo)
  * - completeOnboarding(name, birthData)
- * - activateSubscription(), cancelSubscription(), renewSubscription()
+ * - activateSubscription(), cancelSubscription()
  * - saveBirthData(birthData), updateProfile(data), signOut()
  */
 
@@ -23,22 +23,23 @@ import {
   sendOtp as apiSendOtp,
   verifyOtp as apiVerifyOtp,
   completeOnboarding as apiCompleteOnboarding,
-  subscribe as apiSubscribe,
   unsubscribe as apiUnsubscribe,
   getSubscriptionStatus as apiGetSubscriptionStatus,
-  renewSubscription as apiRenewSubscription,
+  initiateSubscription as apiInitiateSubscription,
+  confirmPayment as apiConfirmPayment,
+  cancelPayHereSubscription as apiCancelPayHere,
 } from '../services/api';
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 
 var AuthContext = createContext(null);
 
-var STORAGE_TOKEN = 'nakath_auth_token';
-var STORAGE_USER = 'nakath_user_profile';
-var STORAGE_ONBOARDING = 'nakath_onboarding_done';
+var STORAGE_TOKEN = 'grahachara_auth_token';
+var STORAGE_USER = 'grahachara_user_profile';
+var STORAGE_ONBOARDING = 'grahachara_onboarding_done';
 
 function getBaseUrl() {
-  if (!__DEV__) return 'https://api.nakath.ai';
+  if (!__DEV__) return 'https://api.grahachara.lk';
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return 'http://' + window.location.hostname + ':3000';
   }
@@ -212,27 +213,87 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Activate daily subscription (LKR 8/day)
+  // Activate monthly subscription via PayHere (LKR 240/month)
   var activateSubscription = useCallback(async function() {
     try {
-      var result = await apiSubscribe();
-      if (result.success) {
-        setSubscription(result.subscription);
-        setUser(function(prev) {
-          var updated = { ...prev, subscription: result.subscription };
-          AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
-          return updated;
-        });
+      // Step 1: Get payment object + hash from server
+      var initResult = await apiInitiateSubscription({
+        firstName: user?.displayName || 'Grahachara',
+        phone: user?.phone || '',
+      });
+
+      if (!initResult.success) {
+        throw new Error(initResult.error || 'Failed to initiate subscription');
       }
-      return result;
+
+      var paymentObject = initResult.paymentObject;
+
+      // Step 2: Open PayHere payment via SDK
+      var PayHere = null;
+      try {
+        PayHere = require('@payhere/payhere-mobilesdk-reactnative').default;
+      } catch (e) {
+        // PayHere SDK not installed — fallback to WebView or error
+        console.warn('PayHere SDK not available:', e.message);
+        throw new Error('Payment system not available. Please update the app.');
+      }
+
+      return new Promise(function(resolve, reject) {
+        PayHere.startPayment(
+          paymentObject,
+          async function(paymentId) {
+            // Step 3: Payment completed — confirm with server
+            console.log('PayHere payment completed:', paymentId);
+            try {
+              var confirmResult = await apiConfirmPayment(
+                paymentId,
+                initResult.orderId,
+                'subscription'
+              );
+
+              if (confirmResult.success) {
+                var sub = confirmResult.subscription || { status: 'active', plan: 'monthly' };
+                setSubscription(sub);
+                setUser(function(prev) {
+                  var updated = { ...prev, subscription: sub };
+                  AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
+                  return updated;
+                });
+                resolve({ success: true, subscription: sub, paymentId: paymentId });
+              } else if (confirmResult.pending) {
+                // Webhook hasn't arrived yet — set optimistic active
+                var pendingSub = { status: 'active', plan: 'monthly', pendingConfirmation: true };
+                setSubscription(pendingSub);
+                resolve({ success: true, subscription: pendingSub, pending: true });
+              } else {
+                reject(new Error('Payment confirmation failed'));
+              }
+            } catch (confirmErr) {
+              console.error('Confirm payment error:', confirmErr);
+              // Payment was made but confirmation failed — still set optimistic
+              var optimisticSub = { status: 'active', plan: 'monthly', pendingConfirmation: true };
+              setSubscription(optimisticSub);
+              resolve({ success: true, subscription: optimisticSub, pending: true });
+            }
+          },
+          function(errorData) {
+            console.error('PayHere error:', errorData);
+            reject(new Error(errorData || 'Payment failed'));
+          },
+          function() {
+            console.log('PayHere dismissed');
+            reject(new Error('Payment cancelled'));
+          }
+        );
+      });
     } catch (err) {
       throw err;
     }
-  }, []);
+  }, [user]);
 
   var cancelSubscription = useCallback(async function() {
     try {
-      var result = await apiUnsubscribe();
+      var result = await apiCancelPayHere();
       if (result.success) {
         setSubscription({ status: 'cancelled' });
         setUser(function(prev) {
@@ -260,9 +321,12 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // PayHere auto-renews monthly — renewSub just refreshes the status
   var renewSub = useCallback(async function() {
     try {
-      var result = await apiRenewSubscription();
+      // With PayHere recurring, there's no manual renewal
+      // If expired, user needs to re-subscribe
+      var result = await apiGetSubscriptionStatus();
       if (result.success) {
         setSubscription(result.subscription);
         setUser(function(prev) {

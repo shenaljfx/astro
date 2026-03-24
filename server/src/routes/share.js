@@ -76,8 +76,8 @@ router.post('/weekly-card', (req, res) => {
           overallWeekScore: Math.round(weekForecast.reduce((s, d) => s + d.score, 0) / 7),
         },
         shareText: {
-          en: `✨ My weekly cosmic forecast from Nakath AI 🪐\n${rashi.english} (${rashi.sinhala})\nOverall: ${Math.round(weekForecast.reduce((s, d) => s + d.score, 0) / 7)}/10\n\nDownload Nakath AI to check yours!`,
-          si: `✨ මගේ සතිපතා කේන්ද්‍ර අනාවැකිය - Nakath AI 🪐\n${rashi.sinhala} ලග්නය\nසමස්ත ලකුණු: ${Math.round(weekForecast.reduce((s, d) => s + d.score, 0) / 7)}/10\n\nඔබගේ අනාවැකිය බලන්න Nakath AI download කරන්න!`,
+          en: `✨ My weekly cosmic forecast from Grahachara 🪐\n${rashi.english} (${rashi.sinhala})\nOverall: ${Math.round(weekForecast.reduce((s, d) => s + d.score, 0) / 7)}/10\n\nDownload Grahachara to check yours!`,
+          si: `✨ මගේ සතිපතා කේන්ද්‍ර අනාවැකිය - ග්‍රහචාර 🪐\n${rashi.sinhala} ලග්නය\nසමස්ත ලකුණු: ${Math.round(weekForecast.reduce((s, d) => s + d.score, 0) / 7)}/10\n\nඔබගේ අනාවැකිය බලන්න ග්‍රහචාර download කරන්න!`,
         },
       },
     });
@@ -235,7 +235,7 @@ router.post('/personality', (req, res) => {
           lord: nakshatra.lord,
         },
         personality,
-        shareText: `${personality.emoji} I'm a ${rashi.english} (${rashi.sinhala}) with ${nakshatra.name} Nakshatra!\n\nStrengths: ${personality.strengths.join(', ')}\n\nFind your cosmic identity on Nakath AI 🪐✨`,
+        shareText: `${personality.emoji} I'm a ${rashi.english} (${rashi.sinhala}) with ${nakshatra.name} Nakshatra!\n\nStrengths: ${personality.strengths.join(', ')}\n\nFind your cosmic identity on Grahachara 🪐✨`,
       },
     });
   } catch (error) {

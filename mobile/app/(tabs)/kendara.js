@@ -21,7 +21,7 @@ import { Colors, Typography, Spacing } from '../../constants/theme';
 import CosmicCard from '../../components/ui/CosmicCard';
 import SectionHeader from '../../components/ui/SectionHeader';
 
-const CHART_CACHE_KEY = '@nakath_chart_cache';
+const CHART_CACHE_KEY = '@grahachara_chart_cache';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -148,6 +148,9 @@ export default function KendaraScreen() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [marakaData, setMarakaData] = useState(null);
+  const [marakaLoading, setMarakaLoading] = useState(false);
+  const [expandedApala, setExpandedApala] = useState(null);
   
   const stepTimers = useRef([]);
   const lastFetchedBirth = useRef(null);
@@ -241,6 +244,27 @@ export default function KendaraScreen() {
     return () => { cancelled = true; clearStepTimers(); };
   }, [hasBirthData, birthDateTime, birthLat, birthLng, clearStepTimers, refreshKey]);
 
+  // Fetch Maraka Apala data when birth data is available
+  useEffect(() => {
+    if (!hasBirthData || !birthDateTime) { setMarakaData(null); return; }
+    var cancelled = false;
+    (async () => {
+      try {
+        setMarakaLoading(true);
+        var res = await api.getMarakaApalaFull(birthDateTime, birthLat, birthLng, 5);
+        if (cancelled) return;
+        if (res.success) {
+          setMarakaData(res.data);
+        }
+      } catch (err) {
+        if (!cancelled) console.warn('Maraka Apala fetch error:', err.message);
+      } finally {
+        if (!cancelled) setMarakaLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [hasBirthData, birthDateTime, birthLat, birthLng, refreshKey]);
+
   // Pull-to-refresh: clear caches and force the effect to re-run
   const onRefresh = useCallback(() => {
     if (fetchingRef.current) return;
@@ -248,6 +272,8 @@ export default function KendaraScreen() {
     chartDataRef.current = null;
     AsyncStorage.removeItem(CHART_CACHE_KEY).catch(() => {});
     setChartData(null);
+    setMarakaData(null);
+    setExpandedApala(null);
     setError(null);
     setRefreshKey(function (k) { return k + 1; });
   }, []);
@@ -787,6 +813,272 @@ export default function KendaraScreen() {
               </View>
             )}
 
+            {/* ═══ MARAKA APALA (Dangerous Periods) ═══ */}
+            {(marakaData || marakaLoading) && (
+              <Animated.View entering={FadeInDown.delay(750).duration(600)}>
+                <View style={styles.headerRow}>
+                  <Ionicons name="shield-outline" size={20} color="#f87171" />
+                  <Text style={styles.sectionTitle}>
+                    {language === 'si' ? 'මාරක අපල — භයානක කාල' : 'Maraka Apala — Dangerous Periods'}
+                  </Text>
+                </View>
+
+                {marakaLoading && !marakaData ? (
+                  <View style={[styles.advCard, { alignItems: 'center', paddingVertical: 24 }]}>
+                    <CosmicLoader size={28} color="#f87171" />
+                    <Text style={{ color: 'rgba(255,255,255,0.4)', marginTop: 10, fontSize: 13 }}>
+                      {language === 'si' ? 'මාරක අපල ගණනය කරමින්...' : 'Calculating dangerous periods...'}
+                    </Text>
+                  </View>
+                ) : marakaData ? (
+                  <View>
+                    {/* Overall Status Card */}
+                    <View style={[styles.advCard, {
+                      borderColor: marakaData.status === 'CRITICAL' ? 'rgba(239,68,68,0.4)'
+                        : marakaData.status === 'HIGH' ? 'rgba(239,68,68,0.25)'
+                        : marakaData.status === 'MODERATE' ? 'rgba(245,158,11,0.25)'
+                        : 'rgba(16,185,129,0.25)',
+                      overflow: 'hidden',
+                    }]}>
+                      <LinearGradient
+                        colors={
+                          marakaData.status === 'CRITICAL' ? ['rgba(239,68,68,0.15)', 'rgba(239,68,68,0.03)']
+                          : marakaData.status === 'HIGH' ? ['rgba(239,68,68,0.1)', 'rgba(239,68,68,0.02)']
+                          : marakaData.status === 'MODERATE' ? ['rgba(245,158,11,0.1)', 'rgba(245,158,11,0.02)']
+                          : ['rgba(16,185,129,0.1)', 'rgba(16,185,129,0.02)']
+                        }
+                        style={StyleSheet.absoluteFill}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <View style={[styles.marakaStatusOrb, {
+                          backgroundColor: marakaData.status === 'CRITICAL' ? 'rgba(239,68,68,0.2)'
+                            : marakaData.status === 'HIGH' ? 'rgba(239,68,68,0.15)'
+                            : marakaData.status === 'MODERATE' ? 'rgba(245,158,11,0.15)'
+                            : 'rgba(16,185,129,0.15)',
+                          borderColor: marakaData.status === 'CRITICAL' ? 'rgba(239,68,68,0.5)'
+                            : marakaData.status === 'HIGH' ? 'rgba(239,68,68,0.35)'
+                            : marakaData.status === 'MODERATE' ? 'rgba(245,158,11,0.35)'
+                            : 'rgba(16,185,129,0.35)',
+                        }]}>
+                          <Ionicons
+                            name={marakaData.status === 'SAFE' ? 'shield-checkmark' : 'warning'}
+                            size={24}
+                            color={marakaData.status === 'CRITICAL' ? '#ef4444'
+                              : marakaData.status === 'HIGH' ? '#f87171'
+                              : marakaData.status === 'MODERATE' ? '#f59e0b'
+                              : '#10b981'}
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.marakaStatusTitle, {
+                            color: marakaData.status === 'CRITICAL' ? '#ef4444'
+                              : marakaData.status === 'HIGH' ? '#f87171'
+                              : marakaData.status === 'MODERATE' ? '#f59e0b'
+                              : '#10b981',
+                          }]}>
+                            {language === 'si'
+                              ? (marakaData.status === 'CRITICAL' ? '⛔ අතිශය භයානක' : marakaData.status === 'HIGH' ? '🔴 භයානක' : marakaData.status === 'MODERATE' ? '🟡 සැලකිලිමත් වන්න' : '🟢 ආරක්ෂිතයි')
+                              : (marakaData.status === 'CRITICAL' ? '⛔ Critical Danger' : marakaData.status === 'HIGH' ? '🔴 High Danger' : marakaData.status === 'MODERATE' ? '🟡 Caution' : '🟢 Safe')}
+                          </Text>
+                          <Text style={styles.marakaStatusDesc}>
+                            {language === 'si' ? marakaData.statusSi : marakaData.statusEn}
+                          </Text>
+                        </View>
+                      </View>
+                      {marakaData.activeCount > 0 && (
+                        <View style={styles.marakaCountRow}>
+                          <View style={styles.marakaCountBadge}>
+                            <Text style={styles.marakaCountNum}>{marakaData.activeCount}</Text>
+                            <Text style={styles.marakaCountLabel}>
+                              {language === 'si' ? 'ක්‍රියාත්මක' : 'Active'}
+                            </Text>
+                          </View>
+                          <View style={[styles.marakaCountBadge, { backgroundColor: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.25)' }]}>
+                            <Text style={[styles.marakaCountNum, { color: '#f59e0b' }]}>{(marakaData.upcomingApala || []).length}</Text>
+                            <Text style={[styles.marakaCountLabel, { color: 'rgba(245,158,11,0.7)' }]}>
+                              {language === 'si' ? 'ඉදිරි' : 'Upcoming'}
+                            </Text>
+                          </View>
+                          <View style={[styles.marakaCountBadge, { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }]}>
+                            <Text style={[styles.marakaCountNum, { color: 'rgba(255,255,255,0.6)' }]}>{marakaData.totalCount}</Text>
+                            <Text style={[styles.marakaCountLabel, { color: 'rgba(255,255,255,0.35)' }]}>
+                              {language === 'si' ? 'මුළු' : 'Total'}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Active Apala List */}
+                    {marakaData.activeApala && marakaData.activeApala.length > 0 && (
+                      <View style={{ marginTop: 4 }}>
+                        <Text style={styles.marakaSubHeader}>
+                          <Ionicons name="radio-button-on" size={12} color="#ef4444" />
+                          {'  ' + (language === 'si' ? 'දැන් ක්‍රියාත්මක අපල' : 'Currently Active Periods')}
+                        </Text>
+                        {marakaData.activeApala.map(function(apala, i) {
+                          var sevColor = apala.severity === 'CRITICAL' ? '#ef4444' : apala.severity === 'HIGH' ? '#f87171' : apala.severity === 'MODERATE' ? '#f59e0b' : '#60a5fa';
+                          var isExpanded = expandedApala === 'active-' + i;
+                          var startDate = new Date(apala.start);
+                          var endDate = new Date(apala.end);
+                          var daysLeft = Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24));
+                          return (
+                            <TouchableOpacity key={'active-' + i} activeOpacity={0.7} onPress={function() { setExpandedApala(isExpanded ? null : 'active-' + i); }}>
+                              <Animated.View entering={FadeInDown.delay(i * 100).duration(400)} style={[styles.marakaApalaCard, { borderLeftColor: sevColor }]}>
+                                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+                                  <View style={[styles.marakaSevDot, { backgroundColor: sevColor }]} />
+                                  <View style={{ flex: 1 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                      <Text style={styles.marakaApalaTitle}>
+                                        {language === 'si' ? apala.title : apala.titleEn}
+                                      </Text>
+                                      <View style={[styles.marakaSevBadge, { backgroundColor: sevColor + '18', borderColor: sevColor + '40' }]}>
+                                        <Text style={[styles.marakaSevText, { color: sevColor }]}>{apala.severity}</Text>
+                                      </View>
+                                    </View>
+                                    <Text style={styles.marakaApalaDesc}>
+                                      {language === 'si' ? apala.description : apala.descriptionEn}
+                                    </Text>
+                                    <View style={styles.marakaPeriodRow}>
+                                      <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.35)" />
+                                      <Text style={styles.marakaPeriodText}>
+                                        {startDate.toLocaleDateString()} — {endDate.toLocaleDateString()}
+                                      </Text>
+                                      <View style={styles.marakaDaysLeftBadge}>
+                                        <Text style={styles.marakaDaysLeftText}>
+                                          {daysLeft > 0
+                                            ? (language === 'si' ? 'දින ' + daysLeft + ' ක් ඉතිරියි' : daysLeft + ' days left')
+                                            : (language === 'si' ? 'අද අවසන් වේ' : 'Ends today')}
+                                        </Text>
+                                      </View>
+                                    </View>
+                                    {/* Expandable remedies */}
+                                    {isExpanded && apala.remedies && apala.remedies.length > 0 && (
+                                      <Animated.View entering={FadeIn.duration(300)} style={styles.marakaRemediesBox}>
+                                        <Text style={styles.marakaRemediesTitle}>
+                                          {language === 'si' ? '🙏 පරිහාර' : '🙏 Remedies'}
+                                        </Text>
+                                        {apala.remedies.map(function(r, ri) {
+                                          return (
+                                            <View key={ri} style={styles.marakaRemedyRow}>
+                                              <Text style={styles.marakaRemedyBullet}>•</Text>
+                                              <Text style={styles.marakaRemedyText}>
+                                                {language === 'si' ? r.si : r.en}
+                                              </Text>
+                                            </View>
+                                          );
+                                        })}
+                                      </Animated.View>
+                                    )}
+                                    {!isExpanded && apala.remedies && apala.remedies.length > 0 && (
+                                      <Text style={styles.marakaTapHint}>
+                                        {language === 'si' ? '↓ පරිහාර බැලීමට ඔබන්න' : '↓ Tap for remedies'}
+                                      </Text>
+                                    )}
+                                  </View>
+                                </View>
+                              </Animated.View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+
+                    {/* Upcoming Apala List */}
+                    {marakaData.upcomingApala && marakaData.upcomingApala.length > 0 && (
+                      <View style={{ marginTop: 12 }}>
+                        <Text style={styles.marakaSubHeader}>
+                          <Ionicons name="time-outline" size={12} color="#f59e0b" />
+                          {'  ' + (language === 'si' ? 'ඉදිරි අපල කාල' : 'Upcoming Periods')}
+                        </Text>
+                        {marakaData.upcomingApala.slice(0, 5).map(function(apala, i) {
+                          var sevColor = apala.severity === 'CRITICAL' ? '#ef4444' : apala.severity === 'HIGH' ? '#f87171' : apala.severity === 'MODERATE' ? '#f59e0b' : '#60a5fa';
+                          var isExpanded = expandedApala === 'upcoming-' + i;
+                          var startDate = new Date(apala.start);
+                          var endDate = new Date(apala.end);
+                          var daysUntil = Math.ceil((startDate - new Date()) / (1000 * 60 * 60 * 24));
+                          return (
+                            <TouchableOpacity key={'upcoming-' + i} activeOpacity={0.7} onPress={function() { setExpandedApala(isExpanded ? null : 'upcoming-' + i); }}>
+                              <Animated.View entering={FadeInDown.delay(i * 80).duration(400)} style={[styles.marakaApalaCard, { borderLeftColor: sevColor, opacity: 0.8 }]}>
+                                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+                                  <View style={[styles.marakaSevDot, { backgroundColor: sevColor, opacity: 0.6 }]} />
+                                  <View style={{ flex: 1 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                      <Text style={[styles.marakaApalaTitle, { color: 'rgba(224,231,255,0.7)' }]}>
+                                        {language === 'si' ? apala.title : apala.titleEn}
+                                      </Text>
+                                      <View style={[styles.marakaSevBadge, { backgroundColor: sevColor + '12', borderColor: sevColor + '30' }]}>
+                                        <Text style={[styles.marakaSevText, { color: sevColor, opacity: 0.8 }]}>{apala.severity}</Text>
+                                      </View>
+                                    </View>
+                                    <View style={styles.marakaPeriodRow}>
+                                      <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.25)" />
+                                      <Text style={[styles.marakaPeriodText, { color: 'rgba(255,255,255,0.35)' }]}>
+                                        {startDate.toLocaleDateString()} — {endDate.toLocaleDateString()}
+                                      </Text>
+                                      <View style={[styles.marakaDaysLeftBadge, { backgroundColor: 'rgba(245,158,11,0.08)' }]}>
+                                        <Text style={[styles.marakaDaysLeftText, { color: 'rgba(245,158,11,0.7)' }]}>
+                                          {language === 'si' ? 'දින ' + daysUntil + ' කින්' : 'in ' + daysUntil + ' days'}
+                                        </Text>
+                                      </View>
+                                    </View>
+                                    {/* Expandable remedies */}
+                                    {isExpanded && (
+                                      <Animated.View entering={FadeIn.duration(300)}>
+                                        <Text style={[styles.marakaApalaDesc, { marginTop: 6 }]}>
+                                          {language === 'si' ? apala.description : apala.descriptionEn}
+                                        </Text>
+                                        {apala.remedies && apala.remedies.length > 0 && (
+                                          <View style={styles.marakaRemediesBox}>
+                                            <Text style={styles.marakaRemediesTitle}>
+                                              {language === 'si' ? '🙏 පරිහාර' : '🙏 Remedies'}
+                                            </Text>
+                                            {apala.remedies.map(function(r, ri) {
+                                              return (
+                                                <View key={ri} style={styles.marakaRemedyRow}>
+                                                  <Text style={styles.marakaRemedyBullet}>•</Text>
+                                                  <Text style={styles.marakaRemedyText}>
+                                                    {language === 'si' ? r.si : r.en}
+                                                  </Text>
+                                                </View>
+                                              );
+                                            })}
+                                          </View>
+                                        )}
+                                      </Animated.View>
+                                    )}
+                                    {!isExpanded && (
+                                      <Text style={styles.marakaTapHint}>
+                                        {language === 'si' ? '↓ විස්තර බැලීමට ඔබන්න' : '↓ Tap for details'}
+                                      </Text>
+                                    )}
+                                  </View>
+                                </View>
+                              </Animated.View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+
+                    {/* Safe message when no active or upcoming */}
+                    {marakaData.status === 'SAFE' && (!marakaData.upcomingApala || marakaData.upcomingApala.length === 0) && (
+                      <View style={[styles.advCard, { alignItems: 'center', paddingVertical: 20 }]}>
+                        <Ionicons name="shield-checkmark" size={32} color="#10b981" />
+                        <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 15, marginTop: 8 }}>
+                          {language === 'si' ? 'ආරක්ෂිත කාලයයි' : 'You\'re in a Safe Period'}
+                        </Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+                          {language === 'si' ? 'ළඟදී මාරක අපල කාලයක් නැත' : 'No dangerous periods detected in the near future'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                ) : null}
+              </Animated.View>
+            )}
+
             {/* ── ENGINE FOOTER ── */}
             <Animated.View entering={FadeIn.delay(800).duration(400)}>
               <Text style={styles.engineFooter}>
@@ -962,5 +1254,47 @@ const styles = StyleSheet.create({
   stepTextPending: { color: 'rgba(255,255,255,0.22)' },
   loadingBarTrack: { height: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' },
   loadingBarFill: { height: 4, backgroundColor: '#FFB800', borderRadius: 2 },
+
+  // ── Maraka Apala styles ──
+  marakaStatusOrb: {
+    width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5,
+  },
+  marakaStatusTitle: { fontSize: 16, fontWeight: '800', marginBottom: 2 },
+  marakaStatusDesc: { color: 'rgba(255,255,255,0.5)', fontSize: 12, lineHeight: 18 },
+  marakaCountRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  marakaCountBadge: {
+    flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 12,
+    backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)',
+  },
+  marakaCountNum: { color: '#f87171', fontSize: 20, fontWeight: '900' },
+  marakaCountLabel: { color: 'rgba(248,113,113,0.7)', fontSize: 10, fontWeight: '600', marginTop: 2 },
+  marakaSubHeader: {
+    color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '700',
+    marginBottom: 8, marginTop: 4, letterSpacing: 0.3,
+  },
+  marakaApalaCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    borderLeftWidth: 3, marginBottom: 8,
+  },
+  marakaSevDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
+  marakaApalaTitle: { color: '#E0E7FF', fontSize: 14, fontWeight: '700', flexShrink: 1 },
+  marakaSevBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1 },
+  marakaSevText: { fontSize: 9, fontWeight: '800' },
+  marakaApalaDesc: { color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 18, marginTop: 4 },
+  marakaPeriodRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' },
+  marakaPeriodText: { color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '500' },
+  marakaDaysLeftBadge: { backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
+  marakaDaysLeftText: { color: 'rgba(248,113,113,0.8)', fontSize: 10, fontWeight: '700' },
+  marakaRemediesBox: {
+    backgroundColor: 'rgba(16,185,129,0.05)', borderRadius: 10, padding: 12,
+    marginTop: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.15)',
+  },
+  marakaRemediesTitle: { color: '#10b981', fontSize: 12, fontWeight: '700', marginBottom: 8 },
+  marakaRemedyRow: { flexDirection: 'row', gap: 6, marginBottom: 4, paddingLeft: 2 },
+  marakaRemedyBullet: { color: 'rgba(16,185,129,0.6)', fontSize: 12, fontWeight: '700' },
+  marakaRemedyText: { color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 18, flex: 1 },
+  marakaTapHint: { color: 'rgba(255,255,255,0.2)', fontSize: 10, marginTop: 6, fontStyle: 'italic' },
   
 });

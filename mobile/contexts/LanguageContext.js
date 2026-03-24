@@ -24,7 +24,7 @@ export function LanguageProvider({ children }) {
         // 2) If nothing saved, check user profile from AuthContext storage
         if (!saved) {
           try {
-            var userRaw = await AsyncStorage.getItem('nakath_user_profile');
+            var userRaw = await AsyncStorage.getItem('grahachara_user_profile');
             if (userRaw) {
               var userData = JSON.parse(userRaw);
               if (userData?.preferences?.language) {

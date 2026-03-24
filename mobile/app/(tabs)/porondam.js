@@ -34,6 +34,28 @@ const { width: W } = Dimensions.get('window');
 const WIDE = W >= 700;
 const MOBILE_CHART = Math.min(W - 64, 300);
 
+// Sri Lanka birth locations for accurate chart calculations
+var BIRTH_LOCATIONS = [
+  { name: 'Colombo', nameSi: 'කොළඹ', lat: 6.9271, lng: 79.8612 },
+  { name: 'Kandy', nameSi: 'මහනුවර', lat: 7.2906, lng: 80.6337 },
+  { name: 'Galle', nameSi: 'ගාල්ල', lat: 6.0535, lng: 80.2210 },
+  { name: 'Jaffna', nameSi: 'යාපනය', lat: 9.6615, lng: 80.0255 },
+  { name: 'Matara', nameSi: 'මාතර', lat: 5.9549, lng: 80.5550 },
+  { name: 'Negombo', nameSi: 'මීගමුව', lat: 7.2008, lng: 79.8737 },
+  { name: 'Anuradhapura', nameSi: 'අනුරාධපුරය', lat: 8.3114, lng: 80.4037 },
+  { name: 'Trincomalee', nameSi: 'ත්‍රිකුණාමලය', lat: 8.5874, lng: 81.2152 },
+  { name: 'Batticaloa', nameSi: 'මඩකලපුව', lat: 7.7310, lng: 81.6747 },
+  { name: 'Kurunegala', nameSi: 'කුරුණෑගල', lat: 7.4863, lng: 80.3647 },
+  { name: 'Ratnapura', nameSi: 'රත්නපුර', lat: 6.6828, lng: 80.3992 },
+  { name: 'Badulla', nameSi: 'බදුල්ල', lat: 6.9934, lng: 81.0550 },
+  { name: 'Nuwara Eliya', nameSi: 'නුවරඑළිය', lat: 6.9497, lng: 80.7891 },
+  { name: 'Gampaha', nameSi: 'ගම්පහ', lat: 7.0840, lng: 80.0098 },
+  { name: 'Kalutara', nameSi: 'කළුතර', lat: 6.5854, lng: 79.9607 },
+  { name: 'Hambantota', nameSi: 'හම්බන්තොට', lat: 6.1429, lng: 81.1212 },
+  { name: 'Kegalle', nameSi: 'කෑගල්ල', lat: 7.2513, lng: 80.3464 },
+  { name: 'Puttalam', nameSi: 'පුත්තලම', lat: 8.0362, lng: 79.8283 },
+];
+
 // Glass Card
 function Glass({ children, style, accent }) {
   return (
@@ -158,6 +180,7 @@ var L = {
     namePh: 'Name (optional)',
     yearPh: 'YYYY', monthPh: 'MM', dayPh: 'DD', hourPh: 'HH', minutePh: 'MM',
     date: 'Date of Birth', time: 'Time',
+    birthPlace: 'Birth Place',
     timeHint: '* Check birth certificate for exact time',
     checkBtn: '\uD83D\uDC8D Check Compatibility',
     brideChart: "Bride's Kendara", groomChart: "Groom's Kendara",
@@ -194,6 +217,7 @@ var L = {
     namePh: '\u0DB1\u0DB8 (\u0D85\u0DC0\u0DC1\u0DCA\u200D\u0DBA \u0DB1\u0DB8\u0DCA)',
     yearPh: 'YYYY', monthPh: 'MM', dayPh: 'DD', hourPh: 'HH', minutePh: 'MM',
     date: '\u0D89\u0DB4\u0DB1\u0DCA \u0DAF\u0DD2\u0DB1\u0DBA', time: '\u0DC0\u0DDA\u0DBD\u0DCF\u0DC0',
+    birthPlace: 'උපන් ස්ථානය',
     timeHint: '* \u0D89\u0DB4\u0DCA\u0DB4\u0DD0\u0DB1\u0DCA\u0DB1 \u0DB4\u0DAD\u0DCA\u200D\u0DBB\u0DBA\u0DDA \u0DC0\u0DDA\u0DBD\u0DCF\u0DC0 \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1',
     checkBtn: '\uD83D\uDC8D \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1',
     brideChart: '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA\u0D9C\u0DDA \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA', groomChart: '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF\u0D9C\u0DDA \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA',
@@ -226,8 +250,41 @@ var L = {
   },
 };
 
+// City Picker for birth location
+function CityPicker({ selectedCity, onSelect, lang }) {
+  var [expanded, setExpanded] = useState(false);
+  var displayName = lang === 'si' ? (selectedCity.nameSi || selectedCity.name) : selectedCity.name;
+  return (
+    <View>
+      <TouchableOpacity
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 12 : 10, borderWidth: 1, borderColor: 'rgba(180,122,255,0.2)' }}
+        activeOpacity={0.7}
+        onPress={function() { setExpanded(!expanded); }}>
+        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>📍 {displayName}</Text>
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="rgba(180,122,255,0.6)" />
+      </TouchableOpacity>
+      {expanded && (
+        <View style={{ backgroundColor: 'rgba(15,5,30,0.95)', borderRadius: 12, marginTop: 4, borderWidth: 1, borderColor: 'rgba(180,122,255,0.15)', maxHeight: 180 }}>
+          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
+            {BIRTH_LOCATIONS.map(function(loc, i) {
+              var isSelected = loc.name === selectedCity.name;
+              var locName = lang === 'si' ? (loc.nameSi || loc.name) : loc.name;
+              return (
+                <TouchableOpacity key={i} style={{ paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: i < BIRTH_LOCATIONS.length - 1 ? 1 : 0, borderBottomColor: 'rgba(255,255,255,0.04)', backgroundColor: isSelected ? 'rgba(180,122,255,0.12)' : 'transparent' }}
+                  onPress={function() { onSelect(loc); setExpanded(false); }} activeOpacity={0.7}>
+                  <Text style={{ color: isSelected ? '#c084fc' : 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: isSelected ? '700' : '400' }}>{locName}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+}
+
 // Person Input Card (with cosmic date/time pickers)
-function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTimeStr, T, lang }) {
+function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTimeStr, city, setCity, T, lang }) {
   return (
     <Glass style={sty.personCard}>
       <Text style={sty.personLabel}>{label}</Text>
@@ -236,6 +293,8 @@ function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTim
       <DatePickerField value={dateStr} onChange={setDateStr} lang={lang} />
       <Text style={[sty.fieldTag, { marginTop: 12 }]}>{T.time}</Text>
       <TimePickerField value={timeStr} onChange={setTimeStr} lang={lang} />
+      <Text style={[sty.fieldTag, { marginTop: 12 }]}>{T.birthPlace}</Text>
+      <CityPicker selectedCity={city} onSelect={setCity} lang={lang} />
     </Glass>
   );
 }
@@ -250,10 +309,12 @@ export default function PorondamScreen() {
   var [bDate, setBDate] = useState('1998-01-15');
   var [bTime, setBTime] = useState('08:30');
   var [bName, setBName] = useState('');
+  var [bCity, setBCity] = useState(BIRTH_LOCATIONS[0]);
 
   var [gDate, setGDate] = useState('1998-06-20');
   var [gTime, setGTime] = useState('10:00');
   var [gName, setGName] = useState('');
+  var [gCity, setGCity] = useState(BIRTH_LOCATIONS[0]);
 
   var [data, setData] = useState(null);
   var [loading, setLoading] = useState(false);
@@ -309,8 +370,8 @@ export default function PorondamScreen() {
     try {
       setLoading(true); setError(null); setData(null); setReport(null); setReportLang(null); setPorondamId(null);
       var res = await api.checkPorondam(
-        { birthDate: buildDateISO(bDate, bTime), lat: 6.9271, lng: 79.8612, name: bName || undefined },
-        { birthDate: buildDateISO(gDate, gTime), lat: 6.9271, lng: 79.8612, name: gName || undefined }
+        { birthDate: buildDateISO(bDate, bTime), lat: bCity.lat, lng: bCity.lng, name: bName || undefined },
+        { birthDate: buildDateISO(gDate, gTime), lat: gCity.lat, lng: gCity.lng, name: gName || undefined }
       );
       setData(res.data);
       if (res.porondamId) setPorondamId(res.porondamId);
@@ -473,15 +534,15 @@ export default function PorondamScreen() {
         + '.end-page .end-disc{max-width:380px;font-size:8px;color:rgba(255,255,255,0.18);line-height:1.6;margin-top:24px;}'
         + '@media print{.cover{page-break-after:always;}.por-section{page-break-inside:avoid;}.end-page{page-break-before:always;}}'
         + '</style></head><body>'
-        + '<div class="watermark">නැකත් AI</div>'
+        + '<div class="watermark">ග්‍රහචාර</div>'
         + '<div class="orn-tl"></div><div class="orn-tr"></div><div class="orn-bl"></div><div class="orn-br"></div>'
-        + '<div class="pg-header"><span style="font-weight:800;color:#be185d;">නැකත් AI</span><span>' + (isSi ? 'පොරොන්දම් වාර්තාව' : 'Porondam Report') + '</span></div>'
-        + '<div class="pg-footer">නැකත් AI &bull; www.nekath.ai &bull; ' + new Date().toLocaleDateString() + '</div>'
+        + '<div class="pg-header"><span style="font-weight:800;color:#be185d;">ග්‍රහචාර</span><span>' + (isSi ? 'පොරොන්දම් වාර්තාව' : 'Porondam Report') + '</span></div>'
+        + '<div class="pg-footer">ග්‍රහචාර &bull; www.grahachara.lk &bull; ' + new Date().toLocaleDateString() + '</div>'
         // Cover
         + '<div class="cover">'
         + '<div class="cover-inner">'
         + '<div class="cover-hearts">💍</div>'
-        + '<div class="cover-brand">නැකත් AI</div>'
+        + '<div class="cover-brand">ග්‍රහචාර</div>'
         + '<div class="cover-title">' + (isSi ? 'සම්පූර්ණ පොරොන්දම් වාර්තාව' : 'Complete Compatibility Report') + '</div>'
         + '<div class="cover-sub">' + (isSi ? 'වෛදික ජ්‍යෝතිෂ ගැලපීම් විශ්ලේෂණය' : 'Vedic Astrology Compatibility Analysis') + '</div>'
         + '<div class="cover-divider"></div>'
@@ -504,10 +565,10 @@ export default function PorondamScreen() {
         // End page
         + '<div class="end-page">'
         + '<div class="end-sym">💍</div>'
-        + '<div class="end-brand">නැකත් AI</div>'
+        + '<div class="end-brand">ග්‍රහචාර</div>'
         + '<div class="end-line"></div>'
         + '<div class="end-tag">' + (isSi ? 'ඔබේ ජීවිතයේ තරු බලන්න' : 'Read the Stars of Your Life') + '</div>'
-        + '<div class="end-url">www.nekath.ai</div>'
+        + '<div class="end-url">www.grahachara.lk</div>'
         + '<div class="end-disc">' + (isSi
           ? 'මෙම වාර්තාව AI සහ සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වේ. මෙය දැනගැනීම් සඳහා පමණි.'
           : 'This report is AI-powered and based on traditional Vedic astrology. For informational purposes only.')
@@ -536,8 +597,8 @@ export default function PorondamScreen() {
   var shareResult = async function() {
     try {
       var msg = language === 'si'
-        ? '\u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) \u2014 ' + (data.ratingSinhala || data.rating) + '\n\nNakath AI \uD83D\uDC8D'
-        : 'Porondam: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) \u2014 ' + data.rating + '\n\nNakath AI \uD83D\uDC8D';
+        ? '\u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) \u2014 ' + (data.ratingSinhala || data.rating) + '\n\nGrahachara \uD83D\uDC8D'
+        : 'Porondam: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) \u2014 ' + data.rating + '\n\nGrahachara \uD83D\uDC8D';
       await Share.share({ message: msg });
     } catch (e) {}
   };
@@ -558,11 +619,13 @@ export default function PorondamScreen() {
               <Animated.View entering={FadeInDown.delay(100).duration(600)} exiting={FadeOut.duration(300)} style={WIDE ? sty.formCol : undefined}>
                 <PersonCard label={T.bride} name={bName} setName={setBName}
                   dateStr={bDate} setDateStr={setBDate} timeStr={bTime} setTimeStr={setBTime}
+                  city={bCity} setCity={setBCity}
                   T={T} lang={language} />
               </Animated.View>
               <Animated.View entering={FadeInDown.delay(180).duration(600)} exiting={FadeOut.duration(300)} style={WIDE ? sty.formCol : undefined}>
                 <PersonCard label={T.groom} name={gName} setName={setGName}
                   dateStr={gDate} setDateStr={setGDate} timeStr={gTime} setTimeStr={setGTime}
+                  city={gCity} setCity={setGCity}
                   T={T} lang={language} />
               </Animated.View>
             </View>
@@ -1240,9 +1303,9 @@ export default function PorondamScreen() {
               {language === 'si' ? '💳 ශේෂය රිචාජ්' : '💳 Top Up Balance'}
             </Text>
             <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
-              {language === 'si' ? 'ඔබේ දුරකතන ක්‍රෙඩිට් එකෙන් ගෙවේ' : 'Charged to your mobile credit via Ideamart'}
+              {language === 'si' ? 'PayHere ඔස්සේ ගෙවන්න (Visa/MasterCard)' : 'Pay securely via PayHere (Visa/MasterCard)'}
             </Text>
-            {[15, 30, 50].map(function(amt) {
+            {[100, 250, 500].map(function(amt) {
               return (
                 <TouchableOpacity
                   key={amt}

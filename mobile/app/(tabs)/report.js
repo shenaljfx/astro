@@ -373,7 +373,7 @@ var BIRTH_LOCATIONS = [
 // ══════════════════════════════════════════
 // TOP-UP MODAL
 // ══════════════════════════════════════════
-var TOP_UP_PACKAGES = [15, 30, 50];
+var TOP_UP_PACKAGES = [100, 250, 500];
 
 function TopUpModal({ visible, onClose, onTopUp, loading, language }) {
   var isSi = language === 'si';
@@ -388,7 +388,7 @@ function TopUpModal({ visible, onClose, onTopUp, loading, language }) {
             {isSi ? '💳 ශේෂය රිචාජ්' : '💳 Top Up Balance'}
           </Text>
           <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
-            {isSi ? 'ඔබේ දුරකතන ක්‍රෙඩිට් එකෙන් ගෙවේ' : 'Charged to your mobile credit via Ideamart'}
+            {isSi ? 'PayHere ඔස්සේ ගෙවන්න (Visa/MasterCard)' : 'Pay securely via PayHere (Visa/MasterCard)'}
           </Text>
 
           {TOP_UP_PACKAGES.map(function(amt) {
@@ -446,6 +446,7 @@ export default function ReportScreen() {
   var [reportLang, setReportLang] = useState(language || 'en');
   var [userName, setUserName] = useState('');
   var [userGender, setUserGender] = useState(null);
+  var [userReligion, setUserReligion] = useState(null);
   var [report, setReport] = useState(null);
   var [aiReport, setAiReport] = useState(null);
   var [chartData, setChartData] = useState(null);
@@ -490,7 +491,7 @@ export default function ReportScreen() {
       // Fire raw report + AI in parallel (chart already fetched)
       var [rawRes, aiRes] = await Promise.all([
         api.getFullReport(dateStr, birthLat, birthLng, reportLang),
-        api.getAIReport(dateStr, birthLat, birthLng, reportLang, birthLocation, userName || null, gender),
+        api.getAIReport(dateStr, birthLat, birthLng, reportLang, birthLocation, userName || null, gender, userReligion || null),
       ]);
 
       if (!rawRes.data) {
@@ -614,6 +615,7 @@ export default function ReportScreen() {
     setError(null);
     setLoading(false);
     setUserGender(null);
+    setUserReligion(null);
     setScreenState('form');
   };
 
@@ -810,6 +812,12 @@ export default function ReportScreen() {
                     <Text style={s.birthSub}>
                       {reportLang === 'si' ? 'උපන් ස්ථානය: ' : 'Born: '}{birthLocation} • {birthDate} • {birthTime}
                     </Text>
+                    {report.birthData.currentAge != null && (
+                      <Text style={s.birthSub}>
+                        {reportLang === 'si' ? '🎂 වයස: ' + report.birthData.currentAge + ' වසර' : '🎂 Age: ' + report.birthData.currentAge + ' years'}
+                        {report.birthData.birthDayOfWeek ? (reportLang === 'si' ? ' • ' + report.birthData.birthDayOfWeek + ' දිනයේ උපන්නා' : ' • Born on a ' + report.birthData.birthDayOfWeek) : ''}
+                      </Text>
+                    )}
                   </View>
                 </View>
                 <View style={s.panchangaRow}>
@@ -825,6 +833,29 @@ export default function ReportScreen() {
                     <Text style={s.panchangaLabel}>{reportLang === 'si' ? '⭐ උපන් තරුව' : '⭐ Birth Star'}</Text>
                     <Text style={s.panchangaValue}>{reportLang === 'si' ? (report.birthData.nakshatra?.sinhala || report.birthData.nakshatra?.name || '') : (report.birthData.nakshatra?.name || '')}</Text>
                   </View>
+                </View>
+                {/* Second row — personal qualities */}
+                <View style={[s.panchangaRow, { marginTop: 4 }]}>
+                  {report.birthData.gana && (
+                    <View style={s.panchangaItem}>
+                      <Text style={s.panchangaLabel}>{reportLang === 'si' ? '🔥 ගුණාංගය' : '🔥 Temperament'}</Text>
+                      <Text style={s.panchangaValue}>{report.birthData.gana.type}</Text>
+                    </View>
+                  )}
+                  {report.birthData.nadi && (
+                    <View style={s.panchangaItem}>
+                      <Text style={s.panchangaLabel}>{reportLang === 'si' ? '💨 ශක්ති ප්‍රවාහය' : '💨 Energy Type'}</Text>
+                      <Text style={s.panchangaValue}>{report.birthData.nadi.type}</Text>
+                    </View>
+                  )}
+                  {report.birthData.panchanga?.panchangaQuality && (
+                    <View style={s.panchangaItem}>
+                      <Text style={s.panchangaLabel}>{reportLang === 'si' ? '✨ උපන් ගුණය' : '✨ Birth Quality'}</Text>
+                      <Text style={[s.panchangaValue, { color: report.birthData.panchanga.panchangaQuality.score >= 2 ? '#4ADE80' : report.birthData.panchanga.panchangaQuality.score >= 0 ? '#FBBF24' : '#F87171' }]}>
+                        {report.birthData.panchanga.panchangaQuality.quality} ({report.birthData.panchanga.panchangaQuality.score}/5)
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </AuraBox>
             </Animated.View>
@@ -918,6 +949,32 @@ export default function ReportScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Religion Selector (Optional) */}
+            <Text style={s.inputHint}>{reportLang === 'si' ? 'ආගම (අත්‍යවශ්‍ය නොවේ)' : 'RELIGION (OPTIONAL)'}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 16, marginTop: 6 }}>
+              {[
+                { key: 'buddhist', label: reportLang === 'si' ? 'බෞද්ධ' : 'Buddhist', icon: '☸️' },
+                { key: 'hindu', label: reportLang === 'si' ? 'හින්දු' : 'Hindu', icon: '🕉️' },
+                { key: 'muslim', label: reportLang === 'si' ? 'ඉස්ලාම්' : 'Muslim', icon: '☪️' },
+                { key: 'christian', label: reportLang === 'si' ? 'ක්‍රිස්තියානි' : 'Christian', icon: '✝️' },
+                { key: 'catholic', label: reportLang === 'si' ? 'කතෝලික' : 'Catholic', icon: '⛪' },
+              ].map(function(r) {
+                var isActive = userReligion === r.key;
+                return (
+                  <TouchableOpacity
+                    key={r.key}
+                    style={[s.locationChip, isActive && s.locationChipActive]}
+                    onPress={function() { setUserReligion(isActive ? null : r.key); }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[s.locationChipText, isActive && s.locationChipTextActive]}>
+                      {r.icon + ' ' + r.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
 
             <View style={s.inputRow}>
               <View style={s.inputGroup}>

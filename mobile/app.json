@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "\u0db1\u0dd0\u0d9a\u0dad\u0dca AI",
-    "slug": "nakath-ai",
+    "name": "ග්‍රහචාර",
+    "slug": "grahachara",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "nakathai",
+    "scheme": "grahachara",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nakathai.app",
+      "bundleIdentifier": "com.grahachara.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to calculate accurate auspicious times based on your GPS coordinates."
       }
@@ -25,7 +25,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0D0B2E"
       },
-      "package": "com.nakathai.app",
+      "package": "com.grahachara.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"

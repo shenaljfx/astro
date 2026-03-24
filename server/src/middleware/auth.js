@@ -16,7 +16,7 @@ const { getAuth } = require('../config/firebase');
 function tryPhoneJwt(token) {
   try {
     const jwt = require('jsonwebtoken');
-    const JWT_SECRET = process.env.JWT_SECRET || 'nakath-ai-cosmic-secret-2025-dev';
+    const JWT_SECRET = process.env.JWT_SECRET || 'grahachara-cosmic-secret-2025-dev';
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded && decoded.type === 'phone-auth') {
       return {

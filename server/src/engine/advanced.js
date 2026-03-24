@@ -11,7 +11,7 @@
  *           Jataka Parijata, Jaimini Sutras, Nadi Jyotish texts,
  *           KP Reader, Sarvartha Chintamani
  * 
- * Author: Nakath AI Engine
+ * Author: Grahachara Engine
  */
 
 const { NAKSHATRAS, RASHIS, PLANETS, getAllPlanetPositions, getLagna, buildHouseChart, buildNavamshaChart, getRashi, getNakshatra, toSidereal, getMoonLongitude, getSunLongitude, getAyanamsha, dateToJD, calculateVimshottariDetailed } = require('./astrology');
@@ -2210,7 +2210,7 @@ function generateAdvancedAnalysis(birthDate, lat = 6.9271, lng = 79.8612) {
 
   return {
     generatedAt: new Date().toISOString(),
-    engineVersion: 'NakathAI-Advanced-v3.0',
+    engineVersion: 'Grahachara-Advanced-v3.0',
     computeTimeMs: elapsed,
 
     tier1: {

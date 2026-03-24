@@ -27,7 +27,7 @@ function phoneAuth(req, res, next) {
   // Try phone JWT first
   try {
     const jwt = require('jsonwebtoken');
-    const JWT_SECRET = process.env.JWT_SECRET || 'nakath-ai-cosmic-secret-2025-dev';
+    const JWT_SECRET = process.env.JWT_SECRET || 'grahachara-cosmic-secret-2025-dev';
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded && decoded.type === 'phone-auth') {
       req.user = {
@@ -96,7 +96,7 @@ function requireSubscription(req, res, next) {
       if (!sub || sub.status === 'none' || sub.status === 'pending') {
         return res.status(402).json({
           error: 'Subscription required',
-          message: 'Please subscribe to access this feature. Only LKR 8/day from your mobile credit.',
+          message: 'Please subscribe to access this feature. Only LKR 240/month via PayHere.',
           subscriptionRequired: true,
         });
       }
@@ -110,6 +110,16 @@ function requireSubscription(req, res, next) {
         });
       }
 
+      // Payment failed (recurring charge failed)
+      if (sub.status === 'payment_failed') {
+        return res.status(402).json({
+          error: 'Payment failed',
+          message: 'Your last payment failed. Please update your payment method or re-subscribe.',
+          subscriptionRequired: true,
+          paymentFailed: true,
+        });
+      }
+
       // Check if expired
       if (sub.status === 'active' && sub.expiresAt) {
         const now = new Date();
@@ -117,7 +127,7 @@ function requireSubscription(req, res, next) {
         if (now > expires) {
           return res.status(402).json({
             error: 'Subscription expired',
-            message: 'Your daily subscription has expired. Renew for LKR 8.',
+            message: 'Your monthly subscription has expired. Please re-subscribe via PayHere.',
             subscriptionRequired: true,
             needsRenewal: true,
           });

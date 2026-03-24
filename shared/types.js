@@ -1,5 +1,5 @@
 /**
- * Shared types for Nakath AI
+ * Shared types for Grahachara
  * Used by both server and mobile app
  */
 

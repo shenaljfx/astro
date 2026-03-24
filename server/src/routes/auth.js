@@ -1,13 +1,15 @@
 /**
- * Auth Routes — Phone OTP Login + Subscription Management
+ * Auth Routes — Phone OTP Login + Subscription Management (PayHere)
  * 
  * Endpoints:
  * - POST /api/auth/send-otp        — Send OTP to phone number
  * - POST /api/auth/verify-otp      — Verify OTP and login/register
- * - POST /api/auth/subscribe       — Activate daily subscription (LKR 8/day)
+ * - POST /api/auth/subscribe       — (Legacy) Redirects to PayHere flow
  * - POST /api/auth/unsubscribe     — Cancel subscription
  * - GET  /api/auth/subscription    — Check subscription status
- * - POST /api/auth/charge          — Manual charge (admin/testing)
+ * 
+ * Payment is now handled by PayHere via /api/payhere/* routes.
+ * This file only handles OTP authentication.
  */
 
 const express = require('express');
@@ -17,20 +19,14 @@ const { v4: uuidv4 } = require('uuid');
 const {
   sendOtp,
   verifyOtp,
-  chargeUser,
-  queryBalance,
-  registerSubscription,
-  unregisterSubscription,
-  checkSubscriptionStatus,
   normalizePhone,
-  DAILY_CHARGE,
   MOCK_MODE,
 } = require('../services/ideamart');
 const { getDb, COLLECTIONS } = require('../config/firebase');
-const { addTokenBalance } = require('../middleware/tokens');
+const { MONTHLY_AMOUNT } = require('../services/payhere');
 
 // JWT secret — in production, use a strong random secret from env
-const JWT_SECRET = process.env.JWT_SECRET || 'nakath-ai-cosmic-secret-2025-dev';
+const JWT_SECRET = process.env.JWT_SECRET || 'grahachara-cosmic-secret-2025-dev';
 const JWT_EXPIRES = '30d'; // Token valid for 30 days
 
 // ─── Helper: Generate JWT for phone-based auth ──────────────────
@@ -99,7 +95,7 @@ async function createPhoneUser(phone, subscriberId) {
   const userData = {
     uid,
     phone: normalized,
-    subscriberId: subscriberId, // Masked MSISDN for Ideamart APIs
+    subscriberId: subscriberId || null, // Legacy Ideamart field, kept for compat
     displayName: 'Cosmic Seeker',
     email: null,
     photoURL: null,
@@ -111,13 +107,15 @@ async function createPhoneUser(phone, subscriberId) {
       theme: 'cosmic',
     },
     subscription: {
-      status: 'pending', // pending | active | cancelled | expired
-      plan: 'daily',
-      amount: DAILY_CHARGE,
+      status: 'pending', // pending | active | cancelled | expired | payment_failed
+      plan: 'monthly',
+      amount: MONTHLY_AMOUNT,
       currency: 'LKR',
       subscribedAt: null,
       lastChargedAt: null,
       expiresAt: null,
+      payherePaymentId: null,
+      payhereSubscriptionId: null,
     },
     onboardingComplete: false,
     tokenBalance: 0,
@@ -142,26 +140,6 @@ async function updateUserSubscription(uid, subscriptionData) {
     updatedAt: new Date().toISOString(),
   });
   return true;
-}
-
-async function recordCharge(uid, chargeResult) {
-  const db = getDb();
-  if (!db) return null;
-
-  const chargeRecord = {
-    id: uuidv4(),
-    uid,
-    transactionId: chargeResult.transactionId,
-    internalTrxId: chargeResult.internalTrxId,
-    amount: chargeResult.amount,
-    currency: chargeResult.currency || 'LKR',
-    status: chargeResult.success ? 'success' : 'failed',
-    statusCode: chargeResult.statusCode,
-    timestamp: new Date().toISOString(),
-  };
-
-  await db.collection('charges').doc(chargeRecord.id).set(chargeRecord);
-  return chargeRecord;
 }
 
 // ─── In-memory OTP reference store (maps phone → referenceNo) ──
@@ -306,7 +284,8 @@ router.post('/verify-otp', async (req, res) => {
 
 /**
  * POST /api/auth/subscribe
- * Activate daily subscription and charge first day
+ * Legacy endpoint — redirects to PayHere subscription flow.
+ * The actual subscription is handled by /api/payhere/initiate-subscription
  * Headers: Authorization: Bearer <jwt>
  */
 router.post('/subscribe', async (req, res) => {
@@ -314,77 +293,13 @@ router.post('/subscribe', async (req, res) => {
     const decoded = extractUser(req);
     if (!decoded) return res.status(401).json({ error: 'Authentication required' });
 
-    const db = getDb();
-    let user = null;
-    if (db) {
-      const doc = await db.collection(COLLECTIONS.USERS).doc(decoded.uid).get();
-      user = doc.exists ? doc.data() : null;
-    }
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Register with Ideamart subscription API
-    if (user.subscriberId) {
-      const subResult = await registerSubscription(user.subscriberId);
-      if (!subResult.success) {
-        console.warn('Ideamart subscription registration warning:', subResult);
-      }
-    }
-
-    // Charge first day
-    const chargeResult = await chargeUser(user.subscriberId, DAILY_CHARGE);
-
-    if (!chargeResult.success) {
-      return res.status(402).json({
-        error: 'Payment failed. Please ensure you have at least LKR ' + DAILY_CHARGE + ' mobile credit.',
-        statusCode: chargeResult.statusCode,
-      });
-    }
-
-    // Record charge
-    await recordCharge(decoded.uid, chargeResult);
-
-    // Credit token balance with the subscription amount
-    let tokenResult = null;
-    try {
-      tokenResult = await addTokenBalance(
-        decoded.uid, DAILY_CHARGE, chargeResult.transactionId,
-        'Daily subscription — LKR ' + DAILY_CHARGE
-      );
-      console.log('[subscribe] ✔ Credited LKR ' + DAILY_CHARGE + ' tokens to ' + decoded.uid + ' (balance: ' + tokenResult.newBalance + ')');
-    } catch (tokenErr) {
-      console.error('[subscribe] ✖ Failed to credit tokens:', tokenErr.message);
-    }
-
-    // Update subscription status
-    const now = new Date();
-    const expiresAt = new Date(now);
-    expiresAt.setHours(23, 59, 59, 999);
-
-    const subscription = {
-      status: 'active',
-      plan: 'daily',
-      amount: DAILY_CHARGE,
-      currency: 'LKR',
-      subscribedAt: now.toISOString(),
-      lastChargedAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-    };
-
-    await updateUserSubscription(decoded.uid, subscription);
-
+    // Direct the client to use the PayHere flow instead
     res.json({
-      success: true,
-      message: `Subscribed! LKR ${DAILY_CHARGE} charged. Tokens credited.`,
-      subscription,
-      tokenBalance: tokenResult ? tokenResult.newBalance : null,
-      charge: {
-        amount: chargeResult.amount,
-        currency: 'LKR',
-        transactionId: chargeResult.transactionId,
-      },
+      success: false,
+      usePayHere: true,
+      message: 'Please use the PayHere payment flow. Call POST /api/payhere/initiate-subscription to start.',
+      monthlyRate: MONTHLY_AMOUNT,
+      currency: 'LKR',
     });
   } catch (err) {
     console.error('Subscribe error:', err);
@@ -394,7 +309,7 @@ router.post('/subscribe', async (req, res) => {
 
 /**
  * POST /api/auth/unsubscribe
- * Cancel daily subscription
+ * Cancel monthly subscription
  */
 router.post('/unsubscribe', async (req, res) => {
   try {
@@ -403,23 +318,16 @@ router.post('/unsubscribe', async (req, res) => {
 
     const db = getDb();
     if (db) {
-      const doc = await db.collection(COLLECTIONS.USERS).doc(decoded.uid).get();
-      const user = doc.exists ? doc.data() : null;
-
-      if (user && user.subscriberId) {
-        await unregisterSubscription(user.subscriberId);
-      }
-
       await updateUserSubscription(decoded.uid, {
         status: 'cancelled',
-        plan: 'daily',
-        amount: DAILY_CHARGE,
+        plan: 'monthly',
+        amount: MONTHLY_AMOUNT,
         currency: 'LKR',
         cancelledAt: new Date().toISOString(),
       });
     }
 
-    res.json({ success: true, message: 'Subscription cancelled' });
+    res.json({ success: true, message: 'Subscription cancelled. You retain access until end of billing period.' });
   } catch (err) {
     console.error('Unsubscribe error:', err);
     res.status(500).json({ error: 'Unsubscription failed' });
@@ -463,7 +371,7 @@ router.get('/subscription', async (req, res) => {
     res.json({
       success: true,
       subscription,
-      dailyRate: DAILY_CHARGE,
+      monthlyRate: MONTHLY_AMOUNT,
       currency: 'LKR',
     });
   } catch (err) {
@@ -474,65 +382,20 @@ router.get('/subscription', async (req, res) => {
 
 /**
  * POST /api/auth/renew
- * Renew expired subscription (charge for today)
+ * Legacy endpoint — PayHere handles auto-renewal via recurring billing.
+ * If subscription expired, user should re-subscribe via PayHere.
  */
 router.post('/renew', async (req, res) => {
   try {
     const decoded = extractUser(req);
     if (!decoded) return res.status(401).json({ error: 'Authentication required' });
 
-    const db = getDb();
-    if (!db) return res.json({ success: true, subscription: { status: 'active' } });
-
-    const doc = await db.collection(COLLECTIONS.USERS).doc(decoded.uid).get();
-    if (!doc.exists) return res.status(404).json({ error: 'User not found' });
-
-    const user = doc.data();
-
-    // Charge for today
-    const chargeResult = await chargeUser(user.subscriberId, DAILY_CHARGE);
-    if (!chargeResult.success) {
-      return res.status(402).json({
-        error: 'Insufficient mobile credit. Need LKR ' + DAILY_CHARGE,
-        statusCode: chargeResult.statusCode,
-      });
-    }
-
-    await recordCharge(decoded.uid, chargeResult);
-
-    // Credit token balance with renewal amount
-    let tokenResult = null;
-    try {
-      tokenResult = await addTokenBalance(
-        decoded.uid, DAILY_CHARGE, chargeResult.transactionId,
-        'Daily renewal — LKR ' + DAILY_CHARGE
-      );
-      console.log('[renew] ✔ Credited LKR ' + DAILY_CHARGE + ' tokens to ' + decoded.uid);
-    } catch (tokenErr) {
-      console.error('[renew] ✖ Failed to credit tokens:', tokenErr.message);
-    }
-
-    const now = new Date();
-    const expiresAt = new Date(now);
-    expiresAt.setHours(23, 59, 59, 999);
-
-    const subscription = {
-      status: 'active',
-      plan: 'daily',
-      amount: DAILY_CHARGE,
-      currency: 'LKR',
-      subscribedAt: user.subscription?.subscribedAt || now.toISOString(),
-      lastChargedAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-    };
-
-    await updateUserSubscription(decoded.uid, subscription);
-
+    // PayHere auto-renews monthly — user should not need to manually renew
     res.json({
-      success: true,
-      message: `Renewed! LKR ${DAILY_CHARGE} charged. Tokens credited.`,
-      subscription,
-      tokenBalance: tokenResult ? tokenResult.newBalance : null,
+      success: false,
+      usePayHere: true,
+      message: 'Subscriptions auto-renew monthly via PayHere. If expired, please re-subscribe.',
+      monthlyRate: MONTHLY_AMOUNT,
     });
   } catch (err) {
     console.error('Renew error:', err);

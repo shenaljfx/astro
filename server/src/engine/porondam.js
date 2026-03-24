@@ -135,7 +135,8 @@ function calculateGanaPorondam(brideNakshatra, groomNakshatra) {
   } else if (
     (brideGana === 'Deva' && groomGana === 'Manushya') ||
     (brideGana === 'Manushya' && groomGana === 'Deva') ||
-    (brideGana === 'Deva' && groomGana === 'Rakshasa')
+    (brideGana === 'Deva' && groomGana === 'Rakshasa') ||
+    (brideGana === 'Rakshasa' && groomGana === 'Deva')
   ) {
     score = 1;
     description = 'Moderate temperament compatibility';
@@ -552,7 +553,7 @@ function analyzeNavamshaCompatibility(brideBirthDate, groomBirthDate, brideLat, 
     let score = 0;
     const insights = [];
     
-    // 1. Check if D9 Lagna signs are compatible (trine/same/7th)
+    // 1. Check if D9 Lagna signs are compatible (trine/same/kendra/7th)
     const brideD9Lagna = brideD9.houses?.[0]?.rashiId || 1;
     const groomD9Lagna = groomD9.houses?.[0]?.rashiId || 1;
     const d9LagnaDiff = Math.abs(brideD9Lagna - groomD9Lagna);
@@ -562,9 +563,15 @@ function analyzeNavamshaCompatibility(brideBirthDate, groomBirthDate, brideLat, 
       score += 3;
       insights.push('Same marriage chart rising sign — exceptional soul-level connection');
     } else if ([4, 8].includes(normalizedDiff)) {
+      // Trines (5th/9th from each other)
       score += 2;
       insights.push('Harmonious marriage chart alignment — natural rapport');
+    } else if ([3, 9].includes(normalizedDiff)) {
+      // Kendras (4th/10th from each other)
+      score += 2;
+      insights.push('Strong kendra alignment in marriage charts — solid foundation for partnership');
     } else if (normalizedDiff === 6) {
+      // 7th house (opposition)
       score += 1;
       insights.push('Opposite marriage chart signs — magnetic attraction but requires adjustment');
     }
@@ -640,11 +647,13 @@ function analyzeMangalaDosha(brideBirthDate, groomBirthDate, brideLat, brideLng,
       let cancelled = false;
       let cancellationReason = '';
       if (hasDosha) {
-        // Mars in own sign (Aries/Scorpio) or exalted (Capricorn) — cancelled
+        // Mars in own sign (Aries=1/Scorpio=8), exalted (Capricorn=10), or friend's sign (Leo=5) — cancelled
         const marsRashi = houseChart.houses[marsHouse - 1]?.rashiId;
-        if ([1, 8, 10].includes(marsRashi)) {
+        if ([1, 5, 8, 10].includes(marsRashi)) {
           cancelled = true;
-          cancellationReason = 'Mars is in own sign or exalted — dosha is neutralized';
+          cancellationReason = marsRashi === 5
+            ? 'Mars is in Leo (friend Sun\'s sign) — dosha is neutralized'
+            : 'Mars is in own sign or exalted — dosha is neutralized';
         }
         // Jupiter aspects Mars — cancelled
         const jupiterHouse = (() => {
@@ -654,7 +663,9 @@ function analyzeMangalaDosha(brideBirthDate, groomBirthDate, brideLat, brideLng,
           return 0;
         })();
         if (jupiterHouse > 0) {
-          const jupAspects = [jupiterHouse, ((jupiterHouse + 4) % 12) + 1, ((jupiterHouse + 6) % 12) + 1, ((jupiterHouse + 8) % 12) + 1];
+          // Jupiter aspects: own house + 5th, 7th, 9th from itself (special drishti)
+          // For 1-based house numbers: ((house - 1 + offset) % 12) + 1
+          const jupAspects = [jupiterHouse, ((jupiterHouse - 1 + 4) % 12) + 1, ((jupiterHouse - 1 + 6) % 12) + 1, ((jupiterHouse - 1 + 8) % 12) + 1];
           if (jupAspects.includes(marsHouse)) {
             cancelled = true;
             cancellationReason = 'Jupiter aspects Mars — dosha is neutralized by Jupiter\'s grace';
@@ -683,11 +694,11 @@ function analyzeMangalaDosha(brideBirthDate, groomBirthDate, brideLat, brideLng,
     } else if (brideMangala.cancelled || groomMangala.cancelled) {
       severity = 'mild';
       description = 'One partner has Mars influence but it is neutralized by other factors.';
-      score = 1.5;
+      score = 1;
     } else {
       severity = 'present';
       description = 'One partner has Mars influence while the other doesn\'t — may cause friction in temperament. Remedies recommended.';
-      score = 0.5;
+      score = 0;
     }
     
     return {
@@ -714,8 +725,7 @@ function analyzeMarriagePlanetStrength(brideBirthDate, groomBirthDate, brideLat,
       const houseChart = buildHouseChart(birthDate, lat, lng);
       const lagnaRashiId = houseChart.lagna?.rashi?.id || 1;
       const seventhRashiId = ((lagnaRashiId - 1 + 6) % 12) + 1;
-      const RASHI_LORDS = { 1: 'Venus', 2: 'Mars', 3: 'Jupiter', 4: 'Saturn', 5: 'Saturn', 6: 'Jupiter', 7: 'Mars', 8: 'Venus', 9: 'Mercury', 10: 'Moon', 11: 'Sun', 12: 'Mercury' };
-      // Correct lord mapping
+      // Rashi lords: Mesha=Mars, Vrishabha=Venus, Mithuna=Mercury, Kataka=Moon, Simha=Sun, Kanya=Mercury, Tula=Venus, Vrischika=Mars, Dhanus=Jupiter, Makara=Saturn, Kumbha=Saturn, Meena=Jupiter
       const lords = { 1: 'Mars', 2: 'Venus', 3: 'Mercury', 4: 'Moon', 5: 'Sun', 6: 'Mercury', 7: 'Venus', 8: 'Mars', 9: 'Jupiter', 10: 'Saturn', 11: 'Saturn', 12: 'Jupiter' };
       const seventhLord = lords[seventhRashiId] || 'Unknown';
       

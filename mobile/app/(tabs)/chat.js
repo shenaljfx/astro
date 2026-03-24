@@ -21,7 +21,7 @@ import api from '../../services/api';
 
 var { width: SW } = Dimensions.get('window');
 var DAILY_LIMIT = 10;
-var STORAGE_KEY_PREFIX = '@nakath_chat_usage_';
+var STORAGE_KEY_PREFIX = '@grahachara_chat_usage_';
 
 // Returns per-user storage key (falls back to 'guest' when not logged in)
 function usageKey(uid) {

@@ -42,7 +42,7 @@ var OB = {
     welcomeSubtitle: "Sri Lanka's #1 Astrology App",
     welcomeDesc: "Your personal Vedic astrologer\nDaily Palapala & Kendara Balima\nPorondam Galapima & Full Life Report",
     welcomeBtn: "Begin Your Cosmic Journey",
-    welcomeHint: "Only LKR 8/day from your mobile credit \u2014 required for access",
+    welcomeHint: "Only LKR 240/month via card/bank \u2014 required for access",
     phoneTitle: "Your Phone Number",
     phoneSubtitle: "We'll send a verification code via SMS",
     phonePlaceholder: "7X XXX XXXX",
@@ -68,10 +68,10 @@ var OB = {
     subFeature5: "Daily Nakath & Rahu Alerts",
     subFeature6: "Personalised Predictions",
     subPerDay: "/day",
-    subNote: "Charged from mobile credit",
-    subNetworks: "Dialog \u2022 Mobitel \u2022 Hutch \u2022 Airtel",
-    subBtn: "Subscribe \u2014 LKR 8/day",
-    subPayFail: "Payment failed. Please ensure you have enough credit.",
+    subNote: "Charged via PayHere (Visa/MasterCard/HelaPay)",
+    subNetworks: "Visa \u2022 MasterCard \u2022 HelaPay \u2022 FriMi",
+    subBtn: "Subscribe \u2014 LKR 240/month",
+    subPayFail: "Payment failed. Please try again or use a different card.",
     subFailed: "Subscription failed",
     nameTitle: "What's Your Name?",
     nameSubtitle: "We'll personalise everything for you",
@@ -114,7 +114,7 @@ var OB = {
     welcomeSubtitle: "\u0dbd\u0d82\u0d9a\u0dcf\u0dc0\u0dda \u0d85\u0d82\u0d9a 1 \u0da2\u0dca\u200d\u0dba\u0ddd\u0dad\u0dd2\u0dc2 App \u0d91\u0d9a \uD83C\uDDF1\uD83C\uDDF0",
     welcomeDesc: "ඔයාගේම පෞද්ගලික ජ්‍යෝතිෂවේදියා \uD83D\uDD2E\nපලාපල \u2022 කේන්දරේ \u2022 පොරොන්දම්",
     welcomeBtn: "\u0dc0\u0dd0\u0da9\u0dda \u0db4\u0da7\u0db1\u0dca \u0d9c\u0db1\u0dca\u0db1",
-    welcomeHint: "\u0daf\u0dc0\u0dc3\u0da7 \u0dbb\u0dd4. 8\u0dba\u0dd2 (\u0d9c\u0dcf\u0dab \u0d85\u0da9\u0dd4 \u0d9a\u0dc5\u0dcf)",
+    welcomeHint: "\u0db8\u0dcf\u0dc3\u0dba\u0da7 \u0dbb\u0dd4. 240\u0dba\u0dd2 (PayHere \u0d94\u0dc3\u0dca\u0dc3\u0dda)",
     phoneTitle: "\u0d94\u0dba\u0dcf\u0d9c\u0dda \u0dc6\u0ddd\u0db1\u0dca \u0db1\u0db8\u0dca\u0db6\u0dbb\u0dca",
     phoneSubtitle: "SMS \u0d91\u0d9a\u0d9a\u0dd2\u0db1\u0dca \u0d9a\u0ddd\u0da9\u0dca \u0d91\u0d9a\u0d9a\u0dca \u0d91\u0dc0\u0db1\u0dc0\u0dcf",
     phonePlaceholder: "07X XXX XXXX",
@@ -140,10 +140,10 @@ var OB = {
     subFeature5: "\u0db1\u0dd0\u0d9a\u0dd0\u0dad\u0dca \u0dc3\u0dc4 \u0dbb\u0dcf\u0dc4\u0dd4 \u0d9a\u0dcf\u0dbd\u0dda",
     subFeature6: "\u0d94\u0dba\u0dcf\u0da7\u0db8 \u0dc4\u0dbb\u0dd2\u0dba\u0db1 \u0d85\u0db1\u0dcf\u0dc0\u0dd0\u0d9a\u0dd2",
     subPerDay: "/\u0daf\u0dc0\u0dc3\u0da7",
-    subNote: "\u0dc6\u0ddd\u0db1\u0dca \u0db6\u0dd2\u0dbd\u0da7 \u0d91\u0d9a\u0dad\u0dd4 \u0dc0\u0dd9\u0db1\u0dc0\u0dcf \u26A1",
-    subNetworks: "Dialog \u2022 Mobitel \u2022 Hutch \u2022 Airtel",
-    subBtn: "\u0d87\u0d9a\u0dca\u0da7\u0dd2\u0dc0\u0dca \u0d9a\u0dbb\u0d9c\u0db1\u0dca\u0db1 \u2014 \u0daf\u0dc0\u0dc3\u0da7 \u0dbb\u0dd4. 8",
-    subPayFail: "\u0dc3\u0dbd\u0dca\u0dbd\u0dd2 \u0d9a\u0dd0\u0db4\u0dd4\u0db1\u0dda \u0db1\u0dd1. \u0d9a\u0dca\u200d\u0dbb\u0dd9\u0da9\u0dd2\u0da7\u0dca \u0d89\u0dc0\u0dbb\u0daf \u0db6\u0dbd\u0db1\u0dca\u0db1.",
+    subNote: "PayHere \u0d94\u0dc3\u0dca\u0dc3\u0dda \u0d9c\u0dd9\u0dc0\u0db1\u0dca\u0db1 (Visa/MasterCard/HelaPay) \u26A1",
+    subNetworks: "Visa \u2022 MasterCard \u2022 HelaPay \u2022 FriMi",
+    subBtn: "\u0d87\u0d9a\u0dca\u0da7\u0dd2\u0dc0\u0dca \u0d9a\u0dbb\u0d9c\u0db1\u0dca\u0db1 \u2014 \u0db8\u0dcf\u0dc3\u0dba\u0da7 \u0dbb\u0dd4. 240",
+    subPayFail: "\u0d9c\u0dd9\u0dc0\u0dd3\u0db8 \u0d85\u0dc3\u0dcf\u0dbb\u0dca\u0dae\u0d9a\u0dba\u0dd2. \u0d86\u0dba\u0dd2 \u0db6\u0dbd\u0db1\u0dca\u0db1.",
     subFailed: "\u0d87\u0d9a\u0dca\u0da7\u0dd2\u0dc0\u0dca \u0dc0\u0dd4\u0db1\u0dda \u0db1\u0dd1",
     nameTitle: "\u0d94\u0dba\u0dcf\u0d9c\u0dda \u0db1\u0db8?",
     nameSubtitle: "\u0d9a\u0dda\u0db1\u0dca\u0daf\u0dbb\u0dda \u0dc4\u0daf\u0db1\u0dca\u0db1 \u0db1\u0db8 \u0d95\u0db1",
@@ -217,54 +217,421 @@ var SL_CITIES = [
 //  SHARED UI ATOMS — with micro-animations + vibrant gradients
 // ═══════════════════════════════════════════════════════════════════════
 
-/* Animated floating particles + cosmic sparkles behind steps */
-function FloatingOrbs() {
-  var orb1 = useSharedValue(0);
-  var orb2 = useSharedValue(0);
-  var orb3 = useSharedValue(0);
-  var orb4 = useSharedValue(0);
-  var orb5 = useSharedValue(0);
-  var starTwinkle = useSharedValue(0);
+/* ═══════════════════════════════════════════════════════════════════════
+   CELESTIAL CANVAS — Alive cosmic background for onboarding
+   Shooting stars, orbiting planets, Sun, Moon, twinkling star field
+   Background shifts color and intensity as user advances steps.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Realistic Shooting Star ──────────────────────────────────────────
+   Physics: bright point head → long luminous fade trail → tiny sparkle burst
+   Uses cubic easing for natural arc feel, 600-1200ms flight, 8-18s pause */
+function Meteor({ delay: dly, fromX, fromY, toX, toY }) {
+  var p = useSharedValue(0);
+  var burstOp = useSharedValue(0);
+  var dx = toX - fromX;
+  var dy = toY - fromY;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  var angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+  var dur = Math.max(550, Math.min(1100, dist * 2.2));
+  var pause = 7000 + Math.random() * 11000;
+
   useEffect(function () {
-    orb1.value = withRepeat(withTiming(1, { duration: 6000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    orb2.value = withRepeat(withTiming(1, { duration: 8000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    orb3.value = withRepeat(withTiming(1, { duration: 5000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    orb4.value = withRepeat(withTiming(1, { duration: 7000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    orb5.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    starTwinkle.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    p.value = withDelay(dly, withRepeat(withSequence(
+      withTiming(1, { duration: dur, easing: Easing.bezier(0.22, 0.61, 0.36, 1) }),
+      withTiming(1, { duration: 80 }),
+      withDelay(pause, withTiming(0, { duration: 0 }))
+    ), -1, false));
+    burstOp.value = withDelay(dly + dur, withRepeat(withSequence(
+      withTiming(1, { duration: 60 }),
+      withTiming(0, { duration: 350, easing: Easing.out(Easing.quad) }),
+      withDelay(pause, withTiming(0, { duration: 0 }))
+    ), -1, false));
   }, []);
+
+  // ── Head (bright point)
+  var headStyle = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(p.value, [0, 0.05, 0.35, 0.75, 1], [0, 1, 1, 0.6, 0]),
+      transform: [
+        { translateX: interpolate(p.value, [0, 1], [fromX, toX]) },
+        { translateY: interpolate(p.value, [0, 1], [fromY, toY]) },
+      ],
+    };
+  });
+
+  // ── Long luminous trail (follows head, fades from bright to zero)
+  var trailStyle = useAnimatedStyle(function () {
+    var t = p.value;
+    // trail sits behind the head position — its length grows then shrinks
+    var trailLen = interpolate(t, [0, 0.25, 0.7, 1], [0, 1, 0.8, 0]);
+    var cx = interpolate(t, [0, 1], [fromX, toX]);
+    var cy = interpolate(t, [0, 1], [fromY, toY]);
+    return {
+      opacity: interpolate(t, [0, 0.06, 0.4, 0.85, 1], [0, 0.65, 0.45, 0.12, 0]),
+      transform: [
+        { translateX: cx },
+        { translateY: cy },
+        { rotate: angleDeg + 'deg' },
+        { scaleX: trailLen },
+      ],
+      width: dist * 0.55,
+    };
+  });
+
+  // ── Sparkle burst at destination
+  var burstStyle = useAnimatedStyle(function () {
+    return {
+      opacity: burstOp.value * 0.7,
+      transform: [
+        { translateX: toX - 6 },
+        { translateY: toY - 6 },
+        { scale: interpolate(burstOp.value, [0, 1], [0.3, 1.4]) },
+      ],
+    };
+  });
+
+  return (
+    <>
+      {/* Trail */}
+      <Animated.View style={[{
+        position: 'absolute', left: 0, top: 0, height: 2.5, borderRadius: 1.25,
+        backgroundColor: 'transparent', borderTopWidth: 0,
+      }, trailStyle]}>
+        <LinearGradient
+          colors={['rgba(255,240,180,0)', 'rgba(255,220,120,0.5)', 'rgba(255,245,220,0.9)']}
+          style={{ flex: 1, borderRadius: 1.25 }}
+          start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+        />
+      </Animated.View>
+      {/* Head */}
+      <Animated.View style={[{
+        position: 'absolute', left: 0, top: 0, width: 5, height: 5, borderRadius: 2.5,
+        backgroundColor: '#FFFDE8',
+        shadowColor: '#FFE082', shadowOpacity: 1, shadowRadius: 10,
+        shadowOffset: { width: 0, height: 0 }, elevation: 8,
+      }, headStyle]} />
+      {/* Burst */}
+      <Animated.View style={[{
+        position: 'absolute', left: 0, top: 0, width: 12, height: 12, borderRadius: 6,
+        backgroundColor: 'rgba(255,240,200,0.4)',
+        shadowColor: '#FFE082', shadowOpacity: 0.6, shadowRadius: 8,
+      }, burstStyle]} />
+    </>
+  );
+}
+
+/* ── Orbiting Planet ──────────────────────────────────────────────────
+   Elliptical orbit around a center point with glow halo.
+   Each planet has a unique color, size, speed, and orbit shape. */
+function OrbitingPlanet({ cx, cy, rx, ry, size, color, glowColor, duration, delay: dly, hasRing }) {
+  var orbit = useSharedValue(0);
+  var pulse = useSharedValue(0);
+  useEffect(function () {
+    orbit.value = withDelay(dly || 0,
+      withRepeat(withTiming(1, { duration: duration, easing: Easing.linear }), -1, false));
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 3000 + Math.random() * 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+
+  var planetStyle = useAnimatedStyle(function () {
+    var angle = orbit.value * Math.PI * 2;
+    var x = cx + Math.cos(angle) * rx;
+    var y = cy + Math.sin(angle) * ry * 0.45; // flatten for perspective
+    // Simulate depth: planets behind center are smaller/dimmer
+    var depthScale = interpolate(Math.sin(angle), [-1, 0, 1], [0.6, 0.85, 1.0]);
+    var depthOpacity = interpolate(Math.sin(angle), [-1, 0, 1], [0.3, 0.65, 0.9]);
+    return {
+      transform: [
+        { translateX: x - size / 2 },
+        { translateY: y - size / 2 },
+        { scale: depthScale * interpolate(pulse.value, [0, 1], [0.92, 1.08]) },
+      ],
+      opacity: depthOpacity,
+      zIndex: Math.sin(angle) > 0 ? 5 : 1,
+    };
+  });
+
+  var glowStyle = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(pulse.value, [0, 1], [0.15, 0.4]),
+      transform: [{ scale: interpolate(pulse.value, [0, 1], [0.85, 1.2]) }],
+    };
+  });
+
+  return (
+    <Animated.View style={[{
+      position: 'absolute', width: size, height: size,
+    }, planetStyle]}>
+      {/* Glow halo */}
+      <Animated.View style={[{
+        position: 'absolute', left: -size * 0.4, top: -size * 0.4,
+        width: size * 1.8, height: size * 1.8, borderRadius: size * 0.9,
+        backgroundColor: glowColor || color,
+      }, glowStyle]} />
+      {/* Planet body */}
+      <View style={{
+        width: size, height: size, borderRadius: size / 2,
+        backgroundColor: color,
+        shadowColor: color, shadowOpacity: 0.8, shadowRadius: size * 0.4,
+        shadowOffset: { width: 0, height: 0 }, elevation: 4,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        {/* Surface highlight */}
+        <View style={{
+          position: 'absolute', top: size * 0.15, left: size * 0.15,
+          width: size * 0.35, height: size * 0.25, borderRadius: size * 0.2,
+          backgroundColor: 'rgba(255,255,255,0.25)',
+        }} />
+      </View>
+      {/* Saturn-style ring */}
+      {hasRing ? (
+        <View style={{
+          position: 'absolute', top: size * 0.32, left: -size * 0.35,
+          width: size * 1.7, height: size * 0.35, borderRadius: size * 0.5,
+          borderWidth: 1.5, borderColor: 'rgba(255,220,160,0.35)',
+          backgroundColor: 'transparent',
+          transform: [{ rotateX: '65deg' }],
+        }} />
+      ) : null}
+    </Animated.View>
+  );
+}
+
+/* ── Decorative Sun (top-right) with layered corona + rotating rays ── */
+function OnboardingSun({ intensity }) {
+  var pulse = useSharedValue(0);
+  var rayRot = useSharedValue(0);
+  useEffect(function () {
+    pulse.value = withRepeat(withTiming(1, { duration: 4500, easing: Easing.inOut(Easing.sin) }), -1, true);
+    rayRot.value = withRepeat(withTiming(1, { duration: 50000, easing: Easing.linear }), -1, false);
+  }, []);
+  var int = intensity || 1;
+  var outerCorona = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(pulse.value, [0, 1], [0.06 * int, 0.18 * int]),
+      transform: [{ scale: interpolate(pulse.value, [0, 1], [0.88, 1.15]) }],
+    };
+  });
+  var innerCorona = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(pulse.value, [0, 1], [0.12 * int, 0.32 * int]),
+      transform: [{ scale: interpolate(pulse.value, [0, 1], [0.94, 1.1]) }],
+    };
+  });
+  var rays = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(pulse.value, [0, 1], [0.04 * int, 0.14 * int]),
+      transform: [{ rotate: interpolate(rayRot.value, [0, 1], [0, 360]) + 'deg' }],
+    };
+  });
+  var RAY_A = [0, 45, 90, 135];
+  var RAY_B = [22.5, 67.5, 112.5, 157.5];
+  return (
+    <View style={{ position: 'absolute', top: -20, right: -25, width: 150, height: 150, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.View style={[{ position: 'absolute', width: 150, height: 150, alignItems: 'center', justifyContent: 'center' }, rays]}>
+        {RAY_A.map(function (a) { return <View key={'a' + a} style={{ position: 'absolute', width: 140, height: 2, borderRadius: 1, backgroundColor: 'rgba(255,230,160,0.22)', transform: [{ rotate: a + 'deg' }] }} />; })}
+        {RAY_B.map(function (a) { return <View key={'b' + a} style={{ position: 'absolute', width: 100, height: 1.2, borderRadius: 0.6, backgroundColor: 'rgba(255,240,180,0.12)', transform: [{ rotate: a + 'deg' }] }} />; })}
+      </Animated.View>
+      <Animated.View style={[{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,210,80,0.05)', shadowColor: '#FFB800', shadowOpacity: 0.25, shadowRadius: 40, elevation: 10 }, outerCorona]} />
+      <Animated.View style={[{ position: 'absolute', width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,225,130,0.1)', shadowColor: '#FFE082', shadowOpacity: 0.35, shadowRadius: 24, elevation: 8 }, innerCorona]} />
+      <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,235,170,0.32)', shadowColor: '#FFD666', shadowOpacity: 0.7, shadowRadius: 16, elevation: 8 }}>
+        <View style={{ position: 'absolute', top: 8, left: 8, width: 18, height: 14, borderRadius: 9, backgroundColor: 'rgba(255,250,220,0.45)' }} />
+      </View>
+    </View>
+  );
+}
+
+/* ── Crescent Moon (top-left) with glow + companion stars ── */
+function OnboardingMoon({ intensity }) {
+  var drift = useSharedValue(0);
+  var glow = useSharedValue(0);
+  var int = intensity || 1;
+  useEffect(function () {
+    drift.value = withRepeat(withTiming(1, { duration: 7000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    glow.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+  var driftStyle = useAnimatedStyle(function () {
+    return { transform: [
+      { translateY: interpolate(drift.value, [0, 1], [-6, 6]) },
+      { translateX: interpolate(drift.value, [0, 1], [4, -4]) },
+    ]};
+  });
+  var glowAnim = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(glow.value, [0, 1], [0.08 * int, 0.26 * int]),
+      transform: [{ scale: interpolate(glow.value, [0, 1], [0.9, 1.15]) }],
+    };
+  });
+  var twinkle1 = useAnimatedStyle(function () {
+    return { opacity: interpolate(glow.value, [0, 0.5, 1], [0.2, 0.8, 0.2]) };
+  });
+  var twinkle2 = useAnimatedStyle(function () {
+    return { opacity: interpolate(drift.value, [0, 0.5, 1], [0.15, 0.7, 0.15]) };
+  });
+  return (
+    <Animated.View style={[{ position: 'absolute', top: 24, left: 8, width: 80, height: 80, alignItems: 'center', justifyContent: 'center' }, driftStyle]}>
+      {/* Outer glow */}
+      <Animated.View style={[{ position: 'absolute', width: 68, height: 68, borderRadius: 34, backgroundColor: 'rgba(190,200,255,0.06)', shadowColor: '#B8C4FF', shadowOpacity: 0.3, shadowRadius: 28, elevation: 6 }, glowAnim]} />
+      {/* Moon body */}
+      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(215,220,255,0.28)', shadowColor: '#D8DEFF', shadowOpacity: 0.5, shadowRadius: 12, elevation: 6, overflow: 'hidden' }}>
+        {/* Dark overlay for crescent */}
+        <View style={{ position: 'absolute', top: -5, left: 9, width: 32, height: 32, borderRadius: 16, backgroundColor: '#04030C' }} />
+        {/* Subtle surface texture */}
+        <View style={{ position: 'absolute', bottom: 8, left: 4, width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+        <View style={{ position: 'absolute', bottom: 14, left: 8, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.06)' }} />
+      </View>
+      {/* Companion stars */}
+      <Animated.View style={[{ position: 'absolute', top: 4, right: 10, width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#FFF', shadowColor: '#FFF', shadowOpacity: 0.8, shadowRadius: 4 }, twinkle1]} />
+      <Animated.View style={[{ position: 'absolute', bottom: 8, right: 4, width: 2, height: 2, borderRadius: 1, backgroundColor: 'rgba(200,210,255,0.7)' }, twinkle2]} />
+      <Animated.View style={[{ position: 'absolute', top: 16, right: 0, width: 1.5, height: 1.5, borderRadius: 0.75, backgroundColor: 'rgba(255,255,255,0.5)' }, twinkle1]} />
+    </Animated.View>
+  );
+}
+
+/* ── Step-Aware Nebula Wash ─────────────────────────────────────────
+   Two large color blobs that shift hue/position based on onboarding step.
+   Creates the feeling the cosmos is responding as you progress. */
+var STEP_NEBULA = [
+  /* -1: Language */ { c1: 'rgba(147,51,234,0.18)', c2: 'rgba(255,184,0,0.12)', y1: 0.2, y2: 0.7 },
+  /*  0: Welcome  */ { c1: 'rgba(255,184,0,0.16)', c2: 'rgba(147,51,234,0.14)', y1: 0.15, y2: 0.65 },
+  /*  1: Phone    */ { c1: 'rgba(76,201,240,0.16)', c2: 'rgba(147,51,234,0.12)', y1: 0.25, y2: 0.6 },
+  /*  2: OTP      */ { c1: 'rgba(0,255,179,0.14)', c2: 'rgba(76,201,240,0.12)', y1: 0.3, y2: 0.55 },
+  /*  3: Subscribe*/ { c1: 'rgba(255,107,157,0.14)', c2: 'rgba(255,184,0,0.12)', y1: 0.2, y2: 0.7 },
+  /*  4: Birth    */ { c1: 'rgba(147,51,234,0.2)', c2: 'rgba(0,255,179,0.14)', y1: 0.15, y2: 0.75 },
+  /*  5: Complete */ { c1: 'rgba(255,184,0,0.22)', c2: 'rgba(147,51,234,0.18)', y1: 0.1, y2: 0.6 },
+];
+function StepNebula({ step }) {
+  var neb = STEP_NEBULA[Math.min(step + 1, STEP_NEBULA.length - 1)] || STEP_NEBULA[0];
+  var transition = useSharedValue(0);
+  useEffect(function () {
+    transition.value = 0;
+    transition.value = withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.quad) });
+  }, [step]);
   var s1 = useAnimatedStyle(function () {
-    return { transform: [{ translateY: interpolate(orb1.value, [0, 1], [-20, 20]) }, { translateX: interpolate(orb1.value, [0, 1], [10, -10]) }], opacity: interpolate(orb1.value, [0, 0.5, 1], [0.15, 0.35, 0.15]) };
+    return {
+      opacity: interpolate(transition.value, [0, 1], [0, 1]),
+      transform: [{ translateY: interpolate(transition.value, [0, 1], [30, 0]) }],
+    };
   });
   var s2 = useAnimatedStyle(function () {
-    return { transform: [{ translateY: interpolate(orb2.value, [0, 1], [15, -25]) }, { translateX: interpolate(orb2.value, [0, 1], [-15, 20]) }], opacity: interpolate(orb2.value, [0, 0.5, 1], [0.1, 0.25, 0.1]) };
-  });
-  var s3 = useAnimatedStyle(function () {
-    return { transform: [{ translateY: interpolate(orb3.value, [0, 1], [-12, 18]) }], opacity: interpolate(orb3.value, [0, 0.5, 1], [0.12, 0.3, 0.12]) };
-  });
-  var s4 = useAnimatedStyle(function () {
-    return { transform: [{ translateY: interpolate(orb4.value, [0, 1], [-18, 14]) }, { translateX: interpolate(orb4.value, [0, 1], [8, -16]) }, { scale: interpolate(orb4.value, [0, 0.5, 1], [0.8, 1.1, 0.8]) }], opacity: interpolate(orb4.value, [0, 0.5, 1], [0.08, 0.2, 0.08]) };
-  });
-  var s5 = useAnimatedStyle(function () {
-    return { transform: [{ translateY: interpolate(orb5.value, [0, 1], [10, -22]) }, { rotate: interpolate(orb5.value, [0, 1], [0, 180]) + 'deg' }], opacity: interpolate(orb5.value, [0, 0.5, 1], [0.06, 0.18, 0.06]) };
-  });
-  var starStyle = useAnimatedStyle(function () {
-    return { opacity: interpolate(starTwinkle.value, [0, 0.5, 1], [0.2, 0.8, 0.2]) };
+    return {
+      opacity: interpolate(transition.value, [0, 1], [0, 1]),
+      transform: [{ translateY: interpolate(transition.value, [0, 1], [-30, 0]) }],
+    };
   });
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Animated.View style={[{ position: 'absolute', top: '15%', left: '10%', width: 120, height: 120, borderRadius: 60, backgroundColor: '#FFB800' }, s1]} />
-      <Animated.View style={[{ position: 'absolute', top: '55%', right: '5%', width: 90, height: 90, borderRadius: 45, backgroundColor: '#D186FF' }, s2]} />
-      <Animated.View style={[{ position: 'absolute', bottom: '20%', left: '30%', width: 70, height: 70, borderRadius: 35, backgroundColor: '#FFB800' }, s3]} />
-      <Animated.View style={[{ position: 'absolute', top: '35%', right: '20%', width: 50, height: 50, borderRadius: 25, backgroundColor: '#B47AFF' }, s4]} />
-      <Animated.View style={[{ position: 'absolute', bottom: '35%', left: '8%', width: 40, height: 40, borderRadius: 20, backgroundColor: '#06B6D4' }, s5]} />
-      {/* Twinkling star dots */}
-      <Animated.View style={[{ position: 'absolute', top: '10%', right: '15%', width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#FFF' }, starStyle]} />
-      <Animated.View style={[{ position: 'absolute', top: '25%', left: '25%', width: 2, height: 2, borderRadius: 1, backgroundColor: '#FFB800' }, starStyle]} />
-      <Animated.View style={[{ position: 'absolute', top: '45%', left: '5%', width: 2.5, height: 2.5, borderRadius: 1.25, backgroundColor: '#FFF' }, starStyle]} />
-      <Animated.View style={[{ position: 'absolute', bottom: '15%', right: '25%', width: 2, height: 2, borderRadius: 1, backgroundColor: '#D186FF' }, starStyle]} />
-      <Animated.View style={[{ position: 'absolute', bottom: '40%', right: '10%', width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#FFF' }, starStyle]} />
-      <Animated.View style={[{ position: 'absolute', top: '65%', left: '45%', width: 2, height: 2, borderRadius: 1, backgroundColor: '#FFB800' }, starStyle]} />
+      <Animated.View style={[{
+        position: 'absolute', left: -SW * 0.2, top: SH * neb.y1 - SW * 0.35,
+        width: SW * 0.9, height: SW * 0.9, borderRadius: SW * 0.45,
+        backgroundColor: neb.c1,
+      }, s1]} />
+      <Animated.View style={[{
+        position: 'absolute', right: -SW * 0.15, top: SH * neb.y2 - SW * 0.3,
+        width: SW * 0.8, height: SW * 0.8, borderRadius: SW * 0.4,
+        backgroundColor: neb.c2,
+      }, s2]} />
+    </View>
+  );
+}
+
+/* ── Deep Star Field — 25 individually-timed twinkling stars ─────── */
+var STAR_SEEDS = [];
+for (var _si = 0; _si < 25; _si++) {
+  STAR_SEEDS.push({
+    id: _si,
+    x: Math.random() * SW,
+    y: Math.random() * SH,
+    r: 0.8 + Math.random() * 2,
+    dur: 2500 + Math.random() * 4000,
+    dly: Math.random() * 3000,
+    col: ['#FFF', '#FFD666', '#B8C4FF', '#4CC9F0', '#D186FF'][Math.floor(Math.random() * 5)],
+  });
+}
+function TwinkleField() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {STAR_SEEDS.map(function (s) { return <TwinkleDot key={s.id} s={s} />; })}
+    </View>
+  );
+}
+function TwinkleDot({ s }) {
+  var t = useSharedValue(0);
+  useEffect(function () {
+    t.value = withDelay(s.dly, withRepeat(
+      withTiming(1, { duration: s.dur, easing: Easing.inOut(Easing.sin) }), -1, true));
+  }, []);
+  var st = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(t.value, [0, 0.5, 1], [0.1, 0.85, 0.1]),
+      transform: [{ scale: interpolate(t.value, [0, 0.5, 1], [0.7, 1.3, 0.7]) }],
+    };
+  });
+  return (
+    <Animated.View style={[{
+      position: 'absolute', left: s.x, top: s.y,
+      width: s.r * 2, height: s.r * 2, borderRadius: s.r,
+      backgroundColor: s.col,
+      shadowColor: s.col, shadowOpacity: s.r > 1.5 ? 0.9 : 0.5, shadowRadius: s.r > 1.5 ? 6 : 3,
+      shadowOffset: { width: 0, height: 0 },
+    }, st]} />
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FloatingOrbs — Master celestial layer (rendered behind every step)
+   Now accepts `step` prop to shift the mood as user advances.
+   ══════════════════════════════════════════════════════════════ */
+function FloatingOrbs({ step }) {
+  var st = step === undefined ? 0 : step;
+  // Sun gets brighter as you advance, moon brighter on early steps
+  var sunInt = interpolate(st, [-1, 2, 5], [0.6, 1, 1.4], 'clamp');
+  var moonInt = interpolate(st, [-1, 2, 5], [1.2, 1, 0.7], 'clamp');
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Nebula color wash that shifts per step */}
+      <StepNebula step={st} />
+
+      {/* Deep twinkling star field */}
+      <TwinkleField />
+
+      {/* Sun & Moon */}
+      <OnboardingSun intensity={sunInt} />
+      <OnboardingMoon intensity={moonInt} />
+
+      {/* Orbiting Planets */}
+      {/* Saturn — large, slow, with ring */}
+      <OrbitingPlanet
+        cx={SW * 0.5} cy={SH * 0.35} rx={SW * 0.42} ry={SH * 0.22}
+        size={18} color="rgba(210,180,120,0.55)" glowColor="rgba(210,180,120,0.08)"
+        duration={28000} delay={0} hasRing
+      />
+      {/* Jupiter — medium, warm orange */}
+      <OrbitingPlanet
+        cx={SW * 0.45} cy={SH * 0.45} rx={SW * 0.34} ry={SH * 0.18}
+        size={14} color="rgba(230,160,80,0.5)" glowColor="rgba(230,160,80,0.06)"
+        duration={22000} delay={4000}
+      />
+      {/* Mars — small, red */}
+      <OrbitingPlanet
+        cx={SW * 0.55} cy={SH * 0.55} rx={SW * 0.28} ry={SH * 0.14}
+        size={9} color="rgba(220,80,60,0.5)" glowColor="rgba(220,80,60,0.06)"
+        duration={16000} delay={2000}
+      />
+      {/* Venus — small, bright white-blue */}
+      <OrbitingPlanet
+        cx={SW * 0.5} cy={SH * 0.3} rx={SW * 0.2} ry={SH * 0.1}
+        size={7} color="rgba(200,220,255,0.6)" glowColor="rgba(200,220,255,0.08)"
+        duration={12000} delay={6000}
+      />
+
+      {/* Shooting Stars — natural trajectories, staggered long pauses */}
+      <Meteor delay={800}   fromX={SW * 0.82} fromY={SH * 0.04} toX={SW * 0.28} toY={SH * 0.22} />
+      <Meteor delay={9000}  fromX={SW * 0.15} fromY={SH * 0.02} toX={SW * 0.65} toY={SH * 0.18} />
+      <Meteor delay={18000} fromX={SW * 0.92} fromY={SH * 0.18} toX={SW * 0.35} toY={SH * 0.42} />
+      <Meteor delay={26000} fromX={SW * 0.4}  fromY={SH * 0.01} toX={SW * 0.08} toY={SH * 0.28} />
     </View>
   );
 }
@@ -434,7 +801,6 @@ function LanguageStep({ onSelect }) {
 
   return (
     <View style={g.center}>
-      <FloatingOrbs />
       <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center', marginBottom: 40 }}>
         <Animated.View style={floatStyle}>
           <Animated.View style={[ls.logoWrap, glowStyle]}>
@@ -442,8 +808,8 @@ function LanguageStep({ onSelect }) {
           </Animated.View>
         </Animated.View>
         <Animated.View style={titleAnim}>
-          <Text style={ls.mainTitleSi}>{'\u0db1\u0dd0\u0d9a\u0dad\u0dca AI'}</Text>
-          <Text style={ls.mainTitleEn}>Nekath AI</Text>
+          <Text style={ls.mainTitleSi}>{'\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB'}</Text>
+          <Text style={ls.mainTitleEn}>Grahachara</Text>
         </Animated.View>
         <View style={ls.divider}>
           <LinearGradient colors={['transparent', '#FFB800', '#D186FF', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
@@ -526,7 +892,6 @@ function WelcomeStep({ onContinue, lang }) {
 
   return (
     <View style={g.center}>
-      <FloatingOrbs />
       <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center' }}>
         {/* Rotating halo ring */}
         <Animated.View style={[ws.haloRing, haloStyle]}>
@@ -546,8 +911,8 @@ function WelcomeStep({ onContinue, lang }) {
           </LinearGradient>
         </Animated.View>
 
-        <Text style={ws.titleSi}>{'\u0db1\u0dd0\u0d9a\u0dad\u0dca AI'}</Text>
-        <Text style={ws.titleEn}>Nekath AI</Text>
+        <Text style={ws.titleSi}>{'\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB'}</Text>
+        <Text style={ws.titleEn}>Grahachara</Text>
         <Text style={ws.subtitle}>{T.welcomeSubtitle}</Text>
 
         <View style={ws.featureList}>
@@ -625,7 +990,6 @@ function PhoneStep({ onContinue, onBack, lang }) {
 
   return (
     <View style={g.stepWrap}>
-      <FloatingOrbs />
       <StepHeader icon="call-outline" iconColor="#FFB800" title={T.phoneTitle} subtitle={T.phoneSubtitle} />
 
       <Animated.View entering={FadeInUp.delay(200).duration(500)} style={{ marginTop: 32 }}>
@@ -751,7 +1115,6 @@ function OtpStep({ phone, referenceNo, onContinue, onBack, lang }) {
 
   return (
     <View style={g.stepWrap}>
-      <FloatingOrbs />
       <StepHeader icon="shield-checkmark-outline" iconColor="#FFB800" title={T.otpTitle} subtitle={T.otpSubtitle + ' ' + maskedPhone} />
 
       <Animated.View entering={FadeInUp.delay(200).duration(500)} style={{ marginTop: 28 }}>
@@ -850,7 +1213,6 @@ function SubscriptionStep({ onContinue, lang }) {
 
   return (
     <ScrollView contentContainerStyle={g.stepWrap} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ backgroundColor: 'transparent' }} bounces={false} overScrollMode="never">
-      <FloatingOrbs />
       <StepHeader icon="diamond-outline" iconColor="#FFB800" title={T.subTitle} subtitle={T.subSubtitle} />
 
       <Animated.View entering={FadeInUp.delay(200).duration(500)} style={{ marginTop: 20 }}>
@@ -886,8 +1248,8 @@ function SubscriptionStep({ onContinue, lang }) {
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           >
             <Text style={ss.priceLabel}>LKR</Text>
-            <Text style={ss.priceAmount}>8</Text>
-            <Text style={ss.pricePer}>{T.subPerDay}</Text>
+            <Text style={ss.priceAmount}>240</Text>
+            <Text style={ss.pricePer}>/month</Text>
           </LinearGradient>
         </Animated.View>
 
@@ -1260,7 +1622,6 @@ function CompleteStep({ lang }) {
 
   return (
     <View style={g.center}>
-      <FloatingOrbs />
       <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center' }}>
         <View style={{ width: 120, height: 120, alignItems: 'center', justifyContent: 'center' }}>
           {/* Pulsing rings */}
@@ -1328,6 +1689,8 @@ export default function OnboardingScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <View style={{ flex: 1, paddingTop: insets.top + 8, paddingBottom: Math.max(insets.bottom, 12), overflow: 'hidden' }}>
+          {/* Single global celestial layer — shifts mood based on step */}
+          <FloatingOrbs step={step} />
           {step >= 0 ? (
             <View style={{ paddingHorizontal: 24, paddingTop: 4 }}>
               <StepProgressBar current={step} total={TOTAL_MAIN_STEPS} lang={lang} />

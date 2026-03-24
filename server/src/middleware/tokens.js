@@ -2,10 +2,10 @@
  * Token / Micro-transaction Middleware
  *
  * Users hold an LKR token balance in their Firestore document.
- * Generating a Full AI Report costs LKR 15; a Porondam Report costs LKR 10.
+ * Generating a Full AI Report costs LKR 350; a Porondam Report costs LKR 50.
  *
  * Usage (route):
- *   router.post('/full-report-ai', phoneAuth, requireTokens(15, 'Full Report'), handler);
+ *   router.post('/full-report-ai', phoneAuth, requireTokens(350, 'Full Report'), handler);
  *
  * The middleware:
  *   1. Reads tokenBalance from Firestore
@@ -16,7 +16,6 @@
  */
 
 const { getDb, COLLECTIONS } = require('../config/firebase');
-const { chargeUser } = require('../services/ideamart');
 
 // ─── Balance helpers ────────────────────────────────────────────────────────
 
@@ -123,7 +122,7 @@ async function addTokenBalance(uid, amount, txId = null, description = 'Top-up')
       type: 'credit',
       amount,
       description,
-      ideamartTxId: txId || null,
+      paymentTxId: txId || null,
       balanceAfter: newBalance,
       createdAt: new Date().toISOString(),
     });
@@ -188,37 +187,26 @@ function requireTokens(amount, label = 'Service') {
   };
 }
 
-// ─── Top-up via Ideamart direct debit ──────────────────────────────────────
+// ─── Top-up via PayHere ────────────────────────────────────────────────────
 
 /**
- * Charge the user's mobile credit via Ideamart and add the amount to their
- * token balance.
+ * Credit tokens after a verified PayHere payment.
+ * Called from PayHere webhook routes after hash verification.
  *
  * @param {string} uid           — Firebase UID
- * @param {string} subscriberId  — tel:94XXXXXXXXX format (from user Firestore doc)
- * @param {number} amount        — LKR amount to top up (e.g. 15, 30, 50)
+ * @param {number} amount        — LKR amount to credit
+ * @param {string} paymentId     — PayHere payment ID
  * @param {string} description   — Human-readable description
  */
-async function topUpViaIdeamart(uid, subscriberId, amount, description = 'Token top-up') {
-  if (!subscriberId) {
-    throw new Error('subscriberId is required for Ideamart charging');
-  }
-
-  // Charge mobile credit
-  const result = await chargeUser(subscriberId, amount);
-  if (!result.success) {
-    throw new Error(result.error || 'Ideamart charge failed');
-  }
-
+async function topUpViaPayHere(uid, amount, paymentId, description = 'PayHere top-up') {
   // Credit token balance
-  const balanceResult = await addTokenBalance(uid, amount, result.transactionId, description);
+  const balanceResult = await addTokenBalance(uid, amount, paymentId, description);
 
   return {
     success: true,
-    charged: amount,
-    transactionId: result.transactionId,
+    credited: amount,
+    paymentId,
     newBalance: balanceResult.newBalance,
-    mock: result.mock || false,
   };
 }
 
@@ -227,5 +215,5 @@ module.exports = {
   getTokenBalance,
   deductTokenBalance,
   addTokenBalance,
-  topUpViaIdeamart,
+  topUpViaPayHere,
 };

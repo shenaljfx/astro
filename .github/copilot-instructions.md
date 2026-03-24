@@ -1,4 +1,4 @@
-# Nakath AI - Sri Lankan Astrology App
+# Grahachara (ග්‍රහචාර) - Sri Lankan Astrology App
 
 ## Architecture Overview
 

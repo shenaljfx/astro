@@ -28,6 +28,18 @@ import SriLankanChart from '../../components/SriLankanChart';
 
 var { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// Approximate moon phase from current date (fallback when server data not yet loaded)
+// Returns 1-30 tithi number based on synodic month (~29.53 days)
+function getMoonPhaseFromDate() {
+  var now = new Date();
+  // Known new moon: Jan 6, 2000 (epoch reference)
+  var refNewMoon = new Date(2000, 0, 6, 18, 14, 0).getTime();
+  var synodicMonth = 29.53058867;
+  var daysSinceRef = (now.getTime() - refNewMoon) / (24 * 60 * 60 * 1000);
+  var cyclePos = ((daysSinceRef % synodicMonth) + synodicMonth) % synodicMonth;
+  return Math.floor(cyclePos / synodicMonth * 30) + 1;
+}
+
 function toSLT(isoOrObj, t) {
   if (!isoOrObj) return '--:--';
   if (typeof isoOrObj === 'object' && isoOrObj.display) return isoOrObj.display;
@@ -49,7 +61,7 @@ var ZODIAC_COLORS = [
   '#F9A8D4','#D4A5FF','#FF9F43','#94A3B8','#67E8F9','#C4B5FD',
 ];
 
-function CosmicOrrery({ size, activeIndex }) {
+function CosmicOrrery({ size, activeIndex, tithiNum }) {
   var pad = size * 0.10;
   var vb = size + pad * 2;
   var cx = vb / 2, cy = vb / 2;
@@ -66,6 +78,17 @@ function CosmicOrrery({ size, activeIndex }) {
   var fontSize = Math.max(u * 11, 7);
   var activeFontSize = Math.max(u * 14, 9);
   var planetScale = Math.max(u, 0.5);
+
+  // Moon phase from tithiNum (1-30): 1=new crescent, 15=full, 16=waning start, 30=new moon
+  // illumination: 0=new, 1=full
+  var moonTithi = tithiNum || 1;
+  var illumination = moonTithi <= 15 ? (moonTithi - 1) / 14 : (30 - moonTithi) / 14;
+  illumination = Math.max(0, Math.min(1, illumination));
+  // Moon position: place on the mid-orbit ring, opposite from where sun is (roughly)
+  var moonAngle = ((moonTithi / 30) * 360 + 180) * Math.PI / 180;
+  var moonX = cx + orbit2 * 0.95 * Math.cos(moonAngle);
+  var moonY = cy + orbit2 * 0.95 * Math.sin(moonAngle);
+  var moonR = Math.max(coreR * 1.1, 4.5);
 
   var STAR_FIELD = [
     [0.08,0.10,0.7,'#FFF'],[0.92,0.08,0.5,'#D4A5FF'],[0.05,0.55,0.6,'#67E8F9'],
@@ -206,6 +229,50 @@ function CosmicOrrery({ size, activeIndex }) {
       <Circle cx={cx} cy={cy} r={coreR * 1.6} fill="url(#oSunCore)" />
       <Circle cx={cx} cy={cy} r={coreR} fill="#FFD666" opacity={0.95} />
       <Circle cx={cx} cy={cy} r={coreR * 0.5} fill="#FFFBE6" opacity={0.8} />
+
+      {/* Moon — phase based on current tithi */}
+      {(() => {
+        // Moon glow
+        var elements = [
+          <Circle key="mglow" cx={moonX} cy={moonY} r={moonR + 3 * u} fill="#93C5FD" opacity={0.12} />,
+          <Circle key="mglow2" cx={moonX} cy={moonY} r={moonR + 6 * u} fill="#93C5FD" opacity={0.05} />,
+        ];
+        // Dark base (the "unlit" side)
+        elements.push(<Circle key="mbase" cx={moonX} cy={moonY} r={moonR} fill="#1E1E3A" />);
+        // Lit portion
+        if (illumination > 0.02) {
+          elements.push(<Circle key="mlit" cx={moonX} cy={moonY} r={moonR * 0.98} fill="#D4D4E8" opacity={Math.min(illumination * 1.1, 1)} />);
+        }
+        // Shadow overlay to create phase shape
+        if (illumination < 0.97 && illumination > 0.03) {
+          // For waxing (Shukla, tithi 1-15): shadow comes from left
+          // For waning (Krishna, tithi 16-30): shadow comes from right
+          var isWaxing = moonTithi <= 15;
+          var shadowShift = isWaxing
+            ? moonR * (1 - illumination * 2)
+            : moonR * (illumination * 2 - 1);
+          elements.push(
+            <Ellipse key="mshadow"
+              cx={moonX + shadowShift * 0.6}
+              cy={moonY}
+              rx={moonR * Math.abs(1 - illumination * 2) * 0.95 + 0.5}
+              ry={moonR * 0.98}
+              fill="#1E1E3A"
+              opacity={0.92}
+            />
+          );
+        }
+        // Subtle crater texture dots
+        if (illumination > 0.2) {
+          elements.push(
+            <Circle key="mc1" cx={moonX - moonR * 0.25} cy={moonY - moonR * 0.15} r={moonR * 0.12} fill="#B8B8D0" opacity={0.25} />,
+            <Circle key="mc2" cx={moonX + moonR * 0.2} cy={moonY + moonR * 0.25} r={moonR * 0.09} fill="#B8B8D0" opacity={0.2} />,
+          );
+        }
+        // Outer ring
+        elements.push(<Circle key="mring" cx={moonX} cy={moonY} r={moonR} fill="none" stroke="#93C5FD" strokeWidth={0.6} opacity={0.4} />);
+        return elements;
+      })()}
 
       {/* Zodiac sign nodes — all sizes proportional */}
       {ZODIAC_SIGNS.map(function (sign, i) {
@@ -460,7 +527,12 @@ export default function HomeScreen() {
       ? (language === 'si' && data.panchanga.yoga.sinhala ? data.panchanga.yoga.sinhala : (data.panchanga.yoga.english || data.panchanga.yoga.name || '--'))
       : '--';
 
-    var orrerySize = 110;
+    // Get tithi number for moon phase (1-30)
+    var currentTithiNum = data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number
+      ? data.panchanga.tithi.number
+      : getMoonPhaseFromDate();
+
+    var orrerySize = Math.min(SCREEN_WIDTH * 0.38, 160);
 
     return (
       <Animated.View entering={FadeInDown.delay(100).springify()}>
@@ -504,7 +576,7 @@ export default function HomeScreen() {
               </View>
             </View>
             <Animated.View style={[wheelStyle, { opacity: 0.90 }]}>
-              <CosmicOrrery size={orrerySize} activeIndex={activeNakIndex} />
+              <CosmicOrrery size={orrerySize} activeIndex={activeNakIndex} tithiNum={currentTithiNum} />
             </Animated.View>
           </View>
 

@@ -968,9 +968,9 @@ router.post('/full-report', async (req, res) => {
 // Optional auth: if logged in, caches report & returns cached if available
 // ═══════════════════════════════════════════════════════════════════
 
-router.post('/full-report-ai', phoneAuth, requireTokens(15, 'Full AI Report'), async (req, res) => {
+router.post('/full-report-ai', phoneAuth, requireTokens(350, 'Full AI Report'), async (req, res) => {
   try {
-    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null } = req.body;
+    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null } = req.body;
 
     if (!birthDate) {
       return res.status(400).json({ error: 'birthDate is required (ISO format or parseable date string)' });
@@ -1032,7 +1032,7 @@ router.post('/full-report-ai', phoneAuth, requireTokens(15, 'Full AI Report'), a
     console.log(`[AI Report] Generating narrative report for ${date.toISOString()} at (${reportLat}, ${reportLng}) in ${language}`);
     const startTime = Date.now();
 
-    const report = await generateAINarrativeReport(date, reportLat, reportLng, language, birthLocation, userName, userGender);
+    const report = await generateAINarrativeReport(date, reportLat, reportLng, language, birthLocation, userName, userGender, userReligion);
 
     const elapsed = Date.now() - startTime;
     const sectionCount = Object.keys(report.narrativeSections).length;

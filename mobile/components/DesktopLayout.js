@@ -1,5 +1,5 @@
 /**
- * DesktopLayout - Nakath AI Desktop Shell
+ * DesktopLayout - Grahachara Desktop Shell
  *
  * DesktopSidebar (default export) is used as the tabBar prop in Expo Router Tabs.
  * It renders as a fixed absolute left panel; Expo Router renders screens in the
@@ -219,7 +219,7 @@ export function DesktopTopBar({ routeName, language, balance, onToggleLanguage }
         <LinearGradient colors={activeItem.gradient} style={top.accentStripe} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} />
       )}
       <View style={top.leftGroup}>
-        <Text style={top.logoText}>Nakath AI</Text>
+        <Text style={top.logoText}>Grahachara</Text>
         <View style={top.leftDivider} />
         {activeItem && (
           <View style={[top.iconCircle, { backgroundColor: activeItem.gradient[0] + '1A' }]}>
@@ -313,7 +313,7 @@ export default function DesktopSidebar({ state, navigation, balance, language, o
         <View style={sb.divider} />
         <BalanceChip balance={balance} collapsed={collapsed} />
         <LangToggle language={language} onToggle={onToggleLanguage} collapsed={collapsed} />
-        {!collapsed && <Text style={sb.versionText}>Nakath AI \u00b7 v2.0</Text>}
+        {!collapsed && <Text style={sb.versionText}>Grahachara \u00b7 v2.0</Text>}
       </View>
     </Animated.View>
   );

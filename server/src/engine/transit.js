@@ -18,7 +18,7 @@
  * Based on: Phaladeepika, Brihat Samhita, Sarvartha Chintamani,
  *           KP Reader (transit techniques), Sri Lankan Gochara tradition
  *
- * Author: Nakath AI Engine v4.0
+ * Author: Grahachara Engine v4.0
  */
 
 const {

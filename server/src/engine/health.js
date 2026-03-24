@@ -21,7 +21,7 @@
  *   8. Longevity Estimation — Jaimini Ayurdaya + classical methods
  *   9. Preventive Recommendations — Remedies, diet, lifestyle per dosha
  *
- * Author: Nakath AI Engine v4.0 — Medical Astrology Module
+ * Author: Grahachara Engine v4.0 — Medical Astrology Module
  */
 
 const {

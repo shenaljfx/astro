@@ -32,7 +32,7 @@
  *
  * Based on: Muhurtha Chintamani, Kaala Prakashika, Sri Lankan Nekath Shastra
  *
- * Author: Nakath AI Engine v4.0
+ * Author: Grahachara Engine v4.0
  */
 
 const {

@@ -1,5 +1,5 @@
 /**
- * Spectacular PDF Report Generator — නැකත් AI
+ * Spectacular PDF Report Generator — ග්‍රහචාර
  * 
  * Generates a premium branded HTML document for PDF export with:
  * - Full-bleed cover page with gradient + logo
@@ -526,7 +526,7 @@ function buildCoverPage(opts) {
     + '<div class="zodiac-symbols">' + zodiacSymbolsHTML() + '</div>'
     + '<div class="cover-content">'
     + '<div class="cover-logo-wrap">' + logoTag + '</div>'
-    + '<div class="cover-brand">නැකත් AI</div>'
+    + '<div class="cover-brand">ග්‍රහචාර</div>'
     + '<div class="cover-title">'
     + '<span class="cover-title-gold">'
     + (isSi ? 'සම්පූර්ණ ජීවිත වාර්තාව' : 'Complete Life Report')
@@ -627,12 +627,12 @@ function buildSectionsHTML(sectionKeys, narrativeSections, sectionTitles, lang, 
 function buildEndPage(isSi) {
   return '<div class="end-page">'
     + '<div style="font-size:48px; margin-bottom:8px;">☸</div>'
-    + '<div class="end-brand">නැකත් AI</div>'
+    + '<div class="end-brand">ග්‍රහචාර</div>'
     + '<div class="end-divider"></div>'
     + '<div class="end-tagline">'
     + (isSi ? 'ඔබේ ජීවිතයේ තරු බලන්න' : 'Read the Stars of Your Life')
     + '</div>'
-    + '<div class="end-url">www.nekath.ai</div>'
+    + '<div class="end-url">www.grahachara.lk</div>'
     + '<div class="end-disclaimer">'
     + (isSi
       ? 'මෙම වාර්තාව AI සහ සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වේ. මෙය අත්දැකීම් හා දැනගැනීම් සඳහා පමණි. වෘත්තීය තීරණ සඳහා සුදුසු විශේෂඥයින්ගෙන් උපදෙස් ලබාගන්න.'
@@ -671,22 +671,22 @@ function generateReportHTML(opts) {
     + '<div class="ornament-corner-bl"></div>'
     + '<div class="ornament-corner-br"></div>';
 
-  var watermark = '<div class="watermark">නැකත් AI</div>';
+  var watermark = '<div class="watermark">ග්‍රහචාර</div>';
 
   var html = '<!DOCTYPE html><html lang="' + (isSi ? 'si' : 'en') + '"><head>'
     + '<meta charset="utf-8"/>'
     + '<meta name="viewport" content="width=device-width, initial-scale=1"/>'
-    + '<title>' + (isSi ? 'නැකත් AI වාර්තාව' : 'Nekath AI Report') + '</title>'
+    + '<title>' + (isSi ? 'ග්‍රහචාර වාර්තාව' : 'Grahachara Report') + '</title>'
     + '<style>' + buildCSS() + '</style>'
     + '</head><body>'
     + watermark
     + ornaments
     + '<div class="page-header">'
-    + '<span class="logo-mark">නැකත් AI</span>'
+    + '<span class="logo-mark">ග්‍රහචාර</span>'
     + '<span>' + (isSi ? 'සම්පූර්ණ ජීවිත වාර්තාව' : 'Complete Life Report') + '</span>'
     + '</div>'
     + '<div class="page-footer">'
-    + 'නැකත් AI &bull; www.nekath.ai &bull; ' + new Date().toLocaleDateString()
+    + 'ග්‍රහචාර &bull; www.grahachara.lk &bull; ' + new Date().toLocaleDateString()
     + '</div>'
     + buildCoverPage(opts)
     + buildTOC(opts.sectionKeys || [], sectionTitles, isSi)

@@ -18,6 +18,8 @@ const authRoutes = require('./routes/auth');
 const rectificationRoutes = require('./routes/rectification');
 const predictionRoutes = require('./routes/predictions');
 const tokensRoutes = require('./routes/tokens');
+const notificationRoutes = require('./routes/notifications');
+const payhereRoutes = require('./routes/payhere');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,12 +34,13 @@ app.use(helmet({
 }));
 app.use(morgan('dev'));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // PayHere webhooks send form-urlencoded
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    app: 'Nakath AI',
+    app: 'Grahachara',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
   });
@@ -54,6 +57,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/rectification', rectificationRoutes);
 app.use('/api/predictions', predictionRoutes);
 app.use('/api/tokens', tokensRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/payhere', payhereRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -65,9 +70,22 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🪐 Nakath AI Server running on port ${PORT}`);
+  console.log(`🪐 Grahachara Server running on port ${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   AI Provider: ${process.env.AI_PROVIDER || 'openai'}`);
+
+  // Start notification scheduler (only if Firebase is available)
+  try {
+    const { startScheduler } = require('./services/scheduler');
+    const { getDb } = require('./config/firebase');
+    if (getDb()) {
+      startScheduler();
+    } else {
+      console.log('   ⚠️  Notification scheduler skipped — Firebase not available');
+    }
+  } catch (err) {
+    console.error('   ⚠️  Notification scheduler failed to start:', err.message);
+  }
 });
 
 module.exports = app;

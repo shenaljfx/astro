@@ -1,0 +1,1990 @@
+{
+  "charts": [
+    {
+      "id": "nehru",
+      "name": "Jawaharlal Nehru",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Kataka",
+          "act": "Kataka",
+          "deg": "113.69",
+          "pass": true
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Vrischika (Scorpio)",
+          "deg": "210.26",
+          "pass": true
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Kataka (Cancer)",
+          "act": "Kataka (Cancer)",
+          "deg": "107.90",
+          "pass": true
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Kataka (Cancer)",
+          "act": "Kanya (Virgo)",
+          "deg": "159.98",
+          "pass": false
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Tula (Libra)",
+          "deg": "197.14",
+          "pass": false
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "255.17",
+          "pass": true
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Tula (Libra)",
+          "deg": "187.35",
+          "pass": false
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Kataka (Cancer)",
+          "act": "Simha (Leo)",
+          "deg": "130.79",
+          "pass": false
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Mesha (Aries)",
+          "act": "Mithuna (Gemini)",
+          "deg": "71.44",
+          "pass": false
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Tula (Libra)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "251.44",
+          "pass": false
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Pushya",
+          "act": "Ashlesha",
+          "pada": 1,
+          "pass": false
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Saturn",
+          "act": "Mercury",
+          "pass": false
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "0",
+          "pass": false
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 8,
+      "fail": 10
+    },
+    {
+      "id": "gandhi",
+      "name": "Mahatma Gandhi",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Tula",
+          "act": "Tula",
+          "deg": "186.33",
+          "pass": true
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Kanya (Virgo)",
+          "act": "Kanya (Virgo)",
+          "deg": "166.89",
+          "pass": true
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Kataka (Cancer)",
+          "act": "Kataka (Cancer)",
+          "deg": "118.01",
+          "pass": true
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Tula (Libra)",
+          "deg": "206.37",
+          "pass": false
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Tula (Libra)",
+          "deg": "191.73",
+          "pass": false
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Mesha (Aries)",
+          "act": "Mesha (Aries)",
+          "deg": "28.13",
+          "pass": true
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Tula (Libra)",
+          "deg": "204.40",
+          "pass": false
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Vrischika (Scorpio)",
+          "deg": "230.32",
+          "pass": false
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Kataka (Cancer)",
+          "act": "Kataka (Cancer)",
+          "deg": "103.65",
+          "pass": true
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "283.65",
+          "pass": true
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Pushya",
+          "act": "Ashlesha",
+          "pada": 4,
+          "pass": false
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Saturn",
+          "act": "Mercury",
+          "pass": false
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "2",
+          "pass": true
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 11,
+      "fail": 7
+    },
+    {
+      "id": "vivekananda",
+      "name": "Swami Vivekananda",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Dhanu",
+          "act": "Dhanus",
+          "deg": "265.90",
+          "pass": true
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "269.43",
+          "pass": true
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Kanya (Virgo)",
+          "deg": "167.45",
+          "pass": false
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Kataka (Cancer)",
+          "act": "Mesha (Aries)",
+          "deg": "6.33",
+          "pass": false
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Makara (Capricorn)",
+          "deg": "281.78",
+          "pass": false
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Simha (Leo)",
+          "act": "Tula (Libra)",
+          "deg": "184.02",
+          "pass": false
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "277.11",
+          "pass": true
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Simha (Leo)",
+          "act": "Kanya (Virgo)",
+          "deg": "163.58",
+          "pass": false
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Vrischika (Scorpio)",
+          "deg": "233.51",
+          "pass": true
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Vrishabha (Taurus)",
+          "act": "Vrishabha (Taurus)",
+          "deg": "53.51",
+          "pass": true
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Moola",
+          "act": "Hasta",
+          "pada": 3,
+          "pass": false
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Ketu",
+          "act": "Moon",
+          "pass": false
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "0",
+          "pass": false
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 9,
+      "fail": 9
+    },
+    {
+      "id": "srilanka_independence",
+      "name": "Sri Lanka Independence",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Tula",
+          "act": "Tula",
+          "deg": "197.63",
+          "pass": true
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "290.72",
+          "pass": true
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Meena (Pisces)",
+          "act": "Vrischika (Scorpio)",
+          "deg": "221.04",
+          "pass": false
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Kanya (Virgo)",
+          "act": "Simha (Leo)",
+          "deg": "130.01",
+          "pass": false
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Makara (Capricorn)",
+          "act": "Kumbha (Aquarius)",
+          "deg": "308.95",
+          "pass": false
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Vrischika (Scorpio)",
+          "deg": "238.72",
+          "pass": false
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Kumbha (Aquarius)",
+          "act": "Kumbha (Aquarius)",
+          "deg": "327.21",
+          "pass": true
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Kataka (Cancer)",
+          "act": "Kataka (Cancer)",
+          "deg": "116.55",
+          "pass": true
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Mesha (Aries)",
+          "act": "Mesha (Aries)",
+          "deg": "26.41",
+          "pass": true
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Tula (Libra)",
+          "act": "Tula (Libra)",
+          "deg": "206.41",
+          "pass": true
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Revati",
+          "act": "Anuradha",
+          "pada": 3,
+          "pass": false
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Mercury",
+          "act": "Saturn",
+          "pass": false
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "1",
+          "pass": true
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 11,
+      "fail": 7
+    },
+    {
+      "id": "einstein",
+      "name": "Albert Einstein",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Mithuna",
+          "act": "Mithuna",
+          "deg": "79.47",
+          "pass": true
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Meena (Pisces)",
+          "act": "Meena (Pisces)",
+          "deg": "331.34",
+          "pass": true
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Vrischika (Scorpio)",
+          "deg": "232.36",
+          "pass": false
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "274.74",
+          "pass": true
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Meena (Pisces)",
+          "act": "Meena (Pisces)",
+          "deg": "340.97",
+          "pass": true
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Kumbha (Aquarius)",
+          "act": "Kumbha (Aquarius)",
+          "deg": "305.31",
+          "pass": true
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Meena (Pisces)",
+          "act": "Meena (Pisces)",
+          "deg": "354.81",
+          "pass": true
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Meena (Pisces)",
+          "act": "Meena (Pisces)",
+          "deg": "342.02",
+          "pass": true
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "280.56",
+          "pass": true
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Kataka (Cancer)",
+          "act": "Kataka (Cancer)",
+          "deg": "100.56",
+          "pass": true
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Moola",
+          "act": "Jyeshtha",
+          "pada": 2,
+          "pass": false
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Ketu",
+          "act": "Mercury",
+          "pass": false
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "3",
+          "pass": true
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 14,
+      "fail": 4
+    },
+    {
+      "id": "diana",
+      "name": "Princess Diana",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Dhanu",
+          "act": "Vrischika",
+          "deg": "235.11",
+          "pass": false
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Mithuna (Gemini)",
+          "act": "Mithuna (Gemini)",
+          "deg": "76.34",
+          "pass": true
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Kumbha (Aquarius)",
+          "act": "Kumbha (Aquarius)",
+          "deg": "301.72",
+          "pass": true
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Simha (Leo)",
+          "act": "Simha (Leo)",
+          "deg": "128.33",
+          "pass": true
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Mithuna (Gemini)",
+          "act": "Mithuna (Gemini)",
+          "deg": "69.88",
+          "pass": true
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "281.78",
+          "pass": true
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Vrishabha (Taurus)",
+          "act": "Vrishabha (Taurus)",
+          "deg": "31.08",
+          "pass": true
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "274.49",
+          "pass": true
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Kataka (Cancer)",
+          "act": "Simha (Leo)",
+          "deg": "124.86",
+          "pass": false
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Makara (Capricorn)",
+          "act": "Kumbha (Aquarius)",
+          "deg": "304.86",
+          "pass": false
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Dhanishta",
+          "act": "Dhanishtha",
+          "pada": 3,
+          "pass": true
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Rahu",
+          "act": "Mars",
+          "pass": false
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "1",
+          "pass": true
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 13,
+      "fail": 5
+    },
+    {
+      "id": "modi",
+      "name": "Narendra Modi",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Vrischika",
+          "act": "Tula",
+          "deg": "198.06",
+          "pass": false
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Simha (Leo)",
+          "act": "Kanya (Virgo)",
+          "deg": "150.55",
+          "pass": false
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Vrischika (Scorpio)",
+          "deg": "218.21",
+          "pass": true
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Simha (Leo)",
+          "act": "Vrischika (Scorpio)",
+          "deg": "210.90",
+          "pass": false
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Kanya (Virgo)",
+          "act": "Kanya (Virgo)",
+          "deg": "150.83",
+          "pass": true
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Kumbha (Aquarius)",
+          "act": "Kumbha (Aquarius)",
+          "deg": "306.60",
+          "pass": true
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Simha (Leo)",
+          "act": "Simha (Leo)",
+          "deg": "135.64",
+          "pass": true
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Simha (Leo)",
+          "act": "Simha (Leo)",
+          "deg": "149.65",
+          "pass": true
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Meena (Pisces)",
+          "act": "Meena (Pisces)",
+          "deg": "335.21",
+          "pass": true
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Kanya (Virgo)",
+          "act": "Kanya (Virgo)",
+          "deg": "155.21",
+          "pass": true
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Anuradha",
+          "act": "Anuradha",
+          "pada": 2,
+          "pass": true
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Moon",
+          "act": "Saturn",
+          "pass": false
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "2",
+          "pass": true
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 13,
+      "fail": 5
+    },
+    {
+      "id": "jobs",
+      "name": "Steve Jobs",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Kanya",
+          "act": "Simha",
+          "deg": "149.06",
+          "pass": false
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Kumbha (Aquarius)",
+          "act": "Kumbha (Aquarius)",
+          "deg": "312.52",
+          "pass": true
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Mesha (Aries)",
+          "act": "Meena (Pisces)",
+          "deg": "344.52",
+          "pass": false
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Mesha (Aries)",
+          "act": "Mesha (Aries)",
+          "deg": "5.86",
+          "pass": true
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "291.13",
+          "pass": true
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Mithuna (Gemini)",
+          "act": "Mithuna (Gemini)",
+          "deg": "87.28",
+          "pass": true
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Makara (Capricorn)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "267.94",
+          "pass": false
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Tula (Libra)",
+          "act": "Tula (Libra)",
+          "deg": "207.93",
+          "pass": true
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "250.18",
+          "pass": true
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Mithuna (Gemini)",
+          "act": "Mithuna (Gemini)",
+          "deg": "70.18",
+          "pass": true
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Ashwini",
+          "act": "Uttara Bhadrapada",
+          "pada": 4,
+          "pass": false
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Ketu",
+          "act": "Saturn",
+          "pass": false
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "1",
+          "pass": true
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 12,
+      "fail": 6
+    },
+    {
+      "id": "elizabeth",
+      "name": "Queen Elizabeth II",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Makara",
+          "act": "Makara",
+          "deg": "290.75",
+          "pass": true
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Mesha (Aries)",
+          "act": "Mesha (Aries)",
+          "deg": "7.42",
+          "pass": true
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Simha (Leo)",
+          "act": "Kataka (Cancer)",
+          "deg": "109.79",
+          "pass": false
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Kumbha (Aquarius)",
+          "act": "Makara (Capricorn)",
+          "deg": "298.07",
+          "pass": false
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Meena (Pisces)",
+          "act": "Meena (Pisces)",
+          "deg": "341.86",
+          "pass": true
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Kumbha (Aquarius)",
+          "act": "Makara (Capricorn)",
+          "deg": "299.69",
+          "pass": false
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Kumbha (Aquarius)",
+          "act": "Kumbha (Aquarius)",
+          "deg": "321.17",
+          "pass": true
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Vrischika (Scorpio)",
+          "deg": "211.61",
+          "pass": true
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Mithuna (Gemini)",
+          "act": "Mithuna (Gemini)",
+          "deg": "87.28",
+          "pass": true
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "267.28",
+          "pass": true
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Magha",
+          "act": "Ashlesha",
+          "pada": 1,
+          "pass": false
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Sun",
+          "act": "Mercury",
+          "pass": false
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "2",
+          "pass": true
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 12,
+      "fail": 6
+    },
+    {
+      "id": "tendulkar",
+      "name": "Sachin Tendulkar",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Kanya",
+          "act": "Simha",
+          "deg": "149.59",
+          "pass": false
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Mesha (Aries)",
+          "act": "Mesha (Aries)",
+          "deg": "10.62",
+          "pass": true
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "266.09",
+          "pass": true
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Kumbha (Aquarius)",
+          "act": "Makara (Capricorn)",
+          "deg": "296.80",
+          "pass": false
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Meena (Pisces)",
+          "act": "Meena (Pisces)",
+          "deg": "346.92",
+          "pass": true
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "286.61",
+          "pass": true
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Meena (Pisces)",
+          "act": "Mesha (Aries)",
+          "deg": "14.42",
+          "pass": false
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Vrishabha (Taurus)",
+          "act": "Vrishabha (Taurus)",
+          "deg": "54.28",
+          "pass": true
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "256.39",
+          "pass": true
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Mithuna (Gemini)",
+          "act": "Mithuna (Gemini)",
+          "deg": "76.39",
+          "pass": true
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Moola",
+          "act": "Purva Ashadha",
+          "pada": 4,
+          "pass": false
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Ketu",
+          "act": "Venus",
+          "pass": false
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "0",
+          "pass": false
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 11,
+      "fail": 7
+    },
+    {
+      "id": "j2000_vector",
+      "name": "Swiss Ephemeris J2000 Test Vector",
+      "tests": [
+        {
+          "cat": "P:sun",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "256.51",
+          "pass": true,
+          "sidExp": 256.5,
+          "sidDiff": "0.012"
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Vrishabha (Taurus)",
+          "act": "Tula (Libra)",
+          "deg": "199.47",
+          "pass": false,
+          "sidExp": 54.3,
+          "sidDiff": "145.167"
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Kumbha (Aquarius)",
+          "act": "Kumbha (Aquarius)",
+          "deg": "304.11",
+          "pass": false,
+          "sidExp": 303.1,
+          "sidDiff": "1.006"
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "248.03",
+          "pass": true,
+          "sidExp": 247.4,
+          "sidDiff": "0.632"
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Mesha (Aries)",
+          "act": "Mesha (Aries)",
+          "deg": "1.40",
+          "pass": true,
+          "sidExp": 1.4,
+          "sidDiff": "0.004"
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Vrischika (Scorpio)",
+          "deg": "217.71",
+          "pass": true,
+          "sidExp": 217.4,
+          "sidDiff": "0.309"
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Mesha (Aries)",
+          "act": "Mesha (Aries)",
+          "deg": "16.54",
+          "pass": true,
+          "sidExp": 16.5,
+          "sidDiff": "0.039"
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "2",
+          "pass": true
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 10,
+      "fail": 3
+    },
+    {
+      "id": "colombo_1990",
+      "name": "Colombo Birth 1990",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Mithuna",
+          "act": "Mithuna",
+          "deg": "66.71",
+          "pass": true
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Mesha (Aries)",
+          "act": "Vrishabha (Taurus)",
+          "deg": "30.31",
+          "pass": false
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Vrishabha (Taurus)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "268.82",
+          "pass": false
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Meena (Pisces)",
+          "act": "Kumbha (Aquarius)",
+          "deg": "324.33",
+          "pass": false
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Mesha (Aries)",
+          "act": "Mesha (Aries)",
+          "deg": "14.34",
+          "pass": true
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Mithuna (Gemini)",
+          "act": "Mithuna (Gemini)",
+          "deg": "75.75",
+          "pass": true
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Meena (Pisces)",
+          "act": "Meena (Pisces)",
+          "deg": "348.67",
+          "pass": true
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "271.53",
+          "pass": true
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "286.55",
+          "pass": true
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Kataka (Cancer)",
+          "act": "Kataka (Cancer)",
+          "deg": "106.55",
+          "pass": true
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Rohini",
+          "act": "Uttara Ashadha",
+          "pada": 1,
+          "pass": false
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Moon",
+          "act": "Sun",
+          "pass": false
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "1",
+          "pass": true
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 12,
+      "fail": 6
+    },
+    {
+      "id": "amitabh",
+      "name": "Amitabh Bachchan",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Kumbha",
+          "act": "Kumbha",
+          "deg": "321.56",
+          "pass": true
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Kanya (Virgo)",
+          "act": "Kanya (Virgo)",
+          "deg": "174.42",
+          "pass": true
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Tula (Libra)",
+          "act": "Tula (Libra)",
+          "deg": "190.90",
+          "pass": true
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Simha (Leo)",
+          "act": "Kanya (Virgo)",
+          "deg": "172.63",
+          "pass": false
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Tula (Libra)",
+          "act": "Kanya (Virgo)",
+          "deg": "173.61",
+          "pass": false
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Mithuna (Gemini)",
+          "act": "Kataka (Cancer)",
+          "deg": "90.54",
+          "pass": false
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Kanya (Virgo)",
+          "deg": "165.24",
+          "pass": false
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Vrishabha (Taurus)",
+          "act": "Vrishabha (Taurus)",
+          "deg": "49.23",
+          "pass": true
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Simha (Leo)",
+          "act": "Simha (Leo)",
+          "deg": "130.41",
+          "pass": true
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Kumbha (Aquarius)",
+          "act": "Kumbha (Aquarius)",
+          "deg": "310.41",
+          "pass": true
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Swati",
+          "act": "Swati",
+          "pada": 2,
+          "pass": true
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Rahu",
+          "act": "Rahu",
+          "pass": true
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "2",
+          "pass": true
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 13,
+      "fail": 5
+    },
+    {
+      "id": "obama",
+      "name": "Barack Obama",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Makara",
+          "act": "Makara",
+          "deg": "294.73",
+          "pass": true
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Kataka (Cancer)",
+          "act": "Kataka (Cancer)",
+          "deg": "109.23",
+          "pass": true
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Vrishabha (Taurus)",
+          "act": "Vrishabha (Taurus)",
+          "deg": "40.04",
+          "pass": true
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Simha (Leo)",
+          "act": "Simha (Leo)",
+          "deg": "149.26",
+          "pass": true
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Mithuna (Gemini)",
+          "act": "Kataka (Cancer)",
+          "deg": "99.01",
+          "pass": false
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "277.54",
+          "pass": true
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Mithuna (Gemini)",
+          "act": "Mithuna (Gemini)",
+          "deg": "68.47",
+          "pass": true
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "272.01",
+          "pass": true
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Simha (Leo)",
+          "act": "Simha (Leo)",
+          "deg": "123.98",
+          "pass": true
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Kumbha (Aquarius)",
+          "act": "Kumbha (Aquarius)",
+          "deg": "303.98",
+          "pass": true
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Rohini",
+          "act": "Rohini",
+          "pada": 1,
+          "pass": true
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Moon",
+          "act": "Moon",
+          "pass": true
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "1",
+          "pass": true
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 16,
+      "fail": 2
+    },
+    {
+      "id": "indira",
+      "name": "Indira Gandhi",
+      "tests": [
+        {
+          "cat": "Lagna",
+          "exp": "Kataka",
+          "act": "Kataka",
+          "deg": "117.37",
+          "pass": true
+        },
+        {
+          "cat": "P:sun",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Vrischika (Scorpio)",
+          "deg": "214.13",
+          "pass": true
+        },
+        {
+          "cat": "P:moon",
+          "exp": "Makara (Capricorn)",
+          "act": "Makara (Capricorn)",
+          "deg": "275.59",
+          "pass": true
+        },
+        {
+          "cat": "P:mars",
+          "exp": "Simha (Leo)",
+          "act": "Simha (Leo)",
+          "deg": "136.38",
+          "pass": true
+        },
+        {
+          "cat": "P:mercury",
+          "exp": "Vrischika (Scorpio)",
+          "act": "Vrischika (Scorpio)",
+          "deg": "223.23",
+          "pass": true
+        },
+        {
+          "cat": "P:jupiter",
+          "exp": "Vrishabha (Taurus)",
+          "act": "Vrishabha (Taurus)",
+          "deg": "45.01",
+          "pass": true
+        },
+        {
+          "cat": "P:venus",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "261.01",
+          "pass": true
+        },
+        {
+          "cat": "P:saturn",
+          "exp": "Kataka (Cancer)",
+          "act": "Kataka (Cancer)",
+          "deg": "111.79",
+          "pass": true
+        },
+        {
+          "cat": "P:rahu",
+          "exp": "Dhanu (Sagittarius)",
+          "act": "Dhanus (Sagittarius)",
+          "deg": "249.21",
+          "pass": true
+        },
+        {
+          "cat": "P:ketu",
+          "exp": "Mithuna (Gemini)",
+          "act": "Mithuna (Gemini)",
+          "deg": "69.21",
+          "pass": true
+        },
+        {
+          "cat": "Nakshatra",
+          "exp": "Shravana",
+          "act": "Uttara Ashadha",
+          "pada": 3,
+          "pass": false
+        },
+        {
+          "cat": "Dasha",
+          "exp": "Moon",
+          "act": "Sun",
+          "pass": false
+        },
+        {
+          "cat": "Houses",
+          "exp": "12h/9p",
+          "act": "12h/9p",
+          "pass": true
+        },
+        {
+          "cat": "Navamsha",
+          "exp": "12 divs",
+          "act": "12 divs",
+          "pass": true
+        },
+        {
+          "cat": "AV",
+          "exp": "12signs/~337",
+          "act": "12signs/338",
+          "pass": true
+        },
+        {
+          "cat": "Yogas",
+          "exp": ">=1",
+          "act": "1",
+          "pass": true
+        },
+        {
+          "cat": "Strengths",
+          "exp": ">=7",
+          "act": "9",
+          "pass": true
+        },
+        {
+          "cat": "FullReport",
+          "exp": "complete",
+          "act": "INCOMPLETE",
+          "pass": false
+        }
+      ],
+      "pass": 15,
+      "fail": 3
+    }
+  ],
+  "panchanga": [
+    {
+      "id": "poya_vesak_2024",
+      "name": "Vesak Poya 2024",
+      "tests": [
+        {
+          "cat": "Tithi",
+          "exp": "Purnima",
+          "act": "Purnima/Amavasya",
+          "pass": true
+        },
+        {
+          "cat": "Vaara",
+          "exp": "Thursday",
+          "act": "Thursday",
+          "pass": true
+        }
+      ],
+      "pass": 2,
+      "fail": 0
+    },
+    {
+      "id": "thai_pongal_2024",
+      "name": "Thai Pongal / Makara Sankranti 2024",
+      "tests": [
+        {
+          "cat": "SunSign",
+          "exp": "Makara",
+          "act": "Makara",
+          "pass": true
+        }
+      ],
+      "pass": 1,
+      "fail": 0
+    },
+    {
+      "id": "sinhala_new_year_2024",
+      "name": "Sinhala & Tamil New Year 2024",
+      "tests": [
+        {
+          "cat": "SunSign",
+          "exp": "Mesha",
+          "act": "Mesha",
+          "pass": true
+        }
+      ],
+      "pass": 1,
+      "fail": 0
+    }
+  ],
+  "ayanamsha": [
+    {
+      "id": "Swiss Eph Lahiri at J2000",
+      "tests": [
+        {
+          "cat": "Ayanamsha",
+          "exp": "23.856 +/-0.05",
+          "act": "23.8571",
+          "diff": "0.0011",
+          "pass": true
+        }
+      ],
+      "pass": 1,
+      "fail": 0
+    },
+    {
+      "id": "Lahiri at 1950 epoch",
+      "tests": [
+        {
+          "cat": "Ayanamsha",
+          "exp": "23.15 +/-0.1",
+          "act": "23.1587",
+          "diff": "0.0087",
+          "pass": true
+        }
+      ],
+      "pass": 1,
+      "fail": 0
+    },
+    {
+      "id": "Projected Lahiri 2025",
+      "tests": [
+        {
+          "cat": "Ayanamsha",
+          "exp": "24.21 +/-0.1",
+          "act": "24.2064",
+          "diff": "0.0036",
+          "pass": true
+        }
+      ],
+      "pass": 1,
+      "fail": 0
+    }
+  ],
+  "summary": {
+    "total": 272,
+    "pass": 187,
+    "fail": 85,
+    "percentage": 68.8,
+    "grade": "D"
+  }
+}

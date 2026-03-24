@@ -1,5 +1,5 @@
 {
-  "name": "nakath-ai-server",
+  "name": "grahachara-server",
   "version": "1.0.0",
   "description": "AI-powered Vedic astrology backend for Sri Lankan market",
   "main": "src/index.js",

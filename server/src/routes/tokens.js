@@ -2,18 +2,16 @@
  * Token / Micro-transaction Routes
  *
  * GET  /api/tokens/balance         — current LKR balance
- * POST /api/tokens/topup           — charge mobile credit & credit balance
+ * POST /api/tokens/topup           — initiate PayHere top-up (returns payment object)
  * GET  /api/tokens/history         — last 20 transactions
  */
 
 const express = require('express');
 const router = express.Router();
 const { phoneAuth } = require('../middleware/subscription');
-const { getTokenBalance, topUpViaIdeamart } = require('../middleware/tokens');
+const { getTokenBalance } = require('../middleware/tokens');
 const { getDb, COLLECTIONS } = require('../config/firebase');
-
-// Top-up packages available (LKR)
-const TOP_UP_PACKAGES = [15, 30, 50];
+const { TOP_UP_PACKAGES, buildTopUpPayment, buildPaymentHash } = require('../services/payhere');
 
 // ─── GET /balance ───────────────────────────────────────────────────────────
 
@@ -26,7 +24,7 @@ router.get('/balance', phoneAuth, async (req, res) => {
       balance: 0,
       guest: true,
       packages: TOP_UP_PACKAGES,
-      pricing: { fullReport: 15, porondamReport: 10 },
+      pricing: { fullReport: 350, porondamReport: 50 },
     });
   }
 
@@ -37,8 +35,8 @@ router.get('/balance', phoneAuth, async (req, res) => {
       balance,
       packages: TOP_UP_PACKAGES,
       pricing: {
-        fullReport: 15,
-        porondamReport: 10,
+        fullReport: 350,
+        porondamReport: 50,
       },
     });
   } catch (err) {
@@ -68,45 +66,43 @@ router.post('/topup', phoneAuth, async (req, res) => {
     });
   }
 
-  // Fetch subscriberId from user doc (stored during phone auth)
-  const db = getDb();
-  let subscriberId = null;
-  console.log('[tokens/topup] uid=' + req.user.uid + ' amount=' + parsed);
-  if (db) {
-    try {
-      const doc = await db.collection(COLLECTIONS.USERS).doc(req.user.uid).get();
-      if (doc.exists) {
-        subscriberId = doc.data().subscriberId || null;
-        console.log('[tokens/topup] user found, subscriberId=' + (subscriberId || 'null'));
-      } else {
-        console.warn('[tokens/topup] ✖ User doc NOT FOUND at users/' + req.user.uid);
-      }
-    } catch (e) {
-      console.error('[tokens/topup] ✖ DB lookup error:', e.message);
-    }
-  }
-
-  // In mock/dev mode, subscriberId is not required
-  if (!subscriberId && process.env.IDEAMART_APP_ID) {
-    return res.status(400).json({
-      error: 'No subscriber ID linked to this account. Please verify your phone number first.',
-    });
-  }
+  const uid = req.user.uid;
+  const phone = req.user.phone || '';
+  const orderId = 'TOPUP_' + uid.replace('phone_', '') + '_' + Date.now();
 
   try {
-    const result = await topUpViaIdeamart(
-      req.user.uid,
-      subscriberId || `tel:94000000000`, // mock fallback
-      parsed,
-      `Token top-up LKR ${parsed}`
-    );
+    // Build PayHere payment object for mobile SDK
+    const paymentObject = buildTopUpPayment({
+      orderId,
+      amount: parsed,
+      phone: phone.replace('94', '0') || '0770000000',
+      userId: uid,
+    });
+
+    const hash = buildPaymentHash(orderId, paymentObject.amount);
+    paymentObject.hash = hash;
+
+    // Store pending order
+    const db = getDb();
+    if (db) {
+      await db.collection('payhere_orders').doc(orderId).set({
+        orderId,
+        uid,
+        type: 'topup',
+        amount: parsed,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    console.log('[tokens/topup] PayHere payment initiated: ' + orderId + ' LKR ' + parsed);
 
     res.json({
       success: true,
-      charged: result.charged,
-      newBalance: result.newBalance,
-      transactionId: result.transactionId,
-      mock: result.mock || false,
+      usePayHere: true,
+      paymentObject,
+      hash,
+      orderId,
     });
   } catch (err) {
     console.error('[tokens/topup] error:', err.message);

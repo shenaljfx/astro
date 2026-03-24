@@ -1,5 +1,5 @@
 /**
- * Nakath AI - "Celestial Flow" Design System v3.0
+ * Grahachara - "Celestial Flow" Design System v3.0
  * CosmicVibe-inspired: lush gradients, calming motion, warm cosmic palette
  * Deep indigo base, warm gold accents, aurora green highlights
  */

@@ -141,7 +141,7 @@ router.post('/check', optionalAuth, async (req, res) => {
  *   groomName: "optional"
  * }
  */
-router.post('/report', phoneAuth, requireTokens(10, 'Porondam Report'), async (req, res) => {
+router.post('/report', phoneAuth, requireTokens(50, 'Porondam Report'), async (req, res) => {
   try {
     const { porondamData, language = 'en', brideName, groomName, porondamId } = req.body;
 
@@ -161,10 +161,6 @@ router.post('/report', phoneAuth, requireTokens(10, 'Porondam Report'), async (r
       throw e;
     }
 
-    if (!porondamData) {
-      return res.status(400).json({ error: 'porondamData is required' });
-    }
-
     const langInstruction = language === 'si'
       ? `ඔබ ශ්‍රී ලංකාවේ ප්‍රසිද්ධ විවාහ ගැළපුම් උපදේශකයෙක්. මේ යුවලයාගේ ගැළපීම ගැන සිංහලෙන් ලියන්න.
 
@@ -180,7 +176,8 @@ router.post('/report', phoneAuth, requireTokens(10, 'Porondam Report'), async (r
 - "මහේන්ද්‍ර පොරොන්දම" → "දිගු කාලීන සමෘද්ධිය"
 - "දෝෂ" → "අභියෝග" හෝ "බාධක"
 - "ග්‍රහ" → "අහස්හි බලපෑම්"
-sugar-coat කරන්න එපා. අවුල් තියෙනවා නම් කෙළින්ම කියන්න, ඒත් විසඳුම් දෙන්න.
+sugar-coat කරන්න එපා. අවුල් තියෙනවා නම් කෙළින්ම කියන්න, ඒත් එදිනෙදා ජීවිතයේ ප්‍රායෝගික උපදෙස් දෙන්න.
+ආගමික වතාවත් (පූජා, ශාන්තිකර්ම, පිරිත්, මාල, යන්ත්‍ර) නිර්දේශ කරන්න එපා — බුද්ධිමත් මිනිස් සබඳතා උපදෙස් පමණක් දෙන්න.
 හිතවත් යාලුවෙක් කතා කරනවා වගේ ලියන්න.`
       : `You are a wise marriage compatibility advisor. Write a compatibility report for this couple based on the data below.
 
@@ -311,7 +308,7 @@ FORMAT RULES: Use Markdown formatting throughout:
 WRITE THE REPORT:
 1. Start with a warm, personal intro about this couple — describe each person's core personality based on their birth stars and chart data. Make them feel seen and understood.
 2. Go through EACH of the 7 compatibility factors one by one — but use HUMAN names (Daily Life Harmony, Temperament Match, Physical & Emotional Chemistry, Health Compatibility, Mutual Attraction, Mental Wavelength, Long-term Prosperity). For each factor: explain what it means in real married life, what score they got, and give specific real-life examples of how this will show up in their relationship.
-3. Highlight any challenges HONESTLY — if there are problems, say them clearly in plain language. But always immediately follow with solutions (temple visits, specific prayers, rituals, gemstones, behavioral advice etc.)
+3. Highlight any challenges HONESTLY — if there are problems, say them clearly in plain language. But always immediately follow with practical relationship advice (communication tips, compromise strategies, things to be mindful of etc.). Do NOT recommend any religious remedies, temple visits, prayers, rituals, gemstones, mantras, or religious ceremonies — keep advice purely practical and relationship-focused.
 4. Discuss how their individual charts complement or clash — using everyday language (e.g., "Her chart shows she's naturally independent and career-driven, while his chart shows deep family attachment — this could cause friction about priorities")
 5. If PORONDAM+ ADVANCED data is available, include a DEEP DIVE section covering:
    a. Current life phase compatibility — are both partners in harmonious or conflicting life phases right now?
@@ -320,7 +317,7 @@ WRITE THE REPORT:
    d. Marriage planet strength — how strong is each person's capacity for partnership
    e. Best wedding timing — when the stars align for both of them to tie the knot
 6. Give an overall verdict using the COMBINED score (traditional + advanced) — be brutally honest but compassionate. Tell them their percentage and what it realistically means.
-7. End with PRACTICAL relationship advice — specific things they can do together to strengthen their bond
+7. End with PRACTICAL relationship advice — specific things they can do together to strengthen their bond (e.g., communication habits, shared activities, ways to handle disagreements). NO religious remedies or rituals.
 8. Write at least 800-1200 words. Be thorough and detailed. This is a full professional report that should feel like a wise elder sat with this couple for an hour.
 9. NEVER use any technical astrology terms in your output — everything should be in simple everyday language that someone with ZERO astrology knowledge can understand and find valuable.`;
 
@@ -407,11 +404,11 @@ router.post('/vibe-link', (req, res) => {
       used: false,
     });
 
-    const shareUrl = `https://nakath.ai/vibe/${linkId}`;
+    const shareUrl = `https://grahachara.lk/vibe/${linkId}`;
     const whatsappMessage = encodeURIComponent(
       `✨ ${senderName} wants to check your astrological compatibility!\n\n` +
       `🔮 Tap to see if the stars align:\n${shareUrl}\n\n` +
-      `Powered by Nakath AI 🪐`
+      `Powered by Grahachara 🪐`
     );
 
     res.json({
