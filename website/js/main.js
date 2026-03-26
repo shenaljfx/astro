@@ -327,7 +327,7 @@
   }
 
   /* ── Section Scene Activation — triggers unique background per section ── */
-  var sceneSections = document.querySelectorAll('.features, .how, .screenshots, .pricing, .testimonials, .faq, .download');
+  var sceneSections = document.querySelectorAll('.features, .how, .screenshots, .kendara, .porondam, .fullreport, .pricing, .testimonials, .faq, .download');
   if (sceneSections.length) {
     var sceneObserver = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
@@ -815,6 +815,306 @@
       setTimeout(function () { resize(); }, 500);
       setTimeout(function () { resize(); }, 2000);
     });
+  })();
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     Kendara — Realistic Branching Lightning System
+     Canvas-based lightning with jagged bolts, branches, ambient glow,
+     multiple rapid sub-flashes, and randomised timing.
+     ═══════════════════════════════════════════════════════════════════════ */
+  (function initKendaraLightning() {
+    var canvas = document.getElementById('kendaraLightning');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var section = document.getElementById('kendara');
+    if (!section) return;
+
+    var W, H, dpr;
+    var bolts = [];
+    var ambientAlpha = 0;
+    var isActive = false;
+
+    function resize() {
+      var rect = section.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = rect.width;
+      H = rect.height;
+      canvas.width  = W * dpr;
+      canvas.height = H * dpr;
+      canvas.style.width  = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function generateBolt(x1, y1, x2, y2, depth) {
+      depth = depth || 0;
+      var segments = [];
+      var dx = x2 - x1, dy = y2 - y1;
+      var len = Math.sqrt(dx * dx + dy * dy);
+      var steps = Math.max(4, Math.floor(len / (depth === 0 ? 18 : 30)));
+      var jitter = len * (depth === 0 ? 0.12 : 0.08);
+      segments.push({ x: x1, y: y1 });
+      for (var i = 1; i <= steps; i++) {
+        var t = i / steps;
+        segments.push({
+          x: x1 + dx * t + (Math.random() - 0.5) * jitter * 2,
+          y: y1 + dy * t + (Math.random() - 0.5) * jitter * 0.6
+        });
+      }
+      segments[segments.length - 1] = { x: x2, y: y2 };
+
+      var branches = [];
+      if (depth < 2) {
+        var bc = depth === 0 ? Math.floor(2 + Math.random() * 4) : Math.floor(Math.random() * 2);
+        for (var b = 0; b < bc; b++) {
+          var si = Math.floor(2 + Math.random() * (segments.length - 4));
+          if (si >= segments.length) si = segments.length - 2;
+          var sp = segments[si];
+          var bAngle = (Math.random() - 0.5) * 1.2 + (dx > 0 ? 0.3 : -0.3);
+          var bLen = len * (0.15 + Math.random() * 0.25) / (depth + 1);
+          var bx2 = sp.x + Math.cos(bAngle) * bLen * (Math.random() > 0.5 ? 1 : -1);
+          var by2 = sp.y + Math.abs(Math.sin(bAngle)) * bLen;
+          branches.push(generateBolt(sp.x, sp.y, bx2, by2, depth + 1));
+        }
+      }
+      return { segments: segments, branches: branches, depth: depth };
+    }
+
+    function drawBolt(bolt, alpha, progress) {
+      var segs = bolt.segments;
+      var drawCount = Math.floor(segs.length * Math.min(progress, 1));
+      if (drawCount < 2) return;
+      var baseW = bolt.depth === 0 ? 2.5 : (bolt.depth === 1 ? 1.2 : 0.6);
+      var glowW = bolt.depth === 0 ? 12 : (bolt.depth === 1 ? 6 : 3);
+
+      // Outer glow
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.4 / (bolt.depth + 1);
+      ctx.strokeStyle = 'rgba(160,120,255,1)';
+      ctx.lineWidth = glowW; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.shadowColor = 'rgba(140,100,255,0.8)'; ctx.shadowBlur = 25;
+      ctx.beginPath(); ctx.moveTo(segs[0].x, segs[0].y);
+      for (var i = 1; i < drawCount; i++) ctx.lineTo(segs[i].x, segs[i].y);
+      ctx.stroke(); ctx.restore();
+
+      // Core
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.9 / (bolt.depth * 0.5 + 1);
+      ctx.strokeStyle = bolt.depth === 0 ? 'rgba(220,210,255,1)' : 'rgba(180,160,255,1)';
+      ctx.lineWidth = baseW; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.shadowColor = 'rgba(200,180,255,1)'; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.moveTo(segs[0].x, segs[0].y);
+      for (var j = 1; j < drawCount; j++) ctx.lineTo(segs[j].x, segs[j].y);
+      ctx.stroke(); ctx.restore();
+
+      // Hot white centre for main bolt
+      if (bolt.depth === 0) {
+        ctx.save(); ctx.globalAlpha = alpha * 0.7;
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.8; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(segs[0].x, segs[0].y);
+        for (var k = 1; k < drawCount; k++) ctx.lineTo(segs[k].x, segs[k].y);
+        ctx.stroke(); ctx.restore();
+      }
+
+      for (var bi = 0; bi < bolt.branches.length; bi++) {
+        var bp = (progress - 0.2) * 1.5;
+        if (bp > 0) drawBolt(bolt.branches[bi], alpha * 0.7, bp);
+      }
+    }
+
+    function spawnBolt() {
+      var ox = W * (0.1 + Math.random() * 0.8);
+      var oy = H * (Math.random() * 0.1);
+      var ex = ox + (Math.random() - 0.5) * W * 0.3;
+      var ey = H * (0.5 + Math.random() * 0.4);
+      var tree = generateBolt(ox, oy, ex, ey, 0);
+      var fc = 2 + Math.floor(Math.random() * 2);
+      var ft = [], dur = 0;
+      for (var f = 0; f < fc; f++) {
+        var fi = 20 + Math.random() * 30, fh = 30 + Math.random() * 60, fo = 80 + Math.random() * 120;
+        var gap = f < fc - 1 ? (40 + Math.random() * 80) : 0;
+        ft.push({ start: dur, fadeIn: fi, hold: fh, fadeOut: fo, peak: 0.5 + Math.random() * 0.5 });
+        dur += fi + fh + fo + gap;
+      }
+      ft[ft.length - 1].peak = 0.9 + Math.random() * 0.1;
+      bolts.push({ tree: tree, born: performance.now(), duration: dur, flashes: ft, ambientPeak: 0.06 + Math.random() * 0.06 });
+    }
+
+    var nextBoltTime = performance.now() + 2000 + Math.random() * 3000;
+    function scheduleNext(now) {
+      nextBoltTime = now + (Math.random() < 0.2 ? 300 + Math.random() * 500 : 2500 + Math.random() * 5000);
+    }
+
+    function getBoltAlpha(bolt, now) {
+      var el = now - bolt.born;
+      if (el < 0 || el > bolt.duration) return 0;
+      var a = 0;
+      for (var i = 0; i < bolt.flashes.length; i++) {
+        var fl = bolt.flashes[i], ft = el - fl.start;
+        if (ft < 0) continue;
+        if (ft < fl.fadeIn) a = Math.max(a, (ft / fl.fadeIn) * fl.peak);
+        else if (ft < fl.fadeIn + fl.hold) a = Math.max(a, fl.peak);
+        else if (ft < fl.fadeIn + fl.hold + fl.fadeOut) a = Math.max(a, fl.peak * (1 - (ft - fl.fadeIn - fl.hold) / fl.fadeOut));
+      }
+      return a;
+    }
+
+    function render() {
+      requestAnimationFrame(render);
+      if (!isActive) { ctx.clearRect(0, 0, W, H); return; }
+      var now = performance.now();
+      if (now >= nextBoltTime) { spawnBolt(); scheduleNext(now); }
+      ctx.clearRect(0, 0, W, H);
+      ambientAlpha = 0;
+      var alive = [];
+      for (var i = 0; i < bolts.length; i++) {
+        var b = bolts[i], a = getBoltAlpha(b, now);
+        if (a > 0.001 || now - b.born <= b.duration) {
+          alive.push(b);
+          ambientAlpha = Math.max(ambientAlpha, a * b.ambientPeak);
+        }
+      }
+      bolts = alive;
+      if (ambientAlpha > 0.002) {
+        ctx.save(); ctx.globalAlpha = ambientAlpha;
+        ctx.fillStyle = 'rgba(100,60,200,1)'; ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
+      for (var j = 0; j < bolts.length; j++) {
+        var bolt = bolts[j], al = getBoltAlpha(bolt, now);
+        if (al > 0.001) {
+          var elapsed = now - bolt.born;
+          var dp = Math.min(elapsed / (bolt.flashes[0].fadeIn + bolt.flashes[0].hold), 1);
+          drawBolt(bolt.tree, al, dp);
+        }
+      }
+    }
+
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { isActive = e.isIntersecting; });
+    }, { threshold: 0.05 });
+    obs.observe(section);
+    requestAnimationFrame(render);
+  })();
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     Porondam — Pink Aurora Ribbons
+     Canvas-based swirling aurora ribbons matching the hero style but pink
+     ═══════════════════════════════════════════════════════════════════════ */
+  (function initPorondamAurora() {
+    var canvas = document.getElementById('porondamAurora');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var section = document.getElementById('porondam');
+    if (!section) return;
+
+    var W, H, dpr;
+    var isActive = false;
+    var time = 0;
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = canvas.parentElement.offsetWidth;
+      H = canvas.parentElement.offsetHeight;
+      canvas.width  = W * dpr;
+      canvas.height = H * dpr;
+      canvas.style.width  = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    /* Catmull-Rom spline helper */
+    function catmullRom(p0, p1, p2, p3, t) {
+      var t2 = t * t, t3 = t2 * t;
+      return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
+    }
+
+    /* 4 ribbons — pink/magenta aurora */
+    var RIBBON_COUNT = 4;
+    var ribbons = [];
+    for (var r = 0; r < RIBBON_COUNT; r++) {
+      ribbons.push({
+        yBase: 0.25 + r * 0.15,
+        speed: 0.15 + r * 0.05,
+        amp: 40 + r * 15,
+        hue: 320 + r * 15,       // Pink → Magenta range
+        alpha: 0.06 - r * 0.008,
+        width: 120 - r * 15
+      });
+    }
+
+    /* 4 soft nebula glows */
+    var NEBULA_COUNT = 4;
+    var nebulas = [];
+    for (var n = 0; n < NEBULA_COUNT; n++) {
+      nebulas.push({
+        x: Math.random(), y: Math.random(),
+        r: 150 + Math.random() * 200,
+        hue: 310 + Math.random() * 40,
+        speed: 0.2 + Math.random() * 0.3
+      });
+    }
+
+    function render() {
+      requestAnimationFrame(render);
+      if (!isActive) return;
+      time += 0.016;
+      ctx.clearRect(0, 0, W, H);
+
+      /* Draw nebula glows */
+      for (var ni = 0; ni < nebulas.length; ni++) {
+        var nb = nebulas[ni];
+        var nx = (nb.x + Math.sin(time * nb.speed * 0.5) * 0.1) * W;
+        var ny = (nb.y + Math.cos(time * nb.speed * 0.3) * 0.1) * H;
+        var grad = ctx.createRadialGradient(nx, ny, 0, nx, ny, nb.r);
+        grad.addColorStop(0, 'hsla(' + nb.hue + ',70%,50%,0.04)');
+        grad.addColorStop(1, 'hsla(' + nb.hue + ',70%,50%,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      /* Draw ribbons */
+      for (var ri = 0; ri < ribbons.length; ri++) {
+        var rb = ribbons[ri];
+        var pts = [];
+        var segs = 8;
+        for (var s = -1; s <= segs + 2; s++) {
+          var px = (s / segs) * W;
+          var py = rb.yBase * H + Math.sin(time * rb.speed + s * 0.8) * rb.amp + Math.cos(time * rb.speed * 0.7 + s * 1.2) * rb.amp * 0.5;
+          pts.push({ x: px, y: py });
+        }
+
+        ctx.beginPath();
+        var samples = 60;
+        for (var si = 0; si < pts.length - 3; si++) {
+          for (var t = 0; t < samples; t++) {
+            var frac = t / samples;
+            var sx = catmullRom(pts[si].x, pts[si + 1].x, pts[si + 2].x, pts[si + 3].x, frac);
+            var sy = catmullRom(pts[si].y, pts[si + 1].y, pts[si + 2].y, pts[si + 3].y, frac);
+            if (si === 0 && t === 0) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
+          }
+        }
+
+        ctx.strokeStyle = 'hsla(' + rb.hue + ',80%,60%,' + rb.alpha + ')';
+        ctx.lineWidth = rb.width;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = 'hsla(' + rb.hue + ',90%,50%,0.15)';
+        ctx.shadowBlur = 40;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { isActive = e.isIntersecting; });
+    }, { threshold: 0.05 });
+    obs.observe(section);
+    requestAnimationFrame(render);
   })();
 
 })();

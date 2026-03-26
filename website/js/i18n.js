@@ -14,6 +14,9 @@
       "nav.features":       "Features",
       "nav.howItWorks":     "How It Works",
       "nav.screenshots":    "Screenshots",
+      "nav.kendara":        "Kendara",
+      "nav.porondam":       "Porondam",
+      "nav.fullreport":     "Life Report",
       "nav.pricing":        "Pricing",
       "nav.reviews":        "Reviews",
       "nav.faq":            "FAQ",
@@ -100,6 +103,47 @@
       "scr.report":         "Life Report",
       "scr.porondam":       "Porondam Matching",
       "scr.swipe":          "← Swipe to explore →",
+
+      /* Kendara Chart */
+      "kendara.label":      "Kendara Chart",
+      "kendara.title":      "Your Birth Chart, Decoded",
+      "kendara.desc":       "Enter your birth date, time & place — and Grahachara builds your complete Kendara (Rashi) chart with planetary positions, house placements, Navamsha & Dasha periods.",
+      "kendara.f1.title":   "Rashi Chart (D1)",
+      "kendara.f1.desc":    "Complete birth chart with all 12 houses, planetary dignities, aspects & Yogas — calculated with Lahiri Ayanamsha precision.",
+      "kendara.f2.title":   "Planet Positions",
+      "kendara.f2.desc":    "See exact degree, Nakshatra pada, retrograde status & strength (Shadbala) for all 9 Grahas at the moment of your birth.",
+      "kendara.f3.title":   "Navamsha (D9)",
+      "kendara.f3.desc":    "The divisional chart that reveals your soul's purpose, marriage compatibility indicators & hidden planetary strengths.",
+      "kendara.f4.title":   "Dasha Periods",
+      "kendara.f4.desc":    "Vimsottari Maha Dasha timeline showing which planet rules each period of your life — past, present & future predictions.",
+      "kendara.f5.title":   "Maraka Apala Engine",
+      "kendara.f5.desc":    "Instant detection of Badaka, Maraka, and Kendradhipathi doshas. Know your challenging periods and remedies (shanthikarma).",
+
+      /* Porondam Section */
+      "porondam.label":     "Porondam",
+      "porondam.title":     "Marriage Compatibility, Perfected",
+      "porondam.desc":      "Enter both birth details and get a comprehensive 20-point Kūta matching report with Dosha analysis, remedies, and a shareable compatibility score.",
+      "porondam.f1.title":  "7-Factor Kūta Analysis",
+      "porondam.f1.desc":   "Complete analysis of Dina, Gana, Yoni, Rashi, Vasya, Nadi & Mahendra factors — the traditional Sri Lankan method used by generations of astrologers.",
+      "porondam.f2.title":  "20-Point Compatibility Score",
+      "porondam.f2.desc":   "Each factor scored precisely. See your total compatibility score out of 20 with a beautiful visual breakdown of strengths and concerns.",
+      "porondam.f3.title":  "Dosha Detection & Remedies",
+      "porondam.f3.desc":   "Automatic Naga Dosha, Kuja Dosha and other compatibility issues detected — with traditional Shanthikarma remedies suggested.",
+      "porondam.f4.title":  "Share via WhatsApp",
+      "porondam.f4.desc":   'Generate a beautiful "Vibe Check" link to share your compatibility results with family, friends, or your partner instantly.',
+
+      /* Full Report Section */
+      "fullreport.label":   "Life Report",
+      "fullreport.title":   "Your Complete Life Story, Written in the Stars",
+      "fullreport.desc":    "A deeply personal 22-section narrative covering personality, career, marriage, children, health, finances, past life, spiritual path & a 25-year predictive timeline.",
+      "fullreport.f1.title": "22 Detailed Sections",
+      "fullreport.f1.desc": "From your core personality traits to career prospects, marriage timing, children, health vulnerabilities, and financial patterns — nothing is left out.",
+      "fullreport.f2.title": "25-Year Life Timeline",
+      "fullreport.f2.desc": "Year-by-year predictions based on your Maha Dasha and Antar Dasha periods. Know what's coming and prepare with confidence.",
+      "fullreport.f3.title": "Past Life & Spiritual Path",
+      "fullreport.f3.desc": "Discover your karmic patterns, past-life indicators from the 12th house, and the spiritual journey your chart reveals.",
+      "fullreport.f4.title": "PDF Export & Permanent Access",
+      "fullreport.f4.desc": "Download your report as a beautifully formatted PDF. Keep it forever, share with family, or bring it to your astrologer for deeper consultation.",
 
       /* Pricing */
       "pricing.label":      "Pricing",
@@ -220,6 +264,9 @@
       "nav.features":       "විශේෂාංග",
       "nav.howItWorks":     "වැඩ කරන්නේ කොහොමද?",
       "nav.screenshots":    "Screenshots",
+      "nav.kendara":        "කේන්දරය",
+      "nav.porondam":       "පොරොන්දම්",
+      "nav.fullreport":     "ජීවිත වාර්තාව",
       "nav.pricing":        "මිල ගණන්",
       "nav.reviews":        "Reviews",
       "nav.faq":            "ප්‍රශ්න සහ පිළිතුරු",
@@ -306,6 +353,47 @@
       "scr.report":         "ජීවිත වාර්තාව",
       "scr.porondam":       "පොරොන්දම් ගැලපීම",
       "scr.swipe":          "← Swipe කරලා බලන්න →",
+
+      /* Kendara Chart */
+      "kendara.label":      "උපත් පත්‍රය (කේන්දරය)",
+      "kendara.title":      "ඔබේ කේන්දරය, සරලව",
+      "kendara.desc":       "උපන් දිනය, වේලාව සහ ස්ථානය ලබා දෙන්න — ග්‍රහචාර මගින් ඔබේ රාශි සටහන, නවාංශකය සහ දශා කාල ඇතුළුව සම්පූර්ණ කේන්දරය ක්ෂණිකව සකසා දෙනු ඇත.",
+      "kendara.f1.title":   "රාශි සටහන (D1)",
+      "kendara.f1.desc":    "ලාහිරි අයනාංශ ක්‍රමයට අනුව සකසා ඇති භාව 12, ග්‍රහ බල දුබලතා, දෘෂ්ටි සහ යෝග ඇතුළත් සම්පූර්ණ ජන්ම පත්‍රය.",
+      "kendara.f2.title":   "ග්‍රහ පිහිටීම්",
+      "kendara.f2.desc":    "උපන් මොහොතේ ග්‍රහයන් සිටි අංශක, නක්ෂත්‍ර පාද, වක්‍ර වීම් සහ ෂඩ්බල වැනි සියුම් තොරතුරු බලාගන්න.",
+      "kendara.f3.title":   "නවාංශකය (D9)",
+      "kendara.f3.desc":    "විවාහය සහ ග්‍රහයන්ගේ සැබෑ බලය පෙන්වන, ජීවිතයේ සැඟවුණු අරමුණු හෙළි කරන වැදගත්ම වර්ග පත්‍රය.",
+      "kendara.f4.title":   "දශා කාල",
+      "kendara.f4.desc":    "විම්ශෝත්තරී මහ දශා, අන්තර් දශා අනුව ඔබේ ජීවිතයේ අතීත, වර්තමාන සහ අනාගත පලාපල කාල වකවානු සමඟ බලාගන්න.",
+      "kendara.f5.title":   "මාරක අපල පරීක්ෂාව",
+      "kendara.f5.desc":    "බාධක, මාරක සහ කේන්ද්‍රාධිපති දෝෂ ක්ෂණිකව හඳුනාගන්න. අපල කාලවලදී කළ යුතු ශාන්තිකර්ම සහ පිළියම් දැනුවත් වෙන්න.",
+
+      /* Porondam Section */
+      "porondam.label":     "පොරොන්දම්",
+      "porondam.title":     "විවාහ ගැලපීම - සම්ප්‍රදායික පරීක්ෂාව",
+      "porondam.desc":      "පොරොන්දම් 20 සම්පූර්ණ ගැලපීම් වාර්තාව. කුජ දෝෂ ඇතුළු දෝෂ පරීක්ෂාවන්, ග්‍රහ පිහිටීම් සහ ශාන්තිකර්ම.",
+      "porondam.f1.title":  "දස සහ විසි පොරොන්දම් විග්‍රහය",
+      "porondam.f1.desc":   "දින, ගණ, මහේන්ද්‍ර, ස්ත්‍රී දීර්ඝ, යෝනි, රාශි, රාශි අධිපති, වශ්‍ය, රජ්ජු, වේධ ඇතුළු සියලුම සාම්ප්‍රදායික පොරොන්දම්.",
+      "porondam.f2.title":  "ගැලපීම් ප්‍රතිශතය (% Match)",
+      "porondam.f2.desc":   "ලකුණු 20 න් ලැබෙන අගය සහ සමස්ත ගැලපීම් ප්‍රතිශතය. ඔබට ගැලපෙනම සහකරු තෝරාගැනීමට පහසු වන සේ සකසා ඇත.",
+      "porondam.f3.title":  "කුජ දෝෂ සහ නාග දෝෂ පරීක්ෂාව",
+      "porondam.f3.desc":   "විවාහයට බාධා ඇති කරන කුජ දෝෂ, ශනි මංගල දෝෂ, නාග දෝෂ ස්වයංක්‍රීයව හඳුනාගැනීම සහ ඊට අදාළ ශාන්තිකර්ම.",
+      "porondam.f4.title":  "වාර්තාව WhatsApp කරන්න",
+      "porondam.f4.desc":   "ඔබේ පොරොන්දම් වාර්තාවේ සාරාංශය WhatsApp හරහා දෙමාපියන් හෝ සහකරු සමඟ පහසුවෙන් Share කරගත හැක.",
+
+      /* Full Report Section */
+      "fullreport.label":   "ජීවිත වාර්තාව",
+      "fullreport.title":   "ඔබේ සම්පූර්ණ ජීවිත කතාව, තරු වලින්",
+      "fullreport.desc":    "ඔබේ ජන්ම පත්‍රයට අනුව සකසන ලද, පරිච්ඡේද 22 කට අධික ගැඹුරු විශ්ලේෂණය. අධ්‍යාපනය, රැකියාව, විවාහය, ධනය, සෞඛ්‍යය ඇතුළු ජීවිතයේ සියලු අංශ ආවරණය කෙරේ.",
+      "fullreport.f1.title": "මාතෘකා 22ක් යටතේ විග්‍රහය",
+      "fullreport.f1.desc": "ඔබේ ලග්නය, නවාංශකය සහ ග්‍රහ පිහිටීම් ගැඹුරින් විමසා බලා සකස් කළ, ඔබේ ජීවිතයේ A to Z ආවරණය වන විශේෂ වාර්තාව.",
+      "fullreport.f2.title": "වසර 25 ක මහ දශා පලාපල",
+      "fullreport.f2.desc": "ඉදිරි වසර 25 තුළ ඔබේ ජීවිතයේ සිදුවන වෙනස්කම්, මහ දශා සහ අන්තර් දශා කාලවල දී ලැබෙන සුභ අසුභ ප්‍රතිඵල.",
+      "fullreport.f3.title": "පෙර පින් සහ කර්ම ඵල",
+      "fullreport.f3.desc": "ඔබේ පෙර පින් බලය, කර්ම බලපෑම්, සහ මෙම ආත්මයේ ඔබේ ආධ්‍යාත්මික දියුණුව සඳහා ග්‍රහයන්ගේ බලපෑම.",
+      "fullreport.f4.title": "PDF පිටපතක් ලබාගන්න",
+      "fullreport.f4.desc": "මුද්‍රණය කළ හැකි මට්ටමේ (Print-ready) PDF ගොනුවක් ලෙස ඔබේ වාර්තාව ඩවුන්ලෝඩ් කරගන්න. ජීවිත කාලයටම පරිශීලනය කළ හැක.",
 
       /* Pricing */
       "pricing.label":      "මිල ගණන්",
@@ -441,6 +529,15 @@
       var key = el.getAttribute('data-i18n');
       if (dict[key] !== undefined) {
         el.innerHTML = dict[key];
+      }
+    });
+
+    // Swap images based on language (data-lang-en / data-lang-si)
+    var langAttr = 'data-lang-' + lang;
+    document.querySelectorAll('img[data-lang-en][data-lang-si]').forEach(function (img) {
+      var newSrc = img.getAttribute(langAttr);
+      if (newSrc && img.getAttribute('src') !== newSrc) {
+        img.setAttribute('src', newSrc);
       }
     });
 

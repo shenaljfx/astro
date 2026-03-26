@@ -608,11 +608,11 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
    ══════════════════════════════════════════════════════════════════════ */
 
 /* Shared scene layer — each section ::before = gradient bg, ::after = glow orb */
-.features, .how, .screenshots, .pricing, .testimonials, .faq, .download {
+.features, .how, .screenshots, .kendara, .porondam, .fullreport, .pricing, .testimonials, .faq, .download {
   position: relative; z-index: 1;
   overflow: hidden;
 }
-.features::before, .how::before, .screenshots::before, .pricing::before,
+.features::before, .how::before, .screenshots::before, .kendara::before, .porondam::before, .fullreport::before, .pricing::before,
 .testimonials::before, .faq::before, .download::before {
   content: ''; position: absolute; inset: 0; z-index: -2;
   opacity: 0; transition: opacity 1.2s ease;
@@ -620,7 +620,9 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
 }
 /* Activate when scrolled into view */
 .features.scene-active::before, .how.scene-active::before,
-.screenshots.scene-active::before, .pricing.scene-active::before,
+.screenshots.scene-active::before, .kendara.scene-active::before,
+.porondam.scene-active::before, .fullreport.scene-active::before,
+.pricing.scene-active::before,
 .testimonials.scene-active::before, .faq.scene-active::before,
 .download.scene-active::before {
   opacity: 1;
@@ -672,6 +674,315 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   bottom: 5%; left: -5%;
   background: radial-gradient(circle, rgba(6,182,212,0.05) 0%, transparent 60%);
   animation: sceneFloat3 22s ease-in-out infinite;
+}
+
+/* ── KENDARA CHART — Cosmic Storm / Thunder Zone ───────────────────── */
+.kendara {
+  padding: var(--s-4xl) 0;
+  position: relative; z-index: 1;
+  overflow: hidden;
+}
+.kendara::before {
+  content: ''; position: absolute; inset: 0; z-index: -2;
+  opacity: 0; transition: opacity 1.2s ease;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 30% 40%, rgba(75,0,180,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 80% 30%, rgba(120,80,255,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 80%, rgba(0,200,255,0.06) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(4,3,12,0) 0%, rgba(12,5,35,0.5) 25%, rgba(8,3,25,0.5) 75%, rgba(4,3,12,0) 100%);
+}
+.kendara.scene-active::before { opacity: 1; }
+
+.kendara .section-header::before {
+  background: linear-gradient(90deg, transparent, rgba(120,80,255,0.5), rgba(0,200,255,0.3), transparent);
+}
+.kendara .section-label {
+  color: #B47AFF;
+  background: rgba(120,80,255,0.08);
+  border-color: rgba(120,80,255,0.15);
+}
+
+.kendara__showcase {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3xl);
+  align-items: center;
+  margin-top: var(--s-2xl);
+}
+.kendara__info {
+  display: flex; flex-direction: column; gap: var(--s-lg);
+}
+.kendara__feature {
+  display: flex; gap: var(--s-md); align-items: flex-start;
+  padding: var(--s-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  transition: all var(--dur);
+}
+.kendara__feature:hover {
+  border-color: rgba(120,80,255,0.3);
+  box-shadow: 0 0 30px rgba(120,80,255,0.06);
+  transform: translateY(-2px);
+}
+.kendara__feature-icon {
+  font-size: 28px; flex-shrink: 0;
+  width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(120,80,255,0.08);
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(120,80,255,0.12);
+}
+.kendara__feature-text h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 17px; font-weight: 700;
+  margin-bottom: var(--s-xs);
+  background: linear-gradient(135deg, #B47AFF, #00C8FF);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.kendara__feature-text p {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+}
+
+.kendara__phones {
+  position: relative; display: flex;
+  justify-content: center; align-items: center;
+  min-height: 400px;
+}
+.kendara__phone--main {
+  position: relative; z-index: 2;
+  transform: rotate(-3deg);
+  transition: transform 0.5s var(--ease);
+}
+.kendara__phone--main:hover { transform: rotate(0deg) scale(1.03); }
+.kendara__phone--secondary {
+  position: absolute; right: 0; top: 15%; z-index: 1;
+  opacity: 0.7;
+  transform: rotate(5deg) scale(0.85) translateX(30%);
+  transition: all 0.5s var(--ease);
+}
+.kendara__phone--secondary:hover {
+  opacity: 1; transform: rotate(2deg) scale(0.9) translateX(25%);
+}
+
+/* Lightning canvas — full-section overlay */
+.kendara__lightning-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+  opacity: 0; transition: opacity 0.6s ease;
+}
+.kendara.scene-active .kendara__lightning-canvas { opacity: 1; }
+
+@media (max-width: 768px) {
+  .kendara__showcase { grid-template-columns: 1fr; gap: var(--s-xl); }
+  .kendara__phones { min-height: 320px; justify-content: center; }
+  .kendara__phone--main { transform: rotate(0deg); }
+  .kendara__phone--secondary { right: -10%; top: 10%; transform: rotate(5deg) scale(0.8) translateX(20%); }
+  .kendara__feature { padding: var(--s-md); }
+  .kendara__feature-icon { width: 40px; height: 40px; font-size: 22px; }
+  .kendara__feature-text h3 { font-size: 15px; }
+  .kendara__feature-text p { font-size: 12px; }
+}
+
+/* ── PORONDAM — Pink Aurora Marriage Zone ───────────────────────────── */
+.porondam {
+  padding: var(--s-4xl) 0;
+  position: relative; z-index: 1;
+  overflow: hidden;
+}
+.porondam::before {
+  content: ''; position: absolute; inset: 0; z-index: -2;
+  opacity: 0; transition: opacity 1.2s ease;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 70% 40%, rgba(255,107,157,0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 30% 60%, rgba(180,80,200,0.08) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(4,3,12,0) 0%, rgba(20,5,20,0.4) 25%, rgba(20,5,20,0.4) 75%, rgba(4,3,12,0) 100%);
+}
+.porondam.scene-active::before { opacity: 1; }
+
+.porondam .section-header::before {
+  background: linear-gradient(90deg, transparent, rgba(255,107,157,0.5), rgba(180,80,200,0.3), transparent);
+}
+.porondam .section-label {
+  color: #FF6B9D;
+  background: rgba(255,107,157,0.08);
+  border-color: rgba(255,107,157,0.15);
+}
+
+.porondam-aurora {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+  opacity: 0; transition: opacity 1s ease;
+}
+.porondam.scene-active .porondam-aurora { opacity: 1; }
+
+.porondam__showcase {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3xl);
+  align-items: center;
+  margin-top: var(--s-2xl);
+}
+.porondam__info {
+  display: flex; flex-direction: column; gap: var(--s-lg);
+}
+.porondam__feature {
+  display: flex; gap: var(--s-md); align-items: flex-start;
+  padding: var(--s-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  transition: all var(--dur);
+}
+.porondam__feature:hover {
+  border-color: rgba(255,107,157,0.3);
+  box-shadow: 0 0 30px rgba(255,107,157,0.06);
+  transform: translateY(-2px);
+}
+.porondam__feature-icon {
+  font-size: 28px; flex-shrink: 0;
+  width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,107,157,0.08);
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(255,107,157,0.12);
+}
+.porondam__feature-text h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 17px; font-weight: 700;
+  margin-bottom: var(--s-xs);
+  background: linear-gradient(135deg, #FF6B9D, #B050C8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.porondam__feature-text p {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+}
+
+.porondam__phones {
+  position: relative; display: flex;
+  justify-content: center; align-items: center;
+  min-height: 400px;
+}
+.porondam__phone--main {
+  position: relative; z-index: 2;
+  transform: rotate(3deg);
+  transition: transform 0.5s var(--ease);
+}
+.porondam__phone--main:hover { transform: rotate(0deg) scale(1.03); }
+.porondam__phone--secondary {
+  position: absolute; left: 0; top: 15%; z-index: 1;
+  opacity: 0.7;
+  transform: rotate(-5deg) scale(0.85) translateX(-30%);
+  transition: all 0.5s var(--ease);
+}
+.porondam__phone--secondary:hover {
+  opacity: 1; transform: rotate(-2deg) scale(0.9) translateX(-25%);
+}
+
+.porondam__glow {
+  position: absolute; border-radius: 50%;
+  pointer-events: none; z-index: 0; opacity: 0;
+  animation: scenePulse 9s ease-in-out infinite;
+}
+.porondam__glow--1 {
+  width: 300px; height: 300px; top: 10%; right: 10%;
+  background: radial-gradient(circle, rgba(255,107,157,0.08) 0%, transparent 70%);
+  animation: scenePulse 10s ease-in-out infinite; opacity: 0.6;
+}
+.porondam__glow--2 {
+  width: 200px; height: 200px; bottom: 15%; left: 5%;
+  background: radial-gradient(circle, rgba(180,80,200,0.06) 0%, transparent 70%);
+  animation: sceneFloat3 18s ease-in-out infinite; opacity: 0.6;
+}
+
+@media (max-width: 768px) {
+  .porondam__showcase { grid-template-columns: 1fr; gap: var(--s-xl); }
+  .porondam__phones { min-height: 320px; order: -1; }
+  .porondam__phone--main { transform: rotate(0deg); }
+  .porondam__phone--secondary { left: auto; right: -10%; top: 10%; transform: rotate(5deg) scale(0.8) translateX(20%); }
+  .porondam__feature { padding: var(--s-md); }
+  .porondam__feature-icon { width: 40px; height: 40px; font-size: 22px; }
+  .porondam__feature-text h3 { font-size: 15px; }
+  .porondam__feature-text p { font-size: 12px; }
+}
+
+/* ── FULL REPORT — Golden Cosmic Zone ──────────────────────────────── */
+.fullreport {
+  padding: var(--s-4xl) 0;
+  position: relative; z-index: 1;
+  overflow: hidden;
+}
+.fullreport::before {
+  content: ''; position: absolute; inset: 0; z-index: -2;
+  opacity: 0; transition: opacity 1.2s ease;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(255,184,0,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 20% 70%, rgba(255,140,0,0.06) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(4,3,12,0) 0%, rgba(20,12,5,0.3) 25%, rgba(20,12,5,0.3) 75%, rgba(4,3,12,0) 100%);
+}
+.fullreport.scene-active::before { opacity: 1; }
+
+.fullreport .section-header::before {
+  background: linear-gradient(90deg, transparent, rgba(255,184,0,0.5), rgba(255,140,0,0.3), transparent);
+}
+.fullreport .section-label {
+  color: #FFB800;
+  background: rgba(255,184,0,0.08);
+  border-color: rgba(255,184,0,0.15);
+}
+
+.fullreport__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-xl);
+  margin-top: var(--s-2xl);
+}
+.fullreport__feature {
+  display: flex; gap: var(--s-md); align-items: flex-start;
+  padding: var(--s-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  transition: all var(--dur);
+}
+.fullreport__feature:hover {
+  border-color: rgba(255,184,0,0.3);
+  box-shadow: 0 0 30px rgba(255,184,0,0.06);
+  transform: translateY(-2px);
+}
+.fullreport__feature-icon {
+  font-size: 28px; flex-shrink: 0;
+  width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,184,0,0.08);
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(255,184,0,0.12);
+}
+.fullreport__feature-text h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 17px; font-weight: 700;
+  margin-bottom: var(--s-xs);
+  background: linear-gradient(135deg, #FFB800, #FF8C00);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.fullreport__feature-text p {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .fullreport__grid { grid-template-columns: 1fr; }
+  .fullreport__feature { padding: var(--s-md); }
+  .fullreport__feature-icon { width: 40px; height: 40px; font-size: 22px; }
+  .fullreport__feature-text h3 { font-size: 15px; }
+  .fullreport__feature-text p { font-size: 12px; }
 }
 
 /* ── PRICING — Rich Indigo Temple Glow ─────────────────────────────── */
@@ -1875,7 +2186,7 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
     width: 100%;
     box-sizing: border-box;
   }
-  .features, .how, .screenshots, .pricing, .testimonials, .faq, .download {
+  .features, .how, .screenshots, .kendara, .porondam, .fullreport, .pricing, .testimonials, .faq, .download {
     padding: var(--s-3xl) 0;
     width: 100%;
   }

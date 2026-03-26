@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact Us — Grahachara</title>
+  <meta name="description" content="Get in touch with the Grahachara team. Questions, feedback, partnerships — we'd love to hear from you." />
+  <meta name="theme-color" content="#04030C" />
+  <link rel="icon" type="image/png" href="../assets/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+Sinhala:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link rel="stylesheet" href="../css/legal.css" />
+</head>
+<body>
+
+  <div class="legal-stars" aria-hidden="true"></div>
+
+  <nav class="legal-nav">
+    <div class="legal-nav__inner">
+      <a href="../index.html" class="legal-nav__logo">
+        <img src="../assets/logo.png" alt="Grahachara" />
+        <span>Grahachara</span>
+      </a>
+      <a href="../index.html" class="legal-nav__home">← Back to Home</a>
+    </div>
+  </nav>
+
+  <main class="legal-page">
+    <div class="legal-container">
+
+      <a href="../index.html" class="legal-back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Home
+      </a>
+
+      <header class="legal-header">
+        <div class="legal-header__icon">✉️</div>
+        <h1>Contact Us</h1>
+        <p class="legal-header__meta">We'd love to hear from you — questions, feedback, or just to say hello</p>
+      </header>
+
+      <!-- Contact Info Cards -->
+      <div class="legal-cards-grid" style="margin-bottom: 40px;">
+        <div class="legal-card">
+          <div class="legal-card__icon">📧</div>
+          <h3>General Inquiries</h3>
+          <p><a href="mailto:hello@grahachara.lk">hello@grahachara.lk</a></p>
+        </div>
+        <div class="legal-card">
+          <div class="legal-card__icon">🛟</div>
+          <h3>Support</h3>
+          <p><a href="mailto:support@grahachara.lk">support@grahachara.lk</a></p>
+        </div>
+        <div class="legal-card">
+          <div class="legal-card__icon">🤝</div>
+          <h3>Partnerships</h3>
+          <p><a href="mailto:partnerships@grahachara.lk">partnerships@grahachara.lk</a></p>
+        </div>
+        <div class="legal-card">
+          <div class="legal-card__icon">📰</div>
+          <h3>Press & Media</h3>
+          <p><a href="mailto:press@grahachara.lk">press@grahachara.lk</a></p>
+        </div>
+      </div>
+
+      <!-- Social Media -->
+      <div class="legal-section">
+        <h2><span class="section-num">🌐</span> Follow Us</h2>
+        <p>Stay connected and get the latest updates on auspicious times, astrology insights, and app news.</p>
+        <div class="legal-cards-grid">
+          <div class="legal-card">
+            <div class="legal-card__icon">📸</div>
+            <h3>Instagram</h3>
+            <p><a href="https://www.instagram.com/grahachara_astro" target="_blank" rel="noopener">@grahachara_astro</a></p>
+          </div>
+          <div class="legal-card">
+            <div class="legal-card__icon">📘</div>
+            <h3>Facebook</h3>
+            <p><a href="https://www.facebook.com/share/1FBBur8QZf/?mibextid=wwXIfr" target="_blank" rel="noopener">Grahachara</a></p>
+          </div>
+          <div class="legal-card">
+            <div class="legal-card__icon">🎵</div>
+            <h3>TikTok</h3>
+            <p><a href="https://www.tiktok.com/@grahachara_astro" target="_blank" rel="noopener">@grahachara_astro</a></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Office Info -->
+      <div class="legal-section">
+        <h2><span class="section-num">📍</span> Our Office</h2>
+        <div class="legal-card">
+          <div class="legal-card__icon">🏢</div>
+          <h3>Wenthura Solutions Pvt Ltd</h3>
+          <p>Colombo, Sri Lanka 🇱🇰<br><br>
+          <strong>Business Hours:</strong><br>
+          Monday – Friday: 9:00 AM – 6:00 PM (IST)<br>
+          Saturday: 9:00 AM – 1:00 PM (IST)<br>
+          Sunday & Poya Days: Closed</p>
+        </div>
+      </div>
+
+      <!-- Contact Form -->
+      <div class="contact-form">
+        <h2>✨ Send Us a Message</h2>
+
+        <form id="contactForm" onsubmit="handleContactSubmit(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="contactName">Your Name</label>
+              <input type="text" id="contactName" name="name" placeholder="Enter your name" required />
+            </div>
+            <div class="form-group">
+              <label for="contactEmail">Email Address</label>
+              <input type="email" id="contactEmail" name="email" placeholder="you@example.com" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="contactSubject">Subject</label>
+            <select id="contactSubject" name="subject" required>
+              <option value="" disabled selected>Select a topic...</option>
+              <option value="general">General Inquiry</option>
+              <option value="support">App Support / Bug Report</option>
+              <option value="subscription">Subscription / Billing</option>
+              <option value="astrology">Astrology Question</option>
+              <option value="partnership">Partnership / Collaboration</option>
+              <option value="press">Press / Media</option>
+              <option value="feedback">Feedback / Suggestion</option>
+              <option value="privacy">Privacy / Data Request</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="contactMessage">Message</label>
+            <textarea id="contactMessage" name="message" placeholder="Tell us how we can help you..." required></textarea>
+          </div>
+
+          <button type="submit" class="form-submit">
+            Send Message
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+        </form>
+
+        <div id="contactSuccess" style="display:none; margin-top: 24px; padding: 20px; background: linear-gradient(135deg, rgba(0,255,179,0.1), rgba(147,51,234,0.08)); border: 1px solid rgba(0,255,179,0.3); border-radius: var(--r-lg); text-align: center;">
+          <p style="font-size: 24px; margin-bottom: 8px;">🌟</p>
+          <p style="font-size: 16px; font-weight: 600; color: var(--green); margin-bottom: 4px;">Message Sent!</p>
+          <p style="font-size: 14px; color: var(--text-secondary);">Thank you for reaching out. We'll get back to you within 24 hours.</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="legal-footer">
+    <div class="legal-footer__inner">
+      <div class="legal-footer__links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms of Service</a>
+        <a href="cookies.html">Cookie Policy</a>
+        <a href="support.html">Support</a>
+        <a href="contact.html">Contact</a>
+      </div>
+      <p class="legal-footer__copy">© 2026 Grahachara. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    function handleContactSubmit(e) {
+      e.preventDefault();
+      var form = document.getElementById('contactForm');
+      var success = document.getElementById('contactSuccess');
+      // In production, this would send data to a backend
+      form.style.display = 'none';
+      success.style.display = 'block';
+    }
+  </script>
+
+</body>
+</html>
