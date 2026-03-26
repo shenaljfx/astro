@@ -1,0 +1,427 @@
+// CosmicBackground.js — Variant-aware 3D WebGL cosmic backgrounds
+// Each page variant gets a UNIQUE 3D scene: different nebula, aurora, star colors
+// WEB: Full Three.js WebGL scene driven by variant
+// NATIVE: LinearGradient + Reanimated fallback
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, View, Platform, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useSharedValue, useAnimatedStyle, withRepeat, withTiming,
+  withSequence, withDelay, Easing, interpolate,
+} from 'react-native-reanimated';
+
+var { width: SW, height: SH } = Dimensions.get('window');
+
+// ══════════════════════════════════════════════════════════════════════
+//  VARIANT 3D SCENE CONFIGS — each drives a completely different WebGL cosmos
+// ══════════════════════════════════════════════════════════════════════
+var SCENE_CONFIGS = {
+  // HOME: Solar Corona — golden milky way, amber auroras, warm nebulae
+  default: {
+    bg: 0x0A0508, fogColor: 0x0A0508,
+    starTint: [1.0, 0.85, 0.5],
+    nebulae: [
+      { x: -300, y: 180, z: -500, size: 450, color: [255, 184, 0] },
+      { x: 350, y: -80, z: -600, size: 380, color: [255, 140, 0] },
+      { x: 0, y: -200, z: -550, size: 500, color: [255, 220, 100] },
+    ],
+    auroras: [
+      { color1: [1.0, 0.75, 0.15], color2: [1.0, 0.55, 0.1], color3: [0.8, 0.4, 0.1], opacity: 0.45, y: 100 },
+      { color1: [0.95, 0.6, 0.1], color2: [1.0, 0.8, 0.3], color3: [0.7, 0.5, 0.9], opacity: 0.30, y: 75 },
+    ],
+    chakra: true,
+    nativeGrad: ['#0A0508', '#120A04', '#0A0508'],
+    nativeBlobs: [
+      { color: [255, 184, 0], x: 0.2, y: 0.1, size: 0.9 },
+      { color: [255, 140, 0], x: 0.75, y: 0.35, size: 0.7 },
+      { color: [180, 122, 255], x: 0.4, y: 0.65, size: 0.55 },
+    ],
+  },
+  // CHART: Deep Nebula — purple-indigo stars, violet auroras
+  nebula: {
+    bg: 0x06030F, fogColor: 0x06030F,
+    starTint: [0.7, 0.5, 1.0],
+    nebulae: [
+      { x: -250, y: 200, z: -450, size: 500, color: [147, 51, 234] },
+      { x: 400, y: -120, z: -550, size: 420, color: [59, 130, 246] },
+      { x: -100, y: -200, z: -500, size: 550, color: [99, 102, 241] },
+      { x: 300, y: 100, z: -650, size: 350, color: [139, 92, 246] },
+    ],
+    auroras: [
+      { color1: [0.6, 0.1, 0.95], color2: [0.4, 0.2, 1.0], color3: [0.25, 0.5, 1.0], opacity: 0.50, y: 105 },
+      { color1: [0.3, 0.15, 0.9], color2: [0.55, 0.3, 1.0], color3: [0.2, 0.4, 0.85], opacity: 0.35, y: 80 },
+      { color1: [0.45, 0.1, 0.85], color2: [0.3, 0.55, 1.0], color3: [0.6, 0.2, 0.9], opacity: 0.25, y: 120 },
+    ],
+    chakra: false,
+    nativeGrad: ['#06030F', '#0D0520', '#06030F'],
+    nativeBlobs: [
+      { color: [147, 51, 234], x: 0.15, y: 0.1, size: 1.0 },
+      { color: [59, 130, 246], x: 0.8, y: 0.35, size: 0.8 },
+      { color: [99, 102, 241], x: 0.35, y: 0.7, size: 0.65 },
+    ],
+  },
+  // REPORT: Cosmic Dust — emerald starfield, teal auroras
+  dust: {
+    bg: 0x030A08, fogColor: 0x030A08,
+    starTint: [0.4, 1.0, 0.7],
+    nebulae: [
+      { x: -280, y: 150, z: -480, size: 420, color: [52, 211, 153] },
+      { x: 320, y: -100, z: -580, size: 380, color: [5, 150, 105] },
+      { x: 50, y: -220, z: -520, size: 480, color: [16, 185, 129] },
+      { x: -350, y: -50, z: -600, size: 300, color: [255, 214, 0] },
+    ],
+    auroras: [
+      { color1: [0.15, 0.85, 0.55], color2: [0.08, 0.7, 0.8], color3: [0.2, 0.5, 0.3], opacity: 0.42, y: 100 },
+      { color1: [0.1, 0.75, 0.45], color2: [0.3, 0.9, 0.6], color3: [0.05, 0.6, 0.7], opacity: 0.28, y: 80 },
+    ],
+    chakra: false,
+    nativeGrad: ['#030A08', '#041210', '#030A08'],
+    nativeBlobs: [
+      { color: [52, 211, 153], x: 0.25, y: 0.08, size: 0.85 },
+      { color: [5, 150, 105], x: 0.7, y: 0.4, size: 0.7 },
+      { color: [16, 185, 129], x: 0.45, y: 0.72, size: 0.6 },
+    ],
+  },
+  // CHAT: Aurora Borealis — cyan-green stars, electric auroras
+  chat: {
+    bg: 0x030810, fogColor: 0x030810,
+    starTint: [0.3, 0.9, 1.0],
+    nebulae: [
+      { x: -320, y: 180, z: -500, size: 480, color: [76, 201, 240] },
+      { x: 280, y: -130, z: -580, size: 400, color: [52, 211, 153] },
+      { x: 80, y: -200, z: -520, size: 520, color: [56, 189, 248] },
+      { x: -200, y: 50, z: -620, size: 320, color: [34, 211, 238] },
+    ],
+    auroras: [
+      { color1: [0.15, 0.85, 1.0], color2: [0.1, 0.95, 0.7], color3: [0.3, 0.6, 1.0], opacity: 0.50, y: 105 },
+      { color1: [0.2, 0.9, 0.85], color2: [0.05, 0.8, 0.65], color3: [0.4, 0.7, 1.0], opacity: 0.35, y: 85 },
+      { color1: [0.1, 0.7, 0.95], color2: [0.25, 0.85, 0.9], color3: [0.15, 0.5, 0.8], opacity: 0.22, y: 120 },
+    ],
+    chakra: false,
+    nativeGrad: ['#030810', '#041018', '#030810'],
+    nativeBlobs: [
+      { color: [76, 201, 240], x: 0.25, y: 0.08, size: 0.9 },
+      { color: [52, 211, 153], x: 0.65, y: 0.3, size: 0.75 },
+      { color: [56, 189, 248], x: 0.15, y: 0.55, size: 0.6 },
+    ],
+  },
+  // MATCH: Twin Stars — pink-rose stars, magenta auroras
+  pinkblue: {
+    bg: 0x0A030A, fogColor: 0x0A030A,
+    starTint: [1.0, 0.5, 0.8],
+    nebulae: [
+      { x: -300, y: 160, z: -480, size: 460, color: [244, 114, 182] },
+      { x: 350, y: -90, z: -560, size: 400, color: [219, 39, 119] },
+      { x: 0, y: -210, z: -530, size: 500, color: [232, 121, 249] },
+      { x: -250, y: -30, z: -620, size: 320, color: [180, 122, 255] },
+    ],
+    auroras: [
+      { color1: [0.95, 0.35, 0.7], color2: [0.85, 0.15, 0.5], color3: [0.7, 0.3, 1.0], opacity: 0.48, y: 100 },
+      { color1: [0.9, 0.45, 0.8], color2: [1.0, 0.25, 0.6], color3: [0.5, 0.2, 0.9], opacity: 0.32, y: 80 },
+      { color1: [0.8, 0.2, 0.65], color2: [0.95, 0.5, 0.9], color3: [0.6, 0.15, 0.85], opacity: 0.22, y: 115 },
+    ],
+    chakra: false,
+    nativeGrad: ['#0A030A', '#140610', '#0A030A'],
+    nativeBlobs: [
+      { color: [244, 114, 182], x: 0.2, y: 0.1, size: 0.9 },
+      { color: [219, 39, 119], x: 0.75, y: 0.35, size: 0.75 },
+      { color: [232, 121, 249], x: 0.4, y: 0.6, size: 0.6 },
+    ],
+  },
+  // PROFILE: Astral Projection — ice-blue stars, indigo auroras
+  astral: {
+    bg: 0x030510, fogColor: 0x030510,
+    starTint: [0.5, 0.75, 1.0],
+    nebulae: [
+      { x: -280, y: 190, z: -490, size: 440, color: [76, 201, 240] },
+      { x: 330, y: -110, z: -570, size: 380, color: [59, 130, 246] },
+      { x: 30, y: -230, z: -540, size: 480, color: [99, 102, 241] },
+      { x: -180, y: 60, z: -630, size: 280, color: [200, 200, 255] },
+    ],
+    auroras: [
+      { color1: [0.3, 0.75, 1.0], color2: [0.2, 0.5, 0.95], color3: [0.5, 0.35, 0.9], opacity: 0.42, y: 105 },
+      { color1: [0.25, 0.6, 0.9], color2: [0.4, 0.8, 1.0], color3: [0.35, 0.25, 0.85], opacity: 0.28, y: 80 },
+    ],
+    chakra: false,
+    nativeGrad: ['#030510', '#050818', '#030510'],
+    nativeBlobs: [
+      { color: [76, 201, 240], x: 0.3, y: 0.12, size: 0.85 },
+      { color: [59, 130, 246], x: 0.7, y: 0.42, size: 0.7 },
+      { color: [99, 102, 241], x: 0.2, y: 0.62, size: 0.6 },
+    ],
+  },
+};
+
+// ── Logo anchor
+var _logoScreenY = -1;
+export function setLogoAnchorY(screenY) { _logoScreenY = screenY; }
+var _currentVariant = 'default';
+
+// ══════════════════════════════════════════════════════════════════════
+//  WebCanvas — variant-driven 3D WebGL scene
+// ══════════════════════════════════════════════════════════════════════
+function WebCanvas() {
+  var containerRef = useRef(null);
+  useEffect(function () {
+    var container = containerRef.current;
+    if (!container) return;
+    var W = container.offsetWidth || window.innerWidth || 800;
+    var H = container.offsetHeight || window.innerHeight || 600;
+    var raf, THREE;
+    var cfg = SCENE_CONFIGS[_currentVariant] || SCENE_CONFIGS.default;
+
+    import('three').then(function (m) {
+      THREE = m;
+      var scene = new THREE.Scene();
+      scene.background = new THREE.Color(cfg.bg);
+      scene.fog = new THREE.FogExp2(cfg.fogColor, 0.00006);
+      var camera = new THREE.PerspectiveCamera(55, W / H, 0.1, 12000);
+      camera.position.set(0, 0, 100);
+      var renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'high-performance' });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.toneMapping = 4; renderer.toneMappingExposure = 0.9;
+      renderer.domElement.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0';
+      container.appendChild(renderer.domElement);
+      var _start = performance.now() * 0.001, _prev = _start;
+      var tR = cfg.starTint[0], tG = cfg.starTint[1], tB = cfg.starTint[2];
+
+      // ── MILKY WAY — variant-tinted ───
+      var isMob = W < H;
+      function mkMilkyWay() {
+        var grp = new THREE.Group();
+        // Core
+        var n = isMob ? 22000 : 35000, geo = new THREE.BufferGeometry();
+        var pos = new Float32Array(n * 3), col = new Float32Array(n * 3), sz = new Float32Array(n);
+        for (var i = 0; i < n; i++) {
+          var t = (Math.random() - 0.5) * (isMob ? 2200 : 3500);
+          var sp = 30 + Math.random() * 50, ang = Math.random() * 6.28;
+          var r = Math.min(sp * Math.sqrt(Math.abs(Math.log(Math.random() + 0.001))), sp * 2.5);
+          pos[i * 3] = t * 0.7 + Math.cos(ang) * r * 0.15;
+          pos[i * 3 + 1] = t * 0.35 + Math.sin(ang) * r * 0.6;
+          pos[i * 3 + 2] = -400 + Math.random() * 150;
+          var b = 0.5 + Math.random() * 0.5;
+          col[i * 3] = b * tR; col[i * 3 + 1] = b * tG; col[i * 3 + 2] = b * tB;
+          if (Math.random() < 0.15) { col[i * 3] = 1; col[i * 3 + 1] = 0.97; col[i * 3 + 2] = 0.95; }
+          sz[i] = isMob ? 1.5 + Math.random() * 3.5 : 1.0 + Math.random() * 3.0;
+        }
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+        geo.setAttribute('size', new THREE.BufferAttribute(sz, 1));
+        grp.add(new THREE.Points(geo, new THREE.ShaderMaterial({
+          uniforms: { time: { value: 0 }, pr: { value: renderer.getPixelRatio() } },
+          vertexShader: 'attribute float size;attribute vec3 color;varying vec3 vc;varying float vB;uniform float time,pr;void main(){vc=color;float tw=sin(time*.7+position.x*.003)*.15+.9;vB=tw;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=size*pr*tw*(180./-mv.z);gl_Position=projectionMatrix*mv;}',
+          fragmentShader: 'varying vec3 vc;varying float vB;void main(){float d=length(gl_PointCoord-.5);if(d>.5)discard;float c=exp(-d*d*18.);float g=exp(-d*d*4.)*.6;gl_FragColor=vec4(vc,(c+g)*vB*.95);}',
+          transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        })));
+        // Halo
+        var n2 = isMob ? 12000 : 20000, g2 = new THREE.BufferGeometry();
+        var p2 = new Float32Array(n2 * 3), c2 = new Float32Array(n2 * 3), s2 = new Float32Array(n2);
+        for (var i = 0; i < n2; i++) {
+          var t = (Math.random() - 0.5) * (isMob ? 2400 : 3800);
+          var sp = 80 + Math.random() * 180, ang = Math.random() * 6.28;
+          var r = Math.min(sp * Math.sqrt(Math.abs(Math.log(Math.random() + 0.001))), sp * 3);
+          p2[i * 3] = t * 0.7 + Math.cos(ang) * r * 0.3;
+          p2[i * 3 + 1] = t * 0.35 + Math.sin(ang) * r * 0.8;
+          p2[i * 3 + 2] = -420 + Math.random() * 200;
+          var b = 0.3 + Math.random() * 0.5;
+          c2[i * 3] = b * tR * 0.7; c2[i * 3 + 1] = b * tG * 0.7; c2[i * 3 + 2] = b * tB * 0.7;
+          s2[i] = isMob ? 3 + Math.random() * 7 : 2 + Math.random() * 5;
+        }
+        g2.setAttribute('position', new THREE.BufferAttribute(p2, 3));
+        g2.setAttribute('color', new THREE.BufferAttribute(c2, 3));
+        g2.setAttribute('size', new THREE.BufferAttribute(s2, 1));
+        grp.add(new THREE.Points(g2, new THREE.ShaderMaterial({
+          uniforms: { time: { value: 0 }, pr: { value: renderer.getPixelRatio() } },
+          vertexShader: 'attribute float size;attribute vec3 color;varying vec3 vc;varying float vB;uniform float time,pr;void main(){vc=color;float tw=sin(time*.5+position.x*.002)*.1+.95;vB=tw;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=size*pr*tw*(200./-mv.z);gl_Position=projectionMatrix*mv;}',
+          fragmentShader: 'varying vec3 vc;varying float vB;void main(){float d=length(gl_PointCoord-.5);if(d>.5)discard;float g=exp(-d*d*3.)*.55;gl_FragColor=vec4(vc,g*vB);}',
+          transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        })));
+        grp.rotation.set(0.15, 0, 0.4);
+        return grp;
+      }
+      var milkyWay = mkMilkyWay();
+      scene.add(milkyWay);
+
+      // ── CHAKRA (home only) ───
+      var rashiChakra = null, chakraY = isMob ? 20 : 14, curCY = chakraY;
+      var halfVisH = Math.tan((55 / 2) * Math.PI / 180) * 105;
+      if (cfg.chakra) {
+        var cs = 1024, cv = document.createElement('canvas'); cv.width = cs; cv.height = cs;
+        var cx2 = cv.getContext('2d'), cx = cs / 2, cy = cs / 2, PI2 = Math.PI * 2;
+        cx2.clearRect(0, 0, cs, cs);
+        [cs * 0.46, cs * 0.385, cs * 0.30, cs * 0.22].forEach(function (r, i) {
+          cx2.beginPath(); cx2.arc(cx, cy, r, 0, PI2);
+          cx2.strokeStyle = 'rgba(255,184,0,' + (0.4 - i * 0.08) + ')'; cx2.lineWidth = 2 - i * 0.3; cx2.stroke();
+        });
+        var signs = '\u2648\u2649\u264A\u264B\u264C\u264D\u264E\u264F\u2650\u2651\u2652\u2653';
+        var sR = (cs * 0.46 + cs * 0.385) / 2;
+        cx2.font = 'bold ' + Math.round(cs * 0.04) + 'px "Segoe UI Symbol",sans-serif';
+        cx2.textAlign = 'center'; cx2.textBaseline = 'middle';
+        for (var i = 0; i < 12; i++) {
+          var a = ((i + 0.5) / 12) * PI2 - Math.PI / 2;
+          cx2.save(); cx2.translate(cx + Math.cos(a) * sR, cy + Math.sin(a) * sR); cx2.rotate(a + Math.PI / 2);
+          cx2.fillStyle = 'rgba(255,184,0,0.7)'; cx2.fillText(signs[i], 0, 0); cx2.restore();
+        }
+        var cg = cx2.createRadialGradient(cx, cy, 0, cx, cy, cs * 0.12);
+        cg.addColorStop(0, 'rgba(255,184,0,0.3)'); cg.addColorStop(1, 'rgba(0,0,0,0)');
+        cx2.fillStyle = cg; cx2.beginPath(); cx2.arc(cx, cy, cs * 0.12, 0, PI2); cx2.fill();
+        var cSz = isMob ? 55 : 50;
+        rashiChakra = new THREE.Mesh(new THREE.PlaneGeometry(cSz, cSz), new THREE.MeshBasicMaterial({
+          map: new THREE.CanvasTexture(cv), side: THREE.DoubleSide, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending,
+        }));
+        rashiChakra.position.set(0, chakraY, -5); rashiChakra.rotation.x = 0.1;
+        scene.add(rashiChakra);
+      }
+
+      // ── VARIANT NEBULAE ───
+      function mkNebTex(r, g, b) {
+        var s = 256, cv = document.createElement('canvas'); cv.width = s; cv.height = s;
+        var ctx = cv.getContext('2d'), gr = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+        gr.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',0.35)');
+        gr.addColorStop(0.25, 'rgba(' + r + ',' + g + ',' + b + ',0.2)');
+        gr.addColorStop(0.5, 'rgba(' + r + ',' + g + ',' + b + ',0.08)');
+        gr.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+        ctx.fillStyle = gr; ctx.fillRect(0, 0, s, s);
+        return new THREE.CanvasTexture(cv);
+      }
+      var nebSprites = [];
+      (cfg.nebulae || []).forEach(function (nd, ni) {
+        var sp = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: mkNebTex(nd.color[0], nd.color[1], nd.color[2]),
+          blending: THREE.AdditiveBlending, transparent: true, opacity: 0.9,
+        }));
+        sp.position.set(nd.x, nd.y, nd.z); sp.scale.set(nd.size, nd.size, 1);
+        sp.userData = { ox: nd.x, oy: nd.y, speed: 0.0003 + Math.random() * 0.0002, offset: ni * 1.5 };
+        nebSprites.push(sp); scene.add(sp);
+      });
+
+      // ── VARIANT AURORAS ───
+      var avs = 'uniform float time,speed,waveFreq;varying vec2 vUv;varying float vD;void main(){vUv=uv;vec3 p=position;float t=time*speed;float w1=sin(p.x*.008*waveFreq+t*.7)*12.;float w2=sin(p.x*.015*waveFreq-t*.4)*8.;float w3=cos(p.x*.005*waveFreq+t*.25)*15.;float w4=sin(p.x*.025*waveFreq+p.y*.01+t*1.1)*5.;p.y+=w1+w2+w3+w4;p.z+=sin(p.x*.01+t*.5)*8.+cos(p.y*.02+t*.3)*5.;vD=(w1+w2+w3+w4)/40.;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}';
+      var afs = 'uniform float time,speed,waveFreq,opacity,intensity;uniform vec3 color1,color2,color3;varying vec2 vUv;varying float vD;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}float fbm(vec2 p){float v=0.,a=.5,f=1.;for(int i=0;i<4;i++){v+=a*vn(p*f);a*=.48;f*=2.05;}return v;}void main(){vec2 uv=vUv;float t=time*speed;float n1=fbm(vec2(uv.x*4.+t*.5,uv.y*2.5-t*.25));float n2=fbm(vec2(uv.x*2.5-t*.35,uv.y*3.5+t*.18));float nm=n1*.5+n2*.5;float vf=smoothstep(0.,.25,uv.y)*smoothstep(1.,.45,uv.y);float hf=smoothstep(0.,.12,uv.x)*smoothstep(1.,.88,uv.x);float cp=uv.x+nm*.35+sin(t*.2)*.18;vec3 col=cp<.5?mix(color1,color2,cp*2.):mix(color2,color3,(cp-.5)*2.);float rays=pow(nm,1.3)*1.4;float dg=abs(vD)*.6;float a=(rays+dg)*vf*hf*opacity*intensity*nm*1.6;gl_FragColor=vec4(col,clamp(a,0.,1.));}';
+      var auroraMeshes = [];
+      (cfg.auroras || []).forEach(function (ac, ai) {
+        var aw = isMob ? 900 : 1800, ah = isMob ? 180 : 320;
+        var mat = new THREE.ShaderMaterial({
+          uniforms: {
+            time: { value: 0 },
+            color1: { value: new THREE.Vector3(ac.color1[0], ac.color1[1], ac.color1[2]) },
+            color2: { value: new THREE.Vector3(ac.color2[0], ac.color2[1], ac.color2[2]) },
+            color3: { value: new THREE.Vector3(ac.color3[0], ac.color3[1], ac.color3[2]) },
+            opacity: { value: ac.opacity }, speed: { value: 0.18 + ai * 0.04 },
+            waveFreq: { value: 4.0 + ai * 0.5 }, intensity: { value: 1.6 },
+          },
+          vertexShader: avs, fragmentShader: afs,
+          transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+        });
+        var mesh = new THREE.Mesh(new THREE.PlaneGeometry(aw, ah, isMob ? 48 : 80, 12), mat);
+        var yOff = isMob ? ac.y * 0.9 : ac.y;
+        mesh.position.set((ai - 1) * (isMob ? 40 : 80), yOff, -180 - ai * 80);
+        mesh.rotation.x = 0.1; mesh.rotation.z = (ai - 1) * 0.06;
+        mesh.userData = { baseX: mesh.position.x, baseY: yOff, baseColors: [ac.color1.slice(), ac.color2.slice(), ac.color3.slice()] };
+        auroraMeshes.push(mesh); scene.add(mesh);
+      });
+
+      var _tmpCol = new THREE.Color(), _tmpHsl = { h: 0, s: 0, l: 0 };
+
+      // ── RENDER LOOP ───
+      function animate() {
+        raf = requestAnimationFrame(animate);
+        var now = performance.now() * 0.001; _prev = now;
+        var t = now - _start;
+        milkyWay.rotation.z = 0.4 + t * 0.001;
+        for (var mi = 0; mi < milkyWay.children.length; mi++) milkyWay.children[mi].material.uniforms.time.value = t;
+        if (rashiChakra) {
+          if (_logoScreenY >= 0) { chakraY = (1.0 - _logoScreenY / H - 0.5) * 2.0 * halfVisH; }
+          curCY += (chakraY - curCY) * 0.08;
+          rashiChakra.position.y = curCY; rashiChakra.rotation.z = t * 0.04;
+          rashiChakra.material.opacity = 0.3 + Math.sin(t * 0.5) * 0.08;
+        }
+        for (var ni = 0; ni < nebSprites.length; ni++) {
+          var sp = nebSprites[ni];
+          sp.position.x = sp.userData.ox + Math.sin(t * sp.userData.speed * 1000 + sp.userData.offset) * 40;
+          sp.position.y = sp.userData.oy + Math.cos(t * sp.userData.speed * 700 + sp.userData.offset) * 30;
+        }
+        for (var ai = 0; ai < auroraMeshes.length; ai++) {
+          var a = auroraMeshes[ai]; a.material.uniforms.time.value = t;
+          a.position.x = a.userData.baseX + Math.sin(t * 0.06 + ai * 2) * 25;
+          a.position.y = a.userData.baseY + Math.sin(t * 0.04 + ai * 1.5) * 8;
+          a.rotation.z += Math.sin(t * 0.02 + ai * 0.7) * 0.00008;
+          if (a.userData.baseColors) {
+            var hs = Math.sin(t * 0.012 + ai * 1.5) * 0.18;
+            for (var ci = 0; ci < 3; ci++) {
+              var bc = a.userData.baseColors[ci]; _tmpCol.setRGB(bc[0], bc[1], bc[2]); _tmpCol.getHSL(_tmpHsl);
+              _tmpCol.setHSL((_tmpHsl.h + hs + 1) % 1, Math.min(1, _tmpHsl.s * 1.1), _tmpHsl.l);
+              a.material.uniforms[ci === 0 ? 'color1' : ci === 1 ? 'color2' : 'color3'].value.set(_tmpCol.r, _tmpCol.g, _tmpCol.b);
+            }
+          }
+        }
+        renderer.render(scene, camera);
+      }
+      animate();
+      var resizeT;
+      function onR() { clearTimeout(resizeT); resizeT = setTimeout(function () { W = container.offsetWidth || window.innerWidth; H = container.offsetHeight || window.innerHeight; camera.aspect = W / H; camera.updateProjectionMatrix(); renderer.setSize(W, H); }, 200); }
+      window.addEventListener('resize', onR);
+      container._cosmosCleanup = function () { clearTimeout(resizeT); cancelAnimationFrame(raf); window.removeEventListener('resize', onR); renderer.dispose(); if (renderer.domElement && renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); };
+    }).catch(function (e) { console.warn('CosmicBg: Three.js failed', e); });
+    return function () { if (container && container._cosmosCleanup) container._cosmosCleanup(); };
+  }, []);
+  return React.createElement('div', { ref: containerRef, style: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden', background: '#04030C' } });
+}
+
+// ── Native Animated Blob ─────────────────────────────────────────
+function NativeBlob({ r, g, b, x, y, size, index }) {
+  var breathe = useSharedValue(0), drift = useSharedValue(0);
+  useEffect(function () {
+    breathe.value = withRepeat(withSequence(
+      withTiming(1, { duration: 16000 + index * 3000, easing: Easing.inOut(Easing.sin) }),
+      withTiming(0, { duration: 16000 + index * 3000, easing: Easing.inOut(Easing.sin) })
+    ), -1, false);
+    drift.value = withRepeat(withSequence(
+      withDelay(index * 600, withTiming(1, { duration: 20000 + index * 2000, easing: Easing.inOut(Easing.sin) })),
+      withTiming(0, { duration: 20000 + index * 2000, easing: Easing.inOut(Easing.sin) })
+    ), -1, false);
+  }, []);
+  var anim = useAnimatedStyle(function () {
+    return {
+      transform: [{ translateX: interpolate(drift.value, [0, 1], [-20, 20]) }, { translateY: interpolate(drift.value, [0, 1], [15, -15]) }, { scale: interpolate(breathe.value, [0, 1], [0.8, 1.2]) }],
+      opacity: interpolate(breathe.value, [0, 1], [0.5, 1.0]),
+    };
+  });
+  var px = x * SW, py = y * SH, sz = size * SW;
+  return (
+    <Animated.View style={[{ position: 'absolute', left: px - sz / 2, top: py - sz / 2, width: sz, height: sz }, anim]} pointerEvents="none">
+      <View style={{ position: 'absolute', width: sz, height: sz, borderRadius: sz / 2, backgroundColor: 'rgba(' + r + ',' + g + ',' + b + ',0.05)' }} />
+      <View style={{ position: 'absolute', top: sz * 0.15, left: sz * 0.15, width: sz * 0.7, height: sz * 0.7, borderRadius: sz * 0.35, backgroundColor: 'rgba(' + r + ',' + g + ',' + b + ',0.12)' }} />
+      <View style={{ position: 'absolute', top: sz * 0.3, left: sz * 0.3, width: sz * 0.4, height: sz * 0.4, borderRadius: sz * 0.2, backgroundColor: 'rgba(' + r + ',' + g + ',' + b + ',0.22)' }} />
+    </Animated.View>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  MAIN COMPONENT
+// ══════════════════════════════════════════════════════════════════════
+export default function CosmicBackground({ children, showScrollHint, variant }) {
+  var isWeb = Platform.OS === 'web';
+  var cfg = SCENE_CONFIGS[variant] || SCENE_CONFIGS.default;
+  _currentVariant = variant || 'default';
+  return (
+    <View style={styles.container}>
+      {isWeb
+        ? React.createElement(WebCanvas, { key: variant || 'default' })
+        : (
+          <View style={StyleSheet.absoluteFill}>
+            <LinearGradient colors={cfg.nativeGrad} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
+            {(cfg.nativeBlobs || []).map(function (b, i) {
+              return <NativeBlob key={i} r={b.color[0]} g={b.color[1]} b={b.color[2]} x={b.x} y={b.y} size={b.size} index={i} />;
+            })}
+          </View>
+        )}
+      <View style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}>{children}</View>
+    </View>
+  );
+}
+
+var styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#04030C', overflow: 'hidden' },
+});

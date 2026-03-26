@@ -258,20 +258,12 @@ export var completeOnboarding = function(data) {
 
 // ─── Subscription API ───────────────────────────────────────────
 
-export var subscribe = function() {
-  return request('/api/auth/subscribe', { method: 'POST' });
-};
-
 export var unsubscribe = function() {
   return request('/api/auth/unsubscribe', { method: 'POST' });
 };
 
 export var getSubscriptionStatus = function() {
   return request('/api/auth/subscription');
-};
-
-export var renewSubscription = function() {
-  return request('/api/auth/renew', { method: 'POST' });
 };
 
 // ─── PayHere Payment API ────────────────────────────────────────
@@ -550,10 +542,8 @@ export default {
   sendOtp: sendOtp,
   verifyOtp: verifyOtp,
   completeOnboarding: completeOnboarding,
-  subscribe: subscribe,
   unsubscribe: unsubscribe,
   getSubscriptionStatus: getSubscriptionStatus,
-  renewSubscription: renewSubscription,
   // PayHere Payment
   initiateSubscription: initiateSubscription,
   initiateTopUp: initiateTopUp,

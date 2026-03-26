@@ -274,8 +274,6 @@
     createNebulae();
     createPricingNebula();
     createCosmicStorm();
-    createCosmicEyes();
-    createSolarEclipse();
     createCosmicDust();
     createCosmicCloudPlanes();
     createMoon();
@@ -324,36 +322,109 @@
 
   /* ── MILKY WAY ──────────────────────────────────────────────────── */
   function createMilkyWayBand() {
-    var n = isMobile ? 10000 : 28000;
+    /* Full-circle spiral galaxy — dense core, vivid spiral arms, dust lanes */
+    var n = isMobile ? 18000 : 45000;
     var g = new THREE.BufferGeometry();
-    var p = new Float32Array(n*3), c = new Float32Array(n*3), sz = new Float32Array(n);
+    var p = new Float32Array(n * 3), c = new Float32Array(n * 3), sz = new Float32Array(n);
+    var arms = 4;         // number of spiral arms
+    var armSpread = 0.6;  // how much stars scatter from arm centerline
+    var coreR = 80;       // core radius
+    var maxR = 1800;      // outer radius
+    var thickness = 35;   // disk thickness
+
     for (var i = 0; i < n; i++) {
-      var t = (Math.random()-0.5)*3500, sp = 60+Math.random()*100;
-      var ang = Math.random()*6.28, r = sp*Math.sqrt(Math.abs(Math.log(Math.random()+0.001)));
-      r = Math.min(r, sp*3);
-      p[i*3]=t*0.85+Math.cos(ang)*r*0.25; p[i*3+1]=t*0.25+Math.sin(ang)*r; p[i*3+2]=-700+Math.random()*250;
+      /* Decide: 30% core blob, 70% spiral arm */
+      var inCore = Math.random() < 0.3;
+      var angle, radius, armIdx;
+
+      if (inCore) {
+        /* Dense glowing core — exponential falloff */
+        angle = Math.random() * Math.PI * 2;
+        radius = Math.pow(Math.random(), 1.5) * coreR;
+      } else {
+        /* Spiral arm distribution — logarithmic spiral */
+        armIdx = Math.floor(Math.random() * arms);
+        var t = Math.pow(Math.random(), 0.7); // bias toward inner regions
+        radius = coreR * 0.5 + t * (maxR - coreR * 0.5);
+        var spiralAngle = (armIdx / arms) * Math.PI * 2;
+        spiralAngle += Math.log(1 + radius / 200) * 1.8; // logarithmic winding
+        angle = spiralAngle + (Math.random() - 0.5) * armSpread * (1 + radius / maxR);
+      }
+
+      var x = Math.cos(angle) * radius;
+      var y = Math.sin(angle) * radius;
+      var z = (Math.random() - 0.5) * thickness * (inCore ? 2.5 : (1 - radius / maxR) + 0.3);
+
+      p[i * 3] = x;
+      p[i * 3 + 1] = y;
+      p[i * 3 + 2] = z;
+
+      /* Vivid colour palette */
       var m = Math.random();
-      if (m<0.5){c[i*3]=0.75+Math.random()*0.25;c[i*3+1]=0.72+Math.random()*0.2;c[i*3+2]=0.82+Math.random()*0.18;}
-      else if(m<0.8){c[i*3]=0.5+Math.random()*0.2;c[i*3+1]=0.35+Math.random()*0.15;c[i*3+2]=0.7+Math.random()*0.3;}
-      else{c[i*3]=0.82+Math.random()*0.18;c[i*3+1]=0.65+Math.random()*0.2;c[i*3+2]=0.25+Math.random()*0.2;}
-      sz[i]=0.8+Math.random()*2.8;
+      var rn = radius / maxR; // normalized radius
+      if (inCore) {
+        /* Hot core — warm gold/amber/white */
+        if (m < 0.4) { c[i*3]=1.0; c[i*3+1]=0.92; c[i*3+2]=0.75; }        // warm white
+        else if (m < 0.7) { c[i*3]=1.0; c[i*3+1]=0.78; c[i*3+2]=0.35; }    // gold
+        else { c[i*3]=1.0; c[i*3+1]=0.65; c[i*3+2]=0.2; }                   // deep amber
+      } else if (rn < 0.35) {
+        /* Inner spiral — vibrant purple/magenta star-forming regions */
+        if (m < 0.3) { c[i*3]=0.85; c[i*3+1]=0.45; c[i*3+2]=1.0; }         // bright purple
+        else if (m < 0.6) { c[i*3]=1.0; c[i*3+1]=0.4; c[i*3+2]=0.75; }     // magenta
+        else { c[i*3]=0.65; c[i*3+1]=0.55; c[i*3+2]=1.0; }                  // blue-purple
+      } else if (rn < 0.65) {
+        /* Mid spiral — blue/cyan young stars + scattered gold */
+        if (m < 0.35) { c[i*3]=0.4; c[i*3+1]=0.7; c[i*3+2]=1.0; }          // bright blue
+        else if (m < 0.6) { c[i*3]=0.3; c[i*3+1]=0.85; c[i*3+2]=1.0; }     // cyan
+        else if (m < 0.85) { c[i*3]=0.9; c[i*3+1]=0.85; c[i*3+2]=0.95; }   // blue-white
+        else { c[i*3]=1.0; c[i*3+1]=0.72; c[i*3+2]=0.2; }                   // scattered gold
+      } else {
+        /* Outer arms — cool blue/white wispy */
+        if (m < 0.5) { c[i*3]=0.7; c[i*3+1]=0.78; c[i*3+2]=1.0; }          // pale blue
+        else if (m < 0.8) { c[i*3]=0.5; c[i*3+1]=0.6; c[i*3+2]=0.9; }      // dim blue
+        else { c[i*3]=0.85; c[i*3+1]=0.82; c[i*3+2]=0.9; }                  // white
+      }
+
+      /* Size: core stars brighter, outer dimmer */
+      sz[i] = inCore ? (1.5 + Math.random() * 4.0) : (0.6 + Math.random() * 2.5 * (1 - rn * 0.5));
     }
+
     g.setAttribute('position', new THREE.BufferAttribute(p, 3));
     g.setAttribute('color', new THREE.BufferAttribute(c, 3));
     g.setAttribute('size', new THREE.BufferAttribute(sz, 1));
+
     var mt = new THREE.ShaderMaterial({
-      uniforms:{time:{value:0},pr:{value:renderer.getPixelRatio()},op:{value:0.45}},
-      vertexShader:
-        'attribute float size;attribute vec3 color;varying vec3 vc;uniform float time,pr;\n'+
-        'void main(){vc=color;float tw=sin(time*0.7+position.x*0.004)*0.15+0.85;\n'+
-        'vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=size*pr*tw*(130.0/-mv.z);gl_Position=projectionMatrix*mv;}',
-      fragmentShader:
-        'varying vec3 vc;uniform float op;void main(){float d=length(gl_PointCoord-0.5);if(d>0.5)discard;\n'+
-        'float a=smoothstep(0.5,0.08,d)*op;float g=exp(-d*d*5.0)*0.4;gl_FragColor=vec4(vc,a+g*op);}',
-      transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+      uniforms: { time: {value:0}, pr: {value:renderer.getPixelRatio()}, op: {value:0.7} },
+      vertexShader: [
+        'attribute float size; attribute vec3 color; varying vec3 vc; varying float vBright;',
+        'uniform float time, pr;',
+        'void main() {',
+        '  vc = color;',
+        '  float tw = sin(time * 0.5 + position.x * 0.003 + position.y * 0.002) * 0.15 + 0.85;',
+        '  vBright = tw;',
+        '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
+        '  gl_PointSize = size * pr * tw * (160.0 / -mv.z);',
+        '  gl_Position = projectionMatrix * mv;',
+        '}'
+      ].join('\n'),
+      fragmentShader: [
+        'varying vec3 vc; varying float vBright; uniform float op;',
+        'void main() {',
+        '  float d = length(gl_PointCoord - 0.5);',
+        '  if (d > 0.5) discard;',
+        '  float core = smoothstep(0.5, 0.02, d);',
+        '  float glow = exp(-d * d * 4.0) * 0.6;',
+        '  float a = (core * 0.9 + glow) * op * vBright;',
+        '  gl_FragColor = vec4(vc * (0.8 + glow * 0.4), a);',
+        '}'
+      ].join('\n'),
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     });
+
     milkyWay = new THREE.Points(g, mt);
-    milkyWay.rotation.set(0.15, 0, 0.4);
+    /* Tilt to show spiral face from slight angle — full circle visible */
+    milkyWay.rotation.set(1.1, 0.15, 0.3);
+    milkyWay.position.set(0, 0, -650);
     scene.add(milkyWay);
   }
 
@@ -1074,181 +1145,278 @@
   var grahaChakra, grahaChakra2, grahaChakra3;
   var chakraParticles; // orbiting particle ring
 
-  /* Generate the outer ring texture — sacred geometry + glowing arcs */
+  /* Generate the outer ring texture — realistic full-circle Rashi Chakra */
   function makeOuterRingTex() {
-    var s = 1024, d = makeCanvas(s), ctx = d.ctx;
+    var s = 2048, d = makeCanvas(s), ctx = d.ctx;
     var cx = s / 2, cy = s / 2;
     ctx.clearRect(0, 0, s, s);
 
-    // Massive radial glow backdrop
-    var bg = ctx.createRadialGradient(cx, cy, s * 0.15, cx, cy, s * 0.5);
-    bg.addColorStop(0, 'rgba(147, 51, 234, 0.08)');
-    bg.addColorStop(0.5, 'rgba(255, 184, 0, 0.03)');
-    bg.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    /* Radial glow backdrop — multi-layered for depth */
+    var bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.5);
+    bg.addColorStop(0,   'rgba(255, 200, 60, 0.12)');
+    bg.addColorStop(0.2, 'rgba(180, 80, 255, 0.06)');
+    bg.addColorStop(0.5, 'rgba(100, 40, 180, 0.03)');
+    bg.addColorStop(1,   'rgba(0, 0, 0, 0)');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, s, s);
 
-    var R1 = s * 0.46, R2 = s * 0.38, R3 = s * 0.28, R4 = s * 0.18, R5 = s * 0.08;
+    var R1 = s * 0.47;  // outermost ring
+    var R2 = s * 0.42;  // zodiac label ring
+    var R3 = s * 0.36;  // planet orbit ring
+    var R4 = s * 0.28;  // inner sacred geometry
+    var R5 = s * 0.18;  // inner mandala
+    var R6 = s * 0.10;  // core energy
 
-    // Multiple glowing rings with varying intensities
-    function glowRing(r, w, col, blur) {
+    /* Helper: glowing ring with double-stroke */
+    function glowRing(r, w, col, blur, alpha) {
       ctx.save();
+      ctx.globalAlpha = alpha || 1;
       ctx.shadowColor = col; ctx.shadowBlur = blur;
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
       ctx.restore();
     }
-    glowRing(R1, 1.5, 'rgba(255, 184, 0, 0.6)', 20);
-    glowRing(R1 + 4, 0.5, 'rgba(255, 184, 0, 0.15)', 0);
-    glowRing(R2, 1.2, 'rgba(180, 122, 255, 0.5)', 15);
-    glowRing(R3, 1, 'rgba(255, 140, 0, 0.4)', 12);
-    glowRing(R4, 0.8, 'rgba(147, 51, 234, 0.45)', 10);
-    glowRing(R5, 0.6, 'rgba(255, 255, 255, 0.2)', 8);
 
-    // Dashed sacred arcs between R1 and R2
+    /* Outer rings — golden with purple accent */
+    glowRing(R1, 2.5, 'rgba(255, 190, 30, 0.85)', 35, 1);
+    glowRing(R1 + 5, 0.8, 'rgba(255, 220, 100, 0.25)', 8, 1);
+    glowRing(R1 - 4, 0.5, 'rgba(255, 190, 30, 0.15)', 0, 1);
+    glowRing(R2, 1.8, 'rgba(200, 140, 255, 0.7)', 25, 1);
+    glowRing(R3, 1.5, 'rgba(255, 170, 40, 0.6)', 20, 1);
+    glowRing(R4, 1.2, 'rgba(160, 100, 255, 0.55)', 18, 1);
+    glowRing(R5, 1.0, 'rgba(255, 160, 40, 0.45)', 15, 1);
+    glowRing(R6, 0.8, 'rgba(255, 255, 220, 0.3)', 12, 1);
+
+    /* Zodiac band glow fill between R1 and R2 */
     ctx.save();
-    ctx.setLineDash([8, 16]);
-    ctx.beginPath(); ctx.arc(cx, cy, (R1 + R2) / 2, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 214, 102, 0.12)'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.globalAlpha = 0.06;
+    var bandGrad = ctx.createRadialGradient(cx, cy, R2, cx, cy, R1);
+    bandGrad.addColorStop(0, 'rgba(180, 100, 255, 0.4)');
+    bandGrad.addColorStop(1, 'rgba(255, 190, 30, 0.3)');
+    ctx.beginPath(); ctx.arc(cx, cy, R1, 0, Math.PI * 2);
+    ctx.arc(cx, cy, R2, 0, Math.PI * 2, true);
+    ctx.fillStyle = bandGrad; ctx.fill();
     ctx.restore();
 
-    // 12 house lines — outer to inner with gradient fade
+    /* 12 house divider lines — gradient fade from core to outer */
     for (var i = 0; i < 12; i++) {
       var ang = (i / 12) * Math.PI * 2 - Math.PI / 2;
       var grad = ctx.createLinearGradient(
-        cx + Math.cos(ang) * R4, cy + Math.sin(ang) * R4,
+        cx + Math.cos(ang) * R5, cy + Math.sin(ang) * R5,
         cx + Math.cos(ang) * R1, cy + Math.sin(ang) * R1
       );
       grad.addColorStop(0, 'rgba(147, 51, 234, 0.0)');
-      grad.addColorStop(0.3, 'rgba(255, 184, 0, 0.3)');
-      grad.addColorStop(1, 'rgba(255, 184, 0, 0.08)');
+      grad.addColorStop(0.2, 'rgba(255, 190, 30, 0.35)');
+      grad.addColorStop(0.8, 'rgba(255, 190, 30, 0.25)');
+      grad.addColorStop(1, 'rgba(255, 220, 100, 0.12)');
       ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(ang) * R4, cy + Math.sin(ang) * R4);
+      ctx.moveTo(cx + Math.cos(ang) * R5, cy + Math.sin(ang) * R5);
       ctx.lineTo(cx + Math.cos(ang) * R1, cy + Math.sin(ang) * R1);
-      ctx.strokeStyle = grad; ctx.lineWidth = 0.8; ctx.stroke();
+      ctx.strokeStyle = grad; ctx.lineWidth = 1.2; ctx.stroke();
     }
 
-    // Sacred geometry — hexagram star
-    ctx.save();
-    ctx.globalAlpha = 0.08;
+    /* Zodiac signs in outer band (Western symbols for universal readability) */
+    var zodiac = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+    var zodiacColors = [
+      '#FF5555','#66BB6A','#FFEB3B','#90CAF9','#FF9800','#81C784',
+      '#E91E63','#B71C1C','#7E57C2','#5D4037','#2196F3','#00BCD4'
+    ];
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    var zodiacR = (R1 + R2) / 2;
+    ctx.font = 'bold ' + Math.round(s * 0.032) + 'px "Segoe UI Symbol", sans-serif';
+    for (var i = 0; i < 12; i++) {
+      var ang = ((i + 0.5) / 12) * Math.PI * 2 - Math.PI / 2;
+      var px = cx + Math.cos(ang) * zodiacR;
+      var py = cy + Math.sin(ang) * zodiacR;
+      ctx.save();
+      ctx.shadowColor = zodiacColors[i]; ctx.shadowBlur = 20;
+      ctx.fillStyle = zodiacColors[i]; ctx.globalAlpha = 0.9;
+      ctx.fillText(zodiac[i], px, py);
+      ctx.restore();
+    }
+
+    /* Sacred geometry — Sri Yantra–inspired triangles */
+    ctx.save(); ctx.globalAlpha = 0.12;
     for (var t = 0; t < 2; t++) {
       ctx.beginPath();
-      for (var i = 0; i < 4; i++) {
-        var ang = (i / 3) * Math.PI * 2 + t * (Math.PI / 3) - Math.PI / 2;
-        var method = i === 0 ? 'moveTo' : 'lineTo';
-        ctx[method](cx + Math.cos(ang) * R3, cy + Math.sin(ang) * R3);
+      var pts = t === 0 ? 3 : 3;
+      for (var i = 0; i <= pts; i++) {
+        var ang = (i / pts) * Math.PI * 2 + t * (Math.PI / 3) - Math.PI / 2;
+        i === 0 ? ctx.moveTo(cx + Math.cos(ang) * R4, cy + Math.sin(ang) * R4)
+                : ctx.lineTo(cx + Math.cos(ang) * R4, cy + Math.sin(ang) * R4);
       }
       ctx.closePath();
-      ctx.strokeStyle = '#B47AFF'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.strokeStyle = t === 0 ? '#FFD700' : '#B47AFF'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    /* Hexagram overlay */
+    for (var t = 0; t < 2; t++) {
+      ctx.beginPath();
+      for (var i = 0; i <= 3; i++) {
+        var ang = (i / 3) * Math.PI * 2 + t * (Math.PI / 6);
+        i === 0 ? ctx.moveTo(cx + Math.cos(ang) * R5, cy + Math.sin(ang) * R5)
+                : ctx.lineTo(cx + Math.cos(ang) * R5, cy + Math.sin(ang) * R5);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = t === 0 ? 'rgba(255,190,30,0.6)' : 'rgba(180,120,255,0.6)';
+      ctx.lineWidth = 0.8; ctx.stroke();
     }
     ctx.restore();
 
-    // Navagraha planet glyphs — orbiting in the planet ring
+    /* Navagraha planet glyphs — on the planet ring */
     var grahas = [
-      { sym: '☉', col: '#FFB800' },
-      { sym: '☽', col: '#E0E0E0' },
-      { sym: '♂', col: '#FF4747' },
-      { sym: '☿', col: '#4CD964' },
-      { sym: '♃', col: '#FFD666' },
-      { sym: '♀', col: '#FF9FF3' },
-      { sym: '♄', col: '#54A0FF' },
-      { sym: '☊', col: '#B47AFF' },
-      { sym: '☋', col: '#7C3AED' }
+      { sym: '☉', col: '#FFB800', name: 'Surya' },
+      { sym: '☽', col: '#E8E8E8', name: 'Chandra' },
+      { sym: '♂', col: '#FF4747', name: 'Kuja' },
+      { sym: '☿', col: '#4CD964', name: 'Budha' },
+      { sym: '♃', col: '#FFD666', name: 'Guru' },
+      { sym: '♀', col: '#FF9FF3', name: 'Shukra' },
+      { sym: '♄', col: '#54A0FF', name: 'Shani' },
+      { sym: '☊', col: '#B47AFF', name: 'Rahu' },
+      { sym: '☋', col: '#7C3AED', name: 'Ketu' }
     ];
-
-    var planetR = (R2 + R3) / 2;
-    ctx.font = 'bold ' + Math.round(s * 0.04) + 'px "Segoe UI Symbol", "Apple Color Emoji", sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    var planetR = (R3 + R4) / 2;
+    ctx.font = 'bold ' + Math.round(s * 0.038) + 'px "Segoe UI Symbol", "Apple Color Emoji", sans-serif';
     for (var i = 0; i < grahas.length; i++) {
       var ang = (i / grahas.length) * Math.PI * 2 - Math.PI / 2;
       var px = cx + Math.cos(ang) * planetR;
       var py = cy + Math.sin(ang) * planetR;
 
-      // Glow circle behind planet
-      var pg = ctx.createRadialGradient(px, py, 0, px, py, s * 0.035);
-      pg.addColorStop(0, grahas[i].col.replace(')', ',0.3)').replace('rgb', 'rgba'));
+      /* Glow disc behind planet */
+      var pg = ctx.createRadialGradient(px, py, 0, px, py, s * 0.04);
+      pg.addColorStop(0, grahas[i].col + '55');
       pg.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = pg;
-      ctx.fillRect(px - s * 0.04, py - s * 0.04, s * 0.08, s * 0.08);
+      ctx.beginPath(); ctx.arc(px, py, s * 0.04, 0, Math.PI * 2); ctx.fill();
 
       ctx.save();
-      ctx.shadowColor = grahas[i].col; ctx.shadowBlur = 25;
+      ctx.shadowColor = grahas[i].col; ctx.shadowBlur = 30;
       ctx.fillStyle = grahas[i].col;
       ctx.fillText(grahas[i].sym, px, py);
       ctx.restore();
     }
 
-    // House numbers in outer ring — subtle
-    ctx.font = '600 ' + Math.round(s * 0.026) + 'px "Space Grotesk", sans-serif';
-    ctx.fillStyle = 'rgba(255, 214, 102, 0.35)';
+    /* House numbers — outer band, subtle gold */
+    ctx.font = '700 ' + Math.round(s * 0.02) + 'px "Space Grotesk", sans-serif';
+    ctx.fillStyle = 'rgba(255, 214, 102, 0.4)';
     for (var i = 0; i < 12; i++) {
       var ang = ((i + 0.5) / 12) * Math.PI * 2 - Math.PI / 2;
-      var tr = (R1 + R2) / 2;
+      var tr = (R2 + R3) / 2;
       ctx.fillText((i + 1).toString(), cx + Math.cos(ang) * tr, cy + Math.sin(ang) * tr);
     }
 
-    // Decorative energy dots on outer ring
-    for (var i = 0; i < 36; i++) {
-      var ang = (i / 36) * Math.PI * 2;
-      var dotR = (i % 3 === 0) ? 3.5 : 1.5;
-      var dotAlpha = (i % 3 === 0) ? 0.7 : 0.25;
+    /* Decorative energy dots — outer ring (72 dots) */
+    for (var i = 0; i < 72; i++) {
+      var ang = (i / 72) * Math.PI * 2;
+      var dotR = (i % 6 === 0) ? 4 : (i % 3 === 0) ? 2.5 : 1.2;
+      var dotA = (i % 6 === 0) ? 0.85 : (i % 3 === 0) ? 0.45 : 0.2;
       ctx.beginPath();
       ctx.arc(cx + Math.cos(ang) * R1, cy + Math.sin(ang) * R1, dotR, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 184, 0, ' + dotAlpha + ')';
+      ctx.fillStyle = 'rgba(255, 200, 60, ' + dotA + ')';
       ctx.fill();
     }
 
-    // Inner energy dots
-    for (var i = 0; i < 24; i++) {
-      var ang = (i / 24) * Math.PI * 2;
+    /* Inner dots — purple accents */
+    for (var i = 0; i < 36; i++) {
+      var ang = (i / 36) * Math.PI * 2;
       ctx.beginPath();
-      ctx.arc(cx + Math.cos(ang) * R4, cy + Math.sin(ang) * R4, 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(180, 122, 255, 0.4)';
+      ctx.arc(cx + Math.cos(ang) * R5, cy + Math.sin(ang) * R5, 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(180, 122, 255, 0.5)';
       ctx.fill();
     }
 
-    // Center — pulsing energy circle (no text)
-    var cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R5);
-    cg.addColorStop(0, 'rgba(255, 184, 0, 0.25)');
-    cg.addColorStop(0.5, 'rgba(147, 51, 234, 0.12)');
+    /* Concentric mandala arcs — dashed sacred geometry */
+    ctx.save(); ctx.setLineDash([6, 12]); ctx.globalAlpha = 0.15;
+    ctx.beginPath(); ctx.arc(cx, cy, (R4 + R5) / 2, 0, Math.PI * 2);
+    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 0.6; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, (R5 + R6) / 2, 0, Math.PI * 2);
+    ctx.strokeStyle = '#B47AFF'; ctx.lineWidth = 0.6; ctx.stroke();
+    ctx.restore();
+
+    /* Center — radiant energy core */
+    var cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R6);
+    cg.addColorStop(0, 'rgba(255, 220, 80, 0.4)');
+    cg.addColorStop(0.3, 'rgba(255, 184, 0, 0.2)');
+    cg.addColorStop(0.6, 'rgba(147, 51, 234, 0.12)');
     cg.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = cg;
-    ctx.beginPath(); ctx.arc(cx, cy, R5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, R6, 0, Math.PI * 2); ctx.fill();
+
+    /* Om symbol in centre */
+    ctx.save();
+    ctx.font = 'bold ' + Math.round(s * 0.06) + 'px "Segoe UI Symbol", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = '#FFB800'; ctx.shadowBlur = 30;
+    ctx.fillStyle = 'rgba(255, 200, 60, 0.6)';
+    ctx.fillText('ॐ', cx, cy);
+    ctx.restore();
 
     return new THREE.CanvasTexture(d.canvas);
   }
 
-  /* Inner ring — simpler, faster spinning accent ring */
+  /* Inner ring — luminous mandala accent ring, counter-spinning */
   function makeInnerRingTex() {
-    var s = 512, d = makeCanvas(s), ctx = d.ctx;
+    var s = 1024, d = makeCanvas(s), ctx = d.ctx;
     var cx = s / 2, cy = s / 2;
     ctx.clearRect(0, 0, s, s);
 
-    var R = s * 0.42;
+    var R = s * 0.44;
+    var R2 = s * 0.32;
+    var R3 = s * 0.20;
 
-    // Dashed luminous ring
+    /* Radial glow fill */
+    var grd = ctx.createRadialGradient(cx, cy, R3, cx, cy, R);
+    grd.addColorStop(0, 'rgba(255, 200, 60, 0.06)');
+    grd.addColorStop(0.5, 'rgba(160, 80, 255, 0.03)');
+    grd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+
+    /* Luminous outer ring */
     ctx.save();
-    ctx.setLineDash([4, 8]);
-    ctx.shadowColor = 'rgba(255, 184, 0, 0.6)'; ctx.shadowBlur = 15;
+    ctx.shadowColor = 'rgba(255, 200, 60, 0.8)'; ctx.shadowBlur = 25;
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 184, 0, 0.5)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 200, 60, 0.65)'; ctx.lineWidth = 2.5; ctx.stroke();
     ctx.restore();
 
-    // Inner dashed ring
-    ctx.save();
-    ctx.setLineDash([3, 12]);
-    ctx.shadowColor = 'rgba(147, 51, 234, 0.5)'; ctx.shadowBlur = 10;
-    ctx.beginPath(); ctx.arc(cx, cy, R * 0.7, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(180, 122, 255, 0.4)'; ctx.lineWidth = 1; ctx.stroke();
+    /* Dashed inner rings */
+    ctx.save(); ctx.setLineDash([5, 10]);
+    ctx.shadowColor = 'rgba(180, 120, 255, 0.6)'; ctx.shadowBlur = 15;
+    ctx.beginPath(); ctx.arc(cx, cy, R2, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(180, 120, 255, 0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.restore();
 
-    // Energy dots on the ring
-    for (var i = 0; i < 48; i++) {
-      var ang = (i / 48) * Math.PI * 2;
-      var sz = (i % 4 === 0) ? 3 : 1.2;
+    ctx.save(); ctx.setLineDash([3, 15]);
+    ctx.shadowColor = 'rgba(255, 160, 40, 0.5)'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(cx, cy, R3, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 160, 40, 0.4)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.restore();
+
+    /* 24 spokes — Nakshatra-style */
+    for (var i = 0; i < 24; i++) {
+      var ang = (i / 24) * Math.PI * 2;
+      ctx.save(); ctx.globalAlpha = 0.15;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(ang) * R3, cy + Math.sin(ang) * R3);
+      ctx.lineTo(cx + Math.cos(ang) * R, cy + Math.sin(ang) * R);
+      ctx.strokeStyle = (i % 2 === 0) ? '#FFD700' : '#B47AFF';
+      ctx.lineWidth = 0.5; ctx.stroke();
+      ctx.restore();
+    }
+
+    /* Energy dots on rings */
+    for (var i = 0; i < 60; i++) {
+      var ang = (i / 60) * Math.PI * 2;
+      var sz = (i % 5 === 0) ? 4 : 1.5;
       ctx.beginPath();
       ctx.arc(cx + Math.cos(ang) * R, cy + Math.sin(ang) * R, sz, 0, Math.PI * 2);
-      ctx.fillStyle = (i % 4 === 0) ? 'rgba(255, 184, 0, 0.6)' : 'rgba(180, 122, 255, 0.3)';
+      ctx.fillStyle = (i % 5 === 0) ? 'rgba(255, 200, 60, 0.7)' : 'rgba(180, 120, 255, 0.35)';
+      ctx.fill();
+    }
+    for (var i = 0; i < 36; i++) {
+      var ang = (i / 36) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(ang) * R2, cy + Math.sin(ang) * R2, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 180, 50, 0.4)';
       ctx.fill();
     }
 
@@ -2023,31 +2191,6 @@
       });
       stormGroup.rotation.z += 0.0001;
       stormGroup.rotation.x = Math.sin(t * 0.3) * 0.015;
-    }
-
-    // ── Cosmic Eyes update ──
-    if (cosmicEyes) {
-      cosmicEyes.children.forEach(function(eye) {
-        if (eye.material && eye.material.uniforms) {
-          eye.material.uniforms.time.value = t;
-          var eyeSec = 0.66;
-          var eyeDist = Math.abs(scrollFrac - eyeSec);
-          var eyeInt = 1.0 - Math.min(eyeDist * 3.5, 1.0);
-          eye.material.uniforms.intensity.value = eyeInt * eyeInt * 0.85;
-        }
-      });
-    }
-
-    // ── Solar Eclipse update ──
-    if (scene) {
-      scene.children.forEach(function(ch) {
-        if (ch.isGroup && ch.children.length === 1 && ch.children[0].material &&
-            ch.children[0].material.uniforms && ch.children[0].material.uniforms.time) {
-          var m = ch.children[0].material;
-          if (m.fragmentShader && typeof m.fragmentShader === 'undefined') return;
-          // Eclipse bodies are identified by their section
-        }
-      });
     }
 
     // ── Cosmic Dust drift ──

@@ -938,11 +938,15 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   border-color: rgba(255,184,0,0.15);
 }
 
-.fullreport__grid {
+.fullreport__showcase {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--s-xl);
+  gap: var(--s-3xl);
+  align-items: center;
   margin-top: var(--s-2xl);
+}
+.fullreport__info {
+  display: flex; flex-direction: column; gap: var(--s-lg);
 }
 .fullreport__feature {
   display: flex; gap: var(--s-md); align-items: flex-start;
@@ -977,8 +981,32 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   font-size: 13px; color: var(--text-secondary); line-height: 1.6;
 }
 
+.fullreport__phones {
+  position: relative; display: flex;
+  justify-content: center; align-items: center;
+  min-height: 400px;
+}
+.fullreport__phone--main {
+  position: relative; z-index: 2;
+  transform: rotate(-3deg);
+  transition: transform 0.5s var(--ease);
+}
+.fullreport__phone--main:hover { transform: rotate(0deg) scale(1.03); }
+.fullreport__phone--secondary {
+  position: absolute; right: 0; top: 15%; z-index: 1;
+  opacity: 0.7;
+  transform: rotate(5deg) scale(0.85) translateX(30%);
+  transition: all 0.5s var(--ease);
+}
+.fullreport__phone--secondary:hover {
+  opacity: 1; transform: rotate(2deg) scale(0.9) translateX(25%);
+}
+
 @media (max-width: 768px) {
-  .fullreport__grid { grid-template-columns: 1fr; }
+  .fullreport__showcase { grid-template-columns: 1fr; gap: var(--s-xl); }
+  .fullreport__phones { min-height: 320px; order: -1; }
+  .fullreport__phone--main { transform: rotate(0deg); }
+  .fullreport__phone--secondary { right: -10%; top: 10%; transform: rotate(5deg) scale(0.8) translateX(20%); }
   .fullreport__feature { padding: var(--s-md); }
   .fullreport__feature-icon { width: 40px; height: 40px; font-size: 22px; }
   .fullreport__feature-text h3 { font-size: 15px; }

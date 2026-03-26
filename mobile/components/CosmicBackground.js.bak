@@ -1,0 +1,1352 @@
+﻿// CosmicBackground.js — Full 3D WebGL cosmos
+// WEB: Three.js WebGL scene (milky way, star fields, nebula, aurora)
+// NATIVE: dark View fallback with variant-specific cosmic overlays
+import React, { useEffect, useRef, useMemo } from 'react';
+import { StyleSheet, View, Platform, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useSharedValue, useAnimatedStyle, withRepeat, withTiming,
+  withSequence, withDelay, Easing, interpolate,
+} from 'react-native-reanimated';
+
+var { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+
+// ══════════════════════════════════════════════════════════════════════
+//  VARIANT THEME CONFIGS — unique cosmic personality per page
+//  Opacities are STRONG here because they layer on top of dark base + WebGL
+// ══════════════════════════════════════════════════════════════════════
+var VARIANT_THEMES = {
+  // ── HOME: Solar Corona — warm golden glow, sun-like energy
+  default: {
+    // Primary atmosphere gradient — the main visual differentiator
+    primaryGradient: {
+      colors: ['rgba(255,184,0,0.18)', 'rgba(255,140,0,0.06)', 'rgba(4,3,12,0.0)', 'rgba(180,122,255,0.08)'],
+      locations: [0, 0.35, 0.6, 1],
+      start: { x: 0.3, y: 0 }, end: { x: 0.7, y: 1 },
+    },
+    // Corner glow spots — positioned radial accent lights
+    cornerGlows: [
+      { color: 'rgba(255,184,0,0.25)', position: 'topLeft' },
+      { color: 'rgba(255,140,0,0.12)', position: 'bottomRight' },
+    ],
+    // Nebula blobs — animated breathing clouds
+    blobs: [
+      { color: 'rgba(255,184,0,0.30)',    x: '20%', y: '10%', size: SCREEN_W * 0.9,  speed: 18000 },
+      { color: 'rgba(255,140,0,0.20)',    x: '75%', y: '35%', size: SCREEN_W * 0.7,  speed: 22000 },
+      { color: 'rgba(180,122,255,0.14)',  x: '40%', y: '65%', size: SCREEN_W * 0.55, speed: 25000 },
+    ],
+    edgeGlow: { top: 'rgba(255,184,0,0.22)', bottom: 'rgba(255,140,0,0.10)' },
+  },
+
+  // ── CHART: Deep Nebula — purple-indigo swirling depths
+  nebula: {
+    primaryGradient: {
+      colors: ['rgba(147,51,234,0.22)', 'rgba(99,102,241,0.10)', 'rgba(4,3,12,0.0)', 'rgba(59,130,246,0.15)'],
+      locations: [0, 0.3, 0.55, 1],
+      start: { x: 0, y: 0 }, end: { x: 1, y: 1 },
+    },
+    cornerGlows: [
+      { color: 'rgba(147,51,234,0.30)', position: 'topRight' },
+      { color: 'rgba(59,130,246,0.20)', position: 'bottomLeft' },
+    ],
+    blobs: [
+      { color: 'rgba(147,51,234,0.35)',   x: '15%', y: '10%', size: SCREEN_W * 1.0,  speed: 20000 },
+      { color: 'rgba(59,130,246,0.25)',    x: '80%', y: '40%', size: SCREEN_W * 0.8,  speed: 24000 },
+      { color: 'rgba(99,102,241,0.20)',    x: '35%', y: '70%', size: SCREEN_W * 0.65, speed: 28000 },
+      { color: 'rgba(139,92,246,0.15)',    x: '10%', y: '50%', size: SCREEN_W * 0.5,  speed: 15000 },
+    ],
+    edgeGlow: { top: 'rgba(147,51,234,0.28)', bottom: 'rgba(59,130,246,0.16)' },
+  },
+
+  // ── REPORT: Cosmic Dust — emerald stardust, ancient wisdom
+  dust: {
+    primaryGradient: {
+      colors: ['rgba(52,211,153,0.20)', 'rgba(16,185,129,0.08)', 'rgba(4,3,12,0.0)', 'rgba(5,150,105,0.12)'],
+      locations: [0, 0.3, 0.6, 1],
+      start: { x: 0.2, y: 0 }, end: { x: 0.8, y: 1 },
+    },
+    cornerGlows: [
+      { color: 'rgba(52,211,153,0.28)', position: 'topLeft' },
+      { color: 'rgba(5,150,105,0.18)', position: 'bottomRight' },
+    ],
+    blobs: [
+      { color: 'rgba(52,211,153,0.30)',    x: '25%', y: '8%',  size: SCREEN_W * 0.85, speed: 22000 },
+      { color: 'rgba(5,150,105,0.22)',      x: '70%', y: '40%', size: SCREEN_W * 0.7,  speed: 26000 },
+      { color: 'rgba(16,185,129,0.18)',     x: '45%', y: '72%', size: SCREEN_W * 0.6,  speed: 19000 },
+    ],
+    edgeGlow: { top: 'rgba(52,211,153,0.25)', bottom: 'rgba(16,185,129,0.14)' },
+  },
+
+  // ── CHAT: Aurora Borealis — flowing greens, cyans, electric
+  chat: {
+    primaryGradient: {
+      colors: ['rgba(76,201,240,0.22)', 'rgba(34,211,238,0.08)', 'rgba(4,3,12,0.0)', 'rgba(52,211,153,0.14)'],
+      locations: [0, 0.3, 0.55, 1],
+      start: { x: 0.1, y: 0 }, end: { x: 0.9, y: 1 },
+    },
+    cornerGlows: [
+      { color: 'rgba(76,201,240,0.30)', position: 'topRight' },
+      { color: 'rgba(52,211,153,0.18)', position: 'bottomLeft' },
+    ],
+    blobs: [
+      { color: 'rgba(76,201,240,0.32)',     x: '25%', y: '8%',  size: SCREEN_W * 0.9,  speed: 16000 },
+      { color: 'rgba(52,211,153,0.22)',      x: '65%', y: '35%', size: SCREEN_W * 0.75, speed: 20000 },
+      { color: 'rgba(56,189,248,0.18)',      x: '15%', y: '55%', size: SCREEN_W * 0.6,  speed: 24000 },
+      { color: 'rgba(34,211,238,0.14)',      x: '80%', y: '72%', size: SCREEN_W * 0.5,  speed: 28000 },
+    ],
+    edgeGlow: { top: 'rgba(76,201,240,0.28)', bottom: 'rgba(52,211,153,0.14)' },
+  },
+
+  // ── MATCH: Twin Stars — pink-rose nebula, romantic celestial
+  pinkblue: {
+    primaryGradient: {
+      colors: ['rgba(244,114,182,0.22)', 'rgba(232,121,249,0.10)', 'rgba(4,3,12,0.0)', 'rgba(219,39,119,0.15)'],
+      locations: [0, 0.3, 0.55, 1],
+      start: { x: 0.1, y: 0 }, end: { x: 0.9, y: 1 },
+    },
+    cornerGlows: [
+      { color: 'rgba(244,114,182,0.30)', position: 'topLeft' },
+      { color: 'rgba(219,39,119,0.20)', position: 'bottomRight' },
+    ],
+    blobs: [
+      { color: 'rgba(244,114,182,0.32)',    x: '20%', y: '10%', size: SCREEN_W * 0.9,  speed: 18000 },
+      { color: 'rgba(219,39,119,0.22)',      x: '75%', y: '35%', size: SCREEN_W * 0.75, speed: 22000 },
+      { color: 'rgba(232,121,249,0.18)',     x: '40%', y: '60%', size: SCREEN_W * 0.6,  speed: 26000 },
+      { color: 'rgba(180,122,255,0.14)',     x: '15%', y: '45%', size: SCREEN_W * 0.5,  speed: 30000 },
+    ],
+    edgeGlow: { top: 'rgba(244,114,182,0.28)', bottom: 'rgba(219,39,119,0.14)' },
+  },
+
+  // ── PROFILE: Astral Projection — ethereal cyan-indigo void
+  astral: {
+    primaryGradient: {
+      colors: ['rgba(76,201,240,0.20)', 'rgba(99,102,241,0.10)', 'rgba(4,3,12,0.0)', 'rgba(59,130,246,0.14)'],
+      locations: [0, 0.3, 0.6, 1],
+      start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 },
+    },
+    cornerGlows: [
+      { color: 'rgba(76,201,240,0.28)', position: 'topRight' },
+      { color: 'rgba(59,130,246,0.18)', position: 'bottomLeft' },
+    ],
+    blobs: [
+      { color: 'rgba(76,201,240,0.28)',     x: '30%', y: '12%', size: SCREEN_W * 0.85, speed: 20000 },
+      { color: 'rgba(59,130,246,0.22)',      x: '70%', y: '42%', size: SCREEN_W * 0.7,  speed: 25000 },
+      { color: 'rgba(99,102,241,0.18)',      x: '20%', y: '62%', size: SCREEN_W * 0.6,  speed: 22000 },
+      { color: 'rgba(255,255,255,0.08)',     x: '55%', y: '25%', size: SCREEN_W * 0.4,  speed: 32000 },
+    ],
+    edgeGlow: { top: 'rgba(76,201,240,0.25)', bottom: 'rgba(59,130,246,0.14)' },
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════════
+//  Animated Nebula Blob — a soft radial glow that breathes & drifts
+//  Uses concentric layered circles for a soft-edge glow effect
+// ══════════════════════════════════════════════════════════════════════
+function NebulaBlob({ color, x, y, size, speed, index }) {
+  var breathe = useSharedValue(0);
+  var drift = useSharedValue(0);
+
+  useEffect(function () {
+    breathe.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: speed, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: speed, easing: Easing.inOut(Easing.sin) })
+      ), -1, false
+    );
+    drift.value = withRepeat(
+      withSequence(
+        withDelay(index * 800,
+          withTiming(1, { duration: speed * 1.3, easing: Easing.inOut(Easing.sin) })
+        ),
+        withTiming(0, { duration: speed * 1.3, easing: Easing.inOut(Easing.sin) })
+      ), -1, false
+    );
+  }, []);
+
+  var animStyle = useAnimatedStyle(function () {
+    var scale = interpolate(breathe.value, [0, 1], [0.8, 1.2]);
+    var tx = interpolate(drift.value, [0, 1], [-18, 18]);
+    var ty = interpolate(drift.value, [0, 1], [14, -14]);
+    var op = interpolate(breathe.value, [0, 1], [0.55, 1.0]);
+    return {
+      transform: [{ translateX: tx }, { translateY: ty }, { scale: scale }],
+      opacity: op,
+    };
+  });
+
+  // Parse the rgba color to extract r,g,b for concentric layers
+  var rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  var r = rgbMatch ? rgbMatch[1] : '128';
+  var g = rgbMatch ? rgbMatch[2] : '128';
+  var b = rgbMatch ? rgbMatch[3] : '128';
+
+  // Concentric circles: outer=very faint, inner=stronger, for soft-edge effect
+  return (
+    <Animated.View
+      style={[
+        {
+          position: 'absolute',
+          left: x,
+          top: y,
+          width: size,
+          height: size,
+          marginLeft: -(size / 2),
+          marginTop: -(size / 2),
+        },
+        animStyle,
+      ]}
+      pointerEvents="none"
+    >
+      {/* Outermost — very faint, largest */}
+      <View style={{
+        position: 'absolute', top: 0, left: 0, width: size, height: size,
+        borderRadius: size / 2,
+        backgroundColor: 'rgba(' + r + ',' + g + ',' + b + ',0.06)',
+      }} />
+      {/* Middle ring */}
+      <View style={{
+        position: 'absolute',
+        top: size * 0.15, left: size * 0.15,
+        width: size * 0.7, height: size * 0.7,
+        borderRadius: size * 0.35,
+        backgroundColor: 'rgba(' + r + ',' + g + ',' + b + ',0.12)',
+      }} />
+      {/* Inner glow — brightest */}
+      <View style={{
+        position: 'absolute',
+        top: size * 0.3, left: size * 0.3,
+        width: size * 0.4, height: size * 0.4,
+        borderRadius: size * 0.2,
+        backgroundColor: 'rgba(' + r + ',' + g + ',' + b + ',0.22)',
+      }} />
+    </Animated.View>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Corner Glow — a large radial glow anchored to a screen corner
+// ══════════════════════════════════════════════════════════════════════
+var CORNER_POSITIONS = {
+  topLeft:     { top: -SCREEN_H * 0.15, left: -SCREEN_W * 0.25 },
+  topRight:    { top: -SCREEN_H * 0.15, right: -SCREEN_W * 0.25 },
+  bottomLeft:  { bottom: -SCREEN_H * 0.15, left: -SCREEN_W * 0.25 },
+  bottomRight: { bottom: -SCREEN_H * 0.15, right: -SCREEN_W * 0.25 },
+};
+
+function CornerGlow({ color, position }) {
+  var pos = CORNER_POSITIONS[position] || CORNER_POSITIONS.topLeft;
+  var glowSize = Math.max(SCREEN_W, SCREEN_H) * 0.7;
+
+  var pulse = useSharedValue(0);
+  useEffect(function () {
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 12000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 12000, easing: Easing.inOut(Easing.sin) })
+      ), -1, false
+    );
+  }, []);
+
+  var animStyle = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(pulse.value, [0, 1], [0.5, 1.0]),
+      transform: [{ scale: interpolate(pulse.value, [0, 1], [0.9, 1.1]) }],
+    };
+  });
+
+  // Parse rgba
+  var rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  var r = rgbMatch ? rgbMatch[1] : '128';
+  var g = rgbMatch ? rgbMatch[2] : '128';
+  var b = rgbMatch ? rgbMatch[3] : '128';
+
+  return (
+    <Animated.View
+      style={[
+        {
+          position: 'absolute',
+          width: glowSize,
+          height: glowSize,
+          ...pos,
+        },
+        animStyle,
+      ]}
+      pointerEvents="none"
+    >
+      <View style={{
+        width: glowSize, height: glowSize, borderRadius: glowSize / 2,
+        backgroundColor: 'rgba(' + r + ',' + g + ',' + b + ',0.04)',
+      }} />
+      <View style={{
+        position: 'absolute',
+        top: glowSize * 0.15, left: glowSize * 0.15,
+        width: glowSize * 0.7, height: glowSize * 0.7,
+        borderRadius: glowSize * 0.35,
+        backgroundColor: 'rgba(' + r + ',' + g + ',' + b + ',0.10)',
+      }} />
+      <View style={{
+        position: 'absolute',
+        top: glowSize * 0.3, left: glowSize * 0.3,
+        width: glowSize * 0.4, height: glowSize * 0.4,
+        borderRadius: glowSize * 0.2,
+        backgroundColor: 'rgba(' + r + ',' + g + ',' + b + ',0.18)',
+      }} />
+    </Animated.View>
+  );
+}
+
+// ── Logo anchor: onboarding sets the logo's screen-center Y (pixels from top).
+//    The Three.js loop reads this and converts to 3D Y so the chakra tracks the logo.
+var _logoScreenY = -1; // -1 means "not set yet"
+export function setLogoAnchorY(screenY) { _logoScreenY = screenY; }
+
+function WebCanvas() {
+  var containerRef = useRef(null);
+  useEffect(function () {
+    var container = containerRef.current;
+    if (!container) return;
+    var W = container.offsetWidth || window.innerWidth || 800;
+    var H = container.offsetHeight || window.innerHeight || 600;
+    var raf;
+    var THREE;
+
+    // Dynamic import Three.js — it's in node_modules
+    function loadThree() {
+      return import('three').then(function(m) { THREE = m; return m; });
+    }
+
+    loadThree().then(function() {
+      // ════════════════════════════════════════════════════════════
+      //  THREE.JS WEBGL SCENE — milky way, star field, nebula, aurora
+      // ════════════════════════════════════════════════════════════
+      var scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x04030C);
+      scene.fog = new THREE.FogExp2(0x04030C, 0.00006);
+      var camera = new THREE.PerspectiveCamera(55, W / H, 0.1, 12000);
+      camera.position.set(0, 0, 100);
+
+      var renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'high-performance' });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.toneMapping = 4; // ACESFilmicToneMapping
+      renderer.toneMappingExposure = 0.9;
+      renderer.domElement.style.position = 'absolute';
+      renderer.domElement.style.top = '0';
+      renderer.domElement.style.left = '0';
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
+      renderer.domElement.style.pointerEvents = 'none';
+      renderer.domElement.style.zIndex = '0';
+      container.appendChild(renderer.domElement);
+
+      var _startTime = performance.now() * 0.001;
+      var _prevTime = _startTime;
+
+      // ── MILKY WAY BAND — spectacular multi-layer galactic band ─────
+      function createMilkyWayBand() {
+        var isMob = W < H;
+        var group = new THREE.Group();
+
+        // ── Layer 1: Dense glowing core — bright concentrated particles ──
+        var n1 = isMob ? 25000 : 40000;
+        var g1 = new THREE.BufferGeometry();
+        var p1 = new Float32Array(n1 * 3);
+        var c1 = new Float32Array(n1 * 3);
+        var sz1 = new Float32Array(n1);
+        for (var i = 0; i < n1; i++) {
+          // Band runs diagonally — long axis
+          var t = (Math.random() - 0.5) * (isMob ? 2200 : 3500);
+          // Tight Gaussian spread for dense core
+          var spread = 30 + Math.random() * 50;
+          var ang = Math.random() * 6.28;
+          var r = spread * Math.sqrt(Math.abs(Math.log(Math.random() + 0.001)));
+          r = Math.min(r, spread * 2.5);
+          p1[i*3]   = t * 0.7 + Math.cos(ang) * r * 0.15;
+          p1[i*3+1] = t * 0.35 + Math.sin(ang) * r * 0.6;
+          p1[i*3+2] = -400 + Math.random() * 150;
+          var m = Math.random();
+          if (m < 0.2) {
+            // Warm white
+            c1[i*3] = 1.0; c1[i*3+1] = 0.95 + Math.random() * 0.05; c1[i*3+2] = 0.85 + Math.random() * 0.1;
+          } else if (m < 0.35) {
+            // Gold
+            c1[i*3] = 1.0; c1[i*3+1] = 0.8 + Math.random() * 0.15; c1[i*3+2] = 0.4 + Math.random() * 0.25;
+          } else if (m < 0.48) {
+            // Vivid cyan-teal
+            c1[i*3] = 0.2 + Math.random() * 0.25; c1[i*3+1] = 0.75 + Math.random() * 0.25; c1[i*3+2] = 0.85 + Math.random() * 0.15;
+          } else if (m < 0.6) {
+            // Cosmic purple
+            c1[i*3] = 0.6 + Math.random() * 0.3; c1[i*3+1] = 0.3 + Math.random() * 0.2; c1[i*3+2] = 0.85 + Math.random() * 0.15;
+          } else if (m < 0.72) {
+            // Hot magenta-pink
+            c1[i*3] = 0.9 + Math.random() * 0.1; c1[i*3+1] = 0.25 + Math.random() * 0.25; c1[i*3+2] = 0.6 + Math.random() * 0.3;
+          } else if (m < 0.82) {
+            // Pale blue-white
+            c1[i*3] = 0.85 + Math.random() * 0.15; c1[i*3+1] = 0.9 + Math.random() * 0.1; c1[i*3+2] = 1.0;
+          } else if (m < 0.92) {
+            // Orange-amber
+            c1[i*3] = 1.0; c1[i*3+1] = 0.65 + Math.random() * 0.2; c1[i*3+2] = 0.2 + Math.random() * 0.2;
+          } else {
+            // Emerald green
+            c1[i*3] = 0.15 + Math.random() * 0.2; c1[i*3+1] = 0.8 + Math.random() * 0.2; c1[i*3+2] = 0.4 + Math.random() * 0.25;
+          }
+          sz1[i] = isMob ? (1.5 + Math.random() * 3.5) : (1.0 + Math.random() * 3.0);
+        }
+        g1.setAttribute('position', new THREE.BufferAttribute(p1, 3));
+        g1.setAttribute('color', new THREE.BufferAttribute(c1, 3));
+        g1.setAttribute('size', new THREE.BufferAttribute(sz1, 1));
+
+        var coreMat = new THREE.ShaderMaterial({
+          uniforms: { time: { value: 0 }, pr: { value: renderer.getPixelRatio() } },
+          vertexShader:
+            'attribute float size; attribute vec3 color; varying vec3 vc; varying float vBright;\n' +
+            'uniform float time, pr;\n' +
+            'void main() { vc = color;\n' +
+            '  float tw = sin(time * 0.7 + position.x * 0.003) * 0.15 + 0.9;\n' +
+            '  vBright = tw;\n' +
+            '  vec4 mv = modelViewMatrix * vec4(position, 1.0);\n' +
+            '  gl_PointSize = size * pr * tw * (180.0 / -mv.z);\n' +
+            '  gl_Position = projectionMatrix * mv; }\n',
+          fragmentShader:
+            'varying vec3 vc; varying float vBright;\n' +
+            'void main() { float d = length(gl_PointCoord - 0.5);\n' +
+            '  if (d > 0.5) discard;\n' +
+            '  float core = exp(-d * d * 18.0);\n' +
+            '  float glow = exp(-d * d * 4.0) * 0.6;\n' +
+            '  float a = (core + glow) * vBright * 0.95;\n' +
+            '  gl_FragColor = vec4(vc, a); }\n',
+          transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        });
+        var coreLayer = new THREE.Points(g1, coreMat);
+        group.add(coreLayer);
+
+        // ── Layer 2: Diffuse halo — wide soft glow around the core ──
+        var n2 = isMob ? 15000 : 25000;
+        var g2 = new THREE.BufferGeometry();
+        var p2 = new Float32Array(n2 * 3);
+        var c2 = new Float32Array(n2 * 3);
+        var sz2 = new Float32Array(n2);
+        for (var i = 0; i < n2; i++) {
+          var t = (Math.random() - 0.5) * (isMob ? 2400 : 3800);
+          var spread = 80 + Math.random() * 180;
+          var ang = Math.random() * 6.28;
+          var r = spread * Math.sqrt(Math.abs(Math.log(Math.random() + 0.001)));
+          r = Math.min(r, spread * 3.0);
+          p2[i*3]   = t * 0.7 + Math.cos(ang) * r * 0.3;
+          p2[i*3+1] = t * 0.35 + Math.sin(ang) * r * 0.8;
+          p2[i*3+2] = -420 + Math.random() * 200;
+          var m = Math.random();
+          if (m < 0.2) {
+            // Soft warm white glow
+            c2[i*3] = 0.8 + Math.random() * 0.2; c2[i*3+1] = 0.75 + Math.random() * 0.2; c2[i*3+2] = 0.55 + Math.random() * 0.25;
+          } else if (m < 0.35) {
+            // Soft gold haze
+            c2[i*3] = 0.85 + Math.random() * 0.15; c2[i*3+1] = 0.65 + Math.random() * 0.2; c2[i*3+2] = 0.3 + Math.random() * 0.2;
+          } else if (m < 0.48) {
+            // Deep purple nebula
+            c2[i*3] = 0.45 + Math.random() * 0.3; c2[i*3+1] = 0.15 + Math.random() * 0.2; c2[i*3+2] = 0.65 + Math.random() * 0.35;
+          } else if (m < 0.6) {
+            // Teal-cyan mist
+            c2[i*3] = 0.15 + Math.random() * 0.2; c2[i*3+1] = 0.55 + Math.random() * 0.3; c2[i*3+2] = 0.7 + Math.random() * 0.3;
+          } else if (m < 0.72) {
+            // Rose-pink nebula
+            c2[i*3] = 0.75 + Math.random() * 0.25; c2[i*3+1] = 0.25 + Math.random() * 0.2; c2[i*3+2] = 0.5 + Math.random() * 0.3;
+          } else if (m < 0.85) {
+            // Faint blue accent
+            c2[i*3] = 0.45 + Math.random() * 0.2; c2[i*3+1] = 0.5 + Math.random() * 0.2; c2[i*3+2] = 0.7 + Math.random() * 0.3;
+          } else {
+            // Faint emerald haze
+            c2[i*3] = 0.2 + Math.random() * 0.15; c2[i*3+1] = 0.6 + Math.random() * 0.25; c2[i*3+2] = 0.35 + Math.random() * 0.25;
+          }
+          sz2[i] = isMob ? (3.0 + Math.random() * 7.0) : (2.0 + Math.random() * 5.0);
+        }
+        g2.setAttribute('position', new THREE.BufferAttribute(p2, 3));
+        g2.setAttribute('color', new THREE.BufferAttribute(c2, 3));
+        g2.setAttribute('size', new THREE.BufferAttribute(sz2, 1));
+
+        var haloMat = new THREE.ShaderMaterial({
+          uniforms: { time: { value: 0 }, pr: { value: renderer.getPixelRatio() } },
+          vertexShader:
+            'attribute float size; attribute vec3 color; varying vec3 vc; varying float vBright;\n' +
+            'uniform float time, pr;\n' +
+            'void main() { vc = color;\n' +
+            '  float tw = sin(time * 0.5 + position.x * 0.002) * 0.1 + 0.95;\n' +
+            '  vBright = tw;\n' +
+            '  vec4 mv = modelViewMatrix * vec4(position, 1.0);\n' +
+            '  gl_PointSize = size * pr * tw * (200.0 / -mv.z);\n' +
+            '  gl_Position = projectionMatrix * mv; }\n',
+          fragmentShader:
+            'varying vec3 vc; varying float vBright;\n' +
+            'void main() { float d = length(gl_PointCoord - 0.5);\n' +
+            '  if (d > 0.5) discard;\n' +
+            '  float glow = exp(-d * d * 3.0) * 0.55;\n' +
+            '  gl_FragColor = vec4(vc, glow * vBright); }\n',
+          transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        });
+        var haloLayer = new THREE.Points(g2, haloMat);
+        group.add(haloLayer);
+
+        // ── Layer 3: Bright concentrated star clusters along the core ──
+        var n3 = isMob ? 3000 : 6000;
+        var g3 = new THREE.BufferGeometry();
+        var p3 = new Float32Array(n3 * 3);
+        var c3 = new Float32Array(n3 * 3);
+        var sz3 = new Float32Array(n3);
+        for (var i = 0; i < n3; i++) {
+          var t = (Math.random() - 0.5) * (isMob ? 1800 : 3000);
+          // Very tight — star clusters in the core
+          var spread = 15 + Math.random() * 30;
+          var ang = Math.random() * 6.28;
+          var r = spread * Math.sqrt(Math.random());
+          p3[i*3]   = t * 0.7 + Math.cos(ang) * r * 0.1;
+          p3[i*3+1] = t * 0.35 + Math.sin(ang) * r * 0.4;
+          p3[i*3+2] = -380 + Math.random() * 80;
+          // Bright colourful star clusters
+          var m = Math.random();
+          if (m < 0.25) {
+            // Bright white
+            c3[i*3] = 1.0; c3[i*3+1] = 0.97; c3[i*3+2] = 0.95;
+          } else if (m < 0.4) {
+            // Vivid blue-white
+            c3[i*3] = 0.7 + Math.random() * 0.3; c3[i*3+1] = 0.8 + Math.random() * 0.2; c3[i*3+2] = 1.0;
+          } else if (m < 0.55) {
+            // Bright gold
+            c3[i*3] = 1.0; c3[i*3+1] = 0.8 + Math.random() * 0.15; c3[i*3+2] = 0.5 + Math.random() * 0.2;
+          } else if (m < 0.68) {
+            // Bright magenta
+            c3[i*3] = 1.0; c3[i*3+1] = 0.35 + Math.random() * 0.2; c3[i*3+2] = 0.75 + Math.random() * 0.25;
+          } else if (m < 0.8) {
+            // Electric cyan
+            c3[i*3] = 0.3 + Math.random() * 0.2; c3[i*3+1] = 0.9 + Math.random() * 0.1; c3[i*3+2] = 1.0;
+          } else if (m < 0.9) {
+            // Violet
+            c3[i*3] = 0.7 + Math.random() * 0.2; c3[i*3+1] = 0.4 + Math.random() * 0.15; c3[i*3+2] = 1.0;
+          } else {
+            // Lime-green
+            c3[i*3] = 0.5 + Math.random() * 0.2; c3[i*3+1] = 1.0; c3[i*3+2] = 0.4 + Math.random() * 0.3;
+          }
+          sz3[i] = isMob ? (0.8 + Math.random() * 2.5) : (0.5 + Math.random() * 2.0);
+        }
+        g3.setAttribute('position', new THREE.BufferAttribute(p3, 3));
+        g3.setAttribute('color', new THREE.BufferAttribute(c3, 3));
+        g3.setAttribute('size', new THREE.BufferAttribute(sz3, 1));
+
+        var clusterMat = new THREE.ShaderMaterial({
+          uniforms: { time: { value: 0 }, pr: { value: renderer.getPixelRatio() } },
+          vertexShader:
+            'attribute float size; attribute vec3 color; varying vec3 vc; varying float vTw;\n' +
+            'uniform float time, pr;\n' +
+            'void main() { vc = color;\n' +
+            '  float tw = sin(time * 1.5 + float(gl_VertexID) * 0.8) * 0.3 + 0.8;\n' +
+            '  vTw = tw;\n' +
+            '  vec4 mv = modelViewMatrix * vec4(position, 1.0);\n' +
+            '  gl_PointSize = size * pr * tw * (160.0 / -mv.z);\n' +
+            '  gl_Position = projectionMatrix * mv; }\n',
+          fragmentShader:
+            'varying vec3 vc; varying float vTw;\n' +
+            'void main() { float d = length(gl_PointCoord - 0.5);\n' +
+            '  if (d > 0.5) discard;\n' +
+            '  float core = exp(-d * d * 40.0);\n' +
+            '  float glow = exp(-d * d * 8.0) * 0.3;\n' +
+            '  gl_FragColor = vec4(vc, (core + glow) * vTw); }\n',
+          transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        });
+        var clusterLayer = new THREE.Points(g3, clusterMat);
+        group.add(clusterLayer);
+
+        group.rotation.set(0.15, 0, 0.4);
+        return group;
+      }
+
+      var milkyWay = createMilkyWayBand();
+      scene.add(milkyWay);
+
+      // ── RASHI CHAKRA — Grand Vedic Zodiac Wheel (from website cosmos3d.js) ──
+      // Canvas-drawn 2048px texture with 12 Rashi houses, Navagraha, sacred geometry
+      function makeRashiChakraTex() {
+        var s = 2048;
+        var cv = document.createElement('canvas');
+        cv.width = s; cv.height = s;
+        var ctx = cv.getContext('2d');
+        var cx = s / 2, cy = s / 2;
+        var PI2 = Math.PI * 2;
+        ctx.clearRect(0, 0, s, s);
+
+        var Ro  = s * 0.49;
+        var R1  = s * 0.46;
+        var R2  = s * 0.385;
+        var R3  = s * 0.30;
+        var R4  = s * 0.22;
+        var R5  = s * 0.12;
+        var Rc  = s * 0.06;
+
+        var gold   = 'rgba(255,184,0,';
+        var goldBr = 'rgba(255,214,102,';
+        var violet = 'rgba(147,51,234,';
+        var lavend = 'rgba(180,122,255,';
+        var white  = 'rgba(255,255,255,';
+        var cyan   = 'rgba(100,220,255,';
+        var red    = 'rgba(220,60,30,';
+        var orange = 'rgba(255,120,20,';
+
+        function glowRing(r, w, col, blur, dash) {
+          ctx.save();
+          if (dash) ctx.setLineDash(dash);
+          if (blur) { ctx.shadowColor = col; ctx.shadowBlur = blur; }
+          ctx.beginPath(); ctx.arc(cx, cy, r, 0, PI2);
+          ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+          ctx.restore();
+        }
+
+        // 1. Cosmic fill
+        var bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.52);
+        bg.addColorStop(0, 'rgba(20,40,80,0.18)');
+        bg.addColorStop(0.3, 'rgba(30,60,120,0.10)');
+        bg.addColorStop(0.55, violet + '0.05)');
+        bg.addColorStop(0.8, 'rgba(10,20,50,0.03)');
+        bg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, s, s);
+
+        // 2. Thick outer border
+        glowRing(Ro, 12, red + '0.35)', 60);
+        glowRing(Ro, 6,  orange + '0.55)', 35);
+        glowRing(Ro, 3,  gold + '0.7)', 20);
+        glowRing(Ro, 1.5, white + '0.5)', 8);
+        glowRing(Ro + 10, 18, red + '0.08)', 50);
+
+        // 3. Zodiac ring boundaries
+        glowRing(R1, 2, gold + '0.4)', 15);
+        glowRing(R2, 1.5, lavend + '0.35)', 12);
+
+        // 4. 12 house division lines
+        for (var i = 0; i < 12; i++) {
+          var a = (i / 12) * PI2 - Math.PI / 2;
+          var cosA = Math.cos(a), sinA = Math.sin(a);
+          var grad = ctx.createLinearGradient(
+            cx + cosA * R2, cy + sinA * R2, cx + cosA * R1, cy + sinA * R1);
+          grad.addColorStop(0, gold + '0.05)');
+          grad.addColorStop(0.3, gold + '0.35)');
+          grad.addColorStop(1, gold + '0.15)');
+          ctx.beginPath();
+          ctx.moveTo(cx + cosA * R2, cy + sinA * R2);
+          ctx.lineTo(cx + cosA * R1, cy + sinA * R1);
+          ctx.strokeStyle = grad; ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(cx + cosA * R4, cy + sinA * R4);
+          ctx.lineTo(cx + cosA * R2, cy + sinA * R2);
+          ctx.strokeStyle = lavend + '0.1)'; ctx.lineWidth = 0.5; ctx.stroke();
+        }
+
+        // 5. Rashi zodiac signs
+        var rashis = [
+          { sym: '\u2648', name: 'Mesha',     col: '#FF6B6B' },
+          { sym: '\u2649', name: 'Vrishabha', col: '#6BCB77' },
+          { sym: '\u264A', name: 'Mithuna',   col: '#FFD93D' },
+          { sym: '\u264B', name: 'Karka',     col: '#E8E8E8' },
+          { sym: '\u264C', name: 'Simha',     col: '#FFB800' },
+          { sym: '\u264D', name: 'Kanya',     col: '#6BCB77' },
+          { sym: '\u264E', name: 'Tula',      col: '#FF9FF3' },
+          { sym: '\u264F', name: 'Vrischika', col: '#FF6B6B' },
+          { sym: '\u2650', name: 'Dhanu',     col: '#FFD93D' },
+          { sym: '\u2651', name: 'Makara',    col: '#74B9FF' },
+          { sym: '\u2652', name: 'Kumbha',    col: '#74B9FF' },
+          { sym: '\u2653', name: 'Meena',     col: '#C79EFF' }
+        ];
+        var zodiacR = (R1 + R2) / 2;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        for (var i = 0; i < 12; i++) {
+          var a = ((i + 0.5) / 12) * PI2 - Math.PI / 2;
+          var px = cx + Math.cos(a) * zodiacR;
+          var py = cy + Math.sin(a) * zodiacR;
+          var r = rashis[i];
+          var sg = ctx.createRadialGradient(px, py, 0, px, py, s * 0.045);
+          sg.addColorStop(0, r.col + '30'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = sg;
+          ctx.beginPath(); ctx.arc(px, py, s * 0.045, 0, PI2); ctx.fill();
+          ctx.save(); ctx.translate(px, py); ctx.rotate(a + Math.PI / 2);
+          ctx.shadowColor = r.col; ctx.shadowBlur = 30;
+          ctx.font = 'bold ' + Math.round(s * 0.042) + 'px "Segoe UI Symbol","Apple Color Emoji",sans-serif';
+          ctx.fillStyle = r.col; ctx.fillText(r.sym, 0, -s * 0.012);
+          ctx.shadowBlur = 0;
+          ctx.font = '600 ' + Math.round(s * 0.018) + 'px sans-serif';
+          ctx.fillStyle = goldBr + '0.7)'; ctx.fillText(r.name, 0, s * 0.022);
+          ctx.restore();
+        }
+
+        // 6. Dashed ring
+        glowRing((R2 + R3) / 2, 0.8, goldBr + '0.12)', 0, [8, 16]);
+
+        // 7. Navagraha ring
+        glowRing(R3, 1.2, lavend + '0.35)', 10);
+
+        // 8. Navagraha glyphs
+        var grahas = [
+          { sym: '\u2609', col: '#FFB800' }, { sym: '\u263D', col: '#E0E0E0' },
+          { sym: '\u2642', col: '#FF6B6B' }, { sym: '\u263F', col: '#6BCB77' },
+          { sym: '\u2643', col: '#FFD93D' }, { sym: '\u2640', col: '#FF9FF3' },
+          { sym: '\u2644', col: '#74B9FF' }, { sym: '\u260A', col: '#C79EFF' },
+          { sym: '\u260B', col: '#9B59B6' }
+        ];
+        var planetR = (R3 + R4) / 2 + s * 0.01;
+        for (var i = 0; i < grahas.length; i++) {
+          var a = (i / grahas.length) * PI2 - Math.PI / 2;
+          var px = cx + Math.cos(a) * planetR;
+          var py = cy + Math.sin(a) * planetR;
+          var g = grahas[i];
+          var pg = ctx.createRadialGradient(px, py, 0, px, py, s * 0.032);
+          pg.addColorStop(0, g.col + '40'); pg.addColorStop(0.6, g.col + '10'); pg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = pg;
+          ctx.beginPath(); ctx.arc(px, py, s * 0.032, 0, PI2); ctx.fill();
+          ctx.save(); ctx.translate(px, py); ctx.rotate(a + Math.PI / 2);
+          ctx.shadowColor = g.col; ctx.shadowBlur = 25;
+          ctx.font = 'bold ' + Math.round(s * 0.036) + 'px "Segoe UI Symbol","Apple Color Emoji",sans-serif';
+          ctx.fillStyle = g.col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(g.sym, 0, 0); ctx.restore();
+        }
+
+        // Dots on planet ring
+        for (var i = 0; i < 36; i++) {
+          var a = (i / 36) * PI2;
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(a) * R3, cy + Math.sin(a) * R3, (i % 4 === 0) ? 3 : 1.2, 0, PI2);
+          ctx.fillStyle = lavend + ((i % 4 === 0) ? '0.45)' : '0.18)'); ctx.fill();
+        }
+
+        // 9. Sacred geometry ring
+        glowRing(R4, 0.8, violet + '0.3)', 8);
+        for (var i = 0; i < 24; i++) {
+          var a = (i / 24) * PI2;
+          ctx.beginPath(); ctx.arc(cx + Math.cos(a) * R4, cy + Math.sin(a) * R4, 1.8, 0, PI2);
+          ctx.fillStyle = lavend + '0.3)'; ctx.fill();
+        }
+
+        // 10. Hexagram
+        ctx.save(); ctx.globalAlpha = 0.08;
+        for (var t = 0; t < 2; t++) {
+          ctx.beginPath();
+          for (var i = 0; i <= 3; i++) {
+            var a = (i / 3) * PI2 + t * (Math.PI / 3) - Math.PI / 2;
+            ctx[i === 0 ? 'moveTo' : 'lineTo'](cx + Math.cos(a) * R4, cy + Math.sin(a) * R4);
+          }
+          ctx.closePath();
+          ctx.strokeStyle = lavend + '1)'; ctx.lineWidth = 1.5; ctx.stroke();
+        }
+        ctx.restore();
+
+        // 11. Inner sanctum
+        glowRing(R5, 0.8, white + '0.15)', 6);
+        glowRing((R4 + R5) / 2, 0.5, goldBr + '0.06)', 0, [4, 12]);
+
+        // 12. Centre sun
+        var cg1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R5);
+        cg1.addColorStop(0, gold + '0.3)'); cg1.addColorStop(0.3, violet + '0.12)'); cg1.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = cg1; ctx.beginPath(); ctx.arc(cx, cy, R5, 0, PI2); ctx.fill();
+        var cg2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, Rc);
+        cg2.addColorStop(0, white + '0.45)'); cg2.addColorStop(0.5, gold + '0.35)'); cg2.addColorStop(1, gold + '0.0)');
+        ctx.fillStyle = cg2; ctx.beginPath(); ctx.arc(cx, cy, Rc, 0, PI2); ctx.fill();
+        ctx.save(); ctx.globalAlpha = 0.1;
+        for (var i = 0; i < 12; i++) {
+          var a = (i / 12) * PI2;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(a) * Rc * 0.3, cy + Math.sin(a) * Rc * 0.3);
+          ctx.lineTo(cx + Math.cos(a) * R5 * 0.65, cy + Math.sin(a) * R5 * 0.65);
+          ctx.strokeStyle = gold + '0.5)'; ctx.lineWidth = 1; ctx.stroke();
+        }
+        ctx.restore();
+
+        // 13. Outer haze
+        var haze = ctx.createRadialGradient(cx, cy, R1, cx, cy, s * 0.52);
+        haze.addColorStop(0, violet + '0.04)');
+        haze.addColorStop(0.5, cyan + '0.015)');
+        haze.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = haze; ctx.fillRect(0, 0, s, s);
+
+        return new THREE.CanvasTexture(cv);
+      }
+
+      // Inner Nakshatra accent ring texture
+      function makeInnerRingTex() {
+        var s = 512;
+        var cv = document.createElement('canvas');
+        cv.width = s; cv.height = s;
+        var ctx = cv.getContext('2d');
+        var cx = s / 2, cy = s / 2;
+        var PI2 = Math.PI * 2;
+        ctx.clearRect(0, 0, s, s);
+        var gold = 'rgba(255,184,0,', violet = 'rgba(147,51,234,', lavend = 'rgba(180,122,255,', white = 'rgba(255,255,255,';
+        var R = s * 0.44, Ri = s * 0.32, Rc = s * 0.18;
+        // Outer dashed ring
+        ctx.save(); ctx.shadowColor = gold + '0.6)'; ctx.shadowBlur = 18; ctx.setLineDash([5, 9]);
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, PI2);
+        ctx.strokeStyle = gold + '0.45)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
+        // Inner dashed ring
+        ctx.save(); ctx.shadowColor = violet + '0.5)'; ctx.shadowBlur = 12; ctx.setLineDash([3, 12]);
+        ctx.beginPath(); ctx.arc(cx, cy, Ri, 0, PI2);
+        ctx.strokeStyle = lavend + '0.35)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+        // Innermost ring
+        ctx.beginPath(); ctx.arc(cx, cy, Rc, 0, PI2);
+        ctx.strokeStyle = white + '0.08)'; ctx.lineWidth = 0.5; ctx.stroke();
+        // 27 Nakshatra ticks
+        for (var i = 0; i < 27; i++) {
+          var a = (i / 27) * PI2;
+          var isMain = (i % 3 === 0);
+          var tickIn = isMain ? R * 0.88 : R * 0.94;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(a) * tickIn, cy + Math.sin(a) * tickIn);
+          ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+          ctx.strokeStyle = isMain ? gold + '0.3)' : lavend + '0.12)';
+          ctx.lineWidth = isMain ? 0.7 : 0.3; ctx.stroke();
+        }
+        // Dots on outer
+        for (var i = 0; i < 54; i++) {
+          var a = (i / 54) * PI2;
+          var big = (i % 6 === 0);
+          ctx.beginPath(); ctx.arc(cx + Math.cos(a) * R, cy + Math.sin(a) * R, big ? 2.5 : 0.9, 0, PI2);
+          ctx.fillStyle = big ? gold + '0.55)' : lavend + '0.25)'; ctx.fill();
+        }
+        // Centre glow
+        var cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Rc);
+        cg.addColorStop(0, gold + '0.15)'); cg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, Rc, 0, PI2); ctx.fill();
+        return new THREE.CanvasTexture(cv);
+      }
+
+      // Create the 3D chakra meshes
+      var chakraTex = makeRashiChakraTex();
+      var innerTex = makeInnerRingTex();
+      // Size — subtle accent, not dominating the scene
+      var chakraSize = W < 768 ? 55 : 50;
+      // Initial Y — will be overridden by logo anchor from onboarding
+      var chakraY = W < H ? 20 : 14;
+      // Half visible height in 3D units: tan(FOV/2) * distance-to-chakra
+      // Camera at z=100, chakra at z=-5, so dist=105
+      var halfVisH = Math.tan((55 / 2) * Math.PI / 180) * 105;
+      var currentChakraY = chakraY; // smooth lerp target
+
+      var rashiChakra = new THREE.Mesh(
+        new THREE.PlaneGeometry(chakraSize, chakraSize),
+        new THREE.MeshBasicMaterial({
+          map: chakraTex, side: THREE.DoubleSide,
+          transparent: true, opacity: 0.35,
+          depthWrite: false, blending: THREE.AdditiveBlending
+        })
+      );
+      rashiChakra.position.set(0, chakraY, -5);
+      rashiChakra.rotation.x = 0.1;
+      scene.add(rashiChakra);
+
+      // Inner accent ring — counter-rotates
+      var innerRingSize = chakraSize * 0.55;
+      var rashiInner = new THREE.Mesh(
+        new THREE.PlaneGeometry(innerRingSize, innerRingSize),
+        new THREE.MeshBasicMaterial({
+          map: innerTex, side: THREE.DoubleSide,
+          transparent: true, opacity: 0.25,
+          depthWrite: false, blending: THREE.AdditiveBlending
+        })
+      );
+      rashiInner.position.set(0, chakraY, -3);
+      rashiInner.rotation.x = 0.1;
+      scene.add(rashiInner);
+
+      // Orbiting particles around the chakra
+      function createChakraParticles() {
+        var count = W < 768 ? 60 : 150;
+        var gp = new THREE.BufferGeometry();
+        var pos = new Float32Array(count * 3);
+        var cols = new Float32Array(count * 3);
+        var sizes = new Float32Array(count);
+        var orbitR = chakraSize * 0.55;
+        for (var i = 0; i < count; i++) {
+          var ang = (i / count) * Math.PI * 2;
+          var rr = orbitR + (Math.random() - 0.5) * orbitR * 0.3;
+          pos[i * 3] = Math.cos(ang) * rr;
+          pos[i * 3 + 1] = Math.sin(ang) * rr;
+          pos[i * 3 + 2] = -7 + (Math.random() - 0.5) * 6;
+          var pick = Math.random();
+          if (pick < 0.4) { cols[i*3]=1; cols[i*3+1]=0.72; cols[i*3+2]=0; }
+          else if (pick < 0.7) { cols[i*3]=0.7; cols[i*3+1]=0.48; cols[i*3+2]=1; }
+          else { cols[i*3]=0.3; cols[i*3+1]=0.78; cols[i*3+2]=1; }
+          sizes[i] = 1 + Math.random() * 3;
+        }
+        gp.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        gp.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+        gp.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+        var mp = new THREE.ShaderMaterial({
+          uniforms: { time: { value: 0 }, pr: { value: renderer.getPixelRatio() } },
+          vertexShader:
+            'attribute float size; attribute vec3 color; varying vec3 vc; varying float va; uniform float time, pr;\n' +
+            'void main(){ vc = color;\n' +
+            '  float idx = float(gl_VertexID);\n' +
+            '  float tw = sin(time * 2.0 + idx * 0.5) * 0.4 + 0.6;\n' +
+            '  va = tw;\n' +
+            '  vec4 mv = modelViewMatrix * vec4(position, 1.0);\n' +
+            '  gl_PointSize = size * pr * tw * (100.0 / -mv.z);\n' +
+            '  gl_Position = projectionMatrix * mv; }',
+          fragmentShader:
+            'varying vec3 vc; varying float va;\n' +
+            'void main(){ float d = length(gl_PointCoord - 0.5);\n' +
+            '  if(d > 0.5) discard;\n' +
+            '  float a = smoothstep(0.5, 0.0, d) * va;\n' +
+            '  float glow = exp(-d * d * 6.0) * 0.5;\n' +
+            '  gl_FragColor = vec4(vc, a * 0.7 + glow); }',
+          transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        });
+        return new THREE.Points(gp, mp);
+      }
+
+      var chakraParticles = createChakraParticles();
+      scene.add(chakraParticles);
+
+      // ── NEBULA SPRITES ─────────────────────────────────────────
+      function makeNebulaTex(r, g, b) {
+        var sz = 256;
+        var cv = document.createElement('canvas');
+        cv.width = sz; cv.height = sz;
+        var ctx = cv.getContext('2d');
+        var grad = ctx.createRadialGradient(sz/2, sz/2, 0, sz/2, sz/2, sz/2);
+        grad.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',0.3)');
+        grad.addColorStop(0.3, 'rgba(' + r + ',' + g + ',' + b + ',0.15)');
+        grad.addColorStop(0.6, 'rgba(' + r + ',' + g + ',' + b + ',0.05)');
+        grad.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, sz, sz);
+        return new THREE.CanvasTexture(cv);
+      }
+      var nebulaData = [
+        { x: -350, y: 150, z: -500, r: 400, color: [147, 51, 234] },
+        { x: 350, y: -100, z: -600, r: 350, color: [255, 184, 0] },
+        { x: 0, y: -250, z: -550, r: 500, color: [76, 201, 240] },
+        { x: -400, y: -180, z: -450, r: 300, color: [255, 107, 157] },
+      ];
+      var nebulaSprites = [];
+      for (var ni = 0; ni < nebulaData.length; ni++) {
+        var nd = nebulaData[ni];
+        var tex = makeNebulaTex(nd.color[0], nd.color[1], nd.color[2]);
+        var spMat = new THREE.SpriteMaterial({ map: tex, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.8 });
+        var sp = new THREE.Sprite(spMat);
+        sp.position.set(nd.x, nd.y, nd.z);
+        sp.scale.set(nd.r, nd.r, 1);
+        sp.userData = { ox: nd.x, oy: nd.y, speed: 0.0003 + Math.random() * 0.0002, offset: ni * 1.5 };
+        nebulaSprites.push(sp);
+        scene.add(sp);
+      }
+
+      // ── AURORA WAVES — exact website cosmos3d.js implementation ─────
+      function createAuroraWaves() {
+        var auroraVert =
+          'uniform float time;\n' +
+          'uniform float speed;\n' +
+          'uniform float waveFreq;\n' +
+          'varying vec2 vUv;\n' +
+          'varying float vDisplace;\n' +
+          'void main() {\n' +
+          '  vUv = uv;\n' +
+          '  vec3 pos = position;\n' +
+          '  float t = time * speed;\n' +
+          '  float w1 = sin(pos.x * 0.008 * waveFreq + t * 0.7) * 12.0;\n' +
+          '  float w2 = sin(pos.x * 0.015 * waveFreq - t * 0.4) * 8.0;\n' +
+          '  float w3 = cos(pos.x * 0.005 * waveFreq + t * 0.25) * 15.0;\n' +
+          '  float w4 = sin(pos.x * 0.025 * waveFreq + pos.y * 0.01 + t * 1.1) * 5.0;\n' +
+          '  pos.y += w1 + w2 + w3 + w4;\n' +
+          '  pos.z += sin(pos.x * 0.01 + t * 0.5) * 8.0 + cos(pos.y * 0.02 + t * 0.3) * 5.0;\n' +
+          '  vDisplace = (w1 + w2 + w3 + w4) / 40.0;\n' +
+          '  gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);\n' +
+          '}\n';
+
+        var auroraFrag =
+          'uniform float time;\n' +
+          'uniform vec3 color1;\n' +
+          'uniform vec3 color2;\n' +
+          'uniform vec3 color3;\n' +
+          'uniform float opacity;\n' +
+          'uniform float speed;\n' +
+          'uniform float waveFreq;\n' +
+          'uniform float intensity;\n' +
+          'varying vec2 vUv;\n' +
+          'varying float vDisplace;\n' +
+          'float hash(vec2 p) {\n' +
+          '  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);\n' +
+          '}\n' +
+          'float vnoise(vec2 p) {\n' +
+          '  vec2 i = floor(p); vec2 f = fract(p);\n' +
+          '  f = f * f * (3.0 - 2.0 * f);\n' +
+          '  float a = hash(i); float b = hash(i + vec2(1.0, 0.0));\n' +
+          '  float c = hash(i + vec2(0.0, 1.0)); float d = hash(i + vec2(1.0, 1.0));\n' +
+          '  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);\n' +
+          '}\n' +
+          'float fbm(vec2 p) {\n' +
+          '  float v = 0.0; float a = 0.5; float f = 1.0;\n' +
+          '  for (int i = 0; i < 5; i++) { v += a * vnoise(p * f); a *= 0.48; f *= 2.05; }\n' +
+          '  return v;\n' +
+          '}\n' +
+          'float turbulence(vec2 p) {\n' +
+          '  float v = 0.0;\n' +
+          '  v += abs(vnoise(p) - 0.5) * 2.0;\n' +
+          '  v += abs(vnoise(p * 2.1) - 0.5) * 1.0;\n' +
+          '  v += abs(vnoise(p * 4.3) - 0.5) * 0.5;\n' +
+          '  v += abs(vnoise(p * 8.7) - 0.5) * 0.25;\n' +
+          '  return v / 3.75;\n' +
+          '}\n' +
+          'void main() {\n' +
+          '  vec2 uv = vUv;\n' +
+          '  float t = time * speed;\n' +
+          '  vec2 q = vec2(fbm(uv * 3.0 + vec2(t * 0.3, 0.0)),\n' +
+          '               fbm(uv * 3.0 + vec2(0.0, t * 0.2)));\n' +
+          '  vec2 r = vec2(fbm(uv * 3.0 + q * 4.0 + vec2(t * 0.1, t * 0.15)),\n' +
+          '               fbm(uv * 3.0 + q * 4.0 + vec2(t * 0.2, -t * 0.1)));\n' +
+          '  float domainWarp = fbm(uv * 3.0 + r * 2.0);\n' +
+          '  float wave1 = sin(uv.x * waveFreq + t * 0.8) * 0.18;\n' +
+          '  float wave2 = sin(uv.x * waveFreq * 1.7 - t * 0.5) * 0.12;\n' +
+          '  float wave3 = cos(uv.x * waveFreq * 0.5 + t * 0.3) * 0.14;\n' +
+          '  float wave4 = sin(uv.x * waveFreq * 3.2 + t * 1.4) * 0.06;\n' +
+          '  float waveY = uv.y + wave1 + wave2 + wave3 + wave4;\n' +
+          '  float n1 = fbm(vec2(uv.x * 4.0 + t * 0.5, waveY * 2.5 - t * 0.25));\n' +
+          '  float n2 = fbm(vec2(uv.x * 2.5 - t * 0.35, waveY * 3.5 + t * 0.18));\n' +
+          '  float turb = turbulence(vec2(uv.x * 2.0 + t * 0.15, waveY * 1.5));\n' +
+          '  float noiseMix = n1 * 0.4 + n2 * 0.3 + domainWarp * 0.3;\n' +
+          '  float vertFade = smoothstep(0.0, 0.25, uv.y) * smoothstep(1.0, 0.45, uv.y);\n' +
+          '  float topGlow = smoothstep(0.5, 1.0, uv.y) * 0.7;\n' +
+          '  float energyPulse = sin(t * 1.5 + uv.x * 6.0) * 0.5 + 0.5;\n' +
+          '  topGlow *= (0.7 + 0.3 * energyPulse);\n' +
+          '  float hFade = smoothstep(0.0, 0.12, uv.x) * smoothstep(1.0, 0.88, uv.x);\n' +
+          '  float colorPos = uv.x + noiseMix * 0.35 + sin(t * 0.2) * 0.18;\n' +
+          '  vec3 col;\n' +
+          '  if (colorPos < 0.5) { col = mix(color1, color2, colorPos * 2.0); }\n' +
+          '  else { col = mix(color2, color3, (colorPos - 0.5) * 2.0); }\n' +
+          '  float fieldLines = pow(abs(sin(uv.x * 50.0 + turb * 8.0 + t * 0.8)), 12.0);\n' +
+          '  fieldLines += pow(abs(sin(uv.x * 35.0 - turb * 6.0 + t * 0.5)), 10.0) * 0.5;\n' +
+          '  fieldLines *= vertFade * 0.4;\n' +
+          '  float rays = pow(noiseMix, 1.3) * 1.4;\n' +
+          '  float shimmer = sin(uv.x * 45.0 + t * 2.5) * 0.5 + 0.5;\n' +
+          '  shimmer *= sin(uv.x * 28.0 - t * 1.8) * 0.5 + 0.5;\n' +
+          '  rays += shimmer * 0.2 * vertFade;\n' +
+          '  float displaceGlow = abs(vDisplace) * 0.6;\n' +
+          '  float alpha = (rays + topGlow + fieldLines + displaceGlow) * vertFade * hFade * opacity * intensity;\n' +
+          '  alpha *= noiseMix * 1.6;\n' +
+          '  alpha = clamp(alpha, 0.0, 1.0);\n' +
+          '  col += vec3(0.15, 0.2, 0.12) * topGlow * noiseMix;\n' +
+          '  col += vec3(0.3, 0.25, 0.1) * fieldLines;\n' +
+          '  col += vec3(0.1) * displaceGlow;\n' +
+          '  gl_FragColor = vec4(col, alpha);\n' +
+          '}\n';
+
+        // Spectacular aurora configs — concentrated at top of viewport
+        var isMob = W < H;
+        // At camera z=100 FOV=55, half-height at z=-180 ≈ tan(27.5°)×280 ≈ 145
+        // Push aurora Y high so they sit in the top 30% of screen
+        var auroraConfigs = [
+          // Main green-teal aurora — wide, brilliant, top
+          {
+            w: isMob ? 900 : 1800, h: isMob ? 200 : 350,
+            x: 0, y: isMob ? 95 : 110, z: -180,
+            rotX: 0.12, rotZ: 0.05,
+            color1: [0.15, 1.0, 0.5], color2: [0.08, 0.85, 0.95], color3: [0.3, 0.4, 1.0],
+            opacity: isMob ? 0.38 : 0.48,
+            speed: 0.22, waveFreq: 4.5, intensity: 1.8, segments: 80,
+          },
+          // Purple-magenta aurora — upper area
+          {
+            w: isMob ? 750 : 1400, h: isMob ? 160 : 280,
+            x: isMob ? -50 : -80, y: isMob ? 70 : 80, z: -260,
+            rotX: 0.10, rotZ: -0.08,
+            color1: [0.6, 0.1, 0.95], color2: [0.95, 0.2, 0.65], color3: [0.3, 0.1, 1.0],
+            opacity: isMob ? 0.28 : 0.38,
+            speed: 0.16, waveFreq: 3.8, intensity: 1.6, segments: 64,
+          },
+          // Golden-emerald aurora — top sweep
+          {
+            w: isMob ? 1000 : 1900, h: isMob ? 150 : 260,
+            x: isMob ? 30 : 60, y: isMob ? 120 : 140, z: -350,
+            rotX: -0.06, rotZ: 0.10,
+            color1: [1.0, 0.8, 0.2], color2: [0.4, 0.9, 0.55], color3: [0.2, 0.6, 1.0],
+            opacity: isMob ? 0.22 : 0.32,
+            speed: 0.14, waveFreq: 3.2, intensity: 1.5, segments: 64,
+          },
+          // Cyan-violet accent — top-right
+          {
+            w: isMob ? 650 : 1300, h: isMob ? 120 : 200,
+            x: isMob ? 70 : 140, y: isMob ? 85 : 95, z: -300,
+            rotX: 0.08, rotZ: 0.15,
+            color1: [0.15, 0.9, 1.0], color2: [0.25, 0.55, 1.0], color3: [0.65, 0.25, 0.9],
+            opacity: isMob ? 0.18 : 0.26,
+            speed: 0.15, waveFreq: 5.0, intensity: 1.4, segments: 48,
+          },
+        ];
+
+        var meshes = [];
+        auroraConfigs.forEach(function (cfg) {
+          var segs = cfg.segments || 32;
+          var geo = new THREE.PlaneGeometry(cfg.w, cfg.h, segs, Math.max(1, Math.floor(segs / 4)));
+          var mat = new THREE.ShaderMaterial({
+            uniforms: {
+              time:      { value: 0 },
+              color1:    { value: new THREE.Vector3(cfg.color1[0], cfg.color1[1], cfg.color1[2]) },
+              color2:    { value: new THREE.Vector3(cfg.color2[0], cfg.color2[1], cfg.color2[2]) },
+              color3:    { value: new THREE.Vector3(cfg.color3[0], cfg.color3[1], cfg.color3[2]) },
+              opacity:   { value: cfg.opacity },
+              speed:     { value: cfg.speed },
+              waveFreq:  { value: cfg.waveFreq },
+              intensity: { value: cfg.intensity || 1.0 },
+            },
+            vertexShader: auroraVert,
+            fragmentShader: auroraFrag,
+            transparent: true, depthWrite: false,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+          });
+          var mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(cfg.x, cfg.y, cfg.z);
+          mesh.rotation.x = cfg.rotX;
+          mesh.rotation.z = cfg.rotZ;
+          mesh.userData.baseX = cfg.x;
+          mesh.userData.baseY = cfg.y;
+          mesh.userData.baseIntensity = cfg.intensity || 1.0;
+          mesh.userData.baseColors = [cfg.color1.slice(), cfg.color2.slice(), cfg.color3.slice()];
+          meshes.push(mesh);
+          scene.add(mesh);
+        });
+        return meshes;
+      }
+
+      var auroraMeshes = createAuroraWaves();
+
+      // Reusable objects for aurora color cycling (avoid GC in animation loop)
+      var _tmpCol = new THREE.Color();
+      var _tmpHsl = { h: 0, s: 0, l: 0 };
+
+      // ── 3D RENDER LOOP ─────────────────────────────────────────
+      function animate() {
+        raf = requestAnimationFrame(animate);
+        var now = performance.now() * 0.001;
+        var dt = now - _prevTime;
+        _prevTime = now;
+        var t = now - _startTime;
+
+        // Update milky way — group with 3 layers
+        milkyWay.rotation.z = 0.4 + t * 0.001;
+        for (var mi = 0; mi < milkyWay.children.length; mi++) {
+          milkyWay.children[mi].material.uniforms.time.value = t;
+        }
+
+        // Rashi Chakra — track logo anchor position + slow rotation + breathing
+        if (_logoScreenY >= 0) {
+          // Convert screen Y (pixels from top) to 3D Y
+          // Screen top = +halfVisH, screen bottom = -halfVisH
+          var normalizedY = 1.0 - (_logoScreenY / H); // 0=bottom, 1=top
+          chakraY = (normalizedY - 0.5) * 2.0 * halfVisH;
+        }
+        // Smooth lerp toward target
+        currentChakraY += (chakraY - currentChakraY) * 0.08;
+        rashiChakra.position.y = currentChakraY;
+        rashiInner.position.y = currentChakraY;
+        rashiChakra.rotation.z = t * 0.04;
+        rashiChakra.material.opacity = 0.3 + Math.sin(t * 0.5) * 0.08;
+        rashiInner.rotation.z = -t * 0.08;
+        rashiInner.material.opacity = 0.2 + Math.sin(t * 0.7) * 0.06;
+
+        // Chakra orbiting particles
+        chakraParticles.position.x = rashiChakra.position.x;
+        chakraParticles.position.y = rashiChakra.position.y;
+        chakraParticles.position.z = rashiChakra.position.z - 2;
+        chakraParticles.rotation.z = t * 0.15;
+        chakraParticles.material.uniforms.time.value = t;
+
+        // Update nebula drift
+        for (var ni = 0; ni < nebulaSprites.length; ni++) {
+          var sp = nebulaSprites[ni];
+          sp.position.x = sp.userData.ox + Math.sin(t * sp.userData.speed * 1000 + sp.userData.offset) * 40;
+          sp.position.y = sp.userData.oy + Math.cos(t * sp.userData.speed * 700 + sp.userData.offset) * 30;
+        }
+
+        // Update aurora — website-exact drift, intensity, color cycling
+        for (var ai = 0; ai < auroraMeshes.length; ai++) {
+          var a = auroraMeshes[ai];
+          a.material.uniforms.time.value = t;
+
+          // Sinusoidal drift with varying speeds (exact website code)
+          var driftX = Math.sin(t * 0.06 + ai * 2.0) * 25 + Math.cos(t * 0.03 + ai) * 10;
+          var driftY = Math.sin(t * 0.04 + ai * 1.5) * 8;
+          a.position.y = a.userData.baseY + driftY;
+          a.position.x = a.userData.baseX + driftX;
+
+          // Gentle rotation oscillation for organic feel
+          a.rotation.z += Math.sin(t * 0.02 + ai * 0.7) * 0.00008;
+
+          // Intensity (no scroll on mobile app — always full)
+          a.material.uniforms.intensity.value = a.userData.baseIntensity || 1.0;
+
+          // Slow color cycling (exact website code)
+          if (a.userData.baseColors) {
+            var hueShift = Math.sin(t * 0.012 + ai * 1.5) * 0.22;
+            for (var ci = 0; ci < 3; ci++) {
+              var bc = a.userData.baseColors[ci];
+              _tmpCol.setRGB(bc[0], bc[1], bc[2]);
+              _tmpCol.getHSL(_tmpHsl);
+              _tmpCol.setHSL((_tmpHsl.h + hueShift + 1.0) % 1.0, Math.min(1.0, _tmpHsl.s * 1.1), _tmpHsl.l);
+              var uName = ci === 0 ? 'color1' : ci === 1 ? 'color2' : 'color3';
+              a.material.uniforms[uName].value.set(_tmpCol.r, _tmpCol.g, _tmpCol.b);
+            }
+          }
+        }
+
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      // ── RESIZE HANDLER ─────────────────────────────────────────
+      var resizeTimer;
+      function onResize() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+          var parent = container;
+          W = (parent && parent.offsetWidth > 0) ? parent.offsetWidth : window.innerWidth;
+          H = (parent && parent.offsetHeight > 0) ? parent.offsetHeight : window.innerHeight;
+          camera.aspect = W / H;
+          camera.updateProjectionMatrix();
+          renderer.setSize(W, H);
+        }, 200);
+      }
+      window.addEventListener('resize', onResize);
+
+      // Cleanup stored for return
+      container._cosmosCleanup = function () {
+        clearTimeout(resizeTimer);
+        cancelAnimationFrame(raf);
+        window.removeEventListener('resize', onResize);
+        renderer.dispose();
+        if (renderer.domElement && renderer.domElement.parentNode) {
+          renderer.domElement.parentNode.removeChild(renderer.domElement);
+        }
+      };
+
+    }).catch(function(err) {
+      // Three.js failed to load — fall back to simple dark background
+      console.warn('CosmicBackground: Three.js failed, falling back', err);
+    });
+
+    return function () {
+      if (container && container._cosmosCleanup) {
+        container._cosmosCleanup();
+      }
+    };
+  }, []);
+
+  return React.createElement('div', {
+    ref: containerRef,
+    style: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden', background: '#04030C' },
+  });
+}
+
+export default function CosmicBackground({ children, showScrollHint, variant }) {
+  var isWeb = Platform.OS === 'web';
+  var theme = VARIANT_THEMES[variant] || VARIANT_THEMES.default;
+
+  // Memoize blob configs to avoid re-creating on every render
+  var blobs = useMemo(function () { return theme.blobs || []; }, [variant]);
+  var corners = useMemo(function () { return theme.cornerGlows || []; }, [variant]);
+  var primary = theme.primaryGradient;
+  var edge = theme.edgeGlow;
+
+  return (
+    <View style={styles.container}>
+      {/* Base layer — WebGL on web, dark fallback on native */}
+      {isWeb
+        ? React.createElement(WebCanvas, null)
+        : <View style={styles.nativeBg} />
+      }
+
+      {/* ═══ VARIANT ATMOSPHERE LAYERS ═══ */}
+
+      {/* 1. Primary atmosphere gradient — THE main visual differentiator per page */}
+      {primary ? (
+        <LinearGradient
+          colors={primary.colors}
+          locations={primary.locations}
+          style={StyleSheet.absoluteFill}
+          start={primary.start}
+          end={primary.end}
+          pointerEvents="none"
+        />
+      ) : null}
+
+      {/* 2. Corner glow spots — large radial accents anchored to corners */}
+      <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
+        {corners.map(function (c, i) {
+          return (
+            <CornerGlow
+              key={variant + '-corner-' + i}
+              color={c.color}
+              position={c.position}
+            />
+          );
+        })}
+      </View>
+
+      {/* 3. Animated nebula blobs — variant-specific cosmic clouds */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        {blobs.map(function (b, i) {
+          return (
+            <NebulaBlob
+              key={variant + '-blob-' + i}
+              color={b.color}
+              x={b.x}
+              y={b.y}
+              size={b.size}
+              speed={b.speed}
+              index={i}
+            />
+          );
+        })}
+      </View>
+
+      {/* 4. Top edge glow — colored light from above */}
+      {edge ? (
+        <LinearGradient
+          colors={[edge.top, 'transparent']}
+          style={styles.edgeTop}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          pointerEvents="none"
+        />
+      ) : null}
+
+      {/* 5. Bottom edge glow */}
+      {edge ? (
+        <LinearGradient
+          colors={['transparent', edge.bottom]}
+          style={styles.edgeBottom}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          pointerEvents="none"
+        />
+      ) : null}
+
+      {/* 6. Subtle dark vignette for text readability */}
+      <LinearGradient
+        colors={['rgba(4,3,12,0.20)', 'rgba(4,3,12,0.05)', 'rgba(4,3,12,0.05)', 'rgba(4,3,12,0.25)']}
+        locations={[0, 0.3, 0.7, 1]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        pointerEvents="none"
+      />
+
+      {/* Content */}
+      <View style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}>
+        {children}
+      </View>
+    </View>
+  );
+}
+
+var styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#04030C', overflow: 'hidden' },
+  nativeBg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#04030C' },
+  edgeTop: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: 180,
+  },
+  edgeBottom: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 120,
+  },
+});

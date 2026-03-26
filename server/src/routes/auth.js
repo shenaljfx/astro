@@ -2,20 +2,18 @@
  * Auth Routes — Phone OTP Login + Subscription Management (PayHere)
  * 
  * Endpoints:
- * - POST /api/auth/send-otp        — Send OTP to phone number
+ * - POST /api/auth/send-otp        — Send OTP to phone number (via Ideamart OTP API)
  * - POST /api/auth/verify-otp      — Verify OTP and login/register
- * - POST /api/auth/subscribe       — (Legacy) Redirects to PayHere flow
  * - POST /api/auth/unsubscribe     — Cancel subscription
  * - GET  /api/auth/subscription    — Check subscription status
  * 
- * Payment is now handled by PayHere via /api/payhere/* routes.
- * This file only handles OTP authentication.
+ * Payment is handled by PayHere via /api/payhere/* routes (card/bank).
+ * Ideamart is used only for phone OTP verification, not for billing.
  */
 
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
 const {
   sendOtp,
   verifyOtp,
@@ -87,7 +85,7 @@ async function findUserByPhone(phone) {
   return null;
 }
 
-async function createPhoneUser(phone, subscriberId) {
+async function createPhoneUser(phone) {
   const db = getDb();
   const normalized = normalizePhone(phone);
   const uid = 'phone_' + normalized;
@@ -95,7 +93,6 @@ async function createPhoneUser(phone, subscriberId) {
   const userData = {
     uid,
     phone: normalized,
-    subscriberId: subscriberId || null, // Legacy Ideamart field, kept for compat
     displayName: 'Cosmic Seeker',
     email: null,
     photoURL: null,
@@ -190,12 +187,10 @@ router.post('/send-otp', async (req, res) => {
       return res.json(response);
     }
 
-    // Handle "already registered" — user can still login
+    // Handle "already registered" phone number
     if (result.alreadyRegistered) {
-      // For already registered users, we still need to send OTP
-      // This might mean the user is already subscribed via Ideamart
       return res.status(409).json({
-        error: 'Phone number already registered with carrier',
+        error: 'Phone number already registered',
         statusCode: result.statusCode,
         canLogin: true,
       });
@@ -242,18 +237,9 @@ router.post('/verify-otp', async (req, res) => {
 
     if (!user) {
       // New user — create profile
-      user = await createPhoneUser(normalized, result.subscriberId);
+      user = await createPhoneUser(normalized);
       isNewUser = true;
       console.log(`🆕 New phone user created: ${normalized}`);
-    } else {
-      // Update subscriberId if changed
-      const db = getDb();
-      if (db && result.subscriberId) {
-        await db.collection(COLLECTIONS.USERS).doc(user.uid).update({
-          subscriberId: result.subscriberId,
-          updatedAt: new Date().toISOString(),
-        });
-      }
     }
 
     // Generate JWT token
@@ -279,31 +265,6 @@ router.post('/verify-otp', async (req, res) => {
   } catch (err) {
     console.error('Verify OTP error:', err);
     res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * POST /api/auth/subscribe
- * Legacy endpoint — redirects to PayHere subscription flow.
- * The actual subscription is handled by /api/payhere/initiate-subscription
- * Headers: Authorization: Bearer <jwt>
- */
-router.post('/subscribe', async (req, res) => {
-  try {
-    const decoded = extractUser(req);
-    if (!decoded) return res.status(401).json({ error: 'Authentication required' });
-
-    // Direct the client to use the PayHere flow instead
-    res.json({
-      success: false,
-      usePayHere: true,
-      message: 'Please use the PayHere payment flow. Call POST /api/payhere/initiate-subscription to start.',
-      monthlyRate: MONTHLY_AMOUNT,
-      currency: 'LKR',
-    });
-  } catch (err) {
-    console.error('Subscribe error:', err);
-    res.status(500).json({ error: 'Subscription failed' });
   }
 });
 
@@ -377,29 +338,6 @@ router.get('/subscription', async (req, res) => {
   } catch (err) {
     console.error('Subscription check error:', err);
     res.status(500).json({ error: 'Failed to check subscription' });
-  }
-});
-
-/**
- * POST /api/auth/renew
- * Legacy endpoint — PayHere handles auto-renewal via recurring billing.
- * If subscription expired, user should re-subscribe via PayHere.
- */
-router.post('/renew', async (req, res) => {
-  try {
-    const decoded = extractUser(req);
-    if (!decoded) return res.status(401).json({ error: 'Authentication required' });
-
-    // PayHere auto-renews monthly — user should not need to manually renew
-    res.json({
-      success: false,
-      usePayHere: true,
-      message: 'Subscriptions auto-renew monthly via PayHere. If expired, please re-subscribe.',
-      monthlyRate: MONTHLY_AMOUNT,
-    });
-  } catch (err) {
-    console.error('Renew error:', err);
-    res.status(500).json({ error: 'Renewal failed' });
   }
 });
 
