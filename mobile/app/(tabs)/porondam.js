@@ -185,7 +185,7 @@ var L = {
     checkBtn: '\uD83D\uDC8D Check Compatibility',
     brideChart: "Bride's Kendara", groomChart: "Groom's Kendara",
     factors: 'Compatibility Factors', factorsSub: '7 Factors \u00B7 20 Points',
-    doshas: 'Doshas', report: 'AI Astrologer Report',
+    doshas: 'Doshas', report: 'Astrology Report',
     reportQ: 'Get detailed analysis in:',
     si: '\u0DC3\u0DD2\u0D82\u0DC4\u0DBD', en: 'English',
     generating: 'Writing your report...', shareBtn: 'Share',
@@ -222,7 +222,7 @@ var L = {
     checkBtn: '\uD83D\uDC8D \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1',
     brideChart: '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA\u0D9C\u0DDA \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA', groomChart: '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF\u0D9C\u0DDA \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA',
     factors: '\u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DC3\u0DCF\u0DB0\u0D9A', factorsSub: '\u0DC3\u0DCF\u0DB0\u0D9A 7 \u00B7 \u0DBD\u0D9A\u0DD4\u0DAB\u0DD4 20',
-    doshas: '\u0DAF\u0DDD\u0DC2', report: 'AI \u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0',
+    doshas: '\u0DAF\u0DDD\u0DC2', report: '\u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0',
     reportQ: '\u0DC3\u0DC0\u0DD2\u0DC3\u0DCA\u0DAD\u0DBB \u0DC0\u0DD2\u0DC1\u0DCA\u0DBD\u0DDA\u0DC2\u0DAB\u0DBA:',
     si: '\u0DC3\u0DD2\u0D82\u0DC4\u0DBD', en: 'English',
     generating: '\u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0 \u0DBD\u0DD2\u0DBA\u0DB8\u0DD2\u0DB1\u0DCA...', shareBtn: '\u0DBA\u0DC0\u0DB1\u0DCA\u0DB1',
@@ -570,8 +570,8 @@ export default function PorondamScreen() {
         + '<div class="end-tag">' + (isSi ? 'ඔබේ ජීවිතයේ තරු බලන්න' : 'Read the Stars of Your Life') + '</div>'
         + '<div class="end-url">www.grahachara.lk</div>'
         + '<div class="end-disc">' + (isSi
-          ? 'මෙම වාර්තාව AI සහ සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වේ. මෙය දැනගැනීම් සඳහා පමණි.'
-          : 'This report is AI-powered and based on traditional Vedic astrology. For informational purposes only.')
+          ? 'මෙම වාර්තාව සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වේ. මෙය දැනගැනීම් සඳහා පමණි.'
+          : 'This report is based on traditional Vedic astrology. For informational purposes only.')
         + '</div>'
         + '</div>'
         + '</body></html>';
@@ -782,7 +782,7 @@ export default function PorondamScreen() {
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                 <Text style={[sty.doshaName, { fontSize: 13, marginBottom: 0 }, d.cancelled && { textDecorationLine: 'line-through', color: 'rgba(255,255,255,0.3)' }]}>{d.name}</Text>
                                 <View style={{ backgroundColor: col + '25', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                                  <Text style={{ color: col, fontSize: 8, fontWeight: '800' }}>{d.cancelled ? 'CANCELLED' : d.severity}</Text>
+                                  <Text style={{ color: col, fontSize: 8, fontWeight: '800' }}>{d.cancelled ? (language === 'si' ? 'නිවාරණය' : 'CANCELLED') : (language === 'si' ? (d.severity === 'Severe' ? 'දරුණු' : d.severity === 'Moderate' ? 'මධ්‍යම' : 'සුළු') : d.severity)}</Text>
                                 </View>
                               </View>
                               <Text style={sty.doshaDesc}>{d.description}</Text>
@@ -818,7 +818,7 @@ export default function PorondamScreen() {
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                 <Text style={[sty.doshaName, { fontSize: 13, marginBottom: 0 }, d.cancelled && { textDecorationLine: 'line-through', color: 'rgba(255,255,255,0.3)' }]}>{d.name}</Text>
                                 <View style={{ backgroundColor: col + '25', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                                  <Text style={{ color: col, fontSize: 8, fontWeight: '800' }}>{d.cancelled ? 'CANCELLED' : d.severity}</Text>
+                                  <Text style={{ color: col, fontSize: 8, fontWeight: '800' }}>{d.cancelled ? (language === 'si' ? 'නිවාරණය' : 'CANCELLED') : (language === 'si' ? (d.severity === 'Severe' ? 'දරුණු' : d.severity === 'Moderate' ? 'මධ්‍යම' : 'සුළු') : d.severity)}</Text>
                                 </View>
                               </View>
                               <Text style={sty.doshaDesc}>{d.description}</Text>
@@ -1074,7 +1074,7 @@ export default function PorondamScreen() {
                           </View>
                           {hasDosha && p.mars.cancelled && (
                             <Text style={{ color: '#34d399', fontSize: 10, fontWeight: '700', marginTop: 4, marginLeft: 22 }}>
-                              {language === 'si' ? 'නිවිලා ✅' : 'Cancelled ✅'}
+                              {language === 'si' ? 'නිවාරණය වී ඇත ✅' : 'Cancelled ✅'}
                             </Text>
                           )}
                         </View>
@@ -1236,7 +1236,7 @@ export default function PorondamScreen() {
               {language === 'si' ? '💍 ගැළපුම් වාර්තාව' : '💍 Compatibility Report'}
             </Text>
             <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 22 }}>
-              {language === 'si' ? 'AI ලියන ලද, ගැඹුරු විශ්ලේෂණය' : 'AI-written deep analysis'}
+              {language === 'si' ? 'විස්තරාත්මක ජ්‍යෝතිෂ විශ්ලේෂණය' : 'Detailed astrology analysis'}
             </Text>
             <View style={{ backgroundColor: 'rgba(255,184,0,0.08)', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>

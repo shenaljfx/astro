@@ -7,7 +7,7 @@ const translations = {
   en: {
     // Common
     appName: 'Grahachara',
-    tagline: 'Your Personal AI Astrologer',
+    tagline: 'Your Personal Astrologer',
     loading: 'Loading...',
     readingStars: 'Reading the stars...',
     error: 'Something went wrong',
@@ -27,12 +27,12 @@ const translations = {
     tabHome: 'Today',
     tabPorondam: 'Porondam',
     tabKendara: 'Kendara',
-    tabChat: 'Ask AI',
-    chatTitle: 'AI Astrologer',
+    tabChat: 'Ask',
+    chatTitle: 'Astrologer',
     askUniverse: 'Ask the universe anything...',
     chatPlaceholder: 'Type your question here...',
     consultingCosmos: 'Reading the stars...',
-    initialChat: 'Hi! I\u2019m your AI Astrologer \u2728\nAsk me about your future, love, career or lucky times.',
+    initialChat: 'Hi! I\u2019m your Astrologer \u2728\nAsk me about your future, love, career or lucky times.',
     starsClouded: 'The stars are cloudy right now... try again shortly \u2601\uFE0F',
     cosmosConnectionFailed: 'Connection lost. Please check your internet \uD83D\uDCE1',
     chatLimitTitle: 'Daily Limit Reached',
@@ -373,7 +373,7 @@ const translations = {
   si: {
     // Common
     appName: 'ග්‍රහචාර 🇱🇰',
-    tagline: 'ඔයාගේම AI ජ්‍යෝතිෂවේදියා \uD83D\uDC51',
+    tagline: 'ඔයාගේම ජ්‍යෝතිෂවේදියා \uD83D\uDC51',
     loading: 'පොඩ්ඩක් ඉන්න, ගණනය කරමින්... \uD83C\uDF1F',
     error: 'අවුලක් වුනා',
     retry: 'ආයි බලන්න',
@@ -395,7 +395,7 @@ const translations = {
     tabPorondam: 'පොරොන්දම්',
     tabKendara: 'කේන්දරේ',
     tabChat: 'චැට්',
-    chatTitle: 'AI ජ්‍යෝතිෂ මිතුරිය',
+    chatTitle: 'ජ්‍යෝතිෂ මිතුරිය',
     askUniverse: 'හිතේ තියෙන ඕනම දෙයක් අහන්න...',
     chatPlaceholder: 'ඔයාගේ ප්‍රශ්නය මෙතන ටයිප් කරන්න...',
     consultingCosmos: 'පොඩ්ඩක් ඉන්න, මම තරු බලනවා... \uD83C\uDF1F',

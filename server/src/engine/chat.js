@@ -36,7 +36,9 @@ function buildSystemPrompt(language = 'en') {
     singlish: 'Respond in Singlish (Sinhala words typed in English characters). This is how young Sri Lankans commonly type. Example: "Oyage upan tharuwata adala graha Mars. Eka hinda oyata leadership tika tiyenawa."',
   };
 
-  return `You are "Grahachara", a wise and compassionate AI astrology guide who specializes in Sri Lankan traditions. You combine deep knowledge with a modern, approachable communication style that ANYONE can understand — even people who know nothing about astrology.
+  return `You are "Grahachara", a wise and compassionate astrology guide who specializes in Sri Lankan traditions. You combine deep knowledge with a modern, approachable communication style that ANYONE can understand — even people who know nothing about astrology.
+
+IDENTITY RULE: You are a professional human astrologer, NOT an AI. NEVER mention AI, machine learning, algorithms, language models, or that you are artificial in any way. Speak as a wise, experienced human astrologer would.
 
 CORE KNOWLEDGE (use these concepts internally but NEVER use the technical terms in your responses):
 - Sri Lankan birth chart reading and life predictions
@@ -342,15 +344,13 @@ async function callOpenAI(messages, maxTokens = 4096) {
 }
 
 /**
- * Call Gemini API
+ * Call Gemini API — with retry + exponential backoff
  */
 async function callGemini(messages, maxTokens = 4096, temperature = 0.7) {
   const apiKey = process.env.GEMINI_API_KEY;
-  // Use GEMINI_MODEL env var or default to gemini-2.5-flash
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  // Convert OpenAI format to Gemini format
   const systemInstruction = messages.find(m => m.role === 'system')?.content || '';
   const contents = messages
     .filter(m => m.role !== 'system')
@@ -359,29 +359,62 @@ async function callGemini(messages, maxTokens = 4096, temperature = 0.7) {
       parts: [{ text: m.content }],
     }));
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemInstruction }] },
-      contents,
-      generationConfig: {
-        maxOutputTokens: maxTokens,
-        temperature,
-      },
-    }),
-  });
+  const MAX_RETRIES = 3;
+  const BASE_DELAY = 1500;
+  const TIMEOUT_MS = 90000;
 
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(`Gemini API error: ${data.error.message}`);
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemInstruction }] },
+          contents,
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature,
+          },
+        }),
+      });
+      clearTimeout(timer);
+
+      if (response.status === 429 || response.status >= 500) {
+        const msg = `HTTP ${response.status}`;
+        if (attempt < MAX_RETRIES) {
+          const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 500;
+          console.warn(`[Gemini] ${msg} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+        throw new Error(`Gemini API error: ${msg} after ${MAX_RETRIES} attempts`);
+      }
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(`Gemini API error: ${data.error.message}`);
+      }
+
+      return {
+        text: data.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to generate response.',
+        usage: extractGeminiUsage(data),
+        model,
+      };
+    } catch (err) {
+      const retryable = /fetch failed|AbortError|ECONNRESET|UND_ERR_CONNECT_TIMEOUT/i.test(err.message || '');
+      if (retryable && attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 500;
+        console.warn(`[Gemini] ${err.message} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
   }
-
-  return {
-    text: data.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to generate response.',
-    usage: extractGeminiUsage(data),
-    model,
-  };
 }
 
 /**
@@ -2434,6 +2467,8 @@ Realistic Predictions Window: ${ageContext.currentYear} to ${ageContext.birthYea
 
   const systemPrompt = `You are a precise Vedic astrology data translator for a Sri Lankan astrology app called "Grahachara". Your job is to convert pre-calculated birth chart data into clear, honest, plain-language descriptions. You NEVER invent, guess, or fabricate information. Every statement you write must be directly supported by the engine data provided in the user message.
 
+IDENTITY RULE: You are a professional human astrologer, NOT an AI. NEVER mention AI, machine learning, algorithms, language models, or that you are artificial in any way. Speak as a wise, experienced human astrologer would.
+
 ${nameGreeting}
 ${genderContext}
 ${religionContext}
@@ -2617,8 +2652,7 @@ DEPTH MANDATE — WRITE MORE, NOT LESS (THIS IS A HARD REQUIREMENT):
 }
 
 /**
- * Call Gemini with higher token limit for long narratives
- * Accepts temperature parameter for section-specific tuning
+ * Call Gemini with higher token limit for long narratives — with retry + exponential backoff
  */
 async function callGeminiLong(messages, sectionTemperature = 0.88) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -2633,39 +2667,71 @@ async function callGeminiLong(messages, sectionTemperature = 0.88) {
       parts: [{ text: m.content }],
     }));
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemInstruction }] },
-      contents,
-      generationConfig: {
-        maxOutputTokens: 65536,
-        temperature: sectionTemperature,
-        topP: sectionTemperature > 0.75 ? 0.95 : 0.90,
-      },
-    }),
-  });
+  const MAX_RETRIES = 3;
+  const BASE_DELAY = 2000;
+  const TIMEOUT_MS = 120000;
 
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(`Gemini API error: ${data.error.message}`);
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemInstruction }] },
+          contents,
+          generationConfig: {
+            maxOutputTokens: 65536,
+            temperature: sectionTemperature,
+            topP: sectionTemperature > 0.75 ? 0.95 : 0.90,
+          },
+        }),
+      });
+      clearTimeout(timer);
+
+      if (response.status === 429 || response.status >= 500) {
+        const msg = `HTTP ${response.status}`;
+        if (attempt < MAX_RETRIES) {
+          const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 500;
+          console.warn(`[GeminiLong] ${msg} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+        throw new Error(`Gemini API error: ${msg} after ${MAX_RETRIES} attempts`);
+      }
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(`Gemini API error: ${data.error.message}`);
+      }
+
+      return {
+        text: data.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to generate response.',
+        usage: extractGeminiUsage(data),
+        model,
+      };
+    } catch (err) {
+      const retryable = /fetch failed|AbortError|ECONNRESET|UND_ERR_CONNECT_TIMEOUT/i.test(err.message || '');
+      if (retryable && attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 500;
+        console.warn(`[GeminiLong] ${err.message} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
   }
-
-  return {
-    text: data.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to generate response.',
-    usage: extractGeminiUsage(data),
-    model,
-  };
 }
 
 /**
- * Call Gemini Pro model for hero sections that need deep reasoning
+ * Call Gemini Pro model for hero sections — with retry + exponential backoff
  * Falls back to standard model if GEMINI_PRO_MODEL is not set
  */
 async function callGeminiHero(messages, sectionTemperature = 0.82) {
   const apiKey = process.env.GEMINI_API_KEY;
-  // Use Pro model for hero sections — falls back to standard model if not set
   const proModel = process.env.GEMINI_PRO_MODEL || process.env.GEMINI_MODEL || 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${proModel}:generateContent?key=${apiKey}`;
 
@@ -2677,32 +2743,68 @@ async function callGeminiHero(messages, sectionTemperature = 0.82) {
       parts: [{ text: m.content }],
     }));
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemInstruction }] },
-      contents,
-      generationConfig: {
-        maxOutputTokens: 65536,
-        temperature: sectionTemperature,
-        topP: 0.92,
-      },
-    }),
-  });
+  const MAX_RETRIES = 3;
+  const BASE_DELAY = 2000;
+  const TIMEOUT_MS = 120000;
 
-  const data = await response.json();
-  if (data.error) {
-    // Fall back to standard model on Pro failure
-    console.warn(`[AI Report] Pro model failed (${data.error.message}), falling back to standard model`);
-    return callGeminiLong(messages, sectionTemperature);
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemInstruction }] },
+          contents,
+          generationConfig: {
+            maxOutputTokens: 65536,
+            temperature: sectionTemperature,
+            topP: 0.92,
+          },
+        }),
+      });
+      clearTimeout(timer);
+
+      if (response.status === 429 || response.status >= 500) {
+        const msg = `HTTP ${response.status}`;
+        if (attempt < MAX_RETRIES) {
+          const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 500;
+          console.warn(`[GeminiHero] ${msg} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+        // Final attempt failed — fall back to standard model
+        console.warn(`[GeminiHero] Pro model failed after ${MAX_RETRIES} attempts, falling back to standard`);
+        return callGeminiLong(messages, sectionTemperature);
+      }
+
+      const data = await response.json();
+      if (data.error) {
+        console.warn(`[AI Report] Pro model failed (${data.error.message}), falling back to standard model`);
+        return callGeminiLong(messages, sectionTemperature);
+      }
+
+      return {
+        text: data.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to generate response.',
+        usage: extractGeminiUsage(data),
+        model: proModel,
+      };
+    } catch (err) {
+      const retryable = /fetch failed|AbortError|ECONNRESET|UND_ERR_CONNECT_TIMEOUT/i.test(err.message || '');
+      if (retryable && attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 500;
+        console.warn(`[GeminiHero] ${err.message} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      // Final failure — fall back to standard model
+      console.warn(`[GeminiHero] Pro model error: ${err.message}, falling back to standard`);
+      return callGeminiLong(messages, sectionTemperature);
+    }
   }
-
-  return {
-    text: data.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to generate response.',
-    usage: extractGeminiUsage(data),
-    model: proModel,
-  };
 }
 
 /**

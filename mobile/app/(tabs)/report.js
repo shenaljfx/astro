@@ -656,7 +656,7 @@ export default function ReportScreen() {
                 {reportLang === 'si' ? 'ජීවිත කතාව' : 'Full Life Report'}
               </Text>
               <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
-                {reportLang === 'si' ? 'AI ලියන ලද, ඔබ ගැන පමණයි' : 'AI-written, personalised just for you'}
+                {reportLang === 'si' ? 'ඔබ ගැන පමණයි, විස්තරාත්මකව ලියා ඇත' : 'Personalised and written just for you'}
               </Text>
 
               {/* Cost row */}

@@ -543,7 +543,7 @@ function buildCoverPage(opts) {
     + (opts.nakshatraLabel ? '<strong>' + (isSi ? 'උපන් තරුව' : 'Nakshatra') + ':</strong> ' + opts.nakshatraLabel : '')
     + '</div>'
     + '</div>'
-    + '<div class="cover-footer">' + (isSi ? 'AI මගින් සංස්කෘත ජ්‍යෝතිෂ ශාස්ත්‍රය' : 'AI-Powered Vedic Astrology') + ' &bull; ' + new Date().toLocaleDateString() + '</div>'
+    + '<div class="cover-footer">' + (isSi ? 'වෛදික ජ්‍යෝතිෂ ශාස්ත්‍රය' : 'Vedic Astrology') + ' &bull; ' + new Date().toLocaleDateString() + '</div>'
     + '</div>';
 }
 
@@ -635,8 +635,8 @@ function buildEndPage(isSi) {
     + '<div class="end-url">www.grahachara.lk</div>'
     + '<div class="end-disclaimer">'
     + (isSi
-      ? 'මෙම වාර්තාව AI සහ සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වේ. මෙය අත්දැකීම් හා දැනගැනීම් සඳහා පමණි. වෘත්තීය තීරණ සඳහා සුදුසු විශේෂඥයින්ගෙන් උපදෙස් ලබාගන්න.'
-      : 'This report is generated using AI combined with traditional Vedic astrology. It is for informational and entertainment purposes only. Please consult qualified professionals for any important life decisions.')
+      ? 'මෙම වාර්තාව සාම්ප්‍රදායික වෛදික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වේ. මෙය අත්දැකීම් හා දැනගැනීම් සඳහා පමණි. වෘත්තීය තීරණ සඳහා සුදුසු විශේෂඥයින්ගෙන් උපදෙස් ලබාගන්න.'
+      : 'This report is based on traditional Vedic astrology. It is for informational and entertainment purposes only. Please consult qualified professionals for any important life decisions.')
     + '</div>'
     + '</div>';
 }
