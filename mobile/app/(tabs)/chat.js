@@ -12,7 +12,6 @@ import Animated, {
   withSequence, withTiming, interpolate,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import CosmicBackground from '../../components/CosmicBackground';
 import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
 import SpringPressable from '../../components/effects/SpringPressable';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -53,7 +52,7 @@ async function incrementUsage(uid) {
 
 // Thinking Dots — cosmic orbiting particles indicator
 function ThinkingDots() {
-  var COLORS = ['#FF6B00', '#E040FB', '#FFB800', '#B47AFF', '#34D399'];
+  var COLORS = ['#FF8C00', '#FF6D00', '#FFB800', '#E65100', '#34D399'];
   var dots = [];
   for (var _i = 0; _i < 5; _i++) { dots.push(useSharedValue(0)); }
   var orbit = useSharedValue(0);
@@ -93,7 +92,7 @@ function ChatBubble({ msg, isDesktop }) {
   if (!isAi) {
     return (
       <Animated.View entering={FadeInUp.duration(250).springify()} style={[s.userWrap, isDesktop && sd.userWrapD]}>
-        <LinearGradient colors={['#FF6B00', '#E040FB', '#9333EA']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.userBubble}>
+        <LinearGradient colors={['#FF8C00', '#FF6D00', '#E65100']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.userBubble}>
           <LinearGradient colors={['rgba(255,255,255,0.12)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 20, borderTopRightRadius: 20 }} />
           <Text style={[s.userText, isDesktop && { fontSize: 15 }]}>{msg.content}</Text>
         </LinearGradient>
@@ -103,7 +102,7 @@ function ChatBubble({ msg, isDesktop }) {
   return (
     <Animated.View entering={FadeInUp.duration(300).springify()} style={[s.aiWrap, isDesktop && sd.aiWrapD]}>
       <View style={s.aiDot}>
-        <LinearGradient colors={['#FF6B00', '#E040FB', '#9333EA']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <LinearGradient colors={['#FF8C00', '#FF6D00', '#E65100']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
         <Text style={{ fontSize: 10 }}>{'\u2726'}</Text>
       </View>
       <View style={[s.aiBubble, isDesktop && sd.aiBubbleD]}>
@@ -151,22 +150,22 @@ function ModeToggle({ mode, setMode, t }) {
     <View style={s.modeRow}>
       <TouchableOpacity onPress={function () { setMode('chat'); }} activeOpacity={0.7} style={s.modeBtn}>
         <LinearGradient
-          colors={mode === 'chat' ? ['#FF6B00', '#E040FB'] : ['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.04)']}
+          colors={mode === 'chat' ? ['#FF8C00', '#FF6D00'] : ['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.04)']}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={s.modeBtnBg}
         >
           <Ionicons name="chatbubble-ellipses" size={14} color={mode === 'chat' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
-          <Text style={[s.modeBtnText, mode === 'chat' && { color: '#FFF' }]}>{t('chatModeChat')}</Text>
+          <Text style={[s.modeBtnText, mode === 'chat' && { color: '#FFF1D0' }]}>{t('chatModeChat')}</Text>
         </LinearGradient>
       </TouchableOpacity>
       <TouchableOpacity onPress={function () { setMode('dream'); }} activeOpacity={0.7} style={s.modeBtn}>
         <LinearGradient
-          colors={mode === 'dream' ? ['#7C3AED', '#E040FB'] : ['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.04)']}
+          colors={mode === 'dream' ? ['#FF8C00', '#E65100'] : ['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.04)']}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={s.modeBtnBg}
         >
           <Ionicons name="moon" size={14} color={mode === 'dream' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
-          <Text style={[s.modeBtnText, mode === 'dream' && { color: '#FFF' }]}>{t('chatModeDream')}</Text>
+          <Text style={[s.modeBtnText, mode === 'dream' && { color: '#FFF1D0' }]}>{t('chatModeDream')}</Text>
         </LinearGradient>
       </TouchableOpacity>
     </View>
@@ -216,7 +215,7 @@ function QuickChips({ onSelect, language, mode }) {
     ? ['rgba(124,58,237,0.15)', 'rgba(224,64,251,0.08)']
     : ['rgba(255,107,0,0.12)', 'rgba(224,64,251,0.06)'];
   var chipBorder = mode === 'dream' ? 'rgba(124,58,237,0.25)' : 'rgba(255,107,0,0.18)';
-  var chipIconColor = mode === 'dream' ? '#B47AFF' : '#FF8C33';
+  var chipIconColor = mode === 'dream' ? '#FF8C00' : '#FF8C33';
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipsRow}>
@@ -331,15 +330,15 @@ export default function ChatScreen() {
   if (isDesktop) {
     return (
       <DesktopScreenWrapper routeName="chat">
-        <CosmicBackground>
+        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
           <View style={sd.shell}>
             <View style={sd.panel}>
 
               {/* ── Panel header ── */}
               <View style={sd.panelHeader}>
                 <View style={sd.panelHeaderLeft}>
-                  <View style={[sd.avatarLg, { borderColor: mode === 'dream' ? 'rgba(192,132,252,0.5)' : 'rgba(255,107,0,0.5)' }]}>
-                    <LinearGradient colors={mode === 'dream' ? ['#7C3AED', '#E040FB'] : ['#FF6B00', '#E040FB']} style={StyleSheet.absoluteFill} />
+                  <View style={[sd.avatarLg, { borderColor: mode === 'dream' ? 'rgba(255,140,0,0.5)' : 'rgba(255,107,0,0.5)' }]}>
+                    <LinearGradient colors={mode === 'dream' ? ['#FF8C00', '#E65100'] : ['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} />
                     <Ionicons name={mode === 'dream' ? 'moon' : 'sparkles'} size={22} color="#FFF" />
                   </View>
                   <View>
@@ -361,20 +360,20 @@ export default function ChatScreen() {
                     <TouchableOpacity onPress={function () { setMode('chat'); }} activeOpacity={0.7}
                       style={[sd.modeChip, mode === 'chat' && sd.modeChipActive]}>
                       <LinearGradient
-                        colors={mode === 'chat' ? ['#FF6B00', '#E040FB'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.06)']}
+                        colors={mode === 'chat' ? ['#FF8C00', '#FF6D00'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.06)']}
                         style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                       />
                       <Ionicons name="chatbubble-ellipses" size={13} color={mode === 'chat' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
-                      <Text style={[sd.modeChipText, mode === 'chat' && { color: '#FFF' }]}>{t('chatModeChat')}</Text>
+                      <Text style={[sd.modeChipText, mode === 'chat' && { color: '#FFF1D0' }]}>{t('chatModeChat')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={function () { setMode('dream'); }} activeOpacity={0.7}
                       style={[sd.modeChip, mode === 'dream' && sd.modeChipActive]}>
                       <LinearGradient
-                        colors={mode === 'dream' ? ['#7C3AED', '#E040FB'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.06)']}
+                        colors={mode === 'dream' ? ['#FF8C00', '#E65100'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.06)']}
                         style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                       />
                       <Ionicons name="moon" size={13} color={mode === 'dream' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
-                      <Text style={[sd.modeChipText, mode === 'dream' && { color: '#FFF' }]}>{t('chatModeDream')}</Text>
+                      <Text style={[sd.modeChipText, mode === 'dream' && { color: '#FFF1D0' }]}>{t('chatModeDream')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -407,7 +406,7 @@ export default function ChatScreen() {
                   {loading && (
                     <Animated.View entering={FadeInUp.duration(200)} style={sd.thinkRow}>
                       <View style={sd.aiDotSm}>
-                        <LinearGradient colors={['#FF6B00', '#FFB800']} style={StyleSheet.absoluteFill} />
+                        <LinearGradient colors={['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} />
                         <Text style={{ fontSize: 10 }}>{'\u2726'}</Text>
                       </View>
                       <View style={sd.thinkBubble}><ThinkingDots /></View>
@@ -440,7 +439,7 @@ export default function ChatScreen() {
                       activeOpacity={0.7}
                       style={[sd.sendBtn, (!msg.trim() || loading || remaining <= 0) && { opacity: 0.3 }]}
                     >
-                      <LinearGradient colors={loading ? ['#333', '#444'] : ['#FF6B00', '#E040FB']}
+                      <LinearGradient colors={loading ? ['#333', '#444'] : ['#FF8C00', '#FF6D00']}
                         style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                       <Ionicons name={loading ? 'hourglass' : 'send'} size={17} color="#FFF" />
                     </TouchableOpacity>
@@ -451,7 +450,7 @@ export default function ChatScreen() {
 
             </View>
           </View>
-        </CosmicBackground>
+        </View>
       </DesktopScreenWrapper>
     );
   }
@@ -459,10 +458,10 @@ export default function ChatScreen() {
   // ── MOBILE LAYOUT ──────────────────────────────────────────────────
   return (
     <DesktopScreenWrapper routeName="chat">
-    <CosmicBackground>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <View style={[s.header, { paddingTop: topPad }]}>
         <View style={s.avatar}>
-          <LinearGradient colors={mode === 'dream' ? ['#7C3AED', '#E040FB'] : ['#FF6B00', '#E040FB']} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={mode === 'dream' ? ['#FF8C00', '#E65100'] : ['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} />
           <Ionicons name={mode === 'dream' ? 'moon' : 'sparkles'} size={18} color="#FFF" />
         </View>
         <View style={{ flex: 1 }}>
@@ -489,7 +488,7 @@ export default function ChatScreen() {
           {loading && (
             <Animated.View entering={FadeInUp.duration(200)} style={s.thinkRow}>
               <View style={s.aiDot}>
-                <LinearGradient colors={['#FF6B00', '#FFB800']} style={StyleSheet.absoluteFill} />
+                <LinearGradient colors={['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} />
                 <Text style={{ fontSize: 10 }}>{'\u2726'}</Text>
               </View>
               <View style={s.thinkBubble}><ThinkingDots /></View>
@@ -520,13 +519,13 @@ export default function ChatScreen() {
               scalePressed={0.88}
               style={[s.sendBtn, (!msg.trim() || loading || remaining <= 0) && { opacity: 0.3 }]}
             >
-              <LinearGradient colors={loading ? ['#333', '#444'] : ['#FF6B00', '#E040FB']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+              <LinearGradient colors={loading ? ['#333', '#444'] : ['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
               <Ionicons name={loading ? 'hourglass' : 'send'} size={16} color="#FFF" />
             </SpringPressable>
           </View>
         </View>
       </KeyboardAvoidingView>
-    </CosmicBackground>
+    </View>
     </DesktopScreenWrapper>
   );
 }
@@ -535,7 +534,7 @@ export default function ChatScreen() {
 var s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingBottom: 8 },
   avatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,107,0,0.4)' },
-  title: { fontSize: 18, fontWeight: '800', color: '#FFF', letterSpacing: 0.3 },
+  title: { fontSize: 18, fontWeight: '800', color: '#FFF1D0', letterSpacing: 0.3 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: '500' },
@@ -557,7 +556,7 @@ var s = StyleSheet.create({
   msgList: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 10 },
   userWrap: { alignSelf: 'flex-end', maxWidth: '78%', marginBottom: 8 },
   userBubble: { borderRadius: 18, borderBottomRightRadius: 4, paddingHorizontal: 14, paddingVertical: 10 },
-  userText: { fontSize: 14, lineHeight: 20, color: '#FFF', fontWeight: '500' },
+  userText: { fontSize: 14, lineHeight: 20, color: '#FFF1D0', fontWeight: '500' },
   aiWrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, maxWidth: '85%', marginBottom: 8, alignSelf: 'flex-start' },
   aiDot: { width: 22, height: 22, borderRadius: 11, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 2, borderWidth: 1, borderColor: 'rgba(255,107,0,0.3)' },
   aiBubble: { flex: 1, borderRadius: 18, borderBottomLeftRadius: 4, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 13, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
@@ -571,7 +570,7 @@ var s = StyleSheet.create({
 
   inputBar: { paddingHorizontal: 14, paddingTop: 6, paddingBottom: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)' },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(255,107,0,0.12)' },
-  input: { flex: 1, minHeight: 36, maxHeight: 90, color: '#FFF', fontSize: 14, paddingTop: 8, paddingBottom: 8 },
+  input: { flex: 1, minHeight: 36, maxHeight: 90, color: '#FFF1D0', fontSize: 14, paddingTop: 8, paddingBottom: 8 },
   sendBtn: { width: 34, height: 34, borderRadius: 17, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 1 },
 });
 
@@ -616,7 +615,7 @@ var sd = StyleSheet.create({
     overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5,
   },
-  panelTitle: { fontSize: 16, fontWeight: '800', color: '#F1F5F9', letterSpacing: 0.3 },
+  panelTitle: { fontSize: 16, fontWeight: '800', color: '#FFE8B0', letterSpacing: 0.3 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
   statusDot: { width: 7, height: 7, borderRadius: 3.5 },
   statusText: { fontSize: 11, color: 'rgba(255,255,255,0.42)', fontWeight: '500' },
@@ -672,7 +671,7 @@ var sd = StyleSheet.create({
     borderRadius: 16, paddingHorizontal: 16, paddingVertical: 6,
     borderWidth: 1, borderColor: 'rgba(255,107,0,0.15)',
   },
-  input: { flex: 1, minHeight: 40, maxHeight: 120, color: '#FFF', fontSize: 14.5, paddingTop: 8, paddingBottom: 8 },
+  input: { flex: 1, minHeight: 40, maxHeight: 120, color: '#FFF1D0', fontSize: 14.5, paddingTop: 8, paddingBottom: 8 },
   sendBtn: {
     width: 38, height: 38, borderRadius: 12, overflow: 'hidden',
     alignItems: 'center', justifyContent: 'center', marginBottom: 1, flexShrink: 0,

@@ -853,35 +853,29 @@
       var segments = [];
       var dx = x2 - x1, dy = y2 - y1;
       var len = Math.sqrt(dx * dx + dy * dy);
-      var steps = Math.max(6, Math.floor(len / (depth === 0 ? 12 : 22)));
-      var jitter = len * (depth === 0 ? 0.15 : 0.1);
+      var steps = Math.max(4, Math.floor(len / (depth === 0 ? 18 : 30)));
+      var jitter = len * (depth === 0 ? 0.12 : 0.08);
       segments.push({ x: x1, y: y1 });
-
-      /* Mid-point displacement with variable roughness */
-      for (var i = 1; i < steps; i++) {
+      for (var i = 1; i <= steps; i++) {
         var t = i / steps;
-        /* Add increasing randomness further from start */
-        var roughness = 1 + t * 0.5;
         segments.push({
-          x: x1 + dx * t + (Math.random() - 0.5) * jitter * 2 * roughness,
-          y: y1 + dy * t + (Math.random() - 0.5) * jitter * 0.7
+          x: x1 + dx * t + (Math.random() - 0.5) * jitter * 2,
+          y: y1 + dy * t + (Math.random() - 0.5) * jitter * 0.6
         });
       }
-      segments.push({ x: x2, y: y2 });
+      segments[segments.length - 1] = { x: x2, y: y2 };
 
       var branches = [];
-      if (depth < 3) {
-        var bc = depth === 0 ? Math.floor(3 + Math.random() * 5)
-               : depth === 1 ? Math.floor(1 + Math.random() * 3)
-               : Math.floor(Math.random() * 2);
+      if (depth < 2) {
+        var bc = depth === 0 ? Math.floor(2 + Math.random() * 4) : Math.floor(Math.random() * 2);
         for (var b = 0; b < bc; b++) {
           var si = Math.floor(2 + Math.random() * (segments.length - 4));
           if (si >= segments.length) si = segments.length - 2;
           var sp = segments[si];
-          var bAngle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 1.6;
-          var bLen = len * (0.12 + Math.random() * 0.3) / (depth + 1);
-          var bx2 = sp.x + Math.cos(bAngle) * bLen;
-          var by2 = sp.y + Math.sin(bAngle) * bLen;
+          var bAngle = (Math.random() - 0.5) * 1.2 + (dx > 0 ? 0.3 : -0.3);
+          var bLen = len * (0.15 + Math.random() * 0.25) / (depth + 1);
+          var bx2 = sp.x + Math.cos(bAngle) * bLen * (Math.random() > 0.5 ? 1 : -1);
+          var by2 = sp.y + Math.abs(Math.sin(bAngle)) * bLen;
           branches.push(generateBolt(sp.x, sp.y, bx2, by2, depth + 1));
         }
       }
@@ -892,86 +886,65 @@
       var segs = bolt.segments;
       var drawCount = Math.floor(segs.length * Math.min(progress, 1));
       if (drawCount < 2) return;
+      var baseW = bolt.depth === 0 ? 2.5 : (bolt.depth === 1 ? 1.2 : 0.6);
+      var glowW = bolt.depth === 0 ? 12 : (bolt.depth === 1 ? 6 : 3);
 
-      /* Layer 1: Wide diffuse glow — vivid purple */
-      var glowW = bolt.depth === 0 ? 22 : (bolt.depth === 1 ? 10 : 5);
+      // Outer glow
       ctx.save();
-      ctx.globalAlpha = alpha * 0.25 / (bolt.depth * 0.5 + 1);
-      ctx.strokeStyle = 'rgba(120,80,255,1)';
+      ctx.globalAlpha = alpha * 0.4 / (bolt.depth + 1);
+      ctx.strokeStyle = 'rgba(160,120,255,1)';
       ctx.lineWidth = glowW; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.shadowColor = 'rgba(100,60,255,0.9)'; ctx.shadowBlur = 40;
+      ctx.shadowColor = 'rgba(140,100,255,0.8)'; ctx.shadowBlur = 25;
       ctx.beginPath(); ctx.moveTo(segs[0].x, segs[0].y);
       for (var i = 1; i < drawCount; i++) ctx.lineTo(segs[i].x, segs[i].y);
       ctx.stroke(); ctx.restore();
 
-      /* Layer 2: Medium electric blue glow */
-      var midW = bolt.depth === 0 ? 8 : (bolt.depth === 1 ? 4 : 2);
+      // Core
       ctx.save();
-      ctx.globalAlpha = alpha * 0.55 / (bolt.depth * 0.4 + 1);
-      ctx.strokeStyle = 'rgba(160,140,255,1)';
-      ctx.lineWidth = midW; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.shadowColor = 'rgba(140,120,255,0.8)'; ctx.shadowBlur = 15;
-      ctx.beginPath(); ctx.moveTo(segs[0].x, segs[0].y);
-      for (var i = 1; i < drawCount; i++) ctx.lineTo(segs[i].x, segs[i].y);
-      ctx.stroke(); ctx.restore();
-
-      /* Layer 3: Bright core — white/lavender */
-      var coreW = bolt.depth === 0 ? 3 : (bolt.depth === 1 ? 1.5 : 0.7);
-      ctx.save();
-      ctx.globalAlpha = alpha * 0.9 / (bolt.depth * 0.3 + 1);
-      ctx.strokeStyle = bolt.depth === 0 ? 'rgba(230,220,255,1)' : 'rgba(200,190,255,1)';
-      ctx.lineWidth = coreW; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.shadowColor = 'rgba(220,210,255,1)'; ctx.shadowBlur = 6;
+      ctx.globalAlpha = alpha * 0.9 / (bolt.depth * 0.5 + 1);
+      ctx.strokeStyle = bolt.depth === 0 ? 'rgba(220,210,255,1)' : 'rgba(180,160,255,1)';
+      ctx.lineWidth = baseW; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.shadowColor = 'rgba(200,180,255,1)'; ctx.shadowBlur = 8;
       ctx.beginPath(); ctx.moveTo(segs[0].x, segs[0].y);
       for (var j = 1; j < drawCount; j++) ctx.lineTo(segs[j].x, segs[j].y);
       ctx.stroke(); ctx.restore();
 
-      /* Layer 4: Hot white centre for main bolt */
+      // Hot white centre for main bolt
       if (bolt.depth === 0) {
-        ctx.save(); ctx.globalAlpha = alpha * 0.8;
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
-        ctx.shadowColor = 'rgba(255,255,255,0.5)'; ctx.shadowBlur = 3;
+        ctx.save(); ctx.globalAlpha = alpha * 0.7;
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.8; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(segs[0].x, segs[0].y);
         for (var k = 1; k < drawCount; k++) ctx.lineTo(segs[k].x, segs[k].y);
         ctx.stroke(); ctx.restore();
       }
 
-      /* Draw branches with cascading delay */
       for (var bi = 0; bi < bolt.branches.length; bi++) {
-        var bp = (progress - 0.15) * 1.4;
-        if (bp > 0) drawBolt(bolt.branches[bi], alpha * 0.65, bp);
+        var bp = (progress - 0.2) * 1.5;
+        if (bp > 0) drawBolt(bolt.branches[bi], alpha * 0.7, bp);
       }
     }
 
     function spawnBolt() {
-      var ox = W * (0.08 + Math.random() * 0.84);
-      var oy = H * (Math.random() * 0.08);
-      var ex = ox + (Math.random() - 0.5) * W * 0.4;
-      var ey = H * (0.5 + Math.random() * 0.45);
+      var ox = W * (0.1 + Math.random() * 0.8);
+      var oy = H * (Math.random() * 0.1);
+      var ex = ox + (Math.random() - 0.5) * W * 0.3;
+      var ey = H * (0.5 + Math.random() * 0.4);
       var tree = generateBolt(ox, oy, ex, ey, 0);
-
-      /* Multi-flash sequence — realistic restrike pattern */
-      var fc = 2 + Math.floor(Math.random() * 3);
+      var fc = 2 + Math.floor(Math.random() * 2);
       var ft = [], dur = 0;
       for (var f = 0; f < fc; f++) {
-        var fi = 15 + Math.random() * 25;
-        var fh = 40 + Math.random() * 80;
-        var fo = 100 + Math.random() * 150;
-        var gap = f < fc - 1 ? (30 + Math.random() * 60) : 0;
-        ft.push({ start: dur, fadeIn: fi, hold: fh, fadeOut: fo, peak: 0.4 + Math.random() * 0.4 });
+        var fi = 20 + Math.random() * 30, fh = 30 + Math.random() * 60, fo = 80 + Math.random() * 120;
+        var gap = f < fc - 1 ? (40 + Math.random() * 80) : 0;
+        ft.push({ start: dur, fadeIn: fi, hold: fh, fadeOut: fo, peak: 0.5 + Math.random() * 0.5 });
         dur += fi + fh + fo + gap;
       }
-      /* Last restrike is brightest */
-      ft[ft.length - 1].peak = 0.85 + Math.random() * 0.15;
-      bolts.push({
-        tree: tree, born: performance.now(), duration: dur, flashes: ft,
-        ambientPeak: 0.08 + Math.random() * 0.08
-      });
+      ft[ft.length - 1].peak = 0.9 + Math.random() * 0.1;
+      bolts.push({ tree: tree, born: performance.now(), duration: dur, flashes: ft, ambientPeak: 0.06 + Math.random() * 0.06 });
     }
 
-    var nextBoltTime = performance.now() + 1500 + Math.random() * 2500;
+    var nextBoltTime = performance.now() + 2000 + Math.random() * 3000;
     function scheduleNext(now) {
-      nextBoltTime = now + (Math.random() < 0.25 ? 200 + Math.random() * 400 : 2000 + Math.random() * 4000);
+      nextBoltTime = now + (Math.random() < 0.2 ? 300 + Math.random() * 500 : 2500 + Math.random() * 5000);
     }
 
     function getBoltAlpha(bolt, now) {
@@ -1004,18 +977,11 @@
         }
       }
       bolts = alive;
-
-      /* Ambient flash — vivid purple/blue wash */
       if (ambientAlpha > 0.002) {
         ctx.save(); ctx.globalAlpha = ambientAlpha;
-        var ambGrad = ctx.createRadialGradient(W / 2, 0, 0, W / 2, H * 0.6, H);
-        ambGrad.addColorStop(0, 'rgba(120,80,255,0.7)');
-        ambGrad.addColorStop(0.4, 'rgba(80,50,180,0.4)');
-        ambGrad.addColorStop(1, 'rgba(30,10,80,0)');
-        ctx.fillStyle = ambGrad; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = 'rgba(100,60,200,1)'; ctx.fillRect(0, 0, W, H);
         ctx.restore();
       }
-
       for (var j = 0; j < bolts.length; j++) {
         var bolt = bolts[j], al = getBoltAlpha(bolt, now);
         if (al > 0.001) {

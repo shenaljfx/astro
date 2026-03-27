@@ -233,19 +233,12 @@ export var deletePorondamRecord = function(recordId) {
   return request('/api/porondam/history/' + recordId, { method: 'DELETE' });
 };
 
-// ─── Phone Auth / OTP API ───────────────────────────────────────
+// ─── Google Auth API ────────────────────────────────────────────
 
-export var sendOtp = function(phone) {
-  return request('/api/auth/send-otp', {
+export var googleAuth = function(idToken, profile) {
+  return request('/api/auth/google', {
     method: 'POST',
-    body: JSON.stringify({ phone: phone }),
-  });
-};
-
-export var verifyOtp = function(phone, otp, referenceNo) {
-  return request('/api/auth/verify-otp', {
-    method: 'POST',
-    body: JSON.stringify({ phone: phone, otp: otp, referenceNo: referenceNo }),
+    body: JSON.stringify({ idToken: idToken, profile: profile || {} }),
   });
 };
 
@@ -539,8 +532,7 @@ export default {
   getUserChats: getUserChats,
   getUserPorondamHistory: getUserPorondamHistory,
   deletePorondamRecord: deletePorondamRecord,
-  sendOtp: sendOtp,
-  verifyOtp: verifyOtp,
+  googleAuth: googleAuth,
   completeOnboarding: completeOnboarding,
   unsubscribe: unsubscribe,
   getSubscriptionStatus: getSubscriptionStatus,

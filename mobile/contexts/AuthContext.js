@@ -1,18 +1,19 @@
 /**
- * AuthContext — Phone OTP Authentication Provider
+ * AuthContext — Google Sign-In Authentication Provider
  * 
  * Flow:
- * 1. User enters phone number → sendOtp()
- * 2. User enters OTP code → verifyAndLogin() → receives JWT + user profile
+ * 1. User taps "Sign in with Google" → Firebase Auth → ID token
+ * 2. ID token sent to server → server verifies with Firebase Admin → JWT returned
  * 3. JWT stored in AsyncStorage for persistent login
- * 4. Onboarding: name + birth data (skippable)
- * 5. Subscription: LKR 240/month via PayHere (card/bank)
+ * 4. Onboarding: Subscription → PayHere card payment (LKR 240/month)
+ * 5. Onboarding: name + birth data (skippable)
  * 
  * Provides:
  * - user, token, loading, isLoggedIn, subscription
- * - sendOtp(phone), verifyAndLogin(phone, otp, referenceNo)
+ * - signInWithGoogle() — opens Google Sign-In flow
  * - completeOnboarding(name, birthData)
- * - activateSubscription(), cancelSubscription()
+ * - activateSubscription() — opens PayHere SDK for card/bank payment
+ * - cancelSubscription()
  * - saveBirthData(birthData), updateProfile(data), signOut()
  */
 
@@ -20,8 +21,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setAuthTokenGetter } from '../services/api';
 import {
-  sendOtp as apiSendOtp,
-  verifyOtp as apiVerifyOtp,
+  googleAuth as apiGoogleAuth,
   completeOnboarding as apiCompleteOnboarding,
   unsubscribe as apiUnsubscribe,
   getSubscriptionStatus as apiGetSubscriptionStatus,
@@ -29,6 +29,7 @@ import {
   confirmPayment as apiConfirmPayment,
   cancelPayHereSubscription as apiCancelPayHere,
 } from '../services/api';
+import { auth as firebaseAuth, GoogleAuthProvider, signInWithPopup, signInWithCredential } from '../services/firebase';
 import Constants from 'expo-constants';
 import { Platform, Alert } from 'react-native';
 
@@ -129,35 +130,56 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // Send OTP to phone number
-  var sendOtp = useCallback(async function(phone) {
+  // Sign in with Google via Firebase Auth
+  var signInWithGoogle = useCallback(async function() {
     try {
-      var result = await apiSendOtp(phone);
-      if (result.success) {
-        return {
-          success: true,
-          referenceNo: result.referenceNo,
-          phone: phone, // Return original phone, NOT the masked version from server
-          maskedPhone: result.phone, // Masked version for display only
-          _devOtp: result._devOtp,
-          mock: result.mock,
-        };
-      }
-      throw new Error(result.error || 'Failed to send OTP');
-    } catch (err) {
-      throw err;
-    }
-  }, []);
+      var firebaseUser = null;
 
-  // Verify OTP and login/register
-  var verifyAndLogin = useCallback(async function(phone, otp, referenceNo) {
-    try {
-      // NOTE: Do NOT set global loading here, as it unmounts the UI components
-      // setLoading(true); 
-      var result = await apiVerifyOtp(phone, otp, referenceNo);
+      if (Platform.OS === 'web') {
+        // Web: use popup-based Google sign-in
+        var provider = new GoogleAuthProvider();
+        var result = await signInWithPopup(firebaseAuth, provider);
+        firebaseUser = result.user;
+      } else {
+        // Native: use expo-auth-session or react-native Google Sign-In
+        // Try @react-native-google-signin/google-signin first
+        var GoogleSignin = null;
+        try {
+          var gsiModule = require('@react-native-google-signin/google-signin');
+          GoogleSignin = gsiModule.GoogleSignin;
+        } catch (e) {
+          // Fallback: try expo-auth-session for Google
+          console.warn('Google Sign-In native module not available, trying web fallback');
+          var provider = new GoogleAuthProvider();
+          var result = await signInWithPopup(firebaseAuth, provider);
+          firebaseUser = result.user;
+        }
+
+        if (GoogleSignin && !firebaseUser) {
+          await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+          var signInResult = await GoogleSignin.signIn();
+          var idToken = signInResult.data?.idToken || signInResult.idToken;
+          if (!idToken) throw new Error('Failed to get Google ID token');
+          var credential = GoogleAuthProvider.credential(idToken);
+          var userCredential = await signInWithCredential(firebaseAuth, credential);
+          firebaseUser = userCredential.user;
+        }
+      }
+
+      if (!firebaseUser) throw new Error('Google Sign-In failed');
+
+      // Get Firebase ID token
+      var idToken = await firebaseUser.getIdToken();
+
+      // Send to our server for JWT + user creation
+      var result = await apiGoogleAuth(idToken, {
+        displayName: firebaseUser.displayName,
+        email: firebaseUser.email,
+        photoURL: firebaseUser.photoURL,
+      });
 
       if (!result.success) {
-        throw new Error(result.error || 'Verification failed');
+        throw new Error(result.error || 'Authentication failed');
       }
 
       var authToken = result.token;
@@ -180,9 +202,11 @@ export function AuthProvider({ children }) {
         isNewUser: result.isNewUser,
       };
     } catch (err) {
+      // Don't throw for user cancellation
+      if (err && err.code === 'ERR_REQUEST_CANCELED') {
+        return { success: false, cancelled: true };
+      }
       throw err;
-    } finally {
-      // setLoading(false);
     }
   }, []);
 
@@ -228,16 +252,57 @@ export function AuthProvider({ children }) {
 
       var paymentObject = initResult.paymentObject;
 
-      // Step 2: Open PayHere payment via SDK
+      // Step 2: Try native SDK first, fall back to web checkout
       var PayHere = null;
+      var useWebCheckout = false;
       try {
         PayHere = require('@payhere/payhere-mobilesdk-reactnative').default;
       } catch (e) {
-        // PayHere SDK not installed — fallback to WebView or error
-        console.warn('PayHere SDK not available:', e.message);
-        throw new Error('Payment system not available. Please update the app.');
+        console.warn('PayHere SDK not available (web mode):', e.message);
+        useWebCheckout = true;
       }
 
+      // ─── Web fallback: open PayHere checkout page in new tab ───
+      if (useWebCheckout) {
+        var checkoutUrl = initResult.checkout_url || 'https://sandbox.payhere.lk/pay/checkout';
+
+        // Build a hidden form and submit it (PayHere requires POST)
+        if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+          var form = document.createElement('form');
+          form.method = 'POST';
+          form.action = checkoutUrl;
+          form.target = '_blank';
+
+          var fields = paymentObject;
+          Object.keys(fields).forEach(function(key) {
+            if (fields[key] !== undefined && fields[key] !== null) {
+              var input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = key;
+              input.value = String(fields[key]);
+              form.appendChild(input);
+            }
+          });
+
+          document.body.appendChild(form);
+          form.submit();
+          document.body.removeChild(form);
+
+          // Set optimistic subscription — webhook will confirm
+          var webSub = { status: 'active', plan: 'monthly', pendingConfirmation: true };
+          setSubscription(webSub);
+          setUser(function(prev) {
+            var updated = { ...prev, subscription: webSub };
+            AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
+            return updated;
+          });
+          return { success: true, subscription: webSub, pending: true, webCheckout: true };
+        } else {
+          throw new Error('Payment not available on this platform');
+        }
+      }
+
+      // ─── Native SDK path (Android/iOS) ───
       return new Promise(function(resolve, reject) {
         PayHere.startPayment(
           paymentObject,
@@ -434,8 +499,7 @@ export function AuthProvider({ children }) {
     subscription: subscription,
     isSubscribed: subscription?.status === 'active',
     getAuthToken: getAuthToken,
-    sendOtp: sendOtp,
-    verifyAndLogin: verifyAndLogin,
+    signInWithGoogle: signInWithGoogle,
     completeOnboarding: completeOnboarding,
     activateSubscription: activateSubscription,
     cancelSubscription: cancelSubscription,

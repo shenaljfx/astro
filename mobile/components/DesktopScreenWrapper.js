@@ -21,7 +21,7 @@
  *
  *   return (
  *     <DesktopScreenWrapper routeName="index">
- *       <CosmicBackground>...</CosmicBackground>
+ *       <View style={{ flex: 1, backgroundColor: '#000' }}>...</View>
  *     </DesktopScreenWrapper>
  *   );
  */

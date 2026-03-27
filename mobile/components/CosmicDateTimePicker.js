@@ -165,7 +165,7 @@ function DatePickerModal({ visible, onClose, value, onChange, lang }) {
           </View>
 
           <TouchableOpacity style={ms.confirmBtn} onPress={handleConfirm} activeOpacity={0.8}>
-            <LinearGradient colors={['#7C3AED', '#9333EA', '#A855F7']} style={ms.confirmGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+            <LinearGradient colors={['#FF8C00', '#FF6D00', '#E65100']} style={ms.confirmGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
               <Ionicons name="checkmark-circle" size={20} color="#FFF" style={{ marginRight: 8 }} />
               <Text style={ms.confirmText}>{lang === 'si' ? 'තහවුරු කරන්න' : 'Confirm'}</Text>
             </LinearGradient>
@@ -239,7 +239,7 @@ function TimePickerModal({ visible, onClose, value, onChange, lang }) {
           </View>
 
           <TouchableOpacity style={ms.confirmBtn} onPress={handleConfirm} activeOpacity={0.8}>
-            <LinearGradient colors={['#7C3AED', '#9333EA', '#A855F7']} style={ms.confirmGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+            <LinearGradient colors={['#FF8C00', '#FF6D00', '#E65100']} style={ms.confirmGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
               <Ionicons name="checkmark-circle" size={20} color="#FFF" style={{ marginRight: 8 }} />
               <Text style={ms.confirmText}>{lang === 'si' ? 'තහවුරු කරන්න' : 'Confirm'}</Text>
             </LinearGradient>
@@ -267,7 +267,7 @@ var ms = StyleSheet.create({
   preview24: { color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 2 },
   confirmBtn: { borderRadius: 14, overflow: 'hidden' },
   confirmGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14 },
-  confirmText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+  confirmText: { color: '#FFF1D0', fontSize: 15, fontWeight: '800' },
 });
 
 
@@ -332,5 +332,5 @@ var fs = StyleSheet.create({
   },
   fieldError: { borderColor: 'rgba(239,68,68,0.5)' },
   icon: { marginRight: 10 },
-  fieldText: { flex: 1, color: '#F1F5F9', fontSize: 15, fontWeight: '600' },
+  fieldText: { flex: 1, color: '#FFE8B0', fontSize: 15, fontWeight: '600' },
 });

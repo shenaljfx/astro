@@ -161,46 +161,46 @@ var styles = StyleSheet.create({
 
   // Heading 1
   h1Wrap: { marginTop: 20, marginBottom: 10 },
-  h1: { fontSize: 22, fontWeight: '900', color: '#f0e7ff', letterSpacing: -0.3 },
-  h1Line: { height: 2, backgroundColor: 'rgba(192,38,211,0.4)', borderRadius: 1, marginTop: 6, width: '60%' },
+  h1: { fontSize: 22, fontWeight: '900', color: '#FFE8A0', letterSpacing: -0.3 },
+  h1Line: { height: 2, backgroundColor: 'rgba(255,184,0,0.4)', borderRadius: 1, marginTop: 6, width: '60%' },
 
   // Heading 2
   h2Wrap: { marginTop: 18, marginBottom: 8 },
-  h2: { fontSize: 18, fontWeight: '800', color: '#e0d4fc', letterSpacing: -0.2 },
-  h2Line: { height: 1.5, backgroundColor: 'rgba(192,38,211,0.3)', borderRadius: 1, marginTop: 5, width: '40%' },
+  h2: { fontSize: 18, fontWeight: '800', color: '#FFD98E', letterSpacing: -0.2 },
+  h2Line: { height: 1.5, backgroundColor: 'rgba(255,184,0,0.3)', borderRadius: 1, marginTop: 5, width: '40%' },
 
   // Heading 3
-  h3: { fontSize: 16, fontWeight: '700', color: '#d4bffc', marginTop: 14, marginBottom: 6 },
+  h3: { fontSize: 16, fontWeight: '700', color: '#FBBF24', marginTop: 14, marginBottom: 6 },
 
   // Paragraph
-  para: { color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 23, marginBottom: 4 },
-  paraInline: { color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 23 },
+  para: { color: 'rgba(255,241,208,0.88)', fontSize: 14, lineHeight: 23, marginBottom: 4 },
+  paraInline: { color: 'rgba(255,241,208,0.88)', fontSize: 14, lineHeight: 23 },
 
   // Inline styles
-  bold: { fontWeight: '800', color: '#f0e7ff' },
-  italic: { fontStyle: 'italic', color: 'rgba(224,211,252,0.9)' },
-  boldItalic: { fontWeight: '800', fontStyle: 'italic', color: '#f0e7ff' },
+  bold: { fontWeight: '800', color: '#FFE8A0' },
+  italic: { fontStyle: 'italic', color: 'rgba(255,220,160,0.9)' },
+  boldItalic: { fontWeight: '800', fontStyle: 'italic', color: '#FFE8A0' },
 
   // Bullet list
   bulletRow: { flexDirection: 'row', paddingLeft: 4, marginBottom: 6, alignItems: 'flex-start' },
-  bulletDot: { color: '#c084fc', fontSize: 11, marginRight: 10, marginTop: 4, width: 16, textAlign: 'center' },
-  bulletText: { flex: 1, color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 22 },
-  bulletTextInline: { color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 22 },
+  bulletDot: { color: '#FBBF24', fontSize: 11, marginRight: 10, marginTop: 4, width: 16, textAlign: 'center' },
+  bulletText: { flex: 1, color: 'rgba(255,241,208,0.88)', fontSize: 14, lineHeight: 22 },
+  bulletTextInline: { color: 'rgba(255,241,208,0.88)', fontSize: 14, lineHeight: 22 },
 
   // Numbered list
   numBadge: {
-    width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(192,38,211,0.15)',
+    width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(255,184,0,0.12)',
     alignItems: 'center', justifyContent: 'center', marginRight: 10, marginTop: 2,
-    borderWidth: 1, borderColor: 'rgba(192,132,252,0.2)',
+    borderWidth: 1, borderColor: 'rgba(255,184,0,0.2)',
   },
-  numText: { color: '#c084fc', fontSize: 11, fontWeight: '800' },
+  numText: { color: '#FBBF24', fontSize: 11, fontWeight: '800' },
 
   // Blockquote
   blockquote: {
     flexDirection: 'row', marginVertical: 8, paddingVertical: 10,
-    paddingHorizontal: 14, backgroundColor: 'rgba(192,38,211,0.06)',
+    paddingHorizontal: 14, backgroundColor: 'rgba(255,184,0,0.06)',
     borderRadius: 10,
   },
-  bqBar: { width: 3, backgroundColor: '#c026d3', borderRadius: 2, marginRight: 12 },
-  bqText: { flex: 1, color: 'rgba(224,211,252,0.9)', fontSize: 14, lineHeight: 22, fontStyle: 'italic' },
+  bqBar: { width: 3, backgroundColor: '#D4A020', borderRadius: 2, marginRight: 12 },
+  bqText: { flex: 1, color: 'rgba(255,220,160,0.9)', fontSize: 14, lineHeight: 22, fontStyle: 'italic' },
 });

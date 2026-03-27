@@ -48,7 +48,7 @@ var getFlag = function (city) {
 };
 
 export default function CitySearchPicker({ selectedCity, onSelect, lang, accentColor, maxHeight, placeholder, compact }) {
-  var accent = accentColor || '#B47AFF';
+  var accent = accentColor || '#FF8C00';
   var listMax = maxHeight || 200;
   var [query, setQuery] = useState('');
   var [results, setResults] = useState([]);
@@ -265,7 +265,7 @@ var st = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#F1F5F9',
+    color: '#FFE8B0',
     fontSize: 14,
     fontWeight: '600',
     paddingVertical: 0,
@@ -303,7 +303,7 @@ var st = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'transparent',
   },
-  cityName: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+  cityName: { color: '#FFF1D0', fontSize: 14, fontWeight: '600' },
   citySub: { color: 'rgba(255,255,255,0.30)', fontSize: 10, marginTop: 2 },
   compactPill: {
     flexDirection: 'row',
@@ -315,6 +315,6 @@ var st = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  compactName: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+  compactName: { color: '#FFF1D0', fontSize: 14, fontWeight: '700' },
   compactSub: { color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 1 },
 });

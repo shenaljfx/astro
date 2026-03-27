@@ -37,7 +37,7 @@
       "trust.privacy":      "🛡️ Privacy First — No data sold",
       "trust.ayanamsha":    "🔮 Lahiri Ayanamsha (Traditional)",
       "trust.nakshatras":   "📿 27 Nakshatras · 12 Rashis · 9 Grahas",
-      "trust.price":        "💰 Just LKR 8/day — All features",
+      "trust.price":        "💰 Just LKR 240/month — All features",
 
       /* Features section */
       "features.label":     "Features",
@@ -148,12 +148,12 @@
       /* Pricing */
       "pricing.label":      "Pricing",
       "pricing.title":      "Simple. Affordable. Sri Lankan.",
-      "pricing.desc":       "Everything for just Rs. 8 a day — less than a cup of tea. No hidden fees, cancel anytime.",
+      "pricing.desc":       "Everything for just Rs. 240 a month. Pay by card or bank via PayHere. No hidden fees, cancel anytime.",
 
       "price1.badge":       "⭐ All Features",
-      "price1.amount":      "LKR 8",
-      "price1.period":      "/ day",
-      "price1.savings":     "That's just Rs. 240/month — less than a cup of tea ☕",
+      "price1.amount":      "LKR 240",
+      "price1.period":      "/ month",
+      "price1.savings":     "Pay securely via Visa / MasterCard / HelaPay / FriMi 💳",
       "price1.f1":          "Daily Rahu Kalaya & Nakath",
       "price1.f2":          "Full Panchanga",
       "price1.f3":          "Birth Chart (Kendara)",
@@ -163,7 +163,7 @@
       "price1.f7":          "Advanced transit alerts",
       "price1.f8":          "No ads, ever",
       "price1.f9":          "Cancel anytime — no lock-in",
-      "price1.cta":         "Get Started — LKR 8/day",
+      "price1.cta":         "Get Started — LKR 240/month",
 
       "price2.badge":       "Life Report",
       "price2.amount":      "LKR 350",
@@ -210,7 +210,7 @@
       "faq.title":          "Frequently Asked Questions",
 
       "faq1.q":             "How much does it cost?",
-      "faq1.a":             "Grahachara gives you access to all features — Rahu Kalaya, Nakath, Panchanga, birth charts, 10 daily chat questions, push notifications, dream interpretation and more — for just LKR 8/day (about Rs. 240/month). Premium add-ons like the full Life Report (LKR 350) and Porondam matching (LKR 50) are one-time pay-per-use. No hidden fees, cancel anytime.",
+      "faq1.a":             "Grahachara gives you access to all features — Rahu Kalaya, Nakath, Panchanga, birth charts, 10 daily chat questions, push notifications, dream interpretation and more — for just LKR 240/month via PayHere (Visa/MasterCard/HelaPay/FriMi). Premium add-ons like the full Life Report (LKR 350) and Porondam matching (LKR 50) are one-time pay-per-use. No hidden fees, cancel anytime.",
 
       "faq2.q":             "Which Ayanamsha does it use?",
       "faq2.a":             "We use the Lahiri Ayanamsha — the traditional standard used across Sri Lanka and India. All calculations are sidereal (not tropical/Western), matching what your family astrologer uses.",
@@ -287,7 +287,7 @@
       "trust.privacy":      "🛡️ Privacy First — ඔයාගේ දත්ත කාටවත් විකුණන්නේ නෑ",
       "trust.ayanamsha":    "🔮 ලාහිරි අයනාංශ (සම්ප්‍රදායික)",
       "trust.nakshatras":   "📿 නක්ෂත්‍ර 27 · රාශි 12 · ග්‍රහ 9",
-      "trust.price":        "💰 දවසට රු. 8යි — ඔක්කොම Features ලැබෙනවා",
+      "trust.price":        "💰 මාසෙට රු. 240යි — ඔක්කොම Features ලැබෙනවා",
 
       /* Features section */
       "features.label":     "විශේෂාංග",
@@ -398,12 +398,12 @@
       /* Pricing */
       "pricing.label":      "මිල ගණන්",
       "pricing.title":      "සරලයි. ලාභයි. අපේ දෙයක්.",
-      "pricing.desc":       "දවසට රු. 8යි යන්නේ. තේ එකක් බොනවටත් වඩා අඩුයිනේ. හංගපු ගණන් මුකුත් නෑ.",
+      "pricing.desc":       "මාසෙට රු. 240යි. කාඩ්පත හෝ බැංකුව ඔස්සේ ගෙවන්න (PayHere). හංගපු ගණන් මුකුත් නෑ.",
 
       "price1.badge":       "⭐ හැම දේම හම්බෙනවා",
-      "price1.amount":      "රු. 8",
-      "price1.period":      "/ දවසට",
-      "price1.savings":     "මාසෙටම රු. 240යි — තේ එකක ගාණවත් නෑනේ ☕",
+      "price1.amount":      "රු. 240",
+      "price1.period":      "/ මාසයට",
+      "price1.savings":     "Visa / MasterCard / HelaPay / FriMi ඔස්සේ ආරක්ෂිතව ගෙවන්න 💳",
       "price1.f1":          "දිනපතා රාහු කාලය සහ නැකත්",
       "price1.f2":          "සම්පූර්ණ පංචාංගය",
       "price1.f3":          "උපත් පත්‍රය (කේන්දරය)",
@@ -413,7 +413,7 @@
       "price1.f7":          "ග්‍රහ මාරු ගැන දැනුම්දීම්",
       "price1.f8":          "Ads එන්නේ නෑ (No Ads)",
       "price1.f9":          "කැමති දවසක නවත්තන්න පුළුවන් (Cancel anytime)",
-      "price1.cta":         "පටන් ගන්න — දවසට රු. 8යි",
+      "price1.cta":         "පටන් ගන්න — මාසෙට රු. 240යි",
 
       "price2.badge":       "ජීවිත වාර්තාව",
       "price2.amount":      "රු. 350",
@@ -460,7 +460,7 @@
       "faq.title":          "නිතර අහන ප්‍රශ්න",
 
       "faq1.q":             "ගාණ කීයද?",
-      "faq1.a":             "ග්‍රහචාර වල තියෙන හැම පහසුකමක්ම — රාහු කාලය, නැකත්, පංචාංගය, කේන්දරය, දවසට Chat ප්‍රශ්න 10ක්, Push notifications, හීන පලාපල මේ ඔක්කොටම යන්නේ දවසට රු. 8යි (මාසෙටම රු. 240ක් වගේ). ජීවිත වාර්තාව (රු. 350) සහ පොරොන්දම් ගැලපීම (රු. 50) විතරක් වෙනම ගෙවලා ගන්න පුළුවන්. හංගපු ගාස්තු මුකුත් නෑ.",
+      "faq1.a":             "ග්‍රහචාර වල තියෙන හැම පහසුකමක්ම — රාහු කාලය, නැකත්, පංචාංගය, කේන්දරය, දවසට Chat ප්‍රශ්න 10ක්, Push notifications, හීන පලාපල මේ ඔක්කොටම යන්නේ මාසෙට රු. 240යි (PayHere ඔස්සේ Visa/MasterCard/HelaPay/FriMi). ජීවිත වාර්තාව (රු. 350) සහ පොරොන්දම් ගැලපීම (රු. 50) විතරක් වෙනම ගෙවලා ගන්න පුළුවන්. හංගපු ගාස්තු මුකුත් නෑ.",
 
       "faq2.q":             "මේක හදලා තියෙන්නේ මොන ක්‍රමයටද?",
       "faq2.a":             "අපි පාවිච්චි කරන්නේ 'ලාහිරි අයනාංශ' (Lahiri Ayanamsha) ක්‍රමය. මේක තමයි ලංකාවේ සහ ඉන්දියාවේ සම්ප්‍රදායිකව පිළිගන්න නිවැරදිම ක්‍රමය. ඒ නිසා පවුලේ ජ්‍යෝතිෂවේදියා බලන විදිහටමයි මේකත් වැඩ කරන්නේ.",

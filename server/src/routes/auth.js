@@ -1,44 +1,37 @@
 /**
- * Auth Routes — Phone OTP Login + Subscription Management (PayHere)
+ * Auth Routes — Google Sign-In + Subscription Management (PayHere)
  * 
  * Endpoints:
- * - POST /api/auth/send-otp        — Send OTP to phone number (via Ideamart OTP API)
- * - POST /api/auth/verify-otp      — Verify OTP and login/register
- * - POST /api/auth/unsubscribe     — Cancel subscription
- * - GET  /api/auth/subscription    — Check subscription status
+ * - POST /api/auth/google           — Verify Google/Firebase ID token and login/register
+ * - POST /api/auth/unsubscribe      — Cancel subscription
+ * - GET  /api/auth/subscription     — Check subscription status
+ * - POST /api/auth/onboarding-complete — Complete onboarding with name + birth data
  * 
  * Payment is handled by PayHere via /api/payhere/* routes (card/bank).
- * Ideamart is used only for phone OTP verification, not for billing.
  */
 
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const {
-  sendOtp,
-  verifyOtp,
-  normalizePhone,
-  MOCK_MODE,
-} = require('../services/ideamart');
-const { getDb, COLLECTIONS } = require('../config/firebase');
+const { getDb, getAuth, COLLECTIONS } = require('../config/firebase');
 const { MONTHLY_AMOUNT } = require('../services/payhere');
 
 // JWT secret — in production, use a strong random secret from env
 const JWT_SECRET = process.env.JWT_SECRET || 'grahachara-cosmic-secret-2025-dev';
 const JWT_EXPIRES = '30d'; // Token valid for 30 days
 
-// ─── Helper: Generate JWT for phone-based auth ──────────────────
+// ─── Helper: Generate JWT for authenticated users ───────────────
 
-function generateToken(uid, phone) {
+function generateToken(uid, email) {
   return jwt.sign(
-    { uid, phone, type: 'phone-auth' },
+    { uid, email, type: 'google-auth' },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES }
   );
 }
 
 /**
- * Verify JWT token from phone auth
+ * Verify JWT token
  * Returns decoded payload or null
  */
 function verifyToken(token) {
@@ -49,53 +42,32 @@ function verifyToken(token) {
   }
 }
 
-// ─── Firestore helpers for phone users ──────────────────────────
+// ─── Firestore helpers for Google users ─────────────────────────
 
-async function findUserByPhone(phone) {
+async function findUserByUid(uid) {
   const db = getDb();
   if (!db) return null;
 
-  const normalized = normalizePhone(phone);
-
-  // Direct doc lookup by deterministic ID (fast, no index needed)
-  const docId = 'phone_' + normalized;
   try {
-    const docRef = await db.collection(COLLECTIONS.USERS).doc(docId).get();
-    if (docRef.exists) {
-      return { uid: docRef.id, ...docRef.data() };
-    }
-  } catch (e) {
-    console.warn('[findUserByPhone] direct lookup failed:', e.message);
-  }
-
-  // Fallback: query by phone field (requires index)
-  try {
-    const snapshot = await db.collection(COLLECTIONS.USERS)
-      .where('phone', '==', normalized)
-      .limit(1)
-      .get();
-    if (!snapshot.empty) {
-      const doc = snapshot.docs[0];
+    const doc = await db.collection(COLLECTIONS.USERS).doc(uid).get();
+    if (doc.exists) {
       return { uid: doc.id, ...doc.data() };
     }
   } catch (e) {
-    console.warn('[findUserByPhone] query fallback failed:', e.message);
+    console.warn('[findUserByUid] lookup failed:', e.message);
   }
-
   return null;
 }
 
-async function createPhoneUser(phone) {
+async function createGoogleUser(uid, profile) {
   const db = getDb();
-  const normalized = normalizePhone(phone);
-  const uid = 'phone_' + normalized;
 
   const userData = {
     uid,
-    phone: normalized,
-    displayName: 'Cosmic Seeker',
-    email: null,
-    photoURL: null,
+    email: profile.email || null,
+    displayName: profile.displayName || 'Cosmic Seeker',
+    photoURL: profile.photoURL || null,
+    phone: null,
     birthData: null,
     location: { lat: 6.9271, lng: 79.8612, name: 'Colombo' },
     preferences: {
@@ -104,7 +76,7 @@ async function createPhoneUser(phone) {
       theme: 'cosmic',
     },
     subscription: {
-      status: 'pending', // pending | active | cancelled | expired | payment_failed
+      status: 'pending',
       plan: 'monthly',
       amount: MONTHLY_AMOUNT,
       currency: 'LKR',
@@ -139,122 +111,73 @@ async function updateUserSubscription(uid, subscriptionData) {
   return true;
 }
 
-// ─── In-memory OTP reference store (maps phone → referenceNo) ──
-// In production, use Redis or Firestore
-const otpRefs = new Map();
-
 // ─── Routes ─────────────────────────────────────────────────────
 
 /**
- * POST /api/auth/send-otp
- * Body: { phone: "0771234567" }
+ * POST /api/auth/google
+ * Body: { idToken: "firebase-id-token", profile: { displayName, email, photoURL } }
+ * 
+ * Verifies the Firebase ID token (from Google Sign-In on mobile),
+ * finds or creates the user, returns a JWT for subsequent API calls.
  */
-router.post('/send-otp', async (req, res) => {
+router.post('/google', async (req, res) => {
   try {
-    const { phone } = req.body;
-    if (!phone) {
-      return res.status(400).json({ error: 'Phone number is required' });
+    const { idToken, profile } = req.body;
+    if (!idToken) {
+      return res.status(400).json({ error: 'Firebase ID token is required' });
     }
 
-    const normalized = normalizePhone(phone);
-    if (!normalized || normalized.length < 11) {
-      return res.status(400).json({ error: 'Invalid phone number. Use format: 07X XXXXXXX' });
-    }
+    // Verify the Firebase ID token
+    const auth = getAuth();
+    let decodedToken = null;
 
-    const result = await sendOtp(phone);
-
-    if (result.success) {
-      // Store referenceNo mapped to phone for verification step
-      otpRefs.set(normalized, {
-        referenceNo: result.referenceNo,
-        sentAt: Date.now(),
-        otp: result._devOtp, // Store OTP for dev retrieval
-      });
-
-      const response = {
-        success: true,
-        message: 'OTP sent successfully',
-        referenceNo: result.referenceNo,
-        phone: normalized.substring(0, 4) + '****' + normalized.substring(normalized.length - 3),
-      };
-
-      // In mock mode, include OTP for testing
-      if (result.mock && result._devOtp) {
-        response._devOtp = result._devOtp;
-        response.mock = true;
+    if (auth) {
+      try {
+        decodedToken = await auth.verifyIdToken(idToken);
+      } catch (verifyErr) {
+        console.error('Firebase token verification failed:', verifyErr.message);
+        return res.status(401).json({ error: 'Invalid or expired token' });
       }
-
-      return res.json(response);
+    } else {
+      // No Firebase Admin — dev mode fallback
+      console.warn('[auth/google] No Firebase Admin available — using dev mode');
+      // In dev mode, create a mock decoded token from the profile
+      decodedToken = {
+        uid: 'dev_' + (profile?.email || 'user').replace(/[^a-z0-9]/gi, '_'),
+        email: profile?.email || 'dev@grahachara.lk',
+        name: profile?.displayName || 'Dev User',
+        picture: profile?.photoURL || null,
+      };
     }
 
-    // Handle "already registered" phone number
-    if (result.alreadyRegistered) {
-      return res.status(409).json({
-        error: 'Phone number already registered',
-        statusCode: result.statusCode,
-        canLogin: true,
-      });
-    }
+    const uid = decodedToken.uid;
+    const email = decodedToken.email || profile?.email || null;
 
-    return res.status(400).json({
-      error: result.error || 'Failed to send OTP',
-      statusCode: result.statusCode,
-    });
-  } catch (err) {
-    console.error('Send OTP error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * POST /api/auth/verify-otp
- * Body: { phone: "0771234567", otp: "123456", referenceNo: "abc..." }
- */
-router.post('/verify-otp', async (req, res) => {
-  try {
-    const { phone, otp, referenceNo } = req.body;
-    console.log('🔑 verify-otp request:', { phone, otp, referenceNo: referenceNo?.substring(0, 8) + '...' });
-
-    if (!phone || !otp || !referenceNo) {
-      console.log('❌ Missing fields:', { hasPhone: !!phone, hasOtp: !!otp, hasRef: !!referenceNo });
-      return res.status(400).json({ error: 'Phone, OTP, and referenceNo are required' });
-    }
-
-    const result = await verifyOtp(referenceNo, otp, phone);
-
-    if (!result.success) {
-      console.log('❌ OTP verification failed:', result.error, result.statusCode);
-      return res.status(400).json({
-        error: result.error || 'Verification failed',
-        statusCode: result.statusCode,
-      });
-    }
-
-    // OTP verified! Now find or create the user
-    const normalized = normalizePhone(phone);
-    let user = await findUserByPhone(normalized);
+    // Find or create user
+    let user = await findUserByUid(uid);
     let isNewUser = false;
 
     if (!user) {
-      // New user — create profile
-      user = await createPhoneUser(normalized);
+      user = await createGoogleUser(uid, {
+        email: email,
+        displayName: decodedToken.name || profile?.displayName || 'Cosmic Seeker',
+        photoURL: decodedToken.picture || profile?.photoURL || null,
+      });
       isNewUser = true;
-      console.log(`🆕 New phone user created: ${normalized}`);
+      console.log(`🆕 New Google user created: ${email || uid}`);
     }
 
-    // Generate JWT token
-    const token = generateToken(user.uid, normalized);
-
-    // Clean up OTP reference
-    otpRefs.delete(normalized);
+    // Generate our JWT token
+    const token = generateToken(uid, email);
 
     res.json({
       success: true,
       token,
       user: {
         uid: user.uid,
-        phone: normalized,
+        email: user.email,
         displayName: user.displayName,
+        photoURL: user.photoURL,
         birthData: user.birthData,
         subscription: user.subscription,
         onboardingComplete: user.onboardingComplete,
@@ -263,7 +186,7 @@ router.post('/verify-otp', async (req, res) => {
       isNewUser,
     });
   } catch (err) {
-    console.error('Verify OTP error:', err);
+    console.error('Google auth error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -380,38 +303,6 @@ router.post('/onboarding-complete', async (req, res) => {
     console.error('Onboarding complete error:', err);
     res.status(500).json({ error: 'Failed to complete onboarding' });
   }
-});
-
-/**
- * GET /api/auth/dev-otp/:phone
- * Retrieve last sent OTP for phone number (DEV MODE ONLY)
- */
-router.get('/dev-otp/:phone', (req, res) => {
-  // Only allow in development or if explicitly enabled
-  if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_DEV_OTP) {
-    return res.status(404).json({ error: 'Not available' });
-  }
-
-  const { phone } = req.params;
-  const decodedPhone = decodeURIComponent(phone);
-  const normalized = normalizePhone(decodedPhone);
-  
-  const record = otpRefs.get(normalized);
-  
-  if (record && record.otp) {
-    return res.json({ 
-      success: true, 
-      phone: normalized, 
-      otp: record.otp 
-    });
-  }
-
-  // Also check if we can generate a mock one on the fly? No, that would be confusing.
-  // Instead, return not found.
-  return res.status(404).json({ 
-    error: 'No active OTP found for this number',
-    phone: normalized
-  });
 });
 
 // ─── Token extraction helper ────────────────────────────────────

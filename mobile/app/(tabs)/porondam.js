@@ -14,7 +14,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import CosmicBackground from '../../components/CosmicBackground';
 import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
 import { DatePickerField, TimePickerField } from '../../components/CosmicDateTimePicker';
 import SriLankanChart from '../../components/SriLankanChart';
@@ -63,7 +62,7 @@ function Glass({ children, style, accent }) {
       <LinearGradient
         pointerEvents="none"
         colors={accent
-          ? ['rgba(244,63,94,0.10)', 'rgba(180,122,255,0.08)', 'rgba(12,6,28,0.6)']
+          ? ['rgba(244,63,94,0.10)', 'rgba(255,140,0,0.08)', 'rgba(12,6,28,0.6)']
           : ['rgba(20,12,50,0.55)', 'rgba(10,6,28,0.45)', 'rgba(8,4,20,0.55)']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -136,7 +135,7 @@ function ScoreGauge({ score, maxScore, rating, ratingEmoji, ratingSinhala, langu
           <Text style={sty.gaugeRating}>{ratingEmoji || '💍'} {label}</Text>
           <Text style={sty.gaugeScoreText}>{score}/{maxScore} {T.overall}</Text>
           <TouchableOpacity style={sty.shareChip} onPress={onShare} activeOpacity={0.7}>
-            <Ionicons name="share-social-outline" size={14} color="#B47AFF" />
+            <Ionicons name="share-social-outline" size={14} color="#FF8C00" />
             <Text style={sty.shareChipText}>{T.shareBtn}</Text>
           </TouchableOpacity>
         </View>
@@ -257,22 +256,22 @@ function CityPicker({ selectedCity, onSelect, lang }) {
   return (
     <View>
       <TouchableOpacity
-        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 12 : 10, borderWidth: 1, borderColor: 'rgba(180,122,255,0.2)' }}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 12 : 10, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)' }}
         activeOpacity={0.7}
         onPress={function() { setExpanded(!expanded); }}>
-        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>📍 {displayName}</Text>
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="rgba(180,122,255,0.6)" />
+        <Text style={{ color: '#FFF1D0', fontSize: 14, fontWeight: '600' }}>📍 {displayName}</Text>
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="rgba(255,140,0,0.6)" />
       </TouchableOpacity>
       {expanded && (
-        <View style={{ backgroundColor: 'rgba(15,5,30,0.95)', borderRadius: 12, marginTop: 4, borderWidth: 1, borderColor: 'rgba(180,122,255,0.15)', maxHeight: 180 }}>
+        <View style={{ backgroundColor: 'rgba(15,5,30,0.95)', borderRadius: 12, marginTop: 4, borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)', maxHeight: 180 }}>
           <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
             {BIRTH_LOCATIONS.map(function(loc, i) {
               var isSelected = loc.name === selectedCity.name;
               var locName = lang === 'si' ? (loc.nameSi || loc.name) : loc.name;
               return (
-                <TouchableOpacity key={i} style={{ paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: i < BIRTH_LOCATIONS.length - 1 ? 1 : 0, borderBottomColor: 'rgba(255,255,255,0.04)', backgroundColor: isSelected ? 'rgba(180,122,255,0.12)' : 'transparent' }}
+                <TouchableOpacity key={i} style={{ paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: i < BIRTH_LOCATIONS.length - 1 ? 1 : 0, borderBottomColor: 'rgba(255,255,255,0.04)', backgroundColor: isSelected ? 'rgba(255,140,0,0.12)' : 'transparent' }}
                   onPress={function() { onSelect(loc); setExpanded(false); }} activeOpacity={0.7}>
-                  <Text style={{ color: isSelected ? '#c084fc' : 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: isSelected ? '700' : '400' }}>{locName}</Text>
+                  <Text style={{ color: isSelected ? '#FF8C00' : 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: isSelected ? '700' : '400' }}>{locName}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -605,7 +604,7 @@ export default function PorondamScreen() {
 
   return (
     <DesktopScreenWrapper routeName="porondam">
-    <CosmicBackground>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop]} showsVerticalScrollIndicator={false}>
         <View style={[sty.scrollInner, isDesktop && sty.scrollInnerDesktop]}>
 
@@ -632,7 +631,8 @@ export default function PorondamScreen() {
             <Text style={sty.timeHint}>{T.timeHint}</Text>
             <Animated.View entering={FadeInDown.delay(250).duration(600)}>
               <SpringPressable style={sty.cta} onPress={check} disabled={loading} haptic="heavy" scalePressed={0.93}>
-                <LinearGradient colors={['#c026d3', '#db2777', '#f43f5e']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                <LinearGradient colors={['#FF8C00', '#FF6D00', '#E65100']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+                <LinearGradient colors={['rgba(255,255,255,0.20)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 16, borderTopRightRadius: 16 }} />
                 {loading ? <CosmicLoader size={28} color="#fff" /> : <Text style={sty.ctaText}>{T.checkBtn}</Text>}
               </SpringPressable>
             </Animated.View>
@@ -643,7 +643,7 @@ export default function PorondamScreen() {
           <Animated.View entering={FadeIn.delay(200).duration(400)}>
             <SpringPressable style={sty.editBtn} haptic="light"
               onPress={function() { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setCollapsed(false); }}>
-              <Ionicons name="pencil" size={14} color="#c084fc" />
+              <Ionicons name="pencil" size={14} color="#FF8C00" />
               <Text style={sty.editText}>{T.edit}</Text>
             </SpringPressable>
           </Animated.View>
@@ -678,14 +678,14 @@ export default function PorondamScreen() {
             <Animated.View entering={FadeIn.delay(200).duration(400)}>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
                 <TouchableOpacity
-                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(180,122,255,0.25)', backgroundColor: 'rgba(180,122,255,0.06)' }}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.25)', backgroundColor: 'rgba(255,140,0,0.06)' }}
                   activeOpacity={0.7}
                   onPress={function() {
                     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                     setCollapsed(false); setData(null); setReport(null); setReportLang(null); setPorondamId(null); setError(null);
                   }}>
-                  <Ionicons name="refresh" size={15} color="#B47AFF" style={{ marginRight: 6 }} />
-                  <Text style={{ color: '#B47AFF', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'අලුත් පරීක්ෂාව' : 'New Check'}</Text>
+                  <Ionicons name="refresh" size={15} color="#FF8C00" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#FF8C00', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'අලුත් පරීක්ෂාව' : 'New Check'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,184,0,0.35)', backgroundColor: 'rgba(255,184,0,0.08)' }}
@@ -859,7 +859,7 @@ export default function PorondamScreen() {
                       <View key={pi} style={{ marginBottom: 14 }}>
                         <Text style={[sty.doshaName, { color: person.color, marginBottom: 8 }]}>{person.emoji} {person.label}</Text>
                         {person.yogas.slice(0, 6).map(function(y, yi) {
-                          var catColor = y.category === 'Raja Yoga' ? '#c084fc' : y.category === 'Dhana Yoga' ? '#FFB800' : '#60a5fa';
+                          var catColor = y.category === 'Raja Yoga' ? '#FF8C00' : y.category === 'Dhana Yoga' ? '#FFB800' : '#60a5fa';
                           return (
                             <View key={yi} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8, paddingLeft: 4 }}>
                               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: catColor, marginTop: 5 }} />
@@ -944,7 +944,7 @@ export default function PorondamScreen() {
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 20, marginTop: 14 }}>
                       <View style={{ alignItems: 'center' }}>
-                        <Text style={{ color: '#c084fc', fontSize: 18, fontWeight: '800' }}>{data.totalScore}/{data.maxPossibleScore}</Text>
+                        <Text style={{ color: '#FF8C00', fontSize: 18, fontWeight: '800' }}>{data.totalScore}/{data.maxPossibleScore}</Text>
                         <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>{language === 'si' ? 'සාම්ප්‍රදායික' : 'Traditional'}</Text>
                       </View>
                       <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
@@ -1026,7 +1026,7 @@ export default function PorondamScreen() {
                   {(data.advancedPorondam.advanced.navamshaCompatibility.insights || []).map(function(insight, i) {
                     return (
                       <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: 6, paddingLeft: 4 }}>
-                        <Text style={{ color: '#c084fc', fontSize: 12 }}>{'\u2728'}</Text>
+                        <Text style={{ color: '#FF8C00', fontSize: 12 }}>{'\u2728'}</Text>
                         <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, flex: 1, lineHeight: 18 }}>{insight}</Text>
                       </View>
                     );
@@ -1180,7 +1180,7 @@ export default function PorondamScreen() {
                   </View>
                   {/* Token balance pill */}
                   {tokenBalance !== null && (
-                    <TouchableOpacity onPress={function() { setShowTopUp(true); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(180,122,255,0.18)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }}>
+                    <TouchableOpacity onPress={function() { setShowTopUp(true); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,140,0,0.18)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }}>
                       <Ionicons name="wallet-outline" size={12} color="#FFB800" />
                       <Text style={{ color: tokenBalance >= 10 ? '#4ADE80' : '#F87171', fontSize: 12, fontWeight: '700' }}>
                         {'LKR ' + tokenBalance}
@@ -1205,7 +1205,7 @@ export default function PorondamScreen() {
                 </View>
                 {reportLoading && (
                   <View style={sty.reportLoadRow}>
-                    <CosmicLoader size={24} color="#c084fc" />
+                    <CosmicLoader size={24} color="#FF8C00" />
                     <Text style={sty.reportLoadText}>{T.generating}</Text>
                   </View>
                 )}
@@ -1230,7 +1230,7 @@ export default function PorondamScreen() {
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <LinearGradient
             colors={['rgba(13,7,32,0.99)', 'rgba(4,3,12,1)']}
-            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(180,122,255,0.3)' }}
+            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(255,140,0,0.3)' }}
           >
             <Text style={{ color: '#FFB800', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
               {language === 'si' ? '💍 ගැළපුම් වාර්තාව' : '💍 Compatibility Report'}
@@ -1254,14 +1254,15 @@ export default function PorondamScreen() {
               <TouchableOpacity
                 onPress={function() { setShowConfirm(false); genReport(pendingReportLang || 'en'); }}
                 activeOpacity={0.85}
-                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
+                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0 }}
               >
                 <LinearGradient
-                  colors={['#FFB800', '#F59E0B', '#9333EA']}
-                  style={{ paddingVertical: 15, alignItems: 'center', borderRadius: 14 }}
+                  colors={['#FF8C00', '#FF6D00', '#E65100']}
+                  style={{ paddingVertical: 16, alignItems: 'center', borderRadius: 14 }}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 >
-                  <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '800' }}>
+                  <LinearGradient colors={['rgba(255,255,255,0.18)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
+                  <Text style={{ color: '#FFF1D0', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 }}>
                     {language === 'si' ? '✨ රු 10 ගෙවා ලියන්න' : '✨ Confirm & Generate — LKR 10'}
                   </Text>
                 </LinearGradient>
@@ -1273,11 +1274,11 @@ export default function PorondamScreen() {
                 style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
               >
                 <LinearGradient
-                  colors={['#7C3AED', '#6366F1']}
+                  colors={['#FF8C00', '#E07800']}
                   style={{ paddingVertical: 15, alignItems: 'center', borderRadius: 14 }}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 >
-                  <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '800' }}>
+                  <Text style={{ color: '#FFF1D0', fontSize: 15, fontWeight: '800' }}>
                     {language === 'si' ? '💳 ශේෂය රිචාජ් කරන්න' : '💳 Top Up Balance'}
                   </Text>
                 </LinearGradient>
@@ -1297,7 +1298,7 @@ export default function PorondamScreen() {
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <LinearGradient
             colors={['rgba(13,7,32,0.99)', 'rgba(4,3,12,1)']}
-            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(180,122,255,0.3)' }}
+            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(255,140,0,0.3)' }}
           >
             <Text style={{ color: '#FFB800', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
               {language === 'si' ? '💳 ශේෂය රිචාජ්' : '💳 Top Up Balance'}
@@ -1312,14 +1313,15 @@ export default function PorondamScreen() {
                   onPress={function() { handleTopUp(amt); }}
                   disabled={topUpLoading}
                   activeOpacity={0.8}
-                  style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
+                  style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 0 }}
                 >
                   <LinearGradient
-                    colors={amt === 15 ? ['#4C1D95', '#7C3AED'] : amt === 30 ? ['#1E3A5F', '#3B82F6'] : ['#065F46', '#10B981']}
+                    colors={amt === 100 ? ['#FF8C00', '#FF6D00'] : amt === 250 ? ['#FF7A00', '#E65100'] : ['#FF9500', '#FF6D00', '#E65100']}
                     style={{ paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                   >
-                    <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700' }}>
+                    <LinearGradient colors={['rgba(255,255,255,0.15)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
+                    <Text style={{ color: '#FFF1D0', fontSize: 16, fontWeight: '700' }}>
                       {language === 'si' ? 'රු ' + amt + ' රිචාජ්' : 'Add LKR ' + amt}
                     </Text>
                     {topUpLoading ? (
@@ -1339,7 +1341,7 @@ export default function PorondamScreen() {
           </LinearGradient>
         </View>
       </Modal>
-    </CosmicBackground>
+    </View>
     </DesktopScreenWrapper>
   );
 }
@@ -1356,10 +1358,10 @@ var sty = StyleSheet.create({
   scrollInner: { width: '100%' },
   scrollInnerDesktop: { maxWidth: 960, alignSelf: 'center', paddingHorizontal: 32 },
   title: {
-    fontSize: WIDE ? 36 : 30, fontWeight: '900', color: '#fff', letterSpacing: -0.5,
+    fontSize: WIDE ? 36 : 30, fontWeight: '900', color: '#FFF1D0', letterSpacing: -0.5,
     textShadowColor: 'rgba(192,38,211,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10,
   },
-  subtitle: { fontSize: 14, color: 'rgba(180,122,255,0.8)', marginBottom: 24, fontWeight: '500', letterSpacing: 0.3 },
+  subtitle: { fontSize: 14, color: 'rgba(255,140,0,0.8)', marginBottom: 24, fontWeight: '500', letterSpacing: 0.3 },
 
   glass: {
     borderRadius: 20, overflow: 'hidden', borderWidth: 1,
@@ -1374,38 +1376,38 @@ var sty = StyleSheet.create({
   nameInput: {
     backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 12 : 10,
-    color: '#fff', fontSize: 14, borderWidth: 1, borderColor: 'rgba(180,122,255,0.2)', marginBottom: 12,
+    color: '#FFF1D0', fontSize: 14, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)', marginBottom: 12,
   },
-  fieldTag: { fontSize: 10, fontWeight: '700', color: 'rgba(180,122,255,0.7)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6, marginTop: 4 },
+  fieldTag: { fontSize: 10, fontWeight: '700', color: 'rgba(255,140,0,0.7)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6, marginTop: 4 },
   fieldRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   numInput: {
     backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 10,
     paddingHorizontal: 10, paddingVertical: Platform.OS === 'ios' ? 11 : 8,
-    color: '#fff', fontSize: 14, fontWeight: '600',
-    borderWidth: 1, borderColor: 'rgba(180,122,255,0.18)', textAlign: 'center', minWidth: 0,
+    color: '#FFF1D0', fontSize: 14, fontWeight: '600',
+    borderWidth: 1, borderColor: 'rgba(255,140,0,0.18)', textAlign: 'center', minWidth: 0,
   },
   sep: { color: 'rgba(255,255,255,0.2)', fontSize: 16, fontWeight: '300' },
-  timeSep: { color: 'rgba(180,122,255,0.6)', fontSize: 20, fontWeight: '700' },
+  timeSep: { color: 'rgba(255,140,0,0.6)', fontSize: 20, fontWeight: '700' },
   timeHint: { fontSize: 11, color: 'rgba(255,255,255,0.28)', marginBottom: 16, fontStyle: 'italic', textAlign: 'center' },
 
-  cta: { borderRadius: 16, paddingVertical: 16, alignItems: 'center', overflow: 'hidden', marginBottom: 8 },
-  ctaText: { color: '#fff', fontWeight: '800', fontSize: 16, letterSpacing: 0.5 },
+  cta: { borderRadius: 16, paddingVertical: 17, alignItems: 'center', overflow: 'hidden', marginBottom: 8, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 18, elevation: 0 },
+  ctaText: { color: '#FFF1D0', fontWeight: '800', fontSize: 16, letterSpacing: 0.8 },
 
   editBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 12, marginBottom: 14, borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(180,122,255,0.18)', backgroundColor: 'rgba(180,122,255,0.06)',
+    borderWidth: 1, borderColor: 'rgba(255,140,0,0.18)', backgroundColor: 'rgba(255,140,0,0.06)',
   },
-  editText: { color: '#B47AFF', fontWeight: '600', fontSize: 13 },
+  editText: { color: '#FF8C00', fontWeight: '600', fontSize: 13 },
 
   loadCenter: { alignItems: 'center', marginVertical: 30 },
-  loadCard: { alignItems: 'center', paddingVertical: 44, paddingHorizontal: 40, borderColor: 'rgba(180,122,255,0.2)' },
+  loadCard: { alignItems: 'center', paddingVertical: 44, paddingHorizontal: 40, borderColor: 'rgba(255,140,0,0.2)' },
   loadRing: { width: 90, height: 90, borderRadius: 45, opacity: 0.22, position: 'absolute', top: 34 },
   loadInner: {
     width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(15,5,25,0.9)',
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(180,122,255,0.3)',
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,140,0,0.3)',
   },
-  loadText: { color: '#B47AFF', fontSize: 15, fontWeight: '700', marginTop: 22, letterSpacing: 0.5 },
+  loadText: { color: '#FF8C00', fontSize: 15, fontWeight: '700', marginTop: 22, letterSpacing: 0.5 },
   errorText: { color: '#F87171', fontSize: 14, textAlign: 'center' },
 
   // Score Gauge — binary star orbit
@@ -1417,29 +1419,29 @@ var sty = StyleSheet.create({
   shareChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
     paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999,
-    backgroundColor: 'rgba(180,122,255,0.1)', borderWidth: 1, borderColor: 'rgba(180,122,255,0.25)',
+    backgroundColor: 'rgba(255,140,0,0.1)', borderWidth: 1, borderColor: 'rgba(255,140,0,0.25)',
   },
-  shareChipText: { color: '#B47AFF', fontSize: 12, fontWeight: '700' },
+  shareChipText: { color: '#FF8C00', fontSize: 12, fontWeight: '700' },
 
   charts: { marginBottom: 6 },
   chartsWide: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   chartCol: { flex: 1, maxWidth: 440 },
   chartCard: { alignItems: 'center', paddingVertical: WIDE ? 20 : 16 },
-  chartTitle: { fontSize: 14, fontWeight: '700', color: '#B47AFF', marginBottom: 12, letterSpacing: 0.3 },
+  chartTitle: { fontSize: 14, fontWeight: '700', color: '#FF8C00', marginBottom: 12, letterSpacing: 0.3 },
   heartBridge: { alignItems: 'center', marginVertical: -6, zIndex: 10 },
   heartBridgeWide: { marginVertical: 0, marginHorizontal: -10 },
 
   section: { marginBottom: 14 },
   secHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
   secTitle: { fontSize: 16, fontWeight: '800', color: '#E0E7FF', letterSpacing: 0.2 },
-  secSub: { fontSize: 12, color: 'rgba(180,122,255,0.6)', fontWeight: '500', marginTop: 2 },
+  secSub: { fontSize: 12, color: 'rgba(255,140,0,0.6)', fontWeight: '500', marginTop: 2 },
 
   factorItem: { marginBottom: 16 },
   factorTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   factorNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   factorDot: { width: 8, height: 8, borderRadius: 4 },
   factorName: { fontSize: 14, color: '#E0E7FF', fontWeight: '700' },
-  factorSinhala: { fontSize: 12, color: 'rgba(180,122,255,0.5)', fontWeight: '500' },
+  factorSinhala: { fontSize: 12, color: 'rgba(255,140,0,0.5)', fontWeight: '500' },
   factorBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
   factorBadgeText: { fontSize: 12, fontWeight: '800' },
   barTrack: { height: 7, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' },
@@ -1460,7 +1462,7 @@ var sty = StyleSheet.create({
   langChipText: { color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: '700' },
   langChipTextActive: { color: '#E879F9' },
   reportLoadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
-  reportLoadText: { color: '#B47AFF', fontSize: 13 },
+  reportLoadText: { color: '#FF8C00', fontSize: 13 },
   reportBody: {
     backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 16,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)',

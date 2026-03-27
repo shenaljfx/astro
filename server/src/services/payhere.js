@@ -36,7 +36,7 @@ const CHECKOUT_URL = SANDBOX
   ? 'https://sandbox.payhere.lk/pay/checkout'
   : 'https://www.payhere.lk/pay/checkout';
 
-// Monthly subscription amount (LKR 8/day × 30 = LKR 240/month)
+// Monthly subscription amount (LKR 240/month via card/bank)
 const MONTHLY_AMOUNT = 240;
 const MONTHLY_AMOUNT_FORMATTED = '240.00';
 
@@ -140,6 +140,8 @@ function buildSubscriptionPayment(params) {
     sandbox: SANDBOX,
     merchant_id: MERCHANT_ID,
     notify_url: NOTIFY_BASE_URL + '/api/payhere/notify',
+    return_url: NOTIFY_BASE_URL + '/api/payhere/return',
+    cancel_url: NOTIFY_BASE_URL + '/api/payhere/cancel',
     order_id: orderId,
     items: 'Grahachara Monthly Subscription',
     amount: MONTHLY_AMOUNT_FORMATTED,

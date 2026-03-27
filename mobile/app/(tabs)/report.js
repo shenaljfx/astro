@@ -15,7 +15,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, useAnimatedScrollHandler, withRepeat, withTiming, withSequence, interpolate } from 'react-native-reanimated';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import CosmicBackground from '../../components/CosmicBackground';
 import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
 import MarkdownText from '../../components/MarkdownText';
 import SriLankanChart from '../../components/SriLankanChart';
@@ -32,7 +31,7 @@ import api from '../../services/api';
 // ──────────────────────────────────────────
 var SECTION_META = {
   personality:      { colors: ['#3B82F6', '#1E3A8A'], emoji: '✨', gradient: ['#818CF8', '#3B82F6'] },
-  yogaAnalysis:     { colors: ['#9333EA', '#581C87'], emoji: '⚡', gradient: ['#B47AFF', '#9333EA'] },
+  yogaAnalysis:     { colors: ['#9333EA', '#581C87'], emoji: '⚡', gradient: ['#FF8C00', '#9333EA'] },
   lifePredictions:  { colors: ['#8B5CF6', '#4C1D95'], emoji: '🔮', gradient: ['#A78BFA', '#8B5CF6'] },
   career:           { colors: ['#F59E0B', '#92400E'], emoji: '💼', gradient: ['#FFB800', '#F59E0B'] },
   marriage:         { colors: ['#EC4899', '#831843'], emoji: '💍', gradient: ['#F9A8D4', '#EC4899'] },
@@ -145,7 +144,7 @@ function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang }) {
               <Text style={sc.title} numberOfLines={2}>{title}</Text>
             </View>
             <View style={[sc.chevronBg, expanded && sc.chevronBgActive]}>
-              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={expanded ? '#B47AFF' : 'rgba(255,255,255,0.4)'} />
+              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={expanded ? '#FF8C00' : 'rgba(255,255,255,0.4)'} />
             </View>
           </View>
           {/* Content — AI Narrative Only */}
@@ -167,9 +166,9 @@ var sc = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', padding: 16 },
   iconBg: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   emoji: { fontSize: 22 },
-  title: { color: '#F1F5F9', fontSize: 15, fontWeight: '700', lineHeight: 21 },
+  title: { color: '#FFE8B0', fontSize: 15, fontWeight: '700', lineHeight: 21 },
   chevronBg: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
-  chevronBgActive: { backgroundColor: 'rgba(180,122,255,0.15)' },
+  chevronBgActive: { backgroundColor: 'rgba(255,140,0,0.15)' },
   content: { paddingHorizontal: 16, paddingBottom: 16 },
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginBottom: 12 },
   narrativeWrap: {
@@ -306,7 +305,7 @@ function CosmicLoader({ progress, userName, language }) {
       <View style={cl.progressRow}>
         <View style={cl.progressBar}>
           <LinearGradient
-            colors={['#9333EA', '#FFB800']}
+            colors={['#FF8C00', '#FFB800']}
             style={[cl.progressFill, { width: ((stageIndex + 1) / stages.length * 100) + '%' }]}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
           />
@@ -323,15 +322,15 @@ var cl = StyleSheet.create({
   glowCircle: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,184,0,0.15)' },
   centerOrb: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', zIndex: 10 },
   centerGrad: { flex: 1, borderRadius: 20 },
-  orbitRing: { position: 'absolute', borderRadius: 999, borderWidth: 1, borderColor: 'rgba(180,122,255,0.15)', borderStyle: 'dashed' },
+  orbitRing: { position: 'absolute', borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)', borderStyle: 'dashed' },
   planet: { position: 'absolute', zIndex: 5 },
   planet1: {},
   planet2: {},
   planet3: {},
   textWrap: { alignItems: 'center', marginBottom: 20 },
-  stageText: { color: '#F1F5F9', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
+  stageText: { color: '#FFE8B0', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
   stageSub: { color: '#94A3B8', fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  personalText: { color: '#B47AFF', fontSize: 14, fontWeight: '600', textAlign: 'center', marginBottom: 24, fontStyle: 'italic' },
+  personalText: { color: '#FF8C00', fontSize: 14, fontWeight: '600', textAlign: 'center', marginBottom: 24, fontStyle: 'italic' },
   progressRow: { width: '100%', alignItems: 'center' },
   progressBar: { width: '80%', height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: 8 },
   progressFill: { height: '100%', borderRadius: 2 },
@@ -382,7 +381,7 @@ function TopUpModal({ visible, onClose, onTopUp, loading, language }) {
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
         <LinearGradient
           colors={['rgba(13,7,32,0.99)', 'rgba(4,3,12,1)']}
-          style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(180,122,255,0.3)' }}
+          style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(255,140,0,0.3)' }}
         >
           <Text style={{ color: '#FFB800', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
             {isSi ? '💳 ශේෂය රිචාජ්' : '💳 Top Up Balance'}
@@ -398,14 +397,15 @@ function TopUpModal({ visible, onClose, onTopUp, loading, language }) {
                 onPress={function() { onTopUp(amt); }}
                 disabled={loading}
                 activeOpacity={0.8}
-                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
+                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 0 }}
               >
                 <LinearGradient
-                  colors={amt === 15 ? ['#4C1D95', '#7C3AED'] : amt === 30 ? ['#1E3A5F', '#3B82F6'] : ['#065F46', '#10B981']}
+                  colors={amt === 15 ? ['#FF8C00', '#FF6D00'] : amt === 30 ? ['#FF7A00', '#E65100'] : ['#FF9500', '#FF6D00', '#E65100']}
                   style={{ paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 >
-                  <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700' }}>
+                  <LinearGradient colors={['rgba(255,255,255,0.15)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
+                  <Text style={{ color: '#FFF1D0', fontSize: 16, fontWeight: '700' }}>
                     {isSi ? 'රු ' + amt + ' රිචාජ්' : 'Add LKR ' + amt}
                   </Text>
                   {loading ? (
@@ -644,12 +644,12 @@ export default function ReportScreen() {
     var afterBal = tokenBalance !== null ? parseFloat((tokenBalance - 15).toFixed(2)) : '—';
     var hasEnough = tokenBalance !== null && tokenBalance >= 15;
     return (
-      <CosmicBackground>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 28 }}>
           <Animated.View entering={FadeInDown.duration(500)} style={{ width: '100%', maxWidth: 380 }}>
             <LinearGradient
-              colors={['rgba(180,122,255,0.18)', 'rgba(4,3,12,0.96)']}
-              style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: 'rgba(180,122,255,0.3)' }}
+              colors={['rgba(255,140,0,0.18)', 'rgba(4,3,12,0.96)']}
+              style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: 'rgba(255,140,0,0.3)' }}
             >
               <Text style={{ fontSize: 38, textAlign: 'center', marginBottom: 12 }}>📜</Text>
               <Text style={{ color: '#FFB800', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 6, letterSpacing: 1 }}>
@@ -689,14 +689,15 @@ export default function ReportScreen() {
                 <TouchableOpacity
                   onPress={handleChargeConfirm}
                   activeOpacity={0.85}
-                  style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
+                  style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0 }}
                 >
                   <LinearGradient
-                    colors={['#FFB800', '#F59E0B', '#9333EA']}
-                    style={{ paddingVertical: 15, alignItems: 'center', borderRadius: 14 }}
+                    colors={['#FF8C00', '#FF6D00', '#E65100']}
+                    style={{ paddingVertical: 16, alignItems: 'center', borderRadius: 14 }}
                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                   >
-                    <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 }}>
+                    <LinearGradient colors={['rgba(255,255,255,0.18)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
+                    <Text style={{ color: '#FFF1D0', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 }}>
                       {reportLang === 'si' ? '✨ LKR 15 ගෙවා ලියන්න' : '✨ Confirm & Generate — LKR 15'}
                     </Text>
                   </LinearGradient>
@@ -711,14 +712,15 @@ export default function ReportScreen() {
                   <TouchableOpacity
                     onPress={function() { setShowTopUp(true); }}
                     activeOpacity={0.85}
-                    style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
+                    style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0 }}
                   >
                     <LinearGradient
-                      colors={['#7C3AED', '#6366F1']}
+                      colors={['#FF8C00', '#FF6D00', '#E65100']}
                       style={{ paddingVertical: 15, alignItems: 'center', borderRadius: 14 }}
                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                     >
-                      <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '800' }}>
+                      <LinearGradient colors={['rgba(255,255,255,0.18)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
+                      <Text style={{ color: '#FFF1D0', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 }}>
                         {reportLang === 'si' ? '💳 ශේෂය රිචාජ් කරන්න' : '💳 Top Up Balance'}
                       </Text>
                     </LinearGradient>
@@ -743,18 +745,18 @@ export default function ReportScreen() {
           loading={topUpLoading}
           language={reportLang}
         />
-      </CosmicBackground>
+      </View>
     );
   }
 
   // ── FULL SCREEN LOADING ──────────────────────────────────
   if (screenState === 'loading') {
     return (
-      <CosmicBackground>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <View style={s.loadingFull}>
           <CosmicLoader userName={userName} language={reportLang} />
         </View>
-      </CosmicBackground>
+      </View>
     );
   }
 
@@ -762,7 +764,7 @@ export default function ReportScreen() {
   if (screenState === 'report' && report) {
     return (
       <DesktopScreenWrapper routeName="report">
-      <CosmicBackground>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
           <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
           {/* Title */}
@@ -779,7 +781,7 @@ export default function ReportScreen() {
           <Animated.View entering={FadeIn.delay(100).duration(400)}>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
               <SpringPressable style={[s.newReportBtn, { flex: 1, marginBottom: 0 }]} onPress={handleNewReport} haptic="medium">
-                <Ionicons name="refresh" size={16} color="#B47AFF" style={{ marginRight: 6 }} />
+                <Ionicons name="refresh" size={16} color="#FF8C00" style={{ marginRight: 6 }} />
                 <Text style={s.newReportText}>{reportLang === 'si' ? 'අලුත් කතාවක්' : 'New Report'}</Text>
               </SpringPressable>
               <SpringPressable style={[s.newReportBtn, { flex: 1, marginBottom: 0, borderColor: 'rgba(255,184,0,0.35)', backgroundColor: 'rgba(255,184,0,0.08)' }]} onPress={handleDownloadPDF} haptic="medium">
@@ -864,7 +866,7 @@ export default function ReportScreen() {
           {/* Birth Chart (Sri Lankan Kendara) */}
           {chartData && chartData.rashiChart && (
             <Animated.View entering={FadeInDown.delay(250).duration(700)}>
-              <AuraBox style={{ borderColor: 'rgba(180,122,255,0.2)' }}>
+              <AuraBox style={{ borderColor: 'rgba(255,140,0,0.2)' }}>
                 <View style={s.chartHeader}>
                   <Text style={s.chartTitle}>{reportLang === 'si' ? '🏛️ ඔයාගේ උපන් සිතියම' : '🏛️ Your Birth Map'}</Text>
                   <Text style={s.chartSub}>{reportLang === 'si' ? 'ඔයා ඉපදුන මොහොතේ අහස පෙනුන හැටි' : 'How the sky looked the moment you were born'}</Text>
@@ -891,7 +893,7 @@ export default function ReportScreen() {
           <View style={{ height: isDesktop ? 32 : 120 }} />
           </View>
         </ScrollView>
-      </CosmicBackground>
+      </View>
       </DesktopScreenWrapper>
     );
   }
@@ -899,7 +901,7 @@ export default function ReportScreen() {
   // ── INPUT FORM (default view) ────────────────────────────
   return (
     <DesktopScreenWrapper routeName="report">
-    <CosmicBackground>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
         <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
         {/* Header */}
@@ -1030,10 +1032,11 @@ export default function ReportScreen() {
 
             <SpringPressable style={s.generateBtn} onPress={handleGenerate} haptic="heavy" scalePressed={0.93}>
               <LinearGradient
-                colors={['#9333EA', '#6D28D9']}
+                colors={['#FF8C00', '#FF6D00', '#E65100']}
                 style={s.generateGrad}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               >
+                <LinearGradient colors={['rgba(255,255,255,0.18)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
                 <Ionicons name="sparkles" size={18} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={s.generateText}>{t('reportGenerate')}</Text>
               </LinearGradient>
@@ -1053,8 +1056,8 @@ export default function ReportScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Ionicons name="pricetag-outline" size={12} color="rgba(251,191,36,0.6)" />
                 <Text style={{ color: '#FFB800', fontSize: 12, fontWeight: '700' }}>LKR 15</Text>
-                <TouchableOpacity onPress={function() { setShowTopUp(true); }} style={{ marginLeft: 8, backgroundColor: 'rgba(180,122,255,0.25)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 }}>
-                  <Text style={{ color: '#B47AFF', fontSize: 11, fontWeight: '700' }}>
+                <TouchableOpacity onPress={function() { setShowTopUp(true); }} style={{ marginLeft: 8, backgroundColor: 'rgba(255,140,0,0.25)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 }}>
+                  <Text style={{ color: '#FF8C00', fontSize: 11, fontWeight: '700' }}>
                     {reportLang === 'si' ? 'රිචාජ්' : 'Top Up'}
                   </Text>
                 </TouchableOpacity>
@@ -1090,7 +1093,7 @@ export default function ReportScreen() {
         <View style={{ height: isDesktop ? 32 : 120 }} />
         </View>
       </ScrollView>
-    </CosmicBackground>
+    </View>
     </DesktopScreenWrapper>
   );
 }
@@ -1103,22 +1106,22 @@ var s = StyleSheet.create({
   contentDesktop: { paddingTop: 24, paddingHorizontal: 0, paddingBottom: 40 },
   contentInner: { width: '100%' },
   contentInnerDesktop: { maxWidth: 900, alignSelf: 'center', paddingHorizontal: 32 },
-  title: { fontSize: 26, fontWeight: '900', color: '#F1F5F9', textAlign: 'center', letterSpacing: 0.5 },
+  title: { fontSize: 26, fontWeight: '900', color: '#FFE8B0', textAlign: 'center', letterSpacing: 0.5 },
   subtitle: { fontSize: 13, color: '#94A3B8', textAlign: 'center', marginTop: 6, marginBottom: 20 },
-  inputLabel: { color: '#CBD5E1', fontSize: 14, fontWeight: '700', marginBottom: 12 },
+  inputLabel: { color: '#D4B06A', fontSize: 14, fontWeight: '700', marginBottom: 12 },
   inputRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   inputGroup: { flex: 1 },
   inputHint: { color: '#64748B', fontSize: 10, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
   input: {
     backgroundColor: 'rgba(24,30,72,0.65)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
-    color: '#F1F5F9', fontSize: 15, fontWeight: '600', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    color: '#FFE8B0', fontSize: 15, fontWeight: '600', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   inputError: { borderColor: 'rgba(239,68,68,0.5)' },
-  generateBtn: { borderRadius: 14, overflow: 'hidden', marginTop: 4 },
-  generateGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14 },
-  generateText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  generateBtn: { borderRadius: 14, overflow: 'hidden', marginTop: 4, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 18, elevation: 0 },
+  generateGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 15 },
+  generateText: { color: '#FFF1D0', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
   errorText: { color: '#F87171', fontSize: 13, flex: 1 },
-  aiProgressText: { color: '#B47AFF', fontSize: 14, fontWeight: '700' },
+  aiProgressText: { color: '#FF8C00', fontSize: 14, fontWeight: '700' },
   aiProgressSub: { color: '#64748B', fontSize: 11, marginTop: 4 },
   genderRow: { flexDirection: 'row', gap: 10, marginBottom: 16, marginTop: 6 },
   genderBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(24,30,72,0.4)' },
@@ -1126,21 +1129,21 @@ var s = StyleSheet.create({
   genderBtnFemaleActive: { borderColor: 'rgba(244,114,182,0.6)', backgroundColor: 'rgba(244,114,182,0.12)' },
   genderIcon: { fontSize: 22 },
   genderText: { color: '#64748B', fontSize: 15, fontWeight: '700' },
-  genderTextActive: { color: '#FFF' },
+  genderTextActive: { color: '#FFF1D0' },
   langRow: { flexDirection: 'row', gap: 10, marginBottom: 16, marginTop: 6 },
   langBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(24,30,72,0.4)' },
-  langBtnActive: { borderColor: 'rgba(180,122,255,0.6)', backgroundColor: 'rgba(180,122,255,0.15)' },
+  langBtnActive: { borderColor: 'rgba(255,140,0,0.6)', backgroundColor: 'rgba(255,140,0,0.15)' },
   langFlag: { fontSize: 20 },
   langText: { color: '#64748B', fontSize: 14, fontWeight: '700' },
-  langTextActive: { color: '#B47AFF' },
+  langTextActive: { color: '#FF8C00' },
   locationRow: { marginBottom: 16, marginTop: 4 },
   locationScroll: { flexGrow: 0 },
   locationChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(24,30,72,0.4)', marginRight: 8 },
-  locationChipActive: { borderColor: 'rgba(180,122,255,0.6)', backgroundColor: 'rgba(180,122,255,0.15)' },
+  locationChipActive: { borderColor: 'rgba(255,140,0,0.6)', backgroundColor: 'rgba(255,140,0,0.15)' },
   locationChipText: { color: '#64748B', fontSize: 12, fontWeight: '700' },
-  locationChipTextActive: { color: '#B47AFF' },
-  newReportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginBottom: 12, backgroundColor: 'rgba(180,122,255,0.1)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(180,122,255,0.25)' },
-  newReportText: { color: '#B47AFF', fontSize: 13, fontWeight: '700' },
+  locationChipTextActive: { color: '#FF8C00' },
+  newReportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginBottom: 12, backgroundColor: 'rgba(255,140,0,0.1)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.25)' },
+  newReportText: { color: '#FF8C00', fontSize: 13, fontWeight: '700' },
   birthHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   birthIconBg: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,184,0,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
   birthLagna: { color: '#FFB800', fontSize: 20, fontWeight: '900' },
@@ -1149,8 +1152,8 @@ var s = StyleSheet.create({
   panchangaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   panchangaItem: { alignItems: 'center', flex: 1 },
   panchangaLabel: { color: '#475569', fontSize: 9, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  panchangaValue: { color: '#CBD5E1', fontSize: 12, fontWeight: '700', marginTop: 2 },
+  panchangaValue: { color: '#D4B06A', fontSize: 12, fontWeight: '700', marginTop: 2 },
   chartHeader: { alignItems: 'center', marginBottom: 12 },
-  chartTitle: { color: '#F1F5F9', fontSize: 16, fontWeight: '800' },
+  chartTitle: { color: '#FFE8B0', fontSize: 16, fontWeight: '800' },
   chartSub: { color: '#64748B', fontSize: 11, marginTop: 4 },
 });

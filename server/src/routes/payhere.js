@@ -81,17 +81,56 @@ router.post('/initiate-subscription', phoneAuth, async (req, res) => {
 
     console.log(`[PayHere] ✔ Subscription initiated: ${orderId} for ${uid} (sandbox=${SANDBOX})`);
 
+    // Build checkout URL for web fallback (form-post redirect)
+    const checkoutUrl = SANDBOX
+      ? 'https://sandbox.payhere.lk/pay/checkout'
+      : 'https://www.payhere.lk/pay/checkout';
+
     res.json({
       success: true,
       paymentObject,
       hash,
       orderId,
       sandbox: SANDBOX,
+      checkout_url: checkoutUrl,
     });
   } catch (err) {
     console.error('[PayHere] initiate-subscription error:', err);
     res.status(500).json({ error: 'Failed to initiate subscription' });
   }
+});
+
+// ─── GET /return — PayHere redirects here after successful web checkout ──
+router.get('/return', (req, res) => {
+  // Redirect user back to the app (Expo web or deep link)
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Payment Complete</title>
+    <style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#04030C;color:#fff;text-align:center;}
+    .box{padding:40px;border-radius:20px;background:rgba(255,255,255,0.05);}
+    h2{color:#34D399;margin-bottom:8px;} a{color:#9333EA;}</style>
+  </head><body><div class="box">
+    <h2>✅ Payment Successful</h2>
+    <p>Your subscription is now active.</p>
+    <p><a href="/">Return to app</a></p>
+    <script>setTimeout(function(){window.location.href='/';},3000);</script>
+  </div></body></html>`;
+  res.send(html);
+});
+
+// ─── GET /cancel — PayHere redirects here if user cancels web checkout ───
+router.get('/cancel', (req, res) => {
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Payment Cancelled</title>
+    <style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#04030C;color:#fff;text-align:center;}
+    .box{padding:40px;border-radius:20px;background:rgba(255,255,255,0.05);}
+    h2{color:#FBBF24;margin-bottom:8px;} a{color:#9333EA;}</style>
+  </head><body><div class="box">
+    <h2>⚠️ Payment Cancelled</h2>
+    <p>No charges were made. You can try again anytime.</p>
+    <p><a href="/">Return to app</a></p>
+    <script>setTimeout(function(){window.location.href='/';},5000);</script>
+  </div></body></html>`;
+  res.send(html);
 });
 
 // ─── POST /initiate-topup ────────────────────────────────────────────────

@@ -5,7 +5,6 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import OnboardingScreen from './onboarding';
-import CosmicBackground from '../components/CosmicBackground';
 import CosmicLoader from '../components/effects/CosmicLoader';
 
 // Fix white background on web — inject CSS into html/body
@@ -27,7 +26,7 @@ function AppGate() {
     if (!authReady) return;
 
     if (!isLoggedIn) {
-      // Not logged in — show onboarding (starts at welcome/phone/OTP)
+      // Not logged in — show onboarding (Google Sign-In)
       setOnboardingPassed(false);
       setShowOnboarding(true);
     } else if (!onboardingDone && !onboardingPassed) {
@@ -45,11 +44,11 @@ function AppGate() {
   // Still loading
   if (loading || showOnboarding === null) {
     return (
-      <CosmicBackground>
+      <View style={{ flex: 1, backgroundColor: '#000000' }}>
         <View style={gs.loadingContainer}>
           <CosmicLoader size={56} color="#7dd3fc" />
         </View>
-      </CosmicBackground>
+      </View>
     );
   }
 

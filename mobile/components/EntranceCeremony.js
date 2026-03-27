@@ -301,8 +301,8 @@ export default function EntranceCeremony({ visible, onFinish }) {
         <Svg width={200} height={200}>
           <Defs>
             <RadialGradient id="splashGlow" cx="50%" cy="50%" rx="50%" ry="50%">
-              <Stop offset="0%" stopColor="#C084FC" stopOpacity="0.6" />
-              <Stop offset="50%" stopColor="#9333EA" stopOpacity="0.3" />
+              <Stop offset="0%" stopColor="#FF8C00" stopOpacity="0.6" />
+              <Stop offset="50%" stopColor="#FF6D00" stopOpacity="0.3" />
               <Stop offset="100%" stopColor="#1E1B4B" stopOpacity="0" />
             </RadialGradient>
           </Defs>
@@ -353,7 +353,7 @@ const ecS = StyleSheet.create({
     fontSize: 32,
     fontWeight: '800',
     color: '#F8FAFC',
-    textShadowColor: '#9333EA',
+    textShadowColor: '#FF8C00',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 20,
     marginTop: 12,

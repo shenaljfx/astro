@@ -13,7 +13,6 @@ import Animated, {
   interpolate, Easing,
 } from 'react-native-reanimated';
 import Svg, { Circle, Path, G, Defs, RadialGradient as SvgRadialGradient, Stop } from 'react-native-svg';
-import CosmicBackground from '../../components/CosmicBackground';
 import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
 import SpringPressable from '../../components/effects/SpringPressable';
 import CosmicLoader from '../../components/effects/CosmicLoader';
@@ -64,7 +63,7 @@ function BirthMandala({ lagnaIndex, moonIndex, size }) {
   var glowStyle = useAnimatedStyle(function () { return { opacity: pulse.value }; });
 
   var r = size / 2;
-  var palette = ['#9333EA','#B47AFF','#FFB800','#F59E0B','#34D399','#4CC9F0','#FF6B9D','#A78BFA'];
+  var palette = ['#9333EA','#FF8C00','#FFB800','#F59E0B','#34D399','#4CC9F0','#FF6B9D','#A78BFA'];
   var lc = palette[lagnaIndex % palette.length];
   var mc = palette[moonIndex  % palette.length];
   var petals = [];
@@ -116,7 +115,7 @@ function BirthMandala({ lagnaIndex, moonIndex, size }) {
 //  GLASS CARD
 // ─────────────────────────────────────────────────────────────────────
 function GCard({ children, style, accent }) {
-  var ac = accent || '#B47AFF';
+  var ac = accent || '#FF8C00';
   return (
     <View style={[gc.card, { borderColor: ac + '30' }, style]}>
       <LinearGradient colors={['rgba(20,12,50,0.65)', 'rgba(10,6,28,0.75)']} style={StyleSheet.absoluteFill} />
@@ -127,7 +126,7 @@ function GCard({ children, style, accent }) {
   );
 }
 var gc = StyleSheet.create({
-  card:  { borderRadius: 22, overflow: 'hidden', borderWidth: 1, marginBottom: 14, shadowColor: 'rgba(180,122,255,0.20)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 14, elevation: 6 },
+  card:  { borderRadius: 22, overflow: 'hidden', borderWidth: 1, marginBottom: 14, shadowColor: 'rgba(255,140,0,0.20)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 14, elevation: 6 },
   inner: { padding: 18 },
 });
 
@@ -178,7 +177,7 @@ var sr = StyleSheet.create({
   row:      { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
   rowBorder:{ borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   iconWrap: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  label:    { flex: 1, fontSize: 14, color: '#E2E8F0', fontWeight: '500' },
+  label:    { flex: 1, fontSize: 14, color: '#EBCF8B', fontWeight: '500' },
 });
 
 // ─────────────────────────────────────────────────────────────────────
@@ -192,7 +191,7 @@ function LangPicker({ language, onSwitch }) {
         var active = language === l.key;
         return (
           <TouchableOpacity key={l.key} style={[lp.pill, active && lp.pillActive]} onPress={function () { onSwitch(l.key); }} activeOpacity={0.8}>
-            {active && <LinearGradient colors={['rgba(180,122,255,0.75)','rgba(99,102,241,0.75)']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />}
+            {active && <LinearGradient colors={['rgba(255,140,0,0.75)','rgba(230,81,0,0.75)']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />}
             <Text style={lp.flag}>{l.flag}</Text>
             <Text style={[lp.text, active && lp.textActive]}>{l.label}</Text>
           </TouchableOpacity>
@@ -204,10 +203,10 @@ function LangPicker({ language, onSwitch }) {
 var lp = StyleSheet.create({
   wrap:       { flexDirection: 'row', gap: 10 },
   pill:       { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 14, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  pillActive: { borderColor: 'rgba(180,122,255,0.45)' },
+  pillActive: { borderColor: 'rgba(255,140,0,0.45)' },
   flag:       { fontSize: 18 },
   text:       { fontSize: 14, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
-  textActive: { color: '#fff', fontWeight: '800' },
+  textActive: { color: '#FFF1D0', fontWeight: '800' },
 });
 
 // ─────────────────────────────────────────────────────────────────────
@@ -231,97 +230,59 @@ var sp = StyleSheet.create({
 });
 
 // ─────────────────────────────────────────────────────────────────────
-//  PHONE AUTH FORM
+//  GOOGLE AUTH FORM
 // ─────────────────────────────────────────────────────────────────────
 function PhoneAuthForm() {
   var { t } = useLanguage();
-  var { sendOtp, verifyAndLogin } = useAuth();
-  var [phone,       setPhone]       = useState('');
-  var [otp,         setOtp]         = useState('');
-  var [referenceNo, setReferenceNo] = useState(null);
-  var [devOtp,      setDevOtp]      = useState(null);
-  var [step,        setStep]        = useState('phone');
+  var { signInWithGoogle } = useAuth();
   var [loading,     setLoading]     = useState(false);
   var [error,       setError]       = useState('');
 
-  async function handleSendOtp() {
-    if (!phone || phone.length < 9) { setError(t('enterPhone')); return; }
+  async function handleGoogleSignIn() {
     setError(''); setLoading(true);
     try {
-      var result = await sendOtp(phone);
-      setReferenceNo(result.referenceNo);
-      if (result._devOtp) setDevOtp(result._devOtp);
-      setStep('otp');
+      var result = await signInWithGoogle();
+      if (result && result.cancelled) {
+        // User cancelled — no error
+        setLoading(false);
+        return;
+      }
     } catch (err) {
       setError(err.message || t('error'));
     } finally { setLoading(false); }
   }
 
-  async function handleVerify() {
-    if (!otp || otp.length < 4) { setError(t('enterCode')); return; }
-    setError(''); setLoading(true);
-    try { await verifyAndLogin(phone, otp, referenceNo); }
-    catch (err) { setError(err.message || t('error')); }
-    finally { setLoading(false); }
-  }
-
   return (
-    <GCard accent="#9333EA">
+    <GCard accent="#FF8C00">
       <View style={af.header}>
         <View style={af.iconRing}>
-          <LinearGradient colors={['#7C3AED','#9333EA']} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={['#FF8C00','#FF6D00']} style={StyleSheet.absoluteFill} />
           <Ionicons name="sparkles" size={26} color="#fff" />
         </View>
-        <Text style={af.title}>{step === 'phone' ? t('signIn') : t('verifyOtp')}</Text>
-        <Text style={af.sub}>{step === 'phone' ? t('enterPhone') : (t('enterCode') + ' ' + phone)}</Text>
+        <Text style={af.title}>{t('signIn')}</Text>
+        <Text style={af.sub}>{t('signInGoogleDesc') || 'Sign in with your Google account'}</Text>
       </View>
 
-      {step === 'phone' && (
-        <>
-          <TextInput style={af.input} placeholder="07X XXX XXXX" placeholderTextColor="rgba(255,255,255,0.28)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={12} />
-          {error ? <Text style={af.error}>{error}</Text> : null}
-          <TouchableOpacity style={af.btn} onPress={handleSendOtp} disabled={loading} activeOpacity={0.85}>
-            <LinearGradient colors={['#7C3AED','#6366F1']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
-            {loading ? <CosmicLoader size={24} color="#fff" /> : <Text style={af.btnText}>{t('sendOtp')}</Text>}
-          </TouchableOpacity>
-        </>
-      )}
-
-      {step === 'otp' && (
-        <>
-          {devOtp && (
-            <View style={af.devBanner}>
-              <Text style={af.devText}>🧪 Dev OTP: {devOtp}</Text>
-            </View>
-          )}
-          <TextInput style={[af.input, { fontSize: 28, letterSpacing: 10, textAlign: 'center', fontWeight: '900' }]} placeholder="——————" placeholderTextColor="rgba(255,255,255,0.2)" value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} />
-          {error ? <Text style={af.error}>{error}</Text> : null}
-          <TouchableOpacity style={af.btn} onPress={handleVerify} disabled={loading} activeOpacity={0.85}>
-            <LinearGradient colors={['#059669','#10B981']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
-            {loading ? <CosmicLoader size={24} color="#fff" /> : <Text style={af.btnText}>{t('verifySignIn')}</Text>}
-          </TouchableOpacity>
-          <TouchableOpacity style={af.back} onPress={function () { setStep('phone'); setOtp(''); setError(''); }}>
-            <Ionicons name="arrow-back" size={14} color="#A78BFA" />
-            <Text style={af.backText}>{t('changePhone')}</Text>
-          </TouchableOpacity>
-        </>
-      )}
+      {error ? <Text style={af.error}>{error}</Text> : null}
+      <TouchableOpacity style={[af.btn, { backgroundColor: '#4285F4' }]} onPress={handleGoogleSignIn} disabled={loading} activeOpacity={0.85}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <View style={{ width: 28, height: 28, borderRadius: 6, backgroundcolor: '#FFF1D0', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#4285F4' }}>G</Text>
+          </View>
+          {loading ? <CosmicLoader size={24} color="#fff" /> : <Text style={af.btnText}>{t('signInGoogle') || 'Continue with Google'}</Text>}
+        </View>
+      </TouchableOpacity>
     </GCard>
   );
 }
 var af = StyleSheet.create({
   header:    { alignItems: 'center', marginBottom: 22 },
   iconRing:  { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 14, borderWidth: 2, borderColor: 'rgba(196,132,252,0.35)' },
-  title:     { fontSize: 22, fontWeight: '900', color: '#fff', marginBottom: 6 },
+  title:     { fontSize: 22, fontWeight: '900', color: '#FFF1D0', marginBottom: 6 },
   sub:       { fontSize: 13, color: 'rgba(255,255,255,0.42)', textAlign: 'center', lineHeight: 19 },
-  input:     { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 16, color: '#fff', fontSize: 17, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(180,122,255,0.22)' },
   btn:       { borderRadius: 16, paddingVertical: 16, alignItems: 'center', overflow: 'hidden', marginTop: 4, marginBottom: 4 },
-  btnText:   { color: '#fff', fontSize: 16, fontWeight: '800' },
+  btnText:   { color: '#FFF1D0', fontSize: 16, fontWeight: '800' },
   error:     { color: '#F87171', fontSize: 13, textAlign: 'center', marginBottom: 10 },
-  back:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
-  backText:  { color: '#A78BFA', fontSize: 13, fontWeight: '600' },
-  devBanner: { backgroundColor: 'rgba(255,184,0,0.12)', padding: 10, borderRadius: 12, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,184,0,0.2)' },
-  devText:   { color: '#FFB800', fontSize: 12, fontWeight: '600' },
 });
 
 // ─────────────────────────────────────────────────────────────────────
@@ -426,7 +387,7 @@ function BirthDataForm({ currentData, onSave }) {
 
       {/* Save */}
       <SpringPressable style={bf.saveBtn} onPress={handleSave} disabled={saving} haptic="heavy" scalePressed={0.93}>
-        <LinearGradient colors={['#059669','#10B981']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
+        <LinearGradient colors={['#FF8C00','#FF6D00','#E65100']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:0}} />
         <LinearGradient colors={['rgba(255,255,255,0.18)','transparent']} style={{ position:'absolute',top:0,left:0,right:0,height:'60%',borderTopLeftRadius:16,borderTopRightRadius:16 }} />
         {saving
           ? <CosmicLoader size={24} color="#fff" />
@@ -483,25 +444,25 @@ var bf = StyleSheet.create({
   row:                { flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginBottom: 16 },
   inputWrap:          { flex: 1, alignItems: 'center' },
   inputHint:          { fontSize: 9, color: 'rgba(255,255,255,0.28)', fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
-  segInput:           { width: '100%', backgroundColor: 'rgba(255,255,255,0.09)', borderRadius: 14, paddingVertical: 13, color: '#fff', fontSize: 20, fontWeight: '900', textAlign: 'center', borderWidth: 1, borderColor: 'rgba(52,211,153,0.25)' },
+  segInput:           { width: '100%', backgroundColor: 'rgba(255,255,255,0.09)', borderRadius: 14, paddingVertical: 13, color: '#FFF1D0', fontSize: 20, fontWeight: '900', textAlign: 'center', borderWidth: 1, borderColor: 'rgba(52,211,153,0.25)' },
   sep:                { color: 'rgba(255,255,255,0.25)', fontSize: 20, fontWeight: '200', paddingBottom: 12 },
   cityBtn:            { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(52,211,153,0.2)' },
-  cityBtnText:        { flex: 1, color: '#fff', fontSize: 15, fontWeight: '600' },
+  cityBtnText:        { flex: 1, color: '#FFF1D0', fontSize: 15, fontWeight: '600' },
   cityBtnPlaceholder: { color: 'rgba(255,255,255,0.28)' },
-  saveBtn:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 15, overflow: 'hidden', marginTop: 2 },
-  saveBtnText:        { color: '#fff', fontSize: 15, fontWeight: '800' },
+  saveBtn:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 15, overflow: 'hidden', marginTop: 2, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.6, shadowRadius: 14, elevation: 0 },
+  saveBtnText:        { color: '#FFF1D0', fontSize: 15, fontWeight: '800' },
 });
 var cm = StyleSheet.create({
   overlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
-  sheet:        { backgroundColor: '#0A0618', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: SH * 0.72, borderWidth: 1, borderColor: 'rgba(180,122,255,0.3)', borderBottomWidth: 0, paddingTop: 10 },
+  sheet:        { backgroundColor: '#0A0618', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: SH * 0.72, borderWidth: 1, borderColor: 'rgba(255,140,0,0.3)', borderBottomWidth: 0, paddingTop: 10 },
   handle:       { width: 36, height: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 2, alignSelf: 'center', marginBottom: 14 },
   header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
-  title:        { fontSize: 17, fontWeight: '800', color: '#fff' },
+  title:        { fontSize: 17, fontWeight: '800', color: '#FFF1D0' },
   closeBtn:     { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
   cityRow:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
   cityRowActive:{ backgroundColor: 'rgba(52,211,153,0.06)' },
   cityDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.18)', marginRight: 14 },
-  cityName:     { fontSize: 15, color: '#E2E8F0', fontWeight: '600' },
+  cityName:     { fontSize: 15, color: '#EBCF8B', fontWeight: '600' },
   cityEn:       { fontSize: 11, color: 'rgba(255,255,255,0.32)', marginTop: 2 },
   sep:          { height: 1, backgroundColor: 'rgba(255,255,255,0.04)', marginLeft: 42 },
 });
@@ -519,11 +480,11 @@ function ProfileScreen() {
 
   if (loading) {
     return (
-      <CosmicBackground>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <View style={s.centered}>
-          <CosmicLoader size={56} color="#B47AFF" text={t('loading')} textColor="#B47AFF" />
+          <CosmicLoader size={56} color="#FF8C00" text={t('loading')} textColor="#FF8C00" />
         </View>
-      </CosmicBackground>
+      </View>
     );
   }
 
@@ -538,7 +499,7 @@ function ProfileScreen() {
 
   return (
     <DesktopScreenWrapper routeName="profile">
-    <CosmicBackground>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <StatusBar barStyle="light-content" />
       <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
 
@@ -551,7 +512,7 @@ function ProfileScreen() {
           />
           {/* Purple nebula top-left */}
           <LinearGradient
-            colors={['rgba(180,122,255,0.38)', 'rgba(99,102,241,0.15)', 'transparent']}
+            colors={['rgba(255,140,0,0.38)', 'rgba(230,81,0,0.15)', 'transparent']}
             style={{ position:'absolute', top:-30, left:-30, width:200, height:200, borderRadius:100 }}
           />
           {/* Gold nebula bottom-right */}
@@ -565,7 +526,7 @@ function ProfileScreen() {
           })}
           {/* Chromatic top border */}
           <LinearGradient
-            colors={['transparent','rgba(180,122,255,0.8)','rgba(255,184,0,0.6)','rgba(99,102,241,0.5)','transparent']}
+            colors={['transparent','rgba(255,140,0,0.8)','rgba(255,184,0,0.6)','rgba(230,81,0,0.5)','transparent']}
             style={{ position:'absolute', top:0, left:0, right:0, height:1.5 }}
             start={{ x:0, y:0.5 }} end={{ x:1, y:0.5 }}
           />
@@ -574,9 +535,9 @@ function ProfileScreen() {
             /* ── LOGGED OUT STATE ── */
             <View style={s.heroLoggedOut}>
               <View style={s.guestOrbWrap}>
-                <LinearGradient colors={['rgba(180,122,255,0.3)','rgba(99,102,241,0.2)']} style={StyleSheet.absoluteFill} />
+                <LinearGradient colors={['rgba(255,140,0,0.3)','rgba(230,81,0,0.2)']} style={StyleSheet.absoluteFill} />
                 <View style={s.guestOrb}>
-                  <LinearGradient colors={['#7C3AED','#6366F1','#4F46E5']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
+                  <LinearGradient colors={['#FF8C00','#FF6D00','#E65100']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
                   <LinearGradient colors={['rgba(255,255,255,0.3)','transparent']} style={{position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:38,borderTopRightRadius:38}} />
                   <Ionicons name="person-outline" size={38} color="rgba(255,255,255,0.85)" />
                 </View>
@@ -584,7 +545,7 @@ function ProfileScreen() {
               <Text style={s.guestTitle}>{t('signIn')}</Text>
               <Text style={s.guestSub}>{t('enterPhone')}</Text>
               <View style={s.guestArrow}>
-                <Ionicons name="chevron-down" size={16} color="rgba(192,132,252,0.6)" />
+                <Ionicons name="chevron-down" size={16} color="rgba(255,140,0,0.6)" />
               </View>
             </View>
           ) : (
@@ -599,13 +560,13 @@ function ProfileScreen() {
                 {/* Avatar core */}
                 <View style={s.avatarCore}>
                   <LinearGradient colors={['#1A0A3E','#0E0521']} style={StyleSheet.absoluteFill} />
-                  <LinearGradient colors={['rgba(180,122,255,0.25)','transparent']} style={{position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:32,borderTopRightRadius:32}} />
+                  <LinearGradient colors={['rgba(255,140,0,0.25)','transparent']} style={{position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:32,borderTopRightRadius:32}} />
                   <Ionicons name="person" size={34} color="#C4B5FD" />
                 </View>
                 {/* Subscription badge */}
                 <View style={[s.badge, isSubscribed ? s.badgePremium : s.badgeFree]}>
                   <LinearGradient
-                    colors={isSubscribed ? ['#F59E0B','#D97706'] : ['#6D28D9','#5B21B6']}
+                    colors={isSubscribed ? ['#F59E0B','#D97706'] : ['#FF8C00','#E65100']}
                     style={StyleSheet.absoluteFill}
                   />
                   <Ionicons name={isSubscribed ? 'star' : 'person'} size={12} color="#fff" />
@@ -619,7 +580,7 @@ function ProfileScreen() {
               {phone ? (
                 <View style={s.phonePill}>
                   <View style={s.phoneIcon}>
-                    <LinearGradient colors={['#9333EA','#6366F1']} style={StyleSheet.absoluteFill} />
+                    <LinearGradient colors={['#FF8C00','#FF6D00']} style={StyleSheet.absoluteFill} />
                     <Ionicons name="call-outline" size={11} color="#fff" />
                   </View>
                   <Text style={s.phoneText}>{phone}</Text>
@@ -630,8 +591,8 @@ function ProfileScreen() {
               {birthData && (
                 <View style={s.birthRow}>
                   <View style={s.birthChip}>
-                    <LinearGradient colors={['rgba(180,122,255,0.25)','rgba(99,102,241,0.12)']} style={StyleSheet.absoluteFill} />
-                    <Ionicons name="calendar-outline" size={13} color="#B47AFF" />
+                    <LinearGradient colors={['rgba(255,140,0,0.25)','rgba(230,81,0,0.12)']} style={StyleSheet.absoluteFill} />
+                    <Ionicons name="calendar-outline" size={13} color="#FF8C00" />
                     <View>
                       <Text style={s.birthChipLabel}>{t('birthDateLabel') || 'Date'}</Text>
                       <Text style={s.birthChipValue}>{birthData.dateTime?.split('T')[0]}</Text>
@@ -685,7 +646,7 @@ function ProfileScreen() {
           <>
             {/* ── STATS ── */}
             <Animated.View entering={FadeInDown.delay(120).duration(700)} style={s.statsRow}>
-              <StatPill value={reportCount} label={t('report')}  icon="document-text-outline" color="#B47AFF" />
+              <StatPill value={reportCount} label={t('report')}  icon="document-text-outline" color="#FF8C00" />
               <StatPill value={chatCount}   label={t('tabChat')} icon="chatbubble-outline"     color="#FFB800" />
               <StatPill
                 value={birthData ? '✓' : '—'}
@@ -697,7 +658,7 @@ function ProfileScreen() {
 
             {/* ── SUBSCRIPTION ── */}
             <Animated.View entering={FadeInDown.delay(180).duration(700)}>
-              <GCard accent={isSubscribed ? '#F59E0B' : '#7C3AED'}>
+              <GCard accent={isSubscribed ? '#F59E0B' : '#FF8C00'}>
                 <SectionHeader
                   icon={isSubscribed ? 'star' : 'star-outline'}
                   title={t('subscription')}
@@ -709,7 +670,7 @@ function ProfileScreen() {
                     <View style={s.subActiveRow}>
                       <Ionicons name="checkmark-circle" size={16} color="#34D399" />
                       <Text style={s.subActiveText}>
-                        {t('subActive').replace('{{amount}}', subscription?.amount || '8')}
+                        {t('subActive').replace('{{amount}}', subscription?.amount || '240')}
                       </Text>
                     </View>
                     <TouchableOpacity style={s.cancelBtn} onPress={function () {
@@ -730,9 +691,14 @@ function ProfileScreen() {
                   <TouchableOpacity style={s.subBtn} onPress={function () {
                     (subStatus === 'expired' ? renewSubscription() : activateSubscription())
                       .then(function (r) { if (r.success) Alert.alert('✨', r.message || 'Subscribed!'); })
-                      .catch(function (e) { Alert.alert('Payment Failed', e.message || 'Insufficient credit'); });
+                      .catch(function (e) {
+                        var msg = e && e.message ? e.message : '';
+                        if (msg.indexOf('cancelled') === -1 && msg.indexOf('dismiss') === -1) {
+                          Alert.alert('Payment Failed', msg || 'Please try again or use a different card.');
+                        }
+                      });
                   }} activeOpacity={0.85}>
-                    <LinearGradient colors={['#F59E0B','#F97316']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:1}} />
+                    <LinearGradient colors={['#FF8C00','#FF6D00','#E65100']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:0}} />
                     <LinearGradient colors={['rgba(255,255,255,0.18)','transparent']} style={{ position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:14,borderTopRightRadius:14 }} />
                     <Ionicons name="diamond-outline" size={17} color="#fff" />
                     <Text style={s.subBtnText}>{subStatus === 'expired' ? t('subRenew') : t('subSubscribe')}</Text>
@@ -748,7 +714,7 @@ function ProfileScreen() {
 
             {/* ── LANGUAGE ── */}
             <Animated.View entering={FadeInDown.delay(300).duration(700)}>
-              <GCard accent="#9333EA">
+              <GCard accent="#FF8C00">
                 <SectionHeader icon="language-outline" title={t('language')} color="#A78BFA" />
                 <LangPicker language={language} onSwitch={switchLanguage} />
               </GCard>
@@ -796,7 +762,7 @@ function ProfileScreen() {
 
         <View style={{ height: isDesktop ? 32 : 120 }} />
       </ScrollView>
-    </CosmicBackground>
+    </View>
     </DesktopScreenWrapper>
   );
 }
@@ -814,38 +780,38 @@ var s = StyleSheet.create({
   // ── Hero card ──────────────────────────────────────────────────────
   heroCard: {
     borderRadius: 32, overflow: 'hidden', marginBottom: 16,
-    borderWidth: 1, borderColor: 'rgba(180,122,255,0.35)',
-    shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 10 },
+    borderWidth: 1, borderColor: 'rgba(255,140,0,0.35)',
+    shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.45, shadowRadius: 30, elevation: 16,
   },
 
   // ── Logged-out hero ────────────────────────────────────────────────
   heroLoggedOut: { alignItems: 'center', paddingTop: 42, paddingBottom: 36, paddingHorizontal: 28 },
-  guestOrbWrap:  { width: 100, height: 100, borderRadius: 50, overflow:'hidden', alignItems:'center', justifyContent:'center', marginBottom: 20, borderWidth: 1.5, borderColor: 'rgba(180,122,255,0.25)' },
+  guestOrbWrap:  { width: 100, height: 100, borderRadius: 50, overflow:'hidden', alignItems:'center', justifyContent:'center', marginBottom: 20, borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.25)' },
   guestOrb:      { width: 88, height: 88, borderRadius: 44, overflow:'hidden', alignItems:'center', justifyContent:'center' },
-  guestTitle:    { fontSize: 24, fontWeight: '900', color: '#fff', marginBottom: 8, textShadowColor:'rgba(180,122,255,0.5)', textShadowOffset:{width:0,height:2}, textShadowRadius:10 },
+  guestTitle:    { fontSize: 24, fontWeight: '900', color: '#FFF1D0', marginBottom: 8, textShadowColor:'rgba(255,140,0,0.5)', textShadowOffset:{width:0,height:2}, textShadowRadius:10 },
   guestSub:      { fontSize: 13, color: 'rgba(255,255,255,0.38)', textAlign: 'center', lineHeight: 20 },
-  guestArrow:    { marginTop: 18, width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(180,122,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  guestArrow:    { marginTop: 18, width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)', alignItems: 'center', justifyContent: 'center' },
 
   // ── Logged-in hero ─────────────────────────────────────────────────
   heroContent:      { alignItems: 'center', paddingTop: 36, paddingBottom: 28, paddingHorizontal: 20 },
   mandalaContainer: { width: 150, height: 150, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
-  avatarRing:       { position:'absolute', width: 86, height: 86, borderRadius: 43, borderWidth: 1.5, borderColor: 'rgba(180,122,255,0.3)', borderStyle: 'dashed' },
+  avatarRing:       { position:'absolute', width: 86, height: 86, borderRadius: 43, borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.3)', borderStyle: 'dashed' },
   avatarCore:       { position:'absolute', width: 66, height: 66, borderRadius: 33, alignItems:'center', justifyContent:'center', overflow:'hidden', borderWidth: 2, borderColor: 'rgba(196,181,253,0.45)' },
   badge:            { position:'absolute', bottom: 8, right: 8, width: 28, height: 28, borderRadius: 14, alignItems:'center', justifyContent:'center', overflow:'hidden', borderWidth: 2, borderColor: '#0D0720' },
   badgePremium:     {},
   badgeFree:        {},
 
-  heroName:  { fontSize: 28, fontWeight: '900', color: '#fff', marginBottom: 6, textAlign: 'center', letterSpacing: 0.5, textShadowColor: 'rgba(180,122,255,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 12 },
-  phonePill: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 18, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(180,122,255,0.2)' },
+  heroName:  { fontSize: 28, fontWeight: '900', color: '#FFF1D0', marginBottom: 6, textAlign: 'center', letterSpacing: 0.5, textShadowColor: 'rgba(255,140,0,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 12 },
+  phonePill: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 18, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)' },
   phoneIcon: { width: 20, height: 20, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   phoneText: { fontSize: 13, color: '#A78BFA', fontWeight: '600', letterSpacing: 0.5 },
 
   // Birth chips row
   birthRow:       { flexDirection: 'row', gap: 8, marginBottom: 16, width: '100%' },
-  birthChip:      { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7, overflow: 'hidden', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 10, borderWidth: 1, borderColor: 'rgba(180,122,255,0.2)' },
+  birthChip:      { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7, overflow: 'hidden', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 10, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)' },
   birthChipLabel: { fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2 },
-  birthChipValue: { fontSize: 12, color: '#B47AFF', fontWeight: '800' },
+  birthChipValue: { fontSize: 12, color: '#FF8C00', fontWeight: '800' },
 
   // Premium ribbon
   premiumRibbon: { flexDirection: 'row', alignItems: 'center', gap: 8, overflow: 'hidden', borderRadius: 999, paddingVertical: 7, paddingHorizontal: 18, borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)' },
@@ -857,8 +823,8 @@ var s = StyleSheet.create({
   // ── Subscription ───────────────────────────────────────────────────
   subActiveRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   subActiveText: { color: '#34D399', fontWeight: '700', fontSize: 14 },
-  subBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14, overflow: 'hidden' },
-  subBtnText:    { color: '#fff', fontSize: 15, fontWeight: '800' },
+  subBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14, overflow: 'hidden', shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0 },
+  subBtnText:    { color: '#FFF1D0', fontSize: 15, fontWeight: '800' },
   cancelBtn:     { paddingVertical: 11, alignItems: 'center', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)' },
   cancelBtnText: { color: '#F87171', fontWeight: '600', fontSize: 13 },
 

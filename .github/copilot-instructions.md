@@ -14,14 +14,17 @@ cd server && npm run dev          # nodemon on port 3000
 cd mobile && npx expo start       # Expo dev server (use --port 8081 if needed)
 ```
 
-Firebase is **optional for local dev** — server starts without `firebase-service-account.json` and falls back to anonymous mode. Set `IDEAMART_MOCK=true` (or omit `IDEAMART_APP_ID`) to skip real SMS/charging calls.
+Firebase is **optional for local dev** — server starts without `firebase-service-account.json` and falls back to anonymous mode.
 
 ## Auth & Subscription Flow
 
-1. Onboarding: Phone → Ideamart OTP SMS → JWT (`type: 'phone-auth'`, signed with `JWT_SECRET`) stored in `AsyncStorage`
+1. Onboarding: Google Sign-In → Firebase Auth → ID token sent to server → JWT returned
 2. JWT is wired into all API requests via `setAuthTokenGetter()` in `AuthContext`
-3. Premium routes use `phoneAuth` + `requireSubscription` middleware — charges **LKR 8/day** via Ideamart Direct Debit
-4. Server also accepts Firebase ID tokens (legacy path in `auth.js`)
+3. Premium routes use `phoneAuth` + `requireSubscription` middleware — charges **LKR 240/month** via PayHere (Visa/MasterCard/HelaPay/FriMi)
+4. Subscription initiated in onboarding Step 2 via PayHere React Native SDK (`@payhere/payhere-mobilesdk-reactnative`)
+5. Server also accepts Firebase ID tokens directly (fallback path in `subscription.js`)
+
+All payment/billing is handled by **PayHere** (`server/src/services/payhere.js` + `server/src/routes/payhere.js`).
 
 Guard pattern for protected routes: `router.post('/endpoint', phoneAuth, requireSubscription, handler)`
 
@@ -46,7 +49,9 @@ Guard pattern for protected routes: `router.post('/endpoint', phoneAuth, require
 
 | Concern | Location |
 |---|---|
-| Ideamart OTP + billing | `server/src/services/ideamart.js` |
+| Google Sign-In (Firebase Auth) | `mobile/services/firebase.js` + `mobile/contexts/AuthContext.js` |
+| Server auth (JWT from Google) | `server/src/routes/auth.js` |
+| PayHere card billing | `server/src/services/payhere.js` + `server/src/routes/payhere.js` |
 | Firebase Admin init | `server/src/config/firebase.js` (gracefully degrades) |
 | AI chat prompts | `server/src/engine/chat.js` — `buildSystemPrompt(language)` |
 | API base URL detection | `mobile/services/api.js` — `getBaseUrl()` |

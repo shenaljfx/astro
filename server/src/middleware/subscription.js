@@ -1,7 +1,7 @@
 /**
  * Subscription Middleware
  * 
- * Checks if the user has an active daily subscription.
+ * Checks if the user has an active subscription.
  * Used to gate premium features (AI reports, unlimited chat, etc.)
  * 
  * Usage:
@@ -11,9 +11,9 @@
 const { getDb, COLLECTIONS } = require('../config/firebase');
 
 /**
- * Phone-based auth middleware
- * Extracts and verifies JWT from phone auth system
- * Falls back to Firebase token verification
+ * Auth middleware — JWT + Firebase token verification
+ * Extracts and verifies JWT from Google/phone auth system
+ * Falls back to Firebase Admin token verification
  */
 function phoneAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -24,21 +24,22 @@ function phoneAuth(req, res, next) {
 
   const token = authHeader.split('Bearer ')[1];
 
-  // Try phone JWT first
+  // Try our JWT first (google-auth or legacy phone-auth)
   try {
     const jwt = require('jsonwebtoken');
     const JWT_SECRET = process.env.JWT_SECRET || 'grahachara-cosmic-secret-2025-dev';
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded && decoded.type === 'phone-auth') {
+    if (decoded && (decoded.type === 'google-auth' || decoded.type === 'phone-auth')) {
       req.user = {
         uid: decoded.uid,
-        phone: decoded.phone,
-        authType: 'phone',
+        email: decoded.email || null,
+        phone: decoded.phone || null,
+        authType: decoded.type === 'google-auth' ? 'google' : 'phone',
       };
       return next();
     }
   } catch (e) {
-    // Not a phone JWT, try Firebase
+    // Not our JWT, try Firebase
   }
 
   // Try Firebase Admin token

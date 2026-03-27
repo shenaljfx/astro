@@ -1,9 +1,9 @@
 /**
- * Firebase + Phone Auth Middleware
+ * Firebase + Google Auth Middleware
  * 
  * Supports both:
- * 1. Phone OTP JWT tokens (from /api/auth/verify-otp)
- * 2. Firebase ID tokens (legacy)
+ * 1. Google Auth JWT tokens (from /api/auth/google)
+ * 2. Firebase ID tokens (direct)
  * 
  * Attaches user info to req.user
  */
@@ -11,22 +11,23 @@
 const { getAuth } = require('../config/firebase');
 
 /**
- * Try to verify a phone JWT token
+ * Try to verify our app JWT token (google-auth or legacy phone-auth)
  */
-function tryPhoneJwt(token) {
+function tryAppJwt(token) {
   try {
     const jwt = require('jsonwebtoken');
     const JWT_SECRET = process.env.JWT_SECRET || 'grahachara-cosmic-secret-2025-dev';
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded && decoded.type === 'phone-auth') {
+    if (decoded && (decoded.type === 'google-auth' || decoded.type === 'phone-auth')) {
       return {
         uid: decoded.uid,
-        phone: decoded.phone,
-        authType: 'phone',
+        email: decoded.email || null,
+        phone: decoded.phone || null,
+        authType: decoded.type === 'google-auth' ? 'google' : 'phone',
         anonymous: false,
       };
     }
-  } catch (e) { /* not a phone JWT */ }
+  } catch (e) { /* not our JWT */ }
   return null;
 }
 
@@ -49,10 +50,10 @@ function requireAuth(req, res, next) {
 
   const idToken = authHeader.split('Bearer ')[1];
 
-  // Try phone JWT first
-  const phoneUser = tryPhoneJwt(idToken);
-  if (phoneUser) {
-    req.user = phoneUser;
+  // Try app JWT first (Google auth)
+  const appUser = tryAppJwt(idToken);
+  if (appUser) {
+    req.user = appUser;
     return next();
   }
   
@@ -94,10 +95,10 @@ function optionalAuth(req, res, next) {
 
   const idToken = authHeader.split('Bearer ')[1];
 
-  // Try phone JWT first
-  const phoneUser = tryPhoneJwt(idToken);
-  if (phoneUser) {
-    req.user = phoneUser;
+  // Try app JWT first (Google auth)
+  const appUser = tryAppJwt(idToken);
+  if (appUser) {
+    req.user = appUser;
     return next();
   }
   

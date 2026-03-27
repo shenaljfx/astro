@@ -85,7 +85,7 @@ async function deductTokenBalance(uid, amount, description = 'Service charge') {
 
 /**
  * Add `amount` LKR to a user's balance.
- * Used after a successful Ideamart direct-debit top-up.
+ * Used after a successful PayHere payment (subscription or top-up).
  * Creates the user doc with tokenBalance if it doesn't exist yet.
  */
 async function addTokenBalance(uid, amount, txId = null, description = 'Top-up') {

@@ -1,35 +1,44 @@
 /**
  * Firebase Configuration for Mobile App
  * 
- * NOTE: This app primarily uses backend JWT auth (phone OTP via Ideamart).
- * Firebase JS SDK on mobile is kept for potential future client-side features
- * (e.g., push notifications via FCM, analytics).
+ * Auth: Google Sign-In via Firebase Auth (getAuth → signInWithCredential)
+ * Payment/subscription: PayHere (card/bank)
+ * Database: All data flows through the backend API at /api/auth/*
  * 
- * All auth & data flows through the backend API at /api/auth/*
- * 
- * To get web app config:
- * 1. Go to Firebase Console → Project Settings → General
- * 2. Under "Your apps", click "Add app" → Web (</>)
- * 3. Copy the config values below
+ * Setup:
+ * 1. Firebase Console → Project Settings → General → Your apps → Web
+ * 2. Copy apiKey, appId etc. below
+ * 3. Enable Google Sign-In in Firebase Console → Authentication → Sign-in method
+ * 4. Add your SHA-1 fingerprint for Android in Firebase Console → Project Settings
  */
 
 import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import {
+  getAuth as _getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithCredential,
+} from 'firebase/auth';
 
-// Firebase project: nakathai-6c5b7
-// ⚠️ Fill in apiKey and appId from Firebase Console → Project Settings → Your apps → Web
+// Firebase project config — reads from EXPO_PUBLIC_FIREBASE_* env vars (.env file)
 const firebaseConfig = {
-  apiKey: "***REMOVED***",
-  authDomain: "nakathai-6c5b7.firebaseapp.com",
-  projectId: "nakathai-6c5b7",
-  storageBucket: "nakathai-6c5b7.firebasestorage.app",
-  messagingSenderId: "106386993267",
-  appId: "1:106386993267:web:placeholder",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "nakathai-6c5b7.firebaseapp.com",
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "nakathai-6c5b7",
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || "nakathai-6c5b7.firebasestorage.app",
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "279712940419",
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
+
+if (!firebaseConfig.apiKey) {
+  console.warn('⚠️ EXPO_PUBLIC_FIREBASE_API_KEY is not set — check your .env file');
+}
 
 // Initialize Firebase (only once, gracefully)
 let app = null;
 let firestore = null;
+let auth = null;
 
 try {
   if (getApps().length === 0) {
@@ -38,9 +47,25 @@ try {
     app = getApps()[0];
   }
   firestore = getFirestore(app);
+  auth = _getAuth(app);
 } catch (err) {
-  console.warn('⚠️ Firebase init skipped (not critical — using backend JWT auth):', err.message);
+  console.warn('⚠️ Firebase init failed:', err.message);
 }
 
-export { app, firestore };
+// Configure native Google Sign-In (Android/iOS)
+// ⚠️ REQUIRED: Set your web client ID from Firebase Console →
+//   Authentication → Sign-in method → Google → Web client ID
+// On Android this is auto-read from google-services.json if you omit webClientId.
+try {
+  const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+  GoogleSignin.configure({
+    // webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+    offlineAccess: true,
+  });
+} catch (e) {
+  // Google Sign-In native module not available (web platform or not installed)
+  console.log('ℹ️ Native Google Sign-In not available (web mode or SDK not installed)');
+}
+
+export { app, firestore, auth, GoogleAuthProvider, signInWithPopup, signInWithCredential };
 export default app;

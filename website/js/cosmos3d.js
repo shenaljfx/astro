@@ -21,19 +21,9 @@
   var auroraMeshes = [];
   var pricingNebulaGroup = null;
   var nebulaStarBirths = [];   // star-birth particle system
-  var cosmicDust = null;       // Cosmic Dust System
-  var cosmicCloudPlanes = [];  // Full-page drifting cloud planes
-  var cosmicEyes = null;       // Cosmic Eyes Group
-  var lightningBolts = [];     // Thunder bolts
   var isMobile = window.innerWidth < 768;
   var BG = 0x04030C;
   var pageHeight = 1; // total scrollable height in pixels
-
-  // Cosmic Storm (Thunder Clouds) — Kendara chart section
-  var stormGroup = null;       // THREE.Group for the storm
-  var stormClouds = null;      // cloud shader mesh
-  var stormBolts = [];         // lightning bolt line geometries
-  var stormSection = 0.56;     // scroll section — set in createCosmicStorm
 
   // Viewport scale factor — everything scales to actual screen size
   var vw, vh, vs;
@@ -273,9 +263,6 @@
     createAuroraWaves();
     createNebulae();
     createPricingNebula();
-    createCosmicStorm();
-    createCosmicDust();
-    createCosmicCloudPlanes();
     createMoon();
     createSaturn();
     createJupiter();
@@ -322,109 +309,36 @@
 
   /* ── MILKY WAY ──────────────────────────────────────────────────── */
   function createMilkyWayBand() {
-    /* Full-circle spiral galaxy — dense core, vivid spiral arms, dust lanes */
-    var n = isMobile ? 18000 : 45000;
+    var n = isMobile ? 10000 : 28000;
     var g = new THREE.BufferGeometry();
-    var p = new Float32Array(n * 3), c = new Float32Array(n * 3), sz = new Float32Array(n);
-    var arms = 4;         // number of spiral arms
-    var armSpread = 0.6;  // how much stars scatter from arm centerline
-    var coreR = 80;       // core radius
-    var maxR = 1800;      // outer radius
-    var thickness = 35;   // disk thickness
-
+    var p = new Float32Array(n*3), c = new Float32Array(n*3), sz = new Float32Array(n);
     for (var i = 0; i < n; i++) {
-      /* Decide: 30% core blob, 70% spiral arm */
-      var inCore = Math.random() < 0.3;
-      var angle, radius, armIdx;
-
-      if (inCore) {
-        /* Dense glowing core — exponential falloff */
-        angle = Math.random() * Math.PI * 2;
-        radius = Math.pow(Math.random(), 1.5) * coreR;
-      } else {
-        /* Spiral arm distribution — logarithmic spiral */
-        armIdx = Math.floor(Math.random() * arms);
-        var t = Math.pow(Math.random(), 0.7); // bias toward inner regions
-        radius = coreR * 0.5 + t * (maxR - coreR * 0.5);
-        var spiralAngle = (armIdx / arms) * Math.PI * 2;
-        spiralAngle += Math.log(1 + radius / 200) * 1.8; // logarithmic winding
-        angle = spiralAngle + (Math.random() - 0.5) * armSpread * (1 + radius / maxR);
-      }
-
-      var x = Math.cos(angle) * radius;
-      var y = Math.sin(angle) * radius;
-      var z = (Math.random() - 0.5) * thickness * (inCore ? 2.5 : (1 - radius / maxR) + 0.3);
-
-      p[i * 3] = x;
-      p[i * 3 + 1] = y;
-      p[i * 3 + 2] = z;
-
-      /* Vivid colour palette */
+      var t = (Math.random()-0.5)*3500, sp = 60+Math.random()*100;
+      var ang = Math.random()*6.28, r = sp*Math.sqrt(Math.abs(Math.log(Math.random()+0.001)));
+      r = Math.min(r, sp*3);
+      p[i*3]=t*0.85+Math.cos(ang)*r*0.25; p[i*3+1]=t*0.25+Math.sin(ang)*r; p[i*3+2]=-700+Math.random()*250;
       var m = Math.random();
-      var rn = radius / maxR; // normalized radius
-      if (inCore) {
-        /* Hot core — warm gold/amber/white */
-        if (m < 0.4) { c[i*3]=1.0; c[i*3+1]=0.92; c[i*3+2]=0.75; }        // warm white
-        else if (m < 0.7) { c[i*3]=1.0; c[i*3+1]=0.78; c[i*3+2]=0.35; }    // gold
-        else { c[i*3]=1.0; c[i*3+1]=0.65; c[i*3+2]=0.2; }                   // deep amber
-      } else if (rn < 0.35) {
-        /* Inner spiral — vibrant purple/magenta star-forming regions */
-        if (m < 0.3) { c[i*3]=0.85; c[i*3+1]=0.45; c[i*3+2]=1.0; }         // bright purple
-        else if (m < 0.6) { c[i*3]=1.0; c[i*3+1]=0.4; c[i*3+2]=0.75; }     // magenta
-        else { c[i*3]=0.65; c[i*3+1]=0.55; c[i*3+2]=1.0; }                  // blue-purple
-      } else if (rn < 0.65) {
-        /* Mid spiral — blue/cyan young stars + scattered gold */
-        if (m < 0.35) { c[i*3]=0.4; c[i*3+1]=0.7; c[i*3+2]=1.0; }          // bright blue
-        else if (m < 0.6) { c[i*3]=0.3; c[i*3+1]=0.85; c[i*3+2]=1.0; }     // cyan
-        else if (m < 0.85) { c[i*3]=0.9; c[i*3+1]=0.85; c[i*3+2]=0.95; }   // blue-white
-        else { c[i*3]=1.0; c[i*3+1]=0.72; c[i*3+2]=0.2; }                   // scattered gold
-      } else {
-        /* Outer arms — cool blue/white wispy */
-        if (m < 0.5) { c[i*3]=0.7; c[i*3+1]=0.78; c[i*3+2]=1.0; }          // pale blue
-        else if (m < 0.8) { c[i*3]=0.5; c[i*3+1]=0.6; c[i*3+2]=0.9; }      // dim blue
-        else { c[i*3]=0.85; c[i*3+1]=0.82; c[i*3+2]=0.9; }                  // white
-      }
-
-      /* Size: core stars brighter, outer dimmer */
-      sz[i] = inCore ? (1.5 + Math.random() * 4.0) : (0.6 + Math.random() * 2.5 * (1 - rn * 0.5));
+      if (m<0.5){c[i*3]=0.75+Math.random()*0.25;c[i*3+1]=0.72+Math.random()*0.2;c[i*3+2]=0.82+Math.random()*0.18;}
+      else if(m<0.8){c[i*3]=0.5+Math.random()*0.2;c[i*3+1]=0.35+Math.random()*0.15;c[i*3+2]=0.7+Math.random()*0.3;}
+      else{c[i*3]=0.82+Math.random()*0.18;c[i*3+1]=0.65+Math.random()*0.2;c[i*3+2]=0.25+Math.random()*0.2;}
+      sz[i]=0.8+Math.random()*2.8;
     }
-
     g.setAttribute('position', new THREE.BufferAttribute(p, 3));
     g.setAttribute('color', new THREE.BufferAttribute(c, 3));
     g.setAttribute('size', new THREE.BufferAttribute(sz, 1));
-
     var mt = new THREE.ShaderMaterial({
-      uniforms: { time: {value:0}, pr: {value:renderer.getPixelRatio()}, op: {value:0.7} },
-      vertexShader: [
-        'attribute float size; attribute vec3 color; varying vec3 vc; varying float vBright;',
-        'uniform float time, pr;',
-        'void main() {',
-        '  vc = color;',
-        '  float tw = sin(time * 0.5 + position.x * 0.003 + position.y * 0.002) * 0.15 + 0.85;',
-        '  vBright = tw;',
-        '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
-        '  gl_PointSize = size * pr * tw * (160.0 / -mv.z);',
-        '  gl_Position = projectionMatrix * mv;',
-        '}'
-      ].join('\n'),
-      fragmentShader: [
-        'varying vec3 vc; varying float vBright; uniform float op;',
-        'void main() {',
-        '  float d = length(gl_PointCoord - 0.5);',
-        '  if (d > 0.5) discard;',
-        '  float core = smoothstep(0.5, 0.02, d);',
-        '  float glow = exp(-d * d * 4.0) * 0.6;',
-        '  float a = (core * 0.9 + glow) * op * vBright;',
-        '  gl_FragColor = vec4(vc * (0.8 + glow * 0.4), a);',
-        '}'
-      ].join('\n'),
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms:{time:{value:0},pr:{value:renderer.getPixelRatio()},op:{value:0.45}},
+      vertexShader:
+        'attribute float size;attribute vec3 color;varying vec3 vc;uniform float time,pr;\n'+
+        'void main(){vc=color;float tw=sin(time*0.7+position.x*0.004)*0.15+0.85;\n'+
+        'vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=size*pr*tw*(130.0/-mv.z);gl_Position=projectionMatrix*mv;}',
+      fragmentShader:
+        'varying vec3 vc;uniform float op;void main(){float d=length(gl_PointCoord-0.5);if(d>0.5)discard;\n'+
+        'float a=smoothstep(0.5,0.08,d)*op;float g=exp(-d*d*5.0)*0.4;gl_FragColor=vec4(vc,a+g*op);}',
+      transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
     });
-
     milkyWay = new THREE.Points(g, mt);
-    /* Tilt to show spiral face from slight angle — full circle visible */
-    milkyWay.rotation.set(1.1, 0.15, 0.3);
-    milkyWay.position.set(0, 0, -650);
+    milkyWay.rotation.set(0.15, 0, 0.4);
     scene.add(milkyWay);
   }
 
@@ -1145,278 +1059,181 @@
   var grahaChakra, grahaChakra2, grahaChakra3;
   var chakraParticles; // orbiting particle ring
 
-  /* Generate the outer ring texture — realistic full-circle Rashi Chakra */
+  /* Generate the outer ring texture — sacred geometry + glowing arcs */
   function makeOuterRingTex() {
-    var s = 2048, d = makeCanvas(s), ctx = d.ctx;
+    var s = 1024, d = makeCanvas(s), ctx = d.ctx;
     var cx = s / 2, cy = s / 2;
     ctx.clearRect(0, 0, s, s);
 
-    /* Radial glow backdrop — multi-layered for depth */
-    var bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.5);
-    bg.addColorStop(0,   'rgba(255, 200, 60, 0.12)');
-    bg.addColorStop(0.2, 'rgba(180, 80, 255, 0.06)');
-    bg.addColorStop(0.5, 'rgba(100, 40, 180, 0.03)');
-    bg.addColorStop(1,   'rgba(0, 0, 0, 0)');
+    // Massive radial glow backdrop
+    var bg = ctx.createRadialGradient(cx, cy, s * 0.15, cx, cy, s * 0.5);
+    bg.addColorStop(0, 'rgba(147, 51, 234, 0.08)');
+    bg.addColorStop(0.5, 'rgba(255, 184, 0, 0.03)');
+    bg.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, s, s);
 
-    var R1 = s * 0.47;  // outermost ring
-    var R2 = s * 0.42;  // zodiac label ring
-    var R3 = s * 0.36;  // planet orbit ring
-    var R4 = s * 0.28;  // inner sacred geometry
-    var R5 = s * 0.18;  // inner mandala
-    var R6 = s * 0.10;  // core energy
+    var R1 = s * 0.46, R2 = s * 0.38, R3 = s * 0.28, R4 = s * 0.18, R5 = s * 0.08;
 
-    /* Helper: glowing ring with double-stroke */
-    function glowRing(r, w, col, blur, alpha) {
+    // Multiple glowing rings with varying intensities
+    function glowRing(r, w, col, blur) {
       ctx.save();
-      ctx.globalAlpha = alpha || 1;
       ctx.shadowColor = col; ctx.shadowBlur = blur;
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
       ctx.restore();
     }
+    glowRing(R1, 1.5, 'rgba(255, 184, 0, 0.6)', 20);
+    glowRing(R1 + 4, 0.5, 'rgba(255, 184, 0, 0.15)', 0);
+    glowRing(R2, 1.2, 'rgba(180, 122, 255, 0.5)', 15);
+    glowRing(R3, 1, 'rgba(255, 140, 0, 0.4)', 12);
+    glowRing(R4, 0.8, 'rgba(147, 51, 234, 0.45)', 10);
+    glowRing(R5, 0.6, 'rgba(255, 255, 255, 0.2)', 8);
 
-    /* Outer rings — golden with purple accent */
-    glowRing(R1, 2.5, 'rgba(255, 190, 30, 0.85)', 35, 1);
-    glowRing(R1 + 5, 0.8, 'rgba(255, 220, 100, 0.25)', 8, 1);
-    glowRing(R1 - 4, 0.5, 'rgba(255, 190, 30, 0.15)', 0, 1);
-    glowRing(R2, 1.8, 'rgba(200, 140, 255, 0.7)', 25, 1);
-    glowRing(R3, 1.5, 'rgba(255, 170, 40, 0.6)', 20, 1);
-    glowRing(R4, 1.2, 'rgba(160, 100, 255, 0.55)', 18, 1);
-    glowRing(R5, 1.0, 'rgba(255, 160, 40, 0.45)', 15, 1);
-    glowRing(R6, 0.8, 'rgba(255, 255, 220, 0.3)', 12, 1);
-
-    /* Zodiac band glow fill between R1 and R2 */
+    // Dashed sacred arcs between R1 and R2
     ctx.save();
-    ctx.globalAlpha = 0.06;
-    var bandGrad = ctx.createRadialGradient(cx, cy, R2, cx, cy, R1);
-    bandGrad.addColorStop(0, 'rgba(180, 100, 255, 0.4)');
-    bandGrad.addColorStop(1, 'rgba(255, 190, 30, 0.3)');
-    ctx.beginPath(); ctx.arc(cx, cy, R1, 0, Math.PI * 2);
-    ctx.arc(cx, cy, R2, 0, Math.PI * 2, true);
-    ctx.fillStyle = bandGrad; ctx.fill();
+    ctx.setLineDash([8, 16]);
+    ctx.beginPath(); ctx.arc(cx, cy, (R1 + R2) / 2, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 214, 102, 0.12)'; ctx.lineWidth = 0.8; ctx.stroke();
     ctx.restore();
 
-    /* 12 house divider lines — gradient fade from core to outer */
+    // 12 house lines — outer to inner with gradient fade
     for (var i = 0; i < 12; i++) {
       var ang = (i / 12) * Math.PI * 2 - Math.PI / 2;
       var grad = ctx.createLinearGradient(
-        cx + Math.cos(ang) * R5, cy + Math.sin(ang) * R5,
+        cx + Math.cos(ang) * R4, cy + Math.sin(ang) * R4,
         cx + Math.cos(ang) * R1, cy + Math.sin(ang) * R1
       );
       grad.addColorStop(0, 'rgba(147, 51, 234, 0.0)');
-      grad.addColorStop(0.2, 'rgba(255, 190, 30, 0.35)');
-      grad.addColorStop(0.8, 'rgba(255, 190, 30, 0.25)');
-      grad.addColorStop(1, 'rgba(255, 220, 100, 0.12)');
+      grad.addColorStop(0.3, 'rgba(255, 184, 0, 0.3)');
+      grad.addColorStop(1, 'rgba(255, 184, 0, 0.08)');
       ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(ang) * R5, cy + Math.sin(ang) * R5);
+      ctx.moveTo(cx + Math.cos(ang) * R4, cy + Math.sin(ang) * R4);
       ctx.lineTo(cx + Math.cos(ang) * R1, cy + Math.sin(ang) * R1);
-      ctx.strokeStyle = grad; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.strokeStyle = grad; ctx.lineWidth = 0.8; ctx.stroke();
     }
 
-    /* Zodiac signs in outer band (Western symbols for universal readability) */
-    var zodiac = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
-    var zodiacColors = [
-      '#FF5555','#66BB6A','#FFEB3B','#90CAF9','#FF9800','#81C784',
-      '#E91E63','#B71C1C','#7E57C2','#5D4037','#2196F3','#00BCD4'
-    ];
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    var zodiacR = (R1 + R2) / 2;
-    ctx.font = 'bold ' + Math.round(s * 0.032) + 'px "Segoe UI Symbol", sans-serif';
-    for (var i = 0; i < 12; i++) {
-      var ang = ((i + 0.5) / 12) * Math.PI * 2 - Math.PI / 2;
-      var px = cx + Math.cos(ang) * zodiacR;
-      var py = cy + Math.sin(ang) * zodiacR;
-      ctx.save();
-      ctx.shadowColor = zodiacColors[i]; ctx.shadowBlur = 20;
-      ctx.fillStyle = zodiacColors[i]; ctx.globalAlpha = 0.9;
-      ctx.fillText(zodiac[i], px, py);
-      ctx.restore();
-    }
-
-    /* Sacred geometry — Sri Yantra–inspired triangles */
-    ctx.save(); ctx.globalAlpha = 0.12;
+    // Sacred geometry — hexagram star
+    ctx.save();
+    ctx.globalAlpha = 0.08;
     for (var t = 0; t < 2; t++) {
       ctx.beginPath();
-      var pts = t === 0 ? 3 : 3;
-      for (var i = 0; i <= pts; i++) {
-        var ang = (i / pts) * Math.PI * 2 + t * (Math.PI / 3) - Math.PI / 2;
-        i === 0 ? ctx.moveTo(cx + Math.cos(ang) * R4, cy + Math.sin(ang) * R4)
-                : ctx.lineTo(cx + Math.cos(ang) * R4, cy + Math.sin(ang) * R4);
+      for (var i = 0; i < 4; i++) {
+        var ang = (i / 3) * Math.PI * 2 + t * (Math.PI / 3) - Math.PI / 2;
+        var method = i === 0 ? 'moveTo' : 'lineTo';
+        ctx[method](cx + Math.cos(ang) * R3, cy + Math.sin(ang) * R3);
       }
       ctx.closePath();
-      ctx.strokeStyle = t === 0 ? '#FFD700' : '#B47AFF'; ctx.lineWidth = 1.5; ctx.stroke();
-    }
-    /* Hexagram overlay */
-    for (var t = 0; t < 2; t++) {
-      ctx.beginPath();
-      for (var i = 0; i <= 3; i++) {
-        var ang = (i / 3) * Math.PI * 2 + t * (Math.PI / 6);
-        i === 0 ? ctx.moveTo(cx + Math.cos(ang) * R5, cy + Math.sin(ang) * R5)
-                : ctx.lineTo(cx + Math.cos(ang) * R5, cy + Math.sin(ang) * R5);
-      }
-      ctx.closePath();
-      ctx.strokeStyle = t === 0 ? 'rgba(255,190,30,0.6)' : 'rgba(180,120,255,0.6)';
-      ctx.lineWidth = 0.8; ctx.stroke();
+      ctx.strokeStyle = '#B47AFF'; ctx.lineWidth = 1; ctx.stroke();
     }
     ctx.restore();
 
-    /* Navagraha planet glyphs — on the planet ring */
+    // Navagraha planet glyphs — orbiting in the planet ring
     var grahas = [
-      { sym: '☉', col: '#FFB800', name: 'Surya' },
-      { sym: '☽', col: '#E8E8E8', name: 'Chandra' },
-      { sym: '♂', col: '#FF4747', name: 'Kuja' },
-      { sym: '☿', col: '#4CD964', name: 'Budha' },
-      { sym: '♃', col: '#FFD666', name: 'Guru' },
-      { sym: '♀', col: '#FF9FF3', name: 'Shukra' },
-      { sym: '♄', col: '#54A0FF', name: 'Shani' },
-      { sym: '☊', col: '#B47AFF', name: 'Rahu' },
-      { sym: '☋', col: '#7C3AED', name: 'Ketu' }
+      { sym: '☉', col: '#FFB800' },
+      { sym: '☽', col: '#E0E0E0' },
+      { sym: '♂', col: '#FF4747' },
+      { sym: '☿', col: '#4CD964' },
+      { sym: '♃', col: '#FFD666' },
+      { sym: '♀', col: '#FF9FF3' },
+      { sym: '♄', col: '#54A0FF' },
+      { sym: '☊', col: '#B47AFF' },
+      { sym: '☋', col: '#7C3AED' }
     ];
-    var planetR = (R3 + R4) / 2;
-    ctx.font = 'bold ' + Math.round(s * 0.038) + 'px "Segoe UI Symbol", "Apple Color Emoji", sans-serif';
+
+    var planetR = (R2 + R3) / 2;
+    ctx.font = 'bold ' + Math.round(s * 0.04) + 'px "Segoe UI Symbol", "Apple Color Emoji", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (var i = 0; i < grahas.length; i++) {
       var ang = (i / grahas.length) * Math.PI * 2 - Math.PI / 2;
       var px = cx + Math.cos(ang) * planetR;
       var py = cy + Math.sin(ang) * planetR;
 
-      /* Glow disc behind planet */
-      var pg = ctx.createRadialGradient(px, py, 0, px, py, s * 0.04);
-      pg.addColorStop(0, grahas[i].col + '55');
+      // Glow circle behind planet
+      var pg = ctx.createRadialGradient(px, py, 0, px, py, s * 0.035);
+      pg.addColorStop(0, grahas[i].col.replace(')', ',0.3)').replace('rgb', 'rgba'));
       pg.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = pg;
-      ctx.beginPath(); ctx.arc(px, py, s * 0.04, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(px - s * 0.04, py - s * 0.04, s * 0.08, s * 0.08);
 
       ctx.save();
-      ctx.shadowColor = grahas[i].col; ctx.shadowBlur = 30;
+      ctx.shadowColor = grahas[i].col; ctx.shadowBlur = 25;
       ctx.fillStyle = grahas[i].col;
       ctx.fillText(grahas[i].sym, px, py);
       ctx.restore();
     }
 
-    /* House numbers — outer band, subtle gold */
-    ctx.font = '700 ' + Math.round(s * 0.02) + 'px "Space Grotesk", sans-serif';
-    ctx.fillStyle = 'rgba(255, 214, 102, 0.4)';
+    // House numbers in outer ring — subtle
+    ctx.font = '600 ' + Math.round(s * 0.026) + 'px "Space Grotesk", sans-serif';
+    ctx.fillStyle = 'rgba(255, 214, 102, 0.35)';
     for (var i = 0; i < 12; i++) {
       var ang = ((i + 0.5) / 12) * Math.PI * 2 - Math.PI / 2;
-      var tr = (R2 + R3) / 2;
+      var tr = (R1 + R2) / 2;
       ctx.fillText((i + 1).toString(), cx + Math.cos(ang) * tr, cy + Math.sin(ang) * tr);
     }
 
-    /* Decorative energy dots — outer ring (72 dots) */
-    for (var i = 0; i < 72; i++) {
-      var ang = (i / 72) * Math.PI * 2;
-      var dotR = (i % 6 === 0) ? 4 : (i % 3 === 0) ? 2.5 : 1.2;
-      var dotA = (i % 6 === 0) ? 0.85 : (i % 3 === 0) ? 0.45 : 0.2;
-      ctx.beginPath();
-      ctx.arc(cx + Math.cos(ang) * R1, cy + Math.sin(ang) * R1, dotR, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 200, 60, ' + dotA + ')';
-      ctx.fill();
-    }
-
-    /* Inner dots — purple accents */
+    // Decorative energy dots on outer ring
     for (var i = 0; i < 36; i++) {
       var ang = (i / 36) * Math.PI * 2;
+      var dotR = (i % 3 === 0) ? 3.5 : 1.5;
+      var dotAlpha = (i % 3 === 0) ? 0.7 : 0.25;
       ctx.beginPath();
-      ctx.arc(cx + Math.cos(ang) * R5, cy + Math.sin(ang) * R5, 2, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(180, 122, 255, 0.5)';
+      ctx.arc(cx + Math.cos(ang) * R1, cy + Math.sin(ang) * R1, dotR, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 184, 0, ' + dotAlpha + ')';
       ctx.fill();
     }
 
-    /* Concentric mandala arcs — dashed sacred geometry */
-    ctx.save(); ctx.setLineDash([6, 12]); ctx.globalAlpha = 0.15;
-    ctx.beginPath(); ctx.arc(cx, cy, (R4 + R5) / 2, 0, Math.PI * 2);
-    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 0.6; ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx, cy, (R5 + R6) / 2, 0, Math.PI * 2);
-    ctx.strokeStyle = '#B47AFF'; ctx.lineWidth = 0.6; ctx.stroke();
-    ctx.restore();
+    // Inner energy dots
+    for (var i = 0; i < 24; i++) {
+      var ang = (i / 24) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(ang) * R4, cy + Math.sin(ang) * R4, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(180, 122, 255, 0.4)';
+      ctx.fill();
+    }
 
-    /* Center — radiant energy core */
-    var cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R6);
-    cg.addColorStop(0, 'rgba(255, 220, 80, 0.4)');
-    cg.addColorStop(0.3, 'rgba(255, 184, 0, 0.2)');
-    cg.addColorStop(0.6, 'rgba(147, 51, 234, 0.12)');
+    // Center — pulsing energy circle (no text)
+    var cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R5);
+    cg.addColorStop(0, 'rgba(255, 184, 0, 0.25)');
+    cg.addColorStop(0.5, 'rgba(147, 51, 234, 0.12)');
     cg.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = cg;
-    ctx.beginPath(); ctx.arc(cx, cy, R6, 0, Math.PI * 2); ctx.fill();
-
-    /* Om symbol in centre */
-    ctx.save();
-    ctx.font = 'bold ' + Math.round(s * 0.06) + 'px "Segoe UI Symbol", sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.shadowColor = '#FFB800'; ctx.shadowBlur = 30;
-    ctx.fillStyle = 'rgba(255, 200, 60, 0.6)';
-    ctx.fillText('ॐ', cx, cy);
-    ctx.restore();
+    ctx.beginPath(); ctx.arc(cx, cy, R5, 0, Math.PI * 2); ctx.fill();
 
     return new THREE.CanvasTexture(d.canvas);
   }
 
-  /* Inner ring — luminous mandala accent ring, counter-spinning */
+  /* Inner ring — simpler, faster spinning accent ring */
   function makeInnerRingTex() {
-    var s = 1024, d = makeCanvas(s), ctx = d.ctx;
+    var s = 512, d = makeCanvas(s), ctx = d.ctx;
     var cx = s / 2, cy = s / 2;
     ctx.clearRect(0, 0, s, s);
 
-    var R = s * 0.44;
-    var R2 = s * 0.32;
-    var R3 = s * 0.20;
+    var R = s * 0.42;
 
-    /* Radial glow fill */
-    var grd = ctx.createRadialGradient(cx, cy, R3, cx, cy, R);
-    grd.addColorStop(0, 'rgba(255, 200, 60, 0.06)');
-    grd.addColorStop(0.5, 'rgba(160, 80, 255, 0.03)');
-    grd.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = grd;
-    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-
-    /* Luminous outer ring */
+    // Dashed luminous ring
     ctx.save();
-    ctx.shadowColor = 'rgba(255, 200, 60, 0.8)'; ctx.shadowBlur = 25;
+    ctx.setLineDash([4, 8]);
+    ctx.shadowColor = 'rgba(255, 184, 0, 0.6)'; ctx.shadowBlur = 15;
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 200, 60, 0.65)'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 184, 0, 0.5)'; ctx.lineWidth = 2; ctx.stroke();
     ctx.restore();
 
-    /* Dashed inner rings */
-    ctx.save(); ctx.setLineDash([5, 10]);
-    ctx.shadowColor = 'rgba(180, 120, 255, 0.6)'; ctx.shadowBlur = 15;
-    ctx.beginPath(); ctx.arc(cx, cy, R2, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(180, 120, 255, 0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+    // Inner dashed ring
+    ctx.save();
+    ctx.setLineDash([3, 12]);
+    ctx.shadowColor = 'rgba(147, 51, 234, 0.5)'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 0.7, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(180, 122, 255, 0.4)'; ctx.lineWidth = 1; ctx.stroke();
     ctx.restore();
 
-    ctx.save(); ctx.setLineDash([3, 15]);
-    ctx.shadowColor = 'rgba(255, 160, 40, 0.5)'; ctx.shadowBlur = 10;
-    ctx.beginPath(); ctx.arc(cx, cy, R3, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 160, 40, 0.4)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.restore();
-
-    /* 24 spokes — Nakshatra-style */
-    for (var i = 0; i < 24; i++) {
-      var ang = (i / 24) * Math.PI * 2;
-      ctx.save(); ctx.globalAlpha = 0.15;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(ang) * R3, cy + Math.sin(ang) * R3);
-      ctx.lineTo(cx + Math.cos(ang) * R, cy + Math.sin(ang) * R);
-      ctx.strokeStyle = (i % 2 === 0) ? '#FFD700' : '#B47AFF';
-      ctx.lineWidth = 0.5; ctx.stroke();
-      ctx.restore();
-    }
-
-    /* Energy dots on rings */
-    for (var i = 0; i < 60; i++) {
-      var ang = (i / 60) * Math.PI * 2;
-      var sz = (i % 5 === 0) ? 4 : 1.5;
+    // Energy dots on the ring
+    for (var i = 0; i < 48; i++) {
+      var ang = (i / 48) * Math.PI * 2;
+      var sz = (i % 4 === 0) ? 3 : 1.2;
       ctx.beginPath();
       ctx.arc(cx + Math.cos(ang) * R, cy + Math.sin(ang) * R, sz, 0, Math.PI * 2);
-      ctx.fillStyle = (i % 5 === 0) ? 'rgba(255, 200, 60, 0.7)' : 'rgba(180, 120, 255, 0.35)';
-      ctx.fill();
-    }
-    for (var i = 0; i < 36; i++) {
-      var ang = (i / 36) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.arc(cx + Math.cos(ang) * R2, cy + Math.sin(ang) * R2, 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 180, 50, 0.4)';
+      ctx.fillStyle = (i % 4 === 0) ? 'rgba(255, 184, 0, 0.6)' : 'rgba(180, 122, 255, 0.3)';
       ctx.fill();
     }
 
@@ -1587,353 +1404,6 @@
       p[0]=s.hx;p[1]=s.hy;p[2]=s.hz;a[0]=s.life;
       s.geo.attributes.position.needsUpdate=true; s.geo.attributes.alpha.needsUpdate=true;
       if(s.life<=0){scene.remove(s.pts);s.geo.dispose();s.pts.material.dispose();shootingStars.splice(i,1);}
-    }
-  }
-
-  /* ══════════════════════════════════════════════════════════════════
-     COSMIC STORM — Volumetric Nebula for Kendara Section
-     ══════════════════════════════════════════════════════════════════ */
-  function createCosmicStorm() {
-    stormGroup = new THREE.Group();
-    var sSize = isMobile ? 85 : 140;
-    sSize *= vs;
-
-    /* Nebula Cloud — GLSL volumetric shader */
-    var cloudMat = new THREE.ShaderMaterial({
-      uniforms: { time: { value: 0 }, intensity: { value: 0.5 } },
-      vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-      fragmentShader: [
-        'precision highp float;',
-        'varying vec2 vUv;',
-        'uniform float time, intensity;',
-        'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
-        'float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);f=f*f*(3.0-2.0*f);',
-        '  return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}',
-        'float fbm(vec2 p){float v=0.0,a=0.5;mat2 rot=mat2(0.8,-0.6,0.6,0.8);',
-        '  for(int i=0;i<5;i++){v+=a*noise(p);p=rot*p*2.0+0.2;a*=0.5;}return v;}',
-        'void main(){',
-        '  vec2 uv=(vUv-0.5)*2.5;',
-        '  vec2 q=vec2(fbm(uv+0.01*time),fbm(uv+vec2(1.0)));',
-        '  vec2 r=vec2(fbm(uv+1.0*q+vec2(1.7,9.2)+0.06*time),fbm(uv+1.0*q+vec2(8.3,2.8)+0.04*time));',
-        '  vec2 s=vec2(fbm(uv+0.8*r+vec2(5.1,3.7)+0.03*time),fbm(uv+0.8*r+vec2(2.9,6.1)+0.02*time));',
-        '  float f=fbm(uv+s);',
-        '  vec3 deepVoid=vec3(0.01,0.01,0.04);',
-        '  vec3 blueGas=vec3(0.08,0.15,0.45);',
-        '  vec3 purpleHaze=vec3(0.25,0.08,0.35);',
-        '  vec3 warmCore=vec3(0.95,0.65,0.25);',
-        '  vec3 hotWhite=vec3(1.0,0.9,0.8);',
-        '  vec3 col=mix(deepVoid,blueGas,clamp(f*1.8,0.0,1.0));',
-        '  col=mix(col,purpleHaze,clamp(length(q)*0.8,0.0,1.0));',
-        '  float oxyPocket=smoothstep(0.4,0.7,fbm(uv*3.0+r));',
-        '  col=mix(col,vec3(0.1,0.35,0.6),oxyPocket*0.5);',
-        '  float hAlpha=smoothstep(0.5,0.8,fbm(uv*2.5-s*0.5));',
-        '  col=mix(col,vec3(0.5,0.1,0.3),hAlpha*0.4);',
-        '  float coreMask=smoothstep(0.6,0.0,length(uv*vec2(0.7,1.5)));',
-        '  float coreNoise=smoothstep(0.4,0.9,f*fbm(uv*2.0-time*0.08));',
-        '  col=mix(col,warmCore,coreNoise*coreMask*0.85);',
-        '  float hotSpots=smoothstep(0.75,0.95,f*fbm(uv*4.0+time*0.05));',
-        '  col=mix(col,hotWhite,hotSpots*coreMask*0.6);',
-        '  float d=length(uv*vec2(0.45,1.1));',
-        '  float mask=smoothstep(1.3,0.2,d);',
-        '  float dust=fbm(uv*4.5+r*2.0+vec2(time*0.02,0.0));',
-        '  float dustLane=smoothstep(0.35,0.55,dust);',
-        '  col*=0.4+0.6*dustLane;',
-        '  float fineDust=fbm(uv*8.0+s);',
-        '  col*=0.8+0.2*fineDust;',
-        '  float rimGlow=smoothstep(0.2,0.8,d)*smoothstep(1.3,0.6,d);',
-        '  col+=vec3(0.05,0.08,0.2)*rimGlow*0.8;',
-        '  col*=mask*2.0;',
-        '  float alpha=smoothstep(0.03,0.3,length(col))*mask*intensity;',
-        '  gl_FragColor=vec4(col,alpha);',
-        '}'
-      ].join('\n'),
-      transparent: true, depthWrite: false,
-      blending: THREE.AdditiveBlending, side: THREE.DoubleSide
-    });
-
-    stormClouds = new THREE.Mesh(
-      new THREE.PlaneGeometry(sSize * 4.5, sSize * 2.8), cloudMat
-    );
-    stormClouds.rotation.z = -0.3;
-    stormGroup.add(stormClouds);
-
-    /* Star field particles inside the nebula */
-    var pCount = isMobile ? 200 : 450;
-    var pGeo = new THREE.BufferGeometry();
-    var pPos = new Float32Array(pCount * 3);
-    var pCol = new Float32Array(pCount * 3);
-    var pSz  = new Float32Array(pCount);
-    for (var i = 0; i < pCount; i++) {
-      var x = (Math.random() - 0.5) * sSize * 2.8;
-      var ySpread = (Math.random() - 0.5) * sSize * 0.9;
-      ySpread *= (1.0 - Math.abs(x) / (sSize * 2.8)) * 1.5 + 0.2;
-      var y = ySpread, z = (Math.random() - 0.5) * 25;
-      var cosR = Math.cos(-0.3), sinR = Math.sin(-0.3);
-      pPos[i*3] = x * cosR - y * sinR;
-      pPos[i*3+1] = x * sinR + y * cosR;
-      pPos[i*3+2] = z;
-      var pick = Math.random();
-      if (pick < 0.5) { pCol[i*3]=0.95; pCol[i*3+1]=0.95; pCol[i*3+2]=1.0; }
-      else if (pick < 0.8) { pCol[i*3]=1.0; pCol[i*3+1]=0.7; pCol[i*3+2]=0.2; }
-      else { pCol[i*3]=1.0; pCol[i*3+1]=0.3; pCol[i*3+2]=0.8; }
-      pSz[i] = 1.5 + Math.random() * 4.5;
-    }
-    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-    pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
-    pGeo.setAttribute('size', new THREE.BufferAttribute(pSz, 1));
-
-    var starMat = new THREE.ShaderMaterial({
-      uniforms: { time: {value:0}, pr: {value: renderer.getPixelRatio()}, intensity: {value:0.5} },
-      vertexShader: [
-        'attribute float size;attribute vec3 color;varying vec3 vc;varying float va;',
-        'uniform float time,pr,intensity;',
-        'void main(){vc=color;float twinkle=sin(time*3.0+float(gl_VertexID)*17.0)*0.3+0.7;',
-        'va=twinkle*intensity;vec4 mv=modelViewMatrix*vec4(position,1.0);',
-        'gl_PointSize=size*pr*twinkle*(130.0/-mv.z);gl_Position=projectionMatrix*mv;}'
-      ].join('\n'),
-      fragmentShader: [
-        'varying vec3 vc;varying float va;',
-        'void main(){float d=length(gl_PointCoord-0.5);if(d>0.5)discard;',
-        'float core=smoothstep(0.5,0.05,d);float glow=exp(-d*d*18.0);',
-        'gl_FragColor=vec4(vc,(core*0.9+glow*0.5)*va*1.2);}'
-      ].join('\n'),
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
-    });
-
-    var nebulaStars = new THREE.Points(pGeo, starMat);
-    stormGroup.add(nebulaStars);
-    nebulaStars.userData.isStormSparks = true;
-
-    /* Position at the Kendara section */
-    stormGroup.position.set(0, 0, isMobile ? -35 : -45);
-    scene.add(stormGroup);
-
-    var stSection = isMobile ? 0.53 : 0.56;
-    stormSection = stSection;
-
-    bodies.push({
-      mesh: stormGroup, rot: 0, bob: 0.15,
-      bobA: isMobile ? 1.5 : 1.0, par: 0.015,
-      orbitR: isMobile ? 2 : 0, orbitS: 0.05, orbitOff: 0,
-      sideX: 0, section: stSection
-    });
-  }
-
-  /* ══════════════════════════════════════════════════════════════════
-     COSMIC EYES — Hypnotic Twin Eyes for Porondam Section
-     ══════════════════════════════════════════════════════════════════ */
-  function createCosmicEyes() {
-    cosmicEyes = new THREE.Group();
-    var eSize = (isMobile ? 28 : 50) * vs;
-
-    function makeEye(xOff) {
-      var eyeMat = new THREE.ShaderMaterial({
-        uniforms: { time: {value:0}, intensity: {value:0.5} },
-        vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-        fragmentShader: [
-          'precision highp float;',
-          'varying vec2 vUv;uniform float time,intensity;',
-          'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
-          'float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);f=f*f*(3.0-2.0*f);',
-          '  return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}',
-          'float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<4;i++){v+=a*noise(p);p*=2.1;a*=0.5;}return v;}',
-          'void main(){',
-          '  vec2 uv=(vUv-0.5)*2.0;',
-          '  float r=length(uv);',
-          '  float ang=atan(uv.y,uv.x);',
-          '  float pupil=smoothstep(0.18,0.12,r);',
-          '  float iris=smoothstep(0.6,0.15,r)-pupil;',
-          '  float irisPattern=fbm(vec2(ang*3.0,r*6.0-time*0.3));',
-          '  vec3 irisCol=mix(vec3(0.6,0.1,0.8),vec3(0.2,0.6,1.0),irisPattern);',
-          '  irisCol+=vec3(1.0,0.8,0.4)*smoothstep(0.25,0.18,r)*0.5;',
-          '  float glow=exp(-r*r*4.0);',
-          '  vec3 col=irisCol*iris+vec3(0.01)*pupil;',
-          '  col+=vec3(0.3,0.2,0.6)*glow*0.3;',
-          '  float rays=sin(ang*12.0+time*0.5)*0.5+0.5;',
-          '  col+=vec3(0.5,0.3,1.0)*rays*iris*0.3;',
-          '  float outer=smoothstep(0.8,0.55,r);',
-          '  float alpha=outer*intensity;',
-          '  gl_FragColor=vec4(col,alpha);',
-          '}'
-        ].join('\n'),
-        transparent: true, depthWrite: false,
-        blending: THREE.AdditiveBlending, side: THREE.DoubleSide
-      });
-      var mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(eSize, eSize), eyeMat
-      );
-      mesh.position.x = xOff;
-      return mesh;
-    }
-
-    var leftEye = makeEye(isMobile ? -eSize * 0.6 : -eSize * 0.7);
-    var rightEye = makeEye(isMobile ? eSize * 0.6 : eSize * 0.7);
-    cosmicEyes.add(leftEye);
-    cosmicEyes.add(rightEye);
-
-    cosmicEyes.position.set(0, 0, isMobile ? -30 : -40);
-    scene.add(cosmicEyes);
-
-    var eyeSection = isMobile ? 0.63 : 0.66;
-    bodies.push({
-      mesh: cosmicEyes, rot: 0, bob: 0.1,
-      bobA: 1.0, par: 0.01,
-      orbitR: 0, orbitS: 0, orbitOff: 0,
-      sideX: 0, section: eyeSection
-    });
-  }
-
-  /* ══════════════════════════════════════════════════════════════════
-     SOLAR ECLIPSE — For Full Report Section
-     ══════════════════════════════════════════════════════════════════ */
-  function createSolarEclipse() {
-    var eclipseGroup = new THREE.Group();
-    var eSize = (isMobile ? 50 : 85) * vs;
-
-    var eclipseMat = new THREE.ShaderMaterial({
-      uniforms: { time: {value:0}, intensity: {value:0.5} },
-      vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-      fragmentShader: [
-        'precision highp float;',
-        'varying vec2 vUv;uniform float time,intensity;',
-        'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
-        'float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);f=f*f*(3.0-2.0*f);',
-        '  return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}',
-        'void main(){',
-        '  vec2 uv=(vUv-0.5)*2.0;',
-        '  float r=length(uv);',
-        '  float ang=atan(uv.y,uv.x);',
-        '  float moonMask=smoothstep(0.32,0.28,r);',
-        '  float corona=exp(-pow(r-0.3,2.0)*15.0)*(1.0-moonMask);',
-        '  float rays=noise(vec2(ang*8.0,time*0.2))*0.5+0.5;',
-        '  corona*=0.6+0.4*rays;',
-        '  float outerCorona=exp(-pow(r-0.3,2.0)*3.0)*(1.0-moonMask);',
-        '  outerCorona*=noise(vec2(ang*4.0+time*0.1,r*5.0))*0.6+0.4;',
-        '  vec3 col=vec3(0.0);',
-        '  col+=vec3(1.0,0.85,0.6)*corona*2.5;',
-        '  col+=vec3(0.8,0.4,0.15)*outerCorona*1.2;',
-        '  col+=vec3(0.3,0.15,0.05)*exp(-r*r*1.5)*(1.0-moonMask)*0.5;',
-        '  float prominence=noise(vec2(ang*6.0+time*0.3,2.0))*exp(-pow(r-0.35,2.0)*20.0);',
-        '  col+=vec3(1.0,0.3,0.1)*prominence*(1.0-moonMask);',
-        '  float diamondRing=exp(-pow(r-0.3,2.0)*80.0)*smoothstep(0.0,0.1,sin(ang*2.0+time*0.5)*0.5+0.3);',
-        '  col+=vec3(1.0,1.0,0.9)*diamondRing*2.0;',
-        '  float alpha=smoothstep(1.0,0.3,r)*intensity*(1.0-moonMask*0.95);',
-        '  alpha=max(alpha,corona*intensity*0.8);',
-        '  gl_FragColor=vec4(col,alpha);',
-        '}'
-      ].join('\n'),
-      transparent: true, depthWrite: false,
-      blending: THREE.AdditiveBlending, side: THREE.DoubleSide
-    });
-
-    var eclipseMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(eSize * 2.5, eSize * 2.5), eclipseMat
-    );
-    eclipseGroup.add(eclipseMesh);
-    eclipseGroup.position.set(0, 0, isMobile ? -25 : -35);
-    scene.add(eclipseGroup);
-
-    var eclipseSection = isMobile ? 0.76 : 0.78;
-    bodies.push({
-      mesh: eclipseGroup, rot: 0, bob: 0.08,
-      bobA: 0.8, par: 0.01,
-      orbitR: 0, orbitS: 0, orbitOff: 0,
-      sideX: 0, section: eclipseSection
-    });
-  }
-
-  /* ══════════════════════════════════════════════════════════════════
-     COSMIC DUST — Ambient floating particles for depth
-     ══════════════════════════════════════════════════════════════════ */
-  function createCosmicDust() {
-    var count = isMobile ? 300 : 800;
-    var geo = new THREE.BufferGeometry();
-    var pos = new Float32Array(count * 3);
-    var col = new Float32Array(count * 3);
-    var sz  = new Float32Array(count);
-    var spread = 400 * vs;
-
-    for (var i = 0; i < count; i++) {
-      pos[i*3]   = (Math.random() - 0.5) * spread;
-      pos[i*3+1] = (Math.random() - 0.5) * spread * 2;
-      pos[i*3+2] = -10 - Math.random() * 80;
-      var c = 0.3 + Math.random() * 0.4;
-      var tint = Math.random();
-      if (tint < 0.3) { col[i*3]=c*0.7; col[i*3+1]=c*0.8; col[i*3+2]=c*1.2; }
-      else if (tint < 0.6) { col[i*3]=c*1.1; col[i*3+1]=c*0.7; col[i*3+2]=c*1.0; }
-      else { col[i*3]=c; col[i*3+1]=c; col[i*3+2]=c; }
-      sz[i] = 0.5 + Math.random() * 2.0;
-    }
-
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    geo.setAttribute('size', new THREE.BufferAttribute(sz, 1));
-
-    var dustMat = new THREE.ShaderMaterial({
-      uniforms: { time: {value:0}, pr: {value: renderer.getPixelRatio()} },
-      vertexShader: [
-        'attribute float size;attribute vec3 color;varying vec3 vc;varying float va;',
-        'uniform float time,pr;',
-        'void main(){vc=color;float tw=sin(time*1.5+float(gl_VertexID)*7.3)*0.3+0.7;',
-        'va=tw*0.4;vec4 mv=modelViewMatrix*vec4(position,1.0);',
-        'gl_PointSize=size*pr*tw*(100.0/-mv.z);gl_Position=projectionMatrix*mv;}'
-      ].join('\n'),
-      fragmentShader: [
-        'varying vec3 vc;varying float va;',
-        'void main(){float d=length(gl_PointCoord-0.5);if(d>0.5)discard;',
-        'float a=smoothstep(0.5,0.1,d)*va;gl_FragColor=vec4(vc,a);}'
-      ].join('\n'),
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
-    });
-
-    cosmicDust = new THREE.Points(geo, dustMat);
-    scene.add(cosmicDust);
-  }
-
-  /* ══════════════════════════════════════════════════════════════════
-     COSMIC CLOUD PLANES — Layered translucent fog planes
-     ══════════════════════════════════════════════════════════════════ */
-  function createCosmicCloudPlanes() {
-    cosmicCloudPlanes = [];
-    var planeCount = isMobile ? 3 : 6;
-    var cloudSize = (isMobile ? 120 : 200) * vs;
-
-    for (var i = 0; i < planeCount; i++) {
-      var cMat = new THREE.ShaderMaterial({
-        uniforms: { time: {value:0}, seed: {value: i * 17.3}, intensity: {value:0.15} },
-        vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-        fragmentShader: [
-          'precision highp float;',
-          'varying vec2 vUv;uniform float time,seed,intensity;',
-          'float hash(vec2 p){return fract(sin(dot(p+seed,vec2(127.1,311.7)))*43758.5453);}',
-          'float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);f=f*f*(3.0-2.0*f);',
-          '  return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}',
-          'float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<3;i++){v+=a*noise(p);p*=2.0;a*=0.5;}return v;}',
-          'void main(){',
-          '  vec2 uv=vUv*3.0+time*0.02;',
-          '  float f=fbm(uv);',
-          '  float d=length(vUv-0.5);',
-          '  float mask=smoothstep(0.5,0.15,d);',
-          '  vec3 col=mix(vec3(0.05,0.05,0.2),vec3(0.15,0.08,0.25),f);',
-          '  float alpha=f*mask*intensity*0.5;',
-          '  gl_FragColor=vec4(col,alpha);',
-          '}'
-        ].join('\n'),
-        transparent: true, depthWrite: false,
-        blending: THREE.AdditiveBlending, side: THREE.DoubleSide
-      });
-
-      var plane = new THREE.Mesh(
-        new THREE.PlaneGeometry(cloudSize, cloudSize * 0.5), cMat
-      );
-      plane.position.set(
-        (Math.random() - 0.5) * 100 * vs,
-        (Math.random() - 0.5) * 300 * vs,
-        -50 - i * 15
-      );
-      plane.rotation.z = Math.random() * Math.PI * 0.5;
-      scene.add(plane);
-      cosmicCloudPlanes.push(plane);
     }
   }
 
@@ -2175,39 +1645,6 @@
     shootT += dt;
     if (shootT > nextShoot) { spawnShooter(); shootT = 0; nextShoot = 0.2 + Math.random() * 0.8; }
     updateShooters();
-
-    // ── Cosmic Storm update ──
-    if (stormGroup && stormClouds) {
-      var stDist = Math.abs(scrollFrac - stormSection);
-      var stInt = 1.0 - Math.min(stDist * 3.5, 1.0);
-      stInt = stInt * stInt;
-      stormClouds.material.uniforms.time.value = t;
-      stormClouds.material.uniforms.intensity.value = stInt * 0.9;
-      stormGroup.children.forEach(function(ch) {
-        if (ch.userData && ch.userData.isStormSparks) {
-          ch.material.uniforms.time.value = t;
-          ch.material.uniforms.intensity.value = stInt;
-        }
-      });
-      stormGroup.rotation.z += 0.0001;
-      stormGroup.rotation.x = Math.sin(t * 0.3) * 0.015;
-    }
-
-    // ── Cosmic Dust drift ──
-    if (cosmicDust && cosmicDust.material && cosmicDust.material.uniforms) {
-      cosmicDust.material.uniforms.time.value = t;
-      cosmicDust.position.y = -scrollY * 0.008;
-    }
-
-    // ── Cosmic Cloud Planes drift ──
-    if (cosmicCloudPlanes) {
-      cosmicCloudPlanes.forEach(function(p) {
-        if (p.material && p.material.uniforms) {
-          p.material.uniforms.time.value = t;
-          p.position.y += Math.sin(t * 0.2 + p.position.x * 0.01) * 0.003;
-        }
-      });
-    }
 
     renderer.render(scene, camera);
   }

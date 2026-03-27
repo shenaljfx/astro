@@ -29,7 +29,7 @@ export var NAV_ITEMS = [
     description: "Today's cosmic forecast",  descriptionSi: 'අද දවසේ අනාවැකිය' },
   { name: 'kendara',  title: 'Chart',  titleSi: '\u0d9a\u0dda\u0db1\u0dca\u0daf\u0dbb\u0dda',
     icon: 'planet-outline',        iconFocused: 'planet',
-    gradient: ['#C084FC','#9333EA'],
+    gradient: ['#FF8C00','#E65100'],
     description: 'Birth chart and planets',  descriptionSi: '\u0da2\u0db1\u0dca\u0db8 \u0d9a\u0dda\u0db1\u0dca\u0daf\u0dbb\u0dba' },
   { name: 'report',   title: 'Report', titleSi: '\u0dc0\u0dcf\u0dbb\u0dca\u0dad\u0dcf\u0dc0',
     icon: 'document-text-outline', iconFocused: 'document-text',
@@ -37,7 +37,7 @@ export var NAV_ITEMS = [
     description: 'Full Jyotish report',      descriptionSi: '\u0dc3\u0db8\u0dca\u0db4\u0dd6\u0dbb\u0dca\u0dab \u0dc0\u0dcf\u0dbb\u0dca\u0dad\u0dcf\u0dc0' },
   { name: 'chat',     title: 'Guide',  titleSi: '\u0db8\u0dcf\u0dbb\u0dca\u0d9c\u0dba',
     icon: 'sparkles-outline',      iconFocused: 'sparkles',
-    gradient: ['#FBBF24','#9333EA'],
+    gradient: ['#FFB800','#FF8C00'],
     description: 'AI astrology guide',       descriptionSi: 'AI \u0db8\u0dcf\u0dbb\u0dca\u0d9c\u0ddc\u0db4\u0daf\u0dda\u0dc1\u0dba' },
   { name: 'porondam', title: 'Match',  titleSi: '\u0db4\u0ddc\u0dbb\u0ddc\u0db1\u0dca\u0daf\u0db8',
     icon: 'heart-circle-outline',  iconFocused: 'heart-circle',
@@ -184,7 +184,7 @@ function LangToggle({ language, onToggle, collapsed }) {
       accessibilityRole="button" accessibilityLabel="Toggle language"
     >
       <LinearGradient
-        colors={isEn ? ['#7C3AED', '#3B82F6'] : ['#B45309', '#9333EA']}
+        colors={isEn ? ['#FF8C00', '#FF6D00'] : ['#E65100', '#FF8C00']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       />
@@ -387,7 +387,7 @@ var sb = StyleSheet.create({
     gap: 8, overflow: 'hidden', borderRadius: 11,
     paddingHorizontal: 14, paddingVertical: 10, marginHorizontal: 4, minHeight: 40,
   },
-  langText:    { fontSize: 12, fontWeight: '700', color: '#FFF', letterSpacing: 0.5 },
+  langText:    { fontSize: 12, fontWeight: '700', color: '#FFF1D0', letterSpacing: 0.5 },
   versionText: {
     fontSize: 9, color: 'rgba(255,255,255,0.18)', textAlign: 'center',
     letterSpacing: 1, marginTop: 4, textTransform: 'uppercase',
@@ -408,7 +408,7 @@ var top = StyleSheet.create({
   leftGroup: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingLeft: 20, gap: 12 },
   iconCircle: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   sectionTitle: {
-    fontSize: 14, fontWeight: '800', color: '#F1F5F9',
+    fontSize: 14, fontWeight: '800', color: '#FFE8B0',
     letterSpacing: 2, textTransform: 'uppercase',
   },
   sectionDesc:  { fontSize: 10.5, color: 'rgba(255,255,255,0.33)', letterSpacing: 0.3, marginTop: 1 },

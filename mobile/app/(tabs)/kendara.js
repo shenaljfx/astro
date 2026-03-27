@@ -8,7 +8,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing, interpolate } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import CosmicBackground from '../../components/CosmicBackground';
 import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
 import SriLankanChart from '../../components/SriLankanChart';
 import SpringPressable from '../../components/effects/SpringPressable';
@@ -124,7 +123,7 @@ function ChartGlowAura({ lagnaColor, children }) {
 
 // ── Yoga Badge pill ──────────────────────────────────────────────────
 function YogaBadge({ name, category }) {
-  var catColor = category === 'Raja Yoga' ? '#B47AFF' : category === 'Dhana Yoga' ? '#FFB800' : category?.includes('Dosha') ? '#F87171' : '#60A5FA';
+  var catColor = category === 'Raja Yoga' ? '#FF8C00' : category === 'Dhana Yoga' ? '#FFB800' : category?.includes('Dosha') ? '#F87171' : '#60A5FA';
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: catColor + '50', backgroundColor: catColor + '12', marginRight: 6, marginBottom: 6 }}>
       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: catColor, marginRight: 5 }} />
@@ -515,11 +514,11 @@ export default function KendaraScreen() {
             {/* ── AI OVERALL SUMMARY ── */}
             {chartData.chartExplanations?.overall && (
               <Animated.View entering={FadeInDown.delay(150).duration(600)}>
-                <View style={[styles.advCard, { borderColor: 'rgba(180,122,255,0.25)', marginBottom: 12 }]}>
-                  <LinearGradient colors={['rgba(180,122,255,0.12)', 'rgba(255,184,0,0.06)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                <View style={[styles.advCard, { borderColor: 'rgba(255,140,0,0.25)', marginBottom: 12 }]}>
+                  <LinearGradient colors={['rgba(255,140,0,0.12)', 'rgba(255,184,0,0.06)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-                    <Ionicons name="sparkles" size={20} color="#B47AFF" />
-                    <Text style={{ color: '#B47AFF', fontSize: 14, fontWeight: '700', letterSpacing: 0.5 }}>
+                    <Ionicons name="sparkles" size={20} color="#FF8C00" />
+                    <Text style={{ color: '#FF8C00', fontSize: 14, fontWeight: '700', letterSpacing: 0.5 }}>
                       {'✨ ' + (t('kpChartAtGlance') || 'Your Chart at a Glance')}
                     </Text>
                   </View>
@@ -591,7 +590,7 @@ export default function KendaraScreen() {
                 </View>
                 <View style={styles.advCard}>
                   {chartData.advancedAnalysis.tier1.advancedYogas.items.map(function(y, i) {
-                    var catColor = y.category === 'Raja Yoga' ? '#B47AFF' : y.category === 'Dhana Yoga' ? '#FFB800' : y.category?.includes('Dosha') ? '#f87171' : '#60a5fa';
+                    var catColor = y.category === 'Raja Yoga' ? '#FF8C00' : y.category === 'Dhana Yoga' ? '#FFB800' : y.category?.includes('Dosha') ? '#f87171' : '#60a5fa';
                     var strColor = y.strength === 'Very Strong' ? '#10b981' : y.strength === 'Strong' ? '#34d399' : '#6b7280';
                     var strLabel = y.strength === 'Very Strong' ? t('kpVeryStrong') : y.strength === 'Strong' ? t('kpStrong') : t('kpModerate');
                     var catLabel = language === 'si'
@@ -628,7 +627,7 @@ export default function KendaraScreen() {
             {chartData.advancedAnalysis.tier1?.jaimini && (
               <Animated.View entering={FadeInDown.delay(400).duration(600)}>
                 <View style={styles.headerRow}>
-                  <Ionicons name="compass-outline" size={20} color="#B47AFF" />
+                  <Ionicons name="compass-outline" size={20} color="#FF8C00" />
                   <Text style={styles.sectionTitle}>
                     {t('kpJaiminiTitle') || 'Your Soul\'s Purpose'}
                   </Text>
@@ -636,7 +635,7 @@ export default function KendaraScreen() {
                 <View style={styles.advCard}>
                   {chartData.advancedAnalysis.tier1.jaimini.atmakaraka && (
                     <View style={styles.jaiminiHighlight}>
-                      <LinearGradient colors={['rgba(180,122,255,0.12)', 'rgba(180,122,255,0.03)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                      <LinearGradient colors={['rgba(255,140,0,0.12)', 'rgba(255,140,0,0.03)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                       <Text style={styles.jaiminiLabel}>{t('kpSoulPlanet') || 'Your Soul Planet'}</Text>
                       <Text style={styles.jaiminiValue}>{(() => { var p = chartData.advancedAnalysis.tier1.jaimini.atmakaraka.planet || ''; var pi = PLANET_INFO[p]; return language === 'si' && pi ? pi.si : p; })()}</Text>
                       {chartData.advancedAnalysis.tier1.jaimini.karakas && (
@@ -1094,7 +1093,7 @@ export default function KendaraScreen() {
 
   return (
     <DesktopScreenWrapper routeName="kendara">
-    <CosmicBackground>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#FFB800" />}>
         <View style={[styles.content, isDesktop && styles.contentDesktop]}>
           <Animated.View entering={FadeIn.duration(700)} style={styles.pageTitleRow}>
@@ -1110,7 +1109,7 @@ export default function KendaraScreen() {
             </View>
             {user?.birthData && (
               <View style={styles.lagnaOrb}>
-                <LinearGradient colors={['#9333EA', '#6D28D9']} style={StyleSheet.absoluteFill} />
+                <LinearGradient colors={['#FF8C00', '#E65100']} style={StyleSheet.absoluteFill} />
                 <Ionicons name="planet" size={22} color="#FFB800" />
               </View>
             )}
@@ -1119,7 +1118,7 @@ export default function KendaraScreen() {
         </View>
         <View style={{ height: isDesktop ? 32 : 110 }} />
       </ScrollView>
-    </CosmicBackground>
+    </View>
     </DesktopScreenWrapper>
   );
 }
@@ -1130,9 +1129,9 @@ const styles = StyleSheet.create({
   pageTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   pageTitle: { fontSize: 30, fontWeight: '800', color: '#FFB800', marginBottom: 3, textShadowColor: 'rgba(255,184,0,0.3)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
   pageSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '500' },
-  lagnaOrb: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.35)', shadowColor: '#9333EA', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 6 },
+  lagnaOrb: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.35)', shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 0 },
   center: { alignItems: 'center', justifyContent: 'center', height: 300 },
-  emptyState: { alignItems: 'center', padding: 40, backgroundColor: 'rgba(180,122,255,0.07)', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(180,122,255,0.2)' },
+  emptyState: { alignItems: 'center', padding: 40, backgroundColor: 'rgba(255,140,0,0.07)', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)' },
   emptyTitle: { color: '#FFB800', fontSize: 18, marginVertical: 16, fontWeight: '700' },
   emptyText: { color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginBottom: 20, lineHeight: 22 },
   actionButton: { backgroundColor: '#FFB800', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20 },
@@ -1140,15 +1139,15 @@ const styles = StyleSheet.create({
   errorText: { color: '#F87171', fontSize: 14 },
   chartContainer: { marginBottom: 20 },
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  sectionTitle: { color: '#fff', fontSize: 17, marginLeft: 10, fontWeight: '700', flex: 1 },
+  sectionTitle: { color: '#FFF1D0', fontSize: 17, marginLeft: 10, fontWeight: '700', flex: 1 },
   detailsCard: {
     backgroundColor: 'rgba(255,255,255,0.04)', padding: 16, borderRadius: 18, marginTop: 10,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
-    shadowColor: '#9333EA', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
+    shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 0,
   },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   infoLabel: { color: 'rgba(255,255,255,0.55)', fontSize: 13 },
-  infoValue: { color: '#F1F5F9', fontWeight: '600', fontSize: 13 },
+  infoValue: { color: '#FFE8B0', fontWeight: '600', fontSize: 13 },
   cardTitle: { color: '#FFB800', marginBottom: 14, fontWeight: '700', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 },
 
   // Planet Positions — bar style
@@ -1186,16 +1185,16 @@ const styles = StyleSheet.create({
   yogaTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   catDot: { width: 8, height: 8, borderRadius: 4 },
   yogaName: { color: '#E0E7FF', fontSize: 14, fontWeight: '700', flex: 1 },
-  yogaCat: { color: 'rgba(180,122,255,0.6)', fontSize: 11, fontWeight: '600', marginTop: 3 },
+  yogaCat: { color: 'rgba(255,140,0,0.6)', fontSize: 11, fontWeight: '600', marginTop: 3 },
   yogaDesc: { color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 18, marginTop: 3 },
   yogaPlanets: { color: 'rgba(255,184,0,0.6)', fontSize: 11, marginTop: 4 },
   strBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   strText: { fontSize: 10, fontWeight: '700' },
 
   // Jaimini styles
-  jaiminiHighlight: { borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(180,122,255,0.15)', overflow: 'hidden' },
-  jaiminiLabel: { color: 'rgba(180,122,255,0.7)', fontSize: 11, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
-  jaiminiValue: { color: '#B47AFF', fontSize: 22, fontWeight: '900' },
+  jaiminiHighlight: { borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)', overflow: 'hidden' },
+  jaiminiLabel: { color: 'rgba(255,140,0,0.7)', fontSize: 11, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
+  jaiminiValue: { color: '#FF8C00', fontSize: 22, fontWeight: '900' },
   jaiminiSub: { color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 8, lineHeight: 18 },
   jaiminiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   jaiminiMini: { flex: 1, minWidth: 90, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 10, alignItems: 'center' },

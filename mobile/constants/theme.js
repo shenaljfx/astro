@@ -62,13 +62,13 @@ export const Colors = {
   glassHighlight: 'rgba(255,255,255,0.10)',
   glassShine: 'rgba(255,255,255,0.03)',
 
-  // Text hierarchy
-  textPrimary: '#F1F5F9',
-  textSecondary: 'rgba(180,190,210,0.90)',
-  textMuted: 'rgba(140,150,175,0.70)',
+  // Text hierarchy — Golden celestial shades
+  textPrimary: '#FFF1D0',
+  textSecondary: 'rgba(235,210,155,0.92)',
+  textMuted: 'rgba(200,175,120,0.72)',
   textAccent: '#FFD666',
-  textGlow: '#E2E8F0',
-  textDisabled: '#475569',
+  textGlow: '#FFE8A0',
+  textDisabled: '#6B5A3A',
 
   // Status
   success: '#10B981',
@@ -101,6 +101,14 @@ export const Colors = {
   cardGlow: 'rgba(180,122,255,0.12)',
   cardBorderHero: 'rgba(255,184,0,0.18)',
   cardBorderContent: 'rgba(255,255,255,0.06)',
+
+  // Button — Premium Orange Glow
+  buttonPrimary: '#FF8C00',
+  buttonPrimaryLight: '#FFB800',
+  buttonPrimaryDark: '#E07800',
+  buttonGlow: 'rgba(255,140,0,0.50)',
+  buttonGlowStrong: 'rgba(255,140,0,0.70)',
+  buttonBorder: 'rgba(255,184,0,0.35)',
 };
 
 export const Spacing = {
@@ -171,11 +179,18 @@ export const Shadows = {
     elevation: 10,
   },
   glow: {
-    shadowColor: '#FFB800',
+    shadowColor: '#FF8C00',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 14,
-    elevation: 12,
+    shadowOpacity: 0.8,
+    shadowRadius: 18,
+    elevation: 14,
+  },
+  buttonGlow: {
+    shadowColor: '#FF8C00',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.9,
+    shadowRadius: 20,
+    elevation: 16,
   },
   cardFloat: {
     shadowColor: 'rgba(0,0,0,0.5)',
@@ -232,6 +247,9 @@ export const Typography = {
 export const Gradients = {
   nebulaPurple:  ['#9333EA', '#6366F1', '#3B82F6'],
   celestialGold: ['#FFB800', '#F59E0B', '#D97706'],
+  // Premium orange button gradient
+  orangeButton:  ['#FF8C00', '#FF6D00', '#E65100'],
+  orangeButtonHover: ['#FFB800', '#FF8C00', '#FF6D00'],
   auroraRise:    ['#00FFB3', '#4CC9F0', '#9333EA'],
   sunriseFire:   ['#FF8C00', '#FFB800', '#FFD666'],
   cosmicRose:    ['#FF6B9D', '#9333EA', '#6366F1'],

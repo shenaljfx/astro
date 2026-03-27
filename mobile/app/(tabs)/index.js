@@ -13,7 +13,6 @@ import Animated, {
   withRepeat, withSequence, withTiming, withSpring,
   interpolate, Easing,
 } from 'react-native-reanimated';
-import CosmicBackground from '../../components/CosmicBackground';
 import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
 import SpringPressable from '../../components/effects/SpringPressable';
 import CosmicLoader from '../../components/effects/CosmicLoader';
@@ -125,11 +124,11 @@ function CosmicOrrery({ size, activeIndex, tithiNum }) {
         <RadialGradient id="oSunCorona" cx="50%" cy="50%" r="50%">
           <Stop offset="0%" stopColor="#FFB800" stopOpacity={0.4} />
           <Stop offset="40%" stopColor="#FFB800" stopOpacity={0.12} />
-          <Stop offset="70%" stopColor="#B47AFF" stopOpacity={0.05} />
-          <Stop offset="100%" stopColor="#B47AFF" stopOpacity={0} />
+          <Stop offset="70%" stopColor="#FF8C00" stopOpacity={0.05} />
+          <Stop offset="100%" stopColor="#FF8C00" stopOpacity={0} />
         </RadialGradient>
         <RadialGradient id="oNebulaViolet" cx="30%" cy="25%" r="55%">
-          <Stop offset="0%" stopColor="#B47AFF" stopOpacity={0.10} />
+          <Stop offset="0%" stopColor="#FF8C00" stopOpacity={0.10} />
           <Stop offset="60%" stopColor="#6C3FA0" stopOpacity={0.04} />
           <Stop offset="100%" stopColor="#020010" stopOpacity={0} />
         </RadialGradient>
@@ -163,10 +162,10 @@ function CosmicOrrery({ size, activeIndex, tithiNum }) {
 
       {/* Orbital rings */}
       <Circle cx={cx} cy={cy} r={orbit1} stroke="rgba(255,184,0,0.08)" strokeWidth={0.6} fill="none" />
-      <Circle cx={cx} cy={cy} r={orbit2} stroke="rgba(180,122,255,0.07)" strokeWidth={0.5} fill="none" />
-      <Circle cx={cx} cy={cy} r={orbit2} stroke="rgba(180,122,255,0.03)" strokeWidth={3 * u} fill="none" />
-      <Circle cx={cx} cy={cy} r={zodiacR} stroke="rgba(180,122,255,0.10)" strokeWidth={0.7} fill="none" strokeDasharray="2,8" />
-      <Circle cx={cx} cy={cy} r={zodiacR} stroke="rgba(180,122,255,0.03)" strokeWidth={4 * u} fill="none" />
+      <Circle cx={cx} cy={cy} r={orbit2} stroke="rgba(255,140,0,0.07)" strokeWidth={0.5} fill="none" />
+      <Circle cx={cx} cy={cy} r={orbit2} stroke="rgba(255,140,0,0.03)" strokeWidth={3 * u} fill="none" />
+      <Circle cx={cx} cy={cy} r={zodiacR} stroke="rgba(255,140,0,0.10)" strokeWidth={0.7} fill="none" strokeDasharray="2,8" />
+      <Circle cx={cx} cy={cy} r={zodiacR} stroke="rgba(255,140,0,0.03)" strokeWidth={4 * u} fill="none" />
 
       {/* Dodecagon edges */}
       {ZODIAC_SIGNS.map(function (_, i) {
@@ -177,7 +176,7 @@ function CosmicOrrery({ size, activeIndex, tithiNum }) {
           <Line key={'edge' + i}
             x1={cx + zodiacR * Math.cos(a1)} y1={cy + zodiacR * Math.sin(a1)}
             x2={cx + zodiacR * Math.cos(a2)} y2={cy + zodiacR * Math.sin(a2)}
-            stroke={isAdj ? 'rgba(255,214,102,0.18)' : 'rgba(180,122,255,0.06)'}
+            stroke={isAdj ? 'rgba(255,214,102,0.18)' : 'rgba(255,140,0,0.06)'}
             strokeWidth={isAdj ? 0.8 : 0.4}
           />
         );
@@ -191,7 +190,7 @@ function CosmicOrrery({ size, activeIndex, tithiNum }) {
           <Line key={'spoke' + i}
             x1={cx + orbit1 * 0.8 * Math.cos(angle)} y1={cy + orbit1 * 0.8 * Math.sin(angle)}
             x2={cx + zodiacR * Math.cos(angle)} y2={cy + zodiacR * Math.sin(angle)}
-            stroke={isAct ? 'rgba(255,214,102,0.15)' : 'rgba(180,122,255,0.025)'}
+            stroke={isAct ? 'rgba(255,214,102,0.15)' : 'rgba(255,140,0,0.025)'}
             strokeWidth={isAct ? 0.6 : 0.3}
             strokeDasharray={isAct ? 'none' : '1,4'}
           />
@@ -543,13 +542,13 @@ export default function HomeScreen() {
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
           <LinearGradient
-            colors={['rgba(180,122,255,0.06)', 'transparent', 'rgba(76,201,240,0.04)']}
+            colors={['rgba(255,140,0,0.06)', 'transparent', 'rgba(76,201,240,0.04)']}
             style={s.dashHeroBg}
             start={{ x: 0, y: 0.2 }} end={{ x: 1, y: 0.8 }}
           />
           <Animated.View style={[s.dashNebulaBlob, coronaPulseStyle]} />
           <LinearGradient
-            colors={['rgba(180,122,255,0.12)', 'transparent']}
+            colors={['rgba(255,140,0,0.12)', 'transparent']}
             style={s.dashEdgeTop}
             start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
           />
@@ -560,7 +559,7 @@ export default function HomeScreen() {
               <View style={s.dashSignOuter}>
                 <Animated.View style={[s.dashSignGlow, coronaPulseStyle]} />
                 <View style={s.dashSignCircle}>
-                  <LinearGradient colors={['rgba(255,184,0,0.22)', 'rgba(180,122,255,0.14)']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                  <LinearGradient colors={['rgba(255,184,0,0.22)', 'rgba(255,140,0,0.14)']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                   <Text style={s.dashSignSymbol}>{ZODIAC_SIGNS[activeNakIndex]}</Text>
                 </View>
               </View>
@@ -582,7 +581,7 @@ export default function HomeScreen() {
 
           {/* Divider */}
           <View style={s.dashDivider}>
-            <LinearGradient colors={['transparent', 'rgba(180,122,255,0.20)', 'rgba(255,184,0,0.15)', 'transparent']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} />
+            <LinearGradient colors={['transparent', 'rgba(255,140,0,0.20)', 'rgba(255,184,0,0.15)', 'transparent']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} />
           </View>
 
           {/* Info grid — daily panchanga at a glance */}
@@ -594,7 +593,7 @@ export default function HomeScreen() {
               <Text style={s.dashCellLabel}>{t('sunrise')}</Text>
             </View>
             <View style={s.dashCell}>
-              <Ionicons name="moon-outline" size={16} color="#B47AFF" />
+              <Ionicons name="moon-outline" size={16} color="#FF8C00" />
               <Text style={s.dashCellValue}>{sunsetVal}</Text>
               <Text style={s.dashCellLabel}>{t('sunset')}</Text>
             </View>
@@ -650,14 +649,14 @@ export default function HomeScreen() {
   function renderQuickActions() {
     var actions = language === 'si'
       ? [
-          { icon: '🔮', label: 'ජ්‍යොතිෂ', gradient: ['rgba(147,51,234,0.5)', 'rgba(99,102,241,0.3)'], route: '/chat' },
+          { icon: '🔮', label: 'ජ්‍යොතිෂ', gradient: ['rgba(255,140,0,0.5)', 'rgba(230,81,0,0.3)'], route: '/chat' },
           { icon: '📅', label: 'කේන්දරය', gradient: ['rgba(6,182,212,0.4)', 'rgba(59,130,246,0.3)'], route: '/kendara' },
           { icon: '⚡', label: 'අනාවැකි', gradient: ['rgba(255,215,0,0.4)', 'rgba(245,158,11,0.3)'], route: '/predictions' },
           { icon: '💑', label: 'ගැලපීම', gradient: ['rgba(244,63,94,0.4)', 'rgba(139,92,246,0.3)'], route: '/porondam' },
           { icon: '📊', label: 'වාර්තාව', gradient: ['rgba(52,211,153,0.4)', 'rgba(16,185,129,0.3)'], route: '/report' },
         ]
       : [
-          { icon: '🔮', label: 'Ask Jyotishi', gradient: ['rgba(147,51,234,0.5)', 'rgba(99,102,241,0.3)'], route: '/chat' },
+          { icon: '🔮', label: 'Ask Jyotishi', gradient: ['rgba(255,140,0,0.5)', 'rgba(230,81,0,0.3)'], route: '/chat' },
           { icon: '📅', label: 'Birth Chart', gradient: ['rgba(6,182,212,0.4)', 'rgba(59,130,246,0.3)'], route: '/kendara' },
           { icon: '⚡', label: 'Predictions', gradient: ['rgba(255,215,0,0.4)', 'rgba(245,158,11,0.3)'], route: '/predictions' },
           { icon: '💑', label: 'Match', gradient: ['rgba(244,63,94,0.4)', 'rgba(139,92,246,0.3)'], route: '/porondam' },
@@ -683,7 +682,7 @@ export default function HomeScreen() {
     var nakshatra = chartData.nakshatra;
 
     var items = [
-      { icon: '⬆', label: language === 'si' ? 'ලග්නය' : 'Lagna', value: (language === 'si' && lagna?.sinhala ? lagna.sinhala : lagna?.english || '--'), color: '#B47AFF' },
+      { icon: '⬆', label: language === 'si' ? 'ලග්නය' : 'Lagna', value: (language === 'si' && lagna?.sinhala ? lagna.sinhala : lagna?.english || '--'), color: '#FF8C00' },
       { icon: '🌙', label: language === 'si' ? 'චන්ද්‍ර' : 'Moon', value: (language === 'si' && moonSign?.sinhala ? moonSign.sinhala : moonSign?.english || '--'), color: '#93C5FD' },
       { icon: '☀', label: language === 'si' ? 'සූර්ය' : 'Sun', value: (language === 'si' && sunSign?.sinhala ? sunSign.sinhala : sunSign?.english || '--'), color: '#FFD666' },
       { icon: '✦', label: language === 'si' ? 'නක්ෂත්‍ර' : 'Nakshatra', value: (language === 'si' && nakshatra?.sinhala ? nakshatra.sinhala : nakshatra?.name || '--'), color: '#34D399' },
@@ -706,7 +705,7 @@ export default function HomeScreen() {
         </View>
         {lagna?.lord && (
           <View style={s.lordRow}>
-            <Ionicons name="planet" size={14} color="#B47AFF" />
+            <Ionicons name="planet" size={14} color="#FF8C00" />
             <Text style={s.lordText}>{language === 'si' ? 'ලග්නාධිපති: ' : 'Lagna Lord: '}{lagna.lord}</Text>
           </View>
         )}
@@ -777,7 +776,7 @@ export default function HomeScreen() {
     }
     var uniqueTraits = traitsSource.filter(function (tr, i) { return traitsSource.indexOf(tr) === i; }).slice(0, 8);
     if (uniqueTraits.length === 0) return null;
-    var traitColors = ['#B47AFF', '#93C5FD', '#FFB800', '#F87171', '#34D399', '#6EE7B7', '#FFD666', '#A78BFA'];
+    var traitColors = ['#FF8C00', '#93C5FD', '#FFB800', '#F87171', '#34D399', '#6EE7B7', '#FFD666', '#A78BFA'];
 
     return (
       <CosmicCard variant="content" delay={450}>
@@ -799,7 +798,7 @@ export default function HomeScreen() {
   function renderPanchanga() {
     if (!data || !data.panchanga) return null;
     var rows = [
-      [t('tithi'), data.panchanga.tithi, '#B47AFF'],
+      [t('tithi'), data.panchanga.tithi, '#FF8C00'],
       [t('nakshatra'), data.panchanga.nakshatra, '#93C5FD'],
       [t('yoga'), data.panchanga.yoga, '#34D399'],
       [t('karana'), data.panchanga.karana, '#FFD666'],
@@ -873,7 +872,8 @@ export default function HomeScreen() {
               : 'Add your birth details in Profile to unlock your personalised Lagna chart, Nakshatra & daily readings.'}
           </Text>
           <TouchableOpacity onPress={function () { router.push('/profile'); }} style={s.noBirthCta}>
-            <LinearGradient colors={['#9333EA', '#6366F1']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+            <LinearGradient colors={['#FF8C00', '#FF6D00', '#E65100']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+            <LinearGradient colors={['rgba(255,255,255,0.20)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 999, borderTopRightRadius: 999 }} />
             <Ionicons name="sparkles" size={14} color="#fff" />
             <Text style={s.noBirthCtaText}>{language === 'si' ? 'Profile → Birth Data' : 'Go to Profile → Birth Data'}</Text>
           </TouchableOpacity>
@@ -884,7 +884,7 @@ export default function HomeScreen() {
 
   return (
     <DesktopScreenWrapper routeName="index">
-      <CosmicBackground>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <Animated.ScrollView
           style={s.flex}
           contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
@@ -897,7 +897,7 @@ export default function HomeScreen() {
               refreshing={loading}
               onRefresh={fetchData}
               tintColor="#FFB800"
-              colors={['#FFB800', '#9333EA']}
+              colors={['#FF8C00', '#FF6D00']}
             />
           }
         >
@@ -963,7 +963,7 @@ export default function HomeScreen() {
             </View>
           )}
         </Animated.ScrollView>
-      </CosmicBackground>
+      </View>
     </DesktopScreenWrapper>
   );
 }
@@ -988,8 +988,8 @@ var s = StyleSheet.create({
   greetWrap: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: Spacing.sectionGap },
   greetText: { fontSize: 14, fontWeight: '600', color: Colors.textMuted, letterSpacing: 0.5 },
   greetName: {
-    fontSize: 28, fontWeight: '900', color: '#FFF', letterSpacing: 0.3,
-    textShadowColor: 'rgba(180,122,255,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10,
+    fontSize: 28, fontWeight: '900', color: '#FFF1D0', letterSpacing: 0.3,
+    textShadowColor: 'rgba(255,140,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10,
   },
   dateBadge: {
     backgroundColor: 'rgba(255,184,0,0.12)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6,
@@ -1000,14 +1000,14 @@ var s = StyleSheet.create({
   // Dashboard Hero
   dashHero: {
     borderRadius: 24, overflow: 'hidden', marginBottom: 8,
-    borderWidth: 1, borderColor: 'rgba(180,122,255,0.15)',
-    shadowColor: '#B47AFF', shadowOffset: { width: 0, height: 4 },
+    borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)',
+    shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.20, shadowRadius: 20, elevation: 10,
   },
   dashHeroBg: { ...StyleSheet.absoluteFillObject, borderRadius: 24 },
   dashNebulaBlob: {
     position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: 70,
-    backgroundColor: 'rgba(180,122,255,0.08)',
+    backgroundColor: 'rgba(255,140,0,0.08)',
   },
   dashEdgeTop: {
     position: 'absolute', top: 0, left: 0, right: 0, height: 1.5, borderTopLeftRadius: 24, borderTopRightRadius: 24,
@@ -1034,7 +1034,7 @@ var s = StyleSheet.create({
   },
   dashSignInfo: { flex: 1 },
   dashHeroLabel: { color: 'rgba(255,255,255,0.40)', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 },
-  dashSignName: { color: '#FFF', fontSize: 18, fontWeight: '900', letterSpacing: 0.3 },
+  dashSignName: { color: '#FFF1D0', fontSize: 18, fontWeight: '900', letterSpacing: 0.3 },
   dashNakRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
   dashNakText: { color: '#FFD666', fontSize: 12, fontWeight: '600', opacity: 0.85 },
   dashDivider: { height: 1, marginHorizontal: 18, overflow: 'hidden' },
@@ -1046,7 +1046,7 @@ var s = StyleSheet.create({
     flex: 1, alignItems: 'center', gap: 5, paddingVertical: 8,
     borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.02)',
   },
-  dashCellValue: { color: '#FFF', fontSize: 13, fontWeight: '800', textAlign: 'center' },
+  dashCellValue: { color: '#FFF1D0', fontSize: 13, fontWeight: '800', textAlign: 'center' },
   dashCellLabel: { color: 'rgba(255,255,255,0.40)', fontSize: 9, fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.8 },
 
   rahuStrip: {
@@ -1088,7 +1088,7 @@ var s = StyleSheet.create({
     borderWidth: 1, marginBottom: 6,
     backgroundColor: 'rgba(255,255,255,0.03)',
   },
-  statMiniValue: { fontSize: 15, fontWeight: '800', color: '#FFF' },
+  statMiniValue: { fontSize: 15, fontWeight: '800', color: '#FFF1D0' },
   statMiniLabel: { fontSize: 11, color: Colors.textMuted, fontWeight: '600', marginTop: 2 },
 
   // Quick Actions
@@ -1100,7 +1100,7 @@ var s = StyleSheet.create({
     overflow: 'hidden',
   },
   quickPillBg: { ...StyleSheet.absoluteFillObject, borderRadius: 999 },
-  quickPillLabel: { color: '#FFF', fontSize: 13, fontWeight: '700', letterSpacing: 0.2 },
+  quickPillLabel: { color: '#FFF1D0', fontSize: 13, fontWeight: '700', letterSpacing: 0.2 },
 
   // Identity
   identityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
@@ -1112,10 +1112,10 @@ var s = StyleSheet.create({
   identityValue: { fontSize: 16, fontWeight: '800', marginTop: 4, textAlign: 'center' },
   lordRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: 'rgba(180,122,255,0.06)', borderRadius: 12, padding: 10,
-    borderWidth: 1, borderColor: 'rgba(180,122,255,0.15)',
+    backgroundColor: 'rgba(255,140,0,0.06)', borderRadius: 12, padding: 10,
+    borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)',
   },
-  lordText: { color: '#B47AFF', fontSize: 13, fontWeight: '600' },
+  lordText: { color: '#FF8C00', fontSize: 13, fontWeight: '600' },
 
   // Palapala
   palapalaText: { color: 'rgba(255,255,255,0.70)', fontSize: 14, lineHeight: 23, marginBottom: 14 },
@@ -1124,7 +1124,7 @@ var s = StyleSheet.create({
     backgroundColor: 'rgba(124,58,237,0.10)', paddingHorizontal: 12, paddingVertical: 6,
     borderRadius: 999, borderWidth: 1, borderColor: 'rgba(124,58,237,0.20)',
   },
-  traitText: { color: '#B47AFF', fontSize: 12, fontWeight: '600' },
+  traitText: { color: '#FF8C00', fontSize: 12, fontWeight: '600' },
   luckyRow: { flexDirection: 'row', gap: 10 },
   luckyItem: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7,
@@ -1149,23 +1149,24 @@ var s = StyleSheet.create({
   },
   pDot: { width: 6, height: 6, borderRadius: 3 },
   pLabel: { fontSize: 13, fontWeight: '600', width: 80 },
-  pValue: { fontSize: 14, color: '#FFF', fontWeight: '700' },
+  pValue: { fontSize: 14, color: '#FFF1D0', fontWeight: '700' },
   pSinhala: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
 
   // Auspicious
   auspRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, gap: 12 },
   auspBar: { width: 3, height: 24, borderRadius: 2 },
-  auspName: { fontSize: 14, color: '#FFF', fontWeight: '700' },
+  auspName: { fontSize: 14, color: '#FFF1D0', fontWeight: '700' },
   auspSinhala: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
   auspTime: { flexDirection: 'row' },
   auspTimeText: { fontSize: 13, color: '#34D399', fontWeight: '700', letterSpacing: 0.3 },
 
   // No Birth Data
-  noBirthTitle: { color: '#FFF', fontSize: 20, fontWeight: '900', textAlign: 'center', marginBottom: 8 },
+  noBirthTitle: { color: '#FFF1D0', fontSize: 20, fontWeight: '900', textAlign: 'center', marginBottom: 8 },
   noBirthBody: { color: Colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 18, paddingHorizontal: 8 },
   noBirthCta: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 20, paddingVertical: 12, borderRadius: 999, overflow: 'hidden',
+    paddingHorizontal: 22, paddingVertical: 14, borderRadius: 999, overflow: 'hidden',
+    shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0,
   },
-  noBirthCtaText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+  noBirthCtaText: { color: '#FFF1D0', fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
 });

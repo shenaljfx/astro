@@ -83,8 +83,8 @@ export default function GlassCard({
   };
 
   const enterAnim = entering || FadeInDown.delay(delay).springify();
-  const bColors = borderColors || ['#9333EA', '#3B82F6', '#FBBF24', '#9333EA'];
-  const gColor = glowColor || '#9333EA';
+  const bColors = borderColors || ['#FF8C00', '#FF6D00', '#FFB800', '#FF8C00'];
+  const gColor = glowColor || '#FF8C00';
 
   // Variant-based glass colors
   const glassColors = {

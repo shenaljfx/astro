@@ -19,15 +19,16 @@ import api from '../../services/api';
 import { Colors } from '../../constants/theme';
 import DesktopSidebar, { SIDEBAR_W_EXPANDED, SIDEBAR_W_COLLAPSED, DesktopTopBar } from '../../components/DesktopLayout';
 import useIsDesktop from '../../hooks/useIsDesktop';
+import CosmicAuroraNebula from '../../components/effects/CosmicAuroraNebula';
 
 var { width: SW } = Dimensions.get('window');
 var LOGO = require('../../assets/logo.png');
 
 var TABS = [
   { name: 'index',    title: 'Today',  titleSi: 'අද',        icon: 'sunny-outline',         iconFocused: 'sunny',          gradient: ['#FFB800', '#F59E0B'] },
-  { name: 'kendara',  title: 'Chart',  titleSi: 'කේන්දරේ',  icon: 'planet-outline',        iconFocused: 'planet',         gradient: ['#B47AFF', '#9333EA'] },
+  { name: 'kendara',  title: 'Chart',  titleSi: 'කේන්දරේ',  icon: 'planet-outline',        iconFocused: 'planet',         gradient: ['#FF8C00', '#E65100'] },
   { name: 'report',   title: 'Report', titleSi: 'වාර්තාව',  icon: 'document-text-outline', iconFocused: 'document-text',  gradient: ['#34D399', '#059669'] },
-  { name: 'chat',     title: 'Guide',  titleSi: 'මාර්ගය',   icon: 'sparkles-outline',      iconFocused: 'sparkles',       gradient: ['#FFB800', '#9333EA'] },
+  { name: 'chat',     title: 'Guide',  titleSi: 'මාර්ගය',   icon: 'sparkles-outline',      iconFocused: 'sparkles',       gradient: ['#FFB800', '#FF8C00'] },
   { name: 'porondam', title: 'Match',  titleSi: 'පොරොන්දම', icon: 'heart-circle-outline',  iconFocused: 'heart-circle',   gradient: ['#F472B6', '#DB2777'] },
   { name: 'profile',  title: 'Aura',   titleSi: 'මම',        icon: 'person-circle-outline', iconFocused: 'person-circle',  gradient: ['#4CC9F0', '#3B82F6'] },
 ];
@@ -137,7 +138,7 @@ function CosmicTabBar({ state, descriptors, navigation }) {
 
         {/* Subtle top glow line */}
         <LinearGradient
-          colors={['rgba(180,122,255,0.35)', 'rgba(255,184,0,0.30)', 'rgba(76,201,240,0.30)']}
+          colors={['rgba(255,140,0,0.35)', 'rgba(255,184,0,0.30)', 'rgba(76,201,240,0.30)']}
           style={tb.topEdge}
           start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
         />
@@ -312,6 +313,7 @@ export default function TabLayout() {
   if (isDesktop) {
     return (
       <View style={ds.shell}>
+        <CosmicAuroraNebula />
         <DesktopSidebarStandalone
           balance={tokenBalance}
           language={language}
@@ -321,7 +323,7 @@ export default function TabLayout() {
         <View style={ds.contentCol}>
           <Tabs
             tabBar={function () { return null; }}
-            sceneContainerStyle={ds.sceneContainer}
+            sceneContainerStyle={{ backgroundColor: 'transparent' }}
             screenOptions={{ headerShown: false }}
           >
             {TABS.map(function (tab) {
@@ -340,9 +342,11 @@ export default function TabLayout() {
   }
 
   return (
+    <View style={{ flex: 1, backgroundColor: Colors.deepVoid }}>
+      <CosmicAuroraNebula />
     <Tabs
       tabBar={function (props) { return <CosmicTabBar {...props} />; }}
-      sceneContainerStyle={{ backgroundColor: Colors.deepVoid }}
+      sceneContainerStyle={{ backgroundColor: 'transparent' }}
       screenOptions={function ({ route }) {
         return {
           headerShown: true,
@@ -390,6 +394,7 @@ export default function TabLayout() {
         );
       })}
     </Tabs>
+    </View>
   );
 }
 
@@ -398,12 +403,12 @@ var hs = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(2,0,16,0.96)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(180,122,255,0.10)',
+    borderBottomColor: 'rgba(255,140,0,0.10)',
   },
   borderLine: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     height: 1,
-    backgroundColor: 'rgba(180,122,255,0.12)',
+    backgroundColor: 'rgba(255,140,0,0.12)',
   },
   wrap: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -445,12 +450,7 @@ var ds = StyleSheet.create({
   contentCol: {
     flex: 1,
     flexDirection: 'column',
-    backgroundColor: Colors.deepVoid,
-    overflow: 'hidden',
-  },
-  sceneContainer: {
-    flex: 1,
-    backgroundColor: Colors.deepVoid,
+    backgroundColor: 'transparent',
     overflow: 'hidden',
   },
 });
