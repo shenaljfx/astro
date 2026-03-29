@@ -24,7 +24,7 @@ router.get('/balance', phoneAuth, async (req, res) => {
       balance: 0,
       guest: true,
       packages: TOP_UP_PACKAGES,
-      pricing: { fullReport: 350, porondamReport: 50 },
+      pricing: { fullReport: 350, porondamReport: 100 },
     });
   }
 
@@ -36,7 +36,7 @@ router.get('/balance', phoneAuth, async (req, res) => {
       packages: TOP_UP_PACKAGES,
       pricing: {
         fullReport: 350,
-        porondamReport: 50,
+        porondamReport: 100,
       },
     });
   } catch (err) {

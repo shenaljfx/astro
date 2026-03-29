@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, Platform, ActivityIndicator, Share, Alert,
-  LayoutAnimation, UIManager, Dimensions, Modal,
+  LayoutAnimation, UIManager, Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,9 +20,13 @@ import SriLankanChart from '../../components/SriLankanChart';
 import MarkdownText from '../../components/MarkdownText';
 import SpringPressable from '../../components/effects/SpringPressable';
 import CosmicLoader from '../../components/effects/CosmicLoader';
+import CitySearchPicker from '../../components/CitySearchPicker';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePricing } from '../../contexts/PricingContext';
 import api from '../../services/api';
+import ThemedAuroraNebula from '../../components/effects/ThemedAuroraNebula';
+import ThemedNebulaBg from '../../components/effects/ThemedNebulaBg';
 import { Colors, Typography } from '../../constants/theme';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -33,27 +37,8 @@ const { width: W } = Dimensions.get('window');
 const WIDE = W >= 700;
 const MOBILE_CHART = Math.min(W - 64, 300);
 
-// Sri Lanka birth locations for accurate chart calculations
-var BIRTH_LOCATIONS = [
-  { name: 'Colombo', nameSi: 'කොළඹ', lat: 6.9271, lng: 79.8612 },
-  { name: 'Kandy', nameSi: 'මහනුවර', lat: 7.2906, lng: 80.6337 },
-  { name: 'Galle', nameSi: 'ගාල්ල', lat: 6.0535, lng: 80.2210 },
-  { name: 'Jaffna', nameSi: 'යාපනය', lat: 9.6615, lng: 80.0255 },
-  { name: 'Matara', nameSi: 'මාතර', lat: 5.9549, lng: 80.5550 },
-  { name: 'Negombo', nameSi: 'මීගමුව', lat: 7.2008, lng: 79.8737 },
-  { name: 'Anuradhapura', nameSi: 'අනුරාධපුරය', lat: 8.3114, lng: 80.4037 },
-  { name: 'Trincomalee', nameSi: 'ත්‍රිකුණාමලය', lat: 8.5874, lng: 81.2152 },
-  { name: 'Batticaloa', nameSi: 'මඩකලපුව', lat: 7.7310, lng: 81.6747 },
-  { name: 'Kurunegala', nameSi: 'කුරුණෑගල', lat: 7.4863, lng: 80.3647 },
-  { name: 'Ratnapura', nameSi: 'රත්නපුර', lat: 6.6828, lng: 80.3992 },
-  { name: 'Badulla', nameSi: 'බදුල්ල', lat: 6.9934, lng: 81.0550 },
-  { name: 'Nuwara Eliya', nameSi: 'නුවරඑළිය', lat: 6.9497, lng: 80.7891 },
-  { name: 'Gampaha', nameSi: 'ගම්පහ', lat: 7.0840, lng: 80.0098 },
-  { name: 'Kalutara', nameSi: 'කළුතර', lat: 6.5854, lng: 79.9607 },
-  { name: 'Hambantota', nameSi: 'හම්බන්තොට', lat: 6.1429, lng: 81.1212 },
-  { name: 'Kegalle', nameSi: 'කෑගල්ල', lat: 7.2513, lng: 80.3464 },
-  { name: 'Puttalam', nameSi: 'පුත්තලම', lat: 8.0362, lng: 79.8283 },
-];
+// Default birth city (Colombo)
+var DEFAULT_CITY = { name: 'Colombo', country: 'Sri Lanka', countryCode: 'LK', lat: 6.9271, lng: 79.8612 };
 
 // Glass Card
 function Glass({ children, style, accent }) {
@@ -62,8 +47,8 @@ function Glass({ children, style, accent }) {
       <LinearGradient
         pointerEvents="none"
         colors={accent
-          ? ['rgba(244,63,94,0.10)', 'rgba(255,140,0,0.08)', 'rgba(12,6,28,0.6)']
-          : ['rgba(20,12,50,0.55)', 'rgba(10,6,28,0.45)', 'rgba(8,4,20,0.55)']}
+          ? ['rgba(244,63,94,0.10)', 'rgba(255,140,0,0.08)', 'rgba(18,6,12,0.6)']
+          : ['rgba(18,6,12,0.55)', 'rgba(14,4,10,0.45)', 'rgba(12,4,8,0.55)']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       />
@@ -72,7 +57,7 @@ function Glass({ children, style, accent }) {
   );
 }
 
-// Binary Star Orbit Animation ─────────────────────────────────────────
+// Binary Star Orbit Animation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function BinaryStarOrbit({ pct, color }) {
   var orbit = useSharedValue(0);
   var pulse = useSharedValue(0.7);
@@ -98,7 +83,7 @@ function BinaryStarOrbit({ pct, color }) {
       <Animated.View style={[{ position: 'absolute', width: 60, height: 60, borderRadius: 30, backgroundColor: color + '18' }, glowStyle]} />
       {/* Center */}
       <View style={{ width: 40, height: 40, borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: color + '60' }}>
-        <LinearGradient colors={[color + '40', 'rgba(15,5,25,0.9)']} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={[color + '40', 'rgba(18,6,12,0.9)']} style={StyleSheet.absoluteFill} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ color: color, fontSize: 13, fontWeight: '900' }}>{pct}<Text style={{ fontSize: 7 }}>%</Text></Text>
         </View>
@@ -111,19 +96,19 @@ function BinaryStarOrbit({ pct, color }) {
   );
 }
 
-// Score Gauge ─────────────────────────────────────────────────────────
+// Score Gauge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ScoreGauge({ score, maxScore, rating, ratingEmoji, ratingSinhala, language, onShare, T }) {
   var pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
   var color = pct >= 75 ? '#34D399' : pct >= 50 ? '#FFB800' : pct >= 30 ? '#F97316' : '#F87171';
 
   // Enhanced color-coded compatibility labels
   var cosmicLabel = pct >= 75
-    ? (language === 'si' ? '✨ දිව්‍ය ගැළපීම' : '✨ Celestial Union')
+    ? (language === 'si' ? '✨ \u0DAF\u0DD2\u0DC0\u0DCA\u200D\u0DBA \u0D9C\u0DD0\u0DC5\u0DB4\u0DD3\u0DB8' : '✨ Celestial Union')
     : pct >= 50
-    ? (language === 'si' ? '💫 තාරකා ගැළපීම' : '💫 Star-Crossed Harmony')
+    ? (language === 'si' ? '💫 \u0DAD\u0DCF\u0DBB\u0D9A\u0DCF \u0D9C\u0DD0\u0DC5\u0DB4\u0DD3\u0DB8' : '💫 Star-Crossed Harmony')
     : pct >= 30
-    ? (language === 'si' ? '🌅 බ්‍රහ්මාණ්ඩ ගාථාව' : '🌅 Cosmic Journey')
-    : (language === 'si' ? '⚔️ ජ්‍යෝතිෂ අභියෝගය' : '⚔️ Galactic Challenge');
+    ? (language === 'si' ? '🌅 \u0DB6\u0DCA\u200D\u0DBB\u0DC4\u0DCA\u0DB8\u0DCF\u0DAB\u0DCA\u0DA9 \u0D9C\u0DCF\u0DAE\u0DCF\u0DC0' : '🌅 Cosmic Journey')
+    : (language === 'si' ? '⚔️ \u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0D85\u0DB7\u0DD2\u0DBA\u0DDD\u0D9C\u0DBA' : '⚔️ Galactic Challenge');
 
   var label = language === 'si' && ratingSinhala ? ratingSinhala : rating;
   return (
@@ -144,7 +129,7 @@ function ScoreGauge({ score, maxScore, rating, ratingEmoji, ratingSinhala, langu
   );
 }
 
-// Factor Bar ──────────────────────────────────────────────────────────
+// Factor Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function FactorBar({ f, index, language }) {
   var pct = f.maxScore > 0 ? f.score / f.maxScore : 0;
   var color = pct >= 0.75 ? '#34D399' : pct >= 0.5 ? '#FFB800' : pct >= 0.25 ? '#F97316' : '#F87171';
@@ -216,7 +201,7 @@ var L = {
     namePh: '\u0DB1\u0DB8 (\u0D85\u0DC0\u0DC1\u0DCA\u200D\u0DBA \u0DB1\u0DB8\u0DCA)',
     yearPh: 'YYYY', monthPh: 'MM', dayPh: 'DD', hourPh: 'HH', minutePh: 'MM',
     date: '\u0D89\u0DB4\u0DB1\u0DCA \u0DAF\u0DD2\u0DB1\u0DBA', time: '\u0DC0\u0DDA\u0DBD\u0DCF\u0DC0',
-    birthPlace: 'උපන් ස්ථානය',
+    birthPlace: '\u0D8B\u0DB4\u0DB1\u0DCA \u0DC3\u0DCA\u0DAE\u0DCF\u0DB1\u0DBA',
     timeHint: '* \u0D89\u0DB4\u0DCA\u0DB4\u0DD0\u0DB1\u0DCA\u0DB1 \u0DB4\u0DAD\u0DCA\u200D\u0DBB\u0DBA\u0DDA \u0DC0\u0DDA\u0DBD\u0DCF\u0DC0 \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1',
     checkBtn: '\uD83D\uDC8D \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1',
     brideChart: '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA\u0D9C\u0DDA \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA', groomChart: '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF\u0D9C\u0DDA \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA',
@@ -232,57 +217,24 @@ var L = {
     historyLoading: '\u0DC3\u0DD4\u0DBB\u0D9A\u0DD2\u0DB1 \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF \u0DB6\u0DBD\u0DB8\u0DD2\u0DB1\u0DCA...', viewReport: '\u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0 \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1',
     newCheck: '+ \u0DB1\u0DC0 \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF\u0DC0',
     // Porondam+ Advanced
-    advancedTitle: '\uD83D\uDD2E ගැඹුරු ගැලපීම',
-    advancedSub: 'සාධක 7 ඔබ්බට',
-    combinedScore: 'ඒකාබද්ධ ලකුණු',
-    dashaTitle: '\uD83C\uDF00 ජීවිත අදියර ගැලපීම',
-    currentPhase: 'දැන් ඉන්න අදියර',
-    benefic: 'සුභයි',
-    malefic: 'අභියෝගාත්මක',
-    navamshaTitle: '\uD83D\uDC9E විවාහ කේන්දරය (D9)',
-    mangalaTitle: '\u2694\uFE0F කුජ ශක්ති පරීක්ෂාව',
-    marriageStrTitle: '\uD83D\uDC8E විවාහ ග්‍රහ ශක්තිය',
-    venus: 'සිකුරු',
-    lord7: '7 වන අධිපති',
-    weddingTitle: '\uD83D\uDCC5 හොඳම විවාහ කාල',
-    noWindows: 'ගැලපෙන සුභ කාලයක් හමු නොවීය',
+    advancedTitle: '\uD83D\uDD2E \u0D9C\u0DD0\u0DB9\u0DD4\u0DBB\u0DD4 \u0D9C\u0DD0\u0DBD\u0DB4\u0DD4\u0DB8',
+    advancedSub: '\u0DC3\u0DCF\u0DB0\u0D9A 7 \u0D94\u0DB6\u0DCA\u0DB6\u0DA7',
+    combinedScore: '\u0D91\u0D9A\u0DCF\u0DB6\u0DAF\u0DCA\u0DB0 \u0DBD\u0D9A\u0DD4\u0DAB\u0DD4',
+    dashaTitle: '\uD83C\uDF00 \u0DA2\u0DD3\u0DC0\u0DD2\u0DAD \u0D85\u0DAF\u0DD2\u0DBA\u0DBB \u0D9C\u0DD0\u0DBD\u0DB4\u0DD4\u0DB8',
+    currentPhase: '\u0DAF\u0DD0\u0DB1\u0DCA \u0D89\u0DB1\u0DCA\u0DB1 \u0D85\u0DAF\u0DD2\u0DBA\u0DBB',
+    benefic: '\u0DC3\u0DD4\u0DB7\u0DBA\u0DD2',
+    malefic: '\u0D85\u0DB7\u0DD2\u0DBA\u0DDC\u0D9C\u0DCF\u0DAD\u0DCA\u0DB8\u0D9A',
+    navamshaTitle: '\uD83D\uDC9E \u0DC0\u0DD2\u0DC0\u0DCF\u0DC4 \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DBB\u0DBA (D9)',
+    mangalaTitle: '\u2694\uFE0F \u0D9A\u0DD4\u0DA2 \u0DC1\u0D9A\u0DCA\u0DAD\u0DD2 \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF\u0DC0',
+    marriageStrTitle: '\uD83D\uDC8E \u0DC0\u0DD2\u0DC0\u0DCF\u0DC4 \u0D9C\u0DCA\u200D\u0DBB\u0DC4 \u0DC1\u0D9A\u0DCA\u0DAD\u0DD2\u0DBA',
+    venus: '\u0DC3\u0DD2\u0D9A\u0DD4\u0DBB\u0DD4',
+    lord7: '7 \u0DC0\u0DB1 \u0D85\u0DB0\u0DD2\u0DB4\u0DAD\u0DD2',
+    weddingTitle: '\uD83D\uDCC5 \u0DC4\u0DDC\u0DB3\u0DB8 \u0DC0\u0DD2\u0DC0\u0DCF\u0DC4 \u0D9A\u0DCF\u0DBD',
+    noWindows: '\u0D9C\u0DD0\u0DBD\u0DB4\u0DD9\u0DB1 \u0DC3\u0DD4\u0DB7 \u0D9A\u0DCF\u0DBD\u0DBA\u0D9A\u0DCA \u0DC4\u0DB8\u0DD4 \u0DB1\u0DDC\u0DC0\u0DD4\u0DBA',
   },
 };
 
-// City Picker for birth location
-function CityPicker({ selectedCity, onSelect, lang }) {
-  var [expanded, setExpanded] = useState(false);
-  var displayName = lang === 'si' ? (selectedCity.nameSi || selectedCity.name) : selectedCity.name;
-  return (
-    <View>
-      <TouchableOpacity
-        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 12 : 10, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)' }}
-        activeOpacity={0.7}
-        onPress={function() { setExpanded(!expanded); }}>
-        <Text style={{ color: '#FFF1D0', fontSize: 14, fontWeight: '600' }}>📍 {displayName}</Text>
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="rgba(255,140,0,0.6)" />
-      </TouchableOpacity>
-      {expanded && (
-        <View style={{ backgroundColor: 'rgba(15,5,30,0.95)', borderRadius: 12, marginTop: 4, borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)', maxHeight: 180 }}>
-          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
-            {BIRTH_LOCATIONS.map(function(loc, i) {
-              var isSelected = loc.name === selectedCity.name;
-              var locName = lang === 'si' ? (loc.nameSi || loc.name) : loc.name;
-              return (
-                <TouchableOpacity key={i} style={{ paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: i < BIRTH_LOCATIONS.length - 1 ? 1 : 0, borderBottomColor: 'rgba(255,255,255,0.04)', backgroundColor: isSelected ? 'rgba(255,140,0,0.12)' : 'transparent' }}
-                  onPress={function() { onSelect(loc); setExpanded(false); }} activeOpacity={0.7}>
-                  <Text style={{ color: isSelected ? '#FF8C00' : 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: isSelected ? '700' : '400' }}>{locName}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
-    </View>
-  );
-}
-
-// Person Input Card (with cosmic date/time pickers)
+// Person Input Card (with cosmic date/time pickers + CitySearchPicker)
 function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTimeStr, city, setCity, T, lang }) {
   return (
     <Glass style={sty.personCard}>
@@ -293,7 +245,14 @@ function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTim
       <Text style={[sty.fieldTag, { marginTop: 12 }]}>{T.time}</Text>
       <TimePickerField value={timeStr} onChange={setTimeStr} lang={lang} />
       <Text style={[sty.fieldTag, { marginTop: 12 }]}>{T.birthPlace}</Text>
-      <CityPicker selectedCity={city} onSelect={setCity} lang={lang} />
+      <CitySearchPicker
+        selectedCity={city}
+        onSelect={setCity}
+        lang={lang}
+        accentColor="#FF8C00"
+        maxHeight={160}
+        compact
+      />
     </Glass>
   );
 }
@@ -302,18 +261,19 @@ function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTim
 export default function PorondamScreen() {
   var { language } = useLanguage();
   var { isLoggedIn } = useAuth();
+  var { priceLabel, priceAmount, currency } = usePricing();
   var T = L[language] || L.en;
   var isDesktop = useDesktopCtx();
 
   var [bDate, setBDate] = useState('1998-01-15');
   var [bTime, setBTime] = useState('08:30');
   var [bName, setBName] = useState('');
-  var [bCity, setBCity] = useState(BIRTH_LOCATIONS[0]);
+  var [bCity, setBCity] = useState(DEFAULT_CITY);
 
   var [gDate, setGDate] = useState('1998-06-20');
   var [gTime, setGTime] = useState('10:00');
   var [gName, setGName] = useState('');
-  var [gCity, setGCity] = useState(BIRTH_LOCATIONS[0]);
+  var [gCity, setGCity] = useState(DEFAULT_CITY);
 
   var [data, setData] = useState(null);
   var [loading, setLoading] = useState(false);
@@ -322,22 +282,14 @@ export default function PorondamScreen() {
   var scrollRef = useRef(null);
   var [report, setReport] = useState(null);
   var [reportLoading, setReportLoading] = useState(false);
-  var [reportLang, setReportLang] = useState(null);
+  var [reportLang, setReportLang] = useState(language || 'en');
   var [porondamId, setPorondamId] = useState(null);
-  // Token balance
-  var [tokenBalance, setTokenBalance] = useState(null);
-  var [showTopUp, setShowTopUp] = useState(false);
-  var [topUpLoading, setTopUpLoading] = useState(false);
-  var [pendingReportLang, setPendingReportLang] = useState(null);
-  var [showConfirm, setShowConfirm] = useState(false);
+  var [paymentLoading, setPaymentLoading] = useState(false);
 
-  // Fetch token balance when logged in
+  // Sync report language when app language changes (only when no data yet)
   useEffect(function() {
-    if (!isLoggedIn) return;
-    api.getTokenBalance()
-      .then(function(res) { if (res && res.balance !== undefined) setTokenBalance(res.balance); })
-      .catch(function() {});
-  }, [isLoggedIn]);
+    if (!data) setReportLang(language || 'en');
+  }, [language]);
 
   var pulse = useSharedValue(1);
   var spin = useSharedValue(0);
@@ -367,75 +319,125 @@ export default function PorondamScreen() {
       Alert.alert('', T.missing); return;
     }
     try {
-      setLoading(true); setError(null); setData(null); setReport(null); setReportLang(null); setPorondamId(null);
-      var res = await api.checkPorondam(
-        { birthDate: buildDateISO(bDate, bTime), lat: bCity.lat, lng: bCity.lng, name: bName || undefined },
-        { birthDate: buildDateISO(gDate, gTime), lat: gCity.lat, lng: gCity.lng, name: gName || undefined }
-      );
-      setData(res.data);
-      if (res.porondamId) setPorondamId(res.porondamId);
+      setLoading(true); setError(null); setData(null); setReport(null); setPorondamId(null);
+
+      // Step 1: Initiate PayHere one-time payment
+      setPaymentLoading(true);
+      var initRes = await api.initiateTopUp(priceAmount('porondam'), currency);
+      if (!initRes || !initRes.success) {
+        throw new Error(initRes?.error || 'Failed to initiate payment');
+      }
+      var paymentObject = initRes.paymentObject;
+      var orderId = initRes.orderId;
+
+      // Step 2: Launch PayHere SDK / web checkout
+      var PayHere = null;
+      var useWebCheckout = false;
+      try {
+        PayHere = require('@payhere/payhere-mobilesdk-reactnative').default;
+      } catch (e) {
+        useWebCheckout = true;
+      }
+
+      var paymentId = null;
+
+      if (useWebCheckout) {
+        // Web fallback: open PayHere checkout in new tab
+        var checkoutUrl = initRes.checkout_url || 'https://sandbox.payhere.lk/pay/checkout';
+        if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+          var form = document.createElement('form');
+          form.method = 'POST';
+          form.action = checkoutUrl;
+          form.target = '_blank';
+          Object.keys(paymentObject).forEach(function(key) {
+            if (paymentObject[key] !== undefined && paymentObject[key] !== null) {
+              var input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = key;
+              input.value = String(paymentObject[key]);
+              form.appendChild(input);
+            }
+          });
+          document.body.appendChild(form);
+          form.submit();
+          document.body.removeChild(form);
+          // For web, proceed optimistically (webhook confirms)
+          paymentId = 'web_' + Date.now();
+        } else {
+          throw new Error('Payment not available on this platform');
+        }
+      } else {
+        // Native SDK payment
+        paymentId = await new Promise(function(resolve, reject) {
+          PayHere.startPayment(
+            paymentObject,
+            function(pid) { resolve(pid); },
+            function(errData) { reject(new Error(errData || 'Payment failed')); },
+            function() { reject(new Error('Payment cancelled')); }
+          );
+        });
+      }
+
+      setPaymentLoading(false);
+
+      // Step 3: Confirm payment with server
+      try {
+        await api.confirmPayment(paymentId, orderId, 'topup');
+      } catch (e) {
+        // Webhook will handle it — continue
+      }
+
+      // Step 4: Generate porondam check + AI report in parallel
+      var brideData = { birthDate: buildDateISO(bDate, bTime), lat: bCity.lat, lng: bCity.lng, name: bName || undefined };
+      var groomData = { birthDate: buildDateISO(gDate, gTime), lat: gCity.lat, lng: gCity.lng, name: gName || undefined };
+
+      var checkRes = await api.checkPorondam(brideData, groomData);
+      setData(checkRes.data);
+      if (checkRes.porondamId) setPorondamId(checkRes.porondamId);
+
+      // Fire AI report generation
+      setReportLoading(true);
+      try {
+        var reportRes = await api.getPorondamReport(checkRes.data, reportLang, bName || undefined, gName || undefined, checkRes.porondamId || undefined);
+        setReport(reportRes.report);
+        if (reportRes.porondamId) setPorondamId(reportRes.porondamId);
+      } catch (rErr) {
+        setReport(reportLang === 'si' ? '\u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0 \u0DC4\u0DAF\u0DB1\u0DCA\u0DB1 \u0DB6\u0DD0\u0DBB\u0DD2 \u0DC0\u0DD4\u0DB1\u0DCF.' : 'Failed to generate report.');
+      } finally {
+        setReportLoading(false);
+      }
+
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setCollapsed(true);
       setTimeout(function() { if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true }); }, 300);
-    } catch (e) { setError(e.message || 'Error'); }
-    finally { setLoading(false); }
-  }, [bDate, bTime, gDate, gTime, T, isLoggedIn]);
-
-  // Show charge confirmation before generating AI report
-  var requestReport = useCallback(function(lang) {
-    setPendingReportLang(lang);
-    setShowConfirm(true);
-  }, []);
-
-  var genReport = useCallback(async function(lang) {
-    if (!data) return;
-    try {
-      setReportLang(lang); setReportLoading(true);
-      var res = await api.getPorondamReport(data, lang, bName || undefined, gName || undefined, porondamId || undefined);
-      setReport(res.report);
-      if (res.balance !== undefined) setTokenBalance(res.balance);
-      if (res.porondamId) setPorondamId(res.porondamId);
     } catch (e) {
-      var msg = e.message || '';
-      if (e.status === 402 || msg.includes('Insufficient') || msg.includes('balance')) {
-        setTokenBalance(e.balance || 0);
-        setShowTopUp(true);
+      var msg = e.message || 'Error';
+      if (msg === 'Payment cancelled') {
+        // User cancelled — just stop loading
       } else {
-        setReport(lang === 'si' ? 'වාර්තාව හදන්න බැරි වුනා.' : 'Failed to generate report.');
+        setError(msg);
       }
-    } finally { setReportLoading(false); }
-  }, [data, bName, gName, porondamId, isLoggedIn]);
+    } finally {
+      setLoading(false);
+      setPaymentLoading(false);
+    }
+  }, [bDate, bTime, gDate, gTime, bCity, gCity, bName, gName, T, isLoggedIn, reportLang]);
 
-  var handleTopUp = async function(amount) {
-    try {
-      setTopUpLoading(true);
-      var res = await api.topUpTokens(amount);
-      if (res && res.success) {
-        setTokenBalance(res.newBalance);
-        setShowTopUp(false);
-        Alert.alert('✅', (language === 'si' ? 'ශේෂය එකතු විය! රු ' : 'Balance topped up! LKR ') + amount);
-      } else {
-        Alert.alert('❌', language === 'si' ? 'රිචාජ් අසාර්ථකයි' : 'Top-up failed');
-      }
-    } catch (e) {
-      Alert.alert('❌', e.message || 'Top-up failed');
-    } finally { setTopUpLoading(false); }
-  };
-
-  // ── DOWNLOAD PORONDAM AS PDF ──────────────────────────────
+  
+  // â”€â”€ DOWNLOAD PORONDAM AS PDF â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var handleDownloadPDF = async function() {
     if (!data) return;
     try {
       var isSi = language === 'si';
-      var brideName = bName || (isSi ? 'මනාලිය' : 'Bride');
-      var groomName = gName || (isSi ? 'මනාලයා' : 'Groom');
+      var brideName = bName || (isSi ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA' : 'Bride');
+      var groomName = gName || (isSi ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF' : 'Groom');
       var pct = data.maxPossibleScore > 0 ? Math.round((data.totalScore / data.maxPossibleScore) * 100) : 0;
       var scoreColor = pct >= 75 ? '#16a34a' : pct >= 50 ? '#ca8a04' : pct >= 30 ? '#ea580c' : '#dc2626';
       var scoreGlow = pct >= 75 ? 'rgba(22,163,74,0.2)' : pct >= 50 ? 'rgba(202,138,4,0.2)' : 'rgba(220,38,38,0.2)';
 
       var factorsHtml = '';
       if (data.factors && data.factors.length > 0) {
-        factorsHtml = '<div class="por-section"><h2 class="por-sec-title">📊 ' + (isSi ? 'ගැලපීම් සාධක (සාධක 7 • ලකුණු 20)' : 'Compatibility Factors (7 Factors • 20 Points)') + '</h2>';
+        factorsHtml = '<div class="por-section"><h2 class="por-sec-title">📊 ' + (isSi ? '\u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8\u0DCA \u0DC3\u0DCF\u0DB0\u0D9A (\u0DC3\u0DCF\u0DB0\u0D9A 7 • \u0DBD\u0D9A\u0DD4\u0DAB\u0DD4 20)' : 'Compatibility Factors (7 Factors • 20 Points)') + '</h2>';
         data.factors.forEach(function(f) {
           var fPct = f.maxScore > 0 ? Math.round((f.score / f.maxScore) * 100) : 0;
           var fColor = fPct >= 75 ? '#16a34a' : fPct >= 50 ? '#ca8a04' : '#dc2626';
@@ -454,7 +456,7 @@ export default function PorondamScreen() {
 
       var doshasHtml = '';
       if (data.doshas && data.doshas.length > 0) {
-        doshasHtml = '<div class="por-section"><h2 class="por-sec-title" style="color:#dc2626;border-color:#fecaca;">⚠️ ' + (isSi ? 'දෝෂ' : 'Doshas') + '</h2>';
+        doshasHtml = '<div class="por-section"><h2 class="por-sec-title" style="color:#dc2626;border-color:#fecaca;">⚠️ ' + (isSi ? '\u0DAF\u0DDD\u0DC2' : 'Doshas') + '</h2>';
         data.doshas.forEach(function(d) {
           var desc = isSi && d.descriptionSinhala ? d.descriptionSinhala : (d.description || '');
           var dName = isSi && d.sinhala ? d.sinhala : d.name;
@@ -469,7 +471,7 @@ export default function PorondamScreen() {
       var reportHtml = '';
       if (report) {
         var bodyText = report.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/\n/g, '<br/>');
-        reportHtml = '<div class="por-section"><h2 class="por-sec-title">🔮 ' + (isSi ? 'විස්තරාත්මක ජ්‍යෝතිෂ වාර්තාව' : 'Detailed Astrology Report') + '</h2>'
+        reportHtml = '<div class="por-section"><h2 class="por-sec-title">🔮 ' + (isSi ? '\u0DC0\u0DD2\u0DC3\u0DCA\u0DAD\u0DBB\u0DCF\u0DAD\u0DCA\u0DB8\u0D9A \u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0' : 'Detailed Astrology Report') + '</h2>'
           + '<div class="por-report-body">' + bodyText + '</div></div>';
       }
 
@@ -533,19 +535,19 @@ export default function PorondamScreen() {
         + '.end-page .end-disc{max-width:380px;font-size:8px;color:rgba(255,255,255,0.18);line-height:1.6;margin-top:24px;}'
         + '@media print{.cover{page-break-after:always;}.por-section{page-break-inside:avoid;}.end-page{page-break-before:always;}}'
         + '</style></head><body>'
-        + '<div class="watermark">ග්‍රහචාර</div>'
+        + '<div class="watermark">\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB</div>'
         + '<div class="orn-tl"></div><div class="orn-tr"></div><div class="orn-bl"></div><div class="orn-br"></div>'
-        + '<div class="pg-header"><span style="font-weight:800;color:#be185d;">ග්‍රහචාර</span><span>' + (isSi ? 'පොරොන්දම් වාර්තාව' : 'Porondam Report') + '</span></div>'
-        + '<div class="pg-footer">ග්‍රහචාර &bull; www.grahachara.lk &bull; ' + new Date().toLocaleDateString() + '</div>'
+        + '<div class="pg-header"><span style="font-weight:800;color:#be185d;">\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB</span><span>' + (isSi ? '\u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0' : 'Porondam Report') + '</span></div>'
+        + '<div class="pg-footer">\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB &bull; www.grahachara.lk &bull; ' + new Date().toLocaleDateString() + '</div>'
         // Cover
         + '<div class="cover">'
         + '<div class="cover-inner">'
         + '<div class="cover-hearts">💍</div>'
-        + '<div class="cover-brand">ග්‍රහචාර</div>'
-        + '<div class="cover-title">' + (isSi ? 'සම්පූර්ණ පොරොන්දම් වාර්තාව' : 'Complete Compatibility Report') + '</div>'
-        + '<div class="cover-sub">' + (isSi ? 'වෛදික ජ්‍යෝතිෂ ගැලපීම් විශ්ලේෂණය' : 'Vedic Astrology Compatibility Analysis') + '</div>'
+        + '<div class="cover-brand">\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB</div>'
+        + '<div class="cover-title">' + (isSi ? '\u0DC3\u0DB8\u0DCA\u0DB4\u0DD6\u0DBB\u0DCA\u0DAB \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0' : 'Complete Compatibility Report') + '</div>'
+        + '<div class="cover-sub">' + (isSi ? '\u0DC0\u0DDB\u0DAF\u0DD2\u0D9A \u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8\u0DCA \u0DC0\u0DD2\u0DC1\u0DCA\u0DBD\u0DDA\u0DC2\u0DAB\u0DBA' : 'Vedic Astrology Compatibility Analysis') + '</div>'
         + '<div class="cover-divider"></div>'
-        + '<div class="cover-names">' + brideName + '<span class="cover-and">' + (isSi ? 'සහ' : '&') + '</span>' + groomName + '</div>'
+        + '<div class="cover-names">' + brideName + '<span class="cover-and">' + (isSi ? '\u0DC3\u0DC4' : '&') + '</span>' + groomName + '</div>'
         + '</div>'
         + '<div class="cover-foot">' + new Date().toLocaleDateString() + '</div>'
         + '</div>'
@@ -553,7 +555,7 @@ export default function PorondamScreen() {
         + '<div class="score-card">'
         + '<div class="score-val" style="color:' + scoreColor + ';text-shadow:0 0 30px ' + scoreGlow + ';">' + pct + '%</div>'
         + '<p class="score-label">' + (data.ratingEmoji || '💍') + ' ' + (isSi && data.ratingSinhala ? data.ratingSinhala : data.rating) + '</p>'
-        + '<p class="score-sub">' + data.totalScore + '/' + data.maxPossibleScore + ' ' + (isSi ? 'ගැලපීම් ලකුණු' : 'Compatibility Score') + '</p>'
+        + '<p class="score-sub">' + data.totalScore + '/' + data.maxPossibleScore + ' ' + (isSi ? '\u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8\u0DCA \u0DBD\u0D9A\u0DD4\u0DAB\u0DD4' : 'Compatibility Score') + '</p>'
         + '</div>'
         // Content
         + '<div class="content">'
@@ -564,12 +566,12 @@ export default function PorondamScreen() {
         // End page
         + '<div class="end-page">'
         + '<div class="end-sym">💍</div>'
-        + '<div class="end-brand">ග්‍රහචාර</div>'
+        + '<div class="end-brand">\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB</div>'
         + '<div class="end-line"></div>'
-        + '<div class="end-tag">' + (isSi ? 'ඔබේ ජීවිතයේ තරු බලන්න' : 'Read the Stars of Your Life') + '</div>'
+        + '<div class="end-tag">' + (isSi ? '\u0D94\u0DB6\u0DDA \u0DA2\u0DD3\u0DC0\u0DD2\u0DAD\u0DBA\u0DDA \u0DAD\u0DBB\u0DD4 \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1' : 'Read the Stars of Your Life') + '</div>'
         + '<div class="end-url">www.grahachara.lk</div>'
         + '<div class="end-disc">' + (isSi
-          ? 'මෙම වාර්තාව සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වේ. මෙය දැනගැනීම් සඳහා පමණි.'
+          ? '\u0DB8\u0DD9\u0DB8 \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0 \u0DC3\u0DCF\u0DB8\u0DCA\u0DB4\u0DCA\u200D\u0DBB\u0DAF\u0DCF\u0DBA\u0DD2\u0D9A \u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0DC1\u0DCF\u0DC3\u0DCA\u0DAD\u0DCA\u200D\u0DBB\u0DBA \u0DB8\u0DAD \u0DB4\u0DAF\u0DB1\u0DB8\u0DCA \u0DC0\u0DDA. \u0DB8\u0DD9\u0DBA \u0DAF\u0DD0\u0DB1\u0D9C\u0DD0\u0DB1\u0DD3\u0DB8\u0DCA \u0DC3\u0DB3\u0DC4\u0DCF \u0DB4\u0DB8\u0DAB\u0DD2.'
           : 'This report is based on traditional Vedic astrology. For informational purposes only.')
         + '</div>'
         + '</div>'
@@ -589,7 +591,7 @@ export default function PorondamScreen() {
         await Sharing.shareAsync(result.uri, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: fileName });
       }
     } catch (err) {
-      Alert.alert('❌', err.message || (isSi ? 'PDF සැකසීමට අසමත් විය' : 'Failed to generate PDF'));
+      Alert.alert('❌', err.message || (isSi ? 'PDF \u0DC3\u0DD0\u0D9A\u0DC3\u0DD3\u0DB8\u0DA7 \u0D85\u0DC3\u0DB8\u0DAD\u0DCA \u0DC0\u0DD2\u0DBA' : 'Failed to generate PDF'));
     }
   };
 
@@ -604,7 +606,9 @@ export default function PorondamScreen() {
 
   return (
     <DesktopScreenWrapper routeName="porondam">
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <View style={{ flex: 1, backgroundColor: '#0C0208' }}>
+      <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="pink" /></View>
+      <ThemedNebulaBg theme="pink" />
       <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop]} showsVerticalScrollIndicator={false}>
         <View style={[sty.scrollInner, isDesktop && sty.scrollInnerDesktop]}>
 
@@ -629,6 +633,33 @@ export default function PorondamScreen() {
               </Animated.View>
             </View>
             <Text style={sty.timeHint}>{T.timeHint}</Text>
+
+            {/* Language Selector */}
+            <Animated.View entering={FadeInDown.delay(220).duration(600)}>
+              <Glass style={{ marginBottom: 14 }}>
+                <Text style={{ color: 'rgba(255,140,0,0.7)', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>
+                  {language === 'si' ? '\u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0\u0DDA \u0DB7\u0DCF\u0DC2\u0DCF\u0DC0' : 'REPORT LANGUAGE'}
+                </Text>
+                <View style={sty.langRow}>
+                  <TouchableOpacity style={[sty.langChip, reportLang === 'si' && sty.langChipActive]} onPress={function() { setReportLang('si'); }} activeOpacity={0.7}>
+                    <Text style={{ fontSize: 18, marginRight: 6 }}>{'\uD83C\uDDF1\uD83C\uDDF0'}</Text>
+                    <Text style={[sty.langChipText, reportLang === 'si' && sty.langChipTextActive]}>{T.si}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[sty.langChip, reportLang === 'en' && sty.langChipActive]} onPress={function() { setReportLang('en'); }} activeOpacity={0.7}>
+                    <Text style={{ fontSize: 18, marginRight: 6 }}>{'\uD83C\uDDEC\uD83C\uDDE7'}</Text>
+                    <Text style={[sty.langChipText, reportLang === 'en' && sty.langChipTextActive]}>{T.en}</Text>
+                  </TouchableOpacity>
+                </View>
+                {/* Payment info */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                  <Ionicons name="card-outline" size={13} color="rgba(251,191,36,0.6)" />
+                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
+                    {language === 'si' ? 'PayHere ඔස්සේ ' + priceLabel('porondam') + ' ගෙවන්න (Visa/MasterCard)' : priceLabel('porondam') + ' via PayHere (Visa/MasterCard)'}
+                  </Text>
+                </View>
+              </Glass>
+            </Animated.View>
+
             <Animated.View entering={FadeInDown.delay(250).duration(600)}>
               <SpringPressable style={sty.cta} onPress={check} disabled={loading} haptic="heavy" scalePressed={0.93}>
                 <LinearGradient colors={['#FF8C00', '#FF6D00', '#E65100']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
@@ -682,17 +713,17 @@ export default function PorondamScreen() {
                   activeOpacity={0.7}
                   onPress={function() {
                     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                    setCollapsed(false); setData(null); setReport(null); setReportLang(null); setPorondamId(null); setError(null);
+                    setCollapsed(false); setData(null); setReport(null); setPorondamId(null); setError(null);
                   }}>
                   <Ionicons name="refresh" size={15} color="#FF8C00" style={{ marginRight: 6 }} />
-                  <Text style={{ color: '#FF8C00', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'අලුත් පරීක්ෂාව' : 'New Check'}</Text>
+                  <Text style={{ color: '#FF8C00', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? '\u0D85\u0DBD\u0DD4\u0DAD\u0DCA \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF\u0DC0' : 'New Check'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,184,0,0.35)', backgroundColor: 'rgba(255,184,0,0.08)' }}
                   activeOpacity={0.7}
                   onPress={handleDownloadPDF}>
                   <Ionicons name="download-outline" size={15} color="#FFB800" style={{ marginRight: 6 }} />
-                  <Text style={{ color: '#FFB800', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'PDF බාගන්න' : 'Download PDF'}</Text>
+                  <Text style={{ color: '#FFB800', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'PDF \u0DB6\u0DCF\u0D9C\u0DB1\u0DCA\u0DB1' : 'Download PDF'}</Text>
                 </TouchableOpacity>
               </View>
             </Animated.View>
@@ -754,14 +785,14 @@ export default function PorondamScreen() {
               </Animated.View>
             )}
 
-            {/* ═══ ADVANCED DOSHA COMPARISON ═══ */}
+            {/* â•â•â• ADVANCED DOSHA COMPARISON â•â•â• */}
             {(data.brideAdvanced || data.groomAdvanced) && (
               <Animated.View entering={FadeInUp.delay(900).duration(700)}>
                 <Glass style={sty.section}>
                   <View style={sty.secHeader}>
                     <View>
-                      <Text style={sty.secTitle}>{'\uD83D\uDD2E'} {language === 'si' ? 'උසස් දෝෂ විශ්ලේෂණය' : 'Advanced Dosha Analysis'}</Text>
-                      <Text style={sty.secSub}>{language === 'si' ? 'දෙදෙනාගේම ග්‍රහ දෝෂ සංසන්දනය' : 'Comparing planetary doshas for both parties'}</Text>
+                      <Text style={sty.secTitle}>{'\uD83D\uDD2E'} {language === 'si' ? '\u0D8B\u0DC3\u0DC3\u0DCA \u0DAF\u0DDD\u0DC2 \u0DC0\u0DD2\u0DC1\u0DCA\u0DBD\u0DDA\u0DC2\u0DAB\u0DBA' : 'Advanced Dosha Analysis'}</Text>
+                      <Text style={sty.secSub}>{language === 'si' ? '\u0DAF\u0DD9\u0DAF\u0DD9\u0DB1\u0DCF\u0D9C\u0DDA\u0DB8 \u0D9C\u0DCA\u200D\u0DBB\u0DC4 \u0DAF\u0DDD\u0DC2 \u0DC3\u0D82\u0DC3\u0DB1\u0DCA\u0DAF\u0DB1\u0DBA' : 'Comparing planetary doshas for both parties'}</Text>
                     </View>
                   </View>
 
@@ -769,7 +800,7 @@ export default function PorondamScreen() {
                   {data.brideAdvanced?.tier1?.doshas?.items?.length > 0 && (
                     <View style={{ marginBottom: 14 }}>
                       <Text style={[sty.doshaName, { color: '#f9a8d4', marginBottom: 8 }]}>
-                        {'\uD83D\uDC70'} {bName || (language === 'si' ? 'මනාලිය' : 'Bride')}
+                        {'\uD83D\uDC70'} {bName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA' : 'Bride')}
                       </Text>
                       {data.brideAdvanced.tier1.doshas.items.map(function(d, i) {
                         var col = d.cancelled ? '#10b981' : d.severity === 'Severe' ? '#ef4444' : d.severity === 'Moderate' ? '#f59e0b' : '#6b7280';
@@ -782,7 +813,7 @@ export default function PorondamScreen() {
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                 <Text style={[sty.doshaName, { fontSize: 13, marginBottom: 0 }, d.cancelled && { textDecorationLine: 'line-through', color: 'rgba(255,255,255,0.3)' }]}>{d.name}</Text>
                                 <View style={{ backgroundColor: col + '25', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                                  <Text style={{ color: col, fontSize: 8, fontWeight: '800' }}>{d.cancelled ? (language === 'si' ? 'නිවාරණය' : 'CANCELLED') : (language === 'si' ? (d.severity === 'Severe' ? 'දරුණු' : d.severity === 'Moderate' ? 'මධ්‍යම' : 'සුළු') : d.severity)}</Text>
+                                  <Text style={{ color: col, fontSize: 8, fontWeight: '800' }}>{d.cancelled ? (language === 'si' ? '\u0DB1\u0DD2\u0DC0\u0DCF\u0DBB\u0DAB\u0DBA' : 'CANCELLED') : (language === 'si' ? (d.severity === 'Severe' ? '\u0DAF\u0DBB\u0DD4\u0DAB\u0DD4' : d.severity === 'Moderate' ? '\u0DB8\u0DB0\u0DCA\u200D\u0DBA\u0DB8' : '\u0DC3\u0DD4\u0DC5\u0DD4') : d.severity)}</Text>
                                 </View>
                               </View>
                               <Text style={sty.doshaDesc}>{d.description}</Text>
@@ -795,9 +826,9 @@ export default function PorondamScreen() {
                   {data.brideAdvanced?.tier1?.doshas?.items?.length === 0 && (
                     <View style={{ marginBottom: 14 }}>
                       <Text style={[sty.doshaName, { color: '#f9a8d4', marginBottom: 6 }]}>
-                        {'\uD83D\uDC70'} {bName || (language === 'si' ? 'මනාලිය' : 'Bride')}
+                        {'\uD83D\uDC70'} {bName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA' : 'Bride')}
                       </Text>
-                      <Text style={[sty.doshaDesc, { color: '#10b981' }]}>{language === 'si' ? 'දෝෂ හමු නොවීය ✅' : 'No doshas detected ✅'}</Text>
+                      <Text style={[sty.doshaDesc, { color: '#10b981' }]}>{language === 'si' ? '\u0DAF\u0DDD\u0DC2 \u0DC4\u0DB8\u0DD4 \u0DB1\u0DDC\u0DC0\u0DD3\u0DBA ✅' : 'No doshas detected ✅'}</Text>
                     </View>
                   )}
 
@@ -805,7 +836,7 @@ export default function PorondamScreen() {
                   {data.groomAdvanced?.tier1?.doshas?.items?.length > 0 && (
                     <View style={{ marginBottom: 8 }}>
                       <Text style={[sty.doshaName, { color: '#93c5fd', marginBottom: 8 }]}>
-                        {'\uD83E\uDD35'} {gName || (language === 'si' ? 'මනාලයා' : 'Groom')}
+                        {'\uD83E\uDD35'} {gName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF' : 'Groom')}
                       </Text>
                       {data.groomAdvanced.tier1.doshas.items.map(function(d, i) {
                         var col = d.cancelled ? '#10b981' : d.severity === 'Severe' ? '#ef4444' : d.severity === 'Moderate' ? '#f59e0b' : '#6b7280';
@@ -818,7 +849,7 @@ export default function PorondamScreen() {
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                 <Text style={[sty.doshaName, { fontSize: 13, marginBottom: 0 }, d.cancelled && { textDecorationLine: 'line-through', color: 'rgba(255,255,255,0.3)' }]}>{d.name}</Text>
                                 <View style={{ backgroundColor: col + '25', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                                  <Text style={{ color: col, fontSize: 8, fontWeight: '800' }}>{d.cancelled ? (language === 'si' ? 'නිවාරණය' : 'CANCELLED') : (language === 'si' ? (d.severity === 'Severe' ? 'දරුණු' : d.severity === 'Moderate' ? 'මධ්‍යම' : 'සුළු') : d.severity)}</Text>
+                                  <Text style={{ color: col, fontSize: 8, fontWeight: '800' }}>{d.cancelled ? (language === 'si' ? '\u0DB1\u0DD2\u0DC0\u0DCF\u0DBB\u0DAB\u0DBA' : 'CANCELLED') : (language === 'si' ? (d.severity === 'Severe' ? '\u0DAF\u0DBB\u0DD4\u0DAB\u0DD4' : d.severity === 'Moderate' ? '\u0DB8\u0DB0\u0DCA\u200D\u0DBA\u0DB8' : '\u0DC3\u0DD4\u0DC5\u0DD4') : d.severity)}</Text>
                                 </View>
                               </View>
                               <Text style={sty.doshaDesc}>{d.description}</Text>
@@ -831,28 +862,28 @@ export default function PorondamScreen() {
                   {data.groomAdvanced?.tier1?.doshas?.items?.length === 0 && (
                     <View style={{ marginBottom: 8 }}>
                       <Text style={[sty.doshaName, { color: '#93c5fd', marginBottom: 6 }]}>
-                        {'\uD83E\uDD35'} {gName || (language === 'si' ? 'මනාලයා' : 'Groom')}
+                        {'\uD83E\uDD35'} {gName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF' : 'Groom')}
                       </Text>
-                      <Text style={[sty.doshaDesc, { color: '#10b981' }]}>{language === 'si' ? 'දෝෂ හමු නොවීය ✅' : 'No doshas detected ✅'}</Text>
+                      <Text style={[sty.doshaDesc, { color: '#10b981' }]}>{language === 'si' ? '\u0DAF\u0DDD\u0DC2 \u0DC4\u0DB8\u0DD4 \u0DB1\u0DDC\u0DC0\u0DD3\u0DBA ✅' : 'No doshas detected ✅'}</Text>
                     </View>
                   )}
                 </Glass>
               </Animated.View>
             )}
 
-            {/* ═══ YOGA COMPARISON ═══ */}
+            {/* â•â•â• YOGA COMPARISON â•â•â• */}
             {(data.brideAdvanced?.tier1?.advancedYogas?.items?.length > 0 || data.groomAdvanced?.tier1?.advancedYogas?.items?.length > 0) && (
               <Animated.View entering={FadeInUp.delay(950).duration(700)}>
                 <Glass style={sty.section}>
                   <View style={sty.secHeader}>
                     <View>
-                      <Text style={sty.secTitle}>{'\u2728'} {language === 'si' ? 'යෝග සංසන්දනය' : 'Yoga Comparison'}</Text>
-                      <Text style={sty.secSub}>{language === 'si' ? 'ප්‍රබල යෝග දෙදෙනාගේම' : 'Key yogas in both charts'}</Text>
+                      <Text style={sty.secTitle}>{'\u2728'} {language === 'si' ? '\u0DBA\u0DDD\u0D9C \u0DC3\u0D82\u0DC3\u0DB1\u0DCA\u0DAF\u0DB1\u0DBA' : 'Yoga Comparison'}</Text>
+                      <Text style={sty.secSub}>{language === 'si' ? '\u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD \u0DBA\u0DDD\u0D9C \u0DAF\u0DD9\u0DAF\u0DD9\u0DB1\u0DCF\u0D9C\u0DDA\u0DB8' : 'Key yogas in both charts'}</Text>
                     </View>
                   </View>
                   {[
-                    { label: bName || (language === 'si' ? 'මනාලිය' : 'Bride'), emoji: '\uD83D\uDC70', color: '#f9a8d4', yogas: data.brideAdvanced?.tier1?.advancedYogas?.items },
-                    { label: gName || (language === 'si' ? 'මනාලයා' : 'Groom'), emoji: '\uD83E\uDD35', color: '#93c5fd', yogas: data.groomAdvanced?.tier1?.advancedYogas?.items },
+                    { label: bName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA' : 'Bride'), emoji: '\uD83D\uDC70', color: '#f9a8d4', yogas: data.brideAdvanced?.tier1?.advancedYogas?.items },
+                    { label: gName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF' : 'Groom'), emoji: '\uD83E\uDD35', color: '#93c5fd', yogas: data.groomAdvanced?.tier1?.advancedYogas?.items },
                   ].map(function(person, pi) {
                     if (!person.yogas || person.yogas.length === 0) return null;
                     return (
@@ -864,7 +895,7 @@ export default function PorondamScreen() {
                             <View key={yi} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8, paddingLeft: 4 }}>
                               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: catColor, marginTop: 5 }} />
                               <View style={{ flex: 1 }}>
-                                <Text style={{ color: '#e0e7ff', fontSize: 13, fontWeight: '700' }}>{y.name}</Text>
+                                <Text style={{ color: '#FFE8B0', fontSize: 13, fontWeight: '700' }}>{y.name}</Text>
                                 <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>{y.category} • {y.strength}</Text>
                               </View>
                             </View>
@@ -882,37 +913,37 @@ export default function PorondamScreen() {
               </Animated.View>
             )}
 
-            {/* ═══ JAIMINI UPAPADA (Marriage Indicator) ═══ */}
+            {/* â•â•â• JAIMINI UPAPADA (Marriage Indicator) â•â•â• */}
             {(data.brideAdvanced?.tier1?.jaimini?.upapadaLagna || data.groomAdvanced?.tier1?.jaimini?.upapadaLagna) && (
               <Animated.View entering={FadeInUp.delay(980).duration(700)}>
                 <Glass style={sty.section}>
                   <View style={sty.secHeader}>
                     <View>
-                      <Text style={sty.secTitle}>{'\uD83E\uDDED'} {language === 'si' ? 'ජෛමිනි විවාහ විශ්ලේෂණය' : 'Jaimini Marriage Analysis'}</Text>
-                      <Text style={sty.secSub}>{language === 'si' ? 'උපපද ලග්නය මගින් විවාහ ස්වභාවය' : 'Upapada Lagna reveals marriage nature'}</Text>
+                      <Text style={sty.secTitle}>{'\uD83E\uDDED'} {language === 'si' ? '\u0DA2\u0DDB\u0DB8\u0DD2\u0DB1\u0DD2 \u0DC0\u0DD2\u0DC0\u0DCF\u0DC4 \u0DC0\u0DD2\u0DC1\u0DCA\u0DBD\u0DDA\u0DC2\u0DAB\u0DBA' : 'Jaimini Marriage Analysis'}</Text>
+                      <Text style={sty.secSub}>{language === 'si' ? '\u0D8B\u0DB4\u0DB4\u0DAF \u0DBD\u0D9C\u0DCA\u0DB1\u0DBA \u0DB8\u0D9C\u0DD2\u0DB1\u0DCA \u0DC0\u0DD2\u0DC0\u0DCF\u0DC4 \u0DC3\u0DCA\u0DC0\u0DB7\u0DCF\u0DC0\u0DBA' : 'Upapada Lagna reveals marriage nature'}</Text>
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     {data.brideAdvanced?.tier1?.jaimini && (
                       <View style={{ flex: 1, backgroundColor: 'rgba(249,168,212,0.06)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(249,168,212,0.12)' }}>
                         <Text style={{ color: '#f9a8d4', fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
-                          {'\uD83D\uDC70'} {bName || (language === 'si' ? 'මනාලිය' : 'Bride')}
+                          {'\uD83D\uDC70'} {bName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA' : 'Bride')}
                         </Text>
                         <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, marginBottom: 2 }}>Atmakaraka</Text>
-                        <Text style={{ color: '#e0e7ff', fontSize: 14, fontWeight: '700', marginBottom: 6 }}>{data.brideAdvanced.tier1.jaimini.atmakaraka?.planet || 'N/A'}</Text>
+                        <Text style={{ color: '#FFE8B0', fontSize: 14, fontWeight: '700', marginBottom: 6 }}>{data.brideAdvanced.tier1.jaimini.atmakaraka?.planet || 'N/A'}</Text>
                         <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, marginBottom: 2 }}>Upapada</Text>
-                        <Text style={{ color: '#e0e7ff', fontSize: 14, fontWeight: '700' }}>{data.brideAdvanced.tier1.jaimini.upapadaLagna?.rashi || 'N/A'}</Text>
+                        <Text style={{ color: '#FFE8B0', fontSize: 14, fontWeight: '700' }}>{data.brideAdvanced.tier1.jaimini.upapadaLagna?.rashi || 'N/A'}</Text>
                       </View>
                     )}
                     {data.groomAdvanced?.tier1?.jaimini && (
                       <View style={{ flex: 1, backgroundColor: 'rgba(147,197,253,0.06)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(147,197,253,0.12)' }}>
                         <Text style={{ color: '#93c5fd', fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
-                          {'\uD83E\uDD35'} {gName || (language === 'si' ? 'මනාලයා' : 'Groom')}
+                          {'\uD83E\uDD35'} {gName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF' : 'Groom')}
                         </Text>
                         <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, marginBottom: 2 }}>Atmakaraka</Text>
-                        <Text style={{ color: '#e0e7ff', fontSize: 14, fontWeight: '700', marginBottom: 6 }}>{data.groomAdvanced.tier1.jaimini.atmakaraka?.planet || 'N/A'}</Text>
+                        <Text style={{ color: '#FFE8B0', fontSize: 14, fontWeight: '700', marginBottom: 6 }}>{data.groomAdvanced.tier1.jaimini.atmakaraka?.planet || 'N/A'}</Text>
                         <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, marginBottom: 2 }}>Upapada</Text>
-                        <Text style={{ color: '#e0e7ff', fontSize: 14, fontWeight: '700' }}>{data.groomAdvanced.tier1.jaimini.upapadaLagna?.rashi || 'N/A'}</Text>
+                        <Text style={{ color: '#FFE8B0', fontSize: 14, fontWeight: '700' }}>{data.groomAdvanced.tier1.jaimini.upapadaLagna?.rashi || 'N/A'}</Text>
                       </View>
                     )}
                   </View>
@@ -920,7 +951,7 @@ export default function PorondamScreen() {
               </Animated.View>
             )}
 
-            {/* ═══ PORONDAM+ COMBINED SCORE ═══ */}
+            {/* â•â•â• PORONDAM+ COMBINED SCORE â•â•â• */}
             {data.advancedPorondam?.combined && (
               <Animated.View entering={ZoomIn.springify().damping(12).delay(1000)}>
                 <Glass accent>
@@ -939,18 +970,18 @@ export default function PorondamScreen() {
                     <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '600', marginTop: 2 }}>
                       {data.advancedPorondam.combined.score}/{data.advancedPorondam.combined.maxScore} {T.combinedScore}
                     </Text>
-                    <Text style={{ color: '#e0e7ff', fontSize: 16, fontWeight: '800', marginTop: 8 }}>
+                    <Text style={{ color: '#FFE8B0', fontSize: 16, fontWeight: '800', marginTop: 8 }}>
                       {data.advancedPorondam.combined.ratingEmoji} {data.advancedPorondam.combined.rating}
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 20, marginTop: 14 }}>
                       <View style={{ alignItems: 'center' }}>
                         <Text style={{ color: '#FF8C00', fontSize: 18, fontWeight: '800' }}>{data.totalScore}/{data.maxPossibleScore}</Text>
-                        <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>{language === 'si' ? 'සාම්ප්‍රදායික' : 'Traditional'}</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>{language === 'si' ? '\u0DC3\u0DCF\u0DB8\u0DCA\u0DB4\u0DCA\u200D\u0DBB\u0DAF\u0DCF\u0DBA\u0DD2\u0D9A' : 'Traditional'}</Text>
                       </View>
                       <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
                       <View style={{ alignItems: 'center' }}>
                         <Text style={{ color: '#60a5fa', fontSize: 18, fontWeight: '800' }}>{data.advancedPorondam.advanced.advancedScore}/{data.advancedPorondam.advanced.advancedMaxScore}</Text>
-                        <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>{language === 'si' ? 'උසස්' : 'Advanced'}</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>{language === 'si' ? '\u0D8B\u0DC3\u0DC3\u0DCA' : 'Advanced'}</Text>
                       </View>
                     </View>
                   </View>
@@ -958,7 +989,7 @@ export default function PorondamScreen() {
               </Animated.View>
             )}
 
-            {/* ═══ DASHA COMPATIBILITY ═══ */}
+            {/* â•â•â• DASHA COMPATIBILITY â•â•â• */}
             {data.advancedPorondam?.advanced?.dashaCompatibility && data.advancedPorondam.advanced.dashaCompatibility.harmony !== 'unknown' && (
               <Animated.View entering={FadeInUp.delay(1050).duration(700)}>
                 <Glass style={sty.section}>
@@ -974,15 +1005,15 @@ export default function PorondamScreen() {
                   </View>
                   <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
                     {[
-                      { label: bName || (language === 'si' ? 'මනාලිය' : 'Bride'), emoji: '\uD83D\uDC70', color: '#f9a8d4', dasha: data.advancedPorondam.advanced.dashaCompatibility.bride },
-                      { label: gName || (language === 'si' ? 'මනාලයා' : 'Groom'), emoji: '\uD83E\uDD35', color: '#93c5fd', dasha: data.advancedPorondam.advanced.dashaCompatibility.groom },
+                      { label: bName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA' : 'Bride'), emoji: '\uD83D\uDC70', color: '#f9a8d4', dasha: data.advancedPorondam.advanced.dashaCompatibility.bride },
+                      { label: gName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF' : 'Groom'), emoji: '\uD83E\uDD35', color: '#93c5fd', dasha: data.advancedPorondam.advanced.dashaCompatibility.groom },
                     ].map(function(p, i) {
                       if (!p.dasha) return null;
                       return (
                         <View key={i} style={{ flex: 1, backgroundColor: p.color + '08', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: p.color + '15' }}>
                           <Text style={{ color: p.color, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>{p.emoji} {p.label}</Text>
                           <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>{T.currentPhase}</Text>
-                          <Text style={{ color: '#e0e7ff', fontSize: 16, fontWeight: '800', marginBottom: 4 }}>{p.dasha.currentDasha}</Text>
+                          <Text style={{ color: '#FFE8B0', fontSize: 16, fontWeight: '800', marginBottom: 4 }}>{p.dasha.currentDasha}</Text>
                           <View style={{ backgroundColor: (p.dasha.isBeneficPeriod ? '#34d399' : '#f59e0b') + '20', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
                             <Text style={{ color: p.dasha.isBeneficPeriod ? '#34d399' : '#f59e0b', fontSize: 9, fontWeight: '800' }}>
                               {p.dasha.isBeneficPeriod ? T.benefic : T.malefic}
@@ -999,7 +1030,7 @@ export default function PorondamScreen() {
               </Animated.View>
             )}
 
-            {/* ═══ NAVAMSHA D9 COMPATIBILITY ═══ */}
+            {/* â•â•â• NAVAMSHA D9 COMPATIBILITY â•â•â• */}
             {data.advancedPorondam?.advanced?.navamshaCompatibility && (
               <Animated.View entering={FadeInUp.delay(1100).duration(700)}>
                 <Glass style={sty.section}>
@@ -1015,12 +1046,12 @@ export default function PorondamScreen() {
                   </View>
                   <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
                     <View style={{ flex: 1, alignItems: 'center', padding: 10, backgroundColor: 'rgba(249,168,212,0.06)', borderRadius: 12 }}>
-                      <Text style={{ color: '#f9a8d4', fontSize: 10, fontWeight: '700' }}>{'\uD83D\uDC70'} D9 {language === 'si' ? 'ලග්නය' : 'Rising'}</Text>
-                      <Text style={{ color: '#e0e7ff', fontSize: 15, fontWeight: '800', marginTop: 4 }}>{data.advancedPorondam.advanced.navamshaCompatibility.brideD9Lagna}</Text>
+                      <Text style={{ color: '#f9a8d4', fontSize: 10, fontWeight: '700' }}>{'\uD83D\uDC70'} D9 {language === 'si' ? '\u0DBD\u0D9C\u0DCA\u0DB1\u0DBA' : 'Rising'}</Text>
+                      <Text style={{ color: '#FFE8B0', fontSize: 15, fontWeight: '800', marginTop: 4 }}>{data.advancedPorondam.advanced.navamshaCompatibility.brideD9Lagna}</Text>
                     </View>
                     <View style={{ flex: 1, alignItems: 'center', padding: 10, backgroundColor: 'rgba(147,197,253,0.06)', borderRadius: 12 }}>
-                      <Text style={{ color: '#93c5fd', fontSize: 10, fontWeight: '700' }}>{'\uD83E\uDD35'} D9 {language === 'si' ? 'ලග්නය' : 'Rising'}</Text>
-                      <Text style={{ color: '#e0e7ff', fontSize: 15, fontWeight: '800', marginTop: 4 }}>{data.advancedPorondam.advanced.navamshaCompatibility.groomD9Lagna}</Text>
+                      <Text style={{ color: '#93c5fd', fontSize: 10, fontWeight: '700' }}>{'\uD83E\uDD35'} D9 {language === 'si' ? '\u0DBD\u0D9C\u0DCA\u0DB1\u0DBA' : 'Rising'}</Text>
+                      <Text style={{ color: '#FFE8B0', fontSize: 15, fontWeight: '800', marginTop: 4 }}>{data.advancedPorondam.advanced.navamshaCompatibility.groomD9Lagna}</Text>
                     </View>
                   </View>
                   {(data.advancedPorondam.advanced.navamshaCompatibility.insights || []).map(function(insight, i) {
@@ -1038,7 +1069,7 @@ export default function PorondamScreen() {
               </Animated.View>
             )}
 
-            {/* ═══ MANGALA DOSHA CROSS-CHECK ═══ */}
+            {/* â•â•â• MANGALA DOSHA CROSS-CHECK â•â•â• */}
             {data.advancedPorondam?.advanced?.mangalaDosha && data.advancedPorondam.advanced.mangalaDosha.severity !== 'unknown' && (
               <Animated.View entering={FadeInUp.delay(1150).duration(700)}>
                 <Glass style={sty.section}>
@@ -1054,8 +1085,8 @@ export default function PorondamScreen() {
                   </View>
                   <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
                     {[
-                      { label: bName || (language === 'si' ? 'මනාලිය' : 'Bride'), emoji: '\uD83D\uDC70', color: '#f9a8d4', mars: data.advancedPorondam.advanced.mangalaDosha.bride },
-                      { label: gName || (language === 'si' ? 'මනාලයා' : 'Groom'), emoji: '\uD83E\uDD35', color: '#93c5fd', mars: data.advancedPorondam.advanced.mangalaDosha.groom },
+                      { label: bName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA' : 'Bride'), emoji: '\uD83D\uDC70', color: '#f9a8d4', mars: data.advancedPorondam.advanced.mangalaDosha.bride },
+                      { label: gName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF' : 'Groom'), emoji: '\uD83E\uDD35', color: '#93c5fd', mars: data.advancedPorondam.advanced.mangalaDosha.groom },
                     ].map(function(p, i) {
                       if (!p.mars) return null;
                       var hasDosha = p.mars.hasDosha;
@@ -1066,15 +1097,15 @@ export default function PorondamScreen() {
                           <Text style={{ color: p.color, fontSize: 11, fontWeight: '700', marginBottom: 8 }}>{p.emoji} {p.label}</Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Ionicons name={icon} size={16} color={iconColor} />
-                            <Text style={{ color: '#e0e7ff', fontSize: 12, fontWeight: '600', flex: 1 }}>
+                            <Text style={{ color: '#FFE8B0', fontSize: 12, fontWeight: '600', flex: 1 }}>
                               {hasDosha
-                                ? (language === 'si' ? 'කුජ දෝෂය — භාවය ' + p.mars.marsHouse : 'Mars Dosha — House ' + p.mars.marsHouse)
-                                : (language === 'si' ? 'කුජ දෝෂ නැත' : 'No Mars Dosha')}
+                                ? (language === 'si' ? '\u0D9A\u0DD4\u0DA2 \u0DAF\u0DDD\u0DC2\u0DBA — \u0DB7\u0DCF\u0DC0\u0DBA ' + p.mars.marsHouse : 'Mars Dosha — House ' + p.mars.marsHouse)
+                                : (language === 'si' ? '\u0D9A\u0DD4\u0DA2 \u0DAF\u0DDD\u0DC2 \u0DB1\u0DD0\u0DAD' : 'No Mars Dosha')}
                             </Text>
                           </View>
                           {hasDosha && p.mars.cancelled && (
                             <Text style={{ color: '#34d399', fontSize: 10, fontWeight: '700', marginTop: 4, marginLeft: 22 }}>
-                              {language === 'si' ? 'නිවාරණය වී ඇත ✅' : 'Cancelled ✅'}
+                              {language === 'si' ? '\u0DB1\u0DD2\u0DC0\u0DCF\u0DBB\u0DAB\u0DBA \u0DC0\u0DD3 \u0D87\u0DAD ✅' : 'Cancelled ✅'}
                             </Text>
                           )}
                         </View>
@@ -1088,7 +1119,7 @@ export default function PorondamScreen() {
               </Animated.View>
             )}
 
-            {/* ═══ MARRIAGE PLANET STRENGTH ═══ */}
+            {/* â•â•â• MARRIAGE PLANET STRENGTH â•â•â• */}
             {data.advancedPorondam?.advanced?.marriagePlanetStrength && (
               <Animated.View entering={FadeInUp.delay(1200).duration(700)}>
                 <Glass style={sty.section}>
@@ -1104,8 +1135,8 @@ export default function PorondamScreen() {
                   </View>
                   <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
                     {[
-                      { label: bName || (language === 'si' ? 'මනාලිය' : 'Bride'), emoji: '\uD83D\uDC70', color: '#f9a8d4', d: data.advancedPorondam.advanced.marriagePlanetStrength.bride },
-                      { label: gName || (language === 'si' ? 'මනාලයා' : 'Groom'), emoji: '\uD83E\uDD35', color: '#93c5fd', d: data.advancedPorondam.advanced.marriagePlanetStrength.groom },
+                      { label: bName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA' : 'Bride'), emoji: '\uD83D\uDC70', color: '#f9a8d4', d: data.advancedPorondam.advanced.marriagePlanetStrength.bride },
+                      { label: gName || (language === 'si' ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF' : 'Groom'), emoji: '\uD83E\uDD35', color: '#93c5fd', d: data.advancedPorondam.advanced.marriagePlanetStrength.groom },
                     ].map(function(p, i) {
                       if (!p.d) return null;
                       var venusColor = p.d.venusAssessment === 'Strong' ? '#34d399' : p.d.venusAssessment === 'Moderate' ? '#FFB800' : '#f87171';
@@ -1142,7 +1173,7 @@ export default function PorondamScreen() {
               </Animated.View>
             )}
 
-            {/* ═══ BEST WEDDING WINDOWS ═══ */}
+            {/* â•â•â• BEST WEDDING WINDOWS â•â•â• */}
             {data.advancedPorondam?.advanced?.weddingWindows?.favorableWindows?.length > 0 && (
               <Animated.View entering={FadeInUp.delay(1250).duration(700)}>
                 <Glass style={sty.section}>
@@ -1156,8 +1187,8 @@ export default function PorondamScreen() {
                         </View>
                         <View style={{ flex: 1 }}>
                           {hasDate ? (
-                            <Text style={{ color: '#e0e7ff', fontSize: 13, fontWeight: '700' }}>
-                              {w.start} → {w.end}
+                            <Text style={{ color: '#FFE8B0', fontSize: 13, fontWeight: '700' }}>
+                              {w.start} â†’ {w.end}
                             </Text>
                           ) : (
                             <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{T.noWindows}</Text>
@@ -1176,32 +1207,7 @@ export default function PorondamScreen() {
                 <View style={sty.secHeader}>
                   <View>
                     <Text style={sty.secTitle}>{'\uD83D\uDD2E'} {T.report}</Text>
-                    <Text style={sty.secSub}>{T.reportQ}</Text>
                   </View>
-                  {/* Token balance pill */}
-                  {tokenBalance !== null && (
-                    <TouchableOpacity onPress={function() { setShowTopUp(true); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,140,0,0.18)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }}>
-                      <Ionicons name="wallet-outline" size={12} color="#FFB800" />
-                      <Text style={{ color: tokenBalance >= 10 ? '#4ADE80' : '#F87171', fontSize: 12, fontWeight: '700' }}>
-                        {'LKR ' + tokenBalance}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <View style={sty.langRow}>
-                  <TouchableOpacity style={[sty.langChip, reportLang === 'si' && sty.langChipActive]} onPress={function() { requestReport('si'); }} disabled={reportLoading} activeOpacity={0.7}>
-                    <Text style={[sty.langChipText, reportLang === 'si' && sty.langChipTextActive]}>{T.si}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[sty.langChip, reportLang === 'en' && sty.langChipActive]} onPress={function() { requestReport('en'); }} disabled={reportLoading} activeOpacity={0.7}>
-                    <Text style={[sty.langChipText, reportLang === 'en' && sty.langChipTextActive]}>{T.en}</Text>
-                  </TouchableOpacity>
-                </View>
-                {/* Cost note */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8, marginTop: -4 }}>
-                  <Ionicons name="pricetag-outline" size={11} color="rgba(251,191,36,0.6)" />
-                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
-                    {language === 'si' ? 'වාර්තාව: රු 10' : 'Report: LKR 10'}
-                  </Text>
                 </View>
                 {reportLoading && (
                   <View style={sty.reportLoadRow}>
@@ -1225,122 +1231,7 @@ export default function PorondamScreen() {
         </View>
       </ScrollView>
 
-      {/* Charge confirmation modal */}
-      <Modal visible={showConfirm} transparent animationType="slide" onRequestClose={function() { setShowConfirm(false); }}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
-          <LinearGradient
-            colors={['rgba(13,7,32,0.99)', 'rgba(4,3,12,1)']}
-            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(255,140,0,0.3)' }}
-          >
-            <Text style={{ color: '#FFB800', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
-              {language === 'si' ? '💍 ගැළපුම් වාර්තාව' : '💍 Compatibility Report'}
-            </Text>
-            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 22 }}>
-              {language === 'si' ? 'විස්තරාත්මක ජ්‍යෝතිෂ විශ්ලේෂණය' : 'Detailed astrology analysis'}
-            </Text>
-            <View style={{ backgroundColor: 'rgba(255,184,0,0.08)', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
-                {language === 'si' ? 'ගෙවීම' : 'Charge'}
-              </Text>
-              <Text style={{ color: '#FFB800', fontSize: 20, fontWeight: '800' }}>LKR 10</Text>
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 24 }}>
-              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>{language === 'si' ? 'ශේෂය' : 'Balance'}</Text>
-              <Text style={{ color: tokenBalance !== null && tokenBalance >= 10 ? '#4ADE80' : '#F87171', fontSize: 12, fontWeight: '700' }}>
-                {'LKR ' + (tokenBalance !== null ? tokenBalance : '—')}
-              </Text>
-            </View>
-            {tokenBalance === null || tokenBalance >= 10 ? (
-              <TouchableOpacity
-                onPress={function() { setShowConfirm(false); genReport(pendingReportLang || 'en'); }}
-                activeOpacity={0.85}
-                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0 }}
-              >
-                <LinearGradient
-                  colors={['#FF8C00', '#FF6D00', '#E65100']}
-                  style={{ paddingVertical: 16, alignItems: 'center', borderRadius: 14 }}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                >
-                  <LinearGradient colors={['rgba(255,255,255,0.18)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
-                  <Text style={{ color: '#FFF1D0', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 }}>
-                    {language === 'si' ? '✨ රු 10 ගෙවා ලියන්න' : '✨ Confirm & Generate — LKR 10'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                onPress={function() { setShowConfirm(false); setShowTopUp(true); }}
-                activeOpacity={0.85}
-                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}
-              >
-                <LinearGradient
-                  colors={['#FF8C00', '#E07800']}
-                  style={{ paddingVertical: 15, alignItems: 'center', borderRadius: 14 }}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                >
-                  <Text style={{ color: '#FFF1D0', fontSize: 15, fontWeight: '800' }}>
-                    {language === 'si' ? '💳 ශේෂය රිචාජ් කරන්න' : '💳 Top Up Balance'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={function() { setShowConfirm(false); }} style={{ paddingVertical: 12, alignItems: 'center' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
-                {language === 'si' ? 'අවලංගු' : 'Cancel'}
-              </Text>
-            </TouchableOpacity>
-          </LinearGradient>
-        </View>
-      </Modal>
 
-      {/* Top-up modal */}
-      <Modal visible={showTopUp} transparent animationType="slide" onRequestClose={function() { setShowTopUp(false); }}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
-          <LinearGradient
-            colors={['rgba(13,7,32,0.99)', 'rgba(4,3,12,1)']}
-            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(255,140,0,0.3)' }}
-          >
-            <Text style={{ color: '#FFB800', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
-              {language === 'si' ? '💳 ශේෂය රිචාජ්' : '💳 Top Up Balance'}
-            </Text>
-            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
-              {language === 'si' ? 'PayHere ඔස්සේ ගෙවන්න (Visa/MasterCard)' : 'Pay securely via PayHere (Visa/MasterCard)'}
-            </Text>
-            {[100, 250, 500].map(function(amt) {
-              return (
-                <TouchableOpacity
-                  key={amt}
-                  onPress={function() { handleTopUp(amt); }}
-                  disabled={topUpLoading}
-                  activeOpacity={0.8}
-                  style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 0 }}
-                >
-                  <LinearGradient
-                    colors={amt === 100 ? ['#FF8C00', '#FF6D00'] : amt === 250 ? ['#FF7A00', '#E65100'] : ['#FF9500', '#FF6D00', '#E65100']}
-                    style={{ paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                  >
-                    <LinearGradient colors={['rgba(255,255,255,0.15)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
-                    <Text style={{ color: '#FFF1D0', fontSize: 16, fontWeight: '700' }}>
-                      {language === 'si' ? 'රු ' + amt + ' රිචාජ්' : 'Add LKR ' + amt}
-                    </Text>
-                    {topUpLoading ? (
-                      <CosmicLoader size={22} color="#FFF" />
-                    ) : (
-                      <Ionicons name="add-circle" size={22} color="rgba(255,255,255,0.8)" />
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-              );
-            })}
-            <TouchableOpacity onPress={function() { setShowTopUp(false); }} style={{ paddingVertical: 14, alignItems: 'center' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
-                {language === 'si' ? 'වසන්න' : 'Close'}
-              </Text>
-            </TouchableOpacity>
-          </LinearGradient>
-        </View>
-      </Modal>
     </View>
     </DesktopScreenWrapper>
   );
@@ -1359,9 +1250,9 @@ var sty = StyleSheet.create({
   scrollInnerDesktop: { maxWidth: 960, alignSelf: 'center', paddingHorizontal: 32 },
   title: {
     fontSize: WIDE ? 36 : 30, fontWeight: '900', color: '#FFF1D0', letterSpacing: -0.5,
-    textShadowColor: 'rgba(192,38,211,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10,
+    textShadowColor: 'rgba(255,184,0,0.35)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10,
   },
-  subtitle: { fontSize: 14, color: 'rgba(255,140,0,0.8)', marginBottom: 24, fontWeight: '500', letterSpacing: 0.3 },
+  subtitle: { fontSize: 14, color: 'rgba(255,184,0,0.65)', marginBottom: 24, fontWeight: '500', letterSpacing: 0.3 },
 
   glass: {
     borderRadius: 20, overflow: 'hidden', borderWidth: 1,
@@ -1372,7 +1263,7 @@ var sty = StyleSheet.create({
   formRow: { flexDirection: 'row', gap: 14 },
   formCol: { flex: 1 },
   personCard: { paddingBottom: WIDE ? 20 : 14 },
-  personLabel: { fontSize: 16, fontWeight: '800', color: '#E0E7FF', marginBottom: 14, letterSpacing: 0.3 },
+  personLabel: { fontSize: 16, fontWeight: '800', color: '#FFE8B0', marginBottom: 14, letterSpacing: 0.3 },
   nameInput: {
     backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 12 : 10,
@@ -1404,7 +1295,7 @@ var sty = StyleSheet.create({
   loadCard: { alignItems: 'center', paddingVertical: 44, paddingHorizontal: 40, borderColor: 'rgba(255,140,0,0.2)' },
   loadRing: { width: 90, height: 90, borderRadius: 45, opacity: 0.22, position: 'absolute', top: 34 },
   loadInner: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(15,5,25,0.9)',
+    width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(18,6,12,0.9)',
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,140,0,0.3)',
   },
   loadText: { color: '#FF8C00', fontSize: 15, fontWeight: '700', marginTop: 22, letterSpacing: 0.5 },
@@ -1414,7 +1305,7 @@ var sty = StyleSheet.create({
   gaugeRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
   gaugeInfo: { flex: 1 },
   gaugeCosmicLabel: { fontSize: 14, fontWeight: '800', marginBottom: 3, letterSpacing: 0.3 },
-  gaugeRating: { fontSize: 16, fontWeight: '700', color: '#E0E7FF', marginBottom: 3 },
+  gaugeRating: { fontSize: 16, fontWeight: '700', color: '#FFE8B0', marginBottom: 3 },
   gaugeScoreText: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '600', marginBottom: 12 },
   shareChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
@@ -1433,14 +1324,14 @@ var sty = StyleSheet.create({
 
   section: { marginBottom: 14 },
   secHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  secTitle: { fontSize: 16, fontWeight: '800', color: '#E0E7FF', letterSpacing: 0.2 },
+  secTitle: { fontSize: 16, fontWeight: '800', color: '#FFE8B0', letterSpacing: 0.2, textShadowColor: 'rgba(255,184,0,0.18)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
   secSub: { fontSize: 12, color: 'rgba(255,140,0,0.6)', fontWeight: '500', marginTop: 2 },
 
   factorItem: { marginBottom: 16 },
   factorTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   factorNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   factorDot: { width: 8, height: 8, borderRadius: 4 },
-  factorName: { fontSize: 14, color: '#E0E7FF', fontWeight: '700' },
+  factorName: { fontSize: 14, color: '#FFE8B0', fontWeight: '700' },
   factorSinhala: { fontSize: 12, color: 'rgba(255,140,0,0.5)', fontWeight: '500' },
   factorBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
   factorBadgeText: { fontSize: 12, fontWeight: '800' },
@@ -1455,7 +1346,7 @@ var sty = StyleSheet.create({
 
   langRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   langChip: {
-    flex: 1, paddingVertical: 11, borderRadius: 12, alignItems: 'center',
+    flex: 1, paddingVertical: 11, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.04)',
   },
   langChipActive: { borderColor: '#C026D3', backgroundColor: 'rgba(192,38,211,0.15)' },

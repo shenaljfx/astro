@@ -36,12 +36,17 @@ const CHECKOUT_URL = SANDBOX
   ? 'https://sandbox.payhere.lk/pay/checkout'
   : 'https://www.payhere.lk/pay/checkout';
 
-// Monthly subscription amount (LKR 240/month via card/bank)
+// Monthly subscription amount (LKR 240/month via card/bank) — Sri Lanka default
 const MONTHLY_AMOUNT = 240;
 const MONTHLY_AMOUNT_FORMATTED = '240.00';
 
-// Token top-up packages
-const TOP_UP_PACKAGES = [100, 250, 500];
+// Token top-up packages (includes per-feature charges: 100 for porondam, 350 for report)
+const TOP_UP_PACKAGES = [100, 250, 350, 500];
+
+// International pricing (USD)
+const MONTHLY_AMOUNT_USD = 4;
+const MONTHLY_AMOUNT_USD_FORMATTED = '4.00';
+const TOP_UP_PACKAGES_USD = [2, 4, 5, 10];
 
 // ─── Hash Generation ────────────────────────────────────────────
 
@@ -125,6 +130,7 @@ function verifyNotification(notification) {
  * @param {string} params.email      — Customer email (required by PayHere)
  * @param {string} params.phone      — Customer phone (07XXXXXXXX)
  * @param {string} params.userId     — Internal user ID (stored in custom_1)
+ * @param {string} [params.currency] — 'LKR' or 'USD' (default: 'LKR')
  */
 function buildSubscriptionPayment(params) {
   const {
@@ -134,7 +140,11 @@ function buildSubscriptionPayment(params) {
     email = 'user@grahachara.lk',
     phone = '0770000000',
     userId = '',
+    currency = 'LKR',
   } = params;
+
+  const isUSD = currency === 'USD';
+  const amount = isUSD ? MONTHLY_AMOUNT_USD_FORMATTED : MONTHLY_AMOUNT_FORMATTED;
 
   return {
     sandbox: SANDBOX,
@@ -144,17 +154,17 @@ function buildSubscriptionPayment(params) {
     cancel_url: NOTIFY_BASE_URL + '/api/payhere/cancel',
     order_id: orderId,
     items: 'Grahachara Monthly Subscription',
-    amount: MONTHLY_AMOUNT_FORMATTED,
+    amount: amount,
     recurrence: '1 Month',
     duration: 'Forever',
-    currency: 'LKR',
+    currency: currency,
     first_name: firstName,
     last_name: lastName,
     email: email,
     phone: phone,
-    address: 'Sri Lanka',
-    city: 'Colombo',
-    country: 'Sri Lanka',
+    address: isUSD ? 'International' : 'Sri Lanka',
+    city: isUSD ? 'N/A' : 'Colombo',
+    country: isUSD ? 'N/A' : 'Sri Lanka',
     custom_1: userId,    // Store internal user ID
     custom_2: 'monthly', // Plan identifier
   };
@@ -166,12 +176,13 @@ function buildSubscriptionPayment(params) {
  * 
  * @param {object} params
  * @param {string} params.orderId
- * @param {number} params.amount     — LKR amount (100, 250, 500)
+ * @param {number} params.amount     — Amount in the specified currency
  * @param {string} params.firstName
  * @param {string} params.lastName
  * @param {string} params.email
  * @param {string} params.phone
  * @param {string} params.userId
+ * @param {string} [params.currency] — 'LKR' or 'USD' (default: 'LKR')
  */
 function buildTopUpPayment(params) {
   const {
@@ -182,25 +193,28 @@ function buildTopUpPayment(params) {
     email = 'user@grahachara.lk',
     phone = '0770000000',
     userId = '',
+    currency = 'LKR',
   } = params;
 
+  const isUSD = currency === 'USD';
   const amountFormatted = parseFloat(amount).toFixed(2);
+  const currencyLabel = isUSD ? `$${amount}` : `LKR ${amount}`;
 
   return {
     sandbox: SANDBOX,
     merchant_id: MERCHANT_ID,
     notify_url: NOTIFY_BASE_URL + '/api/payhere/notify-topup',
     order_id: orderId,
-    items: `Grahachara Token Top-Up LKR ${amount}`,
+    items: `Grahachara Payment ${currencyLabel}`,
     amount: amountFormatted,
-    currency: 'LKR',
+    currency: currency,
     first_name: firstName,
     last_name: lastName,
     email: email,
     phone: phone,
-    address: 'Sri Lanka',
-    city: 'Colombo',
-    country: 'Sri Lanka',
+    address: isUSD ? 'International' : 'Sri Lanka',
+    city: isUSD ? 'N/A' : 'Colombo',
+    country: isUSD ? 'N/A' : 'Sri Lanka',
     custom_1: userId,
     custom_2: 'topup',
   };
@@ -212,10 +226,11 @@ function buildTopUpPayment(params) {
  * so it can start the PayHere SDK payment.
  * 
  * @param {string} orderId
- * @param {string} amount  — Formatted amount e.g. "240.00"
+ * @param {string} amount   — Formatted amount e.g. "240.00"
+ * @param {string} currency — 'LKR' or 'USD'
  */
-function buildPaymentHash(orderId, amount) {
-  return generateHash(orderId, amount, 'LKR');
+function buildPaymentHash(orderId, amount, currency) {
+  return generateHash(orderId, amount, currency || 'LKR');
 }
 
 // ─── Payment Status Codes ───────────────────────────────────────
@@ -257,6 +272,8 @@ module.exports = {
   CHECKOUT_URL,
   MONTHLY_AMOUNT,
   TOP_UP_PACKAGES,
+  MONTHLY_AMOUNT_USD,
+  TOP_UP_PACKAGES_USD,
 
   // Hash & verification
   generateHash,

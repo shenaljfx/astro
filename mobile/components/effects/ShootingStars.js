@@ -286,7 +286,7 @@ function ShootingStarsSystem() {
 
     var uniforms = {};
 
-    return { meteors: meteors, geo: geo, uniforms: uniforms };
+    return { meteors: meteors, geo: geo, uniforms: uniforms, frameCount: { v: 0 } };
   }, []);
 
   useFrame(function (r3fState, delta) {
@@ -295,6 +295,10 @@ function ShootingStarsSystem() {
     var elapsed = r3fState.clock.getElapsedTime();
     var meteors = state.meteors;
     var geo = state.geo;
+
+    // On mobile, skip every other frame for buffer uploads (still update physics)
+    state.frameCount.v++;
+    var skipUpload = IS_MOBILE && (state.frameCount.v % 2 !== 0);
 
     var posAttr = geo.attributes.position;
     var colAttr = geo.attributes.color;
@@ -373,12 +377,14 @@ function ShootingStarsSystem() {
       }
     }
 
-    // Flag buffers as needing GPU upload
-    posAttr.needsUpdate = true;
-    colAttr.needsUpdate = true;
-    sizeAttr.needsUpdate = true;
-    alphaAttr.needsUpdate = true;
-    tempAttr.needsUpdate = true;
+    // Flag buffers as needing GPU upload (skip on mobile alternate frames)
+    if (!skipUpload) {
+      posAttr.needsUpdate = true;
+      colAttr.needsUpdate = true;
+      sizeAttr.needsUpdate = true;
+      alphaAttr.needsUpdate = true;
+      tempAttr.needsUpdate = true;
+    }
   });
 
   if (!THREE_LIB) return null;

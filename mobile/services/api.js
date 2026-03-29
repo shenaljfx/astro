@@ -23,6 +23,12 @@ export function setAuthTokenGetter(fn) {
   _getToken = fn;
 }
 
+// Country code — set by PricingContext for geo-based pricing
+var _detectedCountry = null;
+export function setDetectedCountry(code) {
+  _detectedCountry = code;
+}
+
 async function request(path, opts) {
   if (!opts) opts = {};
   var timeout = opts._timeout || 12000;
@@ -41,6 +47,11 @@ async function request(path, opts) {
 
   // Build headers
   var headers = { 'Content-Type': 'application/json' };
+
+  // Attach country code for geo-based pricing
+  if (_detectedCountry) {
+    headers['X-App-Country'] = _detectedCountry;
+  }
   
   // Attach auth token if available
   var hasToken = false;
@@ -261,6 +272,11 @@ export var getSubscriptionStatus = function() {
 
 // ─── PayHere Payment API ────────────────────────────────────────
 
+export var getPricing = function(countryCode) {
+  var query = countryCode ? '?currency=' + (countryCode === 'LK' ? 'LKR' : 'USD') : '';
+  return request('/api/pricing' + query);
+};
+
 export var initiateSubscription = function(data) {
   return request('/api/payhere/initiate-subscription', {
     method: 'POST',
@@ -268,10 +284,10 @@ export var initiateSubscription = function(data) {
   });
 };
 
-export var initiateTopUp = function(amount) {
+export var initiateTopUp = function(amount, currency) {
   return request('/api/payhere/initiate-topup', {
     method: 'POST',
-    body: JSON.stringify({ amount: amount }),
+    body: JSON.stringify({ amount: amount, currency: currency || undefined }),
   });
 };
 
@@ -288,6 +304,16 @@ export var cancelPayHereSubscription = function() {
 
 export var getPayHereStatus = function() {
   return request('/api/payhere/status');
+};
+
+// ─── Weekly Lagna Palapala ──────────────────────────────────────
+
+export var getWeeklyLagna = function() {
+  return request('/api/weekly-lagna');
+};
+
+export var getWeeklyLagnaById = function(lagnaId) {
+  return request('/api/weekly-lagna/' + lagnaId);
 };
 
 // ─── Predictions API — Transit, Timing, Muhurtha, Health ────────
@@ -521,6 +547,7 @@ export default {
   getFullReport: getFullReport,
   getAIReport: getAIReport,
   setAuthTokenGetter: setAuthTokenGetter,
+  setDetectedCountry: setDetectedCountry,
   getUserProfile: getUserProfile,
   updateUserProfile: updateUserProfile,
   saveBirthData: saveBirthData,
@@ -537,6 +564,7 @@ export default {
   unsubscribe: unsubscribe,
   getSubscriptionStatus: getSubscriptionStatus,
   // PayHere Payment
+  getPricing: getPricing,
   initiateSubscription: initiateSubscription,
   initiateTopUp: initiateTopUp,
   confirmPayment: confirmPayment,
@@ -590,4 +618,7 @@ export default {
   getMarakaApalaFull: getMarakaApalaFull,
   getTodayDashboard: getTodayDashboard,
   sendTestNotification: sendTestNotification,
+  // Weekly Lagna Palapala
+  getWeeklyLagna: getWeeklyLagna,
+  getWeeklyLagnaById: getWeeklyLagnaById,
 };

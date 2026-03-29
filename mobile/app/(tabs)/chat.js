@@ -17,6 +17,8 @@ import SpringPressable from '../../components/effects/SpringPressable';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
+import ThemedAuroraNebula from '../../components/effects/ThemedAuroraNebula';
+import ThemedNebulaBg from '../../components/effects/ThemedNebulaBg';
 
 var { width: SW } = Dimensions.get('window');
 var DAILY_LIMIT = 10;
@@ -330,7 +332,9 @@ export default function ChatScreen() {
   if (isDesktop) {
     return (
       <DesktopScreenWrapper routeName="chat">
-        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <View style={{ flex: 1, backgroundColor: '#0C0602' }}>
+          <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="orange" /></View>
+          <ThemedNebulaBg theme="orange" />
           <View style={sd.shell}>
             <View style={sd.panel}>
 
@@ -458,7 +462,9 @@ export default function ChatScreen() {
   // ── MOBILE LAYOUT ──────────────────────────────────────────────────
   return (
     <DesktopScreenWrapper routeName="chat">
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <View style={{ flex: 1, backgroundColor: '#0C0602' }}>
+      <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="orange" /></View>
+      <ThemedNebulaBg theme="orange" />
       <View style={[s.header, { paddingTop: topPad }]}>
         <View style={s.avatar}>
           <LinearGradient colors={mode === 'dream' ? ['#FF8C00', '#E65100'] : ['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} />

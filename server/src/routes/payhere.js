@@ -20,7 +20,9 @@ const {
   MERCHANT_ID,
   SANDBOX,
   MONTHLY_AMOUNT,
+  MONTHLY_AMOUNT_USD,
   TOP_UP_PACKAGES,
+  TOP_UP_PACKAGES_USD,
   verifyNotification,
   buildSubscriptionPayment,
   buildTopUpPayment,
@@ -29,6 +31,7 @@ const {
   RECURRING_TYPES,
   RECURRING_STATUS,
 } = require('../services/payhere');
+const { detectCurrency, isValidTopUpAmount } = require('../config/pricing');
 
 // ─── POST /initiate-subscription ─────────────────────────────────────────
 
@@ -46,8 +49,10 @@ router.post('/initiate-subscription', phoneAuth, async (req, res) => {
     }
 
     const { firstName, lastName, email } = req.body;
+    const currency = detectCurrency(req);
     const uid = req.user.uid;
     const phone = req.user.phone || '';
+    const subAmount = currency === 'USD' ? MONTHLY_AMOUNT_USD : MONTHLY_AMOUNT;
 
     // Generate unique order ID
     const orderId = 'SUB_' + uid.replace('phone_', '') + '_' + Date.now();
@@ -60,10 +65,11 @@ router.post('/initiate-subscription', phoneAuth, async (req, res) => {
       email: email || 'user@grahachara.lk',
       phone: phone.replace('94', '0') || '0770000000',
       userId: uid,
+      currency,
     });
 
     // Generate server-side hash
-    const hash = buildPaymentHash(orderId, paymentObject.amount);
+    const hash = buildPaymentHash(orderId, paymentObject.amount, currency);
     paymentObject.hash = hash;
 
     // Store pending subscription in Firestore
@@ -73,13 +79,14 @@ router.post('/initiate-subscription', phoneAuth, async (req, res) => {
         orderId,
         uid,
         type: 'subscription',
-        amount: MONTHLY_AMOUNT,
+        amount: subAmount,
+        currency,
         status: 'pending',
         createdAt: new Date().toISOString(),
       });
     }
 
-    console.log(`[PayHere] ✔ Subscription initiated: ${orderId} for ${uid} (sandbox=${SANDBOX})`);
+    console.log(`[PayHere] ✔ Subscription initiated: ${orderId} for ${uid} — ${currency} ${subAmount} (sandbox=${SANDBOX})`);
 
     // Build checkout URL for web fallback (form-post redirect)
     const checkoutUrl = SANDBOX
@@ -91,6 +98,7 @@ router.post('/initiate-subscription', phoneAuth, async (req, res) => {
       paymentObject,
       hash,
       orderId,
+      currency,
       sandbox: SANDBOX,
       checkout_url: checkoutUrl,
     });
@@ -146,12 +154,15 @@ router.post('/initiate-topup', phoneAuth, async (req, res) => {
     }
 
     const { amount, firstName, lastName, email } = req.body;
+    const currency = detectCurrency(req);
     const parsed = parseFloat(amount);
+    const validPackages = currency === 'USD' ? TOP_UP_PACKAGES_USD : TOP_UP_PACKAGES;
 
-    if (!parsed || !TOP_UP_PACKAGES.includes(parsed)) {
+    if (!parsed || !isValidTopUpAmount(parsed, currency)) {
       return res.status(400).json({
-        error: `Invalid amount. Choose from: ${TOP_UP_PACKAGES.join(', ')} LKR`,
-        validPackages: TOP_UP_PACKAGES,
+        error: `Invalid amount. Choose from: ${validPackages.join(', ')} ${currency}`,
+        validPackages,
+        currency,
       });
     }
 
@@ -167,9 +178,10 @@ router.post('/initiate-topup', phoneAuth, async (req, res) => {
       email: email || 'user@grahachara.lk',
       phone: phone.replace('94', '0') || '0770000000',
       userId: uid,
+      currency,
     });
 
-    const hash = buildPaymentHash(orderId, paymentObject.amount);
+    const hash = buildPaymentHash(orderId, paymentObject.amount, currency);
     paymentObject.hash = hash;
 
     // Store pending order
@@ -180,18 +192,20 @@ router.post('/initiate-topup', phoneAuth, async (req, res) => {
         uid,
         type: 'topup',
         amount: parsed,
+        currency,
         status: 'pending',
         createdAt: new Date().toISOString(),
       });
     }
 
-    console.log(`[PayHere] ✔ Top-up initiated: ${orderId} for ${uid} — LKR ${parsed}`);
+    console.log(`[PayHere] ✔ Top-up initiated: ${orderId} for ${uid} — ${currency} ${parsed}`);
 
     res.json({
       success: true,
       paymentObject,
       hash,
       orderId,
+      currency,
     });
   } catch (err) {
     console.error('[PayHere] initiate-topup error:', err);

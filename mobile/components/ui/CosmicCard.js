@@ -6,20 +6,20 @@ import { Colors, BorderRadius, Spacing, Shadows, Gradients } from '../../constan
 
 const VARIANT_CONFIG = {
   hero: {
-    gradient: Gradients.heroCard,
-    borderColor: Colors.cardBorderHero,
+    gradient: ['rgba(20,12,8,0.48)', 'rgba(12,6,4,0.55)'],
+    borderColor: 'rgba(255,184,0,0.22)',
     borderWidth: 1,
     shadow: Shadows.softGlow,
   },
   content: {
-    gradient: Gradients.contentCard,
-    borderColor: Colors.cardBorderContent,
+    gradient: ['rgba(16,10,6,0.42)', 'rgba(8,5,3,0.50)'],
+    borderColor: 'rgba(255,184,0,0.12)',
     borderWidth: 1,
     shadow: Shadows.sm,
   },
   surface: {
-    gradient: Gradients.surfaceCard,
-    borderColor: Colors.borderSubtle,
+    gradient: ['rgba(12,8,4,0.40)', 'rgba(6,4,2,0.48)'],
+    borderColor: 'rgba(255,184,0,0.10)',
     borderWidth: 0.5,
     shadow: null,
   },

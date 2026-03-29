@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Platform } from 'react-native';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { PricingProvider } from '../contexts/PricingContext';
 import OnboardingScreen from './onboarding';
 import CosmicLoader from '../components/effects/CosmicLoader';
 
@@ -78,9 +79,11 @@ export default function RootLayout() {
   return (
     <View style={{ flex: 1, backgroundColor: '#030014' }}>
       <AuthProvider>
-        <LanguageProvider>
-          <AppGate />
-        </LanguageProvider>
+        <PricingProvider>
+          <LanguageProvider>
+            <AppGate />
+          </LanguageProvider>
+        </PricingProvider>
       </AuthProvider>
     </View>
   );

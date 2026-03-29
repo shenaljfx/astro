@@ -9,6 +9,7 @@
  */
 
 const { getDb, COLLECTIONS } = require('../config/firebase');
+const { detectCurrency, getPricing } = require('../config/pricing');
 
 /**
  * Auth middleware — JWT + Firebase token verification
@@ -95,10 +96,13 @@ function requireSubscription(req, res, next) {
 
       // No subscription at all
       if (!sub || sub.status === 'none' || sub.status === 'pending') {
+        const currency = detectCurrency(req);
+        const pricing = getPricing(currency);
         return res.status(402).json({
           error: 'Subscription required',
-          message: 'Please subscribe to access this feature. Only LKR 240/month via PayHere.',
+          message: `Please subscribe to access this feature. Only ${pricing.subscription.label} via PayHere.`,
           subscriptionRequired: true,
+          pricing: pricing.subscription,
         });
       }
 

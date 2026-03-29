@@ -18,6 +18,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { Colors, Typography, Spacing } from '../../constants/theme';
 import CosmicCard from '../../components/ui/CosmicCard';
+import BlueAuroraNebula from '../../components/effects/BlueAuroraNebula';
+import BlueNebulaBg from '../../components/effects/BlueNebulaBg';
 import SectionHeader from '../../components/ui/SectionHeader';
 
 const CHART_CACHE_KEY = '@grahachara_chart_cache';
@@ -1093,8 +1095,10 @@ export default function KendaraScreen() {
 
   return (
     <DesktopScreenWrapper routeName="kendara">
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#FFB800" />}>
+    <View style={{ flex: 1, backgroundColor: '#020412' }}>
+      <BlueAuroraNebula />
+      <BlueNebulaBg />
+      <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#60A5FA" />}>
         <View style={[styles.content, isDesktop && styles.contentDesktop]}>
           <Animated.View entering={FadeIn.duration(700)} style={styles.pageTitleRow}>
             <View>
@@ -1128,25 +1132,25 @@ const styles = StyleSheet.create({
   contentDesktop: { paddingTop: 20, paddingHorizontal: 28, maxWidth: 900, alignSelf: 'center', width: '100%' },
   pageTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   pageTitle: { fontSize: 30, fontWeight: '800', color: '#FFB800', marginBottom: 3, textShadowColor: 'rgba(255,184,0,0.3)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
-  pageSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '500' },
+  pageSubtitle: { fontSize: 13, color: 'rgba(255,214,102,0.50)', fontWeight: '500' },
   lagnaOrb: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.35)', shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 0 },
   center: { alignItems: 'center', justifyContent: 'center', height: 300 },
   emptyState: { alignItems: 'center', padding: 40, backgroundColor: 'rgba(255,140,0,0.07)', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)' },
   emptyTitle: { color: '#FFB800', fontSize: 18, marginVertical: 16, fontWeight: '700' },
-  emptyText: { color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginBottom: 20, lineHeight: 22 },
+  emptyText: { color: 'rgba(255,214,102,0.45)', textAlign: 'center', marginBottom: 20, lineHeight: 22 },
   actionButton: { backgroundColor: '#FFB800', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20 },
   actionButtonText: { fontWeight: '800', color: '#1A1040' },
   errorText: { color: '#F87171', fontSize: 14 },
   chartContainer: { marginBottom: 20 },
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  sectionTitle: { color: '#FFF1D0', fontSize: 17, marginLeft: 10, fontWeight: '700', flex: 1 },
+  sectionTitle: { color: '#FFE8B0', fontSize: 17, marginLeft: 10, fontWeight: '700', flex: 1, textShadowColor: 'rgba(255,184,0,0.20)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   detailsCard: {
     backgroundColor: 'rgba(255,255,255,0.04)', padding: 16, borderRadius: 18, marginTop: 10,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
     shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 0,
   },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  infoLabel: { color: 'rgba(255,255,255,0.55)', fontSize: 13 },
+  infoLabel: { color: 'rgba(255,214,102,0.50)', fontSize: 13 },
   infoValue: { color: '#FFE8B0', fontWeight: '600', fontSize: 13 },
   cardTitle: { color: '#FFB800', marginBottom: 14, fontWeight: '700', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 },
 
@@ -1156,7 +1160,7 @@ const styles = StyleSheet.create({
   planetName: { fontSize: 13, fontWeight: '700', width: 52 },
   planetBarTrack: { flex: 1, height: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' },
   planetBarFill: { height: 4, borderRadius: 2, opacity: 0.7 },
-  planetRashi: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '500', width: 90, textAlign: 'right' },
+  planetRashi: { color: 'rgba(255,214,102,0.50)', fontSize: 11, fontWeight: '500', width: 90, textAlign: 'right' },
 
   // Advanced Analysis styles
   advCard: {
@@ -1172,8 +1176,8 @@ const styles = StyleSheet.create({
   // Dosha styles
   doshaRow: { flexDirection: 'row', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   doshaDot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
-  doshaName: { color: '#E0E7FF', fontSize: 14, fontWeight: '700' },
-  doshaDesc: { color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 18, marginTop: 3 },
+  doshaName: { color: '#FFE8B0', fontSize: 14, fontWeight: '700' },
+  doshaDesc: { color: 'rgba(255,214,102,0.40)', fontSize: 12, lineHeight: 18, marginTop: 3 },
   cancelBadge: { backgroundColor: 'rgba(52,211,153,0.15)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(52,211,153,0.3)' },
   cancelText: { color: '#34D399', fontSize: 9, fontWeight: '800' },
   cancelReason: { color: 'rgba(52,211,153,0.6)', fontSize: 11, fontStyle: 'italic', marginTop: 3 },
@@ -1184,9 +1188,9 @@ const styles = StyleSheet.create({
   yogaItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   yogaTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   catDot: { width: 8, height: 8, borderRadius: 4 },
-  yogaName: { color: '#E0E7FF', fontSize: 14, fontWeight: '700', flex: 1 },
+  yogaName: { color: '#FFE8B0', fontSize: 14, fontWeight: '700', flex: 1 },
   yogaCat: { color: 'rgba(255,140,0,0.6)', fontSize: 11, fontWeight: '600', marginTop: 3 },
-  yogaDesc: { color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 18, marginTop: 3 },
+  yogaDesc: { color: 'rgba(255,214,102,0.40)', fontSize: 12, lineHeight: 18, marginTop: 3 },
   yogaPlanets: { color: 'rgba(255,184,0,0.6)', fontSize: 11, marginTop: 4 },
   strBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   strText: { fontSize: 10, fontWeight: '700' },
@@ -1195,18 +1199,18 @@ const styles = StyleSheet.create({
   jaiminiHighlight: { borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)', overflow: 'hidden' },
   jaiminiLabel: { color: 'rgba(255,140,0,0.7)', fontSize: 11, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
   jaiminiValue: { color: '#FF8C00', fontSize: 22, fontWeight: '900' },
-  jaiminiSub: { color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 8, lineHeight: 18 },
+  jaiminiSub: { color: 'rgba(255,214,102,0.35)', fontSize: 11, marginTop: 8, lineHeight: 18 },
   jaiminiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   jaiminiMini: { flex: 1, minWidth: 90, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 10, alignItems: 'center' },
-  jmLabel: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: '600', marginBottom: 4, textAlign: 'center' },
-  jmValue: { color: '#E0E7FF', fontSize: 14, fontWeight: '700', textAlign: 'center' },
-  jmDesc: { color: 'rgba(255,255,255,0.3)', fontSize: 10, textAlign: 'center', marginTop: 4 },
+  jmLabel: { color: 'rgba(255,214,102,0.35)', fontSize: 10, fontWeight: '600', marginBottom: 4, textAlign: 'center' },
+  jmValue: { color: '#FFE8B0', fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  jmDesc: { color: 'rgba(255,214,102,0.30)', fontSize: 10, textAlign: 'center', marginTop: 4 },
 
   // Shadbala styles
   sbRow: { marginBottom: 14 },
   sbTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   sbPlanet: { fontSize: 14, fontWeight: '700', width: 70 },
-  sbRupas: { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '600', flex: 1 },
+  sbRupas: { color: 'rgba(255,214,102,0.50)', fontSize: 12, fontWeight: '600', flex: 1 },
   sbBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1 },
   sbBarTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
   sbBarFill: { height: 6, borderRadius: 3 },
@@ -1214,15 +1218,15 @@ const styles = StyleSheet.create({
   // Bhrigu Bindu styles
   bbCircle: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: 'rgba(255,184,0,0.35)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,184,0,0.06)' },
   bbDeg: { color: '#FFB800', fontSize: 16, fontWeight: '800' },
-  bbRashi: { color: '#E0E7FF', fontSize: 16, fontWeight: '700' },
-  bbNak: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 2 },
-  bbInterp: { color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 18, marginTop: 12 },
+  bbRashi: { color: '#FFE8B0', fontSize: 16, fontWeight: '700' },
+  bbNak: { color: 'rgba(255,214,102,0.40)', fontSize: 12, marginTop: 2 },
+  bbInterp: { color: 'rgba(255,214,102,0.40)', fontSize: 12, lineHeight: 18, marginTop: 12 },
 
   // Past Life styles
   plRow: { marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   plLabel: { color: 'rgba(167,139,250,0.7)', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  plValue: { color: '#E0E7FF', fontSize: 13, lineHeight: 20 },
-  plIndicator: { color: 'rgba(255,255,255,0.35)', fontSize: 12, lineHeight: 20, paddingLeft: 4 },
+  plValue: { color: '#FFE8B0', fontSize: 13, lineHeight: 20 },
+  plIndicator: { color: 'rgba(255,214,102,0.35)', fontSize: 12, lineHeight: 20, paddingLeft: 4 },
 
   // Engine footer
   engineFooter: { color: 'rgba(255,255,255,0.12)', fontSize: 10, textAlign: 'center', marginTop: 4, marginBottom: 10 },
@@ -1235,7 +1239,7 @@ const styles = StyleSheet.create({
     borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10,
     marginHorizontal: 2, marginBottom: 10, marginTop: -4,
   },
-  aiExplainText: { flex: 1, color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 20, fontStyle: 'italic' },
+  aiExplainText: { flex: 1, color: 'rgba(255,214,102,0.65)', fontSize: 13, lineHeight: 20, fontStyle: 'italic' },
 
   // Loading screen styles
   loadingContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
@@ -1278,12 +1282,12 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3, marginBottom: 8,
   },
   marakaSevDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
-  marakaApalaTitle: { color: '#E0E7FF', fontSize: 14, fontWeight: '700', flexShrink: 1 },
+  marakaApalaTitle: { color: '#FFE8B0', fontSize: 14, fontWeight: '700', flexShrink: 1 },
   marakaSevBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1 },
   marakaSevText: { fontSize: 9, fontWeight: '800' },
-  marakaApalaDesc: { color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 18, marginTop: 4 },
+  marakaApalaDesc: { color: 'rgba(255,214,102,0.40)', fontSize: 12, lineHeight: 18, marginTop: 4 },
   marakaPeriodRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' },
-  marakaPeriodText: { color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '500' },
+  marakaPeriodText: { color: 'rgba(255,214,102,0.40)', fontSize: 11, fontWeight: '500' },
   marakaDaysLeftBadge: { backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   marakaDaysLeftText: { color: 'rgba(248,113,113,0.8)', fontSize: 10, fontWeight: '700' },
   marakaRemediesBox: {

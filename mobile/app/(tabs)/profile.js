@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet,
-  Platform, TextInput, Alert, ActivityIndicator, Modal, FlatList,
+  Platform, TextInput, Alert, ActivityIndicator,
   Dimensions, StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,10 @@ import SpringPressable from '../../components/effects/SpringPressable';
 import CosmicLoader from '../../components/effects/CosmicLoader';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePricing } from '../../contexts/PricingContext';
+import ThemedAuroraNebula from '../../components/effects/ThemedAuroraNebula';
+import ThemedNebulaBg from '../../components/effects/ThemedNebulaBg';
+import CitySearchPicker from '../../components/CitySearchPicker';
 
 var SW = Dimensions.get('window').width;
 var SH = Dimensions.get('window').height;
@@ -118,7 +122,7 @@ function GCard({ children, style, accent }) {
   var ac = accent || '#FF8C00';
   return (
     <View style={[gc.card, { borderColor: ac + '30' }, style]}>
-      <LinearGradient colors={['rgba(20,12,50,0.65)', 'rgba(10,6,28,0.75)']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['rgba(14,6,22,0.65)', 'rgba(10,4,16,0.75)']} style={StyleSheet.absoluteFill} />
       <LinearGradient colors={[ac + '18', ac + '06']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
       <LinearGradient colors={['rgba(255,255,255,0.04)','transparent']} style={{ position:'absolute',top:0,left:0,right:0,height:'45%',borderTopLeftRadius:22,borderTopRightRadius:22 }} />
       <View style={gc.inner}>{children}</View>
@@ -299,7 +303,13 @@ function BirthDataForm({ currentData, onSave }) {
   var [lat,    setLat]    = useState(currentData?.lat || 6.9271);
   var [lng,    setLng]    = useState(currentData?.lng || 79.8612);
   var [saving, setSaving] = useState(false);
-  var [showModal, setShowModal] = useState(false);
+
+  // Build selectedCity object for CitySearchPicker
+  var [selectedCity, setSelectedCity] = useState(
+    currentData?.locationName
+      ? { name: currentData.locationName, lat: currentData.lat || 6.9271, lng: currentData.lng || 79.8612, country: '' }
+      : null
+  );
 
   useEffect(function () {
     if (currentData && currentData.dateTime) {
@@ -312,6 +322,9 @@ function BirthDataForm({ currentData, onSave }) {
         setLocation(currentData.locationName || '');
         setLat(currentData.lat || 6.9271);
         setLng(currentData.lng || 79.8612);
+        if (currentData.locationName) {
+          setSelectedCity({ name: currentData.locationName, lat: currentData.lat || 6.9271, lng: currentData.lng || 79.8612, country: '' });
+        }
       } catch (e) {}
     }
   }, [currentData]);
@@ -331,12 +344,6 @@ function BirthDataForm({ currentData, onSave }) {
       Alert.alert(t('saved'), t('savedMsg'));
     } catch (e) { Alert.alert('Error', t('errorSaving')); }
     finally { setSaving(false); }
-  }
-
-  function getCityLabel(name) {
-    if (!name) return '';
-    var city = SRI_LANKAN_CITIES.find(function (c) { return c.name === name; });
-    return (city && language === 'si' && city.nameSi) ? city.nameSi : name;
   }
 
   return (
@@ -377,13 +384,23 @@ function BirthDataForm({ currentData, onSave }) {
         <View style={{ flex: 2 }} />
       </View>
 
-      {/* City picker */}
+      {/* City picker — global search */}
       <Text style={bf.fieldLabel}>{t('birthPlaceLabel')}</Text>
-      <TouchableOpacity style={bf.cityBtn} onPress={function () { setShowModal(true); }} activeOpacity={0.8}>
-        <Ionicons name="location-outline" size={18} color="#34D399" />
-        <Text style={[bf.cityBtnText, !location && bf.cityBtnPlaceholder]}>{getCityLabel(location) || t('selectCity')}</Text>
-        <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.3)" />
-      </TouchableOpacity>
+      <CitySearchPicker
+        selectedCity={selectedCity}
+        onSelect={function (city) {
+          setSelectedCity(city);
+          setLocation(city.name);
+          setLat(city.lat);
+          setLng(city.lng);
+        }}
+        lang={language}
+        accentColor="#34D399"
+        compact
+        maxHeight={180}
+        placeholder={language === 'si' ? 'නගරය සොයන්න...' : 'Search any city...'}
+      />
+      <View style={{ height: 8 }} />
 
       {/* Save */}
       <SpringPressable style={bf.saveBtn} onPress={handleSave} disabled={saving} haptic="heavy" scalePressed={0.93}>
@@ -394,48 +411,6 @@ function BirthDataForm({ currentData, onSave }) {
           : <><Ionicons name="save-outline" size={17} color="#fff" /><Text style={bf.saveBtnText}>{t('saveBirthData')}</Text></>
         }
       </SpringPressable>
-
-      {/* City bottom-sheet modal */}
-      <Modal visible={showModal} animationType="slide" transparent>
-        <View style={cm.overlay}>
-          <View style={cm.sheet}>
-            <View style={cm.handle} />
-            <View style={cm.header}>
-              <Text style={cm.title}>{t('selectCityTitle')}</Text>
-              <TouchableOpacity onPress={function () { setShowModal(false); }} style={cm.closeBtn}>
-                <Ionicons name="close" size={20} color="#94a3b8" />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={SRI_LANKAN_CITIES}
-              keyExtractor={function (item) { return item.name; }}
-              renderItem={function ({ item }) {
-                var active = location === item.name;
-                return (
-                  <TouchableOpacity
-                    style={[cm.cityRow, active && cm.cityRowActive]}
-                    onPress={function () { setLocation(item.name); setLat(item.lat); setLng(item.lng); setShowModal(false); }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[cm.cityDot, active && { backgroundColor: '#34D399' }]} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[cm.cityName, active && { color: '#34D399' }]}>
-                        {language === 'si' && item.nameSi ? item.nameSi : item.name}
-                      </Text>
-                      {language === 'si' && item.nameSi && (
-                        <Text style={cm.cityEn}>{item.name}</Text>
-                      )}
-                    </View>
-                    {active && <Ionicons name="checkmark-circle" size={20} color="#34D399" />}
-                  </TouchableOpacity>
-                );
-              }}
-              ItemSeparatorComponent={function () { return <View style={cm.sep} />; }}
-              contentContainerStyle={{ paddingBottom: 36 }}
-            />
-          </View>
-        </View>
-      </Modal>
     </GCard>
   );
 }
@@ -446,25 +421,8 @@ var bf = StyleSheet.create({
   inputHint:          { fontSize: 9, color: 'rgba(255,255,255,0.28)', fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
   segInput:           { width: '100%', backgroundColor: 'rgba(255,255,255,0.09)', borderRadius: 14, paddingVertical: 13, color: '#FFF1D0', fontSize: 20, fontWeight: '900', textAlign: 'center', borderWidth: 1, borderColor: 'rgba(52,211,153,0.25)' },
   sep:                { color: 'rgba(255,255,255,0.25)', fontSize: 20, fontWeight: '200', paddingBottom: 12 },
-  cityBtn:            { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(52,211,153,0.2)' },
-  cityBtnText:        { flex: 1, color: '#FFF1D0', fontSize: 15, fontWeight: '600' },
-  cityBtnPlaceholder: { color: 'rgba(255,255,255,0.28)' },
   saveBtn:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 15, overflow: 'hidden', marginTop: 2, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.6, shadowRadius: 14, elevation: 0 },
   saveBtnText:        { color: '#FFF1D0', fontSize: 15, fontWeight: '800' },
-});
-var cm = StyleSheet.create({
-  overlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
-  sheet:        { backgroundColor: '#0A0618', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: SH * 0.72, borderWidth: 1, borderColor: 'rgba(255,140,0,0.3)', borderBottomWidth: 0, paddingTop: 10 },
-  handle:       { width: 36, height: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 2, alignSelf: 'center', marginBottom: 14 },
-  header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
-  title:        { fontSize: 17, fontWeight: '800', color: '#FFF1D0' },
-  closeBtn:     { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
-  cityRow:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
-  cityRowActive:{ backgroundColor: 'rgba(52,211,153,0.06)' },
-  cityDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.18)', marginRight: 14 },
-  cityName:     { fontSize: 15, color: '#EBCF8B', fontWeight: '600' },
-  cityEn:       { fontSize: 11, color: 'rgba(255,255,255,0.32)', marginTop: 2 },
-  sep:          { height: 1, backgroundColor: 'rgba(255,255,255,0.04)', marginLeft: 42 },
 });
 
 // ─────────────────────────────────────────────────────────────────────
@@ -473,6 +431,7 @@ var cm = StyleSheet.create({
 function ProfileScreen() {
   var { language, switchLanguage, t } = useLanguage();
   var isDesktop = useDesktopCtx();
+  var { priceLabel } = usePricing();
   var {
     user, loading, isLoggedIn, subscription, isSubscribed,
     signOut, saveBirthData, activateSubscription, cancelSubscription, renewSubscription,
@@ -480,7 +439,9 @@ function ProfileScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <View style={{ flex: 1, backgroundColor: '#06020C' }}>
+        <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="purple" /></View>
+        <ThemedNebulaBg theme="purple" />
         <View style={s.centered}>
           <CosmicLoader size={56} color="#FF8C00" text={t('loading')} textColor="#FF8C00" />
         </View>
@@ -499,7 +460,9 @@ function ProfileScreen() {
 
   return (
     <DesktopScreenWrapper routeName="profile">
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <View style={{ flex: 1, backgroundColor: '#06020C' }}>
+      <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="purple" /></View>
+      <ThemedNebulaBg theme="purple" />
       <StatusBar barStyle="light-content" />
       <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
 
@@ -559,7 +522,7 @@ function ProfileScreen() {
                 <View style={s.avatarRing} />
                 {/* Avatar core */}
                 <View style={s.avatarCore}>
-                  <LinearGradient colors={['#1A0A3E','#0E0521']} style={StyleSheet.absoluteFill} />
+                  <LinearGradient colors={['#14082A','#0C0418']} style={StyleSheet.absoluteFill} />
                   <LinearGradient colors={['rgba(255,140,0,0.25)','transparent']} style={{position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:32,borderTopRightRadius:32}} />
                   <Ionicons name="person" size={34} color="#C4B5FD" />
                 </View>
@@ -592,31 +555,25 @@ function ProfileScreen() {
                 <View style={s.birthRow}>
                   <View style={s.birthChip}>
                     <LinearGradient colors={['rgba(255,140,0,0.25)','rgba(230,81,0,0.12)']} style={StyleSheet.absoluteFill} />
-                    <Ionicons name="calendar-outline" size={13} color="#FF8C00" />
-                    <View>
-                      <Text style={s.birthChipLabel}>{t('birthDateLabel') || 'Date'}</Text>
-                      <Text style={s.birthChipValue}>{birthData.dateTime?.split('T')[0]}</Text>
-                    </View>
+                    <Ionicons name="calendar-outline" size={14} color="#FF8C00" />
+                    <Text style={s.birthChipLabel}>{language === 'si' ? 'උපන් දිනය' : 'Birth Date'}</Text>
+                    <Text style={s.birthChipValue} numberOfLines={1}>{birthData.dateTime?.split('T')[0]}</Text>
                   </View>
                   <View style={s.birthChip}>
                     <LinearGradient colors={['rgba(255,184,0,0.2)','rgba(245,158,11,0.08)']} style={StyleSheet.absoluteFill} />
-                    <Ionicons name="time-outline" size={13} color="#FFB800" />
-                    <View>
-                      <Text style={s.birthChipLabel}>{t('birthTimeLabel') || 'Time'}</Text>
-                      <Text style={[s.birthChipValue, { color: '#FFB800' }]}>{birthData.dateTime?.split('T')[1]?.substring(0,5)}</Text>
-                    </View>
+                    <Ionicons name="time-outline" size={14} color="#FFB800" />
+                    <Text style={s.birthChipLabel}>{language === 'si' ? 'උපන් වේලාව' : 'Birth Time'}</Text>
+                    <Text style={[s.birthChipValue, { color: '#FFB800' }]} numberOfLines={1}>{birthData.dateTime?.split('T')[1]?.substring(0,5)}</Text>
                   </View>
                   <View style={s.birthChip}>
                     <LinearGradient colors={['rgba(52,211,153,0.2)','rgba(16,185,129,0.08)']} style={StyleSheet.absoluteFill} />
-                    <Ionicons name="location-outline" size={13} color="#34D399" />
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={s.birthChipLabel}>{t('birthPlaceLabel') || 'City'}</Text>
-                      <Text style={[s.birthChipValue, { color: '#34D399' }]} numberOfLines={1}>
-                        {language === 'si'
-                          ? (SRI_LANKAN_CITIES.find(function (c) { return c.name === birthData.locationName; })?.nameSi || birthData.locationName || 'Colombo')
-                          : (birthData.locationName || 'Colombo')}
-                      </Text>
-                    </View>
+                    <Ionicons name="location-outline" size={14} color="#34D399" />
+                    <Text style={s.birthChipLabel}>{language === 'si' ? 'උපන් ස්ථානය' : 'Birth Place'}</Text>
+                    <Text style={[s.birthChipValue, { color: '#34D399' }]} numberOfLines={1}>
+                      {language === 'si'
+                        ? (SRI_LANKAN_CITIES.find(function (c) { return c.name === birthData.locationName; })?.nameSi || birthData.locationName || 'කොළඹ')
+                        : (birthData.locationName || 'Colombo')}
+                    </Text>
                   </View>
                 </View>
               )}
@@ -701,7 +658,7 @@ function ProfileScreen() {
                     <LinearGradient colors={['#FF8C00','#FF6D00','#E65100']} style={StyleSheet.absoluteFill} start={{x:0,y:0}} end={{x:1,y:0}} />
                     <LinearGradient colors={['rgba(255,255,255,0.18)','transparent']} style={{ position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:14,borderTopRightRadius:14 }} />
                     <Ionicons name="diamond-outline" size={17} color="#fff" />
-                    <Text style={s.subBtnText}>{subStatus === 'expired' ? t('subRenew') : t('subSubscribe')}</Text>
+                    <Text style={s.subBtnText}>{(subStatus === 'expired' ? t('subRenew') : t('subSubscribe')).replace('{{subPrice}}', priceLabel('subscription'))}</Text>
                   </TouchableOpacity>
                 )}
               </GCard>
@@ -808,10 +765,10 @@ var s = StyleSheet.create({
   phoneText: { fontSize: 13, color: '#A78BFA', fontWeight: '600', letterSpacing: 0.5 },
 
   // Birth chips row
-  birthRow:       { flexDirection: 'row', gap: 8, marginBottom: 16, width: '100%' },
-  birthChip:      { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7, overflow: 'hidden', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 10, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)' },
-  birthChipLabel: { fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2 },
-  birthChipValue: { fontSize: 12, color: '#FF8C00', fontWeight: '800' },
+  birthRow:       { flexDirection: 'row', gap: 6, marginBottom: 16, width: '100%' },
+  birthChip:      { flex: 1, flexDirection: 'column', alignItems: 'center', gap: 4, overflow: 'hidden', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 6, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)' },
+  birthChipLabel: { fontSize: 9, color: 'rgba(255,255,255,0.35)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 1, textAlign: 'center' },
+  birthChipValue: { fontSize: 12, color: '#FF8C00', fontWeight: '800', textAlign: 'center' },
 
   // Premium ribbon
   premiumRibbon: { flexDirection: 'row', alignItems: 'center', gap: 8, overflow: 'hidden', borderRadius: 999, paddingVertical: 7, paddingHorizontal: 18, borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)' },
@@ -823,8 +780,8 @@ var s = StyleSheet.create({
   // ── Subscription ───────────────────────────────────────────────────
   subActiveRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   subActiveText: { color: '#34D399', fontWeight: '700', fontSize: 14 },
-  subBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14, overflow: 'hidden', shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0 },
-  subBtnText:    { color: '#FFF1D0', fontSize: 15, fontWeight: '800' },
+  subBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 16, overflow: 'hidden', shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0 },
+  subBtnText:    { color: '#FFF1D0', fontSize: 14, fontWeight: '800', flexShrink: 1, textAlign: 'center' },
   cancelBtn:     { paddingVertical: 11, alignItems: 'center', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)' },
   cancelBtnText: { color: '#F87171', fontWeight: '600', fontSize: 13 },
 

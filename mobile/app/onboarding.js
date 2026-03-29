@@ -28,6 +28,7 @@ import CosmicLoader from '../components/effects/CosmicLoader';
 import CitySearchPicker from '../components/CitySearchPicker';
 import { getBirthChartBasic } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { usePricing } from '../contexts/PricingContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import AwesomeRashiChakra from '../components/AwesomeRashiChakra';
 import CosmicAuroraNebula from '../components/effects/CosmicAuroraNebula';
@@ -205,7 +206,7 @@ function GoldenIcon({ name, size }) {
 
 var OB = {
   en: {
-    welcomeSubtitle: "Sri Lanka's #1 Astrology App",
+    welcomeSubtitle: "Your Personal Vedic Astrology App",
     welcomeDesc: "Your personal Vedic astrologer\nDaily Palapala & Kendara Balima\nPorondam Galapima & Full Life Report",
     welcomeBtn: "Begin Your Cosmic Journey",
     welcomeHint: "Only LKR 240/month via card/bank \u2014 required for access",
@@ -621,6 +622,7 @@ var ls = StyleSheet.create({
 
 function WelcomeStep({ onContinue, onBack, lang }) {
   var T = OB[lang] || OB.en;
+  var { priceLabel, isInternational } = usePricing();
   var pulse = useSharedValue(0);
   var haloRotate = useSharedValue(0);
   useEffect(function () {
@@ -679,7 +681,7 @@ function WelcomeStep({ onContinue, onBack, lang }) {
 
       <Animated.View entering={FadeInUp.delay(900).duration(600)} style={{ width: '100%', marginTop: 40 }}>
         <PrimaryButton label={T.welcomeBtn} onPress={onContinue} icon="sparkles" />
-        <Text style={g.hint}>{T.welcomeHint}</Text>
+        <Text style={g.hint}>{isInternational ? ('Only ' + priceLabel('subscription') + ' via card — required for access') : T.welcomeHint}</Text>
         <GhostButton label={lang === 'si' ? 'භාෂාව වෙනස් කරන්න' : 'Change Language'} onPress={onBack} icon={<GoldenIcon name="globe" size={16} />} />
       </Animated.View>
     </View>
@@ -980,6 +982,7 @@ function SubscriptionStep({ onContinue, lang }) {
   var [payError, setPayError] = useState('');
   var [agreed, setAgreed] = useState(false);
   var { activateSubscription } = useAuth();
+  var { priceLabel, priceAmount, currency, currencySymbol, isInternational } = usePricing();
   var priceGlow = useSharedValue(0);
   var shieldPulse = useSharedValue(0);
 
@@ -1046,8 +1049,8 @@ function SubscriptionStep({ onContinue, lang }) {
             style={ss.priceGrad}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           >
-            <Text style={ss.priceLabel}>LKR</Text>
-            <Text style={ss.priceAmount}>240</Text>
+            <Text style={ss.priceLabel}>{isInternational ? '$' : 'LKR'}</Text>
+            <Text style={ss.priceAmount}>{priceAmount('subscription')}</Text>
             <Text style={ss.pricePer}>/month</Text>
           </LinearGradient>
         </Animated.View>

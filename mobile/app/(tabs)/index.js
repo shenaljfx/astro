@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
   StyleSheet, Platform, Dimensions,
@@ -18,7 +18,10 @@ import SpringPressable from '../../components/effects/SpringPressable';
 import CosmicLoader from '../../components/effects/CosmicLoader';
 import PinchableView from '../../components/effects/PinchableView';
 import CosmicCard from '../../components/ui/CosmicCard';
+import CosmicAuroraNebula from '../../components/effects/CosmicAuroraNebula';
+import GoldenNebulaBg from '../../components/effects/GoldenNebulaBg';
 import SectionHeader from '../../components/ui/SectionHeader';
+import AwesomeRashiChakra from '../../components/AwesomeRashiChakra';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -26,6 +29,7 @@ import { Colors, Typography, Gradients, Spacing } from '../../constants/theme';
 import SriLankanChart from '../../components/SriLankanChart';
 
 var { width: SCREEN_WIDTH } = Dimensions.get('window');
+var CHAKRA_HERO_SIZE = Math.min(SCREEN_WIDTH * 0.52, 220);
 
 // Approximate moon phase from current date (fallback when server data not yet loaded)
 // Returns 1-30 tithi number based on synodic month (~29.53 days)
@@ -55,6 +59,8 @@ function toSLT(isoOrObj, t) {
 /* ── Cosmic Orrery — Immersive Galaxy Hero ── */
 var ZODIAC_SIGNS = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
 var ZODIAC_NAMES_EN = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+var ZODIAC_NAMES_SI = ['මේෂ','වෘෂභ','මිථුන','කටක','සිංහ','කන්‍යා','තුලා','වෘශ්චික','ධනු','මකර','කුම්භ','මීන'];
+var PLANET_NAMES_SI = { Sun: 'සූර්යා', Moon: 'චන්ද්‍රා', Mars: 'කුජ', Mercury: 'බුධ', Jupiter: 'ගුරු', Venus: 'සිකුරු', Saturn: 'ශනි', Rahu: 'රාහු', Ketu: 'කේතු' };
 var ZODIAC_COLORS = [
   '#FF6B6B','#34D399','#FFD666','#7DD3FC','#FFB800','#6EE7B7',
   '#F9A8D4','#D4A5FF','#FF9F43','#94A3B8','#67E8F9','#C4B5FD',
@@ -129,13 +135,13 @@ function CosmicOrrery({ size, activeIndex, tithiNum }) {
         </RadialGradient>
         <RadialGradient id="oNebulaViolet" cx="30%" cy="25%" r="55%">
           <Stop offset="0%" stopColor="#FF8C00" stopOpacity={0.10} />
-          <Stop offset="60%" stopColor="#6C3FA0" stopOpacity={0.04} />
-          <Stop offset="100%" stopColor="#020010" stopOpacity={0} />
+          <Stop offset="60%" stopColor="#B8860B" stopOpacity={0.04} />
+          <Stop offset="100%" stopColor="#04030C" stopOpacity={0} />
         </RadialGradient>
         <RadialGradient id="oNebulaTeal" cx="75%" cy="70%" r="50%">
-          <Stop offset="0%" stopColor="#4CC9F0" stopOpacity={0.08} />
-          <Stop offset="60%" stopColor="#0E7490" stopOpacity={0.03} />
-          <Stop offset="100%" stopColor="#020010" stopOpacity={0} />
+          <Stop offset="0%" stopColor="#FFB800" stopOpacity={0.08} />
+          <Stop offset="60%" stopColor="#8B6914" stopOpacity={0.03} />
+          <Stop offset="100%" stopColor="#04030C" stopOpacity={0} />
         </RadialGradient>
         <RadialGradient id="oActiveNode" cx="50%" cy="50%" r="50%">
           <Stop offset="0%" stopColor="#FFD666" stopOpacity={0.8} />
@@ -295,7 +301,7 @@ function CosmicOrrery({ size, activeIndex, tithiNum }) {
         return (
           <G key={'z' + i}>
             <Circle cx={x} cy={y} r={nodeR + 2 * u} fill={col} opacity={0.06} />
-            <Circle cx={x} cy={y} r={nodeR} fill="rgba(12,6,32,0.75)" stroke={col + '40'} strokeWidth={0.7} />
+            <Circle cx={x} cy={y} r={nodeR} fill="rgba(10,7,4,0.75)" stroke={col + '40'} strokeWidth={0.7} />
             <SvgText x={x} y={y + fontSize * 0.38} fontSize={fontSize} fill={col} textAnchor="middle" opacity={0.75}>{sign}</SvgText>
           </G>
         );
@@ -347,9 +353,14 @@ export default function HomeScreen() {
   var router = useRouter();
   var [data, setData] = useState(null);
   var [chartData, setChartData] = useState(null);
+  var [weeklyLagna, setWeeklyLagna] = useState(null);
+  var [weeklyLagnaExpanded, setWeeklyLagnaExpanded] = useState(null);
   var [loading, setLoading] = useState(true);
   var [chartLoading, setChartLoading] = useState(false);
   var [error, setError] = useState(null);
+
+  var scrollRef = useRef(null);
+  var weeklyLagnaY = useRef(0);
 
   var scrollY = useSharedValue(0);
   var scrollHandler = useAnimatedScrollHandler({
@@ -433,6 +444,17 @@ export default function HomeScreen() {
     fetchBirthChart(cancelled);
     return function () { cancelled.current = true; };
   }, [fetchBirthChart]);
+
+  // Fetch weekly lagna palapala
+  useEffect(function () {
+    api.getWeeklyLagna()
+      .then(function (res) {
+        if (res && res.success && res.reports && res.reports.length > 0) {
+          setWeeklyLagna(res);
+        }
+      })
+      .catch(function () { /* silent */ });
+  }, []);
 
   var getGreeting = function () {
     var h = new Date().getHours();
@@ -532,80 +554,102 @@ export default function HomeScreen() {
       : getMoonPhaseFromDate();
 
     var orrerySize = Math.min(SCREEN_WIDTH * 0.38, 160);
+    var chakraSize = CHAKRA_HERO_SIZE;
 
     return (
       <Animated.View entering={FadeInDown.delay(100).springify()}>
         <View style={s.dashHero}>
+          {/* ── Glass background layers ── */}
           <LinearGradient
-            colors={['#0A0520', '#0D0730', '#10093A', '#0D0730', '#0A0520']}
+            colors={['rgba(14,10,4,0.92)', 'rgba(10,7,3,0.88)', 'rgba(14,10,4,0.92)']}
             style={s.dashHeroBg}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
           <LinearGradient
-            colors={['rgba(255,140,0,0.06)', 'transparent', 'rgba(76,201,240,0.04)']}
+            colors={['rgba(255,184,0,0.10)', 'transparent', 'rgba(255,140,0,0.06)']}
             style={s.dashHeroBg}
-            start={{ x: 0, y: 0.2 }} end={{ x: 1, y: 0.8 }}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          />
+          {/* Glass shine line at top */}
+          <LinearGradient
+            colors={['transparent', 'rgba(255,255,255,0.06)', 'transparent']}
+            style={s.dashGlassShine}
+            start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
           />
           <Animated.View style={[s.dashNebulaBlob, coronaPulseStyle]} />
           <LinearGradient
-            colors={['rgba(255,140,0,0.12)', 'transparent']}
+            colors={['rgba(255,140,0,0.14)', 'transparent']}
             style={s.dashEdgeTop}
             start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
           />
 
-          {/* Top row — zodiac badge + mini orrery */}
-          <View style={s.dashTopRow}>
-            <View style={s.dashSignArea}>
-              <View style={s.dashSignOuter}>
-                <Animated.View style={[s.dashSignGlow, coronaPulseStyle]} />
-                <View style={s.dashSignCircle}>
-                  <LinearGradient colors={['rgba(255,184,0,0.22)', 'rgba(255,140,0,0.14)']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-                  <Text style={s.dashSignSymbol}>{ZODIAC_SIGNS[activeNakIndex]}</Text>
-                </View>
+          {/* ═══ RASHI CHAKRA — Center piece ═══ */}
+          <View style={s.chakraHeroWrap}>
+            <View style={s.chakraContainer}>
+              <AwesomeRashiChakra size={chakraSize} />
+            </View>
+            {/* Sign info row below chakra */}
+            <View style={s.chakraOverlayInfo}>
+              <View style={s.chakraSignBadge}>
+                <LinearGradient colors={['rgba(255,184,0,0.30)', 'rgba(255,140,0,0.15)']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                <Text style={s.chakraSignSymbol}>{ZODIAC_SIGNS[activeNakIndex]}</Text>
               </View>
-              <View style={s.dashSignInfo}>
-                <Text style={s.dashHeroLabel}>{language === 'si' ? 'අද ලග්නය' : "Today's Sign"}</Text>
-                <Text style={s.dashSignName}>{ZODIAC_NAMES_EN[activeNakIndex]}</Text>
-                {todayNakshatra ? (
-                  <View style={s.dashNakRow}>
-                    <Ionicons name="star" size={10} color="#FFD666" />
-                    <Text style={s.dashNakText}>{language === 'si' ? 'නක්ෂත්‍ර: ' : 'Nakshatra: '}{todayNakshatra}</Text>
-                  </View>
-                ) : null}
+              <View style={s.chakraSignTextWrap}>
+                <Text style={s.dashHeroLabel}>{language === 'si' ? 'අද රාශිය' : "TODAY'S SIGN"}</Text>
+                <Text style={s.dashSignNameLarge}>{language === 'si' ? (ZODIAC_NAMES_SI[activeNakIndex] || ZODIAC_NAMES_EN[activeNakIndex]) : ZODIAC_NAMES_EN[activeNakIndex]}</Text>
+              </View>
+              <View style={s.chakraSignSubBadge}>
+                <Text style={s.dashSignNameSub}>{language === 'si' ? ZODIAC_NAMES_EN[activeNakIndex] : (ZODIAC_NAMES_SI[activeNakIndex] || '')}</Text>
               </View>
             </View>
-            <Animated.View style={[wheelStyle, { opacity: 0.90 }]}>
-              <CosmicOrrery size={orrerySize} activeIndex={activeNakIndex} tithiNum={currentTithiNum} />
-            </Animated.View>
           </View>
 
-          {/* Divider */}
+          {/* ═══ NAKSHATRA PILL ═══ */}
+          {todayNakshatra ? (
+            <View style={s.nakPill}>
+              <LinearGradient colors={['rgba(255,214,102,0.10)', 'rgba(255,140,0,0.06)']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+              <Ionicons name="star" size={12} color="#FFD666" />
+              <Text style={s.nakPillLabel}>{language === 'si' ? 'නක්ෂත්‍රය' : 'Nakshatra'}</Text>
+              <View style={s.nakPillDot} />
+              <Text style={s.nakPillValue}>{todayNakshatra}</Text>
+            </View>
+          ) : null}
+
+          {/* ═══ DIVIDER ═══ */}
           <View style={s.dashDivider}>
-            <LinearGradient colors={['transparent', 'rgba(255,140,0,0.20)', 'rgba(255,184,0,0.15)', 'transparent']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} />
+            <LinearGradient colors={['transparent', 'rgba(255,184,0,0.22)', 'rgba(255,140,0,0.18)', 'transparent']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} />
           </View>
 
-          {/* Info grid — daily panchanga at a glance */}
+          {/* ═══ PANCHANGA GRID ═══ */}
           <Text style={s.dashGridTitle}>{language === 'si' ? 'අද දිනයේ පංචාංගය' : "Today's Panchanga"}</Text>
           <View style={s.dashGrid}>
             <View style={s.dashCell}>
-              <Ionicons name="sunny-outline" size={16} color="#FFB800" />
+              <View style={[s.dashCellIcon, { backgroundColor: 'rgba(255,184,0,0.10)' }]}>
+                <Ionicons name="sunny-outline" size={16} color="#FFB800" />
+              </View>
               <Text style={s.dashCellValue}>{sunriseVal}</Text>
-              <Text style={s.dashCellLabel}>{t('sunrise')}</Text>
+              <Text style={s.dashCellLabel}>{language === 'si' ? 'උදාව' : t('sunrise')}</Text>
             </View>
             <View style={s.dashCell}>
-              <Ionicons name="moon-outline" size={16} color="#FF8C00" />
+              <View style={[s.dashCellIcon, { backgroundColor: 'rgba(255,140,0,0.10)' }]}>
+                <Ionicons name="moon-outline" size={16} color="#FF8C00" />
+              </View>
               <Text style={s.dashCellValue}>{sunsetVal}</Text>
-              <Text style={s.dashCellLabel}>{t('sunset')}</Text>
+              <Text style={s.dashCellLabel}>{language === 'si' ? 'බැසීම' : t('sunset')}</Text>
             </View>
             <View style={s.dashCell}>
-              <Ionicons name="sparkles-outline" size={16} color="#34D399" />
+              <View style={[s.dashCellIcon, { backgroundColor: 'rgba(52,211,153,0.10)' }]}>
+                <Ionicons name="sparkles-outline" size={16} color="#34D399" />
+              </View>
               <Text style={s.dashCellValue}>{tithiVal}</Text>
               <Text style={s.dashCellLabel}>{language === 'si' ? 'තිථි' : 'Tithi'}</Text>
             </View>
             <View style={s.dashCell}>
-              <Ionicons name="infinite-outline" size={16} color="#67E8F9" />
+              <View style={[s.dashCellIcon, { backgroundColor: 'rgba(103,232,249,0.10)' }]}>
+                <Ionicons name="infinite-outline" size={16} color="#67E8F9" />
+              </View>
               <Text style={s.dashCellValue}>{yogaVal}</Text>
-              <Text style={s.dashCellLabel}>{language === 'si' ? 'යෝග' : 'Yoga'}</Text>
+              <Text style={s.dashCellLabel}>{language === 'si' ? 'යෝගය' : 'Yoga'}</Text>
             </View>
           </View>
         </View>
@@ -646,19 +690,30 @@ export default function HomeScreen() {
   /* Today's Sky info is now integrated into the dashboard hero */
 
   /* ── Quick Actions ── */
+  function scrollToWeeklyLagna() {
+    try {
+      if (scrollRef.current && weeklyLagnaY.current > 0) {
+        scrollRef.current.scrollTo({ x: 0, y: weeklyLagnaY.current - 20, animated: true });
+      } else if (scrollRef.current) {
+        // Fallback: scroll to bottom area where weekly lagna usually is
+        scrollRef.current.scrollToEnd({ animated: true });
+      }
+    } catch (e) {
+      console.warn('scrollToWeeklyLagna error:', e);
+    }
+  }
+
   function renderQuickActions() {
     var actions = language === 'si'
       ? [
           { icon: '🔮', label: 'ජ්‍යොතිෂ', gradient: ['rgba(255,140,0,0.5)', 'rgba(230,81,0,0.3)'], route: '/chat' },
           { icon: '📅', label: 'කේන්දරය', gradient: ['rgba(6,182,212,0.4)', 'rgba(59,130,246,0.3)'], route: '/kendara' },
-          { icon: '⚡', label: 'අනාවැකි', gradient: ['rgba(255,215,0,0.4)', 'rgba(245,158,11,0.3)'], route: '/predictions' },
           { icon: '💑', label: 'ගැලපීම', gradient: ['rgba(244,63,94,0.4)', 'rgba(139,92,246,0.3)'], route: '/porondam' },
           { icon: '📊', label: 'වාර්තාව', gradient: ['rgba(52,211,153,0.4)', 'rgba(16,185,129,0.3)'], route: '/report' },
         ]
       : [
           { icon: '🔮', label: 'Ask Jyotishi', gradient: ['rgba(255,140,0,0.5)', 'rgba(230,81,0,0.3)'], route: '/chat' },
           { icon: '📅', label: 'Birth Chart', gradient: ['rgba(6,182,212,0.4)', 'rgba(59,130,246,0.3)'], route: '/kendara' },
-          { icon: '⚡', label: 'Predictions', gradient: ['rgba(255,215,0,0.4)', 'rgba(245,158,11,0.3)'], route: '/predictions' },
           { icon: '💑', label: 'Match', gradient: ['rgba(244,63,94,0.4)', 'rgba(139,92,246,0.3)'], route: '/porondam' },
           { icon: '📊', label: 'Report', gradient: ['rgba(52,211,153,0.4)', 'rgba(16,185,129,0.3)'], route: '/report' },
         ];
@@ -673,7 +728,79 @@ export default function HomeScreen() {
     );
   }
 
-  /* ── Birth Summary ── */
+  /* ── Weekly Palapala Banner ── */
+  function renderWeeklyBanner() {
+    if (!weeklyLagna || !weeklyLagna.reports || weeklyLagna.reports.length === 0) return null;
+
+    var weekStart = weeklyLagna.weekStart ? new Date(weeklyLagna.weekStart).toLocaleDateString(language === 'si' ? 'si-LK' : 'en-US', { month: 'short', day: 'numeric' }) : '';
+    var weekEnd = weeklyLagna.weekEnd ? new Date(weeklyLagna.weekEnd).toLocaleDateString(language === 'si' ? 'si-LK' : 'en-US', { month: 'short', day: 'numeric' }) : '';
+    var weekLabel = weekStart && weekEnd ? weekStart + ' – ' + weekEnd : '';
+
+    // Find user's lagna report for a personalized teaser
+    var userLagnaId = chartData && chartData.lagna ? (chartData.lagna.rashiId || chartData.lagna.id || null) : null;
+    var userReport = userLagnaId ? weeklyLagna.reports.find(function (r) { return r.lagnaId === userLagnaId; }) : null;
+
+    var OUTLOOK_EMOJI = { favorable: '🟢', mixed: '🟡', challenging: '🔴' };
+
+    return (
+      <Animated.View entering={FadeInDown.delay(280).springify()}>
+        <TouchableOpacity activeOpacity={0.7} onPress={scrollToWeeklyLagna}>
+          <View style={s.wbCard}>
+            <LinearGradient
+              colors={['rgba(147,51,234,0.25)', 'rgba(124,58,237,0.12)', 'rgba(168,85,247,0.06)']}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            />
+            {/* Subtle top shimmer */}
+            <LinearGradient
+              colors={['rgba(255,214,102,0.12)', 'transparent']}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}
+            />
+            {/* Decorative star dots */}
+            {[[8, 15], [85, 20], [92, 70], [15, 75]].map(function (pos, i) {
+              return <View key={i} style={{ position: 'absolute', left: pos[0] + '%', top: pos[1] + '%', width: 2, height: 2, borderRadius: 1, backgroundColor: 'rgba(255,214,102,' + (0.2 + i * 0.08) + ')' }} />;
+            })}
+
+            <View style={s.wbContent}>
+              {/* Left: Icon + Text */}
+              <View style={s.wbLeft}>
+                <View style={s.wbIconWrap}>
+                  <LinearGradient colors={['rgba(168,85,247,0.35)', 'rgba(124,58,237,0.20)']} style={StyleSheet.absoluteFill} />
+                  <Text style={{ fontSize: 22 }}>🔮</Text>
+                </View>
+                <View style={s.wbTextCol}>
+                  <Text style={s.wbTitle}>{language === 'si' ? 'සතිපතා ලග්න පලාපල' : 'Weekly Lagna Palapala'}</Text>
+                  {weekLabel ? <Text style={s.wbWeek}>{weekLabel}</Text> : null}
+                  {userReport ? (
+                    <View style={s.wbTeaser}>
+                      <Text style={s.wbTeaserText}>
+                        {OUTLOOK_EMOJI[userReport.outlook] || '🟡'}{' '}
+                        {language === 'si'
+                          ? 'ඔබේ ' + userReport.nameSi + ' ලග්නය — ' + (userReport.outlook === 'favorable' ? 'හිතකර' : userReport.outlook === 'challenging' ? 'අභියෝගාත්මක' : 'මිශ්‍ර')
+                          : 'Your ' + userReport.nameEn + ' — ' + (userReport.outlook || 'mixed')
+                        }
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={s.wbSub}>
+                      {language === 'si' ? 'ලග්න 12ම සඳහා සතිපතා අනාවැකි' : 'Weekly forecasts for all 12 lagnas'}
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Right: Arrow */}
+              <View style={s.wbArrow}>
+                <Ionicons name="chevron-down" size={16} color="rgba(168,85,247,0.7)" />
+              </View>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  }
+
+  /* ── Birth Summary — Glass Cosmic Identity ── */
   function renderBirthSummary() {
     if (!chartData) return null;
     var lagna = chartData.lagna;
@@ -681,35 +808,73 @@ export default function HomeScreen() {
     var sunSign = chartData.sunSign;
     var nakshatra = chartData.nakshatra;
 
-    var items = [
-      { icon: '⬆', label: language === 'si' ? 'ලග්නය' : 'Lagna', value: (language === 'si' && lagna?.sinhala ? lagna.sinhala : lagna?.english || '--'), color: '#FF8C00' },
-      { icon: '🌙', label: language === 'si' ? 'චන්ද්‍ර' : 'Moon', value: (language === 'si' && moonSign?.sinhala ? moonSign.sinhala : moonSign?.english || '--'), color: '#93C5FD' },
-      { icon: '☀', label: language === 'si' ? 'සූර්ය' : 'Sun', value: (language === 'si' && sunSign?.sinhala ? sunSign.sinhala : sunSign?.english || '--'), color: '#FFD666' },
-      { icon: '✦', label: language === 'si' ? 'නක්ෂත්‍ර' : 'Nakshatra', value: (language === 'si' && nakshatra?.sinhala ? nakshatra.sinhala : nakshatra?.name || '--'), color: '#34D399' },
-    ];
+    var lagnaName = language === 'si' && lagna?.sinhala ? lagna.sinhala : lagna?.english || '--';
+    var lagnaEn = lagna?.english || '';
+    var moonName = language === 'si' && moonSign?.sinhala ? moonSign.sinhala : moonSign?.english || '--';
+    var sunName = language === 'si' && sunSign?.sinhala ? sunSign.sinhala : sunSign?.english || '--';
+    var nakName = language === 'si' && nakshatra?.sinhala ? nakshatra.sinhala : nakshatra?.name || '--';
+    var lagnaIdx = lagna?.rashiId ? lagna.rashiId - 1 : 0;
 
     return (
-      <CosmicCard variant="content" delay={300}>
-        <SectionHeader title={language === 'si' ? 'ඔබේ විශ්වීය අනන්‍යතාවය' : 'Your Cosmic Identity'} icon="🌟" delay={300} />
-        <View style={s.identityGrid}>
-          {items.map(function (item, i) {
-            return (
-              <Animated.View key={i} entering={FadeInDown.delay(350 + i * 60).springify()} style={[s.identityItem, { borderColor: item.color + '22' }]}>
-                <LinearGradient colors={[item.color + '12', 'transparent']} style={StyleSheet.absoluteFill} />
-                <Text style={{ fontSize: 18 }}>{item.icon}</Text>
-                <Text style={s.identityLabel}>{item.label}</Text>
-                <Text style={[s.identityValue, { color: item.color }]}>{item.value}</Text>
-              </Animated.View>
-            );
-          })}
-        </View>
-        {lagna?.lord && (
-          <View style={s.lordRow}>
-            <Ionicons name="planet" size={14} color="#FF8C00" />
-            <Text style={s.lordText}>{language === 'si' ? 'ලග්නාධිපති: ' : 'Lagna Lord: '}{lagna.lord}</Text>
+      <Animated.View entering={FadeInDown.delay(300).springify()}>
+        <View style={s.glassIdentity}>
+          <LinearGradient colors={['rgba(14,10,4,0.90)', 'rgba(10,7,3,0.85)', 'rgba(14,10,4,0.90)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+          <LinearGradient colors={['rgba(255,184,0,0.08)', 'transparent', 'rgba(255,140,0,0.04)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+          <LinearGradient colors={['rgba(255,255,255,0.05)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
+
+          {/* Title */}
+          <View style={s.glassIdHeader}>
+            <Text style={s.glassIdIcon}>🌟</Text>
+            <Text style={s.glassIdTitle}>{language === 'si' ? 'ඔබේ ග්‍රහ තත්ත්වය' : 'Your Cosmic Identity'}</Text>
           </View>
-        )}
-      </CosmicCard>
+
+          {/* ═══ LAGNA HERO — Big featured card ═══ */}
+          <View style={s.lagnaHero}>
+            <LinearGradient colors={['rgba(255,140,0,0.12)', 'rgba(255,184,0,0.05)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+            <View style={s.lagnaHeroLeft}>
+              <View style={s.lagnaSignBig}>
+                <LinearGradient colors={['rgba(255,184,0,0.28)', 'rgba(255,140,0,0.12)']} style={StyleSheet.absoluteFillObject} />
+                <Text style={s.lagnaSignEmoji}>{ZODIAC_SIGNS[lagnaIdx]}</Text>
+              </View>
+            </View>
+            <View style={s.lagnaHeroRight}>
+              <Text style={s.lagnaHeroLabel}>{language === 'si' ? 'ලග්නය' : 'LAGNA'}</Text>
+              <Text style={s.lagnaHeroName}>{lagnaName}</Text>
+              {lagnaEn && language === 'si' ? <Text style={s.lagnaHeroSub}>{lagnaEn}</Text> : null}
+              {lagna?.lord ? (
+                <View style={s.lagnaLordPill}>
+                  <Ionicons name="planet" size={11} color="#FFB800" />
+                  <Text style={s.lagnaLordText}>{language === 'si' ? 'අධිපති: ' : 'Lord: '}{language === 'si' && PLANET_NAMES_SI[lagna.lord] ? PLANET_NAMES_SI[lagna.lord] : lagna.lord}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+
+          {/* ═══ 3 MINI GLASS CARDS — Moon / Sun / Nakshatra ═══ */}
+          <View style={s.glassTrioRow}>
+            <Animated.View entering={FadeInDown.delay(400).springify()} style={[s.glassTrioCard, { borderColor: 'rgba(147,197,253,0.18)' }]}>
+              <LinearGradient colors={['rgba(147,197,253,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
+              <Text style={s.glassTrioEmoji}>🌙</Text>
+              <Text style={s.glassTrioLabel}>{language === 'si' ? 'චන්ද්‍ර' : 'Moon'}</Text>
+              <Text style={[s.glassTrioValue, { color: '#93C5FD' }]}>{moonName}</Text>
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(460).springify()} style={[s.glassTrioCard, { borderColor: 'rgba(255,214,102,0.18)' }]}>
+              <LinearGradient colors={['rgba(255,214,102,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
+              <Text style={s.glassTrioEmoji}>☀️</Text>
+              <Text style={s.glassTrioLabel}>{language === 'si' ? 'සූර්ය' : 'Sun'}</Text>
+              <Text style={[s.glassTrioValue, { color: '#FFD666' }]}>{sunName}</Text>
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(520).springify()} style={[s.glassTrioCard, { borderColor: 'rgba(52,211,153,0.18)' }]}>
+              <LinearGradient colors={['rgba(52,211,153,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
+              <Text style={s.glassTrioEmoji}>✦</Text>
+              <Text style={s.glassTrioLabel}>{language === 'si' ? 'නක්ෂත්‍ර' : 'Nakshatra'}</Text>
+              <Text style={[s.glassTrioValue, { color: '#34D399' }]}>{nakName}</Text>
+            </Animated.View>
+          </View>
+        </View>
+      </Animated.View>
     );
   }
 
@@ -857,6 +1022,283 @@ export default function HomeScreen() {
     );
   }
 
+  /* ── Weekly Lagna Palapala ── */
+  function renderWeeklyLagna() {
+    if (!weeklyLagna || !weeklyLagna.reports || weeklyLagna.reports.length === 0) return null;
+
+    var reports = weeklyLagna.reports;
+    var weekStart = weeklyLagna.weekStart ? new Date(weeklyLagna.weekStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    var weekEnd = weeklyLagna.weekEnd ? new Date(weeklyLagna.weekEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    var weekLabel = weekStart && weekEnd ? weekStart + ' – ' + weekEnd : '';
+
+    // User's lagna (if birth data available)
+    var userLagnaId = chartData && chartData.lagna ? (chartData.lagna.rashiId || chartData.lagna.id || null) : null;
+
+    var OUTLOOK_CONFIG = {
+      favorable: { bg: 'rgba(52,211,153,0.10)', border: 'rgba(52,211,153,0.25)', color: '#34D399', icon: 'trending-up', label: language === 'si' ? 'හිතකර' : 'Favorable' },
+      mixed: { bg: 'rgba(255,184,0,0.10)', border: 'rgba(255,184,0,0.25)', color: '#FFB800', icon: 'swap-horizontal', label: language === 'si' ? 'මිශ්‍ර' : 'Mixed' },
+      challenging: { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.25)', color: '#EF4444', icon: 'alert-circle', label: language === 'si' ? 'අභියෝගාත්මක' : 'Challenging' },
+    };
+
+    return (
+      <Animated.View entering={FadeInDown.delay(300).springify()}>
+        <CosmicCard variant="surface" delay={300}>
+          {/* Header */}
+          <View style={s.wlHeader}>
+            <View style={s.wlHeaderLeft}>
+              <Text style={{ fontSize: 22 }}>🔮</Text>
+              <View>
+                <Text style={s.wlTitle}>{language === 'si' ? 'සතිපතා ලග්න පලාපල' : 'Weekly Lagna Palapala'}</Text>
+                {weekLabel ? <Text style={s.wlWeekLabel}>{weekLabel}</Text> : null}
+              </View>
+            </View>
+          </View>
+
+          {/* Lagna Grid */}
+          <View style={s.wlGrid}>
+            {reports.map(function (report) {
+              var isExpanded = weeklyLagnaExpanded === report.lagnaId;
+              var isUserLagna = userLagnaId === report.lagnaId;
+              var outlookCfg = OUTLOOK_CONFIG[report.outlook] || OUTLOOK_CONFIG.mixed;
+
+              return (
+                <View key={report.lagnaId}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={function () { setWeeklyLagnaExpanded(isExpanded ? null : report.lagnaId); }}
+                  >
+                    <View style={[
+                      s.wlCard,
+                      isUserLagna && s.wlCardUser,
+                      isExpanded && s.wlCardExpanded,
+                    ]}>
+                      {isUserLagna && (
+                        <LinearGradient
+                          colors={['rgba(255,184,0,0.12)', 'rgba(255,140,0,0.04)']}
+                          style={StyleSheet.absoluteFill}
+                          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                        />
+                      )}
+                      <View style={s.wlCardRow}>
+                        <View style={[s.wlSignBadge, { borderColor: outlookCfg.border, backgroundColor: outlookCfg.bg }]}>
+                          <Text style={s.wlSignEmoji}>{report.symbol}</Text>
+                        </View>
+                        <View style={s.wlCardInfo}>
+                          <View style={s.wlNameRow}>
+                            <Text style={s.wlSignName}>
+                              {language === 'si' ? report.nameSi : report.nameEn}
+                            </Text>
+                            {isUserLagna && (
+                              <View style={s.wlYouBadge}>
+                                <Text style={s.wlYouText}>{language === 'si' ? 'ඔබ' : 'YOU'}</Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text style={s.wlSignNameSub}>
+                            {language === 'si' ? report.nameEn : report.nameSi}
+                          </Text>
+                        </View>
+                        <View style={[s.wlOutlookPill, { backgroundColor: outlookCfg.bg, borderColor: outlookCfg.border }]}>
+                          <Ionicons name={outlookCfg.icon} size={12} color={outlookCfg.color} />
+                          <Text style={[s.wlOutlookText, { color: outlookCfg.color }]}>{outlookCfg.label}</Text>
+                        </View>
+                        <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} color="rgba(255,214,102,0.40)" />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Expanded Detail */}
+                  {isExpanded && (
+                    <Animated.View entering={FadeInDown.duration(250)} style={s.wlDetail}>
+                      <LinearGradient
+                        colors={['rgba(14,10,4,0.95)', 'rgba(10,7,3,0.90)']}
+                        style={StyleSheet.absoluteFill}
+                      />
+
+                      {/* Lagna Lord & Ruling Planet */}
+                      <View style={s.wlLordRow}>
+                        <View style={s.wlLordChip}>
+                          <Text numberOfLines={1} style={s.wlLordLabel}>{language === 'si' ? 'අධිපති' : 'Lord'}</Text>
+                          <Text numberOfLines={1} style={s.wlLordValue}>{language === 'si' ? report.lordSi : report.lord}</Text>
+                        </View>
+                        <View style={s.wlLordChip}>
+                          <Text numberOfLines={1} style={s.wlLordLabel}>{language === 'si' ? 'සංස්කෘත' : 'Sanskrit'}</Text>
+                          <Text numberOfLines={1} style={s.wlLordValue}>{report.sanskrit}</Text>
+                        </View>
+                        <View style={[s.wlLordChip, { borderColor: (OUTLOOK_CONFIG[report.outlook] || OUTLOOK_CONFIG.mixed).border }]}>
+                          <Text numberOfLines={1} style={s.wlLordLabel}>{language === 'si' ? 'තත්ත්වය' : 'Status'}</Text>
+                          <Text numberOfLines={1} style={[s.wlLordValue, { color: (OUTLOOK_CONFIG[report.outlook] || OUTLOOK_CONFIG.mixed).color }]}>
+                            {(OUTLOOK_CONFIG[report.outlook] || OUTLOOK_CONFIG.mixed).label}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Overall Outlook */}
+                      <View style={s.wlOverallBox}>
+                        <View style={s.wlSectionHeader}>
+                          <Ionicons name="telescope-outline" size={14} color="#A78BFA" />
+                          <Text style={s.wlSectionTitle}>{language === 'si' ? 'සමස්ත දැක්ම' : 'Overall Outlook'}</Text>
+                        </View>
+                        <Text style={s.wlDetailText}>
+                          {language === 'si' ? report.overallSi : report.overallEn}
+                        </Text>
+                      </View>
+
+                      {/* Planetary Transit Note */}
+                      {(report.transitEn || report.transitSi) ? (
+                        <View style={s.wlTransitBox}>
+                          <View style={s.wlSectionHeader}>
+                            <Ionicons name="planet-outline" size={14} color="#818CF8" />
+                            <Text style={s.wlSectionTitle}>{language === 'si' ? 'ග්‍රහ ගමන්' : 'Planetary Transits'}</Text>
+                          </View>
+                          <Text style={s.wlSectionBody}>
+                            {language === 'si' ? report.transitSi : report.transitEn}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {/* Career & Finance */}
+                      {(report.careerEn || report.careerSi) ? (
+                        <View style={s.wlSection}>
+                          <View style={s.wlSectionHeader}>
+                            <Ionicons name="briefcase-outline" size={14} color="#FFB800" />
+                            <Text style={s.wlSectionTitle}>{language === 'si' ? 'රැකියාව සහ මුදල්' : 'Career & Finance'}</Text>
+                          </View>
+                          <Text style={s.wlSectionBody}>
+                            {language === 'si' ? report.careerSi : report.careerEn}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {/* Education & Learning */}
+                      {(report.educationEn || report.educationSi) ? (
+                        <View style={s.wlSection}>
+                          <View style={s.wlSectionHeader}>
+                            <Ionicons name="school-outline" size={14} color="#60A5FA" />
+                            <Text style={s.wlSectionTitle}>{language === 'si' ? 'අධ්‍යාපනය' : 'Education & Learning'}</Text>
+                          </View>
+                          <Text style={s.wlSectionBody}>
+                            {language === 'si' ? report.educationSi : report.educationEn}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {/* Health & Wellbeing */}
+                      {(report.healthEn || report.healthSi) ? (
+                        <View style={s.wlSection}>
+                          <View style={s.wlSectionHeader}>
+                            <Ionicons name="fitness-outline" size={14} color="#34D399" />
+                            <Text style={s.wlSectionTitle}>{language === 'si' ? 'සෞඛ්‍ය' : 'Health & Wellbeing'}</Text>
+                          </View>
+                          <Text style={s.wlSectionBody}>
+                            {language === 'si' ? report.healthSi : report.healthEn}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {/* Relationships */}
+                      {(report.relationshipEn || report.relationshipSi) ? (
+                        <View style={s.wlSection}>
+                          <View style={s.wlSectionHeader}>
+                            <Ionicons name="heart-outline" size={14} color="#F472B6" />
+                            <Text style={s.wlSectionTitle}>{language === 'si' ? 'සබඳතා' : 'Relationships'}</Text>
+                          </View>
+                          <Text style={s.wlSectionBody}>
+                            {language === 'si' ? report.relationshipSi : report.relationshipEn}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {/* Family */}
+                      {(report.familyEn || report.familySi) ? (
+                        <View style={s.wlSection}>
+                          <View style={s.wlSectionHeader}>
+                            <Ionicons name="people-outline" size={14} color="#FB923C" />
+                            <Text style={s.wlSectionTitle}>{language === 'si' ? 'පවුල සහ ගෘහස්ථ' : 'Family & Home'}</Text>
+                          </View>
+                          <Text style={s.wlSectionBody}>
+                            {language === 'si' ? report.familySi : report.familyEn}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {/* Spiritual & Religious */}
+                      {(report.spiritualEn || report.spiritualSi) ? (
+                        <View style={s.wlSection}>
+                          <View style={s.wlSectionHeader}>
+                            <Ionicons name="flower-outline" size={14} color="#C084FC" />
+                            <Text style={s.wlSectionTitle}>{language === 'si' ? 'ආධ්‍යාත්මික' : 'Spiritual & Religious'}</Text>
+                          </View>
+                          <Text style={s.wlSectionBody}>
+                            {language === 'si' ? report.spiritualSi : report.spiritualEn}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {/* Remedy / Precaution */}
+                      {(report.remedyEn || report.remedySi) ? (
+                        <View style={s.wlRemedyBox}>
+                          <View style={s.wlSectionHeader}>
+                            <Ionicons name="shield-checkmark-outline" size={14} color="#2DD4BF" />
+                            <Text style={s.wlSectionTitle}>{language === 'si' ? 'ප්‍රතිකාර / පිළියම්' : 'Remedies & Precautions'}</Text>
+                          </View>
+                          <Text style={s.wlSectionBody}>
+                            {language === 'si' ? report.remedySi : report.remedyEn}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {/* Key Advice */}
+                      {(report.adviceEn || report.adviceSi) ? (
+                        <View style={s.wlAdvice}>
+                          <Ionicons name="bulb-outline" size={14} color="#FFD666" />
+                          <Text style={s.wlAdviceText}>
+                            {language === 'si' ? report.adviceSi : report.adviceEn}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {/* Lucky Row */}
+                      <View style={s.wlLuckyRow}>
+                        {report.luckyDay ? (
+                          <View style={s.wlLuckyItem}>
+                            <Text style={s.wlLuckyIcon}>📅</Text>
+                            <View style={{ flex: 1 }}>
+                              <Text numberOfLines={1} style={s.wlLuckyMeta}>{language === 'si' ? 'දිනය' : 'Day'}</Text>
+                              <Text numberOfLines={1} style={s.wlLuckyLabel}>{language === 'si' ? report.luckyDay.si : report.luckyDay.en}</Text>
+                            </View>
+                          </View>
+                        ) : null}
+                        {report.luckyColor ? (
+                          <View style={s.wlLuckyItem}>
+                            <Text style={s.wlLuckyIcon}>🎨</Text>
+                            <View style={{ flex: 1 }}>
+                              <Text numberOfLines={1} style={s.wlLuckyMeta}>{language === 'si' ? 'වර්ණය' : 'Color'}</Text>
+                              <Text numberOfLines={1} style={s.wlLuckyLabel}>{language === 'si' ? report.luckyColor.si : report.luckyColor.en}</Text>
+                            </View>
+                          </View>
+                        ) : null}
+                        {report.luckyNumber ? (
+                          <View style={s.wlLuckyItem}>
+                            <Text style={s.wlLuckyIcon}>🔢</Text>
+                            <View style={{ flex: 1 }}>
+                              <Text numberOfLines={1} style={s.wlLuckyMeta}>{language === 'si' ? 'අංකය' : 'Number'}</Text>
+                              <Text numberOfLines={1} style={s.wlLuckyLabel}>{report.luckyNumber}</Text>
+                            </View>
+                          </View>
+                        ) : null}
+                      </View>
+                    </Animated.View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </CosmicCard>
+      </Animated.View>
+    );
+  }
+
   /* ── No Birth Data Prompt ── */
   function renderNoBirthDataPrompt() {
     return (
@@ -884,8 +1326,11 @@ export default function HomeScreen() {
 
   return (
     <DesktopScreenWrapper routeName="index">
-      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+        <CosmicAuroraNebula />
+        <GoldenNebulaBg />
         <Animated.ScrollView
+          ref={scrollRef}
           style={s.flex}
           contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
           showsVerticalScrollIndicator={false}
@@ -934,6 +1379,9 @@ export default function HomeScreen() {
               {/* Quick Actions */}
               {renderQuickActions()}
 
+              {/* Weekly Palapala Banner */}
+              {renderWeeklyBanner()}
+
               {/* Birth Chart Section */}
               {hasBirthData && chartData && renderBirthSummary()}
               {hasBirthData && chartData && renderChartCard()}
@@ -955,6 +1403,11 @@ export default function HomeScreen() {
 
               {/* Panchanga */}
               {renderPanchanga()}
+
+              {/* Weekly Lagna Palapala */}
+              <View onLayout={function (e) { weeklyLagnaY.current = e.nativeEvent.layout.y; }}>
+                {renderWeeklyLagna()}
+              </View>
 
               {/* Auspicious */}
               {renderAuspicious()}
@@ -1005,6 +1458,10 @@ var s = StyleSheet.create({
     shadowOpacity: 0.20, shadowRadius: 20, elevation: 10,
   },
   dashHeroBg: { ...StyleSheet.absoluteFillObject, borderRadius: 24 },
+  dashGlassShine: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: 1.5,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+  },
   dashNebulaBlob: {
     position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: 70,
     backgroundColor: 'rgba(255,140,0,0.08)',
@@ -1012,42 +1469,75 @@ var s = StyleSheet.create({
   dashEdgeTop: {
     position: 'absolute', top: 0, left: 0, right: 0, height: 1.5, borderTopLeftRadius: 24, borderTopRightRadius: 24,
   },
-  dashTopRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 18, paddingTop: 18, paddingBottom: 12,
+
+  // Rashi Chakra Hero
+  chakraHeroWrap: {
+    alignItems: 'center',
+    paddingTop: 14,
+    paddingBottom: 6,
   },
-  dashSignArea: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
-  dashSignOuter: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center' },
-  dashSignGlow: {
-    position: 'absolute', width: 56, height: 56, borderRadius: 28,
-    backgroundColor: 'rgba(255,184,0,0.12)',
+  chakraContainer: {
+    width: CHAKRA_HERO_SIZE,
+    height: CHAKRA_HERO_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 8,
   },
-  dashSignCircle: {
-    width: 50, height: 50, borderRadius: 25, overflow: 'hidden',
+  chakraOverlayInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+  },
+  chakraSignBadge: {
+    width: 42, height: 42, borderRadius: 21, overflow: 'hidden',
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.35)',
-    backgroundColor: 'rgba(12,6,32,0.60)',
+    backgroundColor: 'rgba(10,7,4,0.60)',
   },
-  dashSignSymbol: {
-    fontSize: 26, color: '#FFD666',
+  chakraSignSymbol: {
+    fontSize: 22, color: '#FFD666',
     textShadowColor: 'rgba(255,214,102,0.8)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12,
   },
-  dashSignInfo: { flex: 1 },
-  dashHeroLabel: { color: 'rgba(255,255,255,0.40)', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 },
-  dashSignName: { color: '#FFF1D0', fontSize: 18, fontWeight: '900', letterSpacing: 0.3 },
-  dashNakRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
-  dashNakText: { color: '#FFD666', fontSize: 12, fontWeight: '600', opacity: 0.85 },
+  chakraSignTextWrap: {
+    flex: 1,
+  },
+  chakraSignSubBadge: {
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,184,0,0.08)',
+    borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)',
+  },
+
+  dashHeroLabel: { color: 'rgba(255,214,102,0.50)', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 2 },
+  dashSignNameLarge: { color: '#FFF1D0', fontSize: 20, fontWeight: '900', letterSpacing: 0.3, lineHeight: 26, textShadowColor: 'rgba(255,184,0,0.30)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
+  dashSignNameSub: { color: 'rgba(255,214,102,0.65)', fontSize: 12, fontWeight: '700' },
+  nakPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center',
+    marginBottom: 12, paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,214,102,0.15)',
+    overflow: 'hidden',
+  },
+  nakPillLabel: { color: 'rgba(255,214,102,0.65)', fontSize: 11, fontWeight: '700' },
+  nakPillDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,214,102,0.40)' },
+  nakPillValue: { color: '#FFD666', fontSize: 13, fontWeight: '800' },
   dashDivider: { height: 1, marginHorizontal: 18, overflow: 'hidden' },
-  dashGridTitle: { color: 'rgba(255,255,255,0.50)', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', textAlign: 'center', marginTop: 12, marginBottom: -4 },
+  dashGridTitle: { color: 'rgba(255,214,102,0.50)', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', textAlign: 'center', marginTop: 12, marginBottom: -4 },
   dashGrid: {
     flexDirection: 'row', paddingHorizontal: 8, paddingTop: 14, paddingBottom: 16, gap: 2,
   },
   dashCell: {
-    flex: 1, alignItems: 'center', gap: 5, paddingVertical: 8,
-    borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.02)',
+    flex: 1, alignItems: 'center', gap: 5, paddingVertical: 10,
+    borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  dashCellIcon: {
+    width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
   },
   dashCellValue: { color: '#FFF1D0', fontSize: 13, fontWeight: '800', textAlign: 'center' },
-  dashCellLabel: { color: 'rgba(255,255,255,0.40)', fontSize: 9, fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.8 },
+  dashCellLabel: { color: 'rgba(255,214,102,0.40)', fontSize: 9, fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.8 },
 
   rahuStrip: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -1073,9 +1563,9 @@ var s = StyleSheet.create({
     borderColor: 'rgba(239,68,68,0.30)',
   },
   rahuContent: { flex: 1 },
-  rahuTitle: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
+  rahuTitle: { color: 'rgba(255,214,102,0.55)', fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
   rahuTitleActive: { color: '#FCA5A5', fontWeight: '800', fontSize: 13 },
-  rahuTime: { color: 'rgba(255,255,255,0.45)', fontSize: 13, fontWeight: '600', marginTop: 2 },
+  rahuTime: { color: 'rgba(255,214,102,0.45)', fontSize: 13, fontWeight: '600', marginTop: 2 },
   rahuTimeActive: { color: '#FF8A8A', fontWeight: '700', fontSize: 14 },
   rahuDotPulse: { width: 10, height: 10, borderRadius: 5 },
 
@@ -1102,23 +1592,67 @@ var s = StyleSheet.create({
   quickPillBg: { ...StyleSheet.absoluteFillObject, borderRadius: 999 },
   quickPillLabel: { color: '#FFF1D0', fontSize: 13, fontWeight: '700', letterSpacing: 0.2 },
 
-  // Identity
-  identityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
-  identityItem: {
-    width: '47%', borderRadius: 16, padding: 12, alignItems: 'center',
-    overflow: 'hidden', borderWidth: 1,
+  // Glass Cosmic Identity
+  glassIdentity: {
+    borderRadius: 22, overflow: 'hidden', marginBottom: 10,
+    borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)',
+    shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15, shadowRadius: 16, elevation: 8,
   },
-  identityLabel: { fontSize: 11, color: Colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4 },
-  identityValue: { fontSize: 16, fontWeight: '800', marginTop: 4, textAlign: 'center' },
-  lordRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: 'rgba(255,140,0,0.06)', borderRadius: 12, padding: 10,
-    borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)',
+  glassIdHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 18, paddingTop: 18, paddingBottom: 10,
   },
-  lordText: { color: '#FF8C00', fontSize: 13, fontWeight: '600' },
+  glassIdIcon: { fontSize: 18 },
+  glassIdTitle: { color: '#FFE8B0', fontSize: 16, fontWeight: '800', letterSpacing: 0.5, textShadowColor: 'rgba(255,184,0,0.20)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
+
+  // Lagna Hero
+  lagnaHero: {
+    flexDirection: 'row', alignItems: 'center', marginHorizontal: 14, marginBottom: 14,
+    borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,140,0,0.18)',
+    padding: 14, gap: 14,
+  },
+  lagnaHeroLeft: { alignItems: 'center' },
+  lagnaSignBig: {
+    width: 60, height: 60, borderRadius: 18, overflow: 'hidden',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.35)',
+  },
+  lagnaSignEmoji: {
+    fontSize: 30, textShadowColor: 'rgba(255,214,102,0.8)',
+    textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 14,
+  },
+  lagnaHeroRight: { flex: 1 },
+  lagnaHeroLabel: {
+    color: 'rgba(255,214,102,0.50)', fontSize: 10, fontWeight: '700',
+    letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 3,
+  },
+  lagnaHeroName: { color: '#FFB800', fontSize: 22, fontWeight: '900', letterSpacing: 0.3, textShadowColor: 'rgba(255,184,0,0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
+  lagnaHeroSub: { color: 'rgba(255,214,102,0.55)', fontSize: 12, fontWeight: '600', marginTop: 1 },
+  lagnaLordPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8,
+    alignSelf: 'flex-start', backgroundColor: 'rgba(255,184,0,0.08)',
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)',
+  },
+  lagnaLordText: { color: '#FFB800', fontSize: 11, fontWeight: '700' },
+
+  // Glass Trio Row
+  glassTrioRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingBottom: 16 },
+  glassTrioCard: {
+    flex: 1, borderRadius: 14, overflow: 'hidden', padding: 12,
+    alignItems: 'center', borderWidth: 1, gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  glassTrioEmoji: { fontSize: 18, marginBottom: 2 },
+  glassTrioLabel: {
+    color: 'rgba(255,214,102,0.45)', fontSize: 9, fontWeight: '700',
+    letterSpacing: 1, textTransform: 'uppercase',
+  },
+  glassTrioValue: { fontSize: 14, fontWeight: '800', textAlign: 'center' },
 
   // Palapala
-  palapalaText: { color: 'rgba(255,255,255,0.70)', fontSize: 14, lineHeight: 23, marginBottom: 14 },
+  palapalaText: { color: 'rgba(255,214,102,0.65)', fontSize: 14, lineHeight: 23, marginBottom: 14 },
   traitsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   traitChip: {
     backgroundColor: 'rgba(124,58,237,0.10)', paddingHorizontal: 12, paddingVertical: 6,
@@ -1149,19 +1683,19 @@ var s = StyleSheet.create({
   },
   pDot: { width: 6, height: 6, borderRadius: 3 },
   pLabel: { fontSize: 13, fontWeight: '600', width: 80 },
-  pValue: { fontSize: 14, color: '#FFF1D0', fontWeight: '700' },
+  pValue: { fontSize: 14, color: '#FFE8B0', fontWeight: '700' },
   pSinhala: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
 
   // Auspicious
   auspRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, gap: 12 },
   auspBar: { width: 3, height: 24, borderRadius: 2 },
-  auspName: { fontSize: 14, color: '#FFF1D0', fontWeight: '700' },
+  auspName: { fontSize: 14, color: '#FFE8B0', fontWeight: '700' },
   auspSinhala: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
   auspTime: { flexDirection: 'row' },
   auspTimeText: { fontSize: 13, color: '#34D399', fontWeight: '700', letterSpacing: 0.3 },
 
   // No Birth Data
-  noBirthTitle: { color: '#FFF1D0', fontSize: 20, fontWeight: '900', textAlign: 'center', marginBottom: 8 },
+  noBirthTitle: { color: '#FFE8B0', fontSize: 20, fontWeight: '900', textAlign: 'center', marginBottom: 8, textShadowColor: 'rgba(255,184,0,0.30)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
   noBirthBody: { color: Colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 18, paddingHorizontal: 8 },
   noBirthCta: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -1169,4 +1703,138 @@ var s = StyleSheet.create({
     shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0,
   },
   noBirthCtaText: { color: '#FFF1D0', fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+
+  // Weekly Palapala Banner
+  wbCard: {
+    borderRadius: 20, overflow: 'hidden', marginBottom: 14,
+    borderWidth: 1, borderColor: 'rgba(168,85,247,0.25)',
+    paddingVertical: 16, paddingHorizontal: 16,
+  },
+  wbContent: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  wbLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  wbIconWrap: {
+    width: 46, height: 46, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(168,85,247,0.30)',
+  },
+  wbTextCol: { flex: 1 },
+  wbTitle: { color: '#E0CFFF', fontSize: 14, fontWeight: '800', letterSpacing: 0.2 },
+  wbWeek: { color: 'rgba(168,85,247,0.55)', fontSize: 10, fontWeight: '600', marginTop: 2 },
+  wbSub: { color: 'rgba(255,214,102,0.40)', fontSize: 11, fontWeight: '500', marginTop: 3 },
+  wbTeaser: { marginTop: 3 },
+  wbTeaserText: { color: 'rgba(255,214,102,0.60)', fontSize: 11, fontWeight: '600' },
+  wbArrow: {
+    width: 30, height: 30, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(168,85,247,0.10)',
+    borderWidth: 1, borderColor: 'rgba(168,85,247,0.18)',
+  },
+
+  // Weekly Lagna Palapala
+  wlHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  wlHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  wlTitle: { color: '#FFE8B0', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
+  wlWeekLabel: { color: 'rgba(255,214,102,0.45)', fontSize: 11, fontWeight: '600', marginTop: 1 },
+  wlGrid: { gap: 6 },
+  wlCard: {
+    borderRadius: 14, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    paddingHorizontal: 12, paddingVertical: 10,
+  },
+  wlCardUser: {
+    borderColor: 'rgba(255,184,0,0.30)',
+    shadowColor: '#FFB800', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
+  },
+  wlCardExpanded: {
+    borderColor: 'rgba(255,214,102,0.20)',
+    borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
+  },
+  wlCardRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  wlSignBadge: {
+    width: 38, height: 38, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
+  },
+  wlSignEmoji: { fontSize: 18 },
+  wlCardInfo: { flex: 1 },
+  wlNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  wlSignName: { color: '#FFF1D0', fontSize: 14, fontWeight: '800' },
+  wlSignNameSub: { color: 'rgba(255,214,102,0.40)', fontSize: 11, fontWeight: '600', marginTop: 1 },
+  wlYouBadge: {
+    backgroundColor: 'rgba(255,184,0,0.20)', borderRadius: 6,
+    paddingHorizontal: 6, paddingVertical: 2,
+    borderWidth: 1, borderColor: 'rgba(255,184,0,0.35)',
+  },
+  wlYouText: { color: '#FFB800', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+  wlOutlookPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 10, borderWidth: 1,
+  },
+  wlOutlookText: { fontSize: 10, fontWeight: '700' },
+  wlDetail: {
+    overflow: 'hidden', borderRadius: 14,
+    borderTopLeftRadius: 0, borderTopRightRadius: 0,
+    borderWidth: 1, borderTopWidth: 0,
+    borderColor: 'rgba(255,214,102,0.12)',
+    padding: 14, gap: 12,
+    marginBottom: 4,
+  },
+  wlLordRow: {
+    flexDirection: 'row', gap: 6, marginBottom: 4,
+  },
+  wlLordChip: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 10,
+    paddingVertical: 8, paddingHorizontal: 8, minHeight: 48,
+    borderWidth: 1, borderColor: 'rgba(255,214,102,0.10)',
+  },
+  wlLordLabel: { color: 'rgba(255,214,102,0.40)', fontSize: 8, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
+  wlLordValue: { color: '#FFE8B0', fontSize: 11, fontWeight: '800', marginTop: 2, textAlign: 'center', numberOfLines: 1 },
+  wlOverallBox: {
+    backgroundColor: 'rgba(167,139,250,0.06)', borderRadius: 12,
+    padding: 12, gap: 6,
+    borderWidth: 1, borderColor: 'rgba(167,139,250,0.12)',
+  },
+  wlTransitBox: {
+    backgroundColor: 'rgba(129,140,248,0.06)', borderRadius: 12,
+    padding: 12, gap: 6,
+    borderWidth: 1, borderColor: 'rgba(129,140,248,0.10)',
+  },
+  wlRemedyBox: {
+    backgroundColor: 'rgba(45,212,191,0.06)', borderRadius: 12,
+    padding: 12, gap: 6,
+    borderWidth: 1, borderColor: 'rgba(45,212,191,0.10)',
+  },
+  wlDetailText: { color: 'rgba(255,214,102,0.70)', fontSize: 13, lineHeight: 21 },
+  wlSection: { gap: 4 },
+  wlSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  wlSectionTitle: { color: 'rgba(255,214,102,0.55)', fontSize: 11, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
+  wlSectionBody: { color: 'rgba(255,214,102,0.60)', fontSize: 13, lineHeight: 20 },
+  wlAdvice: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: 'rgba(255,184,0,0.06)', borderRadius: 10,
+    padding: 10, borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)',
+  },
+  wlAdviceText: { color: '#FFD666', fontSize: 12, fontWeight: '600', lineHeight: 18, flex: 1 },
+  wlLuckyRow: { flexDirection: 'row', gap: 6 },
+  wlLuckyItem: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 10,
+    paddingVertical: 8, paddingHorizontal: 8,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    overflow: 'hidden',
+  },
+  wlLuckyIcon: { fontSize: 14 },
+  wlLuckyMeta: { color: 'rgba(255,214,102,0.35)', fontSize: 7, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3 },
+  wlLuckyLabel: { color: '#FFD666', fontSize: 11, fontWeight: '700' },
 });

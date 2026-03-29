@@ -178,7 +178,7 @@
       "price2.cta":         "Generate Report",
 
       "price3.badge":       "Porondam",
-      "price3.amount":      "LKR 50",
+      "price3.amount":      "LKR 100",
       "price3.period":      "per report",
       "price3.f1":          "7-Factor Kūta Analysis",
       "price3.f2":          "20-Point Compatibility Score",
@@ -210,7 +210,7 @@
       "faq.title":          "Frequently Asked Questions",
 
       "faq1.q":             "How much does it cost?",
-      "faq1.a":             "Grahachara gives you access to all features — Rahu Kalaya, Nakath, Panchanga, birth charts, 10 daily chat questions, push notifications, dream interpretation and more — for just LKR 240/month via PayHere (Visa/MasterCard/HelaPay/FriMi). Premium add-ons like the full Life Report (LKR 350) and Porondam matching (LKR 50) are one-time pay-per-use. No hidden fees, cancel anytime.",
+      "faq1.a":             "Grahachara gives you access to all features — Rahu Kalaya, Nakath, Panchanga, birth charts, 10 daily chat questions, push notifications, dream interpretation and more — for just LKR 240/month via PayHere (Visa/MasterCard/HelaPay/FriMi). Premium add-ons like the full Life Report (LKR 350) and Porondam matching (LKR 100) are one-time pay-per-use. No hidden fees, cancel anytime.",
 
       "faq2.q":             "Which Ayanamsha does it use?",
       "faq2.a":             "We use the Lahiri Ayanamsha — the traditional standard used across Sri Lanka and India. All calculations are sidereal (not tropical/Western), matching what your family astrologer uses.",
@@ -428,7 +428,7 @@
       "price2.cta":         "වාර්තාව ලබා ගන්න",
 
       "price3.badge":       "පොරොන්දම්",
-      "price3.amount":      "රු. 50",
+      "price3.amount":      "රු. 100",
       "price3.period":      "වාර්තාවට",
       "price3.f1":          "සාධක 7ම බලනවා",
       "price3.f2":          "ලකුණු 20න් ගැලපීම බලනවා",
@@ -460,7 +460,7 @@
       "faq.title":          "නිතර අහන ප්‍රශ්න",
 
       "faq1.q":             "ගාණ කීයද?",
-      "faq1.a":             "ග්‍රහචාර වල තියෙන හැම පහසුකමක්ම — රාහු කාලය, නැකත්, පංචාංගය, කේන්දරය, දවසට Chat ප්‍රශ්න 10ක්, Push notifications, හීන පලාපල මේ ඔක්කොටම යන්නේ මාසෙට රු. 240යි (PayHere ඔස්සේ Visa/MasterCard/HelaPay/FriMi). ජීවිත වාර්තාව (රු. 350) සහ පොරොන්දම් ගැලපීම (රු. 50) විතරක් වෙනම ගෙවලා ගන්න පුළුවන්. හංගපු ගාස්තු මුකුත් නෑ.",
+      "faq1.a":             "ග්‍රහචාර වල තියෙන හැම පහසුකමක්ම — රාහු කාලය, නැකත්, පංචාංගය, කේන්දරය, දවසට Chat ප්‍රශ්න 10ක්, Push notifications, හීන පලාපල මේ ඔක්කොටම යන්නේ මාසෙට රු. 240යි (PayHere ඔස්සේ Visa/MasterCard/HelaPay/FriMi). ජීවිත වාර්තාව (රු. 350) සහ පොරොන්දම් ගැලපීම (රු. 100) විතරක් වෙනම ගෙවලා ගන්න පුළුවන්. හංගපු ගාස්තු මුකුත් නෑ.",
 
       "faq2.q":             "මේක හදලා තියෙන්නේ මොන ක්‍රමයටද?",
       "faq2.a":             "අපි පාවිච්චි කරන්නේ 'ලාහිරි අයනාංශ' (Lahiri Ayanamsha) ක්‍රමය. මේක තමයි ලංකාවේ සහ ඉන්දියාවේ සම්ප්‍රදායිකව පිළිගන්න නිවැරදිම ක්‍රමය. ඒ නිසා පවුලේ ජ්‍යෝතිෂවේදියා බලන විදිහටමයි මේකත් වැඩ කරන්නේ.",

@@ -40,6 +40,9 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.title3,
     color: Colors.textPrimary,
+    textShadowColor: 'rgba(255,184,0,0.20)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   subtitle: {
     ...Typography.caption,

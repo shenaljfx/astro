@@ -1,18 +1,13 @@
 // ═══════════════════════════════════════════════════════════════════════
-//  CosmicAuroraNebula.js — GOLDEN Theme Compositor
+//  ThemedAuroraNebula.js — Universal Themed 3D Aurora+Nebula Compositor
 //
-//  Thin compositor that composes the separate physics engines:
-//  • AuroraEngine.js  — 6 curtains, Birkeland currents, Alfvén waves,
-//    Kelvin-Helmholtz instability, magnetic reconnection substorms
-//  • NebulaEngine.js  — Volumetric dust (ray marching, Mie/Rayleigh
-//    scattering, curl advection, Beer-Lambert, ridged FBM filaments),
-//    cosmic star field, milky way band + glow, fade bridge
-//  • ShootingStars.js — Particle shooting star system
+//  Composes AuroraEngine + NebulaEngine + ShootingStars with any theme.
+//  Props:
+//    theme   — 'golden' | 'blue' | 'green' | 'pink' | 'purple'
+//    bgColor — hex background color (default '#04030C')
 //
-//  Layout: Aurora (TOP) → Fade Bridge (MID) → Nebula + Stars + MW (BOTTOM)
-//  Theme: GOLDEN — warm gold, amber, copper, champagne palette
-//
-//  Works on iOS, Android, Web. Falls back to animated gradients if no GL.
+//  Usage:
+//    <ThemedAuroraNebula theme="green" bgColor="#020C06" />
 // ═══════════════════════════════════════════════════════════════════════
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
@@ -28,7 +23,7 @@ import Animated, {
 var { width: SW, height: SH } = Dimensions.get('window');
 var IS_MOBILE = SW < 768;
 
-// ── Suppress known R3F findDOMNode warning on web ──
+// ── Suppress known R3F warnings ──
 if (Platform.OS === 'web') {
   var _origWarn = console.error;
   console.error = function () {
@@ -52,6 +47,34 @@ try {
   GL_OK = false;
 }
 
+// ── Theme-specific background colors ──
+var THEME_BG = {
+  golden: 0x04030C,
+  blue:   0x020412,
+  green:  0x020C06,
+  pink:   0x0C0208,
+  purple: 0x06020C,
+  orange: 0x0C0602,
+};
+
+var THEME_BG_CSS = {
+  golden: '#04030C',
+  blue:   '#020412',
+  green:  '#020C06',
+  pink:   '#0C0208',
+  purple: '#06020C',
+  orange: '#0C0602',
+};
+
+// ── Fallback glow colors per theme ──
+var FALLBACK_COLORS = {
+  golden: { top: 'rgba(255,180,30,0.08)',  bottom: 'rgba(180,100,10,0.06)' },
+  blue:   { top: 'rgba(30,80,200,0.08)',   bottom: 'rgba(20,40,140,0.06)' },
+  green:  { top: 'rgba(16,200,100,0.08)',  bottom: 'rgba(10,120,60,0.06)' },
+  pink:   { top: 'rgba(220,50,120,0.08)',  bottom: 'rgba(160,30,80,0.06)' },
+  purple: { top: 'rgba(120,50,220,0.08)',  bottom: 'rgba(80,20,160,0.06)' },
+  orange: { top: 'rgba(255,100,10,0.08)',  bottom: 'rgba(200,50,5,0.06)' },
+};
 
 // ══════════════════════════════════════════════════════════════════
 //  FRAME THROTTLE — caps mobile to ~30fps for 2x perf savings
@@ -74,41 +97,47 @@ function FrameThrottle() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  MAIN SCENE — composes the separate engine modules
+//  SCENE — renders 3 aurora wave systems with different themes
 // ══════════════════════════════════════════════════════════════════
-function CosmicScene() {
+// Per-page 3-color aurora combos
+var MULTI_THEMES = {
+  golden:  ['golden', 'orange', 'pink'],
+  blue:    ['blue', 'purple', 'green'],
+  green:   ['green', 'blue', 'golden'],
+  pink:    ['pink', 'purple', 'golden'],
+  purple:  ['purple', 'pink', 'blue'],
+  orange:  ['orange', 'golden', 'pink'],
+};
+
+function ThemedScene({ theme }) {
+  var combos = MULTI_THEMES[theme] || MULTI_THEMES.golden;
   return (
     <>
       <FrameThrottle />
-      {/* 3-color aurora: golden (primary) + orange + pink */}
-      <AuroraWaveSystem theme="golden" />
-      <AuroraWaveSystem theme="orange" weight="accent" />
-      <AuroraWaveSystem theme="pink" weight="accent" />
-      {/* Advanced Nebula Engine — volumetric dust, stars, milky way, fade bridge */}
-      <NebulaEngine theme="golden" />
-      {/* Shooting stars particle system */}
+      <AuroraWaveSystem theme={combos[0]} />
+      <AuroraWaveSystem theme={combos[1]} weight="accent" />
+      <AuroraWaveSystem theme={combos[2]} weight="accent" />
+      <NebulaEngine theme={theme} />
       <ShootingStarsSystem />
     </>
   );
 }
 
-
 // ══════════════════════════════════════════════════════════════════
-//  CANVAS WRAPPER
+//  CANVAS
 // ══════════════════════════════════════════════════════════════════
-function ThreeJSBackground() {
+function ThreeJSBg({ theme }) {
   var [failed, setFailed] = useState(false);
   var containerRef = useRef(null);
+  var bgHex = THEME_BG[theme] || THEME_BG.golden;
+  var bgCss = THEME_BG_CSS[theme] || THEME_BG_CSS.golden;
 
-  var handleError = useCallback(function () {
-    setFailed(true);
-  }, []);
-
+  var handleError = useCallback(function () { setFailed(true); }, []);
   var handleCreated = useCallback(function (state) {
-    state.gl.setClearColor(0x04030C, 1);
-  }, []);
+    state.gl.setClearColor(bgHex, 1);
+  }, [bgHex]);
 
-  if (failed) return <FallbackBackground />;
+  if (failed) return <FallbackBg theme={theme} />;
 
   var dprVal = 1;
   if (Platform.OS === 'web') {
@@ -118,7 +147,7 @@ function ThreeJSBackground() {
   return (
     <View ref={containerRef} style={StyleSheet.absoluteFill} pointerEvents="none">
       <R3FCanvas
-        style={{ flex: 1, backgroundColor: '#04030C' }}
+        style={{ flex: 1, backgroundColor: bgCss }}
         camera={{ position: [0, 0, 100], fov: 55, near: 0.1, far: 2000 }}
         gl={{ alpha: false, antialias: false, preserveDrawingBuffer: false, powerPreference: 'low-power' }}
         dpr={dprVal}
@@ -126,25 +155,19 @@ function ThreeJSBackground() {
         onCreated={handleCreated}
         onError={handleError}
       >
-        <fog attach="fog" args={[0x04030C, 200, 900]} />
-        <CosmicScene />
+        <fog attach="fog" args={[bgHex, 200, 900]} />
+        <ThemedScene theme={theme} />
       </R3FCanvas>
-      {/* Transparent black glass overlay — makes text/content more readable */}
-      <View
-        style={{
-          ...StyleSheet.absoluteFillObject,
-          backgroundColor: 'rgba(0, 0, 0, 0.18)',
-        }}
-      />
+      <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.18)' }} />
     </View>
   );
 }
 
-
 // ══════════════════════════════════════════════════════════════════
-//  FALLBACK — animated golden gradients for no-GL devices
+//  FALLBACK
 // ══════════════════════════════════════════════════════════════════
-function FallbackBackground() {
+function FallbackBg({ theme }) {
+  var fc = FALLBACK_COLORS[theme] || FALLBACK_COLORS.golden;
   var glow1 = useSharedValue(0);
   var glow2 = useSharedValue(0);
 
@@ -162,38 +185,20 @@ function FallbackBackground() {
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Animated.View
-        style={[{
-          position: 'absolute', top: 0, left: 0, right: 0,
-          height: SH * 0.3,
-          backgroundColor: 'rgba(255,180,30,0.08)',
-        }, style1]}
-      />
-      <Animated.View
-        style={[{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          height: SH * 0.3,
-          backgroundColor: 'rgba(180,100,10,0.06)',
-        }, style2]}
-      />
-      {/* Glass overlay for fallback too */}
-      <View
-        style={{
-          ...StyleSheet.absoluteFillObject,
-          backgroundColor: 'rgba(0, 0, 0, 0.35)',
-        }}
-      />
+      <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, height: SH * 0.3, backgroundColor: fc.top }, style1]} />
+      <Animated.View style={[{ position: 'absolute', bottom: 0, left: 0, right: 0, height: SH * 0.3, backgroundColor: fc.bottom }, style2]} />
+      <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' }} />
     </View>
   );
 }
 
-
 // ══════════════════════════════════════════════════════════════════
 //  EXPORT
 // ══════════════════════════════════════════════════════════════════
-export default function CosmicAuroraNebula() {
+export default function ThemedAuroraNebula({ theme }) {
+  var t = theme || 'golden';
   if (GL_OK) {
-    return <ThreeJSBackground />;
+    return <ThreeJSBg theme={t} />;
   }
-  return <FallbackBackground />;
+  return <FallbackBg theme={t} />;
 }

@@ -1,18 +1,13 @@
 // ═══════════════════════════════════════════════════════════════════════
-//  CosmicAuroraNebula.js — GOLDEN Theme Compositor
+//  BlueAuroraNebula.js — BLUE Theme Compositor (Kendara page)
 //
-//  Thin compositor that composes the separate physics engines:
-//  • AuroraEngine.js  — 6 curtains, Birkeland currents, Alfvén waves,
-//    Kelvin-Helmholtz instability, magnetic reconnection substorms
-//  • NebulaEngine.js  — Volumetric dust (ray marching, Mie/Rayleigh
-//    scattering, curl advection, Beer-Lambert, ridged FBM filaments),
-//    cosmic star field, milky way band + glow, fade bridge
+//  Same architecture as CosmicAuroraNebula.js but with theme="blue":
+//  • AuroraEngine.js  — 6 curtains with cyan/indigo/sapphire palette
+//  • NebulaEngine.js  — Volumetric dust in deep blue/violet tones
 //  • ShootingStars.js — Particle shooting star system
 //
 //  Layout: Aurora (TOP) → Fade Bridge (MID) → Nebula + Stars + MW (BOTTOM)
-//  Theme: GOLDEN — warm gold, amber, copper, champagne palette
-//
-//  Works on iOS, Android, Web. Falls back to animated gradients if no GL.
+//  Theme: BLUE — cyan, sapphire, indigo, teal palette
 // ═══════════════════════════════════════════════════════════════════════
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
@@ -27,8 +22,9 @@ import Animated, {
 
 var { width: SW, height: SH } = Dimensions.get('window');
 var IS_MOBILE = SW < 768;
+var IS_MOBILE = SW < 768;
 
-// ── Suppress known R3F findDOMNode warning on web ──
+// ── Suppress known R3F warnings ──
 if (Platform.OS === 'web') {
   var _origWarn = console.error;
   console.error = function () {
@@ -54,9 +50,12 @@ try {
 
 
 // ══════════════════════════════════════════════════════════════════
+//  MAIN SCENE — blue theme
+// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 //  FRAME THROTTLE — caps mobile to ~30fps for 2x perf savings
 // ══════════════════════════════════════════════════════════════════
-var TARGET_FRAME_MS = IS_MOBILE ? 33.3 : 16.6; // 30fps mobile, 60fps desktop
+var TARGET_FRAME_MS = IS_MOBILE ? 33.3 : 16.6;
 function FrameThrottle() {
   var lastTime = useRef(0);
   var r3fUseFrame;
@@ -64,29 +63,26 @@ function FrameThrottle() {
   r3fUseFrame(function (state) {
     var now = state.clock.getElapsedTime() * 1000;
     if (now - lastTime.current < TARGET_FRAME_MS) {
-      state.gl.autoClear = false; // skip this frame's render
+      state.gl.autoClear = false;
     } else {
       state.gl.autoClear = true;
       lastTime.current = now;
     }
-  }, -1); // run before all other useFrame callbacks
+  }, -1);
   return null;
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  MAIN SCENE — composes the separate engine modules
-// ══════════════════════════════════════════════════════════════════
-function CosmicScene() {
+function BlueScene() {
   return (
     <>
       <FrameThrottle />
-      {/* 3-color aurora: golden (primary) + orange + pink */}
-      <AuroraWaveSystem theme="golden" />
-      <AuroraWaveSystem theme="orange" weight="accent" />
-      <AuroraWaveSystem theme="pink" weight="accent" />
-      {/* Advanced Nebula Engine — volumetric dust, stars, milky way, fade bridge */}
-      <NebulaEngine theme="golden" />
-      {/* Shooting stars particle system */}
+      {/* 3-color aurora: blue (primary) + purple + green */}
+      <AuroraWaveSystem theme="blue" />
+      <AuroraWaveSystem theme="purple" weight="accent" />
+      <AuroraWaveSystem theme="green" weight="accent" />
+      {/* Advanced Nebula Engine — volumetric dust in sapphire/indigo */}
+      <NebulaEngine theme="blue" />
+      {/* Shooting stars */}
       <ShootingStarsSystem />
     </>
   );
@@ -94,9 +90,9 @@ function CosmicScene() {
 
 
 // ══════════════════════════════════════════════════════════════════
-//  CANVAS WRAPPER
+//  CANVAS WRAPPER — blue background color
 // ══════════════════════════════════════════════════════════════════
-function ThreeJSBackground() {
+function BlueThreeJSBackground() {
   var [failed, setFailed] = useState(false);
   var containerRef = useRef(null);
 
@@ -105,10 +101,10 @@ function ThreeJSBackground() {
   }, []);
 
   var handleCreated = useCallback(function (state) {
-    state.gl.setClearColor(0x04030C, 1);
+    state.gl.setClearColor(0x020412, 1);
   }, []);
 
-  if (failed) return <FallbackBackground />;
+  if (failed) return <BlueFallbackBackground />;
 
   var dprVal = 1;
   if (Platform.OS === 'web') {
@@ -118,7 +114,7 @@ function ThreeJSBackground() {
   return (
     <View ref={containerRef} style={StyleSheet.absoluteFill} pointerEvents="none">
       <R3FCanvas
-        style={{ flex: 1, backgroundColor: '#04030C' }}
+        style={{ flex: 1, backgroundColor: '#020412' }}
         camera={{ position: [0, 0, 100], fov: 55, near: 0.1, far: 2000 }}
         gl={{ alpha: false, antialias: false, preserveDrawingBuffer: false, powerPreference: 'low-power' }}
         dpr={dprVal}
@@ -126,10 +122,9 @@ function ThreeJSBackground() {
         onCreated={handleCreated}
         onError={handleError}
       >
-        <fog attach="fog" args={[0x04030C, 200, 900]} />
-        <CosmicScene />
+        <fog attach="fog" args={[0x020412, 200, 900]} />
+        <BlueScene />
       </R3FCanvas>
-      {/* Transparent black glass overlay — makes text/content more readable */}
       <View
         style={{
           ...StyleSheet.absoluteFillObject,
@@ -142,9 +137,9 @@ function ThreeJSBackground() {
 
 
 // ══════════════════════════════════════════════════════════════════
-//  FALLBACK — animated golden gradients for no-GL devices
+//  FALLBACK — animated blue gradients for no-GL devices
 // ══════════════════════════════════════════════════════════════════
-function FallbackBackground() {
+function BlueFallbackBackground() {
   var glow1 = useSharedValue(0);
   var glow2 = useSharedValue(0);
 
@@ -166,17 +161,16 @@ function FallbackBackground() {
         style={[{
           position: 'absolute', top: 0, left: 0, right: 0,
           height: SH * 0.3,
-          backgroundColor: 'rgba(255,180,30,0.08)',
+          backgroundColor: 'rgba(30,80,200,0.08)',
         }, style1]}
       />
       <Animated.View
         style={[{
           position: 'absolute', bottom: 0, left: 0, right: 0,
           height: SH * 0.3,
-          backgroundColor: 'rgba(180,100,10,0.06)',
+          backgroundColor: 'rgba(20,40,140,0.06)',
         }, style2]}
       />
-      {/* Glass overlay for fallback too */}
       <View
         style={{
           ...StyleSheet.absoluteFillObject,
@@ -191,9 +185,9 @@ function FallbackBackground() {
 // ══════════════════════════════════════════════════════════════════
 //  EXPORT
 // ══════════════════════════════════════════════════════════════════
-export default function CosmicAuroraNebula() {
+export default function BlueAuroraNebula() {
   if (GL_OK) {
-    return <ThreeJSBackground />;
+    return <BlueThreeJSBackground />;
   }
-  return <FallbackBackground />;
+  return <BlueFallbackBackground />;
 }

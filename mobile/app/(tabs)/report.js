@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  StyleSheet, Platform, Alert, ActivityIndicator, Modal,
+  StyleSheet, Platform, Alert, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,12 +19,15 @@ import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScr
 import MarkdownText from '../../components/MarkdownText';
 import SriLankanChart from '../../components/SriLankanChart';
 import SpringPressable from '../../components/effects/SpringPressable';
-import CosmicSpinner from '../../components/effects/CosmicLoader';
 import { DatePickerField, TimePickerField } from '../../components/CosmicDateTimePicker';
+import CitySearchPicker from '../../components/CitySearchPicker';
 import { generateReportHTML } from '../../utils/pdfReportGenerator';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePricing } from '../../contexts/PricingContext';
 import api from '../../services/api';
+import ThemedAuroraNebula from '../../components/effects/ThemedAuroraNebula';
+import ThemedNebulaBg from '../../components/effects/ThemedNebulaBg';
 
 // ──────────────────────────────────────────
 // Section icons & gradient colors
@@ -329,7 +332,7 @@ var cl = StyleSheet.create({
   planet3: {},
   textWrap: { alignItems: 'center', marginBottom: 20 },
   stageText: { color: '#FFE8B0', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
-  stageSub: { color: '#94A3B8', fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  stageSub: { color: 'rgba(255,214,102,0.50)', fontSize: 13, textAlign: 'center', lineHeight: 20 },
   personalText: { color: '#FF8C00', fontSize: 14, fontWeight: '600', textAlign: 'center', marginBottom: 24, fontStyle: 'italic' },
   progressRow: { width: '100%', alignItems: 'center' },
   progressBar: { width: '80%', height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: 8 },
@@ -338,111 +341,25 @@ var cl = StyleSheet.create({
 });
 
 // ══════════════════════════════════════════
-// BIRTH LOCATION DATA
-// ══════════════════════════════════════════
-var BIRTH_LOCATIONS = [
-  { name: 'Colombo', lat: 6.9271, lng: 79.8612 },
-  { name: 'Kandy', lat: 7.2906, lng: 80.6337 },
-  { name: 'Galle', lat: 6.0535, lng: 80.2210 },
-  { name: 'Jaffna', lat: 9.6615, lng: 80.0255 },
-  { name: 'Matara', lat: 5.9549, lng: 80.5550 },
-  { name: 'Negombo', lat: 7.2008, lng: 79.8737 },
-  { name: 'Anuradhapura', lat: 8.3114, lng: 80.4037 },
-  { name: 'Trincomalee', lat: 8.5874, lng: 81.2152 },
-  { name: 'Batticaloa', lat: 7.7310, lng: 81.6747 },
-  { name: 'Kurunegala', lat: 7.4863, lng: 80.3647 },
-  { name: 'Ratnapura', lat: 6.6828, lng: 80.3992 },
-  { name: 'Badulla', lat: 6.9934, lng: 81.0550 },
-  { name: 'Nuwara Eliya', lat: 6.9497, lng: 80.7891 },
-  { name: 'Gampaha', lat: 7.0840, lng: 80.0098 },
-  { name: 'Kalutara', lat: 6.5854, lng: 79.9607 },
-  { name: 'Matale', lat: 7.4675, lng: 80.6234 },
-  { name: 'Hambantota', lat: 6.1429, lng: 81.1212 },
-  { name: 'Polonnaruwa', lat: 7.9403, lng: 81.0188 },
-  { name: 'Kegalle', lat: 7.2513, lng: 80.3464 },
-  { name: 'Ampara', lat: 7.2975, lng: 81.6820 },
-  { name: 'Puttalam', lat: 8.0362, lng: 79.8283 },
-  { name: 'Chilaw', lat: 7.5758, lng: 79.7953 },
-  { name: 'Vavuniya', lat: 8.7514, lng: 80.4971 },
-  { name: 'Dambulla', lat: 7.8675, lng: 80.6519 },
-  { name: 'Monaragala', lat: 6.8728, lng: 81.3507 },
-  { name: 'Kalmunai', lat: 7.4167, lng: 81.8167 },
-];
-
-// ══════════════════════════════════════════
-// TOP-UP MODAL
-// ══════════════════════════════════════════
-var TOP_UP_PACKAGES = [100, 250, 500];
-
-function TopUpModal({ visible, onClose, onTopUp, loading, language }) {
-  var isSi = language === 'si';
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
-        <LinearGradient
-          colors={['rgba(13,7,32,0.99)', 'rgba(4,3,12,1)']}
-          style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, borderTopWidth: 1, borderColor: 'rgba(255,140,0,0.3)' }}
-        >
-          <Text style={{ color: '#FFB800', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 6 }}>
-            {isSi ? '💳 ශේෂය රිචාජ්' : '💳 Top Up Balance'}
-          </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
-            {isSi ? 'PayHere ඔස්සේ ගෙවන්න (Visa/MasterCard)' : 'Pay securely via PayHere (Visa/MasterCard)'}
-          </Text>
-
-          {TOP_UP_PACKAGES.map(function(amt) {
-            return (
-              <TouchableOpacity
-                key={amt}
-                onPress={function() { onTopUp(amt); }}
-                disabled={loading}
-                activeOpacity={0.8}
-                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 0 }}
-              >
-                <LinearGradient
-                  colors={amt === 15 ? ['#FF8C00', '#FF6D00'] : amt === 30 ? ['#FF7A00', '#E65100'] : ['#FF9500', '#FF6D00', '#E65100']}
-                  style={{ paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                >
-                  <LinearGradient colors={['rgba(255,255,255,0.15)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
-                  <Text style={{ color: '#FFF1D0', fontSize: 16, fontWeight: '700' }}>
-                    {isSi ? 'රු ' + amt + ' රිචාජ්' : 'Add LKR ' + amt}
-                  </Text>
-                  {loading ? (
-                    <CosmicSpinner size={22} color="#FFF" />
-                  ) : (
-                    <Ionicons name="add-circle" size={22} color="rgba(255,255,255,0.8)" />
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            );
-          })}
-
-          <TouchableOpacity onPress={onClose} style={{ paddingVertical: 14, alignItems: 'center', marginTop: 4 }}>
-            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
-              {isSi ? 'වසන්න' : 'Close'}
-            </Text>
-          </TouchableOpacity>
-        </LinearGradient>
-      </View>
-    </Modal>
-  );
-}
-
-// ══════════════════════════════════════════
-
-// ══════════════════════════════════════════
 // MAIN REPORT SCREEN
 // ══════════════════════════════════════════
 export default function ReportScreen() {
   var { t, language } = useLanguage();
   var { user } = useAuth();
+  var { priceLabel, priceAmount, currency } = usePricing();
   var isDesktop = useDesktopCtx();
   var [birthDate, setBirthDate] = useState('1998-10-09');
   var [birthTime, setBirthTime] = useState('09:16');
   var [birthLocation, setBirthLocation] = useState('Colombo');
   var [birthLat, setBirthLat] = useState(6.9271);
   var [birthLng, setBirthLng] = useState(79.8612);
+  var [selectedCity, setSelectedCity] = useState({ name: 'Colombo', country: 'Sri Lanka', countryCode: 'LK', lat: 6.9271, lng: 79.8612 });
+  var handleCitySelect = useCallback(function(city) {
+    setSelectedCity(city);
+    setBirthLocation(city.name);
+    setBirthLat(city.lat);
+    setBirthLng(city.lng);
+  }, []);
   var [reportLang, setReportLang] = useState(language || 'en');
   var [userName, setUserName] = useState('');
   var [userGender, setUserGender] = useState(null);
@@ -452,28 +369,8 @@ export default function ReportScreen() {
   var [chartData, setChartData] = useState(null);
   var [loading, setLoading] = useState(false);
   var [error, setError] = useState(null);
-  // Flow states: 'form' -> 'confirm-charge' -> 'loading' -> 'report'
+  // Flow states: 'form' -> 'loading' -> 'report'
   var [screenState, setScreenState] = useState('form');
-  // Token balance
-  var [tokenBalance, setTokenBalance] = useState(null);
-  var [showTopUp, setShowTopUp] = useState(false);
-  var [topUpLoading, setTopUpLoading] = useState(false);
-
-  // Fetch token balance when on form
-  var fetchBalance = useCallback(async function() {
-    try {
-      var res = await api.getTokenBalance();
-      if (res && res.balance !== undefined) {
-        setTokenBalance(res.balance);
-      }
-    } catch (e) {
-      // Not logged in or dev mode — ignore
-    }
-  }, []);
-
-  useEffect(function() {
-    if (screenState === 'form') fetchBalance();
-  }, [screenState, fetchBalance]);
 
   // Sync report language when app language changes (only on form screen)
   useEffect(function() {
@@ -504,33 +401,25 @@ export default function ReportScreen() {
       setReport(rawRes.data);
       if (aiRes.data) {
         setAiReport(aiRes.data);
-        // Update balance if server returned new balance
-        if (aiRes.balance !== undefined) setTokenBalance(aiRes.balance);
       }
       setScreenState('report');
     } catch (err) {
       var msg = err.message || '';
-      if (err.status === 402 || msg.includes('Insufficient') || msg.includes('balance')) {
-        setTokenBalance(err.balance || 0);
-        setShowTopUp(true);
-        setScreenState('form');
-      } else {
-        setError(msg || 'Failed to generate report');
-        setScreenState('form');
-      }
+      setError(msg || 'Failed to generate report');
+      setScreenState('form');
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 1: User taps Generate → validate → show charge confirmation
+  // Step 1: User taps Generate → validate → PayHere payment → generate
   var handleGenerate = async function() {
     if (!userName || !userName.trim()) {
-      setError(reportLang === 'si' ? 'කරුණාකර ඔයාගේ නම ඇතුලත් කරන්න' : 'Please enter your name');
+      setError(reportLang === 'si' ? '\u0D9A\u0DBB\u0DD4\u0DAB\u0DCF\u0D9A\u0DBB \u0D94\u0DBA\u0DCF\u0D9C\u0DDA \u0DB1\u0DB8 \u0D87\u0DAD\u0DD4\u0DBD\u0DAD\u0DCA \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1' : 'Please enter your name');
       return;
     }
     if (!userGender) {
-      setError(reportLang === 'si' ? 'කරුණාකර ස්ත්‍රී/පුරුෂ භාවය තෝරන්න' : 'Please select your gender');
+      setError(reportLang === 'si' ? '\u0D9A\u0DBB\u0DD4\u0DAB\u0DCF\u0D9A\u0DBB \u0DC3\u0DCA\u0DAD\u0DCA\u200D\u0DBB\u0DD3/\u0DB4\u0DD4\u0DBB\u0DD4\u0DC2 \u0DB7\u0DCF\u0DC0\u0DBA \u0DAD\u0DDD\u0DBB\u0DB1\u0DCA\u0DB1' : 'Please select your gender');
       return;
     }
     try {
@@ -538,24 +427,85 @@ export default function ReportScreen() {
       setReport(null);
       setAiReport(null);
       setChartData(null);
+
+      // Step 1: Initiate PayHere one-time payment
+      var initRes = await api.initiateTopUp(priceAmount('report'), currency);
+      if (!initRes || !initRes.success) {
+        throw new Error(initRes?.error || 'Failed to initiate payment');
+      }
+      var paymentObject = initRes.paymentObject;
+      var orderId = initRes.orderId;
+
+      // Step 2: Launch PayHere SDK / web checkout
+      var PayHere = null;
+      var useWebCheckout = false;
+      try {
+        PayHere = require('@payhere/payhere-mobilesdk-reactnative').default;
+      } catch (e) {
+        useWebCheckout = true;
+      }
+
+      var paymentId = null;
+
+      if (useWebCheckout) {
+        var checkoutUrl = initRes.checkout_url || 'https://sandbox.payhere.lk/pay/checkout';
+        if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+          var form = document.createElement('form');
+          form.method = 'POST';
+          form.action = checkoutUrl;
+          form.target = '_blank';
+          Object.keys(paymentObject).forEach(function(key) {
+            if (paymentObject[key] !== undefined && paymentObject[key] !== null) {
+              var input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = key;
+              input.value = String(paymentObject[key]);
+              form.appendChild(input);
+            }
+          });
+          document.body.appendChild(form);
+          form.submit();
+          document.body.removeChild(form);
+          paymentId = 'web_' + Date.now();
+        } else {
+          throw new Error('Payment not available on this platform');
+        }
+      } else {
+        paymentId = await new Promise(function(resolve, reject) {
+          PayHere.startPayment(
+            paymentObject,
+            function(pid) { resolve(pid); },
+            function(errData) { reject(new Error(errData || 'Payment failed')); },
+            function() { reject(new Error('Payment cancelled')); }
+          );
+        });
+      }
+
+      // Step 3: Confirm payment with server
+      try {
+        await api.confirmPayment(paymentId, orderId, 'topup');
+      } catch (e) {
+        // Webhook will handle it
+      }
+
+      // Step 4: Fetch chart + generate report
       var dateStr = birthDate + 'T' + birthTime + ':00';
 
       var chartRes = await api.getBirthChart(dateStr, birthLat, birthLng, reportLang);
       if (chartRes.data) {
         setChartData(chartRes.data);
-        setScreenState('confirm-charge');
       } else {
         setError('Failed to read birth chart');
+        return;
       }
-    } catch (err) {
-      setError(err.message || 'Failed to read birth chart');
-    }
-  };
 
-  // Step 3: User confirms charge → fire full generation
-  var handleChargeConfirm = function() {
-    var dateStr = birthDate + 'T' + birthTime + ':00';
-    startFullGeneration(dateStr, userGender);
+      startFullGeneration(dateStr, userGender);
+    } catch (err) {
+      var msg = err.message || 'Error';
+      if (msg !== 'Payment cancelled') {
+        setError(msg);
+      }
+    }
   };
 
   // ── DOWNLOAD REPORT AS PDF ─────────────────────────────────
@@ -619,140 +569,12 @@ export default function ReportScreen() {
     setScreenState('form');
   };
 
-  // ── TOP-UP MODAL ────────────────────────────────────────
-  var handleTopUp = async function(amount) {
-    try {
-      setTopUpLoading(true);
-      var res = await api.topUpTokens(amount);
-      if (res && res.success) {
-        setTokenBalance(res.newBalance);
-        setShowTopUp(false);
-        Alert.alert('✅', t('tokenTopUpSuccess') + ' LKR ' + amount + ' added. Balance: LKR ' + res.newBalance);
-      } else {
-        Alert.alert('❌', t('tokenTopUpFail'));
-      }
-    } catch (e) {
-      Alert.alert('❌', e.message || t('tokenTopUpFail'));
-    } finally {
-      setTopUpLoading(false);
-    }
-  };
-
-  // ── CONFIRM CHARGE SCREEN ─────────────────────────────────
-  if (screenState === 'confirm-charge') {
-    var bal = tokenBalance !== null ? tokenBalance : '—';
-    var afterBal = tokenBalance !== null ? parseFloat((tokenBalance - 15).toFixed(2)) : '—';
-    var hasEnough = tokenBalance !== null && tokenBalance >= 15;
-    return (
-      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 28 }}>
-          <Animated.View entering={FadeInDown.duration(500)} style={{ width: '100%', maxWidth: 380 }}>
-            <LinearGradient
-              colors={['rgba(255,140,0,0.18)', 'rgba(4,3,12,0.96)']}
-              style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: 'rgba(255,140,0,0.3)' }}
-            >
-              <Text style={{ fontSize: 38, textAlign: 'center', marginBottom: 12 }}>📜</Text>
-              <Text style={{ color: '#FFB800', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 6, letterSpacing: 1 }}>
-                {reportLang === 'si' ? 'ජීවිත කතාව' : 'Full Life Report'}
-              </Text>
-              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
-                {reportLang === 'si' ? 'ඔබ ගැන පමණයි, විස්තරාත්මකව ලියා ඇත' : 'Personalised and written just for you'}
-              </Text>
-
-              {/* Cost row */}
-              <View style={{ backgroundColor: 'rgba(255,184,0,0.08)', borderRadius: 14, padding: 16, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
-                  {reportLang === 'si' ? 'ගෙවීම' : 'Charge'}
-                </Text>
-                <Text style={{ color: '#FFB800', fontSize: 20, fontWeight: '800' }}>LKR 15</Text>
-              </View>
-
-              {/* Balance row */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 4 }}>
-                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>
-                  {reportLang === 'si' ? 'වත්මන් ශේෂය' : 'Current balance'}
-                </Text>
-                <Text style={{ color: hasEnough ? '#4ADE80' : '#F87171', fontSize: 12, fontWeight: '700' }}>
-                  LKR {bal}
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 24 }}>
-                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>
-                  {reportLang === 'si' ? 'ඉතිරි ශේෂය' : 'Balance after'}
-                </Text>
-                <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600' }}>
-                  LKR {afterBal}
-                </Text>
-              </View>
-
-              {hasEnough ? (
-                <TouchableOpacity
-                  onPress={handleChargeConfirm}
-                  activeOpacity={0.85}
-                  style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0 }}
-                >
-                  <LinearGradient
-                    colors={['#FF8C00', '#FF6D00', '#E65100']}
-                    style={{ paddingVertical: 16, alignItems: 'center', borderRadius: 14 }}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                  >
-                    <LinearGradient colors={['rgba(255,255,255,0.18)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
-                    <Text style={{ color: '#FFF1D0', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 }}>
-                      {reportLang === 'si' ? '✨ LKR 15 ගෙවා ලියන්න' : '✨ Confirm & Generate — LKR 15'}
-                    </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              ) : (
-                <>
-                  <View style={{ backgroundColor: 'rgba(248,113,113,0.12)', borderRadius: 12, padding: 12, marginBottom: 14 }}>
-                    <Text style={{ color: '#F87171', fontSize: 13, textAlign: 'center' }}>
-                      {reportLang === 'si' ? '⚠️ ශේෂය මදිි. රිචාජ් කරන්න.' : '⚠️ Insufficient balance. Please top up.'}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={function() { setShowTopUp(true); }}
-                    activeOpacity={0.85}
-                    style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0 }}
-                  >
-                    <LinearGradient
-                      colors={['#FF8C00', '#FF6D00', '#E65100']}
-                      style={{ paddingVertical: 15, alignItems: 'center', borderRadius: 14 }}
-                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                    >
-                      <LinearGradient colors={['rgba(255,255,255,0.18)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
-                      <Text style={{ color: '#FFF1D0', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 }}>
-                        {reportLang === 'si' ? '💳 ශේෂය රිචාජ් කරන්න' : '💳 Top Up Balance'}
-                      </Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </>
-              )}
-
-              <TouchableOpacity onPress={handleNewReport} style={{ paddingVertical: 10, alignItems: 'center' }}>
-                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
-                  {reportLang === 'si' ? 'අවලංගු' : 'Cancel'}
-                </Text>
-              </TouchableOpacity>
-            </LinearGradient>
-          </Animated.View>
-        </View>
-
-        {/* Top-up modal */}
-        <TopUpModal
-          visible={showTopUp}
-          onClose={function() { setShowTopUp(false); }}
-          onTopUp={handleTopUp}
-          loading={topUpLoading}
-          language={reportLang}
-        />
-      </View>
-    );
-  }
-
   // ── FULL SCREEN LOADING ──────────────────────────────────
   if (screenState === 'loading') {
     return (
-      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <View style={{ flex: 1, backgroundColor: '#020C06' }}>
+        <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="green" /></View>
+        <ThemedNebulaBg theme="green" />
         <View style={s.loadingFull}>
           <CosmicLoader userName={userName} language={reportLang} />
         </View>
@@ -764,7 +586,9 @@ export default function ReportScreen() {
   if (screenState === 'report' && report) {
     return (
       <DesktopScreenWrapper routeName="report">
-      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <View style={{ flex: 1, backgroundColor: '#020C06' }}>
+        <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="green" /></View>
+        <ThemedNebulaBg theme="green" />
         <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
           <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
           {/* Title */}
@@ -901,7 +725,9 @@ export default function ReportScreen() {
   // ── INPUT FORM (default view) ────────────────────────────
   return (
     <DesktopScreenWrapper routeName="report">
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <View style={{ flex: 1, backgroundColor: '#020C06' }}>
+        <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="green" /></View>
+        <ThemedNebulaBg theme="green" />
       <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
         <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
         {/* Header */}
@@ -991,23 +817,14 @@ export default function ReportScreen() {
 
             {/* Birth Location */}
             <Text style={s.inputHint}>{reportLang === 'si' ? 'උපන් ස්ථානය' : 'BIRTH LOCATION'}</Text>
-            <View style={s.locationRow}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.locationScroll}>
-                {BIRTH_LOCATIONS.map(function(loc) {
-                  var isActive = birthLocation === loc.name;
-                  return (
-                    <TouchableOpacity
-                      key={loc.name}
-                      style={[s.locationChip, isActive && s.locationChipActive]}
-                      onPress={function() { setBirthLocation(loc.name); setBirthLat(loc.lat); setBirthLng(loc.lng); }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[s.locationChipText, isActive && s.locationChipTextActive]}>{loc.name}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
+            <CitySearchPicker
+              selectedCity={selectedCity}
+              onSelect={handleCitySelect}
+              lang={reportLang}
+              accentColor="#FF8C00"
+              maxHeight={160}
+              compact
+            />
 
             {/* Language Selector */}
             <Text style={s.inputHint}>{reportLang === 'si' ? 'භාෂාව' : 'REPORT LANGUAGE'}</Text>
@@ -1042,38 +859,15 @@ export default function ReportScreen() {
               </LinearGradient>
             </SpringPressable>
 
-            {/* Token balance row */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingHorizontal: 2 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="wallet-outline" size={13} color="rgba(251,191,36,0.7)" />
-                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>
-                  {reportLang === 'si' ? 'ශේෂය' : 'Balance'}{': '}
-                  <Text style={{ color: tokenBalance !== null && tokenBalance >= 15 ? '#4ADE80' : '#F87171', fontWeight: '700' }}>
-                    {tokenBalance !== null ? 'LKR ' + tokenBalance : '—'}
-                  </Text>
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Ionicons name="pricetag-outline" size={12} color="rgba(251,191,36,0.6)" />
-                <Text style={{ color: '#FFB800', fontSize: 12, fontWeight: '700' }}>LKR 15</Text>
-                <TouchableOpacity onPress={function() { setShowTopUp(true); }} style={{ marginLeft: 8, backgroundColor: 'rgba(255,140,0,0.25)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 }}>
-                  <Text style={{ color: '#FF8C00', fontSize: 11, fontWeight: '700' }}>
-                    {reportLang === 'si' ? 'රිචාජ්' : 'Top Up'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+            {/* Payment info */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingHorizontal: 2 }}>
+              <Ionicons name="card-outline" size={13} color="rgba(251,191,36,0.6)" />
+              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
+                {reportLang === 'si' ? 'PayHere ඔස්සේ ' + priceLabel('report') + ' ගෙවන්න (Visa/MasterCard)' : priceLabel('report') + ' via PayHere (Visa/MasterCard)'}
+              </Text>
             </View>
           </AuraBox>
         </Animated.View>
-
-        {/* Top-up modal */}
-        <TopUpModal
-          visible={showTopUp}
-          onClose={function() { setShowTopUp(false); }}
-          onTopUp={handleTopUp}
-          loading={topUpLoading}
-          language={reportLang}
-        />
 
         {/* Error */}
         {error && (
@@ -1106,14 +900,14 @@ var s = StyleSheet.create({
   contentDesktop: { paddingTop: 24, paddingHorizontal: 0, paddingBottom: 40 },
   contentInner: { width: '100%' },
   contentInnerDesktop: { maxWidth: 900, alignSelf: 'center', paddingHorizontal: 32 },
-  title: { fontSize: 26, fontWeight: '900', color: '#FFE8B0', textAlign: 'center', letterSpacing: 0.5 },
-  subtitle: { fontSize: 13, color: '#94A3B8', textAlign: 'center', marginTop: 6, marginBottom: 20 },
+  title: { fontSize: 26, fontWeight: '900', color: '#FFE8B0', textAlign: 'center', letterSpacing: 0.5, textShadowColor: 'rgba(255,184,0,0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
+  subtitle: { fontSize: 13, color: 'rgba(255,214,102,0.50)', textAlign: 'center', marginTop: 6, marginBottom: 20 },
   inputLabel: { color: '#D4B06A', fontSize: 14, fontWeight: '700', marginBottom: 12 },
   inputRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   inputGroup: { flex: 1 },
-  inputHint: { color: '#64748B', fontSize: 10, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
+  inputHint: { color: 'rgba(255,184,0,0.45)', fontSize: 10, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
   input: {
-    backgroundColor: 'rgba(24,30,72,0.65)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+    backgroundColor: 'rgba(8,20,12,0.65)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
     color: '#FFE8B0', fontSize: 15, fontWeight: '600', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   inputError: { borderColor: 'rgba(239,68,68,0.5)' },
@@ -1122,32 +916,32 @@ var s = StyleSheet.create({
   generateText: { color: '#FFF1D0', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
   errorText: { color: '#F87171', fontSize: 13, flex: 1 },
   aiProgressText: { color: '#FF8C00', fontSize: 14, fontWeight: '700' },
-  aiProgressSub: { color: '#64748B', fontSize: 11, marginTop: 4 },
+  aiProgressSub: { color: 'rgba(255,214,102,0.40)', fontSize: 11, marginTop: 4 },
   genderRow: { flexDirection: 'row', gap: 10, marginBottom: 16, marginTop: 6 },
-  genderBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(24,30,72,0.4)' },
+  genderBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(8,20,12,0.4)' },
   genderBtnMaleActive: { borderColor: 'rgba(96,165,250,0.6)', backgroundColor: 'rgba(96,165,250,0.12)' },
   genderBtnFemaleActive: { borderColor: 'rgba(244,114,182,0.6)', backgroundColor: 'rgba(244,114,182,0.12)' },
   genderIcon: { fontSize: 22 },
-  genderText: { color: '#64748B', fontSize: 15, fontWeight: '700' },
+  genderText: { color: 'rgba(255,214,102,0.40)', fontSize: 15, fontWeight: '700' },
   genderTextActive: { color: '#FFF1D0' },
   langRow: { flexDirection: 'row', gap: 10, marginBottom: 16, marginTop: 6 },
-  langBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(24,30,72,0.4)' },
+  langBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(8,20,12,0.4)' },
   langBtnActive: { borderColor: 'rgba(255,140,0,0.6)', backgroundColor: 'rgba(255,140,0,0.15)' },
   langFlag: { fontSize: 20 },
-  langText: { color: '#64748B', fontSize: 14, fontWeight: '700' },
+  langText: { color: 'rgba(255,214,102,0.40)', fontSize: 14, fontWeight: '700' },
   langTextActive: { color: '#FF8C00' },
   locationRow: { marginBottom: 16, marginTop: 4 },
   locationScroll: { flexGrow: 0 },
-  locationChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(24,30,72,0.4)', marginRight: 8 },
+  locationChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(8,20,12,0.4)', marginRight: 8 },
   locationChipActive: { borderColor: 'rgba(255,140,0,0.6)', backgroundColor: 'rgba(255,140,0,0.15)' },
-  locationChipText: { color: '#64748B', fontSize: 12, fontWeight: '700' },
+  locationChipText: { color: 'rgba(255,214,102,0.40)', fontSize: 12, fontWeight: '700' },
   locationChipTextActive: { color: '#FF8C00' },
   newReportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginBottom: 12, backgroundColor: 'rgba(255,140,0,0.1)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.25)' },
   newReportText: { color: '#FF8C00', fontSize: 13, fontWeight: '700' },
   birthHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   birthIconBg: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,184,0,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
   birthLagna: { color: '#FFB800', fontSize: 20, fontWeight: '900' },
-  birthSinhala: { color: '#94A3B8', fontSize: 12, marginTop: 2 },
+  birthSinhala: { color: 'rgba(255,214,102,0.50)', fontSize: 12, marginTop: 2 },
   birthSub: { color: '#64748B', fontSize: 11, marginTop: 2 },
   panchangaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   panchangaItem: { alignItems: 'center', flex: 1 },

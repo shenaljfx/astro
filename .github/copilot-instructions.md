@@ -20,7 +20,7 @@ Firebase is **optional for local dev** — server starts without `firebase-servi
 
 1. Onboarding: Google Sign-In → Firebase Auth → ID token sent to server → JWT returned
 2. JWT is wired into all API requests via `setAuthTokenGetter()` in `AuthContext`
-3. Premium routes use `phoneAuth` + `requireSubscription` middleware — charges **LKR 240/month** via PayHere (Visa/MasterCard/HelaPay/FriMi)
+3. Premium routes use `phoneAuth` + `requireSubscription` middleware — charges **LKR 240/month** (Sri Lanka) or **USD 4/month** (international) via PayHere (Visa/MasterCard/HelaPay/FriMi)
 4. Subscription initiated in onboarding Step 2 via PayHere React Native SDK (`@payhere/payhere-mobilesdk-reactnative`)
 5. Server also accepts Firebase ID tokens directly (fallback path in `subscription.js`)
 

@@ -15,6 +15,7 @@ const { calculateRahuKalaya, getDailyNakath, getNakshatra, getRashi, toSidereal,
 const { calculateMarakaApala } = require('../engine/maraka');
 const { sendPush, getTokensWithPreference, logNotification } = require('./notifications');
 const { getDb, COLLECTIONS } = require('../config/firebase');
+const { generateWeeklyLagnaReports } = require('../engine/weeklyLagna');
 
 // SLT offset in ms (UTC+5:30)
 const SLT_OFFSET_MS = 5.5 * 60 * 60 * 1000;
@@ -280,39 +281,132 @@ function startScheduler() {
   }, 5 * 60 * 1000); // 5 minutes
 
   // ── Daily Palapa — check every 10 minutes, send at 5:30 AM SLT ──
+  let dailyPalapaSent = false;
   setInterval(() => {
     const now = new Date();
     const slt = toSLTDate(now);
     const sltHour = slt.getUTCHours();
     const sltMin = slt.getUTCMinutes();
 
+    // Reset flag after the window passes
+    if (!(sltHour === 5 && sltMin >= 25 && sltMin <= 35)) {
+      dailyPalapaSent = false;
+      return;
+    }
+
     // Target: 5:25-5:35 AM SLT
-    if (sltHour === 5 && sltMin >= 25 && sltMin <= 35) {
+    if (sltHour === 5 && sltMin >= 25 && sltMin <= 35 && !dailyPalapaSent) {
+      dailyPalapaSent = true;
       sendDailyPalapa().catch(err => {
         console.error('[Scheduler] Daily palapa interval error:', err.message);
+        dailyPalapaSent = false; // Allow retry on failure
       });
     }
   }, 10 * 60 * 1000); // 10 minutes
 
   // ── Maraka Apala — check once daily at 6:00 AM SLT ──
+  let marakaChecked = false;
   setInterval(() => {
     const now = new Date();
     const slt = toSLTDate(now);
     const sltHour = slt.getUTCHours();
     const sltMin = slt.getUTCMinutes();
 
+    // Reset flag after the window passes
+    if (!((sltHour === 5 && sltMin >= 55) || (sltHour === 6 && sltMin <= 5))) {
+      marakaChecked = false;
+      return;
+    }
+
     // Target: 5:55-6:05 AM SLT
-    if (sltHour === 5 && sltMin >= 55 || sltHour === 6 && sltMin <= 5) {
+    if (((sltHour === 5 && sltMin >= 55) || (sltHour === 6 && sltMin <= 5)) && !marakaChecked) {
+      marakaChecked = true;
       checkMarakaApalaForAllUsers().catch(err => {
         console.error('[Scheduler] Maraka interval error:', err.message);
+        marakaChecked = false; // Allow retry on failure
       });
     }
   }, 10 * 60 * 1000); // 10 minutes
+
+  // ── Weekly Lagna Palapala — Sunday 6:00 AM SLT ──
+  // Generates AI-powered weekly predictions for all 12 lagnas
+  // Then sends push notification to all users
+  let weeklyLagnaGenerated = false;
+  setInterval(() => {
+    const now = new Date();
+    const slt = toSLTDate(now);
+    const sltDay = slt.getUTCDay(); // 0 = Sunday
+    const sltHour = slt.getUTCHours();
+    const sltMin = slt.getUTCMinutes();
+
+    // Reset flag at midnight Sunday so it can generate again
+    if (sltDay !== 0) {
+      weeklyLagnaGenerated = false;
+      return;
+    }
+
+    // Target: Sunday 5:55-6:10 AM SLT (window of 15 min)
+    if ((sltDay === 0 && sltHour === 5 && sltMin >= 55) || (sltDay === 0 && sltHour === 6 && sltMin <= 10)) {
+      if (weeklyLagnaGenerated) return;
+      weeklyLagnaGenerated = true;
+
+      console.log('[Scheduler] 🔮 Starting weekly lagna palapala generation...');
+      generateWeeklyLagnaReports()
+        .then(async (result) => {
+          console.log(`[Scheduler] ✅ Weekly lagna reports generated: ${result.reportCount} lagnas for ${result.weekId}`);
+          // Send notification to all users
+          try {
+            await sendWeeklyLagnaPushNotification();
+          } catch (pushErr) {
+            console.error('[Scheduler] Weekly lagna push error:', pushErr.message);
+          }
+        })
+        .catch(err => {
+          console.error('[Scheduler] Weekly lagna generation error:', err.message);
+          weeklyLagnaGenerated = false; // Allow retry
+        });
+    }
+  }, 5 * 60 * 1000); // Check every 5 minutes
 
   console.log('[Scheduler] ✅ Notification scheduler started');
   console.log('[Scheduler]    📊 Rahu Kalaya checks every 5 min');
   console.log('[Scheduler]    🌅 Daily Palapa at 5:30 AM SLT');
   console.log('[Scheduler]    ⛔ Maraka Apala at 6:00 AM SLT');
+  console.log('[Scheduler]    🔮 Weekly Lagna Palapala — Sunday 6:00 AM SLT');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 5. WEEKLY LAGNA PUSH — Notify users about new weekly predictions
+// ═══════════════════════════════════════════════════════════════
+async function sendWeeklyLagnaPushNotification() {
+  console.log('[Scheduler] Sending weekly lagna push notifications...');
+  try {
+    const tokens = await getTokensWithPreference('dailyPalapa'); // reuse same preference
+    console.log(`[Scheduler] Weekly lagna push: ${tokens.length} users to notify`);
+
+    let sent = 0;
+    for (const token of tokens) {
+      try {
+        const lang = token.language || 'si';
+        const title = lang === 'si' ? '🔮 සතිපතා ලග්න පලාපල' : '🔮 Weekly Lagna Palapala';
+        const body = lang === 'si'
+          ? 'මේ සතියේ ඔබේ ලග්නයට කුමක් සිදුවේද? දැන් බලන්න!'
+          : "What does this week hold for your lagna? Check now!";
+
+        await sendPush(token.pushToken, title, body, {
+          type: 'WEEKLY_LAGNA',
+          route: '/(tabs)',
+        }, { channelId: 'weekly-lagna' });
+
+        sent++;
+      } catch (err) {
+        // Skip individual failures
+      }
+    }
+    console.log(`[Scheduler] Weekly lagna push sent to ${sent} users`);
+  } catch (err) {
+    console.error('[Scheduler] Weekly lagna push error:', err.message);
+  }
 }
 
 function stopScheduler() {
@@ -326,4 +420,5 @@ module.exports = {
   sendDailyPalapa,
   sendRahuKalayaWarning,
   checkMarakaApalaForAllUsers,
+  sendWeeklyLagnaPushNotification,
 };

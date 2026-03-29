@@ -88,11 +88,11 @@ export default function GlassCard({
 
   // Variant-based glass colors
   const glassColors = {
-    default: ['rgba(24,22,60,0.6)', 'rgba(12,10,38,0.45)'],
-    elevated: ['rgba(37,34,80,0.65)', 'rgba(20,18,55,0.5)'],
-    subtle: ['rgba(16,14,42,0.45)', 'rgba(8,6,28,0.3)'],
-    hero: ['rgba(40,36,90,0.7)', 'rgba(24,20,60,0.55)'],
-  }[variant] || ['rgba(24,22,60,0.6)', 'rgba(12,10,38,0.45)'];
+    default: ['rgba(18,14,8,0.6)', 'rgba(10,8,4,0.45)'],
+    elevated: ['rgba(26,20,12,0.65)', 'rgba(16,12,6,0.5)'],
+    subtle: ['rgba(12,10,6,0.45)', 'rgba(6,5,3,0.3)'],
+    hero: ['rgba(30,22,12,0.7)', 'rgba(18,14,8,0.55)'],
+  }[variant] || ['rgba(18,14,8,0.6)', 'rgba(10,8,4,0.45)'];
 
   return (
     <Animated.View entering={enterAnim} style={scaleStyle}>

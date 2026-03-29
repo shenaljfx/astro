@@ -20,6 +20,8 @@ const predictionRoutes = require('./routes/predictions');
 const tokensRoutes = require('./routes/tokens');
 const notificationRoutes = require('./routes/notifications');
 const payhereRoutes = require('./routes/payhere');
+const pricingRoutes = require('./routes/pricing');
+const weeklyLagnaRoutes = require('./routes/weeklyLagna');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -59,6 +61,8 @@ app.use('/api/predictions', predictionRoutes);
 app.use('/api/tokens', tokensRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payhere', payhereRoutes);
+app.use('/api/pricing', pricingRoutes);
+app.use('/api/weekly-lagna', weeklyLagnaRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
