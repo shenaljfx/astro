@@ -1,18 +1,49 @@
-/* ═══════════════════════════════════════════════════════════════════════
-   Grahachara Website — Main Interactions
-   Nav scroll, mobile menu, scroll animations, counter, carousel
-   ═══════════════════════════════════════════════════════════════════════ */
+﻿/* Grahachara Website - Main Interactions */
 
 (function () {
   'use strict';
 
-  /* ── Navigation: scroll effect + mobile burger ──────────────────── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Performance: throttled scroll handler Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+  var scrollTicking = false;
+  var lastScrollY = 0;
+  var scrollCallbacks = [];
+
+  function onScrollTick() {
+    lastScrollY = window.pageYOffset || window.scrollY || 0;
+    for (var i = 0; i < scrollCallbacks.length; i++) {
+      scrollCallbacks[i](lastScrollY);
+    }
+    scrollTicking = false;
+  }
+
+  window.addEventListener('scroll', function () {
+    if (!scrollTicking) {
+      scrollTicking = true;
+      requestAnimationFrame(onScrollTick);
+    }
+  }, { passive: true });
+
+  function addScrollCallback(fn) {
+    scrollCallbacks.push(fn);
+  }
+
+
+  /* -- Rashi Chakra: fade as user scrolls past hero -- */
+  var rcEl = document.querySelector('.rashi-chakra');
+  if (rcEl) {
+    addScrollCallback(function (sy) {
+      var h = window.innerHeight;
+      var t = Math.min(sy / h, 1);
+      rcEl.style.opacity = (0.5 * (1 - t)).toFixed(3);
+    });
+  }
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Navigation: scroll effect + mobile burger Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   var nav = document.getElementById('nav');
   var burger = document.getElementById('navBurger');
   var navLinks = document.getElementById('navLinks');
 
-  window.addEventListener('scroll', function () {
-    if (window.scrollY > 40) {
+  addScrollCallback(function (sy) {
+    if (sy > 40) {
       nav.classList.add('nav--scrolled');
     } else {
       nav.classList.remove('nav--scrolled');
@@ -57,7 +88,7 @@
     });
   }
 
-  /* ── Smooth scroll for anchor links ─────────────────────────────── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Smooth scroll for anchor links Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   document.querySelectorAll('a[href^="#"]').forEach(function (a) {
     a.addEventListener('click', function (e) {
       var target = document.querySelector(a.getAttribute('href'));
@@ -70,7 +101,7 @@
     });
   });
 
-  /* ── Scroll-triggered animations (AOS-like) ─────────────────────── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Scroll-triggered animations (AOS-like) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   var aosElements = document.querySelectorAll('[data-aos]');
   var aosObserver = new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
@@ -86,7 +117,7 @@
 
   aosElements.forEach(function (el) { aosObserver.observe(el); });
 
-  /* ── Screenshots Carousel ───────────────────────────────────────── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Screenshots Carousel Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   var track = document.getElementById('screenshotsTrack');
   var prevBtn = document.getElementById('scrPrev');
   var nextBtn = document.getElementById('scrNext');
@@ -199,12 +230,12 @@
     }, { passive: true });
   }
 
-  /* ── Active nav link highlight ──────────────────────────────────── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Active nav link highlight Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   var sections = document.querySelectorAll('section[id]');
   var navAnchors = document.querySelectorAll('.nav__link');
 
-  window.addEventListener('scroll', function () {
-    var scrollY = window.scrollY + 120;
+  addScrollCallback(function (sy) {
+    var scrollY = sy + 120;
     sections.forEach(function (section) {
       var top = section.offsetTop;
       var height = section.offsetHeight;
@@ -220,7 +251,7 @@
     });
   });
 
-  /* ── FAQ toggle animation ───────────────────────────────────────── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ FAQ toggle animation Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   document.querySelectorAll('.faq__item').forEach(function (item) {
     item.querySelector('.faq__question').addEventListener('click', function () {
       // Close others
@@ -232,87 +263,99 @@
     });
   });
 
-  /* ── Scroll-linked parallax for sections ─────────────────────────── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Scroll-linked parallax for sections Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   (function () {
     var hero = document.getElementById('hero');
     var heroContent = hero ? hero.querySelector('.hero__content') : null;
     var heroVisual = hero ? hero.querySelector('.hero__visual') : null;
     var heroScrollHint = hero ? hero.querySelector('.hero__scroll-hint') : null;
+    // Cache section headers Ã¢â‚¬â€ avoid repeated querySelectorAll on scroll
+    var sectionHeaders = document.querySelectorAll('.section-header');
+    // Skip feature card parallax on mobile
+    var isMobile = window.innerWidth < 768;
 
     function onScrollParallax() {
-      var sy = window.pageYOffset;
+      var sy = lastScrollY;
 
-      // Hero parallax — content and visual drift at different speeds
-      if (heroContent) {
+      // Hero parallax Ã¢â‚¬â€ content and visual drift at different speeds
+      if (heroContent && sy < 800) {
         var heroOpacity = Math.max(0, 1 - sy / 600);
         var heroShift = sy * 0.25;
         heroContent.style.transform = 'translateY(' + heroShift + 'px)';
         heroContent.style.opacity = heroOpacity;
       }
-      if (heroVisual) {
+      if (heroVisual && sy < 800) {
         heroVisual.style.transform = 'translateY(' + (sy * 0.15) + 'px)';
       }
       // Fade out scroll hint
-      if (heroScrollHint) {
+      if (heroScrollHint && sy < 300) {
         heroScrollHint.style.opacity = Math.max(0, 1 - sy / 200);
       }
 
-      // Section titles — subtle parallax
-      document.querySelectorAll('.section-header').forEach(function (header) {
+      // Section titles Ã¢â‚¬â€ subtle parallax (only when near viewport)
+      var viewH = window.innerHeight;
+      for (var i = 0; i < sectionHeaders.length; i++) {
+        var header = sectionHeaders[i];
         var rect = header.getBoundingClientRect();
-        var viewH = window.innerHeight;
         if (rect.top < viewH && rect.bottom > 0) {
           var progress = (viewH - rect.top) / (viewH + rect.height);
           var shift = (progress - 0.5) * -15;
           header.style.transform = 'translateY(' + shift + 'px)';
         }
-      });
+      }
 
-      // Feature cards — tilt based on scroll position
-      document.querySelectorAll('.feature-card.aos-animate').forEach(function (card) {
-        var rect = card.getBoundingClientRect();
-        var viewH = window.innerHeight;
-        if (rect.top < viewH && rect.bottom > 0) {
-          var progress = (viewH - rect.top) / (viewH + rect.height);
-          var tilt = (progress - 0.5) * 3;
-          card.style.transform = 'perspective(800px) rotateX(' + tilt + 'deg) translateY(0)';
+      // Feature cards tilt Ã¢â‚¬â€ skip on mobile for perf
+      if (!isMobile) {
+        var featureCards = document.querySelectorAll('.feature-card.aos-animate');
+        for (var j = 0; j < featureCards.length; j++) {
+          var card = featureCards[j];
+          var crect = card.getBoundingClientRect();
+          if (crect.top < viewH && crect.bottom > 0) {
+            var cprogress = (viewH - crect.top) / (viewH + crect.height);
+            var tilt = (cprogress - 0.5) * 3;
+            card.style.transform = 'perspective(800px) rotateX(' + tilt + 'deg) translateY(0)';
+          }
         }
-      });
+      }
     }
 
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      window.addEventListener('scroll', onScrollParallax, { passive: true });
+      addScrollCallback(onScrollParallax);
     }
   })();
 
-  /* ── Mouse tilt for cards (3D depth effect) ──────────────────────── */
-  document.querySelectorAll('.feature-card, .pricing-card--featured').forEach(function (card) {
-    card.addEventListener('mousemove', function (e) {
-      var rect = card.getBoundingClientRect();
-      var x = (e.clientX - rect.left) / rect.width - 0.5;
-      var y = (e.clientY - rect.top) / rect.height - 0.5;
-      card.style.transform = 'perspective(600px) rotateY(' + (x * 8) + 'deg) rotateX(' + (-y * 8) + 'deg) translateY(-4px) scale(1.02)';
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Mouse tilt for cards (3D depth effect) Ã¢â‚¬â€ desktop only Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+  if (window.innerWidth >= 768) {
+    document.querySelectorAll('.feature-card, .pricing-card--featured').forEach(function (card) {
+      card.addEventListener('mousemove', function (e) {
+        var rect = card.getBoundingClientRect();
+        var x = (e.clientX - rect.left) / rect.width - 0.5;
+        var y = (e.clientY - rect.top) / rect.height - 0.5;
+        card.style.transform = 'perspective(600px) rotateY(' + (x * 8) + 'deg) rotateX(' + (-y * 8) + 'deg) translateY(-4px) scale(1.02)';
+      });
+      card.addEventListener('mouseleave', function () {
+        card.style.transform = '';
+        card.style.transition = 'transform 0.5s cubic-bezier(0.22,0.61,0.36,1)';
+      });
     });
-    card.addEventListener('mouseleave', function () {
-      card.style.transform = '';
-      card.style.transition = 'transform 0.5s cubic-bezier(0.22,0.61,0.36,1)';
-    });
-  });
+  }
 
-  /* ── Magnetic button effect ──────────────────────────────────────── */
-  document.querySelectorAll('.btn--glow').forEach(function (btn) {
-    btn.addEventListener('mousemove', function (e) {
-      var rect = btn.getBoundingClientRect();
-      var x = e.clientX - rect.left - rect.width / 2;
-      var y = e.clientY - rect.top - rect.height / 2;
-      btn.style.transform = 'translate(' + (x * 0.15) + 'px,' + (y * 0.15) + 'px)';
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Magnetic button effect Ã¢â‚¬â€ desktop only Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+  if (window.innerWidth >= 768) {
+    document.querySelectorAll('.btn--glow').forEach(function (btn) {
+      btn.addEventListener('mousemove', function (e) {
+        var rect = btn.getBoundingClientRect();
+        var x = e.clientX - rect.left - rect.width / 2;
+        var y = e.clientY - rect.top - rect.height / 2;
+        btn.style.transform = 'translate(' + (x * 0.15) + 'px,' + (y * 0.15) + 'px)';
+      });
+      btn.addEventListener('mouseleave', function () {
+        btn.style.transform = '';
+      });
     });
-    btn.addEventListener('mouseleave', function () {
-      btn.style.transform = '';
-    });
-  });
+  }
 
-  /* ── Counter animation for trust strip items on scroll ───────────── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Counter animation for trust strip items on scroll Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   var trustObserved = false;
   var trustStrip = document.querySelector('.trust-strip');
   if (trustStrip) {
@@ -326,8 +369,8 @@
     trustObs.observe(trustStrip);
   }
 
-  /* ── Section Scene Activation — triggers unique background per section ── */
-  var sceneSections = document.querySelectorAll('.features, .how, .screenshots, .kendara, .porondam, .fullreport, .pricing, .testimonials, .faq, .download');
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Section Scene Activation Ã¢â‚¬â€ triggers unique background per section Ã¢â€â‚¬Ã¢â€â‚¬ */
+  var sceneSections = document.querySelectorAll('.features, .how, .screenshots, .kendara, .porondam, .fullreport, .weekly-lagna, .pricing, .testimonials, .faq, .download');
   if (sceneSections.length) {
     var sceneObserver = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
@@ -342,22 +385,24 @@
     });
   }
 
-  /* ── Cursor spotlight glow on feature & pricing cards ────────────── */
-  document.querySelectorAll('.feature-card, .pricing-card, .how__step').forEach(function (card) {
-    card.addEventListener('mousemove', function (e) {
-      var rect = card.getBoundingClientRect();
-      var x = e.clientX - rect.left;
-      var y = e.clientY - rect.top;
-      card.style.background =
-        'radial-gradient(600px circle at ' + x + 'px ' + y + 'px, rgba(147,51,234,0.06), transparent 50%), ' +
-        'var(--bg-card)';
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Cursor spotlight glow on feature & pricing cards Ã¢â‚¬â€ desktop only Ã¢â€â‚¬Ã¢â€â‚¬ */
+  if (window.innerWidth >= 768) {
+    document.querySelectorAll('.feature-card, .pricing-card, .how__step').forEach(function (card) {
+      card.addEventListener('mousemove', function (e) {
+        var rect = card.getBoundingClientRect();
+        var x = e.clientX - rect.left;
+        var y = e.clientY - rect.top;
+        card.style.background =
+          'radial-gradient(600px circle at ' + x + 'px ' + y + 'px, rgba(147,51,234,0.06), transparent 50%), ' +
+          'var(--bg-card)';
+      });
+      card.addEventListener('mouseleave', function () {
+        card.style.background = '';
+      });
     });
-    card.addEventListener('mouseleave', function () {
-      card.style.background = '';
-    });
-  });
+  }
 
-  /* ── Staggered card entrance — adds sequential delay ─────────────── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Staggered card entrance Ã¢â‚¬â€ adds sequential delay Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   document.querySelectorAll('.features__grid, .pricing__grid, .testimonials__grid').forEach(function (grid) {
     var cards = grid.children;
     for (var i = 0; i < cards.length; i++) {
@@ -365,7 +410,7 @@
     }
   });
 
-  /* ── Number counter animation for pricing amounts ────────────────── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Number counter animation for pricing amounts Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   var priceObserved = false;
   var pricingSection = document.getElementById('pricing');
   if (pricingSection) {
@@ -399,430 +444,38 @@
     priceObs.observe(pricingSection);
   }
 
-  /* ── Scroll progress indicator (thin gold line at page top) ──────── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Scroll progress indicator (thin gold line at page top) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   var scrollProgressBar = document.createElement('div');
   scrollProgressBar.style.cssText =
     'position:fixed;top:0;left:0;height:2px;z-index:9999;pointer-events:none;' +
     'background:linear-gradient(90deg,#FFB800,#9333EA,#4CC9F0);' +
     'transition:width 0.15s ease;width:0;border-radius:0 2px 2px 0;';
   document.body.appendChild(scrollProgressBar);
-  window.addEventListener('scroll', function () {
-    var scrolled = window.scrollY;
+  addScrollCallback(function (sy) {
     var total = document.documentElement.scrollHeight - window.innerHeight;
-    var pct = total > 0 ? (scrolled / total) * 100 : 0;
+    var pct = total > 0 ? (sy / total) * 100 : 0;
     scrollProgressBar.style.width = pct + '%';
-  }, { passive: true });
-
-  /* ── Tilt reset smoothing (makes card tilt feel premium) ─────────── */
-  document.querySelectorAll('.feature-card, .pricing-card--featured, .testimonial-card').forEach(function (card) {
-    card.addEventListener('mouseenter', function () {
-      card.style.transition = 'transform 0.1s ease-out';
-    });
-    card.addEventListener('mouseleave', function () {
-      card.style.transition = 'transform 0.6s cubic-bezier(0.22,0.61,0.36,1)';
-      card.style.transform = '';
-    });
   });
 
-  /* ═══════════════════════════════════════════════════════════════════
-     AURORA STAR LANE — S-shaped aurora ribbon with bright stars,
-     comets, and connecting star lanes weaving down the centre.
-     Canvas-based, lightweight, scroll-aware.
-     ═══════════════════════════════════════════════════════════════════ */
-  (function initAuroraLane() {
-    var canvas = document.getElementById('auroraLane');
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-
-    var W, H, pageH, dpr;
-    var stars = [];
-    var comets = [];
-    var time = 0;
-    var scrollY = 0;
-    var raf;
-
-    /* ── Section anchors for the S-curve waypoints ── */
-    var sectionIds = ['hero','features','how-it-works','screenshots',
-                      'pricing','testimonials','faq','download'];
-
-    /* ── Aurora colour palette ── */
-    var auroraColors = [
-      { r: 100, g: 60,  b: 220 },   // deep violet
-      { r: 30,  g: 180, b: 220 },   // cyan
-      { r: 255, g: 184, b: 0   },   // gold
-      { r: 80,  g: 220, b: 160 },   // emerald
-      { r: 200, g: 80,  b: 200 }    // magenta
-    ];
-
-    /* ── Resize — match full page height ── */
-    function resize() {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      W = window.innerWidth;
-      pageH = document.documentElement.scrollHeight;
-      H = pageH;
-
-      canvas.width  = W * dpr;
-      canvas.height = H * dpr;
-      canvas.style.width  = W + 'px';
-      canvas.style.height = H + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      buildStars();
-    }
-
-    /* ── Build the S-curve control points through section centres ── */
-    function getSCurvePoints() {
-      var pts = [];
-      var scrollTop = window.pageYOffset || 0;
-      var cx = W * 0.5;
-
-      for (var i = 0; i < sectionIds.length; i++) {
-        var el = document.getElementById(sectionIds[i]);
-        if (!el) continue;
-        var rect = el.getBoundingClientRect();
-        var yMid = rect.top + scrollTop + rect.height * 0.45;
-        // S-shape: alternate left & right of centre
-        var amplitude = W < 768 ? W * 0.18 : W * 0.15;
-        var xOff = (i % 2 === 0 ? -1 : 1) * amplitude;
-        pts.push({ x: cx + xOff, y: yMid });
-      }
-
-      // Bookend
-      if (pts.length > 0) {
-        pts.unshift({ x: cx, y: 0 });
-        pts.push({ x: cx, y: pageH });
-      }
-      return pts;
-    }
-
-    /* ── Catmull-Rom interpolation for smooth S path ── */
-    function catmullRom(p0, p1, p2, p3, t) {
-      var t2 = t * t, t3 = t2 * t;
-      return {
-        x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-        y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
-      };
-    }
-
-    /* ── Sample the full S path at uniform intervals ── */
-    function samplePath(pts, count) {
-      var out = [];
-      if (pts.length < 2) return out;
-      var segs = pts.length - 1;
-      for (var i = 0; i < count; i++) {
-        var f = i / (count - 1) * (segs - 1);
-        var seg = Math.min(Math.floor(f), segs - 2);
-        var lt = f - seg;
-        var p0 = pts[Math.max(0, seg - 1)];
-        var p1 = pts[seg];
-        var p2 = pts[Math.min(segs, seg + 1)];
-        var p3 = pts[Math.min(segs, seg + 2)];
-        out.push(catmullRom(p0, p1, p2, p3, lt));
-      }
-      return out;
-    }
-
-    /* ── Populate lane stars along the S-path ── */
-    function buildStars() {
-      stars = [];
-      var pts = getSCurvePoints();
-      var sampled = samplePath(pts, 250);
-
-      for (var i = 0; i < sampled.length; i++) {
-        var sp = sampled[i];
-        // Scatter around the path
-        var spread = W < 768 ? 60 : 110;
-        var ox = (Math.random() - 0.5) * spread;
-        var oy = (Math.random() - 0.5) * 30;
-        var brightness = Math.random();
-        var isBright = brightness > 0.88;
-
-        stars.push({
-          x: sp.x + ox,
-          y: sp.y + oy,
-          r: isBright ? 1.5 + Math.random() * 1.8 : 0.4 + Math.random() * 1.0,
-          bright: isBright,
-          twinkleSpeed: 1.5 + Math.random() * 3,
-          twinklePhase: Math.random() * Math.PI * 2,
-          color: auroraColors[Math.floor(Math.random() * auroraColors.length)],
-          baseAlpha: isBright ? 0.8 + Math.random() * 0.2 : 0.2 + Math.random() * 0.4
-        });
-      }
-
-      // Seed initial comets
-      comets = [];
-      for (var c = 0; c < 3; c++) {
-        comets.push(spawnComet());
-      }
-    }
-
-    /* ── Spawn a comet along the S-path ── */
-    function spawnComet() {
-      var pts = getSCurvePoints();
-      var sampled = samplePath(pts, 100);
-      var idx = Math.floor(Math.random() * (sampled.length - 10));
-      var start = sampled[idx];
-      var end   = sampled[Math.min(idx + 8, sampled.length - 1)];
-      var dx = end.x - start.x;
-      var dy = end.y - start.y;
-      var len = Math.sqrt(dx * dx + dy * dy);
-      var speed = 1.5 + Math.random() * 2.5;
-
-      return {
-        x: start.x + (Math.random() - 0.5) * 60,
-        y: start.y,
-        vx: (dx / len) * speed + (Math.random() - 0.5) * 0.8,
-        vy: (dy / len) * speed,
-        life: 1.0,
-        decay: 0.004 + Math.random() * 0.006,
-        tailLen: 25 + Math.random() * 40,
-        radius: 1.5 + Math.random() * 1.5,
-        color: auroraColors[Math.floor(Math.random() * auroraColors.length)]
-      };
-    }
-
-    /* ── Draw the aurora glow ribbon along the S-path ── */
-    function drawAurora(pts) {
-      if (pts.length < 2) return;
-      var sampled = samplePath(pts, 120);
-
-      // Draw multiple translucent bands with time-shifted hue
-      for (var band = 0; band < 3; band++) {
-        ctx.beginPath();
-        ctx.moveTo(sampled[0].x, sampled[0].y);
-        for (var i = 1; i < sampled.length; i++) {
-          var prev = sampled[i - 1];
-          var cur  = sampled[i];
-          var mx = (prev.x + cur.x) * 0.5;
-          var my = (prev.y + cur.y) * 0.5;
-          ctx.quadraticCurveTo(prev.x, prev.y, mx, my);
-        }
-        var last = sampled[sampled.length - 1];
-        ctx.lineTo(last.x, last.y);
-
-        var bandWidth = (W < 768 ? 40 : 80) + band * 30;
-        var hueShift = time * 0.3 + band * 1.2;
-        var ci = Math.floor((hueShift) % auroraColors.length);
-        var col = auroraColors[ci];
-        var alpha = (0.025 - band * 0.007);
-
-        ctx.strokeStyle = 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',' + alpha + ')';
-        ctx.lineWidth = bandWidth;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.shadowColor = 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',0.15)';
-        ctx.shadowBlur = 40 + band * 20;
-        ctx.stroke();
-      }
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = 'transparent';
-    }
-
-    /* ── Draw lane stars with twinkling ── */
-    function drawStars() {
-      var viewTop = scrollY - 200;
-      var viewBot = scrollY + window.innerHeight + 200;
-
-      for (var i = 0; i < stars.length; i++) {
-        var s = stars[i];
-        if (s.y < viewTop || s.y > viewBot) continue;
-
-        var twinkle = Math.sin(time * s.twinkleSpeed + s.twinklePhase);
-        var alpha = s.baseAlpha + twinkle * 0.25;
-        alpha = Math.max(0.05, Math.min(1, alpha));
-
-        var col = s.color;
-
-        if (s.bright) {
-          // Bright star — glow halo
-          var grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 5);
-          grad.addColorStop(0, 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',' + (alpha * 0.8) + ')');
-          grad.addColorStop(0.3, 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',' + (alpha * 0.3) + ')');
-          grad.addColorStop(1, 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',0)');
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, s.r * 5, 0, Math.PI * 2);
-          ctx.fillStyle = grad;
-          ctx.fill();
-
-          // Cross-spike for brightest stars
-          ctx.strokeStyle = 'rgba(255,255,255,' + (alpha * 0.5) + ')';
-          ctx.lineWidth = 0.5;
-          var spikeLen = s.r * 4 + twinkle * 2;
-          ctx.beginPath();
-          ctx.moveTo(s.x - spikeLen, s.y);
-          ctx.lineTo(s.x + spikeLen, s.y);
-          ctx.moveTo(s.x, s.y - spikeLen);
-          ctx.lineTo(s.x, s.y + spikeLen);
-          ctx.stroke();
-        }
-
-        // Core dot
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,' + alpha + ')';
-        ctx.fill();
-      }
-    }
-
-    /* ── Draw comets with glowing tails ── */
-    function drawComets() {
-      for (var i = comets.length - 1; i >= 0; i--) {
-        var c = comets[i];
-        c.x += c.vx;
-        c.y += c.vy;
-        c.life -= c.decay;
-
-        if (c.life <= 0) {
-          comets[i] = spawnComet();
-          continue;
-        }
-
-        var alpha = c.life * 0.9;
-        var col = c.color;
-
-        // Comet tail
-        var tailX = c.x - c.vx * c.tailLen;
-        var tailY = c.y - c.vy * c.tailLen;
-        var grad = ctx.createLinearGradient(c.x, c.y, tailX, tailY);
-        grad.addColorStop(0, 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',' + alpha + ')');
-        grad.addColorStop(1, 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',0)');
-
-        ctx.beginPath();
-        ctx.moveTo(tailX, tailY);
-        ctx.lineTo(c.x, c.y);
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = c.radius;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-
-        // Comet head glow
-        var headGrad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.radius * 4);
-        headGrad.addColorStop(0, 'rgba(255,255,255,' + (alpha * 0.9) + ')');
-        headGrad.addColorStop(0.4, 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',' + (alpha * 0.5) + ')');
-        headGrad.addColorStop(1, 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',0)');
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, c.radius * 4, 0, Math.PI * 2);
-        ctx.fillStyle = headGrad;
-        ctx.fill();
-      }
-    }
-
-    /* ── Draw section node stars — bright anchor points ── */
-    function drawNodeStars(pts) {
-      // Skip first/last bookend points
-      for (var i = 1; i < pts.length - 1; i++) {
-        var p = pts[i];
-
-        // Check if near viewport
-        var dist = Math.abs(p.y - (scrollY + window.innerHeight * 0.5));
-        var nearness = 1 - Math.min(dist / (window.innerHeight * 0.6), 1);
-        if (nearness <= 0) continue;
-
-        var pulse = Math.sin(time * 1.5 + i * 0.8) * 0.3 + 0.7;
-        var alpha = nearness * pulse;
-        var col = auroraColors[i % auroraColors.length];
-
-        // Outer glow
-        var r1 = 18 + nearness * 8;
-        var grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r1);
-        grad.addColorStop(0, 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',' + (alpha * 0.4) + ')');
-        grad.addColorStop(0.5, 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',' + (alpha * 0.1) + ')');
-        grad.addColorStop(1, 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',0)');
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, r1, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        // Inner bright core
-        var r2 = 3 + nearness * 2;
-        var coreGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r2);
-        coreGrad.addColorStop(0, 'rgba(255,255,255,' + (alpha * 0.95) + ')');
-        coreGrad.addColorStop(1, 'rgba(' + col.r + ',' + col.g + ',' + col.b + ',' + (alpha * 0.3) + ')');
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, r2, 0, Math.PI * 2);
-        ctx.fillStyle = coreGrad;
-        ctx.fill();
-
-        // Cross spikes
-        ctx.strokeStyle = 'rgba(255,255,255,' + (alpha * 0.35) + ')';
-        ctx.lineWidth = 0.7;
-        var spike = 8 + nearness * 10;
-        ctx.beginPath();
-        ctx.moveTo(p.x - spike, p.y); ctx.lineTo(p.x + spike, p.y);
-        ctx.moveTo(p.x, p.y - spike); ctx.lineTo(p.x, p.y + spike);
-        ctx.stroke();
-      }
-    }
-
-    /* ── Connecting star lines between nodes ── */
-    function drawConnections(pts) {
-      if (pts.length < 3) return;
-      var sampled = samplePath(pts, 80);
-
-      // Thin luminous line along the centre of the S
-      ctx.beginPath();
-      ctx.moveTo(sampled[0].x, sampled[0].y);
-      for (var i = 1; i < sampled.length; i++) {
-        ctx.lineTo(sampled[i].x, sampled[i].y);
-      }
-
-      var scrollFrac = scrollY / Math.max(1, pageH - window.innerHeight);
-      var revealLen = sampled.length * Math.min(1, scrollFrac * 1.15 + 0.08);
-
-      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([2, 6]);
-      ctx.lineDashOffset = -time * 8;
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    /* ── Main render loop ── */
-    function render() {
-      time += 0.016;
-      scrollY = window.pageYOffset || 0;
-
-      ctx.clearRect(0, 0, W, H);
-
-      var pts = getSCurvePoints();
-      drawAurora(pts);
-      drawConnections(pts);
-      drawStars();
-      drawComets();
-      drawNodeStars(pts);
-
-      raf = requestAnimationFrame(render);
-    }
-
-    /* ── Scroll listener ── */
-    window.addEventListener('scroll', function () {
-      scrollY = window.pageYOffset || 0;
-    }, { passive: true });
-
-    /* ── Resize handler ── */
-    var resizeTimer;
-    window.addEventListener('resize', function () {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(resize, 200);
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Tilt reset smoothing Ã¢â‚¬â€ desktop only Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+  if (window.innerWidth >= 768) {
+    document.querySelectorAll('.feature-card, .pricing-card--featured, .testimonial-card').forEach(function (card) {
+      card.addEventListener('mouseenter', function () {
+        card.style.transition = 'transform 0.1s ease-out';
+      });
+      card.addEventListener('mouseleave', function () {
+        card.style.transition = 'transform 0.6s cubic-bezier(0.22,0.61,0.36,1)';
+        card.style.transform = '';
+      });
     });
+  }
 
-    /* ── Init ── */
-    resize();
-    render();
-
-    /* Rebuild after full load to get correct section positions */
-    window.addEventListener('load', function () {
-      setTimeout(function () { resize(); }, 500);
-      setTimeout(function () { resize(); }, 2000);
-    });
-  })();
-
-  /* ═══════════════════════════════════════════════════════════════════════
-     Kendara — Realistic Branching Lightning System
-     Canvas-based lightning with jagged bolts, branches, ambient glow,
-     multiple rapid sub-flashes, and randomised timing.
-     ═══════════════════════════════════════════════════════════════════════ */
-  (function initKendaraLightning() {
+  /* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+     Kendara Ã¢â‚¬â€ Realistic Storm with Volumetric Clouds & Natural Lightning
+     Multi-layer Perlin-noise clouds, cloud-internal illumination,
+     natural forked bolts with glow halos, sheet lightning, smooth timing.
+     Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */
+  (function initKendaraStorm() {
     var canvas = document.getElementById('kendaraLightning');
     if (!canvas) return;
     var ctx = canvas.getContext('2d');
@@ -830,284 +483,408 @@
     if (!section) return;
 
     var W, H, dpr;
-    var bolts = [];
-    var ambientAlpha = 0;
     var isActive = false;
+    var isMobile = window.innerWidth < 768;
 
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Simple 2D value noise (smooth randomness for clouds) Ã¢â€â‚¬Ã¢â€â‚¬ */
+    var PERM = new Uint8Array(512);
+    (function seedNoise() {
+      var p = [];
+      for (var i = 0; i < 256; i++) p[i] = i;
+      for (var j = 255; j > 0; j--) {
+        var k = Math.floor(Math.random() * (j + 1));
+        var tmp = p[j]; p[j] = p[k]; p[k] = tmp;
+      }
+      for (var n = 0; n < 512; n++) PERM[n] = p[n & 255];
+    })();
+
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function grad(hash, x, y) {
+      var h = hash & 3;
+      return ((h & 1) === 0 ? x : -x) + ((h & 2) === 0 ? y : -y);
+    }
+    function noise2D(x, y) {
+      var xi = Math.floor(x) & 255, yi = Math.floor(y) & 255;
+      var xf = x - Math.floor(x), yf = y - Math.floor(y);
+      var u = fade(xf), v = fade(yf);
+      var aa = PERM[PERM[xi] + yi], ab = PERM[PERM[xi] + yi + 1];
+      var ba = PERM[PERM[xi + 1] + yi], bb = PERM[PERM[xi + 1] + yi + 1];
+      return lerp(
+        lerp(grad(aa, xf, yf), grad(ba, xf - 1, yf), u),
+        lerp(grad(ab, xf, yf - 1), grad(bb, xf - 1, yf - 1), u),
+        v
+      );
+    }
+    function fbm(x, y, octaves) {
+      var val = 0, amp = 0.5, freq = 1;
+      for (var i = 0; i < octaves; i++) {
+        val += amp * noise2D(x * freq, y * freq);
+        amp *= 0.5; freq *= 2.1;
+      }
+      return val;
+    }
+
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Cloud layers (pre-rendered to off-screen canvases) Ã¢â€â‚¬Ã¢â€â‚¬ */
+    var cloudLayers = [];
+    var cloudDrift = 0;
+
+    function buildCloudLayer(scale, yBias, opacity, tint) {
+      var cw = Math.ceil(W / 3), ch = Math.ceil(H / 3);
+      var offscreen = document.createElement('canvas');
+      offscreen.width = cw; offscreen.height = ch;
+      var c = offscreen.getContext('2d');
+      var imgData = c.createImageData(cw, ch);
+      var d = imgData.data;
+      var ox = Math.random() * 1000, oy = Math.random() * 1000;
+      for (var py = 0; py < ch; py++) {
+        var ny = py / ch;
+        /* Clouds concentrated in top 55% with soft falloff */
+        var yMask = ny < 0.15 ? ny / 0.15 : (ny < 0.45 ? 1 : Math.max(0, 1 - (ny - 0.45) / 0.15));
+        yMask = yMask * yMask * (3 - 2 * yMask); /* smoothstep */
+        yMask *= (0.6 + 0.4 * yBias);
+        for (var px = 0; px < cw; px++) {
+          var nx = px / cw;
+          var n = fbm(ox + nx * scale, oy + ny * scale * 0.7, 4);
+          n = (n + 1) * 0.5; /* normalise 0..1 */
+          n = Math.pow(n, 1.3); /* contrast boost */
+          var a = n * yMask * opacity;
+          var idx = (py * cw + px) * 4;
+          d[idx]     = tint[0];
+          d[idx + 1] = tint[1];
+          d[idx + 2] = tint[2];
+          d[idx + 3] = Math.min(255, a * 255) | 0;
+        }
+      }
+      c.putImageData(imgData, 0, 0);
+      return { canvas: offscreen, opacity: opacity, drift: (0.3 + Math.random() * 0.7) * (Math.random() > 0.5 ? 1 : -1) };
+    }
+
+    function rebuildClouds() {
+      cloudLayers = [];
+      if (isMobile) {
+        cloudLayers.push(buildCloudLayer(4.0, 0.9, 0.6, [20, 14, 40]));
+        cloudLayers.push(buildCloudLayer(6.0, 1.0, 0.4, [32, 22, 55]));
+      } else {
+        cloudLayers.push(buildCloudLayer(3.5, 0.9, 0.65, [18, 12, 38]));
+        cloudLayers.push(buildCloudLayer(5.5, 1.0, 0.45, [30, 20, 55]));
+      }
+    }
+
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Resize Ã¢â€â‚¬Ã¢â€â‚¬ */
     function resize() {
       var rect = section.getBoundingClientRect();
       dpr = Math.min(window.devicePixelRatio || 1, 2);
-      W = rect.width;
-      H = rect.height;
-      canvas.width  = W * dpr;
-      canvas.height = H * dpr;
-      canvas.style.width  = W + 'px';
-      canvas.style.height = H + 'px';
+      W = rect.width; H = rect.height;
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      isMobile = window.innerWidth < 768;
+      rebuildClouds();
     }
     resize();
     window.addEventListener('resize', resize);
 
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Natural lightning bolt generator Ã¢â€â‚¬Ã¢â€â‚¬ */
     function generateBolt(x1, y1, x2, y2, depth) {
       depth = depth || 0;
-      var segments = [];
+      var segs = [];
       var dx = x2 - x1, dy = y2 - y1;
       var len = Math.sqrt(dx * dx + dy * dy);
-      var steps = Math.max(4, Math.floor(len / (depth === 0 ? 18 : 30)));
-      var jitter = len * (depth === 0 ? 0.12 : 0.08);
-      segments.push({ x: x1, y: y1 });
-      for (var i = 1; i <= steps; i++) {
-        var t = i / steps;
-        segments.push({
-          x: x1 + dx * t + (Math.random() - 0.5) * jitter * 2,
-          y: y1 + dy * t + (Math.random() - 0.5) * jitter * 0.6
-        });
-      }
-      segments[segments.length - 1] = { x: x2, y: y2 };
+      if (len < 3) return { segments: [{x:x1,y:y1},{x:x2,y:y2}], branches: [], depth: depth };
 
+      /* Midpoint displacement algorithm for natural look */
+      var points = [{x: x1, y: y1}, {x: x2, y: y2}];
+      var displace = len * (depth === 0 ? 0.28 : 0.18);
+      for (var pass = 0; pass < (depth === 0 ? 5 : 3); pass++) {
+        var newPts = [points[0]];
+        for (var i = 0; i < points.length - 1; i++) {
+          var a = points[i], b = points[i + 1];
+          var mx = (a.x + b.x) / 2 + (Math.random() - 0.5) * displace;
+          var my = (a.y + b.y) / 2 + (Math.random() - 0.5) * displace * 0.4;
+          newPts.push({x: mx, y: my});
+          newPts.push(b);
+        }
+        points = newPts;
+        displace *= 0.52;
+      }
+      segs = points;
+
+      /* Branches */
       var branches = [];
-      if (depth < 2) {
-        var bc = depth === 0 ? Math.floor(2 + Math.random() * 4) : Math.floor(Math.random() * 2);
+      if (depth < 3) {
+        var bc = depth === 0 ? (2 + Math.floor(Math.random() * 4))
+               : depth === 1 ? Math.floor(1 + Math.random() * 2)
+               : (Math.random() < 0.4 ? 1 : 0);
         for (var b = 0; b < bc; b++) {
-          var si = Math.floor(2 + Math.random() * (segments.length - 4));
-          if (si >= segments.length) si = segments.length - 2;
-          var sp = segments[si];
-          var bAngle = (Math.random() - 0.5) * 1.2 + (dx > 0 ? 0.3 : -0.3);
-          var bLen = len * (0.15 + Math.random() * 0.25) / (depth + 1);
-          var bx2 = sp.x + Math.cos(bAngle) * bLen * (Math.random() > 0.5 ? 1 : -1);
-          var by2 = sp.y + Math.abs(Math.sin(bAngle)) * bLen;
+          var si = Math.floor(segs.length * (0.15 + Math.random() * 0.6));
+          if (si >= segs.length) si = segs.length - 2;
+          var sp = segs[si];
+          var mainAngle = Math.atan2(dy, dx);
+          var spread = depth === 0 ? 0.8 : 0.6;
+          var bAngle = mainAngle + (Math.random() - 0.5) * spread + (Math.random() > 0.5 ? 0.3 : -0.3);
+          var bLen = len * (0.12 + Math.random() * 0.22) / (depth * 0.7 + 1);
+          var bx2 = sp.x + Math.cos(bAngle) * bLen;
+          var by2 = sp.y + Math.sin(bAngle) * bLen;
           branches.push(generateBolt(sp.x, sp.y, bx2, by2, depth + 1));
         }
       }
-      return { segments: segments, branches: branches, depth: depth };
+      return { segments: segs, branches: branches, depth: depth };
     }
 
-    function drawBolt(bolt, alpha, progress) {
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Draw a bolt with efficient 2-pass glow Ã¢â€â‚¬Ã¢â€â‚¬ */
+    function drawBolt(bolt, alpha) {
       var segs = bolt.segments;
-      var drawCount = Math.floor(segs.length * Math.min(progress, 1));
-      if (drawCount < 2) return;
-      var baseW = bolt.depth === 0 ? 2.5 : (bolt.depth === 1 ? 1.2 : 0.6);
-      var glowW = bolt.depth === 0 ? 12 : (bolt.depth === 1 ? 6 : 3);
+      if (segs.length < 2) return;
 
-      // Outer glow
-      ctx.save();
-      ctx.globalAlpha = alpha * 0.4 / (bolt.depth + 1);
-      ctx.strokeStyle = 'rgba(160,120,255,1)';
-      ctx.lineWidth = glowW; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.shadowColor = 'rgba(140,100,255,0.8)'; ctx.shadowBlur = 25;
-      ctx.beginPath(); ctx.moveTo(segs[0].x, segs[0].y);
-      for (var i = 1; i < drawCount; i++) ctx.lineTo(segs[i].x, segs[i].y);
-      ctx.stroke(); ctx.restore();
+      var d = bolt.depth;
+      var depthFade = 1 / (d * 0.6 + 1);
+      var a = alpha * depthFade;
 
-      // Core
-      ctx.save();
-      ctx.globalAlpha = alpha * 0.9 / (bolt.depth * 0.5 + 1);
-      ctx.strokeStyle = bolt.depth === 0 ? 'rgba(220,210,255,1)' : 'rgba(180,160,255,1)';
-      ctx.lineWidth = baseW; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.shadowColor = 'rgba(200,180,255,1)'; ctx.shadowBlur = 8;
-      ctx.beginPath(); ctx.moveTo(segs[0].x, segs[0].y);
-      for (var j = 1; j < drawCount; j++) ctx.lineTo(segs[j].x, segs[j].y);
-      ctx.stroke(); ctx.restore();
-
-      // Hot white centre for main bolt
-      if (bolt.depth === 0) {
-        ctx.save(); ctx.globalAlpha = alpha * 0.7;
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.8; ctx.lineCap = 'round';
+      /* Pass 1: Glow halo (only for main bolt and first-level branches) */
+      if (d < 2) {
+        ctx.save();
+        ctx.globalAlpha = a * 0.25;
+        ctx.strokeStyle = d === 0 ? 'rgba(160,140,255,1)' : 'rgba(140,120,220,1)';
+        ctx.lineWidth = d === 0 ? 14 : 7;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.shadowColor = d === 0 ? 'rgba(140,110,255,0.8)' : 'rgba(120,100,200,0.6)';
+        ctx.shadowBlur = d === 0 ? 25 : 12;
         ctx.beginPath(); ctx.moveTo(segs[0].x, segs[0].y);
-        for (var k = 1; k < drawCount; k++) ctx.lineTo(segs[k].x, segs[k].y);
-        ctx.stroke(); ctx.restore();
-      }
-
-      for (var bi = 0; bi < bolt.branches.length; bi++) {
-        var bp = (progress - 0.2) * 1.5;
-        if (bp > 0) drawBolt(bolt.branches[bi], alpha * 0.7, bp);
-      }
-    }
-
-    function spawnBolt() {
-      var ox = W * (0.1 + Math.random() * 0.8);
-      var oy = H * (Math.random() * 0.1);
-      var ex = ox + (Math.random() - 0.5) * W * 0.3;
-      var ey = H * (0.5 + Math.random() * 0.4);
-      var tree = generateBolt(ox, oy, ex, ey, 0);
-      var fc = 2 + Math.floor(Math.random() * 2);
-      var ft = [], dur = 0;
-      for (var f = 0; f < fc; f++) {
-        var fi = 20 + Math.random() * 30, fh = 30 + Math.random() * 60, fo = 80 + Math.random() * 120;
-        var gap = f < fc - 1 ? (40 + Math.random() * 80) : 0;
-        ft.push({ start: dur, fadeIn: fi, hold: fh, fadeOut: fo, peak: 0.5 + Math.random() * 0.5 });
-        dur += fi + fh + fo + gap;
-      }
-      ft[ft.length - 1].peak = 0.9 + Math.random() * 0.1;
-      bolts.push({ tree: tree, born: performance.now(), duration: dur, flashes: ft, ambientPeak: 0.06 + Math.random() * 0.06 });
-    }
-
-    var nextBoltTime = performance.now() + 2000 + Math.random() * 3000;
-    function scheduleNext(now) {
-      nextBoltTime = now + (Math.random() < 0.2 ? 300 + Math.random() * 500 : 2500 + Math.random() * 5000);
-    }
-
-    function getBoltAlpha(bolt, now) {
-      var el = now - bolt.born;
-      if (el < 0 || el > bolt.duration) return 0;
-      var a = 0;
-      for (var i = 0; i < bolt.flashes.length; i++) {
-        var fl = bolt.flashes[i], ft = el - fl.start;
-        if (ft < 0) continue;
-        if (ft < fl.fadeIn) a = Math.max(a, (ft / fl.fadeIn) * fl.peak);
-        else if (ft < fl.fadeIn + fl.hold) a = Math.max(a, fl.peak);
-        else if (ft < fl.fadeIn + fl.hold + fl.fadeOut) a = Math.max(a, fl.peak * (1 - (ft - fl.fadeIn - fl.hold) / fl.fadeOut));
-      }
-      return a;
-    }
-
-    function render() {
-      requestAnimationFrame(render);
-      if (!isActive) { ctx.clearRect(0, 0, W, H); return; }
-      var now = performance.now();
-      if (now >= nextBoltTime) { spawnBolt(); scheduleNext(now); }
-      ctx.clearRect(0, 0, W, H);
-      ambientAlpha = 0;
-      var alive = [];
-      for (var i = 0; i < bolts.length; i++) {
-        var b = bolts[i], a = getBoltAlpha(b, now);
-        if (a > 0.001 || now - b.born <= b.duration) {
-          alive.push(b);
-          ambientAlpha = Math.max(ambientAlpha, a * b.ambientPeak);
-        }
-      }
-      bolts = alive;
-      if (ambientAlpha > 0.002) {
-        ctx.save(); ctx.globalAlpha = ambientAlpha;
-        ctx.fillStyle = 'rgba(100,60,200,1)'; ctx.fillRect(0, 0, W, H);
+        for (var g = 1; g < segs.length; g++) ctx.lineTo(segs[g].x, segs[g].y);
+        ctx.stroke();
         ctx.restore();
       }
-      for (var j = 0; j < bolts.length; j++) {
-        var bolt = bolts[j], al = getBoltAlpha(bolt, now);
-        if (al > 0.001) {
-          var elapsed = now - bolt.born;
-          var dp = Math.min(elapsed / (bolt.flashes[0].fadeIn + bolt.flashes[0].hold), 1);
-          drawBolt(bolt.tree, al, dp);
-        }
+
+      /* Pass 2: Bright core */
+      ctx.save();
+      ctx.globalAlpha = a * 0.85;
+      ctx.strokeStyle = d === 0 ? 'rgba(230,225,255,1)' : (d === 1 ? 'rgba(200,190,255,1)' : 'rgba(170,160,230,1)');
+      ctx.lineWidth = d === 0 ? 2.2 : (d === 1 ? 1.2 : 0.6);
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.shadowColor = 'rgba(220,210,255,0.7)';
+      ctx.shadowBlur = 3;
+      ctx.beginPath(); ctx.moveTo(segs[0].x, segs[0].y);
+      for (var c = 1; c < segs.length; c++) ctx.lineTo(segs[c].x, segs[c].y);
+      ctx.stroke();
+      ctx.restore();
+
+      /* Draw branches */
+      for (var bi = 0; bi < bolt.branches.length; bi++) {
+        drawBolt(bolt.branches[bi], alpha * 0.65);
       }
     }
 
-    var obs = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) { isActive = e.isIntersecting; });
-    }, { threshold: 0.05 });
-    obs.observe(section);
-    requestAnimationFrame(render);
-  })();
-
-  /* ═══════════════════════════════════════════════════════════════════════
-     Porondam — Pink Aurora Ribbons
-     Canvas-based swirling aurora ribbons matching the hero style but pink
-     ═══════════════════════════════════════════════════════════════════════ */
-  (function initPorondamAurora() {
-    var canvas = document.getElementById('porondamAurora');
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    var section = document.getElementById('porondam');
-    if (!section) return;
-
-    var W, H, dpr;
-    var isActive = false;
-    var time = 0;
-
-    function resize() {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      W = canvas.parentElement.offsetWidth;
-      H = canvas.parentElement.offsetHeight;
-      canvas.width  = W * dpr;
-      canvas.height = H * dpr;
-      canvas.style.width  = W + 'px';
-      canvas.style.height = H + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    resize();
-    window.addEventListener('resize', resize);
-
-    /* Catmull-Rom spline helper */
-    function catmullRom(p0, p1, p2, p3, t) {
-      var t2 = t * t, t3 = t2 * t;
-      return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Cloud illumination Ã¢â‚¬â€ radial glow at bolt origin Ã¢â€â‚¬Ã¢â€â‚¬ */
+    function drawCloudIllumination(x, y, intensity) {
+      var radius = W * 0.35;
+      var grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      grad.addColorStop(0, 'rgba(140,120,255,' + (intensity * 0.25) + ')');
+      grad.addColorStop(0.3, 'rgba(100,70,200,' + (intensity * 0.12) + ')');
+      grad.addColorStop(0.6, 'rgba(60,40,150,' + (intensity * 0.04) + ')');
+      grad.addColorStop(1, 'rgba(30,20,80,0)');
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+      ctx.restore();
     }
 
-    /* 4 ribbons — pink/magenta aurora */
-    var RIBBON_COUNT = 4;
-    var ribbons = [];
-    for (var r = 0; r < RIBBON_COUNT; r++) {
-      ribbons.push({
-        yBase: 0.25 + r * 0.15,
-        speed: 0.15 + r * 0.05,
-        amp: 40 + r * 15,
-        hue: 320 + r * 15,       // Pink → Magenta range
-        alpha: 0.06 - r * 0.008,
-        width: 120 - r * 15
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Sheet lightning (distant cloud-to-cloud flash) Ã¢â€â‚¬Ã¢â€â‚¬ */
+    function drawSheetLightning(x, y, intensity) {
+      var rw = W * (0.2 + Math.random() * 0.3);
+      var rh = H * (0.08 + Math.random() * 0.1);
+      var grad = ctx.createRadialGradient(x, y, 0, x, y, Math.max(rw, rh));
+      grad.addColorStop(0, 'rgba(130,110,220,' + (intensity * 0.18) + ')');
+      grad.addColorStop(0.5, 'rgba(80,60,170,' + (intensity * 0.06) + ')');
+      grad.addColorStop(1, 'rgba(40,30,100,0)');
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Storm state Ã¢â€â‚¬Ã¢â€â‚¬ */
+    var bolts = [];
+    var sheetFlashes = [];
+
+    function spawnBolt() {
+      /* Origin in cloud band (top 10-35% of section) */
+      var ox = W * (0.08 + Math.random() * 0.84);
+      var oy = H * (0.1 + Math.random() * 0.2);
+      /* End point lower down */
+      var ex = ox + (Math.random() - 0.5) * W * 0.25;
+      var ey = H * (0.5 + Math.random() * 0.35);
+      var tree = generateBolt(ox, oy, ex, ey, 0);
+
+      /* Natural multi-pulse flash envelope (2-4 rapid re-strokes) */
+      var pulseCount = 2 + Math.floor(Math.random() * 3);
+      var pulses = [];
+      var t = 0;
+      for (var p = 0; p < pulseCount; p++) {
+        var attack = 15 + Math.random() * 25;
+        var hold = 20 + Math.random() * 40;
+        var decay = 60 + Math.random() * 120;
+        var peak = p === pulseCount - 1 ? (0.85 + Math.random() * 0.15) : (0.3 + Math.random() * 0.4);
+        pulses.push({ start: t, attack: attack, hold: hold, decay: decay, peak: peak });
+        t += attack + hold + decay + (p < pulseCount - 1 ? (20 + Math.random() * 60) : 0);
+      }
+      bolts.push({
+        tree: tree,
+        born: performance.now(),
+        duration: t + 200, /* extra tail for glow decay */
+        pulses: pulses,
+        ox: ox, oy: oy
       });
     }
 
-    /* 4 soft nebula glows */
-    var NEBULA_COUNT = 4;
-    var nebulas = [];
-    for (var n = 0; n < NEBULA_COUNT; n++) {
-      nebulas.push({
-        x: Math.random(), y: Math.random(),
-        r: 150 + Math.random() * 200,
-        hue: 310 + Math.random() * 40,
-        speed: 0.2 + Math.random() * 0.3
+    function spawnSheet() {
+      var sx = W * (0.1 + Math.random() * 0.8);
+      var sy = H * (0.05 + Math.random() * 0.25);
+      var attack = 30 + Math.random() * 50;
+      var hold = 40 + Math.random() * 80;
+      var decay = 150 + Math.random() * 300;
+      sheetFlashes.push({
+        born: performance.now(),
+        duration: attack + hold + decay,
+        attack: attack, hold: hold, decay: decay,
+        peak: 0.3 + Math.random() * 0.4,
+        x: sx, y: sy
       });
     }
 
+    var nextBoltTime = performance.now() + 1500 + Math.random() * 2500;
+    var nextSheetTime = performance.now() + 800 + Math.random() * 1500;
+
+    function scheduleNextBolt(now) {
+      nextBoltTime = now + (Math.random() < 0.15 ? (200 + Math.random() * 400) : (3000 + Math.random() * 5000));
+    }
+    function scheduleNextSheet(now) {
+      nextSheetTime = now + (1000 + Math.random() * 3000);
+    }
+
+    function getEnvelopeAlpha(item, now) {
+      var el = now - item.born;
+      if (el < 0) return 0;
+      /* For bolts with pulses */
+      if (item.pulses) {
+        var a = 0;
+        for (var i = 0; i < item.pulses.length; i++) {
+          var p = item.pulses[i], pt = el - p.start;
+          if (pt < 0) continue;
+          var val = 0;
+          if (pt < p.attack) val = (pt / p.attack) * p.peak;
+          else if (pt < p.attack + p.hold) val = p.peak;
+          else if (pt < p.attack + p.hold + p.decay) {
+            var dt = (pt - p.attack - p.hold) / p.decay;
+            val = p.peak * (1 - dt) * (1 - dt); /* quadratic ease-out for smooth decay */
+          }
+          a = Math.max(a, val);
+        }
+        return a;
+      }
+      /* For sheet flashes */
+      if (el < item.attack) return (el / item.attack) * item.peak;
+      if (el < item.attack + item.hold) return item.peak;
+      if (el < item.attack + item.hold + item.decay) {
+        var dd = (el - item.attack - item.hold) / item.decay;
+        return item.peak * (1 - dd) * (1 - dd);
+      }
+      return 0;
+    }
+
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Draw clouds (composited from pre-rendered layers) Ã¢â€â‚¬Ã¢â€â‚¬ */
+    function drawClouds(now, flashIntensity) {
+      var elapsed = now * 0.00003;
+      for (var i = 0; i < cloudLayers.length; i++) {
+        var layer = cloudLayers[i];
+        if (!layer.canvas) continue;
+        var drift = (elapsed * layer.drift * 40) % W;
+        ctx.save();
+        /* Base dark clouds */
+        ctx.globalAlpha = layer.opacity * 0.85;
+        ctx.drawImage(layer.canvas, drift, 0, W, H);
+        ctx.drawImage(layer.canvas, drift - W, 0, W, H);
+
+        /* Lightning illumination overlay Ã¢â‚¬â€ brighter when flashing */
+        if (flashIntensity > 0.01) {
+          ctx.globalCompositeOperation = 'screen';
+          ctx.globalAlpha = flashIntensity * layer.opacity * 0.5;
+          ctx.drawImage(layer.canvas, drift, 0, W, H);
+          ctx.drawImage(layer.canvas, drift - W, 0, W, H);
+        }
+        ctx.restore();
+      }
+    }
+
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Main render loop Ã¢â€â‚¬Ã¢â€â‚¬ */
+    var lastCloudFrame = 0;
     function render() {
       requestAnimationFrame(render);
       if (!isActive) return;
-      time += 0.016;
+      var now = performance.now();
+
+      /* Spawn events */
+      if (now >= nextBoltTime) { spawnBolt(); scheduleNextBolt(now); }
+      if (now >= nextSheetTime) { spawnSheet(); scheduleNextSheet(now); }
+
+      /* Calculate peak flash intensity for cloud illumination */
+      var peakFlash = 0;
+      for (var bi = 0; bi < bolts.length; bi++) {
+        peakFlash = Math.max(peakFlash, getEnvelopeAlpha(bolts[bi], now));
+      }
+      for (var si = 0; si < sheetFlashes.length; si++) {
+        peakFlash = Math.max(peakFlash, getEnvelopeAlpha(sheetFlashes[si], now) * 0.5);
+      }
+
+      /* Skip frames when idle (clouds drift very slowly Ã¢â‚¬â€ 10fps is enough) */
+      var hasActivity = peakFlash > 0.005 || bolts.length > 0 || sheetFlashes.length > 0;
+      if (!hasActivity && now - lastCloudFrame < 100) return;
+      lastCloudFrame = now;
+
       ctx.clearRect(0, 0, W, H);
 
-      /* Draw nebula glows */
-      for (var ni = 0; ni < nebulas.length; ni++) {
-        var nb = nebulas[ni];
-        var nx = (nb.x + Math.sin(time * nb.speed * 0.5) * 0.1) * W;
-        var ny = (nb.y + Math.cos(time * nb.speed * 0.3) * 0.1) * H;
-        var grad = ctx.createRadialGradient(nx, ny, 0, nx, ny, nb.r);
-        grad.addColorStop(0, 'hsla(' + nb.hue + ',70%,50%,0.04)');
-        grad.addColorStop(1, 'hsla(' + nb.hue + ',70%,50%,0)');
-        ctx.fillStyle = grad;
+      /* 1. Draw cloud layers (with illumination) */
+      drawClouds(now, peakFlash);
+
+      /* 2. Ambient sky flash */
+      if (peakFlash > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = peakFlash * 0.05;
+        ctx.fillStyle = 'rgba(120,100,200,1)';
         ctx.fillRect(0, 0, W, H);
+        ctx.restore();
       }
 
-      /* Draw ribbons */
-      for (var ri = 0; ri < ribbons.length; ri++) {
-        var rb = ribbons[ri];
-        var pts = [];
-        var segs = 8;
-        for (var s = -1; s <= segs + 2; s++) {
-          var px = (s / segs) * W;
-          var py = rb.yBase * H + Math.sin(time * rb.speed + s * 0.8) * rb.amp + Math.cos(time * rb.speed * 0.7 + s * 1.2) * rb.amp * 0.5;
-          pts.push({ x: px, y: py });
+      /* 3. Sheet lightning */
+      var aliveSheets = [];
+      for (var sj = 0; sj < sheetFlashes.length; sj++) {
+        var sh = sheetFlashes[sj];
+        var sa = getEnvelopeAlpha(sh, now);
+        if (sa > 0.001 || now - sh.born < sh.duration) {
+          aliveSheets.push(sh);
+          if (sa > 0.01) drawSheetLightning(sh.x, sh.y, sa);
         }
+      }
+      sheetFlashes = aliveSheets;
 
-        ctx.beginPath();
-        var samples = 60;
-        for (var si = 0; si < pts.length - 3; si++) {
-          for (var t = 0; t < samples; t++) {
-            var frac = t / samples;
-            var sx = catmullRom(pts[si].x, pts[si + 1].x, pts[si + 2].x, pts[si + 3].x, frac);
-            var sy = catmullRom(pts[si].y, pts[si + 1].y, pts[si + 2].y, pts[si + 3].y, frac);
-            if (si === 0 && t === 0) ctx.moveTo(sx, sy);
-            else ctx.lineTo(sx, sy);
+      /* 4. Lightning bolts with cloud glow */
+      var aliveBolts = [];
+      for (var bj = 0; bj < bolts.length; bj++) {
+        var bolt = bolts[bj];
+        var ba = getEnvelopeAlpha(bolt, now);
+        if (ba > 0.001 || now - bolt.born < bolt.duration) {
+          aliveBolts.push(bolt);
+          if (ba > 0.01) {
+            /* Cloud illumination at bolt origin */
+            drawCloudIllumination(bolt.ox, bolt.oy, ba);
+            /* The bolt itself */
+            drawBolt(bolt.tree, ba);
           }
         }
-
-        ctx.strokeStyle = 'hsla(' + rb.hue + ',80%,60%,' + rb.alpha + ')';
-        ctx.lineWidth = rb.width;
-        ctx.lineCap = 'round';
-        ctx.shadowColor = 'hsla(' + rb.hue + ',90%,50%,0.15)';
-        ctx.shadowBlur = 40;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
       }
+      bolts = aliveBolts;
     }
 
     var obs = new IntersectionObserver(function (entries) {
@@ -1118,3 +895,4 @@
   })();
 
 })();
+

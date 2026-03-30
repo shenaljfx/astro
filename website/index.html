@@ -8,6 +8,13 @@
   <meta name="keywords" content="Grahachara, astrology, Sri Lanka, Vedic, Rahu Kalaya, Nakath, Porondam, astrologer, ග්‍රහචාර, ජ්‍යෝතිෂය" />
   <meta name="theme-color" content="#04030C" />
 
+  <!-- DNS prefetch for external resources -->
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+
+  <!-- Preload critical hero image for fast LCP -->
+  <link rel="preload" as="image" href="assets/todaypageenglish.png" />
+
   <!-- Open Graph -->
   <meta property="og:title" content="Grahachara — Sri Lanka's #1 Vedic Astrology App" />
   <meta property="og:description" content="Your personal astrologer in your pocket. Daily Nakath, Porondam, birth chart reports & more." />
@@ -15,26 +22,32 @@
   <meta property="og:url" content="https://grahachara.lk" />
   <meta property="og:image" content="https://grahachara.lk/assets/og-card.png" />
 
-  <!-- Fonts (English + Sinhala) -->
+  <!-- Fonts (English + Sinhala) — optimized with display=swap and preconnect -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+Sinhala:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="assets/favicon.png" />
 
   <link rel="stylesheet" href="css/styles.css" />
+
+  <!-- Performance: lazy-load all below-fold images -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add lazy loading to all images except the hero phone
+      document.querySelectorAll('img').forEach(function(img) {
+        if (!img.closest('.hero__phone')) {
+          img.loading = 'lazy';
+          img.decoding = 'async';
+        }
+      });
+    });
+  </script>
 </head>
 <body>
-
-  <!-- ═══ 3D COSMIC SCENE (Three.js WebGL — planets, milky way, stars) ═══ -->
-  <div id="cosmos3d" aria-hidden="true" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;"></div>
-
-  <!-- ═══ 2D FALLBACK CANVAS (if WebGL unavailable) ═══ -->
-  <canvas id="cosmos" aria-hidden="true"></canvas>
-
-  <!-- ═══ AURORA STAR LANE — S-shaped aurora ribbon with bright stars & comets ═══ -->
-  <canvas id="auroraLane" class="aurora-lane" aria-hidden="true"></canvas>
 
   <!-- ═══ NAVIGATION ═══ -->
   <nav class="nav" id="nav">
@@ -47,6 +60,7 @@
         <a href="#features" class="nav__link" data-i18n="nav.features">Features</a>
         <a href="#how-it-works" class="nav__link" data-i18n="nav.howItWorks">How It Works</a>
         <a href="#screenshots" class="nav__link" data-i18n="nav.screenshots">Screenshots</a>
+        <a href="#weekly-lagna" class="nav__link" data-i18n="nav.weeklyLagna">Weekly Palapala</a>
         <a href="#pricing" class="nav__link" data-i18n="nav.pricing">Pricing</a>
         <a href="#testimonials" class="nav__link" data-i18n="nav.reviews">Reviews</a>
         <a href="#faq" class="nav__link" data-i18n="nav.faq">FAQ</a>
@@ -85,6 +99,273 @@
     </div>
   </nav>
 
+  <!-- ═══ STARFIELD + MILKY WAY — Full-page background ═══ -->
+  <canvas id="starfield" class="starfield"></canvas>
+
+  <!-- ═══ AURORA BACKGROUND — Full viewport ═══ -->
+  <canvas id="heroAurora" class="hero__aurora"></canvas>
+
+  <!-- Rashi Chakra — decorative zodiac wheel, top-right corner -->
+  <div class="rashi-chakra" aria-hidden="true">
+    <svg class="rashi-chakra__svg" viewBox="-30 -30 460 460" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+        <!-- Center orb glow -->
+        <radialGradient id="rcOrb" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+          <stop offset="10%" stop-color="#FFE4A0" stop-opacity="0.88"/>
+          <stop offset="30%" stop-color="#D4A84C" stop-opacity="0.6"/>
+          <stop offset="55%" stop-color="#B87333" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#1A1028" stop-opacity="0"/>
+        </radialGradient>
+        <!-- Platinum ring gradient -->
+        <linearGradient id="rcPlat" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#E8E0D0" stop-opacity="0.7"/>
+          <stop offset="50%" stop-color="#B8A88A" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#D4C5A9" stop-opacity="0.65"/>
+        </linearGradient>
+        <!-- Zodiac wedge gradients -->
+        <linearGradient id="zg0" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#E8575D" stop-opacity="0.55"/><stop offset="100%" stop-color="#5C1D22" stop-opacity="0.18"/></linearGradient>
+        <linearGradient id="zg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#D4A84C" stop-opacity="0.55"/><stop offset="100%" stop-color="#4A3818" stop-opacity="0.18"/></linearGradient>
+        <linearGradient id="zg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3DCFB6" stop-opacity="0.55"/><stop offset="100%" stop-color="#144A3E" stop-opacity="0.18"/></linearGradient>
+        <linearGradient id="zg3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#5FA8D4" stop-opacity="0.55"/><stop offset="100%" stop-color="#1B3A50" stop-opacity="0.18"/></linearGradient>
+        <linearGradient id="zg4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#E09730" stop-opacity="0.55"/><stop offset="100%" stop-color="#503512" stop-opacity="0.18"/></linearGradient>
+        <linearGradient id="zg5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8BBF6A" stop-opacity="0.55"/><stop offset="100%" stop-color="#2E4A1E" stop-opacity="0.18"/></linearGradient>
+        <linearGradient id="zg6" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#A0DDD5" stop-opacity="0.55"/><stop offset="100%" stop-color="#264A44" stop-opacity="0.18"/></linearGradient>
+        <linearGradient id="zg7" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#CF5A5A" stop-opacity="0.55"/><stop offset="100%" stop-color="#4C1A1A" stop-opacity="0.18"/></linearGradient>
+        <linearGradient id="zg8" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#D49555" stop-opacity="0.55"/><stop offset="100%" stop-color="#4A3318" stop-opacity="0.18"/></linearGradient>
+        <linearGradient id="zg9" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7EC87E" stop-opacity="0.55"/><stop offset="100%" stop-color="#1E4A1E" stop-opacity="0.18"/></linearGradient>
+        <linearGradient id="zg10" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6AADDD" stop-opacity="0.55"/><stop offset="100%" stop-color="#1B3B52" stop-opacity="0.18"/></linearGradient>
+        <linearGradient id="zg11" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#A08EDA" stop-opacity="0.55"/><stop offset="100%" stop-color="#2D2456" stop-opacity="0.18"/></linearGradient>
+        <!-- Aura halo gradient -->
+        <linearGradient id="rcHalo" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#FBBF24" stop-opacity="0.6"/>
+          <stop offset="35%" stop-color="#F472B6" stop-opacity="0.4"/>
+          <stop offset="70%" stop-color="#A78BFA" stop-opacity="0.45"/>
+          <stop offset="100%" stop-color="#22D3EE" stop-opacity="0.5"/>
+        </linearGradient>
+        <!-- Star glow filter -->
+        <filter id="rcStarGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- L0: Star field — 3 concentric rings of twinkling stars -->
+      <g class="rc-stars" opacity="0.9">
+        <!-- Outer ring — 60 stars at r≈198 -->
+        <circle cx="398" cy="200" r="1.1" fill="#FFF" opacity="0.7"/><circle cx="397" cy="221" r="0.8" fill="#FFE4A0" opacity="0.55"/>
+        <circle cx="393" cy="241" r="1.0" fill="#FFF" opacity="0.65"/><circle cx="387" cy="261" r="0.7" fill="#C7D2FE" opacity="0.5"/>
+        <circle cx="378" cy="279" r="1.2" fill="#FFF" opacity="0.72"/><circle cx="367" cy="296" r="0.6" fill="#FFE4A0" opacity="0.48"/>
+        <circle cx="353" cy="311" r="0.9" fill="#FFF" opacity="0.6"/><circle cx="337" cy="323" r="1.1" fill="#A78BFA" opacity="0.55"/>
+        <circle cx="320" cy="333" r="0.7" fill="#FFF" opacity="0.7"/><circle cx="301" cy="340" r="1.0" fill="#FFE4A0" opacity="0.5"/>
+        <circle cx="281" cy="344" r="0.8" fill="#FFF" opacity="0.62"/><circle cx="260" cy="345" r="1.2" fill="#22D3EE" opacity="0.45"/>
+        <circle cx="240" cy="344" r="0.6" fill="#FFF" opacity="0.55"/><circle cx="220" cy="340" r="0.9" fill="#FFE4A0" opacity="0.58"/>
+        <circle cx="200" cy="398" r="1.1" fill="#FFF" opacity="0.7"/><circle cx="179" cy="397" r="0.7" fill="#FBBF24" opacity="0.5"/>
+        <circle cx="159" cy="393" r="1.0" fill="#FFF" opacity="0.65"/><circle cx="139" cy="387" r="0.8" fill="#C7D2FE" opacity="0.52"/>
+        <circle cx="121" cy="378" r="1.2" fill="#FFF" opacity="0.68"/><circle cx="104" cy="367" r="0.6" fill="#FFE4A0" opacity="0.45"/>
+        <circle cx="89" cy="353" r="0.9" fill="#FFF" opacity="0.6"/><circle cx="77" cy="337" r="1.1" fill="#F472B6" opacity="0.5"/>
+        <circle cx="67" cy="320" r="0.7" fill="#FFF" opacity="0.62"/><circle cx="60" cy="301" r="1.0" fill="#FFE4A0" opacity="0.55"/>
+        <circle cx="56" cy="281" r="0.8" fill="#FFF" opacity="0.58"/><circle cx="55" cy="260" r="1.2" fill="#22D3EE" opacity="0.42"/>
+        <circle cx="56" cy="240" r="0.6" fill="#FFF" opacity="0.65"/><circle cx="60" cy="220" r="0.9" fill="#FFE4A0" opacity="0.5"/>
+        <circle cx="2" cy="200" r="1.1" fill="#FFF" opacity="0.72"/><circle cx="3" cy="179" r="0.8" fill="#A78BFA" opacity="0.48"/>
+        <circle cx="7" cy="159" r="1.0" fill="#FFF" opacity="0.6"/><circle cx="13" cy="139" r="0.7" fill="#FFE4A0" opacity="0.55"/>
+        <circle cx="22" cy="121" r="1.2" fill="#FFF" opacity="0.7"/><circle cx="33" cy="104" r="0.6" fill="#FBBF24" opacity="0.45"/>
+        <circle cx="47" cy="89" r="0.9" fill="#FFF" opacity="0.58"/><circle cx="63" cy="77" r="1.1" fill="#C7D2FE" opacity="0.52"/>
+        <circle cx="80" cy="67" r="0.7" fill="#FFF" opacity="0.65"/><circle cx="99" cy="60" r="1.0" fill="#FFE4A0" opacity="0.5"/>
+        <circle cx="119" cy="56" r="0.8" fill="#FFF" opacity="0.6"/><circle cx="140" cy="55" r="1.2" fill="#F472B6" opacity="0.42"/>
+        <circle cx="160" cy="56" r="0.6" fill="#FFF" opacity="0.68"/><circle cx="180" cy="60" r="0.9" fill="#FFE4A0" opacity="0.55"/>
+        <!-- Mid ring — 40 stars at r≈165 -->
+        <circle cx="365" cy="200" r="0.9" fill="#FFF" opacity="0.6"/><circle cx="362" cy="227" r="0.6" fill="#FFE4A0" opacity="0.5"/>
+        <circle cx="353" cy="253" r="0.8" fill="#FFF" opacity="0.55"/><circle cx="339" cy="276" r="1.0" fill="#A78BFA" opacity="0.45"/>
+        <circle cx="320" cy="295" r="0.7" fill="#FFF" opacity="0.6"/><circle cx="297" cy="309" r="0.9" fill="#FFE4A0" opacity="0.5"/>
+        <circle cx="272" cy="318" r="0.6" fill="#22D3EE" opacity="0.42"/><circle cx="245" cy="321" r="0.8" fill="#FFF" opacity="0.55"/>
+        <circle cx="218" cy="319" r="1.0" fill="#FFF" opacity="0.58"/><circle cx="192" cy="312" r="0.7" fill="#FFE4A0" opacity="0.48"/>
+        <circle cx="168" cy="300" r="0.9" fill="#FFF" opacity="0.52"/><circle cx="148" cy="284" r="0.6" fill="#C7D2FE" opacity="0.45"/>
+        <circle cx="132" cy="264" r="0.8" fill="#FFF" opacity="0.6"/><circle cx="121" cy="241" r="1.0" fill="#FFE4A0" opacity="0.5"/>
+        <circle cx="114" cy="217" r="0.7" fill="#FFF" opacity="0.55"/><circle cx="35" cy="200" r="0.9" fill="#FBBF24" opacity="0.48"/>
+        <circle cx="38" cy="173" r="0.6" fill="#FFF" opacity="0.6"/><circle cx="47" cy="147" r="0.8" fill="#FFE4A0" opacity="0.52"/>
+        <circle cx="61" cy="124" r="1.0" fill="#FFF" opacity="0.55"/><circle cx="80" cy="105" r="0.7" fill="#A78BFA" opacity="0.42"/>
+        <circle cx="103" cy="91" r="0.9" fill="#FFF" opacity="0.58"/><circle cx="128" cy="82" r="0.6" fill="#FFE4A0" opacity="0.48"/>
+        <circle cx="155" cy="79" r="0.8" fill="#FFF" opacity="0.52"/><circle cx="182" cy="81" r="1.0" fill="#22D3EE" opacity="0.45"/>
+        <circle cx="208" cy="88" r="0.7" fill="#FFF" opacity="0.6"/><circle cx="232" cy="100" r="0.9" fill="#FFE4A0" opacity="0.5"/>
+        <circle cx="253" cy="116" r="0.6" fill="#FFF" opacity="0.55"/><circle cx="271" cy="136" r="0.8" fill="#F472B6" opacity="0.42"/>
+        <circle cx="284" cy="159" r="1.0" fill="#FFF" opacity="0.58"/><circle cx="292" cy="183" r="0.7" fill="#FFE4A0" opacity="0.48"/>
+        <!-- Inner ring — 24 stars scattered -->
+        <circle cx="260" cy="108" r="0.6" fill="#FFF" opacity="0.5"/><circle cx="292" cy="142" r="0.8" fill="#FFE4A0" opacity="0.42"/>
+        <circle cx="308" cy="180" r="0.5" fill="#FFF" opacity="0.48"/><circle cx="310" cy="220" r="0.7" fill="#A78BFA" opacity="0.38"/>
+        <circle cx="298" cy="258" r="0.6" fill="#FFF" opacity="0.52"/><circle cx="275" cy="288" r="0.8" fill="#FFE4A0" opacity="0.4"/>
+        <circle cx="244" cy="305" r="0.5" fill="#22D3EE" opacity="0.35"/><circle cx="210" cy="310" r="0.7" fill="#FFF" opacity="0.48"/>
+        <circle cx="176" cy="302" r="0.6" fill="#FFF" opacity="0.42"/><circle cx="148" cy="282" r="0.8" fill="#FFE4A0" opacity="0.38"/>
+        <circle cx="128" cy="254" r="0.5" fill="#FFF" opacity="0.5"/><circle cx="118" cy="222" r="0.7" fill="#C7D2FE" opacity="0.35"/>
+        <circle cx="120" cy="188" r="0.6" fill="#FFF" opacity="0.42"/><circle cx="130" cy="156" r="0.8" fill="#FFE4A0" opacity="0.4"/>
+        <circle cx="148" cy="130" r="0.5" fill="#FFF" opacity="0.48"/><circle cx="173" cy="110" r="0.7" fill="#FBBF24" opacity="0.35"/>
+        <circle cx="200" cy="102" r="0.6" fill="#FFF" opacity="0.5"/><circle cx="228" cy="104" r="0.8" fill="#FFE4A0" opacity="0.38"/>
+        <circle cx="340" cy="170" r="0.5" fill="#FFF" opacity="0.45"/><circle cx="60" cy="230" r="0.7" fill="#A78BFA" opacity="0.35"/>
+        <circle cx="350" cy="240" r="0.6" fill="#FFF" opacity="0.42"/><circle cx="50" cy="160" r="0.8" fill="#FFE4A0" opacity="0.38"/>
+        <circle cx="200" cy="10" r="0.7" fill="#FFF" opacity="0.55"/><circle cx="200" cy="390" r="0.6" fill="#FFE4A0" opacity="0.45"/>
+      </g>
+
+      <!-- L1: 3D Aura halos (rotating ellipses) -->
+      <g class="rc-aura">
+        <ellipse cx="200" cy="200" rx="205" ry="76" stroke="url(#rcHalo)" stroke-width="2.2" fill="none" opacity="0.3" transform="rotate(-25,200,200)"/>
+        <ellipse cx="200" cy="200" rx="200" ry="104" stroke="#FBBF24" stroke-width="1.0" fill="none" opacity="0.2" transform="rotate(20,200,200)"/>
+        <ellipse cx="200" cy="200" rx="196" ry="56" stroke="#A78BFA" stroke-width="1.5" fill="none" opacity="0.18" transform="rotate(-55,200,200)"/>
+        <ellipse cx="200" cy="200" rx="210" ry="36" stroke="#22D3EE" stroke-width="0.8" fill="none" opacity="0.14" transform="rotate(42,200,200)"/>
+        <ellipse cx="200" cy="200" rx="190" ry="90" stroke="#F472B6" stroke-width="0.6" fill="none" opacity="0.12" transform="rotate(-10,200,200)"/>
+      </g>
+
+      <!-- L3: Platinum outer ring + tick marks -->
+      <g class="rc-outer">
+        <circle cx="200" cy="200" r="196" stroke="#C9B896" stroke-width="0.6" fill="none" opacity="0.35"/>
+        <circle cx="200" cy="200" r="184" stroke="url(#rcPlat)" stroke-width="2.0" fill="none" opacity="0.75"/>
+        <circle cx="200" cy="200" r="181.5" stroke="#B8A88A" stroke-width="0.4" fill="none" opacity="0.25"/>
+      </g>
+
+      <!-- L4: Zodiac wheel (slow rotation) -->
+      <g class="rc-zodiac">
+        <!-- 12 wedges -->
+        <path d="M200,28 A172,172 0 0,1 286,56.95 L255.6,86.13 A134,134 0 0,0 200,66 Z" fill="url(#zg0)"/>
+        <path d="M286,56.95 A172,172 0 0,1 343.05,114 L313.87,144.4 A134,134 0 0,0 255.6,86.13 Z" fill="url(#zg1)"/>
+        <path d="M343.05,114 A172,172 0 0,1 372,200 L334,200 A134,134 0 0,0 313.87,144.4 Z" fill="url(#zg2)"/>
+        <path d="M372,200 A172,172 0 0,1 343.05,286 L313.87,255.6 A134,134 0 0,0 334,200 Z" fill="url(#zg3)"/>
+        <path d="M343.05,286 A172,172 0 0,1 286,343.05 L255.6,313.87 A134,134 0 0,0 313.87,255.6 Z" fill="url(#zg4)"/>
+        <path d="M286,343.05 A172,172 0 0,1 200,372 L200,334 A134,134 0 0,0 255.6,313.87 Z" fill="url(#zg5)"/>
+        <path d="M200,372 A172,172 0 0,1 114,343.05 L144.4,313.87 A134,134 0 0,0 200,334 Z" fill="url(#zg6)"/>
+        <path d="M114,343.05 A172,172 0 0,1 56.95,286 L86.13,255.6 A134,134 0 0,0 144.4,313.87 Z" fill="url(#zg7)"/>
+        <path d="M56.95,286 A172,172 0 0,1 28,200 L66,200 A134,134 0 0,0 86.13,255.6 Z" fill="url(#zg8)"/>
+        <path d="M28,200 A172,172 0 0,1 56.95,114 L86.13,144.4 A134,134 0 0,0 66,200 Z" fill="url(#zg9)"/>
+        <path d="M56.95,114 A172,172 0 0,1 114,56.95 L144.4,86.13 A134,134 0 0,0 86.13,144.4 Z" fill="url(#zg10)"/>
+        <path d="M114,56.95 A172,172 0 0,1 200,28 L200,66 A134,134 0 0,0 144.4,86.13 Z" fill="url(#zg11)"/>
+        <!-- Divider lines -->
+        <line x1="200" y1="28" x2="200" y2="66" stroke="#0C0818" stroke-width="1" opacity="0.65"/>
+        <line x1="286" y1="56.95" x2="255.6" y2="86.13" stroke="#0C0818" stroke-width="1" opacity="0.65"/>
+        <line x1="343.05" y1="114" x2="313.87" y2="144.4" stroke="#0C0818" stroke-width="1" opacity="0.65"/>
+        <line x1="372" y1="200" x2="334" y2="200" stroke="#0C0818" stroke-width="1" opacity="0.65"/>
+        <line x1="343.05" y1="286" x2="313.87" y2="255.6" stroke="#0C0818" stroke-width="1" opacity="0.65"/>
+        <line x1="286" y1="343.05" x2="255.6" y2="313.87" stroke="#0C0818" stroke-width="1" opacity="0.65"/>
+        <line x1="200" y1="372" x2="200" y2="334" stroke="#0C0818" stroke-width="1" opacity="0.65"/>
+        <line x1="114" y1="343.05" x2="144.4" y2="313.87" stroke="#0C0818" stroke-width="1" opacity="0.65"/>
+        <line x1="56.95" y1="286" x2="86.13" y2="255.6" stroke="#0C0818" stroke-width="1" opacity="0.65"/>
+        <line x1="28" y1="200" x2="66" y2="200" stroke="#0C0818" stroke-width="1" opacity="0.65"/>
+        <line x1="56.95" y1="114" x2="86.13" y2="144.4" stroke="#0C0818" stroke-width="1" opacity="0.65"/>
+        <line x1="114" y1="56.95" x2="144.4" y2="86.13" stroke="#0C0818" stroke-width="1" opacity="0.65"/>
+        <!-- Borders -->
+        <circle cx="200" cy="200" r="172" stroke="#C9B896" stroke-width="1.8" fill="none" opacity="0.78"/>
+        <circle cx="200" cy="200" r="173.5" stroke="#FFE4A0" stroke-width="0.3" fill="none" opacity="0.35"/>
+        <circle cx="200" cy="200" r="134" stroke="#8B7D9B" stroke-width="1.4" fill="none" opacity="0.6"/>
+        <!-- Zodiac SVG glyphs -->
+        <path d="M-4 4 C-4-2 0-6 0-2 C0-6 4-2 4 4" stroke="#FFD98E" stroke-width="1.4" fill="none" opacity="0.95" stroke-linecap="round" transform="translate(200,43) rotate(15) scale(1.2)"/>
+        <path d="M-3-3 C-5-6 5-6 3-3 M-3 0 A3 3 0 1 0 3 0 A3 3 0 1 0-3 0" stroke="#FFD98E" stroke-width="1.4" fill="none" opacity="0.95" stroke-linecap="round" transform="translate(267.6,68) rotate(45) scale(1.2)"/>
+        <path d="M-4-4 L4-4 M-4 4 L4 4 M-2-4 L-2 4 M2-4 L2 4" stroke="#FFD98E" stroke-width="1.4" fill="none" opacity="0.95" stroke-linecap="round" transform="translate(332,131.4) rotate(75) scale(1.2)"/>
+        <path d="M4-1 A3 3 0 0 0-2-1 M-2-1 A1.5 1.5 0 0 0-2 2 M-4 1 A3 3 0 0 0 2 1 M2 1 A1.5 1.5 0 0 0 2-2" stroke="#FFD98E" stroke-width="1.4" fill="none" opacity="0.95" stroke-linecap="round" transform="translate(357,200) rotate(105) scale(1.2)"/>
+        <path d="M-3 3 A2 2 0 1 1 1 3 Q4 3 4 0 A2 2 0 1 1 0-1" stroke="#FFD98E" stroke-width="1.4" fill="none" opacity="0.95" stroke-linecap="round" transform="translate(332,268.6) rotate(135) scale(1.2)"/>
+        <path d="M-4 4 L-4-3 Q-2-5 0-3 L0 4 M0-3 Q2-5 4-3 L4 2 Q5 5 2 5" stroke="#FFD98E" stroke-width="1.4" fill="none" opacity="0.95" stroke-linecap="round" transform="translate(267.6,332) rotate(165) scale(1.2)"/>
+        <path d="M-4 1 L4 1 M-4-1 C-4-4 4-4 4-1 M-4 3 L4 3" stroke="#FFD98E" stroke-width="1.4" fill="none" opacity="0.95" stroke-linecap="round" transform="translate(200,357) rotate(195) scale(1.2)"/>
+        <path d="M-4 4 L-4-3 Q-2-5 0-3 L0 4 M0-3 Q2-5 4-3 L4 4 L5 2" stroke="#FFD98E" stroke-width="1.4" fill="none" opacity="0.95" stroke-linecap="round" transform="translate(132.4,332) rotate(225) scale(1.2)"/>
+        <path d="M-3 4 L4-3 M4-3 L1-3 M4-3 L4 0 M-2 3 L2-1" stroke="#FFD98E" stroke-width="1.4" fill="none" opacity="0.95" stroke-linecap="round" transform="translate(68,268.6) rotate(255) scale(1.2)"/>
+        <path d="M-4-3 L-1-3 Q2-3 2 0 Q2 3 0 3 A2 2 0 0 1 4 3" stroke="#FFD98E" stroke-width="1.4" fill="none" opacity="0.95" stroke-linecap="round" transform="translate(43,200) rotate(285) scale(1.2)"/>
+        <path d="M-4-1 Q-2-3 0-1 Q2 1 4-1 M-4 2 Q-2 0 0 2 Q2 4 4 2" stroke="#FFD98E" stroke-width="1.4" fill="none" opacity="0.95" stroke-linecap="round" transform="translate(68,131.4) rotate(315) scale(1.2)"/>
+        <path d="M-3-4 A4 4 0 0 0-3 4 M3-4 A4 4 0 0 1 3 4 M-3 0 L3 0" stroke="#FFD98E" stroke-width="1.4" fill="none" opacity="0.95" stroke-linecap="round" transform="translate(132.4,68) rotate(345) scale(1.2)"/>
+        <!-- Jewel dots per sign -->
+        <circle cx="200" cy="32" r="2.8" fill="#E8575D" opacity="0.88"/><circle cx="200" cy="32" r="5.5" fill="#E8575D" opacity="0.12"/>
+        <circle cx="282" cy="61" r="2.8" fill="#D4A84C" opacity="0.88"/><circle cx="282" cy="61" r="5.5" fill="#D4A84C" opacity="0.12"/>
+        <circle cx="339" cy="118" r="2.8" fill="#3DCFB6" opacity="0.88"/><circle cx="339" cy="118" r="5.5" fill="#3DCFB6" opacity="0.12"/>
+        <circle cx="368" cy="200" r="2.8" fill="#5FA8D4" opacity="0.88"/><circle cx="368" cy="200" r="5.5" fill="#5FA8D4" opacity="0.12"/>
+        <circle cx="339" cy="282" r="2.8" fill="#E09730" opacity="0.88"/><circle cx="339" cy="282" r="5.5" fill="#E09730" opacity="0.12"/>
+        <circle cx="282" cy="339" r="2.8" fill="#8BBF6A" opacity="0.88"/><circle cx="282" cy="339" r="5.5" fill="#8BBF6A" opacity="0.12"/>
+        <circle cx="200" cy="368" r="2.8" fill="#A0DDD5" opacity="0.88"/><circle cx="200" cy="368" r="5.5" fill="#A0DDD5" opacity="0.12"/>
+        <circle cx="118" cy="339" r="2.8" fill="#CF5A5A" opacity="0.88"/><circle cx="118" cy="339" r="5.5" fill="#CF5A5A" opacity="0.12"/>
+        <circle cx="61" cy="282" r="2.8" fill="#D49555" opacity="0.88"/><circle cx="61" cy="282" r="5.5" fill="#D49555" opacity="0.12"/>
+        <circle cx="32" cy="200" r="2.8" fill="#7EC87E" opacity="0.88"/><circle cx="32" cy="200" r="5.5" fill="#7EC87E" opacity="0.12"/>
+        <circle cx="61" cy="118" r="2.8" fill="#6AADDD" opacity="0.88"/><circle cx="61" cy="118" r="5.5" fill="#6AADDD" opacity="0.12"/>
+        <circle cx="118" cy="61" r="2.8" fill="#A08EDA" opacity="0.88"/><circle cx="118" cy="61" r="5.5" fill="#A08EDA" opacity="0.12"/>
+      </g>
+
+      <!-- L5: Graha orbit ring + planet bodies (counter-rotate) -->
+      <g class="rc-grahas">
+        <circle cx="200" cy="200" r="122" stroke="#FFD98E" stroke-width="0.8" fill="none" opacity="0.4"/>
+        <circle cx="200" cy="200" r="124.5" stroke="#C9A44E" stroke-width="0.3" fill="none" opacity="0.2"/>
+        <circle cx="200" cy="200" r="119.5" stroke="#C9A44E" stroke-width="0.3" fill="none" opacity="0.2"/>
+        <!-- Sun -->
+        <circle cx="221" cy="79" r="6" fill="#FBBF24" opacity="0.08"/><circle cx="221" cy="79" r="5.5" fill="#FDE68A" opacity="0.18"/><circle cx="221" cy="79" r="3.5" fill="#FBBF24" opacity="0.92"/><circle cx="220.3" cy="78.1" r="1.1" fill="#FFF" opacity="0.6"/>
+        <!-- Moon -->
+        <circle cx="300" cy="131" r="5" fill="#E0E7FF" opacity="0.18"/><circle cx="300" cy="131" r="2.8" fill="#C7D2FE" opacity="0.92"/><circle cx="299.4" cy="130.3" r="0.9" fill="#FFF" opacity="0.6"/>
+        <!-- Mars -->
+        <circle cx="317" cy="233" r="5.5" fill="#FECACA" opacity="0.18"/><circle cx="317" cy="233" r="3" fill="#F87171" opacity="0.92"/><circle cx="316.4" cy="232.2" r="1" fill="#FFF" opacity="0.6"/>
+        <!-- Mercury -->
+        <circle cx="268" cy="307" r="4.8" fill="#A7F3D0" opacity="0.18"/><circle cx="268" cy="307" r="2.6" fill="#6EE7B7" opacity="0.92"/><circle cx="267.5" cy="306.3" r="0.85" fill="#FFF" opacity="0.6"/>
+        <!-- Jupiter -->
+        <circle cx="158" cy="316" r="5.8" fill="#FEF3C7" opacity="0.18"/><circle cx="158" cy="316" r="3.5" fill="#FCD34D" opacity="0.92"/><circle cx="157.3" cy="315.1" r="1.1" fill="#FFF" opacity="0.6"/>
+        <!-- Venus -->
+        <circle cx="88" cy="249" r="5.5" fill="#FBCFE8" opacity="0.18"/><circle cx="88" cy="249" r="3" fill="#F9A8D4" opacity="0.92"/><circle cx="87.4" cy="248.2" r="1" fill="#FFF" opacity="0.6"/>
+        <!-- Saturn -->
+        <circle cx="93" cy="143" r="4.8" fill="#C7D2FE" opacity="0.18"/><circle cx="93" cy="143" r="2.6" fill="#A5B4FC" opacity="0.92"/><circle cx="92.5" cy="142.3" r="0.85" fill="#FFF" opacity="0.6"/>
+        <!-- Rahu -->
+        <circle cx="162" cy="82" r="4.5" fill="#CBD5E1" opacity="0.18"/><circle cx="162" cy="82" r="2.4" fill="#94A3B8" opacity="0.92"/><circle cx="161.5" cy="81.4" r="0.75" fill="#FFF" opacity="0.6"/>
+        <!-- Ketu -->
+        <circle cx="322" cy="196" r="4.5" fill="#DDD6FE" opacity="0.18"/><circle cx="322" cy="196" r="2.4" fill="#C4B5FD" opacity="0.92"/><circle cx="321.5" cy="195.4" r="0.75" fill="#FFF" opacity="0.6"/>
+      </g>
+
+      <!-- L6: Center orb with lens flares -->
+      <g class="rc-center">
+        <circle cx="200" cy="200" r="60" fill="url(#rcOrb)"/>
+        <!-- 6-pointed star — bigger -->
+        <polygon points="200,172 207,189 223,189 210,200 215,217 200,207 185,217 190,200 177,189 193,189" fill="#FFE4A0" opacity="0.25"/>
+        <!-- Lens flares -->
+        <line x1="158" y1="158" x2="242" y2="242" stroke="#FFE4A0" stroke-width="0.9" opacity="0.5"/>
+        <line x1="158" y1="242" x2="242" y2="158" stroke="#FFE4A0" stroke-width="0.9" opacity="0.5"/>
+        <line x1="170" y1="175" x2="230" y2="225" stroke="#FFE4A0" stroke-width="0.4" opacity="0.28"/>
+        <line x1="170" y1="225" x2="230" y2="175" stroke="#FFE4A0" stroke-width="0.4" opacity="0.28"/>
+        <line x1="200" y1="155" x2="200" y2="245" stroke="#FFE4A0" stroke-width="0.3" opacity="0.2"/>
+        <line x1="155" y1="200" x2="245" y2="200" stroke="#FFE4A0" stroke-width="0.3" opacity="0.2"/>
+        <!-- Core discs -->
+        <circle cx="200" cy="200" r="16" fill="#D4A84C" opacity="0.3"/>
+        <circle cx="200" cy="200" r="10" fill="#FFE4A0" opacity="0.55"/>
+        <circle cx="200" cy="200" r="6" fill="#FFF8E1" opacity="0.88"/>
+        <circle cx="200" cy="200" r="2.5" fill="#FFFFFF" opacity="1"/>
+      </g>
+
+      <!-- L7: Rotating colorful outer stars — Ring 1 (r≈215, slow CW) -->
+      <g class="rc-outer-stars-1">
+        <!-- 12 colorful 4-pointed stars evenly spaced -->
+        <g transform="translate(200,0)"><polygon points="0,-3 1,-1 3,0 1,1 0,3 -1,1 -3,0 -1,-1" fill="#FBBF24" opacity="0.85"/><circle cx="0" cy="0" r="4" fill="#FBBF24" opacity="0.08"/></g>
+        <g transform="translate(307,55)"><polygon points="0,-2.5 0.8,-0.8 2.5,0 0.8,0.8 0,2.5 -0.8,0.8 -2.5,0 -0.8,-0.8" fill="#F472B6" opacity="0.8"/><circle cx="0" cy="0" r="3.5" fill="#F472B6" opacity="0.08"/></g>
+        <g transform="translate(380,145)"><polygon points="0,-3 1,-1 3,0 1,1 0,3 -1,1 -3,0 -1,-1" fill="#22D3EE" opacity="0.85"/><circle cx="0" cy="0" r="4" fill="#22D3EE" opacity="0.08"/></g>
+        <g transform="translate(400,260)"><polygon points="0,-2.2 0.7,-0.7 2.2,0 0.7,0.7 0,2.2 -0.7,0.7 -2.2,0 -0.7,-0.7" fill="#A78BFA" opacity="0.8"/><circle cx="0" cy="0" r="3" fill="#A78BFA" opacity="0.08"/></g>
+        <g transform="translate(350,355)"><polygon points="0,-3 1,-1 3,0 1,1 0,3 -1,1 -3,0 -1,-1" fill="#34D399" opacity="0.85"/><circle cx="0" cy="0" r="4" fill="#34D399" opacity="0.08"/></g>
+        <g transform="translate(260,400)"><polygon points="0,-2.5 0.8,-0.8 2.5,0 0.8,0.8 0,2.5 -0.8,0.8 -2.5,0 -0.8,-0.8" fill="#FB923C" opacity="0.8"/><circle cx="0" cy="0" r="3.5" fill="#FB923C" opacity="0.08"/></g>
+        <g transform="translate(140,400)"><polygon points="0,-3 1,-1 3,0 1,1 0,3 -1,1 -3,0 -1,-1" fill="#F87171" opacity="0.85"/><circle cx="0" cy="0" r="4" fill="#F87171" opacity="0.08"/></g>
+        <g transform="translate(50,355)"><polygon points="0,-2.2 0.7,-0.7 2.2,0 0.7,0.7 0,2.2 -0.7,0.7 -2.2,0 -0.7,-0.7" fill="#FBBF24" opacity="0.8"/><circle cx="0" cy="0" r="3" fill="#FBBF24" opacity="0.08"/></g>
+        <g transform="translate(0,260)"><polygon points="0,-3 1,-1 3,0 1,1 0,3 -1,1 -3,0 -1,-1" fill="#818CF8" opacity="0.85"/><circle cx="0" cy="0" r="4" fill="#818CF8" opacity="0.08"/></g>
+        <g transform="translate(20,145)"><polygon points="0,-2.5 0.8,-0.8 2.5,0 0.8,0.8 0,2.5 -0.8,0.8 -2.5,0 -0.8,-0.8" fill="#2DD4BF" opacity="0.8"/><circle cx="0" cy="0" r="3.5" fill="#2DD4BF" opacity="0.08"/></g>
+        <g transform="translate(93,55)"><polygon points="0,-3 1,-1 3,0 1,1 0,3 -1,1 -3,0 -1,-1" fill="#F472B6" opacity="0.85"/><circle cx="0" cy="0" r="4" fill="#F472B6" opacity="0.08"/></g>
+        <g transform="translate(200,0)" transform="rotate(15,200,200)"><polygon points="0,-2.2 0.7,-0.7 2.2,0 0.7,0.7 0,2.2 -0.7,0.7 -2.2,0 -0.7,-0.7" fill="#E879F9" opacity="0.75"/><circle cx="0" cy="0" r="3" fill="#E879F9" opacity="0.08"/></g>
+      </g>
+
+      <!-- L8: Rotating colorful outer stars — Ring 2 (r≈240, slow CCW) -->
+      <g class="rc-outer-stars-2">
+        <!-- 16 smaller colorful stars, wider orbit -->
+        <g transform="translate(200,-25)"><polygon points="0,-2 0.6,-0.6 2,0 0.6,0.6 0,2 -0.6,0.6 -2,0 -0.6,-0.6" fill="#FCD34D" opacity="0.7"/><circle cx="0" cy="0" r="3" fill="#FCD34D" opacity="0.06"/></g>
+        <g transform="translate(275,-10)"><polygon points="0,-1.8 0.5,-0.5 1.8,0 0.5,0.5 0,1.8 -0.5,0.5 -1.8,0 -0.5,-0.5" fill="#C084FC" opacity="0.65"/><circle cx="0" cy="0" r="2.5" fill="#C084FC" opacity="0.06"/></g>
+        <g transform="translate(340,30)"><polygon points="0,-2 0.6,-0.6 2,0 0.6,0.6 0,2 -0.6,0.6 -2,0 -0.6,-0.6" fill="#67E8F9" opacity="0.7"/><circle cx="0" cy="0" r="3" fill="#67E8F9" opacity="0.06"/></g>
+        <g transform="translate(390,100)"><polygon points="0,-1.5 0.5,-0.5 1.5,0 0.5,0.5 0,1.5 -0.5,0.5 -1.5,0 -0.5,-0.5" fill="#FB7185" opacity="0.65"/><circle cx="0" cy="0" r="2.2" fill="#FB7185" opacity="0.06"/></g>
+        <g transform="translate(410,180)"><polygon points="0,-2 0.6,-0.6 2,0 0.6,0.6 0,2 -0.6,0.6 -2,0 -0.6,-0.6" fill="#4ADE80" opacity="0.7"/><circle cx="0" cy="0" r="3" fill="#4ADE80" opacity="0.06"/></g>
+        <g transform="translate(405,260)"><polygon points="0,-1.8 0.5,-0.5 1.8,0 0.5,0.5 0,1.8 -0.5,0.5 -1.8,0 -0.5,-0.5" fill="#FBBF24" opacity="0.65"/><circle cx="0" cy="0" r="2.5" fill="#FBBF24" opacity="0.06"/></g>
+        <g transform="translate(375,335)"><polygon points="0,-2 0.6,-0.6 2,0 0.6,0.6 0,2 -0.6,0.6 -2,0 -0.6,-0.6" fill="#A78BFA" opacity="0.7"/><circle cx="0" cy="0" r="3" fill="#A78BFA" opacity="0.06"/></g>
+        <g transform="translate(315,390)"><polygon points="0,-1.5 0.5,-0.5 1.5,0 0.5,0.5 0,1.5 -0.5,0.5 -1.5,0 -0.5,-0.5" fill="#F472B6" opacity="0.65"/><circle cx="0" cy="0" r="2.2" fill="#F472B6" opacity="0.06"/></g>
+        <g transform="translate(235,410)"><polygon points="0,-2 0.6,-0.6 2,0 0.6,0.6 0,2 -0.6,0.6 -2,0 -0.6,-0.6" fill="#22D3EE" opacity="0.7"/><circle cx="0" cy="0" r="3" fill="#22D3EE" opacity="0.06"/></g>
+        <g transform="translate(155,410)"><polygon points="0,-1.8 0.5,-0.5 1.8,0 0.5,0.5 0,1.8 -0.5,0.5 -1.8,0 -0.5,-0.5" fill="#34D399" opacity="0.65"/><circle cx="0" cy="0" r="2.5" fill="#34D399" opacity="0.06"/></g>
+        <g transform="translate(80,385)"><polygon points="0,-2 0.6,-0.6 2,0 0.6,0.6 0,2 -0.6,0.6 -2,0 -0.6,-0.6" fill="#FB923C" opacity="0.7"/><circle cx="0" cy="0" r="3" fill="#FB923C" opacity="0.06"/></g>
+        <g transform="translate(25,330)"><polygon points="0,-1.5 0.5,-0.5 1.5,0 0.5,0.5 0,1.5 -0.5,0.5 -1.5,0 -0.5,-0.5" fill="#E879F9" opacity="0.65"/><circle cx="0" cy="0" r="2.2" fill="#E879F9" opacity="0.06"/></g>
+        <g transform="translate(-5,250)"><polygon points="0,-2 0.6,-0.6 2,0 0.6,0.6 0,2 -0.6,0.6 -2,0 -0.6,-0.6" fill="#FCD34D" opacity="0.7"/><circle cx="0" cy="0" r="3" fill="#FCD34D" opacity="0.06"/></g>
+        <g transform="translate(-5,165)"><polygon points="0,-1.8 0.5,-0.5 1.8,0 0.5,0.5 0,1.8 -0.5,0.5 -1.8,0 -0.5,-0.5" fill="#F87171" opacity="0.65"/><circle cx="0" cy="0" r="2.5" fill="#F87171" opacity="0.06"/></g>
+        <g transform="translate(30,85)"><polygon points="0,-2 0.6,-0.6 2,0 0.6,0.6 0,2 -0.6,0.6 -2,0 -0.6,-0.6" fill="#818CF8" opacity="0.7"/><circle cx="0" cy="0" r="3" fill="#818CF8" opacity="0.06"/></g>
+        <g transform="translate(115,-15)"><polygon points="0,-1.5 0.5,-0.5 1.5,0 0.5,0.5 0,1.5 -0.5,0.5 -1.5,0 -0.5,-0.5" fill="#2DD4BF" opacity="0.65"/><circle cx="0" cy="0" r="2.2" fill="#2DD4BF" opacity="0.06"/></g>
+      </g>
+    </svg>
+    <canvas class="rashi-sparkle-canvas" width="460" height="460"></canvas>
+  </div>
+
   <!-- ═══ HERO ═══ -->
   <header class="hero" id="hero">
     <div class="hero__content">
@@ -118,7 +399,12 @@
           <div class="phone-mockup__bezel">
             <div class="phone-mockup__notch"></div>
             <div class="phone-mockup__screen">
-              <img src="assets/adamainpage.png" alt="Grahachara Home Screen" />
+              <img src="assets/todaypageenglish.png"
+                   data-lang-en="assets/todaypageenglish.png"
+                   data-lang-si="assets/todaypagesinhala.png"
+                   alt="Grahachara Home Screen"
+                   decoding="async"
+                   fetchpriority="high" />
             </div>
             <div class="phone-mockup__chin"></div>
           </div>
@@ -287,7 +573,7 @@
             <div class="phone-mockup phone-mockup--sm">
               <div class="phone-mockup__bezel">
                 <div class="phone-mockup__notch"></div>
-                <div class="phone-mockup__screen"><img src="assets/adamainpage.png" alt="Home Screen" /></div>
+                <div class="phone-mockup__screen"><img src="assets/todaypageenglish.png" data-lang-en="assets/todaypageenglish.png" data-lang-si="assets/todaypagesinhala.png" alt="Home Screen" /></div>
                 <div class="phone-mockup__chin"></div>
               </div>
             </div>
@@ -297,7 +583,7 @@
             <div class="phone-mockup phone-mockup--sm">
               <div class="phone-mockup__bezel">
                 <div class="phone-mockup__notch"></div>
-                <div class="phone-mockup__screen"><img src="assets/aichatpage.png" alt="Grahachara Chat" /></div>
+                <div class="phone-mockup__screen"><img src="assets/chatenglish.png" data-lang-en="assets/chatenglish.png" data-lang-si="assets/chatsinhala.png" alt="Grahachara Chat" /></div>
                 <div class="phone-mockup__chin"></div>
               </div>
             </div>
@@ -307,7 +593,7 @@
             <div class="phone-mockup phone-mockup--sm">
               <div class="phone-mockup__bezel">
                 <div class="phone-mockup__notch"></div>
-                <div class="phone-mockup__screen"><img src="assets/kendarapage1.png" alt="Kendara Chart" /></div>
+                <div class="phone-mockup__screen"><img src="assets/kendrapageenglish1.png" data-lang-en="assets/kendrapageenglish1.png" data-lang-si="assets/kendarapagesinhala1.png" alt="Kendara Chart" /></div>
                 <div class="phone-mockup__chin"></div>
               </div>
             </div>
@@ -317,7 +603,7 @@
             <div class="phone-mockup phone-mockup--sm">
               <div class="phone-mockup__bezel">
                 <div class="phone-mockup__notch"></div>
-                <div class="phone-mockup__screen"><img src="assets/kendarapage2.png" alt="Kendara Planets" /></div>
+                <div class="phone-mockup__screen"><img src="assets/kendrapageenglish2.png" data-lang-en="assets/kendrapageenglish2.png" data-lang-si="assets/kendarapagesinhala2.png" alt="Kendara Planets" /></div>
                 <div class="phone-mockup__chin"></div>
               </div>
             </div>
@@ -327,7 +613,7 @@
             <div class="phone-mockup phone-mockup--sm">
               <div class="phone-mockup__bezel">
                 <div class="phone-mockup__notch"></div>
-                <div class="phone-mockup__screen"><img src="assets/kendarapag3.png" alt="Kendara Navamsha" /></div>
+                <div class="phone-mockup__screen"><img src="assets/kendarapageenglish3.png" data-lang-en="assets/kendarapageenglish3.png" data-lang-si="assets/kendarapagesinhala3.png" alt="Kendara Navamsha" /></div>
                 <div class="phone-mockup__chin"></div>
               </div>
             </div>
@@ -337,7 +623,7 @@
             <div class="phone-mockup phone-mockup--sm">
               <div class="phone-mockup__bezel">
                 <div class="phone-mockup__notch"></div>
-                <div class="phone-mockup__screen"><img src="assets/kendarapage4.png" alt="Kendara Dasha" /></div>
+                <div class="phone-mockup__screen"><img src="assets/kendarapagesinhala4.png" data-lang-en="assets/kendarapagesinhala4.png" data-lang-si="assets/kendarapagesinhala4.png" alt="Kendara Dasha" /></div>
                 <div class="phone-mockup__chin"></div>
               </div>
             </div>
@@ -347,7 +633,7 @@
             <div class="phone-mockup phone-mockup--sm">
               <div class="phone-mockup__bezel">
                 <div class="phone-mockup__notch"></div>
-                <div class="phone-mockup__screen"><img src="assets/reportpage1.png" alt="Life Report" /></div>
+                <div class="phone-mockup__screen"><img src="assets/reportenglish1.png" data-lang-en="assets/reportenglish1.png" data-lang-si="assets/reportsinhala.png" alt="Life Report" /></div>
                 <div class="phone-mockup__chin"></div>
               </div>
             </div>
@@ -357,7 +643,17 @@
             <div class="phone-mockup phone-mockup--sm">
               <div class="phone-mockup__bezel">
                 <div class="phone-mockup__notch"></div>
-                <div class="phone-mockup__screen"><img src="assets/porondampage.png" alt="Porondam Matching" /></div>
+                <div class="phone-mockup__screen"><img src="assets/porondamenglish.png" data-lang-en="assets/porondamenglish.png" data-lang-si="assets/porondamsinhala.png" alt="Porondam Matching" /></div>
+                <div class="phone-mockup__chin"></div>
+              </div>
+            </div>
+          </div>
+          <div class="screenshot-card">
+            <span class="screenshot-card__label" data-i18n="scr.weeklyLagna">Weekly Lagna Palapala</span>
+            <div class="phone-mockup phone-mockup--sm">
+              <div class="phone-mockup__bezel">
+                <div class="phone-mockup__notch"></div>
+                <div class="phone-mockup__screen"><img src="assets/predictionspage.png" data-lang-en="assets/predictionspage.png" data-lang-si="assets/week%20lagna%20palapala%20sinhala.png" alt="Weekly Lagna Palapala" /></div>
                 <div class="phone-mockup__chin"></div>
               </div>
             </div>
@@ -423,26 +719,30 @@
         </div>
         <div class="kendara__phones" data-aos="fade-left">
           <div class="phone-mockup kendara__phone--main">
-            <div class="phone-mockup__notch"></div>
-            <div class="phone-mockup__screen">
-              <img
-                src="assets/kendrapageenglish1.png"
-                data-lang-en="assets/kendrapageenglish1.png"
-                data-lang-si="assets/kendarapagesinhala1.png"
-                alt="Kendara Birth Chart" />
+            <div class="phone-mockup__bezel">
+              <div class="phone-mockup__notch"></div>
+              <div class="phone-mockup__screen">
+                <img
+                  src="assets/kendrapageenglish1.png"
+                  data-lang-en="assets/kendrapageenglish1.png"
+                  data-lang-si="assets/kendarapagesinhala1.png"
+                  alt="Kendara Birth Chart" />
+              </div>
+              <div class="phone-mockup__chin"></div>
             </div>
-            <div class="phone-mockup__chin"></div>
           </div>
           <div class="phone-mockup kendara__phone--secondary">
-            <div class="phone-mockup__notch"></div>
-            <div class="phone-mockup__screen">
-              <img
-                src="assets/kendrapageenglish2.png"
-                data-lang-en="assets/kendrapageenglish2.png"
-                data-lang-si="assets/kendarapagesinhala2.png"
-                alt="Kendara Planets" />
+            <div class="phone-mockup__bezel">
+              <div class="phone-mockup__notch"></div>
+              <div class="phone-mockup__screen">
+                <img
+                  src="assets/kendrapageenglish2.png"
+                  data-lang-en="assets/kendrapageenglish2.png"
+                  data-lang-si="assets/kendarapagesinhala2.png"
+                  alt="Kendara Planets" />
+              </div>
+              <div class="phone-mockup__chin"></div>
             </div>
-            <div class="phone-mockup__chin"></div>
           </div>
         </div>
       </div>
@@ -454,9 +754,6 @@
 
   <!-- ═══ PORONDAM — Marriage Matching Showcase ═══ -->
   <section class="porondam" id="porondam">
-    <!-- Pink Aurora & Cosmic Dust Canvas -->
-    <canvas id="porondamAurora" class="porondam-aurora" aria-hidden="true"></canvas>
-
     <div class="container">
       <div class="section-header">
         <span class="section-label" data-i18n="porondam.label">Porondam</span>
@@ -466,26 +763,30 @@
       <div class="porondam__showcase">
         <div class="porondam__phones" data-aos="fade-right">
           <div class="phone-mockup porondam__phone--main">
-            <div class="phone-mockup__notch"></div>
-            <div class="phone-mockup__screen">
-              <img
-                src="assets/porondamenglish.png"
-                data-lang-en="assets/porondamenglish.png"
-                data-lang-si="assets/porondamsinhala.png"
-                alt="Porondam Matching" />
+            <div class="phone-mockup__bezel">
+              <div class="phone-mockup__notch"></div>
+              <div class="phone-mockup__screen">
+                <img
+                  src="assets/porondamenglish.png"
+                  data-lang-en="assets/porondamenglish.png"
+                  data-lang-si="assets/porondamsinhala.png"
+                  alt="Porondam Matching" />
+              </div>
+              <div class="phone-mockup__chin"></div>
             </div>
-            <div class="phone-mockup__chin"></div>
           </div>
           <div class="phone-mockup porondam__phone--secondary">
-            <div class="phone-mockup__notch"></div>
-            <div class="phone-mockup__screen">
-              <img
-                src="assets/porondamenglish1.png"
-                data-lang-en="assets/porondamenglish1.png"
-                data-lang-si="assets/porndamreportsinhala1.png"
-                alt="Porondam Report" />
+            <div class="phone-mockup__bezel">
+              <div class="phone-mockup__notch"></div>
+              <div class="phone-mockup__screen">
+                <img
+                  src="assets/porondamenglish1.png"
+                  data-lang-en="assets/porondamenglish1.png"
+                  data-lang-si="assets/porandamreportsinhala2.png"
+                  alt="Porondam Report" />
+              </div>
+              <div class="phone-mockup__chin"></div>
             </div>
-            <div class="phone-mockup__chin"></div>
           </div>
         </div>
         <div class="porondam__info">
@@ -520,10 +821,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Floating glow orbs -->
-    <div class="porondam__glow porondam__glow--1"></div>
-    <div class="porondam__glow porondam__glow--2"></div>
   </section>
 
   <!-- ═══ FULL REPORT — Life Report Showcase ═══ -->
@@ -534,33 +831,121 @@
         <h2 class="section-title" data-i18n="fullreport.title">Your Complete Life Story, Written in the Stars</h2>
         <p class="section-desc" data-i18n="fullreport.desc">A deeply personal 22-section narrative covering personality, career, marriage, children, health, finances, past life, spiritual path &amp; a 25-year predictive timeline.</p>
       </div>
-      <div class="fullreport__grid">
-        <div class="fullreport__feature" data-aos="fade-up">
-          <div class="fullreport__feature-icon">📖</div>
-          <div class="fullreport__feature-text">
-            <h3 data-i18n="fullreport.f1.title">22 Detailed Sections</h3>
-            <p data-i18n="fullreport.f1.desc">From your core personality traits to career prospects, marriage timing, children, health vulnerabilities, and financial patterns — nothing is left out.</p>
+      <div class="fullreport__showcase">
+        <div class="fullreport__phones" data-aos="fade-right">
+          <div class="phone-mockup fullreport__phone--main">
+            <div class="phone-mockup__bezel">
+              <div class="phone-mockup__notch"></div>
+              <div class="phone-mockup__screen">
+                <img
+                  src="assets/reportenglish1.png"
+                  data-lang-en="assets/reportenglish1.png"
+                  data-lang-si="assets/reportsinhala.png"
+                  alt="Life Report Page 1" />
+              </div>
+              <div class="phone-mockup__chin"></div>
+            </div>
+          </div>
+          <div class="phone-mockup fullreport__phone--secondary">
+            <div class="phone-mockup__bezel">
+              <div class="phone-mockup__notch"></div>
+              <div class="phone-mockup__screen">
+                <img
+                  src="assets/report%20english%202.png"
+                  data-lang-en="assets/report%20english%202.png"
+                  data-lang-si="assets/fulreport%20sinhala%202.png"
+                  alt="Life Report Page 2" />
+              </div>
+              <div class="phone-mockup__chin"></div>
+            </div>
           </div>
         </div>
-        <div class="fullreport__feature" data-aos="fade-up" data-aos-delay="100">
-          <div class="fullreport__feature-icon">📅</div>
-          <div class="fullreport__feature-text">
-            <h3 data-i18n="fullreport.f2.title">25-Year Life Timeline</h3>
-            <p data-i18n="fullreport.f2.desc">Year-by-year predictions based on your Maha Dasha and Antar Dasha periods. Know what's coming and prepare with confidence.</p>
+        <div class="fullreport__info">
+          <div class="fullreport__feature" data-aos="fade-up">
+            <div class="fullreport__feature-icon">📖</div>
+            <div class="fullreport__feature-text">
+              <h3 data-i18n="fullreport.f1.title">22 Detailed Sections</h3>
+              <p data-i18n="fullreport.f1.desc">From your core personality traits to career prospects, marriage timing, children, health vulnerabilities, and financial patterns — nothing is left out.</p>
+            </div>
+          </div>
+          <div class="fullreport__feature" data-aos="fade-up" data-aos-delay="100">
+            <div class="fullreport__feature-icon">📅</div>
+            <div class="fullreport__feature-text">
+              <h3 data-i18n="fullreport.f2.title">25-Year Life Timeline</h3>
+              <p data-i18n="fullreport.f2.desc">Year-by-year predictions based on your Maha Dasha and Antar Dasha periods. Know what's coming and prepare with confidence.</p>
+            </div>
+          </div>
+          <div class="fullreport__feature" data-aos="fade-up" data-aos-delay="200">
+            <div class="fullreport__feature-icon">🕉️</div>
+            <div class="fullreport__feature-text">
+              <h3 data-i18n="fullreport.f3.title">Past Life &amp; Spiritual Path</h3>
+              <p data-i18n="fullreport.f3.desc">Discover your karmic patterns, past-life indicators from the 12th house, and the spiritual journey your chart reveals.</p>
+            </div>
+          </div>
+          <div class="fullreport__feature" data-aos="fade-up" data-aos-delay="300">
+            <div class="fullreport__feature-icon">📄</div>
+            <div class="fullreport__feature-text">
+              <h3 data-i18n="fullreport.f4.title">PDF Export &amp; Permanent Access</h3>
+              <p data-i18n="fullreport.f4.desc">Download your report as a beautifully formatted PDF. Keep it forever, share with family, or bring it to your astrologer for deeper consultation.</p>
+            </div>
           </div>
         </div>
-        <div class="fullreport__feature" data-aos="fade-up" data-aos-delay="200">
-          <div class="fullreport__feature-icon">🕉️</div>
-          <div class="fullreport__feature-text">
-            <h3 data-i18n="fullreport.f3.title">Past Life &amp; Spiritual Path</h3>
-            <p data-i18n="fullreport.f3.desc">Discover your karmic patterns, past-life indicators from the 12th house, and the spiritual journey your chart reveals.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ WEEKLY LAGNA PALAPALA — Weekly Horoscope Showcase ═══ -->
+  <section class="weekly-lagna" id="weekly-lagna">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label" data-i18n="weeklyLagna.label">Weekly Horoscope</span>
+        <h2 class="section-title" data-i18n="weeklyLagna.title">Weekly Lagna Palapala</h2>
+        <p class="section-desc" data-i18n="weeklyLagna.desc">Get personalized weekly predictions for all 12 Lagna signs. Know what the stars have in store for your week — career, love, health &amp; finances.</p>
+      </div>
+      <div class="weekly-lagna__showcase">
+        <div class="weekly-lagna__phones" data-aos="fade-right">
+          <div class="phone-mockup weekly-lagna__phone--main">
+            <div class="phone-mockup__bezel">
+              <div class="phone-mockup__notch"></div>
+              <div class="phone-mockup__screen">
+                <img
+                  src="assets/weekly%20pagna%20palapala%20english.png"
+                  data-lang-en="assets/weekly%20pagna%20palapala%20english.png"
+                  data-lang-si="assets/week%20lagna%20palapala%20sinhala.png"
+                  alt="Weekly Lagna Palapala" />
+              </div>
+              <div class="phone-mockup__chin"></div>
+            </div>
           </div>
         </div>
-        <div class="fullreport__feature" data-aos="fade-up" data-aos-delay="300">
-          <div class="fullreport__feature-icon">📄</div>
-          <div class="fullreport__feature-text">
-            <h3 data-i18n="fullreport.f4.title">PDF Export &amp; Permanent Access</h3>
-            <p data-i18n="fullreport.f4.desc">Download your report as a beautifully formatted PDF. Keep it forever, share with family, or bring it to your astrologer for deeper consultation.</p>
+        <div class="weekly-lagna__info">
+          <div class="weekly-lagna__feature" data-aos="fade-left">
+            <div class="weekly-lagna__feature-icon">🔮</div>
+            <div class="weekly-lagna__feature-text">
+              <h3 data-i18n="weeklyLagna.f1.title">All 12 Lagna Signs</h3>
+              <p data-i18n="weeklyLagna.f1.desc">Detailed weekly predictions for Mesha, Vrushabha, Mithuna, Kataka, Simha, Kanya, Thula, Vrushchika, Dhanu, Makara, Kumbha &amp; Meena — covering every aspect of life.</p>
+            </div>
+          </div>
+          <div class="weekly-lagna__feature" data-aos="fade-left" data-aos-delay="100">
+            <div class="weekly-lagna__feature-icon">📅</div>
+            <div class="weekly-lagna__feature-text">
+              <h3 data-i18n="weeklyLagna.f2.title">Updated Every Week</h3>
+              <p data-i18n="weeklyLagna.f2.desc">Fresh predictions every Monday based on real-time planetary transits and your Lagna chart. Never miss a cosmic update.</p>
+            </div>
+          </div>
+          <div class="weekly-lagna__feature" data-aos="fade-left" data-aos-delay="200">
+            <div class="weekly-lagna__feature-icon">💼</div>
+            <div class="weekly-lagna__feature-text">
+              <h3 data-i18n="weeklyLagna.f3.title">Career, Love &amp; Health</h3>
+              <p data-i18n="weeklyLagna.f3.desc">Each weekly reading covers career prospects, romantic life, health warnings, financial outlook, and lucky days of the week.</p>
+            </div>
+          </div>
+          <div class="weekly-lagna__feature" data-aos="fade-left" data-aos-delay="300">
+            <div class="weekly-lagna__feature-icon">🌟</div>
+            <div class="weekly-lagna__feature-text">
+              <h3 data-i18n="weeklyLagna.f4.title">Personalized to Your Chart</h3>
+              <p data-i18n="weeklyLagna.f4.desc">Not generic horoscopes — Grahachara combines your birth chart with current transits to give predictions that truly apply to your life.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -594,6 +979,7 @@
             <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f7">Advanced transit alerts</li>
             <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f8">No ads, ever</li>
             <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f9">Cancel anytime — no lock-in</li>
+            <li class="pricing-card__feat pricing-card__feat--yes" data-i18n="price1.f10">Weekly Lagna Palapala</li>
           </ul>
           <a href="#download" class="btn btn--primary btn--glow" data-i18n="price1.cta">Get Started — LKR 8/day</a>
         </div>
@@ -794,10 +1180,11 @@
     </div>
   </footer>
 
-  <script src="js/three.min.js"></script>
-  <script src="js/cosmos3d.js"></script>
-  <script src="js/cosmos.js"></script>
-  <script src="js/main.js"></script>
-  <script src="js/i18n.js"></script>
+  <script src="js/starfield.js" defer></script>
+  <script src="js/aurora.js" defer></script>
+  <script src="js/rashi-sparkle.js" defer></script>
+  <script src="js/cosmic-fx.js" defer></script>
+  <script src="js/main.js" defer></script>
+  <script src="js/i18n.js" defer></script>
 </body>
 </html>
