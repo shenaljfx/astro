@@ -22,6 +22,7 @@ const notificationRoutes = require('./routes/notifications');
 const payhereRoutes = require('./routes/payhere');
 const pricingRoutes = require('./routes/pricing');
 const weeklyLagnaRoutes = require('./routes/weeklyLagna');
+const readingRoutes = require('./routes/reading');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -63,6 +64,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/payhere', payhereRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/weekly-lagna', weeklyLagnaRoutes);
+app.use('/api/reading', readingRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

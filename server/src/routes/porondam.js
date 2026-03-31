@@ -16,7 +16,7 @@ const { chat } = require('../engine/chat');
 const { parseSLT } = require('../utils/dateUtils');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth } = require('../middleware/subscription');
-const { requireTokens } = require('../middleware/tokens');
+const { trackCost } = require('../services/costTracker');
 const { savePorondamResult, updatePorondamReport } = require('../models/firestore');
 const { getDb, COLLECTIONS } = require('../config/firebase');
 
@@ -141,7 +141,7 @@ router.post('/check', optionalAuth, async (req, res) => {
  *   groomName: "optional"
  * }
  */
-router.post('/report', phoneAuth, requireTokens(50, 'Porondam Report'), async (req, res) => {
+router.post('/report', phoneAuth, async (req, res) => {
   try {
     const { porondamData, language = 'en', brideName, groomName, porondamId } = req.body;
 
@@ -149,17 +149,7 @@ router.post('/report', phoneAuth, requireTokens(50, 'Porondam Report'), async (r
       return res.status(400).json({ error: 'porondamData is required' });
     }
 
-    // Deduct LKR 10 before AI generation
-    let newBalance = req.tokenBalanceBefore;
-    try {
-      const deduction = await req.deductTokens();
-      newBalance = deduction.newBalance;
-    } catch (e) {
-      if (e.code === 'INSUFFICIENT_BALANCE') {
-        return res.status(402).json({ error: 'Insufficient token balance', balance: e.balance, required: e.required, topUpRequired: true });
-      }
-      throw e;
-    }
+    // Payment handled by PayHere before API call — no token deduction needed
 
     const langInstruction = language === 'si'
       ? `ඔබ ශ්‍රී ලංකාවේ ප්‍රසිද්ධ විවාහ ගැළපුම් උපදේශකයෙක්. මේ යුවලයාගේ ගැළපීම ගැන සිංහලෙන් ලියන්න.
@@ -358,12 +348,18 @@ WRITE THE REPORT:
     */
     let savedPorondamId = porondamId || null;
 
+    // Track AI cost
+    trackCost('porondam', req.user?.uid || null, {
+      inputTokens: result.usage?.promptTokenCount || result.usage?.prompt_tokens || 0,
+      outputTokens: result.usage?.candidatesTokenCount || result.usage?.completion_tokens || 0,
+      thinkingTokens: result.usage?.thoughtsTokenCount || 0,
+      model: result.model,
+    });
+
     res.json({
       success: true,
       report: result.message,
       language,
-      tokenCost: req.tokenCost,
-      balance: newBalance,
       porondamId: savedPorondamId,
       tokenUsage: result.usage ? {
         model: result.model,

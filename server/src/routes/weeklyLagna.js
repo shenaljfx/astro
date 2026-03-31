@@ -13,6 +13,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../config/firebase');
 const { generateWeeklyLagnaReports } = require('../engine/weeklyLagna');
+const { trackCost } = require('../services/costTracker');
 
 const COLLECTION = 'weeklyLagnaReports';
 
@@ -163,6 +164,12 @@ router.post('/generate', async (req, res) => {
   try {
     console.log('[WeeklyLagna] Force-generating weekly reports...');
     const result = await generateWeeklyLagnaReports();
+
+    // Track AI cost
+    if (result.usage) {
+      trackCost('weeklyLagna', null, result.usage);
+    }
+
     res.json({ success: true, ...result });
   } catch (err) {
     console.error('[WeeklyLagna] Generate error:', err.message);

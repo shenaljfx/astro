@@ -11,6 +11,7 @@ const router = express.Router();
 const { chat } = require('../engine/chat');
 const { phoneAuth } = require('../middleware/subscription');
 const { getDb, COLLECTIONS } = require('../config/firebase');
+const { trackCost } = require('../services/costTracker');
 
 const DAILY_LIMIT = 10;
 
@@ -152,6 +153,14 @@ router.post('/ask', phoneAuth, async (req, res) => {
     if (db && uid) {
       quotaAfter = await incrementQuota(uid);
     }
+
+    // Track AI cost
+    trackCost('chat', uid, {
+      inputTokens: result.usage?.promptTokenCount || result.usage?.prompt_tokens || 0,
+      outputTokens: result.usage?.candidatesTokenCount || result.usage?.completion_tokens || 0,
+      thinkingTokens: result.usage?.thoughtsTokenCount || 0,
+      model: result.model,
+    });
 
     res.json({
       success: true,

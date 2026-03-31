@@ -4,7 +4,7 @@
 //  Same architecture as CosmicAuroraNebula.js but with theme="blue":
 //  • AuroraEngine.js  — 6 curtains with cyan/indigo/sapphire palette
 //  • NebulaEngine.js  — Volumetric dust in deep blue/violet tones
-//  • ShootingStars.js — Particle shooting star system
+//  • ShootingStars.js — Lightweight Reanimated shooting star overlay
 //
 //  Layout: Aurora (TOP) → Fade Bridge (MID) → Nebula + Stars + MW (BOTTOM)
 //  Theme: BLUE — cyan, sapphire, indigo, teal palette
@@ -12,7 +12,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { View, Dimensions, StyleSheet, Platform } from 'react-native';
-import ShootingStarsSystem from './ShootingStars';
+import ShootingStarsOverlay from './ShootingStars';
 import AuroraWaveSystem from './AuroraEngine';
 import NebulaEngine from './NebulaEngine';
 import Animated, {
@@ -82,8 +82,6 @@ function BlueScene() {
       <AuroraWaveSystem theme="green" weight="accent" />
       {/* Advanced Nebula Engine — volumetric dust in sapphire/indigo */}
       <NebulaEngine theme="blue" />
-      {/* Shooting stars */}
-      <ShootingStarsSystem />
     </>
   );
 }
@@ -131,6 +129,8 @@ function BlueThreeJSBackground() {
           backgroundColor: 'rgba(0, 0, 0, 0.18)',
         }}
       />
+      {/* Lightweight shooting stars — runs outside R3F Canvas */}
+      <ShootingStarsOverlay />
     </View>
   );
 }

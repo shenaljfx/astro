@@ -7,7 +7,7 @@
 //  • NebulaEngine.js  — Volumetric dust (ray marching, Mie/Rayleigh
 //    scattering, curl advection, Beer-Lambert, ridged FBM filaments),
 //    cosmic star field, milky way band + glow, fade bridge
-//  • ShootingStars.js — Particle shooting star system
+//  • ShootingStars.js — Lightweight Reanimated shooting star overlay
 //
 //  Layout: Aurora (TOP) → Fade Bridge (MID) → Nebula + Stars + MW (BOTTOM)
 //  Theme: GOLDEN — warm gold, amber, copper, champagne palette
@@ -17,7 +17,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { View, Dimensions, StyleSheet, Platform } from 'react-native';
-import ShootingStarsSystem from './ShootingStars';
+import ShootingStarsOverlay from './ShootingStars';
 import AuroraWaveSystem from './AuroraEngine';
 import NebulaEngine from './NebulaEngine';
 import Animated, {
@@ -86,8 +86,6 @@ function CosmicScene() {
       <AuroraWaveSystem theme="pink" weight="accent" />
       {/* Advanced Nebula Engine — volumetric dust, stars, milky way, fade bridge */}
       <NebulaEngine theme="golden" />
-      {/* Shooting stars particle system */}
-      <ShootingStarsSystem />
     </>
   );
 }
@@ -136,6 +134,8 @@ function ThreeJSBackground() {
           backgroundColor: 'rgba(0, 0, 0, 0.18)',
         }}
       />
+      {/* Lightweight shooting stars — runs outside R3F Canvas */}
+      <ShootingStarsOverlay />
     </View>
   );
 }

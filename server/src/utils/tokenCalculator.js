@@ -15,7 +15,34 @@
 
 // ── Model Pricing (USD per 1,000,000 tokens) ────────────────────
 const MODEL_PRICING = {
-  // Gemini 2.5 Flash (default model)
+  // Gemini 3.1 Pro Preview (hero sections + weekly lagna + full reading)
+  'gemini-3.1-pro-preview': {
+    inputPer1M: 2.00,   // prompts <= 200k tokens
+    outputPer1M: 12.00,  // includes thinking tokens
+    label: 'Gemini 3.1 Pro Preview',
+    searchCostPer1K: 14.00, // $14 per 1,000 search queries (after 5k free/month)
+  },
+  'gemini-3.1-pro-preview-customtools': {
+    inputPer1M: 2.00,
+    outputPer1M: 12.00,
+    label: 'Gemini 3.1 Pro Preview (Custom Tools)',
+    searchCostPer1K: 14.00,
+  },
+  // Gemini 3 Flash Preview
+  'gemini-3-flash-preview': {
+    inputPer1M: 0.50,
+    outputPer1M: 3.00,
+    label: 'Gemini 3 Flash Preview',
+    searchCostPer1K: 14.00,
+  },
+  // Gemini 3.1 Flash-Lite Preview
+  'gemini-3.1-flash-lite-preview': {
+    inputPer1M: 0.25,
+    outputPer1M: 1.50,
+    label: 'Gemini 3.1 Flash-Lite Preview',
+    searchCostPer1K: 14.00,
+  },
+  // Gemini 2.5 Flash (standard sections)
   'gemini-2.5-flash': {
     inputPer1M: 0.30,
     outputPer1M: 2.50, // includes thinking tokens
@@ -26,7 +53,13 @@ const MODEL_PRICING = {
     outputPer1M: 2.50,
     label: 'Gemini 2.5 Flash Preview',
   },
-  // Gemini 2.5 Pro (hero sections)
+  // Gemini 2.5 Flash-Lite
+  'gemini-2.5-flash-lite': {
+    inputPer1M: 0.10,
+    outputPer1M: 0.40,
+    label: 'Gemini 2.5 Flash-Lite',
+  },
+  // Gemini 2.5 Pro (hero sections fallback)
   'gemini-2.5-pro': {
     inputPer1M: 1.25,
     outputPer1M: 10.00,
@@ -37,7 +70,7 @@ const MODEL_PRICING = {
     outputPer1M: 10.00,
     label: 'Gemini 2.5 Pro Preview',
   },
-  // Gemini 2.0 Flash (legacy)
+  // Gemini 2.0 Flash (legacy — deprecated June 2026)
   'gemini-2.0-flash': {
     inputPer1M: 0.10,
     outputPer1M: 0.40,

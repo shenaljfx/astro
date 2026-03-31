@@ -13,7 +13,7 @@ const { generateAdvancedAnalysis } = require('../engine/advanced');
 const { chat, generateAINarrativeReport, translateAdvancedForDisplay, explainChartSimple } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth } = require('../middleware/subscription');
-const { requireTokens, deductTokenBalance } = require('../middleware/tokens');
+const { trackCost } = require('../services/costTracker');
 const { saveReport, getCachedReport, saveChartExplanation, getCachedChartExplanation, saveTranslationCache, getCachedTranslation, getUserReports, saveBirthChartCache, getCachedBirthChart } = require('../models/firestore');
 const { parseSLT } = require('../utils/dateUtils');
 const { parseBirthDateTime } = require('../services/timezone');
@@ -968,7 +968,7 @@ router.post('/full-report', async (req, res) => {
 // Optional auth: if logged in, caches report & returns cached if available
 // ═══════════════════════════════════════════════════════════════════
 
-router.post('/full-report-ai', phoneAuth, requireTokens(350, 'Full AI Report'), async (req, res) => {
+router.post('/full-report-ai', phoneAuth, async (req, res) => {
   try {
     const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null } = req.body;
 
@@ -1017,17 +1017,7 @@ router.post('/full-report-ai', phoneAuth, requireTokens(350, 'Full AI Report'), 
     }
     */
 
-    // Deduct LKR 15 BEFORE generation
-    let newBalance = req.tokenBalanceBefore;
-    try {
-      const deduction = await req.deductTokens();
-      newBalance = deduction.newBalance;
-    } catch (e) {
-      if (e.code === 'INSUFFICIENT_BALANCE') {
-        return res.status(402).json({ error: 'Insufficient token balance', balance: e.balance, required: e.required, topUpRequired: true });
-      }
-      throw e;
-    }
+    // Deduct LKR 15 BEFORE generation — REMOVED: payment handled by PayHere before API call
 
     console.log(`[AI Report] Generating narrative report for ${date.toISOString()} at (${reportLat}, ${reportLng}) in ${language}`);
     const startTime = Date.now();
@@ -1037,6 +1027,9 @@ router.post('/full-report-ai', phoneAuth, requireTokens(350, 'Full AI Report'), 
     const elapsed = Date.now() - startTime;
     const sectionCount = Object.keys(report.narrativeSections).length;
     console.log(`[AI Report] Complete in ${elapsed}ms — ${sectionCount} narrative sections`);
+
+    // Track real AI cost
+    trackCost('fullReport', req.user?.uid || null, report.tokenUsage);
 
     // Save report to Firestore — DISABLED: caching disabled during development
     /*
@@ -1066,8 +1059,6 @@ router.post('/full-report-ai', phoneAuth, requireTokens(350, 'Full AI Report'), 
     res.json({
       success: true,
       cached: false,
-      tokenCost: req.tokenCost,
-      balance: newBalance,
       generationTime: `${elapsed}ms`,
       data: report,
       tokenUsage: report.tokenUsage || null,

@@ -2,20 +2,20 @@
  * Notification Scheduler — Cron-like daily tasks
  * 
  * Runs scheduled notification jobs:
- *   1. Daily Palapa (පලාපල) — morning horoscope push at 5:30 AM SLT
- *   2. Rahu Kalaya Warning — 15 minutes before Rahu Kalaya starts
- *   3. Maraka Apala Alerts — daily check for users in dangerous periods
- *   4. Weekly Digest — Sunday summary of upcoming week
+ *   1. Rahu Kalaya Warning — 15 minutes before Rahu Kalaya starts
+ *   2. Maraka Apala Alerts — daily check for users in dangerous periods
+ *   3. Weekly Lagna Palapala — Sunday AI-generated weekly predictions
  * 
  * Uses setInterval for self-hosted servers.
  * For production: use Cloud Functions / Cloud Scheduler / cron job.
  */
 
-const { calculateRahuKalaya, getDailyNakath, getNakshatra, getRashi, toSidereal, getMoonLongitude, getPanchanga } = require('../engine/astrology');
+const { calculateRahuKalaya } = require('../engine/astrology');
 const { calculateMarakaApala } = require('../engine/maraka');
 const { sendPush, getTokensWithPreference, logNotification } = require('./notifications');
 const { getDb, COLLECTIONS } = require('../config/firebase');
 const { generateWeeklyLagnaReports } = require('../engine/weeklyLagna');
+const { trackCost } = require('./costTracker');
 
 // SLT offset in ms (UTC+5:30)
 const SLT_OFFSET_MS = 5.5 * 60 * 60 * 1000;
@@ -25,86 +25,7 @@ function toSLTDate(date) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 1. DAILY PALAPA — Morning horoscope notification
-// ═══════════════════════════════════════════════════════════════
-async function sendDailyPalapa() {
-  console.log('[Scheduler] Starting daily palapa push...');
-  
-  try {
-    const today = new Date();
-    const panchanga = getPanchanga(today, 6.9271, 79.8612);
-    const nakath = getDailyNakath(today, 6.9271, 79.8612);
-
-    // Get all users who have daily palapa enabled
-    const tokens = await getTokensWithPreference('dailyPalapa');
-    console.log(`[Scheduler] Daily palapa: ${tokens.length} users to notify`);
-
-    const tithiName = panchanga?.tithi?.name || 'Unknown';
-    const nakshatraName = panchanga?.nakshatra?.name || 'Unknown';
-    const nakshatraSinhala = panchanga?.nakshatra?.sinhala || '';
-    const yogaName = panchanga?.yoga?.name || '';
-
-    for (const token of tokens) {
-      try {
-        const lang = token.language || 'si';
-        const birthData = token.birthData;
-
-        let title, body;
-
-        if (lang === 'si') {
-          title = '🌅 අද දිනයේ පලාපල';
-          body = `නක්ෂත්‍රය: ${nakshatraSinhala || nakshatraName} | තිථිය: ${tithiName}`;
-          
-          // Personalize if birth data available
-          if (birthData?.dateTime) {
-            try {
-              const bDate = new Date(birthData.dateTime);
-              const moonLong = getMoonLongitude(bDate);
-              const siderealMoon = toSidereal(moonLong, bDate);
-              const moonRashi = getRashi(siderealMoon);
-              if (moonRashi?.sinhala) {
-                body += ` | ඔබේ රාශිය: ${moonRashi.sinhala}`;
-              }
-            } catch (e) { /* personalization failed, use generic */ }
-          }
-        } else {
-          title = '🌅 Today\'s Horoscope';
-          body = `Nakshatra: ${nakshatraName} | Tithi: ${tithiName}`;
-          
-          if (birthData?.dateTime) {
-            try {
-              const bDate = new Date(birthData.dateTime);
-              const moonLong = getMoonLongitude(bDate);
-              const siderealMoon = toSidereal(moonLong, bDate);
-              const moonRashi = getRashi(siderealMoon);
-              if (moonRashi?.english) {
-                body += ` | Your sign: ${moonRashi.english}`;
-              }
-            } catch (e) { /* skip */ }
-          }
-        }
-
-        await sendPush(token.pushToken, title, body, {
-          type: 'DAILY_PALAPA',
-          date: today.toISOString().split('T')[0],
-          nakshatra: nakshatraName,
-          tithi: tithiName,
-        }, { channelId: 'daily-palapa' });
-
-        await logNotification(token.uid, 'DAILY_PALAPA', title, body);
-      } catch (err) {
-        console.error(`[Scheduler] Palapa push failed for ${token.uid}:`, err.message);
-      }
-    }
-
-    console.log(`[Scheduler] Daily palapa sent to ${tokens.length} users`);
-  } catch (err) {
-    console.error('[Scheduler] Daily palapa error:', err.message);
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 2. RAHU KALAYA WARNING — 15 min before
+// 1. RAHU KALAYA WARNING — 15 min before
 // ═══════════════════════════════════════════════════════════════
 async function sendRahuKalayaWarning() {
   console.log('[Scheduler] Checking Rahu Kalaya...');
@@ -280,30 +201,6 @@ function startScheduler() {
     });
   }, 5 * 60 * 1000); // 5 minutes
 
-  // ── Daily Palapa — check every 10 minutes, send at 5:30 AM SLT ──
-  let dailyPalapaSent = false;
-  setInterval(() => {
-    const now = new Date();
-    const slt = toSLTDate(now);
-    const sltHour = slt.getUTCHours();
-    const sltMin = slt.getUTCMinutes();
-
-    // Reset flag after the window passes
-    if (!(sltHour === 5 && sltMin >= 25 && sltMin <= 35)) {
-      dailyPalapaSent = false;
-      return;
-    }
-
-    // Target: 5:25-5:35 AM SLT
-    if (sltHour === 5 && sltMin >= 25 && sltMin <= 35 && !dailyPalapaSent) {
-      dailyPalapaSent = true;
-      sendDailyPalapa().catch(err => {
-        console.error('[Scheduler] Daily palapa interval error:', err.message);
-        dailyPalapaSent = false; // Allow retry on failure
-      });
-    }
-  }, 10 * 60 * 1000); // 10 minutes
-
   // ── Maraka Apala — check once daily at 6:00 AM SLT ──
   let marakaChecked = false;
   setInterval(() => {
@@ -354,6 +251,10 @@ function startScheduler() {
       generateWeeklyLagnaReports()
         .then(async (result) => {
           console.log(`[Scheduler] ✅ Weekly lagna reports generated: ${result.reportCount} lagnas for ${result.weekId}`);
+          // Track AI cost
+          if (result.usage) {
+            trackCost('weeklyLagna', null, result.usage);
+          }
           // Send notification to all users
           try {
             await sendWeeklyLagnaPushNotification();
@@ -370,7 +271,6 @@ function startScheduler() {
 
   console.log('[Scheduler] ✅ Notification scheduler started');
   console.log('[Scheduler]    📊 Rahu Kalaya checks every 5 min');
-  console.log('[Scheduler]    🌅 Daily Palapa at 5:30 AM SLT');
   console.log('[Scheduler]    ⛔ Maraka Apala at 6:00 AM SLT');
   console.log('[Scheduler]    🔮 Weekly Lagna Palapala — Sunday 6:00 AM SLT');
 }
@@ -417,7 +317,6 @@ function stopScheduler() {
 module.exports = {
   startScheduler,
   stopScheduler,
-  sendDailyPalapa,
   sendRahuKalayaWarning,
   checkMarakaApalaForAllUsers,
   sendWeeklyLagnaPushNotification,

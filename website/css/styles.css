@@ -327,22 +327,47 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   max-width: var(--container); margin: 0 auto;
   align-items: center;
   padding: 100px var(--s-lg) 40px;
-  overflow: hidden;
+  overflow: visible;
 }
-/* Aurora canvas — full viewport fixed background, always visible */
+/* Northern Lights — Three.js aurora — INTENSE, bleeds through 3 sections */
 .hero__aurora {
   position: fixed;
-  top: 0;
-  left: 0;
+  top: -10vh;
+  left: 50%;
+  transform: translateX(-50%);
   width: 100vw;
-  height: 100vh;
-  z-index: -1;
+  height: 280vh;             /* Cover hero + 3 full sections */
+  max-height: 2400px;
+  z-index: 0;
   pointer-events: none;
-  opacity: 0.7;
+  opacity: 1;
   mix-blend-mode: screen;
+  /* Maximum vibrancy */
+  filter: saturate(1.55) contrast(1.2) brightness(1.3) blur(0.1px);
+  /* Very gradual fade over 3 sections */
+  -webkit-mask-image: linear-gradient(to bottom,
+    rgba(0,0,0,0.0)   0%,
+    rgba(0,0,0,1.0)   3%,
+    rgba(0,0,0,1.0)   25%,
+    rgba(0,0,0,0.95)  40%,
+    rgba(0,0,0,0.8)   55%,
+    rgba(0,0,0,0.55)  70%,
+    rgba(0,0,0,0.3)   82%,
+    rgba(0,0,0,0.1)   92%,
+    transparent       100%);
+  mask-image: linear-gradient(to bottom,
+    rgba(0,0,0,0.0)   0%,
+    rgba(0,0,0,1.0)   3%,
+    rgba(0,0,0,1.0)   25%,
+    rgba(0,0,0,0.95)  40%,
+    rgba(0,0,0,0.8)   55%,
+    rgba(0,0,0,0.55)  70%,
+    rgba(0,0,0,0.3)   82%,
+    rgba(0,0,0,0.1)   92%,
+    transparent       100%);
 }
 @media (prefers-reduced-motion: reduce) {
-  .hero__aurora { opacity: 0.15; }
+  .hero__aurora { opacity: 0.2; }
 }
 .hero::after {
   display: none;
@@ -400,79 +425,16 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
 .hero__visual { position: relative; z-index: 3; display: flex; justify-content: center; }
 .hero__phone { position: relative; }
 
-/* ── Rashi Chakra — Rotating zodiac wheel decoration ───────────────── */
+/* ── Rashi Chakra — Canvas-rendered Sacred Zodiac Mandala ────────── */
 .rashi-chakra {
   position: fixed;
-  width: 700px; height: 700px;
-  top: 50%; right: -300px;
+  width: 750px; height: 750px;
+  top: 50%; right: -280px;
   transform: translateY(-50%);
-  z-index: 0;
+  z-index: 1;
   pointer-events: none;
-  opacity: 0.5;
-  filter: saturate(1.5) brightness(1.15) drop-shadow(0 0 30px rgba(255,184,0,0.1));
+  opacity: 0.55;
 }
-.rashi-chakra__svg {
-  width: 100%; height: 100%;
-  animation: rcBreathe 6s ease-in-out infinite;
-}
-.rashi-sparkle-canvas {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-}
-/* Star field shimmer */
-.rc-stars {
-  animation: rcStarTwinkle 4s ease-in-out infinite alternate;
-}
-/* Zodiac ring — slow clockwise */
-.rc-zodiac {
-  transform-origin: 200px 200px;
-  animation: rcSpinSlow 140s linear infinite;
-}
-/* Graha orbit — medium counter-clockwise */
-.rc-grahas {
-  transform-origin: 200px 200px;
-  animation: rcSpinMed 85s linear infinite reverse;
-}
-/* Aura halos — slow reverse */
-.rc-aura {
-  transform-origin: 200px 200px;
-  animation: rcSpinAura 55s linear infinite reverse;
-}
-/* Center orb pulse */
-.rc-center {
-  transform-origin: 200px 200px;
-  animation: rcPulse 3.2s ease-in-out infinite alternate;
-}
-@keyframes rcSpinSlow  { to { transform: rotate(360deg); } }
-@keyframes rcSpinMed   { to { transform: rotate(360deg); } }
-@keyframes rcSpinAura  { to { transform: rotate(360deg); } }
-@keyframes rcPulse {
-  0%   { opacity: 0.55; transform: scale(0.993); }
-  100% { opacity: 1;    transform: scale(1.007); }
-}
-@keyframes rcBreathe {
-  0%, 100% { filter: brightness(0.88); }
-  50%      { filter: brightness(1.15); }
-}
-@keyframes rcStarTwinkle {
-  0%   { opacity: 0.7; }
-  33%  { opacity: 1; }
-  66%  { opacity: 0.8; }
-  100% { opacity: 0.95; }
-}
-/* Outer star rings — counter-rotating */
-.rc-outer-stars-1 {
-  transform-origin: 200px 200px;
-  animation: rcSpinOuterCW 100s linear infinite;
-}
-.rc-outer-stars-2 {
-  transform-origin: 200px 200px;
-  animation: rcSpinOuterCCW 130s linear infinite;
-}
-@keyframes rcSpinOuterCW  { to { transform: rotate(360deg); } }
-@keyframes rcSpinOuterCCW { to { transform: rotate(-360deg); } }
 
 /* ═══ Beautiful Phone Mockup Component ════════════════════════════════
    Reusable across hero + screenshot cards.
@@ -706,17 +668,9 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
    Each section has its own gradient, glow orbs, and color identity.
    ══════════════════════════════════════════════════════════════════════ */
 
-/* Cosmic FX canvas — shared styles */
-.cosmic-fx-canvas {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  pointer-events: none; z-index: 0;
-  opacity: 0; transition: opacity 1.5s ease;
-}
-
 /* Shared scene layer — each section ::before = gradient bg, ::after = glow orb */
 .features, .how, .screenshots, .kendara, .porondam, .fullreport, .pricing, .testimonials, .faq, .download {
-  position: relative; z-index: 1;
+  position: relative; z-index: 2;
   overflow: hidden;
 }
 .features::before, .how::before, .screenshots::before, .kendara::before, .porondam::before, .fullreport::before, .pricing::before,
@@ -780,7 +734,7 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   animation: sceneFloat3 22s ease-in-out infinite;
 }
 
-/* ── KENDARA CHART — Cosmic Storm / Thunder Zone ───────────────────── */
+/* ── KENDARA CHART — Solar Eclipse Zone ────────────────────────────── */
 .kendara {
   padding: var(--s-4xl) 0;
   position: relative; z-index: 1;
@@ -791,18 +745,17 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   opacity: 0; transition: opacity 1.4s ease;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 90% 50% at 25% 20%, rgba(60,30,120,0.22) 0%, transparent 60%),
-    radial-gradient(ellipse 80% 45% at 75% 15%, rgba(80,50,160,0.16) 0%, transparent 55%),
-    radial-gradient(ellipse 100% 30% at 50% 10%, rgba(40,20,90,0.25) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 40% at 50% 85%, rgba(0,150,200,0.06) 0%, transparent 60%);
+    radial-gradient(ellipse 60% 60% at 50% 40%, rgba(255,160,50,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 90% 50% at 50% 40%, rgba(180,100,30,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 30% at 50% 10%, rgba(20,10,40,0.15) 0%, transparent 50%);
 }
 .kendara.scene-active::before { opacity: 1; }
 
 .kendara .section-header::before { display: none; }
 .kendara .section-label {
-  color: #B47AFF;
-  background: rgba(120,80,255,0.08);
-  border-color: rgba(120,80,255,0.15);
+  color: #FFA832;
+  background: rgba(255,168,50,0.08);
+  border-color: rgba(255,168,50,0.15);
 }
 
 .kendara__showcase {
@@ -824,23 +777,23 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   transition: all var(--dur);
 }
 .kendara__feature:hover {
-  border-color: rgba(120,80,255,0.3);
-  box-shadow: 0 0 30px rgba(120,80,255,0.06);
+  border-color: rgba(255,168,50,0.3);
+  box-shadow: 0 0 30px rgba(255,168,50,0.06);
   transform: translateY(-2px);
 }
 .kendara__feature-icon {
   font-size: 28px; flex-shrink: 0;
   width: 48px; height: 48px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(120,80,255,0.08);
+  background: rgba(255,168,50,0.08);
   border-radius: var(--r-lg);
-  border: 1px solid rgba(120,80,255,0.12);
+  border: 1px solid rgba(255,168,50,0.12);
 }
 .kendara__feature-text h3 {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 17px; font-weight: 700;
   margin-bottom: var(--s-xs);
-  background: linear-gradient(135deg, #B47AFF, #00C8FF);
+  background: linear-gradient(135deg, #FFA832, #FFD700);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
 }
@@ -869,14 +822,8 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   opacity: 1; transform: rotate(2deg) scale(0.9) translateX(25%);
 }
 
-/* Storm canvas — full-section overlay with clouds & lightning */
-.kendara__lightning-canvas {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  pointer-events: none; z-index: 0;
-  opacity: 0; transition: opacity 1s ease;
-}
-.kendara.scene-active .kendara__lightning-canvas { opacity: 1; }
+/* Ensure kendara content sits above background */
+.kendara .container { position: relative; z-index: 3; }
 
 @media (max-width: 768px) {
   .kendara__showcase { grid-template-columns: 1fr; gap: var(--s-xl); place-items: center; }
@@ -894,7 +841,7 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   .kendara__feature-text p { font-size: 12px; }
 }
 
-/* ── PORONDAM — Pink Aurora Marriage Zone ───────────────────────────── */
+/* ── PORONDAM — Nebula Zone ──────────────────────────────────────────── */
 .porondam {
   padding: var(--s-4xl) 0;
   position: relative; z-index: 1;
@@ -905,12 +852,34 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   opacity: 0; transition: opacity 1.4s ease;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 90% 55% at 65% 25%, rgba(255,107,157,0.1) 0%, transparent 55%),
-    radial-gradient(ellipse 80% 50% at 25% 50%, rgba(220,80,180,0.08) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 40% at 50% 75%, rgba(180,60,200,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse 100% 30% at 50% 10%, rgba(255,140,120,0.05) 0%, transparent 50%);
+    radial-gradient(ellipse 90% 55% at 65% 25%, rgba(180,100,255,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 50% at 25% 50%, rgba(120,60,200,0.04) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 40% at 50% 75%, rgba(200,80,255,0.04) 0%, transparent 50%);
 }
 .porondam.scene-active::before { opacity: 1; }
+
+/* Nebula canvas — behind content */
+.nebula-poro-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: -1;
+  opacity: 0;
+  transition: opacity 1.8s ease;
+}
+.porondam .container { position: relative; z-index: 2; }
+
+/* Cosmic dust canvas — fixed behind pricing + below */
+.cosmic-dust-canvas {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 1;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+.pricing .container,
+.testimonials .container,
+.faq .container,
+.download .container { position: relative; z-index: 3; }
 
 .porondam .section-header::before { display: none; }
 .porondam .section-label {
@@ -1190,18 +1159,19 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   .weekly-lagna__feature-text p { font-size: 12px; }
 }
 
-/* ── PRICING — Rich Indigo Temple Glow ─────────────────────────────── */
+/* ── PRICING — Nebula Star Birth Zone ──────────────────────────────── */
 .pricing { padding: var(--s-4xl) 0; }
 .pricing::before {
   background:
-    radial-gradient(ellipse 80% 70% at 50% 50%, rgba(75,0,130,0.1) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 80% 20%, rgba(255,184,0,0.06) 0%, transparent 60%);
+    radial-gradient(ellipse 80% 70% at 40% 40%, rgba(100,50,200,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 70% 30%, rgba(50,100,220,0.05) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 30% 70%, rgba(200,60,120,0.04) 0%, transparent 50%);
 }
 .pricing::after {
   content: ''; position: absolute; z-index: -1; pointer-events: none;
   width: 500px; height: 500px; border-radius: 50%;
   top: 50%; left: 50%; transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(255,184,0,0.04) 0%, transparent 50%);
+  background: radial-gradient(circle, rgba(120,80,255,0.03) 0%, transparent 50%);
   animation: scenePulse 8s ease-in-out infinite;
 }
 
@@ -2294,13 +2264,16 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
     50% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
   }
 
-  /* Rashi Chakra — centered on mobile */
+  /* Rashi Chakra — behind phone mockup on mobile */
   .rashi-chakra {
-    width: 380px; height: 380px;
-    right: auto; top: 50%;
-    left: 50%; bottom: auto;
-    transform: translate(-50%, -50%);
-    opacity: 0.35;
+    width: 320px; height: 320px;
+    right: auto;
+    top: 28vh;
+    left: 50%;
+    bottom: auto;
+    transform: translateX(-50%);
+    opacity: 0.4;
+    z-index: 1;
   }
 
   .phone-mockup { animation: phoneFloat 6s ease-in-out infinite; margin: 0 auto; }

@@ -117,23 +117,27 @@ async function callAIForWeeklyReports(weekRange, planetaryContext) {
 
   const systemPrompt = `You are a renowned Vedic astrologer creating weekly lagna palapala (ලග්න පලාපල) for a Sri Lankan astrology app called Grahachara.
 
+You have access to Google Search — use it to verify current planetary transits, retrograde periods, and any significant astronomical events for the prediction week. Cross-reference the provided engine data with live search results for maximum accuracy.
+
 IMPORTANT RULES:
 1. You must provide predictions for ALL 12 lagnas (Mesha through Meena)
 2. Each prediction must be in BOTH English AND Sinhala
-3. Use the actual planetary positions provided to make accurate, specific predictions
+3. Use the actual planetary positions provided AND verify with Google Search for the most accurate, up-to-date transit data
 4. Consider planetary transits, aspects (drishti), and house placements FROM each lagna
 5. Be specific — mention exact planets, their positions, and effects
 6. Keep each lagna's prediction concise but meaningful (3-4 sentences per section)
 7. The tone should be positive yet honest — warn about challenges with remedies
 8. Include practical advice, not just vague spiritual platitudes
 9. Mention specific astrological remedies (mantras, colors, gemstones, donations) for challenging periods
+10. Search for any special astronomical events (eclipses, planetary conjunctions, retrogrades) happening during this week
 
 For each lagna, analyze:
 - Which houses the current planets occupy FROM that lagna
 - Major transits affecting that sign this week
 - Benefic/malefic influences
 - Dasha-like general trends
-- Specific planetary conjunctions and their effects`;
+- Specific planetary conjunctions and their effects
+- Any retrogrades or station changes this week (verify via search)`;
 
   const userPrompt = `Generate weekly horoscope for the week of ${weekStartStr} to ${weekEndStr}.
 
@@ -186,10 +190,121 @@ async function callGemini(systemPrompt, userPrompt) {
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not set in environment variables');
   }
+
+  // Prefer Gemini 3.1 Pro for weekly reports (best quality + search grounding)
+  // Falls back to GEMINI_PRO_MODEL → GEMINI_MODEL → gemini-2.5-flash
+  const model = process.env.GEMINI_3_PRO_MODEL
+    || process.env.GEMINI_PRO_MODEL
+    || process.env.GEMINI_MODEL
+    || 'gemini-2.5-flash';
+
+  const useSearchGrounding = model.includes('3.1') || model.includes('3-');
+  
+  console.log(`[WeeklyLagna] Using model: ${model} (search grounding: ${useSearchGrounding})`);
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const requestBody = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 65536,
+      responseMimeType: 'application/json',
+    },
+  };
+
+  // Enable Google Search grounding for real-time planetary transit awareness
+  if (useSearchGrounding) {
+    requestBody.tools = [{ google_search: {} }];
+  }
+
+  const MAX_RETRIES = 3;
+  const BASE_DELAY = 3000;
+  const TIMEOUT_MS = 180000; // 3 min — Gemini 3.1 Pro can be slower
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify(requestBody),
+      });
+      clearTimeout(timer);
+
+      if (response.status === 429 || response.status >= 500) {
+        const msg = `HTTP ${response.status}`;
+        if (attempt < MAX_RETRIES) {
+          const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 1000;
+          console.warn(`[WeeklyLagna] ${msg} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+        // Final attempt: fall back to standard model without search grounding
+        if (model !== (process.env.GEMINI_MODEL || 'gemini-2.5-flash')) {
+          console.warn(`[WeeklyLagna] ${model} failed after ${MAX_RETRIES} attempts, falling back to standard model`);
+          return callGeminiFallback(systemPrompt, userPrompt);
+        }
+        throw new Error(`Gemini API error: ${msg} after ${MAX_RETRIES} attempts`);
+      }
+
+      const data = await response.json();
+      if (data.error) {
+        console.warn(`[WeeklyLagna] Gemini error: ${data.error.message}`);
+        if (model !== (process.env.GEMINI_MODEL || 'gemini-2.5-flash')) {
+          console.warn('[WeeklyLagna] Falling back to standard model');
+          return callGeminiFallback(systemPrompt, userPrompt);
+        }
+        throw new Error(`Gemini API error: ${data.error.message}`);
+      }
+
+      // Log search grounding info if available
+      const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
+      if (groundingMetadata) {
+        const queries = groundingMetadata.webSearchQueries || [];
+        console.log(`[WeeklyLagna] 🔍 Search grounded with ${queries.length} queries: ${queries.slice(0, 3).join(', ')}`);
+      }
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const usage = data.usageMetadata || {};
+      console.log(`[WeeklyLagna] ✅ Generated with ${model} (tokens: ${usage.totalTokenCount || '?'})`);
+      
+      const reports = parseAIResponse(text);
+      return { reports, usage: { inputTokens: usage.promptTokenCount || 0, outputTokens: usage.candidatesTokenCount || 0, thinkingTokens: usage.thoughtsTokenCount || 0 } };
+    } catch (err) {
+      const retryable = /fetch failed|AbortError|ECONNRESET|UND_ERR_CONNECT_TIMEOUT/i.test(err.message || '');
+      if (retryable && attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 1000;
+        console.warn(`[WeeklyLagna] ${err.message} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      // Fall back to standard model on final failure
+      if (model !== (process.env.GEMINI_MODEL || 'gemini-2.5-flash')) {
+        console.warn(`[WeeklyLagna] ${model} error: ${err.message}, falling back to standard model`);
+        return callGeminiFallback(systemPrompt, userPrompt);
+      }
+      throw err;
+    }
+  }
+}
+
+/**
+ * Fallback: call standard Gemini model (gemini-2.5-flash) without search grounding
+ */
+async function callGeminiFallback(systemPrompt, userPrompt) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  console.log(`[WeeklyLagna] Fallback to: ${model}`);
+  
   const { GoogleGenerativeAI } = require('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ 
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+  const genModel = genAI.getGenerativeModel({
+    model,
     systemInstruction: systemPrompt,
     generationConfig: {
       temperature: 0.7,
@@ -198,10 +313,11 @@ async function callGemini(systemPrompt, userPrompt) {
     },
   });
 
-  const result = await model.generateContent(userPrompt);
-
+  const result = await genModel.generateContent(userPrompt);
   const text = result.response.text();
-  return parseAIResponse(text);
+  const usageMeta = result.response.usageMetadata || {};
+  const reports = parseAIResponse(text);
+  return { reports, usage: { inputTokens: usageMeta.promptTokenCount || 0, outputTokens: usageMeta.candidatesTokenCount || 0, thinkingTokens: usageMeta.thoughtsTokenCount || 0 } };
 }
 
 async function callOpenAI(systemPrompt, userPrompt) {
@@ -220,7 +336,8 @@ async function callOpenAI(systemPrompt, userPrompt) {
   });
 
   const text = response.choices[0].message.content;
-  return parseAIResponse(text);
+  const reports = parseAIResponse(text);
+  return { reports, usage: { inputTokens: response.usage?.prompt_tokens || 0, outputTokens: response.usage?.completion_tokens || 0, thinkingTokens: 0 } };
 }
 
 function parseAIResponse(text) {
@@ -268,7 +385,9 @@ async function generateWeeklyLagnaReports() {
   console.log('[WeeklyLagna] Planetary context built');
 
   // Call AI
-  const aiReports = await callAIForWeeklyReports(weekRange, planetaryContext);
+  const aiResult = await callAIForWeeklyReports(weekRange, planetaryContext);
+  const aiReports = aiResult.reports || aiResult;
+  const aiUsage = aiResult.usage || null;
   console.log(`[WeeklyLagna] AI returned ${aiReports.length} reports`);
 
   // Validate and enrich reports
@@ -356,6 +475,7 @@ async function generateWeeklyLagnaReports() {
     weekEnd: weekRange.end.toISOString(),
     reportCount: reports.length,
     generatedAt: now.toISOString(),
+    usage: aiUsage,
   };
 }
 

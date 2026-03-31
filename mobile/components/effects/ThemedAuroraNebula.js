@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 //  ThemedAuroraNebula.js — Universal Themed 3D Aurora+Nebula Compositor
 //
-//  Composes AuroraEngine + NebulaEngine + ShootingStars with any theme.
+//  Composes AuroraEngine + NebulaEngine + ShootingStars overlay with any theme.
 //  Props:
 //    theme   — 'golden' | 'blue' | 'green' | 'pink' | 'purple'
 //    bgColor — hex background color (default '#04030C')
@@ -12,7 +12,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { View, Dimensions, StyleSheet, Platform } from 'react-native';
-import ShootingStarsSystem from './ShootingStars';
+import ShootingStarsOverlay from './ShootingStars';
 import AuroraWaveSystem from './AuroraEngine';
 import NebulaEngine from './NebulaEngine';
 import Animated, {
@@ -118,7 +118,6 @@ function ThemedScene({ theme }) {
       <AuroraWaveSystem theme={combos[1]} weight="accent" />
       <AuroraWaveSystem theme={combos[2]} weight="accent" />
       <NebulaEngine theme={theme} />
-      <ShootingStarsSystem />
     </>
   );
 }
@@ -159,6 +158,8 @@ function ThreeJSBg({ theme }) {
         <ThemedScene theme={theme} />
       </R3FCanvas>
       <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.18)' }} />
+      {/* Lightweight shooting stars — runs outside R3F Canvas */}
+      <ShootingStarsOverlay />
     </View>
   );
 }

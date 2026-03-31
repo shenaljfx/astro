@@ -397,6 +397,7 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
+  object-fit: contain;
 }
 .legal-nav__home {
   font-size: 14px;

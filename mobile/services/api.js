@@ -147,7 +147,7 @@ export var getPorondamReport = function(porondamData, language, brideName, groom
   return request('/api/porondam/report', {
     method: 'POST',
     body: JSON.stringify({ porondamData: porondamData, language: language || 'en', brideName: brideName, groomName: groomName, porondamId: porondamId || null }),
-    _timeout: 120000,
+    _timeout: 180000,
   });
 };
 
@@ -185,7 +185,17 @@ export var getAIReport = function(birthDate, lat, lng, language, birthLocation, 
   return request('/api/horoscope/full-report-ai', {
     method: 'POST',
     body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en', birthLocation: birthLocation || null, userName: userName || null, userGender: userGender || null, userReligion: userReligion || null }),
-    _timeout: 120000,
+    _timeout: 300000,
+  });
+};
+
+// ─── Full AI Reading (Gemini 3.1 Pro + Search Grounding) ─────────
+
+export var getFullReading = function(dateTime, lat, lng, language) {
+  return request('/api/reading/full', {
+    method: 'POST',
+    body: JSON.stringify({ dateTime: dateTime, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'si' }),
+    _timeout: 300000,
   });
 };
 
@@ -275,6 +285,10 @@ export var getSubscriptionStatus = function() {
 export var getPricing = function(countryCode) {
   var query = countryCode ? '?currency=' + (countryCode === 'LK' ? 'LKR' : 'USD') : '';
   return request('/api/pricing' + query);
+};
+
+export var getLiveCostStats = function() {
+  return request('/api/pricing/live-stats');
 };
 
 export var initiateSubscription = function(data) {
@@ -546,6 +560,7 @@ export default {
   createVibeLink: createVibeLink,
   getFullReport: getFullReport,
   getAIReport: getAIReport,
+  getFullReading: getFullReading,
   setAuthTokenGetter: setAuthTokenGetter,
   setDetectedCountry: setDetectedCountry,
   getUserProfile: getUserProfile,
@@ -621,4 +636,6 @@ export default {
   // Weekly Lagna Palapala
   getWeeklyLagna: getWeeklyLagna,
   getWeeklyLagnaById: getWeeklyLagnaById,
+  // Live Cost Stats
+  getLiveCostStats: getLiveCostStats,
 };
