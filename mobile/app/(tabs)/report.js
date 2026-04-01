@@ -639,7 +639,7 @@ function CosmicLoader({ progress, userName, language }) {
     ? (userName ? 'පොඩ්ඩක් ඉන්න ' + userName + '! ඔයාගේ ජීවිත කතාව ලියමින්... ✨' : 'ඔයාගේ ජීවිත කතාව ලියමින්... ✨')
     : (userName ? 'Hold tight, ' + userName + '! Your life story is being written... ✨' : 'Your life story is being written... ✨');
 
-  var timeMsg = lang === 'si' ? 'තත්පර 20-40ක් ගතවේ' : 'This takes 20-40 seconds';
+  var timeMsg = lang === 'si' ? ' 1-2 min ගතවේ' : 'This takes 1-3 min';
 
   return (
     <View style={cl.container}>

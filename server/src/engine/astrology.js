@@ -7569,18 +7569,20 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const ketuConjLord4 = lord4FamilyHouse && ketuFamilyHouse && lord4FamilyHouse === ketuFamilyHouse;
   // Saturn in 8th — chronic hidden illness, surgery risk, especially if lord4
   const satInH8 = satFamilyHouse === 8;
-  // Kidney disease confidence: count how many rules fire
+  // Kidney disease confidence: count how many KIDNEY-SPECIFIC rules fire
+  // NOTE: General mother health indicators (lord4 in dusthana, Moon in dusthana) are NOT
+  // kidney-specific — they indicate general health challenges. Only factors that specifically
+  // point to kidneys/urinary system should count here to avoid over-predicting kidney issues.
   const kidneyIndicators = [
     lord4InH6 && lord4IsSaturn,       // strongest: 4th lord=Saturn sits in 6th (disease house)
     lord4InH8 && lord4IsSaturn,       // 4th lord=Saturn in 8th = surgical/crisis health events
     satAspectsMoon,                    // Saturn aspects Moon (chronic kidney pressure)
-    moonIsVenusSign,                   // Moon in Venus sign (kidney-prone rashi)
-    lord4InDusthanFamily,              // 4th lord in any dusthana (6/8/12)
+    moonIsVenusSign && satAspectsMoon, // Moon in Venus sign + Saturn aspect = kidney combo
+    moonIsVenusSign && (rahuConjMoon || ketuConjMoon), // Moon in Venus sign + nodes = fluid issues
     rahuConjMoon || ketuConjMoon,      // Rahu/Ketu with Moon = mystery/fluid conditions
-    ketuConjLord4,                     // Ketu with 4th lord = karmic health disruption
-    maleficsIn4.includes('Saturn'),    // Saturn in 4th house itself
+    ketuConjLord4 && lord4IsSaturn,    // Ketu with Saturn as 4th lord = karmic kidney disruption
+    maleficsIn4.includes('Saturn') && moonIsVenusSign, // Saturn in 4th + Moon in kidney sign
     satInH8 && ketuConjLord4,          // Saturn+Ketu in 8th = double surgical risk indicator
-    moonFamilyHouse && [6,8,12].includes(moonFamilyHouse), // Moon in dusthana itself
   ].filter(Boolean).length;
   const highKidneyRisk = kidneyIndicators >= 2;
 
@@ -7683,8 +7685,14 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       }
       if (satAspectsMoon) risks.push('Saturn directly aspects the Moon — the kidney karaka is under chronic Saturn pressure. Issues tend to be long-lasting rather than acute, and may first appear in the late 20s, then recur or worsen in the late 50s.');
       if (moonIsVenusSign) risks.push(`Moon in ${moonRashiName} (ruled by Venus, natural kidney karaka) — this sign amplifies urinary, kidney, and reproductive system vulnerabilities.`);
-    } else if (moonIsVenusSign || lord4InH6) {
-      risks.push('Moderate kidney/urinary risk: Moon is in a Venus-ruled sign or 4th lord is in the disease house — fluid-related conditions and urinary health should be monitored, especially after age 40.');
+    } else if (moonIsVenusSign && lord4InH6) {
+      // Both conditions must be true together for moderate risk — Moon in Venus sign alone
+      // is too common (~16% of charts), and 4th lord in 6th alone = general mother health,
+      // not specifically kidney. Only when BOTH align do we flag moderate kidney risk.
+      risks.push('Moderate kidney/urinary risk: Moon is in a Venus-ruled sign AND 4th lord is in the disease house — fluid-related conditions and urinary health should be monitored, especially after age 40.');
+    } else if (moonIsVenusSign && (satAspectsMoon || rahuConjMoon || ketuConjMoon)) {
+      // Moon in Venus sign + Saturn/Rahu/Ketu involvement = moderate kidney risk
+      risks.push('Moderate kidney/urinary risk: Moon in Venus-ruled sign with malefic influence — some vulnerability to fluid-related or urinary conditions in later years.');
     }
 
     // ── EMOTIONAL / MENTAL ──────────────────────────────────────
@@ -8070,10 +8078,13 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     // 11th lord in dusthana = weak elder sibling house
     if (lord11InDusthan) elderScore -= 0.3;
     else if (lord11FamilyHouse) elderScore += 0.4;
-    // Aspects from benefics on 11th
-    if (h11Aspects.some(a => a.planet === 'Mars'))    { hasBros = true; elderScore += 0.2; }
-    if (h11Aspects.some(a => a.planet === 'Venus'))   { hasSis  = true; elderScore += 0.2; }
-    if (h11Aspects.some(a => a.planet === 'Jupiter')) elderScore += 0.2;
+    // Aspects from benefics on 11th — only count if there's already planet-based evidence
+    // Venus aspecting 11th from H5 (children house) does NOT indicate elder sisters
+    if (h11SiblingPlanets.length > 0) {
+      if (h11Aspects.some(a => a.planet === 'Mars'))    { hasBros = true; elderScore += 0.2; }
+      if (h11Aspects.some(a => a.planet === 'Venus'))   { hasSis  = true; elderScore += 0.2; }
+      if (h11Aspects.some(a => a.planet === 'Jupiter')) elderScore += 0.2;
+    }
     // House strength: only adds bonus when sibling-relevant planets are present
     if (h11SiblingPlanets.length > 0) {
       if (h11Family?.strength === 'very strong') elderScore += 0.2;
@@ -8102,25 +8113,19 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       }
     }
     // Reverse balance: if younger siblings are confirmed but elder score is near-zero,
-    // check if 11th house lord exists and is functional, or if 11th house has strength
-    // indicating elder siblings are possible despite empty house.
-    // Also: Mars in 3rd = brother karaka active — in Sri Lankan/Indian families,
-    // Mars indicating "brothers" often means BOTH elder and younger brothers.
+    // ONLY infer elder siblings if the 11th house has actual planet-based evidence.
+    // An empty 11th house with just a functional lord does NOT guarantee elder siblings —
+    // that was causing phantom elder siblings for many charts.
+    // Mars in 3rd = brother karaka, but 3rd house = YOUNGER siblings specifically.
+    // Mars here does NOT automatically mean elder brothers exist.
     if (elderScore < 0.3 && youngerScore >= 0.3) {
-      // 11th house is not destroyed (at least average strength) and lord exists
-      if (lord11Family && h11Family?.strength !== 'very weak' && h11Family?.strength !== 'challenged') {
+      // Only boost elder if 11th house actually has sibling-relevant planets
+      if (h11SiblingPlanets.length > 0) {
         elderScore += 0.3;
-        // Strong 11th house = additional boost (the house itself supports elder siblings)
-        if (h11Family?.strength === 'strong' || h11Family?.strength === 'very strong') {
-          elderScore += 0.15;
-        }
       }
-      // Mars in 3rd house is a strong brother karaka — even though 3rd house = "younger",
-      // Mars here indicates brothers in general, which can include elder brothers.
-      // In practice, a strong Mars karaka often means both elder and younger brothers exist.
-      if (h3pl.includes('Mars') && hasBros) {
-        elderScore += 0.15;  // small boost acknowledging Mars = brothers in general
-      }
+      // NOTE: Aspects alone are NOT sufficient to create phantom elder siblings.
+      // Venus aspecting 11th from 5th (children house) does not indicate elder siblings.
+      // Only actual planets IN the 11th house matter for sibling presence.
     }
 
     // ── Adjusted thresholds ────────────────────────────────────────
@@ -8137,7 +8142,9 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     else                         genderNote = 'Gender not strongly indicated';
 
     const totalScore = youngerScore + elderScore;
-    const countLabel = totalScore >= 3.6 ? '3 or more' : totalScore >= 0.6 ? '2' : totalScore >= 0.3 ? '1' : '0 or 1';
+    // Count label should reflect the actual elder+younger breakdown, not raw score
+    const actualCount = (elderCount === '2+' ? 2 : parseInt(elderCount) || 0) + (youngerCount === '2+' ? 2 : parseInt(youngerCount) || 0);
+    const countLabel = actualCount >= 3 ? '3 or more' : actualCount >= 1 ? String(actualCount) : '0 or 1';
 
     return {
       count: countLabel,
