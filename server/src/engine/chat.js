@@ -680,7 +680,7 @@ SHIFT TO VALIDATION NARRATIVE:
 CROSS-REFERENCE DATA (for richer marriage narrative):
 - Children estimate: ${allSections?.children?.estimatedChildren?.count || 'N/A'} children (${allSections?.children?.estimatedChildren?.genderTendency || 'N/A'})
 - Children timing: ${(allSections?.children?.childrenTimingDasas || []).slice(0, 2).join(' | ') || 'N/A'}
-- Career path: ${(allSections?.career?.suggestedCareers || []).slice(0, 3).join(', ') || 'N/A'} (spouse may be in related field)
+- Career top planets: ${(allSections?.career?.careerPlanetRanking || []).slice(0, 3).map(p => `${p.planet}(${p.dignity}, H${p.house})`).join(', ') || 'N/A'} (spouse may work in field signified by these planets)
 - Foreign travel/settlement: ${allSections?.foreignTravel?.foreignLikelihood || 'N/A'} (foreign spouse possibility if HIGH)
 - Mental health: depression ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'}, childhood trauma ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (affects attachment style)
 - Financial strength: ${allSections?.career?.wealthStrength?.assessment || 'N/A'} (affects marital stability)
@@ -853,7 +853,7 @@ PERSONALITY & ATTACHMENT:
 FINANCIAL DYNAMICS AS A COUPLE:
 - Wealth strength: ${allSections?.career?.wealthStrength?.assessment || 'N/A'}
 - Money personality: ${allSections?.surpriseInsights?.moneyPersonality?.archetype || 'N/A'} (impulse: ${allSections?.surpriseInsights?.moneyPersonality?.impulseScore || 'N/A'})
-- Business vs Service: ${allSections?.career?.businessVsService || 'N/A'}
+- Business vs Service: ${allSections?.career?.businessVsService ? `10th lord H${allSections.career.businessVsService.lord10House}, kendra: ${allSections.career.businessVsService.lord10InKendra}` : 'N/A'}
 
 CHILDREN IMPACT ON MARRIAGE:
 - Estimated children: ${allSections?.children?.estimatedChildren?.count || 'N/A'} (${allSections?.children?.estimatedChildren?.genderTendency || ''})
@@ -955,28 +955,58 @@ Max Prediction Year: ${bd?.birthDateStr ? new Date(bd.birthDateStr).getFullYear(
 - ${personAge >= 55 ? `At age ${personAge}, focus on retirement planning, legacy, and health-wealth balance. Do NOT predict major career changes.` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-━━━ CAREER ENGINE DATA ━━━
+━━━ CAREER ENGINE DATA (TECHNICAL — YOU INTERPRET) ━━━
+
+═══ VEDIC CAREER INTERPRETATION GUIDE ═══
+YOU must determine career fields from the planet data below. Here is how each planet influences career:
+- SUN: Government, administration, politics, authority, leadership, medicine (as authority), civil service, father's profession
+- MOON: Public-facing roles, nursing, hospitality, catering, shipping, travel, liquids, psychology, counseling, social work
+- MARS: Engineering, military, police, surgery, sports, real estate, construction, fire, technology hardware, competition
+- MERCURY: IT/software, accounting, writing, journalism, teaching, commerce, communications, data science, business, astrology
+- JUPITER: Education/professor, law/judge, banking, finance, religious leadership, consulting, philosophy, advisory
+- VENUS: Art, music, cinema, design, fashion, photography, luxury goods, tourism, beauty, interior design, entertainment
+- SATURN: Mining, agriculture, labor, iron/steel, oil/petroleum, judiciary, politics, construction, structure, discipline
+- RAHU: Foreign companies, technology/IT, aviation, research, diplomacy, pharmaceuticals, unconventional, innovation
+- KETU: Spiritual, alternative medicine, mathematics, computer science, investigation, research, programming, forensics
+
+PLANET COMBINATIONS modify interpretation (combine the above):
+- Sun+Mars = defense leadership, surgical authority, government enforcement
+- Mercury+Rahu = IT/software, AI/ML, foreign tech companies
+- Jupiter+Venus = luxury hospitality, art education, cultural management
+- Moon+Jupiter = counseling, public banking, social work, healthcare management
+...and so on. Combine the themes of BOTH planets for combinations.
+
+10th HOUSE SIGN gives career TONE:
+- Fire signs (Aries/Leo/Sagittarius) = pioneering, leadership, independent
+- Earth signs (Taurus/Virgo/Capricorn) = practical, structured, corporate, government
+- Air signs (Gemini/Libra/Aquarius) = intellectual, communication, innovative, technology
+- Water signs (Cancer/Scorpio/Pisces) = nurturing, research, creative, healing
 
 CAREER SECTOR:
 - Sign: ${sectionData?.tenthHouse?.rashiEnglish || 'N/A'}
-- Career sign tone: ${sectionData?.careerSignFlavor || 'N/A'} — use this to FLAVOR the career narrative
+- Element: ${sectionData?.tenthHouseSign?.element || 'N/A'}
+- Modality: ${sectionData?.tenthHouseSign?.modality || 'N/A'}
 - Strength: ${sectionData?.tenthHouse?.strength || 'N/A'}
-- Strength Score: ${sectionData?.tenthHouse?.strengthScore || 'N/A'}/100 — ${(sectionData?.tenthHouse?.strengthScore || 0) >= 70 ? 'POWERFUL career sector — natural ability to rise to the top' : (sectionData?.tenthHouse?.strengthScore || 0) >= 50 ? 'SOLID career sector — steady professional growth' : 'CHALLENGED career sector — success requires extra effort and persistence'}
+- Strength Score: ${sectionData?.tenthHouse?.strengthScore || 'N/A'}/100
 - Ashtakavarga Bindus: ${sectionData?.tenthHouse?.ashtakavargaBindus || 'N/A'} (${sectionData?.tenthHouse?.ashtakavargaQuality || 'N/A'})
 - Benefic/Malefic aspects: ${sectionData?.tenthHouse?.beneficAspectCount || 0} benefic / ${sectionData?.tenthHouse?.maleficAspectCount || 0} malefic
-- Bhava Chalit shifts: ${(sectionData?.tenthHouse?.chalitShifts || []).length > 0 ? sectionData.tenthHouse.chalitShifts.map(s => s.planet + ' shifts to house ' + s.chalitHouse + ' — career energy redirected').join('; ') : 'None'}
+- Bhava Chalit shifts: ${(sectionData?.tenthHouse?.chalitShifts || []).length > 0 ? sectionData.tenthHouse.chalitShifts.map(s => s.planet + ' shifts to house ' + s.chalitHouse).join('; ') : 'None'}
 - Planets in career sector: ${(sectionData?.tenthHouse?.planetsInHouse || []).join(', ') || 'Empty'}
 - Aspects on career sector: ${(sectionData?.tenthHouse?.aspectingPlanets || []).map(a => a.planet || a).join(', ') || 'None'}
 - Career Lord: ${sectionData?.tenthLord?.name || 'N/A'} in house ${sectionData?.tenthLord?.house || 'N/A'}
+- Rahu in 10th: ${sectionData?.rahuInTenth ? 'YES — strongest indicator for IT/technology/foreign companies/innovation careers' : 'No'}
+- Ketu in 10th: ${sectionData?.ketuInTenth ? 'YES — strong indicator for research/spiritual/programming/investigation careers' : 'No'}
 
-⭐ CAREER PLANET RANKING (sorted by influence — use this order):
-${(sectionData?.careerPlanetRanking || []).map((r, i) => `  ${i + 1}. ${r}`).join('\n') || 'N/A'}
+⭐ CAREER PLANET RANKING (sorted by influence — INTERPRET these planets to determine career):
+${(sectionData?.careerPlanetRanking || []).map((r, i) => `  ${i + 1}. ${typeof r === 'string' ? r : `${r.planet} (influence: ${r.influence}, role: ${r.role}, dignity: ${r.dignity}, nature: ${r.functionalNature}, in ${r.rashi} house ${r.house}${r.isRetrograde ? ' RETROGRADE' : ''})`}`).join('\n') || 'N/A'}
 
-⭐ PRIMARY CAREERS (TOP PICKS — focus your narrative on these):
-${(sectionData?.primaryCareers || []).map((c, i) => `  ${i + 1}. ${c}`).join('\n') || (sectionData?.suggestedCareers || []).slice(0, 3).join(', ') || 'N/A'}
+⭐ PLANET COMBINATIONS IN CAREER SECTOR:
+${(sectionData?.careerPlanetCombinations || []).map(c => `  • ${c.planets} — combined influence: ${c.combinedInfluence} — ${c.context}`).join('\n') || 'No combinations'}
 
-${(sectionData?.secondaryCareers || []).length > 0 ? `SECONDARY CAREERS (mention briefly as alternatives):
-${sectionData.secondaryCareers.map((c, i) => `  ${i + 1}. ${c}`).join('\n')}` : ''}
+🎯 YOUR JOB: Look at the top 2-3 career planets above + the 10th house sign + combinations.
+Determine 2-3 specific career fields by combining planet themes with sign tone.
+Example: Moon (top, Amatyakaraka) + Jupiter (10th lord) + Cancer 10th house = counseling, healthcare management, public sector social work.
+DO NOT just list planet names — derive SPECIFIC modern career names.
 
 WEALTH SECTOR:
 - Sign: ${sectionData?.secondHouse?.rashiEnglish || 'N/A'}
@@ -996,7 +1026,8 @@ INCOME/GAINS SECTOR:
 
 WEALTH COMBINATIONS: ${(sectionData?.dhanaYogas || []).join(' | ') || 'None detected'}
 WEALTH STRENGTH: ${sectionData?.wealthStrength ? `Savings: ${sectionData.wealthStrength.house2Bindus}, Income: ${sectionData.wealthStrength.house11Bindus} — ${sectionData.wealthStrength.assessment}` : 'N/A'}
-BUSINESS VS SERVICE: ${sectionData?.businessVsService || 'N/A'}
+BUSINESS VS SERVICE: ${sectionData?.businessVsService ? `10th lord in kendra: ${sectionData.businessVsService.lord10InKendra}, in dusthana: ${sectionData.businessVsService.lord10InDusthana}, house: ${sectionData.businessVsService.lord10House}` : 'N/A'}
+(10th lord in kendra = strong independent business potential; in dusthana = behind-the-scenes/service roles; otherwise = balanced)
 
 Rising sign: ${lagnaEn}, Moon: ${moonEn}
 
@@ -1013,8 +1044,7 @@ ${sectionData?.nadiCareer ? `- Service/Job Verdict: ${sectionData.nadiCareer.ser
 - Career Sectors: ${(sectionData.nadiCareer.careerSectors || []).map(s => s.planet + '→' + s.sector).join(', ') || 'N/A'}
 - Best Dasha for career: ${(sectionData.nadiCareer.bestDashaPlanets || []).join(', ') || 'N/A'}
 - Wealth Verdict: ${sectionData.nadiCareer.wealthVerdict}
-- Windfall/Unearned income: ${sectionData.nadiCareer.windfallVerdict}
-USE THIS: Service vs Business verdicts tell you definitively whether this person should pursue employment or entrepreneurship. Career sectors narrow down the INDUSTRY.` : 'Nadi career analysis not available'}
+- Windfall/Unearned income: ${sectionData.nadiCareer.windfallVerdict}` : 'Nadi career analysis not available'}
 
 HOME & DOMESTIC INDICATORS:
 - Home lord: ${sectionData?.homeLifeIndicators?.h4Lord} in house ${sectionData?.homeLifeIndicators?.h4LordHouse}${sectionData?.homeLifeIndicators?.h4LordInDusthana ? ' (difficult placement)' : ''}
@@ -1023,60 +1053,32 @@ HOME & DOMESTIC INDICATORS:
 - Emotional isolation: ${sectionData?.homeLifeIndicators?.kemadrumaPresent ? 'YES' : 'No'}
 - Domestic patterns: ${(sectionData?.homeLifeIndicators?.domesticYogas || []).join(' | ') || 'None detected'}
 - DOMESTIC ROLE: ${sectionData?.homeLifeIndicators?.domesticRole} (PRIMARY = homemaker path; SECONDARY = balanced; NONE = career-dominant)
-- Home narrative: ${sectionData?.homeLifeIndicators?.homeNarrative || 'Not available'}
 
-⛔ MANDATORY EDUCATION↔CAREER CONSISTENCY CHECK:
-- Education suggested fields: ${(allSections?.education?.suggestedFields || []).join(', ') || 'N/A'}
-- Nadi education fields: ${(allSections?.education?.nadiEducation?.suggestedFields || []).slice(0, 8).join(', ') || 'N/A'}
-- Education→Career alignment from core themes: (see CORE THEMES above — "Education→Career Alignment" field)
-⚠️ YOUR CAREER NARRATIVE MUST LOGICALLY CONNECT TO THE EDUCATION DATA. If the education engine says "Medicine, biology" you CANNOT say "IT programmer" for career unless you explicitly explain the bridge (e.g., "health-tech", "medical informatics", "biotech software"). The career path must be a NATURAL EXTENSION of the education background. If they truly diverge, acknowledge the career pivot explicitly.
-
-CROSS-REFERENCE DATA (for richer career narrative):
-- Education strength: ${allSections?.education?.academicStrength || 'N/A'}
-- Education fields: ${(allSections?.education?.suggestedFields || []).join(', ') || 'N/A'}
+CROSS-REFERENCE DATA:
+- Education planet pool: ${(allSections?.education?.eduPlanetPool || []).map(p => `${p.planet}(${p.source}, ${p.dignity})`).join(', ') || 'N/A'}
+- Mercury: house ${allSections?.education?.mercury?.house || 'N/A'}, score ${allSections?.education?.mercury?.score || 'N/A'}
+- Jupiter: house ${allSections?.education?.jupiter?.house || 'N/A'}, score ${allSections?.education?.jupiter?.score || 'N/A'}
 - Foreign travel likelihood: ${allSections?.foreignTravel?.foreignLikelihood || 'N/A'}
 - Foreign settlement: ${allSections?.foreignTravel?.settlementAbroad ? 'Yes — likely to settle abroad' : 'N/A'}
 - Current life phase: ${currentDasha} main / ${currentAD} sub
 - Life phase effects on career: ${allSections?.lifePredictions?.currentDasha?.effects?.career || 'N/A'}
-- Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'} (impacts work-life balance if SEVERE)
+- Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'}
 - Financial risk periods: ${(allSections?.financial?.losses?.riskPeriods || []).slice(0, 3).map(p => p.lord + ': ' + p.period + ' — ' + p.reason).join(' | ') || 'None'}
-- Retrograde planets affecting career: ${(allSections?.personality?.retrogradePlanets || []).filter(r => [1, 2, 6, 7, 10, 11].includes(r.house)).map(r => r.name + ' (house ' + r.house + ')').join(', ') || 'None'}
+- Retrograde planets in career houses: ${(allSections?.personality?.retrogradePlanets || []).filter(r => [1, 2, 6, 7, 10, 11].includes(r.house)).map(r => r.name + ' (house ' + r.house + ')').join(', ') || 'None'}
 
 ${sectionData?.homeLifeIndicators?.domesticRole === 'PRIMARY' ? `
-DOMESTIC ROLE DETECTED — write about homemaking as their primary career path:
-- Describe the domestic role based on the data (home narrative, domestic patterns)
-- If emotional isolation is YES, acknowledge it
-- Identify the next life phase window when they could redirect energy outward
-- Suggest practical options based on their chart strengths
+DOMESTIC ROLE DETECTED — write about homemaking as their primary career path.
 ` : ''}
 
 ━━━ CRITICAL RULES FOR CAREER OUTPUT ━━━
 
-🚫 DO NOT list 5+ career options like a menu. This is NOT a career fair brochure.
-✅ DO pick the TOP 2-3 careers from PRIMARY CAREERS and build a FOCUSED narrative.
-✅ DO explain WHY each career fits — connect it to the career sign tone, planet ranking, and career depth data.
-✅ DO mention 1-2 secondary careers briefly as alternatives, not as equal options.
-✅ DO use the career planet ranking to determine which career direction is STRONGEST.
-✅ DO consider the person's current life phase (dasha) and education background to make the advice RELEVANT.
-✅ DO pay special attention to Venus/Moon/Mercury indicators — if Venus is prominent (in career house, aspecting 10th, strong in career planet ranking), creative/artistic careers like graphic design, visual arts, photography, fashion, interior design MUST be mentioned prominently. Do NOT ignore artistic/design careers when Venus is a top career planet.
-✅ DO check for Mercury+Venus combinations — these strongly indicate design, communication design, advertising, UX/UI, or digital art careers.
-
-- Business vs service → state directly whether self-employment or employment suits them better
-- Career significator → describes their professional calling
-- D10 data → the professional self (may differ from general personality)
-- Career lord strength → gauges career success potential
-- Wealth combinations → explain what kind of wealth-building the data indicates
-- Wealth strength assessment → overall financial capacity
-- Education cross-reference → connect their academic strengths to career suitability
-- Foreign travel → if likely, discuss international career opportunities
-- Financial risk periods → warn about specific years to be cautious
-- Retrograde planets in career houses → these create UNCONVENTIONAL career paths (freelancing, career changes, going against the norm)
-
-⚠️ AGE-AWARE CAREER ADVICE:
-- If under 22: Focus on education choices and career direction from the data
-- If 22-30: Focus on career launch, first job success indicators, and early growth periods. Be specific about WHICH field to enter.
-- If 30-45: Focus on peak earning periods, promotions, business opportunities. They are already in a career — advise on advancement.
-- If 45+: Focus on career legacy, post-retirement activities, wealth preservation
+🎯 YOU ARE THE INTERPRETER. The engine gives you raw planetary data. YOU determine the career.
+🚫 DO NOT list 5+ career options like a menu.
+✅ DO derive 2-3 specific career fields from the career planet ranking + 10th house sign + combinations.
+✅ DO explain WHY each career fits by connecting the planet significations.
+✅ DO ensure education and career are logically connected — the same planets that influence education houses (4th, 5th) also shape what the person studies toward.
+✅ DO consider Nadi career sectors and service/business verdicts as additional confirmation.
+✅ DO use the Vedic Career Interpretation Guide above to translate planet data into career names.
 
 ${sectionData?.homeLifeIndicators?.domesticRole !== 'PRIMARY' ? `OUTPUT STRUCTURE:
 1. Their CORE career direction (1-2 sentences, the single strongest career path)
@@ -1137,19 +1139,17 @@ ${sectionData?.childrenBirthYears?.children?.length > 0 ? sectionData.childrenBi
 - ${sectionData?.childrenBirthYears?.note || ''}
 ⚠️ IMPORTANT: Present birth year predictions with authority — "Your first child is most likely to be born around [year], when you are [age]." People LOVE specific year predictions. Use the peak year for the most precise statement.
 
-🔥 CHILDREN'S EDUCATION & CAREER PATHS:
+🔥 CHILDREN'S EDUCATION & CAREER PATHS (TECHNICAL PLANET DATA — YOU INTERPRET):
 - Academic Potential: ${sectionData?.childrenEducation?.academicLevel || 'N/A'}
 - Academic Score: ${sectionData?.childrenEducation?.academicScore || 0}/7
-- Suggested Study Fields: ${(sectionData?.childrenEducation?.suggestedFields || []).join(', ') || 'N/A'}
+- Children's Education Planet Pool:
+${(sectionData?.childrenEducation?.childEduPlanetPool || []).map(p => `  → ${p.planet}: ${p.source}, Tier ${p.tier}, H${p.house}, Dignity: ${p.dignity}, Rashi: ${p.rashi}`).join('\n') || '  N/A'}
 - Primary Planetary Influence: ${sectionData?.childrenEducation?.primaryInfluence || 'N/A'}
 - Putrakaraka Planet: ${sectionData?.childrenEducation?.putrakarakaPlanet || 'N/A'}
-- Learning Styles:
-${(sectionData?.childrenEducation?.learningStyles || []).map(s => `  → ${s}`).join('\n') || '  N/A'}
+- Struggle Indicators: ${(sectionData?.childrenEducation?.struggles || []).join(', ') || 'None'}
 - Foreign Education: ${sectionData?.childrenEducation?.foreignEducation || 'N/A'}
-- Academic Struggles/Challenges:
-${(sectionData?.childrenEducation?.struggles || []).map(s => `  ⚠️ ${s}`).join('\n') || '  None flagged'}
 - D7 Jupiter Position: ${sectionData?.childrenEducation?.d7JupiterRashi || 'N/A'}
-⚠️ IMPORTANT: Children's education is highly shareable content. Parents want to know WHAT their children should study, what careers suit them, and how they learn. Be specific — "Your child is naturally inclined toward [field] and will thrive in [learning environment]."
+⚠️ USE THE VEDIC EDUCATION INTERPRETATION GUIDE: Sun→admin/medical, Moon→psychology/nurturing, Mars→engineering/sports, Mercury→IT/business, Jupiter→law/teaching, Venus→design/arts, Saturn→civil/agriculture, Rahu→tech/foreign, Ketu→spiritual/research. Derive children's education fields from their planet pool above. Explain which planet suggests which field.
 
 MARRIAGE AFFLICTIONS (affects children):
 ${allSections?.marriage?.marriageAfflictions ? `Severity: ${allSections.marriage.marriageAfflictions.severity} (Score: ${allSections.marriage.marriageAfflictions.severityScore}/100)\nMarriage Denied: ${allSections.marriage.marriageAfflictions.isMarriageDenied ? '⛔ YES — CHILDREN THROUGH MARRIAGE VERY UNLIKELY' : 'No'}\nIssues: ${(allSections.marriage.marriageAfflictions.afflictions || []).join(' | ')}` : 'N/A'}
@@ -1266,10 +1266,12 @@ ${(sectionData?.lifePhaseSummary || []).map(d => `${d.lord}: ${d.period} (${d.ye
 CROSS-REFERENCE DATA:
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'}${allSections?.marriage?.marriageAfflictions?.isMarriageDenied ? ' ⛔ MARRIAGE DENIED — do NOT predict marriage events in life timeline' : allSections?.marriage?.marriageAfflictions?.severity === 'HIGH' ? ' ⚠️ MARRIAGE HIGHLY UNLIKELY — avoid predicting marriage events unless with strong caveats' : ''}
 - Estimated children: ${allSections?.children?.estimatedChildren?.count || 'N/A'}${allSections?.children?.estimatedChildren?.marriageDenialImpact ? ' (' + allSections.children.estimatedChildren.marriageDenialImpact + ')' : ''}
-- Career path: ${(allSections?.career?.suggestedCareers || []).slice(0, 3).join(', ') || 'N/A'}
+- Career top planets: ${(allSections?.career?.careerPlanetRanking || []).slice(0, 3).map(p => `${p.planet}(${p.dignity}, H${p.house})`).join(', ') || 'N/A'}
 - Health danger periods: ${(allSections?.health?.dangerPeriods || []).filter(d => d.level === 'CRITICAL').slice(0, 3).map(d => d.lord + '-' + d.antardasha + ': ' + d.period).join(' | ') || 'None critical'}
 - Foreign travel likelihood: ${allSections?.foreignTravel?.foreignLikelihood || 'N/A'}
-- 25-year detailed forecast: ${(allSections?.timeline25?.periods || []).slice(0, 5).map(p => `${p.period}: ${p.overallTone || p.nature || ''}`).join(' | ') || 'N/A'}
+- ${allSections?.timeline25?.timelineYears || 25}-year detailed forecast: ${(allSections?.timeline25?.periods || []).slice(0, 5).map(p => `${p.period}: ${p.overallTone || p.nature || ''}`).join(' | ') || 'N/A'}
+- Best future years: ${(allSections?.bestYearsRanking?.top10FutureYears || []).slice(0, 5).map(y => `${y.year} (score ${y.score}, age ${y.age})`).join(', ') || 'N/A'}
+- Peak life period: ${allSections?.bestYearsRanking?.peakLifePeriod?.years || 'N/A'} (ages ${allSections?.bestYearsRanking?.peakLifePeriod?.ages || 'N/A'})
 - Financial risk periods: ${(allSections?.financial?.losses?.riskPeriods || []).slice(0, 3).map(p => p.lord + ': ' + p.period).join(' | ') || 'None'}
 - Property best periods: ${(allSections?.realEstate?.bestPeriodsForProperty || []).slice(0, 2).map(p => p.lord + ': ' + p.period).join(' | ') || 'N/A'}
 
@@ -1322,7 +1324,10 @@ For each life phase in the timeline, write 1-2 paragraphs covering:
 4. **Past phases (brief)** — for already-lived periods, note what the data indicates they went through (helps validate the reading)
 5. **Critical turning points** — flag specific years where multiple data sources converge (e.g., health danger + financial risk + Saturn period = very challenging year)
 6. **The single most important year ahead** — identify ONE upcoming year that the data suggests will be transformative, and explain why
-Skip phases beyond 10 years from now unless the person is under 25.`,
+Skip phases beyond 10 years from now unless the person is under 30.
+${personAge <= 25 ? '🎯 THIS PERSON IS VERY YOUNG (' + personAge + '). Give EXTENSIVE future predictions — cover the next 30-40 years. Detail education→career→marriage→children→peak periods. This is the most valuable part of the reading for a young person.' : personAge <= 30 ? '🎯 THIS PERSON IS YOUNG (' + personAge + '). Give detailed future predictions for the next 20-30 years. Career growth, marriage timing, children, peak earning years.' : personAge <= 40 ? '🎯 THIS PERSON IS IN THEIR PRIME (' + personAge + '). Focus on the next 15-20 years. Career peaks, financial growth, family milestones, health maintenance.' : '🎯 THIS PERSON IS ' + personAge + '. Focus on the next 10-15 years. Health, financial security, family stability, spiritual growth.'}
+${allSections?.bestYearsRanking ? `\n🏆 BEST FUTURE YEARS DATA: ${(allSections.bestYearsRanking.top10FutureYears || []).slice(0, 8).map(y => y.year + ' (score ' + y.score + ', age ' + y.age + ': ' + y.reasons.join(', ') + ')').join(' | ')}` : ''}
+${allSections?.bestYearsRanking?.peakLifePeriod ? `\n🌟 PEAK LIFE PERIOD: ${allSections.bestYearsRanking.peakLifePeriod.years} (ages ${allSections.bestYearsRanking.peakLifePeriod.ages})` : ''}`,
     },
 
     transits: {
@@ -1444,9 +1449,9 @@ LOSSES & RISKS:
 INVESTMENT ADVICE (engine): ${(sectionData?.investmentAdvice || []).join(' | ') || 'N/A'}
 
 CROSS-REFERENCE:
-- Career: ${(allSections?.career?.suggestedCareers || []).slice(0, 5).join(', ') || 'N/A'}
+- Career top planets: ${(allSections?.career?.careerPlanetRanking || []).slice(0, 5).map(p => `${p.planet}(${p.dignity}, H${p.house})`).join(', ') || 'N/A'}
 - Wealth Strength: ${allSections?.career?.wealthStrength ? `Savings: ${allSections.career.wealthStrength.house2Bindus}, Income: ${allSections.career.wealthStrength.house11Bindus} — ${allSections.career.wealthStrength.assessment}` : 'N/A'}
-- Business vs service: ${allSections?.career?.businessVsService || 'N/A'}
+- Business vs service: ${allSections?.career?.businessVsService ? `10th lord H${allSections.career.businessVsService.lord10House}, kendra: ${allSections.career.businessVsService.lord10InKendra}` : 'N/A'}
 - Dhana yogas: ${(allSections?.career?.dhanaYogas || []).join(' | ') || 'None'}
 - Money personality: ${allSections?.surpriseInsights?.moneyPersonality?.archetype || 'N/A'} (impulse: ${allSections?.surpriseInsights?.moneyPersonality?.impulseScore || 'N/A'})
 - Wealth class prediction: ${allSections?.surpriseInsights?.wealthClass?.wealthLevel || 'N/A'}
@@ -1586,7 +1591,7 @@ PERSONALITY CROSS-REFERENCE (unique chart signatures):
 - Nadi Career verdict: ${allSections?.career?.nadiCareer?.careerType || 'N/A'} (strength: ${allSections?.career?.nadiCareer?.serviceStrength || 'N/A'})
 - Nadi Marriage verdict: ${allSections?.marriage?.nadiMarriage?.verdict || 'N/A'} (strength: ${allSections?.marriage?.nadiMarriage?.strength || 'N/A'})
 - Nadi Health longevity: ${allSections?.health?.nadiHealth?.longevityEstimate?.estimatedYears || 'N/A'} years (${allSections?.health?.nadiHealth?.longevityStrength || 'N/A'})
-- Nadi Education: ${(allSections?.education?.nadiEducation?.suggestedFields || []).slice(0, 3).join(', ') || 'N/A'}
+- Nadi Education: grade ${allSections?.education?.nadiEducation?.overallGrade || 'N/A'}, strength ${allSections?.education?.nadiEducation?.strength || 'N/A'}
 USE: If a yoga supports career and Nadi career is STRONG, the yoga's effect is AMPLIFIED. If a dosha threatens health and Nadi longevity is WEAK, the dosha's impact is MORE SEVERE.
 
 OUTPUT: 1. Each classical yoga — name and real-life meaning 2. Each advanced yoga if any 3. Each dosha/challenge with severity 4. Unique chart signatures — what makes THIS chart special (retrograde patterns, planetary wars, weakness→strength transformations) 5. Functional benefics and malefics explained 6. Yoga karaka planet explained
@@ -1696,7 +1701,7 @@ CROSS-REFERENCE DATA (for richer health narrative):
 - Childhood trauma: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (stored trauma manifests as physical symptoms)
 - Sleep pattern: ${allSections?.surpriseInsights?.sleepPattern || 'N/A'}
 - Food preference: ${allSections?.surpriseInsights?.foodPreference || 'N/A'}
-- Career type: ${(allSections?.career?.suggestedCareers || []).slice(0, 2).join(', ') || 'N/A'} (desk job vs physical work matters for health)
+- Career top planet: ${(allSections?.career?.careerPlanetRanking || []).slice(0, 1).map(p => `${p.planet}(H${p.house})`).join('') || 'N/A'} (desk job vs physical work — interpret from planet nature)
 - Marriage stress: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'} (relationship stress affects cardiovascular/digestive health)
 - Current age: use from system context to prioritize age-appropriate health advice
 - Mother health risks: ${JSON.stringify(allSections?.familyPortrait?.mother?.healthRisks || []).substring(0, 100)} (hereditary patterns)
@@ -1753,7 +1758,7 @@ CROSS-REFERENCE DATA:
 - 12th lord: ${sectionData?.twelfthHouse?.rashiLord || 'N/A'} in house ${sectionData?.twelfthHouse?.lordHouse || 'N/A'}
 - Current dasha: ${allSections?.lifePredictions?.currentDasha?.lord || 'N/A'} (${typeof allSections?.lifePredictions?.currentDasha?.effects === 'object' ? allSections.lifePredictions.currentDasha.effects.general || 'N/A' : allSections?.lifePredictions?.currentDasha?.effects || 'N/A'})
 - Education foreign study: ${allSections?.education?.foreignStudy ? 'YES — foreign study indicated' : 'N/A'}
-- Career foreign opportunity: ${(allSections?.career?.suggestedCareers || []).some(c => (c || '').toLowerCase().includes('foreign') || (c || '').toLowerCase().includes('international')) ? 'International career path suggested' : 'N/A'}
+- Career foreign opportunity: ${(allSections?.career?.careerPlanetRanking || []).some(p => p.planet === 'Rahu' || p.planet === 'Ketu') ? 'Rahu/Ketu in career ranking — international career potential' : 'N/A'}
 
 ═══ NADI ASTROLOGY FOREIGN TRAVEL ANALYSIS (Sub-Lord Methodology) ═══
 ${sectionData?.nadiForeignTravel ? `- Nadi Verdict: ${sectionData.nadiForeignTravel.verdict} (${sectionData.nadiForeignTravel.strength})
@@ -1833,34 +1838,53 @@ ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). No
 
     education: {
       title: 'Education & Knowledge Path',
-      prompt: `Translate the following education data. State academic strength, suggested fields, study periods, and competitive exam indication from the data.
+      prompt: `Analyze the following RAW PLANETARY EDUCATION DATA and derive education fields, academic strengths, and study recommendations. YOU are the interpreter — the engine provides only technical astrological positions.
 
 REMINDER: Clear and honest. If Sinhala (si), use 100% pure Sinhala with no English or Tamil (දෙමළ) words mixed in.
 
 Birth details: Born under ${lagnaEn} rising, Moon in ${moonEn}, Nakshatra: ${nakshatraName}
 Current life period: ${currentDasha} main period, ${currentAD} sub-period
 
-━━━ COMPLETE EDUCATION ENGINE DATA (USE ALL — NO HALLUCINATION) ━━━
+━━━ RAW EDUCATION PLANET DATA (TECHNICAL ONLY — YOU INTERPRET) ━━━
 
-ACADEMIC STRENGTH: ${sectionData?.academicStrength || 'N/A'}
-
-MERCURY (INTELLECT):
+MERCURY (INTELLECT KARAKA):
 - House: ${sectionData?.mercury?.house || 'N/A'}
 - Score: ${sectionData?.mercury?.score || 'N/A'}
 - Strength: ${sectionData?.mercury?.strength || 'N/A'}
 
-JUPITER (WISDOM/HIGHER EDUCATION):
+JUPITER (WISDOM/HIGHER EDUCATION KARAKA):
 - House: ${sectionData?.jupiter?.house || 'N/A'}
 - Score: ${sectionData?.jupiter?.score || 'N/A'}
 - Strength: ${sectionData?.jupiter?.strength || 'N/A'}
 
-SUGGESTED FIELDS: ${(sectionData?.suggestedFields || []).join(', ') || 'N/A'}
+EDUCATION PLANET POOL (planets influencing education, ranked by tier):
+${(sectionData?.eduPlanetPool || []).map(p => `- ${p.planet}: Tier ${p.tier}, Source: ${p.source}, House ${p.house}, Dignity: ${p.dignity}, Strength: ${p.strength}, Functional Nature: ${p.functionalNature}, Rashi: ${p.rashi}, Nakshatra: ${p.nakshatra}${p.isRetrograde ? ' (RETROGRADE)' : ''}`).join('\n') || 'N/A'}
+
+═══ VEDIC EDUCATION INTERPRETATION GUIDE (use this to derive fields from planets) ═══
+Each planet SIGNIFIES certain education domains — derive the person's ideal fields from their education planet pool above:
+• Sun → Administration, government studies, political science, physics, leadership programs, medical sciences (authority/prestige fields)
+• Moon → Psychology, nursing, social work, hospitality, marine studies, counseling, creative arts (nurturing/emotional fields)
+• Mars → Engineering, surgery, military/defense, sports science, technology hardware, competitive fields (action/technical fields)
+• Mercury → IT/software, business studies, mathematics, linguistics, data science, accounting, communications (analytical/communicative fields)
+• Jupiter → Law, philosophy, teaching, banking/finance, religious studies, higher education, research (wisdom/expansion fields)
+• Venus → Design, fashion, music, media/film, architecture, beauty/aesthetics, hotel management (creative/artistic fields)
+• Saturn → Civil engineering, agriculture, mining, environmental science, law enforcement, archaeology (disciplined/structured fields)
+• Rahu → Computer science, AI/emerging tech, foreign languages, aviation, overseas studies, unconventional fields (innovation/foreign fields)
+• Ketu → Spiritual studies, alternative medicine, genetics, forensics, programming, mysticism (intuitive/research fields)
+
+COMBINATION RULES:
+- Tier 1 planets (5th house occupants, 5th lord) = PRIMARY education direction
+- Tier 2 planets (4th lord, 9th lord) = SUPPORTING education themes
+- Multiple planets pointing to same domain = STRONG indication
+- Retrograde education planets = deep but unconventional learning style, may revisit studies
+- Debilitated education planets = struggles in that domain but potential for transformation
+- Exalted/Own sign = natural excellence in that domain
 
 BEST STUDY PERIODS:
 ${(sectionData?.bestStudyPeriods || []).map(p => `- ${typeof p === 'string' ? p : (p.lord + ': ' + p.period + ' — ' + (p.reason || 'favorable'))}`).join('\n') || 'N/A'}
 
 FOREIGN STUDY: ${sectionData?.foreignStudy ? 'Yes — indicated' : 'Domestic study preferred'}
-COMPETITIVE EXAMS: ${sectionData?.competitiveExams || 'N/A'}
+COMPETITIVE EXAMS: ${sectionData?.competitiveExams ? `Mars in career houses: ${sectionData.competitiveExams.marsInCareerHouses ? 'YES' : 'NO'}, Mars house: ${sectionData.competitiveExams.marsHouse || 'N/A'}` : 'N/A'}
 
 EDUCATION HOUSE STRENGTH DATA:
 - 4th house (foundational education): Strength ${sectionData?.fourthHouse?.strengthScore || 'N/A'}/100, AV ${sectionData?.fourthHouse?.ashtakavargaBindus || 'N/A'} (${sectionData?.fourthHouse?.ashtakavargaQuality || 'N/A'})
@@ -1875,26 +1899,32 @@ CROSS-REFERENCE DATA:
 - 4th Lord (foundation): ${allSections?.mentalHealth?.education?.fourthLord || 'N/A'} in house ${allSections?.mentalHealth?.education?.fourthLordHouse || 'N/A'}
 - 5th Lord (intellect): ${allSections?.mentalHealth?.education?.fifthLord || 'N/A'} in house ${allSections?.mentalHealth?.education?.fifthLordHouse || 'N/A'}
 - Mental stability: ${allSections?.mentalHealth?.mentalStability || 'N/A'}
-- Career suggested: ${(allSections?.career?.suggestedCareers || []).slice(0, 5).join(', ') || 'N/A'}
-- Career primary paths: ${(allSections?.career?.primaryCareers || []).join(', ') || 'N/A'}
+- Career planet ranking: ${(allSections?.career?.careerPlanetRanking || []).map(p => `${p.planet}(${p.dignity}, H${p.house})`).join(', ') || 'N/A'}
+- 10th house sign: ${allSections?.career?.tenthHouseSign ? `${allSections.career.tenthHouseSign.rashi} (${allSections.career.tenthHouseSign.element}, ${allSections.career.tenthHouseSign.modality})` : 'N/A'}
 - Nadi career type: ${allSections?.career?.nadiCareer?.careerType?.type || 'N/A'}
 - Nadi career sectors: ${(allSections?.career?.nadiCareer?.careerSectors || []).map(s => s.planet + '→' + s.sector).join(', ') || 'N/A'}
 
-⛔ MANDATORY EDUCATION↔CAREER CONSISTENCY CHECK:
-- Education→Career alignment from core themes: (see CORE THEMES above — "Education→Career Alignment" field)
-⚠️ YOUR EDUCATION NARRATIVE MUST LOGICALLY LEAD TOWARD THE CAREER DATA. If the career engine says "IT, software" you CANNOT suggest "Ancient History" as the primary education field unless you explicitly explain the connection. The education fields you emphasize must be the FOUNDATION for the career paths indicated above. If education and career planets genuinely point to different domains, acknowledge the pivot explicitly: "Your education may begin in [field A] but your career naturally gravitates toward [field B] because..."
+⛔ MANDATORY EDUCATION↔CAREER CONSISTENCY:
+YOU must ensure the education fields you suggest logically lead toward the career direction indicated by the career planet data above. Both education and career interpretations come from the SAME planet data — they must be consistent. If education planets and career planets point to different domains, acknowledge the pivot explicitly.
 
 ═══ NADI ASTROLOGY EDUCATION ANALYSIS (Sub-Lord Methodology) ═══
 ${sectionData?.nadiEducation ? `- Nadi Education Verdict: ${sectionData.nadiEducation.verdict} (${sectionData.nadiEducation.strength})
 - Overall Nadi Grade: ${sectionData.nadiEducation.overallGrade}
 - Best Dasha for education: ${(sectionData.nadiEducation.bestDashaPlanets || []).join(', ') || 'N/A'}
 - Strong education planets: ${(sectionData.nadiEducation.strongPlanets || []).join(', ') || 'N/A'}
-- Nadi suggested fields: ${(sectionData.nadiEducation.suggestedFields || []).slice(0, 8).join(', ') || 'N/A'}
 USE THIS: The Nadi grade (A/B/C/D/F) indicates education quality. Best Dasha planets indicate WHEN academic peaks occur.` : 'Nadi education analysis not available'}
 
-OUTPUT: 1. Academic strength assessment 2. Intellect and wisdom strength from the data 3. Suggested study fields 4. Best study periods with dates 5. Foreign study indication 6. Competitive exam suitability
+═══ YOUR INTERPRETATION TASK ═══
+YOU ARE THE INTERPRETER. The engine gives you raw planetary positions, house strengths, and dignities. YOU must:
+1. Look at the education planet pool — which planets dominate? What fields do they signify?
+2. Cross-check with education house strengths — strong 5th house amplifies intellect planets
+3. Consider planet dignities — exalted/own sign = natural talent, debilitated = challenges in that area
+4. Derive 3-5 specific education fields that MATCH the planetary signatures
+5. Ensure education fields logically connect to career planet data
 
-Write AT LEAST 6-8 detailed paragraphs (each 3-6 sentences). For each study field, explain WHY it suits this person. For study periods, give specific years and what kind of academic success to expect. Describe their learning style and intellectual strengths vividly.
+OUTPUT: 1. Academic strength assessment (derive from Mercury/Jupiter scores + house strengths) 2. Intellect and wisdom analysis 3. Recommended study fields (derived from planet pool — explain WHY each planet suggests that field) 4. Best study periods with dates 5. Foreign study indication 6. Competitive exam suitability
+
+Write AT LEAST 6-8 detailed paragraphs (each 3-6 sentences). For each study field, explain which PLANET in their chart points to it. For study periods, give specific years and what kind of academic success to expect. Describe their learning style and intellectual strengths vividly.
 
 REMINDER: Plain language — avoid technical chart jargon.
 ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word. දෙමළ (Tamil) අකුරු හෝ වචන කිසිසේත් භාවිතා නොකරන්න.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish (Sinhala words in English letters).' : 'Write in motivating, practical English.'}`,
@@ -2096,7 +2126,7 @@ ${(sectionData?.addictionProfile || []).map((a, i) => `${i+1}. ${a}`).join('\n')
 - Nadi Career: ${allSections?.career?.nadiCareer?.careerType || 'N/A'} | Sectors: ${(allSections?.career?.nadiCareer?.careerSectors || []).slice(0, 3).map(s => s.sector || s.planet).join(', ') || 'N/A'}
 - Nadi Marriage: ${allSections?.marriage?.nadiMarriage?.verdict || 'N/A'} (${allSections?.marriage?.nadiMarriage?.strength || 'N/A'})
 - Nadi Health longevity: ${allSections?.health?.nadiHealth?.longevityEstimate?.estimatedYears || 'N/A'}yr
-- Nadi Education: ${(allSections?.education?.nadiEducation?.suggestedFields || []).slice(0, 3).join(', ') || 'N/A'}
+- Nadi Education: grade ${allSections?.education?.nadiEducation?.overallGrade || 'N/A'}, strength ${allSections?.education?.nadiEducation?.strength || 'N/A'}
 USE: Nadi verdicts CONFIRM or DENY surprise insights. If Nadi marriage is WEAK and second marriage score is HIGH, the combination is VERY strong evidence for relationship disruption.
 
 ═══ 🔥 SECOND MARRIAGE & DIVORCE ANALYSIS ═══
@@ -2687,7 +2717,7 @@ Each section MUST focus ONLY on its own domain. DO NOT repeat information from o
 - "familyPortrait" → Mother, father, siblings, family karma — NOT children or spouse
 - "physicalProfile" → Body, face, height, complexion, mind, intellect — NOT personality traits from "personality" section
 - "attractionProfile" → Attraction power, romantic energy, sexual magnetism, love language — NOT marriage timing or partner finding from "marriage" section
-- "timeline25" → Year-by-year forecast for next 25 years — compact, punchy, dates only
+- "timeline25" → Year-by-year forecast for next ${allSections?.timeline25?.timelineYears || 25} years — compact, punchy, dates only. For younger people this covers more years ahead.
 - "remedies" → Gemstones, mantras, rituals, colors, fasting — NOT predictions
 
 If you find yourself writing something that belongs in another section, STOP and write something section-specific instead.
@@ -3510,9 +3540,8 @@ SECTION DATA HIGHLIGHTS:
 - Marriage Likelihood: ${sections.marriage?.marriageAfflictions?.likelihood || 'Well-supported'}
 - Marriage affliction details: ${(sections.marriage?.marriageAfflictions?.afflictions || []).slice(0, 3).join(' | ') || 'None'}
 - Marriage best window: ${sections.marriage?.marriageTimingPrediction?.bestWindow?.dateRange || 'N/A'} ${sections.marriage?.marriageAfflictions?.isMarriageDenied ? '(⚠ window exists but marriage denial overrides — do NOT predict marriage)' : ''}
-- Career suggestions: ${(sections.career?.primaryCareers || sections.career?.suggestedCareers || []).join(', ') || 'N/A'}
-- Career sign flavor: ${sections.career?.careerSignFlavor || 'N/A'}
-- Career planet ranking: ${(sections.career?.careerPlanetRanking || []).join('; ') || 'N/A'}
+- Career planet ranking: ${(sections.career?.careerPlanetRanking || []).map(p => typeof p === 'string' ? p : `${p.planet}(${p.dignity}, H${p.house})`).join('; ') || 'N/A'}
+- 10th house sign: ${sections.career?.tenthHouseSign ? `${sections.career.tenthHouseSign.rashi} (${sections.career.tenthHouseSign.element}, ${sections.career.tenthHouseSign.modality})` : 'N/A'}
 - Children estimate: ${sections.children?.estimatedChildren?.count || 'N/A'} (${sections.children?.estimatedChildren?.genderTendency || ''})
 - Depression risk: ${sections.mentalHealth?.depressionRisk?.level || 'N/A'}
 - Childhood trauma: ${sections.mentalHealth?.childhoodTrauma?.level || 'N/A'}
@@ -3563,7 +3592,7 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
   "biggestChallenge": "primary challenge from doshas/weak planets/afflictions — be brutally specific, not vague",
   "biggestBlessing": "primary strength from yogas/strong planets — be specific about what it gives them",
   "uniqueChartFeatures": "2-3 features that make this chart rare — stelliums, exalted/debilitated planets, retrograde patterns, unusual combinations",
-  "educationCareerAlignment": "CRITICAL — Reconcile education fields (${(sections.education?.suggestedFields || []).join(', ') || 'N/A'}) with career paths (${(sections.career?.primaryCareers || sections.career?.suggestedCareers || []).join(', ') || 'N/A'}) and Nadi education fields (${(sections.education?.nadiEducation?.suggestedFields || []).slice(0, 5).join(', ') || 'N/A'}) and Nadi career sectors (${(sections.career?.nadiCareer?.careerSectors || []).map(s => s.sector || s.planet).join(', ') || 'N/A'}). Find the LOGICAL THREAD connecting education to career. Example: if education=medicine and career=healthcare administration, the thread is 'Medical degree leading to healthcare management'. If they seem contradictory, find the bridge field. Output: '[Education field] → [Career field]: [1-sentence explanation of how education leads to this career]'",
+  "educationCareerAlignment": "CRITICAL — Using education planet pool (${(sections.education?.eduPlanetPool || []).map(p => `${p.planet}(${p.source}, ${p.dignity})`).join(', ') || 'N/A'}) and career planet ranking (${(sections.career?.careerPlanetRanking || []).map(p => typeof p === 'string' ? p : `${p.planet}(${p.dignity}, H${p.house})`).join(', ') || 'N/A'}) and Nadi career sectors (${(sections.career?.nadiCareer?.careerSectors || []).map(s => s.sector || s.planet).join(', ') || 'N/A'}), DERIVE the education→career thread. Both come from the SAME planetary data — find the common planets and their natural significations. Output: '[Derived education field] → [Derived career field]: [1-sentence explanation of how the shared planetary signatures connect education to career]'",
   "lifeMotto": "one-sentence theme from the chart data — NOT a generic inspirational quote but something that captures THIS person's specific journey"
 }`;
 

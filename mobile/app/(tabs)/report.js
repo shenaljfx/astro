@@ -224,7 +224,10 @@ function extractKeyStats(sectionKey, rawData, reportLang) {
       if (rawData.secondMarriage?.divorceRisk) stats.push({ label: isSi ? 'දික්කසාද අවදානම' : 'Divorce Risk', value: rawData.secondMarriage.divorceRisk.split('—')[0].trim(), icon: '⚠️' });
       break;
     case 'career':
-      if (rawData.suggestedCareers?.length) stats.push({ label: isSi ? 'හොඳම ක්ෂේත්‍ර' : 'Top Field', value: rawData.suggestedCareers[0], icon: '🎯' });
+      if (rawData.careerPlanetRanking?.length) {
+        var topPlanet = typeof rawData.careerPlanetRanking[0] === 'object' ? rawData.careerPlanetRanking[0].planet : rawData.careerPlanetRanking[0];
+        stats.push({ label: isSi ? 'ප්‍රධාන ග්‍රහයා' : 'Top Planet', value: topPlanet, icon: '🎯' });
+      }
       if (rawData.nadiCareer?.careerType) {
         var careerType = typeof rawData.nadiCareer.careerType === 'object' ? rawData.nadiCareer.careerType.type : rawData.nadiCareer.careerType;
         stats.push({ label: isSi ? 'වර්ගය' : 'Type', value: careerType, icon: '💼' });
@@ -245,7 +248,10 @@ function extractKeyStats(sectionKey, rawData, reportLang) {
       break;
     case 'education':
       if (rawData.nadiEducation?.overallGrade) stats.push({ label: isSi ? 'ශ්‍රේණිය' : 'Grade', value: rawData.nadiEducation.overallGrade, icon: '📚' });
-      if (rawData.nadiEducation?.suggestedFields?.length) stats.push({ label: isSi ? 'ක්ෂේත්‍රය' : 'Field', value: rawData.nadiEducation.suggestedFields[0], icon: '🎯' });
+      if (rawData.eduPlanetPool?.length) {
+        var topEduPlanet = rawData.eduPlanetPool[0].planet;
+        stats.push({ label: isSi ? 'ප්‍රධාන ග්‍රහයා' : 'Top Planet', value: topEduPlanet, icon: '🎯' });
+      }
       break;
     case 'foreignTravel':
       if (rawData.nadiForeignTravel?.strength) stats.push({ label: isSi ? 'සම්භාවිතාව' : 'Chance', value: rawData.nadiForeignTravel.strength, icon: '✈️' });

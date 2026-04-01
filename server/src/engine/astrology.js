@@ -3425,17 +3425,10 @@ const FUNCTIONAL_STATUS = {
 /**
  * Career significations by planet ruling or placed in 10th house
  */
-const CAREER_BY_PLANET = {
-  'Sun':     ['Government service', 'Administration', 'Medicine', 'Politics', 'Management', 'Temple/religious work'],
-  'Moon':    ['Nursing', 'Hotel/catering', 'Shipping', 'Dairy', 'Public relations', 'Counseling'],
-  'Mars':    ['Military/Police', 'Engineering', 'Surgery', 'Real estate', 'Sports', 'Construction', 'Fire dept'],
-  'Mercury': ['Accounting', 'Writing/Journalism', 'IT/Software', 'Teaching', 'Commerce', 'Astrology'],
-  'Jupiter': ['Education/Professor', 'Law/Judge', 'Banking', 'Religious leader', 'Consulting', 'Finance'],
-  'Venus':   ['Art/Music/Cinema', 'Graphic design/Visual arts', 'Fashion', 'Photography/Videography', 'Luxury goods', 'Tourism', 'Beauty industry', 'Interior design'],
-  'Saturn':  ['Mining', 'Agriculture', 'Labor unions', 'Iron/steel', 'Judiciary', 'Oil/petroleum', 'Democracy/politics'],
-  'Rahu':    ['Foreign companies', 'Technology/IT', 'Aviation', 'Research', 'Diplomacy', 'Pharmaceuticals'],
-  'Ketu':    ['Spiritual/religious', 'Alternative medicine', 'Mathematics', 'Computer science', 'Investigation'],
-};
+// NOTE: Career/education predictions are NOT hardcoded here.
+// The engine provides ONLY technical astrological data (planets, houses, dignities, strengths).
+// The AI interprets this data to make career/education predictions.
+// This avoids wrong defaults like "medicine" for every Sun-influenced chart.
 
 /**
  * Dasha effects for each planet as Mahadasha lord (simplified BPHS/Phaladeepika)
@@ -3748,9 +3741,10 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const functionalStatus = FUNCTIONAL_STATUS[lagnaName] || {};
 
   // ── Lifespan-aware period filter ───────────────────────────────
-  // Filters out dasha periods whose MIDPOINT exceeds age 75 (unrealistic predictions)
+  // Filters out dasha periods whose MIDPOINT exceeds age 80 (unrealistic predictions)
+  // Extended from 75 to 80 to give more future predictions for younger users
   const birthYear = date.getUTCFullYear();
-  const maxYear = birthYear + 75;
+  const maxYear = birthYear + 80;
   const lifespanFilter = (periods) => periods.filter(p => {
     const startStr = p.start || (p.period ? p.period.split(' to ')[0] : '');
     const endStr = p.endDate || p.end || (p.period ? p.period.split(' to ')[1] : '');
@@ -4597,37 +4591,11 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   }
   const careerPlanets = _baseCareerPlanets;
 
-  // Combination archetypes — when specific planets combine in career sector, they create specific career themes
-  const CAREER_COMBINATIONS = {
-    'Sun+Mars':    ['Senior management', 'Defense/security leadership', 'Surgical specialist', 'Government authority'],
-    'Sun+Rahu':    ['International corporate leadership', 'Technology executive', 'Diplomatic service', 'Multinational management'],
-    'Sun+Mercury': ['Administrative officer', 'Government communications', 'Media director', 'Corporate management'],
-    'Sun+Jupiter': ['Educational leadership', 'Judicial authority', 'Banking executive', 'Government advisor'],
-    'Sun+Saturn':  ['Mining/industrial authority', 'Government administration', 'Agricultural leadership', 'Infrastructure management'],
-    'Sun+Venus':   ['Luxury brand management', 'Arts administration', 'Tourism director', 'Fashion industry leader'],
-    'Mars+Rahu':   ['Technology engineering', 'Defense technology', 'International security', 'Aerospace engineering'],
-    'Mars+Mercury':['Software engineering', 'Technical writing', 'Data engineering', 'Manufacturing systems'],
-    'Mars+Saturn': ['Heavy engineering', 'Construction management', 'Mining operations', 'Industrial manufacturing'],
-    'Mars+Jupiter':['Military officer', 'Legal enforcement', 'Sports management', 'Financial auditing'],
-    'Mercury+Venus':['Graphic design', 'Advertising', 'Content creation', 'Fashion marketing'],
-    'Mercury+Rahu':['IT/software development', 'AI/machine learning', 'Foreign tech companies', 'Research & development'],
-    'Mercury+Jupiter':['Financial analyst', 'University professor', 'Legal consultant', 'Publishing/media'],
-    'Mercury+Saturn':['Chartered accountant', 'Data management', 'Government clerk', 'Quality assurance'],
-    'Jupiter+Saturn':['Corporate law', 'Government banking', 'Agricultural business', 'Infrastructure development'],
-    'Jupiter+Rahu': ['International law', 'Foreign banking', 'University administration', 'Import/export business'],
-    'Jupiter+Venus':['Luxury hospitality', 'Financial consulting', 'Art education', 'Cultural management'],
-    'Venus+Saturn': ['Interior design', 'Architecture', 'Luxury real estate', 'Film production'],
-    'Saturn+Rahu': ['Foreign industrial work', 'Oil & gas industry', 'Mining technology', 'International labor'],
-    'Venus+Rahu':  ['International entertainment', 'Foreign luxury brands', 'Aviation hospitality', 'Film industry'],
-    'Moon+Mercury':['Public communications', 'Counseling psychology', 'Travel writing', 'Marketing research'],
-    'Moon+Venus':  ['Hospitality management', 'Catering/restaurant', 'Fashion retail', 'Event management'],
-    'Moon+Rahu':   ['International hospitality', 'Shipping/logistics', 'Foreign settlement services', 'Immigration consulting'],
-    'Moon+Jupiter':['School counselor', 'Public sector banking', 'Social work', 'Healthcare management'],
-    'Moon+Mars':   ['Emergency medicine', 'Naval/coast guard', 'Food manufacturing', 'Hotel operations'],
-    'Moon+Saturn': ['Public administration', 'Elderly care', 'Water/irrigation', 'Municipal services'],
-  };
+  // Combination archetypes — REMOVED. AI interprets planet combinations directly.
+  // The engine now provides only technical data: which planets influence career,
+  // their strengths, dignities, house placements, and functional natures.
 
-  // Score each planet's career influence
+  // Score each planet's career influence (PURE TECHNICAL — no career name mapping)
   const rahuInTenth = (h10?.planetsInHouse || []).includes('Rahu');
   const ketuInTenth = (h10?.planetsInHouse || []).includes('Ketu');
   const isInTenth = (pName) => (h10?.planetsInHouse || []).includes(pName);
@@ -4638,36 +4606,26 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     const isLord10 = pName === lord10Name;
     const isAmatyakaraka = jaiminiKarakas?.karakas?.Amatyakaraka?.planet === pName;
     const isAspecting10th = h10AspectPlanets.includes(pName);
+    const functionalNature = getFunctionalNature(lagnaName, pName);
+    const rashiName = planetStrengths[key]?.rashi || '';
+    const houseNum = getPlanetHouse(pName);
+    const isRetrograde = planets[key]?.isRetrograde || false;
+    const nakshatraName = planets[key]?.nakshatra || '';
 
     // Base score from planet strength (0-100 range)
     let influence = pStrength;
 
-    // 10th lord gets priority boost — it DEFINES the career direction
+    // 10th lord gets priority boost
     if (isLord10) influence += 30;
-
-    // Amatyakaraka (career significator) gets strong boost — in Jaimini,
-    // Amatyakaraka is THE planet that defines profession/career nature.
-    // When exalted or in own sign, it's an even stronger career definer.
     if (isAmatyakaraka) {
       influence += 25;
       if (dignity === 'Exalted' || dignity === 'Moolatrikona' || dignity === 'Own Sign') {
-        influence += 10; // Exalted Amatyakaraka = career strongly defined by this planet
+        influence += 10;
       }
     }
-
-    // Planet aspecting 10th house (not lord, not in 10th) — moderate career influence
-    if (isAspecting10th && !isLord10 && !isInTenth(pName)) {
-      influence += 10;
-    }
-
-    // ── RAHU IN 10TH HOUSE: Technology/IT career mega-boost ──
-    if (pName === 'Rahu' && rahuInTenth) {
-      influence += 40;
-    }
-    // ── KETU IN 10TH: Computer science/spiritual/research boost ──
-    if (pName === 'Ketu' && ketuInTenth) {
-      influence += 25;
-    }
+    if (isAspecting10th && !isLord10 && !isInTenth(pName)) influence += 10;
+    if (pName === 'Rahu' && rahuInTenth) influence += 40;
+    if (pName === 'Ketu' && ketuInTenth) influence += 25;
 
     // Dignity modifiers
     if (dignity === 'Exalted' || dignity === 'Moolatrikona') influence += 15;
@@ -4676,107 +4634,38 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     else if (dignity === "Enemy's Sign" && !(pName === 'Rahu' && rahuInTenth)) influence -= 10;
     else if (dignity === 'Debilitated') influence -= 20;
 
-    return { planet: pName, influence, isLord10, isAmatyakaraka, dignity };
+    return { planet: pName, influence, isLord10, isAmatyakaraka, dignity, functionalNature, rashi: rashiName, house: houseNum, isRetrograde, nakshatra: nakshatraName, isInTenth: isInTenth(pName), isAspecting10th };
   }).sort((a, b) => b.influence - a.influence);
 
-  // Build ranked career list — combination archetypes first, then individual planet careers
-  const rankedCareers = [];
+  // 10th house sign — raw technical data for AI interpretation
+  const h10RashiEnglish = h10?.rashiEnglish || '';
+  const h10Element = (() => {
+    const ELEMENTS = { Fire: ['Aries','Leo','Sagittarius'], Earth: ['Taurus','Virgo','Capricorn'], Air: ['Gemini','Libra','Aquarius'], Water: ['Cancer','Scorpio','Pisces'] };
+    for (const [el, signs] of Object.entries(ELEMENTS)) { if (signs.includes(h10RashiEnglish)) return el; }
+    return '';
+  })();
+  const h10Modality = (() => {
+    const MOD = { Cardinal: ['Aries','Cancer','Libra','Capricorn'], Fixed: ['Taurus','Leo','Scorpio','Aquarius'], Mutable: ['Gemini','Virgo','Sagittarius','Pisces'] };
+    for (const [mod, signs] of Object.entries(MOD)) { if (signs.includes(h10RashiEnglish)) return mod; }
+    return '';
+  })();
 
-  // ── 0. RAHU/KETU IN 10TH HOUSE: Priority override for technology/unconventional careers ──
-  // In Vedic astrology, Rahu physically placed in the 10th house is the STRONGEST indicator
-  // for IT/Technology/Software/Foreign companies careers — it overrides all other combinations.
-  // This is because Rahu = technology, innovation, foreign connections, unconventional paths.
-  if (rahuInTenth) {
-    const rahuTechCareers = ['IT/Software industry', 'Technology leadership', 'Software engineering', 'Foreign technology companies'];
-    rahuTechCareers.forEach(c => {
-      rankedCareers.push({ career: c, source: 'rahu-in-10th', planets: 'Rahu (10th house)', priority: 0 }); // priority 0 = highest
-    });
-  }
-  if (ketuInTenth) {
-    const ketuTechCareers = ['Computer science/programming', 'Research & analytics', 'Spiritual technology', 'Investigative/forensic work'];
-    ketuTechCareers.forEach(c => {
-      rankedCareers.push({ career: c, source: 'ketu-in-10th', planets: 'Ketu (10th house)', priority: 0 });
-    });
-  }
-
-  // 1. Check for combination archetypes (most specific and accurate)
-  if (careerPlanets.length >= 2) {
-    for (let i = 0; i < careerPlanets.length; i++) {
-      for (let j = i + 1; j < careerPlanets.length; j++) {
-        const combo1 = `${careerPlanets[i]}+${careerPlanets[j]}`;
-        const combo2 = `${careerPlanets[j]}+${careerPlanets[i]}`;
-        const comboCareers = CAREER_COMBINATIONS[combo1] || CAREER_COMBINATIONS[combo2];
-        if (comboCareers) {
-          comboCareers.forEach(c => {
-            if (!rankedCareers.some(rc => rc.career === c)) {
-              rankedCareers.push({ career: c, source: 'combination', planets: combo1, priority: 1 });
-            }
-          });
-        }
+  // Planet combinations in career sector (for AI to interpret)
+  const careerPlanetCombinations = [];
+  for (let i = 0; i < careerPlanetScores.length; i++) {
+    for (let j = i + 1; j < careerPlanetScores.length; j++) {
+      const p1 = careerPlanetScores[i];
+      const p2 = careerPlanetScores[j];
+      // Only include combinations where both planets are in 10th or one is 10th lord
+      if (p1.isInTenth || p2.isInTenth || p1.isLord10 || p2.isLord10) {
+        careerPlanetCombinations.push({
+          planets: `${p1.planet}+${p2.planet}`,
+          combinedInfluence: Math.round(p1.influence + p2.influence),
+          context: `${p1.planet} (${p1.dignity}, ${p1.functionalNature}) + ${p2.planet} (${p2.dignity}, ${p2.functionalNature})`,
+        });
       }
     }
   }
-
-  // 2. Add careers from the strongest planet (10th lord or strongest influence)
-  // If the top planet is the Amatyakaraka AND exalted/strong, its TOP 2 careers get priority 0.5
-  // (above combinations) because the Amatyakaraka DEFINES career direction in Jaimini.
-  // Remaining individual careers get priority 1 (same as combinations).
-  const topPlanet = careerPlanetScores[0];
-  if (topPlanet) {
-    const isStrongAmk = topPlanet.isAmatyakaraka && (topPlanet.dignity === 'Exalted' || topPlanet.dignity === 'Moolatrikona' || topPlanet.dignity === 'Own Sign');
-    const planetCareers = (CAREER_BY_PLANET[topPlanet.planet] || []).filter(c => !rankedCareers.some(rc => rc.career === c));
-    planetCareers.forEach((c, idx) => {
-      // Strong Amatyakaraka: first 3 careers are top priority (career-defining)
-      const priority = isStrongAmk && idx < 3 ? 0.5 : 2;
-      rankedCareers.push({ career: c, source: 'primary', planet: topPlanet.planet, priority });
-    });
-  }
-
-  // 3. Add from second strongest if very strong (influence > 60)
-  const secondPlanet = careerPlanetScores[1];
-  if (secondPlanet && secondPlanet.influence > 60) {
-    (CAREER_BY_PLANET[secondPlanet.planet] || []).slice(0, 3).forEach(c => {
-      if (!rankedCareers.some(rc => rc.career === c)) {
-        rankedCareers.push({ career: c, source: 'secondary', planet: secondPlanet.planet, priority: 3 });
-      }
-    });
-  }
-
-  // 10th house sign flavor — adds career TONE (leadership, communication, creativity, etc.)
-  const h10RashiEnglish = h10?.rashiEnglish || '';
-  const CAREER_SIGN_FLAVOR = {
-    'Aries': 'pioneering, independent, competitive roles',
-    'Taurus': 'stable, financial, artistic roles',
-    'Gemini': 'communication, media, intellectual roles',
-    'Cancer': 'nurturing, public service, hospitality roles',
-    'Leo': 'leadership, authority, creative, managerial roles',
-    'Virgo': 'analytical, detail-oriented, health, service roles',
-    'Libra': 'diplomatic, partnership, design, legal roles',
-    'Scorpio': 'research, investigation, transformation, medical roles',
-    'Sagittarius': 'teaching, travel, philosophical, advisory roles',
-    'Capricorn': 'administrative, structured, corporate, government roles',
-    'Aquarius': 'innovative, humanitarian, technology, group roles',
-    'Pisces': 'creative, spiritual, healing, artistic roles',
-  };
-  const careerSignFlavor = CAREER_SIGN_FLAVOR[h10RashiEnglish] || '';
-
-  // Final output: primary (top 4-5 most relevant) and secondary (next 2-3)
-  // Priority 0 = Rahu/Ketu in 10th (highest), 1 = combos, 2 = strongest planet, 3 = secondary
-  // When Rahu/Ketu in 10th exists (priority 0), they lead and combos follow.
-  // When no priority 0 exists, combos (1) and strongest planet (2) are both primary.
-  // Sort by priority before selecting (lower number = higher priority)
-  rankedCareers.sort((a, b) => a.priority - b.priority);
-
-  // Final output: primary (top 5-6 most relevant) and secondary (next 2-3)
-  const hasRahuKetuOverride = rankedCareers.some(c => c.priority === 0);
-  const primaryCareers = hasRahuKetuOverride
-    ? rankedCareers.filter(c => c.priority <= 1).slice(0, 6).map(c => c.career)
-    : rankedCareers.filter(c => c.priority <= 2).slice(0, 5).map(c => c.career);
-  const secondaryCareers = hasRahuKetuOverride
-    ? rankedCareers.filter(c => c.priority >= 2).slice(0, 3).map(c => c.career)
-    : rankedCareers.filter(c => c.priority >= 3).slice(0, 3).map(c => c.career);
-  // Legacy flat list (capped at 6 for backward compatibility)
-  const suggestedCareers = [...primaryCareers, ...secondaryCareers].slice(0, 6);
 
   // Dhana (wealth) yogas check
   const dhanaYogas = [];
@@ -4805,11 +4694,22 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     tenthLord: { name: lord10Name, house: lord10House },
     secondHouse: h2,
     eleventhHouse: h11,
-    suggestedCareers,
-    primaryCareers,
-    secondaryCareers,
-    careerSignFlavor,
-    careerPlanetRanking: careerPlanetScores.map(p => `${p.planet} (influence: ${Math.round(p.influence)}, ${p.isLord10 ? '10th lord' : p.isAmatyakaraka ? 'Amatyakaraka' : 'in 10th'}, dignity: ${p.dignity}${p.isAmatyakaraka ? ', Amatyakaraka' : ''})`),
+    // TECHNICAL DATA ONLY — AI interprets career from these
+    careerPlanetRanking: careerPlanetScores.map(p => ({
+      planet: p.planet,
+      influence: Math.round(p.influence),
+      role: p.isLord10 ? '10th lord' : p.isAmatyakaraka ? 'Amatyakaraka' : p.isInTenth ? 'in 10th house' : p.isAspecting10th ? 'aspects 10th' : 'career pool',
+      dignity: p.dignity,
+      functionalNature: p.functionalNature,
+      rashi: p.rashi,
+      house: p.house,
+      isRetrograde: p.isRetrograde,
+      nakshatra: p.nakshatra,
+    })),
+    careerPlanetCombinations,
+    tenthHouseSign: { rashi: h10RashiEnglish, element: h10Element, modality: h10Modality },
+    rahuInTenth,
+    ketuInTenth,
     dhanaYogas,
     wealthStrength: ashtakavarga?.sarvashtakavarga ? (() => {
       // Check bindus in 2nd and 11th house signs
@@ -4819,7 +4719,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       const h11Bindus = ashtakavarga.sarvashtakavarga[h11RashiIdx] || 0;
       return { house2Bindus: h2Bindus, house11Bindus: h11Bindus, assessment: (h2Bindus + h11Bindus) >= 56 ? 'Strong wealth potential' : (h2Bindus + h11Bindus) >= 48 ? 'Moderate wealth' : 'Wealth requires effort' };
     })() : null,
-    businessVsService: isInKendra(lord10House) ? 'Strong potential for independent business or leadership roles' : isInDusthana(lord10House) ? 'Service-oriented or behind-the-scenes roles may suit better' : 'A balanced mix of initiative and cooperative work',
+    businessVsService: { lord10InKendra: isInKendra(lord10House), lord10InDusthana: isInDusthana(lord10House), lord10House: lord10House },
     // ── NEW: D10 Dashamsha for career precision ─────────────────
     dashamsha: extendedVargas?.D10 ? {
       d10Lagna: extendedVargas.D10.lagnaRashi,
@@ -5331,45 +5231,70 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     })(),
     // ── NEW: Children's Education & Career Paths ──────────────────
     childrenEducation: (() => {
-      // Children's education comes from: 5th house (children's nature), D7 chart,
+      // Children's education derived from: 5th house (children's nature), D7 chart,
       // 5th from 5th (9th house = children's fortune/higher ed),
       // 10th from 5th (2nd house = children's career)
-      const CHILD_EDU_MAP = {
-        'Sun': { fields: ['Medicine', 'Government service', 'Administration', 'Political science', 'Physics'], style: 'Authoritative learner — excels when given leadership roles in class. Natural preference for structured, prestigious education.' },
-        'Moon': { fields: ['Psychology', 'Nursing', 'Social work', 'Hospitality', 'Creative arts', 'Marine studies'], style: 'Emotional learner — absorbs through feeling and connection. Needs supportive, nurturing teachers. May cry easily in early school.' },
-        'Mars': { fields: ['Engineering', 'Military/Defence', 'Sports science', 'Surgery', 'IT hardware', 'Martial arts'], style: 'Competitive learner — thrives in challenges and contests. May struggle with authority. Needs physical activity alongside academics.' },
-        'Mercury': { fields: ['IT/Software', 'Business', 'Mathematics', 'Languages', 'Data science', 'Accounting'], style: 'Quick analytical mind — picks up new subjects fast, may get bored easily. Multiple interests, needs stimulation.' },
-        'Jupiter': { fields: ['Teaching', 'Law', 'Philosophy', 'Banking/Finance', 'Higher education', 'Religious studies'], style: 'Wisdom-seeker — genuinely loves learning for its own sake. Natural respect for teachers. Likely to pursue postgraduate/doctoral education.' },
-        'Venus': { fields: ['Design', 'Fashion', 'Music', 'Media/Film', 'Hotel management', 'Beauty therapy', 'Architecture'], style: 'Aesthetic learner — drawn to beauty, creativity, and artistic expression. Excels in visual and performing arts.' },
-        'Saturn': { fields: ['Civil engineering', 'Agriculture', 'Mining', 'Environmental science', 'Construction', 'Law enforcement'], style: 'Slow but deep learner — may struggle initially but becomes the most thorough student. Discipline develops with age. Late bloomer academically.' },
-        'Rahu': { fields: ['Computer science', 'AI/Technology', 'Foreign languages', 'Aviation', 'Overseas studies', 'Research'], style: 'Unconventional learner — may reject traditional education, drawn to cutting-edge or foreign education systems. Could study abroad.' },
-        'Ketu': { fields: ['Spiritual studies', 'Alternative medicine', 'Genetics', 'Psychology', 'Forensics', 'Programming'], style: 'Intuitive learner — knows things without being taught. May feel disconnected from mainstream education. Excels in deep, focused research.' },
-      };
+      // ARCHITECTURE: Engine provides ONLY technical planet data — AI interprets education fields
 
       // Primary: Planets IN the 5th house (children's direct nature)
-      const h5Planets = (h5?.planetsInHouse || []).filter(p => p !== 'Lagna' && CHILD_EDU_MAP[p]);
+      const h5Planets = (h5?.planetsInHouse || []).filter(p => p !== 'Lagna');
       // Secondary: 5th lord's influence
-      const lord5Edu = CHILD_EDU_MAP[lord5Name] || null;
+      const lord5Info = { planet: lord5Name, house: lord5House };
       // Tertiary: Putrakaraka from Jaimini (if available)
       const pkPlanet = jaiminiKarakas?.karakas?.Putrakaraka?.planet;
-      const pkEdu = pkPlanet ? CHILD_EDU_MAP[pkPlanet] : null;
       // Quaternary: 9th house (5th from 5th = children's higher education/fortune)
       const h9ForChildren = analyzeHouse(9, houses, planets, drishtis, lagnaName, ashtakavarga, bhavaChalit);
-      const h9Planets = (h9ForChildren?.planetsInHouse || []).filter(p => p !== 'Lagna' && CHILD_EDU_MAP[p]);
+      const h9Planets = (h9ForChildren?.planetsInHouse || []).filter(p => p !== 'Lagna');
       // D7 Jupiter position for children's wisdom
       const d7JupRashi = extendedVargas?.D7?.positions?.jupiter?.vargaRashi;
 
-      // Collect all suggested fields with priority
-      const primaryFields = h5Planets.flatMap(p => CHILD_EDU_MAP[p].fields);
-      const secondaryFields = lord5Edu ? lord5Edu.fields : [];
-      const pkFields = pkEdu ? pkEdu.fields : [];
-      const tertiaryFields = h9Planets.flatMap(p => CHILD_EDU_MAP[p].fields);
-      const allFields = [...new Set([...primaryFields, ...secondaryFields, ...pkFields, ...tertiaryFields])];
-
-      // Learning style — composite from all influences
-      const styles = [];
-      for (const p of h5Planets) { if (CHILD_EDU_MAP[p]?.style) styles.push(CHILD_EDU_MAP[p].style); }
-      if (lord5Edu?.style && !styles.includes(lord5Edu.style)) styles.push(lord5Edu.style);
+      // Build technical planet pool for children's education (AI interprets fields from this)
+      const childEduPlanetPool = [];
+      for (const p of h5Planets) {
+        const pData = planets[p.toLowerCase()];
+        childEduPlanetPool.push({
+          planet: p,
+          source: '5th house occupant',
+          tier: 1,
+          house: 5,
+          dignity: planetStrengths[p.toLowerCase()]?.dignityLevel || 'Neutral',
+          rashi: pData?.rashi || 'N/A',
+        });
+      }
+      // 5th lord
+      const lord5Data = planets[lord5Name.toLowerCase()];
+      childEduPlanetPool.push({
+        planet: lord5Name,
+        source: '5th lord',
+        tier: 1,
+        house: lord5House,
+        dignity: planetStrengths[lord5Name.toLowerCase()]?.dignityLevel || 'Neutral',
+        rashi: lord5Data?.rashi || 'N/A',
+      });
+      // Putrakaraka
+      if (pkPlanet) {
+        const pkData = planets[pkPlanet.toLowerCase()];
+        childEduPlanetPool.push({
+          planet: pkPlanet,
+          source: 'Putrakaraka',
+          tier: 2,
+          house: pkData?.house || 'N/A',
+          dignity: planetStrengths[pkPlanet.toLowerCase()]?.dignityLevel || 'Neutral',
+          rashi: pkData?.rashi || 'N/A',
+        });
+      }
+      // 9th house planets (5th from 5th)
+      for (const p of h9Planets) {
+        const pData = planets[p.toLowerCase()];
+        childEduPlanetPool.push({
+          planet: p,
+          source: '9th house (5th from 5th)',
+          tier: 2,
+          house: 9,
+          dignity: planetStrengths[p.toLowerCase()]?.dignityLevel || 'Neutral',
+          rashi: pData?.rashi || 'N/A',
+        });
+      }
 
       // Academic excellence potential — based on Mercury + Jupiter strength and 4th/5th house
       const mercScore = getHealthScore('mercury');
@@ -5387,28 +5312,27 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       // Rahu in 5th or 9th = foreign education for children
       const foreignEduForChildren = (h5?.planetsInHouse || []).includes('Rahu') || h9Planets.includes('Rahu');
 
-      const academicLevel = academicScore >= 5 ? 'EXCEPTIONAL — children are likely to be high achievers, topping classes, winning awards, pursuing postgraduate or doctoral education. Strong indication of scholarships.'
-        : academicScore >= 3 ? 'ABOVE AVERAGE — children will do well academically with consistent effort. Higher education is strongly indicated. May specialize in one field.'
-        : academicScore >= 1 ? 'AVERAGE — children will complete education but may need extra support. Practical or vocational education may suit some better than theoretical.'
-        : 'NEEDS SUPPORT — children may face educational challenges. Early intervention, tutoring, and encouragement are important. Non-traditional education paths may work better.';
+      const academicLevel = academicScore >= 5 ? 'EXCEPTIONAL'
+        : academicScore >= 3 ? 'ABOVE AVERAGE'
+        : academicScore >= 1 ? 'AVERAGE'
+        : 'NEEDS SUPPORT';
 
       // Study abroad indication
       const studyAbroad = foreignEduForChildren
-        ? 'STRONG — children are likely to study abroad or in foreign education systems. International schools may suit them better.'
-        : [9, 12].includes(lord5House) ? 'MODERATE — foreign education is possible, especially if opportunities arise during Jupiter or Rahu periods.'
-        : 'LOW — children will likely study locally. Domestic education systems suit them well.';
+        ? 'STRONG'
+        : [9, 12].includes(lord5House) ? 'MODERATE'
+        : 'LOW';
 
-      // Education struggle periods
+      // Education struggle indicators (technical)
       const eduStruggles = [];
-      if ((h5?.planetsInHouse || []).includes('Saturn')) eduStruggles.push('Saturn in children sector — children may face delays, academic pressure, or slow progress in early years. They bloom after age 14-16.');
-      if ((h5?.planetsInHouse || []).includes('Rahu')) eduStruggles.push('Rahu in children sector — children may be restless, distracted, or drawn to unconventional subjects. Traditional school may bore them.');
-      if ((h5?.planetsInHouse || []).includes('Ketu')) eduStruggles.push('Ketu in children sector — children may be introverted or spiritually inclined, preferring solitude over group study. Gifted but misunderstood.');
-      if (jupScoreEdu < 35) eduStruggles.push('Weak wisdom indicator — children may need extra guidance, tutoring, or alternative educational approaches.');
+      if ((h5?.planetsInHouse || []).includes('Saturn')) eduStruggles.push('Saturn in 5th house');
+      if ((h5?.planetsInHouse || []).includes('Rahu')) eduStruggles.push('Rahu in 5th house');
+      if ((h5?.planetsInHouse || []).includes('Ketu')) eduStruggles.push('Ketu in 5th house');
+      if (jupScoreEdu < 35) eduStruggles.push('Weak Jupiter');
 
       return {
-        suggestedFields: allFields.slice(0, 10),
+        childEduPlanetPool,
         primaryInfluence: h5Planets.length > 0 ? h5Planets.join(', ') : lord5Name,
-        learningStyles: styles.slice(0, 3),
         academicLevel,
         academicScore,
         foreignEducation: studyAbroad,
@@ -5416,7 +5340,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
         struggles: eduStruggles,
         d7JupiterRashi: d7JupRashi || 'N/A',
         putrakarakaPlanet: pkPlanet || 'N/A',
-        note: `Children's education predicted from 5th house planets (${h5Planets.join(', ') || 'empty'}), 5th lord ${lord5Name}, Putrakaraka ${pkPlanet || 'N/A'}, and 9th house influence.`
+        note: `Children's education planets from 5th house (${h5Planets.join(', ') || 'empty'}), 5th lord ${lord5Name}, Putrakaraka ${pkPlanet || 'N/A'}, and 9th house influence.`
       };
     })(),
     // ── Nadi Astrology Children Event Analysis (Sub-Lord methodology) ──
@@ -5711,7 +5635,8 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const business = {
     title: 'Business Growth',
     sinhala: 'ව්‍යාපාර වර්ධනය',
-    bestBusinessTypes: suggestedCareers.slice(0, 5),
+    // No hardcoded business types — AI derives from career planet data
+    careerPlanetData: careerPlanetScores.slice(0, 3).map(p => ({ planet: p.planet, influence: Math.round(p.influence), dignity: p.dignity })),
     partnershipHouse: h7ForBiz,
     initiativeHouse: h3,
     tenthHouseStrength: { bindus: h10Bindus, assessment: h10Bindus >= 30 ? 'Excellent career/business sign' : h10Bindus >= 25 ? 'Good potential' : 'Requires extra effort' },
@@ -6138,10 +6063,12 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       });
     }
     
-    // Find best years
+    // Find best years — more future years for younger users
     const allYears = yearScores.sort((a, b) => b.score - a.score);
     const bestEver = allYears.slice(0, 10);
-    const bestFuture = allYears.filter(y => y.year > currentYear).slice(0, 10);
+    const personAge = currentYear - birthYear;
+    const futureCount = personAge <= 25 ? 20 : personAge <= 35 ? 15 : 10;
+    const bestFuture = allYears.filter(y => y.year > currentYear).slice(0, futureCount);
     const bestPast = allYears.filter(y => y.year < currentYear).slice(0, 5);
     const worstYears = [...yearScores].sort((a, b) => a.score - b.score).slice(0, 5);
     
@@ -6546,7 +6473,8 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     tenthHouse: h10,
     sixthHouse: h6, // 6th = service, daily work
     tenthLord: { name: lord10Name, house: lord10House },
-    careerPaths: suggestedCareers,
+    // No hardcoded career paths — AI derives from career planet data
+    careerPlanetData: careerPlanetScores.slice(0, 3).map(p => ({ planet: p.planet, influence: Math.round(p.influence), dignity: p.dignity, house: p.house })),
     promotionPeriods: lifespanFilter(dasaPeriods.filter(d => d.lord === lord10Name || d.lord === lord9Name || d.lord === 'Sun')).map(d => ({
       lord: d.lord,
       period: `${d.start} to ${d.endDate}`,
@@ -6608,21 +6536,33 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   };
 
   // ══════════════════════════════════════════════════════════════
-  // SECTION 13: 25-YEAR TIMELINE (Dasha Timeline)
+  // SECTION 13: FUTURE TIMELINE (Age-Adaptive Dasha Timeline)
   // ══════════════════════════════════════════════════════════════
   const timelineStart = new Date();
+  const currentAge = Math.max(0, timelineStart.getFullYear() - date.getFullYear());
+  // Younger users get LONGER future predictions (up to age 70)
+  // Age 20 → 50 years forward, Age 30 → 40 years, Age 50 → 25 years, Age 65+ → 15 years
+  const timelineYears = currentAge <= 20 ? 50
+    : currentAge <= 25 ? 45
+    : currentAge <= 30 ? 40
+    : currentAge <= 40 ? 35
+    : currentAge <= 50 ? 25
+    : currentAge <= 60 ? 20
+    : 15;
   const timelineEnd = new Date(timelineStart);
-  timelineEnd.setFullYear(timelineEnd.getFullYear() + 25);
+  timelineEnd.setFullYear(timelineEnd.getFullYear() + timelineYears);
 
   const timeline25 = {
-    title: '25-Year Predictive Timeline',
-    sinhala: 'වසර 25 අනාවැකි කාල සටහන',
+    title: `${timelineYears}-Year Predictive Timeline`,
+    sinhala: `වසර ${timelineYears} අනාවැකි කාල සටහන`,
     from: timelineStart.toISOString().split('T')[0],
     to: timelineEnd.toISOString().split('T')[0],
+    currentAge,
+    timelineYears,
     periods: [],
   };
 
-  // Build the 25-year timeline with Mahadasha + Antardasha breakdowns
+  // Build the age-adaptive timeline with Mahadasha + Antardasha breakdowns
   for (const dasha of dasaPeriods) {
     const dashaStart = new Date(dasha.start);
     const dashaEnd = new Date(dasha.endDate);
@@ -8673,43 +8613,43 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const h9ForEdu = analyzeHouse(9, houses, planets, drishtis, lagnaName, ashtakavarga, bhavaChalit);
   const lord4HouseEdu = getPlanetHouse(lord4Name);
 
-  const EDUCATION_BY_PLANET = {
-    'Sun': 'Medicine, biology, medical science, political science, administration, physics, government studies',
-    'Moon': 'Psychology, nursing, hospitality, social work, marine studies, botany, food science',
-    'Mars': 'Engineering, military, sports science, surgery, chemistry, laboratory science, IT hardware',
-    'Mercury': 'IT, software development, accounting, business management, mathematics, languages, communications, data science',
-    'Jupiter': 'Teaching, philosophy, banking, religious studies, advisory roles, higher education, law',
-    'Venus': 'Arts, chemistry, biology, life sciences, design, fashion, music, media, hotel management, beauty therapy',
-    'Saturn': 'Construction, agriculture, mining, archaeology, geology, civil engineering, environmental science',
-    'Rahu': 'Software engineering, computer science, foreign languages, research, aviation, overseas studies, AI/technology',
-    'Ketu': 'Spiritual studies, alternative medicine, microbiology, genetics, astrology, psychology, forensics, computer programming',
-  };
-
-  // ── IMPROVED: Include 10th house planets and Rahu's technology influence in education ──
-  // Education is influenced by: 4th house (formal education), 5th house (intelligence/creativity),
-  // AND 10th house planets (career they educate toward), especially Rahu (technology/IT indicator)
+  // Education section: PURE TECHNICAL DATA — AI interprets education fields
+  // No EDUCATION_BY_PLANET mapping. Instead, provide which planets influence education
+  // houses (4th, 5th, 9th, 10th) with their strengths, dignities, and placements.
   const h10PlanetsForEdu = (h10?.planetsInHouse || []).filter(p => p && p !== 'Lagna' && p !== 'Ascendant');
-  // ── Build education planet list with PRIORITY ordering ──
-  // Priority hierarchy:
-  //   1. 10th house planets (career-oriented education — what you'll work in)
-  //   2. 5th house planets + 5th lord (intelligence, creativity, WHAT you study)
-  //   3. 4th house planets + 4th lord (formal education infrastructure, WHERE you study)
-  // The 5th house reveals subject APTITUDE (sciences, arts, etc.), 4th house reveals the
-  // educational ENVIRONMENT (communication, structure), so 5th > 4th for subject prediction.
-  const eduTier1 = h10PlanetsForEdu.filter(p => EDUCATION_BY_PLANET[p]); // Career direction
-  const eduTier2 = [...new Set([
-    ...(h5ForEdu?.planetsInHouse || []),  // Planets IN 5th (strongest subject indicators)
-    lord5Name,                            // 5th lord (intelligence ruler)
-  ])].filter(p => EDUCATION_BY_PLANET[p] && !eduTier1.includes(p));
-  const eduTier3 = [...new Set([
-    ...(h4ForEdu?.planetsInHouse || []),  // Planets IN 4th
-    lord4Name,                            // 4th lord (formal education)
-  ])].filter(p => EDUCATION_BY_PLANET[p] && !eduTier1.includes(p) && !eduTier2.includes(p));
 
-  const tier1Fields = [...new Set(eduTier1.flatMap(p => EDUCATION_BY_PLANET[p].split(', ')))];
-  const tier2Fields = [...new Set(eduTier2.flatMap(p => EDUCATION_BY_PLANET[p].split(', ')))];
-  const tier3Fields = [...new Set(eduTier3.flatMap(p => EDUCATION_BY_PLANET[p].split(', ')))];
-  const suggestedEducation = [...new Set([...tier1Fields, ...tier2Fields, ...tier3Fields])];
+  // Education-influencing planets with technical data (for AI interpretation)
+  const eduPlanetPool = (() => {
+    const pool = [];
+    const addPlanet = (pName, source, tier) => {
+      if (!pName || pName === 'Lagna' || pName === 'Ascendant') return;
+      if (pool.some(p => p.planet === pName)) return;
+      const key = pName.toLowerCase();
+      pool.push({
+        planet: pName,
+        source, // e.g., 'in 10th house', '5th lord', 'in 4th house'
+        tier,   // 1=career-directed, 2=aptitude, 3=environment
+        house: getPlanetHouse(pName),
+        dignity: planetStrengths[key]?.dignityLevel || 'Neutral',
+        strength: advancedShadbala?.[key]?.percentage || planetStrengths[key]?.score || 50,
+        functionalNature: getFunctionalNature(lagnaName, pName),
+        rashi: planetStrengths[key]?.rashi || '',
+        nakshatra: planets[key]?.nakshatra || '',
+        isRetrograde: planets[key]?.isRetrograde || false,
+      });
+    };
+    // Tier 1: 10th house planets (career-directed education)
+    h10PlanetsForEdu.forEach(p => addPlanet(p, 'in 10th house (career direction)', 1));
+    // Tier 2: 5th house planets + 5th lord (aptitude/intelligence)
+    (h5ForEdu?.planetsInHouse || []).forEach(p => addPlanet(p, 'in 5th house (intelligence)', 2));
+    addPlanet(lord5Name, '5th lord (intelligence ruler)', 2);
+    // Tier 3: 4th house planets + 4th lord (formal education)
+    (h4ForEdu?.planetsInHouse || []).forEach(p => addPlanet(p, 'in 4th house (formal education)', 3));
+    addPlanet(lord4Name, '4th lord (education ruler)', 3);
+    // Tier 4: 9th house planets (higher learning/philosophy)
+    (h9ForEdu?.planetsInHouse || []).forEach(p => addPlanet(p, 'in 9th house (higher learning)', 4));
+    return pool;
+  })();
 
   const education = {
     title: 'Education & Knowledge Path',
@@ -8719,29 +8659,21 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     ninthHouse: h9ForEdu,
     mercury: { house: mercuryHouse, strength: mercuryStrength.strength, score: mercuryStrength.score },
     jupiter: { house: jupiterHouse, strength: planetStrengths.jupiter?.strength, score: planetStrengths.jupiter?.score },
-    suggestedFields: suggestedEducation.slice(0, 12),
-    academicStrength: (() => {
-      const mercScore = mercuryStrength.score || 0;
-      const jupScore = planetStrengths.jupiter?.score || 0;
-      const avg = (mercScore + jupScore) / 2;
-      if (avg >= 60) return 'Excellent academic potential — higher education strongly favored';
-      if (avg >= 45) return 'Good academic ability — focused effort brings success';
-      return 'Education may face obstacles — practical/vocational learning may suit better';
-    })(),
+    // TECHNICAL DATA — AI interprets education fields from planet placements
+    eduPlanetPool,
     bestStudyPeriods: lifespanFilter(dasaPeriods.filter(d => d.lord === 'Mercury' || d.lord === 'Jupiter' || d.lord === lord4Name || d.lord === lord5Name)).map(d => ({
       lord: d.lord, period: `${d.start} to ${d.endDate}`,
-      reason: d.lord === 'Mercury' ? 'Intellectual peak — exams and learning favored' : d.lord === 'Jupiter' ? 'Wisdom and higher learning period' : d.lord === lord4Name ? '4th lord — formal education success' : '5th lord — creativity and intelligence boosted',
+      reason: d.lord === 'Mercury' ? 'Mercury dasha — intellectual peak' : d.lord === 'Jupiter' ? 'Jupiter dasha — wisdom and higher learning' : d.lord === lord4Name ? '4th lord dasha — formal education' : '5th lord dasha — creativity and intelligence',
     })),
     foreignStudy: [9, 12].includes(rahuHouse) || [9, 12].includes(getPlanetHouse(lord4Name)),
-    competitiveExams: marsHouse && [6, 10, 11].includes(marsHouse) ? 'Strong ability to succeed in competitive exams' : 'Competitive exams need extra preparation and remedial support',
+    competitiveExams: { marsInCareerHouses: marsHouse && [6, 10, 11].includes(marsHouse), marsHouse },
     // ── Nadi Astrology Education Analysis (Sub-Lord methodology) ──
     nadiEducation: nadiPredictions ? (() => {
       const e = nadiPredictions.events?.education;
       const ea = nadiPredictions.educationByPlanet || {};
-      // Find the best education significator planets
       const bestEduPlanets = Object.entries(ea)
         .filter(([_, v]) => v.score >= 70)
-        .map(([k, v]) => ({ planet: k, grade: v.grade, fields: v.fields?.slice(0, 5) }));
+        .map(([k, v]) => ({ planet: k, grade: v.grade, score: v.score }));
       return {
         verdict: e?.verdict,
         strength: e?.strength,
@@ -8750,8 +8682,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
         strongPlanets: e?.strongPlanets?.map(p => p.name),
         averageScore: e?.averageScore,
         bestEduPlanets,
-        suggestedFields: [...new Set(Object.values(ea).flatMap(v => v.fields || []))].slice(0, 15),
-        note: 'Nadi methodology: Education success in DBA of planets signifying 4,9,11. Grade: 4,9,11=A (maximum), 4,11=B+ (above average), 5,11=B (intelligent). Houses 6,8,12 indicate obstacles.',
+        note: 'Nadi methodology: Education success in DBA of planets signifying 4,9,11.',
       };
     })() : null,
   };
@@ -10921,7 +10852,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       const allSections = {
         yogaAnalysis, personality, marriage, career, children,
         lifePredictions, mentalHealth, business, transits, realEstate,
-        employment, financial, timeline25, remedies, health,
+        employment, financial, timeline25, bestYearsRanking, remedies, health,
         foreignTravel, legal, education, luck, spiritual,
         surpriseInsights, familyPortrait, physicalProfile, attractionProfile,
       };
@@ -11118,132 +11049,10 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       // Currently familyPortrait doesn't have its own strengthScore in analyzeHouse
       // but if it did, constrain it.
 
-      // ── RULE 11: Education↔Career field alignment ──
-      // The UI badge shows nadiEducation.suggestedFields[0]. This MUST match the
-      // primary career direction. Uses the PRIMARY career (index 0) as the anchor.
-      if (allSections.education && allSections.career) {
-        const eduFields = allSections.education.suggestedFields || [];
-        const careerFields = allSections.career.primaryCareers || allSections.career.suggestedCareers || [];
-        const nadiEduFields = allSections.education.nadiEducation?.suggestedFields || [];
-        const nadiCareerSectors = (allSections.career.nadiCareer?.careerSectors || []).map(s => s.sector || '');
-
-        const FIELD_FAMILIES = {
-          medical: ['medicine', 'biology', 'medical science', 'nursing', 'surgery', 'psychology', 'pharmacy', 'healthcare', 'health', 'dental', 'veterinary', 'physiotherapy', 'life sciences'],
-          tech: ['it', 'software', 'computer', 'data science', 'ai', 'technology', 'programming', 'engineering', 'software development', 'computer science', 'hardware', 'electronics'],
-          business: ['business', 'management', 'accounting', 'banking', 'finance', 'economics', 'commerce', 'marketing', 'entrepreneurship', 'mba'],
-          arts: ['arts', 'design', 'music', 'media', 'fashion', 'beauty', 'film', 'photography', 'creative', 'literature', 'languages'],
-          law: ['law', 'legal', 'political science', 'government', 'public policy', 'judiciary'],
-          science: ['chemistry', 'physics', 'mathematics', 'research', 'laboratory', 'environmental science', 'geology', 'agriculture'],
-          education: ['teaching', 'education', 'philosophy', 'religious studies', 'advisory', 'counseling', 'training'],
-        };
-
-        const CAREER_TO_EDU_BRIDGE = {
-          tech: ['Computer Science', 'Software Engineering', 'Data Science', 'Information Technology', 'Mathematics'],
-          medical: ['Medicine', 'Medical Science', 'Biology', 'Nursing', 'Psychology'],
-          business: ['Business Management', 'Economics', 'Accounting', 'Commerce', 'Banking & Finance'],
-          arts: ['Design', 'Fine Arts', 'Music', 'Media Studies', 'Fashion Design'],
-          law: ['Law', 'Political Science', 'Public Administration'],
-          science: ['Physics', 'Chemistry', 'Environmental Science', 'Mathematics', 'Research'],
-          education: ['Education', 'Teaching', 'Philosophy', 'Higher Education'],
-        };
-
-        const getAllFamilies = (field) => {
-          const results = [];
-          const fl = (field || '').toLowerCase();
-          for (const [family, keywords] of Object.entries(FIELD_FAMILIES)) {
-            if (keywords.some(kw => fl.includes(kw))) results.push(family);
-          }
-          return results;
-        };
-
-        // PRIMARY career family = what the badge should align with
-        const primaryCareer = (careerFields[0] || nadiCareerSectors[0] || '').toLowerCase();
-        const primaryCareerFamilies = new Set(getAllFamilies(primaryCareer));
-        // Also include families from top 3 careers for broader matching
-        const allCareerLower = [...careerFields.slice(0, 3), ...nadiCareerSectors.slice(0, 3)].map(f => (f || '').toLowerCase());
-        const allCareerFamilies = new Set(allCareerLower.flatMap(getAllFamilies));
-
-        const allEduLower = [...eduFields, ...nadiEduFields].map(f => (f || '').toLowerCase());
-        const allEduFamilies = new Set(allEduLower.flatMap(getAllFamilies));
-
-        // Check if the FIRST education field matches the PRIMARY career family
-        const firstEduField = (nadiEduFields[0] || eduFields[0] || '').toLowerCase();
-        const firstEduFamilies = new Set(getAllFamilies(firstEduField));
-        const primaryAligned = [...firstEduFamilies].some(f => primaryCareerFamilies.has(f));
-
-        // Score how relevant an education field is to the PRIMARY career
-        const scoreForPrimaryCareer = (field) => {
-          const fl = (field || '').toLowerCase();
-          const fieldFams = getAllFamilies(fl);
-          if (fieldFams.some(f => primaryCareerFamilies.has(f))) return 200;
-          if (fieldFams.some(f => allCareerFamilies.has(f))) return 100;
-          const careerText = allCareerLower.join(' ');
-          if (fl.split(/[,/ ]/).some(w => w.length > 3 && careerText.includes(w))) return 80;
-          return 0;
-        };
-
-        const reorderByCareer = (fields) => {
-          if (!Array.isArray(fields) || fields.length === 0) return fields;
-          const scored = fields.map(f => ({ field: f, score: scoreForPrimaryCareer(f) }));
-          scored.sort((a, b) => b.score - a.score);
-          return scored.map(s => s.field);
-        };
-
-        // Log alignment info
-        allSections.education._careerAlignment = {
-          primaryCareerFamilies: [...primaryCareerFamilies],
-          allCareerFamilies: [...allCareerFamilies],
-          allEduFamilies: [...allEduFamilies],
-          primaryAligned,
-          eduFields: eduFields.slice(0, 5),
-          careerFields: careerFields.slice(0, 5),
-        };
-        allSections.career._educationAlignment = allSections.education._careerAlignment;
-
-        if (!primaryAligned) {
-          // First education field does NOT match primary career → fix it
-          // Step 1: Inject bridge fields for the primary career family
-          const bridgeFields = [];
-          for (const fam of primaryCareerFamilies) {
-            if (CAREER_TO_EDU_BRIDGE[fam]) bridgeFields.push(...CAREER_TO_EDU_BRIDGE[fam]);
-          }
-          // If no primary match, try all career families
-          if (bridgeFields.length === 0) {
-            for (const fam of allCareerFamilies) {
-              if (CAREER_TO_EDU_BRIDGE[fam]) bridgeFields.push(...CAREER_TO_EDU_BRIDGE[fam]);
-            }
-          }
-
-          if (bridgeFields.length > 0) {
-            // Inject bridge fields at top, then existing fields sorted by relevance
-            const existingEdu = allSections.education.suggestedFields || [];
-            const sortedExisting = reorderByCareer(existingEdu);
-            const merged = [...new Set([...bridgeFields.slice(0, 3), ...sortedExisting])];
-            allSections.education.suggestedFields = merged.slice(0, 12);
-
-            if (allSections.education.nadiEducation) {
-              const existingNadi = allSections.education.nadiEducation.suggestedFields || [];
-              const sortedNadi = reorderByCareer(existingNadi);
-              allSections.education.nadiEducation.suggestedFields = [...new Set([...bridgeFields.slice(0, 2), ...sortedNadi])].slice(0, 15);
-            }
-
-            crossValidationLog.push({
-              section: 'education.suggestedFields',
-              from: firstEduField || 'N/A',
-              to: bridgeFields[0] || 'N/A',
-              reason: `Education badge "${firstEduField}" mismatched primary career "${primaryCareer}". Injected ${bridgeFields.slice(0, 3).join(', ')} at top.`,
-            });
-          }
-        } else {
-          // Already aligned at primary level — just reorder so best matches come first
-          if (allSections.education.suggestedFields) {
-            allSections.education.suggestedFields = reorderByCareer(allSections.education.suggestedFields);
-          }
-          if (allSections.education.nadiEducation?.suggestedFields) {
-            allSections.education.nadiEducation.suggestedFields = reorderByCareer(allSections.education.nadiEducation.suggestedFields);
-          }
-        }
-      }
+      // ── RULE 11: REMOVED ──
+      // Education↔Career alignment is now handled entirely by the AI.
+      // The engine no longer hardcodes career/education field names,
+      // so there is nothing to cross-validate here.
 
       // Log results
       if (crossValidationLog.length > 0) {
