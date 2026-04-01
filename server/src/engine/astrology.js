@@ -9148,94 +9148,314 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     })(),
     handedness: lagnaName && ['Mithuna', 'Kanya', 'Kumbha'].includes(lagnaName) ? 'Higher likelihood of left-handedness or ambidexterity' : 'Right-handed is most likely',
     partnerFirstLetter: (() => {
+      // ── Nakshatra Pada Syllables (108 padas) — traditional Vedic name letters ──
+      // Each Nakshatra has 4 padas, each pada maps to a starting syllable.
+      // This is the authoritative method used in Sri Lankan/Indian Jyotish.
+      const NAKSHATRA_PADA_SYLLABLES = {
+        'Ashwini':            ['Chu', 'Che', 'Cho', 'La'],
+        'Bharani':            ['Li', 'Lu', 'Le', 'Lo'],
+        'Krittika':           ['A', 'I', 'U', 'E'],
+        'Rohini':             ['O', 'Va', 'Vi', 'Vu'],
+        'Mrigashira':         ['Ve', 'Vo', 'Ka', 'Ki'],
+        'Ardra':              ['Ku', 'Gha', 'Ng', 'Chha'],
+        'Punarvasu':          ['Ke', 'Ko', 'Ha', 'Hi'],
+        'Pushya':             ['Hu', 'He', 'Ho', 'Da'],
+        'Ashlesha':           ['Di', 'Du', 'De', 'Do'],
+        'Magha':              ['Ma', 'Mi', 'Mu', 'Me'],
+        'Purva Phalguni':     ['Mo', 'Ta', 'Ti', 'Tu'],
+        'Uttara Phalguni':    ['Te', 'To', 'Pa', 'Pi'],
+        'Hasta':              ['Pu', 'Sha', 'Na', 'Tha'],
+        'Chitra':             ['Pe', 'Po', 'Ra', 'Ri'],
+        'Swati':              ['Ru', 'Re', 'Ro', 'Ta'],
+        'Vishakha':           ['Ti', 'Tu', 'Te', 'To'],
+        'Anuradha':           ['Na', 'Ni', 'Nu', 'Ne'],
+        'Jyeshtha':           ['No', 'Ya', 'Yi', 'Yu'],
+        'Mula':               ['Ye', 'Yo', 'Bha', 'Bhi'],
+        'Purva Ashadha':      ['Bhu', 'Dha', 'Pha', 'Dha'],
+        'Uttara Ashadha':     ['Bhe', 'Bho', 'Ja', 'Ji'],
+        'Shravana':           ['Ju', 'Je', 'Jo', 'Gha'],
+        'Dhanishtha':         ['Ga', 'Gi', 'Gu', 'Ge'],
+        'Shatabhisha':        ['Go', 'Sa', 'Si', 'Su'],
+        'Purva Bhadrapada':   ['Se', 'So', 'Da', 'Di'],
+        'Uttara Bhadrapada':  ['Du', 'Tha', 'Jha', 'Da'],
+        'Revati':             ['De', 'Do', 'Cha', 'Chi'],
+      };
+
+      // Helper: get syllables for a sidereal degree
+      const getSyllablesForDeg = (sidDeg) => {
+        const nak = getNakshatra(sidDeg);
+        const syllables = NAKSHATRA_PADA_SYLLABLES[nak.name];
+        if (!syllables) return { all: [], pada: nak.pada, nak: nak.name, exact: null };
+        return { all: syllables, pada: nak.pada, nak: nak.name, exact: syllables[nak.pada - 1] };
+      };
+
+      // Helper: extract first letter(s) from syllable for matching
+      // "Sha" → "Sh", "La" → "L", "Chu" → "Ch", "Gha" → "Gh"
+      const syllableToLetter = (syl) => {
+        if (!syl) return syl;
+        // Multi-char consonants first
+        const multiConsonants = ['Chh', 'Ch', 'Sh', 'Th', 'Ph', 'Bh', 'Dh', 'Gh', 'Ng', 'Jh', 'Kh'];
+        for (const mc of multiConsonants) {
+          if (syl.startsWith(mc)) return mc;
+        }
+        return syl[0]; // single consonant/vowel
+      };
+
       const h7Rashi = houses[6]?.rashi || '';
+      const h7RashiId = houses[6]?.rashiId || 0;
+
+      // ── Rashi-based letters lookup (used by multiple methods below) ──
       const RASHI_LETTERS = {
-        'Mesha': ['A', 'L', 'E'], 'Vrishabha': ['B', 'V', 'U'], 'Mithuna': ['K', 'G', 'CH'],
+        'Mesha': ['A', 'L', 'E'], 'Vrishabha': ['B', 'V', 'U'], 'Mithuna': ['K', 'G', 'Ch'],
         'Kataka': ['D', 'H'], 'Simha': ['M', 'T'], 'Kanya': ['P', 'Th'],
         'Tula': ['R', 'T'], 'Vrischika': ['N', 'Y'], 'Dhanus': ['Bh', 'Dh', 'Ph'],
         'Makara': ['Kh', 'J'], 'Kumbha': ['G', 'S', 'Sh'], 'Meena': ['D', 'Ch', 'Z', 'Th'],
       };
-      const h7Letters = RASHI_LETTERS[h7Rashi] || ['Unknown'];
 
       // ── Weighted scoring across multiple Vedic methods ─────────
-      // Each method adds weight to its letters. Top 3 highest-weight letters are returned.
       const letterWeights = {};
       const addWeighted = (letters, weight, source) => {
+        if (!letters || !letters.length) return;
         letters.forEach(l => {
+          if (!l) return;
           if (!letterWeights[l]) letterWeights[l] = { weight: 0, sources: [] };
           letterWeights[l].weight += weight;
           letterWeights[l].sources.push(source);
         });
       };
 
-      // Method 1: 7th house rashi (weight 3) — strongest classical indicator
-      addWeighted(h7Letters, 3, 'H7 rashi (' + h7Rashi + ')');
+      // Helper: add both exact syllable AND its first-letter extraction
+      const addSyllableWeighted = (syllInfo, weight, source) => {
+        if (!syllInfo) return;
+        // Add exact pada syllable with full weight
+        if (syllInfo.exact) {
+          addWeighted([syllInfo.exact], weight, source + ' pada ' + syllInfo.pada);
+          // Also add the starting letter as a separate entry with slightly less weight
+          const letter = syllableToLetter(syllInfo.exact);
+          if (letter !== syllInfo.exact) {
+            addWeighted([letter], weight * 0.7, source + ' letter');
+          }
+        }
+        // Add all 4 pada syllables of this nakshatra with reduced weight
+        if (syllInfo.all) {
+          const otherSyllables = syllInfo.all.filter(s => s !== syllInfo.exact);
+          addWeighted(otherSyllables, weight * 0.3, source + ' nak ' + syllInfo.nak);
+        }
+      };
 
-      // Method 2: Navamsha D9 7th house rashi (weight 2.5) — D9 = marriage chart
-      const nav7Rashi = navamsha?.houses?.[6]?.rashi || '';
-      if (nav7Rashi && RASHI_LETTERS[nav7Rashi]) {
-        addWeighted(RASHI_LETTERS[nav7Rashi], 2.5, 'Navamsha H7 (' + nav7Rashi + ')');
+      // ── Method 1: Bhava Chalit 7th cusp (lagna+180°) Nakshatra Pada (weight 4) — PRIMARY ──
+      // The precise 7th cusp = Ascendant degree + 180°, much more accurate than whole-sign
+      const lagnaSidereal = lagna.sidereal || ((houses[0]?.rashiId - 1) * 30);
+      const bhava7CuspDeg = (lagnaSidereal + 180) % 360;
+      const bhava7CuspNak = getSyllablesForDeg(bhava7CuspDeg);
+      addSyllableWeighted(bhava7CuspNak, 4, 'H7 Bhava cusp');
+
+      // Also check the adjacent pada if the degree is within 2° of a pada boundary
+      const padaSpan = 360 / 108; // 3.333°
+      const posInPada = bhava7CuspDeg % padaSpan;
+      if (posInPada < 2) {
+        // Near the START of this pada — previous pada also relevant
+        const prevDeg = ((bhava7CuspDeg - 3) + 360) % 360;
+        const prevNak = getSyllablesForDeg(prevDeg);
+        addSyllableWeighted(prevNak, 2, 'H7 cusp adj-');
+      } else if (posInPada > padaSpan - 2) {
+        // Near the END of this pada — next pada also relevant
+        const nextDeg = (bhava7CuspDeg + 3) % 360;
+        const nextNak = getSyllablesForDeg(nextDeg);
+        addSyllableWeighted(nextNak, 2, 'H7 cusp adj+');
       }
 
-      // Method 3: 7th lord's occupied rashi (weight 2) — BPHS classical
-      const lord7Name = getHouseLord(7);
-      const lord7Planet = lord7Name ? planets[lord7Name.toLowerCase()] : null;
-      const lord7Rashi = lord7Planet?.rashi || '';
-      if (lord7Rashi && RASHI_LETTERS[lord7Rashi]) {
-        addWeighted(RASHI_LETTERS[lord7Rashi], 2, '7th lord ' + lord7Name + ' in ' + lord7Rashi);
+      // ── Method 1c: Cross-rashi nakshatra bridge ──
+      // When the 7th cusp nakshatra spans two rashis (e.g., Krittika spans Mesha/Vrishabha),
+      // include the other rashi's letters with moderate weight, because the cusp energy
+      // inherits qualities from both rashis.
+      const cuspNakStart = NAKSHATRAS.find(n => n.name === bhava7CuspNak.nak)?.start || 0;
+      const cuspNakEnd = cuspNakStart + (360 / 27); // 13.333° span
+      const cuspRashiStart = Math.floor(bhava7CuspDeg / 30) * 30;
+      const cuspRashiEnd = cuspRashiStart + 30;
+      // Check if nakshatra starts before this rashi (bleeds from previous rashi)
+      if (cuspNakStart < cuspRashiStart) {
+        const prevRashiId = Math.floor(cuspNakStart / 30) + 1;
+        const prevRashiName = RASHIS[prevRashiId - 1]?.name || '';
+        if (prevRashiName && RASHI_LETTERS[prevRashiName]) {
+          addWeighted(RASHI_LETTERS[prevRashiName], 1.5, 'H7 nak bridge ' + prevRashiName);
+        }
+        // Also add the pada syllables from the part of the nakshatra in the previous rashi
+        const prevPartPada1Deg = cuspNakStart;
+        const prevPartNak = getSyllablesForDeg(prevPartPada1Deg);
+        addSyllableWeighted(prevPartNak, 1.5, 'H7 nak bridge pada');
       }
-
-      // Method 4: Darakaraka (lowest degree planet) rashi (weight 1.5) — Jaimini
-      let dkRashiName = '';
-      if (jaiminiKarakas?.darakaraka?.rashi) {
-        dkRashiName = RASHIS.find(r => r.english === jaiminiKarakas.darakaraka.rashi)?.name || '';
-        if (dkRashiName && RASHI_LETTERS[dkRashiName]) {
-          addWeighted(RASHI_LETTERS[dkRashiName], 1.5, 'DK ' + (jaiminiKarakas.darakaraka.planet || '') + ' in ' + dkRashiName);
+      // Check if nakshatra extends past this rashi (bleeds into next rashi)
+      if (cuspNakEnd > cuspRashiEnd) {
+        const nextRashiId = (Math.floor(bhava7CuspDeg / 30) + 1) % 12 + 1;
+        const nextRashiName = RASHIS[nextRashiId - 1]?.name || '';
+        if (nextRashiName && RASHI_LETTERS[nextRashiName]) {
+          addWeighted(RASHI_LETTERS[nextRashiName], 1, 'H7 nak bridge ' + nextRashiName);
         }
       }
 
-      // Method 5: Planets sitting IN the 7th house — their rashi letters (weight 1)
-      // The planet in H7 colors the spouse identity
+      // ── Method 1b: Whole-sign 7th cusp (rashi start) — secondary cross-check ──
+      const h7CuspDeg = (h7RashiId - 1) * 30;
+      const h7WholeCuspNak = getSyllablesForDeg(h7CuspDeg);
+      if (h7WholeCuspNak.nak !== bhava7CuspNak.nak || h7WholeCuspNak.pada !== bhava7CuspNak.pada) {
+        addSyllableWeighted(h7WholeCuspNak, 2, 'H7 sign cusp');
+      }
+
+      // ── Method 2: 7th lord Nakshatra Pada (weight 3.5) — very strong ──
+      const lord7Name = getHouseLord(7);
+      const lord7Planet = lord7Name ? planets[lord7Name.toLowerCase()] : null;
+      if (lord7Planet?.sidereal != null) {
+        const lord7Nak = getSyllablesForDeg(lord7Planet.sidereal);
+        addSyllableWeighted(lord7Nak, 3.5, '7L ' + lord7Name);
+      }
+
+      // ── Method 3: Navamsha D9 7th house cusp Nakshatra (weight 3) ──
+      const nav7Rashi = navamsha?.houses?.[6]?.rashi || '';
+      const nav7RashiId = navamsha?.houses?.[6]?.rashiId || 0;
+      if (nav7RashiId) {
+        const nav7CuspDeg = (nav7RashiId - 1) * 30;
+        const nav7CuspNak = getSyllablesForDeg(nav7CuspDeg);
+        addSyllableWeighted(nav7CuspNak, 3, 'D9 H7 cusp');
+      }
+
+      // ── Method 4: Darakaraka Nakshatra Pada (weight 2.5) — Jaimini ──
+      if (jaiminiKarakas?.darakaraka?.planet) {
+        const dkName = jaiminiKarakas.darakaraka.planet;
+        const dkPlanet = planets[dkName.toLowerCase()];
+        if (dkPlanet?.sidereal != null) {
+          const dkNak = getSyllablesForDeg(dkPlanet.sidereal);
+          addSyllableWeighted(dkNak, 2.5, 'DK ' + dkName);
+        }
+      }
+
+      // ── Method 5: Venus Nakshatra Pada (weight 2) — marriage karaka ──
+      if (planets.venus?.sidereal != null) {
+        const venusNak = getSyllablesForDeg(planets.venus.sidereal);
+        addSyllableWeighted(venusNak, 2, 'Venus');
+      }
+
+      // ── Method 6: Planets IN 7th house — their Nakshatra (weight 1.5 each) ──
       const h7Planets = houses[6]?.planets || [];
       h7Planets.forEach(hp => {
-        // The planet's own rashi gives secondary letters
-        const hpData = planets[hp.name.toLowerCase()];
-        if (hpData?.rashi && RASHI_LETTERS[hpData.rashi]) {
-          addWeighted(RASHI_LETTERS[hpData.rashi], 1, hp.name + ' in H7 (' + hpData.rashi + ')');
+        const hpData = planets[hp.name?.toLowerCase()];
+        if (hpData?.sidereal != null) {
+          const hpNak = getSyllablesForDeg(hpData.sidereal);
+          addSyllableWeighted(hpNak, 1.5, hp.name + ' in H7');
         }
       });
 
-      // Method 6: Upapada Lagna (Arudha of H12) — Jaimini spouse indicator (weight 1.5)
+      // ── Method 7: Upapada Lagna rashi cusp Nakshatra (weight 1.5) ──
       const h12Lord = getHouseLord(12);
       const h12LordHouse = getPlanetHouse(h12Lord);
       if (h12LordHouse) {
         const dist = ((h12LordHouse - 12 + 12) % 12);
         const ulHouseNum = ((h12LordHouse + dist - 1 + 12) % 12) + 1;
-        // Exception: if UL falls in same house as H12, move to 10th from it
         const finalUL = (ulHouseNum === 12) ? ((12 + 9) % 12) + 1 : ulHouseNum;
-        const ulRashi = houses[finalUL - 1]?.rashi || '';
-        if (ulRashi && RASHI_LETTERS[ulRashi]) {
-          addWeighted(RASHI_LETTERS[ulRashi], 1.5, 'Upapada Lagna H' + finalUL + ' (' + ulRashi + ')');
+        const ulRashiId = houses[finalUL - 1]?.rashiId || 0;
+        if (ulRashiId) {
+          const ulCuspDeg = (ulRashiId - 1) * 30;
+          const ulNak = getSyllablesForDeg(ulCuspDeg);
+          addSyllableWeighted(ulNak, 1.5, 'UL H' + finalUL);
         }
       }
 
-      // Sort by weight descending and pick top 3
-      const sortedLetters = Object.entries(letterWeights)
+      // ── Method 8: 7th from Moon (Chandra Lagna) Nakshatra — spouse from emotional self ──
+      // The 7th house from Moon sign is an important secondary spouse indicator
+      if (planets.moon?.sidereal != null) {
+        const moonRashiId = Math.floor(planets.moon.sidereal / 30) + 1;
+        const h7FromMoonRashiId = ((moonRashiId - 1 + 6) % 12) + 1;
+        const h7MoonCuspDeg = (h7FromMoonRashiId - 1) * 30;
+        const h7MoonNak = getSyllablesForDeg(h7MoonCuspDeg);
+        addSyllableWeighted(h7MoonNak, 2, '7th from Moon');
+      }
+
+      // ── Method 9: D9 Navamsha 7th lord Nakshatra — marriage chart's 7th lord ──
+      if (navamsha?.houses?.[6]) {
+        const nav7Lord = navamsha.houses[6].rashiLord;
+        if (nav7Lord) {
+          const nav7LordPlanet = planets[nav7Lord.toLowerCase()];
+          if (nav7LordPlanet?.sidereal != null) {
+            addSyllableWeighted(getSyllablesForDeg(nav7LordPlanet.sidereal), 1.5, 'D9 7L ' + nav7Lord);
+          }
+        }
+      }
+
+      // ── Method 10: KP Cuspal Sub-Lord of 7th cusp — very precise indicator ──
+      // In KP astrology, the sub-lord of the 7th cusp is the finest pointer to spouse identity
+      const csl7 = nadiPredictions?.cuspalSubLords?.[7] || nadiPredictions?.cuspalSubLords?.['7'];
+      if (csl7?.subLord) {
+        const subLordPlanet = planets[csl7.subLord.toLowerCase()];
+        if (subLordPlanet?.sidereal != null) {
+          addSyllableWeighted(getSyllablesForDeg(subLordPlanet.sidereal), 2, 'KP sublord ' + csl7.subLord);
+        }
+      }
+
+      // ── Method 11: Rashi-based letters as supplementary signal ──
+      // Traditional rashi-level letters provide broader coverage alongside precise pada syllables
+      // H7 rashi letters (weight 2) — very traditional
+      if (h7Rashi && RASHI_LETTERS[h7Rashi]) {
+        addWeighted(RASHI_LETTERS[h7Rashi], 2, 'H7 rashi ' + h7Rashi);
+      }
+      // 7th lord's rashi letters (weight 2) — where the 7th lord sits matters
+      const lord7RashiName = lord7Planet?.rashi || '';
+      if (lord7RashiName && RASHI_LETTERS[lord7RashiName]) {
+        addWeighted(RASHI_LETTERS[lord7RashiName], 2, '7L rashi ' + lord7RashiName);
+      }
+      // Navamsha 7th rashi letters (weight 1.5) — D9 = marriage chart
+      if (nav7Rashi && RASHI_LETTERS[nav7Rashi]) {
+        addWeighted(RASHI_LETTERS[nav7Rashi], 1.5, 'D9 rashi ' + nav7Rashi);
+      }
+      // Darakaraka's rashi letters (weight 1) — Jaimini spouse significator
+      if (jaiminiKarakas?.darakaraka?.rashi) {
+        const dkRashiName = RASHIS.find(r => r.english === jaiminiKarakas.darakaraka.rashi)?.name || '';
+        if (dkRashiName && RASHI_LETTERS[dkRashiName]) {
+          addWeighted(RASHI_LETTERS[dkRashiName], 1, 'DK rashi ' + dkRashiName);
+        }
+      }
+
+      // ── Method 11: Nakshatra lord chain — dispositor of 7th cusp nakshatra ──
+      // The nakshatra lord of the 7th cusp points to a planet whose own nakshatra adds signal
+      const bhavaCuspNakLord = bhava7CuspNak.nak ? NAKSHATRAS.find(n => n.name === bhava7CuspNak.nak)?.lord : null;
+      if (bhavaCuspNakLord) {
+        const nakLordPlanet = planets[bhavaCuspNakLord.toLowerCase()];
+        if (nakLordPlanet?.sidereal != null) {
+          addSyllableWeighted(getSyllablesForDeg(nakLordPlanet.sidereal), 1.5, 'H7 nak lord ' + bhavaCuspNakLord);
+        }
+      }
+
+      // ── Merge syllables that share the same starting letter ──
+      // Group syllables by their first letter for final ranking
+      const letterGroups = {};
+      for (const [syl, info] of Object.entries(letterWeights)) {
+        const letter = syllableToLetter(syl);
+        if (!letterGroups[letter]) letterGroups[letter] = { weight: 0, syllables: [], sources: new Set() };
+        letterGroups[letter].weight += info.weight;
+        letterGroups[letter].syllables.push({ syllable: syl, weight: info.weight });
+        info.sources.forEach(s => letterGroups[letter].sources.add(s));
+      }
+
+      // Sort by weight descending
+      const sortedLetters = Object.entries(letterGroups)
         .sort((a, b) => b[1].weight - a[1].weight);
-      const topLetters = sortedLetters.slice(0, 3).map(e => e[0]);
+      const topLetters = sortedLetters.slice(0, 5).map(e => e[0]);
       const allLetters = sortedLetters.map(e => e[0]);
 
-      // Build source note for top letters
-      const topNote = topLetters.map(l => {
-        const info = letterWeights[l];
-        return `${l} (score ${info.weight.toFixed(1)}, from: ${info.sources.join(' + ')})`;
+      // Build detailed info for top entries
+      const topNote = sortedLetters.slice(0, 5).map(([l, info]) => {
+        const topSyls = info.syllables.sort((a, b) => b.weight - a.weight).slice(0, 3).map(s => s.syllable).join('/');
+        return `${l} (${topSyls}, score ${info.weight.toFixed(1)})`;
       }).join('; ');
+
+      const lord7Rashi = lord7Planet?.rashi || '';
 
       return {
         topLetters,
         allPossibleLetters: allLetters,
-        letterDetails: sortedLetters.slice(0, 6).map(([l, info]) => ({
-          letter: l, score: info.weight, sources: info.sources,
+        letterDetails: sortedLetters.slice(0, 8).map(([l, info]) => ({
+          letter: l,
+          score: parseFloat(info.weight.toFixed(1)),
+          syllables: info.syllables.sort((a, b) => b.weight - a.weight).slice(0, 4).map(s => s.syllable),
+          sources: [...info.sources],
         })),
         rashiBasis: h7Rashi,
         navamshaRashi: nav7Rashi || null,
@@ -9243,7 +9463,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
         lord7Planet: lord7Name || null,
         darakarakaPlanet: jaiminiKarakas?.darakaraka?.planet || null,
         darakarakaRashi: jaiminiKarakas?.darakaraka?.rashi || null,
-        note: `Top 3 predicted: ${topLetters.join(', ')}. ${topNote}`,
+        note: `Top 5 predicted: ${topLetters.join(', ')}. ${topNote}`,
       };
     })(),
     hiddenTalent: (() => {
