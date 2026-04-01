@@ -18,8 +18,6 @@ import SpringPressable from '../../components/effects/SpringPressable';
 import CosmicLoader from '../../components/effects/CosmicLoader';
 import PinchableView from '../../components/effects/PinchableView';
 import CosmicCard from '../../components/ui/CosmicCard';
-import CosmicAuroraNebula from '../../components/effects/CosmicAuroraNebula';
-import GoldenNebulaBg from '../../components/effects/GoldenNebulaBg';
 import SectionHeader from '../../components/ui/SectionHeader';
 import AwesomeRashiChakra from '../../components/AwesomeRashiChakra';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -27,6 +25,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { Colors, Typography, Gradients, Spacing } from '../../constants/theme';
 import SriLankanChart from '../../components/SriLankanChart';
+import { boxShadow, textShadow } from '../../utils/shadow';
 
 var { width: SCREEN_WIDTH } = Dimensions.get('window');
 var CHAKRA_HERO_SIZE = Math.min(SCREEN_WIDTH * 0.52, 220);
@@ -1327,8 +1326,6 @@ export default function HomeScreen() {
   return (
     <DesktopScreenWrapper routeName="index">
       <View style={{ flex: 1, backgroundColor: '#04030C' }}>
-        <CosmicAuroraNebula />
-        <GoldenNebulaBg />
         <Animated.ScrollView
           ref={scrollRef}
           style={s.flex}
@@ -1442,7 +1439,7 @@ var s = StyleSheet.create({
   greetText: { fontSize: 14, fontWeight: '600', color: Colors.textMuted, letterSpacing: 0.5 },
   greetName: {
     fontSize: 28, fontWeight: '900', color: '#FFF1D0', letterSpacing: 0.3,
-    textShadowColor: 'rgba(255,140,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10,
+    ...textShadow('rgba(255,140,0,0.5)', { width: 0, height: 2 }, 10),
   },
   dateBadge: {
     backgroundColor: 'rgba(255,184,0,0.12)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6,
@@ -1454,8 +1451,7 @@ var s = StyleSheet.create({
   dashHero: {
     borderRadius: 24, overflow: 'hidden', marginBottom: 8,
     borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)',
-    shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.20, shadowRadius: 20, elevation: 10,
+    ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.20, 20), elevation: 10,
   },
   dashHeroBg: { ...StyleSheet.absoluteFillObject, borderRadius: 24 },
   dashGlassShine: {
@@ -1500,7 +1496,7 @@ var s = StyleSheet.create({
   },
   chakraSignSymbol: {
     fontSize: 22, color: '#FFD666',
-    textShadowColor: 'rgba(255,214,102,0.8)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12,
+    ...textShadow('rgba(255,214,102,0.8)', { width: 0, height: 0 }, 12),
   },
   chakraSignTextWrap: {
     flex: 1,
@@ -1513,7 +1509,7 @@ var s = StyleSheet.create({
   },
 
   dashHeroLabel: { color: 'rgba(255,214,102,0.50)', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 2 },
-  dashSignNameLarge: { color: '#FFF1D0', fontSize: 20, fontWeight: '900', letterSpacing: 0.3, lineHeight: 26, textShadowColor: 'rgba(255,184,0,0.30)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
+  dashSignNameLarge: { color: '#FFF1D0', fontSize: 20, fontWeight: '900', letterSpacing: 0.3, lineHeight: 26, ...textShadow('rgba(255,184,0,0.30)', { width: 0, height: 1 }, 8) },
   dashSignNameSub: { color: 'rgba(255,214,102,0.65)', fontSize: 12, fontWeight: '700' },
   nakPill: {
     flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center',
@@ -1549,8 +1545,7 @@ var s = StyleSheet.create({
   rahuStripActive: {
     backgroundColor: 'rgba(239,68,68,0.08)',
     borderColor: 'rgba(239,68,68,0.30)',
-    shadowColor: '#EF4444', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.30, shadowRadius: 12, elevation: 6,
+    ...boxShadow('#EF4444', { width: 0, height: 2 }, 0.30, 12), elevation: 6,
   },
   rahuIconWrap: {
     width: 36, height: 36, borderRadius: 12,
@@ -1596,15 +1591,14 @@ var s = StyleSheet.create({
   glassIdentity: {
     borderRadius: 22, overflow: 'hidden', marginBottom: 10,
     borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)',
-    shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 16, elevation: 8,
+    ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.15, 16), elevation: 8,
   },
   glassIdHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 18, paddingTop: 18, paddingBottom: 10,
   },
   glassIdIcon: { fontSize: 18 },
-  glassIdTitle: { color: '#FFE8B0', fontSize: 16, fontWeight: '800', letterSpacing: 0.5, textShadowColor: 'rgba(255,184,0,0.20)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
+  glassIdTitle: { color: '#FFE8B0', fontSize: 16, fontWeight: '800', letterSpacing: 0.5, ...textShadow('rgba(255,184,0,0.20)', { width: 0, height: 1 }, 6) },
 
   // Lagna Hero
   lagnaHero: {
@@ -1619,15 +1613,14 @@ var s = StyleSheet.create({
     borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.35)',
   },
   lagnaSignEmoji: {
-    fontSize: 30, textShadowColor: 'rgba(255,214,102,0.8)',
-    textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 14,
+    fontSize: 30, ...textShadow('rgba(255,214,102,0.8)', { width: 0, height: 0 }, 14),
   },
   lagnaHeroRight: { flex: 1 },
   lagnaHeroLabel: {
     color: 'rgba(255,214,102,0.50)', fontSize: 10, fontWeight: '700',
     letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 3,
   },
-  lagnaHeroName: { color: '#FFB800', fontSize: 22, fontWeight: '900', letterSpacing: 0.3, textShadowColor: 'rgba(255,184,0,0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
+  lagnaHeroName: { color: '#FFB800', fontSize: 22, fontWeight: '900', letterSpacing: 0.3, ...textShadow('rgba(255,184,0,0.35)', { width: 0, height: 1 }, 8) },
   lagnaHeroSub: { color: 'rgba(255,214,102,0.55)', fontSize: 12, fontWeight: '600', marginTop: 1 },
   lagnaLordPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8,
@@ -1695,12 +1688,12 @@ var s = StyleSheet.create({
   auspTimeText: { fontSize: 13, color: '#34D399', fontWeight: '700', letterSpacing: 0.3 },
 
   // No Birth Data
-  noBirthTitle: { color: '#FFE8B0', fontSize: 20, fontWeight: '900', textAlign: 'center', marginBottom: 8, textShadowColor: 'rgba(255,184,0,0.30)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
+  noBirthTitle: { color: '#FFE8B0', fontSize: 20, fontWeight: '900', textAlign: 'center', marginBottom: 8, ...textShadow('rgba(255,184,0,0.30)', { width: 0, height: 1 }, 8) },
   noBirthBody: { color: Colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 18, paddingHorizontal: 8 },
   noBirthCta: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 22, paddingVertical: 14, borderRadius: 999, overflow: 'hidden',
-    shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0,
+    ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 16), elevation: 0,
   },
   noBirthCtaText: { color: '#FFF1D0', fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
 
@@ -1749,8 +1742,7 @@ var s = StyleSheet.create({
   },
   wlCardUser: {
     borderColor: 'rgba(255,184,0,0.30)',
-    shadowColor: '#FFB800', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
+    ...boxShadow('#FFB800', { width: 0, height: 2 }, 0.15, 8), elevation: 4,
   },
   wlCardExpanded: {
     borderColor: 'rgba(255,214,102,0.20)',

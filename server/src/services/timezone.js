@@ -44,6 +44,19 @@ async function resolveUtcOffset(lat, lng, date) {
     return _cache.get(cacheKey);
   }
 
+  // ── Sri Lanka / India fixed offset ─────────────────────────────────
+  // Sri Lanka temporarily used UTC+6:00 and UTC+6:30 between 1996–2006,
+  // but Sri Lankan astrologers universally continued using IST (UTC+5:30)
+  // throughout that period.  Birth certificates and astrology charts from
+  // 1996–2006 record times in UTC+5:30, not the government-mandated
+  // offset.  To match traditional practice we hard-code UTC+5:30 for all
+  // Sri Lankan and Indian births regardless of the historical civil offset.
+  if (_isSriLankaOrIndia(lat, lng)) {
+    const sltOffset = 19800; // UTC+5:30
+    _setCache(cacheKey, sltOffset);
+    return sltOffset;
+  }
+
   const apiKey = process.env.TIMEZONEDB_API_KEY;
 
   if (apiKey) {
@@ -199,6 +212,21 @@ function _ianaFromCoords(lat, lng) {
   if (lat >= 1.0 && lat <= 7.5 && lng >= 99.0 && lng <= 119.0) return 'Asia/Singapore';
 
   return null; // Unknown — let TimeZoneDB handle it
+}
+
+/**
+ * Check whether coordinates fall within Sri Lanka or India.
+ * Both countries use IST (UTC+5:30) and have never observed DST in
+ * modern times.  Sri Lanka's 1996–2006 UTC+6:00/+6:30 experiment is
+ * ignored for astrological purposes (see resolveUtcOffset comment).
+ */
+function _isSriLankaOrIndia(lat, lng) {
+  // Sri Lanka: roughly 5.9°–9.9° N, 79.6°–81.9° E
+  if (lat >= 5.9 && lat <= 9.9 && lng >= 79.6 && lng <= 81.9) return true;
+  // India: roughly 8°–37° N, 68°–97° E
+  if (lat >= 8.0 && lat <= 37.0 && lng >= 68.0 && lng <= 97.0) return true;
+  // Nepal: UTC+5:45 — do NOT include here, different offset
+  return false;
 }
 
 /**

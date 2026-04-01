@@ -234,7 +234,7 @@ function TimePickerModal({ visible, onClose, value, onChange, lang }) {
           </View>
 
           <View style={ms.preview}>
-            <Text style={ms.previewText}>{formatHour(hour).replace(' ', ':')} : {pad(minute)}</Text>
+            <Text style={ms.previewText}>{(hour === 0 ? 12 : hour > 12 ? hour - 12 : hour) + ':' + pad(minute) + ' ' + (hour < 12 ? 'AM' : 'PM')}</Text>
             <Text style={ms.preview24}>{pad(hour) + ':' + pad(minute)}</Text>
           </View>
 

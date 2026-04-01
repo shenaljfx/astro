@@ -1,3 +1,4 @@
+import { boxShadow, textShadow } from '../utils/shadow';
 /**
  * Grahachara - "Celestial Flow" Design System v3.0
  * CosmicVibe-inspired: lush gradients, calming motion, warm cosmic palette
@@ -159,52 +160,31 @@ export const BorderRadius = {
 
 export const Shadows = {
   sm: {
-    shadowColor: 'rgba(180,122,255,0.35)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
+    ...boxShadow('rgba(180,122,255,0.35)', { width: 0, height: 2 }, 1, 6),
     elevation: 3,
   },
   md: {
-    shadowColor: 'rgba(180,122,255,0.45)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
+    ...boxShadow('rgba(180,122,255,0.45)', { width: 0, height: 4 }, 1, 12),
     elevation: 5,
   },
   lg: {
-    shadowColor: 'rgba(180,122,255,0.55)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 24,
+    ...boxShadow('rgba(180,122,255,0.55)', { width: 0, height: 8 }, 1, 24),
     elevation: 10,
   },
   glow: {
-    shadowColor: '#FF8C00',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 18,
+    ...boxShadow('#FF8C00', { width: 0, height: 0 }, 0.8, 18),
     elevation: 14,
   },
   buttonGlow: {
-    shadowColor: '#FF8C00',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.9,
-    shadowRadius: 20,
+    ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.9, 20),
     elevation: 16,
   },
   cardFloat: {
-    shadowColor: 'rgba(0,0,0,0.5)',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 1,
-    shadowRadius: 18,
+    ...boxShadow('rgba(0,0,0,0.5)', { width: 0, height: 10 }, 1, 18),
     elevation: 10,
   },
   softGlow: {
-    shadowColor: 'rgba(180,122,255,0.20)',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
+    ...boxShadow('rgba(180,122,255,0.20)', { width: 0, height: 0 }, 1, 20),
     elevation: 6,
   },
 };
@@ -224,19 +204,19 @@ export const Animations = {
  * Typography - "Celestial Type"
  */
 export const Typography = {
-  displayXXL: { fontSize: 40, fontWeight: '900', letterSpacing: 3, lineHeight: 48, textShadowColor: 'rgba(255,184,0,0.30)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 },
-  displayXL:  { fontSize: 32, fontWeight: '800', letterSpacing: 2, lineHeight: 38, textShadowColor: 'rgba(255,184,0,0.28)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
-  title1: { fontSize: 26, fontWeight: '800', letterSpacing: 1.5, lineHeight: 32, textShadowColor: 'rgba(255,184,0,0.22)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
-  title2: { fontSize: 22, fontWeight: '700', letterSpacing: 1,   lineHeight: 28, textShadowColor: 'rgba(255,184,0,0.18)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
-  title3: { fontSize: 18, fontWeight: '700', letterSpacing: 0.8, lineHeight: 24, textShadowColor: 'rgba(255,184,0,0.15)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+  displayXXL: { fontSize: 40, fontWeight: '900', letterSpacing: 3, lineHeight: 48, ...textShadow('rgba(255,184,0,0.30)', { width: 0, height: 2 }, 10) },
+  displayXL:  { fontSize: 32, fontWeight: '800', letterSpacing: 2, lineHeight: 38, ...textShadow('rgba(255,184,0,0.28)', { width: 0, height: 2 }, 8) },
+  title1: { fontSize: 26, fontWeight: '800', letterSpacing: 1.5, lineHeight: 32, ...textShadow('rgba(255,184,0,0.22)', { width: 0, height: 1 }, 6) },
+  title2: { fontSize: 22, fontWeight: '700', letterSpacing: 1,   lineHeight: 28, ...textShadow('rgba(255,184,0,0.18)', { width: 0, height: 1 }, 5) },
+  title3: { fontSize: 18, fontWeight: '700', letterSpacing: 0.8, lineHeight: 24, ...textShadow('rgba(255,184,0,0.15)', { width: 0, height: 1 }, 4) },
   body:   { fontSize: 15, fontWeight: '400', letterSpacing: 0.2, lineHeight: 24 },
   bodyMd: { fontSize: 14, fontWeight: '400', letterSpacing: 0.1, lineHeight: 22 },
   bodySm: { fontSize: 13, fontWeight: '400', letterSpacing: 0,   lineHeight: 20 },
   label:  { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, lineHeight: 16, textTransform: 'uppercase' },
   caption:{ fontSize: 11, fontWeight: '500', letterSpacing: 0.8, lineHeight: 16 },
-  statLg: { fontSize: 36, fontWeight: '800', letterSpacing: -0.5, lineHeight: 42, textShadowColor: 'rgba(255,184,0,0.30)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 },
-  statMd: { fontSize: 28, fontWeight: '700', letterSpacing: -0.3, lineHeight: 34, textShadowColor: 'rgba(255,184,0,0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
-  statSm: { fontSize: 20, fontWeight: '700', letterSpacing: 0,    lineHeight: 26, textShadowColor: 'rgba(255,184,0,0.20)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
+  statLg: { fontSize: 36, fontWeight: '800', letterSpacing: -0.5, lineHeight: 42, ...textShadow('rgba(255,184,0,0.30)', { width: 0, height: 2 }, 10) },
+  statMd: { fontSize: 28, fontWeight: '700', letterSpacing: -0.3, lineHeight: 34, ...textShadow('rgba(255,184,0,0.25)', { width: 0, height: 1 }, 8) },
+  statSm: { fontSize: 20, fontWeight: '700', letterSpacing: 0,    lineHeight: 26, ...textShadow('rgba(255,184,0,0.20)', { width: 0, height: 1 }, 6) },
   sinhalaBody: { fontSize: 15, fontWeight: '400', letterSpacing: 0.3, lineHeight: 28 },
   sinhalaSm:   { fontSize: 13, fontWeight: '400', letterSpacing: 0.2, lineHeight: 22 },
   sinhalaMd:   { fontSize: 14, fontWeight: '500', letterSpacing: 0.2, lineHeight: 24 },

@@ -1,18 +1,28 @@
 /**
- * Full Jyotish Report Screen
+ * Full Jyotish Report Screen — "Cosmic Reveal" Edition
  * 
- * Premium 14-section comprehensive astrology report with
- * collapsible cards, color-coded indicators, timeline view,
- * and cosmic design language.
+ * Dopamine-inducing progressive reveal design with:
+ * - Dramatic hero score card with animated rings
+ * - Hook-line teasers that pull users into each section
+ * - Animated strength meters and rare-trait badges
+ * - Visual timeline milestones with golden dots
+ * - Key prediction spotlight callouts
+ * - Progressive unlock animations on scroll
+ * - Score badges on every section header
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  StyleSheet, Platform, Alert, ActivityIndicator,
+  StyleSheet, Platform, Alert, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, useAnimatedScrollHandler, withRepeat, withTiming, withSequence, interpolate } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown, FadeIn, FadeInUp, FadeInRight, ZoomIn, SlideInRight,
+  useSharedValue, useAnimatedStyle, useAnimatedScrollHandler,
+  withRepeat, withTiming, withSequence, withDelay, withSpring,
+  interpolate, Easing, runOnJS,
+} from 'react-native-reanimated';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
@@ -21,44 +31,51 @@ import SriLankanChart from '../../components/SriLankanChart';
 import SpringPressable from '../../components/effects/SpringPressable';
 import { DatePickerField, TimePickerField } from '../../components/CosmicDateTimePicker';
 import CitySearchPicker from '../../components/CitySearchPicker';
-import { generateReportHTML } from '../../utils/pdfReportGenerator';
+import { generateReportHTML, loadLogoBase64 } from '../../utils/pdfReportGenerator';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePricing } from '../../contexts/PricingContext';
 import api from '../../services/api';
-import ThemedAuroraNebula from '../../components/effects/ThemedAuroraNebula';
-import ThemedNebulaBg from '../../components/effects/ThemedNebulaBg';
+import { boxShadow, textShadow } from '../../utils/shadow';
+
+var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
+var MAX_SAVED_REPORTS = 20;
+
+var { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ──────────────────────────────────────────
-// Section icons & gradient colors
+// Section icons, gradients & dopamine config
 // ──────────────────────────────────────────
 var SECTION_META = {
-  personality:      { colors: ['#3B82F6', '#1E3A8A'], emoji: '✨', gradient: ['#818CF8', '#3B82F6'] },
-  yogaAnalysis:     { colors: ['#9333EA', '#581C87'], emoji: '⚡', gradient: ['#FF8C00', '#9333EA'] },
-  lifePredictions:  { colors: ['#8B5CF6', '#4C1D95'], emoji: '🔮', gradient: ['#A78BFA', '#8B5CF6'] },
-  career:           { colors: ['#F59E0B', '#92400E'], emoji: '💼', gradient: ['#FFB800', '#F59E0B'] },
-  marriage:         { colors: ['#EC4899', '#831843'], emoji: '💍', gradient: ['#F9A8D4', '#EC4899'] },
-  marriedLife:      { colors: ['#E11D48', '#881337'], emoji: '🏠', gradient: ['#FDA4AF', '#E11D48'] },
-  financial:        { colors: ['#22C55E', '#14532D'], emoji: '💰', gradient: ['#4ADE80', '#22C55E'] },
-  children:         { colors: ['#10B981', '#064E3B'], emoji: '👶', gradient: ['#34D399', '#10B981'] },
-  familyPortrait:   { colors: ['#0EA5E9', '#0C4A6E'], emoji: '👨‍👩‍👧‍👦', gradient: ['#38BDF8', '#0EA5E9'] },
-  health:           { colors: ['#EF4444', '#7F1D1D'], emoji: '🏥', gradient: ['#FCA5A5', '#EF4444'] },
-  mentalHealth:     { colors: ['#06B6D4', '#0E7490'], emoji: '🧠', gradient: ['#67E8F9', '#06B6D4'] },
-  foreignTravel:    { colors: ['#6366F1', '#312E81'], emoji: '✈️', gradient: ['#A5B4FC', '#6366F1'] },
-  education:        { colors: ['#7C3AED', '#4C1D95'], emoji: '🎓', gradient: ['#A78BFA', '#7C3AED'] },
-  luck:             { colors: ['#FFB800', '#78350F'], emoji: '🎰', gradient: ['#FDE68A', '#FFB800'] },
-  legal:            { colors: ['#64748B', '#1E293B'], emoji: '⚖️', gradient: ['#94A3B8', '#64748B'] },
-  spiritual:        { colors: ['#A855F7', '#581C87'], emoji: '🙏', gradient: ['#D8B4FE', '#A855F7'] },
-  realEstate:       { colors: ['#84CC16', '#365314'], emoji: '🏡', gradient: ['#BEF264', '#84CC16'] },
-  transits:         { colors: ['#14B8A6', '#134E4A'], emoji: '🌍', gradient: ['#5EEAD4', '#14B8A6'] },
-  surpriseInsights: { colors: ['#F97316', '#9A3412'], emoji: '🤯', gradient: ['#FDBA74', '#F97316'] },
-  timeline25:       { colors: ['#6366F1', '#312E81'], emoji: '📅', gradient: ['#A5B4FC', '#6366F1'] },
-  remedies:         { colors: ['#FFB800', '#78350F'], emoji: '💎', gradient: ['#FDE68A', '#FFB800'] },
+  personality:      { colors: ['#3B82F6', '#1E3A8A'], emoji: '✨', gradient: ['#818CF8', '#3B82F6'], icon: 'person-outline', scoreKey: 'personality' },
+  yogaAnalysis:     { colors: ['#9333EA', '#581C87'], emoji: '⚡', gradient: ['#FF8C00', '#9333EA'], icon: 'flash-outline', scoreKey: 'yogas' },
+  lifePredictions:  { colors: ['#8B5CF6', '#4C1D95'], emoji: '🔮', gradient: ['#A78BFA', '#8B5CF6'], icon: 'telescope-outline', scoreKey: 'destiny' },
+  career:           { colors: ['#F59E0B', '#92400E'], emoji: '💼', gradient: ['#FFB800', '#F59E0B'], icon: 'briefcase-outline', scoreKey: 'career' },
+  marriage:         { colors: ['#EC4899', '#831843'], emoji: '💍', gradient: ['#F9A8D4', '#EC4899'], icon: 'heart-outline', scoreKey: 'love' },
+  marriedLife:      { colors: ['#E11D48', '#881337'], emoji: '🏠', gradient: ['#FDA4AF', '#E11D48'], icon: 'home-outline', scoreKey: 'marriage' },
+  financial:        { colors: ['#22C55E', '#14532D'], emoji: '💰', gradient: ['#4ADE80', '#22C55E'], icon: 'cash-outline', scoreKey: 'wealth' },
+  children:         { colors: ['#10B981', '#064E3B'], emoji: '👶', gradient: ['#34D399', '#10B981'], icon: 'happy-outline', scoreKey: 'children' },
+  familyPortrait:   { colors: ['#0EA5E9', '#0C4A6E'], emoji: '👨‍👩‍👧‍👦', gradient: ['#38BDF8', '#0EA5E9'], icon: 'people-outline', scoreKey: 'family' },
+  health:           { colors: ['#EF4444', '#7F1D1D'], emoji: '🏥', gradient: ['#FCA5A5', '#EF4444'], icon: 'fitness-outline', scoreKey: 'health' },
+  physicalProfile:  { colors: ['#D946EF', '#86198F'], emoji: '🪞', gradient: ['#F0ABFC', '#D946EF'], icon: 'body-outline', scoreKey: 'physical' },
+  attractionProfile:{ colors: ['#F43F5E', '#9F1239'], emoji: '💘', gradient: ['#FDA4AF', '#F43F5E'], icon: 'flame-outline', scoreKey: 'attraction' },
+  mentalHealth:     { colors: ['#06B6D4', '#0E7490'], emoji: '🧠', gradient: ['#67E8F9', '#06B6D4'], icon: 'bulb-outline', scoreKey: 'mind' },
+  foreignTravel:    { colors: ['#6366F1', '#312E81'], emoji: '✈️', gradient: ['#A5B4FC', '#6366F1'], icon: 'airplane-outline', scoreKey: 'travel' },
+  education:        { colors: ['#7C3AED', '#4C1D95'], emoji: '🎓', gradient: ['#A78BFA', '#7C3AED'], icon: 'school-outline', scoreKey: 'education' },
+  luck:             { colors: ['#FFB800', '#78350F'], emoji: '🎰', gradient: ['#FDE68A', '#FFB800'], icon: 'diamond-outline', scoreKey: 'luck' },
+  legal:            { colors: ['#64748B', '#1E293B'], emoji: '⚖️', gradient: ['#94A3B8', '#64748B'], icon: 'shield-outline', scoreKey: 'protection' },
+  spiritual:        { colors: ['#A855F7', '#581C87'], emoji: '🙏', gradient: ['#D8B4FE', '#A855F7'], icon: 'sparkles-outline', scoreKey: 'spiritual' },
+  realEstate:       { colors: ['#84CC16', '#365314'], emoji: '🏡', gradient: ['#BEF264', '#84CC16'], icon: 'business-outline', scoreKey: 'property' },
+  transits:         { colors: ['#14B8A6', '#134E4A'], emoji: '🌍', gradient: ['#5EEAD4', '#14B8A6'], icon: 'planet-outline', scoreKey: 'transits' },
+  surpriseInsights: { colors: ['#F97316', '#9A3412'], emoji: '🤯', gradient: ['#FDBA74', '#F97316'], icon: 'eye-outline', scoreKey: 'surprise' },
+  timeline25:       { colors: ['#6366F1', '#312E81'], emoji: '📅', gradient: ['#A5B4FC', '#6366F1'], icon: 'calendar-outline', scoreKey: 'timeline' },
+  remedies:         { colors: ['#FFB800', '#78350F'], emoji: '💎', gradient: ['#FDE68A', '#FFB800'], icon: 'color-wand-outline', scoreKey: 'remedies' },
 };
 
 var SECTION_KEYS = [
   'personality', 'yogaAnalysis', 'lifePredictions', 'career', 'marriage', 'marriedLife', 'financial',
-  'children', 'familyPortrait', 'health', 'mentalHealth', 'foreignTravel', 'education', 'luck',
+  'children', 'familyPortrait', 'health', 'physicalProfile', 'attractionProfile', 'mentalHealth', 'foreignTravel', 'education', 'luck',
   'legal', 'spiritual', 'realEstate', 'transits', 'surpriseInsights', 'timeline25', 'remedies',
 ];
 
@@ -73,6 +90,8 @@ var SECTION_TITLES = {
   children: 'reportChildren',
   familyPortrait: 'reportFamilyPortrait',
   health: 'reportHealth',
+  physicalProfile: 'reportPhysicalProfile',
+  attractionProfile: 'reportAttractionProfile',
   mentalHealth: 'reportMentalHealth',
   foreignTravel: 'reportForeignTravel',
   education: 'reportEducation',
@@ -94,11 +113,10 @@ function AuraBox({ children, style }) {
     <View style={[gs.box, style]}>
       <LinearGradient
         colors={['rgba(20, 12, 50, 0.55)', 'rgba(10, 6, 28, 0.65)']}
-        style={StyleSheet.absoluteFill}
+        style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        pointerEvents="none"
       />
-      <View style={gs.innerGlow} pointerEvents="none" />
+      <View style={[gs.innerGlow, { pointerEvents: 'none' }]} />
       {children}
     </View>
   );
@@ -107,8 +125,7 @@ var gs = StyleSheet.create({
   box: {
     borderRadius: 20, overflow: 'hidden', borderWidth: 1,
     borderColor: 'rgba(255, 184, 0, 0.10)', padding: 16, marginBottom: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 10, elevation: 5,
+    ...boxShadow('#000', { width: 0, height: 4 }, 0.3, 10), elevation: 5,
   },
   innerGlow: {
     ...StyleSheet.absoluteFillObject,
@@ -117,67 +134,431 @@ var gs = StyleSheet.create({
 });
 
 // ══════════════════════════════════════════
-// COLLAPSIBLE SECTION CARD
+// EXTRACT HOOK LINE — grabs first compelling sentence from narrative
 // ══════════════════════════════════════════
-function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang }) {
-  var [expanded, setExpanded] = useState(index < 3); // First 3 open by default
+function extractHookLine(narrative, sectionKey) {
+  if (!narrative) return null;
+  // Strip markdown formatting for hook
+  var clean = narrative.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#+\s*/gm, '').replace(/^>\s*/gm, '').replace(/^[-•]\s*/gm, '');
+  var sentences = clean.split(/[.!?]\s+/).filter(function(s) { return s.trim().length > 20 && s.trim().length < 200; });
+  // Find the most hook-worthy sentence (contains specific dates, numbers, or strong language)
+  var hookPatterns = /\d{4}|\d+%|\d+ years|powerful|extraordinary|rare|unique|exceptional|remarkable|unusual|hidden|secret|surprising|shocking|incredible/i;
+  for (var i = 0; i < Math.min(sentences.length, 8); i++) {
+    if (hookPatterns.test(sentences[i])) {
+      var hook = sentences[i].trim();
+      if (!hook.endsWith('.') && !hook.endsWith('!') && !hook.endsWith('?')) hook += '...';
+      return hook;
+    }
+  }
+  // Fallback: use first sentence if it's substantial
+  if (sentences.length > 0) {
+    var hook = sentences[0].trim();
+    if (!hook.endsWith('.') && !hook.endsWith('!') && !hook.endsWith('?')) hook += '...';
+    return hook;
+  }
+  return null;
+}
+
+// ══════════════════════════════════════════
+// EXTRACT SCORE from raw section data
+// ══════════════════════════════════════════
+function extractSectionScore(sectionKey, rawData) {
+  if (!rawData) return null;
+  var score = null;
+  // Try to extract meaningful scores from different section types
+  switch (sectionKey) {
+    case 'marriage':
+    case 'marriedLife':
+      score = rawData.seventhHouse?.strengthScore;
+      if (!score && rawData.marriageAfflictions) {
+        score = 100 - (rawData.marriageAfflictions.severityScore || 0);
+      }
+      break;
+    case 'career':
+      score = rawData.tenthHouse?.strengthScore;
+      break;
+    case 'health':
+      score = rawData.sixthHouse?.strengthScore || rawData.eighthHouse?.strengthScore || rawData.firstHouse?.strengthScore;
+      break;
+    case 'financial':
+      score = rawData.income?.secondHouse?.strengthScore || rawData.income?.eleventhHouse?.strengthScore || rawData.secondHouse?.strengthScore;
+      break;
+    case 'education':
+      score = rawData.fourthHouse?.strengthScore || rawData.fifthHouse?.strengthScore;
+      break;
+    case 'children':
+      score = rawData.fifthHouse?.strengthScore;
+      break;
+    case 'foreignTravel':
+      score = rawData.ninthHouse?.strengthScore || rawData.twelfthHouse?.strengthScore;
+      break;
+    case 'luck':
+      score = rawData.ninthHouse?.strengthScore;
+      break;
+    case 'spiritual':
+      score = rawData.twelfthHouse?.strengthScore;
+      break;
+    default:
+      break;
+  }
+  if (score != null) return Math.min(100, Math.max(0, Math.round(score)));
+  return null;
+}
+
+// ══════════════════════════════════════════
+// EXTRACT KEY STATS from section data
+// ══════════════════════════════════════════
+function extractKeyStats(sectionKey, rawData, reportLang) {
+  if (!rawData) return [];
+  var stats = [];
+  var isSi = reportLang === 'si';
+  switch (sectionKey) {
+    case 'marriage':
+      if (rawData.marriageTimingPrediction?.bestWindow?.dateRange) stats.push({ label: isSi ? 'හොඳම කාලය' : 'Best Window', value: rawData.marriageTimingPrediction.bestWindow.dateRange, icon: '💫' });
+      if (rawData.marriageAfflictions?.likelihood) stats.push({ label: isSi ? 'සම්භාවිතාව' : 'Likelihood', value: rawData.marriageAfflictions.likelihood, icon: '📊' });
+      if (rawData.secondMarriage?.divorceRisk) stats.push({ label: isSi ? 'දික්කසාද අවදානම' : 'Divorce Risk', value: rawData.secondMarriage.divorceRisk.split('—')[0].trim(), icon: '⚠️' });
+      break;
+    case 'marriedLife':
+      if (rawData.navamshaAnalysis?.marriageStrength) stats.push({ label: isSi ? 'විවාහ ශක්තිය' : 'Marriage Quality', value: rawData.navamshaAnalysis.marriageStrength, icon: '💍' });
+      if (rawData.secondMarriage?.probability) stats.push({ label: isSi ? 'දෙවන විවාහය' : '2nd Marriage', value: rawData.secondMarriage.probability.split('—')[0].trim(), icon: '💔' });
+      if (rawData.secondMarriage?.divorceRisk) stats.push({ label: isSi ? 'දික්කසාද අවදානම' : 'Divorce Risk', value: rawData.secondMarriage.divorceRisk.split('—')[0].trim(), icon: '⚠️' });
+      break;
+    case 'career':
+      if (rawData.suggestedCareers?.length) stats.push({ label: isSi ? 'හොඳම ක්ෂේත්‍ර' : 'Top Field', value: rawData.suggestedCareers[0], icon: '🎯' });
+      if (rawData.nadiCareer?.careerType) {
+        var careerType = typeof rawData.nadiCareer.careerType === 'object' ? rawData.nadiCareer.careerType.type : rawData.nadiCareer.careerType;
+        stats.push({ label: isSi ? 'වර්ගය' : 'Type', value: careerType, icon: '💼' });
+      }
+      if (rawData.nadiCareer?.serviceStrength || rawData.nadiCareer?.businessStrength) {
+        var svc = rawData.nadiCareer.serviceStrength || '';
+        var biz = rawData.nadiCareer.businessStrength || '';
+        stats.push({ label: isSi ? 'ව්‍යාපාර/සේවය' : 'Biz/Service', value: biz + '/' + svc, icon: '📈' });
+      }
+      break;
+    case 'health':
+      if (rawData.nadiHealth?.longevityEstimate?.estimatedYears) stats.push({ label: isSi ? 'ආයුෂ' : 'Longevity', value: rawData.nadiHealth.longevityEstimate.estimatedYears + (isSi ? ' වසර' : ' yrs'), icon: '❤️' });
+      if (rawData.nadiHealth?.longevityStrength) stats.push({ label: isSi ? 'ශක්තිය' : 'Vitality', value: rawData.nadiHealth.longevityStrength, icon: '💪' });
+      break;
+    case 'children':
+      if (rawData.estimatedChildren?.count != null) stats.push({ label: isSi ? 'දරු සංඛ්‍යාව' : 'Children', value: String(rawData.estimatedChildren.count), icon: '👶' });
+      if (rawData.nadiChildren?.strength) stats.push({ label: isSi ? 'නාඩි' : 'Nadi', value: rawData.nadiChildren.strength, icon: '🔮' });
+      break;
+    case 'education':
+      if (rawData.nadiEducation?.overallGrade) stats.push({ label: isSi ? 'ශ්‍රේණිය' : 'Grade', value: rawData.nadiEducation.overallGrade, icon: '📚' });
+      if (rawData.nadiEducation?.suggestedFields?.length) stats.push({ label: isSi ? 'ක්ෂේත්‍රය' : 'Field', value: rawData.nadiEducation.suggestedFields[0], icon: '🎯' });
+      break;
+    case 'foreignTravel':
+      if (rawData.nadiForeignTravel?.strength) stats.push({ label: isSi ? 'සම්භාවිතාව' : 'Chance', value: rawData.nadiForeignTravel.strength, icon: '✈️' });
+      break;
+    case 'luck':
+      if (rawData.nadiLuck?.windfallStrength) stats.push({ label: isSi ? 'වාසනාව' : 'Windfall', value: rawData.nadiLuck.windfallStrength, icon: '🍀' });
+      if (rawData.nadiLuck?.wealthStrength) stats.push({ label: isSi ? 'සම්පත' : 'Wealth', value: rawData.nadiLuck.wealthStrength, icon: '💎' });
+      break;
+    case 'surpriseInsights':
+      if (rawData.secondMarriage?.probability) stats.push({ label: isSi ? 'දෙවන විවාහය' : '2nd Marriage', value: rawData.secondMarriage.probability.split('—')[0].trim(), icon: '💔' });
+      if (rawData.secondMarriage?.divorceRisk) stats.push({ label: isSi ? 'දික්කසාද' : 'Divorce', value: rawData.secondMarriage.divorceRisk.split('—')[0].trim(), icon: '⚠️' });
+      if (rawData.famePotential?.level) stats.push({ label: isSi ? 'ප්‍රසිද්ධිය' : 'Fame', value: rawData.famePotential.level, icon: '⭐' });
+      break;
+    default:
+      break;
+  }
+  return stats.slice(0, 3); // Max 3 stats per section
+}
+
+// ══════════════════════════════════════════
+// ANIMATED SCORE RING
+// ══════════════════════════════════════════
+function ScoreRing({ score, size, color, delay: delayMs }) {
+  var animVal = useSharedValue(0);
+  useEffect(function() {
+    animVal.value = withDelay(delayMs || 300, withTiming(score / 100, { duration: 1200, easing: Easing.bezierFn(0.25, 0.1, 0.25, 1) }));
+  }, [score]);
+
+  var circumference = 2 * Math.PI * ((size - 6) / 2);
+  var ringStyle = useAnimatedStyle(function() {
+    return { opacity: interpolate(animVal.value, [0, 0.1], [0, 1]) };
+  });
+
+  var getColor = function(s) {
+    if (s >= 75) return '#10B981';
+    if (s >= 55) return '#3B82F6';
+    if (s >= 35) return '#FBBF24';
+    return '#EF4444';
+  };
+  var scoreColor = color || getColor(score);
+  var label = score >= 80 ? '🔥' : score >= 60 ? '✨' : score >= 40 ? '💫' : '⚡';
+
+  return (
+    <Animated.View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, ringStyle]}>
+      {/* Background ring */}
+      <View style={{
+        position: 'absolute', width: size, height: size, borderRadius: size / 2,
+        borderWidth: 3, borderColor: 'rgba(255,255,255,0.06)',
+      }} />
+      {/* Score ring — using a simple progress bar visual instead of SVG */}
+      <View style={{
+        position: 'absolute', width: size, height: size, borderRadius: size / 2,
+        borderWidth: 3, borderColor: scoreColor,
+        opacity: 0.8,
+      }} />
+      <Text style={{ fontSize: size * 0.28, fontWeight: '900', color: scoreColor }}>{score}</Text>
+      <Text style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)', marginTop: -2 }}>{label}</Text>
+    </Animated.View>
+  );
+}
+
+// ══════════════════════════════════════════
+// STAT BADGE — small key metric chip
+// ══════════════════════════════════════════
+function StatBadge({ stat, index }) {
+  return (
+    <Animated.View entering={FadeInRight.delay(200 + index * 100).duration(400)} style={stb.wrap}>
+      <LinearGradient
+        colors={['rgba(255,184,0,0.10)', 'rgba(255,184,0,0.04)']}
+        style={stb.inner}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      >
+        <Text style={stb.icon}>{stat.icon}</Text>
+        <View style={stb.textWrap}>
+          <Text style={stb.label} numberOfLines={1}>{stat.label}</Text>
+          <Text style={stb.value} numberOfLines={1}>{stat.value}</Text>
+        </View>
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+var stb = StyleSheet.create({
+  wrap: { marginRight: 8, marginBottom: 6 },
+  inner: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)' },
+  icon: { fontSize: 14, marginRight: 6 },
+  textWrap: { flexShrink: 1 },
+  label: { fontSize: 9, color: 'rgba(255,214,102,0.45)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  value: { fontSize: 12, color: '#FFE8B0', fontWeight: '700', marginTop: 1 },
+});
+
+// ══════════════════════════════════════════
+// STRENGTH BAR — animated horizontal meter
+// ══════════════════════════════════════════
+function StrengthBar({ label, value, color, delay: delayMs }) {
+  var animWidth = useSharedValue(0);
+  useEffect(function() {
+    animWidth.value = withDelay(delayMs || 200, withSpring(value, { damping: 15, stiffness: 80 }));
+  }, [value]);
+
+  var barStyle = useAnimatedStyle(function() {
+    return { width: animWidth.value + '%' };
+  });
+
+  return (
+    <View style={sbr.wrap}>
+      <View style={sbr.labelRow}>
+        <Text style={sbr.label}>{label}</Text>
+        <Text style={[sbr.score, { color: color || '#FFB800' }]}>{value}%</Text>
+      </View>
+      <View style={sbr.track}>
+        <Animated.View style={[sbr.fill, barStyle]}>
+          <LinearGradient
+            colors={[color || '#FFB800', (color || '#FFB800') + '80']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          />
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
+var sbr = StyleSheet.create({
+  wrap: { marginBottom: 8 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  label: { fontSize: 11, color: 'rgba(255,214,102,0.55)', fontWeight: '600' },
+  score: { fontSize: 11, fontWeight: '800' },
+  track: { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 2, overflow: 'hidden' },
+});
+
+// ══════════════════════════════════════════
+// COLLAPSIBLE SECTION CARD — Dopamine Edition
+// ══════════════════════════════════════════
+function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang, rawData }) {
+  var [expanded, setExpanded] = useState(false);
+  var [revealed, setRevealed] = useState(false);
   var meta = SECTION_META[sectionKey] || {};
   var isSi = reportLang === 'si';
-  // When Sinhala, always use i18n title; otherwise prefer AI title, fallback to i18n
   var i18nTitle = t(SECTION_TITLES[sectionKey]);
   var title = isSi ? (i18nTitle || aiNarrative?.title || sectionKey) : (aiNarrative?.title || i18nTitle || sectionKey);
 
-  // If no AI narrative available, skip this section entirely
   if (!aiNarrative?.narrative) return null;
 
+  // Extract dopamine elements
+  var hookLine = useMemo(function() { return extractHookLine(aiNarrative.narrative, sectionKey); }, [aiNarrative.narrative, sectionKey]);
+  var score = useMemo(function() { return extractSectionScore(sectionKey, rawData); }, [sectionKey, rawData]);
+  var keyStats = useMemo(function() { return extractKeyStats(sectionKey, rawData, reportLang); }, [sectionKey, rawData, reportLang]);
+
+  // Word count for reading time
+  var wordCount = aiNarrative.narrative ? aiNarrative.narrative.split(/\s+/).length : 0;
+  var readTime = Math.max(1, Math.ceil(wordCount / 200));
+
+  var handleExpand = function() {
+    if (!expanded) {
+      setExpanded(true);
+      // Delay the "revealed" state for dramatic effect
+      setTimeout(function() { setRevealed(true); }, 100);
+    } else {
+      setExpanded(!expanded);
+    }
+  };
+
+  var sectionNumber = String(index + 1).padStart(2, '0');
+
   return (
-    <Animated.View entering={FadeInDown.delay(100 + index * 60).duration(600)}>
-      <SpringPressable haptic="light" scalePressed={0.97} onPress={function() { setExpanded(!expanded); }}>
-        <AuraBox style={{ padding: 0 }}>
-          {/* Header */}
-          <View style={sc.header}>
-            <LinearGradient
-              colors={meta.gradient || meta.colors || ['#333', '#111']}
-              style={sc.iconBg}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            >
-              <Text style={sc.emoji}>{meta.emoji || '📋'}</Text>
-            </LinearGradient>
-            <View style={{ flex: 1 }}>
-              <Text style={sc.title} numberOfLines={2}>{title}</Text>
+    <Animated.View entering={FadeInDown.delay(100 + index * 80).duration(600).springify()}>
+      <View style={sc.outerWrap}>
+        {/* Section number badge — floating left */}
+        <Animated.View entering={ZoomIn.delay(200 + index * 80).duration(400)} style={sc.sectionNumBadge}>
+          <Text style={sc.sectionNumText}>{sectionNumber}</Text>
+        </Animated.View>
+
+        <AuraBox style={[sc.cardBox, expanded && sc.cardBoxExpanded]}>
+          {/* Accent top border glow */}
+          <LinearGradient
+            colors={[...(meta.gradient || meta.colors || ['#333', '#111']), 'transparent']}
+            style={sc.topGlow}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          />
+
+          {/* ─── Header ─── */}
+          <SpringPressable haptic="light" scalePressed={0.98} onPress={handleExpand}>
+            <View style={sc.header}>
+              <LinearGradient
+                colors={meta.gradient || meta.colors || ['#333', '#111']}
+                style={sc.iconBg}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              >
+                <Text style={sc.emoji}>{meta.emoji || '📋'}</Text>
+              </LinearGradient>
+              <View style={{ flex: 1 }}>
+                <Text style={sc.title} numberOfLines={2}>{title}</Text>
+                {!expanded && hookLine && (
+                  <Animated.Text entering={FadeIn.duration(600)} style={sc.hookLine} numberOfLines={2}>
+                    {hookLine}
+                  </Animated.Text>
+                )}
+              </View>
+              <View style={sc.rightCol}>
+                {/* Score ring */}
+                {score != null && (
+                  <ScoreRing score={score} size={36} delay={300 + index * 80} />
+                )}
+                <View style={[sc.chevronBg, expanded && sc.chevronBgActive]}>
+                  <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={expanded ? '#FF8C00' : 'rgba(255,255,255,0.3)'} />
+                </View>
+              </View>
             </View>
-            <View style={[sc.chevronBg, expanded && sc.chevronBgActive]}>
-              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={expanded ? '#FF8C00' : 'rgba(255,255,255,0.4)'} />
+          </SpringPressable>
+
+          {/* ─── Preview Stats (always visible) ─── */}
+          {!expanded && keyStats.length > 0 && (
+            <View style={sc.statsRow}>
+              {keyStats.map(function(stat, i) {
+                return <StatBadge key={i} stat={stat} index={i} />;
+              })}
             </View>
-          </View>
-          {/* Content — AI Narrative Only */}
+          )}
+
+          {/* ─── Tap to read prompt ─── */}
+          {!expanded && (
+            <SpringPressable haptic="light" onPress={handleExpand} style={sc.readMoreBtn}>
+              <LinearGradient
+                colors={['rgba(255,140,0,0.08)', 'rgba(255,140,0,0.02)']}
+                style={sc.readMoreGrad}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              >
+                <Ionicons name="book-outline" size={12} color="#FF8C00" />
+                <Text style={sc.readMoreText}>
+                  {isSi ? 'කියවන්න · විනාඩි ' + readTime : 'Read · ' + readTime + ' min'}
+                </Text>
+                <Ionicons name="chevron-forward" size={12} color="rgba(255,140,0,0.5)" />
+              </LinearGradient>
+            </SpringPressable>
+          )}
+
+          {/* ─── Expanded Content ─── */}
           {expanded && (
-            <View style={sc.content}>
+            <Animated.View entering={FadeInDown.duration(500)} style={sc.content}>
               <View style={sc.divider} />
+
+              {/* Key stats bar at top of content */}
+              {keyStats.length > 0 && (
+                <View style={sc.statsRowExpanded}>
+                  {keyStats.map(function(stat, i) {
+                    return <StatBadge key={i} stat={stat} index={i} />;
+                  })}
+                </View>
+              )}
+
+              {/* Score bar if available */}
+              {score != null && (
+                <Animated.View entering={FadeInDown.delay(200).duration(400)} style={sc.scoreBarWrap}>
+                  <StrengthBar
+                    label={isSi ? 'මෙම ක්ෂේත්‍රයේ ශක්තිය' : 'Strength in this area'}
+                    value={score}
+                    color={(meta.gradient || meta.colors || ['#FFB800'])[0]}
+                    delay={300}
+                  />
+                </Animated.View>
+              )}
+
+              {/* Main narrative */}
               <View style={sc.narrativeWrap}>
                 <MarkdownText>{aiNarrative.narrative}</MarkdownText>
               </View>
-            </View>
+
+              {/* Collapse button at bottom */}
+              <SpringPressable haptic="light" onPress={function() { setExpanded(false); }} style={sc.collapseBtn}>
+                <Ionicons name="chevron-up" size={14} color="rgba(255,140,0,0.6)" />
+                <Text style={sc.collapseText}>{isSi ? 'හකුලන්න' : 'Collapse'}</Text>
+              </SpringPressable>
+            </Animated.View>
           )}
         </AuraBox>
-      </SpringPressable>
+      </View>
     </Animated.View>
   );
 }
 
 var sc = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16 },
-  iconBg: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  emoji: { fontSize: 22 },
-  title: { color: '#FFE8B0', fontSize: 15, fontWeight: '700', lineHeight: 21 },
-  chevronBg: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
+  outerWrap: { position: 'relative', marginBottom: 4 },
+  sectionNumBadge: {
+    position: 'absolute', left: -4, top: 14, zIndex: 10, width: 22, height: 22, borderRadius: 11,
+    backgroundColor: 'rgba(255,140,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,140,0,0.3)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sectionNumText: { fontSize: 9, fontWeight: '900', color: '#FF8C00' },
+  cardBox: { padding: 0, marginLeft: 12, borderColor: 'rgba(255,184,0,0.08)' },
+  cardBoxExpanded: { borderColor: 'rgba(255,140,0,0.20)' },
+  topGlow: { height: 2, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 14, paddingBottom: 8 },
+  iconBg: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  emoji: { fontSize: 20 },
+  title: { color: '#FFE8B0', fontSize: 14, fontWeight: '800', lineHeight: 20 },
+  hookLine: { color: 'rgba(255,214,102,0.50)', fontSize: 12, lineHeight: 17, marginTop: 3, fontStyle: 'italic' },
+  rightCol: { alignItems: 'center', gap: 4 },
+  chevronBg: { width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', alignItems: 'center', justifyContent: 'center' },
   chevronBgActive: { backgroundColor: 'rgba(255,140,0,0.15)' },
-  content: { paddingHorizontal: 16, paddingBottom: 16 },
+  statsRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14, paddingBottom: 8 },
+  statsRowExpanded: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 },
+  readMoreBtn: { marginHorizontal: 14, marginBottom: 12, borderRadius: 10, overflow: 'hidden' },
+  readMoreGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,140,0,0.12)' },
+  readMoreText: { fontSize: 11, color: '#FF8C00', fontWeight: '700' },
+  content: { paddingHorizontal: 14, paddingBottom: 14 },
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginBottom: 12 },
+  scoreBarWrap: { marginBottom: 12 },
   narrativeWrap: {
     backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12, padding: 14,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)',
   },
+  collapseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: 'rgba(255,140,0,0.06)', borderWidth: 1, borderColor: 'rgba(255,140,0,0.10)' },
+  collapseText: { fontSize: 11, color: 'rgba(255,140,0,0.6)', fontWeight: '600' },
 });
 
 // ══════════════════════════════════════════
@@ -371,6 +752,94 @@ export default function ReportScreen() {
   var [error, setError] = useState(null);
   // Flow states: 'form' -> 'loading' -> 'report'
   var [screenState, setScreenState] = useState('form');
+  var [savedReports, setSavedReports] = useState([]);
+
+  // ── Load saved reports from AsyncStorage on mount ──
+  useEffect(function() {
+    (async function() {
+      try {
+        var stored = await AsyncStorage.getItem(REPORTS_CACHE_KEY);
+        if (stored) {
+          setSavedReports(JSON.parse(stored));
+        }
+      } catch (e) {
+        console.warn('Failed to load saved reports:', e);
+      }
+    })();
+  }, []);
+
+  // Save a report to cache
+  var saveReportToCache = useCallback(async function(reportData) {
+    try {
+      var entry = {
+        id: Date.now().toString(),
+        userName: reportData.userName,
+        birthDate: reportData.birthDate,
+        birthTime: reportData.birthTime,
+        birthLocation: reportData.birthLocation,
+        birthLat: reportData.birthLat,
+        birthLng: reportData.birthLng,
+        reportLang: reportData.reportLang,
+        userGender: reportData.userGender,
+        userReligion: reportData.userReligion,
+        report: reportData.report,
+        aiReport: reportData.aiReport,
+        chartData: reportData.chartData,
+        savedAt: new Date().toISOString(),
+      };
+      var updated = [entry].concat(savedReports).slice(0, MAX_SAVED_REPORTS);
+      await AsyncStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(updated));
+      setSavedReports(updated);
+    } catch (e) {
+      console.warn('Failed to save report:', e);
+    }
+  }, [savedReports]);
+
+  // Delete a saved report
+  var deleteSavedReport = useCallback(async function(reportId) {
+    try {
+      var updated = savedReports.filter(function(r) { return r.id !== reportId; });
+      await AsyncStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(updated));
+      setSavedReports(updated);
+    } catch (e) {
+      console.warn('Failed to delete report:', e);
+    }
+  }, [savedReports]);
+
+  // Load a saved report
+  var loadSavedReport = useCallback(function(entry) {
+    setUserName(entry.userName || '');
+    setBirthDate(entry.birthDate || '1998-10-09');
+    setBirthTime(entry.birthTime || '09:16');
+    setBirthLocation(entry.birthLocation || 'Colombo');
+    setBirthLat(entry.birthLat || 6.9271);
+    setBirthLng(entry.birthLng || 79.8612);
+    setReportLang(entry.reportLang || 'en');
+    setUserGender(entry.userGender || null);
+    setUserReligion(entry.userReligion || null);
+    setReport(entry.report);
+    setAiReport(entry.aiReport);
+    setChartData(entry.chartData);
+    setError(null);
+    setScreenState('report');
+  }, []);
+
+  // Calculate overview scores for Hero Card (must be at top level, not conditional)
+  var overviewScores = useMemo(function() {
+    if (!report) return { average: null, map: {}, count: 0 };
+    var sections = report.sections || {};
+    var scores = [];
+    var scoreMap = {};
+    SECTION_KEYS.forEach(function(key) {
+      var s = extractSectionScore(key, sections[key] || (aiReport?.rawSections || {})[key]);
+      if (s != null) {
+        scores.push(s);
+        scoreMap[key] = s;
+      }
+    });
+    var avg = scores.length > 0 ? Math.round(scores.reduce(function(a, b) { return a + b; }, 0) / scores.length) : null;
+    return { average: avg, map: scoreMap, count: scores.length };
+  }, [report, aiReport]);
 
   // Sync report language when app language changes (only on form screen)
   useEffect(function() {
@@ -403,6 +872,22 @@ export default function ReportScreen() {
         setAiReport(aiRes.data);
       }
       setScreenState('report');
+
+      // Save to cache
+      saveReportToCache({
+        userName: userName,
+        birthDate: dateStr,
+        birthTime: birthTime,
+        birthLocation: birthLocation,
+        birthLat: birthLat,
+        birthLng: birthLng,
+        reportLang: reportLang,
+        userGender: gender,
+        userReligion: userReligion,
+        report: rawRes.data,
+        aiReport: aiRes.data || null,
+        chartData: chartData,
+      });
     } catch (err) {
       var msg = err.message || '';
       setError(msg || 'Failed to generate report');
@@ -524,6 +1009,8 @@ export default function ReportScreen() {
         return isSi ? (t(titleKey) || (narrative && narrative.title) || key) : ((narrative && narrative.title) || t(titleKey) || key);
       });
 
+      var logoB64 = await loadLogoBase64();
+
       var html = generateReportHTML({
         lang: reportLang,
         userName: userName,
@@ -534,10 +1021,12 @@ export default function ReportScreen() {
         nakshatraLabel: nakLabel,
         birthData: bd,
         aiReport: aiReport,
+        report: report,
+        chartData: chartData,
         sectionKeys: SECTION_KEYS,
         sectionTitles: resolvedTitles,
         t: t,
-        logoBase64: null,
+        logoBase64: logoB64,
       });
 
       var fileName = 'NekathAI_Report_' + (userName || 'Report').replace(/\s+/g, '_') + '_' + birthDate + '.pdf';
@@ -573,8 +1062,6 @@ export default function ReportScreen() {
   if (screenState === 'loading') {
     return (
       <View style={{ flex: 1, backgroundColor: '#020C06' }}>
-        <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="green" /></View>
-        <ThemedNebulaBg theme="green" />
         <View style={s.loadingFull}>
           <CosmicLoader userName={userName} language={reportLang} />
         </View>
@@ -584,24 +1071,53 @@ export default function ReportScreen() {
 
   // ── REPORT VIEW (only after AI is done) ──────────────────
   if (screenState === 'report' && report) {
+
+    // Count total sections with content
+    var sectionCount = SECTION_KEYS.filter(function(k) {
+      return aiReport?.narrativeSections?.[k]?.narrative;
+    }).length;
+
+    // Total word count
+    var totalWords = SECTION_KEYS.reduce(function(total, k) {
+      var nar = aiReport?.narrativeSections?.[k]?.narrative;
+      return total + (nar ? nar.split(/\s+/).length : 0);
+    }, 0);
+    var totalReadTime = Math.max(1, Math.ceil(totalWords / 200));
+
     return (
       <DesktopScreenWrapper routeName="report">
       <View style={{ flex: 1, backgroundColor: '#020C06' }}>
-        <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="green" /></View>
-        <ThemedNebulaBg theme="green" />
         <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
           <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
-          {/* Title */}
-          <Animated.View entering={FadeInDown.delay(50).duration(600)}>
-            <Text style={s.title}>{
-              reportLang === 'si'
-                ? (userName ? userName + 'ගේ ජීවිත කතාව ✨' : '✨ ඔයාගේ ජීවිත කතාව')
-                : (userName ? userName + '\'s Life Story' : '✨ Your Life Story')
-            }</Text>
-            <Text style={s.subtitle}>{birthLocation} • {birthDate} • {birthTime}</Text>
+
+          {/* ═══ HERO TITLE ═══ */}
+          <Animated.View entering={FadeInDown.delay(50).duration(800)}>
+            <View style={s.heroTitleWrap}>
+              <Text style={s.heroEmoji}>🌟</Text>
+              <Text style={s.title}>{
+                reportLang === 'si'
+                  ? (userName ? userName + 'ගේ ජීවිත කතාව' : 'ඔයාගේ ජීවිත කතාව')
+                  : (userName ? userName + '\'s Life Story' : 'Your Life Story')
+              }</Text>
+              <Text style={s.subtitle}>{birthLocation} • {birthDate} • {birthTime}</Text>
+              <View style={s.heroStatsRow}>
+                <View style={s.heroStatChip}>
+                  <Ionicons name="document-text-outline" size={12} color="#FF8C00" />
+                  <Text style={s.heroStatText}>{sectionCount} {reportLang === 'si' ? 'කොටස්' : 'chapters'}</Text>
+                </View>
+                <View style={s.heroStatChip}>
+                  <Ionicons name="time-outline" size={12} color="#FF8C00" />
+                  <Text style={s.heroStatText}>{totalReadTime} {reportLang === 'si' ? 'විනාඩි' : 'min read'}</Text>
+                </View>
+                <View style={s.heroStatChip}>
+                  <Ionicons name="text-outline" size={12} color="#FF8C00" />
+                  <Text style={s.heroStatText}>{totalWords.toLocaleString()} {reportLang === 'si' ? 'වචන' : 'words'}</Text>
+                </View>
+              </View>
+            </View>
           </Animated.View>
 
-          {/* New Report Button + Download PDF */}
+          {/* ═══ ACTION BUTTONS ═══ */}
           <Animated.View entering={FadeIn.delay(100).duration(400)}>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
               <SpringPressable style={[s.newReportBtn, { flex: 1, marginBottom: 0 }]} onPress={handleNewReport} haptic="medium">
@@ -615,12 +1131,74 @@ export default function ReportScreen() {
             </View>
           </Animated.View>
 
-          {/* Birth Summary Header */}
-          {report.birthData && (
-            <Animated.View entering={FadeInDown.delay(150).duration(600)}>
-              <AuraBox style={{ borderColor: 'rgba(255,184,0,0.2)' }}>
+          {/* ═══ HERO LIFE SCORE CARD ═══ */}
+          {overviewScores.average != null && (
+            <Animated.View entering={FadeInDown.delay(150).duration(800).springify()}>
+              <AuraBox style={{ borderColor: 'rgba(255,184,0,0.25)', padding: 0 }}>
                 <LinearGradient
-                  colors={['rgba(255,184,0,0.08)', 'transparent']}
+                  colors={['rgba(255,184,0,0.12)', 'rgba(255,140,0,0.04)', 'transparent']}
+                  style={{ padding: 20 }}
+                  start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+                >
+                  {/* Main score */}
+                  <View style={s.heroScoreCenter}>
+                    <View style={s.heroScoreRingOuter}>
+                      <LinearGradient
+                        colors={['rgba(255,184,0,0.20)', 'rgba(255,140,0,0.08)']}
+                        style={s.heroScoreRingInner}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      >
+                        <Animated.Text entering={ZoomIn.delay(400).duration(600)} style={s.heroScoreNum}>
+                          {overviewScores.average}
+                        </Animated.Text>
+                        <Text style={s.heroScoreLabel}>{reportLang === 'si' ? 'සමස්ත ලකුණු' : 'LIFE SCORE'}</Text>
+                      </LinearGradient>
+                    </View>
+                    <Text style={s.heroScoreDesc}>
+                      {overviewScores.average >= 75
+                        ? (reportLang === 'si' ? '🔥 ඔයාගේ උපන් සිතියම අතිශයින්ම ශක්තිමත්!' : '🔥 Your birth chart is exceptionally powerful!')
+                        : overviewScores.average >= 55
+                        ? (reportLang === 'si' ? '✨ ඔයාගේ ජන්ම පත්‍රයේ හොඳ ශක්තියක් තිබෙනවා' : '✨ Your chart carries strong positive energy')
+                        : overviewScores.average >= 35
+                        ? (reportLang === 'si' ? '💫 ඔයාගේ ජීවිතයේ විශේෂ මිශ්‍ර ශක්තියක්' : '💫 Your life has a unique mix of energies')
+                        : (reportLang === 'si' ? '⚡ ඔයාගේ සිතියමේ තීව්‍ර ශක්තින් තිබෙනවා' : '⚡ Your chart has intense transformative energy')
+                      }
+                    </Text>
+                  </View>
+
+                  {/* Quick score bars */}
+                  <View style={s.heroScoreBars}>
+                    {[
+                      { key: 'career', label: reportLang === 'si' ? 'රැකියාව' : 'Career', icon: '💼' },
+                      { key: 'marriage', label: reportLang === 'si' ? 'ආදරය' : 'Love', icon: '💍' },
+                      { key: 'health', label: reportLang === 'si' ? 'සෞඛ්‍යය' : 'Health', icon: '❤️' },
+                      { key: 'financial', label: reportLang === 'si' ? 'මුදල්' : 'Wealth', icon: '💰' },
+                      { key: 'luck', label: reportLang === 'si' ? 'වාසනාව' : 'Luck', icon: '🍀' },
+                    ].map(function(item, i) {
+                      var val = overviewScores.map[item.key];
+                      if (val == null) return null;
+                      return (
+                        <View key={item.key} style={s.heroBarItem}>
+                          <Text style={s.heroBarIcon}>{item.icon}</Text>
+                          <View style={s.heroBarTrack}>
+                            <Animated.View entering={FadeInRight.delay(600 + i * 150).duration(800)} style={[s.heroBarFill, { width: val + '%', backgroundColor: val >= 70 ? '#10B981' : val >= 45 ? '#FBBF24' : '#EF4444' }]} />
+                          </View>
+                          <Text style={[s.heroBarVal, { color: val >= 70 ? '#10B981' : val >= 45 ? '#FBBF24' : '#EF4444' }]}>{val}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </LinearGradient>
+              </AuraBox>
+            </Animated.View>
+          )}
+
+          {/* ═══ BIRTH SUMMARY ═══ */}
+          {report.birthData && (
+            <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+              <AuraBox style={{ borderColor: 'rgba(255,184,0,0.15)' }}>
+                <LinearGradient
+                  colors={['rgba(255,184,0,0.06)', 'transparent']}
                   style={StyleSheet.absoluteFill}
                   start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
                 />
@@ -660,7 +1238,6 @@ export default function ReportScreen() {
                     <Text style={s.panchangaValue}>{reportLang === 'si' ? (report.birthData.nakshatra?.sinhala || report.birthData.nakshatra?.name || '') : (report.birthData.nakshatra?.name || '')}</Text>
                   </View>
                 </View>
-                {/* Second row — personal qualities */}
                 <View style={[s.panchangaRow, { marginTop: 4 }]}>
                   {report.birthData.gana && (
                     <View style={s.panchangaItem}>
@@ -687,7 +1264,7 @@ export default function ReportScreen() {
             </Animated.View>
           )}
 
-          {/* Birth Chart (Sri Lankan Kendara) */}
+          {/* ═══ BIRTH CHART ═══ */}
           {chartData && chartData.rashiChart && (
             <Animated.View entering={FadeInDown.delay(250).duration(700)}>
               <AuraBox style={{ borderColor: 'rgba(255,140,0,0.2)' }}>
@@ -704,16 +1281,43 @@ export default function ReportScreen() {
             </Animated.View>
           )}
 
-          {/* AI Narrative Sections — No technical data shown */}
+          {/* ═══ SECTION DIVIDER ═══ */}
+          <Animated.View entering={FadeInDown.delay(300).duration(600)}>
+            <View style={s.sectionDivider}>
+              <View style={s.sectionDividerLine} />
+              <Text style={s.sectionDividerText}>{reportLang === 'si' ? '📖 විස්තරාත්මක විශ්ලේෂණය' : '📖 Detailed Analysis'}</Text>
+              <View style={s.sectionDividerLine} />
+            </View>
+          </Animated.View>
+
+          {/* ═══ AI NARRATIVE SECTIONS — Dopamine Edition ═══ */}
           {aiReport && aiReport.narrativeSections && (
             SECTION_KEYS.map(function(key, index) {
               var aiNarrative = aiReport.narrativeSections[key] || null;
               if (!aiNarrative || !aiNarrative.narrative) return null;
-              return <SectionCard key={key} sectionKey={key} data={null} index={index} t={t} aiNarrative={aiNarrative} reportLang={reportLang} />;
+              var rawDataKey = key === 'marriedLife' ? 'marriage' : key;
+              var rawData = (report.sections || {})[rawDataKey] || (aiReport.rawSections || {})[rawDataKey] || null;
+              return <SectionCard key={key} sectionKey={key} data={null} index={index} t={t} aiNarrative={aiNarrative} reportLang={reportLang} rawData={rawData} />;
             })
           )}
 
-          {/* Bottom spacer */}
+          {/* ═══ END CARD ═══ */}
+          <Animated.View entering={FadeInDown.delay(400).duration(600)}>
+            <AuraBox style={{ borderColor: 'rgba(255,184,0,0.15)', alignItems: 'center', paddingVertical: 24 }}>
+              <Text style={{ fontSize: 32 }}>✨</Text>
+              <Text style={{ color: '#FFE8B0', fontSize: 16, fontWeight: '800', marginTop: 8, textAlign: 'center' }}>
+                {reportLang === 'si' ? 'ඔයාගේ ජීවිත කතාව සම්පූර්ණයි' : 'Your Life Story is Complete'}
+              </Text>
+              <Text style={{ color: 'rgba(255,214,102,0.45)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+                {reportLang === 'si' ? 'වෙනත් අයෙකුගේ කතාවක් අනාවරණය කරන්න' : 'Unlock another person\'s story'}
+              </Text>
+              <SpringPressable style={[s.newReportBtn, { marginTop: 16, paddingHorizontal: 24 }]} onPress={handleNewReport} haptic="heavy">
+                <Ionicons name="sparkles" size={16} color="#FF8C00" style={{ marginRight: 6 }} />
+                <Text style={s.newReportText}>{reportLang === 'si' ? 'අලුත් වාර්තාවක් සාදන්න' : 'Generate Another Report'}</Text>
+              </SpringPressable>
+            </AuraBox>
+          </Animated.View>
+
           <View style={{ height: isDesktop ? 32 : 120 }} />
           </View>
         </ScrollView>
@@ -726,8 +1330,6 @@ export default function ReportScreen() {
   return (
     <DesktopScreenWrapper routeName="report">
     <View style={{ flex: 1, backgroundColor: '#020C06' }}>
-        <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="green" /></View>
-        <ThemedNebulaBg theme="green" />
       <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
         <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
         {/* Header */}
@@ -869,6 +1471,100 @@ export default function ReportScreen() {
           </AuraBox>
         </Animated.View>
 
+        {/* Saved Reports */}
+        {savedReports.length > 0 && (
+          <Animated.View entering={FadeInDown.delay(250).duration(800)}>
+            <AuraBox style={{ marginBottom: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <Ionicons name="document-text-outline" size={18} color="#FF8C00" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#D4B06A', fontSize: 14, fontWeight: '700', flex: 1 }}>
+                  {reportLang === 'si' ? 'සුරකින ලද වාර්තා' : 'Saved Reports'}
+                </Text>
+                <Text style={{ color: 'rgba(255,214,102,0.35)', fontSize: 11 }}>
+                  {savedReports.length + '/' + MAX_SAVED_REPORTS}
+                </Text>
+              </View>
+              {savedReports.map(function(entry, idx) {
+                var savedDate = entry.savedAt ? new Date(entry.savedAt) : null;
+                var timeAgo = '';
+                if (savedDate) {
+                  var diffMs = Date.now() - savedDate.getTime();
+                  var diffMin = Math.floor(diffMs / 60000);
+                  var diffHr = Math.floor(diffMin / 60);
+                  var diffDay = Math.floor(diffHr / 24);
+                  if (diffMin < 1) timeAgo = reportLang === 'si' ? 'දැන්' : 'just now';
+                  else if (diffMin < 60) timeAgo = diffMin + (reportLang === 'si' ? ' මිනි. පෙර' : 'm ago');
+                  else if (diffHr < 24) timeAgo = diffHr + (reportLang === 'si' ? ' පැ. පෙර' : 'h ago');
+                  else timeAgo = diffDay + (reportLang === 'si' ? ' දින පෙර' : 'd ago');
+                }
+                return (
+                  <TouchableOpacity
+                    key={entry.id}
+                    onPress={function() { loadSavedReport(entry); }}
+                    activeOpacity={0.7}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 12,
+                      backgroundColor: 'rgba(255,140,0,0.04)', borderRadius: 12, marginBottom: 8,
+                      borderWidth: 1, borderColor: 'rgba(255,140,0,0.1)',
+                    }}
+                  >
+                    <View style={{
+                      width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,140,0,0.1)',
+                      alignItems: 'center', justifyContent: 'center', marginRight: 12,
+                    }}>
+                      <Text style={{ fontSize: 18 }}>📜</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: '#FFE8B0', fontSize: 14, fontWeight: '700' }} numberOfLines={1}>
+                        {entry.userName || (reportLang === 'si' ? 'නම නැත' : 'No Name')}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                        <Text style={{ color: 'rgba(255,214,102,0.45)', fontSize: 11 }}>
+                          {entry.birthDate || ''}
+                        </Text>
+                        <Text style={{ color: 'rgba(255,214,102,0.2)', fontSize: 11 }}>•</Text>
+                        <Text style={{ color: 'rgba(255,214,102,0.45)', fontSize: 11 }}>
+                          {entry.birthLocation || ''}
+                        </Text>
+                        <Text style={{ color: 'rgba(255,214,102,0.2)', fontSize: 11 }}>•</Text>
+                        <Text style={{ color: 'rgba(255,214,102,0.35)', fontSize: 10 }}>
+                          {entry.reportLang === 'si' ? '🇱🇰' : '🇬🇧'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', marginLeft: 8 }}>
+                      <Text style={{ color: 'rgba(255,214,102,0.3)', fontSize: 10 }}>{timeAgo}</Text>
+                      <TouchableOpacity
+                        onPress={function(e) {
+                          e.stopPropagation && e.stopPropagation();
+                          if (Platform.OS === 'web') {
+                            if (confirm(reportLang === 'si' ? 'මෙම වාර්තාව මකන්නද?' : 'Delete this report?')) {
+                              deleteSavedReport(entry.id);
+                            }
+                          } else {
+                            Alert.alert(
+                              reportLang === 'si' ? 'මකන්න' : 'Delete',
+                              reportLang === 'si' ? 'මෙම වාර්තාව මකන්නද?' : 'Delete this report?',
+                              [
+                                { text: reportLang === 'si' ? 'නැහැ' : 'Cancel', style: 'cancel' },
+                                { text: reportLang === 'si' ? 'ඔව්' : 'Delete', style: 'destructive', onPress: function() { deleteSavedReport(entry.id); } },
+                              ]
+                            );
+                          }
+                        }}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        style={{ marginTop: 4, padding: 4 }}
+                      >
+                        <Ionicons name="trash-outline" size={14} color="rgba(239,68,68,0.5)" />
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </AuraBox>
+          </Animated.View>
+        )}
+
         {/* Error */}
         {error && (
           <Animated.View entering={FadeIn.duration(400)}>
@@ -900,8 +1596,36 @@ var s = StyleSheet.create({
   contentDesktop: { paddingTop: 24, paddingHorizontal: 0, paddingBottom: 40 },
   contentInner: { width: '100%' },
   contentInnerDesktop: { maxWidth: 900, alignSelf: 'center', paddingHorizontal: 32 },
-  title: { fontSize: 26, fontWeight: '900', color: '#FFE8B0', textAlign: 'center', letterSpacing: 0.5, textShadowColor: 'rgba(255,184,0,0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
-  subtitle: { fontSize: 13, color: 'rgba(255,214,102,0.50)', textAlign: 'center', marginTop: 6, marginBottom: 20 },
+
+  // Hero title area
+  heroTitleWrap: { alignItems: 'center', marginBottom: 16 },
+  heroEmoji: { fontSize: 36, marginBottom: 6 },
+  title: { fontSize: 24, fontWeight: '900', color: '#FFE8B0', textAlign: 'center', letterSpacing: 0.3, ...textShadow('rgba(255,184,0,0.25)', { width: 0, height: 2 }, 8) },
+  subtitle: { fontSize: 12, color: 'rgba(255,214,102,0.45)', textAlign: 'center', marginTop: 4, marginBottom: 8 },
+  heroStatsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  heroStatChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(255,140,0,0.08)', borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)' },
+  heroStatText: { fontSize: 10, color: 'rgba(255,214,102,0.55)', fontWeight: '600' },
+
+  // Hero Score Card
+  heroScoreCenter: { alignItems: 'center', marginBottom: 16 },
+  heroScoreRingOuter: { width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: 'rgba(255,184,0,0.25)', alignItems: 'center', justifyContent: 'center', marginBottom: 10, ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.3, 20) },
+  heroScoreRingInner: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
+  heroScoreNum: { fontSize: 32, fontWeight: '900', color: '#FFB800', ...textShadow('rgba(255,184,0,0.4)', { width: 0, height: 2 }, 10) },
+  heroScoreLabel: { fontSize: 8, fontWeight: '800', color: 'rgba(255,214,102,0.45)', letterSpacing: 1.5, marginTop: -2 },
+  heroScoreDesc: { color: 'rgba(255,214,102,0.65)', fontSize: 13, fontWeight: '600', textAlign: 'center', lineHeight: 18 },
+  heroScoreBars: { marginTop: 4 },
+  heroBarItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 },
+  heroBarIcon: { fontSize: 14, width: 22, textAlign: 'center' },
+  heroBarTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
+  heroBarFill: { height: '100%', borderRadius: 3 },
+  heroBarVal: { fontSize: 12, fontWeight: '800', width: 28, textAlign: 'right' },
+
+  // Section divider
+  sectionDivider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 12 },
+  sectionDividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,184,0,0.12)' },
+  sectionDividerText: { fontSize: 12, color: 'rgba(255,214,102,0.45)', fontWeight: '700' },
+
+  // Form styles
   inputLabel: { color: '#D4B06A', fontSize: 14, fontWeight: '700', marginBottom: 12 },
   inputRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   inputGroup: { flex: 1 },
@@ -911,7 +1635,7 @@ var s = StyleSheet.create({
     color: '#FFE8B0', fontSize: 15, fontWeight: '600', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   inputError: { borderColor: 'rgba(239,68,68,0.5)' },
-  generateBtn: { borderRadius: 14, overflow: 'hidden', marginTop: 4, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 18, elevation: 0 },
+  generateBtn: { borderRadius: 14, overflow: 'hidden', marginTop: 4, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 18), elevation: 0 },
   generateGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 15 },
   generateText: { color: '#FFF1D0', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
   errorText: { color: '#F87171', fontSize: 13, flex: 1 },

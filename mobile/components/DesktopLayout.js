@@ -20,6 +20,7 @@ import Animated, {
   withSpring, withTiming, withRepeat, withSequence,
   interpolate, Easing,
 } from 'react-native-reanimated';
+import { boxShadow, textShadow } from '../utils/shadow';
 
 // ── Nav items (mirror TABS in _layout.js) ─────────────────────────
 export var NAV_ITEMS = [
@@ -136,7 +137,7 @@ function NavItem({ item, focused, collapsed, language, onPress }) {
         accessibilityState={focused ? { selected: true } : {}}
         accessibilityLabel={label}
       >
-        <Animated.View style={[StyleSheet.absoluteFill, sb.navPill, pillStyle]} pointerEvents="none">
+        <Animated.View style={[StyleSheet.absoluteFill, sb.navPill, pillStyle, { pointerEvents: 'none' }]}>
           <LinearGradient
             colors={[item.gradient[0] + '20', item.gradient[1] + '0C']}
             style={StyleSheet.absoluteFill}
@@ -162,17 +163,9 @@ function NavItem({ item, focused, collapsed, language, onPress }) {
   );
 }
 
-// ── Balance chip ───────────────────────────────────────────────────
+// ── Balance chip (hidden — removed per user request) ──────────────
 function BalanceChip({ balance, collapsed }) {
-  if (balance === null || balance === undefined) return null;
-  var isLow = balance < 10;
-  var c = isLow ? '#F87171' : '#FBBF24';
-  return (
-    <View style={[sb.balanceChip, { borderColor: c + '42', backgroundColor: c + '10' }]}>
-      <Ionicons name="wallet-outline" size={13} color={c} />
-      {!collapsed && <Text style={[sb.balanceText, { color: c }]}>LKR {balance}</Text>}
-    </View>
-  );
+  return null;
 }
 
 // ── Language toggle ────────────────────────────────────────────────
@@ -244,12 +237,7 @@ export function DesktopTopBar({ routeName, language, balance, onToggleLanguage }
             <Text style={top.langToggleText}>{language === 'si' ? 'EN' : 'SI'}</Text>
           </TouchableOpacity>
         )}
-        {balance !== null && balance !== undefined && (
-          <View style={[top.balancePill, balance < 10 && { borderColor: 'rgba(248,113,113,0.4)' }]}>
-            <Ionicons name="wallet-outline" size={12} color={balance < 10 ? '#F87171' : '#FBBF24'} />
-            <Text style={[top.balanceVal, balance < 10 && { color: '#F87171' }]}>LKR {balance}</Text>
-          </View>
-        )}
+        {/* Balance display removed */}
       </View>
     </View>
   );
@@ -278,7 +266,7 @@ export default function DesktopSidebar({ state, navigation, balance, language, o
   return (
     <Animated.View style={[styles.sidebar, sideStyle]}>
       <LinearGradient colors={['rgba(14,8,36,0.99)', 'rgba(6,4,18,0.99)']} style={StyleSheet.absoluteFill} />
-      <View style={styles.borderRight} pointerEvents="none" />
+      <View style={[styles.borderRight, { pointerEvents: 'none' }]} />
       <ChromaticLine />
       <View style={sb.logoSection}>
         <SidebarLogo collapsed={collapsed} />
@@ -323,8 +311,7 @@ export default function DesktopSidebar({ state, navigation, balance, language, o
 var styles = StyleSheet.create({
   sidebar: {
     overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 4, height: 0 },
-    shadowOpacity: 0.5, shadowRadius: 24, elevation: 24,
+    ...boxShadow('#000', { width: 4, height: 0 }, 0.5, 24), elevation: 24,
     // height:100% is naturally achieved by being a flex child in a row container
   },
   borderRight: {
@@ -347,8 +334,7 @@ var sb = StyleSheet.create({
   logoImg:      { width: 36, height: 36, borderRadius: 11 },
   logoTitle: {
     fontSize: 14, fontWeight: '900', color: '#FBBF24', letterSpacing: 3.5,
-    textShadowColor: 'rgba(251,191,36,0.55)',
-    textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 9,
+    ...textShadow('rgba(251,191,36,0.55)', { width: 0, height: 0 }, 9),
   },
   logoSubtitle: { fontSize: 9.5, color: 'rgba(255,255,255,0.33)', letterSpacing: 1.5, marginTop: 2 },
   collapseBtn: {

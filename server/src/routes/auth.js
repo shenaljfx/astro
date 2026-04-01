@@ -16,8 +16,13 @@ const jwt = require('jsonwebtoken');
 const { getDb, getAuth, COLLECTIONS } = require('../config/firebase');
 const { MONTHLY_AMOUNT } = require('../services/payhere');
 
-// JWT secret — in production, use a strong random secret from env
-const JWT_SECRET = process.env.JWT_SECRET || 'grahachara-cosmic-secret-2025-dev';
+// JWT secret — MUST be set via environment variable in production
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('⚠️  CRITICAL: JWT_SECRET environment variable is not set!');
+  console.error('   Set JWT_SECRET in .env with a strong random string (64+ chars)');
+  console.error('   Generate one: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"');
+}
 const JWT_EXPIRES = '30d'; // Token valid for 30 days
 
 // ─── Helper: Generate JWT for authenticated users ───────────────

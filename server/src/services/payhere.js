@@ -26,8 +26,11 @@ const crypto = require('crypto');
 
 // ─── Configuration ──────────────────────────────────────────────
 
-const MERCHANT_ID = process.env.PAYHERE_MERCHANT_ID || '1211149';
-const MERCHANT_SECRET = process.env.PAYHERE_MERCHANT_SECRET || 'test_secret';
+const MERCHANT_ID = process.env.PAYHERE_MERCHANT_ID;
+const MERCHANT_SECRET = process.env.PAYHERE_MERCHANT_SECRET;
+if (!MERCHANT_ID || !MERCHANT_SECRET) {
+  console.warn('⚠️  PAYHERE_MERCHANT_ID or PAYHERE_MERCHANT_SECRET not set — PayHere payments disabled');
+}
 const SANDBOX = process.env.PAYHERE_SANDBOX === 'true' || !process.env.PAYHERE_MERCHANT_ID;
 const NOTIFY_BASE_URL = process.env.PAYHERE_NOTIFY_BASE_URL || 'https://api.grahachara.lk';
 

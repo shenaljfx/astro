@@ -31,8 +31,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePricing } from '../contexts/PricingContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import AwesomeRashiChakra from '../components/AwesomeRashiChakra';
-import CosmicAuroraNebula from '../components/effects/CosmicAuroraNebula';
 import Svg, { Defs, LinearGradient as SvgGrad, Stop, Path, Circle, Rect, G, Ellipse, Line } from 'react-native-svg';
+import { boxShadow, textShadow } from '../utils/shadow';
 
 var { width: SW, height: SH } = Dimensions.get('window');
 var LOGO = require('../assets/logo.png');
@@ -395,6 +395,7 @@ function PrimaryButton({ label, onPress, loading, disabled, icon }) {
   }, []);
 
   var glowStyle = useAnimatedStyle(function () {
+    if (Platform.OS === 'web') return {};
     return {
       shadowOpacity: isOff ? 0 : interpolate(glow.value, [0, 1], [0.4, 0.9]),
       shadowRadius: interpolate(glow.value, [0, 1], [10, 28]),
@@ -463,6 +464,7 @@ function StepHeader({ icon, iconColor, title, subtitle }) {
     };
   });
   var glowAnim = useAnimatedStyle(function () {
+    if (Platform.OS === 'web') return {};
     return {
       shadowOpacity: interpolate(iconGlow.value, [0, 1], [0.2, 0.6]),
       shadowRadius: interpolate(iconGlow.value, [0, 1], [8, 20]),
@@ -472,7 +474,7 @@ function StepHeader({ icon, iconColor, title, subtitle }) {
   return (
     <Animated.View entering={FadeInDown.duration(500)} style={g.headerWrap}>
       {icon ? (
-        <Animated.View style={[g.headerIconBg, { borderColor: '#FFB80050', shadowColor: '#FFB800' }, iconAnim, glowAnim]}>
+        <Animated.View style={[g.headerIconBg, { borderColor: '#FFB80050', ...(Platform.OS !== 'web' ? { shadowColor: '#FFB800' } : {}) }, iconAnim, glowAnim]}>
           <GoldenIcon name={icon} size={28} />
         </Animated.View>
       ) : null}
@@ -602,7 +604,7 @@ function LanguageStep({ onSelect }) {
 var ls = StyleSheet.create({
   logoWrap: { width: 90, height: 90, borderRadius: 24, overflow: 'hidden', marginBottom: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(20,12,50,0.6)', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.25)' },
   logoImg:  { width: 80, height: 80, borderRadius: 20 },
-  mainTitleSi: { fontSize: 44, fontWeight: '900', color: '#FFB800', letterSpacing: 2, textShadowColor: 'rgba(255,184,0,0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 20, textAlign: 'center' },
+  mainTitleSi: { fontSize: 44, fontWeight: '900', color: '#FFB800', letterSpacing: 2, ...textShadow('rgba(255,184,0,0.6)', { width: 0, height: 0 }, 20), textAlign: 'center' },
   mainTitleEn: { fontSize: 16, fontWeight: '600', color: 'rgba(255,255,255,0.35)', letterSpacing: 4, marginTop: 2, textAlign: 'center' },
   divider: { width: 60, height: 3, borderRadius: 2, marginVertical: 16, overflow: 'hidden' },
   siTitle: { fontSize: 22, fontWeight: '700', color: '#FFD666', marginBottom: 4 },
@@ -694,7 +696,7 @@ var ws = StyleSheet.create({
   logoRing: { width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: 'rgba(255,184,0,0.4)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
   logoInner: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
   logoImg:  { width: 72, height: 72, borderRadius: 36 },
-  titleSi: { fontSize: 40, fontWeight: '900', color: '#FFB800', letterSpacing: 2, textShadowColor: 'rgba(255,184,0,0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16, marginBottom: 2, textAlign: 'center' },
+  titleSi: { fontSize: 40, fontWeight: '900', color: '#FFB800', letterSpacing: 2, ...textShadow('rgba(255,184,0,0.6)', { width: 0, height: 0 }, 16), marginBottom: 2, textAlign: 'center' },
   titleEn: { fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.3)', letterSpacing: 4, marginBottom: 6, textAlign: 'center' },
   subtitle: { fontSize: 15, fontWeight: '600', color: '#FFD666', marginBottom: 4 },
   featureList: { marginTop: 28, alignSelf: 'stretch', gap: 12 },
@@ -744,6 +746,7 @@ function GoogleSignInStep({ onContinue, onBack, lang }) {
   });
 
   var glowAnim = useAnimatedStyle(function () {
+    if (Platform.OS === 'web') return {};
     return {
       shadowOpacity: interpolate(iconGlow.value, [0, 1], [0.3, 0.8]),
       shadowRadius: interpolate(iconGlow.value, [0, 1], [10, 22]),
@@ -774,7 +777,7 @@ function GoogleSignInStep({ onContinue, onBack, lang }) {
 
         {/* ── Premium Header ── */}
         <Animated.View entering={FadeInDown.duration(600)} style={{ alignItems: 'center', marginBottom: 6 }}>
-          <Animated.View style={[gs.headerIconBg, { shadowColor: '#FFB800' }, iconAnim, glowAnim]}>
+          <Animated.View style={[gs.headerIconBg, Platform.OS !== 'web' ? { shadowColor: '#FFB800' } : {}, iconAnim, glowAnim]}>
             <GoldenIcon name="lock" size={22} />
           </Animated.View>
           <Text style={gs.headerTitle}>{T.googleTitle}</Text>
@@ -929,7 +932,7 @@ var gs = StyleSheet.create({
   headerSub: { fontSize: 13, color: 'rgba(255,200,80,0.6)', textAlign: 'center', marginTop: 4, lineHeight: 18 },
 
   /* Platform Logo */
-  platformLogoOuter: { width: 80, height: 80, borderRadius: 40, borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 10, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 0 },
+  platformLogoOuter: { width: 80, height: 80, borderRadius: 40, borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 10, ...boxShadow('#FF8C00', { width: 0, height: 0 }, 0.25, 16), elevation: 0 },
   platformLogoInner: { width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   platformLogoImg: { width: 52, height: 52 },
 
@@ -954,9 +957,9 @@ var gs = StyleSheet.create({
   errorText: { color: '#FCA5A5', fontSize: 12, fontWeight: '600', flex: 1 },
 
   /* Google button */
-  googleBtnShadow: { borderRadius: 16, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0 },
+  googleBtnShadow: { borderRadius: 16, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 16), elevation: 0 },
   googleBtnGrad: { paddingVertical: 15, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
-  googleBtnIcon: { width: 34, height: 34, borderRadius: 10, backgroundcolor: '#FFF1D0', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 0 },
+  googleBtnIcon: { width: 34, height: 34, borderRadius: 10, backgroundcolor: '#FFF1D0', alignItems: 'center', justifyContent: 'center', ...boxShadow('#000', { width: 0, height: 1 }, 0.15, 4), elevation: 0 },
   googleBtnGWrap: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   gBtnSeg: { position: 'absolute', width: 24, height: 24, borderRadius: 12 },
   gBtnBlue: { borderWidth: 2.5, borderColor: 'transparent', borderTopColor: '#4285F4', borderRightColor: '#4285F4' },
@@ -964,7 +967,7 @@ var gs = StyleSheet.create({
   gBtnYellow: { borderWidth: 2.5, borderColor: 'transparent', borderBottomColor: '#FBBC05', borderLeftColor: '#FBBC05' },
   gBtnGreen: { borderWidth: 2.5, borderColor: 'transparent', borderBottomColor: '#34A853', borderRightColor: '#34A853' },
   googleBtnGLetter: { fontSize: 14, fontWeight: '900', color: '#4285F4', zIndex: 10 },
-  googleBtnText: { fontSize: 15, fontWeight: '800', color: '#FFE8A0', letterSpacing: 0.5, textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+  googleBtnText: { fontSize: 15, fontWeight: '800', color: '#FFE8A0', letterSpacing: 0.5, ...textShadow('rgba(0,0,0,0.2)', { width: 0, height: 1 }, 4) },
 
   /* Trust */
   trustRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
@@ -1127,7 +1130,7 @@ var ss = StyleSheet.create({
   priceBadge: { marginTop: 14, borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.25)', alignSelf: 'center' },
   priceGrad: { flexDirection: 'row', alignItems: 'baseline', paddingVertical: 12, paddingHorizontal: 28, gap: 4 },
   priceLabel: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.5)' },
-  priceAmount: { fontSize: 38, fontWeight: '900', color: '#FFB800', textShadowColor: 'rgba(255,184,0,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
+  priceAmount: { fontSize: 38, fontWeight: '900', color: '#FFB800', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12) },
   pricePer: { fontSize: 14, color: 'rgba(255,255,255,0.5)', marginLeft: 2 },
   payBadgeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 },
   paySecureIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(52,211,153,0.10)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(52,211,153,0.20)' },
@@ -1367,9 +1370,7 @@ function VortexParticle({ particle }) {
         fontSize: isChar ? 14 : 10,
         color: '#FBBF24',
         fontWeight: '800',
-        textShadowColor: '#FFB800',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10,
+        ...textShadow('#FFB800', { width: 0, height: 0 }, 10),
       }}>{particle.char}</Text>
     </Animated.View>
   );
@@ -2061,21 +2062,21 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
 
 var lr = StyleSheet.create({
   ring: { position: 'absolute', borderWidth: 1.5, borderStyle: 'dashed' },
-  centerOrb: { width: 80, height: 80, borderRadius: 40, overflow: 'hidden', shadowColor: '#FFB800', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 30, elevation: 0 },
+  centerOrb: { width: 80, height: 80, borderRadius: 40, overflow: 'hidden', ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.8, 30), elevation: 0 },
   centerOrbGrad: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 40 },
   centerOrbEmoji: { fontSize: 36 },
-  loadingTitle: { fontSize: 22, fontWeight: '800', color: '#FFD666', textAlign: 'center', marginTop: 32, textShadowColor: 'rgba(255,184,0,0.4)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
+  loadingTitle: { fontSize: 22, fontWeight: '800', color: '#FFD666', textAlign: 'center', marginTop: 32, ...textShadow('rgba(255,184,0,0.4)', { width: 0, height: 0 }, 12) },
   loadingSub: { fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 8 },
   dotsRow: { flexDirection: 'row', gap: 8, marginTop: 24, justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: 4, overflow: 'hidden' },
   dotGrad: { width: '100%', height: '100%' },
   revealCenter: { alignItems: 'center', marginBottom: 4 },
-  symbolOrb: { width: 90, height: 90, borderRadius: 45, overflow: 'hidden', shadowColor: '#FFB800', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 35, elevation: 0 },
+  symbolOrb: { width: 90, height: 90, borderRadius: 45, overflow: 'hidden', ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.9, 35), elevation: 0 },
   symbolOrbGrad: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 45 },
-  zodiacSymbol: { fontSize: 42, color: '#FFF1D0', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
+  zodiacSymbol: { fontSize: 42, color: '#FFF1D0', ...textShadow('rgba(0,0,0,0.5)', { width: 0, height: 2 }, 8) },
   lagnaNameWrap: { alignItems: 'center', marginTop: 10 },
   revealLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.4)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 2 },
-  lagnaName: { fontSize: 28, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(255,184,0,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16 },
+  lagnaName: { fontSize: 28, fontWeight: '900', letterSpacing: 1, ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 16) },
   lagnaSubname: { fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.35)', marginTop: 1 },
   tripleRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
   tripleCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
@@ -2154,7 +2155,7 @@ function CompleteStep({ lang, onDone }) {
           <Animated.Text style={[{ fontSize: 56 }, starStyle]}>{'\uD83C\uDF1F'}</Animated.Text>
         </View>
 
-        <Text style={[g.headerTitle, { fontSize: 28, marginTop: 16, color: '#FFB800', textShadowColor: 'rgba(255,184,0,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16 }]}>{T.completeTitle}</Text>
+        <Text style={[g.headerTitle, { fontSize: 28, marginTop: 16, color: '#FFB800', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 16) }]}>{T.completeTitle}</Text>
         <Text style={[g.headerSub, { color: '#FFD666' }]}>{T.completeSubtitle}</Text>
 
         <View style={{ marginTop: 32, alignItems: 'center' }}>
@@ -2218,7 +2219,6 @@ export default function OnboardingScreen({ onComplete }) {
   return (
     <View style={{ flex: 1, backgroundColor: '#000000' }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <CosmicAuroraNebula />
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: 'transparent', overflow: 'hidden' }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -2256,9 +2256,9 @@ var g = StyleSheet.create({
   card: { backgroundColor: 'rgba(15,10,30,0.55)', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   inputLabel: { color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '700', marginBottom: 8, letterSpacing: 1.2, textTransform: 'uppercase' },
   textInput: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 15 : 13, color: '#FFF1D0', fontSize: 16, fontWeight: '500', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  primaryBtn: { borderRadius: 16, overflow: 'hidden', shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 20, elevation: 0 },
+  primaryBtn: { borderRadius: 16, overflow: 'hidden', ...boxShadow('#FF8C00', { width: 0, height: 4 }, 1, 20), elevation: 0 },
   primaryGrad: { paddingVertical: 14, minHeight: 56, alignItems: 'center', justifyContent: 'center', borderRadius: 16, paddingHorizontal: 16 },
-  primaryText: { fontSize: 16, fontWeight: '800', color: '#FFF1D0', letterSpacing: 0.8, textAlign: 'center', flexShrink: 1, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+  primaryText: { fontSize: 16, fontWeight: '800', color: '#FFF1D0', letterSpacing: 0.8, textAlign: 'center', flexShrink: 1, ...textShadow('rgba(0,0,0,0.3)', { width: 0, height: 1 }, 4) },
   ghostBtn: { alignItems: 'center', paddingVertical: 14, marginTop: 8 },
   ghostText: { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: '500' },
   error: { color: '#FF6B6B', fontSize: 12, marginTop: 8, textAlign: 'center', fontWeight: '500' },

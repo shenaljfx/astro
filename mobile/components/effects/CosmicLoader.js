@@ -9,6 +9,7 @@ import Animated, {
   withRepeat, withTiming, withSequence, withDelay,
   interpolate, Easing,
 } from 'react-native-reanimated';
+import { boxShadow, textShadow } from '../../utils/shadow';
 
 const ORBIT_COLORS = ['#FBBF24', '#C084FC', '#34D399', '#60A5FA', '#F472B6'];
 
@@ -52,10 +53,7 @@ function OrbitDot({ index, count, radius, duration, color, dotSize }) {
           height: dotSize,
           borderRadius: dotSize / 2,
           backgroundColor: color,
-          shadowColor: color,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.8,
-          shadowRadius: dotSize,
+          ...boxShadow(color, { width: 0, height: 0 }, 0.8, dotSize),
           elevation: 4,
         },
         dotStyle,
@@ -147,10 +145,7 @@ export default function CosmicLoader({
             height: coreSize,
             borderRadius: coreSize / 2,
             backgroundColor: color,
-            shadowColor: color,
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 1,
-            shadowRadius: coreSize,
+            ...boxShadow(color, { width: 0, height: 0 }, 1, coreSize),
             elevation: 6,
           },
           coreStyle,

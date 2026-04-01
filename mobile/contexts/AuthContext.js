@@ -100,6 +100,16 @@ export function AuthProvider({ children }) {
           'Authorization': 'Bearer ' + authToken,
         },
       });
+      if (res.status === 401) {
+        // Token invalid or expired
+        console.warn('Profile refresh returned 401, signing out');
+        await AsyncStorage.multiRemove([STORAGE_TOKEN, STORAGE_USER, STORAGE_ONBOARDING]);
+        setToken(null);
+        setUser(null);
+        setSubscription(null);
+        setAuthTokenGetter(null);
+        return;
+      }
       var json = await res.json();
       if (json.success && json.user) {
         // Preserve onboardingComplete — never lose it during refresh

@@ -1,89 +1,105 @@
 /**
- * Cross-platform shadow utility for React Native + Web.
+ * Cross-platform shadow utility for React Native + Web
  *
- * React Native Web (v0.19+) deprecated the `shadow*` / `textShadow*` shorthand
- * props in favour of the CSS `boxShadow` / `textShadow` strings.
- * This helper emits both formats so the style works everywhere without warnings.
+ * react-native-web deprecated individual shadow* style props in favour of
+ * the CSS `boxShadow` shorthand and the `textShadow` shorthand.
  *
  * Usage:
  *   import { boxShadow, textShadow } from '../utils/shadow';
- *   <View style={[myStyle, boxShadow('#000', 0, 4, 12, 0.3)]} />
- *   <Text style={[myStyle, textShadow('rgba(0,0,0,0.5)', 0, 2, 10)]} />
+ *
+ *   const styles = StyleSheet.create({
+ *     card: {
+ *       ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 18),
+ *       elevation: 6,
+ *     },
+ *     title: {
+ *       ...textShadow('rgba(255,184,0,0.3)', { width: 0, height: 2 }, 8),
+ *     },
+ *   });
  */
-var { Platform } = require('react-native');
+import { Platform } from 'react-native';
 
 /**
- * @param {string} color   – shadow colour (hex / rgba)
- * @param {number} [ox=0]  – horizontal offset
- * @param {number} [oy=0]  – vertical offset
- * @param {number} [radius=10] – blur radius
- * @param {number} [opacity=1] – shadow opacity (native only; bake into color for web)
- * @param {number} [elevation] – Android elevation (defaults to radius * 0.5)
+ * Generate cross-platform box shadow styles.
+ * On web, outputs `boxShadow` CSS string. On native, outputs individual shadow* props.
+ *
+ * @param {string} color - shadow colour (hex or rgba)
+ * @param {{ width: number, height: number }} offset
+ * @param {number} opacity - 0–1
+ * @param {number} radius - blur radius
  * @returns {object} style object
  */
-function boxShadow(color, ox, oy, radius, opacity, elevation) {
-  if (ox === undefined) ox = 0;
-  if (oy === undefined) oy = 0;
-  if (radius === undefined) radius = 10;
-  if (opacity === undefined) opacity = 1;
-  if (elevation === undefined) elevation = Math.round(radius * 0.5);
-
+export function boxShadow(color, offset = { width: 0, height: 4 }, opacity = 0.5, radius = 10) {
   if (Platform.OS === 'web') {
-    // Convert hex + opacity to rgba for web boxShadow string
-    var webColor = _toRgba(color, opacity);
-    return { boxShadow: ox + 'px ' + oy + 'px ' + radius + 'px ' + webColor };
+    // Parse colour to inject opacity
+    var c = _colorWithOpacity(color, opacity);
+    return {
+      boxShadow: offset.width + 'px ' + offset.height + 'px ' + radius + 'px ' + c,
+    };
   }
-
   return {
     shadowColor: color,
-    shadowOffset: { width: ox, height: oy },
+    shadowOffset: offset,
     shadowOpacity: opacity,
     shadowRadius: radius,
-    elevation: elevation,
   };
 }
 
 /**
- * @param {string} color  – text shadow colour (hex / rgba)
- * @param {number} [ox=0] – horizontal offset
- * @param {number} [oy=0] – vertical offset
- * @param {number} [radius=8] – blur radius
+ * Generate cross-platform text shadow styles.
+ * On web, outputs `textShadow` CSS string. On native, outputs individual textShadow* props.
+ *
+ * @param {string} color - shadow colour
+ * @param {{ width: number, height: number }} offset
+ * @param {number} radius - blur radius
  * @returns {object} style object
  */
-function textShadow(color, ox, oy, radius) {
-  if (ox === undefined) ox = 0;
-  if (oy === undefined) oy = 0;
-  if (radius === undefined) radius = 8;
-
+export function textShadow(color, offset = { width: 0, height: 0 }, radius = 8) {
   if (Platform.OS === 'web') {
-    return { textShadow: ox + 'px ' + oy + 'px ' + radius + 'px ' + color };
+    return {
+      textShadow: offset.width + 'px ' + offset.height + 'px ' + radius + 'px ' + color,
+    };
   }
-
   return {
     textShadowColor: color,
-    textShadowOffset: { width: ox, height: oy },
+    textShadowOffset: offset,
     textShadowRadius: radius,
   };
 }
 
-/* ── internal ────────────────────────────────────────────────── */
+/**
+ * Internal: inject opacity into a colour string.
+ * If the colour is already rgba, we multiply the existing alpha by opacity.
+ * If hex, we convert to rgba.
+ */
+function _colorWithOpacity(color, opacity) {
+  if (!color) return 'rgba(0,0,0,' + opacity + ')';
 
-function _toRgba(color, opacity) {
-  if (opacity >= 1 && color.indexOf('rgba') === 0) return color;
-  if (color.indexOf('rgba') === 0) {
-    // Already rgba – multiply alpha
-    return color.replace(/,\s*[\d.]+\)/, ', ' + opacity + ')');
+  // Already rgba — extract and multiply alpha
+  var rgbaMatch = color.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\s*\)/);
+  if (rgbaMatch) {
+    var existingAlpha = rgbaMatch[4] != null ? parseFloat(rgbaMatch[4]) : 1;
+    return 'rgba(' + rgbaMatch[1] + ',' + rgbaMatch[2] + ',' + rgbaMatch[3] + ',' + (existingAlpha * opacity).toFixed(3) + ')';
   }
-  if (color.indexOf('rgb(') === 0) {
-    return color.replace('rgb(', 'rgba(').replace(')', ', ' + opacity + ')');
+
+  // 3-digit hex
+  var hex3 = color.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i);
+  if (hex3) {
+    var r = parseInt(hex3[1] + hex3[1], 16);
+    var g = parseInt(hex3[2] + hex3[2], 16);
+    var b = parseInt(hex3[3] + hex3[3], 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + opacity + ')';
   }
-  // Hex
-  var hex = color.replace('#', '');
-  if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-  var r = parseInt(hex.substring(0, 2), 16);
-  var g = parseInt(hex.substring(2, 4), 16);
-  var b = parseInt(hex.substring(4, 6), 16);
-  return 'rgba(' + r + ',' + g + ',' + b + ',' + opacity + ')';
+
+  // 6-digit hex
+  var hex6 = color.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+  if (hex6) {
+    var r2 = parseInt(hex6[1], 16);
+    var g2 = parseInt(hex6[2], 16);
+    var b2 = parseInt(hex6[3], 16);
+    return 'rgba(' + r2 + ',' + g2 + ',' + b2 + ',' + opacity + ')';
+  }
+
+  // Fallback — just use colour as-is with opacity note
+  return color;
 }
-
-module.exports = { boxShadow: boxShadow, textShadow: textShadow };

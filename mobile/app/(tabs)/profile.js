@@ -19,9 +19,8 @@ import CosmicLoader from '../../components/effects/CosmicLoader';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePricing } from '../../contexts/PricingContext';
-import ThemedAuroraNebula from '../../components/effects/ThemedAuroraNebula';
-import ThemedNebulaBg from '../../components/effects/ThemedNebulaBg';
 import CitySearchPicker from '../../components/CitySearchPicker';
+import { boxShadow, textShadow } from '../../utils/shadow';
 
 var SW = Dimensions.get('window').width;
 var SH = Dimensions.get('window').height;
@@ -130,7 +129,7 @@ function GCard({ children, style, accent }) {
   );
 }
 var gc = StyleSheet.create({
-  card:  { borderRadius: 22, overflow: 'hidden', borderWidth: 1, marginBottom: 14, shadowColor: 'rgba(255,140,0,0.20)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 14, elevation: 6 },
+  card:  { borderRadius: 22, overflow: 'hidden', borderWidth: 1, marginBottom: 14, ...boxShadow('rgba(255,140,0,0.20)', { width: 0, height: 4 }, 1, 14), elevation: 6 },
   inner: { padding: 18 },
 });
 
@@ -421,7 +420,7 @@ var bf = StyleSheet.create({
   inputHint:          { fontSize: 9, color: 'rgba(255,255,255,0.28)', fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
   segInput:           { width: '100%', backgroundColor: 'rgba(255,255,255,0.09)', borderRadius: 14, paddingVertical: 13, color: '#FFF1D0', fontSize: 20, fontWeight: '900', textAlign: 'center', borderWidth: 1, borderColor: 'rgba(52,211,153,0.25)' },
   sep:                { color: 'rgba(255,255,255,0.25)', fontSize: 20, fontWeight: '200', paddingBottom: 12 },
-  saveBtn:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 15, overflow: 'hidden', marginTop: 2, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.6, shadowRadius: 14, elevation: 0 },
+  saveBtn:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 15, overflow: 'hidden', marginTop: 2, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.6, 14), elevation: 0 },
   saveBtnText:        { color: '#FFF1D0', fontSize: 15, fontWeight: '800' },
 });
 
@@ -440,8 +439,6 @@ function ProfileScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: '#06020C' }}>
-        <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="purple" /></View>
-        <ThemedNebulaBg theme="purple" />
         <View style={s.centered}>
           <CosmicLoader size={56} color="#FF8C00" text={t('loading')} textColor="#FF8C00" />
         </View>
@@ -461,8 +458,6 @@ function ProfileScreen() {
   return (
     <DesktopScreenWrapper routeName="profile">
     <View style={{ flex: 1, backgroundColor: '#06020C' }}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="purple" /></View>
-      <ThemedNebulaBg theme="purple" />
       <StatusBar barStyle="light-content" />
       <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
 
@@ -738,15 +733,14 @@ var s = StyleSheet.create({
   heroCard: {
     borderRadius: 32, overflow: 'hidden', marginBottom: 16,
     borderWidth: 1, borderColor: 'rgba(255,140,0,0.35)',
-    shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.45, shadowRadius: 30, elevation: 16,
+    ...boxShadow('#FF8C00', { width: 0, height: 10 }, 0.45, 30), elevation: 16,
   },
 
   // ── Logged-out hero ────────────────────────────────────────────────
   heroLoggedOut: { alignItems: 'center', paddingTop: 42, paddingBottom: 36, paddingHorizontal: 28 },
   guestOrbWrap:  { width: 100, height: 100, borderRadius: 50, overflow:'hidden', alignItems:'center', justifyContent:'center', marginBottom: 20, borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.25)' },
   guestOrb:      { width: 88, height: 88, borderRadius: 44, overflow:'hidden', alignItems:'center', justifyContent:'center' },
-  guestTitle:    { fontSize: 24, fontWeight: '900', color: '#FFF1D0', marginBottom: 8, textShadowColor:'rgba(255,140,0,0.5)', textShadowOffset:{width:0,height:2}, textShadowRadius:10 },
+  guestTitle:    { fontSize: 24, fontWeight: '900', color: '#FFF1D0', marginBottom: 8, ...textShadow('rgba(255,140,0,0.5)', {width:0,height:2}, 10) },
   guestSub:      { fontSize: 13, color: 'rgba(255,255,255,0.38)', textAlign: 'center', lineHeight: 20 },
   guestArrow:    { marginTop: 18, width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)', alignItems: 'center', justifyContent: 'center' },
 
@@ -759,7 +753,7 @@ var s = StyleSheet.create({
   badgePremium:     {},
   badgeFree:        {},
 
-  heroName:  { fontSize: 28, fontWeight: '900', color: '#FFF1D0', marginBottom: 6, textAlign: 'center', letterSpacing: 0.5, textShadowColor: 'rgba(255,140,0,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 12 },
+  heroName:  { fontSize: 28, fontWeight: '900', color: '#FFF1D0', marginBottom: 6, textAlign: 'center', letterSpacing: 0.5, ...textShadow('rgba(255,140,0,0.4)', { width: 0, height: 2 }, 12) },
   phonePill: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 18, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)' },
   phoneIcon: { width: 20, height: 20, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   phoneText: { fontSize: 13, color: '#A78BFA', fontWeight: '600', letterSpacing: 0.5 },
@@ -780,7 +774,7 @@ var s = StyleSheet.create({
   // ── Subscription ───────────────────────────────────────────────────
   subActiveRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   subActiveText: { color: '#34D399', fontWeight: '700', fontSize: 14 },
-  subBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 16, overflow: 'hidden', shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 16, elevation: 0 },
+  subBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 16, overflow: 'hidden', ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 16), elevation: 0 },
   subBtnText:    { color: '#FFF1D0', fontSize: 14, fontWeight: '800', flexShrink: 1, textAlign: 'center' },
   cancelBtn:     { paddingVertical: 11, alignItems: 'center', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)' },
   cancelBtnText: { color: '#F87171', fontWeight: '600', fontSize: 13 },

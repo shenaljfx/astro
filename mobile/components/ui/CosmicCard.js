@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Colors, BorderRadius, Spacing, Shadows, Gradients } from '../../constants/theme';
+import { boxShadow, textShadow } from '../../utils/shadow';
 
 const VARIANT_CONFIG = {
   hero: {
@@ -84,10 +85,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   glowShadow: {
-    shadowColor: Colors.primaryGlow,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
+    ...boxShadow(Colors.primaryGlow, { width: 0, height: 0 }, 0.6, 16),
     elevation: 8,
   },
 });

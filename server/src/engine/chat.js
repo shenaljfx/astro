@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AI Chat & Report Engine
  * 
  * Gemini 3.1 Pro (hero sections) + Gemini 2.5 Flash (standard/chat)
@@ -87,6 +87,42 @@ PSYCHOLOGICAL ENGAGEMENT TECHNIQUES (use these naturally throughout ALL report s
 🎯 6. THE "HOW DID YOU KNOW" HOOK — Save the most surprising, verifiable detail for the middle or end of a section (not the beginning). When readers are already nodding along, hitting them with "You're likely a deep sleeper who can sleep through almost anything" or "You probably have a mark near your [body area]" creates a powerful emotional response.
 
 🎯 7. PROGRESSIVE REVELATION — Start each section with safe, agreeable observations, then gradually reveal deeper, more personal insights. By the time you reach the intense stuff (childhood pain, relationship patterns, health vulnerabilities), the reader is emotionally invested and trusts you.
+
+🎯 8. PROBABILISTIC LANGUAGE FOR VERIFIABLE CLAIMS — For ANY claim the user can immediately verify (current marital status, relationship with living parents, number of siblings, current job status), use PROBABILISTIC language:
+- Instead of "You have a difficult relationship with your mother" → "Your chart suggests there may be phases of emotional complexity with your mother — though many with this pattern maintain close bonds"
+- Instead of "You will marry in 2027" → "Your chart's strongest marriage energy peaks around 2027-2030 — though if you're already married, this likely aligned with when you actually met or married"
+- Instead of "Your father was absent" → "There may be some distance or formality in the father relationship — or he may have been very busy/working"
+- REASON: Users will immediately know if a claim about their CURRENT life is wrong. Wrong claims = lost trust = bad reviews. Hedge verifiable present-tense claims.
+
+🎯 9. AGE-AWARE PAST/FUTURE FRAMING — For users aged 25+:
+- Marriage timing: ALWAYS acknowledge they may already be married. Frame predictions as "this is when your chart's marriage energy peaked" rather than "you will marry"
+- Career: ALWAYS acknowledge they may already be working. Frame as "your chart supports careers in..." rather than "you will become..."
+- Children: If age 28+, acknowledge they may already have children
+- NEVER make confident future predictions about events that typically happen before the user's current age
+
+🎯 10. REASONABLE LIFESPAN PREDICTIONS — CRITICAL:
+- NEVER predict events happening after age 75-80. Human lifespan is typically 70-85 years.
+- If a dasha period extends to 2080 or beyond, DO NOT say "you will experience X in 2080" — that's absurd.
+- For wealth/prosperity: Focus on the NEXT 10-20 years, not a mythical far future.
+- For health: Focus on the next 20-30 years of actionable prevention.
+- For career: Focus on ages 25-65 (working years).
+- EXAMPLE OF WHAT NOT TO DO: "You will become wealthy in 2099" — NO! The person will be 100+ years old.
+- INSTEAD: "Your chart shows a wealth-building period approaching in [next 5-15 years]. The strongest financial growth potential is from [year] to [year]."
+- If multiple timing windows exist and one is 50 years away, PRIORITIZE the closer one that falls within a reasonable working lifespan.
+
+🎯 11. CONFIDENCE LEVELS FOR PREDICTIONS — Be transparent about certainty:
+- 🔴 HIGH CONFIDENCE (90%+): When 3+ independent chart factors converge on the same conclusion. State boldly: "This is one of the clearest patterns in your chart..."
+- 🟡 MODERATE CONFIDENCE (60-89%): When 2 factors agree. State: "Your chart suggests..." or "There's a strong indication that..."
+- 🟢 LOW CONFIDENCE (below 60%): When only 1 factor supports the claim. State: "One pattern in your chart hints at..." or "This is a possibility, though not strongly shown..."
+- For VERIFIABLE claims (siblings count, parent relationships), ALWAYS use moderate/low confidence language unless confirmed by user.
+- For TIMING predictions, state the confidence score from the data (e.g., "Score: 72/100 — high likelihood")
+
+🎯 12. "WOW FACTOR" SPECIFICITY — Make predictions memorable:
+- Generic: "You may have health issues" ❌
+- Specific: "Your chart shows vulnerability in the lower limbs — feet and ankles specifically. Around age 35-40, watch for plantar fasciitis or ankle weakness." ✅
+- Generic: "You'll have a good career" ❌
+- Specific: "You're built for technology leadership — the kind of person who becomes a CTO or starts a SaaS company. The next 5 years (2026-2031) are your power window." ✅
+- The MORE SPECIFIC and VERIFIABLE a prediction, the more it builds trust when correct.
 
 RESPONSE LENGTH RULE — CRITICAL:
 - Keep every answer SHORT — 3 to 5 sentences maximum, like a text message from a wise friend
@@ -353,6 +389,9 @@ async function callGemini(messages, maxTokens = 4096, temperature = 0.7) {
           generationConfig: {
             maxOutputTokens: maxTokens,
             temperature,
+            thinkingConfig: {
+              thinkingBudget: 4096,
+            },
           },
         }),
       });
@@ -374,8 +413,13 @@ async function callGemini(messages, maxTokens = 4096, temperature = 0.7) {
         throw new Error(`Gemini API error: ${data.error.message}`);
       }
 
+      // Extract text from thinking model response — may have multiple parts
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const textParts = parts.filter(p => p.text && !p.thought);
+      const text = textParts.map(p => p.text).join('') || 'Unable to generate response.';
+
       return {
-        text: data.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to generate response.',
+        text,
         usage: extractGeminiUsage(data),
         model,
       };
@@ -455,7 +499,7 @@ function buildSectionPrompt(sectionKey, sectionData, birthData, allSections, lan
 
   // Sinhala section titles — used when language === 'si'
   const SINHALA_TITLES = {
-    yogaAnalysis: '⚡ ඔයාගේ සැඟවුණු සුපිරි බලයන්',
+    yogaAnalysis: '⚡ ඔයාගේ කේන්දරයේ ශක්තීන් සහ අභියෝග',
     lifePredictions: '🔮 ඔයාගේ ජීවිත ගමන — අතීතය, වර්තමානය සහ අනාගතය',
     career: '💼 රැකියාව සහ මුදල් මාර්ගය',
     marriage: '💍 ආදරය සහ විවාහය',
@@ -472,6 +516,8 @@ function buildSectionPrompt(sectionKey, sectionData, birthData, allSections, lan
     surpriseInsights: '🤯 ඔයා ගැන පුදුම දේවල්',
     familyPortrait: '👨‍👩‍👧‍👦 ගැඹුරු පවුලේ කතාව — දෙමව්පියන්, සහෝදරයෝ සහ පවුල් කර්මය',
     remedies: '💎 ඔයාගේ බල මෙවලම් කට්ටලය',
+    physicalProfile: '🪞 ඔයාගේ ශරීරය, මුහුණ සහ මනස',
+    attractionProfile: '💘 ඔයාගේ ආකර්ෂණ බලය',
   };
 
   const SECTION_PROMPTS = {
@@ -480,6 +526,13 @@ function buildSectionPrompt(sectionKey, sectionData, birthData, allSections, lan
       prompt: `Translate the following marriage and relationship engine data into a clear, honest assessment. Lead with the EXACT timing windows and confidence scores. State spouse characteristics directly from the data. Be honest about afflictions.
 
 REMINDER: No astrology terms in output. No "7th house", "Venus placement", "Kuja Dosha", "Mangala Dosha", "Navamsha", "Darakaraka" etc. Describe everything as real-life relationship patterns. If Sinhala, write 100% pure Sinhala with zero English words.
+
+━━━ PERSON'S CURRENT AGE — CRITICAL FOR FRAMING ━━━
+Current Age: ${personAge || 'Unknown'} years old
+Current Year: ${new Date().getFullYear()}
+${personAge >= 28 ? `⚠️ THIS PERSON IS ${personAge}. In Sri Lanka, most people marry between 24-30. ASSUME THEY MAY ALREADY BE MARRIED unless clearly stated otherwise. Frame ALL timing as past/validation, not future prediction.` : ''}
+${personAge >= 35 ? `🚨 AGE 35+: DO NOT predict "you will marry in [future year]". Focus on marriage QUALITY, spouse dynamics, and relationship patterns. If they're single at 35+, it's a known fact to them — don't state the obvious. If married, describe the marriage.` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ━━━ MARRIAGE ENGINE DATA ━━━
 
@@ -537,10 +590,54 @@ D9 MARRIAGE CHART ANALYSIS:
 - D9 Marriage Verdict: ${sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.marriageStrengthFromD9Lord || 'N/A'}
 
 MARRIAGE TIMING ENGINE — CALCULATED WINDOWS (USE THESE EXACT DATES):
+Current Age: ${sectionData?.marriageTimingPrediction?.currentAge || 'Unknown'} years old
 ${sectionData?.marriageTimingPrediction?.firstMarriageWindows?.length ? sectionData.marriageTimingPrediction.firstMarriageWindows.map((w, i) => `${i + 1}. ${w.period} (${w.dateRange}) — Age ${w.ageRange}, Peak year: ${w.peakYear}, Score: ${w.score}/100 [${w.confidence}]${w.reasons?.length ? '\n   Reasons: ' + w.reasons.join('; ') : ''}`).join('\n') : 'Marriage timing data not available — use general timing from: ' + (sectionData?.marriageTimingIndicators || []).join('; ')}
-${sectionData?.marriageTimingPrediction?.bestWindow ? `BEST WINDOW: ${sectionData.marriageTimingPrediction.bestWindow.period} (${sectionData.marriageTimingPrediction.bestWindow.dateRange}), Age ${sectionData.marriageTimingPrediction.bestWindow.ageRange}` : ''}
+
+${sectionData?.marriageTimingPrediction?.bestWindow ? `
+━━━ AGE-AWARE BEST WINDOW ━━━
+BEST WINDOW: ${sectionData.marriageTimingPrediction.bestWindow.period} (${sectionData.marriageTimingPrediction.bestWindow.dateRange}), Age ${sectionData.marriageTimingPrediction.bestWindow.ageRange}
+STATUS: ${sectionData.marriageTimingPrediction.bestWindow.status || 'N/A'}
+${sectionData.marriageTimingPrediction.bestWindow.note || ''}
+${sectionData.marriageTimingPrediction.bestWindow.status === 'PAST_PRIME_WINDOW' ? `
+⚠️ THIS PERSON'S STRONGEST MARRIAGE WINDOW HAS ALREADY PASSED.
+- They are likely ALREADY MARRIED (check if confirmed), OR
+- Marriage was delayed due to circumstances — current transits matter more now.
+- Do NOT say "you will marry in [past years]" — that's ridiculous.
+- Instead: "Your chart's strongest marriage energy peaked during [past window]. If you married during this time, it aligns with your destiny. If not, current planetary transits offer fresh opportunities."
+` : ''}
+${sectionData.marriageTimingPrediction.bestWindow.status === 'ACTIVE_NOW' ? `
+🔥 THIS PERSON IS CURRENTLY IN AN ACTIVE MARRIAGE WINDOW!
+- They are in the middle of a strong marriage period RIGHT NOW.
+- If they are single, this is THE time to actively seek marriage.
+- Frame as: "Your chart shows you are currently in a prime marriage window. This period from [dates] is especially favorable for meeting a life partner."
+` : ''}
+${sectionData.marriageTimingPrediction.bestWindow.status === 'UPCOMING' ? `
+✨ THIS PERSON HAS AN UPCOMING MARRIAGE WINDOW.
+- The best marriage opportunity is AHEAD of them.
+- Frame as future: "Your strongest marriage window is approaching in [dates]. Prepare for this period by..."
+` : ''}
+` : ''}
+
+WINDOWS BY TIME STATUS (for age-appropriate framing):
+Past Windows (already happened): ${(sectionData?.marriageTimingPrediction?.windowsByTimeStatus?.past || []).slice(0, 3).map(w => w.period + ' (' + w.dateRange + ')').join('; ') || 'None'}
+Active Windows (happening NOW): ${(sectionData?.marriageTimingPrediction?.windowsByTimeStatus?.active || []).map(w => w.period + ' (' + w.dateRange + ')').join('; ') || 'None'}
+Future Windows (upcoming): ${(sectionData?.marriageTimingPrediction?.windowsByTimeStatus?.future || []).slice(0, 3).map(w => w.period + ' (' + w.dateRange + ')').join('; ') || 'None'}
 
 ${sectionData?.lagnaCuspWarning?.isNearCusp ? `⚠️ BIRTH TIME SENSITIVITY: Lagna is at ${sectionData.lagnaCuspWarning.degreeInSign}° — near a sign boundary. Marriage predictions may vary.` : ''}
+
+${sectionData?.marriageTimingPrediction?.confirmedMarriageYear ? `
+★★★ CONFIRMED MARRIAGE MODE ★★★
+This person is ALREADY MARRIED. Their marriage year is ${sectionData.marriageTimingPrediction.confirmedMarriageYear}.
+SHIFT TO VALIDATION NARRATIVE:
+- Do NOT predict "when will you marry" — they are already married.
+- Instead, explain HOW their marriage in ${sectionData.marriageTimingPrediction.confirmedMarriageYear} aligns with the planetary periods shown above.
+- Identify which dasha/antardasha window their marriage fell in and explain why that period triggered marriage.
+- Frame the narrative as: "Your marriage in [year] happened during [period], which is when [planet] activated your partnership energy. This explains [trait of the marriage]."
+- Use the timing data to VALIDATE their lived experience, not to predict a future event.
+- Still describe spouse qualities, marriage dynamics, and relationship patterns — but in present/past tense.
+- If the confirmed year doesn't perfectly match the top window, explain that chart patterns show energy peaks but real life also involves personal choice and circumstance.
+` : `${personAge && parseInt(personAge, 10) >= 27 ? 'NOTE: This person is ' + personAge + ' years old. If they are already married, the timing windows below show when their chart\'s marriage energy peaked — which likely coincides with their actual marriage. If they provide their marriage year, we can validate the exact alignment.' : ''}
+`}
 
 ━━━ DATA USAGE RULES ━━━
 - Partnership sign → what kind of partner they attract
@@ -564,13 +661,20 @@ ${sectionData?.lagnaCuspWarning?.isNearCusp ? `⚠️ BIRTH TIME SENSITIVITY: La
 - D9 marriage strength → overall verdict on marital happiness
 - Marriage timing windows → USE THESE EXACT YEARS AND SCORES — but ONLY if marriage denial is MILD or NONE
 
-⚠️ AGE AWARENESS:
-- If under 24: State the EXACT marriage year window and confidence score from the timing engine (unless marriage denied)
-- If 24-30: Cover both scenarios — already married (describe dynamics) OR still searching (state remaining windows). If marriage afflictions are HIGH/SEVERE, focus on why they may still be single.
-- If 30+: Focus on marriage quality and spouse dynamics from the data. If timing windows point to past ages, acknowledge it.
-- If 35+ AND marriage afflictions MODERATE+: Honestly acknowledge they may remain unmarried. This is the truth the chart shows.
-- If 45+ AND not married AND afflictions HIGH/SEVERE: State clearly that the chart strongly indicates lifelong single status. Do NOT sugarcoat or give false hope.
+⚠️ AGE AWARENESS — CRITICAL FOR CREDIBILITY:
+- If under 22: Safe to predict future marriage timing with confidence (unless marriage denied)
+- If 22-24: State timing windows but acknowledge they may already be engaged/in serious relationship
+- If 25-32: ⚠️ DANGER ZONE — In Sri Lanka, most people marry between 24-30. 
+  • NEVER say "you will marry in [year]" as if it's future — they may already be married!
+  • Instead say: "Your chart shows peak marriage energy during [period]. If you married during this time, that explains the cosmic alignment. If you're still searching, this window remains favorable."
+  • If timing windows show years BEFORE current year (e.g., 2020-2024 for someone in 2026), say: "Your chart's marriage energy peaked during [past years]. If you married then, your timing aligned perfectly with cosmic support. If not yet married, the energy has shifted — describe current/upcoming periods."
+  • ALWAYS frame spouse descriptions in present tense if age 25+: "Your partner likely has..." not "Your future spouse will have..."
+- If 33+: Assume likely married unless afflictions are HIGH/SEVERE. Focus entirely on marriage quality and spouse dynamics, not timing.
+- If 40+: Focus on marriage quality, not "when will they marry"
+
+🚨 THE #1 RULE: If a timing window's years are BEFORE the current date (${new Date().getFullYear()}), DO NOT present it as a future prediction. Say "your chart showed strong marriage energy during [past period]" and shift to validation mode.
 - NEVER predict marriage at an age already passed.
+- NEVER say "you will marry in 2023" to someone in 2026 — that's obviously wrong and destroys credibility.
 - NEVER predict confident marriage when the denial engine says SEVERE or HIGH.
 
 CROSS-REFERENCE DATA (for richer marriage narrative):
@@ -582,10 +686,24 @@ CROSS-REFERENCE DATA (for richer marriage narrative):
 - Financial strength: ${allSections?.career?.wealthStrength?.assessment || 'N/A'} (affects marital stability)
 - Partner's first letter: ${(allSections?.surpriseInsights?.partnerFirstLetter?.topLetters || []).join(', ') || 'N/A'}
 - Retrograde Venus: ${(allSections?.personality?.retrogradePlanets || []).some(r => r.name === 'Venus') ? 'YES — past-life relationship karma, unconventional love patterns, may revisit old relationships' : 'No'}
-- 🔥 SECOND MARRIAGE: ${allSections?.surpriseInsights?.secondMarriage?.probability || 'N/A'}
+━━━ SECOND MARRIAGE & DIVORCE — FULL ANALYSIS ━━━
+- 🔥 SECOND MARRIAGE PROBABILITY: ${allSections?.surpriseInsights?.secondMarriage?.probability || 'N/A'}
 - 🔥 DIVORCE RISK: ${allSections?.surpriseInsights?.secondMarriage?.divorceRisk || 'N/A'}
-- 🔥 Second marriage indicators: ${(allSections?.surpriseInsights?.secondMarriage?.reasons || []).slice(0, 3).join(' | ') || 'None'}
-NOTE: If second marriage probability is HIGH/VERY HIGH, mention it in the marriage section. If LOW, reassure the person.
+- 🔥 Score: ${allSections?.surpriseInsights?.secondMarriage?.score || 0}/15 — ${(allSections?.surpriseInsights?.secondMarriage?.score || 0) >= 7 ? 'STRONG indicators of second marriage' : (allSections?.surpriseInsights?.secondMarriage?.score || 0) >= 4 ? 'MODERATE indicators' : 'WEAK indicators'}
+- Divorce sub-score: ${allSections?.surpriseInsights?.secondMarriage?.divorceScore || 0}/8
+- 7th House Sign: ${allSections?.surpriseInsights?.secondMarriage?.h7Rashi || 'N/A'} ${allSections?.surpriseInsights?.secondMarriage?.isDualSign ? '(DUAL SIGN — classical indicator of multiple relationships)' : ''}
+- ALL Indicators:
+${(allSections?.surpriseInsights?.secondMarriage?.reasons || []).map((r, i) => `  ${i+1}. ${r}`).join('\n') || '  None'}
+⚠️ RULE: State probability and divorce risk DIRECTLY — no softening. If HIGH/VERY HIGH, dedicate a FULL paragraph explaining when and why. If LOW, state it plainly in one sentence.
+
+═══ NADI ASTROLOGY MARRIAGE ANALYSIS (Sub-Lord Methodology) ═══
+${sectionData?.nadiMarriage ? `- Nadi Verdict: ${sectionData.nadiMarriage.verdict} (${sectionData.nadiMarriage.strength})
+- Best Dasha planets for marriage: ${(sectionData.nadiMarriage.bestDashaPlanets || []).join(', ') || 'N/A'}
+- Strong marriage planets: ${(sectionData.nadiMarriage.strongPlanets || []).join(', ') || 'N/A'}
+- Weak/denying planets: ${(sectionData.nadiMarriage.weakPlanets || []).join(', ') || 'None'}
+- Average Nadi Score: ${sectionData.nadiMarriage.averageScore}/100
+- NOTE: ${sectionData.nadiMarriage.note}
+USE THIS: The "Best Dasha planets" tells you WHICH planet periods will bring marriage. Weave this into your timing analysis.` : 'Nadi analysis not available'}
 
 OUTPUT INSTRUCTIONS:
 ${sectionData?.marriageAfflictions?.isMarriageDenied ? `
@@ -594,7 +712,7 @@ Write paragraphs covering:
 1. **Life pattern** — Explain why this person's life energy is NOT directed toward marriage. Use the specific afflictions to describe real-life patterns (e.g., career absorption, emotional guardedness, spiritual independence, preference for solitude). Be compassionate but HONEST.
 2. **What happened during "marriage windows"** — If timing windows exist, explain that even during those periods, the blocking factors prevented marriage from manifesting. The energy was redirected elsewhere.
 3. **Relationship capacity** — This person CAN have relationships but may not formalize them into marriage. Explain the difference.
-4. **Strengths of being unmarried** — Frame the single life positively: independence, career achievement, spiritual growth, deep friendships.
+4. **Life without marriage** — State what their life looks like without marriage. Mention practical realities: independence, but also loneliness, social pressure, and financial implications of single life.
 5. **Practical advice** — If marriage is still desired, offer specific practical tips based on the afflictions (communication, social habits, lifestyle changes — not religious rituals).
 6. **Late marriage possibility** — If ANY supportive factors exist, mention that marriage is not 100% impossible but requires specific conditions and timing.
 DO NOT fabricate marriage timing. DO NOT give false hope. Be truthful.` :
@@ -610,12 +728,209 @@ Write paragraphs acknowledging:
 1. **Marriage timing** — State the calculated windows with their confidence scores. This is the #1 thing people want to know. Include specific years and age ranges. Elaborate on what each window means.
 2. **Spouse description** — From the spouse planet and spouse qualities data, describe the partner's personality, likely profession, and how they complement this person. Use partner's first letter data if available. Dedicate a FULL rich paragraph to painting a vivid picture of the spouse.
 3. **How they meet** — From the partnership lord placement, describe the likely circumstances of meeting (through work, family, travel, etc.) Paint a scenario.
-4. **Marriage strength** — From the D9 analysis, state whether marriage is indicated as strong, moderate, or challenging. Be HONEST. Explain what this means in daily life.
-5. **Afflictions and challenges** — If affliction data exists, state the severity and specific issues. If Mars affliction is present, explain its real-life impact (arguments, dominance, passion). Be detailed about how these play out.
+4. **Marriage strength** — From the D9 analysis, state whether marriage is indicated as strong, moderate, or challenging. Be HONEST.
+5. **Afflictions and challenges** — If affliction data exists, state the severity and specific issues. If Mars affliction is present, explain its real-life impact (arguments, dominance, passion).
 6. **Impact on children** — From cross-reference data, how marriage dynamics affect family building
 7. **Attachment style** — If childhood trauma or depression data exists, explain how it shapes their approach to love. This is deeply personal — write with empathy.
-8. **Practical advice** — Based on the SPECIFIC challenges identified in the data (not generic "communicate better"). Give actionable, specific steps.`}
+8. 🔥 **Second marriage & divorce risk** — State the probability DIRECTLY. If score >= 5, explain each indicator and what it means in real life. Include the specific triggers (which relationship patterns, which life periods). If divorce risk is HIGH, state WHEN it's most likely (from Dasha data). If LOW, state it in one clear sentence and move on.
+9. **Practical advice** — Based on the SPECIFIC challenges identified in the data (not generic "communicate better"). Give actionable, specific steps.
+⚠️ DO NOT write about daily married life, in-law dynamics, or decade-by-decade evolution here — that content belongs in the "විවාහ ජීවිතය (Your Married Life)" section.`}
 Skip any area where the data is N/A.`,
+    },
+
+    marriedLife: {
+      title: '🏠 විවාහ ජීවිතය — Your Married Life',
+      prompt: `Write about the DAILY EXPERIENCE of married life — what happens AFTER marriage. This is NOT about timing, NOT about finding a partner, NOT about whether marriage happens (that was covered in the Love & Relationships section). Focus EXCLUSIVELY on: what married life FEELS like day-to-day, conflict patterns, intimacy, household management, power dynamics, in-law relationships, financial decisions as a couple, and how the marriage evolves over decades.
+
+⚠️ THIS SECTION IS COMPLETELY DIFFERENT FROM "LOVE & RELATIONSHIPS":
+- Love section = WHEN marriage happens, WHO the partner is, HOW they meet
+- THIS section = What happens EVERY DAY after the wedding — the reality of living together
+
+⚠️ CRITICAL AGE-AWARE FRAMING (Person is ${personAge || 'unknown'} years old):
+${personAge && parseInt(personAge, 10) >= 25 ? `- This person is ${personAge} years old — they are likely ALREADY MARRIED
+- Write in PRESENT/PAST TENSE: "In your married life, you experience..." NOT "When you marry, you will..."
+- Describe what IS happening in their marriage, not what WILL happen
+- If describing challenges, say "you may notice..." or "there could be patterns of..." — not definitive statements they can immediately disprove` : '- This person may not yet be married. Use future tense: "In your married life, you will likely experience..."'}
+
+REMINDER: No astrology terms in output. No "7th house", "Venus placement", "Navamsha", "Darakaraka" etc. Describe everything as real-life relationship patterns. If Sinhala, write 100% pure Sinhala with zero English words.
+
+Birth details: Born under ${lagnaEn} rising, Moon in ${moonEn}, Nakshatra: ${nakshatraName}
+Current life period: ${currentDasha} main period, ${currentAD} sub-period
+Person's age: ${personAge || 'unknown'}
+Gender: ${extraContext.userGender || 'unknown'}
+
+━━━ COMPLETE MARRIED LIFE ENGINE DATA (USE ALL — NO HALLUCINATION) ━━━
+
+7TH HOUSE (MARRIAGE HOUSE) — PRIMARY MARRIAGE INDICATOR:
+- Sign: ${sectionData?.seventhHouse?.rashiEnglish || 'N/A'} (${sectionData?.seventhHouse?.rashi || ''})
+- Strength: ${sectionData?.seventhHouse?.strength || 'N/A'}
+- Strength Score: ${sectionData?.seventhHouse?.strengthScore || 'N/A'}/100 — ${(sectionData?.seventhHouse?.strengthScore || 0) >= 65 ? 'STRONG marriage house = harmonious married life' : (sectionData?.seventhHouse?.strengthScore || 0) >= 45 ? 'MODERATE marriage house = mixed married life' : 'WEAK marriage house = married life faces challenges'}
+- Ashtakavarga Bindus: ${sectionData?.seventhHouse?.ashtakavargaBindus || 'N/A'} (${sectionData?.seventhHouse?.ashtakavargaQuality || 'N/A'})
+- Planets in 7th: ${(sectionData?.seventhHouse?.planetsInHouse || []).join(', ') || 'Empty — marriage dynamics depend on 7th lord'}
+- Aspects on 7th: ${(sectionData?.seventhHouse?.aspectingPlanets || []).map(a => a.planet || a).join(', ') || 'None'}
+- Benefic aspects: ${sectionData?.seventhHouse?.beneficAspectCount || 0}, Malefic aspects: ${sectionData?.seventhHouse?.maleficAspectCount || 0} — ${(sectionData?.seventhHouse?.beneficAspectCount || 0) > (sectionData?.seventhHouse?.maleficAspectCount || 0) ? 'More benefic = smoother married life' : (sectionData?.seventhHouse?.maleficAspectCount || 0) > (sectionData?.seventhHouse?.beneficAspectCount || 0) ? 'More malefic = friction in married life' : 'Balanced'}
+- Bhava Chalit shifts: ${(sectionData?.seventhHouse?.chalitShifts || []).length > 0 ? sectionData.seventhHouse.chalitShifts.map(s => s.planet + ' shifts from house ' + s.wholeSignHouse + ' to ' + s.chalitHouse).join('; ') : 'None'}
+- 7th Lord: ${sectionData?.seventhLord?.name || 'N/A'} in house ${sectionData?.seventhLord?.house || 'N/A'}
+- 7th Lord Nature: ${sectionData?.seventhHouse?.lordNature || 'N/A'} — ${sectionData?.seventhHouse?.lordNature === 'malefic' ? 'Marriage lord is working AGAINST domestic harmony — extra effort needed' : sectionData?.seventhHouse?.lordNature === 'benefic' ? 'Marriage lord SUPPORTS domestic harmony' : 'Neutral'}
+
+SPOUSE PERSONALITY (Darakaraka — soul-level spouse indicator):
+${sectionData?.darakaraka ? `- Planet: ${sectionData.darakaraka.planet} in ${sectionData.darakaraka.rashi}
+- Spouse Nature: ${sectionData.darakaraka.spouseNature}
+→ THIS defines the spouse's CORE personality. Use this to describe daily interactions.` : 'Not available'}
+
+UPAPADA LAGNA (how marriage APPEARS to others):
+${sectionData?.upapadaLagna ? `- Sign: ${sectionData.upapadaLagna.rashi}
+- Meaning: ${sectionData.upapadaLagna.meaning}` : 'Not available'}
+
+SPOUSE QUALITIES (blended from all indicators — ALREADY PRIORITIZED):
+${Array.isArray(sectionData?.spouseQualities) ? sectionData.spouseQualities.map((q, i) => `${i+1}. ${q}`).join('\n') : (sectionData?.spouseQualities || 'N/A')}
+
+LOVE PLANET (Venus — romance and intimacy style):
+- Venus in house: ${sectionData?.venus?.house || 'N/A'}
+- Venus sign: ${sectionData?.venus?.rashi || 'N/A'}
+- Venus in D9: ${sectionData?.venus?.navamshaRashi || 'N/A'}
+→ Venus house = HOW they express love daily. Venus in 1st = affectionate, 4th = home-loving, 7th = partner-focused, 12th = bedroom passion
+
+MARS AFFLICTION (Kuja Dosha — conflict energy):
+- Present: ${sectionData?.kujaDosha?.present ? 'YES — Mars in house ' + sectionData.kujaDosha.marsHouse : 'NO'}
+- Details: ${sectionData?.kujaDosha?.note || 'N/A'}
+→ If present: Mars injects AGGRESSION into married life — arguments are heated, dominance struggles exist, but also PASSION
+
+D9 NAVAMSHA (MARRIAGE SOUL CHART — THE TRUE married life picture):
+- D9 Lagna: ${sectionData?.navamshaAnalysis?.d9LagnaSign || 'N/A'}
+- Venus in D9: ${sectionData?.navamshaAnalysis?.venusInNavamsha || 'N/A'}
+- D9 7th planets: ${(sectionData?.navamshaAnalysis?.d9SeventhPlanets || []).join(', ') || 'None'}
+- Marriage Strength: ${sectionData?.navamshaAnalysis?.marriageStrength || 'N/A'}
+- D9 7th Lord: ${sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.d9SeventhLord || 'N/A'} in D9 house ${sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.d9SeventhLordHouse || 'N/A'}
+- In Kendra: ${sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.inKendra ? 'YES — STRONG marriage foundation at soul level' : 'No'}
+- In Dusthana: ${sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.inDusthana ? 'YES — hidden soul-level marriage challenges' : 'No'}
+- D9 Verdict: ${sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.marriageStrengthFromD9Lord || 'N/A'}
+→ D9 is THE marriage chart. Marriage strength here = TRUE daily quality of married life
+
+MARRIAGE AFFLICTIONS (from allSections — critical for married life quality):
+- Severity: ${allSections?.marriage?.marriageAfflictions?.severity || 'NONE'} (Score: ${allSections?.marriage?.marriageAfflictions?.severityScore || 0}/100)
+- Marriage Denied: ${allSections?.marriage?.marriageAfflictions?.isMarriageDenied ? '⛔ YES' : 'No'}
+- Marriage Delayed: ${allSections?.marriage?.marriageAfflictions?.isMarriageDelayed ? '⚠️ YES' : 'No'}
+- Likelihood: ${allSections?.marriage?.marriageAfflictions?.likelihood || 'N/A'}
+- Specific afflictions: ${(allSections?.marriage?.marriageAfflictions?.afflictions || []).join(' | ') || 'None'}
+- Detailed breakdown: ${(allSections?.marriage?.marriageAfflictions?.afflictionDetails || []).map(a => a.factor + ': ' + a.meaning).join(' | ') || 'None'}
+- Supportive factors: ${(allSections?.marriage?.marriageAfflictions?.supportiveFactors || []).join(' | ') || 'None'}
+- Summary: ${allSections?.marriage?.marriageAfflictions?.summary || 'N/A'}
+
+━━━ IN-LAW RELATIONSHIP ENGINE DATA ━━━
+
+4TH HOUSE (HOME & DOMESTIC LIFE):
+- Strength Score: ${allSections?.realEstate?.fourthHouse?.strengthScore || allSections?.education?.fourthHouse?.strengthScore || 'N/A'}/100
+- Planets in 4th: ${(allSections?.realEstate?.fourthHouse?.planetsInHouse || allSections?.education?.fourthHouse?.planetsInHouse || []).join(', ') || 'Empty'}
+- Malefics in 4th: ${(allSections?.realEstate?.fourthHouse?.maleficsIn || allSections?.education?.fourthHouse?.maleficsIn || []).join(', ') || 'None — domestic peace supported'}
+- 4th Lord in house: ${allSections?.career?.homeLifeIndicators?.h4LordHouse || 'N/A'} ${allSections?.career?.homeLifeIndicators?.h4LordInDusthana ? '⚠️ (in difficult house — domestic friction likely)' : ''}
+- Domestic Yogas: ${(allSections?.career?.homeLifeIndicators?.domesticYogas || []).join(' | ') || 'None'}
+- Domestic Role: ${allSections?.career?.homeLifeIndicators?.domesticRole || 'N/A'}
+- Home Narrative: ${allSections?.career?.homeLifeIndicators?.homeNarrative || 'N/A'}
+
+IN-LAW CONFLICT INDICATORS:
+- Saturn aspecting 7th: ${(sectionData?.seventhHouse?.aspectingPlanets || []).some(a => (a.planet || a) === 'Saturn') ? 'YES — cold, distant, or restrictive in-law dynamics' : 'No'}
+- Rahu in 7th: ${(sectionData?.seventhHouse?.planetsInHouse || []).includes('Rahu') ? 'YES — unconventional in-laws, cultural/religious differences possible' : 'No'}
+- Ketu in 7th: ${(sectionData?.seventhHouse?.planetsInHouse || []).includes('Ketu') ? 'YES — detachment from spouse family, spiritual disconnect with in-laws' : 'No'}
+- Jupiter position: house ${allSections?.children?.jupiter?.house || sectionData?.venus?.house || 'N/A'} — ${(() => { const jh = allSections?.children?.jupiter?.house; return jh && [6,8,12].includes(jh) ? '⚠️ Jupiter in dusthana = in-law disputes, interference in marriage' : 'Jupiter not in difficult position for in-laws'; })()}
+- Mother bond: ${allSections?.familyPortrait?.mother?.bond || 'N/A'} → shapes mother-in-law relationship
+- Father bond: ${allSections?.familyPortrait?.father?.bond || 'N/A'} → shapes father-in-law relationship
+
+━━━ CROSS-REFERENCE DATA FOR MARRIED LIFE DYNAMICS ━━━
+
+PERSONALITY & ATTACHMENT:
+- Retrograde Venus: ${(allSections?.personality?.retrogradePlanets || []).some(r => r.name === 'Venus') ? 'YES — past-life relationship karma, revisiting old patterns in marriage' : 'No'}
+- Retrograde planets in 7th: ${(allSections?.personality?.retrogradePlanets || []).filter(r => r.house === 7).map(r => r.name + ' — delays/complications in partnership').join(', ') || 'None'}
+- Attachment style: ${allSections?.surpriseInsights?.loveLanguage?.attachment || 'N/A'} — ${allSections?.surpriseInsights?.loveLanguage?.attachDetail || ''}
+- Love language: ${allSections?.surpriseInsights?.loveLanguage?.primary || 'N/A'}
+- Childhood trauma: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (score: ${allSections?.mentalHealth?.childhoodTrauma?.score || 0}) — affects conflict patterns in marriage
+- Depression risk: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'} — affects emotional availability in marriage
+- Anger style: ${allSections?.surpriseInsights?.emotionalStyle?.angerStyle || 'N/A'}
+- Conflict style: ${allSections?.surpriseInsights?.emotionalStyle?.conflictStyle || 'N/A'}
+- Social battery: ${allSections?.surpriseInsights?.dailyBehavior?.socialBattery || 'N/A'}
+- Public vs Private contrast: ${allSections?.surpriseInsights?.publicVsPrivate?.contrastLevel || 'N/A'}
+
+FINANCIAL DYNAMICS AS A COUPLE:
+- Wealth strength: ${allSections?.career?.wealthStrength?.assessment || 'N/A'}
+- Money personality: ${allSections?.surpriseInsights?.moneyPersonality?.archetype || 'N/A'} (impulse: ${allSections?.surpriseInsights?.moneyPersonality?.impulseScore || 'N/A'})
+- Business vs Service: ${allSections?.career?.businessVsService || 'N/A'}
+
+CHILDREN IMPACT ON MARRIAGE:
+- Estimated children: ${allSections?.children?.estimatedChildren?.count || 'N/A'} (${allSections?.children?.estimatedChildren?.genderTendency || ''})
+- First child predicted: ${allSections?.children?.childrenBirthYears?.children?.[0]?.predictedYears || 'N/A'}
+
+━━━ SECOND MARRIAGE & DIVORCE — FULL DATA ━━━
+- 🔥 SECOND MARRIAGE PROBABILITY: ${allSections?.surpriseInsights?.secondMarriage?.probability || 'N/A'}
+- 🔥 DIVORCE RISK: ${allSections?.surpriseInsights?.secondMarriage?.divorceRisk || 'N/A'}
+- Score: ${allSections?.surpriseInsights?.secondMarriage?.score || 0}/15
+- Divorce sub-score: ${allSections?.surpriseInsights?.secondMarriage?.divorceScore || 0}/8
+- 7th House Sign: ${allSections?.surpriseInsights?.secondMarriage?.h7Rashi || 'N/A'} ${allSections?.surpriseInsights?.secondMarriage?.isDualSign ? '(DUAL SIGN — multiple relationships indicated)' : ''}
+- ALL Indicators:
+${(allSections?.surpriseInsights?.secondMarriage?.reasons || []).map((r, i) => `  ${i+1}. ${r}`).join('\n') || '  None'}
+
+MARRIAGE TIMING (for age-context):
+- Best window: ${allSections?.marriage?.marriageTimingPrediction?.bestWindow ? allSections.marriage.marriageTimingPrediction.bestWindow.dateRange + ', Age ' + allSections.marriage.marriageTimingPrediction.bestWindow.ageRange : 'N/A'}
+
+═══ NADI ASTROLOGY MARRIAGE ANALYSIS (Sub-Lord Methodology) ═══
+${sectionData?.nadiMarriage ? `- Nadi Verdict: ${sectionData.nadiMarriage.verdict} (${sectionData.nadiMarriage.strength})
+- Best Dasha planets for marriage: ${(sectionData.nadiMarriage.bestDashaPlanets || []).join(', ') || 'N/A'}
+- Strong marriage planets: ${(sectionData.nadiMarriage.strongPlanets || []).join(', ') || 'N/A'}
+- Weak/denying planets: ${(sectionData.nadiMarriage.weakPlanets || []).join(', ') || 'None'}
+- Average Nadi Score: ${sectionData.nadiMarriage.averageScore}/100
+- NOTE: ${sectionData.nadiMarriage.note}
+USE THIS: Strong Nadi verdict = marriage is CONFIRMED at soul level → married life dynamics are more meaningful. Weak verdict = marriage itself is uncertain → write conditionally. Best Dasha planets indicate WHICH life periods bring HARMONY or CONFLICT in married life.` : 'Nadi marriage analysis not available'}
+
+━━━ DASHA PERIODS (for decade-by-decade marriage evolution) ━━━
+${allSections?.lifePredictions?.lifePhaseSummary ? allSections.lifePredictions.lifePhaseSummary.map(d => `${d.lord}: ${d.period} (${d.years}yr) — "${d.theme}"${d.chartTheme ? ' | ' + d.chartTheme : ''}${d.isCurrent ? ' ← NOW' : ''}`).join('\n') : 'Dasha timeline not available'}
+
+━━━ HOW TO USE ALL THIS DATA ━━━
+
+SPOUSE PERSONALITY FOR DAILY LIFE (follow this hierarchy):
+1. Darakaraka spouseNature → THE core personality you live with daily (HIGHEST weight)
+2. 7th house sign → STYLE and TONE of daily interactions
+3. Upapada → how the marriage LOOKS to outsiders
+4. D9 marriage strength → the DEEP TRUTH of married life quality
+5. Affliction severity → the CHALLENGES you face
+
+IN-LAW ANALYSIS (mandatory if data exists):
+- 4th house weak + malefics = domestic friction including in-laws
+- Mother bond "difficult"/"distant" → challenging mother-in-law dynamics
+- Father bond → authority dynamics with father-in-law
+- Rahu/Ketu on 1-7 axis = cultural/background differences with spouse's family
+- Saturn aspecting 7th = cold or formal in-law relationships
+- Jupiter in dusthana (6/8/12) = in-law interference in marriage decisions
+
+CONFLICT PATTERN DERIVATION:
+- Mars in 7th or Kuja Dosha = heated arguments, physical tension, dominance struggles
+- Saturn influence = cold war, silent treatment, emotional distance
+- Rahu influence = deception, misunderstandings, trust issues
+- Ketu influence = spiritual disconnect, feeling like strangers
+- Anger style + conflict style data = HOW arguments actually play out
+
+⚠️ CRITICAL AGE AWARENESS:
+- If marriage afflictions severity is SEVERE or Marriage Denied = YES: DO NOT assume they are married. Write conditionally: "If you were to marry..." Frame as hypothetical.
+- If under 24: Future tense — "Your married life WILL look like..."
+- If 24-35 AND denial NONE/MILD: Mix — "If you're already married..." / "When you marry..."
+- If 35+ AND denial NONE/MILD: ASSUME married. Write about CURRENT daily dynamics.
+- If 35+ AND denial MODERATE+: Write conditionally.
+
+⚠️ ${sectionData?.lagnaCuspWarning?.isNearCusp ? `BIRTH TIME SENSITIVITY: Lagna at ${sectionData.lagnaCuspWarning.degreeInSign}° — near sign boundary. Married life predictions may vary.` : ''}
+
+OUTPUT — Write AT LEAST 10-14 rich, detailed paragraphs (each 3-6 sentences). This is a HERO section. Cover:
+1. 🏠 **Daily routine together** — Morning dynamics, evening patterns, weekend routines. Who wakes first? Who handles what? How do they spend evenings together? Use 7th house sign + Darakaraka to paint this picture.
+2. 💬 **Communication patterns** — How do they talk? Deep conversations or surface-level? Who initiates? Use attachment style + love language data. Are they emotionally open or guarded?
+3. ⚔️ **Conflict and arguments** — HOW they fight (from anger style + Mars data). What triggers arguments? How long do they last? Who apologizes first? Who holds grudges? If Kuja Dosha present, describe the HEAT and INTENSITY.
+4. 💕 **Intimacy and emotional connection** — Physical and emotional intimacy quality from Venus data + D9. Is there passion, tenderness, or distance? How does intimacy change over years?
+5. 🏡 **Household management and power dynamics** — Who manages money? Who makes big decisions? Who handles daily tasks? From domestic role data + money personality. Is there equality or one-sided control?
+6. 👨‍👩‍👧 **In-law relationships** — DETAILED: Mother-in-law dynamics (from mother bond data), father-in-law (from father bond), living arrangements (together or separate?), interference level, cultural friction if Rahu involved. Will in-laws SUPPORT or STRAIN the marriage?
+7. 💰 **Financial decisions as a couple** — Saving vs spending, joint accounts vs separate, financial stress periods from risk data. Who earns more? Does that create tension?
+8. 👶 **How children change the marriage** — From children data: when first child comes, how parenting shifts dynamics, added stress or bonding.
+9. 📅 **Decade-by-decade evolution** — Use Dasha periods to map how the marriage changes: the honeymoon phase, the adjustment years, the challenging middle period, the mature companionship phase. Which specific year ranges bring closeness and which bring distance?
+10. 🔮 **Separation or distance risks** — If divorce risk data is HIGH, describe the vulnerable periods. If separation planets are active, describe when distance may occur. Be honest but constructive.
+11. 💪 **Practical advice for a better marriage** — Based on the SPECIFIC challenges identified. NOT generic. If conflict is the issue, give conflict-specific tips. If intimacy is weak, give intimacy tips. If in-laws are the problem, give boundary-setting advice.
+
+REMINDER: Plain language — avoid technical chart jargon.
+${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word. දෙමළ (Tamil) අකුරු හෝ වචන කිසිසේත් භාවිතා නොකරන්න.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish (Sinhala words in English letters).' : 'Write in warm, honest, relatable English.'}`,
     },
 
     career: {
@@ -623,6 +938,22 @@ Skip any area where the data is N/A.`,
       prompt: `Translate the following career engine data into a FOCUSED, specific career and wealth assessment. You MUST pick the 2-3 MOST relevant career paths from the ranked data and explain WHY they fit — do NOT list every possible career. Be specific and on-point.
 
 REMINDER: No astrology terms. No "10th house", "2nd lord", "Dhana Yoga", "Dashamsha", "Amatyakaraka" etc. Describe career insights as real-world experiences. If Sinhala, write 100% pure Sinhala — zero English words.
+
+━━━ AGE-AWARE CAREER/WEALTH PREDICTIONS ━━━
+Current Age: ${personAge || 'Unknown'} years old
+Current Year: ${new Date().getFullYear()}
+Birth Year: ${bd?.birthDateStr ? new Date(bd.birthDateStr).getFullYear() : 'Unknown'}
+Max Prediction Year: ${bd?.birthDateStr ? new Date(bd.birthDateStr).getFullYear() + 75 : new Date().getFullYear() + 30}
+
+⚠️ CRITICAL TIMING RULES:
+- NEVER predict wealth/career events beyond age 75. No "you will be rich in 2099".
+- For career predictions, focus on ages 22-65 (working life).
+- For wealth predictions, focus on the NEXT 10-20 years from current age.
+- If dasha periods extend beyond age 75, DO NOT mention those years specifically.
+- ${personAge >= 25 ? `This person is ${personAge} — they are likely ALREADY WORKING. Frame career advice as "your chart supports..." not "you will become..."` : 'This person may be starting their career or still studying.'}
+- ${personAge >= 40 ? `At age ${personAge}, focus on career CONSOLIDATION and wealth PRESERVATION, not "you will start..." predictions.` : ''}
+- ${personAge >= 55 ? `At age ${personAge}, focus on retirement planning, legacy, and health-wealth balance. Do NOT predict major career changes.` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ━━━ CAREER ENGINE DATA ━━━
 
@@ -675,6 +1006,16 @@ CAREER DEPTH DATA:
 - Career Lord Strength: ${sectionData?.tenthLordShadbala ? `${sectionData.tenthLordShadbala.totalRupas} Rupas (${sectionData.tenthLordShadbala.percentage}%) — ${sectionData.tenthLordShadbala.strength}. Strongest aspect: ${sectionData.tenthLordShadbala.strongestComponent}` : 'Not available'}
 ${sectionData?.lagnaCuspWarning?.isNearCusp ? `⚠️ BIRTH TIME SENSITIVITY: Near sign boundary. Career predictions may vary if birth time is slightly off.` : ''}
 
+═══ NADI ASTROLOGY CAREER ANALYSIS (Sub-Lord Methodology) ═══
+${sectionData?.nadiCareer ? `- Service/Job Verdict: ${sectionData.nadiCareer.serviceVerdict} (${sectionData.nadiCareer.serviceStrength})
+- Business Verdict: ${sectionData.nadiCareer.businessVerdict} (${sectionData.nadiCareer.businessStrength})
+- Nadi Career Type: ${sectionData.nadiCareer.careerType?.type} (Confidence: ${sectionData.nadiCareer.careerType?.confidence})
+- Career Sectors: ${(sectionData.nadiCareer.careerSectors || []).map(s => s.planet + '→' + s.sector).join(', ') || 'N/A'}
+- Best Dasha for career: ${(sectionData.nadiCareer.bestDashaPlanets || []).join(', ') || 'N/A'}
+- Wealth Verdict: ${sectionData.nadiCareer.wealthVerdict}
+- Windfall/Unearned income: ${sectionData.nadiCareer.windfallVerdict}
+USE THIS: Service vs Business verdicts tell you definitively whether this person should pursue employment or entrepreneurship. Career sectors narrow down the INDUSTRY.` : 'Nadi career analysis not available'}
+
 HOME & DOMESTIC INDICATORS:
 - Home lord: ${sectionData?.homeLifeIndicators?.h4Lord} in house ${sectionData?.homeLifeIndicators?.h4LordHouse}${sectionData?.homeLifeIndicators?.h4LordInDusthana ? ' (difficult placement)' : ''}
 - Planets in home sector: ${(sectionData?.homeLifeIndicators?.h4PlanetsAll || []).join(', ') || 'None'}
@@ -683,6 +1024,12 @@ HOME & DOMESTIC INDICATORS:
 - Domestic patterns: ${(sectionData?.homeLifeIndicators?.domesticYogas || []).join(' | ') || 'None detected'}
 - DOMESTIC ROLE: ${sectionData?.homeLifeIndicators?.domesticRole} (PRIMARY = homemaker path; SECONDARY = balanced; NONE = career-dominant)
 - Home narrative: ${sectionData?.homeLifeIndicators?.homeNarrative || 'Not available'}
+
+⛔ MANDATORY EDUCATION↔CAREER CONSISTENCY CHECK:
+- Education suggested fields: ${(allSections?.education?.suggestedFields || []).join(', ') || 'N/A'}
+- Nadi education fields: ${(allSections?.education?.nadiEducation?.suggestedFields || []).slice(0, 8).join(', ') || 'N/A'}
+- Education→Career alignment from core themes: (see CORE THEMES above — "Education→Career Alignment" field)
+⚠️ YOUR CAREER NARRATIVE MUST LOGICALLY CONNECT TO THE EDUCATION DATA. If the education engine says "Medicine, biology" you CANNOT say "IT programmer" for career unless you explicitly explain the bridge (e.g., "health-tech", "medical informatics", "biotech software"). The career path must be a NATURAL EXTENSION of the education background. If they truly diverge, acknowledge the career pivot explicitly.
 
 CROSS-REFERENCE DATA (for richer career narrative):
 - Education strength: ${allSections?.education?.academicStrength || 'N/A'}
@@ -711,6 +1058,8 @@ DOMESTIC ROLE DETECTED — write about homemaking as their primary career path:
 ✅ DO mention 1-2 secondary careers briefly as alternatives, not as equal options.
 ✅ DO use the career planet ranking to determine which career direction is STRONGEST.
 ✅ DO consider the person's current life phase (dasha) and education background to make the advice RELEVANT.
+✅ DO pay special attention to Venus/Moon/Mercury indicators — if Venus is prominent (in career house, aspecting 10th, strong in career planet ranking), creative/artistic careers like graphic design, visual arts, photography, fashion, interior design MUST be mentioned prominently. Do NOT ignore artistic/design careers when Venus is a top career planet.
+✅ DO check for Mercury+Venus combinations — these strongly indicate design, communication design, advertising, UX/UI, or digital art careers.
 
 - Business vs service → state directly whether self-employment or employment suits them better
 - Career significator → describes their professional calling
@@ -805,6 +1154,14 @@ ${(sectionData?.childrenEducation?.struggles || []).map(s => `  ⚠️ ${s}`).jo
 MARRIAGE AFFLICTIONS (affects children):
 ${allSections?.marriage?.marriageAfflictions ? `Severity: ${allSections.marriage.marriageAfflictions.severity} (Score: ${allSections.marriage.marriageAfflictions.severityScore}/100)\nMarriage Denied: ${allSections.marriage.marriageAfflictions.isMarriageDenied ? '⛔ YES — CHILDREN THROUGH MARRIAGE VERY UNLIKELY' : 'No'}\nIssues: ${(allSections.marriage.marriageAfflictions.afflictions || []).join(' | ')}` : 'N/A'}
 
+═══ NADI ASTROLOGY CHILDREN ANALYSIS (Sub-Lord Methodology) ═══
+${sectionData?.nadiChildren ? `- Nadi Verdict: ${sectionData.nadiChildren.verdict} (${sectionData.nadiChildren.strength})
+- Best Dasha planets for children: ${(sectionData.nadiChildren.bestDashaPlanets || []).join(', ') || 'N/A'}
+- Strong children planets: ${(sectionData.nadiChildren.strongPlanets || []).join(', ') || 'N/A'}
+- Average Nadi Score: ${sectionData.nadiChildren.averageScore}/100
+- NOTE: ${sectionData.nadiChildren.note}
+USE THIS: Nadi methodology determines children timing through DBA of planets signifying houses 2,5,11. Sub-Lord of 5th cusp determines if children are PROMISED or DENIED. Use "Best Dasha planets" to refine timing predictions.` : 'Nadi children analysis not available'}
+
 ━━━ DATA USAGE RULES ━━━
 - Estimated count → state this number directly
 - Gender tendency → state directly
@@ -822,6 +1179,8 @@ ${allSections?.marriage?.marriageAfflictions ? `Severity: ${allSections.marriage
 CROSS-REFERENCE DATA (for richer children narrative):
 - Marriage timing: ${allSections?.marriage?.marriageTimingPrediction?.bestWindow?.dateRange || 'N/A'} (children come AFTER marriage in most cases)
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'} (${allSections?.marriage?.marriageAfflictions?.severityScore || 0}/100 — if SEVERE, children may be delayed or affected. If marriage DENIED, children through marriage very unlikely)
+- Marriage score: ${allSections?.marriage?.seventhHouse?.strengthScore || 'N/A'}/100 — children score CANNOT be more optimistic than marriage score. If marriage is 50/100, do NOT write an enthusiastic children section.
+- Cross-validation adjustments: ${(sectionData?._crossValidation || []).map(a => `${a.from}→${a.to}: ${a.reason}`).join('; ') || 'None — scores are consistent'}
 - Mother profile: ${allSections?.surpriseInsights?.motherProfile ? allSections.surpriseInsights.motherProfile.substring(0, 100) : 'N/A'} (parenting style influenced by own upbringing)
 - Childhood trauma: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (if HIGH/SEVERE, person may be extra protective or struggle with parenting)
 - Health: fertility-related organ risks: ${(allSections?.health?.organRisks || []).filter(o => (o.organ || '').toLowerCase().includes('reprod')).map(o => o.organ + ': ' + o.risk).join(', ') || 'None flagged'}
@@ -853,7 +1212,7 @@ Be honest about the marriage obstacles affecting children prospects.` :
 3. **Children's nature** — from the significator data, describe children's likely temperament, talents, and personality. Paint a vivid picture of what these children will be like.
 4. 🔥 **Children's education & career** — What subjects should their children study? What careers suit them? State the suggested fields clearly. Describe the learning style — how do their children learn best? Are they quick learners or late bloomers? Will they study abroad? This is EXTREMELY valuable for parents planning their children's future.
 5. 🔥 **Academic potential** — Will their children excel academically? Top of the class or average? Will they pursue higher education, postgraduate studies, or practical vocational training? State the academic level with confidence.
-6. **Fertility assessment** — from the strength data, state fertility outlook honestly. Reference organ risk if relevant. Be compassionate but honest.
+6. **Fertility assessment** — from the strength data, state fertility outlook DIRECTLY. If weak, say "fertility faces challenges" plainly. Reference organ risk if relevant.
 7. **Relationship with children** — from the sector strength data + childhood trauma cross-reference. How will they bond with their children?
 8. **Impact of marriage dynamics** — if marriage affliction data shows severity, note the effect on family
 9. **Parenting style** — from the person's own personality + childhood experience data. What kind of parent will they be?
@@ -931,12 +1290,20 @@ EXAMPLE: Instead of "Jupiter period = expansion" (GENERIC), use:
 - Past phases → describe what the data indicates for those periods
 - Future phases → state what the data predicts
 
+═══ NADI ASTROLOGY CROSS-REFERENCES (enrich each life phase) ═══
+- Nadi Career: ${allSections?.career?.nadiCareer?.careerType || 'N/A'} | Best dashas: ${(allSections?.career?.nadiCareer?.bestDashaPlanets || []).join(', ') || 'N/A'}
+- Nadi Marriage: ${allSections?.marriage?.nadiMarriage?.verdict || 'N/A'} | Best dashas: ${(allSections?.marriage?.nadiMarriage?.bestDashaPlanets || []).join(', ') || 'N/A'}
+- Nadi Health: Longevity ${allSections?.health?.nadiHealth?.longevityEstimate?.estimatedYears || 'N/A'}yr | Danger dashas: ${(allSections?.health?.nadiHealth?.dangerousDashaPlanets || []).join(', ') || 'N/A'}
+- Nadi Children: ${allSections?.children?.nadiChildren?.verdict || 'N/A'} | Best dashas: ${(allSections?.children?.nadiChildren?.bestDashaPlanets || []).join(', ') || 'N/A'}
+- Nadi Foreign: ${allSections?.foreignTravel?.nadiForeignTravel?.verdict || 'N/A'}
+USE: When describing a life phase, check if its lord planet appears in ANY Nadi "bestDashaPlanets" list — that tells you WHICH life events are most likely during that period. If the period lord is a "danger dasha planet" for health, flag it.
+
 REALITY CHECK:
 - Use the person's exact age from system context to anchor all predictions
 - Future predictions must fall within realistic lifespan (max age 80-85)
-- Be honest about difficult periods — if a phase shows hardship, say so
+- Be honest about difficult periods — if a phase shows hardship, say so DIRECTLY without softening
 - Use SPECIFIC years from the data for every prediction
-- Do NOT make every phase sound positive — include hard periods honestly
+- Do NOT make every phase sound positive — include hard periods with full honesty
 
 ⚠️ PERSONALIZATION RULE: For each life phase, cross-reference with ALL available section data:
 - During a Venus period → reference marriage timing from marriage section, romance, beauty/art career
@@ -1030,6 +1397,12 @@ CROSS-REFERENCE:
 - Venus (vehicles/luxury): house ${allSections?.marriage?.venus?.house || 'N/A'} — ${allSections?.marriage?.venus?.note || 'N/A'}
 - Foreign settlement: ${allSections?.foreignTravel?.settlementAbroad ? 'YES — property abroad possible' : 'Domestic focus'}
 
+═══ NADI ASTROLOGY PROPERTY ANALYSIS (Sub-Lord Methodology) ═══
+${allSections?.luck?.nadiLuck ? `- Property Verdict: ${allSections.luck.nadiLuck.propertyVerdict || 'N/A'} (${allSections.luck.nadiLuck.propertyStrength || 'N/A'})
+- Property-activating planets: ${(allSections.luck.nadiLuck.propertyPlanets || []).join(', ') || 'N/A'}
+- NOTE: Nadi methodology: Property via houses 4,11,12. Strong verdict = property acquisition is PROMISED.
+USE THIS: If property verdict is "strong"/"very_strong", property ownership is confirmed. Cross-reference with best periods for property from traditional analysis.` : 'Nadi property analysis not available'}
+
 OUTPUT INSTRUCTIONS — cover ONLY what the data supports:
 1. **Property ownership potential** — from 4th house strength score and property combinations
 2. **Best timing for property** — state the exact periods from the data
@@ -1077,6 +1450,16 @@ CROSS-REFERENCE:
 - Dhana yogas: ${(allSections?.career?.dhanaYogas || []).join(' | ') || 'None'}
 - Money personality: ${allSections?.surpriseInsights?.moneyPersonality?.archetype || 'N/A'} (impulse: ${allSections?.surpriseInsights?.moneyPersonality?.impulseScore || 'N/A'})
 - Wealth class prediction: ${allSections?.surpriseInsights?.wealthClass?.wealthLevel || 'N/A'}
+
+═══ NADI ASTROLOGY FINANCIAL ANALYSIS (Sub-Lord Methodology) ═══
+${allSections?.luck?.nadiLuck ? `- Wealth Verdict: ${allSections.luck.nadiLuck.wealthVerdict || 'N/A'} (${allSections.luck.nadiLuck.wealthStrength || 'N/A'})
+- Windfall Verdict: ${allSections.luck.nadiLuck.windfallVerdict || 'N/A'} (${allSections.luck.nadiLuck.windfallStrength || 'N/A'})
+- Windfall-activating planets: ${(allSections.luck.nadiLuck.windfallPlanets || []).join(', ') || 'N/A'}
+- Best Dasha for windfalls: ${(allSections.luck.nadiLuck.windfallBestDasha || []).join(', ') || 'N/A'}
+- NOTE: Nadi methodology: Wealth via 2,6,10,11. Windfall via 8,11.
+USE THIS: Wealth verdict confirms earning capacity. Windfall verdict tells if unearned money (insurance, PF, inheritance, lottery) is promised. Cross-reference with risk periods to know when to protect vs invest aggressively.` : 'Nadi financial analysis not available'}
+${allSections?.career?.nadiCareer ? `- Nadi Career Wealth: ${allSections.career.nadiCareer.wealthVerdict || 'N/A'}
+- Nadi Windfall: ${allSections.career.nadiCareer.windfallVerdict || 'N/A'}` : ''}
 
 ━━━ DATA USAGE RULES ━━━
 - Savings sector strength → savings capacity
@@ -1153,6 +1536,13 @@ RECOMMEND THESE PRACTICAL APPROACHES:
 - 🎵 Music and sound — calming or energizing music matched to planetary needs
 - 📚 Learning and skill-building — courses or hobbies that strengthen weak planetary energies
 
+═══ NADI CROSS-REFERENCES (prioritize remedies for Nadi-identified weaknesses) ═══
+- Nadi Career weak planets: ${(allSections?.career?.nadiCareer?.weakPlanets || []).join(', ') || 'None'}
+- Nadi Marriage weak planets: ${(allSections?.marriage?.nadiMarriage?.weakPlanets || []).join(', ') || 'None'}
+- Nadi Health weak areas: ${(allSections?.health?.nadiHealth?.vulnerableOrgans || []).join(', ') || 'None'}
+- Nadi Longevity strength: ${allSections?.health?.nadiHealth?.longevityStrength || 'N/A'}
+USE: If Nadi identifies a planet as weak for career AND it appears in weak planet remedies, EMPHASIZE that remedy as highest priority.
+
 OUTPUT: 1. Primary gemstone recommendation (which gem, which finger, which metal, when to start) 2. Lucky color integration and power day strategy 3. Weak planet practical lifestyle adjustments from the data 4. Diet and exercise recommendations from cross-reference data 5. Daily routine suggestions (morning, evening habits) 6. General protective and self-improvement practices
 
 Write AT LEAST 6-8 detailed paragraphs (each 3-6 sentences). For each remedy, explain WHAT to do, WHEN to do it, and WHY it helps. Don't just list — elaborate with practical instructions.`,
@@ -1192,6 +1582,13 @@ PERSONALITY CROSS-REFERENCE (unique chart signatures):
 - Atmakaraka (soul planet): ${allSections?.personality?.atmakaraka || 'N/A'}
 - Overall personality strength: ${allSections?.personality?.overallStrength || 'N/A'}
 
+═══ NADI CROSS-REFERENCES (for enriching yoga/dosha analysis) ═══
+- Nadi Career verdict: ${allSections?.career?.nadiCareer?.careerType || 'N/A'} (strength: ${allSections?.career?.nadiCareer?.serviceStrength || 'N/A'})
+- Nadi Marriage verdict: ${allSections?.marriage?.nadiMarriage?.verdict || 'N/A'} (strength: ${allSections?.marriage?.nadiMarriage?.strength || 'N/A'})
+- Nadi Health longevity: ${allSections?.health?.nadiHealth?.longevityEstimate?.estimatedYears || 'N/A'} years (${allSections?.health?.nadiHealth?.longevityStrength || 'N/A'})
+- Nadi Education: ${(allSections?.education?.nadiEducation?.suggestedFields || []).slice(0, 3).join(', ') || 'N/A'}
+USE: If a yoga supports career and Nadi career is STRONG, the yoga's effect is AMPLIFIED. If a dosha threatens health and Nadi longevity is WEAK, the dosha's impact is MORE SEVERE.
+
 OUTPUT: 1. Each classical yoga — name and real-life meaning 2. Each advanced yoga if any 3. Each dosha/challenge with severity 4. Unique chart signatures — what makes THIS chart special (retrograde patterns, planetary wars, weakness→strength transformations) 5. Functional benefics and malefics explained 6. Yoga karaka planet explained
 
 Write AT LEAST 6-8 detailed paragraphs (each 3-6 sentences). For each yoga, explain its real-life effect with a scenario. For each dosha, describe how it manifests in daily life and what to watch for.`,
@@ -1217,11 +1614,38 @@ ${(sectionData?.mentalHealthIndicator || '').includes('Moon-Saturn') ? '⚠️ C
 - Shadbala Summary: ${sectionData?.shadbalaSummary ? `Weakest planet: ${JSON.stringify(sectionData.shadbalaSummary.weakestPlanet)}, Strongest: ${JSON.stringify(sectionData.shadbalaSummary.strongestPlanet)}. Note: ${sectionData.shadbalaSummary.note}` : 'N/A'}
 
 BIRTH QUALITY & HEALTH FOUNDATION:
-${bd?.panchanga?.panchangaQuality ? `Birth Quality: ${bd.panchanga.panchangaQuality.score}/5 (${bd.panchanga.panchangaQuality.quality}) — ${bd.panchanga.panchangaQuality.score >= 4 ? 'Born at an excellent cosmic moment — natural vitality is HIGH, recovery from illness is fast' : bd.panchanga.panchangaQuality.score >= 3 ? 'Good birth quality — average resilience' : 'Challenged birth quality — health needs extra attention from early age'}` : 'Birth quality data not available'}
+${bd?.panchanga?.panchangaQuality ? `Birth Quality: ${bd.panchanga.panchangaQuality.score}/5 (${bd.panchanga.panchangaQuality.quality}) — ${bd.panchanga.panchangaQuality.score >= 4 ? 'Born at an excellent cosmic moment — natural vitality is HIGH, recovery from illness is fast' : bd.panchanga.panchangaQuality.score >= 3 ? 'Good birth quality — average resilience' : 'Challenged birth quality — health needs extra attention from early age. This person may have had a difficult birth (premature, incubator, birth complications). Do NOT say they were born strong.'}` : 'Birth quality data not available'}
+
+⚠️ CRITICAL — BIRTH HEALTH ACCURACY RULES:
+- If Birth Quality score is 1 or 2 out of 5, the birth was DIFFICULT. The person may have been premature, spent time in an incubator or NICU, or had birth complications. State this clearly. Do NOT say "born strong" or "healthy birth" when the score is low.
+- If earlyLifeHealth severity is HIGH or CRITICAL (see below), the infant period was dangerous — describe the struggles honestly.
+- Only describe the birth as "strong" or "healthy" if BOTH Birth Quality >= 4 AND earlyLifeHealth severity is LOW.
 
 ━━━ ORGAN-BY-ORGAN RISK MAP ━━━
 ${sectionData?.highRiskOrgans?.length > 0 ? `🔴 HIGH RISK organs: ${sectionData.highRiskOrgans.join(', ')}` : '✅ No HIGH RISK organs detected'}
 ${sectionData?.moderateRiskOrgans?.length > 0 ? `🟡 MODERATE RISK organs: ${sectionData.moderateRiskOrgans.join(', ')}` : ''}
+
+🎯 PRIMARY HEALTH CONCERN (HIGHEST RISK ORGAN):
+${sectionData?.primaryHealthConcern ? `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ ${sectionData.primaryHealthConcern.organ} — ${sectionData.primaryHealthConcern.risk} RISK (${sectionData.primaryHealthConcern.indicators} indicators)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Diseases: ${(sectionData.primaryHealthConcern.diseases || []).join(', ')}
+• Vulnerable from: ${sectionData.primaryHealthConcern.vulnerableAge}
+• Why: ${sectionData.primaryHealthConcern.narrative}
+
+📋 COMPREHENSIVE REMEDIES FOR ${sectionData.primaryHealthConcern.organ.toUpperCase()}:
+🌿 Ayurvedic Medicines: ${(sectionData.primaryHealthConcern.remedies?.ayurvedic || []).join(' | ')}
+🍽️ Dietary Guidelines: ${(sectionData.primaryHealthConcern.remedies?.dietary || []).join(' | ')}
+🏃 Lifestyle Changes: ${(sectionData.primaryHealthConcern.remedies?.lifestyle || []).join(' | ')}
+💎 Gemstone Remedy: ${sectionData.primaryHealthConcern.remedies?.gemstone || 'Consult astrologer'}
+🕉️ Mantra: ${sectionData.primaryHealthConcern.remedies?.mantra || 'N/A'}
+` : 'No primary health concern identified — all organs are at LOW or MODERATE risk.'}
+
+RANKED ORGANS BY RISK (sorted from highest to lowest risk):
+${(sectionData?.rankedOrganRisks || []).map((o, i) => `${i + 1}. [${o.risk}] ${o.organ} (${o.indicators} indicators)`).join('\n')}
+
+━━━ ALL ORGAN DETAILS ━━━
 ${(sectionData?.organRisks || []).map(o => `• [${o.risk}] ${o.organ}
   - Diseases: ${(o.diseases || []).join(', ')}
   - Vulnerable from: ${o.vulnerableAge}
@@ -1236,10 +1660,12 @@ Summary: ${sectionData?.earlyLifeHealth?.summary || 'N/A'}
 
 IMPORTANT: If this person's early-life health severity is HIGH or CRITICAL, you MUST dedicate a FULL PARAGRAPH to their infant/childhood health struggles. Describe:
 - What likely happened in the first days/weeks/months of life (based on the risk indicators above)
+- Possible premature birth, time in incubator/NICU, low birth weight, breathing difficulties
 - The specific illness patterns (respiratory if Ketu/Mars in 4th, gut/immune if Saturn in 6th, etc.)
 - How they survived and what this means for their resilience
 - Long-term health effects of childhood illness
 - This is NOT speculative — the chart clearly shows early-life health crisis indicators.
+- NEVER contradict this by saying "born strong" elsewhere in the report.
 ` : 'No significant early-life health vulnerability detected.'}
 
 ━━━ KIDNEY / URINARY SYSTEM (SPECIFIC) ━━━
@@ -1253,6 +1679,15 @@ ${(sectionData?.dangerPeriods || []).filter(d => d.level === 'CRITICAL').slice(0
 
 ELEVATED periods (main period is a health significator):
 ${(sectionData?.dangerPeriods || []).filter(d => d.level === 'ELEVATED').slice(0, 8).map(d => `• ${d.lord}-${d.antardasha}: ${d.period}`).join('\n') || 'None'}
+
+═══ NADI ASTROLOGY HEALTH ANALYSIS (Sub-Lord Methodology) ═══
+${sectionData?.nadiHealth ? `- Disease Verdict: ${sectionData.nadiHealth.diseaseVerdict} (${sectionData.nadiHealth.diseaseStrength})
+- Disease-activating planets: ${(sectionData.nadiHealth.diseasePlanets || []).join(', ') || 'N/A'}
+- Longevity Verdict: ${sectionData.nadiHealth.longevityVerdict || 'N/A'} (${sectionData.nadiHealth.longevityStrength || 'N/A'})
+- Longevity-supporting planets: ${(sectionData.nadiHealth.longevityPlanets || []).join(', ') || 'N/A'}
+- Longevity Estimate: ${sectionData.nadiHealth.longevityEstimate ? `${sectionData.nadiHealth.longevityEstimate.estimatedYears} years — ${sectionData.nadiHealth.longevityEstimate.category}` : 'N/A'}
+- NOTE: ${sectionData.nadiHealth.note}
+USE THIS: Disease verdict tells if health problems are PROMISED or DENIED. Disease planets tell which DASHA periods bring illness. Longevity estimate gives lifespan range. Cross-reference with organ risk map for precision.` : 'Nadi health analysis not available'}
 
 ⚠️ PRECISION NOTE: Health vulnerability scores are based on 6-component Shadbala analysis. The organ risk map above is computed from house positions, planetary strengths, and aspect patterns — use it to give HIGHLY SPECIFIC health advice for each organ system.
 
@@ -1283,100 +1718,6 @@ Write AT LEAST 10-14 rich, detailed paragraphs (each 3-6 sentences). This is a H
 
 REMINDER: Plain language — avoid technical chart jargon. Be honest about risks; stay actionable and supportive.
 ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word. දෙමළ (Tamil) අකුරු හෝ වචන කිසිසේත් භාවිතා නොකරන්න.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish (Sinhala words in English letters).' : 'Write in warm, caring English.'}`,
-    },
-
-    marriedLife: {
-      title: 'විවාහ ජීවිතය — Your Married Life',
-      prompt: `Write about the DAILY EXPERIENCE of married life — NOT about timing, NOT about finding a partner (that's in the Love section). Focus on: what married life FEELS like, daily dynamics, conflict patterns, intimacy, household management, power dynamics, in-law relationships, and how the marriage evolves over decades.
-
-⚠️ THIS SECTION IS DIFFERENT FROM THE LOVE & RELATIONSHIPS SECTION:
-- Love section = TIMING, partner description, how they meet, whether marriage happens
-- THIS section = What happens AFTER marriage — the day-to-day reality of living together
-
-REMINDER: Clear and honest. If Sinhala (si), use 100% pure Sinhala with no English or Tamil (දෙමළ) words mixed in.
-
-Birth details: Born under ${lagnaEn} rising, Moon in ${moonEn}, Nakshatra: ${nakshatraName}
-Current life period: ${currentDasha} main period, ${currentAD} sub-period
-
-━━━ COMPLETE MARRIED LIFE ENGINE DATA (USE ALL — NO HALLUCINATION) ━━━
-
-7TH HOUSE (MARRIAGE HOUSE):
-- Sign: ${sectionData?.seventhHouse?.rashiEnglish || 'N/A'}
-- Strength: ${sectionData?.seventhHouse?.strength || 'N/A'}
-- Strength Score: ${sectionData?.seventhHouse?.strengthScore || 'N/A'}/100
-- Ashtakavarga Bindus: ${sectionData?.seventhHouse?.ashtakavargaBindus || 'N/A'} (${sectionData?.seventhHouse?.ashtakavargaQuality || 'N/A'})
-- Planets in 7th: ${(sectionData?.seventhHouse?.planetsInHouse || []).join(', ') || 'Empty'}
-- 7th Lord: ${sectionData?.seventhLord?.name || 'N/A'} in house ${sectionData?.seventhLord?.house || 'N/A'}
-
-SPOUSE NATURE (Darakaraka): ${sectionData?.darakaraka ? `${sectionData.darakaraka.planet} in ${sectionData.darakaraka.rashi} — ${sectionData.darakaraka.spouseNature}` : 'N/A'}
-UPAPADA LAGNA: ${sectionData?.upapadaLagna ? `${sectionData.upapadaLagna.rashi} — ${sectionData.upapadaLagna.meaning}` : 'N/A'}
-
-NAVAMSHA D9 ANALYSIS:
-- D9 Lagna: ${sectionData?.navamshaAnalysis?.d9LagnaSign || 'N/A'}
-- Venus in D9: ${sectionData?.navamshaAnalysis?.venusInNavamsha || 'N/A'}
-- Marriage Strength: ${sectionData?.navamshaAnalysis?.marriageStrength || 'N/A'}
-- D9 7th Lord: ${sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.d9SeventhLord || 'N/A'} in D9 house ${sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.d9SeventhLordHouse || 'N/A'}
-- D9 7th Lord Status: ${sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.inKendra ? 'In Angular house — STRONG marriage foundation at soul level' : sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.inDusthana ? 'In Difficult house — marriage faces hidden soul-level challenges' : 'Neutral placement'}
-- D9 Marriage Verdict: ${sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.marriageStrengthFromD9Lord || 'N/A'}
-
-MANGALA DOSHA: ${sectionData?.kujaDosha?.present ? `Present — ${sectionData.kujaDosha.severity || 'moderate'}. Details: ${sectionData.kujaDosha.details || 'N/A'}` : 'Not present'}
-
-⚠️ MARRIAGE AFFLICTIONS (FROM allSections):
-- Severity: ${allSections?.marriage?.marriageAfflictions?.severity || 'NONE'}
-- Score: ${allSections?.marriage?.marriageAfflictions?.severityScore || 0}/100
-- Marriage Denied: ${allSections?.marriage?.marriageAfflictions?.isMarriageDenied ? '⛔ YES' : 'No'}
-- Marriage Delayed: ${allSections?.marriage?.marriageAfflictions?.isMarriageDelayed ? '⚠️ YES' : 'No'}
-- Likelihood: ${allSections?.marriage?.marriageAfflictions?.likelihood || 'N/A'}
-- Afflictions: ${(allSections?.marriage?.marriageAfflictions?.afflictions || []).join(' | ') || 'None'}
-- Summary: ${allSections?.marriage?.marriageAfflictions?.summary || 'N/A'}
-
-MARRIAGE TIMING: ${allSections?.marriage?.marriageTimingPrediction?.bestWindow ? `${allSections.marriage.marriageTimingPrediction.bestWindow.dateRange || 'N/A'}, Age range: ${allSections.marriage.marriageTimingPrediction.bestWindow.ageRange || 'N/A'}` : 'N/A'}
-
-SPOUSE QUALITIES: ${Array.isArray(allSections?.marriage?.spouseQualities) ? allSections.marriage.spouseQualities.join(', ') : (allSections?.marriage?.spouseQualities || 'N/A')}
-
-CROSS-REFERENCE FOR MARRIED LIFE DYNAMICS:
-- Retrograde Venus: ${(allSections?.personality?.retrogradePlanets || []).some(r => r.name === 'Venus') ? 'YES — past-life relationship karma, unconventional love patterns, revisiting old relationships' : 'No'}
-- Retrograde planets in 7th: ${(allSections?.personality?.retrogradePlanets || []).filter(r => r.house === 7).map(r => r.name + ' — delays/complications in partnership').join(', ') || 'None'}
-- Mother bond: ${allSections?.familyPortrait?.mother?.bond || 'N/A'} (shapes how they relate to spouse)
-- Father bond: ${allSections?.familyPortrait?.father?.bond || 'N/A'} (shapes authority dynamics in marriage)
-- Childhood trauma: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (affects attachment in marriage)
-- Attachment style: ${allSections?.surpriseInsights?.loveLanguage?.attachment || 'N/A'}
-- Love language: ${allSections?.surpriseInsights?.loveLanguage?.primary || 'N/A'}
-- Second marriage risk: ${allSections?.surpriseInsights?.secondMarriage?.probability || 'N/A'} (divorce risk: ${allSections?.surpriseInsights?.secondMarriage?.divorceRisk || 'N/A'})
-
-━━━ HOW TO USE THIS DATA (NO GUESSING ALLOWED) ━━━
-- marriageAfflictions severity SEVERE → acknowledge REAL marriage difficulties, don't sugarcoat
-- D9 marriageStrength → the TRUE picture of married life (D9 is marriage chart)
-- ★ Darakaraka → THE MOST IMPORTANT spouse personality indicator (soul-level). Use the spouseNature field as the PRIMARY description of who the spouse IS. This outweighs planets-in-7th.
-- Spouse qualities → USE ALL of these for "who you live with daily" section — they are already PRIORITIZED (Darakaraka marked with ★ is highest priority)
-- 7th house sign → gives the STYLE and TONE of the marriage
-- Planets IN 7th house → give SECONDARY coloring (they MODIFY, not define the spouse)
-- Upapada → describes how the marriage LOOKS from outside
-- Mangala Dosha → if present, describes the NATURE of conflicts (aggressive energy)
-- Marriage timing → if late marriage indicated, discuss the wait and its effect
-
-⚠️ SPOUSE DESCRIPTION HIERARCHY (FOLLOW THIS ORDER):
-1. Darakaraka spouseNature — THE core personality of the spouse (HIGHEST weight)
-2. 7th lord placement — WHERE the spouse's energy focuses (career, friends, home, etc.)
-3. 7th house sign — STYLE of marriage and spouse's general demeanor
-4. Planets in 7th — SECONDARY influence (modifies, doesn't override Darakaraka)
-5. Navamsha D9 — DEEP marriage quality and spouse's hidden nature
-Do NOT let one planet in 7th house dominate the entire spouse description. BLEND all indicators.
-
-⚠️ CRITICAL AGE AWARENESS:
-- Use the person's CURRENT AGE from the system context.
-- If marriage afflictions severity is SEVERE or Marriage Denied = YES: DO NOT assume they are married at any age. Instead write about their SINGLE life patterns, independence, and what partnership WOULD look like if it ever happened. Frame it as "if you were to marry..." rather than "your married life is..."
-- If they are under 24: Write FUTURE-TENSE predictions about what their married life WILL look like (unless denial)
-- If 24-35: Mix future predictions with "if you're already married, this is what you're experiencing" (unless denial)
-- If 35+ AND denial NONE/MILD: ASSUME they are married. Write about their CURRENT married life, challenges, growth, and future of the relationship
-- If 35+ AND denial MODERATE+: DO NOT assume married. Write conditionally.
-
-OUTPUT: 1. Spouse's personality from the spouse indicator data 2. Marriage strength from D9 analysis 3. Affliction severity and specific issues 4. Mars affliction impact if present 5. Age-appropriate framing (under 24/24-35/35+) 6. Practical relationship advice based on the data
-
-Write AT LEAST 8-12 rich, detailed paragraphs (each 3-6 sentences). This is a HERO section about daily married life — paint vivid pictures of morning routines, conflict resolution, intimacy patterns, household dynamics, power balance, in-law relationships, and how the marriage evolves decade by decade.
-
-REMINDER: Plain language — avoid technical chart jargon.
-${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word. දෙමළ (Tamil) අකුරු හෝ වචන කිසිසේත් භාවිතා නොකරන්න.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish (Sinhala words in English letters).' : 'Write in warm, honest, relatable English.'}`,
     },
 
     foreignTravel: {
@@ -1413,6 +1754,14 @@ CROSS-REFERENCE DATA:
 - Current dasha: ${allSections?.lifePredictions?.currentDasha?.lord || 'N/A'} (${typeof allSections?.lifePredictions?.currentDasha?.effects === 'object' ? allSections.lifePredictions.currentDasha.effects.general || 'N/A' : allSections?.lifePredictions?.currentDasha?.effects || 'N/A'})
 - Education foreign study: ${allSections?.education?.foreignStudy ? 'YES — foreign study indicated' : 'N/A'}
 - Career foreign opportunity: ${(allSections?.career?.suggestedCareers || []).some(c => (c || '').toLowerCase().includes('foreign') || (c || '').toLowerCase().includes('international')) ? 'International career path suggested' : 'N/A'}
+
+═══ NADI ASTROLOGY FOREIGN TRAVEL ANALYSIS (Sub-Lord Methodology) ═══
+${sectionData?.nadiForeignTravel ? `- Nadi Verdict: ${sectionData.nadiForeignTravel.verdict} (${sectionData.nadiForeignTravel.strength})
+- Best Dasha planets for foreign travel: ${(sectionData.nadiForeignTravel.bestDashaPlanets || []).join(', ') || 'N/A'}
+- Strong travel planets: ${(sectionData.nadiForeignTravel.strongPlanets || []).join(', ') || 'N/A'}
+- Average Nadi Score: ${sectionData.nadiForeignTravel.averageScore}/100
+- NOTE: Nadi methodology: Foreign travel in DBA of planets signifying 3,9,12. Houses 2,4,11 indicate return to homeland.
+USE THIS: If verdict is "strong" or "very_strong", foreign travel is CONFIRMED. Best Dasha planets tell you WHEN travel happens. Cross-reference with traditional travel periods for highest accuracy.` : 'Nadi foreign travel analysis not available'}
 
 OUTPUT: 1. Foreign travel likelihood from the data 2. Settlement abroad indication 3. Visa success assessment 4. Travel timing windows with dates 5. Suggested direction and countries 6. Foreign study indication if applicable
 
@@ -1465,6 +1814,14 @@ CROSS-REFERENCE DATA:
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'} (legal separation risk if severe)
 - Property disputes: ${allSections?.realEstate?.propertyYoga ? 'Property indicated' : 'N/A'}
 - Health 6th house: ${allSections?.health?.sixthHouse?.strength || 'N/A'}
+
+═══ NADI ASTROLOGY LEGAL/LITIGATION ANALYSIS (Sub-Lord Methodology) ═══
+${sectionData?.nadiLitigation ? `- Litigation Verdict: ${sectionData.nadiLitigation.verdict} (${sectionData.nadiLitigation.strength})
+- Litigation-activating planets: ${(sectionData.nadiLitigation.strongPlanets || []).join(', ') || 'N/A'}
+- Best Dasha for legal matters: ${(sectionData.nadiLitigation.bestDashaPlanets || []).join(', ') || 'N/A'}
+- Average Nadi Score: ${sectionData.nadiLitigation.averageScore}/100
+- NOTE: Nadi methodology: Legal disputes in DBA of planets signifying 6,8,12. Victory indicated by 2,10,11.
+USE THIS: If verdict is "denied" or "weak", legal troubles are unlikely. If "strong"/"very_strong", legal issues are PROMISED during the activating Dasha periods. Cross-reference with traditional legal case periods for highest accuracy.` : 'Nadi litigation analysis not available'}
 
 OUTPUT: 1. Enemy profile from the data 2. Legal indicators 3. Legal case periods with dates 4. Protection advice from the engine 5. Property dispute risk from cross-reference
 
@@ -1519,6 +1876,21 @@ CROSS-REFERENCE DATA:
 - 5th Lord (intellect): ${allSections?.mentalHealth?.education?.fifthLord || 'N/A'} in house ${allSections?.mentalHealth?.education?.fifthLordHouse || 'N/A'}
 - Mental stability: ${allSections?.mentalHealth?.mentalStability || 'N/A'}
 - Career suggested: ${(allSections?.career?.suggestedCareers || []).slice(0, 5).join(', ') || 'N/A'}
+- Career primary paths: ${(allSections?.career?.primaryCareers || []).join(', ') || 'N/A'}
+- Nadi career type: ${allSections?.career?.nadiCareer?.careerType?.type || 'N/A'}
+- Nadi career sectors: ${(allSections?.career?.nadiCareer?.careerSectors || []).map(s => s.planet + '→' + s.sector).join(', ') || 'N/A'}
+
+⛔ MANDATORY EDUCATION↔CAREER CONSISTENCY CHECK:
+- Education→Career alignment from core themes: (see CORE THEMES above — "Education→Career Alignment" field)
+⚠️ YOUR EDUCATION NARRATIVE MUST LOGICALLY LEAD TOWARD THE CAREER DATA. If the career engine says "IT, software" you CANNOT suggest "Ancient History" as the primary education field unless you explicitly explain the connection. The education fields you emphasize must be the FOUNDATION for the career paths indicated above. If education and career planets genuinely point to different domains, acknowledge the pivot explicitly: "Your education may begin in [field A] but your career naturally gravitates toward [field B] because..."
+
+═══ NADI ASTROLOGY EDUCATION ANALYSIS (Sub-Lord Methodology) ═══
+${sectionData?.nadiEducation ? `- Nadi Education Verdict: ${sectionData.nadiEducation.verdict} (${sectionData.nadiEducation.strength})
+- Overall Nadi Grade: ${sectionData.nadiEducation.overallGrade}
+- Best Dasha for education: ${(sectionData.nadiEducation.bestDashaPlanets || []).join(', ') || 'N/A'}
+- Strong education planets: ${(sectionData.nadiEducation.strongPlanets || []).join(', ') || 'N/A'}
+- Nadi suggested fields: ${(sectionData.nadiEducation.suggestedFields || []).slice(0, 8).join(', ') || 'N/A'}
+USE THIS: The Nadi grade (A/B/C/D/F) indicates education quality. Best Dasha planets indicate WHEN academic peaks occur.` : 'Nadi education analysis not available'}
 
 OUTPUT: 1. Academic strength assessment 2. Intellect and wisdom strength from the data 3. Suggested study fields 4. Best study periods with dates 5. Foreign study indication 6. Competitive exam suitability
 
@@ -1573,6 +1945,14 @@ CROSS-REFERENCE DATA:
 - Past karma theme: ${allSections?.spiritual?.pastKarmaTheme || 'N/A'} (karmic luck patterns)
 - Spiritual inclination: ${allSections?.spiritual?.spiritualInclination || 'N/A'}
 
+═══ NADI ASTROLOGY LUCK & WINDFALL ANALYSIS (Sub-Lord Methodology) ═══
+${sectionData?.nadiLuck ? `- Windfall Verdict: ${sectionData.nadiLuck.windfallVerdict || 'N/A'} (${sectionData.nadiLuck.windfallStrength || 'N/A'})
+- Windfall-activating planets: ${(sectionData.nadiLuck.windfallPlanets || []).join(', ') || 'N/A'}
+- Best Dasha for windfalls: ${(sectionData.nadiLuck.windfallBestDasha || []).join(', ') || 'N/A'}
+- Wealth Verdict: ${sectionData.nadiLuck.wealthVerdict || 'N/A'} (${sectionData.nadiLuck.wealthStrength || 'N/A'})
+- NOTE: Nadi methodology: Windfall in DBA of planets signifying 8,11. Wealth via 2,6,10,11.
+USE THIS: Windfall verdict tells if UNEARNED income (lottery, inheritance, insurance, PF) is promised. Best Dasha planets tell WHEN windfalls come. Cross-reference with lottery indication for precision.` : 'Nadi luck analysis not available'}
+
 OUTPUT: 1. Overall luck score 2. Lucky periods with dates 3. Lucky numbers and days 4. Lottery indication - honest assessment 5. Inheritance indication 6. Fortune sector strength
 
 Write AT LEAST 6-8 detailed paragraphs (each 3-6 sentences). For each lucky period, describe what kind of luck to expect and how to maximize it. For lottery indication, be brutally honest. For lucky numbers, explain how to use them practically.
@@ -1583,7 +1963,16 @@ ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). No
 
     surpriseInsights: {
       title: 'Surprise Insights About You',
-      prompt: `Translate the following verifiable prediction data. State each prediction directly from the engine data. Do NOT add generic guesses that aren't in the data.
+      prompt: `ANALYZE the following prediction data deeply. Do NOT just list each field — THINK about what combinations reveal about this person. Cross-reference multiple data points to find HIGH-CONFIDENCE insights that will make the reader say "How did they know that?"
+
+ACCURACY RULES FOR THIS SECTION:
+1. Body marks: ONLY state locations from the data — these are verifiable, so accuracy matters most here
+2. Sibling count: State the EXACT number from the data. If the data says 3 siblings, say 3. Do NOT round or hedge.
+3. Parent profiles: The engine text is already analyzed — translate faithfully, do NOT reinterpret
+4. Partner letter: The TOP 3 letters are weighted by 6 methods — present them with confidence
+5. Life shift moments: These are AGE-SPECIFIC — the reader will check these against their real life. Only include ages that the data provides.
+6. For appearance, sleep, food, handedness — these are verifiable facts. Be specific, not vague.
+7. CROSS-CHECK: If the attachment style says "anxious" but the social battery says "introvert" — think about what that COMBINATION means. Write about the combination, not just each field separately.
 
 REMINDER: Stick to the data. If Sinhala (si), use 100% pure Sinhala with no English or Tamil (දෙමළ) words mixed in.
 
@@ -1703,10 +2092,17 @@ ${(sectionData?.addictionProfile || []).map((a, i) => `${i+1}. ${a}`).join('\n')
 - Romantic Chemistry Sign: ${sectionData?.compatibilityCards?.romanticChemistry || 'N/A'}
 - Life Partner Sign: ${sectionData?.compatibilityCards?.lifePartnerSign || 'N/A'}
 
+═══ NADI CROSS-REFERENCES (for enriching surprise insights) ═══
+- Nadi Career: ${allSections?.career?.nadiCareer?.careerType || 'N/A'} | Sectors: ${(allSections?.career?.nadiCareer?.careerSectors || []).slice(0, 3).map(s => s.sector || s.planet).join(', ') || 'N/A'}
+- Nadi Marriage: ${allSections?.marriage?.nadiMarriage?.verdict || 'N/A'} (${allSections?.marriage?.nadiMarriage?.strength || 'N/A'})
+- Nadi Health longevity: ${allSections?.health?.nadiHealth?.longevityEstimate?.estimatedYears || 'N/A'}yr
+- Nadi Education: ${(allSections?.education?.nadiEducation?.suggestedFields || []).slice(0, 3).join(', ') || 'N/A'}
+USE: Nadi verdicts CONFIRM or DENY surprise insights. If Nadi marriage is WEAK and second marriage score is HIGH, the combination is VERY strong evidence for relationship disruption.
+
 ═══ 🔥 SECOND MARRIAGE & DIVORCE ANALYSIS ═══
 - Second Marriage Probability: ${sectionData?.secondMarriage?.probability || 'N/A'}
 - Divorce Risk: ${sectionData?.secondMarriage?.divorceRisk || 'N/A'}
-- Score: ${sectionData?.secondMarriage?.score || 0}/10
+- Score: ${sectionData?.secondMarriage?.score || 0}/15
 - 7th House Sign: ${sectionData?.secondMarriage?.h7Rashi || 'N/A'}
 - Key Indicators:
 ${(sectionData?.secondMarriage?.reasons || []).map((r, i) => `  ${i+1}. ${r}`).join('\n') || '  None'}
@@ -1735,15 +2131,6 @@ ${(sectionData?.famePotential?.indicators || []).map((ind, i) => `  ${i+1}. ${in
 - Past-Life Talent: ${sectionData?.pastLifeStory?.talent || 'N/A'}
 - Future Direction (Rahu path): ${sectionData?.pastLifeStory?.futureDirection || 'N/A'}
 
-═══ 🔥 SECRET SUPERPOWERS (Rare Chart Features) ═══
-${(sectionData?.secretSuperpower || []).map((s, i) => `${i+1}. ${s}`).join('\n') || 'No special superpowers detected'}
-
-═══ 🔥 "IF YOU WERE BORN 1 HOUR LATER" ═══
-- Lagna Changed: ${sectionData?.alternateLife?.changed ? 'YES' : 'NO'}
-- Current Lagna: ${sectionData?.alternateLife?.currentLagna || 'N/A'}
-- Alternate Lagna: ${sectionData?.alternateLife?.alternateLagna || 'N/A'}
-- Impact: ${sectionData?.alternateLife?.impact || 'N/A'}
-
 ═══ 🔥 DANGER PERIODS (Crisis/Accident Risk Windows) ═══
 ${(sectionData?.dangerPeriods || []).map((d, i) => `${i+1}. ${d.type} — ${d.period} | Severity: ${d.severity}\n   Advice: ${d.advice}`).join('\n') || 'No major danger periods'}
 
@@ -1755,15 +2142,12 @@ ${(sectionData?.dangerPeriods || []).map((d, i) => `${i+1}. ${d.type} — ${d.pe
 - Celebrity Match: ${sectionData?.celebrityTwin?.name || 'N/A'}
 - Why: ${sectionData?.celebrityTwin?.reason || 'N/A'}
 
-═══ 🔥 "WHAT YOUR EX WOULD SAY ABOUT YOU" ═══
-${(sectionData?.exWouldSay || []).map((q, i) => `${i+1}. ${q}`).join('\n') || 'N/A'}
-
 ═══ 🔥 YOUR GOLDEN PERIOD (Peak Life Phase) ═══
 - ${sectionData?.goldenPeriod?.description || 'N/A'}
 - Peak Age: ${sectionData?.goldenPeriod?.peakAge || 'N/A'}
 - Ruling Planet: ${sectionData?.goldenPeriod?.lord || 'N/A'}
 
-OUTPUT: Write AT LEAST 28-35 rich, detailed paragraphs covering ALL the data below. This is the MOST PERSONAL and VIRAL section — people screenshot this and share it on social media. Make it feel like a psychic reading, not a report.
+OUTPUT: Write AT LEAST 25-30 rich, detailed paragraphs covering ALL the data below. This is the MOST PERSONAL and VIRAL section — people screenshot this and share it on social media. Make it feel like a psychic reading, not a report.
 
 SECTION STRUCTURE (dedicate a FULL paragraph to each):
 1. **Physical appearance** — paint a vivid picture from the data
@@ -1783,19 +2167,16 @@ SECTION STRUCTURE (dedicate a FULL paragraph to each):
 15. **Addiction vulnerabilities** — what they're most susceptible to. Frame compassionately but honestly.
 16. **Lucky profile** — numbers, colors, day, gemstone, direction. People use these in daily life.
 17. **Compatibility cards** — best friend sign, enemy sign, boss sign, romance sign. Highly shareable.
-18. 🔥 **Second Marriage & Divorce** — Will they have a second marriage? What's the divorce risk? Present the probability honestly. If LOW, reassure them. If HIGH, explain it compassionately. This is the #1 question people ask astrologers — DELIVER IT WITH AUTHORITY.
+18. 🔥 **Second Marriage & Divorce** — Will they have a second marriage? What's the divorce risk? State the probability DIRECTLY without softening. If LOW, say "low" in one sentence. If HIGH, explain exactly WHY and WHEN divorce/second marriage is most likely. Do NOT sugarcoat — this is the #1 question people ask astrologers and they want the TRUTH.
 19. 🔥 **Monk or Renunciation** — Do they have the chart of a monk/nun? Will they ever "leave everything behind"? Even if LOW, discuss their relationship with spirituality vs material life. If HIGH, this becomes the most dramatic paragraph in the report.
 20. 🔥 **Fame Potential** — Will they be famous? How and where? Celebrity level or local recognition? People LOVE hearing about their fame potential.
 21. 🔥 **Wealth Class Prediction** — What economic class does their chart indicate? Be direct. People want to know if they'll be rich.
 22. 🔥 **Past Life Story** — Who were they in their past life? What karmic lesson are they learning? What talent did they bring? This is DEEPLY engaging — write it like a short story.
-23. 🔥 **Secret Superpowers** — What rare abilities does their chart give them? Vargottama planets, exaltations, stelliums. Make them feel special and unique.
-24. 🔥 **"If You Were Born 1 Hour Later"** — How would their life be completely different? This blows people's minds and makes them appreciate their exact birth time.
-25. 🔥 **Danger Periods** — When should they be extra careful? Accident-prone years, health crisis windows. Frame as protective advice, not doom.
-26. 🔥 **Spirit Animal** — What animal represents their cosmic energy? Fun, shareable, and memorable.
-27. 🔥 **Celebrity Chart Twin** — Which famous person shares their chart energy? People LOVE this and will share it instantly.
-28. 🔥 **"What Your Ex Would Say"** — Funny, relatable quotes their ex-partner would say about them. Light-hearted and highly viral. End this one with humor.
-29. 🔥 **Golden Period** — The BEST years of their life. When everything clicks. People mark these dates and tell their friends.
-30. **🔥 The Cosmic Roast** — END with a funny, affectionate roasting paragraph using the planetary roasts below. Like a best friend exposing you lovingly.
+23. 🔥 **Danger Periods** — When should they be extra careful? Accident-prone years, health crisis windows. Frame as protective advice, not doom.
+24. 🔥 **Spirit Animal** — What animal represents their cosmic energy? Fun, shareable, and memorable.
+25. 🔥 **Celebrity Chart Twin** — Which famous person shares their chart energy? People LOVE this and will share it instantly.
+26. 🔥 **Golden Period** — The BEST years of their life. When everything clicks. People mark these dates and tell their friends.
+27. **🔥 The Cosmic Roast** — END with a funny, affectionate roasting paragraph using the planetary roasts below. Like a best friend exposing you lovingly.
 
 Skip any area where data is N/A. Do NOT add generic predictions not supported by the data.
 
@@ -1818,7 +2199,7 @@ ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). No
 - D12 parent chart: ${sectionData?.mother?.d12ParentChart ? JSON.stringify(sectionData.mother.d12ParentChart) : 'N/A'}
 - Family separation: ${sectionData?.mother?.familySeparation || 'N/A'}
 - Health risks: ${JSON.stringify(sectionData?.mother?.healthRisks || [])}
-- Kidney risk: ${sectionData?.mother?.kidneyRiskLevel || 'N/A'}
+- Top 3 most vulnerable organs: ${JSON.stringify(sectionData?.mother?.healthRisks?.slice(0, 3) || [])}
 - Health crisis windows (by native's age): ${JSON.stringify(sectionData?.mother?.healthCrisisWindows || [])}
 - Health event periods: ${JSON.stringify(sectionData?.mother?.motherHealthPeriods || [])}
 - Life struggles: ${JSON.stringify(sectionData?.mother?.lifestrug || [])}
@@ -1864,16 +2245,195 @@ ${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? allSections.m
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'} (family dynamics often echo in marriage patterns)
 - Retrograde planets: ${(allSections?.personality?.retrogradePlanets || []).filter(r => [4, 9, 3].includes(r.house)).map(r => r.name + ' in house ' + r.house + ' — past-life family karma').join(', ') || 'None in family houses'}
 
+═══ NADI CROSS-REFERENCES ═══
+- Nadi Marriage strength: ${allSections?.marriage?.nadiMarriage?.strength || 'N/A'} (strong = stable family foundation, weak = family stress)
+- Nadi Health longevity: ${allSections?.health?.nadiHealth?.longevityEstimate?.estimatedYears || 'N/A'}yr (context for parent health predictions)
+- Nadi Children verdict: ${allSections?.children?.nadiChildren?.verdict || 'N/A'} (strong = family grows, weak = limited family expansion)
+USE: Nadi verdicts add confidence to family predictions — if Nadi marriage is weak AND family trauma is high, the family dysfunction pattern is CONFIRMED at multiple levels.
+
 ${allSections?.mentalHealth?.childhoodTrauma?.level === 'SEVERE' || allSections?.mentalHealth?.childhoodTrauma?.level === 'HIGH' ? '🚨 CHILDHOOD TRAUMA DETECTED — Multiple indicators of early-life suffering. Do NOT write a generic happy family narrative. Acknowledge emotional disruption in mother section (familySeparation), distance/conflict in father section (bond field), and weave pain into descriptions with compassion.' : ''}
 
+⚠️ CRITICAL: PROBABILISTIC LANGUAGE FOR FAMILY RELATIONSHIPS
+The user can IMMEDIATELY verify claims about their living parents. Wrong claims = lost trust = bad reviews.
+- For mother bond: If the data suggests "difficult" or "distant", ALWAYS use probabilistic language:
+  • Say "there may be phases of emotional complexity" NOT "you have a difficult relationship"
+  • Say "communication styles may sometimes differ" NOT "you don't understand each other"
+  • Say "your chart suggests some testing phases in this bond — though many with this pattern maintain very close relationships" NOT definitive negative statements
+- For father bond: Same rule — hedge all negative claims
+- For health risks: Say "watch for" or "be mindful of" NOT "your mother WILL have kidney problems"
+- For life struggles: Say "your mother may have faced challenges with..." NOT definitive past-tense claims about events you can't verify
+
+REASON: A user whose mother is perfectly healthy and loving will immediately reject the entire report if you claim the relationship is "difficult." But if you say "there may be phases of emotional adjustment" — that's true for EVERYONE and doesn't trigger rejection.
+
 OUTPUT: Write AT LEAST 10-14 paragraphs (each 3-6 sentences). This is a HERO section.
-- AT LEAST 3 paragraphs for MOTHER: personality as a real person, her occupation/daily life, health risks with specific crisis windows, your bond
+- AT LEAST 3 paragraphs for MOTHER: personality as a real person, her occupation/daily life, health risks — identify the TOP 3 most vulnerable organs from the health risks data, HIGHLIGHT the single most dangerous one prominently, explain health crisis windows, your bond
 - AT LEAST 3 paragraphs for FATHER: personality, career type, health risks, life struggles, your bond
-- AT LEAST 2 paragraphs for SIBLINGS: exact count and breakdown stated boldly, each sibling's character, health, relationship dynamics
+- AT LEAST 2 paragraphs for SIBLINGS: state the EXACT elder and younger count from the engine data — if estimatedElderSiblings > 0 say "you likely have [N] older sibling(s)", if estimatedYoungerSiblings > 0 say "you likely have [N] younger sibling(s)". Use the gender breakdown to specify brothers vs sisters. Describe each sibling's character, health, relationship dynamics. NEVER say "no older siblings" if the estimatedElderSiblings field is > 0.
 - AT LEAST 2 paragraphs for FAMILY KARMA: inherited patterns, karmic summary, how family patterns echo in your own life
 
 State sibling count and parent details from the engine fields directly — do not invent drama beyond the data.
 ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish.' : 'Write in profound, touching English.'}`,
+    },
+
+    physicalProfile: {
+      title: '🪞 Your Body, Face & Mind Profile',
+      prompt: `You are creating the most PERSONAL and SPECIFIC physical profile possible for this person. Use ALL the multi-layer data below — do NOT rely only on Lagna. The engine has cross-referenced 10+ data layers for high accuracy. This is the section where people say "HOW DID THEY KNOW WHAT I LOOK LIKE?!"
+
+CRITICAL ACCURACY RULES:
+1. Use ALL layers — Lagna base, planet modifications, Lagna lord dignity, Moon influence, Navamsha, decan, Venus analysis, aspects, and body constitution. Each layer REFINES the prediction.
+2. When planets IN the 1st house contradict the base Lagna, the PLANETS WIN. E.g., Saturn in 1st overrides Taurus's "stocky" with "lean/bony."
+3. When Lagna lord is exalted/debilitated, it AMPLIFIES or DIMINISHES the base traits significantly.
+4. Moon sign determines EMOTIONAL expression on the face — how they LOOK when relaxed, how their face changes with mood.
+5. Navamsha Lagna shows how they CHANGE with age — especially after 30-35.
+6. Be SPECIFIC — don't say "nice eyes", say "large, calm, almond-shaped eyes with a warm expression."
+
+REMINDER: No astrology jargon. No "Lagna", "1st house", "Navamsha", "Venus dignity." Describe as if you're painting a portrait of a real person.
+
+Birth details: ${lagnaEn} rising, Moon in ${moonEn}, Nakshatra: ${nakshatraName}
+
+━━━ PHYSICAL PROFILE ENGINE DATA (10-LAYER ANALYSIS) ━━━
+
+LAYER 1 — BASE BODY (from rising sign):
+- Build: ${sectionData?.base?.build || 'N/A'}
+- Height: ${sectionData?.base?.height || 'N/A'}
+- Face: ${sectionData?.base?.face || 'N/A'}
+- Complexion: ${sectionData?.base?.complexion || 'N/A'}
+- Eyes: ${sectionData?.base?.eyes || 'N/A'}
+- Hair: ${sectionData?.base?.hair || 'N/A'}
+- Nose: ${sectionData?.base?.nose || 'N/A'}
+- Lips: ${sectionData?.base?.lips || 'N/A'}
+- Body Type: ${sectionData?.base?.bodyType || 'N/A'}
+- Walk Style: ${sectionData?.base?.gait || 'N/A'}
+- Voice: ${sectionData?.base?.voice || 'N/A'}
+
+LAYER 2 — PLANET MODIFICATIONS (planets in 1st house: ${(sectionData?.planetsIn1st || []).join(', ') || 'None'}):
+${(sectionData?.planetModifications || []).map(m => '- ' + m).join('\n') || '- No planets modifying appearance'}
+Complexion modifiers: ${(sectionData?.complexionModifiers || []).join(', ') || 'None'}
+Height modifiers: ${(sectionData?.heightModifiers || []).join(', ') || 'None'}
+Build modifiers: ${(sectionData?.buildModifiers || []).join(', ') || 'None'}
+
+LAYER 3 — RULING PLANET ANALYSIS:
+- ${sectionData?.lagnaLord?.name || 'N/A'} (ruling planet): House ${sectionData?.lagnaLord?.house || 'N/A'}, Strength: ${sectionData?.lagnaLord?.score || 'N/A'}%, Dignity: ${sectionData?.lagnaLord?.dignity || 'N/A'}
+- Effect: ${sectionData?.lagnaLord?.effect || 'N/A'}
+
+LAYER 4 — EMOTIONAL FACE (from Moon in ${sectionData?.moonSignEnglish || 'N/A'}):
+- Resting expression: ${sectionData?.moonFacialExpression || 'N/A'}
+- Emotional element: ${sectionData?.moonElement || 'N/A'}
+
+LAYER 5 — AGING PATTERN (from inner chart):
+- Inner sign: ${sectionData?.navamshaLagnaEnglish || 'N/A'}
+- How you change with age: ${sectionData?.navamshaAppearance || 'N/A'}
+
+LAYER 6 — DECAN MODIFIER:
+- Decan ${sectionData?.lagnaDecan || 'N/A'}: ${sectionData?.decanEffect || 'N/A'}
+
+LAYER 7 — BEAUTY ANALYSIS:
+- Beauty planet strength: ${sectionData?.venusAnalysis?.score || 'N/A'}%, Dignity: ${sectionData?.venusAnalysis?.dignity || 'N/A'}, House: ${sectionData?.venusAnalysis?.house || 'N/A'}
+- ${sectionData?.venusAnalysis?.note || 'N/A'}
+- ATTRACTIVENESS SCORE: ${sectionData?.attractivenessScore || 'N/A'}/100 — ${sectionData?.attractivenessLevel || 'N/A'}
+
+LAYER 8 — EXTERNAL INFLUENCES ON APPEARANCE:
+${(sectionData?.aspectsOnLagna || []).map(a => '- ' + a).join('\n') || '- No external planetary influences'}
+
+LAYER 9 — MENTAL & PSYCHOLOGICAL PROFILE:
+- Mental temperament: ${sectionData?.mentalTemperament || 'N/A'}
+- Intellect: ${sectionData?.intellect || 'N/A'} (Mercury: ${sectionData?.mercuryStrength || 'N/A'}%)
+- Emotional depth: ${sectionData?.emotionalDepth || 'N/A'} (Moon: ${sectionData?.moonStrength || 'N/A'}%)
+- Wisdom: ${sectionData?.wisdom || 'N/A'} (Jupiter: ${sectionData?.jupiterStrength || 'N/A'}%)
+
+LAYER 10 — BODY CONSTITUTION:
+- Stamina: ${sectionData?.bodyConstitution?.stamina || 'N/A'}
+- Endurance: ${sectionData?.bodyConstitution?.endurance || 'N/A'}
+- Immunity: ${sectionData?.bodyConstitution?.immunity || 'N/A'}
+
+SUPERPOWER AGE:
+- Strongest planet: ${sectionData?.superpowerAge?.planet || 'N/A'} (${sectionData?.superpowerAge?.score || 'N/A'}%)
+- Peak maturation age: ${sectionData?.superpowerAge?.maturationAge || 'N/A'}
+
+OUTPUT STRUCTURE (dedicate a FULL paragraph to each):
+1. **Overall body portrait** — paint a vivid picture combining build, height, body type, walk style. Make the reader SEE themselves.
+2. **Face & features** — detailed face shape, eyes, nose, lips, jaw. Be SPECIFIC enough that a friend could recognize them from the description.
+3. **Complexion & skin** — skin tone, texture, how it changes. Include planet modifications.
+4. **Hair** — texture, thickness, style tendency, how it changes with age.
+5. **Voice & presence** — how they sound, how they enter a room, their natural aura.
+6. **How you age** — Navamsha aging pattern. Youth vs maturity appearance changes.
+7. **Beauty & attractiveness** — honest assessment with the attractiveness score. What makes them beautiful/handsome.
+8. **Mental landscape** — temperament, how they think, emotional processing. This is the "mind" part.
+9. **Intellect & wisdom** — how sharp, how wise, how they learn and make decisions.
+10. **Body constitution** — stamina, endurance, immunity, physical strengths/weaknesses.
+11. **Superpower age** — the age when their strongest planet matures and they peak.
+
+Write AT LEAST 12-15 detailed paragraphs. This is DEEPLY personal — people will share this section.
+${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish.' : 'Write in vivid, portrait-like English.'}`,
+    },
+
+    attractionProfile: {
+      title: '💘 Your Attraction & Romantic Power',
+      prompt: `You are writing the MOST VIRAL section of this report — the attraction and romantic profile. This is what people SCREENSHOT and share on social media. Every paragraph must make the reader feel SEEN and slightly exposed.
+
+CRITICAL RULES:
+1. This section is about ATTRACTION — how the opposite gender perceives them, what they're attracted to, their romantic energy. NOT about marriage timing or daily married life (those are separate sections).
+2. Be bold and specific. Don't hedge. If the data says they're highly attractive, SAY IT with confidence.
+3. The attraction power score is the CENTERPIECE — present it dramatically.
+4. Love language and sexual energy must feel PERSONAL, not generic.
+5. The "first impression vs real you" journey is the MOST shareable part — make it feel like a revelation.
+
+REMINDER: No astrology jargon. No "7th house", "Venus placement", "Darakaraka." Describe as romantic profile of a real person.
+
+Birth details: ${lagnaEn} rising, Moon in ${moonEn}, Nakshatra: ${nakshatraName}
+Gender: ${extraContext?.userGender || 'Unknown'}
+
+━━━ ATTRACTION PROFILE ENGINE DATA ━━━
+
+🔥 ATTRACTION POWER SCORE: ${sectionData?.attractionPower || 'N/A'}/10 — ${sectionData?.attractionLevel || 'N/A'}
+
+HOW THE OPPOSITE GENDER SEES YOU:
+- First impression: ${sectionData?.attractionAura?.en || 'N/A'}
+- Sinhala: ${sectionData?.attractionAura?.si || ''}
+- Modifiers:
+${(sectionData?.attractionAuraModifiers || []).map(m => '  ★ ' + m).join('\n') || '  None'}
+
+WHAT TYPE YOU'RE ATTRACTED TO:
+- 7th house sign: ${sectionData?.seventhHouseSign || 'N/A'}
+- Your type: ${sectionData?.attractedTo?.type || 'N/A'}
+${sectionData?.darakaraka ? `
+SOUL-LEVEL PARTNER TYPE (Darakaraka: ${sectionData.darakaraka.planet}):
+- Spouse planet: ${sectionData.darakaraka.planet} in ${sectionData.darakaraka.rashi || 'N/A'}
+- Spouse nature: ${sectionData.darakaraka.spouseType?.en || 'N/A'}` : ''}
+
+LOVE LANGUAGE:
+- Primary: ${sectionData?.loveLanguage?.en || 'N/A'}
+- Venus element: ${sectionData?.venusElement || 'N/A'}
+- Venus strength: ${sectionData?.venusStrength || 'N/A'}%, Dignity: ${sectionData?.venusDignity || 'N/A'}, House: ${sectionData?.venusHouse || 'N/A'}
+
+SEXUAL ENERGY:
+- ${sectionData?.sexualEnergy || 'N/A'}
+- Mars element: ${sectionData?.marsElement || 'N/A'}, Mars strength: ${sectionData?.marsStrength || 'N/A'}%
+- Venus-Mars together: ${sectionData?.venusMarsSameHouse ? 'YES — extremely high sexual magnetism' : 'No'}
+- Intimacy house planets: ${sectionData?.h8PlanetCount || 0} planets
+
+FIRST IMPRESSION → REAL YOU JOURNEY:
+1. First 5 minutes: ${sectionData?.firstImpression?.en || 'N/A'}
+2. After 3 months: ${sectionData?.moonReality || 'N/A'}
+3. After deep commitment: ${sectionData?.navamshaTrue || 'N/A'}
+
+CROSS-REFERENCE:
+- Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'}
+- Attachment style: ${allSections?.surpriseInsights?.loveLanguage?.attachment || 'N/A'}
+- Jealousy level: ${allSections?.surpriseInsights?.loveLanguage?.jealousy?.level || 'N/A'}
+
+OUTPUT STRUCTURE (dedicate a FULL paragraph to each):
+1. 🔥 **Attraction Power Score reveal** — dramatic reveal of the score. If 8+, celebrate it boldly. If 5-7, state it as average and explain why. If below 5, be HONEST — state the score directly and explain what holds it back. Do NOT reframe a low score as a hidden strength.
+2. **How the opposite gender sees you** — paint a vivid picture of the first impression. Make it feel like a movie scene.
+3. **Your romantic modifiers** — what amplifies/changes the base attraction (planet modifiers).
+4. **Your type** — who you're drawn to and WHY. From 7th house sign and Darakaraka.
+5. **Love language** — how you express and receive love. Be specific, not generic.
+6. **Sexual energy profile** — tasteful but honest. The Mars element and Venus-Mars relationship tell the story.
+7. **The reveal journey** — First impression → 3 months → after commitment. This is the MOST shareable paragraph. "At first they see... but after 3 months they discover... and after full commitment, the real you emerges as..."
+8. **Your ultimate romantic superpower** — the one thing about your romantic energy that nobody else has.
+
+Write AT LEAST 10-12 detailed paragraphs. This section should make the reader's heart race.
+${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish.' : 'Write in bold, engaging English.'}`,
     },
   };
 
@@ -1889,7 +2449,7 @@ ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). No
  * Generate AI narrative for a single section
  */
 async function generateSectionNarrative(sectionKey, sectionData, birthData, allSections, language = 'en', rashiContext = null, ageContext = null, userName = null, userGender = null, userReligion = null) {
-  const sectionPromptData = buildSectionPrompt(sectionKey, sectionData, birthData, allSections, language, { rashiContext: rashiContext || { userReligion: userReligion } });
+  const sectionPromptData = buildSectionPrompt(sectionKey, sectionData, birthData, allSections, language, { rashiContext: rashiContext || { userReligion: userReligion }, userGender, userName, userReligion });
   if (!sectionPromptData) return null;
 
   const langInstructions = {
@@ -1985,7 +2545,26 @@ Realistic Predictions Window: ${ageContext.currentYear} to ${ageContext.birthYea
   // Build religion context — NO religious recommendations
   const religionContext = '⚠️ IMPORTANT RULE: Do NOT recommend any religious activities, rituals, or faith-based practices. No temple visits, prayers, pujas, pirith, mantras, church services, mosque visits, chanting, novenas, or any worship activities. Keep ALL advice purely practical: gemstones as accessories, lucky colors, meditation/mindfulness (secular), exercise, diet, charity, journaling, nature connection, and lifestyle improvements.';
 
-  const systemPrompt = `You are a precise Vedic astrology data translator for a Sri Lankan astrology app called "Grahachara". Your job is to convert pre-calculated birth chart data into clear, honest, plain-language descriptions. You NEVER invent, guess, or fabricate information. Every statement you write must be directly supported by the engine data provided in the user message.
+  const systemPrompt = `You are a precise Vedic astrology analyst for a Sri Lankan astrology app called "Grahachara". Your job is to ANALYZE pre-calculated birth chart data, REASON about what it means for this specific person, and then write clear, honest, plain-language descriptions.
+
+⚠️ CRITICAL APPROACH — ANALYZE FIRST, WRITE SECOND:
+You are NOT a data translator. You are an ANALYST. Before writing any paragraph:
+1. THINK about what the combination of data points means — a single data point alone is weak, but 2-3 data points pointing the same direction is a strong prediction
+2. CROSS-REFERENCE the section data with the full birth chart data below — find confirming or contradicting signals
+3. IDENTIFY CONTRADICTIONS — if the engine says one thing but the planet positions suggest another, address the tension honestly
+4. When multiple data fields converge on the same conclusion, that prediction is HIGH CONFIDENCE — state it boldly and decisively
+5. When only one weak indicator supports a claim, still state it but note it depends on a single factor
+6. Pick the STRONGER signal and COMMIT to it — do NOT hedge with vague "mixed indicators" language. Make a call. Be decisive.
+
+🔥 HONESTY MANDATE — NON-NEGOTIABLE:
+- Do NOT soften bad news. Do NOT add silver linings to every negative finding.
+- If the data shows something difficult, STATE IT DIRECTLY. The user is paying for TRUTH, not comfort.
+- A score of 35/100 means WEAK — say it plainly. Do not dress it up as "developing" or "has room for growth."
+- A score of 55/100 means BELOW AVERAGE — say what that means in real life without sugarcoating.
+- A score of 80+ means STRONG — celebrate it boldly.
+- If divorce risk is HIGH, say "divorce risk is high" — do NOT hide it behind "there may be some adjustments needed."
+- If second marriage is indicated, state the probability directly without tiptoeing.
+- The ONLY exception: when marriage is completely denied or a life-threatening health issue is indicated, you may add ONE sentence of compassionate framing AFTER stating the hard truth. But the truth comes FIRST, always.
 
 IDENTITY RULE: You are a professional human astrologer, NOT an AI. NEVER mention AI, machine learning, algorithms, language models, or that you are artificial in any way. Speak as a wise, experienced human astrologer would.
 
@@ -1998,11 +2577,14 @@ ${ageBlock}
 ${langInstructions[language] || langInstructions.en}
 
 ═══ CORE MANDATE ═══
+- ANALYZE the engine data deeply — don't just convert each field into a sentence. Think about what combinations of data points MEAN together.
 - ONLY state what the engine data supports. If a data field says "N/A" or is missing, SKIP it — do not invent content to fill the gap.
 - Every date, year, timing window, and number you mention MUST come from the provided data. NEVER make up dates or numbers.
-- Two people with different chart data must get completely different readings because you are translating THEIR specific data.
-- Write as many paragraphs as the data supports. Rich data = more paragraphs (8-12). Sparse data = fewer paragraphs (3-5). NEVER pad with filler or generic statements.
+- Two people with different chart data must get completely different readings because you are analyzing THEIR specific data.
+- Use ALL the data provided. Each data point with a real value = at least 1-2 sentences of analysis. Count your data fields and ensure each gets attention.
 - ${userName ? `Use their name "${userName}" naturally 2-3 times per section.` : 'Address them as "you" throughout.'}
+- ACCURACY IS KING: If the data says earlyLifeHealth severity is HIGH, do NOT write "you were born healthy". If estimatedElderSiblings is 1, do NOT write "you have no older siblings". READ the data carefully and FAITHFULLY represent it.
+- CROSS-REFERENCE: Before writing about any topic, check BOTH the section-specific data AND the full birth chart below. The birth chart is the ground truth — if the section data seems wrong, the chart data overrides it.
 
 ⚠️ ANTI-GENERIC MANDATE — THIS IS YOUR #1 PRIORITY:
 Before writing ANY sentence, ask yourself: "Could this sentence appear in someone else's report who has a completely different chart?" If yes, DELETE IT and replace with something specific to THIS person's data.
@@ -2024,10 +2606,13 @@ SPECIFICITY TEST: Every paragraph must contain at least ONE of:
 - A unique chart feature that less than 20% of people would have
 
 VOICE & STYLE:
-- Write like a knowledgeable, honest advisor — warm but direct
-- Be SPECIFIC: use the exact numbers, dates, and descriptions from the engine data
-- Be HONEST: if the data shows difficulty, say so directly and then offer the remedy data if available
-- Use conversational tone — not a textbook, not a fortune cookie
+- Write like a seasoned astrologer who has analyzed 10,000 charts — confident, specific, decisive, never vague
+- Be BLUNT: if the data shows difficulty, say so FIRST, then offer practical advice. Truth before comfort.
+- Start STRONG — the first sentence of each section should be a bold, specific claim that hooks the reader. Never start with a preamble.
+- Every paragraph must contain at least ONE specific, concrete prediction or insight the person has never heard before
+- Use vivid real-life scenarios with specific ages: "Around age 35-38, expect heated arguments about money" NOT "financial disagreements are possible"
+- NO generic advice like "communicate better" or "be patient" — give SPECIFIC, chart-derived guidance: "Your partner responds best to physical gestures, not words — a touch on the shoulder resolves fights faster than a 2-hour conversation"
+- Make the reader feel like you're sitting across from them telling them things nobody else has ever told them
 - Every claim must trace back to a specific data field provided to you
 
 FORMAT: Use Markdown for readability:
@@ -2086,8 +2671,8 @@ REALITY CHECK — ABSOLUTE RULES:
 ANTI-DUPLICATION MANDATE — CRITICAL
 ══════════════════════════════════════════════════════════════
 Each section MUST focus ONLY on its own domain. DO NOT repeat information from other sections:
-- "marriage" → TIMING, partner description, how they meet — NOT daily married life dynamics
-- "marriedLife" → DAILY marriage dynamics, conflicts, intimacy, growth — NOT timing or partner finding
+- "marriage" → TIMING of marriage, partner description (appearance, personality, profession), how/where they meet, whether marriage happens, afflictions, first letter of partner — NOT daily married life
+- "marriedLife" → DAILY experience AFTER marriage: conflict patterns, intimacy, in-law dynamics, household management, power dynamics, decade-by-decade evolution — NOT timing, NOT partner finding, NOT whether marriage happens
 - "career" → Career PATH, business vs service, earning periods — NOT financial management or property
 - "financial" → Money management, savings, debt, investment style, loss periods — NOT career paths
 - "lifePredictions" → Timeline of life phases — NOT deep dive into any single topic
@@ -2100,24 +2685,23 @@ Each section MUST focus ONLY on its own domain. DO NOT repeat information from o
 - "foreignTravel" → Travel, visa, countries, settlement — NOT career abroad (brief mention OK)
 - "surpriseInsights" → Hidden/unusual facts — appearance, siblings, parents, sleep, food — NOT repeating other sections
 - "familyPortrait" → Mother, father, siblings, family karma — NOT children or spouse
+- "physicalProfile" → Body, face, height, complexion, mind, intellect — NOT personality traits from "personality" section
+- "attractionProfile" → Attraction power, romantic energy, sexual magnetism, love language — NOT marriage timing or partner finding from "marriage" section
 - "timeline25" → Year-by-year forecast for next 25 years — compact, punchy, dates only
 - "remedies" → Gemstones, mantras, rituals, colors, fasting — NOT predictions
 
 If you find yourself writing something that belongs in another section, STOP and write something section-specific instead.
 ══════════════════════════════════════════════════════════════
 
-DEPTH MANDATE — WRITE MORE, NOT LESS (THIS IS A HARD REQUIREMENT):
-⚠️ MINIMUM LENGTH ENFORCEMENT — FAILING TO MEET THESE MINIMUMS IS A CRITICAL ERROR:
-- HERO sections (lifePredictions, career, marriage, health, marriedLife, children, familyPortrait, surpriseInsights, education): Write AT LEAST 8-15 substantial paragraphs (each paragraph = 3-6 sentences minimum). Target 1500-2500 words per section.
-- STANDARD sections (financial, luck, legal, foreignTravel, realEstate, remedies, yogaAnalysis, transits): Write AT LEAST 5-10 substantial paragraphs. Target 800-1500 words per section.
-- A "paragraph" is NOT 1-2 sentences. Each paragraph must be 3-6 sentences that deeply explore ONE aspect.
-- If you find yourself writing less than 6 paragraphs for ANY section, you are NOT using all the data. Go back and expand.
-- Use ALL the data provided — if a data field has a value, it MUST appear in your output. Count the data fields and ensure each one gets attention.
-- Cross-reference data should be mentioned briefly (1 sentence) to connect sections, NOT as the main content
-- Include SPECIFIC numbers: strength scores, bindus, percentages, years, ages, counts
-- Name the person by name at least 2-3 times per section if their name is provided
-- ELABORATE on predictions — don't just state them. For each prediction: state it, explain WHY (from data), describe the REAL-LIFE impact, then give practical advice.
-- Use the 4-LAYER technique for each major finding: (1) State the finding, (2) Explain what it means in daily life, (3) Give a specific example or scenario, (4) Offer actionable advice`;
+DEPTH MANDATE — DATA-DRIVEN LENGTH:
+⚠️ LENGTH RULE — SIMPLE: Use ALL the data. Each data point = at least 1-2 sentences. If you have 30 data points, you need 30+ sentences across your paragraphs.
+- HERO sections (lifePredictions, career, marriage, marriedLife, health, children, familyPortrait, surpriseInsights, education, physicalProfile, attractionProfile): AT LEAST 8-15 paragraphs, each 3-6 sentences. Target 1500-2500 words.
+- STANDARD sections (financial, luck, legal, foreignTravel, realEstate, remedies, yogaAnalysis, transits): AT LEAST 5-10 paragraphs. Target 800-1500 words.
+- Every data field with a value MUST appear in your output. Count them.
+- Include SPECIFIC numbers: strength scores, percentages, years, ages, counts
+- Name the person by name 2-3 times per section if provided
+- For each major finding, use the 4-LAYER technique: (1) State it boldly, (2) Explain the real-life impact, (3) Give a vivid scenario with specific ages/years, (4) Offer actionable advice
+- Cross-reference data: mention briefly (1 sentence) to connect sections`;
 
   const userPrompt = sectionPromptData.prompt + rashiBlock + coherenceBlock;
 
@@ -2127,15 +2711,15 @@ DEPTH MANDATE — WRITE MORE, NOT LESS (THIS IS A HARD REQUIREMENT):
   ];
 
   // ── Hybrid Model Strategy + Per-Section Temperature ──────────
-  // Hero sections → Gemini 3.1 Pro (search grounding, temp 0.85)
-  // Data-heavy sections → Gemini 2.5 Flash (temp 0.65)
-  // Standard sections → Gemini 2.5 Flash (temp 0.75)
-  const HERO_SECTIONS = ['lifePredictions', 'surpriseInsights', 'marriage', 'career', 'marriedLife', 'familyPortrait', 'health', 'children', 'education'];
+  // Hero sections → Gemini 3.1 Pro (temp 0.82 — vivid, unique per person)
+  // Data-heavy sections → Gemini 2.5 Flash (temp 0.62 — grounded but not robotic)
+  // Standard sections → Gemini 2.5 Flash (temp 0.72)
+  const HERO_SECTIONS = ['lifePredictions', 'surpriseInsights', 'marriage', 'career', 'marriedLife', 'familyPortrait', 'health', 'children', 'education', 'physicalProfile', 'attractionProfile'];
   const DATA_HEAVY_SECTIONS = ['yogaAnalysis', 'financial', 'transits', 'realEstate', 'legal'];
   
   const isHero = HERO_SECTIONS.includes(sectionKey);
   const isDataHeavy = DATA_HEAVY_SECTIONS.includes(sectionKey);
-  const sectionTemperature = isHero ? 0.85 : isDataHeavy ? 0.65 : 0.75;
+  const sectionTemperature = isHero ? 0.82 : isDataHeavy ? 0.62 : 0.72;
   // ─────────────────────────────────────────────────────────────
 
   try {
@@ -2164,7 +2748,7 @@ DEPTH MANDATE — WRITE MORE, NOT LESS (THIS IS A HARD REQUIREMENT):
 /**
  * Call Gemini with higher token limit for long narratives — with retry + exponential backoff
  */
-async function callGeminiLong(messages, sectionTemperature = 0.88) {
+async function callGeminiLong(messages, sectionTemperature = 0.65) {
   const apiKey = process.env.GEMINI_API_KEY;
   const model = 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -2196,7 +2780,10 @@ async function callGeminiLong(messages, sectionTemperature = 0.88) {
           generationConfig: {
             maxOutputTokens: 65536,
             temperature: sectionTemperature,
-            topP: sectionTemperature > 0.75 ? 0.95 : 0.90,
+            topP: 0.90,
+            thinkingConfig: {
+              thinkingBudget: 8192,
+            },
           },
         }),
       });
@@ -2218,8 +2805,18 @@ async function callGeminiLong(messages, sectionTemperature = 0.88) {
         throw new Error(`Gemini API error: ${data.error.message}`);
       }
 
+      // Extract text from thinking model response — may have multiple parts
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const textParts = parts.filter(p => p.text && !p.thought);
+      const text = textParts.map(p => p.text).join('') || 'Unable to generate response.';
+      const thoughtParts = parts.filter(p => p.thought);
+      if (thoughtParts.length > 0) {
+        const thinkingChars = thoughtParts.reduce((sum, p) => sum + (p.text?.length || 0), 0);
+        console.log(`[GeminiLong] 🧠 Model used thinking (${thinkingChars} chars of reasoning)`);
+      }
+
       return {
-        text: data.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to generate response.',
+        text,
         usage: extractGeminiUsage(data),
         model,
       };
@@ -2237,10 +2834,9 @@ async function callGeminiLong(messages, sectionTemperature = 0.88) {
 }
 
 /**
- * Call Gemini 3.1 Pro for hero sections — with retry + exponential backoff
- * Uses Google Search grounding for real-time data enrichment
+ * Call Gemini 2.5 Flash for hero sections — with thinking enabled for deep analysis
  */
-async function callGeminiHero(messages, sectionTemperature = 0.82) {
+async function callGeminiHero(messages, sectionTemperature = 0.65) {
   const apiKey = process.env.GEMINI_API_KEY;
   const model = 'gemini-3.1-pro-preview';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -2268,9 +2864,11 @@ async function callGeminiHero(messages, sectionTemperature = 0.82) {
         generationConfig: {
           maxOutputTokens: 65536,
           temperature: sectionTemperature,
-          topP: 0.92,
+          topP: 0.90,
+          thinkingConfig: {
+            thinkingBudget: 16384,
+          },
         },
-        tools: [{ google_search: {} }],
       };
 
       const response = await fetch(url, {
@@ -2289,12 +2887,12 @@ async function callGeminiHero(messages, sectionTemperature = 0.82) {
           await new Promise(r => setTimeout(r, delay));
           continue;
         }
-        throw new Error(`Gemini 3.1 Pro error: ${msg} after ${MAX_RETRIES} attempts`);
+        throw new Error(`Gemini Hero error: ${msg} after ${MAX_RETRIES} attempts`);
       }
 
       const data = await response.json();
       if (data.error) {
-        throw new Error(`Gemini 3.1 Pro error: ${data.error.message}`);
+        throw new Error(`Gemini Hero error: ${data.error.message}`);
       }
 
       const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
@@ -2305,8 +2903,18 @@ async function callGeminiHero(messages, sectionTemperature = 0.82) {
         }
       }
 
+      // Extract text from thinking model response — may have multiple parts
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const textParts = parts.filter(p => p.text && !p.thought);
+      const text = textParts.map(p => p.text).join('') || 'Unable to generate response.';
+      const thoughtParts = parts.filter(p => p.thought);
+      if (thoughtParts.length > 0) {
+        const thinkingTokens = thoughtParts.reduce((sum, p) => sum + (p.text?.length || 0), 0);
+        console.log(`[GeminiHero] 🧠 Model used thinking (${thinkingTokens} chars of reasoning)`);
+      }
+
       return {
-        text: data.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to generate response.',
+        text,
         usage: extractGeminiUsage(data),
         model,
       };
@@ -2418,9 +3026,9 @@ function resolveLocationName(lat, lng) {
  * @param {string} language - 'en', 'si', 'ta', 'singlish'
  * @returns {Object} Full narrative report
  */
-async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null) {
+async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, marriageOpts = {}) {
   const tokenTracker = createTokenTracker();
-  const rawReport = generateFullReport(birthDate, lat, lng);
+  const rawReport = generateFullReport(birthDate, lat, lng, marriageOpts);
   const birthData = rawReport.birthData;
   const sections = rawReport.sections;
 
@@ -2742,6 +3350,9 @@ ${verses.slice(0, 3).map(v => `[${v.source}] ${v.topic}: "${v.text}"`).join('\n'
 
   advancedBlock += tier35Block;
 
+  // ── Key Events Calendar (consolidated life timeline) ──────────
+  const keyEventsCalendar = rawReport.keyEventsCalendar || null;
+
   const rashiContext = {
     lagnaEnglish: houseChart.lagna?.rashi?.english || '',
     lagnaName: houseChart.lagna?.rashi?.name || '',
@@ -2764,6 +3375,25 @@ ${verses.slice(0, 3).map(v => `[${v.source}] ${v.topic}: "${v.text}"`).join('\n'
     nakshatraPada: birthData.nakshatra?.pada || '',
     nakshatraLord: birthData.nakshatra?.lord || '',
     advancedBlock: advancedBlock,
+    // ── Key Events Calendar (for quick AI reference) ──
+    keyEventsCalendar: keyEventsCalendar ? `
+═══ KEY EVENTS CALENDAR (CONSOLIDATED TIMELINE) ═══
+Generated for: Born ${keyEventsCalendar.generatedFor?.birthYear}, Current age: ${keyEventsCalendar.generatedFor?.currentAge}
+📊 Summary: ${keyEventsCalendar.summary?.totalEvents} major life events predicted
+
+${keyEventsCalendar.summary?.nextMajorEvent ? `🎯 NEXT MAJOR EVENT: ${keyEventsCalendar.summary.nextMajorEvent.icon} ${keyEventsCalendar.summary.nextMajorEvent.summary} (${keyEventsCalendar.summary.nextMajorEvent.year}, age ${keyEventsCalendar.summary.nextMajorEvent.ageAtEvent})` : ''}
+
+${keyEventsCalendar.byStatus?.thisYear?.length > 0 ? `🔥 THIS YEAR (${new Date().getFullYear()}):
+${keyEventsCalendar.byStatus.thisYear.map(e => `  ${e.icon} ${e.summary}`).join('\n')}` : ''}
+
+${keyEventsCalendar.byStatus?.nearTerm?.length > 0 ? `📅 NEAR TERM (next 2-3 years):
+${keyEventsCalendar.byStatus.nearTerm.map(e => `  ${e.icon} ${e.summary} (${e.year})`).join('\n')}` : ''}
+
+${keyEventsCalendar.allEvents?.filter(e => e.status === 'ACTIVE_NOW').length > 0 ? `⭐ CURRENTLY ACTIVE WINDOWS:
+${keyEventsCalendar.allEvents.filter(e => e.status === 'ACTIVE_NOW').map(e => `  ${e.icon} ${e.summary} — HAPPENING NOW!`).join('\n')}` : ''}
+
+REFERENCE: Use this calendar when writing about "key upcoming events" or "life timeline ahead".
+` : '',
     // ── Enriched personal profile for deeper personalization ──
     personalProfile: (() => {
       const parts = [];
@@ -2818,7 +3448,7 @@ ${verses.slice(0, 3).map(v => `[${v.source}] ${v.topic}: "${v.text}"`).join('\n'
   // Consolidated sections — removed duplicates/overlaps:
   // - 'employment' merged into 'career' (was repeating career paths/promotions)
   // - 'business' merged into 'career' (was repeating career data)
-  // NEW: marriedLife (separate from marriage/love), legal, education, spiritual
+  // marriedLife = post-marriage daily life (separate from marriage timing/partner)
   // EXPANDED: health (from ~35 lines to ~100+ lines)
   const sectionOrder = [
     'yogaAnalysis',
@@ -2830,6 +3460,8 @@ ${verses.slice(0, 3).map(v => `[${v.source}] ${v.topic}: "${v.text}"`).join('\n'
     'children',
     'familyPortrait',
     'health',
+    'physicalProfile',
+    'attractionProfile',
     'foreignTravel',
     'education',
     'luck',
@@ -2896,6 +3528,26 @@ SECTION DATA HIGHLIGHTS:
 - Public mask vs private self contrast: ${sections.surpriseInsights?.publicVsPrivate?.contrastLevel || 'N/A'}
 - Money personality: ${sections.surpriseInsights?.moneyPersonality?.archetype || 'N/A'}
 
+CROSS-VALIDATED SECTION SCORES (engine-enforced logical consistency):
+${(() => {
+  const cv = sections._crossValidation || [];
+  if (cv.length === 0) return '✅ All section scores are logically consistent — no adjustments were needed.';
+  return '⚠️ The engine detected logical inconsistencies and applied the following corrections:\n' +
+    cv.map((adj, i) => `${i + 1}. ${adj.section}: ${adj.from} → ${adj.to} | ${adj.reason}`).join('\n') +
+    '\n\n⛔ CRITICAL: You MUST respect these adjusted scores. If children was reduced from 95 to 65 because marriage is 50, your narrative must reflect CHALLENGES in both areas — do NOT write an optimistic children section that contradicts a weak marriage section.';
+})()}
+
+SECTION SCORE SUMMARY (after cross-validation):
+- Marriage: ${sections.marriage?.seventhHouse?.strengthScore ?? 'N/A'}/100
+- Children: ${sections.children?.fifthHouse?.strengthScore ?? 'N/A'}/100
+- Career: ${sections.career?.tenthHouse?.strengthScore ?? 'N/A'}/100
+- Financial: ${sections.financial?.secondHouse?.strengthScore ?? 'N/A'}/100
+- Education: ${sections.education?.fourthHouse?.strengthScore ?? sections.education?.fifthHouse?.strengthScore ?? 'N/A'}/100
+- Health: ${sections.health?.sixthHouse?.strengthScore ?? sections.health?.eighthHouse?.strengthScore ?? 'N/A'}/100
+- Foreign Travel: ${sections.foreignTravel?.ninthHouse?.strengthScore ?? sections.foreignTravel?.twelfthHouse?.strengthScore ?? 'N/A'}/100
+- Luck: ${sections.luck?.ninthHouse?.strengthScore ?? 'N/A'}/100
+- Spiritual: ${sections.spiritual?.twelfthHouse?.strengthScore ?? 'N/A'}/100
+
 Write EXACTLY this JSON format (no markdown, no fences). For each field, derive the value ONLY from the data above. If insufficient data exists for a field, write "Insufficient data":
 {
   "corePersonality": "3-sentence summary — what makes THIS person fundamentally different from others with same lagna. Include retrograde/combust effects and unique signatures.",
@@ -2911,13 +3563,14 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
   "biggestChallenge": "primary challenge from doshas/weak planets/afflictions — be brutally specific, not vague",
   "biggestBlessing": "primary strength from yogas/strong planets — be specific about what it gives them",
   "uniqueChartFeatures": "2-3 features that make this chart rare — stelliums, exalted/debilitated planets, retrograde patterns, unusual combinations",
+  "educationCareerAlignment": "CRITICAL — Reconcile education fields (${(sections.education?.suggestedFields || []).join(', ') || 'N/A'}) with career paths (${(sections.career?.primaryCareers || sections.career?.suggestedCareers || []).join(', ') || 'N/A'}) and Nadi education fields (${(sections.education?.nadiEducation?.suggestedFields || []).slice(0, 5).join(', ') || 'N/A'}) and Nadi career sectors (${(sections.career?.nadiCareer?.careerSectors || []).map(s => s.sector || s.planet).join(', ') || 'N/A'}). Find the LOGICAL THREAD connecting education to career. Example: if education=medicine and career=healthcare administration, the thread is 'Medical degree leading to healthcare management'. If they seem contradictory, find the bridge field. Output: '[Education field] → [Career field]: [1-sentence explanation of how education leads to this career]'",
   "lifeMotto": "one-sentence theme from the chart data — NOT a generic inspirational quote but something that captures THIS person's specific journey"
 }`;
 
     const themesResult = await callGemini([
       { role: 'system', content: 'You output ONLY valid JSON. No markdown code fences. No extra text. Be specific with years and numbers.' },
       { role: 'user', content: themesPrompt },
-    ], 8192, 0.5);
+    ], 8192, 0.65);
 
     // Record coherence pass token usage
     if (themesResult.usage) {
@@ -2943,11 +3596,18 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
 • Biggest Challenge: ${parsed.biggestChallenge || ''}
 • Biggest Blessing: ${parsed.biggestBlessing || ''}
 • Unique Chart Features: ${parsed.uniqueChartFeatures || ''}
+• Education→Career Alignment: ${parsed.educationCareerAlignment || ''}
 • Life Motto: ${parsed.lifeMotto || ''}
 
 ⚠️ CRITICAL: Your section MUST be consistent with these core themes. If the core themes say "marriage around 28-30", you MUST NOT say "marriage at 24" or "marriage unlikely before 35". All sections tell ONE coherent story.
 
 ⚠️ PERSONALIZATION MANDATE: The "Unique Chart Features" and "Dominant Life Theme" above capture what makes THIS person's chart rare. EVERY section must reflect these unique qualities. If this chart has a stellium in house 10, the career section must be dramatically different from a chart with an empty house 10. If retrograde Venus is noted, the marriage section must address it specifically. Generic statements that could apply to anyone are FORBIDDEN.
+
+⚖️ CROSS-VALIDATION MANDATE: Section scores have been ENGINE-VALIDATED for logical consistency. ${(() => {
+  const cv = sections._crossValidation || [];
+  if (cv.length === 0) return 'All scores are consistent.';
+  return 'The following adjustments were applied: ' + cv.map(a => `${a.section} ${a.from}→${a.to}`).join(', ') + '. Your narrative tone MUST match the ADJUSTED score HONESTLY. 80+/100 = STRONG — celebrate it. 60-79 = DECENT — state it plainly. 40-59 = BELOW AVERAGE — say it directly and explain real-life impact. Below 40 = WEAK — be blunt about what this means. Do NOT soften scores with diplomatic language.';
+})()}
 ════════════════════════════════════════════════════════`;
       console.log(`[AI Report] Core themes generated in ${Date.now() - coherenceStart}ms`);
     } catch (parseErr) {
@@ -2969,7 +3629,6 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
   const startTime = Date.now();
 
   const narrativePromises = sectionOrder.map(key => {
-    // marriedLife uses the same chart data as marriage section
     const dataKey = key === 'marriedLife' ? 'marriage' : key;
     const sectionData = sections[dataKey];
     if (!sectionData) return Promise.resolve({ title: key, narrative: null });

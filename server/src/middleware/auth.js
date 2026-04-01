@@ -16,7 +16,11 @@ const { getAuth } = require('../config/firebase');
 function tryAppJwt(token) {
   try {
     const jwt = require('jsonwebtoken');
-    const JWT_SECRET = process.env.JWT_SECRET || 'grahachara-cosmic-secret-2025-dev';
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      console.warn('[auth] JWT_SECRET not set — JWT verification disabled');
+      return null;
+    }
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded && (decoded.type === 'google-auth' || decoded.type === 'phone-auth')) {
       return {
@@ -27,7 +31,15 @@ function tryAppJwt(token) {
         anonymous: false,
       };
     }
-  } catch (e) { /* not our JWT */ }
+  } catch (e) {
+    // If it is a JWT but failed validation, we shouldn't attempt Firebase token validation on it.
+    if (e.name === 'JsonWebTokenError' || e.name === 'TokenExpiredError') {
+      console.warn('[auth] App JWT verification failed:', e.message);
+    }
+    // Still we can fall through if it's not a JWT at all (Firebase tokens are also JWTs though)
+    // Actually Firebase ID tokens are JWTs. If they are signed by Google, jwt.verify with our secret fails and throws JsonWebTokenError (invalid signature).
+    // So we just return null to try Firebase Admin.
+  }
   return null;
 }
 
@@ -57,6 +69,14 @@ function requireAuth(req, res, next) {
     return next();
   }
   
+  // If we couldn't verify it as an app JWT, check if it actually looks like one before passing to Firebase
+  const jwtHelper = require('jsonwebtoken');
+  const decodedUnverified = jwtHelper.decode(idToken);
+  if (decodedUnverified && (decodedUnverified.type === 'google-auth' || decodedUnverified.type === 'phone-auth')) {
+    // It's one of our own expired/invalid tokens, no point sending it to Firebase
+    return res.status(401).json({ error: 'Invalid or expired app token' });
+  }
+
   // Try Firebase token
   auth.verifyIdToken(idToken)
     .then(decoded => {
@@ -102,6 +122,15 @@ function optionalAuth(req, res, next) {
     return next();
   }
   
+  // If we couldn't verify it as an app JWT, check if it actually looks like one before passing to Firebase
+  const jwtHelper = require('jsonwebtoken');
+  const decodedUnverified = jwtHelper.decode(idToken);
+  if (decodedUnverified && (decodedUnverified.type === 'google-auth' || decodedUnverified.type === 'phone-auth')) {
+    // It's one of our own expired/invalid tokens, no point sending it to Firebase
+    req.user = null;
+    return next();
+  }
+
   // Try Firebase token
   auth.verifyIdToken(idToken)
     .then(decoded => {

@@ -28,7 +28,11 @@ function phoneAuth(req, res, next) {
   // Try our JWT first (google-auth or legacy phone-auth)
   try {
     const jwt = require('jsonwebtoken');
-    const JWT_SECRET = process.env.JWT_SECRET || 'grahachara-cosmic-secret-2025-dev';
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      // No JWT_SECRET configured — skip JWT verification
+      throw new Error('JWT_SECRET not set');
+    }
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded && (decoded.type === 'google-auth' || decoded.type === 'phone-auth')) {
       req.user = {

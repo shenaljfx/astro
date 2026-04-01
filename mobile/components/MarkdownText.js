@@ -1,8 +1,8 @@
 /**
- * Lightweight Markdown renderer for React Native
+ * Lightweight Markdown renderer for React Native — Enhanced Edition
  * Supports: **bold**, *italic*, ## headings, - bullet lists,
- * numbered lists, --- dividers, > blockquotes, and emoji.
- * No external dependencies beyond react-native.
+ * numbered lists, --- dividers, > blockquotes, > 💡/🔥/⚠️ callouts,
+ * and emoji. No external dependencies beyond react-native.
  */
 
 import React from 'react';
@@ -103,12 +103,25 @@ export default function MarkdownText({ children, style }) {
       continue;
     }
 
-    // > Blockquote
+    // > Blockquote — with callout detection
     if (/^>\s*/.test(trimmed)) {
+      var bqContent = trimmed.replace(/^>\s*/, '');
+      // Detect callout type from leading emoji
+      var calloutType = 'default';
+      if (/^[🔥💡⚠️⭐✨🎯💎❤️💪🍀💰💼💍]/.test(bqContent)) {
+        calloutType = 'highlight';
+      } else if (/^[⛔❌🚫]/.test(bqContent)) {
+        calloutType = 'warning';
+      }
+      var bqColors = calloutType === 'highlight'
+        ? { bar: '#FFB800', bg: 'rgba(255,184,0,0.08)', border: 'rgba(255,184,0,0.15)' }
+        : calloutType === 'warning'
+        ? { bar: '#EF4444', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.15)' }
+        : { bar: '#D4A020', bg: 'rgba(255,184,0,0.06)', border: 'rgba(255,184,0,0.10)' };
       elements.push(
-        <View key={k++} style={styles.blockquote}>
-          <View style={styles.bqBar} />
-          <Text style={styles.bqText}>{parseInline(trimmed.replace(/^>\s*/, ''), styles.bqText)}</Text>
+        <View key={k++} style={[styles.blockquote, { backgroundColor: bqColors.bg, borderColor: bqColors.border, borderWidth: 1 }]}>
+          <View style={[styles.bqBar, { backgroundColor: bqColors.bar }]} />
+          <Text style={[styles.bqText, calloutType === 'highlight' && { color: '#FFE8B0' }]}>{parseInline(bqContent, styles.bqText)}</Text>
         </View>
       );
       continue;
@@ -153,54 +166,54 @@ export default function MarkdownText({ children, style }) {
 var styles = StyleSheet.create({
   spacer: { height: 8 },
 
-  // Divider
+  // Divider — enhanced with gradient feel
   divider: {
-    height: 1, marginVertical: 16, marginHorizontal: 8,
-    backgroundColor: 'rgba(192,132,252,0.2)',
+    height: 1, marginVertical: 18, marginHorizontal: 8,
+    backgroundColor: 'rgba(255,184,0,0.15)',
   },
 
-  // Heading 1
-  h1Wrap: { marginTop: 20, marginBottom: 10 },
+  // Heading 1 — dramatic reveal
+  h1Wrap: { marginTop: 22, marginBottom: 12 },
   h1: { fontSize: 22, fontWeight: '900', color: '#FFE8A0', letterSpacing: -0.3 },
-  h1Line: { height: 2, backgroundColor: 'rgba(255,184,0,0.4)', borderRadius: 1, marginTop: 6, width: '60%' },
+  h1Line: { height: 2.5, backgroundColor: 'rgba(255,184,0,0.45)', borderRadius: 1.5, marginTop: 6, width: '60%' },
 
-  // Heading 2
-  h2Wrap: { marginTop: 18, marginBottom: 8 },
+  // Heading 2 — section anchors
+  h2Wrap: { marginTop: 20, marginBottom: 10 },
   h2: { fontSize: 18, fontWeight: '800', color: '#FFD98E', letterSpacing: -0.2 },
-  h2Line: { height: 1.5, backgroundColor: 'rgba(255,184,0,0.3)', borderRadius: 1, marginTop: 5, width: '40%' },
+  h2Line: { height: 2, backgroundColor: 'rgba(255,184,0,0.30)', borderRadius: 1, marginTop: 5, width: '40%' },
 
   // Heading 3
-  h3: { fontSize: 16, fontWeight: '700', color: '#FBBF24', marginTop: 14, marginBottom: 6 },
+  h3: { fontSize: 16, fontWeight: '700', color: '#FBBF24', marginTop: 16, marginBottom: 8 },
 
-  // Paragraph
-  para: { color: 'rgba(255,241,208,0.88)', fontSize: 14, lineHeight: 23, marginBottom: 4 },
-  paraInline: { color: 'rgba(255,241,208,0.88)', fontSize: 14, lineHeight: 23 },
+  // Paragraph — improved readability
+  para: { color: 'rgba(255,241,208,0.88)', fontSize: 14.5, lineHeight: 24, marginBottom: 6 },
+  paraInline: { color: 'rgba(255,241,208,0.88)', fontSize: 14.5, lineHeight: 24 },
 
-  // Inline styles
+  // Inline styles — punchier
   bold: { fontWeight: '800', color: '#FFE8A0' },
   italic: { fontStyle: 'italic', color: 'rgba(255,220,160,0.9)' },
   boldItalic: { fontWeight: '800', fontStyle: 'italic', color: '#FFE8A0' },
 
-  // Bullet list
-  bulletRow: { flexDirection: 'row', paddingLeft: 4, marginBottom: 6, alignItems: 'flex-start' },
-  bulletDot: { color: '#FBBF24', fontSize: 11, marginRight: 10, marginTop: 4, width: 16, textAlign: 'center' },
-  bulletText: { flex: 1, color: 'rgba(255,241,208,0.88)', fontSize: 14, lineHeight: 22 },
-  bulletTextInline: { color: 'rgba(255,241,208,0.88)', fontSize: 14, lineHeight: 22 },
+  // Bullet list — enhanced with better spacing
+  bulletRow: { flexDirection: 'row', paddingLeft: 4, marginBottom: 8, alignItems: 'flex-start' },
+  bulletDot: { color: '#FBBF24', fontSize: 11, marginRight: 10, marginTop: 5, width: 16, textAlign: 'center' },
+  bulletText: { flex: 1, color: 'rgba(255,241,208,0.88)', fontSize: 14, lineHeight: 23 },
+  bulletTextInline: { color: 'rgba(255,241,208,0.88)', fontSize: 14, lineHeight: 23 },
 
-  // Numbered list
+  // Numbered list — badge style
   numBadge: {
-    width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(255,184,0,0.12)',
+    width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,184,0,0.12)',
     alignItems: 'center', justifyContent: 'center', marginRight: 10, marginTop: 2,
-    borderWidth: 1, borderColor: 'rgba(255,184,0,0.2)',
+    borderWidth: 1, borderColor: 'rgba(255,184,0,0.22)',
   },
   numText: { color: '#FBBF24', fontSize: 11, fontWeight: '800' },
 
-  // Blockquote
+  // Blockquote — callout style
   blockquote: {
-    flexDirection: 'row', marginVertical: 8, paddingVertical: 10,
+    flexDirection: 'row', marginVertical: 10, paddingVertical: 12,
     paddingHorizontal: 14, backgroundColor: 'rgba(255,184,0,0.06)',
-    borderRadius: 10,
+    borderRadius: 12,
   },
   bqBar: { width: 3, backgroundColor: '#D4A020', borderRadius: 2, marginRight: 12 },
-  bqText: { flex: 1, color: 'rgba(255,220,160,0.9)', fontSize: 14, lineHeight: 22, fontStyle: 'italic' },
+  bqText: { flex: 1, color: 'rgba(255,220,160,0.9)', fontSize: 14, lineHeight: 23, fontStyle: 'italic' },
 });

@@ -25,9 +25,9 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePricing } from '../../contexts/PricingContext';
 import api from '../../services/api';
-import ThemedAuroraNebula from '../../components/effects/ThemedAuroraNebula';
-import ThemedNebulaBg from '../../components/effects/ThemedNebulaBg';
 import { Colors, Typography } from '../../constants/theme';
+import { boxShadow, textShadow } from '../../utils/shadow';
+import { generatePorondamHTML, loadLogoBase64 } from '../../utils/pdfReportGenerator';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -45,11 +45,10 @@ function Glass({ children, style, accent }) {
   return (
     <View style={[sty.glass, style]}>
       <LinearGradient
-        pointerEvents="none"
         colors={accent
           ? ['rgba(244,63,94,0.10)', 'rgba(255,140,0,0.08)', 'rgba(18,6,12,0.6)']
           : ['rgba(18,6,12,0.55)', 'rgba(14,4,10,0.45)', 'rgba(12,4,8,0.55)']}
-        style={StyleSheet.absoluteFill}
+        style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       />
       {children}
@@ -89,9 +88,9 @@ function BinaryStarOrbit({ pct, color }) {
         </View>
       </View>
       {/* Bride star */}
-      <Animated.View style={[{ position: 'absolute', width: 14, height: 14, borderRadius: 7, backgroundColor: '#F9A8D4', shadowColor: '#F9A8D4', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 6, elevation: 4 }, star1Style]} />
+      <Animated.View style={[{ position: 'absolute', width: 14, height: 14, borderRadius: 7, backgroundColor: '#F9A8D4', ...boxShadow('#F9A8D4', { width: 0, height: 0 }, 1, 6), elevation: 4 }, star1Style]} />
       {/* Groom star */}
-      <Animated.View style={[{ position: 'absolute', width: 14, height: 14, borderRadius: 7, backgroundColor: '#93C5FD', shadowColor: '#93C5FD', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 6, elevation: 4 }, star2Style]} />
+      <Animated.View style={[{ position: 'absolute', width: 14, height: 14, borderRadius: 7, backgroundColor: '#93C5FD', ...boxShadow('#93C5FD', { width: 0, height: 0 }, 1, 6), elevation: 4 }, star2Style]} />
     </View>
   );
 }
@@ -138,7 +137,7 @@ function FactorBar({ f, index, language }) {
     <Animated.View entering={FadeInUp.delay(100 * index).duration(500)} style={sty.factorItem}>
       <View style={sty.factorTop}>
         <View style={sty.factorNameRow}>
-          <View style={[sty.factorDot, { backgroundColor: color, shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 4 }]} />
+          <View style={[sty.factorDot, { backgroundColor: color, ...boxShadow(color, { width: 0, height: 0 }, 0.8, 4) }]} />
           <Text style={sty.factorName}>{f.name}</Text>
           {f.sinhala ? <Text style={sty.factorSinhala}>{f.sinhala}</Text> : null}
         </View>
@@ -429,153 +428,17 @@ export default function PorondamScreen() {
     if (!data) return;
     try {
       var isSi = language === 'si';
-      var brideName = bName || (isSi ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA' : 'Bride');
-      var groomName = gName || (isSi ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF' : 'Groom');
-      var pct = data.maxPossibleScore > 0 ? Math.round((data.totalScore / data.maxPossibleScore) * 100) : 0;
-      var scoreColor = pct >= 75 ? '#16a34a' : pct >= 50 ? '#ca8a04' : pct >= 30 ? '#ea580c' : '#dc2626';
-      var scoreGlow = pct >= 75 ? 'rgba(22,163,74,0.2)' : pct >= 50 ? 'rgba(202,138,4,0.2)' : 'rgba(220,38,38,0.2)';
 
-      var factorsHtml = '';
-      if (data.factors && data.factors.length > 0) {
-        factorsHtml = '<div class="por-section"><h2 class="por-sec-title">📊 ' + (isSi ? '\u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8\u0DCA \u0DC3\u0DCF\u0DB0\u0D9A (\u0DC3\u0DCF\u0DB0\u0D9A 7 • \u0DBD\u0D9A\u0DD4\u0DAB\u0DD4 20)' : 'Compatibility Factors (7 Factors • 20 Points)') + '</h2>';
-        data.factors.forEach(function(f) {
-          var fPct = f.maxScore > 0 ? Math.round((f.score / f.maxScore) * 100) : 0;
-          var fColor = fPct >= 75 ? '#16a34a' : fPct >= 50 ? '#ca8a04' : '#dc2626';
-          var desc = isSi && f.descriptionSinhala ? f.descriptionSinhala : (f.description || '');
-          var fName = isSi && f.sinhala ? f.sinhala : f.name;
-          factorsHtml += '<div class="factor-card" style="border-left-color:' + fColor + ';">'
-            + '<div style="display:flex;justify-content:space-between;align-items:center;">'
-            + '<strong>' + fName + '</strong>'
-            + '<span class="factor-score" style="color:' + fColor + ';">' + f.score + '/' + f.maxScore + '</span></div>'
-            + '<div class="factor-bar-track"><div class="factor-bar-fill" style="width:' + fPct + '%;background:' + fColor + ';"></div></div>'
-            + (desc ? '<p class="factor-desc">' + desc + '</p>' : '')
-            + '</div>';
-        });
-        factorsHtml += '</div>';
-      }
+      var logoB64 = await loadLogoBase64();
 
-      var doshasHtml = '';
-      if (data.doshas && data.doshas.length > 0) {
-        doshasHtml = '<div class="por-section"><h2 class="por-sec-title" style="color:#dc2626;border-color:#fecaca;">⚠️ ' + (isSi ? '\u0DAF\u0DDD\u0DC2' : 'Doshas') + '</h2>';
-        data.doshas.forEach(function(d) {
-          var desc = isSi && d.descriptionSinhala ? d.descriptionSinhala : (d.description || '');
-          var dName = isSi && d.sinhala ? d.sinhala : d.name;
-          doshasHtml += '<div class="dosha-card">'
-            + '<strong>' + dName + '</strong>'
-            + (desc ? '<p class="factor-desc">' + desc + '</p>' : '')
-            + '</div>';
-        });
-        doshasHtml += '</div>';
-      }
-
-      var reportHtml = '';
-      if (report) {
-        var bodyText = report.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/\n/g, '<br/>');
-        reportHtml = '<div class="por-section"><h2 class="por-sec-title">🔮 ' + (isSi ? '\u0DC0\u0DD2\u0DC3\u0DCA\u0DAD\u0DBB\u0DCF\u0DAD\u0DCA\u0DB8\u0D9A \u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0' : 'Detailed Astrology Report') + '</h2>'
-          + '<div class="por-report-body">' + bodyText + '</div></div>';
-      }
-
-      var html = '<!DOCTYPE html><html><head><meta charset="utf-8"/>'
-        + '<style>'
-        + '@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@300;400;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap");'
-        + '@page{margin:0;size:A4;}'
-        + '*{box-sizing:border-box;margin:0;padding:0;}'
-        + 'body{font-family:"Inter","Noto Sans Sinhala",sans-serif;color:#1F2937;line-height:1.7;font-size:13px;background:#fff;}'
-        // Watermark
-        + '.watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);font-size:80px;font-weight:900;color:rgba(236,72,153,0.03);letter-spacing:16px;white-space:nowrap;z-index:0;pointer-events:none;}'
-        // Ornamental corners
-        + '.orn-tl,.orn-tr,.orn-bl,.orn-br{position:fixed;width:40px;height:40px;z-index:5;}'
-        + '.orn-tl{top:6px;left:6px;border-top:2px solid rgba(236,72,153,0.12);border-left:2px solid rgba(236,72,153,0.12);}'
-        + '.orn-tr{top:6px;right:6px;border-top:2px solid rgba(236,72,153,0.12);border-right:2px solid rgba(236,72,153,0.12);}'
-        + '.orn-bl{bottom:6px;left:6px;border-bottom:2px solid rgba(236,72,153,0.12);border-left:2px solid rgba(236,72,153,0.12);}'
-        + '.orn-br{bottom:6px;right:6px;border-bottom:2px solid rgba(236,72,153,0.12);border-right:2px solid rgba(236,72,153,0.12);}'
-        // Header/Footer
-        + '.pg-header{position:fixed;top:0;left:0;right:0;height:32px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;font-size:8px;color:rgba(236,72,153,0.4);letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid rgba(236,72,153,0.06);}'
-        + '.pg-footer{position:fixed;bottom:0;left:0;right:0;height:28px;display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(236,72,153,0.3);letter-spacing:1.5px;border-top:1px solid rgba(236,72,153,0.06);}'
-        // Cover page
-        + '.cover{width:100%;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#831843 0%,#be185d 30%,#ec4899 60%,#f9a8d4 100%);color:#fff;position:relative;overflow:hidden;page-break-after:always;}'
-        + '.cover::before{content:"";position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 30% 50%,rgba(251,191,36,0.12) 0%,transparent 50%),radial-gradient(ellipse at 70% 30%,rgba(255,255,255,0.08) 0%,transparent 50%);}'
-        + '.cover-inner{position:relative;z-index:2;text-align:center;padding:40px;}'
-        + '.cover-hearts{font-size:56px;margin-bottom:12px;}'
-        + '.cover-brand{font-size:12px;font-weight:700;color:rgba(251,191,36,0.9);letter-spacing:6px;text-transform:uppercase;margin-bottom:8px;}'
-        + '.cover-title{font-size:32px;font-weight:900;margin-bottom:8px;text-shadow:0 2px 20px rgba(0,0,0,0.2);}'
-        + '.cover-sub{font-size:15px;color:rgba(255,255,255,0.7);margin-bottom:36px;font-weight:300;}'
-        + '.cover-divider{width:100px;height:2px;background:linear-gradient(90deg,transparent,rgba(251,191,36,0.5),transparent);margin:0 auto 28px;}'
-        + '.cover-names{font-size:26px;font-weight:800;color:#FFD666;text-shadow:0 0 30px rgba(251,191,36,0.3);}'
-        + '.cover-and{display:block;font-size:14px;color:rgba(255,255,255,0.5);margin:6px 0;font-weight:400;}'
-        + '.cover-foot{position:absolute;bottom:28px;left:0;right:0;text-align:center;font-size:8px;color:rgba(255,255,255,0.2);letter-spacing:3px;text-transform:uppercase;}'
-        // Score card
-        + '.score-card{text-align:center;padding:32px;background:linear-gradient(135deg,#fdf2f8,#fef3c7,#f5f3ff);border-radius:20px;margin:48px 48px 28px;border:1px solid rgba(236,72,153,0.15);position:relative;overflow:hidden;}'
-        + '.score-card::after{content:"💍";position:absolute;top:-15px;right:-15px;font-size:80px;opacity:0.04;}'
-        + '.score-val{font-size:64px;font-weight:900;line-height:1;}'
-        + '.score-label{color:#555;font-size:17px;font-weight:700;margin:10px 0 4px;}'
-        + '.score-sub{color:#888;font-size:13px;}'
-        // Content area
-        + '.content{padding:0 48px 44px;}'
-        + '.por-section{margin-bottom:28px;page-break-inside:avoid;}'
-        + '.por-sec-title{color:#be185d;font-size:16px;font-weight:800;margin-bottom:12px;border-bottom:2px solid #fce7f3;padding-bottom:6px;}'
-        + '.factor-card{margin-bottom:10px;padding:12px 16px;background:#fdf2f8;border-radius:10px;border-left:4px solid #ccc;}'
-        + '.factor-card strong{color:#333;font-size:13px;}'
-        + '.factor-score{font-weight:800;font-size:16px;}'
-        + '.factor-bar-track{height:4px;background:rgba(0,0,0,0.06);border-radius:2px;margin-top:6px;}'
-        + '.factor-bar-fill{height:4px;border-radius:2px;transition:width 0.3s;}'
-        + '.factor-desc{color:#666;font-size:11px;margin:5px 0 0;line-height:1.6;}'
-        + '.dosha-card{margin-bottom:8px;padding:10px 14px;background:#fff5f5;border-radius:10px;border-left:4px solid #dc2626;}'
-        + '.dosha-card strong{color:#333;font-size:13px;}'
-        + '.por-report-body{color:#374151;font-size:12.5px;line-height:1.85;background:#fdf2f8;padding:20px;border-radius:12px;border:1px solid #fce7f3;}'
-        + '.por-report-body strong{color:#1F2937;}'
-        + '.por-report-body em{color:#be185d;}'
-        // End page
-        + '.end-page{width:100%;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#831843,#be185d,#ec4899);color:#fff;text-align:center;page-break-before:always;}'
-        + '.end-page .end-sym{font-size:48px;margin-bottom:8px;}'
-        + '.end-page .end-brand{font-size:11px;letter-spacing:6px;color:rgba(251,191,36,0.7);text-transform:uppercase;font-weight:700;}'
-        + '.end-page .end-line{width:80px;height:2px;background:linear-gradient(90deg,transparent,rgba(251,191,36,0.5),transparent);margin:16px auto;}'
-        + '.end-page .end-tag{font-size:13px;color:rgba(255,255,255,0.5);font-style:italic;}'
-        + '.end-page .end-url{font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:2px;margin-top:16px;}'
-        + '.end-page .end-disc{max-width:380px;font-size:8px;color:rgba(255,255,255,0.18);line-height:1.6;margin-top:24px;}'
-        + '@media print{.cover{page-break-after:always;}.por-section{page-break-inside:avoid;}.end-page{page-break-before:always;}}'
-        + '</style></head><body>'
-        + '<div class="watermark">\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB</div>'
-        + '<div class="orn-tl"></div><div class="orn-tr"></div><div class="orn-bl"></div><div class="orn-br"></div>'
-        + '<div class="pg-header"><span style="font-weight:800;color:#be185d;">\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB</span><span>' + (isSi ? '\u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0' : 'Porondam Report') + '</span></div>'
-        + '<div class="pg-footer">\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB &bull; www.grahachara.lk &bull; ' + new Date().toLocaleDateString() + '</div>'
-        // Cover
-        + '<div class="cover">'
-        + '<div class="cover-inner">'
-        + '<div class="cover-hearts">💍</div>'
-        + '<div class="cover-brand">\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB</div>'
-        + '<div class="cover-title">' + (isSi ? '\u0DC3\u0DB8\u0DCA\u0DB4\u0DD6\u0DBB\u0DCA\u0DAB \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0' : 'Complete Compatibility Report') + '</div>'
-        + '<div class="cover-sub">' + (isSi ? '\u0DC0\u0DDB\u0DAF\u0DD2\u0D9A \u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8\u0DCA \u0DC0\u0DD2\u0DC1\u0DCA\u0DBD\u0DDA\u0DC2\u0DAB\u0DBA' : 'Vedic Astrology Compatibility Analysis') + '</div>'
-        + '<div class="cover-divider"></div>'
-        + '<div class="cover-names">' + brideName + '<span class="cover-and">' + (isSi ? '\u0DC3\u0DC4' : '&') + '</span>' + groomName + '</div>'
-        + '</div>'
-        + '<div class="cover-foot">' + new Date().toLocaleDateString() + '</div>'
-        + '</div>'
-        // Score
-        + '<div class="score-card">'
-        + '<div class="score-val" style="color:' + scoreColor + ';text-shadow:0 0 30px ' + scoreGlow + ';">' + pct + '%</div>'
-        + '<p class="score-label">' + (data.ratingEmoji || '💍') + ' ' + (isSi && data.ratingSinhala ? data.ratingSinhala : data.rating) + '</p>'
-        + '<p class="score-sub">' + data.totalScore + '/' + data.maxPossibleScore + ' ' + (isSi ? '\u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8\u0DCA \u0DBD\u0D9A\u0DD4\u0DAB\u0DD4' : 'Compatibility Score') + '</p>'
-        + '</div>'
-        // Content
-        + '<div class="content">'
-        + factorsHtml
-        + doshasHtml
-        + reportHtml
-        + '</div>'
-        // End page
-        + '<div class="end-page">'
-        + '<div class="end-sym">💍</div>'
-        + '<div class="end-brand">\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB</div>'
-        + '<div class="end-line"></div>'
-        + '<div class="end-tag">' + (isSi ? '\u0D94\u0DB6\u0DDA \u0DA2\u0DD3\u0DC0\u0DD2\u0DAD\u0DBA\u0DDA \u0DAD\u0DBB\u0DD4 \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1' : 'Read the Stars of Your Life') + '</div>'
-        + '<div class="end-url">www.grahachara.lk</div>'
-        + '<div class="end-disc">' + (isSi
-          ? '\u0DB8\u0DD9\u0DB8 \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0 \u0DC3\u0DCF\u0DB8\u0DCA\u0DB4\u0DCA\u200D\u0DBB\u0DAF\u0DCF\u0DBA\u0DD2\u0D9A \u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0DC1\u0DCF\u0DC3\u0DCA\u0DAD\u0DCA\u200D\u0DBB\u0DBA \u0DB8\u0DAD \u0DB4\u0DAF\u0DB1\u0DB8\u0DCA \u0DC0\u0DDA. \u0DB8\u0DD9\u0DBA \u0DAF\u0DD0\u0DB1\u0D9C\u0DD0\u0DB1\u0DD3\u0DB8\u0DCA \u0DC3\u0DB3\u0DC4\u0DCF \u0DB4\u0DB8\u0DAB\u0DD2.'
-          : 'This report is based on traditional Vedic astrology. For informational purposes only.')
-        + '</div>'
-        + '</div>'
-        + '</body></html>';
+      var html = generatePorondamHTML({
+        lang: language,
+        data: data,
+        brideName: bName || (isSi ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA' : 'Bride'),
+        groomName: gName || (isSi ? '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF' : 'Groom'),
+        report: report,
+        logoBase64: logoB64,
+      });
 
       var fileName = 'NekathAI_Porondam_' + (bName || 'Bride').replace(/\s+/g, '_') + '_' + (gName || 'Groom').replace(/\s+/g, '_') + '.pdf';
 
@@ -607,8 +470,6 @@ export default function PorondamScreen() {
   return (
     <DesktopScreenWrapper routeName="porondam">
     <View style={{ flex: 1, backgroundColor: '#0C0208' }}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="pink" /></View>
-      <ThemedNebulaBg theme="pink" />
       <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop]} showsVerticalScrollIndicator={false}>
         <View style={[sty.scrollInner, isDesktop && sty.scrollInnerDesktop]}>
 
@@ -1250,7 +1111,7 @@ var sty = StyleSheet.create({
   scrollInnerDesktop: { maxWidth: 960, alignSelf: 'center', paddingHorizontal: 32 },
   title: {
     fontSize: WIDE ? 36 : 30, fontWeight: '900', color: '#FFF1D0', letterSpacing: -0.5,
-    textShadowColor: 'rgba(255,184,0,0.35)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10,
+    ...textShadow('rgba(255,184,0,0.35)', { width: 0, height: 2 }, 10),
   },
   subtitle: { fontSize: 14, color: 'rgba(255,184,0,0.65)', marginBottom: 24, fontWeight: '500', letterSpacing: 0.3 },
 
@@ -1281,7 +1142,7 @@ var sty = StyleSheet.create({
   timeSep: { color: 'rgba(255,140,0,0.6)', fontSize: 20, fontWeight: '700' },
   timeHint: { fontSize: 11, color: 'rgba(255,255,255,0.28)', marginBottom: 16, fontStyle: 'italic', textAlign: 'center' },
 
-  cta: { borderRadius: 16, paddingVertical: 17, alignItems: 'center', overflow: 'hidden', marginBottom: 8, shadowColor: '#FF8C00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.7, shadowRadius: 18, elevation: 0 },
+  cta: { borderRadius: 16, paddingVertical: 17, alignItems: 'center', overflow: 'hidden', marginBottom: 8, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 18), elevation: 0 },
   ctaText: { color: '#FFF1D0', fontWeight: '800', fontSize: 16, letterSpacing: 0.8 },
 
   editBtn: {
@@ -1324,7 +1185,7 @@ var sty = StyleSheet.create({
 
   section: { marginBottom: 14 },
   secHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  secTitle: { fontSize: 16, fontWeight: '800', color: '#FFE8B0', letterSpacing: 0.2, textShadowColor: 'rgba(255,184,0,0.18)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
+  secTitle: { fontSize: 16, fontWeight: '800', color: '#FFE8B0', letterSpacing: 0.2, ...textShadow('rgba(255,184,0,0.18)', { width: 0, height: 1 }, 5) },
   secSub: { fontSize: 12, color: 'rgba(255,140,0,0.6)', fontWeight: '500', marginTop: 2 },
 
   factorItem: { marginBottom: 16 },

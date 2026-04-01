@@ -13,6 +13,7 @@ const { generateAdvancedAnalysis } = require('../engine/advanced');
 const { chat, generateAINarrativeReport, translateAdvancedForDisplay, explainChartSimple } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth } = require('../middleware/subscription');
+const { reportLimiter, validateBirthData } = require('../middleware/security');
 const { trackCost } = require('../services/costTracker');
 const { saveReport, getCachedReport, saveChartExplanation, getCachedChartExplanation, saveTranslationCache, getCachedTranslation, getUserReports, saveBirthChartCache, getCachedBirthChart } = require('../models/firestore');
 const { parseSLT } = require('../utils/dateUtils');
@@ -308,6 +309,12 @@ router.post('/birth-chart', optionalAuth, async (req, res) => {
     if (!birthDate) {
       console.log('[birth-chart] ✖ Missing birthDate');
       return res.status(400).json({ error: 'Birth date is required (ISO 8601 format).' });
+    }
+
+    // Input validation
+    const validationErrors = validateBirthData(req.body);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ error: 'Invalid input', details: validationErrors });
     }
 
     const birthLat = parseFloat(lat) || 6.9271;
@@ -922,7 +929,7 @@ router.get('/birth-chart/data', optionalAuth, async (req, res) => {
 // Comprehensive 13-section Jyotish report
 // Body: { birthDate, lat?, lng? }
 // ═══════════════════════════════════════════════════════════════════
-router.post('/full-report', async (req, res) => {
+router.post('/full-report', reportLimiter, async (req, res) => {
   try {
     const { birthDate, lat = 6.9271, lng = 79.8612 } = req.body;
 
@@ -957,7 +964,10 @@ router.post('/full-report', async (req, res) => {
     });
   } catch (error) {
     console.error('[Full Report] Error:', error);
-    res.status(500).json({ error: error.message, stack: process.env.NODE_ENV === 'development' ? error.stack : undefined });
+    res.status(500).json({
+      error: 'Failed to generate report',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
   }
 });
 
@@ -968,12 +978,18 @@ router.post('/full-report', async (req, res) => {
 // Optional auth: if logged in, caches report & returns cached if available
 // ═══════════════════════════════════════════════════════════════════
 
-router.post('/full-report-ai', phoneAuth, async (req, res) => {
+router.post('/full-report-ai', reportLimiter, phoneAuth, async (req, res) => {
   try {
-    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null } = req.body;
+    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null } = req.body;
 
     if (!birthDate) {
       return res.status(400).json({ error: 'birthDate is required (ISO format or parseable date string)' });
+    }
+
+    // Input validation
+    const validationErrors = validateBirthData(req.body);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ error: 'Invalid input', details: validationErrors });
     }
 
     const reportLat = parseFloat(lat);
@@ -1022,7 +1038,7 @@ router.post('/full-report-ai', phoneAuth, async (req, res) => {
     console.log(`[AI Report] Generating narrative report for ${date.toISOString()} at (${reportLat}, ${reportLng}) in ${language}`);
     const startTime = Date.now();
 
-    const report = await generateAINarrativeReport(date, reportLat, reportLng, language, birthLocation, userName, userGender, userReligion);
+    const report = await generateAINarrativeReport(date, reportLat, reportLng, language, birthLocation, userName, userGender, userReligion, { maritalStatus, marriageYear });
 
     const elapsed = Date.now() - startTime;
     const sectionCount = Object.keys(report.narrativeSections).length;
@@ -1065,7 +1081,10 @@ router.post('/full-report-ai', phoneAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('[AI Report] Error:', error);
-    res.status(500).json({ error: error.message, stack: process.env.NODE_ENV === 'development' ? error.stack : undefined });
+    res.status(500).json({
+      error: 'Failed to generate AI report',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
   }
 });
 

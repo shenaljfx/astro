@@ -8,6 +8,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { boxShadow, textShadow } from '../../utils/shadow';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming,
   withSequence, interpolate, Easing, useDerivedValue,
@@ -224,10 +225,7 @@ var tb = StyleSheet.create({
     overflow: 'visible',
     borderWidth: 0.5,
     borderColor: 'rgba(255,255,255,0.06)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
+    ...boxShadow('#000', { width: 0, height: -4 }, 0.5, 20),
     elevation: 20,
   },
   topEdge: {
@@ -468,8 +466,7 @@ var hs = StyleSheet.create({
   title: {
     fontSize: 16, fontWeight: '800', color: '#FFB800',
     letterSpacing: 2.5, textTransform: 'uppercase',
-    textShadowColor: 'rgba(255,184,0,0.5)',
-    textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+    ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 8),
   },
   balancePill: {
     flexDirection: 'row',

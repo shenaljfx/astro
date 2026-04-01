@@ -17,8 +17,7 @@ import SpringPressable from '../../components/effects/SpringPressable';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
-import ThemedAuroraNebula from '../../components/effects/ThemedAuroraNebula';
-import ThemedNebulaBg from '../../components/effects/ThemedNebulaBg';
+import { boxShadow, textShadow } from '../../utils/shadow';
 
 var { width: SW } = Dimensions.get('window');
 var DAILY_LIMIT = 10;
@@ -82,7 +81,7 @@ function ThinkingDots() {
   return (
     <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 14 }}>
       {COLORS.map(function (c, i) {
-        return <Animated.View key={i} style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: c, shadowColor: c, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 4 }, anims[i]]} />;
+        return <Animated.View key={i} style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: c, ...boxShadow(c, { width: 0, height: 0 }, 0.8, 4) }, anims[i]]} />;
       })}
     </View>
   );
@@ -333,8 +332,6 @@ export default function ChatScreen() {
     return (
       <DesktopScreenWrapper routeName="chat">
         <View style={{ flex: 1, backgroundColor: '#0C0602' }}>
-          <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="orange" /></View>
-          <ThemedNebulaBg theme="orange" />
           <View style={sd.shell}>
             <View style={sd.panel}>
 
@@ -463,8 +460,6 @@ export default function ChatScreen() {
   return (
     <DesktopScreenWrapper routeName="chat">
     <View style={{ flex: 1, backgroundColor: '#0C0602' }}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none"><ThemedAuroraNebula theme="orange" /></View>
-      <ThemedNebulaBg theme="orange" />
       <View style={[s.header, { paddingTop: topPad }]}>
         <View style={s.avatar}>
           <LinearGradient colors={mode === 'dream' ? ['#FF8C00', '#E65100'] : ['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} />
@@ -600,10 +595,7 @@ var sd = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.025)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.07)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 32,
+    ...boxShadow('#000', { width: 0, height: 8 }, 0.35, 32),
     flexDirection: 'column',
   },
   panelHeader: {
