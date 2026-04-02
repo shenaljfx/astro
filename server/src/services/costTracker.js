@@ -22,9 +22,9 @@ const { getUsdToLkr, MODEL_PRICING } = require('../utils/tokenCalculator');
 
 // ── Revenue constants (LKR) ─────────────────────────────────────
 const REVENUE = {
-  fullReport: 350,
+  fullReport: 380,
   porondam: 100,
-  subscription: 240,    // per month (includes: weekly lagna shared, 10 chats, 1 kendara)
+  subscription: 280,    // per month (includes: weekly lagna shared, 10 chats, 1 kendara)
   chat: 0,              // included in subscription (10/month)
   weeklyLagna: 0,       // shared cost, no per-user revenue
   reading: 0,           // part of report flow

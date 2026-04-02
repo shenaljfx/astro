@@ -1,12 +1,12 @@
 /**
  * Pricing Configuration — Geo-based dual-currency pricing
  * 
- * Sri Lanka users: LKR pricing via PayHere
- * International users: USD pricing via PayHere (supports multi-currency)
+ * Sri Lanka users: LKR pricing via RevenueCat (in-app purchases)
+ * International users: USD pricing via RevenueCat (in-app purchases)
  * 
  * Pricing tiers:
- *   SL:  LKR 240/month subscription, LKR 100 porondam, LKR 350 report
- *   INT: USD 4/month subscription, USD 2 porondam, USD 5 report
+ *   SL:  LKR 280/month subscription, LKR 100 porondam, LKR 380 report
+ *   INT: USD 4.99/month subscription, USD 1.99 porondam, USD 5.99 report
  */
 
 // ─── Price Tables ───────────────────────────────────────────────
@@ -17,10 +17,10 @@ const PRICING = {
     currencySymbol: 'LKR',
     country: 'Sri Lanka',
     subscription: {
-      amount: 240,
-      amountFormatted: '240.00',
+      amount: 280,
+      amountFormatted: '280.00',
       period: 'month',
-      label: 'LKR 240/month',
+      label: 'LKR 280/month',
     },
     porondam: {
       amount: 100,
@@ -28,33 +28,33 @@ const PRICING = {
       label: 'LKR 100',
     },
     report: {
-      amount: 350,
-      amountFormatted: '350.00',
-      label: 'LKR 350',
+      amount: 380,
+      amountFormatted: '380.00',
+      label: 'LKR 380',
     },
-    topUpPackages: [100, 250, 350, 500],
+    topUpPackages: [100, 280, 380, 500],
   },
   USD: {
     currency: 'USD',
     currencySymbol: '$',
     country: 'International',
     subscription: {
-      amount: 4,
-      amountFormatted: '4.00',
+      amount: 4.99,
+      amountFormatted: '4.99',
       period: 'month',
-      label: '$4/month',
+      label: '$4.99/month',
     },
     porondam: {
-      amount: 2,
-      amountFormatted: '2.00',
-      label: '$2',
+      amount: 1.99,
+      amountFormatted: '1.99',
+      label: '$1.99',
     },
     report: {
-      amount: 5,
-      amountFormatted: '5.00',
-      label: '$5',
+      amount: 5.99,
+      amountFormatted: '5.99',
+      label: '$5.99',
     },
-    topUpPackages: [2, 4, 5, 10],
+    topUpPackages: [2, 5, 6, 10],
   },
 };
 

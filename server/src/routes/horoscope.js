@@ -1033,7 +1033,7 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, async (req, res) => {
     }
     */
 
-    // Deduct LKR 15 BEFORE generation — REMOVED: payment handled by PayHere before API call
+    // Deduct LKR 15 BEFORE generation — REMOVED: payment handled by RevenueCat subscription
 
     console.log(`[AI Report] Generating narrative report for ${date.toISOString()} at (${reportLat}, ${reportLng}) in ${language}`);
     const startTime = Date.now();

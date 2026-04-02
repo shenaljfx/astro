@@ -434,6 +434,7 @@ function ProfileScreen() {
   var {
     user, loading, isLoggedIn, subscription, isSubscribed,
     signOut, saveBirthData, activateSubscription, cancelSubscription, renewSubscription,
+    restorePurchases, presentCustomerCenter,
   } = useAuth();
 
   if (loading) {
@@ -622,20 +623,13 @@ function ProfileScreen() {
                     <View style={s.subActiveRow}>
                       <Ionicons name="checkmark-circle" size={16} color="#34D399" />
                       <Text style={s.subActiveText}>
-                        {t('subActive').replace('{{amount}}', subscription?.amount || '240')}
+                        {t('subActive').replace('{{amount}}', subscription?.amount || '280')}
                       </Text>
                     </View>
                     <TouchableOpacity style={s.cancelBtn} onPress={function () {
-                      if (Platform.OS === 'web') {
-                        if (window.confirm('Cancel?')) cancelSubscription();
-                      } else {
-                        Alert.alert(t('subCancel'), t('confirm'), [
-                          { text: t('cancel'), style: 'cancel' },
-                          { text: t('confirm'), style: 'destructive', onPress: cancelSubscription },
-                        ]);
-                      }
+                      presentCustomerCenter().catch(function(e) { console.warn('Customer Center error:', e.message); });
                     }}>
-                      <Text style={s.cancelBtnText}>{t('subCancel')}</Text>
+                      <Text style={s.cancelBtnText}>{t('manageSub') || t('subCancel')}</Text>
                     </TouchableOpacity>
                   </>
                 )}

@@ -23,7 +23,6 @@ import CosmicLoader from '../../components/effects/CosmicLoader';
 import CitySearchPicker from '../../components/CitySearchPicker';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { usePricing } from '../../contexts/PricingContext';
 import api from '../../services/api';
 import { Colors, Typography } from '../../constants/theme';
 import { boxShadow, textShadow } from '../../utils/shadow';
@@ -259,8 +258,7 @@ function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTim
 // ======= MAIN SCREEN =======
 export default function PorondamScreen() {
   var { language } = useLanguage();
-  var { isLoggedIn } = useAuth();
-  var { priceLabel, priceAmount, currency } = usePricing();
+  var { isLoggedIn, showPaywall } = useAuth();
   var T = L[language] || L.en;
   var isDesktop = useDesktopCtx();
 
@@ -283,7 +281,6 @@ export default function PorondamScreen() {
   var [reportLoading, setReportLoading] = useState(false);
   var [reportLang, setReportLang] = useState(language || 'en');
   var [porondamId, setPorondamId] = useState(null);
-  var [paymentLoading, setPaymentLoading] = useState(false);
 
   // Sync report language when app language changes (only when no data yet)
   useEffect(function() {
@@ -317,76 +314,19 @@ export default function PorondamScreen() {
     if (!bDate || !gDate) {
       Alert.alert('', T.missing); return;
     }
+
+    // Show paywall first — only check after successful payment
+    try {
+      await showPaywall('porondam');
+    } catch (e) {
+      // User cancelled payment — do not proceed
+      return;
+    }
+
+    // Payment succeeded — now run the compatibility check
     try {
       setLoading(true); setError(null); setData(null); setReport(null); setPorondamId(null);
 
-      // Step 1: Initiate PayHere one-time payment
-      setPaymentLoading(true);
-      var initRes = await api.initiateTopUp(priceAmount('porondam'), currency);
-      if (!initRes || !initRes.success) {
-        throw new Error(initRes?.error || 'Failed to initiate payment');
-      }
-      var paymentObject = initRes.paymentObject;
-      var orderId = initRes.orderId;
-
-      // Step 2: Launch PayHere SDK / web checkout
-      var PayHere = null;
-      var useWebCheckout = false;
-      try {
-        PayHere = require('@payhere/payhere-mobilesdk-reactnative').default;
-      } catch (e) {
-        useWebCheckout = true;
-      }
-
-      var paymentId = null;
-
-      if (useWebCheckout) {
-        // Web fallback: open PayHere checkout in new tab
-        var checkoutUrl = initRes.checkout_url || 'https://sandbox.payhere.lk/pay/checkout';
-        if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-          var form = document.createElement('form');
-          form.method = 'POST';
-          form.action = checkoutUrl;
-          form.target = '_blank';
-          Object.keys(paymentObject).forEach(function(key) {
-            if (paymentObject[key] !== undefined && paymentObject[key] !== null) {
-              var input = document.createElement('input');
-              input.type = 'hidden';
-              input.name = key;
-              input.value = String(paymentObject[key]);
-              form.appendChild(input);
-            }
-          });
-          document.body.appendChild(form);
-          form.submit();
-          document.body.removeChild(form);
-          // For web, proceed optimistically (webhook confirms)
-          paymentId = 'web_' + Date.now();
-        } else {
-          throw new Error('Payment not available on this platform');
-        }
-      } else {
-        // Native SDK payment
-        paymentId = await new Promise(function(resolve, reject) {
-          PayHere.startPayment(
-            paymentObject,
-            function(pid) { resolve(pid); },
-            function(errData) { reject(new Error(errData || 'Payment failed')); },
-            function() { reject(new Error('Payment cancelled')); }
-          );
-        });
-      }
-
-      setPaymentLoading(false);
-
-      // Step 3: Confirm payment with server
-      try {
-        await api.confirmPayment(paymentId, orderId, 'topup');
-      } catch (e) {
-        // Webhook will handle it — continue
-      }
-
-      // Step 4: Generate porondam check + AI report in parallel
       var brideData = { birthDate: buildDateISO(bDate, bTime), lat: bCity.lat, lng: bCity.lng, name: bName || undefined };
       var groomData = { birthDate: buildDateISO(gDate, gTime), lat: gCity.lat, lng: gCity.lng, name: gName || undefined };
 
@@ -411,14 +351,9 @@ export default function PorondamScreen() {
       setTimeout(function() { if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true }); }, 300);
     } catch (e) {
       var msg = e.message || 'Error';
-      if (msg === 'Payment cancelled') {
-        // User cancelled — just stop loading
-      } else {
-        setError(msg);
-      }
+      setError(msg);
     } finally {
       setLoading(false);
-      setPaymentLoading(false);
     }
   }, [bDate, bTime, gDate, gTime, bCity, gCity, bName, gName, T, isLoggedIn, reportLang]);
 
@@ -510,13 +445,6 @@ export default function PorondamScreen() {
                     <Text style={{ fontSize: 18, marginRight: 6 }}>{'\uD83C\uDDEC\uD83C\uDDE7'}</Text>
                     <Text style={[sty.langChipText, reportLang === 'en' && sty.langChipTextActive]}>{T.en}</Text>
                   </TouchableOpacity>
-                </View>
-                {/* Payment info */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                  <Ionicons name="card-outline" size={13} color="rgba(251,191,36,0.6)" />
-                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
-                    {language === 'si' ? 'PayHere ඔස්සේ ' + priceLabel('porondam') + ' ගෙවන්න (Visa/MasterCard)' : priceLabel('porondam') + ' via PayHere (Visa/MasterCard)'}
-                  </Text>
                 </View>
               </Glass>
             </Animated.View>

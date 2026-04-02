@@ -207,24 +207,24 @@ function GoldenIcon({ name, size }) {
 var OB = {
   en: {
     welcomeSubtitle: "Your Personal Vedic Astrology App",
-    welcomeDesc: "Your personal Vedic astrologer\nDaily Palapala & Kendara Balima\nPorondam Galapima & Full Life Report",
+    welcomeDesc: "Your personal Vedic astrologer\nWeekly Palapala & Kendara Balima\nPorondam Galapima & Full Life Report",
     welcomeBtn: "Begin Your Cosmic Journey",
-    welcomeHint: "Only LKR 240/month via card/bank \u2014 required for access",
+    welcomeHint: "Only LKR 280/month via in-app purchase \u2014 required for access",
     googleTitle: "Sign In",
     googleSubtitle: "Sign in with your Google account to continue",
     googleBtn: "Continue with Google",
     googleFail: "Sign in failed. Please try again.",
     subTitle: "Unlock Premium",
     subSubtitle: "Full access to all cosmic features",
-    subFeature1: "Daily, Weekly & Monthly Palapala",
+    subFeature1: "Weekly Lagna Palapala",
     subFeature2: "Full Vedic Birth Chart (Kendara)",
     subFeature3: "Marriage Compatibility (Porondam)",
     subFeature4: "Complete Life Report with AI",
-    subFeature5: "Daily Nakath & Rahu Alerts",
+    subFeature5: "Weekly Nakath & Rahu Alerts",
     subFeature6: "Personalised Predictions",
     subPerDay: "/day",
-    subNote: "Charged via PayHere (Visa/MasterCard/HelaPay)",
-    subNetworks: "Visa \u2022 MasterCard \u2022 HelaPay \u2022 FriMi",
+    subNote: "Billed via Google Play / App Store",
+    subNetworks: "Google Play \u2022 App Store \u2022 All cards accepted",
     subBtn: "Activate Premium",
     subPayFail: "Payment failed. Please try again or use a different card.",
     subFailed: "Subscription failed",
@@ -283,24 +283,24 @@ var OB = {
   },
   si: {
     welcomeSubtitle: "\u0dbd\u0d82\u0d9a\u0dcf\u0dc0\u0dda \u0d85\u0d82\u0d9a 1 \u0da2\u0dca\u200d\u0dba\u0ddd\u0dad\u0dd2\u0dc2 App \u0d91\u0d9a \uD83C\uDDF1\uD83C\uDDF0",
-    welcomeDesc: "ඔයාගේම පෞද්ගලික ජ්‍යෝතිෂවේදියා \uD83D\uDD2E\nපලාපල \u2022 කේන්දරේ \u2022 පොරොන්දම්",
+    welcomeDesc: "ඔයාගේම පෞද්ගලික ජ්‍යෝතිෂවේදියා\nපලාපල \u2022 කේන්දරේ \u2022 පොරොන්දම්",
     welcomeBtn: "\u0dc0\u0dd0\u0da9\u0dda \u0db4\u0da7\u0db1\u0dca \u0d9c\u0db1\u0dca\u0db1",
-    welcomeHint: "\u0db8\u0dcf\u0dc3\u0dba\u0da7 \u0dbb\u0dd4. 240\u0dba\u0dd2 (PayHere \u0d94\u0dc3\u0dca\u0dc3\u0dda)",
+    welcomeHint: "\u0db8\u0dcf\u0dc3\u0dba\u0da7 \u0dbb\u0dd4. 280\u0dba\u0dd2 (Google Play \u0d94\u0dc3\u0dca\u0dc3\u0dda)",
     googleTitle: "\u0d87\u0dad\u0dd4\u0dbd\u0dca \u0dc0\u0db1\u0dca\u0db1",
     googleSubtitle: "\u0d89\u0daf\u0dd2\u0dbb\u0dd2\u0dba\u0da7 \u0dba\u0dcf\u0db8 \u0dc3\u0db3\u0dc4\u0dcf Google \u0d9c\u0dd2\u0dab\u0dd4\u0db8\u0dd9\u0db1\u0dca \u0d87\u0dad\u0dd4\u0dbd\u0dca \u0dc0\u0db1\u0dca\u0db1",
     googleBtn: "Google \u0dc4\u0dbb\u0dc4\u0dcf \u0db4\u0dd2\u0dc0\u0dd2\u0dc3\u0dd9\u0db1\u0dca\u0db1",
     googleFail: "\u0db4\u0dd2\u0dc0\u0dd2\u0dc3\u0dd3\u0db8 \u0d85\u0dc3\u0dcf\u0dbb\u0dca\u0dae\u0d9a\u0dba\u0dd2. \u0d9a\u0dbb\u0dd4\u0dab\u0dcf\u0d9a\u0dbb \u0db1\u0dd0\u0dc0\u0dad \u0d8b\u0dad\u0dca\u0dc3\u0dcf\u0dc4 \u0d9a\u0dbb\u0db1\u0dca\u0db1.",
     subTitle: "Premium \u0daf\u0dcf\u0d9c\u0db1\u0dca\u0db1 \uD83D\uDC51",
     subSubtitle: "\u0d85\u0db1\u0dcf\u0d9c\u0dad\u0dda \u0d9c\u0dd0\u0db1 \u0d94\u0d9a\u0dca\u0d9a\u0ddc\u0db8 \u0daf\u0dd0\u0db1\u0d9c\u0db1\u0dca\u0db1",
-    subFeature1: "\u0dc4\u0dd0\u0db8\u0daf\u0dcf\u0db8 \u0d8b\u0daf\u0dda\u0da7 \u0d91\u0db1 \u0db4\u0dbd\u0dcf\u0db4\u0dbd",
+    subFeature1: "\u0dc3\u0dad\u0dd2\u0db4\u0dad\u0dcf \u0dbd\u0d9c\u0dca\u0db1 \u0db4\u0dbd\u0dcf\u0db4\u0dbd",
     subFeature2: "\u0dc3\u0db8\u0dca\u0db4\u0dd6\u0dbb\u0dca\u0dab \u0d9a\u0dda\u0db1\u0dca\u0daf\u0dbb\u0dda",
     subFeature3: "\u0db4\u0ddc\u0dbb\u0ddc\u0db1\u0dca\u0daf\u0db8\u0dca \u0d9c\u0dd0\u0dbd\u0db4\u0dd3\u0db8",
     subFeature4: "AI \u0d91\u0d9a\u0dd9\u0db1\u0dca \u0d85\u0dc4\u0dbd\u0dcf \u0daf\u0dd0\u0db1\u0d9c\u0db1\u0dca\u0db1",
     subFeature5: "\u0db1\u0dd0\u0d9a\u0dd0\u0dad\u0dca \u0dc3\u0dc4 \u0dbb\u0dcf\u0dc4\u0dd4 \u0d9a\u0dcf\u0dbd\u0dda",
     subFeature6: "\u0d94\u0dba\u0dcf\u0da7\u0db8 \u0dc4\u0dbb\u0dd2\u0dba\u0db1 \u0d85\u0db1\u0dcf\u0dc0\u0dd0\u0d9a\u0dd2",
     subPerDay: "/\u0daf\u0dc0\u0dc3\u0da7",
-    subNote: "PayHere \u0d94\u0dc3\u0dca\u0dc3\u0dda \u0d9c\u0dd9\u0dc0\u0db1\u0dca\u0db1 (Visa/MasterCard/HelaPay) \u26A1",
-    subNetworks: "Visa \u2022 MasterCard \u2022 HelaPay \u2022 FriMi",
+    subNote: "Google Play / App Store \u0d94\u0dc3\u0dca\u0dc3\u0dda \u0d9c\u0dd9\u0dc0\u0db1\u0dca\u0db1 \u26A1",
+    subNetworks: "Google Play \u2022 App Store \u2022 \u0dc3\u0dd2\u0dba\u0dbd\u0dd4\u0db8 \u0d9a\u0dcf\u0da9\u0dca\u0db4\u0dad\u0dca",
     subBtn: "Activate Premium",
     subPayFail: "\u0d9c\u0dd9\u0dc0\u0dd3\u0db8 \u0d85\u0dc3\u0dcf\u0dbb\u0dca\u0dae\u0d9a\u0dba\u0dd2. \u0d86\u0dba\u0dd2 \u0db6\u0dbd\u0db1\u0dca\u0db1.",
     subFailed: "\u0d87\u0d9a\u0dca\u0da7\u0dd2\u0dc0\u0dca \u0dc0\u0dd4\u0db1\u0dda \u0db1\u0dd1",
@@ -982,9 +982,10 @@ var gs = StyleSheet.create({
 function SubscriptionStep({ onContinue, lang }) {
   var T = OB[lang] || OB.en;
   var [loading, setLoading] = useState(false);
+  var [restoring, setRestoring] = useState(false);
   var [payError, setPayError] = useState('');
   var [agreed, setAgreed] = useState(false);
-  var { activateSubscription } = useAuth();
+  var { activateSubscription, restorePurchases } = useAuth();
   var { priceLabel, priceAmount, currency, currencySymbol, isInternational } = usePricing();
   var priceGlow = useSharedValue(0);
   var shieldPulse = useSharedValue(0);
@@ -1026,6 +1027,21 @@ function SubscriptionStep({ onContinue, lang }) {
     } finally { setLoading(false); }
   };
 
+  var handleRestore = async function () {
+    setRestoring(true);
+    setPayError('');
+    try {
+      var result = await restorePurchases();
+      if (result && result.isProActive) {
+        onContinue();
+      } else {
+        setPayError(lang === 'si' ? 'ක්‍රියාකාරී දායකත්වයක් හමු නොවීය' : 'No active subscription found');
+      }
+    } catch (e) {
+      setPayError(lang === 'si' ? 'ප්‍රතිස්ථාපනය අසාර්ථකයි' : 'Restore failed. Please try again.');
+    } finally { setRestoring(false); }
+  };
+
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 40, justifyContent: 'space-between' }} showsVerticalScrollIndicator={false} bounces={false}>
       <View>
@@ -1058,13 +1074,13 @@ function SubscriptionStep({ onContinue, lang }) {
           </LinearGradient>
         </Animated.View>
 
-        {/* Card Payment Badge */}
+        {/* Secure Payment Badge */}
         <Animated.View entering={FadeInUp.delay(650).duration(400)} style={ss.payBadgeRow}>
           <Animated.View style={[ss.paySecureIcon, shieldGlow]}>
             <Ionicons name="shield-checkmark" size={16} color="#34D399" />
           </Animated.View>
           <Text style={ss.paySecureText}>
-            {lang === 'si' ? 'ආරක්ෂිත කාඩ්පත් ගෙවීම' : 'Secure Card Payment'}
+            {lang === 'si' ? 'ආරක්ෂිත ගෙවීම' : 'Secure In-App Purchase'}
           </Text>
         </Animated.View>
 
@@ -1086,7 +1102,7 @@ function SubscriptionStep({ onContinue, lang }) {
             <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }} onPress={() => setAgreed(!agreed)}>
               {lang === 'si' ? 'මම ' : 'I agree to the '}
             </Text>
-            <TouchableOpacity onPress={() => Linking.openURL('https://grahachara.lk/legal/terms.html')} activeOpacity={0.6}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://grahachara.com/legal/terms.html')} activeOpacity={0.6}>
               <Text style={{ color: '#FF8C00', fontSize: 13, textDecorationLine: 'underline', fontWeight: '500' }}>
                 {lang === 'si' ? 'නියමයන් සහ කොන්දේසිවලට' : 'Terms and Conditions'}
               </Text>
@@ -1119,6 +1135,20 @@ function SubscriptionStep({ onContinue, lang }) {
             ? 'මාසිකව ස්වයංක්‍රීයව අලුත් වේ. ඕනෑම වේලාවක අවලංගු කළ හැක.'
             : 'Auto-renews monthly. Cancel anytime from Profile.'}
         </Text>
+
+        {/* Restore Purchases — required by App Store / Google Play */}
+        <TouchableOpacity
+          onPress={handleRestore}
+          disabled={restoring}
+          style={{ alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 16 }}
+          activeOpacity={0.7}
+        >
+          <Text style={{ color: 'rgba(255,184,0,0.7)', fontSize: 13, textDecorationLine: 'underline' }}>
+            {restoring
+              ? (lang === 'si' ? 'ප්‍රතිස්ථාපනය වෙමින්...' : 'Restoring...')
+              : (lang === 'si' ? 'මිලදී ගැනීම් ප්‍රතිස්ථාපනය කරන්න' : 'Restore Purchases')}
+          </Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );

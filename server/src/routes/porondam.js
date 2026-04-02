@@ -149,7 +149,7 @@ router.post('/report', phoneAuth, async (req, res) => {
       return res.status(400).json({ error: 'porondamData is required' });
     }
 
-    // Payment handled by PayHere before API call — no token deduction needed
+    // Payment handled by RevenueCat subscription — no token deduction needed
 
     const langInstruction = language === 'si'
       ? `ඔබ ශ්‍රී ලංකාවේ ප්‍රසිද්ධ විවාහ ගැළපුම් උපදේශකයෙක්. මේ යුවලයාගේ ගැළපීම ගැන සිංහලෙන් ලියන්න.
@@ -410,7 +410,7 @@ router.post('/vibe-link', (req, res) => {
       used: false,
     });
 
-    const shareUrl = `https://grahachara.lk/vibe/${linkId}`;
+    const shareUrl = `https://grahachara.com/vibe/${linkId}`;
     const whatsappMessage = encodeURIComponent(
       `✨ ${senderName} wants to check your astrological compatibility!\n\n` +
       `🔮 Tap to see if the stars align:\n${shareUrl}\n\n` +

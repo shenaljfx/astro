@@ -2,7 +2,7 @@
  * Firebase Configuration for Mobile App
  * 
  * Auth: Google Sign-In via Firebase Auth (getAuth → signInWithCredential)
- * Payment/subscription: PayHere (card/bank)
+ * Payment/subscription: RevenueCat (in-app purchases)
  * Database: All data flows through the backend API at /api/auth/*
  * 
  * Setup:

@@ -626,28 +626,28 @@ export default function HomeScreen() {
               <View style={[s.dashCellIcon, { backgroundColor: 'rgba(255,184,0,0.10)' }]}>
                 <Ionicons name="sunny-outline" size={16} color="#FFB800" />
               </View>
-              <Text style={s.dashCellValue}>{sunriseVal}</Text>
+              <Text style={s.dashCellValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{sunriseVal}</Text>
               <Text style={s.dashCellLabel}>{language === 'si' ? 'උදාව' : t('sunrise')}</Text>
             </View>
             <View style={s.dashCell}>
               <View style={[s.dashCellIcon, { backgroundColor: 'rgba(255,140,0,0.10)' }]}>
                 <Ionicons name="moon-outline" size={16} color="#FF8C00" />
               </View>
-              <Text style={s.dashCellValue}>{sunsetVal}</Text>
+              <Text style={s.dashCellValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{sunsetVal}</Text>
               <Text style={s.dashCellLabel}>{language === 'si' ? 'බැසීම' : t('sunset')}</Text>
             </View>
             <View style={s.dashCell}>
               <View style={[s.dashCellIcon, { backgroundColor: 'rgba(52,211,153,0.10)' }]}>
                 <Ionicons name="sparkles-outline" size={16} color="#34D399" />
               </View>
-              <Text style={s.dashCellValue}>{tithiVal}</Text>
+              <Text style={s.dashCellValue} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.65}>{tithiVal}</Text>
               <Text style={s.dashCellLabel}>{language === 'si' ? 'තිථි' : 'Tithi'}</Text>
             </View>
             <View style={s.dashCell}>
               <View style={[s.dashCellIcon, { backgroundColor: 'rgba(103,232,249,0.10)' }]}>
                 <Ionicons name="infinite-outline" size={16} color="#67E8F9" />
               </View>
-              <Text style={s.dashCellValue}>{yogaVal}</Text>
+              <Text style={s.dashCellValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{yogaVal}</Text>
               <Text style={s.dashCellLabel}>{language === 'si' ? 'යෝගය' : 'Yoga'}</Text>
             </View>
           </View>
@@ -1309,8 +1309,8 @@ export default function HomeScreen() {
           </Text>
           <Text style={s.noBirthBody}>
             {language === 'si'
-              ? 'ඔබගේ උපන් විස්තර ඇතුලත් කර ඔබගේ ලග්න පලාපල, නක්ෂත්‍ර සහ දෛනික පලාපල බලාගන්න.'
-              : 'Add your birth details in Profile to unlock your personalised Lagna chart, Nakshatra & daily readings.'}
+              ? 'ඔබගේ උපන් විස්තර ඇතුලත් කර ඔබගේ ලග්න පලාපල, නක්ෂත්‍ර සහ සතිපතා පලාපල බලාගන්න.'
+              : 'Add your birth details in Profile to unlock your personalised Lagna chart, Nakshatra & weekly readings.'}
           </Text>
           <TouchableOpacity onPress={function () { router.push('/profile'); }} style={s.noBirthCta}>
             <LinearGradient colors={['#FF8C00', '#FF6D00', '#E65100']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
@@ -1523,17 +1523,18 @@ var s = StyleSheet.create({
   dashDivider: { height: 1, marginHorizontal: 18, overflow: 'hidden' },
   dashGridTitle: { color: 'rgba(255,214,102,0.50)', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', textAlign: 'center', marginTop: 12, marginBottom: -4 },
   dashGrid: {
-    flexDirection: 'row', paddingHorizontal: 8, paddingTop: 14, paddingBottom: 16, gap: 2,
+    flexDirection: 'row', paddingHorizontal: 6, paddingTop: 14, paddingBottom: 16, gap: 4,
   },
   dashCell: {
-    flex: 1, alignItems: 'center', gap: 5, paddingVertical: 10,
+    flex: 1, alignItems: 'center', gap: 4, paddingVertical: 8, paddingHorizontal: 2,
     borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.02)',
+    overflow: 'hidden',
   },
   dashCellIcon: {
     width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
   },
-  dashCellValue: { color: '#FFF1D0', fontSize: 13, fontWeight: '800', textAlign: 'center' },
-  dashCellLabel: { color: 'rgba(255,214,102,0.40)', fontSize: 9, fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.8 },
+  dashCellValue: { color: '#FFF1D0', fontSize: 11, fontWeight: '800', textAlign: 'center', paddingHorizontal: 2 },
+  dashCellLabel: { color: 'rgba(255,214,102,0.40)', fontSize: 8, fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   rahuStrip: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

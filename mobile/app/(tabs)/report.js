@@ -35,7 +35,6 @@ import { generateReportHTML, loadLogoBase64 } from '../../utils/pdfReportGenerat
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { usePricing } from '../../contexts/PricingContext';
 import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
 
@@ -732,8 +731,7 @@ var cl = StyleSheet.create({
 // ══════════════════════════════════════════
 export default function ReportScreen() {
   var { t, language } = useLanguage();
-  var { user } = useAuth();
-  var { priceLabel, priceAmount, currency } = usePricing();
+  var { user, showPaywall } = useAuth();
   var isDesktop = useDesktopCtx();
   var [birthDate, setBirthDate] = useState('1998-10-09');
   var [birthTime, setBirthTime] = useState('09:16');
@@ -903,7 +901,7 @@ export default function ReportScreen() {
     }
   };
 
-  // Step 1: User taps Generate → validate → PayHere payment → generate
+  // User taps Generate → validate → show paywall → pay → generate
   var handleGenerate = async function() {
     if (!userName || !userName.trim()) {
       setError(reportLang === 'si' ? '\u0D9A\u0DBB\u0DD4\u0DAB\u0DCF\u0D9A\u0DBB \u0D94\u0DBA\u0DCF\u0D9C\u0DDA \u0DB1\u0DB8 \u0D87\u0DAD\u0DD4\u0DBD\u0DAD\u0DCA \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1' : 'Please enter your name');
@@ -913,73 +911,22 @@ export default function ReportScreen() {
       setError(reportLang === 'si' ? '\u0D9A\u0DBB\u0DD4\u0DAB\u0DCF\u0D9A\u0DBB \u0DC3\u0DCA\u0DAD\u0DCA\u200D\u0DBB\u0DD3/\u0DB4\u0DD4\u0DBB\u0DD4\u0DC2 \u0DB7\u0DCF\u0DC0\u0DBA \u0DAD\u0DDD\u0DBB\u0DB1\u0DCA\u0DB1' : 'Please select your gender');
       return;
     }
+
+    // Show paywall first — only generate after successful payment
+    try {
+      await showPaywall('report');
+    } catch (e) {
+      // User cancelled payment — do not generate
+      return;
+    }
+
+    // Payment succeeded — now generate the report
     try {
       setError(null);
       setReport(null);
       setAiReport(null);
       setChartData(null);
 
-      // Step 1: Initiate PayHere one-time payment
-      var initRes = await api.initiateTopUp(priceAmount('report'), currency);
-      if (!initRes || !initRes.success) {
-        throw new Error(initRes?.error || 'Failed to initiate payment');
-      }
-      var paymentObject = initRes.paymentObject;
-      var orderId = initRes.orderId;
-
-      // Step 2: Launch PayHere SDK / web checkout
-      var PayHere = null;
-      var useWebCheckout = false;
-      try {
-        PayHere = require('@payhere/payhere-mobilesdk-reactnative').default;
-      } catch (e) {
-        useWebCheckout = true;
-      }
-
-      var paymentId = null;
-
-      if (useWebCheckout) {
-        var checkoutUrl = initRes.checkout_url || 'https://sandbox.payhere.lk/pay/checkout';
-        if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-          var form = document.createElement('form');
-          form.method = 'POST';
-          form.action = checkoutUrl;
-          form.target = '_blank';
-          Object.keys(paymentObject).forEach(function(key) {
-            if (paymentObject[key] !== undefined && paymentObject[key] !== null) {
-              var input = document.createElement('input');
-              input.type = 'hidden';
-              input.name = key;
-              input.value = String(paymentObject[key]);
-              form.appendChild(input);
-            }
-          });
-          document.body.appendChild(form);
-          form.submit();
-          document.body.removeChild(form);
-          paymentId = 'web_' + Date.now();
-        } else {
-          throw new Error('Payment not available on this platform');
-        }
-      } else {
-        paymentId = await new Promise(function(resolve, reject) {
-          PayHere.startPayment(
-            paymentObject,
-            function(pid) { resolve(pid); },
-            function(errData) { reject(new Error(errData || 'Payment failed')); },
-            function() { reject(new Error('Payment cancelled')); }
-          );
-        });
-      }
-
-      // Step 3: Confirm payment with server
-      try {
-        await api.confirmPayment(paymentId, orderId, 'topup');
-      } catch (e) {
-        // Webhook will handle it
-      }
-
-      // Step 4: Fetch chart + generate report
       var dateStr = birthDate + 'T' + birthTime + ':00';
 
       var chartRes = await api.getBirthChart(dateStr, birthLat, birthLng, reportLang);
@@ -993,9 +940,7 @@ export default function ReportScreen() {
       startFullGeneration(dateStr, userGender);
     } catch (err) {
       var msg = err.message || 'Error';
-      if (msg !== 'Payment cancelled') {
-        setError(msg);
-      }
+      setError(msg);
     }
   };
 
@@ -1412,6 +1357,7 @@ export default function ReportScreen() {
               })}
             </ScrollView>
 
+            {/* Birth Date and Time */}
             <View style={s.inputRow}>
               <View style={s.inputGroup}>
                 <Text style={s.inputHint}>{reportLang === 'si' ? 'උපන් දිනය' : 'BIRTH DATE'}</Text>
@@ -1466,14 +1412,6 @@ export default function ReportScreen() {
                 <Text style={s.generateText}>{t('reportGenerate')}</Text>
               </LinearGradient>
             </SpringPressable>
-
-            {/* Payment info */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingHorizontal: 2 }}>
-              <Ionicons name="card-outline" size={13} color="rgba(251,191,36,0.6)" />
-              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
-                {reportLang === 'si' ? 'PayHere ඔස්සේ ' + priceLabel('report') + ' ගෙවන්න (Visa/MasterCard)' : priceLabel('report') + ' via PayHere (Visa/MasterCard)'}
-              </Text>
-            </View>
           </AuraBox>
         </Animated.View>
 

@@ -2,10 +2,10 @@
  * Token / Micro-transaction Middleware
  *
  * Users hold an LKR token balance in their Firestore document.
- * Generating a Full AI Report costs LKR 350; a Porondam Report costs LKR 100.
+ * Generating a Full AI Report costs LKR 380; a Porondam Report costs LKR 100.
  *
  * Usage (route):
- *   router.post('/full-report-ai', phoneAuth, requireTokens(350, 'Full Report'), handler);
+ *   router.post('/full-report-ai', phoneAuth, requireTokens(380, 'Full Report'), handler);
  *
  * The middleware:
  *   1. Reads tokenBalance from Firestore
@@ -85,7 +85,7 @@ async function deductTokenBalance(uid, amount, description = 'Service charge') {
 
 /**
  * Add `amount` LKR to a user's balance.
- * Used after a successful PayHere payment (subscription or top-up).
+ * Used after a successful payment (subscription or top-up).
  * Creates the user doc with tokenBalance if it doesn't exist yet.
  */
 async function addTokenBalance(uid, amount, txId = null, description = 'Top-up') {
@@ -187,25 +187,25 @@ function requireTokens(amount, label = 'Service') {
   };
 }
 
-// ─── Top-up via PayHere ────────────────────────────────────────────────────
+// ─── Top-up via RevenueCat / In-App Purchase ──────────────────────────────
 
 /**
- * Credit tokens after a verified PayHere payment.
- * Called from PayHere webhook routes after hash verification.
+ * Credit tokens after a verified in-app purchase.
+ * Called from RevenueCat webhook routes after verification.
  *
  * @param {string} uid           — Firebase UID
  * @param {number} amount        — LKR amount to credit
- * @param {string} paymentId     — PayHere payment ID
+ * @param {string} transactionId — Transaction ID from store
  * @param {string} description   — Human-readable description
  */
-async function topUpViaPayHere(uid, amount, paymentId, description = 'PayHere top-up') {
+async function topUpViaIAP(uid, amount, transactionId, description = 'In-app purchase top-up') {
   // Credit token balance
-  const balanceResult = await addTokenBalance(uid, amount, paymentId, description);
+  const balanceResult = await addTokenBalance(uid, amount, transactionId, description);
 
   return {
     success: true,
     credited: amount,
-    paymentId,
+    transactionId,
     newBalance: balanceResult.newBalance,
   };
 }
@@ -215,5 +215,5 @@ module.exports = {
   getTokenBalance,
   deductTokenBalance,
   addTokenBalance,
-  topUpViaPayHere,
+  topUpViaIAP,
 };

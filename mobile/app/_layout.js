@@ -78,13 +78,13 @@ var gs = StyleSheet.create({
 export default function RootLayout() {
   return (
     <View style={{ flex: 1, backgroundColor: '#030014' }}>
-      <AuthProvider>
+      <LanguageProvider>
         <PricingProvider>
-          <LanguageProvider>
+          <AuthProvider>
             <AppGate />
-          </LanguageProvider>
+          </AuthProvider>
         </PricingProvider>
-      </AuthProvider>
+      </LanguageProvider>
     </View>
   );
 }

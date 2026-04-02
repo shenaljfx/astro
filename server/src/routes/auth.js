@@ -1,5 +1,5 @@
 /**
- * Auth Routes — Google Sign-In + Subscription Management (PayHere)
+ * Auth Routes — Google Sign-In + Subscription Management
  * 
  * Endpoints:
  * - POST /api/auth/google           — Verify Google/Firebase ID token and login/register
@@ -7,14 +7,13 @@
  * - GET  /api/auth/subscription     — Check subscription status
  * - POST /api/auth/onboarding-complete — Complete onboarding with name + birth data
  * 
- * Payment is handled by PayHere via /api/payhere/* routes (card/bank).
+ * Payment is handled by RevenueCat via in-app purchases.
  */
 
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { getDb, getAuth, COLLECTIONS } = require('../config/firebase');
-const { MONTHLY_AMOUNT } = require('../services/payhere');
 
 // JWT secret — MUST be set via environment variable in production
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -82,14 +81,10 @@ async function createGoogleUser(uid, profile) {
     },
     subscription: {
       status: 'pending',
-      plan: 'monthly',
-      amount: MONTHLY_AMOUNT,
-      currency: 'LKR',
+      plan: null,
       subscribedAt: null,
-      lastChargedAt: null,
       expiresAt: null,
-      payherePaymentId: null,
-      payhereSubscriptionId: null,
+      provider: null,
     },
     onboardingComplete: false,
     tokenBalance: 0,
@@ -149,7 +144,7 @@ router.post('/google', async (req, res) => {
       // In dev mode, create a mock decoded token from the profile
       decodedToken = {
         uid: 'dev_' + (profile?.email || 'user').replace(/[^a-z0-9]/gi, '_'),
-        email: profile?.email || 'dev@grahachara.lk',
+        email: profile?.email || 'dev@grahachara.com',
         name: profile?.displayName || 'Dev User',
         picture: profile?.photoURL || null,
       };

@@ -5,15 +5,15 @@
  * 1. User taps "Sign in with Google" → Firebase Auth → ID token
  * 2. ID token sent to server → server verifies with Firebase Admin → JWT returned
  * 3. JWT stored in AsyncStorage for persistent login
- * 4. Onboarding: Subscription → PayHere card payment (LKR 240/month)
+ * 4. Onboarding: Subscription → RevenueCat Paywall (Google Play / App Store billing)
  * 5. Onboarding: name + birth data (skippable)
  * 
  * Provides:
  * - user, token, loading, isLoggedIn, subscription
  * - signInWithGoogle() — opens Google Sign-In flow
  * - completeOnboarding(name, birthData)
- * - activateSubscription() — opens PayHere SDK for card/bank payment
- * - cancelSubscription()
+ * - activateSubscription() — opens RevenueCat Paywall for subscription
+ * - cancelSubscription() — opens RevenueCat Customer Center
  * - saveBirthData(birthData), updateProfile(data), signOut()
  */
 
@@ -23,15 +23,22 @@ import { setAuthTokenGetter } from '../services/api';
 import {
   googleAuth as apiGoogleAuth,
   completeOnboarding as apiCompleteOnboarding,
-  unsubscribe as apiUnsubscribe,
   getSubscriptionStatus as apiGetSubscriptionStatus,
-  initiateSubscription as apiInitiateSubscription,
-  confirmPayment as apiConfirmPayment,
-  cancelPayHereSubscription as apiCancelPayHere,
 } from '../services/api';
+import {
+  initRevenueCat,
+  loginUser as rcLoginUser,
+  logoutUser as rcLogoutUser,
+  checkEntitlement,
+  getActiveSubscription,
+  presentCustomerCenter,
+  restorePurchases,
+  addCustomerInfoListener,
+} from '../services/revenuecat';
 import { auth as firebaseAuth, GoogleAuthProvider, signInWithPopup, signInWithCredential } from '../services/firebase';
 import Constants from 'expo-constants';
 import { Platform, Alert } from 'react-native';
+import PaywallScreen from '../components/PaywallScreen';
 
 var AuthContext = createContext(null);
 
@@ -40,7 +47,7 @@ var STORAGE_USER = 'grahachara_user_profile';
 var STORAGE_ONBOARDING = 'grahachara_onboarding_done';
 
 function getBaseUrl() {
-  if (!__DEV__) return 'https://api.grahachara.lk';
+  if (!__DEV__) return 'https://api.grahachara.com';
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return 'http://' + window.location.hostname + ':3000';
   }
@@ -59,14 +66,58 @@ export function AuthProvider({ children }) {
   var [loading, setLoading] = useState(true);
   var [authReady, setAuthReady] = useState(false);
   var [subscription, setSubscription] = useState(null);
+  var [paywallVisible, setPaywallVisible] = useState(false);
+  var [paywallResolve, setPaywallResolve] = useState(null);
+  var [paywallSource, setPaywallSource] = useState('onboarding');
 
   // Initialize: Load saved token on app start
   useEffect(function() {
     loadSavedAuth();
   }, []);
 
+  // Listen for RevenueCat subscription changes in real-time
+  useEffect(function() {
+    var unsubscribe = addCustomerInfoListener(function(update) {
+      console.log('[Auth] RevenueCat update — pro active:', update.isProActive);
+      if (update.isProActive) {
+        var activeSub = update.activeSubscription;
+        var sub = {
+          status: 'active',
+          plan: activeSub ? activeSub.productIdentifier : 'pro',
+          expiresAt: activeSub ? activeSub.expirationDate : null,
+          willRenew: activeSub ? activeSub.willRenew : true,
+          store: activeSub ? activeSub.store : null,
+        };
+        setSubscription(sub);
+        setUser(function(prev) {
+          if (!prev) return prev;
+          var updated = { ...prev, subscription: sub };
+          AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
+          return updated;
+        });
+      } else {
+        setSubscription(null);
+        setUser(function(prev) {
+          if (!prev) return prev;
+          var updated = { ...prev, subscription: null };
+          AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
+          return updated;
+        });
+      }
+    });
+
+    return function() {
+      if (unsubscribe && typeof unsubscribe.remove === 'function') {
+        unsubscribe.remove();
+      }
+    };
+  }, []);
+
   async function loadSavedAuth() {
     try {
+      // Initialize RevenueCat early (anonymous until login)
+      await initRevenueCat(null);
+
       var savedToken = await AsyncStorage.getItem(STORAGE_TOKEN);
       var savedUser = await AsyncStorage.getItem(STORAGE_USER);
 
@@ -80,6 +131,34 @@ export function AuthProvider({ children }) {
         setAuthTokenGetter(function() {
           return Promise.resolve(savedToken);
         });
+
+        // Login to RevenueCat with user's Firebase UID
+        if (userData.uid) {
+          try {
+            await rcLoginUser(userData.uid);
+          } catch (rcErr) {
+            console.warn('[Auth] RevenueCat login failed (non-fatal):', rcErr.message);
+          }
+        }
+
+        // Sync subscription status from RevenueCat
+        try {
+          var isProActive = await checkEntitlement();
+          if (isProActive) {
+            var activeSub = await getActiveSubscription();
+            var sub = {
+              status: 'active',
+              plan: activeSub ? activeSub.plan : 'pro',
+              expiresAt: activeSub ? activeSub.expiresDate : null,
+              willRenew: activeSub ? activeSub.willRenew : true,
+            };
+            setSubscription(sub);
+            userData.subscription = sub;
+            await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
+          }
+        } catch (rcErr) {
+          console.warn('[Auth] RevenueCat entitlement check failed (non-fatal):', rcErr.message);
+        }
 
         // Refresh profile from server in background
         refreshProfile(savedToken);
@@ -206,6 +285,29 @@ export function AuthProvider({ children }) {
         return Promise.resolve(authToken);
       });
 
+      // Login to RevenueCat with Firebase UID
+      if (userData.uid) {
+        try {
+          await rcLoginUser(userData.uid);
+          // Check if user already has an active subscription via RevenueCat
+          var isActive = await checkEntitlement();
+          if (isActive) {
+            var activeSub = await getActiveSubscription();
+            var sub = {
+              status: 'active',
+              plan: activeSub ? activeSub.plan : 'pro',
+              expiresAt: activeSub ? activeSub.expiresDate : null,
+              willRenew: activeSub ? activeSub.willRenew : true,
+            };
+            setSubscription(sub);
+            userData.subscription = sub;
+            await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
+          }
+        } catch (rcErr) {
+          console.warn('[Auth] RevenueCat login after Google auth failed (non-fatal):', rcErr.message);
+        }
+      }
+
       return {
         success: true,
         user: userData,
@@ -247,129 +349,60 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Activate monthly subscription via PayHere (LKR 240/month)
+  // Activate subscription — show custom Paywall
   var activateSubscription = useCallback(async function() {
+    return new Promise(function(resolve, reject) {
+      setPaywallResolve({ resolve: resolve, reject: reject });
+      setPaywallVisible(true);
+    });
+  }, []);
+
+  // Called when purchase succeeds in PaywallScreen
+  var handlePaywallPurchased = useCallback(async function(result) {
+    setPaywallVisible(false);
     try {
-      // Step 1: Get payment object + hash from server
-      var initResult = await apiInitiateSubscription({
-        firstName: user?.displayName || 'Grahachara',
-        phone: user?.phone || '',
+      var activeSub = await getActiveSubscription();
+      var sub = {
+        status: 'active',
+        plan: activeSub ? activeSub.plan : 'pro',
+        expiresAt: activeSub ? activeSub.expiresDate : null,
+        willRenew: activeSub ? activeSub.willRenew : true,
+        store: activeSub ? activeSub.store : null,
+      };
+      setSubscription(sub);
+      setUser(function(prev) {
+        var updated = { ...prev, subscription: sub };
+        AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
+        return updated;
       });
-
-      if (!initResult.success) {
-        throw new Error(initResult.error || 'Failed to initiate subscription');
+      if (paywallResolve) {
+        if (paywallResolve.resolve) paywallResolve.resolve({ success: true, subscription: sub });
+        setPaywallResolve(null);
       }
-
-      var paymentObject = initResult.paymentObject;
-
-      // Step 2: Try native SDK first, fall back to web checkout
-      var PayHere = null;
-      var useWebCheckout = false;
-      try {
-        PayHere = require('@payhere/payhere-mobilesdk-reactnative').default;
-      } catch (e) {
-        console.warn('PayHere SDK not available (web mode):', e.message);
-        useWebCheckout = true;
-      }
-
-      // ─── Web fallback: open PayHere checkout page in new tab ───
-      if (useWebCheckout) {
-        var checkoutUrl = initResult.checkout_url || 'https://sandbox.payhere.lk/pay/checkout';
-
-        // Build a hidden form and submit it (PayHere requires POST)
-        if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-          var form = document.createElement('form');
-          form.method = 'POST';
-          form.action = checkoutUrl;
-          form.target = '_blank';
-
-          var fields = paymentObject;
-          Object.keys(fields).forEach(function(key) {
-            if (fields[key] !== undefined && fields[key] !== null) {
-              var input = document.createElement('input');
-              input.type = 'hidden';
-              input.name = key;
-              input.value = String(fields[key]);
-              form.appendChild(input);
-            }
-          });
-
-          document.body.appendChild(form);
-          form.submit();
-          document.body.removeChild(form);
-
-          // Set optimistic subscription — webhook will confirm
-          var webSub = { status: 'active', plan: 'monthly', pendingConfirmation: true };
-          setSubscription(webSub);
-          setUser(function(prev) {
-            var updated = { ...prev, subscription: webSub };
-            AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
-            return updated;
-          });
-          return { success: true, subscription: webSub, pending: true, webCheckout: true };
-        } else {
-          throw new Error('Payment not available on this platform');
-        }
-      }
-
-      // ─── Native SDK path (Android/iOS) ───
-      return new Promise(function(resolve, reject) {
-        PayHere.startPayment(
-          paymentObject,
-          async function(paymentId) {
-            // Step 3: Payment completed — confirm with server
-            console.log('PayHere payment completed:', paymentId);
-            try {
-              var confirmResult = await apiConfirmPayment(
-                paymentId,
-                initResult.orderId,
-                'subscription'
-              );
-
-              if (confirmResult.success) {
-                var sub = confirmResult.subscription || { status: 'active', plan: 'monthly' };
-                setSubscription(sub);
-                setUser(function(prev) {
-                  var updated = { ...prev, subscription: sub };
-                  AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
-                  return updated;
-                });
-                resolve({ success: true, subscription: sub, paymentId: paymentId });
-              } else if (confirmResult.pending) {
-                // Webhook hasn't arrived yet — set optimistic active
-                var pendingSub = { status: 'active', plan: 'monthly', pendingConfirmation: true };
-                setSubscription(pendingSub);
-                resolve({ success: true, subscription: pendingSub, pending: true });
-              } else {
-                reject(new Error('Payment confirmation failed'));
-              }
-            } catch (confirmErr) {
-              console.error('Confirm payment error:', confirmErr);
-              // Payment was made but confirmation failed — still set optimistic
-              var optimisticSub = { status: 'active', plan: 'monthly', pendingConfirmation: true };
-              setSubscription(optimisticSub);
-              resolve({ success: true, subscription: optimisticSub, pending: true });
-            }
-          },
-          function(errorData) {
-            console.error('PayHere error:', errorData);
-            reject(new Error(errorData || 'Payment failed'));
-          },
-          function() {
-            console.log('PayHere dismissed');
-            reject(new Error('Payment cancelled'));
-          }
-        );
-      });
     } catch (err) {
-      throw err;
+      if (paywallResolve) {
+        if (paywallResolve.resolve) paywallResolve.resolve({ success: true });
+        setPaywallResolve(null);
+      }
     }
-  }, [user]);
+  }, [paywallResolve]);
 
+  // Called when paywall is closed without purchase
+  var handlePaywallClose = useCallback(function() {
+    setPaywallVisible(false);
+    if (paywallResolve) {
+      if (paywallResolve.reject) paywallResolve.reject(new Error('Payment cancelled'));
+      setPaywallResolve(null);
+    }
+  }, [paywallResolve]);
+
+  // Cancel subscription — opens RevenueCat Customer Center
   var cancelSubscription = useCallback(async function() {
     try {
-      var result = await apiCancelPayHere();
-      if (result.success) {
+      await presentCustomerCenter();
+      // After Customer Center closes, refresh subscription status
+      var isActive = await checkEntitlement();
+      if (!isActive) {
         setSubscription({ status: 'cancelled' });
         setUser(function(prev) {
           var updated = { ...prev, subscription: { status: 'cancelled' } };
@@ -377,7 +410,7 @@ export function AuthProvider({ children }) {
           return updated;
         });
       }
-      return result;
+      return { success: true };
     } catch (err) {
       throw err;
     }
@@ -385,36 +418,30 @@ export function AuthProvider({ children }) {
 
   var checkSubscription = useCallback(async function() {
     try {
-      var result = await apiGetSubscriptionStatus();
-      if (result.success) {
-        setSubscription(result.subscription);
-      }
-      return result;
+      var isActive = await checkEntitlement();
+      var activeSub = isActive ? await getActiveSubscription() : null;
+      var sub = isActive ? {
+        status: 'active',
+        plan: activeSub ? activeSub.plan : 'pro',
+        expiresAt: activeSub ? activeSub.expiresDate : null,
+        willRenew: activeSub ? activeSub.willRenew : true,
+      } : null;
+      setSubscription(sub);
+      return { success: true, subscription: sub };
     } catch (err) {
       console.warn('Subscription check failed:', err.message);
       return { success: false };
     }
   }, []);
 
-  // PayHere auto-renews monthly — renewSub just refreshes the status
+  // Renew = just re-present the paywall (RevenueCat handles everything)
   var renewSub = useCallback(async function() {
     try {
-      // With PayHere recurring, there's no manual renewal
-      // If expired, user needs to re-subscribe
-      var result = await apiGetSubscriptionStatus();
-      if (result.success) {
-        setSubscription(result.subscription);
-        setUser(function(prev) {
-          var updated = { ...prev, subscription: result.subscription };
-          AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
-          return updated;
-        });
-      }
-      return result;
+      return await activateSubscription();
     } catch (err) {
       throw err;
     }
-  }, []);
+  }, [activateSubscription]);
 
   // Save birth data (once per day limit enforced server-side)
   var saveBirthData = useCallback(async function(birthData) {
@@ -478,6 +505,13 @@ export function AuthProvider({ children }) {
   // Sign out
   var signOut = useCallback(async function() {
     try {
+      // Logout from RevenueCat (resets to anonymous)
+      try {
+        await rcLogoutUser();
+      } catch (rcErr) {
+        console.warn('[Auth] RevenueCat logout failed (non-fatal):', rcErr.message);
+      }
+
       // Clear all stored auth data
       await AsyncStorage.multiRemove([STORAGE_TOKEN, STORAGE_USER, STORAGE_ONBOARDING]);
       
@@ -515,6 +549,15 @@ export function AuthProvider({ children }) {
     cancelSubscription: cancelSubscription,
     checkSubscription: checkSubscription,
     renewSubscription: renewSub,
+    restorePurchases: restorePurchases,
+    presentCustomerCenter: presentCustomerCenter,
+    showPaywall: function(source) {
+      return new Promise(function(resolve, reject) {
+        setPaywallSource(source || 'onboarding');
+        setPaywallResolve({ resolve: resolve, reject: reject });
+        setPaywallVisible(true);
+      });
+    },
     saveBirthData: saveBirthData,
     updateProfile: updateProfile,
     signOut: signOut,
@@ -523,6 +566,12 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={value}>
       {children}
+      <PaywallScreen
+        visible={paywallVisible}
+        source={paywallSource}
+        onClose={handlePaywallClose}
+        onPurchased={handlePaywallPurchased}
+      />
     </AuthContext.Provider>
   );
 }

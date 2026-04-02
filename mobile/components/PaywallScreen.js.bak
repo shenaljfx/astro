@@ -1,0 +1,757 @@
+/**
+ * PaywallScreen — Custom Grahachara Paywall (replaces RevenueCat default UI)
+ * 
+ * A stunning cosmic-themed paywall with:
+ * - Animated hero illustration (orbiting planets + zodiac ring)
+ * - Feature list with staggered entry animations
+ * - Plan selector (Monthly / Yearly with savings badge)
+ * - Pulsing CTA button with glow
+ * - Restore Purchases + Terms/Privacy links (App Store requirement)
+ * - Full i18n support (English / Sinhala)
+ * 
+ * Usage:
+ *   <PaywallScreen visible={true} onClose={fn} onPurchased={fn} />
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View, Text, TouchableOpacity, StyleSheet, Modal, StatusBar,
+  Dimensions, ActivityIndicator, ScrollView, Linking, Platform,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  FadeInDown, FadeInUp, FadeIn, FadeOut, ZoomIn, SlideInUp,
+  useSharedValue, useAnimatedStyle, withRepeat, withTiming,
+  withSpring, withDelay, withSequence, interpolate, Easing,
+  interpolateColor, runOnJS,
+} from 'react-native-reanimated';
+import Svg, { Circle, Defs, LinearGradient as SvgGrad, Stop, Path, G, Ellipse } from 'react-native-svg';
+import { Colors, Spacing, BorderRadius, Shadows, Typography, Gradients } from '../constants/theme';
+import { boxShadow, textShadow } from '../utils/shadow';
+import { useLanguage } from '../contexts/LanguageContext';
+import { usePricing } from '../contexts/PricingContext';
+import {
+  getOfferings,
+  purchasePackage,
+  restorePurchases,
+  checkEntitlement,
+} from '../services/revenuecat';
+
+var { width: SW, height: SH } = Dimensions.get('window');
+var AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
+
+// ─── i18n ────────────────────────────────────────────────────────
+
+var T = {
+  en: {
+    title: 'Unlock Full Access',
+    subtitle: 'Your complete Vedic astrology companion',
+    feat1: 'AI Birth Chart & Full Life Report',
+    feat1sub: 'Detailed 30+ page analysis of your entire life',
+    feat2: 'Rahu Kalaya Alerts & Weekly Nakath',
+    feat2sub: 'Never miss an auspicious time again',
+    feat3: 'Marriage Compatibility (Porondam)',
+    feat3sub: 'Score your match out of 20 with AI insights',
+    feat4: 'Personal AI Astrologer Chat',
+    feat4sub: 'Ask anything — get instant Vedic guidance',
+    feat5: 'Weekly Lagna Palapala',
+    feat5sub: 'Personalized weekly horoscope for your Lagna',
+    monthly: 'Monthly',
+    yearly: 'Yearly',
+    saveBadge: 'Save {{pct}}%',
+    perMonth: '/month',
+    perYear: '/year',
+    cta: 'Continue',
+    ctaSub: '3-day free trial, then {{price}}',
+    restore: 'Restore Purchases',
+    restoring: 'Restoring...',
+    terms: 'Terms',
+    privacy: 'Privacy',
+    cancel: 'Cancel anytime',
+    secured: 'Secured by Google Play',
+    noSub: 'No active subscription found',
+    purchaseFail: 'Purchase failed. Please try again.',
+    restoreFail: 'Restore failed. Please try again.',
+    loading: 'Loading plans...',
+  },
+  si: {
+    title: 'සම්පූර්ණ ප්‍රවේශය',
+    subtitle: 'ඔබේ සම්පූර්ණ වෛදික ජ්‍යෝතිෂ සහකාරයා',
+    feat1: 'AI කේන්දර & සම්පූර්ණ ජීවිත වාර්තාව',
+    feat1sub: 'ඔබේ සම්පූර්ණ ජීවිතයේ විස්තරාත්මක විශ්ලේෂණය',
+    feat2: 'රාහු කාලය & සතිපතා නැකත්',
+    feat2sub: 'ශුභ වේලාවක් කවදාවත් මග හැරෙන්නේ නැත',
+    feat3: 'විවාහ ගැළපීම (පොරොන්දම්)',
+    feat3sub: 'ලකුණු 20 න් ඔබේ ගැළපීම AI සමඟ',
+    feat4: 'AI ජ්‍යෝතිෂ්‍යවේදී Chat',
+    feat4sub: 'ඕනෑම දෙයක් අහන්න — ක්ෂණික වෛදික මඟපෙන්වීම',
+    feat5: 'සතිපතා ලග්න පලාපල',
+    feat5sub: 'ඔබේ ලග්නයට අනුව සතිපතා කේන්දරය',
+    monthly: 'මාසික',
+    yearly: 'වාර්ෂික',
+    saveBadge: '{{pct}}% ඉතිරියි',
+    perMonth: '/මාසයට',
+    perYear: '/වසරට',
+    cta: 'ඉදිරියට',
+    ctaSub: 'දින 3ක නොමිලේ, ඊට පස්සේ {{price}}',
+    restore: 'මිලදී ගැනීම් ප්‍රතිස්ථාපනය',
+    restoring: 'ප්‍රතිස්ථාපනය වෙමින්...',
+    terms: 'කොන්දේසි',
+    privacy: 'රහස්‍යතාව',
+    cancel: 'ඕනෑම වේලාවක අවලංගු කරන්න',
+    secured: 'Google Play මඟින් ආරක්ෂිතයි',
+    noSub: 'ක්‍රියාකාරී දායකත්වයක් හමු නොවීය',
+    purchaseFail: 'මිලදී ගැනීම අසාර්ථකයි. නැවත උත්සාහ කරන්න.',
+    restoreFail: 'ප්‍රතිස්ථාපනය අසාර්ථකයි. නැවත උත්සාහ කරන්න.',
+    loading: 'සැලසුම් පූරණය වෙමින්...',
+  },
+};
+
+// ─── Cosmic Hero Illustration ───────────────────────────────────
+
+function CosmicHero() {
+  var ringRotate = useSharedValue(0);
+  var planet1 = useSharedValue(0);
+  var planet2 = useSharedValue(0);
+  var starPulse = useSharedValue(0);
+  var centerGlow = useSharedValue(0);
+
+  useEffect(function () {
+    ringRotate.value = withRepeat(withTiming(360, { duration: 30000, easing: Easing.linear }), -1, false);
+    planet1.value = withRepeat(withTiming(360, { duration: 8000, easing: Easing.linear }), -1, false);
+    planet2.value = withRepeat(withTiming(360, { duration: 12000, easing: Easing.linear }), -1, false);
+    starPulse.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    centerGlow.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+
+  var ringStyle = useAnimatedStyle(function () {
+    return { transform: [{ rotate: ringRotate.value + 'deg' }] };
+  });
+
+  var p1Style = useAnimatedStyle(function () {
+    var rad = (planet1.value * Math.PI) / 180;
+    return {
+      transform: [
+        { translateX: Math.cos(rad) * 65 },
+        { translateY: Math.sin(rad) * 65 },
+        { scale: interpolate(planet1.value % 360, [0, 180, 360], [0.8, 1.2, 0.8]) },
+      ],
+    };
+  });
+
+  var p2Style = useAnimatedStyle(function () {
+    var rad = (planet2.value * Math.PI) / 180;
+    return {
+      transform: [
+        { translateX: Math.cos(rad) * 85 },
+        { translateY: Math.sin(rad) * 85 },
+        { scale: interpolate(planet2.value % 360, [0, 180, 360], [0.7, 1.1, 0.7]) },
+      ],
+    };
+  });
+
+  var glowStyle = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(centerGlow.value, [0, 1], [0.4, 0.9]),
+      transform: [{ scale: interpolate(centerGlow.value, [0, 1], [0.95, 1.08]) }],
+    };
+  });
+
+  var starStyle = useAnimatedStyle(function () {
+    return { opacity: interpolate(starPulse.value, [0, 1], [0.3, 1]) };
+  });
+
+  return (
+    <View style={heroStyles.wrap}>
+      {/* Background glow */}
+      <Animated.View style={[heroStyles.bgGlow, glowStyle]} />
+
+      {/* Zodiac ring */}
+      <Animated.View style={[heroStyles.ringWrap, ringStyle]}>
+        <Svg width={190} height={190} viewBox="0 0 190 190">
+          <Defs>
+            <SvgGrad id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor="#9333EA" stopOpacity="0.6" />
+              <Stop offset="0.5" stopColor="#FFB800" stopOpacity="0.4" />
+              <Stop offset="1" stopColor="#9333EA" stopOpacity="0.6" />
+            </SvgGrad>
+          </Defs>
+          <Circle cx="95" cy="95" r="88" stroke="url(#ringGrad)" strokeWidth="1.5" fill="none" strokeDasharray="8 4" />
+          <Circle cx="95" cy="95" r="72" stroke="rgba(255,184,0,0.15)" strokeWidth="0.8" fill="none" />
+          <Circle cx="95" cy="95" r="58" stroke="rgba(147,51,234,0.12)" strokeWidth="0.6" fill="none" strokeDasharray="3 6" />
+        </Svg>
+      </Animated.View>
+
+      {/* Center star icon */}
+      <Animated.View style={[heroStyles.centerStar, glowStyle]}>
+        <LinearGradient
+          colors={['rgba(255,184,0,0.3)', 'rgba(147,51,234,0.2)']}
+          style={heroStyles.centerGrad}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        >
+          <Ionicons name="star" size={36} color="#FFD666" />
+        </LinearGradient>
+      </Animated.View>
+
+      {/* Orbiting planet 1 — Gold */}
+      <Animated.View style={[heroStyles.planet, heroStyles.planet1, p1Style]}>
+        <LinearGradient colors={['#FFB800', '#FF8C00']} style={heroStyles.planetGrad}>
+          <Ionicons name="planet-outline" size={16} color="#FFF" />
+        </LinearGradient>
+      </Animated.View>
+
+      {/* Orbiting planet 2 — Purple */}
+      <Animated.View style={[heroStyles.planet, heroStyles.planet2, p2Style]}>
+        <LinearGradient colors={['#B47AFF', '#9333EA']} style={heroStyles.planetGrad}>
+          <Ionicons name="moon-outline" size={14} color="#FFF" />
+        </LinearGradient>
+      </Animated.View>
+
+      {/* Floating stars */}
+      {[
+        { top: 8, left: 25, size: 6, delay: 0 },
+        { top: 20, right: 15, size: 4, delay: 400 },
+        { top: 55, left: 10, size: 5, delay: 800 },
+        { top: 70, right: 30, size: 3, delay: 200 },
+        { top: 35, left: 50, size: 3, delay: 600 },
+        { top: 80, left: 40, size: 4, delay: 1000 },
+      ].map(function (s, i) {
+        return (
+          <Animated.View key={i} style={[heroStyles.star, { top: s.top + '%', left: s.left != null ? s.left + '%' : undefined, right: s.right != null ? s.right + '%' : undefined }, starStyle]}>
+            <Ionicons name="sparkles" size={s.size + 6} color="rgba(255,214,102,0.6)" />
+          </Animated.View>
+        );
+      })}
+    </View>
+  );
+}
+
+var heroStyles = StyleSheet.create({
+  wrap: { height: SH * 0.26, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  bgGlow: {
+    position: 'absolute', width: 220, height: 220, borderRadius: 110,
+    backgroundColor: 'rgba(147,51,234,0.08)',
+    ...boxShadow('rgba(147,51,234,0.3)', { width: 0, height: 0 }, 1, 60),
+  },
+  ringWrap: { position: 'absolute' },
+  centerStar: {
+    width: 72, height: 72, borderRadius: 36,
+    borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.25)',
+    overflow: 'hidden',
+  },
+  centerGrad: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  planet: { position: 'absolute', zIndex: 10 },
+  planet1: {},
+  planet2: {},
+  planetGrad: {
+    width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+  },
+  star: { position: 'absolute' },
+});
+
+// ─── Feature Row ─────────────────────────────────────────────────
+
+function FeatureItem({ icon, iconColor, title, subtitle, index }) {
+  return (
+    <Animated.View entering={FadeInDown.delay(300 + index * 100).duration(400).springify()} style={fStyles.row}>
+      <View style={fStyles.timeline}>
+        <LinearGradient
+          colors={[iconColor || '#FFB800', 'rgba(147,51,234,0.6)']}
+          style={fStyles.iconCircle}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        >
+          <Ionicons name={icon} size={18} color="#FFF" />
+        </LinearGradient>
+        {index < 4 ? <View style={fStyles.timelineLine} /> : null}
+      </View>
+      <View style={fStyles.textWrap}>
+        <Text style={fStyles.title}>{title}</Text>
+        <Text style={fStyles.sub}>{subtitle}</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+var fStyles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 2 },
+  timeline: { alignItems: 'center', width: 44 },
+  iconCircle: {
+    width: 38, height: 38, borderRadius: 19,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)',
+  },
+  timelineLine: {
+    width: 2, height: 28,
+    backgroundColor: 'rgba(147,51,234,0.25)',
+    marginTop: 2,
+    borderRadius: 1,
+  },
+  textWrap: { flex: 1, marginLeft: 12, paddingTop: 2 },
+  title: { color: '#FFE8B0', fontSize: 15, fontWeight: '700', letterSpacing: 0.3, lineHeight: 20 },
+  sub: { color: 'rgba(255,220,140,0.6)', fontSize: 12, lineHeight: 18, marginTop: 1 },
+});
+
+// ─── Plan Selector ──────────────────────────────────────────────
+
+function PlanCard({ selected, onPress, label, price, period, badge, badgeColor }) {
+  var borderAnim = useSharedValue(selected ? 1 : 0);
+
+  useEffect(function () {
+    borderAnim.value = withSpring(selected ? 1 : 0, { damping: 15, stiffness: 200 });
+  }, [selected]);
+
+  var animBorder = useAnimatedStyle(function () {
+    return {
+      borderColor: interpolateColor(borderAnim.value, [0, 1], ['rgba(255,255,255,0.08)', 'rgba(255,184,0,0.50)']),
+      borderWidth: interpolate(borderAnim.value, [0, 1], [1, 2]),
+      transform: [{ scale: interpolate(borderAnim.value, [0, 1], [0.98, 1]) }],
+    };
+  });
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ flex: 1 }}>
+      <Animated.View style={[pStyles.card, animBorder]}>
+        {badge ? (
+          <View style={[pStyles.badge, { backgroundColor: badgeColor || 'rgba(16,185,129,0.18)' }]}>
+            <Text style={[pStyles.badgeText, { color: badgeColor ? '#FFF' : '#34D399' }]}>{badge}</Text>
+          </View>
+        ) : null}
+        <View style={pStyles.radio}>
+          <View style={[pStyles.radioInner, selected && pStyles.radioSelected]} />
+        </View>
+        <Text style={[pStyles.planLabel, selected && pStyles.planLabelActive]}>{label}</Text>
+        <Text style={[pStyles.planPrice, selected && pStyles.planPriceActive]}>{price}</Text>
+        <Text style={pStyles.planPeriod}>{period}</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+var pStyles = StyleSheet.create({
+  card: {
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(16,10,8,0.55)',
+    padding: 16,
+    alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  badge: {
+    position: 'absolute', top: -1, right: -1,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderBottomLeftRadius: 10, borderTopRightRadius: BorderRadius.lg - 2,
+  },
+  badgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  radio: {
+    width: 20, height: 20, borderRadius: 10,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.20)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+  },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'transparent' },
+  radioSelected: { backgroundColor: '#FFB800' },
+  planLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '600', marginBottom: 4 },
+  planLabelActive: { color: '#FFE8B0' },
+  planPrice: { color: 'rgba(255,255,255,0.7)', fontSize: 24, fontWeight: '900', ...textShadow('rgba(255,184,0,0.2)', { width: 0, height: 0 }, 6) },
+  planPriceActive: { color: '#FFB800', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12) },
+  planPeriod: { color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 2 },
+});
+
+// ─── Main Paywall Component ─────────────────────────────────────
+
+export default function PaywallScreen({ visible, onClose, onPurchased }) {
+  var insets = useSafeAreaInsets();
+  var { language } = useLanguage();
+  var lang = language === 'si' ? 'si' : 'en';
+  var t = T[lang];
+  var { priceLabel, priceAmount, isInternational, currency } = usePricing();
+
+  var [selectedPlan, setSelectedPlan] = useState('monthly');
+  var [offerings, setOfferings] = useState(null);
+  var [loadingOfferings, setLoadingOfferings] = useState(true);
+  var [purchasing, setPurchasing] = useState(false);
+  var [restoring, setRestoring] = useState(false);
+  var [error, setError] = useState('');
+
+  // Button glow animation
+  var btnGlow = useSharedValue(0);
+  useEffect(function () {
+    btnGlow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+
+  var btnGlowStyle = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(btnGlow.value, [0, 1], [0.85, 1]),
+      transform: [{ scale: interpolate(btnGlow.value, [0, 1], [0.99, 1.02]) }],
+    };
+  });
+
+  // Load RevenueCat offerings
+  useEffect(function () {
+    if (!visible) return;
+    setLoadingOfferings(true);
+    setError('');
+    getOfferings()
+      .then(function (off) {
+        setOfferings(off);
+        // Auto-select yearly if available
+        if (off && off.current) {
+          var hasYearly = off.current.availablePackages.some(function (p) {
+            return p.packageType === 'ANNUAL' || p.identifier === '$rc_annual' || (p.product && p.product.identifier && p.product.identifier.indexOf('yearly') !== -1);
+          });
+          if (hasYearly) setSelectedPlan('yearly');
+        }
+      })
+      .catch(function () {
+        // Will show fallback pricing from PricingContext
+      })
+      .finally(function () {
+        setLoadingOfferings(false);
+      });
+  }, [visible]);
+
+  // Get package for selected plan
+  var getSelectedPackage = useCallback(function () {
+    if (!offerings || !offerings.current) return null;
+    var pkgs = offerings.current.availablePackages;
+    if (selectedPlan === 'yearly') {
+      return pkgs.find(function (p) {
+        return p.packageType === 'ANNUAL' || p.identifier === '$rc_annual' || (p.product && p.product.identifier && p.product.identifier.indexOf('yearly') !== -1);
+      });
+    }
+    return pkgs.find(function (p) {
+      return p.packageType === 'MONTHLY' || p.identifier === '$rc_monthly' || (p.product && p.product.identifier && p.product.identifier.indexOf('monthly') !== -1);
+    });
+  }, [offerings, selectedPlan]);
+
+  // Get display prices from offerings or fallback to PricingContext
+  var getMonthlyPrice = function () {
+    if (offerings && offerings.current) {
+      var monthly = offerings.current.availablePackages.find(function (p) {
+        return p.packageType === 'MONTHLY' || p.identifier === '$rc_monthly';
+      });
+      if (monthly && monthly.product) return monthly.product.priceString;
+    }
+    return priceLabel('subscription');
+  };
+
+  var getYearlyPrice = function () {
+    if (offerings && offerings.current) {
+      var yearly = offerings.current.availablePackages.find(function (p) {
+        return p.packageType === 'ANNUAL' || p.identifier === '$rc_annual';
+      });
+      if (yearly && yearly.product) return yearly.product.priceString;
+    }
+    // Fallback: calculate from monthly
+    var monthly = priceAmount('subscription');
+    var yearly = Math.round(monthly * 12 * 0.7); // ~30% discount
+    return (isInternational ? '$' : 'LKR ') + yearly;
+  };
+
+  var getSavingsPercent = function () {
+    if (offerings && offerings.current) {
+      var monthly = offerings.current.availablePackages.find(function (p) { return p.packageType === 'MONTHLY'; });
+      var yearly = offerings.current.availablePackages.find(function (p) { return p.packageType === 'ANNUAL'; });
+      if (monthly && yearly && monthly.product && yearly.product) {
+        var monthlyAnnual = monthly.product.price * 12;
+        var yearlyPrice = yearly.product.price;
+        return Math.round(((monthlyAnnual - yearlyPrice) / monthlyAnnual) * 100);
+      }
+    }
+    return 30; // Default 30% savings
+  };
+
+  // Purchase handler
+  var handlePurchase = async function () {
+    setPurchasing(true);
+    setError('');
+    try {
+      var pkg = getSelectedPackage();
+      if (!pkg) {
+        setError(t.purchaseFail);
+        setPurchasing(false);
+        return;
+      }
+      var result = await purchasePackage(pkg);
+      if (result && result.isProActive) {
+        if (onPurchased) onPurchased(result);
+      }
+    } catch (e) {
+      var msg = e && e.message ? e.message : '';
+      if (msg.indexOf('cancelled') !== -1 || msg.indexOf('cancel') !== -1) {
+        // User cancelled — no error
+      } else {
+        setError(t.purchaseFail);
+      }
+    } finally {
+      setPurchasing(false);
+    }
+  };
+
+  // Restore handler
+  var handleRestore = async function () {
+    setRestoring(true);
+    setError('');
+    try {
+      var result = await restorePurchases();
+      if (result && result.isProActive) {
+        if (onPurchased) onPurchased(result);
+      } else {
+        setError(t.noSub);
+      }
+    } catch (e) {
+      setError(t.restoreFail);
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  var features = [
+    { icon: 'document-text-outline', color: '#FFB800', title: t.feat1, sub: t.feat1sub },
+    { icon: 'notifications-outline', color: '#06D6A0', title: t.feat2, sub: t.feat2sub },
+    { icon: 'heart-outline', color: '#FF6B9D', title: t.feat3, sub: t.feat3sub },
+    { icon: 'chatbubble-ellipses-outline', color: '#4CC9F0', title: t.feat4, sub: t.feat4sub },
+    { icon: 'calendar-outline', color: '#B47AFF', title: t.feat5, sub: t.feat5sub },
+  ];
+
+  var savePct = getSavingsPercent();
+  var saveBadgeText = t.saveBadge.replace('{{pct}}', savePct);
+
+  var ctaPrice = selectedPlan === 'yearly' ? getYearlyPrice() : getMonthlyPrice();
+
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent={false} statusBarTranslucent>
+      <StatusBar barStyle="light-content" backgroundColor="#04030C" />
+      <LinearGradient
+        colors={['#0A0714', '#04030C', '#080510']}
+        style={[s.container, { paddingTop: insets.top }]}
+        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+      >
+        {/* Close button */}
+        {onClose ? (
+          <Animated.View entering={FadeIn.delay(600).duration(400)} style={[s.closeBtn, { top: insets.top + 8 }]}>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <View style={s.closeBtnInner}>
+                <Ionicons name="close" size={22} color="rgba(255,255,255,0.5)" />
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+        ) : null}
+
+        <ScrollView
+          contentContainerStyle={s.scroll}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* Hero */}
+          <CosmicHero />
+
+          {/* Title */}
+          <Animated.View entering={FadeInUp.delay(100).duration(500)} style={s.titleWrap}>
+            <Text style={s.title}>{t.title}</Text>
+            <Text style={s.subtitle}>{t.subtitle}</Text>
+          </Animated.View>
+
+          {/* Features */}
+          <View style={s.features}>
+            {features.map(function (f, i) {
+              return (
+                <FeatureItem
+                  key={i}
+                  icon={f.icon}
+                  iconColor={f.color}
+                  title={f.title}
+                  subtitle={f.sub}
+                  index={i}
+                />
+              );
+            })}
+          </View>
+
+          {/* Plan selector */}
+          {loadingOfferings ? (
+            <View style={s.loadingWrap}>
+              <ActivityIndicator size="small" color="#FFB800" />
+              <Text style={s.loadingText}>{t.loading}</Text>
+            </View>
+          ) : (
+            <Animated.View entering={FadeInUp.delay(800).duration(400)} style={s.plansRow}>
+              <PlanCard
+                selected={selectedPlan === 'monthly'}
+                onPress={function () { setSelectedPlan('monthly'); }}
+                label={t.monthly}
+                price={getMonthlyPrice()}
+                period={t.perMonth}
+              />
+              <View style={{ width: 12 }} />
+              <PlanCard
+                selected={selectedPlan === 'yearly'}
+                onPress={function () { setSelectedPlan('yearly'); }}
+                label={t.yearly}
+                price={getYearlyPrice()}
+                period={t.perYear}
+                badge={saveBadgeText}
+                badgeColor="#10B981"
+              />
+            </Animated.View>
+          )}
+
+          {/* Error */}
+          {error ? (
+            <Animated.View entering={FadeInDown.duration(300)} style={s.errorWrap}>
+              <Ionicons name="alert-circle" size={16} color="#FF6B6B" />
+              <Text style={s.errorText}>{error}</Text>
+            </Animated.View>
+          ) : null}
+        </ScrollView>
+
+        {/* Bottom CTA area */}
+        <View style={[s.bottomWrap, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          {/* Price hint */}
+          <Animated.View entering={FadeInUp.delay(900).duration(400)}>
+            <Text style={s.ctaHint}>
+              {ctaPrice + (selectedPlan === 'yearly' ? t.perYear : t.perMonth)}
+            </Text>
+          </Animated.View>
+
+          {/* CTA Button */}
+          <Animated.View entering={FadeInUp.delay(1000).duration(500)} style={btnGlowStyle}>
+            <TouchableOpacity
+              onPress={handlePurchase}
+              disabled={purchasing || loadingOfferings}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={purchasing ? ['#666', '#555'] : ['#FF8C00', '#FF6D00', '#E65100']}
+                style={s.ctaBtn}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              >
+                {purchasing ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <>
+                    <Ionicons name="sparkles" size={20} color="#FFF" style={{ marginRight: 8 }} />
+                    <Text style={s.ctaText}>{t.cta}</Text>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Cancel note */}
+          <Animated.View entering={FadeIn.delay(1100).duration(300)}>
+            <View style={s.secureRow}>
+              <Ionicons name="shield-checkmark" size={14} color="#34D399" />
+              <Text style={s.secureText}>
+                {Platform.OS === 'ios' ? t.secured.replace('Google Play', 'App Store') : t.secured}
+              </Text>
+              <Text style={s.dot}>·</Text>
+              <Text style={s.secureText}>{t.cancel}</Text>
+            </View>
+          </Animated.View>
+
+          {/* Footer links */}
+          <Animated.View entering={FadeIn.delay(1200).duration(300)} style={s.footerLinks}>
+            <TouchableOpacity onPress={handleRestore} disabled={restoring}>
+              <Text style={s.footerLink}>
+                {restoring ? t.restoring : t.restore}
+              </Text>
+            </TouchableOpacity>
+            <Text style={s.footerDot}>·</Text>
+            <TouchableOpacity onPress={function () { Linking.openURL('https://grahachara.com/legal/terms.html'); }}>
+              <Text style={s.footerLink}>{t.terms}</Text>
+            </TouchableOpacity>
+            <Text style={s.footerDot}>·</Text>
+            <TouchableOpacity onPress={function () { Linking.openURL('https://grahachara.com/legal/privacy.html'); }}>
+              <Text style={s.footerLink}>{t.privacy}</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </LinearGradient>
+    </Modal>
+  );
+}
+
+// ─── Styles ─────────────────────────────────────────────────────
+
+var s = StyleSheet.create({
+  container: { flex: 1 },
+  scroll: { flexGrow: 1, paddingHorizontal: 24 },
+  closeBtn: { position: 'absolute', right: 16, zIndex: 100 },
+  closeBtnInner: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  // Title
+  titleWrap: { alignItems: 'center', marginBottom: 24 },
+  title: {
+    fontSize: 28, fontWeight: '900', color: '#FFE8B0',
+    letterSpacing: 1.5, textAlign: 'center',
+    ...textShadow('rgba(255,184,0,0.3)', { width: 0, height: 2 }, 10),
+  },
+  subtitle: {
+    fontSize: 14, color: 'rgba(255,220,140,0.6)', marginTop: 6,
+    textAlign: 'center', letterSpacing: 0.3,
+  },
+
+  // Features
+  features: { marginBottom: 24 },
+
+  // Plans
+  plansRow: { flexDirection: 'row', marginBottom: 16 },
+  loadingWrap: { alignItems: 'center', paddingVertical: 20 },
+  loadingText: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 8 },
+
+  // Error
+  errorWrap: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, marginBottom: 12,
+    backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 12,
+    paddingVertical: 10, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: 'rgba(239,68,68,0.20)',
+  },
+  errorText: { color: '#FCA5A5', fontSize: 13, fontWeight: '600', flex: 1 },
+
+  // Bottom
+  bottomWrap: {
+    paddingHorizontal: 24, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(4,3,12,0.95)',
+  },
+  ctaHint: {
+    textAlign: 'center', color: 'rgba(255,220,140,0.7)',
+    fontSize: 13, fontWeight: '600', marginBottom: 10, letterSpacing: 0.3,
+  },
+  ctaBtn: {
+    borderRadius: BorderRadius.xl,
+    paddingVertical: 16, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ctaText: {
+    color: '#FFF', fontSize: 18, fontWeight: '800', letterSpacing: 1,
+  },
+
+  // Secure row
+  secureRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    marginTop: 12, gap: 6,
+  },
+  secureText: { color: 'rgba(255,255,255,0.35)', fontSize: 11 },
+  dot: { color: 'rgba(255,255,255,0.2)', fontSize: 11 },
+
+  // Footer links
+  footerLinks: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    marginTop: 10, gap: 8,
+  },
+  footerLink: { color: 'rgba(255,184,0,0.5)', fontSize: 12, textDecorationLine: 'underline' },
+  footerDot: { color: 'rgba(255,255,255,0.15)', fontSize: 12 },
+});

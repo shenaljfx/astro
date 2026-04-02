@@ -28,7 +28,8 @@
       "package": "com.grahachara.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "com.android.vending.BILLING"
       ]
     },
     "web": {
@@ -53,6 +54,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "1a77f887-0ff3-4a43-b4cc-5f48d6d60f74"
+      }
+    },
+    "owner": "shenaldev"
   }
 }

@@ -23,10 +23,10 @@ var DEFAULT_PRICING = {
   currency: 'LKR',
   currencySymbol: 'LKR',
   country: 'Sri Lanka',
-  subscription: { amount: 240, amountFormatted: '240.00', label: 'LKR 240/month', period: 'month' },
+  subscription: { amount: 280, amountFormatted: '280.00', label: 'LKR 280/month', period: 'month' },
   porondam: { amount: 100, amountFormatted: '100.00', label: 'LKR 100' },
-  report: { amount: 350, amountFormatted: '350.00', label: 'LKR 350' },
-  topUpPackages: [100, 250, 350, 500],
+  report: { amount: 380, amountFormatted: '380.00', label: 'LKR 380' },
+  topUpPackages: [100, 280, 380, 500],
 };
 
 /**

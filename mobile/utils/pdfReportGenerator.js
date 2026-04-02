@@ -641,10 +641,10 @@ function generateReportHTML(opts) {
   var endHTML = '<div class="ep">'+endLogoTag+'<div class="ep-brand" style="margin-top:12px;">ග්‍රහචාර</div><div class="ep-line"></div>'
     +'<div class="ep-tag">'+(isSi?'ඔබේ ජීවිතයේ තරු බලන්න':'Read the Stars of Your Life')+'</div>'
     +'<div class="ep-cta">'+(isSi?'📱 යෙදුම බාගන්න':'📱 Download the App')+'</div>'
-    +'<div class="ep-features"><span class="ep-feat">🔮 '+(isSi?'දෛනික නැකැත්':'Daily Nakath')+'</span>'
+    +'<div class="ep-features"><span class="ep-feat">🔮 '+(isSi?'සතිපතා නැකැත්':'Weekly Nakath')+'</span>'
     +'<span class="ep-feat">💬 '+(isSi?'AI ජ්‍යෝතිෂ chat':'AI Astro Chat')+'</span>'
     +'<span class="ep-feat">💍 '+(isSi?'පොරොන්දම්':'Porondam')+'</span></div>'
-    +'<div class="ep-url">www.grahachara.lk</div>'
+    +'<div class="ep-url">www.grahachara.com</div>'
     +'<div class="ep-disc">'+(isSi
       ?'මෙම වාර්තාව සාම්ප්‍රදායික වෛදික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වේ. මෙය අත්දැකීම් හා දැනගැනීම් සඳහා පමණි.'
       :'This report is based on traditional Vedic astrology. For informational and entertainment purposes only.')
@@ -659,7 +659,7 @@ function generateReportHTML(opts) {
     +'<div class="wm">ග්‍රහචාර</div>'
     +'<div class="oc oc-tl"></div><div class="oc oc-tr"></div><div class="oc oc-bl"></div><div class="oc oc-br"></div>'
     +'<div class="ph"><span class="lm">'+headerLogoTag+'ග්‍රහචාර</span><span>'+(isSi?'සම්පූර්ණ ජීවිත වාර්තාව':'Complete Life Report')+'</span></div>'
-    +'<div class="pf">ග්‍රහචාර &bull; www.grahachara.lk &bull; '+new Date().toLocaleDateString()+'</div>'
+    +'<div class="pf">ග්‍රහචාර &bull; www.grahachara.com &bull; '+new Date().toLocaleDateString()+'</div>'
     +coverHTML+tocHTML
     +'<div class="cp">'+bcHTML+chartHTML+'</div>'
     +heroHTML
@@ -863,10 +863,10 @@ function generatePorondamHTML(opts) {
     +pEndLogoTag+'<div class="ep-brand" style="margin-top:12px;">ග්‍රහචාර</div><div class="ep-line"></div>'
     +'<div class="ep-tag">'+(isSi?'ඔබේ ජීවිතයේ තරු බලන්න':'Read the Stars of Your Life')+'</div>'
     +'<div class="ep-cta">'+(isSi?'📱 යෙදුම බාගන්න':'📱 Download the App')+'</div>'
-    +'<div class="ep-features"><span class="ep-feat">🔮 '+(isSi?'දෛනික නැකැත්':'Daily Nakath')+'</span>'
+    +'<div class="ep-features"><span class="ep-feat">🔮 '+(isSi?'සතිපතා නැකැත්':'Weekly Nakath')+'</span>'
     +'<span class="ep-feat">📊 '+(isSi?'සම්පූර්ණ වාර්තා':'Full Reports')+'</span>'
     +'<span class="ep-feat">💬 '+(isSi?'AI ජ්‍යෝතිෂ chat':'AI Astro Chat')+'</span></div>'
-    +'<div class="ep-url">www.grahachara.lk</div>'
+    +'<div class="ep-url">www.grahachara.com</div>'
     +'<div class="ep-disc">'+(isSi
       ?'මෙම වාර්තාව සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වේ. මෙය දැනගැනීම් සඳහා පමණි.'
       :'This report is based on traditional Vedic astrology. For informational purposes only.')+'</div></div>';
@@ -880,7 +880,7 @@ function generatePorondamHTML(opts) {
     +'<div class="wm">ග්‍රහචාර</div>'
     +'<div class="oc oc-tl"></div><div class="oc oc-tr"></div><div class="oc oc-bl"></div><div class="oc oc-br"></div>'
     +'<div class="ph"><span class="lm" style="color:#EC4899;">'+pHeaderLogoTag+'ග්‍රහචාර</span><span>'+(isSi?'පොරොන්දම් වාර්තාව':'Porondam Report')+'</span></div>'
-    +'<div class="pf">ග්‍රහචාර &bull; www.grahachara.lk &bull; '+new Date().toLocaleDateString()+'</div>'
+    +'<div class="pf">ග්‍රහචාර &bull; www.grahachara.com &bull; '+new Date().toLocaleDateString()+'</div>'
     +coverHTML+scoreHTML+chartsHTML+factorsHTML+doshasHTML
     +'<div class="cp">'+advHTML+'</div>'
     +reportHTML+endHTML+'</body></html>';

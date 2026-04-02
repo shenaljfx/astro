@@ -2204,6 +2204,7 @@ ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). No
 - Mother significator (Matrukaraka): ${sectionData?.mother?.matrukaraka ? `${sectionData.mother.matrukaraka.planet} in ${sectionData.mother.matrukaraka.rashi}` : 'N/A'}
 - D12 parent chart: ${sectionData?.mother?.d12ParentChart ? JSON.stringify(sectionData.mother.d12ParentChart) : 'N/A'}
 - Mother is homemaker pattern: ${sectionData?.mother?.motherIsHomemaker || false}
+- Mother career analysis (chart-predicted): ${JSON.stringify(sectionData?.mother?.motherCareer || {})}
 - Abandonment risk: ${sectionData?.mother?.hasStrongAbandonmentRisk ? 'STRONG' : sectionData?.mother?.hasAbandonmentRisk ? 'Moderate' : 'Low'}
 - Health risks: ${JSON.stringify(sectionData?.mother?.healthRisks || [])}
 - Kidney risk: high=${sectionData?.mother?.kidneyRisk?.high || false}, indicators=${sectionData?.mother?.kidneyRisk?.indicatorCount || 0}
@@ -2221,7 +2222,7 @@ ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). No
 - Sun strength: ${sectionData?.father?.sunShadbala ? `${sectionData.father.sunShadbala.percentage}% — ${sectionData.father.sunShadbala.strength}` : 'N/A'}
 - Father significator (Pitrakaraka): ${sectionData?.father?.pitrakaraka ? `${sectionData.father.pitrakaraka.planet} in ${sectionData.father.pitrakaraka.rashi}` : 'N/A'}
 - D12 parent chart: ${sectionData?.father?.d12ParentChart ? JSON.stringify(sectionData.father.d12ParentChart) : 'N/A'}
-- Father career analysis: ${JSON.stringify(sectionData?.father?.fatherCareer || {})}
+- Father career analysis (chart-predicted): ${JSON.stringify(sectionData?.father?.fatherCareer || {})}
 - Health risks: ${JSON.stringify(sectionData?.father?.healthRisks || [])}
 - Life struggles: ${JSON.stringify(sectionData?.father?.lifestrug || [])}
 - Father event periods: ${JSON.stringify(sectionData?.father?.fatherEventPeriods || [])}
@@ -2286,10 +2287,12 @@ The user can IMMEDIATELY verify claims about their living parents. Wrong claims 
 REASON: A user whose mother is perfectly healthy and loving will immediately reject the entire report if you claim the relationship is "difficult." But if you say "there may be phases of emotional adjustment" — that's true for EVERYONE and doesn't trigger rejection.
 
 OUTPUT: Write AT LEAST 10-14 paragraphs (each 3-6 sentences). This is a HERO section.
-- AT LEAST 3 paragraphs for MOTHER: personality as a real person, her occupation/daily life, health risks — identify the TOP 3 most vulnerable organs from the health risks data, HIGHLIGHT the single most dangerous one prominently, explain health crisis windows, your bond
-- AT LEAST 3 paragraphs for FATHER: personality, career type, health risks, life struggles, your bond
+- AT LEAST 3 paragraphs for MOTHER: personality as a real person, her occupation/daily life (USE the mother career analysis scores to PREDICT her likely occupation — the highest scoring career type is the most probable. If homemakerScore is highest, describe her as a homemaker. If teachingScore is high, predict she works in education. If nursingScore is high, predict healthcare. Describe the predicted career confidently as a chart-based prediction), health risks — identify the TOP 3 most vulnerable organs from the health risks data, HIGHLIGHT the single most dangerous one prominently, explain health crisis windows, your bond
+- AT LEAST 3 paragraphs for FATHER: personality, career type (USE the father career analysis scores to PREDICT his likely occupation — jupMedicineScore for medical field, logisticsScore for logistics/transport, businessScore for business/trade. Describe the predicted career confidently as a chart-based prediction, explaining HOW he experiences that job, his challenges, and career trajectory), health risks, life struggles, your bond
 - AT LEAST 2 paragraphs for SIBLINGS: state the EXACT elder and younger count from the engine data — if estimatedElderSiblings > 0 say "you likely have [N] older sibling(s)", if estimatedYoungerSiblings > 0 say "you likely have [N] younger sibling(s)". Use the gender breakdown to specify brothers vs sisters. Describe each sibling's character, health, relationship dynamics. NEVER say "no older siblings" if the estimatedElderSiblings field is > 0.
 - AT LEAST 2 paragraphs for FAMILY KARMA: inherited patterns, karmic summary, how family patterns echo in your own life
+
+⚠️ IMPORTANT: Use the chart-predicted career analysis scores for mother and father to PREDICT their occupations. The highest scoring career type is the most probable. Present the predicted career confidently using probabilistic language like "Your mother's chart strongly suggests she works in..." or "Your father most likely works in..." — blend with the planet positions and house data to enrich the narrative.
 
 State sibling count and parent details from the engine fields directly — do not invent drama beyond the data.
 ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish.' : 'Write in profound, touching English.'}`,
@@ -2431,7 +2434,7 @@ ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). No
 /**
  * Generate AI narrative for a single section
  */
-async function generateSectionNarrative(sectionKey, sectionData, birthData, allSections, language = 'en', rashiContext = null, ageContext = null, userName = null, userGender = null, userReligion = null) {
+async function generateSectionNarrative(sectionKey, sectionData, birthData, allSections, language = 'en', rashiContext = null, ageContext = null, userName = null, userGender = null, userReligion = null, familyInfo = {}) {
   const sectionPromptData = buildSectionPrompt(sectionKey, sectionData, birthData, allSections, language, { rashiContext: rashiContext || { userReligion: userReligion }, userGender, userName, userReligion });
   if (!sectionPromptData) return null;
 
@@ -3011,7 +3014,8 @@ function resolveLocationName(lat, lng) {
  */
 async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, marriageOpts = {}) {
   const tokenTracker = createTokenTracker();
-  const rawReport = generateFullReport(birthDate, lat, lng, marriageOpts);
+  const { ...cleanMarriageOpts } = marriageOpts;
+  const rawReport = generateFullReport(birthDate, lat, lng, cleanMarriageOpts);
   const birthData = rawReport.birthData;
   const sections = rawReport.sections;
 
@@ -3612,7 +3616,7 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
     const dataKey = key === 'marriedLife' ? 'marriage' : key;
     const sectionData = sections[dataKey];
     if (!sectionData) return Promise.resolve({ title: key, narrative: null });
-    return generateSectionNarrative(key, sectionData, birthData, sections, language, rashiContext, ageContext, userName, userGender, userReligion);
+    return generateSectionNarrative(key, sectionData, birthData, sections, language, rashiContext, ageContext, userName, userGender, userReligion, {});
   });
 
   const narrativeResults = await Promise.all(narrativePromises);

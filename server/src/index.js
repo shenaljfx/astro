@@ -15,7 +15,6 @@ const {
   aiLimiter,
   reportLimiter,
   chatLimiter,
-  webhookLimiter,
   sanitizeInputs,
   corsOptions,
   hppProtection,
@@ -32,7 +31,7 @@ const rectificationRoutes = require('./routes/rectification');
 const predictionRoutes = require('./routes/predictions');
 const tokensRoutes = require('./routes/tokens');
 const notificationRoutes = require('./routes/notifications');
-const payhereRoutes = require('./routes/payhere');
+const revenuecatRoutes = require('./routes/revenuecat');
 const pricingRoutes = require('./routes/pricing');
 const weeklyLagnaRoutes = require('./routes/weeklyLagna');
 const readingRoutes = require('./routes/reading');
@@ -57,7 +56,7 @@ app.use(morgan('dev'));
 
 // 4. Body parsers with size limits
 app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' })); // PayHere webhooks send form-urlencoded
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // 5. HTTP Parameter Pollution protection
 app.use(hppProtection);
@@ -90,7 +89,7 @@ app.use('/api/rectification', aiLimiter, rectificationRoutes);
 app.use('/api/predictions', aiLimiter, predictionRoutes);
 app.use('/api/tokens', tokensRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/payhere', webhookLimiter, payhereRoutes);
+app.use('/api/revenuecat', revenuecatRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/weekly-lagna', weeklyLagnaRoutes);
 app.use('/api/reading', aiLimiter, readingRoutes);

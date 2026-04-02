@@ -79,6 +79,12 @@ function phoneAuth(req, res, next) {
  * Returns 402 if no active subscription
  */
 function requireSubscription(req, res, next) {
+  // Mock payments bypass — skip all subscription checks in dev
+  if (process.env.MOCK_PAYMENTS === 'true') {
+    req.subscription = { status: 'active', plan: 'mock_pro', store: 'mock' };
+    return next();
+  }
+
   if (!req.user || req.user.authType === 'anonymous') {
     return res.status(401).json({ error: 'Authentication required' });
   }
@@ -104,7 +110,7 @@ function requireSubscription(req, res, next) {
         const pricing = getPricing(currency);
         return res.status(402).json({
           error: 'Subscription required',
-          message: `Please subscribe to access this feature. Only ${pricing.subscription.label} via PayHere.`,
+          message: 'Please subscribe to access this feature.',
           subscriptionRequired: true,
           pricing: pricing.subscription,
         });
@@ -136,7 +142,7 @@ function requireSubscription(req, res, next) {
         if (now > expires) {
           return res.status(402).json({
             error: 'Subscription expired',
-            message: 'Your monthly subscription has expired. Please re-subscribe via PayHere.',
+            message: 'Your subscription has expired. Please re-subscribe.',
             subscriptionRequired: true,
             needsRenewal: true,
           });

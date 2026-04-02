@@ -7,7 +7,7 @@
  *   - aiLimiter           — 5 req/min per IP (expensive AI endpoints)
  *   - reportLimiter       — 3 req/min per IP (full report generation)
  *   - chatLimiter         — 15 req/min per IP (chat messages)
- *   - webhookLimiter      — 30 req/min per IP (PayHere webhooks)
+ *   - webhookLimiter      — 30 req/min per IP (webhooks)
  *   - sanitizeInputs      — strips XSS from all req.body/query/params strings
  *   - corsOptions         — restricted CORS config
  *   - validateBirthData   — validates common birth data inputs
@@ -180,7 +180,7 @@ const chatLimiter = rateLimit({
 
 /**
  * Webhook limiter — 30 requests per minute per IP
- * PayHere sends notifications; should be generous
+ * RevenueCat / external webhooks; should be generous
  */
 const webhookLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -194,10 +194,10 @@ const webhookLimiter = rateLimit({
 
 const ALLOWED_ORIGINS = [
   // Production
-  'https://grahachara.lk',
-  'https://www.grahachara.lk',
-  'https://api.grahachara.lk',
-  'https://app.grahachara.lk',
+  'https://grahachara.com',
+  'https://www.grahachara.com',
+  'https://api.grahachara.com',
+  'https://app.grahachara.com',
   // Dev & Expo
   /^http:\/\/localhost(:\d+)?$/,
   /^http:\/\/127\.0\.0\.1(:\d+)?$/,

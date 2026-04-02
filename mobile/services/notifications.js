@@ -26,10 +26,10 @@ export async function setupNotificationChannels() {
   });
 
   await Notifications.setNotificationChannelAsync('daily-palapa', {
-    name: 'දෛනික පලාපල / Daily Horoscope',
+    name: 'සතිපතා පලාපල / Weekly Horoscope',
     importance: Notifications.AndroidImportance.DEFAULT,
     sound: 'default',
-    description: 'Morning daily horoscope predictions',
+    description: 'Weekly lagna horoscope predictions',
   });
 
   await Notifications.setNotificationChannelAsync('rahu-kalaya', {

@@ -6615,6 +6615,98 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     return moonNotInCareerHouse && lord4NotCareer;
   })();
 
+  // ── MOTHER'S CAREER ANALYSIS (predicted from chart) ──────────
+  const motherCareerAnalysis = (() => {
+    const moonH = moonFamilyHouse || 0;
+    const venusH = venusFamilyHouse || 0;
+    const lord4H = lord4FamilyHouse || 0;
+    const moonSign = planets.moon?.rashi || '';
+    const moonStrong = advancedShadbala?.moon?.percentage >= 55;
+    const venusStrong = advancedShadbala?.venus?.percentage >= 55;
+    const mercH = getPlanetHouse('Mercury') || 0;
+    const mercSign = planets.mercury?.rashi || '';
+    const mercStrong = advancedShadbala?.mercury?.percentage >= 55;
+    const h4pl = h4Family?.planetsInHouse || [];
+    const jupH = jupiterFamilyHouseF || 0;
+    const jupStrong = advancedShadbala?.jupiter?.percentage >= 55;
+
+    // Teaching / Education score
+    const teachingScore = [
+      jupH === 4 || h4pl.includes('Jupiter'),      // Jupiter in 4th = education at home
+      moonSign === 'Kataka' || moonSign === 'Meena', // Nurturing signs
+      mercStrong && (mercH === 4 || mercH === 5),    // Mercury strong near 4th/5th
+      lord4H === 5 || lord4H === 9,                  // 4th lord in education houses
+      jupStrong && (jupH === 5 || jupH === 9),       // Jupiter in education houses
+    ].filter(Boolean).length;
+
+    // Nursing / Healthcare score
+    const nursingScore = [
+      moonH === 6 || moonH === 12,                   // Moon in service/hospital house
+      moonSign === 'Kanya',                           // Virgo = healthcare
+      h4pl.includes('Ketu'),                          // Ketu in 4th = healing/spiritual service
+      lord4H === 6,                                   // 4th lord in 6th = service
+      venusH === 6 || venusH === 12,                  // Venus in service houses
+    ].filter(Boolean).length;
+
+    // Garment / Textile / Fashion score
+    const garmentScore = [
+      venusStrong,                                    // Strong Venus = textiles/beauty
+      venusH === 10 || venusH === 2,                  // Venus in career/wealth house
+      moonSign === 'Tula' || moonSign === 'Vrishabha', // Venus-ruled signs
+      rahuFamilyHouse === 10,                         // Rahu in 10th = factory/mass production
+      h4pl.includes('Venus'),                         // Venus in 4th
+    ].filter(Boolean).length;
+
+    // Government / Clerical score
+    const govScore = [
+      sunFamilyHouse === 10 || sunFamilyHouse === 4,  // Sun in career or home
+      satFamilyHouse === 10,                           // Saturn in 10th = government
+      lord4H === 10 || lord4H === 11,                  // 4th lord in career houses
+      moonH === 10 || moonH === 11,                    // Moon in career house
+    ].filter(Boolean).length;
+
+    // Agriculture / Farming score
+    const farmingScore = [
+      moonSign === 'Vrishabha' || moonSign === 'Kanya' || moonSign === 'Makara', // Earth signs
+      satFamilyHouse === 4,                            // Saturn in 4th = land/agriculture
+      lord4H === 2,                                    // 4th lord in 2nd = family livelihood from land
+      h4pl.includes('Saturn'),                         // Saturn in 4th
+      moonH === 2 || moonH === 4,                      // Moon in home/wealth
+    ].filter(Boolean).length;
+
+    // Domestic / Homemaker score
+    const homemakerScore = [
+      motherIsHomemaker,                               // Already calculated
+      moonH === 4,                                     // Moon in own house = contentment at home
+      !moonStrong && moonH !== 10 && moonH !== 11,     // Weak Moon away from career
+      venusH === 4,                                    // Venus in 4th = domestic comfort
+      lord4H === 4,                                    // 4th lord in 4th = strong home focus
+    ].filter(Boolean).length;
+
+    // Business / Trade score
+    const businessScore = [
+      mercStrong,                                      // Mercury = commerce
+      rahuFamilyHouse === 10 || rahuFamilyHouse === 7, // Rahu = unconventional, trade
+      moonH === 7 || moonH === 10,                     // Moon in partnership/career
+      lord4H === 7 || lord4H === 10,                   // 4th lord in trade houses
+    ].filter(Boolean).length;
+
+    return {
+      moonRashi: moonSign,
+      moonHouse: moonH,
+      venusHouse: venusH,
+      lord4House: lord4H,
+      motherIsHomemaker,
+      teachingScore,
+      nursingScore,
+      garmentScore,
+      govScore,
+      farmingScore,
+      homemakerScore,
+      businessScore,
+    };
+  })();
+
   // Mother's personality — AI interprets from Moon sign
   const MOON_MOTHER_PERSONALITY = {};
 
@@ -6683,6 +6775,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     matrukaraka: matrukaraka ? { planet: matrukaraka.planet, rashi: matrukaraka.rashi } : null,
     d12ParentChart: d12Lagna ? { d12Lagna } : null,
     motherIsHomemaker,
+    motherCareer: motherCareerAnalysis,
     hasStrongAbandonmentRisk,
     hasAbandonmentRisk,
     healthRisks: motherHealthRisks,

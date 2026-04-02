@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 export function getBaseUrl() {
-  if (!__DEV__) return 'https://api.grahachara.lk';
+  if (!__DEV__) return 'https://api.grahachara.com';
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return 'http://' + window.location.hostname + ':3000';
   }
@@ -280,7 +280,7 @@ export var getSubscriptionStatus = function() {
   return request('/api/auth/subscription');
 };
 
-// ─── PayHere Payment API ────────────────────────────────────────
+// ─── Pricing API ────────────────────────────────────────────────
 
 export var getPricing = function(countryCode) {
   var query = countryCode ? '?currency=' + (countryCode === 'LK' ? 'LKR' : 'USD') : '';
@@ -289,35 +289,6 @@ export var getPricing = function(countryCode) {
 
 export var getLiveCostStats = function() {
   return request('/api/pricing/live-stats');
-};
-
-export var initiateSubscription = function(data) {
-  return request('/api/payhere/initiate-subscription', {
-    method: 'POST',
-    body: JSON.stringify(data || {}),
-  });
-};
-
-export var initiateTopUp = function(amount, currency) {
-  return request('/api/payhere/initiate-topup', {
-    method: 'POST',
-    body: JSON.stringify({ amount: amount, currency: currency || undefined }),
-  });
-};
-
-export var confirmPayment = function(paymentId, orderId, type) {
-  return request('/api/payhere/confirm-payment', {
-    method: 'POST',
-    body: JSON.stringify({ paymentId: paymentId, orderId: orderId, type: type }),
-  });
-};
-
-export var cancelPayHereSubscription = function() {
-  return request('/api/payhere/cancel', { method: 'POST' });
-};
-
-export var getPayHereStatus = function() {
-  return request('/api/payhere/status');
 };
 
 // ─── Weekly Lagna Palapala ──────────────────────────────────────
@@ -578,13 +549,8 @@ export default {
   completeOnboarding: completeOnboarding,
   unsubscribe: unsubscribe,
   getSubscriptionStatus: getSubscriptionStatus,
-  // PayHere Payment
+  // Pricing
   getPricing: getPricing,
-  initiateSubscription: initiateSubscription,
-  initiateTopUp: initiateTopUp,
-  confirmPayment: confirmPayment,
-  cancelPayHereSubscription: cancelPayHereSubscription,
-  getPayHereStatus: getPayHereStatus,
   // Predictions — Transit
   getCurrentTransits: getCurrentTransits,
   getEnhancedTransits: getEnhancedTransits,

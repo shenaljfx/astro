@@ -526,17 +526,17 @@ function printFinalSummary() {
   console.log('\n  ─── Recommended Pricing vs Real Costs ───');
   console.log(`  Full Report:    Charge LKR 50  | Cost ${formatLKR(reportCost)} | Margin: ${((50 - reportCost) / 50 * 100).toFixed(1)}% ✅`);
   console.log(`  Porondam:       Charge LKR 20  | Cost ${formatLKR(porondamCost)} | Margin: ${((20 - porondamCost) / 20 * 100).toFixed(1)}% ✅`);
-  console.log(`  Chat (sub only):LKR 240/mo sub | Cost ${formatLKR(chatCost)}/msg | Covered by subscription ✅`);
+  console.log(`  Chat (sub only):LKR 280/mo sub | Cost ${formatLKR(chatCost)}/msg | Covered by subscription ✅`);
   console.log(`  Chart Explain:  Sub only       | Cost ${formatLKR(chartExplCost)} | Covered by subscription ✅`);
 
   // Monthly subscriber profitability
-  const monthlySubRevenue = 240 * (1 - 0.033); // After PayHere ~3.3% fee
+  const monthlySubRevenue = 280 * (1 - 0.30); // After App Store/Play ~30% fee
   // Average subscriber usage per month: 1 report + 8 chats + 1 chart explanation + 1 porondam
   const avgSubscriberCost = reportCost + (chatCost * 8) + chartExplCost + porondamCost;
 
-  console.log('\n  ─── Monthly Subscriber (LKR 240/month via PayHere) ───');
-  console.log(`  Gross revenue:    LKR 240/month`);
-  console.log(`  PayHere fee:     -LKR ${(240 * 0.033).toFixed(0)} (~3.3%)`);
+  console.log('\n  ─── Monthly Subscriber (LKR 280/month via In-App Purchase) ───');
+  console.log(`  Gross revenue:    LKR 280/month`);
+  console.log(`  Store fee:       -LKR ${(280 * 0.30).toFixed(0)} (~30%)`);
   console.log(`  Net revenue:      ${formatLKR(monthlySubRevenue)}/month`);
   console.log(`  Avg AI cost:     -${formatLKR(avgSubscriberCost)} (1 report + 8 chats + 1 chart expl + 1 porondam)`);
   console.log(`  Server share:    -LKR 2 (estimated @ 1K users)`);
