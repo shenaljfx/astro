@@ -20,11 +20,11 @@ Firebase is **optional for local dev** — server starts without `firebase-servi
 
 1. Onboarding: Google Sign-In → Firebase Auth → ID token sent to server → JWT returned
 2. JWT is wired into all API requests via `setAuthTokenGetter()` in `AuthContext`
-3. Premium routes use `phoneAuth` + `requireSubscription` middleware — charges **LKR 240/month** (Sri Lanka) or **USD 4/month** (international) via PayHere (Visa/MasterCard/HelaPay/FriMi)
-4. Subscription initiated in onboarding Step 2 via PayHere React Native SDK (`@payhere/payhere-mobilesdk-reactnative`)
+3. Premium routes use `phoneAuth` + `requireSubscription` middleware — charges **LKR 280/month** (Sri Lanka) or **USD 4.99/month** (international) via RevenueCat (in-app purchases)
+4. Subscription initiated in onboarding Step 2 via RevenueCat SDK (`react-native-purchases` + `react-native-purchases-ui`)
 5. Server also accepts Firebase ID tokens directly (fallback path in `subscription.js`)
 
-All payment/billing is handled by **PayHere** (`server/src/services/payhere.js` + `server/src/routes/payhere.js`).
+All payment/billing is handled by **RevenueCat** (`mobile/services/revenuecat.js` + `server/src/routes/revenuecat.js`).
 
 Guard pattern for protected routes: `router.post('/endpoint', phoneAuth, requireSubscription, handler)`
 
@@ -51,11 +51,43 @@ Guard pattern for protected routes: `router.post('/endpoint', phoneAuth, require
 |---|---|
 | Google Sign-In (Firebase Auth) | `mobile/services/firebase.js` + `mobile/contexts/AuthContext.js` |
 | Server auth (JWT from Google) | `server/src/routes/auth.js` |
-| PayHere card billing | `server/src/services/payhere.js` + `server/src/routes/payhere.js` |
+| RevenueCat billing | `mobile/services/revenuecat.js` + `server/src/routes/revenuecat.js` |
 | Firebase Admin init | `server/src/config/firebase.js` (gracefully degrades) |
 | AI chat prompts | `server/src/engine/chat.js` — `buildSystemPrompt(language)` |
 | API base URL detection | `mobile/services/api.js` — `getBaseUrl()` |
 | Auth token injection | `mobile/contexts/AuthContext.js` — `setAuthTokenGetter()` |
+
+## Git & Environment Files
+
+### Ignored files (NEVER commit these)
+- `.env` / `.env.local` / `.env.production` — contain API keys, secrets
+- `server/firebase-service-account.json` — Firebase Admin credentials
+- `node_modules/` — dependencies (install via `npm install`)
+- `mobile/.expo/` — Expo cache (auto-generated)
+
+### `.env.example` files (ALWAYS commit these)
+- `mobile/.env.example` — template for mobile env vars (Firebase config, mock payments flag)
+- `server/.env.example` — template for server env vars (API keys, AI provider, timezone DB)
+
+When adding a new env var: add the real value to `.env` (local only) AND add a placeholder to `.env.example` (committed).
+
+### Key Environment Variables
+
+| Variable | Location | Purpose |
+|---|---|---|
+| `EXPO_PUBLIC_FIREBASE_*` | `mobile/.env` | Firebase client config |
+| `EXPO_PUBLIC_MOCK_PAYMENTS` | `mobile/.env` | Set `true` to bypass RevenueCat in dev |
+| `GEMINI_API_KEY` | `server/.env` | Gemini AI for report generation |
+| `MOCK_PAYMENTS` | `server/.env` | Set `true` to bypass `requireSubscription` middleware |
+| `JWT_SECRET` | `server/.env` | JWT signing for auth tokens |
+| `TIMEZONEDB_API_KEY` | `server/.env` | Historical timezone resolution for birth charts |
+
+### Mock Payments (dev bypass)
+Set both to `true` for local dev without real payments:
+- `EXPO_PUBLIC_MOCK_PAYMENTS=true` in `mobile/.env` — all RevenueCat functions auto-succeed
+- `MOCK_PAYMENTS=true` in `server/.env` — `requireSubscription` middleware passes through
+
+**⚠️ Set both to `false` or remove before production builds.**
 
 ## Adding a New Feature
 

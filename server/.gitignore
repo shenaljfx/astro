@@ -1,4 +1,14 @@
 node_modules/
-.env
 *.log
+
+# Environment (secrets)
+.env
+.env.local
+.env.production
+
+# Firebase service account (secret)
 firebase-service-account.json
+
+# OS
+.DS_Store
+Thumbs.db

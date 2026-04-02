@@ -6,21 +6,48 @@ node_modules/
 __pycache__/
 *.pyc
 
-# Environment
+# Environment (secrets — never commit)
 .env
 .env.local
+.env.production
+.env.staging
+
+# Firebase service account (secret)
+server/firebase-service-account.json
 
 # OS
 .DS_Store
 Thumbs.db
+Desktop.ini
+*.swp
+*~
 
 # IDE
 .vscode/
 .idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Build / generated
+dist/
+build/
+*.tgz
+
+# Logs
+*.log
+npm-debug.log*
 
 # Build scripts (generated, not needed)
 write_*.js
 write_*.py
 fix_*.js
 implement_*.js
-server/firebase-service-account.json
+
+# Expo
+mobile/.expo/
+mobile/dist/
+
+# EAS
+mobile/.npmrc.bak
