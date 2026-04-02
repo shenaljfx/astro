@@ -175,7 +175,7 @@ USER'S BIRTH CHART DATA:
           context += `- ${p.planet}: transiting ${p.transitRashi} (house ${p.houseFromLagna} from Asc)${p.isRetrograde ? ' [R]' : ''}${effectStr}\n`;
         }
         if (transits.summary) {
-          context += `- Summary: ${transits.summary.substring(0, 150)}\n`;
+          context += `- Summary: good ${transits.summary.goodTransits || 0}, bad ${transits.summary.badTransits || 0}, vedha-blocked ${transits.summary.blockedByVedha || 0}, combust ${transits.summary.combustPlanets || 0}, retrograde ${transits.summary.retrogradePlanets || 0}\n`;
         }
       }
     } catch (e) { /* skip if transit fails */ }
@@ -488,10 +488,8 @@ function buildSectionPrompt(sectionKey, sectionData, birthData, allSections, lan
   const rashiContext = extraContext.rashiContext || {};
   // Enriched personal data
   const ganaType = bd.gana?.type || '';
-  const ganaMeaning = bd.gana?.meaning || '';
   const yoniAnimal = bd.yoni?.animal || '';
   const nadiType = bd.nadi?.type || '';
-  const nadiMeaning = bd.nadi?.meaning || '';
   const birthDay = bd.birthDayOfWeek || '';
   const dayRuler = bd.rulingPlanetOfDay || '';
   const birthTimeQ = bd.birthTimeQuality || '';
@@ -546,7 +544,6 @@ PARTNERSHIP ANALYSIS:
 - Benefic aspects: ${sectionData?.seventhHouse?.beneficAspectCount || 0}, Malefic aspects: ${sectionData?.seventhHouse?.maleficAspectCount || 0}
 - Bhava Chalit shifts in 7th: ${(sectionData?.seventhHouse?.chalitShifts || []).length > 0 ? sectionData.seventhHouse.chalitShifts.map(s => s.planet + ' shifts from house ' + s.wholeSignHouse + ' to ' + s.chalitHouse).join('; ') : 'None — standard and actual 7th house align'}
 - Partnership Lord: ${sectionData?.seventhLord?.name || 'N/A'} in house ${sectionData?.seventhLord?.house || 'N/A'}
-  → Interpretation: ${sectionData?.seventhLord?.interpretation || 'N/A'}
 
 LOVE PLANET:
 - Venus in house: ${sectionData?.venus?.house || 'N/A'}
@@ -555,7 +552,9 @@ LOVE PLANET:
 
 MARS AFFLICTION:
 - Present: ${sectionData?.kujaDosha?.present ? 'YES — Mars in house ' + sectionData.kujaDosha.marsHouse : 'NO'}
-- Note: ${sectionData?.kujaDosha?.note || 'N/A'}
+- Cancelled: ${sectionData?.kujaDosha?.cancelled ? 'YES' : 'No'}
+- Severity: ${sectionData?.kujaDosha?.severity || 'N/A'}
+- Cancellation factors: ${JSON.stringify(sectionData?.kujaDosha?.cancellationFactors || [])}
 
 MARRIAGE AFFLICTIONS:
 - Severity: ${sectionData?.marriageAfflictions?.severity || 'NONE'} (Score: ${sectionData?.marriageAfflictions?.severityScore || 0}/100)
@@ -563,11 +562,10 @@ MARRIAGE AFFLICTIONS:
 - Marriage Delayed: ${sectionData?.marriageAfflictions?.isMarriageDelayed ? '⚠️ YES — MARRIAGE IS DELAYED' : 'No'}
 - Marriage Supported: ${sectionData?.marriageAfflictions?.isMarriageSupported ? '✅ YES' : 'No'}
 - Likelihood: ${sectionData?.marriageAfflictions?.likelihood || 'N/A'}
-- Issues: ${(sectionData?.marriageAfflictions?.afflictions || []).join(' | ') || 'None'}
+- Issues: ${(sectionData?.marriageAfflictions?.afflictions || []).map(a => `${a.planet || 'chart'}: ${a.type} (${a.points}pts, H${a.house || a.targetHouse || '?'})`).join(' | ') || 'None'}
 - Detailed Affliction Breakdown:
-${(sectionData?.marriageAfflictions?.afflictionDetails || []).map((a, i) => `  ${i+1}. ${a.factor} (${a.points} pts) — ${a.meaning}`).join('\n') || '  None'}
-- Supportive factors: ${(sectionData?.marriageAfflictions?.supportiveFactors || []).join(' | ') || 'None'}
-- Summary: ${sectionData?.marriageAfflictions?.summary || 'N/A'}
+${(sectionData?.marriageAfflictions?.afflictionDetails || sectionData?.marriageAfflictions?.afflictions || []).map((a, i) => `  ${i+1}. ${a.planet || 'chart'}: ${a.type || a.factor || 'unknown'} (${a.points} pts)`).join('\n') || '  None'}
+- Supportive factors: ${(sectionData?.marriageAfflictions?.supportiveFactors || []).map(s => `${s.planet || s.chart || 'chart'}: ${s.type} (${s.points}pts)`).join(' | ') || 'None'}
 
 PARTNERSHIP HOUSE LORD NATURE: ${sectionData?.seventhHouse?.lordNature || 'N/A'} — ${sectionData?.seventhHouse?.lordNature === 'malefic' ? 'The ruling planet of your partnership sector is working AGAINST you — marriage requires extra effort' : sectionData?.seventhHouse?.lordNature === 'benefic' ? 'The ruling planet supports marriage — natural flow toward partnership' : 'Neutral influence on marriage'}
 
@@ -575,7 +573,7 @@ SPOUSE QUALITIES: ${Array.isArray(sectionData?.spouseQualities) ? sectionData.sp
 
 SPOUSE INDICATOR DATA:
 - Spouse Planet: ${sectionData?.darakaraka ? `${sectionData.darakaraka.planet} in ${sectionData.darakaraka.rashi} — ${sectionData.darakaraka.spouseNature}` : 'Not available'}
-- Marriage Indicator: ${sectionData?.upapadaLagna ? `${sectionData.upapadaLagna.rashi} — ${sectionData.upapadaLagna.meaning}` : 'Not available'}
+- Marriage Indicator: ${sectionData?.upapadaLagna ? `${sectionData.upapadaLagna.rashi}` : 'Not available'}
 
 D9 MARRIAGE CHART ANALYSIS:
 - D9 Lagna: ${sectionData?.navamshaAnalysis?.d9LagnaSign || 'N/A'}
@@ -591,13 +589,12 @@ D9 MARRIAGE CHART ANALYSIS:
 
 MARRIAGE TIMING ENGINE — CALCULATED WINDOWS (USE THESE EXACT DATES):
 Current Age: ${sectionData?.marriageTimingPrediction?.currentAge || 'Unknown'} years old
-${sectionData?.marriageTimingPrediction?.firstMarriageWindows?.length ? sectionData.marriageTimingPrediction.firstMarriageWindows.map((w, i) => `${i + 1}. ${w.period} (${w.dateRange}) — Age ${w.ageRange}, Peak year: ${w.peakYear}, Score: ${w.score}/100 [${w.confidence}]${w.reasons?.length ? '\n   Reasons: ' + w.reasons.join('; ') : ''}`).join('\n') : 'Marriage timing data not available — use general timing from: ' + (sectionData?.marriageTimingIndicators || []).join('; ')}
+${sectionData?.marriageTimingPrediction?.firstMarriageWindows?.length ? sectionData.marriageTimingPrediction.firstMarriageWindows.map((w, i) => `${i + 1}. ${w.period} (${w.dateRange}) — Age ${w.ageRange}, Peak year: ${w.peakYear}, Score: ${w.score}/100 [${w.confidence}]${w.reasons?.length ? '\n   Reasons: ' + w.reasons.join('; ') : ''}`).join('\n') : 'Marriage timing data not available — use general timing from: ' + (sectionData?.marriageTimingIndicators || []).map(d => `${d.lord} (${d.start} to ${d.end})`).join('; ')}
 
 ${sectionData?.marriageTimingPrediction?.bestWindow ? `
 ━━━ AGE-AWARE BEST WINDOW ━━━
 BEST WINDOW: ${sectionData.marriageTimingPrediction.bestWindow.period} (${sectionData.marriageTimingPrediction.bestWindow.dateRange}), Age ${sectionData.marriageTimingPrediction.bestWindow.ageRange}
 STATUS: ${sectionData.marriageTimingPrediction.bestWindow.status || 'N/A'}
-${sectionData.marriageTimingPrediction.bestWindow.note || ''}
 ${sectionData.marriageTimingPrediction.bestWindow.status === 'PAST_PRIME_WINDOW' ? `
 ⚠️ THIS PERSON'S STRONGEST MARRIAGE WINDOW HAS ALREADY PASSED.
 - They are likely ALREADY MARRIED (check if confirmed), OR
@@ -679,22 +676,23 @@ SHIFT TO VALIDATION NARRATIVE:
 
 CROSS-REFERENCE DATA (for richer marriage narrative):
 - Children estimate: ${allSections?.children?.estimatedChildren?.count || 'N/A'} children (${allSections?.children?.estimatedChildren?.genderTendency || 'N/A'})
-- Children timing: ${(allSections?.children?.childrenTimingDasas || []).slice(0, 2).join(' | ') || 'N/A'}
+- Children timing: ${(allSections?.children?.childrenTimingDasas || []).slice(0, 2).map(d => `${d.lord} (${d.start} to ${d.end})`).join(' | ') || 'N/A'}
 - Career top planets: ${(allSections?.career?.careerPlanetRanking || []).slice(0, 3).map(p => `${p.planet}(${p.dignity}, H${p.house})`).join(', ') || 'N/A'} (spouse may work in field signified by these planets)
 - Foreign travel/settlement: ${allSections?.foreignTravel?.foreignLikelihood || 'N/A'} (foreign spouse possibility if HIGH)
 - Mental health: depression ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'}, childhood trauma ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (affects attachment style)
-- Financial strength: ${allSections?.career?.wealthStrength?.assessment || 'N/A'} (affects marital stability)
+- Financial strength: Ashtakavarga 7H bindus ${allSections?.career?.wealthStrength?.totalBindus || 'N/A'} (affects marital stability)
 - Partner's first letter: ${(allSections?.surpriseInsights?.partnerFirstLetter?.topLetters || []).join(', ') || 'N/A'}
 - Retrograde Venus: ${(allSections?.personality?.retrogradePlanets || []).some(r => r.name === 'Venus') ? 'YES — past-life relationship karma, unconventional love patterns, may revisit old relationships' : 'No'}
 ━━━ SECOND MARRIAGE & DIVORCE — FULL ANALYSIS ━━━
-- 🔥 SECOND MARRIAGE PROBABILITY: ${allSections?.surpriseInsights?.secondMarriage?.probability || 'N/A'}
-- 🔥 DIVORCE RISK: ${allSections?.surpriseInsights?.secondMarriage?.divorceRisk || 'N/A'}
-- 🔥 Score: ${allSections?.surpriseInsights?.secondMarriage?.score || 0}/15 — ${(allSections?.surpriseInsights?.secondMarriage?.score || 0) >= 7 ? 'STRONG indicators of second marriage' : (allSections?.surpriseInsights?.secondMarriage?.score || 0) >= 4 ? 'MODERATE indicators' : 'WEAK indicators'}
+- 🔥 SECOND MARRIAGE Score: ${allSections?.surpriseInsights?.secondMarriage?.score || 0}/15 — ${(allSections?.surpriseInsights?.secondMarriage?.score || 0) >= 7 ? 'STRONG indicators of second marriage' : (allSections?.surpriseInsights?.secondMarriage?.score || 0) >= 4 ? 'MODERATE indicators' : 'WEAK indicators'}
 - Divorce sub-score: ${allSections?.surpriseInsights?.secondMarriage?.divorceScore || 0}/8
 - 7th House Sign: ${allSections?.surpriseInsights?.secondMarriage?.h7Rashi || 'N/A'} ${allSections?.surpriseInsights?.secondMarriage?.isDualSign ? '(DUAL SIGN — classical indicator of multiple relationships)' : ''}
-- ALL Indicators:
-${(allSections?.surpriseInsights?.secondMarriage?.reasons || []).map((r, i) => `  ${i+1}. ${r}`).join('\n') || '  None'}
-⚠️ RULE: State probability and divorce risk DIRECTLY — no softening. If HIGH/VERY HIGH, dedicate a FULL paragraph explaining when and why. If LOW, state it plainly in one sentence.
+- 7th House Planets: ${(allSections?.surpriseInsights?.secondMarriage?.h7Planets || []).join(', ') || 'None'}
+- 2nd House Planets: ${(allSections?.surpriseInsights?.secondMarriage?.h2Planets || []).join(', ') || 'None'}
+- 7th Lord in House: ${allSections?.surpriseInsights?.secondMarriage?.lord7House || 'N/A'}
+- Venus-Rahu Conjunct: ${allSections?.surpriseInsights?.secondMarriage?.venusRahuConjunct ? 'YES' : 'No'}
+- Venus Retrograde: ${allSections?.surpriseInsights?.secondMarriage?.venusRetrograde ? 'YES' : 'No'}
+⚠️ RULE: Interpret the score — if >= 7, dedicate a FULL paragraph on second marriage possibility. If < 4, state it plainly in one sentence.
 
 ═══ NADI ASTROLOGY MARRIAGE ANALYSIS (Sub-Lord Methodology) ═══
 ${sectionData?.nadiMarriage ? `- Nadi Verdict: ${sectionData.nadiMarriage.verdict} (${sectionData.nadiMarriage.strength})
@@ -702,7 +700,6 @@ ${sectionData?.nadiMarriage ? `- Nadi Verdict: ${sectionData.nadiMarriage.verdic
 - Strong marriage planets: ${(sectionData.nadiMarriage.strongPlanets || []).join(', ') || 'N/A'}
 - Weak/denying planets: ${(sectionData.nadiMarriage.weakPlanets || []).join(', ') || 'None'}
 - Average Nadi Score: ${sectionData.nadiMarriage.averageScore}/100
-- NOTE: ${sectionData.nadiMarriage.note}
 USE THIS: The "Best Dasha planets" tells you WHICH planet periods will bring marriage. Weave this into your timing analysis.` : 'Nadi analysis not available'}
 
 OUTPUT INSTRUCTIONS:
@@ -779,8 +776,7 @@ ${sectionData?.darakaraka ? `- Planet: ${sectionData.darakaraka.planet} in ${sec
 → THIS defines the spouse's CORE personality. Use this to describe daily interactions.` : 'Not available'}
 
 UPAPADA LAGNA (how marriage APPEARS to others):
-${sectionData?.upapadaLagna ? `- Sign: ${sectionData.upapadaLagna.rashi}
-- Meaning: ${sectionData.upapadaLagna.meaning}` : 'Not available'}
+${sectionData?.upapadaLagna ? `- Sign: ${sectionData.upapadaLagna.rashi}` : 'Not available'}
 
 SPOUSE QUALITIES (blended from all indicators — ALREADY PRIORITIZED):
 ${Array.isArray(sectionData?.spouseQualities) ? sectionData.spouseQualities.map((q, i) => `${i+1}. ${q}`).join('\n') : (sectionData?.spouseQualities || 'N/A')}
@@ -793,7 +789,9 @@ LOVE PLANET (Venus — romance and intimacy style):
 
 MARS AFFLICTION (Kuja Dosha — conflict energy):
 - Present: ${sectionData?.kujaDosha?.present ? 'YES — Mars in house ' + sectionData.kujaDosha.marsHouse : 'NO'}
-- Details: ${sectionData?.kujaDosha?.note || 'N/A'}
+- Cancelled: ${sectionData?.kujaDosha?.cancelled ? 'YES' : 'No'}
+- Severity: ${sectionData?.kujaDosha?.severity || 'N/A'}
+- Cancellation factors: ${JSON.stringify(sectionData?.kujaDosha?.cancellationFactors || [])}
 → If present: Mars injects AGGRESSION into married life — arguments are heated, dominance struggles exist, but also PASSION
 
 D9 NAVAMSHA (MARRIAGE SOUL CHART — THE TRUE married life picture):
@@ -812,10 +810,9 @@ MARRIAGE AFFLICTIONS (from allSections — critical for married life quality):
 - Marriage Denied: ${allSections?.marriage?.marriageAfflictions?.isMarriageDenied ? '⛔ YES' : 'No'}
 - Marriage Delayed: ${allSections?.marriage?.marriageAfflictions?.isMarriageDelayed ? '⚠️ YES' : 'No'}
 - Likelihood: ${allSections?.marriage?.marriageAfflictions?.likelihood || 'N/A'}
-- Specific afflictions: ${(allSections?.marriage?.marriageAfflictions?.afflictions || []).join(' | ') || 'None'}
-- Detailed breakdown: ${(allSections?.marriage?.marriageAfflictions?.afflictionDetails || []).map(a => a.factor + ': ' + a.meaning).join(' | ') || 'None'}
-- Supportive factors: ${(allSections?.marriage?.marriageAfflictions?.supportiveFactors || []).join(' | ') || 'None'}
-- Summary: ${allSections?.marriage?.marriageAfflictions?.summary || 'N/A'}
+- Specific afflictions: ${(allSections?.marriage?.marriageAfflictions?.afflictions || []).map(a => `${a.planet || 'chart'}: ${a.type} (${a.points}pts)`).join(' | ') || 'None'}
+- Detailed breakdown: ${(allSections?.marriage?.marriageAfflictions?.afflictionDetails || allSections?.marriage?.marriageAfflictions?.afflictions || []).map(a => `${a.planet || 'chart'}: ${a.type || a.factor} (${a.points} pts)`).join(' | ') || 'None'}
+- Supportive factors: ${(allSections?.marriage?.marriageAfflictions?.supportiveFactors || []).map(s => `${s.planet || s.chart || 'chart'}: ${s.type} (${s.points}pts)`).join(' | ') || 'None'}
 
 ━━━ IN-LAW RELATIONSHIP ENGINE DATA ━━━
 
@@ -824,17 +821,16 @@ MARRIAGE AFFLICTIONS (from allSections — critical for married life quality):
 - Planets in 4th: ${(allSections?.realEstate?.fourthHouse?.planetsInHouse || allSections?.education?.fourthHouse?.planetsInHouse || []).join(', ') || 'Empty'}
 - Malefics in 4th: ${(allSections?.realEstate?.fourthHouse?.maleficsIn || allSections?.education?.fourthHouse?.maleficsIn || []).join(', ') || 'None — domestic peace supported'}
 - 4th Lord in house: ${allSections?.career?.homeLifeIndicators?.h4LordHouse || 'N/A'} ${allSections?.career?.homeLifeIndicators?.h4LordInDusthana ? '⚠️ (in difficult house — domestic friction likely)' : ''}
-- Domestic Yogas: ${(allSections?.career?.homeLifeIndicators?.domesticYogas || []).join(' | ') || 'None'}
+- Domestic Yogas: ${(allSections?.career?.homeLifeIndicators?.domesticYogas || []).map(d => d.type ? `${d.type}${d.lord ? ': ' + d.lord + ' H' + d.house : ''}` : `${(d.planets || []).join('+')} in H${d.house}`).join(' | ') || 'None'}
 - Domestic Role: ${allSections?.career?.homeLifeIndicators?.domesticRole || 'N/A'}
-- Home Narrative: ${allSections?.career?.homeLifeIndicators?.homeNarrative || 'N/A'}
 
 IN-LAW CONFLICT INDICATORS:
 - Saturn aspecting 7th: ${(sectionData?.seventhHouse?.aspectingPlanets || []).some(a => (a.planet || a) === 'Saturn') ? 'YES — cold, distant, or restrictive in-law dynamics' : 'No'}
 - Rahu in 7th: ${(sectionData?.seventhHouse?.planetsInHouse || []).includes('Rahu') ? 'YES — unconventional in-laws, cultural/religious differences possible' : 'No'}
 - Ketu in 7th: ${(sectionData?.seventhHouse?.planetsInHouse || []).includes('Ketu') ? 'YES — detachment from spouse family, spiritual disconnect with in-laws' : 'No'}
 - Jupiter position: house ${allSections?.children?.jupiter?.house || sectionData?.venus?.house || 'N/A'} — ${(() => { const jh = allSections?.children?.jupiter?.house; return jh && [6,8,12].includes(jh) ? '⚠️ Jupiter in dusthana = in-law disputes, interference in marriage' : 'Jupiter not in difficult position for in-laws'; })()}
-- Mother bond: ${allSections?.familyPortrait?.mother?.bond || 'N/A'} → shapes mother-in-law relationship
-- Father bond: ${allSections?.familyPortrait?.father?.bond || 'N/A'} → shapes father-in-law relationship
+- Mother bond: Moon score ${allSections?.familyPortrait?.mother?.bond?.moonScore || 'N/A'}%, Moon in H${allSections?.familyPortrait?.mother?.bond?.moonHouse || '?'} → shapes mother-in-law relationship
+- Father bond: Sun score ${allSections?.familyPortrait?.father?.bond?.sunScore || 'N/A'}%, Sun in H${allSections?.familyPortrait?.father?.bond?.sunHouse || '?'} → shapes father-in-law relationship
 
 ━━━ CROSS-REFERENCE DATA FOR MARRIED LIFE DYNAMICS ━━━
 
@@ -851,7 +847,7 @@ PERSONALITY & ATTACHMENT:
 - Public vs Private contrast: ${allSections?.surpriseInsights?.publicVsPrivate?.contrastLevel || 'N/A'}
 
 FINANCIAL DYNAMICS AS A COUPLE:
-- Wealth strength: ${allSections?.career?.wealthStrength?.assessment || 'N/A'}
+- Wealth strength: Ashtakavarga bindus ${allSections?.career?.wealthStrength?.totalBindus || 'N/A'}
 - Money personality: ${allSections?.surpriseInsights?.moneyPersonality?.archetype || 'N/A'} (impulse: ${allSections?.surpriseInsights?.moneyPersonality?.impulseScore || 'N/A'})
 - Business vs Service: ${allSections?.career?.businessVsService ? `10th lord H${allSections.career.businessVsService.lord10House}, kendra: ${allSections.career.businessVsService.lord10InKendra}` : 'N/A'}
 
@@ -860,13 +856,12 @@ CHILDREN IMPACT ON MARRIAGE:
 - First child predicted: ${allSections?.children?.childrenBirthYears?.children?.[0]?.predictedYears || 'N/A'}
 
 ━━━ SECOND MARRIAGE & DIVORCE — FULL DATA ━━━
-- 🔥 SECOND MARRIAGE PROBABILITY: ${allSections?.surpriseInsights?.secondMarriage?.probability || 'N/A'}
-- 🔥 DIVORCE RISK: ${allSections?.surpriseInsights?.secondMarriage?.divorceRisk || 'N/A'}
-- Score: ${allSections?.surpriseInsights?.secondMarriage?.score || 0}/15
+- 🔥 SECOND MARRIAGE Score: ${allSections?.surpriseInsights?.secondMarriage?.score || 0}/15
 - Divorce sub-score: ${allSections?.surpriseInsights?.secondMarriage?.divorceScore || 0}/8
 - 7th House Sign: ${allSections?.surpriseInsights?.secondMarriage?.h7Rashi || 'N/A'} ${allSections?.surpriseInsights?.secondMarriage?.isDualSign ? '(DUAL SIGN — multiple relationships indicated)' : ''}
-- ALL Indicators:
-${(allSections?.surpriseInsights?.secondMarriage?.reasons || []).map((r, i) => `  ${i+1}. ${r}`).join('\n') || '  None'}
+- 7th House Planets: ${(allSections?.surpriseInsights?.secondMarriage?.h7Planets || []).join(', ') || 'None'}
+- Venus-Rahu Conjunct: ${allSections?.surpriseInsights?.secondMarriage?.venusRahuConjunct ? 'YES' : 'No'}
+- Venus Retrograde: ${allSections?.surpriseInsights?.secondMarriage?.venusRetrograde ? 'YES' : 'No'}
 
 MARRIAGE TIMING (for age-context):
 - Best window: ${allSections?.marriage?.marriageTimingPrediction?.bestWindow ? allSections.marriage.marriageTimingPrediction.bestWindow.dateRange + ', Age ' + allSections.marriage.marriageTimingPrediction.bestWindow.ageRange : 'N/A'}
@@ -877,11 +872,10 @@ ${sectionData?.nadiMarriage ? `- Nadi Verdict: ${sectionData.nadiMarriage.verdic
 - Strong marriage planets: ${(sectionData.nadiMarriage.strongPlanets || []).join(', ') || 'N/A'}
 - Weak/denying planets: ${(sectionData.nadiMarriage.weakPlanets || []).join(', ') || 'None'}
 - Average Nadi Score: ${sectionData.nadiMarriage.averageScore}/100
-- NOTE: ${sectionData.nadiMarriage.note}
 USE THIS: Strong Nadi verdict = marriage is CONFIRMED at soul level → married life dynamics are more meaningful. Weak verdict = marriage itself is uncertain → write conditionally. Best Dasha planets indicate WHICH life periods bring HARMONY or CONFLICT in married life.` : 'Nadi marriage analysis not available'}
 
 ━━━ DASHA PERIODS (for decade-by-decade marriage evolution) ━━━
-${allSections?.lifePredictions?.lifePhaseSummary ? allSections.lifePredictions.lifePhaseSummary.map(d => `${d.lord}: ${d.period} (${d.years}yr) — "${d.theme}"${d.chartTheme ? ' | ' + d.chartTheme : ''}${d.isCurrent ? ' ← NOW' : ''}`).join('\n') : 'Dasha timeline not available'}
+${allSections?.lifePredictions?.lifePhaseSummary ? allSections.lifePredictions.lifePhaseSummary.map(d => `${d.lord}: ${d.period} (${d.years}yr)${d.chartTheme ? ' | ' + d.chartTheme.functionalNature + ' ruling houses ' + (d.chartTheme.ruledHouses || []).join(',') : ''}${d.isCurrent ? ' ← NOW' : ''}`).join('\n') : 'Dasha timeline not available'}
 
 ━━━ HOW TO USE ALL THIS DATA ━━━
 
@@ -1025,7 +1019,7 @@ INCOME/GAINS SECTOR:
 - Lord house: ${sectionData?.eleventhHouse?.lordHouse || 'N/A'}
 
 WEALTH COMBINATIONS: ${(sectionData?.dhanaYogas || []).join(' | ') || 'None detected'}
-WEALTH STRENGTH: ${sectionData?.wealthStrength ? `Savings: ${sectionData.wealthStrength.house2Bindus}, Income: ${sectionData.wealthStrength.house11Bindus} — ${sectionData.wealthStrength.assessment}` : 'N/A'}
+WEALTH STRENGTH: ${sectionData?.wealthStrength ? `Savings: ${sectionData.wealthStrength.house2Bindus}, Income: ${sectionData.wealthStrength.house11Bindus}, Total: ${sectionData.wealthStrength.totalBindus}` : 'N/A'}
 BUSINESS VS SERVICE: ${sectionData?.businessVsService ? `10th lord in kendra: ${sectionData.businessVsService.lord10InKendra}, in dusthana: ${sectionData.businessVsService.lord10InDusthana}, house: ${sectionData.businessVsService.lord10House}` : 'N/A'}
 (10th lord in kendra = strong independent business potential; in dusthana = behind-the-scenes/service roles; otherwise = balanced)
 
@@ -1033,8 +1027,8 @@ Rising sign: ${lagnaEn}, Moon: ${moonEn}
 
 CAREER DEPTH DATA:
 - Career Chart (D10): ${sectionData?.dashamsha ? `D10 Lagna: ${sectionData.dashamsha.d10Lagna}, Sun in D10: ${sectionData.dashamsha.d10Sun}, Saturn in D10: ${sectionData.dashamsha.d10Saturn}, Career Lord in D10: ${sectionData.dashamsha.d10TenthLord}` : 'Not available'}
-- Career Significator: ${sectionData?.amatyakaraka ? `${sectionData.amatyakaraka.planet} in ${sectionData.amatyakaraka.rashi} — ${sectionData.amatyakaraka.meaning}` : 'Not available'}
-- Career Lord Strength: ${sectionData?.tenthLordShadbala ? `${sectionData.tenthLordShadbala.totalRupas} Rupas (${sectionData.tenthLordShadbala.percentage}%) — ${sectionData.tenthLordShadbala.strength}. Strongest aspect: ${sectionData.tenthLordShadbala.strongestComponent}` : 'Not available'}
+- Career Significator: ${sectionData?.amatyakaraka ? `${sectionData.amatyakaraka.planet} in ${sectionData.amatyakaraka.rashi}` : 'Not available'}
+- Career Lord Strength: ${sectionData?.tenthLordShadbala ? `${sectionData.tenthLordShadbala.totalRupas} Rupas (${sectionData.tenthLordShadbala.percentage}%) — ${sectionData.tenthLordShadbala.strength}. Strongest component: ${sectionData.tenthLordShadbala.strongestComponent?.name || 'N/A'} (${sectionData.tenthLordShadbala.strongestComponent?.value || 'N/A'})` : 'Not available'}
 ${sectionData?.lagnaCuspWarning?.isNearCusp ? `⚠️ BIRTH TIME SENSITIVITY: Near sign boundary. Career predictions may vary if birth time is slightly off.` : ''}
 
 ═══ NADI ASTROLOGY CAREER ANALYSIS (Sub-Lord Methodology) ═══
@@ -1051,7 +1045,7 @@ HOME & DOMESTIC INDICATORS:
 - Planets in home sector: ${(sectionData?.homeLifeIndicators?.h4PlanetsAll || []).join(', ') || 'None'}
 - Career sector empty: ${sectionData?.homeLifeIndicators?.h10Empty ? 'YES' : 'No'}
 - Emotional isolation: ${sectionData?.homeLifeIndicators?.kemadrumaPresent ? 'YES' : 'No'}
-- Domestic patterns: ${(sectionData?.homeLifeIndicators?.domesticYogas || []).join(' | ') || 'None detected'}
+- Domestic patterns: ${(sectionData?.homeLifeIndicators?.domesticYogas || []).map(d => d.type ? `${d.type}${d.lord ? ': ' + d.lord + ' H' + d.house : ''}` : `${(d.planets || []).join('+')} in H${d.house}`).join(' | ') || 'None detected'}
 - DOMESTIC ROLE: ${sectionData?.homeLifeIndicators?.domesticRole} (PRIMARY = homemaker path; SECONDARY = balanced; NONE = career-dominant)
 
 CROSS-REFERENCE DATA:
@@ -1113,15 +1107,12 @@ CHILDREN SECTOR:
 - Lord: ${sectionData?.fifthLord?.name || 'N/A'} in house ${sectionData?.fifthLord?.house || 'N/A'}
 
 FERTILITY INDICATOR: House ${sectionData?.jupiter?.house || 'N/A'}
-  → ${sectionData?.jupiter?.note || ''}
 
-ENGINE ASSESSMENT: ${sectionData?.assessment || 'N/A'}
-
-CHILDREN TIMING PERIODS: ${(sectionData?.childrenTimingDasas || []).join(' | ') || 'N/A'}
+CHILDREN TIMING PERIODS: ${(sectionData?.childrenTimingDasas || []).map(d => `${d.lord} (${d.start} to ${d.end})`).join(' | ') || 'N/A'}
 
 CHILDREN CHART (D7): ${sectionData?.saptamsha ? `D7 Lagna: ${sectionData.saptamsha.d7Lagna}, Jupiter in D7: ${sectionData.saptamsha.d7Jupiter}, 5th Lord in D7: ${sectionData.saptamsha.d7FifthLord}` : 'Not available'}
 
-CHILDREN SIGNIFICATOR: ${sectionData?.putrakaraka ? `${sectionData.putrakaraka.planet} in ${sectionData.putrakaraka.rashi} — ${sectionData.putrakaraka.meaning}` : 'Not available'}
+CHILDREN SIGNIFICATOR: ${sectionData?.putrakaraka ? `${sectionData.putrakaraka.planet} in ${sectionData.putrakaraka.rashi}` : 'Not available'}
 
 FERTILITY STRENGTH: ${sectionData?.jupiterShadbala ? `${sectionData.jupiterShadbala.percentage}% — ${sectionData.jupiterShadbala.strength} (${sectionData.jupiterShadbala.totalRupas} Rupas)` : 'Not available'}
 
@@ -1129,14 +1120,12 @@ ESTIMATED CHILDREN:
 - Count: ${sectionData?.estimatedChildren?.count || 'N/A'}
 - Gender tendency: ${sectionData?.estimatedChildren?.genderTendency || 'N/A'}
 - Multi-factor score: ${sectionData?.estimatedChildren?.score || 'N/A'}
-- Scoring: ${sectionData?.estimatedChildren?.note || 'N/A'}
 - Fertility reduced: ${sectionData?.estimatedChildren?.jupiterDebilitated ? 'YES — fertility indicator is weakened, may need medical support or timing awareness' : 'No — fertility indicator is functional'}
 - Marriage denial impact on children: ${sectionData?.estimatedChildren?.marriageDenialImpact || 'None — marriage is supported'}
 
 🔥 PREDICTED BIRTH YEARS FOR EACH CHILD:
 ${sectionData?.childrenBirthYears?.children?.length > 0 ? sectionData.childrenBirthYears.children.map(c => `- ${c.childNumber} Child: ${c.gender} — Predicted birth years: ${c.predictedYears} (Peak: ${c.peakYear}) — Parent age: ${c.parentAge} — Confidence: ${c.confidence}\n  Reason: ${c.reason}`).join('\n') : 'No specific birth year windows could be calculated'}
 - Marriage year used as baseline: ${sectionData?.childrenBirthYears?.marriageYearUsed || 'N/A'}
-- ${sectionData?.childrenBirthYears?.note || ''}
 ⚠️ IMPORTANT: Present birth year predictions with authority — "Your first child is most likely to be born around [year], when you are [age]." People LOVE specific year predictions. Use the peak year for the most precise statement.
 
 🔥 CHILDREN'S EDUCATION & CAREER PATHS (TECHNICAL PLANET DATA — YOU INTERPRET):
@@ -1152,14 +1141,13 @@ ${(sectionData?.childrenEducation?.childEduPlanetPool || []).map(p => `  → ${p
 ⚠️ USE THE VEDIC EDUCATION INTERPRETATION GUIDE: Sun→admin/medical, Moon→psychology/nurturing, Mars→engineering/sports, Mercury→IT/business, Jupiter→law/teaching, Venus→design/arts, Saturn→civil/agriculture, Rahu→tech/foreign, Ketu→spiritual/research. Derive children's education fields from their planet pool above. Explain which planet suggests which field.
 
 MARRIAGE AFFLICTIONS (affects children):
-${allSections?.marriage?.marriageAfflictions ? `Severity: ${allSections.marriage.marriageAfflictions.severity} (Score: ${allSections.marriage.marriageAfflictions.severityScore}/100)\nMarriage Denied: ${allSections.marriage.marriageAfflictions.isMarriageDenied ? '⛔ YES — CHILDREN THROUGH MARRIAGE VERY UNLIKELY' : 'No'}\nIssues: ${(allSections.marriage.marriageAfflictions.afflictions || []).join(' | ')}` : 'N/A'}
+${allSections?.marriage?.marriageAfflictions ? `Severity: ${allSections.marriage.marriageAfflictions.severity} (Score: ${allSections.marriage.marriageAfflictions.severityScore}/100)\nMarriage Denied: ${allSections.marriage.marriageAfflictions.isMarriageDenied ? '⛔ YES — CHILDREN THROUGH MARRIAGE VERY UNLIKELY' : 'No'}\nIssues: ${(allSections.marriage.marriageAfflictions.afflictions || []).map(a => `${a.planet || 'chart'}: ${a.type} (${a.points}pts)`).join(' | ')}` : 'N/A'}
 
 ═══ NADI ASTROLOGY CHILDREN ANALYSIS (Sub-Lord Methodology) ═══
 ${sectionData?.nadiChildren ? `- Nadi Verdict: ${sectionData.nadiChildren.verdict} (${sectionData.nadiChildren.strength})
 - Best Dasha planets for children: ${(sectionData.nadiChildren.bestDashaPlanets || []).join(', ') || 'N/A'}
 - Strong children planets: ${(sectionData.nadiChildren.strongPlanets || []).join(', ') || 'N/A'}
 - Average Nadi Score: ${sectionData.nadiChildren.averageScore}/100
-- NOTE: ${sectionData.nadiChildren.note}
 USE THIS: Nadi methodology determines children timing through DBA of planets signifying houses 2,5,11. Sub-Lord of 5th cusp determines if children are PROMISED or DENIED. Use "Best Dasha planets" to refine timing predictions.` : 'Nadi children analysis not available'}
 
 ━━━ DATA USAGE RULES ━━━
@@ -1181,7 +1169,7 @@ CROSS-REFERENCE DATA (for richer children narrative):
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'} (${allSections?.marriage?.marriageAfflictions?.severityScore || 0}/100 — if SEVERE, children may be delayed or affected. If marriage DENIED, children through marriage very unlikely)
 - Marriage score: ${allSections?.marriage?.seventhHouse?.strengthScore || 'N/A'}/100 — children score CANNOT be more optimistic than marriage score. If marriage is 50/100, do NOT write an enthusiastic children section.
 - Cross-validation adjustments: ${(sectionData?._crossValidation || []).map(a => `${a.from}→${a.to}: ${a.reason}`).join('; ') || 'None — scores are consistent'}
-- Mother profile: ${allSections?.surpriseInsights?.motherProfile ? allSections.surpriseInsights.motherProfile.substring(0, 100) : 'N/A'} (parenting style influenced by own upbringing)
+- Mother profile: ${allSections?.surpriseInsights?.motherProfile ? JSON.stringify(allSections.surpriseInsights.motherProfile) : 'N/A'} (parenting style influenced by own upbringing)
 - Childhood trauma: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (if HIGH/SEVERE, person may be extra protective or struggle with parenting)
 - Health: fertility-related organ risks: ${(allSections?.health?.organRisks || []).filter(o => (o.organ || '').toLowerCase().includes('reprod')).map(o => o.organ + ': ' + o.risk).join(', ') || 'None flagged'}
 - Career domestic role: ${allSections?.career?.homeLifeIndicators?.domesticRole || 'N/A'}
@@ -1238,15 +1226,12 @@ CURRENT LIFE PHASE:
   → Functional nature for this person: ${sectionData?.currentDasha?.chartSpecificEffects?.functionalNature || 'N/A'}
   → Strength: ${sectionData?.currentDasha?.chartSpecificEffects?.lordStrength || 'N/A'}%
   → Is retrograde: ${sectionData?.currentDasha?.chartSpecificEffects?.isRetrograde ? 'YES — internalized, past-life karma activated' : 'No'}
-  → Life areas activated: ${(sectionData?.currentDasha?.chartSpecificEffects?.houseThemes || []).join(', ') || 'N/A'}
-  → ENGINE VERDICT: ${sectionData?.currentDasha?.chartSpecificEffects?.summary || 'N/A'}
 - Sub-Period Lord: ${sectionData?.currentAntardasha?.lord || 'N/A'}
 - Sub-Period: ${sectionData?.currentAntardasha?.period || 'N/A'}
 - Sub-Period Chart Analysis:
   → Houses ruled: ${sectionData?.currentAntardasha?.chartSpecificEffects?.ruledHouses?.join(', ') || 'N/A'}
   → Sits in house: ${sectionData?.currentAntardasha?.chartSpecificEffects?.lordHouse || 'N/A'}
   → Functional nature: ${sectionData?.currentAntardasha?.chartSpecificEffects?.functionalNature || 'N/A'}
-  → ENGINE VERDICT: ${sectionData?.currentAntardasha?.chartSpecificEffects?.summary || 'N/A'}
 
 NEXT MAJOR LIFE PHASE:
 - Lord: ${sectionData?.nextDasha?.lord || 'N/A'}
@@ -1257,11 +1242,9 @@ NEXT MAJOR LIFE PHASE:
   → Sits in house: ${sectionData?.nextDasha?.chartSpecificEffects?.lordHouse || 'N/A'}
   → Functional nature: ${sectionData?.nextDasha?.chartSpecificEffects?.functionalNature || 'N/A'}
   → Strength: ${sectionData?.nextDasha?.chartSpecificEffects?.lordStrength || 'N/A'}%
-  → Life areas activated: ${(sectionData?.nextDasha?.chartSpecificEffects?.houseThemes || []).join(', ') || 'N/A'}
-  → ENGINE VERDICT: ${sectionData?.nextDasha?.chartSpecificEffects?.summary || 'N/A'}
 
 COMPLETE LIFE PHASES TIMELINE:
-${(sectionData?.lifePhaseSummary || []).map(d => `${d.lord}: ${d.period} (${d.years} years) — "${d.theme}"${d.chartTheme ? ' | Chart-specific: ' + d.chartTheme : ''}${d.isCurrent ? ' ← CURRENT' : ''}`).join('\n')}
+${(sectionData?.lifePhaseSummary || []).map(d => `${d.lord}: ${d.period} (${d.years} years)${d.chartTheme ? ' | Functional nature: ' + d.chartTheme.functionalNature + ', rules houses ' + (d.chartTheme.ruledHouses || []).join(',') : ''}${d.isCurrent ? ' ← CURRENT' : ''}`).join('\n')}
 
 CROSS-REFERENCE DATA:
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'}${allSections?.marriage?.marriageAfflictions?.isMarriageDenied ? ' ⛔ MARRIAGE DENIED — do NOT predict marriage events in life timeline' : allSections?.marriage?.marriageAfflictions?.severity === 'HIGH' ? ' ⚠️ MARRIAGE HIGHLY UNLIKELY — avoid predicting marriage events unless with strong caveats' : ''}
@@ -1293,7 +1276,7 @@ EXAMPLE: Instead of "Jupiter period = expansion" (GENERIC), use:
 - Future phases → state what the data predicts
 
 ═══ NADI ASTROLOGY CROSS-REFERENCES (enrich each life phase) ═══
-- Nadi Career: ${allSections?.career?.nadiCareer?.careerType || 'N/A'} | Best dashas: ${(allSections?.career?.nadiCareer?.bestDashaPlanets || []).join(', ') || 'N/A'}
+- Nadi Career: ${allSections?.career?.nadiCareer?.careerType?.type || allSections?.career?.nadiCareer?.careerType || 'N/A'} | Best dashas: ${(allSections?.career?.nadiCareer?.bestDashaPlanets || []).join(', ') || 'N/A'}
 - Nadi Marriage: ${allSections?.marriage?.nadiMarriage?.verdict || 'N/A'} | Best dashas: ${(allSections?.marriage?.nadiMarriage?.bestDashaPlanets || []).join(', ') || 'N/A'}
 - Nadi Health: Longevity ${allSections?.health?.nadiHealth?.longevityEstimate?.estimatedYears || 'N/A'}yr | Danger dashas: ${(allSections?.health?.nadiHealth?.dangerousDashaPlanets || []).join(', ') || 'N/A'}
 - Nadi Children: ${allSections?.children?.nadiChildren?.verdict || 'N/A'} | Best dashas: ${(allSections?.children?.nadiChildren?.bestDashaPlanets || []).join(', ') || 'N/A'}
@@ -1326,7 +1309,7 @@ For each life phase in the timeline, write 1-2 paragraphs covering:
 6. **The single most important year ahead** — identify ONE upcoming year that the data suggests will be transformative, and explain why
 Skip phases beyond 10 years from now unless the person is under 30.
 ${personAge <= 25 ? '🎯 THIS PERSON IS VERY YOUNG (' + personAge + '). Give EXTENSIVE future predictions — cover the next 30-40 years. Detail education→career→marriage→children→peak periods. This is the most valuable part of the reading for a young person.' : personAge <= 30 ? '🎯 THIS PERSON IS YOUNG (' + personAge + '). Give detailed future predictions for the next 20-30 years. Career growth, marriage timing, children, peak earning years.' : personAge <= 40 ? '🎯 THIS PERSON IS IN THEIR PRIME (' + personAge + '). Focus on the next 15-20 years. Career peaks, financial growth, family milestones, health maintenance.' : '🎯 THIS PERSON IS ' + personAge + '. Focus on the next 10-15 years. Health, financial security, family stability, spiritual growth.'}
-${allSections?.bestYearsRanking ? `\n🏆 BEST FUTURE YEARS DATA: ${(allSections.bestYearsRanking.top10FutureYears || []).slice(0, 8).map(y => y.year + ' (score ' + y.score + ', age ' + y.age + ': ' + y.reasons.join(', ') + ')').join(' | ')}` : ''}
+${allSections?.bestYearsRanking ? `\n🏆 BEST FUTURE YEARS DATA: ${(allSections.bestYearsRanking.top10FutureYears || []).slice(0, 8).map(y => y.year + ' (score ' + y.score + ', age ' + y.age + ': ' + (y.reasons || []).map(r => r.type || JSON.stringify(r)).join(', ') + ')').join(' | ')}` : ''}
 ${allSections?.bestYearsRanking?.peakLifePeriod ? `\n🌟 PEAK LIFE PERIOD: ${allSections.bestYearsRanking.peakLifePeriod.years} (ages ${allSections.bestYearsRanking.peakLifePeriod.ages})` : ''}`,
     },
 
@@ -1340,7 +1323,7 @@ REMINDER: No astrology terms. No "transit", "Sade Sati", "Saturn return" etc. If
 
 Overall Transit Score: ${sectionData?.overallTransitScore || 'N/A'}/100
 Major Events Active: ${(sectionData?.majorEvents || []).map(e => e.event + ' (' + e.severity + '): ' + e.description).join(' | ') || 'None'}
-Saturn Testing Period: ${sectionData?.sadheSati?.active ? 'ACTIVE — ' + sectionData.sadheSati.phase + '. ' + sectionData.sadheSati.note : 'Not active'}
+Saturn Testing Period: ${sectionData?.sadheSati?.active ? 'ACTIVE — Phase: ' + sectionData.sadheSati.phase + ', Saturn in house ' + sectionData.sadheSati.saturnHouseFromMoon + ' from Moon' : 'Not active'}
 Activated Life Areas: ${sectionData?.activatedHouses ? Object.entries(sectionData.activatedHouses).map(([h, ps]) => 'Area ' + h + ': ' + ps.join(', ')).join(' | ') : 'N/A'}
 
 CURRENT PLANET POSITIONS:
@@ -1384,22 +1367,22 @@ HOME/PROPERTY SECTOR:
 - Lord nature: ${sectionData?.fourthHouse?.lordNature || 'N/A'}
 - Lord: ${sectionData?.fourthLord?.name || 'N/A'} in house ${sectionData?.fourthLord?.house || 'N/A'}
 
-PROPERTY COMBINATIONS: ${(sectionData?.propertyYoga || []).join(' | ') || 'None detected'}
+PROPERTY COMBINATIONS: ${sectionData?.propertyYoga ? `4th lord in H${sectionData.propertyYoga.lord4House}${sectionData.propertyYoga.lord4InKendraTrikona ? ' (Kendra/Trikona — strong for property!)' : ''}, Mars in H${sectionData.propertyYoga.marsHouse}${sectionData.propertyYoga.marsInKendraTrikona ? ' (Kendra/Trikona)' : ''}, Benefics in 4th: ${(sectionData.propertyYoga.beneficsIn4th || []).join(', ') || 'none'}` : 'N/A'}
 BEST PERIODS FOR PROPERTY: ${(sectionData?.bestPeriodsForProperty || []).map(p => `${p.lord}: ${p.period}`).join(' | ') || 'N/A'}
 
 MARS (LAND/PROPERTY KARAKA):
 - House: ${sectionData?.mars?.house || 'N/A'}
-- Note: ${sectionData?.mars?.note || 'N/A'}
+- Rashi: ${sectionData?.mars?.rashi || 'N/A'}
 
 SATURN (STRUCTURES/BUILDINGS):
 - House: ${sectionData?.saturn?.house || 'N/A'}
-- Note: ${sectionData?.saturn?.note || 'N/A'}
+- Rashi: ${sectionData?.saturn?.rashi || 'N/A'}
 
 CROSS-REFERENCE:
-- Home narrative: ${allSections?.career?.homeLifeIndicators?.homeNarrative || 'N/A'}
-- Wealth strength: ${allSections?.career?.wealthStrength?.assessment || 'N/A'}
+- Domestic Role: ${allSections?.career?.homeLifeIndicators?.domesticRole || 'N/A'}
+- Wealth strength: Ashtakavarga bindus ${allSections?.career?.wealthStrength?.totalBindus || 'N/A'}
 - Inheritance indication: ${allSections?.luck?.inheritanceIndication || 'N/A'}
-- Venus (vehicles/luxury): house ${allSections?.marriage?.venus?.house || 'N/A'} — ${allSections?.marriage?.venus?.note || 'N/A'}
+- Venus (vehicles/luxury): house ${allSections?.marriage?.venus?.house || 'N/A'}
 - Foreign settlement: ${allSections?.foreignTravel?.settlementAbroad ? 'YES — property abroad possible' : 'Domestic focus'}
 
 ═══ NADI ASTROLOGY PROPERTY ANALYSIS (Sub-Lord Methodology) ═══
@@ -1439,7 +1422,6 @@ FINANCIAL PRECISION: Houses with Ashtakavarga bindus 28+ are STRONG money areas 
 EXPENSES:
 - Expense Sector: Strength ${sectionData?.expenses?.twelfthHouse?.strength || 'N/A'}, Planets: ${(sectionData?.expenses?.twelfthHouse?.planetsInHouse || []).join(', ') || 'Empty'}
 - Expense Lord: ${sectionData?.expenses?.twelfthLord?.name || 'N/A'} in house ${sectionData?.expenses?.twelfthLord?.house || 'N/A'}
-- Expense Note: ${sectionData?.expenses?.note || 'N/A'}
 
 LOSSES & RISKS:
 - Sudden Events Sector: Strength ${sectionData?.losses?.eighthHouse?.strength || 'N/A'}, Planets: ${(sectionData?.losses?.eighthHouse?.planetsInHouse || []).join(', ') || 'Empty'}
@@ -1450,7 +1432,7 @@ INVESTMENT ADVICE (engine): ${(sectionData?.investmentAdvice || []).join(' | ') 
 
 CROSS-REFERENCE:
 - Career top planets: ${(allSections?.career?.careerPlanetRanking || []).slice(0, 5).map(p => `${p.planet}(${p.dignity}, H${p.house})`).join(', ') || 'N/A'}
-- Wealth Strength: ${allSections?.career?.wealthStrength ? `Savings: ${allSections.career.wealthStrength.house2Bindus}, Income: ${allSections.career.wealthStrength.house11Bindus} — ${allSections.career.wealthStrength.assessment}` : 'N/A'}
+- Wealth Strength: ${allSections?.career?.wealthStrength ? `Savings: ${allSections.career.wealthStrength.house2Bindus}, Income: ${allSections.career.wealthStrength.house11Bindus}, Total: ${allSections.career.wealthStrength.totalBindus}` : 'N/A'}
 - Business vs service: ${allSections?.career?.businessVsService ? `10th lord H${allSections.career.businessVsService.lord10House}, kendra: ${allSections.career.businessVsService.lord10InKendra}` : 'N/A'}
 - Dhana yogas: ${(allSections?.career?.dhanaYogas || []).join(' | ') || 'None'}
 - Money personality: ${allSections?.surpriseInsights?.moneyPersonality?.archetype || 'N/A'} (impulse: ${allSections?.surpriseInsights?.moneyPersonality?.impulseScore || 'N/A'})
@@ -1499,7 +1481,7 @@ LUCKY COLOR: ${sectionData?.lagnaColor || 'N/A'}
 POWER DAY: ${sectionData?.lagnaDay || 'N/A'}
 
 YOGA KARAKA (Most Powerful Planet for this person):
-${sectionData?.yogaKaraka ? `Planet: ${sectionData.yogaKaraka.planet}, Gem: ${sectionData.yogaKaraka.gem}, Note: ${sectionData.yogaKaraka.note}` : 'None detected'}
+${sectionData?.yogaKaraka ? `Planet: ${sectionData.yogaKaraka.planet}, Gem: ${sectionData.yogaKaraka.gem}` : 'None detected'}
 
 WEAK PLANETS NEEDING REMEDIES:
 ${(sectionData?.weakPlanetRemedies || []).map((p, i) => `${i+1}. ${p.planet} (Score: ${p.score}%) — Gem: ${p.gem}, Color: ${p.color}, Day: ${p.day}`).join('\n') || 'No weak planets detected'}
@@ -1570,25 +1552,25 @@ ${(sectionData?.advancedYogas || []).map((y, i) => `${i+1}. ${y.icon || '✨'} $
 DOSHAS / KARMIC CHALLENGES (${(sectionData?.doshas || []).length} found):
 ${(sectionData?.doshas || []).map((d, i) => `${i+1}. ${d.icon || '⚠️'} ${d.name} (Severity: ${d.severity || 'moderate'}): ${d.description || 'N/A'}`).join('\n') || 'No major doshas detected — clean karmic slate'}
 
-ENGINE SUMMARY: ${sectionData?.summary || 'N/A'}
+Total Yogas: ${sectionData?.totalYogaCount || 0} (${sectionData?.strongYogaCount || 0} strong)
 
 FUNCTIONAL BENEFICS (planets working FOR this person): ${(sectionData?.functionalBenefics || []).join(', ') || 'N/A'}
 FUNCTIONAL MALEFICS (planets creating challenges): ${(sectionData?.functionalMalefics || []).join(', ') || 'N/A'}
 YOGA KARAKA (single most powerful planet): ${sectionData?.yogaKaraka || 'None'}
 
 PERSONALITY CROSS-REFERENCE (unique chart signatures):
-- Unique signatures: ${(allSections?.personality?.uniqueSignatures || []).join('; ') || 'None'}
+- Unique signatures: ${(allSections?.personality?.uniqueSignatures || []).map(s => `${s.type}: ${s.planet || s.planets?.join('+')} in ${s.sign || 'H' + s.house}`).join('; ') || 'None'}
 - Retrograde planets: ${(allSections?.personality?.retrogradePlanets || []).map(r => `${r.name} in house ${r.house}`).join(', ') || 'None'}
-- Retrograde effects: ${(allSections?.personality?.retrogradeHouseEffects || []).join('; ') || 'N/A'}
-- Combust planets: ${(allSections?.personality?.combustPlanets || []).map(c => `${c.name} (${c.combustDistance?.toFixed(1) || '?'}° from Sun)`).join(', ') || 'None'}
-- Graha Yuddha (planetary wars): ${(allSections?.personality?.grahaYuddha || []).map(g => `${g.planet1} vs ${g.planet2} — ${g.winner} wins`).join('; ') || 'None'}
-- Neecha Bhanga (weakness→strength): ${(allSections?.personality?.neechaBhangaYogas || []).map(n => `${n.planet}: ${n.reason}`).join('; ') || 'None'}
-- Lagna lord position: house ${allSections?.personality?.lagnaLordPosition?.house || 'N/A'} — ${allSections?.personality?.lagnaLordPosition?.interpretation || 'N/A'}
-- Atmakaraka (soul planet): ${allSections?.personality?.atmakaraka || 'N/A'}
+- Retrograde effects: ${(allSections?.personality?.retrogradeHouseEffects || []).map(r => `${r.planet} H${r.currentHouse}→H${r.previousHouseInfluence}`).join('; ') || 'N/A'}
+- Combust planets: ${(allSections?.personality?.combustPlanets || []).map(c => `${c.name} (${c.distanceFromSun || '?'}° from Sun)`).join(', ') || 'None'}
+- Graha Yuddha (planetary wars): ${(allSections?.personality?.grahaYuddha || []).map(g => `${g.planet1} vs ${g.planet2} (${g.distance}° apart, H${g.house})`).join('; ') || 'None'}
+- Neecha Bhanga (weakness→strength): ${(allSections?.personality?.neechaBhangaYogas || []).map(n => `${n.planet}: ${(n.reasons || []).join(', ')}`).join('; ') || 'None'}
+- Lagna lord position: house ${allSections?.personality?.lagnaLordPosition?.house || 'N/A'}
+- Atmakaraka (soul planet): ${allSections?.personality?.atmakaraka?.planet || 'N/A'} in ${allSections?.personality?.atmakaraka?.rashi || 'N/A'}
 - Overall personality strength: ${allSections?.personality?.overallStrength || 'N/A'}
 
 ═══ NADI CROSS-REFERENCES (for enriching yoga/dosha analysis) ═══
-- Nadi Career verdict: ${allSections?.career?.nadiCareer?.careerType || 'N/A'} (strength: ${allSections?.career?.nadiCareer?.serviceStrength || 'N/A'})
+- Nadi Career verdict: ${allSections?.career?.nadiCareer?.careerType?.type || 'N/A'} (strength: ${allSections?.career?.nadiCareer?.serviceStrength || 'N/A'})
 - Nadi Marriage verdict: ${allSections?.marriage?.nadiMarriage?.verdict || 'N/A'} (strength: ${allSections?.marriage?.nadiMarriage?.strength || 'N/A'})
 - Nadi Health longevity: ${allSections?.health?.nadiHealth?.longevityEstimate?.estimatedYears || 'N/A'} years (${allSections?.health?.nadiHealth?.longevityStrength || 'N/A'})
 - Nadi Education: grade ${allSections?.education?.nadiEducation?.overallGrade || 'N/A'}, strength ${allSections?.education?.nadiEducation?.strength || 'N/A'}
@@ -1610,13 +1592,13 @@ Current life period: ${currentDasha} main period, ${currentAD} sub-period
 
 ━━━ HEALTH DATA FROM CHART ━━━
 - Overall vitality: ${sectionData?.overallVitality || 'N/A'}
-- Mental health indicator: ${sectionData?.mentalHealthIndicator || 'N/A'}
-${(sectionData?.mentalHealthIndicator || '').includes('Moon-Saturn') ? '⚠️ CRITICAL: Moon-Saturn conjunction detected — this person is highly susceptible to anxiety, depression, and emotional trauma. The MENTAL HEALTH DEEP DIVE section (#9) must address childhood emotional patterns, suppressed feelings, and provide serious healing recommendations. Do NOT skip or minimize this.' : ''}
-- Longevity indicator: ${sectionData?.longevityIndicator || 'N/A'}
+- Mental health indicator: ${sectionData?.mentalHealthIndicator ? `Moon-Saturn conjunction: ${sectionData.mentalHealthIndicator.moonSaturnConjunction}, Moon H${sectionData.mentalHealthIndicator.moonHouse}, Moon score: ${sectionData.mentalHealthIndicator.moonScore}, Moon in dusthana: ${sectionData.mentalHealthIndicator.moonInDusthana}` : 'N/A'}
+${sectionData?.mentalHealthIndicator?.moonSaturnConjunction ? '⚠️ CRITICAL: Moon-Saturn conjunction detected — this person is highly susceptible to anxiety, depression, and emotional trauma. The MENTAL HEALTH DEEP DIVE section (#9) must address childhood emotional patterns, suppressed feelings, and provide serious healing recommendations. Do NOT skip or minimize this.' : ''}
+- Longevity indicator: ${sectionData?.longevityIndicator ? `Saturn score: ${sectionData.longevityIndicator.saturnScore}, H8 strength: ${sectionData.longevityIndicator.h8Strength}` : 'N/A'}
 - Body areas at risk: ${JSON.stringify(sectionData?.bodyRisks || [])}
-- Health vulnerabilities (weak planets): ${(sectionData?.healthVulnerabilities || []).map(v => `${v.planet || v.name || JSON.stringify(v)}: ${v.score || v.percentage || '?'}% — ${v.riskDescription || v.risk || ''} (weakest: ${v.weakestComponent || 'N/A'})`).join('; ') || 'N/A'}
-- Diet recommendations: ${JSON.stringify(sectionData?.dietRecommendations || [])}
-- Shadbala Summary: ${sectionData?.shadbalaSummary ? `Weakest planet: ${JSON.stringify(sectionData.shadbalaSummary.weakestPlanet)}, Strongest: ${JSON.stringify(sectionData.shadbalaSummary.strongestPlanet)}. Note: ${sectionData.shadbalaSummary.note}` : 'N/A'}
+- Health vulnerabilities (weak planets): ${(sectionData?.healthVulnerabilities || []).map(v => `${v.planet || v.name || 'Unknown'}: ${v.score || v.percentage || '?'}% (${v.dignity || ''}${v.weakestComponent?.name ? ', weakest: ' + v.weakestComponent.name + '=' + v.weakestComponent.value : ''})`).join('; ') || 'N/A'}
+- Diet recommendations: ${(sectionData?.dietRecommendations || []).map(d => `${d.planet}: score ${d.score}`).join(', ') || 'N/A'}
+- Shadbala Summary: ${sectionData?.shadbalaSummary ? `Weakest planet: ${JSON.stringify(sectionData.shadbalaSummary.weakestPlanet)}, Strongest: ${JSON.stringify(sectionData.shadbalaSummary.strongestPlanet)}` : 'N/A'}
 
 BIRTH QUALITY & HEALTH FOUNDATION:
 ${bd?.panchanga?.panchangaQuality ? `Birth Quality: ${bd.panchanga.panchangaQuality.score}/5 (${bd.panchanga.panchangaQuality.quality}) — ${bd.panchanga.panchangaQuality.score >= 4 ? 'Born at an excellent cosmic moment — natural vitality is HIGH, recovery from illness is fast' : bd.panchanga.panchangaQuality.score >= 3 ? 'Good birth quality — average resilience' : 'Challenged birth quality — health needs extra attention from early age. This person may have had a difficult birth (premature, incubator, birth complications). Do NOT say they were born strong.'}` : 'Birth quality data not available'}
@@ -1635,33 +1617,20 @@ ${sectionData?.primaryHealthConcern ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚠️ ${sectionData.primaryHealthConcern.organ} — ${sectionData.primaryHealthConcern.risk} RISK (${sectionData.primaryHealthConcern.indicators} indicators)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Diseases: ${(sectionData.primaryHealthConcern.diseases || []).join(', ')}
-• Vulnerable from: ${sectionData.primaryHealthConcern.vulnerableAge}
-• Why: ${sectionData.primaryHealthConcern.narrative}
-
-📋 COMPREHENSIVE REMEDIES FOR ${sectionData.primaryHealthConcern.organ.toUpperCase()}:
-🌿 Ayurvedic Medicines: ${(sectionData.primaryHealthConcern.remedies?.ayurvedic || []).join(' | ')}
-🍽️ Dietary Guidelines: ${(sectionData.primaryHealthConcern.remedies?.dietary || []).join(' | ')}
-🏃 Lifestyle Changes: ${(sectionData.primaryHealthConcern.remedies?.lifestyle || []).join(' | ')}
-💎 Gemstone Remedy: ${sectionData.primaryHealthConcern.remedies?.gemstone || 'Consult astrologer'}
-🕉️ Mantra: ${sectionData.primaryHealthConcern.remedies?.mantra || 'N/A'}
+AI: Interpret this organ risk using your medical knowledge. Determine likely diseases, vulnerable age ranges, and practical prevention strategies based on the organ name and risk level.
 ` : 'No primary health concern identified — all organs are at LOW or MODERATE risk.'}
 
 RANKED ORGANS BY RISK (sorted from highest to lowest risk):
 ${(sectionData?.rankedOrganRisks || []).map((o, i) => `${i + 1}. [${o.risk}] ${o.organ} (${o.indicators} indicators)`).join('\n')}
 
 ━━━ ALL ORGAN DETAILS ━━━
-${(sectionData?.organRisks || []).map(o => `• [${o.risk}] ${o.organ}
-  - Diseases: ${(o.diseases || []).join(', ')}
-  - Vulnerable from: ${o.vulnerableAge}
-  - Prevention: ${o.prevention}
-  - Chart reason: ${o.narrative}`).join('\n')}
+${(sectionData?.organRisks || []).map(o => `• [${o.risk}] ${o.organ} (${o.indicators} indicators)`).join('\n')}
 
 ━━━ 🍼 INFANT & EARLY CHILDHOOD HEALTH ━━━
 ${sectionData?.earlyLifeHealth?.severity !== 'LOW' ? `
 ⚠️ EARLY-LIFE HEALTH VULNERABILITY: ${sectionData?.earlyLifeHealth?.severity}
-${(sectionData?.earlyLifeHealth?.risks || []).map((r, i) => `${i+1}. ${r}`).join('\n')}
-Summary: ${sectionData?.earlyLifeHealth?.summary || 'N/A'}
+Risk indicators (${sectionData?.earlyLifeHealth?.riskCount || 0}):
+${(sectionData?.earlyLifeHealth?.indicators || []).map((r, i) => `${i+1}. ${r.type}${r.planets ? ' — planets: ' + r.planets.join(', ') : ''}${r.house ? ' — house ' + r.house : ''}${r.lord ? ' — ' + r.lord : ''}${r.score ? ' — score ' + r.score : ''}`).join('\n')}
 
 IMPORTANT: If this person's early-life health severity is HIGH or CRITICAL, you MUST dedicate a FULL PARAGRAPH to their infant/childhood health struggles. Describe:
 - What likely happened in the first days/weeks/months of life (based on the risk indicators above)
@@ -1675,7 +1644,7 @@ IMPORTANT: If this person's early-life health severity is HIGH or CRITICAL, you 
 
 ━━━ KIDNEY / URINARY SYSTEM (SPECIFIC) ━━━
 - Kidney risk level: ${sectionData?.kidneyRisk || 'N/A'}
-- Kidney chart analysis: ${sectionData?.kidneyNarrative || 'N/A'}
+- Kidney chart analysis: ${sectionData?.kidneyNarrative ? `Risk: ${sectionData.kidneyNarrative.risk}, Indicators: ${sectionData.kidneyNarrative.indicatorCount}, Types: ${(sectionData.kidneyNarrative.indicators || []).map(i => i.type).join(', ') || 'none'}` : 'N/A'}
 ${sectionData?.kidneyRisk === 'HIGH' ? `⚠️ MANDATORY: You MUST include a detailed, specific kidney/urinary health section. This person has HIGH kidney risk written into their chart. Describe: (1) early stone/UTI episodes likely in their late 20s, (2) a more serious kidney health crisis around age 50, (3) the strong possibility of surgical intervention, (4) specific kidney protection protocol — diet (avoid oxalate-rich foods, drink 3L water daily, coconut water, barley water/iridhu), herbal remedies (polpala tea, punarnava, gokshura), annual kidney function tests (creatinine, eGFR, urine microalbumin) from age 30 onwards.` : ''}
 
 ━━━ HEALTH DANGER PERIODS (ANTARDASHA-LEVEL) ━━━
@@ -1691,7 +1660,6 @@ ${sectionData?.nadiHealth ? `- Disease Verdict: ${sectionData.nadiHealth.disease
 - Longevity Verdict: ${sectionData.nadiHealth.longevityVerdict || 'N/A'} (${sectionData.nadiHealth.longevityStrength || 'N/A'})
 - Longevity-supporting planets: ${(sectionData.nadiHealth.longevityPlanets || []).join(', ') || 'N/A'}
 - Longevity Estimate: ${sectionData.nadiHealth.longevityEstimate ? `${sectionData.nadiHealth.longevityEstimate.estimatedYears} years — ${sectionData.nadiHealth.longevityEstimate.category}` : 'N/A'}
-- NOTE: ${sectionData.nadiHealth.note}
 USE THIS: Disease verdict tells if health problems are PROMISED or DENIED. Disease planets tell which DASHA periods bring illness. Longevity estimate gives lifespan range. Cross-reference with organ risk map for precision.` : 'Nadi health analysis not available'}
 
 ⚠️ PRECISION NOTE: Health vulnerability scores are based on 6-component Shadbala analysis. The organ risk map above is computed from house positions, planetary strengths, and aspect patterns — use it to give HIGHLY SPECIFIC health advice for each organ system.
@@ -1807,13 +1775,15 @@ ENEMY PROFILE: ${sectionData?.enemyProfile || 'N/A'}
 - House: ${sectionData?.sixthLord?.house || 'N/A'}
 
 LEGAL INDICATORS:
-${(sectionData?.legalIndicators || []).map((ind, i) => `${i+1}. ${ind}`).join('\n') || 'None detected'}
+${sectionData?.legalIndicators ? `- Malefics in 6th: ${(sectionData.legalIndicators.maleficsIn6th || []).join(', ') || 'none'}
+- Malefics in 8th: ${(sectionData.legalIndicators.maleficsIn8th || []).join(', ') || 'none'}
+- Malefics in 12th: ${(sectionData.legalIndicators.maleficsIn12th || []).join(', ') || 'none'}
+- Mars in 6th: ${sectionData.legalIndicators.marsIn6th}, Saturn in 6th: ${sectionData.legalIndicators.saturnIn6th}, Rahu in 6th: ${sectionData.legalIndicators.rahuIn6th}` : 'None detected'}
 
 LEGAL CASE PERIODS:
-${(sectionData?.legalCasePeriods || []).map(p => `- ${p.lord || 'N/A'}: ${p.period || 'N/A'} — ${p.reason || 'potential legal matter'}`).join('\n') || 'None detected'}
+${(sectionData?.legalCasePeriods || []).map(p => `- ${p.lord || 'N/A'}: ${p.period || 'N/A'}`).join('\n') || 'None detected'}
 
-PROTECTION ADVICE:
-${(sectionData?.protectionAdvice || []).map((a, i) => `${i+1}. ${a}`).join('\n') || 'N/A'}
+PROTECTION ADVICE: AI should generate based on chart data above
 
 CROSS-REFERENCE DATA:
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'} (legal separation risk if severe)
@@ -1895,10 +1865,11 @@ CROSS-REFERENCE DATA:
 - Mercury Shadbala: ${allSections?.mentalHealth?.mercuryShadbala ? `${allSections.mentalHealth.mercuryShadbala.percentage}% — ${allSections.mentalHealth.mercuryShadbala.strength}` : 'N/A'}
 - Moon Shadbala: ${allSections?.mentalHealth?.moonShadbala ? `${allSections.mentalHealth.moonShadbala.percentage}% — ${allSections.mentalHealth.moonShadbala.strength}` : 'N/A'}
 - D24 Education Chart: ${allSections?.mentalHealth?.education?.chaturvimshamsha ? `D24 Lagna: ${allSections.mentalHealth.education.chaturvimshamsha.d24Lagna}, Mercury D24: ${allSections.mentalHealth.education.chaturvimshamsha.d24Mercury}, Jupiter D24: ${allSections.mentalHealth.education.chaturvimshamsha.d24Jupiter}` : 'N/A'}
-- Education Assessment: ${allSections?.mentalHealth?.education?.assessment || 'N/A'}
+- Mercury Score: ${allSections?.mentalHealth?.education?.mercuryScore || 'N/A'}%
+- Moon Score: ${allSections?.mentalHealth?.education?.moonScore || 'N/A'}%
 - 4th Lord (foundation): ${allSections?.mentalHealth?.education?.fourthLord || 'N/A'} in house ${allSections?.mentalHealth?.education?.fourthLordHouse || 'N/A'}
 - 5th Lord (intellect): ${allSections?.mentalHealth?.education?.fifthLord || 'N/A'} in house ${allSections?.mentalHealth?.education?.fifthLordHouse || 'N/A'}
-- Mental stability: ${allSections?.mentalHealth?.mentalStability || 'N/A'}
+- Mental stability: ${allSections?.mentalHealth?.mentalStability ? `Moon score ${allSections.mentalHealth.mentalStability.moonScore}, Moon H${allSections.mentalHealth.mentalStability.moonHouse}${allSections.mentalHealth.mentalStability.vishYoga ? ', Vish Yoga' : ''}${allSections.mentalHealth.mentalStability.moonInDusthana ? ', Moon in dusthana' : ''}` : 'N/A'}
 - Career planet ranking: ${(allSections?.career?.careerPlanetRanking || []).map(p => `${p.planet}(${p.dignity}, H${p.house})`).join(', ') || 'N/A'}
 - 10th house sign: ${allSections?.career?.tenthHouseSign ? `${allSections.career.tenthHouseSign.rashi} (${allSections.career.tenthHouseSign.element}, ${allSections.career.tenthHouseSign.modality})` : 'N/A'}
 - Nadi career type: ${allSections?.career?.nadiCareer?.careerType?.type || 'N/A'}
@@ -1944,7 +1915,7 @@ Current life period: ${currentDasha} main period, ${currentAD} sub-period
 OVERALL LUCK SCORE: ${sectionData?.overallLuck || 'N/A'}
 
 LUCK INDICATORS:
-${(sectionData?.luckIndicators || []).map((ind, i) => `${i+1}. ${ind}`).join('\n') || 'None detected'}
+${(sectionData?.luckIndicators || []).map((ind, i) => `${i+1}. ${ind.type}${ind.house ? ' (house ' + ind.house + ')' : ''}${ind.strength ? ' (' + ind.strength + ')' : ''}`).join('\n') || 'None detected'}
 
 LOTTERY INDICATION: ${sectionData?.lotteryIndication || 'N/A'}
 INHERITANCE INDICATION: ${sectionData?.inheritanceIndication || 'N/A'}
@@ -2011,34 +1982,33 @@ Current life period: ${currentDasha} main period, ${currentAD} sub-period
 
 ━━━ COMPLETE SURPRISE INSIGHTS ENGINE DATA (USE ALL — NO HALLUCINATION) ━━━
 
-PHYSICAL APPEARANCE: ${sectionData?.appearance ? `Build: ${sectionData.appearance.build || 'N/A'}, Complexion: ${sectionData.appearance.complexion || 'N/A'}, Face: ${sectionData.appearance.faceShape || 'N/A'}, Eyes: ${sectionData.appearance.eyes || 'N/A'}, Height: ${sectionData.appearance.height || 'N/A'}, Distinctive: ${sectionData.appearance.distinctive || 'N/A'}` : 'N/A'}
+PHYSICAL APPEARANCE: N/A (AI interprets from Lagna/planets — see physicalProfile section)
 
 BODY MARKS/SCARS:
-${(sectionData?.bodyMarks || []).map((m, i) => `${i+1}. ${m.location || m} — ${m.type || 'mark/mole'}${(m.location || m || '').includes('D3') || (m.location || m || '').includes('Drekkana') ? ' [PRECISE — from D3 Drekkana divisional chart analysis]' : ''}`).join('\n') || 'None predicted'}
-NOTE: Body marks now use DUAL analysis — traditional house placement AND D3 Drekkana divisional chart. D3-based marks are especially precise for locating scars, moles, and birthmarks on specific body parts.
+${(sectionData?.bodyMarks || []).map((m, i) => `${i+1}. ${m.planet || 'Unknown'} in H${m.house || '?'} — type: ${m.type || 'mark'}${m.d3Rashi ? ` [D3 Drekkana: ${m.d3Rashi}]` : ''}`).join('\n') || 'None predicted'}
+NOTE: Body marks use DUAL analysis — traditional house placement AND D3 Drekkana divisional chart. D3-based marks are especially precise for locating scars, moles, and birthmarks on specific body parts.
 
-NUMBER OF SIBLINGS: ${sectionData?.numberOfSiblings || 'N/A'}
-FATHER PROFILE: ${sectionData?.fatherProfile || 'N/A'}
-MOTHER PROFILE: ${sectionData?.motherProfile || 'N/A'}
+NUMBER OF SIBLINGS: ${sectionData?.numberOfSiblings ? `Count: ${sectionData.numberOfSiblings.count}, Elder: ${sectionData.numberOfSiblings.elder}, Younger: ${sectionData.numberOfSiblings.younger}` : 'N/A'}
+FATHER PROFILE: ${sectionData?.fatherProfile ? `Sun H${sectionData.fatherProfile.sunHouse} (score ${sectionData.fatherProfile.sunScore}, ${sectionData.fatherProfile.sunDignity}), 9th lord: ${sectionData.fatherProfile.lord9} in H${sectionData.fatherProfile.lord9House} (score ${sectionData.fatherProfile.lord9Score}), H9 strength: ${sectionData.fatherProfile.h9Strength}${sectionData.fatherProfile.hasNeechabhanga ? ', has Neechabhanga' : ''}` : 'N/A'}
+MOTHER PROFILE: ${sectionData?.motherProfile ? `Moon H${sectionData.motherProfile.moonHouse} (score ${sectionData.motherProfile.moonScore}), 4th lord in H${sectionData.motherProfile.lord4House}${sectionData.motherProfile.lord4InDusthana ? ' (dusthana!)' : ''}, H4: ${sectionData.motherProfile.h4Strength}${sectionData.motherProfile.moonSaturnConjunct ? ', Moon-Saturn conjunct' : ''}` : 'N/A'}
 
 SLEEP PATTERN: ${sectionData?.sleepPattern || 'N/A'}
 FOOD PREFERENCE: ${sectionData?.foodPreference || 'N/A'}
 PET AFFINITY: ${sectionData?.petAffinity || 'N/A'}
 HANDEDNESS: ${sectionData?.handedness || 'N/A'}
-HIDDEN TALENT: ${sectionData?.hiddenTalent || 'N/A'}
-SOUL PURPOSE: ${sectionData?.soulPurpose || 'N/A'}
+HIDDEN TALENT: ${sectionData?.hiddenTalent ? `5th house planets: ${(sectionData.hiddenTalent.fifthHousePlanets || []).join(', ') || 'none'}, Amatyakaraka: ${sectionData.hiddenTalent.amatyakaraka?.planet || 'N/A'} (${sectionData.hiddenTalent.amatyakaraka?.dignity || ''}), 5th lord: ${sectionData.hiddenTalent.fifthLord} in H${sectionData.hiddenTalent.fifthLordHouse}, Karakamsha: ${sectionData.hiddenTalent.karakamshaRashi || 'N/A'}` : 'N/A'}
+SOUL PURPOSE: ${sectionData?.soulPurpose ? `Atmakaraka: ${sectionData.soulPurpose.planet} in ${sectionData.soulPurpose.rashi}, Karakamsha: ${sectionData.soulPurpose.karakamshaRashi || 'N/A'}` : 'N/A'}
 
 PARTNER'S FIRST LETTER — WEIGHTED MULTI-METHOD (6 sources):
 - ⭐ TOP 3 PREDICTED: ${(sectionData?.partnerFirstLetter?.topLetters || []).join(', ') || 'N/A'}
 - All possible: ${(sectionData?.partnerFirstLetter?.allPossibleLetters || []).join(', ') || 'N/A'}
-- Scoring: ${sectionData?.partnerFirstLetter?.note || 'N/A'}
 
 CROSS-REFERENCE DATA:
 - Estimated children: ${allSections?.children?.estimatedChildren?.count || 'N/A'} (${allSections?.children?.estimatedChildren?.genderTendency || 'N/A'})
 - Siblings from familyPortrait: count ${allSections?.familyPortrait?.siblings?.estimatedCount?.count || 'N/A'}, elder ${allSections?.familyPortrait?.siblings?.estimatedCount?.estimatedElderSiblings || 'N/A'}, younger ${allSections?.familyPortrait?.siblings?.estimatedCount?.estimatedYoungerSiblings || 'N/A'}
-- Mental stability: ${allSections?.mentalHealth?.mentalStability || 'N/A'}
+- Mental stability: ${allSections?.mentalHealth?.mentalStability ? `Moon score ${allSections.mentalHealth.mentalStability.moonScore}, Moon H${allSections.mentalHealth.mentalStability.moonHouse}${allSections.mentalHealth.mentalStability.vishYoga ? ', Vish Yoga present' : ''}${allSections.mentalHealth.mentalStability.moonInDusthana ? ', Moon in dusthana' : ''}` : 'N/A'}
 - Childhood trauma level: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (${allSections?.mentalHealth?.childhoodTrauma?.score || 0}/${allSections?.mentalHealth?.childhoodTrauma?.maxScore || 17})
-${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? '- Trauma indicators: ' + allSections.mentalHealth.childhoodTrauma.indicators.join(' | ') : ''}
+${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? '- Trauma indicators: ' + allSections.mentalHealth.childhoodTrauma.indicators.map(ind => ind.type || JSON.stringify(ind)).join(' | ') : ''}
 - Depression risk: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'}
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'}${allSections?.marriage?.marriageAfflictions?.isMarriageDenied ? ' ⛔ MARRIAGE DENIED — partner letter predictions still valid (describes potential partner if they were to meet someone) but frame as hypothetical' : ''}
 
@@ -2057,21 +2027,21 @@ ${sectionData?.partnerFirstLetter?.topLetters ? `⭐ TOP 3 LETTERS: ${sectionDat
 ${(sectionData?.partnerFirstLetter?.letterDetails || []).map(d => `  ${d.letter}: score ${d.score} (from: ${d.sources.join(' + ')})`).join('\n')}
 ${sectionData?.partnerFirstLetter?.allPossibleLetters?.length > 3 ? `Secondary letters: ${sectionData.partnerFirstLetter.allPossibleLetters.slice(3).join(', ')}` : ''}
 
-SIBLING COUNT: The number ${sectionData?.numberOfSiblings || 'N/A'} is based on multi-factor scoring (3rd house planets, aspects, lord strength, lord placement). Present this with confidence.
+SIBLING COUNT: ${sectionData?.numberOfSiblings ? `Total: ${sectionData.numberOfSiblings.count}, Elder: ${sectionData.numberOfSiblings.elder}, Younger: ${sectionData.numberOfSiblings.younger}` : 'N/A'} — based on multi-factor scoring (3rd house planets, aspects, lord strength, lord placement). Present this with confidence.
 
-FATHER PROFILE: "${sectionData?.fatherProfile || 'N/A'}" — based on multi-factor analysis (Sun strength, Sun house, 9th lord house, angular/dusthana analysis). Be detailed about the father.
+FATHER PROFILE: ${sectionData?.fatherProfile ? `Sun H${sectionData.fatherProfile.sunHouse} (score ${sectionData.fatherProfile.sunScore}, ${sectionData.fatherProfile.sunDignity}), 9th lord ${sectionData.fatherProfile.lord9} in H${sectionData.fatherProfile.lord9House}, H9 strength: ${sectionData.fatherProfile.h9Strength}${sectionData.fatherProfile.hasNeechabhanga ? ', Neechabhanga' : ''}` : 'N/A'} — based on multi-factor analysis. Be detailed about the father.
 
-MOTHER PROFILE: "${sectionData?.motherProfile || 'N/A'}" — based on multi-factor analysis (Moon strength, 4th house, Moon house, 4th lord house). Be detailed about the mother.
+MOTHER PROFILE: ${sectionData?.motherProfile ? `Moon H${sectionData.motherProfile.moonHouse} (score ${sectionData.motherProfile.moonScore}), 4th lord in H${sectionData.motherProfile.lord4House}${sectionData.motherProfile.lord4InDusthana ? ' (dusthana!)' : ''}, H4: ${sectionData.motherProfile.h4Strength}${sectionData.motherProfile.moonSaturnConjunct ? ', Moon-Saturn conjunct' : ''}` : 'N/A'} — based on multi-factor analysis. Be detailed about the mother.
 
-EMOTIONAL PATTERN: "${allSections?.mentalHealth?.mentalStability || 'N/A'}" — this reveals whether the person had childhood emotional struggles, trauma, or a difficult home environment. If this indicates Moon-Saturn conjunction or childhood trauma, WEAVE IT into the family section — mention that the home environment may have been emotionally cold or difficult.
+EMOTIONAL PATTERN: ${allSections?.mentalHealth?.mentalStability ? `Moon score ${allSections.mentalHealth.mentalStability.moonScore}, Moon H${allSections.mentalHealth.mentalStability.moonHouse}${allSections.mentalHealth.mentalStability.vishYoga ? ', Vish Yoga present' : ''}${allSections.mentalHealth.mentalStability.moonInDusthana ? ', Moon in dusthana' : ''}` : 'N/A'} — this reveals whether the person had childhood emotional struggles, trauma, or a difficult home environment. If Vish Yoga or Moon in dusthana, WEAVE IT into the family section — mention that the home environment may have been emotionally cold or difficult.
 
 CHILDHOOD TRAUMA LEVEL: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (Score: ${allSections?.mentalHealth?.childhoodTrauma?.score || 0}/${allSections?.mentalHealth?.childhoodTrauma?.maxScore || 17})
-${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? 'TRAUMA INDICATORS:\n' + allSections.mentalHealth.childhoodTrauma.indicators.map(i => '  🔴 ' + i).join('\n') : 'No childhood trauma indicators'}
+${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? 'TRAUMA INDICATORS:\n' + allSections.mentalHealth.childhoodTrauma.indicators.map(i => `  🔴 ${i.type || 'unknown'}${i.lord ? ` (${i.lord} in H${i.house})` : i.house ? ` (H${i.house})` : i.yoga ? ` — ${i.yoga}` : ''}`).join('\n') : 'No childhood trauma indicators'}
 ${allSections?.mentalHealth?.childhoodTrauma?.level === 'SEVERE' || allSections?.mentalHealth?.childhoodTrauma?.level === 'HIGH' ? '\n🚨 THIS PERSON HAD A DIFFICULT CHILDHOOD. The engine detected multiple layers of early-life suffering. When writing about the MOTHER and FATHER, you MUST acknowledge this pain. Describe the ACTUAL family dynamics — cold/absent/struggling parents, emotional neglect, disrupted home — based on the indicators above. Do NOT write a generic happy family narrative when the data shows trauma.' : ''}
 
 DEPRESSION RISK: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'} — if HIGH, the family environment contributed. Acknowledge this in the family narrative.
 
-SOUL PURPOSE: "${sectionData?.soulPurpose ? (typeof sectionData.soulPurpose === 'object' ? `${sectionData.soulPurpose.planet} in ${sectionData.soulPurpose.rashi} — ${sectionData.soulPurpose.meaning}` : sectionData.soulPurpose) : 'N/A'}"
+SOUL PURPOSE: "${sectionData?.soulPurpose ? (typeof sectionData.soulPurpose === 'object' ? `${sectionData.soulPurpose.planet} in ${sectionData.soulPurpose.rashi}` : sectionData.soulPurpose) : 'N/A'}"
 KARAKAMSHA (Soul's deepest craving): ${sectionData?.soulPurpose?.karakamsha || 'N/A'} — THIS is the most specific soul description. Use it to paint a vivid picture of what this person's soul truly wants in this lifetime.
 
 ═══ LOVE LANGUAGE & ATTACHMENT STYLE ═══
@@ -2106,36 +2076,39 @@ KARAKAMSHA (Soul's deepest craving): ${sectionData?.soulPurpose?.karakamsha || '
 - What They Hide: ${sectionData?.publicVsPrivate?.hiddenSelf || 'N/A'}
 
 ═══ MONEY PERSONALITY ═══
-- Money Archetype: ${sectionData?.moneyPersonality?.archetype || 'N/A'}
-- Impulse Buying: ${sectionData?.moneyPersonality?.impulseBuying || 'N/A'} (Score: ${sectionData?.moneyPersonality?.impulseScore || 0})
+- Impulse Score: ${sectionData?.moneyPersonality?.impulseScore || 0}
+- Venus H${sectionData?.moneyPersonality?.venusHouse || '?'}, Saturn H${sectionData?.moneyPersonality?.saturnHouse || '?'}, Rahu H${sectionData?.moneyPersonality?.rahuHouse || '?'}, Jupiter H${sectionData?.moneyPersonality?.jupiterHouse || '?'}
+- Lagna Element: ${sectionData?.moneyPersonality?.lagnaElement || 'N/A'}
 
 ═══ LIFE SHIFT MOMENTS (Age-Specific "How Did You Know" Anchors) ═══
-${(sectionData?.lifeShiftMoments || []).map(s => `- ${s.description}`).join('\n') || 'No major life shifts calculated'}
+${(sectionData?.lifeShiftMoments || []).map(s => `- Age ${s.age} (${s.year}): Dasha shift from ${s.from} to ${s.to}`).join('\n') || 'No major life shifts calculated'}
 
 ═══ ADDICTION VULNERABILITIES ═══
-${(sectionData?.addictionProfile || []).map((a, i) => `${i+1}. ${a}`).join('\n') || 'No vulnerabilities flagged'}
+${sectionData?.addictionProfile ? `- Rahu H${sectionData.addictionProfile.rahuHouse}, Venus H${sectionData.addictionProfile.venusHouse}, Moon H${sectionData.addictionProfile.moonHouse}, Mars H${sectionData.addictionProfile.marsHouse}
+- Lagna element: ${sectionData.addictionProfile.lagnaElement}, Moon element: ${sectionData.addictionProfile.moonElement}` : 'No vulnerability data'}
 
 ═══ COMPATIBILITY QUICK-CARDS ═══
-- Best Friend Sign: ${sectionData?.compatibilityCards?.bestFriendSign || 'N/A'}
-- Worst Enemy Sign: ${sectionData?.compatibilityCards?.worstEnemySign || 'N/A'}
-- Ideal Boss Sign: ${sectionData?.compatibilityCards?.idealBossSign || 'N/A'}
-- Romantic Chemistry Sign: ${sectionData?.compatibilityCards?.romanticChemistry || 'N/A'}
-- Life Partner Sign: ${sectionData?.compatibilityCards?.lifePartnerSign || 'N/A'}
+- 11th House Sign (friends): ${sectionData?.compatibilityCards?.h11Sign || 'N/A'}
+- 6th House Sign (enemies): ${sectionData?.compatibilityCards?.h6Sign || 'N/A'}
+- 10th House Sign (boss): ${sectionData?.compatibilityCards?.h10Sign || 'N/A'}
+- 7th House Sign (romance): ${sectionData?.compatibilityCards?.h7Sign || 'N/A'}
+- 5th House Sign (chemistry): ${sectionData?.compatibilityCards?.h5Sign || 'N/A'}
 
 ═══ NADI CROSS-REFERENCES (for enriching surprise insights) ═══
-- Nadi Career: ${allSections?.career?.nadiCareer?.careerType || 'N/A'} | Sectors: ${(allSections?.career?.nadiCareer?.careerSectors || []).slice(0, 3).map(s => s.sector || s.planet).join(', ') || 'N/A'}
+- Nadi Career: ${allSections?.career?.nadiCareer?.careerType?.type || allSections?.career?.nadiCareer?.careerType || 'N/A'} | Sectors: ${(allSections?.career?.nadiCareer?.careerSectors || []).slice(0, 3).map(s => s.sector || s.planet).join(', ') || 'N/A'}
 - Nadi Marriage: ${allSections?.marriage?.nadiMarriage?.verdict || 'N/A'} (${allSections?.marriage?.nadiMarriage?.strength || 'N/A'})
 - Nadi Health longevity: ${allSections?.health?.nadiHealth?.longevityEstimate?.estimatedYears || 'N/A'}yr
 - Nadi Education: grade ${allSections?.education?.nadiEducation?.overallGrade || 'N/A'}, strength ${allSections?.education?.nadiEducation?.strength || 'N/A'}
 USE: Nadi verdicts CONFIRM or DENY surprise insights. If Nadi marriage is WEAK and second marriage score is HIGH, the combination is VERY strong evidence for relationship disruption.
 
 ═══ 🔥 SECOND MARRIAGE & DIVORCE ANALYSIS ═══
-- Second Marriage Probability: ${sectionData?.secondMarriage?.probability || 'N/A'}
-- Divorce Risk: ${sectionData?.secondMarriage?.divorceRisk || 'N/A'}
-- Score: ${sectionData?.secondMarriage?.score || 0}/15
-- 7th House Sign: ${sectionData?.secondMarriage?.h7Rashi || 'N/A'}
-- Key Indicators:
-${(sectionData?.secondMarriage?.reasons || []).map((r, i) => `  ${i+1}. ${r}`).join('\n') || '  None'}
+- Second Marriage Score: ${sectionData?.secondMarriage?.score || 0}/15
+- Divorce sub-score: ${sectionData?.secondMarriage?.divorceScore || 0}/8
+- 7th House Sign: ${sectionData?.secondMarriage?.h7Rashi || 'N/A'} ${sectionData?.secondMarriage?.isDualSign ? '(DUAL SIGN)' : ''}
+- 7th House Planets: ${(sectionData?.secondMarriage?.h7Planets || []).join(', ') || 'None'}
+- 7th Lord in House: ${sectionData?.secondMarriage?.lord7House || 'N/A'}
+- Venus-Rahu Conjunct: ${sectionData?.secondMarriage?.venusRahuConjunct ? 'YES' : 'No'}
+- Venus Retrograde: ${sectionData?.secondMarriage?.venusRetrograde ? 'YES' : 'No'}
 
 ═══ 🔥 MONASTIC / RENUNCIATION TENDENCY (Sanyasa Yoga) ═══
 - Monk/Renunciation Score: ${sectionData?.monasticTendency?.score || 0}
@@ -2162,11 +2135,10 @@ ${(sectionData?.famePotential?.indicators || []).map((ind, i) => `  ${i+1}. ${in
 - Future Direction (Rahu path): ${sectionData?.pastLifeStory?.futureDirection || 'N/A'}
 
 ═══ 🔥 DANGER PERIODS (Crisis/Accident Risk Windows) ═══
-${(sectionData?.dangerPeriods || []).map((d, i) => `${i+1}. ${d.type} — ${d.period} | Severity: ${d.severity}\n   Advice: ${d.advice}`).join('\n') || 'No major danger periods'}
+${(sectionData?.dangerPeriods || []).map((d, i) => `${i+1}. ${d.type} — ${d.period} | Severity: ${d.severity}`).join('\n') || 'No major danger periods'}
 
 ═══ 🔥 SPIRIT ANIMAL ═══
 - Your Spirit Animal: ${sectionData?.spiritAnimal?.animal || 'N/A'}
-- Why: ${sectionData?.spiritAnimal?.meaning || 'N/A'}
 
 ═══ 🔥 CELEBRITY CHART TWIN ═══
 - Celebrity Match: ${sectionData?.celebrityTwin?.name || 'N/A'}
@@ -2210,8 +2182,11 @@ SECTION STRUCTURE (dedicate a FULL paragraph to each):
 
 Skip any area where data is N/A. Do NOT add generic predictions not supported by the data.
 
-🔥 PLANETARY ROASTS (use 2-3 of these for the Cosmic Roast paragraph at the end):
-${(sectionData?.planetaryRoasts || []).map(r => `- [${r.source}]: "${r.roast}"`).join('\n') || 'No roast data available'}
+🔥 PLANETARY ROAST DATA (use to create a funny, affectionate roasting paragraph):
+${sectionData?.planetaryRoasts ? `- Lagna: ${sectionData.planetaryRoasts.lagnaSign} (${sectionData.planetaryRoasts.lagnaElement})
+- Planet Houses: ${Object.entries(sectionData.planetaryRoasts.planetHouses || {}).map(([p, h]) => `${p}=H${h}`).join(', ')}
+- Retrograde: ${(sectionData.planetaryRoasts.retroPlanets || []).join(', ') || 'none'}
+- Debilitated: ${(sectionData.planetaryRoasts.debilitatedPlanets || []).join(', ') || 'none'}` : 'No roast data available'}
 
 REMINDER: Plain language — no technical chart jargon.
 ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word. දෙමළ (Tamil) අකුරු හෝ වචන කිසිසේත් භාවිතා නොකරන්න.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish (Sinhala words in English letters).' : 'Write in clear, conversational English.'}`,
@@ -2222,56 +2197,71 @@ ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). No
       prompt: `Translate the following family data into an honest, vivid family portrait. Describe each family member as a REAL person. Be honest about difficult dynamics when the data shows them.
 
 ━━━ MOTHER ━━━
-- Personality: ${sectionData?.mother?.personality || 'N/A'}
-- Occupation: ${sectionData?.mother?.occupation || 'N/A'}
+- 4th House Analysis: ${JSON.stringify(sectionData?.mother?.h4Analysis || {})}
+- 4th Lord: ${sectionData?.mother?.h4Lord?.name || 'N/A'} in House ${sectionData?.mother?.h4Lord?.house || 'N/A'}
+- Moon Position: House ${sectionData?.mother?.moonPosition?.house || 'N/A'}, Rashi: ${sectionData?.mother?.moonPosition?.rashiEnglish || 'N/A'}
 - Moon strength: ${sectionData?.mother?.moonShadbala ? `${sectionData.mother.moonShadbala.percentage}% — ${sectionData.mother.moonShadbala.strength}` : 'N/A'}
-- Mother significator: ${sectionData?.mother?.matrukaraka || 'N/A'}
+- Mother significator (Matrukaraka): ${sectionData?.mother?.matrukaraka ? `${sectionData.mother.matrukaraka.planet} in ${sectionData.mother.matrukaraka.rashi}` : 'N/A'}
 - D12 parent chart: ${sectionData?.mother?.d12ParentChart ? JSON.stringify(sectionData.mother.d12ParentChart) : 'N/A'}
-- Family separation: ${sectionData?.mother?.familySeparation || 'N/A'}
+- Mother is homemaker pattern: ${sectionData?.mother?.motherIsHomemaker || false}
+- Abandonment risk: ${sectionData?.mother?.hasStrongAbandonmentRisk ? 'STRONG' : sectionData?.mother?.hasAbandonmentRisk ? 'Moderate' : 'Low'}
 - Health risks: ${JSON.stringify(sectionData?.mother?.healthRisks || [])}
-- Top 3 most vulnerable organs: ${JSON.stringify(sectionData?.mother?.healthRisks?.slice(0, 3) || [])}
+- Kidney risk: high=${sectionData?.mother?.kidneyRisk?.high || false}, indicators=${sectionData?.mother?.kidneyRisk?.indicatorCount || 0}
 - Health crisis windows (by native's age): ${JSON.stringify(sectionData?.mother?.healthCrisisWindows || [])}
 - Health event periods: ${JSON.stringify(sectionData?.mother?.motherHealthPeriods || [])}
 - Life struggles: ${JSON.stringify(sectionData?.mother?.lifestrug || [])}
-- Your bond with mother: ${sectionData?.mother?.bond || 'N/A'}
-- Remedies: ${JSON.stringify(sectionData?.mother?.remedies || [])}
+- Bond with mother: ${JSON.stringify(sectionData?.mother?.bond || {})}
+- Malefics in 4th: ${(sectionData?.mother?.maleficsIn4th || []).join(', ') || 'None'}
+- Lord 4 in Dusthana: ${sectionData?.mother?.lord4InDusthanFamily || false}
 
 ━━━ FATHER ━━━
-- Personality: ${sectionData?.father?.personality || 'N/A'}
-- Career: ${sectionData?.father?.fatherCareer || 'N/A'}
+- 9th House Analysis: ${JSON.stringify(sectionData?.father?.h9Analysis || {})}
+- 9th Lord: ${sectionData?.father?.h9Lord?.name || 'N/A'} in House ${sectionData?.father?.h9Lord?.house || 'N/A'}
+- Sun Position: House ${sectionData?.father?.sunPosition?.house || 'N/A'}, Rashi: ${sectionData?.father?.sunPosition?.rashiEnglish || 'N/A'}
 - Sun strength: ${sectionData?.father?.sunShadbala ? `${sectionData.father.sunShadbala.percentage}% — ${sectionData.father.sunShadbala.strength}` : 'N/A'}
-- Father significator: ${sectionData?.father?.pitrakaraka || 'N/A'}
+- Father significator (Pitrakaraka): ${sectionData?.father?.pitrakaraka ? `${sectionData.father.pitrakaraka.planet} in ${sectionData.father.pitrakaraka.rashi}` : 'N/A'}
 - D12 parent chart: ${sectionData?.father?.d12ParentChart ? JSON.stringify(sectionData.father.d12ParentChart) : 'N/A'}
+- Father career analysis: ${JSON.stringify(sectionData?.father?.fatherCareer || {})}
 - Health risks: ${JSON.stringify(sectionData?.father?.healthRisks || [])}
 - Life struggles: ${JSON.stringify(sectionData?.father?.lifestrug || [])}
 - Father event periods: ${JSON.stringify(sectionData?.father?.fatherEventPeriods || [])}
-- Your bond with father: ${sectionData?.father?.bond || 'N/A'}
-- Remedies: ${JSON.stringify(sectionData?.father?.remedies || [])}
+- Bond with father: ${JSON.stringify(sectionData?.father?.bond || {})}
+- Lord 9 in Dusthana: ${sectionData?.father?.lord9InDusthan || false}
+- Malefics in 9th: ${(sectionData?.father?.maleficsIn9th || []).join(', ') || 'None'}
 
 ━━━ SIBLINGS ━━━
+- 3rd House Analysis: ${JSON.stringify(sectionData?.siblings?.h3Analysis || {})}
+- 3rd Lord: ${sectionData?.siblings?.h3Lord?.name || 'N/A'} in House ${sectionData?.siblings?.h3Lord?.house || 'N/A'}
+- Mars Position: House ${sectionData?.siblings?.marsPosition?.house || 'N/A'}, Rashi: ${sectionData?.siblings?.marsPosition?.rashiEnglish || 'N/A'}
 - Estimated count: ${sectionData?.siblings?.estimatedCount?.count || 'N/A'}
 - Elder: ${sectionData?.siblings?.estimatedCount?.estimatedElderSiblings || 'N/A'}, Younger: ${sectionData?.siblings?.estimatedCount?.estimatedYoungerSiblings || 'N/A'}
 - Gender breakdown: ${sectionData?.siblings?.estimatedCount?.gender || 'N/A'}
 - Brother karaka: ${sectionData?.siblings?.estimatedCount?.brotherKaraka || 'N/A'}, Sister karaka: ${sectionData?.siblings?.estimatedCount?.sisterKaraka || 'N/A'}
-- Sibling significator: ${sectionData?.siblings?.bhratrkaraka || 'N/A'}
+- Sibling significator (Bhratrkaraka): ${sectionData?.siblings?.bhratrkaraka ? `${sectionData.siblings.bhratrkaraka.planet} in ${sectionData.siblings.bhratrkaraka.rashi}` : 'N/A'}
 - D3 sibling chart: ${sectionData?.siblings?.d3SiblingChart ? JSON.stringify(sectionData.siblings.d3SiblingChart) : 'N/A'}
-- Characters: ${JSON.stringify(sectionData?.siblings?.characters || [])}
-- Health risks: ${JSON.stringify(sectionData?.siblings?.healthRisks || [])}
-- Life struggles: ${JSON.stringify(sectionData?.siblings?.lifestrug || [])}
+- Planets in 3rd (character indicators): ${JSON.stringify(sectionData?.siblings?.planetsIn3rd || [])}
+- Lord 3 in Dusthana: ${sectionData?.siblings?.lord3InDusthan || false}
+- Malefics in 3rd: ${(sectionData?.siblings?.maleficsIn3rd || []).join(', ') || 'None'}
+- Benefics in 3rd: ${(sectionData?.siblings?.beneficsIn3rd || []).join(', ') || 'None'}
 - Event periods: ${JSON.stringify(sectionData?.siblings?.eventPeriods || [])}
-- Your relationship: ${sectionData?.siblings?.relationship || 'N/A'}
-- Remedies: ${JSON.stringify(sectionData?.siblings?.remedies || [])}
 
 ━━━ FAMILY KARMA ━━━
-- Family karma: ${JSON.stringify(sectionData?.familyKarmaSummary || [])}
-- Inherited traits: ${JSON.stringify(sectionData?.inheritedTraits || [])}
+- Family karma factors: ${JSON.stringify(sectionData?.familyKarmaFactors || {})}
+- Inherited trait factors: ${JSON.stringify(sectionData?.inheritedTraitFactors || {})}
+
+━━━ PARENT HEALTH PREDICTIONS ━━━
+${sectionData?.parentHealthPredictions ? `Mother Health Score: ${sectionData.parentHealthPredictions.mother?.overallHealthScore || 'N/A'}%, Moon: ${sectionData.parentHealthPredictions.mother?.moonScore || 'N/A'}% (${sectionData.parentHealthPredictions.mother?.moonDignity || 'N/A'})
+Mother Critical Periods: ${JSON.stringify(sectionData.parentHealthPredictions.mother?.criticalPeriods || [])}
+Father Health Score: ${sectionData.parentHealthPredictions.father?.overallHealthScore || 'N/A'}%, Sun: ${sectionData.parentHealthPredictions.father?.sunScore || 'N/A'}% (${sectionData.parentHealthPredictions.father?.sunDignity || 'N/A'})
+Father Critical Periods: ${JSON.stringify(sectionData.parentHealthPredictions.father?.criticalPeriods || [])}
+Protective Factors: ${JSON.stringify(sectionData.parentHealthPredictions.protectiveFactors || {})}` : 'N/A'}
 
 ━━━ CROSS-REFERENCE ━━━
 - Children: ${allSections?.children?.estimatedChildren?.count || 'N/A'} (${allSections?.children?.estimatedChildren?.genderTendency || 'N/A'})
 - Childhood trauma: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (${allSections?.mentalHealth?.childhoodTrauma?.score || 0}/${allSections?.mentalHealth?.childhoodTrauma?.maxScore || 17})
-${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? allSections.mentalHealth.childhoodTrauma.indicators.map(i => '  🔴 ' + i).join('\n') : ''}
+${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? allSections.mentalHealth.childhoodTrauma.indicators.map(i => `  🔴 ${i.type || 'unknown'}${i.lord ? ` (${i.lord} in H${i.house})` : i.house ? ` (H${i.house})` : i.yoga ? ` — ${i.yoga}` : ''}`).join('\n') : ''}
 - Depression risk: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'}
-- Mental stability: ${allSections?.mentalHealth?.mentalStability || 'N/A'}
+- Mental stability: ${allSections?.mentalHealth?.mentalStability ? `Moon score ${allSections.mentalHealth.mentalStability.moonScore}, Moon H${allSections.mentalHealth.mentalStability.moonHouse}${allSections.mentalHealth.mentalStability.vishYoga ? ', Vish Yoga' : ''}` : 'N/A'}
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'} (family dynamics often echo in marriage patterns)
 - Retrograde planets: ${(allSections?.personality?.retrogradePlanets || []).filter(r => [4, 9, 3].includes(r.house)).map(r => r.name + ' in house ' + r.house + ' — past-life family karma').join(', ') || 'None in family houses'}
 
@@ -2321,64 +2311,32 @@ REMINDER: No astrology jargon. No "Lagna", "1st house", "Navamsha", "Venus digni
 
 Birth details: ${lagnaEn} rising, Moon in ${moonEn}, Nakshatra: ${nakshatraName}
 
-━━━ PHYSICAL PROFILE ENGINE DATA (10-LAYER ANALYSIS) ━━━
+━━━ PHYSICAL PROFILE ENGINE DATA (TECHNICAL — YOU INTERPRET) ━━━
 
-LAYER 1 — BASE BODY (from rising sign):
-- Build: ${sectionData?.base?.build || 'N/A'}
-- Height: ${sectionData?.base?.height || 'N/A'}
-- Face: ${sectionData?.base?.face || 'N/A'}
-- Complexion: ${sectionData?.base?.complexion || 'N/A'}
-- Eyes: ${sectionData?.base?.eyes || 'N/A'}
-- Hair: ${sectionData?.base?.hair || 'N/A'}
-- Nose: ${sectionData?.base?.nose || 'N/A'}
-- Lips: ${sectionData?.base?.lips || 'N/A'}
-- Body Type: ${sectionData?.base?.bodyType || 'N/A'}
-- Walk Style: ${sectionData?.base?.gait || 'N/A'}
-- Voice: ${sectionData?.base?.voice || 'N/A'}
+RISING SIGN: ${sectionData?.lagnaEnglish || 'N/A'} (${sectionData?.lagnaSign || 'N/A'}), Element: ${sectionData?.lagnaElement || 'N/A'}
+PLANETS IN 1ST HOUSE: ${(sectionData?.planetsIn1st || []).join(', ') || 'None'} — these MODIFY the base rising sign appearance significantly
+LAGNA LORD: ${sectionData?.lagnaLord?.name || 'N/A'}, House: ${sectionData?.lagnaLord?.house || 'N/A'}, Strength: ${sectionData?.lagnaLord?.score || 'N/A'}%, Dignity: ${sectionData?.lagnaLord?.dignity || 'N/A'}
+MOON SIGN: ${sectionData?.moonSignEnglish || 'N/A'} (Element: ${sectionData?.moonElement || 'N/A'}) — determines emotional expression on face
+NAVAMSHA LAGNA: ${sectionData?.navamshaLagnaEnglish || 'N/A'} — shows how appearance changes after age 30-35
+LAGNA DECAN: ${sectionData?.lagnaDecan || 'N/A'}
+ASPECTS ON LAGNA: ${(sectionData?.aspectPlanetsOnLagna || []).join(', ') || 'None'}
 
-LAYER 2 — PLANET MODIFICATIONS (planets in 1st house: ${(sectionData?.planetsIn1st || []).join(', ') || 'None'}):
-${(sectionData?.planetModifications || []).map(m => '- ' + m).join('\n') || '- No planets modifying appearance'}
-Complexion modifiers: ${(sectionData?.complexionModifiers || []).join(', ') || 'None'}
-Height modifiers: ${(sectionData?.heightModifiers || []).join(', ') || 'None'}
-Build modifiers: ${(sectionData?.buildModifiers || []).join(', ') || 'None'}
+BEAUTY & ATTRACTION:
+- Venus: strength ${sectionData?.venusAnalysis?.score || 'N/A'}%, Dignity: ${sectionData?.venusAnalysis?.dignity || 'N/A'}, House: ${sectionData?.venusAnalysis?.house || 'N/A'}
+- ATTRACTIVENESS SCORE: ${sectionData?.attractivenessScore || 'N/A'}/100
 
-LAYER 3 — RULING PLANET ANALYSIS:
-- ${sectionData?.lagnaLord?.name || 'N/A'} (ruling planet): House ${sectionData?.lagnaLord?.house || 'N/A'}, Strength: ${sectionData?.lagnaLord?.score || 'N/A'}%, Dignity: ${sectionData?.lagnaLord?.dignity || 'N/A'}
-- Effect: ${sectionData?.lagnaLord?.effect || 'N/A'}
-
-LAYER 4 — EMOTIONAL FACE (from Moon in ${sectionData?.moonSignEnglish || 'N/A'}):
-- Resting expression: ${sectionData?.moonFacialExpression || 'N/A'}
-- Emotional element: ${sectionData?.moonElement || 'N/A'}
-
-LAYER 5 — AGING PATTERN (from inner chart):
-- Inner sign: ${sectionData?.navamshaLagnaEnglish || 'N/A'}
-- How you change with age: ${sectionData?.navamshaAppearance || 'N/A'}
-
-LAYER 6 — DECAN MODIFIER:
-- Decan ${sectionData?.lagnaDecan || 'N/A'}: ${sectionData?.decanEffect || 'N/A'}
-
-LAYER 7 — BEAUTY ANALYSIS:
-- Beauty planet strength: ${sectionData?.venusAnalysis?.score || 'N/A'}%, Dignity: ${sectionData?.venusAnalysis?.dignity || 'N/A'}, House: ${sectionData?.venusAnalysis?.house || 'N/A'}
-- ${sectionData?.venusAnalysis?.note || 'N/A'}
-- ATTRACTIVENESS SCORE: ${sectionData?.attractivenessScore || 'N/A'}/100 — ${sectionData?.attractivenessLevel || 'N/A'}
-
-LAYER 8 — EXTERNAL INFLUENCES ON APPEARANCE:
-${(sectionData?.aspectsOnLagna || []).map(a => '- ' + a).join('\n') || '- No external planetary influences'}
-
-LAYER 9 — MENTAL & PSYCHOLOGICAL PROFILE:
-- Mental temperament: ${sectionData?.mentalTemperament || 'N/A'}
-- Intellect: ${sectionData?.intellect || 'N/A'} (Mercury: ${sectionData?.mercuryStrength || 'N/A'}%)
-- Emotional depth: ${sectionData?.emotionalDepth || 'N/A'} (Moon: ${sectionData?.moonStrength || 'N/A'}%)
-- Wisdom: ${sectionData?.wisdom || 'N/A'} (Jupiter: ${sectionData?.jupiterStrength || 'N/A'}%)
-
-LAYER 10 — BODY CONSTITUTION:
-- Stamina: ${sectionData?.bodyConstitution?.stamina || 'N/A'}
-- Endurance: ${sectionData?.bodyConstitution?.endurance || 'N/A'}
-- Immunity: ${sectionData?.bodyConstitution?.immunity || 'N/A'}
+PLANET STRENGTHS (for mental/physical profiling):
+- Mercury (intellect): ${sectionData?.mercuryStrength || 'N/A'}%
+- Moon (emotions): ${sectionData?.moonStrength || 'N/A'}%
+- Jupiter (wisdom): ${sectionData?.jupiterStrength || 'N/A'}%
+- Mars (stamina): ${sectionData?.marsStrength || 'N/A'}%
+- Saturn (endurance): ${sectionData?.saturnStrength || 'N/A'}%
 
 SUPERPOWER AGE:
 - Strongest planet: ${sectionData?.superpowerAge?.planet || 'N/A'} (${sectionData?.superpowerAge?.score || 'N/A'}%)
 - Peak maturation age: ${sectionData?.superpowerAge?.maturationAge || 'N/A'}
+
+YOUR JOB: Using your Vedic astrology knowledge, interpret ALL the above technical data to paint a vivid physical and mental portrait. Use the rising sign as base body type, modify with planets in 1st house, factor in lagna lord dignity, use Moon for emotional expression, Venus for beauty, Navamsha for aging patterns, and planet strengths for mental/physical profiling.
 
 OUTPUT STRUCTURE (dedicate a FULL paragraph to each):
 1. **Overall body portrait** — paint a vivid picture combining build, height, body type, walk style. Make the reader SEE themselves.
@@ -2413,39 +2371,34 @@ REMINDER: No astrology jargon. No "7th house", "Venus placement", "Darakaraka." 
 Birth details: ${lagnaEn} rising, Moon in ${moonEn}, Nakshatra: ${nakshatraName}
 Gender: ${extraContext?.userGender || 'Unknown'}
 
-━━━ ATTRACTION PROFILE ENGINE DATA ━━━
+━━━ ATTRACTION PROFILE ENGINE DATA (TECHNICAL — YOU INTERPRET) ━━━
 
-🔥 ATTRACTION POWER SCORE: ${sectionData?.attractionPower || 'N/A'}/10 — ${sectionData?.attractionLevel || 'N/A'}
+🔥 ATTRACTION POWER SCORE: ${sectionData?.attractionPower || 'N/A'}/10
 
-HOW THE OPPOSITE GENDER SEES YOU:
-- First impression: ${sectionData?.attractionAura?.en || 'N/A'}
-- Sinhala: ${sectionData?.attractionAura?.si || ''}
-- Modifiers:
-${(sectionData?.attractionAuraModifiers || []).map(m => '  ★ ' + m).join('\n') || '  None'}
+RISING SIGN & APPEARANCE: ${sectionData?.lagnaEnglish || 'N/A'} (Element: ${sectionData?.lagnaElement || 'N/A'})
+Planets in 1st House: ${(sectionData?.planetsIn1st || []).join(', ') || 'None'}
+Lagna Lord Dignity: ${sectionData?.lagnaLordDignity || 'N/A'}
 
-WHAT TYPE YOU'RE ATTRACTED TO:
-- 7th house sign: ${sectionData?.seventhHouseSign || 'N/A'}
-- Your type: ${sectionData?.attractedTo?.type || 'N/A'}
-${sectionData?.darakaraka ? `
-SOUL-LEVEL PARTNER TYPE (Darakaraka: ${sectionData.darakaraka.planet}):
-- Spouse planet: ${sectionData.darakaraka.planet} in ${sectionData.darakaraka.rashi || 'N/A'}
-- Spouse nature: ${sectionData.darakaraka.spouseType?.en || 'N/A'}` : ''}
+7TH HOUSE (PARTNER TYPE):
+- 7th House Sign: ${sectionData?.h7SignEnglish || 'N/A'} (${sectionData?.h7Sign || 'N/A'})
+- 7th Lord: ${sectionData?.seventhLord || 'N/A'} in House ${sectionData?.seventhLordHouse || 'N/A'}
+${sectionData?.darakaraka ? `- Darakaraka (Soul Spouse): ${sectionData.darakaraka.planet} in ${sectionData.darakaraka.rashi || 'N/A'}` : ''}
 
-LOVE LANGUAGE:
-- Primary: ${sectionData?.loveLanguage?.en || 'N/A'}
-- Venus element: ${sectionData?.venusElement || 'N/A'}
-- Venus strength: ${sectionData?.venusStrength || 'N/A'}%, Dignity: ${sectionData?.venusDignity || 'N/A'}, House: ${sectionData?.venusHouse || 'N/A'}
+VENUS (LOVE & BEAUTY):
+- Venus House: ${sectionData?.venusHouse || 'N/A'}, Strength: ${sectionData?.venusStrength || 'N/A'}%, Dignity: ${sectionData?.venusDignity || 'N/A'}
+- Venus Element: ${sectionData?.venusElement || 'N/A'}, Rashi: ${sectionData?.venusRashi || 'N/A'}
 
-SEXUAL ENERGY:
-- ${sectionData?.sexualEnergy || 'N/A'}
-- Mars element: ${sectionData?.marsElement || 'N/A'}, Mars strength: ${sectionData?.marsStrength || 'N/A'}%
-- Venus-Mars together: ${sectionData?.venusMarsSameHouse ? 'YES — extremely high sexual magnetism' : 'No'}
-- Intimacy house planets: ${sectionData?.h8PlanetCount || 0} planets
+MARS (SEXUAL ENERGY):
+- Mars House: ${sectionData?.marsHouse || 'N/A'}, Strength: ${sectionData?.marsStrength || 'N/A'}%
+- Mars Element: ${sectionData?.marsElement || 'N/A'}, Rashi: ${sectionData?.marsRashi || 'N/A'}
+- Venus-Mars Same House: ${sectionData?.venusMarsSameHouse ? 'YES — extremely high sexual magnetism' : 'No'}
 
-FIRST IMPRESSION → REAL YOU JOURNEY:
-1. First 5 minutes: ${sectionData?.firstImpression?.en || 'N/A'}
-2. After 3 months: ${sectionData?.moonReality || 'N/A'}
-3. After deep commitment: ${sectionData?.navamshaTrue || 'N/A'}
+8TH HOUSE (INTIMACY): Planets: ${(sectionData?.h8Planets || []).join(', ') || 'None'}
+
+MOON SIGN: ${sectionData?.moonSign || 'N/A'} (Element: ${sectionData?.moonElement || 'N/A'}) — emotional depth in relationships
+NAVAMSHA LAGNA: ${sectionData?.navamshaLagnaEnglish || 'N/A'} — how they change after deep commitment
+
+YOUR JOB: Interpret ALL the above technical data to create a vivid romantic and attraction profile. Rising sign determines first impression, Moon shows emotional reality after 3 months, Navamsha reveals the true self after deep commitment. Venus data determines love language, Mars data determines sexual energy. 7th house and Darakaraka determine partner type.
 
 CROSS-REFERENCE:
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'}
@@ -3411,45 +3364,43 @@ ${verses.slice(0, 3).map(v => `[${v.source}] ${v.topic}: "${v.text}"`).join('\n'
 Generated for: Born ${keyEventsCalendar.generatedFor?.birthYear}, Current age: ${keyEventsCalendar.generatedFor?.currentAge}
 📊 Summary: ${keyEventsCalendar.summary?.totalEvents} major life events predicted
 
-${keyEventsCalendar.summary?.nextMajorEvent ? `🎯 NEXT MAJOR EVENT: ${keyEventsCalendar.summary.nextMajorEvent.icon} ${keyEventsCalendar.summary.nextMajorEvent.summary} (${keyEventsCalendar.summary.nextMajorEvent.year}, age ${keyEventsCalendar.summary.nextMajorEvent.ageAtEvent})` : ''}
+${keyEventsCalendar.summary?.nextMajorEvent ? `🎯 NEXT MAJOR EVENT: ${keyEventsCalendar.summary.nextMajorEvent.icon} ${keyEventsCalendar.summary.nextMajorEvent.category} — ${keyEventsCalendar.summary.nextMajorEvent.period} (${keyEventsCalendar.summary.nextMajorEvent.year}, age ${keyEventsCalendar.summary.nextMajorEvent.ageAtEvent})` : ''}
 
 ${keyEventsCalendar.byStatus?.thisYear?.length > 0 ? `🔥 THIS YEAR (${new Date().getFullYear()}):
-${keyEventsCalendar.byStatus.thisYear.map(e => `  ${e.icon} ${e.summary}`).join('\n')}` : ''}
+${keyEventsCalendar.byStatus.thisYear.map(e => `  ${e.icon} ${e.category} — ${e.period} (${e.dateRange || ''})`).join('\n')}` : ''}
 
 ${keyEventsCalendar.byStatus?.nearTerm?.length > 0 ? `📅 NEAR TERM (next 2-3 years):
-${keyEventsCalendar.byStatus.nearTerm.map(e => `  ${e.icon} ${e.summary} (${e.year})`).join('\n')}` : ''}
+${keyEventsCalendar.byStatus.nearTerm.map(e => `  ${e.icon} ${e.category} — ${e.period} (${e.year})`).join('\n')}` : ''}
 
 ${keyEventsCalendar.allEvents?.filter(e => e.status === 'ACTIVE_NOW').length > 0 ? `⭐ CURRENTLY ACTIVE WINDOWS:
-${keyEventsCalendar.allEvents.filter(e => e.status === 'ACTIVE_NOW').map(e => `  ${e.icon} ${e.summary} — HAPPENING NOW!`).join('\n')}` : ''}
+${keyEventsCalendar.allEvents.filter(e => e.status === 'ACTIVE_NOW').map(e => `  ${e.icon} ${e.category} — ${e.period} — HAPPENING NOW!`).join('\n')}` : ''}
 
 REFERENCE: Use this calendar when writing about "key upcoming events" or "life timeline ahead".
 ` : '',
     // ── Enriched personal profile for deeper personalization ──
     personalProfile: (() => {
       const parts = [];
-      if (birthData.gana) parts.push(`Gana (Temperament): ${birthData.gana.type} — ${birthData.gana.meaning}`);
+      if (birthData.gana) parts.push(`Gana (Temperament): ${birthData.gana.type}`);
       if (birthData.yoni) parts.push(`Yoni (Instinct): ${birthData.yoni.animal}`);
-      if (birthData.nadi) parts.push(`Nadi (Constitution): ${birthData.nadi.type} — ${birthData.nadi.meaning}`);
+      if (birthData.nadi) parts.push(`Nadi (Constitution): ${birthData.nadi.type}`);
       if (birthData.birthDayOfWeek) parts.push(`Born on: ${birthData.birthDayOfWeek} (ruler: ${birthData.rulingPlanetOfDay || 'N/A'})`);
       if (birthData.birthTimeQuality) parts.push(`Birth time quality: ${birthData.birthTimeQuality}`);
       if (birthData.currentAge != null) parts.push(`Current age: ${birthData.currentAge} years old`);
-      // NEW: Personal behavior data from surpriseInsights
+      // Personal behavior data from surpriseInsights (technical fields)
       const si = sections.surpriseInsights;
-      if (si?.loveLanguage?.attachment) parts.push(`Attachment Style: ${si.loveLanguage.attachment} — ${si.loveLanguage.attachDetail}`);
-      if (si?.loveLanguage?.primary) parts.push(`Love Language: ${si.loveLanguage.primary}`);
-      if (si?.dailyBehavior?.chronotype) parts.push(`Chronotype: ${si.dailyBehavior.chronotype}`);
-      if (si?.dailyBehavior?.socialBattery) parts.push(`Social Battery: ${si.dailyBehavior.socialBattery}`);
-      if (si?.emotionalStyle?.angerStyle) parts.push(`Anger Style: ${si.emotionalStyle.angerStyle}`);
-      if (si?.publicVsPrivate?.contrastLevel) parts.push(`Public/Private Contrast: ${si.publicVsPrivate.contrastLevel}`);
-      if (si?.moneyPersonality?.archetype) parts.push(`Money Personality: ${si.moneyPersonality.archetype}`);
-      // NEW: Viral fields for coherence
-      if (si?.secondMarriage?.probability) parts.push(`Second Marriage: ${si.secondMarriage.probability.substring(0, 80)}`);
-      if (si?.monasticTendency?.tendency) parts.push(`Monastic Tendency: ${si.monasticTendency.tendency.substring(0, 80)}`);
-      if (si?.famePotential?.level) parts.push(`Fame Potential: ${si.famePotential.level.substring(0, 80)}`);
-      if (si?.wealthClass?.wealthLevel) parts.push(`Wealth Class: ${si.wealthClass.wealthLevel.substring(0, 80)}`);
-      if (si?.spiritAnimal?.animal) parts.push(`Spirit Animal: ${si.spiritAnimal.animal}`);
-      if (si?.celebrityTwin?.name) parts.push(`Celebrity Twin: ${si.celebrityTwin.name}`);
-      if (si?.goldenPeriod?.ageRange) parts.push(`Golden Period: Age ${si.goldenPeriod.ageRange}`);
+      if (si?.loveLanguage) parts.push(`Love Language: Venus H${si.loveLanguage.venusHouse} (score ${si.loveLanguage.venusScore}), Moon H${si.loveLanguage.moonHouse} (score ${si.loveLanguage.moonScore}), element: ${si.loveLanguage.moonElement}`);
+      if (si?.dailyBehavior) parts.push(`Daily Behavior: introvert ${si.dailyBehavior.introvertScore}, extrovert ${si.dailyBehavior.extrovertScore}, Mercury score ${si.dailyBehavior.mercuryScore}, lagna element: ${si.dailyBehavior.lagnaElement}`);
+      if (si?.emotionalStyle) parts.push(`Emotional Style: Mars H${si.emotionalStyle.marsHouse} (score ${si.emotionalStyle.marsScore}), Moon H${si.emotionalStyle.moonHouse}${si.emotionalStyle.marsRetrograde ? ', Mars retrograde' : ''}`);
+      if (si?.publicVsPrivate) parts.push(`Public/Private: Lagna ${si.publicVsPrivate.lagnaSign} (${si.publicVsPrivate.lagnaElement}), Moon ${si.publicVsPrivate.moonSign} H${si.publicVsPrivate.moonHouse}${si.publicVsPrivate.sameSign ? ', same sign' : ''}`);
+      if (si?.moneyPersonality) parts.push(`Money Personality: impulse score ${si.moneyPersonality.impulseScore}, Venus H${si.moneyPersonality.venusHouse}, Saturn H${si.moneyPersonality.saturnHouse}, lagna element: ${si.moneyPersonality.lagnaElement}`);
+      // Viral fields for coherence
+      if (si?.secondMarriage?.score != null) parts.push(`Second Marriage: score ${si.secondMarriage.score}, divorce score ${si.secondMarriage.divorceScore}`);
+      if (si?.monasticTendency?.score != null) parts.push(`Monastic Tendency: score ${si.monasticTendency.score}, Ketu H${si.monasticTendency.ketuHouse}, Saturn H${si.monasticTendency.saturnHouse}`);
+      if (si?.famePotential?.score != null) parts.push(`Fame Potential: score ${si.famePotential.score}, Sun H${si.famePotential.sunHouse}, Rahu H${si.famePotential.rahuHouse}`);
+      if (si?.wealthClass?.score != null) parts.push(`Wealth Class: score ${si.wealthClass.score}, H2 strength ${si.wealthClass.h2Strength}, H11 strength ${si.wealthClass.h11Strength}`);
+      if (si?.spiritAnimal) parts.push(`Spirit Animal: Lagna ${si.spiritAnimal.lagnaSign} (${si.spiritAnimal.lagnaElement})`);
+      if (si?.celebrityTwin) parts.push(`Celebrity Twin: Lagna ${si.celebrityTwin.lagnaSign}, Moon ${si.celebrityTwin.moonSign}`);
+      if (si?.goldenPeriod?.ageRange) parts.push(`Golden Period: Age ${si.goldenPeriod.ageRange} (peak ${si.goldenPeriod.peakAge}, lord: ${si.goldenPeriod.lord})`);
       return parts.length > 0 ? '\nPERSONAL PROFILE:\n' + parts.map(p => '- ' + p).join('\n') : '';
     })(),
     // ── Religion for faith-aware remedies ──
@@ -3538,7 +3489,7 @@ SECTION DATA HIGHLIGHTS:
 - Marriage Denied: ${sections.marriage?.marriageAfflictions?.isMarriageDenied ? '⛔ YES — MARRIAGE VERY UNLIKELY' : 'No'}
 - Marriage Delayed: ${sections.marriage?.marriageAfflictions?.isMarriageDelayed ? '⚠️ YES' : 'No'}
 - Marriage Likelihood: ${sections.marriage?.marriageAfflictions?.likelihood || 'Well-supported'}
-- Marriage affliction details: ${(sections.marriage?.marriageAfflictions?.afflictions || []).slice(0, 3).join(' | ') || 'None'}
+- Marriage affliction details: ${(sections.marriage?.marriageAfflictions?.afflictions || []).slice(0, 3).map(a => `${a.planet || 'chart'}: ${a.type} (${a.points}pts)`).join(' | ') || 'None'}
 - Marriage best window: ${sections.marriage?.marriageTimingPrediction?.bestWindow?.dateRange || 'N/A'} ${sections.marriage?.marriageAfflictions?.isMarriageDenied ? '(⚠ window exists but marriage denial overrides — do NOT predict marriage)' : ''}
 - Career planet ranking: ${(sections.career?.careerPlanetRanking || []).map(p => typeof p === 'string' ? p : `${p.planet}(${p.dignity}, H${p.house})`).join('; ') || 'N/A'}
 - 10th house sign: ${sections.career?.tenthHouseSign ? `${sections.career.tenthHouseSign.rashi} (${sections.career.tenthHouseSign.element}, ${sections.career.tenthHouseSign.modality})` : 'N/A'}
