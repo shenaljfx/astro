@@ -519,6 +519,139 @@ export var getPendingFeedback = function() {
   return request('/api/predictions/feedback/pending');
 };
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  ENHANCED ANALYSIS — MIT Libraries (celestine + astrology-insights)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export var getEnhancedReport = function(data) {
+  return request('/api/enhanced/report', { method: 'POST', body: JSON.stringify(data), _timeout: 20000 });
+};
+
+export var getGandantaDosha = function(data) {
+  return request('/api/enhanced/gandanta', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getGandaMoolaDosha = function(data) {
+  return request('/api/enhanced/ganda-moola', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getTattvaBalance = function(data) {
+  return request('/api/enhanced/tattva', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getPlanetaryFriendships = function(data) {
+  return request('/api/enhanced/friendships', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getRemedies = function(data) {
+  return request('/api/enhanced/remedies', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getBabyNames = function(data) {
+  return request('/api/enhanced/baby-names', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getShodashvarga = function(data) {
+  return request('/api/enhanced/shodashvarga', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getDivisionalChart = function(data) {
+  return request('/api/enhanced/divisional', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getProgressions = function(data) {
+  return request('/api/enhanced/progressions', { method: 'POST', body: JSON.stringify(data), _timeout: 15000 });
+};
+
+export var getSolarArc = function(data) {
+  return request('/api/enhanced/solar-arc', { method: 'POST', body: JSON.stringify(data), _timeout: 15000 });
+};
+
+export var getAspectPatterns = function(data) {
+  return request('/api/enhanced/patterns', { method: 'POST', body: JSON.stringify(data), _timeout: 15000 });
+};
+
+export var getRetrogradePeriods2 = function(data) {
+  return request('/api/enhanced/retrogrades', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getChoghadiya = function(params) {
+  var qs = new URLSearchParams(params).toString();
+  return request('/api/enhanced/choghadiya?' + qs);
+};
+
+export var getGulikaKalam = function(params) {
+  var qs = new URLSearchParams(params).toString();
+  return request('/api/enhanced/gulika?' + qs);
+};
+
+export var getCrossValidatedShadbala = function(data) {
+  return request('/api/enhanced/cross-validate', { method: 'POST', body: JSON.stringify(data) });
+};
+
+// ═══════════════════════════════════════════════════════════════
+// JYOTISH API (@prisri/jyotish — ISC license, independent Vedic engine)
+// ═══════════════════════════════════════════════════════════════
+
+export var getJyotishKundli = function(data) {
+  return request('/api/jyotish/kundli', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getJyotishChalit = function(data) {
+  return request('/api/jyotish/chalit', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getJyotishVarga = function(division, data) {
+  return request('/api/jyotish/varga/' + division, { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getJyotishDasha = function(data) {
+  return request('/api/jyotish/dasha', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getJyotishMangalDosha = function(data) {
+  return request('/api/jyotish/mangal-dosha', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getJyotishSadeSati = function(data) {
+  return request('/api/jyotish/sade-sati', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getJyotishTaraBalam = function(data) {
+  return request('/api/jyotish/tara-balam', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getJyotishChandrashtama = function(data) {
+  return request('/api/jyotish/chandrashtama', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getJyotishDishaShoola = function(params) {
+  var qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return request('/api/jyotish/disha-shoola' + qs);
+};
+
+export var getJyotishToday = function(params) {
+  var qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return request('/api/jyotish/today' + qs);
+};
+
+export var getJyotishPersonalized = function(data) {
+  return request('/api/jyotish/personalized', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getJyotishMatch = function(data) {
+  return request('/api/jyotish/match', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export var getJyotishPanchanga = function(params) {
+  var qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return request('/api/jyotish/panchanga' + qs);
+};
+
+export var getJyotishSpecialYogas = function() {
+  return request('/api/jyotish/special-yogas');
+};
+
 export default {
   getDailyNakath: getDailyNakath,
   getDailyHoroscope: getDailyHoroscope,
@@ -604,4 +737,36 @@ export default {
   getWeeklyLagnaById: getWeeklyLagnaById,
   // Live Cost Stats
   getLiveCostStats: getLiveCostStats,
+  // Enhanced Analysis (MIT libraries)
+  getEnhancedReport: getEnhancedReport,
+  getGandantaDosha: getGandantaDosha,
+  getGandaMoolaDosha: getGandaMoolaDosha,
+  getTattvaBalance: getTattvaBalance,
+  getPlanetaryFriendships: getPlanetaryFriendships,
+  getRemedies: getRemedies,
+  getBabyNames: getBabyNames,
+  getShodashvarga: getShodashvarga,
+  getDivisionalChart: getDivisionalChart,
+  getProgressions: getProgressions,
+  getSolarArc: getSolarArc,
+  getAspectPatterns: getAspectPatterns,
+  getRetrogradePeriods2: getRetrogradePeriods2,
+  getChoghadiya: getChoghadiya,
+  getGulikaKalam: getGulikaKalam,
+  getCrossValidatedShadbala: getCrossValidatedShadbala,
+  // Jyotish API (@prisri/jyotish — ISC)
+  getJyotishKundli: getJyotishKundli,
+  getJyotishChalit: getJyotishChalit,
+  getJyotishVarga: getJyotishVarga,
+  getJyotishDasha: getJyotishDasha,
+  getJyotishMangalDosha: getJyotishMangalDosha,
+  getJyotishSadeSati: getJyotishSadeSati,
+  getJyotishTaraBalam: getJyotishTaraBalam,
+  getJyotishChandrashtama: getJyotishChandrashtama,
+  getJyotishDishaShoola: getJyotishDishaShoola,
+  getJyotishToday: getJyotishToday,
+  getJyotishPersonalized: getJyotishPersonalized,
+  getJyotishMatch: getJyotishMatch,
+  getJyotishPanchanga: getJyotishPanchanga,
+  getJyotishSpecialYogas: getJyotishSpecialYogas,
 };

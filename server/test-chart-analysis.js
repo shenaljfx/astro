@@ -62,8 +62,11 @@ if (adv.tier1?.doshas?.items) {
 
 console.log('\n--- ADVANCED: PAST LIFE ---');
 if (adv.tier3?.pastLife) {
-  console.log('Past life:', adv.tier3.pastLife.pastLife?.pastLifeStory);
-  console.log('Karma balance:', JSON.stringify(adv.tier3.pastLife.karmaBalance));
+  const pl = adv.tier3.pastLife;
+  console.log('Ketu House:', pl.pastLife?.ketuHouse, '- Themes:', JSON.stringify(pl.pastLife?.ketuThemes));
+  console.log('Rahu House:', pl.currentLifeDirection?.rahuHouse, '- Themes:', JSON.stringify(pl.currentLifeDirection?.rahuThemes));
+  console.log('Merit:', pl.pastLifeMerit?.assessment);
+  console.log('Karma balance:', JSON.stringify(pl.karmaBalance));
 }
 
 console.log('\n--- DASHA TIMELINE ---');

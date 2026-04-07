@@ -24,8 +24,8 @@ const { getUsdToLkr, MODEL_PRICING } = require('../utils/tokenCalculator');
 const REVENUE = {
   fullReport: 380,
   porondam: 100,
-  subscription: 280,    // per month (includes: weekly lagna shared, 10 chats, 1 kendara)
-  chat: 0,              // included in subscription (10/month)
+  subscription: 280,    // per month (includes: weekly lagna shared, 5 chats/day, 1 kendara)
+  chat: 0,              // included in subscription (5/day)
   weeklyLagna: 0,       // shared cost, no per-user revenue
   reading: 0,           // part of report flow
   kendara: 0,           // pure calculation, no AI cost

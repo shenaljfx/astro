@@ -31,7 +31,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePricing } from '../contexts/PricingContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import AwesomeRashiChakra from '../components/AwesomeRashiChakra';
-import Svg, { Defs, LinearGradient as SvgGrad, Stop, Path, Circle, Rect, G, Ellipse, Line } from 'react-native-svg';
+import Svg, { Defs, LinearGradient as SvgGrad, Stop, Path, Circle, Rect, G, Ellipse } from 'react-native-svg';
 import { boxShadow, textShadow } from '../utils/shadow';
 
 var { width: SW, height: SH } = Dimensions.get('window');
@@ -1240,6 +1240,76 @@ function buildConstellationPoints(text, centerX, centerY, letterSize) {
   return points;
 }
 
+/* Single animated star particle — uses Reanimated (works on mobile + web) */
+function ConstellationStar({ x, y, delay, outerR, innerR, coreR, outerColor, coreColor, outerOpacity, coreOpacity }) {
+  var anim = useSharedValue(0);
+  var twinkle = useSharedValue(0);
+  useEffect(function () {
+    anim.value = withDelay(delay, withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) }));
+    twinkle.value = withDelay(delay + 700,
+      withRepeat(withSequence(
+        withTiming(1, { duration: 1500 + Math.random() * 1000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0.5, { duration: 1500 + Math.random() * 1000, easing: Easing.inOut(Easing.sin) })
+      ), -1, true)
+    );
+  }, []);
+  var style = useAnimatedStyle(function () {
+    var s = interpolate(anim.value, [0, 1], [0, 1]);
+    var tw = twinkle.value || 0.5;
+    var totalOpacity = anim.value * (0.5 + tw * 0.5);
+    return {
+      position: 'absolute',
+      left: x - outerR,
+      top: y - outerR,
+      width: outerR * 2,
+      height: outerR * 2,
+      opacity: totalOpacity,
+      transform: [{ scale: s }],
+    };
+  });
+  return (
+    <Animated.View style={style}>
+      <View style={{ width: outerR * 2, height: outerR * 2, borderRadius: outerR, backgroundColor: outerColor, opacity: outerOpacity, position: 'absolute' }} />
+      <View style={{ width: innerR * 2, height: innerR * 2, borderRadius: innerR, backgroundColor: outerColor, opacity: outerOpacity * 2.5, position: 'absolute', left: outerR - innerR, top: outerR - innerR }} />
+      <View style={{ width: coreR * 2, height: coreR * 2, borderRadius: coreR, backgroundColor: coreColor, opacity: coreOpacity, position: 'absolute', left: outerR - coreR, top: outerR - coreR }} />
+    </Animated.View>
+  );
+}
+
+/* Single animated line between two constellation stars */
+function ConstellationLine({ x1, y1, x2, y2, delay }) {
+  var anim = useSharedValue(0);
+  useEffect(function () {
+    anim.value = withDelay(delay, withTiming(0.5, { duration: 800, easing: Easing.out(Easing.cubic) }));
+  }, []);
+  var len = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+  var angle = Math.atan2(y2 - y1, x2 - x1);
+  // Pre-compute the midpoint and use that as the position with centering
+  var midX = (x1 + x2) / 2;
+  var midY = (y1 + y2) / 2;
+  var angleDeg = angle * 180 / Math.PI;
+  var style = useAnimatedStyle(function () {
+    return {
+      position: 'absolute',
+      left: midX - len / 2,
+      top: midY - 0.5,
+      width: len,
+      height: 1,
+      opacity: anim.value,
+      transform: [{ rotate: angleDeg + 'deg' }],
+    };
+  });
+  return (
+    <Animated.View style={style}>
+      <LinearGradient
+        colors={['rgba(251,191,36,0.04)', 'rgba(255,214,102,0.25)', 'rgba(251,191,36,0.04)']}
+        style={{ flex: 1, borderRadius: 1 }}
+        start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+      />
+    </Animated.View>
+  );
+}
+
 function WrittenInTheStars({ name, dateStr, timeStr, page }) {
   // Name constellation centered in the top zone, date/time below it
   var constellationH = SH * 0.16;
@@ -1257,77 +1327,49 @@ function WrittenInTheStars({ name, dateStr, timeStr, page }) {
 
   if (namePoints.length === 0 && digitPoints.length === 0) return null;
 
+  // Build line connections between nearby name stars
+  var nameLines = [];
+  for (var i = 1; i < namePoints.length; i++) {
+    var prev = namePoints[i - 1];
+    var cur = namePoints[i];
+    var dist = Math.sqrt((cur.x - prev.x) * (cur.x - prev.x) + (cur.y - prev.y) * (cur.y - prev.y));
+    if (dist <= 35) {
+      nameLines.push({ x1: prev.x, y1: prev.y, x2: cur.x, y2: cur.y, delay: 600 + i * 60 });
+    }
+  }
+
   return (
     <View style={{ position: 'absolute', top: 8, left: 0, right: 0, height: constellationH, pointerEvents: 'none', zIndex: 2, overflow: 'visible' }}>
-      <Svg width={SW} height={constellationH} style={{ position: 'absolute', top: 0, left: 0 }}>
-        <Defs>
-          <SvgGrad id="starLineG" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor="#FBBF24" stopOpacity="0.04" />
-            <Stop offset="0.5" stopColor="#FFD666" stopOpacity="0.22" />
-            <Stop offset="1" stopColor="#FBBF24" stopOpacity="0.04" />
-          </SvgGrad>
-        </Defs>
-        {/* Constellation lines connecting nearby name stars */}
-        {namePoints.map(function (p, i) {
-          if (i === 0) return null;
-          var prev = namePoints[i - 1];
-          var dist = Math.sqrt((p.x - prev.x) * (p.x - prev.x) + (p.y - prev.y) * (p.y - prev.y));
-          if (dist > 35) return null;
-          var del = (0.6 + i * 0.06).toFixed(2) + 's';
-          return (
-            <Line
-              key={'cl' + i}
-              x1={prev.x.toFixed(1)} y1={prev.y.toFixed(1)}
-              x2={p.x.toFixed(1)} y2={p.y.toFixed(1)}
-              stroke="url(#starLineG)"
-              strokeWidth="0.7"
-              opacity="0"
-            >
-              <animate attributeName="opacity" from="0" to="0.6" dur="0.8s" begin={del} fill="freeze" />
-            </Line>
-          );
-        })}
-        {/* Name star dots — "star born" animation: scale up + fade in staggered */}
-        {namePoints.map(function (p, i) {
-          var del = (0.5 + i * 0.05).toFixed(2) + 's';
-          return (
-            <G key={'ns' + i} opacity="0">
-              {/* Soft outer glow */}
-              <Circle cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r="0" fill="#FBBF24" opacity={0.06}>
-                <animate attributeName="r" from="0" to="7" dur="0.9s" begin={del} fill="freeze" />
-              </Circle>
-              {/* Mid halo */}
-              <Circle cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r="0" fill="#FBBF24" opacity={0.14}>
-                <animate attributeName="r" from="0" to="3" dur="0.7s" begin={del} fill="freeze" />
-              </Circle>
-              {/* Bright core */}
-              <Circle cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r="0" fill="#FFE8A0" opacity={0.85}>
-                <animate attributeName="r" from="0" to="1.6" dur="0.5s" begin={del} fill="freeze" />
-              </Circle>
-              {/* Fade in the whole group */}
-              <animate attributeName="opacity" from="0" to="1" dur="0.6s" begin={del} fill="freeze" />
-            </G>
-          );
-        })}
-        {/* Date/time star dots — smaller, dimmer, after name stars */}
-        {digitPoints.map(function (p, i) {
-          var del = (0.8 + i * 0.04).toFixed(2) + 's';
-          return (
-            <G key={'ds' + i} opacity="0">
-              <Circle cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r="0" fill="#FFD98E" opacity={0.05}>
-                <animate attributeName="r" from="0" to="4.5" dur="0.8s" begin={del} fill="freeze" />
-              </Circle>
-              <Circle cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r="0" fill="#FFD98E" opacity={0.12}>
-                <animate attributeName="r" from="0" to="2" dur="0.6s" begin={del} fill="freeze" />
-              </Circle>
-              <Circle cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r="0" fill="#FFE8A0" opacity={0.55}>
-                <animate attributeName="r" from="0" to="0.9" dur="0.5s" begin={del} fill="freeze" />
-              </Circle>
-              <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin={del} fill="freeze" />
-            </G>
-          );
-        })}
-      </Svg>
+      {/* Constellation lines connecting nearby name stars */}
+      {nameLines.map(function (line, i) {
+        return <ConstellationLine key={'cl' + i} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} delay={line.delay} />;
+      })}
+      {/* Name star dots — staggered star-born animation */}
+      {namePoints.map(function (p, i) {
+        return (
+          <ConstellationStar
+            key={'ns' + i}
+            x={p.x} y={p.y}
+            delay={500 + i * 50}
+            outerR={7} innerR={3} coreR={1.6}
+            outerColor="#FBBF24" coreColor="#FFE8A0"
+            outerOpacity={0.06} coreOpacity={0.85}
+          />
+        );
+      })}
+      {/* Date/time star dots — smaller, dimmer, after name stars */}
+      {digitPoints.map(function (p, i) {
+        return (
+          <ConstellationStar
+            key={'ds' + i}
+            x={p.x} y={p.y}
+            delay={800 + i * 40}
+            outerR={4.5} innerR={2} coreR={0.9}
+            outerColor="#FFD98E" coreColor="#FFE8A0"
+            outerOpacity={0.05} coreOpacity={0.55}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -1338,15 +1380,19 @@ function StarVortex({ name, dateStr, timeStr }) {
   var points = useMemo(function () {
     var pts = [];
     var upper = allText.toUpperCase().replace(/[^A-Z0-9: ]/g, '');
-    for (var i = 0; i < Math.min(upper.length * 3, 60); i++) {
-      var angle = (i / 60) * Math.PI * 6;
-      var radius = 40 + (i / 60) * 100;
+    var count = Math.min(upper.length * 3, 80);
+    for (var i = 0; i < count; i++) {
+      var angle = (i / count) * Math.PI * 8;  // More spiral revolutions
+      var radius = 50 + (i / count) * 130;
+      var STAR_COLORS = ['#FBBF24', '#FFD666', '#FF8C00', '#FFE8A0', '#FFA940', '#FFD98E'];
       pts.push({
         id: i,
         startX: SW / 2 + Math.cos(angle) * radius,
-        startY: SH * 0.28 + Math.sin(angle) * radius * 0.6,
+        startY: SH * 0.28 + Math.sin(angle) * radius * 0.55,
         char: i < upper.length ? upper[i] : '✦',
-        delay: i * 35,
+        delay: i * 30,
+        color: STAR_COLORS[i % STAR_COLORS.length],
+        size: i < upper.length ? (12 + Math.random() * 4) : (6 + Math.random() * 6),
       });
     }
     return pts;
@@ -1362,34 +1408,52 @@ function StarVortex({ name, dateStr, timeStr }) {
 }
 
 function VortexParticle({ particle }) {
-  var opacity = useSharedValue(0.8);
+  var opacity = useSharedValue(0);
   var posX = useSharedValue(particle.startX);
   var posY = useSharedValue(particle.startY);
-  var scale = useSharedValue(1);
+  var scale = useSharedValue(0.3);
+  var rotation = useSharedValue(0);
 
   useEffect(function () {
-    // Spiral inward to center
-    posX.value = withDelay(particle.delay,
-      withTiming(SW / 2, { duration: 2200, easing: Easing.inOut(Easing.cubic) })
-    );
-    posY.value = withDelay(particle.delay,
-      withTiming(SH * 0.28, { duration: 2200, easing: Easing.inOut(Easing.cubic) })
+    // Pop in first
+    opacity.value = withDelay(particle.delay,
+      withTiming(0.9, { duration: 300, easing: Easing.out(Easing.cubic) })
     );
     scale.value = withDelay(particle.delay,
-      withTiming(0, { duration: 2200, easing: Easing.in(Easing.cubic) })
+      withSequence(
+        withSpring(1.3, { damping: 6, stiffness: 200 }),
+        withSpring(1, { damping: 10, stiffness: 150 })
+      )
     );
-    opacity.value = withDelay(particle.delay + 1500,
-      withTiming(0, { duration: 700 })
+    // Spiral inward with slight overshoot
+    posX.value = withDelay(particle.delay + 200,
+      withTiming(SW / 2, { duration: 2000, easing: Easing.bezier(0.25, 0.1, 0.25, 1) })
+    );
+    posY.value = withDelay(particle.delay + 200,
+      withTiming(SH * 0.28, { duration: 2000, easing: Easing.bezier(0.25, 0.1, 0.25, 1) })
+    );
+    rotation.value = withDelay(particle.delay,
+      withTiming(360, { duration: 2200, easing: Easing.inOut(Easing.cubic) })
+    );
+    // Shrink and fade at end
+    scale.value = withDelay(particle.delay + 1200,
+      withTiming(0, { duration: 1000, easing: Easing.in(Easing.cubic) })
+    );
+    opacity.value = withDelay(particle.delay + 1600,
+      withTiming(0, { duration: 600 })
     );
   }, []);
 
   var style = useAnimatedStyle(function () {
     return {
       position: 'absolute',
-      left: posX.value,
-      top: posY.value,
+      left: posX.value - particle.size / 2,
+      top: posY.value - particle.size / 2,
       opacity: opacity.value,
-      transform: [{ scale: scale.value }],
+      transform: [
+        { scale: scale.value },
+        { rotate: rotation.value + 'deg' },
+      ],
     };
   });
 
@@ -1397,10 +1461,11 @@ function VortexParticle({ particle }) {
   return (
     <Animated.View style={style}>
       <Text style={{
-        fontSize: isChar ? 14 : 10,
-        color: '#FBBF24',
+        fontSize: particle.size,
+        color: particle.color,
         fontWeight: '800',
-        ...textShadow('#FFB800', { width: 0, height: 0 }, 10),
+        textAlign: 'center',
+        ...textShadow(particle.color, { width: 0, height: 0 }, 12),
       }}>{particle.char}</Text>
     </Animated.View>
   );
@@ -1681,8 +1746,8 @@ var bd = StyleSheet.create({
   progressLineCurrent: { backgroundColor: '#FFB800' },
   progressLabel: { fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   progressLabelActive: { color: '#FFD666' },
-  monthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
-  monthChip: { width: (SW - 24 * 2 - 28 - 8 * 3) / 4, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  monthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6, justifyContent: 'space-between' },
+  monthChip: { width: '31%', paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   monthChipSel: { backgroundColor: 'rgba(255,184,0,0.15)', borderColor: '#FFB800' },
   monthText: { color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '600' },
   monthTextSel: { color: '#FFD666', fontWeight: '700' },

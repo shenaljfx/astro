@@ -24,6 +24,14 @@
 const { getDb } = require('../config/firebase');
 const { getAllPlanetPositions, getPanchanga, toSidereal } = require('./astrology');
 
+// Enhanced engine (graceful — null if unavailable)
+let enhancedEngine = null;
+try { enhancedEngine = require('./enhanced'); } catch (e) { console.warn('[WeeklyLagna] enhanced engine not available:', e.message); }
+
+// Jyotish engine (graceful — null if unavailable)
+let jyotishEngine = null;
+try { jyotishEngine = require('./jyotish'); } catch (e) { console.warn('[WeeklyLagna] jyotish engine not available:', e.message); }
+
 const COLLECTION = 'weeklyLagnaReports';
 
 // All 12 Lagnas
@@ -100,6 +108,66 @@ function buildPlanetaryContext(date) {
       if (panchanga.tithi) context += `  Tithi: ${panchanga.tithi.name}\n`;
       if (panchanga.yoga) context += `  Yoga: ${panchanga.yoga.name}\n`;
     }
+
+    // Enhanced engine data for richer weekly predictions
+    if (enhancedEngine) {
+      try {
+        // Choghadiya for the week (daily muhurta timing)
+        const choghadiya = enhancedEngine.calculateChoghadiya(6.9271, 79.8612);
+        if (choghadiya) {
+          context += '\nChoghadiya (Daily Muhurta Periods):\n';
+          const daytime = (choghadiya.daytimeChoghadiyas || []).slice(0, 4);
+          daytime.forEach(c => {
+            context += `  ${c.type}: ${c.start} to ${c.end}\n`;
+          });
+        }
+      } catch (e) { /* skip */ }
+
+      try {
+        // Aspect patterns in the sky right now (T-Square, Grand Trine, Yod)
+        const patterns = enhancedEngine.detectAspectPatterns(date, 6.9271, 79.8612);
+        if (patterns?.patterns?.length > 0) {
+          context += '\nCurrent Aspect Patterns (Sky Configuration):\n';
+          patterns.patterns.forEach(p => {
+            context += `  ${p.name}: ${(p.planets || []).join(', ')}${p.description ? ' — ' + p.description : ''}\n`;
+          });
+        }
+        if (patterns?.summary) {
+          const s = patterns.summary;
+          if (s.elements) {
+            context += `  Element Distribution: Fire=${(s.elements.fire || []).length}, Earth=${(s.elements.earth || []).length}, Air=${(s.elements.air || []).length}, Water=${(s.elements.water || []).length}\n`;
+          }
+        }
+      } catch (e) { /* skip */ }
+
+      try {
+        // Current retrograde periods (precise from celestine)
+        const retros = enhancedEngine.findRetrogradePeriods(date.getFullYear());
+        if (retros?.length > 0) {
+          const currentRetros = retros.filter(r => {
+            const now = date;
+            return now >= new Date(r.start) && now <= new Date(r.end);
+          });
+          if (currentRetros.length > 0) {
+            context += '\nCurrently Retrograde (Celestine/NASA-verified):\n';
+            currentRetros.forEach(r => {
+              context += `  ${r.planet}: ${r.start} to ${r.end}\n`;
+            });
+          }
+        }
+      } catch (e) { /* skip */ }
+    }
+
+    // Jyotish engine data for weekly predictions
+    if (jyotishEngine) {
+      try {
+        const jWeekly = jyotishEngine.generateWeeklyContext(date);
+        if (jWeekly) {
+          context += '\n' + jWeekly + '\n';
+        }
+      } catch (e) { /* skip */ }
+    }
+
     return context;
   } catch (err) {
     console.error('[WeeklyLagna] Failed to get planetary positions:', err.message);
@@ -130,6 +198,10 @@ IMPORTANT RULES:
 8. Include practical advice, not just vague spiritual platitudes
 9. Mention specific astrological remedies (mantras, colors, gemstones, donations) for challenging periods
 10. Search for any special astronomical events (eclipses, planetary conjunctions, retrogrades) happening during this week
+11. If Choghadiya data is provided, incorporate auspicious/inauspicious daily timing into advice (e.g., "early mornings are especially auspicious this week")
+12. If Aspect Patterns (T-Square, Grand Trine, Yod) are present in the sky, explain how they affect each lagna — these are major cosmic configurations
+13. If retrograde planets are listed, emphasize their effects on each lagna (delays, revisiting old issues, inner reflection)
+14. Use the Element Distribution data to note which lagnas benefit most from current elemental balance
 
 For each lagna, analyze:
 - Which houses the current planets occupy FROM that lagna

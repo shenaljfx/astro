@@ -354,6 +354,8 @@ export default function HomeScreen() {
   var [chartData, setChartData] = useState(null);
   var [weeklyLagna, setWeeklyLagna] = useState(null);
   var [weeklyLagnaExpanded, setWeeklyLagnaExpanded] = useState(null);
+  var [jyotishToday, setJyotishToday] = useState(null);
+  var [expandedPanchanga, setExpandedPanchanga] = useState(null);
   var [loading, setLoading] = useState(true);
   var [chartLoading, setChartLoading] = useState(false);
   var [error, setError] = useState(null);
@@ -454,6 +456,22 @@ export default function HomeScreen() {
       })
       .catch(function () { /* silent */ });
   }, []);
+
+  // Fetch personalized jyotish data (Disha Shoola, Chandrashtama, Tara Balam, Special Yogas)
+  useEffect(function () {
+    if (!hasBirthData || !birthDateTime) return;
+    api.getJyotishPersonalized({
+      dateTime: birthDateTime,
+      lat: birthLat,
+      lng: birthLng,
+    })
+      .then(function (res) {
+        if (res && res.success && res.data) {
+          setJyotishToday(res.data);
+        }
+      })
+      .catch(function () { /* silent */ });
+  }, [hasBirthData, birthDateTime, birthLat, birthLng]);
 
   var getGreeting = function () {
     var h = new Date().getHours();
@@ -958,34 +976,208 @@ export default function HomeScreen() {
     );
   }
 
+  /* ── Cosmic Shield — Jyotish Daily Intelligence ── */
+  function renderCosmicShield() {
+    if (!jyotishToday) return null;
+    var ds = jyotishToday.dishaShoola;
+    var ch = jyotishToday.chandrashtama;
+    var tb = jyotishToday.taraBalam;
+
+    var DIRECTION_EMOJI = { North: '⬆️', South: '⬇️', East: '➡️', West: '⬅️', NE: '↗️', NW: '↖️', SE: '↘️', SW: '↙️' };
+    var DIR_LABELS = {
+      North: language === 'si' ? 'උතුර' : 'North',
+      South: language === 'si' ? 'දකුණ' : 'South',
+      East: language === 'si' ? 'නැ‍ග' : 'East',
+      West: language === 'si' ? 'බට' : 'West',
+    };
+
+    var chActive = ch && ch.isActive;
+    var taraLabel = tb ? (tb.tara || tb.bpiCategory || '--') : '--';
+    var taraScore = tb && typeof tb.score === 'number' ? tb.score : null;
+    var taraColor = taraScore != null ? (taraScore >= 70 ? '#34D399' : taraScore >= 40 ? '#FFB800' : '#EF4444') : '#FFB800';
+
+    return (
+      <Animated.View entering={FadeInDown.delay(320).springify()}>
+        <CosmicCard variant="content" delay={320}>
+          <SectionHeader title={language === 'si' ? '🛡️ තාරකා ආරක්ෂාව' : '🛡️ Cosmic Shield'} icon="" delay={320} />
+
+          {/* ── Chandrashtama Alert Strip ── */}
+          <View style={[cs.alertStrip, chActive ? cs.alertDanger : cs.alertSafe]}>
+            {chActive && <LinearGradient colors={['rgba(239,68,68,0.12)', 'rgba(239,68,68,0.03)']} style={StyleSheet.absoluteFill} />}
+            {!chActive && <LinearGradient colors={['rgba(52,211,153,0.10)', 'rgba(52,211,153,0.02)']} style={StyleSheet.absoluteFill} />}
+            <View style={[cs.alertIconWrap, chActive ? cs.alertIconDanger : cs.alertIconSafe]}>
+              <Ionicons name={chActive ? 'moon' : 'shield-checkmark'} size={18} color={chActive ? '#FF6B6B' : '#34D399'} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[cs.alertTitle, chActive && cs.alertTitleDanger]}>
+                {chActive
+                  ? (language === 'si' ? '⚠ චන්ද්‍රාෂ්ටම' : '⚠ Chandrashtama')
+                  : (language === 'si' ? '✓ සඳු ආරක්ෂිතයි' : '✓ Moon Transit Safe')}
+              </Text>
+              <Text style={[cs.alertDesc, chActive && cs.alertDescDanger]}>
+                {chActive
+                  ? (language === 'si' ? 'ප්‍රධාන තීරණ ගැනීමෙන් වළකින්න' : 'Avoid major decisions today')
+                  : (language === 'si' ? 'අද සඳු ගමන හිතකරයි' : 'Moon transit is favorable today')}
+              </Text>
+            </View>
+            <View style={[cs.alertDot, { backgroundColor: chActive ? '#EF4444' : '#34D399' }]} />
+          </View>
+
+          {/* ── Tara Balam + Disha Shoola Row ── */}
+          <View style={cs.shieldRow}>
+            {/* Tara Balam Card */}
+            {tb && (
+              <View style={[cs.shieldCard, { borderColor: taraColor + '25' }]}>
+                <LinearGradient colors={[taraColor + '10', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                <Text style={cs.shieldEmoji}>⭐</Text>
+                <Text style={cs.shieldLabel}>{language === 'si' ? 'තාරා බලය' : 'Star Strength'}</Text>
+                <Text style={[cs.shieldValue, { color: taraColor }]}>{taraLabel}</Text>
+                {taraScore != null && (
+                  <View style={cs.shieldBarTrack}>
+                    <View style={[cs.shieldBarFill, { width: taraScore + '%', backgroundColor: taraColor }]} />
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Disha Shoola Compass */}
+            {ds && (
+              <View style={[cs.shieldCard, { borderColor: 'rgba(139,92,246,0.20)' }]}>
+                <LinearGradient colors={['rgba(139,92,246,0.10)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                <Text style={cs.shieldEmoji}>🧭</Text>
+                <Text style={cs.shieldLabel}>{language === 'si' ? 'ගමන් දිශාව' : 'Travel Compass'}</Text>
+                {/* Compass mini display */}
+                <View style={cs.compassGrid}>
+                  {['North', 'South', 'East', 'West'].map(function (dir) {
+                    var isBad = ds.avoidDirection === dir || (ds.avoidDirections && ds.avoidDirections.indexOf(dir) !== -1);
+                    return (
+                      <View key={dir} style={[cs.compassDir, isBad && cs.compassDirBad]}>
+                        <Text style={{ fontSize: 10 }}>{DIRECTION_EMOJI[dir] || '•'}</Text>
+                        <Text style={[cs.compassDirText, isBad && cs.compassDirTextBad]}>{DIR_LABELS[dir] || dir}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+                {ds.avoidDirection && (
+                  <View style={cs.avoidPill}>
+                    <Ionicons name="close-circle" size={10} color="#F87171" />
+                    <Text style={cs.avoidPillText}>{language === 'si' ? 'වළක්වන්න: ' : 'Avoid: '}{ds.avoidDirection}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        </CosmicCard>
+      </Animated.View>
+    );
+  }
+
+  /* ── Today's Special Yogas ── */
+  function renderTodayYogas() {
+    if (!jyotishToday || !jyotishToday.specialYogas || jyotishToday.specialYogas.length === 0) return null;
+    var yogaColors = ['#FF8C00', '#A78BFA', '#34D399', '#F472B6', '#60A5FA', '#FFB800'];
+    return (
+      <Animated.View entering={FadeInDown.delay(340).springify()}>
+        <CosmicCard variant="surface" delay={340}>
+          <SectionHeader title={language === 'si' ? '✨ අද දිනයේ විශේෂ තත්ත්ව' : "✨ Today's Cosmic Patterns"} icon="" delay={340} />
+          <View style={cs.yogaWrap}>
+            {jyotishToday.specialYogas.slice(0, 6).map(function (yoga, i) {
+              var yColor = yogaColors[i % yogaColors.length];
+              var yName = typeof yoga === 'string' ? yoga : (yoga.name || yoga.yoga || '--');
+              var yDesc = typeof yoga === 'object' ? (yoga.description || yoga.result || null) : null;
+              return (
+                <Animated.View key={i} entering={FadeInUp.delay(380 + i * 50).springify()}>
+                  <View style={[cs.yogaPill, { borderColor: yColor + '30' }]}>
+                    <LinearGradient colors={[yColor + '12', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                    <View style={[cs.yogaDot, { backgroundColor: yColor }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[cs.yogaName, { color: yColor }]}>{yName}</Text>
+                      {yDesc && <Text style={cs.yogaDesc} numberOfLines={2}>{yDesc}</Text>}
+                    </View>
+                  </View>
+                </Animated.View>
+              );
+            })}
+          </View>
+        </CosmicCard>
+      </Animated.View>
+    );
+  }
+
   /* ── Panchanga Card ── */
   function renderPanchanga() {
     if (!data || !data.panchanga) return null;
+
+    var TITHI_SI = { 'Pratipada': 'ප්‍රතිපදා', 'Dwitiya': 'ද්විතීයා', 'Tritiya': 'තෘතීයා', 'Chaturthi': 'චතුර්ථී', 'Panchami': 'පංචමී', 'Shashthi': 'ෂෂ්ඨී', 'Saptami': 'සප්තමී', 'Ashtami': 'අෂ්ටමී', 'Navami': 'නවමී', 'Dashami': 'දශමී', 'Ekadashi': 'ඒකාදශී', 'Dwadashi': 'ද්වාදශී', 'Trayodashi': 'ත්‍රයෝදශී', 'Chaturdashi': 'චතුර්දශී', 'Purnima/Amavasya': 'පුර්ණිමා/අමාවාසි' };
+    var YOGA_SI = { 'Vishkambha': 'විෂ්කම්භ', 'Priti': 'ප්‍රීති', 'Ayushman': 'ආයුෂ්මාන්', 'Saubhagya': 'සෞභාග්‍ය', 'Shobhana': 'ශෝභන', 'Atiganda': 'අතිගණ්ඩ', 'Sukarma': 'සුකර්ම', 'Dhriti': 'ධෘතී', 'Shula': 'ශූල', 'Ganda': 'ගණ්ඩ', 'Vriddhi': 'වෘද්ධී', 'Dhruva': 'ධ්‍රැව', 'Vyaghata': 'ව්‍යාඝාත', 'Harshana': 'හර්ෂණ', 'Vajra': 'වජ්‍ර', 'Siddhi': 'සිද්ධී', 'Vyatipata': 'ව්‍යතීපාත', 'Variyan': 'වරියන්', 'Parigha': 'පරිඝ', 'Shiva': 'ශිව', 'Siddha': 'සිද්ධ', 'Sadhya': 'සාධ්‍ය', 'Shubha': 'ශුභ', 'Shukla': 'ශුක්ල', 'Brahma': 'බ්‍රහ්ම', 'Indra': 'ඉන්ද්‍ර', 'Vaidhriti': 'වෛධෘතී' };
+    var KARANA_SI = { 'Bava': 'බව', 'Balava': 'බාලව', 'Kaulava': 'කෞලව', 'Taitila': 'තෛතිල', 'Garaja': 'ගරජ', 'Vanija': 'වණිජ', 'Vishti': 'විෂ්ටි', 'Kinstughna': 'කිංස්තුඝ්න', 'Shakuni': 'ශකුණි', 'Chatushpada': 'චතුෂ්පාද', 'Naga': 'නාග' };
+    var VAARA_SI = { 'Sunday': 'ඉරිදා', 'Monday': 'සඳුදා', 'Tuesday': 'අඟහරුවාදා', 'Wednesday': 'බදාදා', 'Thursday': 'බ්‍රහස්පතින්දා', 'Friday': 'සිකුරාදා', 'Saturday': 'සෙනසුරාදා' };
+    var ALL_SI = Object.assign({}, TITHI_SI, YOGA_SI, KARANA_SI, VAARA_SI);
+
+    // Each row: [label, data, color, explanationKey, icon, hintKey]
     var rows = [
-      [t('tithi'), data.panchanga.tithi, '#FF8C00'],
-      [t('nakshatra'), data.panchanga.nakshatra, '#93C5FD'],
-      [t('yoga'), data.panchanga.yoga, '#34D399'],
-      [t('karana'), data.panchanga.karana, '#FFD666'],
-      [t('vaara'), data.panchanga.vaara, '#F472B6'],
+      [t('tithi'), data.panchanga.tithi, '#FF8C00', 'tithiExplain', 'sparkles-outline', t('tithiHint')],
+      [t('nakshatra'), data.panchanga.nakshatra, '#93C5FD', 'nakshatraExplain', 'star-outline', t('nakshatraHint')],
+      [t('yoga'), data.panchanga.yoga, '#34D399', 'yogaExplain', 'infinite-outline', t('yogaHint')],
+      [t('karana'), data.panchanga.karana, '#FFD666', 'karanaExplain', 'time-outline', t('karanaHint')],
+      [t('vaara'), data.panchanga.vaara, '#F472B6', 'vaaraExplain', 'planet-outline', t('vaaraHint')],
     ];
+
     return (
       <CosmicCard variant="surface" delay={500}>
         <SectionHeader title={t('sacredPanchanga')} subtitle={t('sacredPanchangaHint')} icon="🕉" delay={500} />
+        {/* Tap hint */}
+        <View style={s.pTapHintRow}>
+          <Ionicons name="hand-left-outline" size={12} color="rgba(255,214,102,0.35)" />
+          <Text style={s.pTapHint}>{t('tapToLearn')}</Text>
+        </View>
         {rows.map(function (row, i) {
-          var label = row[0], entry = row[1], color = row[2];
+          var label = row[0], entry = row[1], color = row[2], explainKey = row[3], icon = row[4], hint = row[5];
           if (!entry) return null;
           var englishName = typeof entry === 'string' ? entry : (entry.english || entry.name || String(entry));
-          var sinhalaName = typeof entry === 'object' ? entry.sinhala : null;
+          var sinhalaName = typeof entry === 'object' ? entry.sinhala : ALL_SI[englishName];
           var dispName = (language === 'si' && sinhalaName) ? sinhalaName : englishName;
           var subName = language === 'si' ? null : sinhalaName;
+          var isOpen = expandedPanchanga === i;
           return (
-            <View key={i} style={[s.pRow, i === rows.length - 1 && { borderBottomWidth: 0 }]}>
-              <View style={[s.pDot, { backgroundColor: color }]} />
-              <Text style={[s.pLabel, { color }]}>{label}</Text>
-              <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                <Text style={s.pValue}>{dispName}</Text>
-                {subName ? <Text style={s.pSinhala}>{subName}</Text> : null}
-              </View>
+            <View key={i}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={function () { setExpandedPanchanga(isOpen ? null : i); }}
+              >
+                <View style={[s.pRow, i === rows.length - 1 && !isOpen && { borderBottomWidth: 0 }]}>
+                  <View style={[s.pIconWrap, { backgroundColor: color + '18' }]}>
+                    <Ionicons name={icon} size={14} color={color} />
+                  </View>
+                  <View style={s.pLabelWrap}>
+                    <Text style={[s.pLabel, { color }]}>{label}</Text>
+                    <Text style={s.pHintText}>{hint}</Text>
+                  </View>
+                  <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                    <Text style={s.pValue}>{dispName}</Text>
+                    {subName ? <Text style={s.pSinhala}>{subName}</Text> : null}
+                  </View>
+                  <Ionicons
+                    name={isOpen ? 'chevron-up' : 'chevron-down'}
+                    size={14}
+                    color="rgba(255,214,102,0.30)"
+                    style={{ marginLeft: 6 }}
+                  />
+                </View>
+              </TouchableOpacity>
+              {isOpen && (
+                <Animated.View entering={FadeInDown.duration(250)}>
+                  <View style={s.pExplainBox}>
+                    <LinearGradient
+                      colors={[color + '12', 'transparent']}
+                      style={StyleSheet.absoluteFillObject}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    />
+                    <View style={[s.pExplainAccent, { backgroundColor: color }]} />
+                    <Text style={s.pExplainText}>{t(explainKey)}</Text>
+                  </View>
+                </Animated.View>
+              )}
             </View>
           );
         })}
@@ -1398,6 +1590,10 @@ export default function HomeScreen() {
               )}
               {!hasBirthData && renderNoBirthDataPrompt()}
 
+              {/* Cosmic Shield — Jyotish Intelligence */}
+              {hasBirthData && renderCosmicShield()}
+              {hasBirthData && renderTodayYogas()}
+
               {/* Panchanga */}
               {renderPanchanga()}
 
@@ -1670,15 +1866,37 @@ var s = StyleSheet.create({
   },
   personalityText: { fontSize: 12, fontWeight: '700' },
 
-  // Panchanga
+  // Panchanga (expandable with explanations)
+  pTapHintRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginBottom: 6, paddingHorizontal: 2,
+  },
+  pTapHint: { color: 'rgba(255,214,102,0.30)', fontSize: 11, fontWeight: '500', fontStyle: 'italic' },
   pRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: Colors.border, gap: 10,
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border, gap: 10,
   },
+  pIconWrap: {
+    width: 30, height: 30, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pLabelWrap: { width: 85 },
   pDot: { width: 6, height: 6, borderRadius: 3 },
-  pLabel: { fontSize: 13, fontWeight: '600', width: 80 },
+  pLabel: { fontSize: 13, fontWeight: '700' },
+  pHintText: { fontSize: 10, color: 'rgba(255,214,102,0.30)', fontWeight: '500', marginTop: 1 },
   pValue: { fontSize: 14, color: '#FFE8B0', fontWeight: '700' },
   pSinhala: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
+  pExplainBox: {
+    borderRadius: 10, padding: 14, marginBottom: 8,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
+    overflow: 'hidden', position: 'relative',
+  },
+  pExplainAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, borderRadius: 2 },
+  pExplainText: {
+    color: 'rgba(255,214,102,0.60)', fontSize: 13, lineHeight: 21, fontWeight: '500',
+    paddingLeft: 6,
+  },
 
   // Auspicious
   auspRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, gap: 12 },
@@ -1830,4 +2048,67 @@ var s = StyleSheet.create({
   wlLuckyIcon: { fontSize: 14 },
   wlLuckyMeta: { color: 'rgba(255,214,102,0.35)', fontSize: 7, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3 },
   wlLuckyLabel: { color: '#FFD666', fontSize: 11, fontWeight: '700' },
+});
+
+// ── Cosmic Shield Styles ──
+var cs = StyleSheet.create({
+  alertStrip: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 14, overflow: 'hidden',
+    paddingHorizontal: 14, paddingVertical: 11,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  alertSafe: { backgroundColor: 'rgba(52,211,153,0.05)', borderColor: 'rgba(52,211,153,0.15)' },
+  alertDanger: { backgroundColor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.25)' },
+  alertIconWrap: {
+    width: 36, height: 36, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+  },
+  alertIconSafe: { backgroundColor: 'rgba(52,211,153,0.10)', borderColor: 'rgba(52,211,153,0.20)' },
+  alertIconDanger: { backgroundColor: 'rgba(239,68,68,0.10)', borderColor: 'rgba(239,68,68,0.25)' },
+  alertTitle: { color: 'rgba(52,211,153,0.80)', fontSize: 13, fontWeight: '800' },
+  alertTitleDanger: { color: '#FCA5A5' },
+  alertDesc: { color: 'rgba(52,211,153,0.55)', fontSize: 11, fontWeight: '500', marginTop: 1 },
+  alertDescDanger: { color: 'rgba(248,113,113,0.65)' },
+  alertDot: { width: 8, height: 8, borderRadius: 4 },
+
+  shieldRow: { flexDirection: 'row', gap: 10 },
+  shieldCard: {
+    flex: 1, borderRadius: 16, overflow: 'hidden', padding: 14,
+    alignItems: 'center', borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.02)', gap: 6,
+  },
+  shieldEmoji: { fontSize: 22, marginBottom: 2 },
+  shieldLabel: { color: 'rgba(255,214,102,0.45)', fontSize: 9, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
+  shieldValue: { fontSize: 16, fontWeight: '900', textAlign: 'center' },
+  shieldBarTrack: { width: '100%', height: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, marginTop: 4, overflow: 'hidden' },
+  shieldBarFill: { height: 4, borderRadius: 2 },
+
+  compassGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, justifyContent: 'center', marginTop: 4 },
+  compassDir: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 6, paddingVertical: 3,
+    borderRadius: 8, backgroundColor: 'rgba(52,211,153,0.08)',
+    borderWidth: 1, borderColor: 'rgba(52,211,153,0.15)',
+  },
+  compassDirBad: { backgroundColor: 'rgba(239,68,68,0.10)', borderColor: 'rgba(239,68,68,0.25)' },
+  compassDirText: { color: 'rgba(52,211,153,0.70)', fontSize: 9, fontWeight: '700' },
+  compassDirTextBad: { color: '#F87171' },
+  avoidPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+    backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.20)',
+  },
+  avoidPillText: { color: '#F87171', fontSize: 9, fontWeight: '700' },
+
+  yogaWrap: { gap: 8 },
+  yogaPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderRadius: 12, overflow: 'hidden', padding: 12,
+    borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  yogaDot: { width: 8, height: 8, borderRadius: 4 },
+  yogaName: { fontSize: 13, fontWeight: '800' },
+  yogaDesc: { color: 'rgba(255,214,102,0.40)', fontSize: 11, lineHeight: 16, marginTop: 2 },
 });

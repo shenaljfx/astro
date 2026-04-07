@@ -985,9 +985,9 @@ const PUSHKARA_NAVAMSHA_RANGES = {
   6:  [{ start: 10.000, end: 13.333, navamsha: 'Kataka' }, { start: 20.000, end: 23.333, navamsha: 'Tula' }],     // Kanya
   10: [{ start: 10.000, end: 13.333, navamsha: 'Kataka' }, { start: 20.000, end: 23.333, navamsha: 'Tula' }],     // Makara
   // Air signs:
-  3:  [{ start: 6.667, end: 10.000, navamsha: 'Dhanu' }, { start: 16.667, end: 20.000, navamsha: 'Meena' }],      // Mithuna
-  7:  [{ start: 6.667, end: 10.000, navamsha: 'Dhanu' }, { start: 16.667, end: 20.000, navamsha: 'Meena' }],      // Tula
-  11: [{ start: 6.667, end: 10.000, navamsha: 'Dhanu' }, { start: 16.667, end: 20.000, navamsha: 'Meena' }],      // Kumbha
+  3:  [{ start: 6.667, end: 10.000, navamsha: 'Dhanus' }, { start: 16.667, end: 20.000, navamsha: 'Meena' }],      // Mithuna
+  7:  [{ start: 6.667, end: 10.000, navamsha: 'Dhanus' }, { start: 16.667, end: 20.000, navamsha: 'Meena' }],      // Tula
+  11: [{ start: 6.667, end: 10.000, navamsha: 'Dhanus' }, { start: 16.667, end: 20.000, navamsha: 'Meena' }],      // Kumbha
   // Water signs:
   4:  [{ start: 0.000, end: 3.333, navamsha: 'Kataka' }, { start: 13.333, end: 16.667, navamsha: 'Tula' }],       // Kataka
   8:  [{ start: 0.000, end: 3.333, navamsha: 'Kataka' }, { start: 13.333, end: 16.667, navamsha: 'Tula' }],       // Vrischika
@@ -1240,11 +1240,10 @@ function calculateAshtakavarga(date, lat, lng) {
     const rashi = RASHIS[i];
     sarvashtakavarga[rashi.name] = sarva[i];
     
-    // Interpret strength: Total 337 bindus / 12 signs ≈ 28 average
-    let strength = 'Average';
-    if (sarva[i] >= 30) strength = 'Strong (ශුභ)';
-    else if (sarva[i] >= 25) strength = 'Average';
-    else strength = 'Weak (අශුභ)';
+    let strength = 'average';
+    if (sarva[i] >= 30) strength = 'strong';
+    else if (sarva[i] >= 25) strength = 'average';
+    else strength = 'weak';
 
     signStrengths[rashi.name] = {
       rashiId: rashi.id,
@@ -2125,76 +2124,72 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
       // Mahadasha lord is a marriage significator
       if (marriageSignificators.has(mdLord)) {
         score += 15;
-        reasons.push(`${mdLord} Mahadasha is marriage significator`);
+        reasons.push({ rule: 'mdSignificator', planet: mdLord, pts: 15 });
       }
       // Antardasha lord is a marriage significator
       if (marriageSignificators.has(adLord)) {
         score += 15;
-        reasons.push(`${adLord} Antardasha is marriage significator`);
+        reasons.push({ rule: 'adSignificator', planet: adLord, pts: 15 });
       }
 
       // ── RULE 2: Dasha lord is 7th lord or Venus (extra weight) ──
       if (mdLord === lord7 || mdLord === 'Venus') {
         score += 10;
-        reasons.push(`${mdLord} MD is 7th lord or Venus — strong marriage trigger`);
+        reasons.push({ rule: 'mdIs7thLordOrVenus', planet: mdLord, pts: 10 });
       }
       if (adLord === lord7 || adLord === 'Venus') {
         score += 10;
-        reasons.push(`${adLord} AD is 7th lord or Venus — strong marriage trigger`);
+        reasons.push({ rule: 'adIs7thLordOrVenus', planet: adLord, pts: 10 });
       }
 
       // ── RULE 2b: Venus antardasha special bonus ──
-      // Venus is THE natural karaka of marriage — Venus AD deserves extra weight
-      // BUT if Venus is already the 7th lord, the bonus from Rule 2 already covers it
-      // so we give a reduced karaka bonus to prevent double-stacking
       if (adLord === 'Venus') {
-        const venusKarakaBonus = (lord7 === 'Venus') ? 4 : 8; // reduced if already 7th lord
+        const venusKarakaBonus = (lord7 === 'Venus') ? 4 : 8;
         score += venusKarakaBonus;
-        reasons.push(`Venus AD — natural marriage karaka activation${lord7 === 'Venus' ? ' (reduced: already counted as 7th lord)' : ' (strongest marriage antardasha)'}`);
-        // Venus in kendra or trikona from lagna = even more potent
+        reasons.push({ rule: 'venusADKaraka', pts: venusKarakaBonus, venusIs7thLord: lord7 === 'Venus' });
         const venusH = getPlanetHouse('Venus');
         if (venusH && [1, 4, 5, 7, 9, 10].includes(venusH)) {
           score += 5;
-          reasons.push(`Venus placed in strong house ${venusH} — amplifies marriage potential`);
+          reasons.push({ rule: 'venusInKendraTrikona', house: venusH, pts: 5 });
         }
       }
       if (mdLord === 'Venus') {
-        const venusMDBonus = (lord7 === 'Venus') ? 3 : 5; // reduced if already 7th lord
+        const venusMDBonus = (lord7 === 'Venus') ? 3 : 5;
         score += venusMDBonus;
-        reasons.push(`Venus MD — entire period favors relationships and marriage${lord7 === 'Venus' ? ' (reduced: already 7th lord)' : ''}`);
+        reasons.push({ rule: 'venusMDKaraka', pts: venusMDBonus, venusIs7thLord: lord7 === 'Venus' });
       }
 
       // ── RULE 3: Rahu/Ketu as proxy (they activate their dispositor's house) ──
       if (mdLord === 'Rahu' && rahuDispositor && marriageSignificators.has(rahuDispositor)) {
         score += 10;
-        reasons.push(`Rahu MD acts through dispositor ${rahuDispositor} (marriage significator)`);
+        reasons.push({ rule: 'rahuMDDispositor', planet: 'Rahu', dispositor: rahuDispositor, pts: 10 });
       }
       if (mdLord === 'Ketu' && ketuDispositor && marriageSignificators.has(ketuDispositor)) {
         score += 10;
-        reasons.push(`Ketu MD acts through dispositor ${ketuDispositor}`);
+        reasons.push({ rule: 'ketuMDDispositor', planet: 'Ketu', dispositor: ketuDispositor, pts: 10 });
       }
       if (adLord === 'Rahu' && rahuDispositor && marriageSignificators.has(rahuDispositor)) {
         score += 8;
-        reasons.push(`Rahu AD acts through dispositor ${rahuDispositor}`);
+        reasons.push({ rule: 'rahuADDispositor', planet: 'Rahu', dispositor: rahuDispositor, pts: 8 });
       }
       if (adLord === 'Ketu' && ketuDispositor && marriageSignificators.has(ketuDispositor)) {
         score += 8;
-        reasons.push(`Ketu AD acts through dispositor ${ketuDispositor}`);
+        reasons.push({ rule: 'ketuADDispositor', planet: 'Ketu', dispositor: ketuDispositor, pts: 8 });
       }
 
       // ── RULE 4: Dasha lord placed in or aspecting 7th house natally ──
       const mdHouse = getPlanetHouse(mdLord);
       const adHouse = getPlanetHouse(adLord);
-      if (mdHouse === 7) { score += 8; reasons.push(`${mdLord} placed in 7th house`); }
-      if (adHouse === 7) { score += 8; reasons.push(`${adLord} placed in 7th house`); }
-      if (planetsAspecting7.includes(mdLord)) { score += 5; reasons.push(`${mdLord} aspects 7th`); }
-      if (planetsAspecting7.includes(adLord)) { score += 5; reasons.push(`${adLord} aspects 7th`); }
+      if (mdHouse === 7) { score += 8; reasons.push({ rule: 'mdInH7', planet: mdLord, pts: 8 }); }
+      if (adHouse === 7) { score += 8; reasons.push({ rule: 'adInH7', planet: adLord, pts: 8 }); }
+      if (planetsAspecting7.includes(mdLord)) { score += 5; reasons.push({ rule: 'mdAspectsH7', planet: mdLord, pts: 5 }); }
+      if (planetsAspecting7.includes(adLord)) { score += 5; reasons.push({ rule: 'adAspectsH7', planet: adLord, pts: 5 }); }
 
       // ── RULE 4b: Rahu-Saturn affinity (Shani vat Rahu principle) ──
       // In Vedic astrology, Rahu acts like Saturn — their combined period amplifies commitment
       if ((mdLord === 'Rahu' && adLord === 'Saturn') || (mdLord === 'Saturn' && adLord === 'Rahu')) {
         score += 5;
-        reasons.push(`Rahu-Saturn combo (Shani vat Rahu) — amplifies commitment/marriage energy`);
+        reasons.push({ rule: 'rahuSaturnCombo', pts: 5 });
       }
 
       // ── RULE 4c: Saturn's special natal aspects on marriage houses ──
@@ -2206,7 +2201,7 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
             const aspH = ((satNatalH - 1 + asp - 1) % 12) + 1;
             if (aspH === 2 || aspH === 11) {
               score += 3;
-              reasons.push(`Saturn natal ${asp}th aspect hits H${aspH} (family/gains)`);
+              reasons.push({ rule: 'saturnAspectH2H11', aspect: asp, targetHouse: aspH, pts: 3 });
             }
           });
         }
@@ -2218,13 +2213,12 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
       const moonHouse = getPlanetHouse('Moon');
       if (moonHouse === 7) {
         score += 10;
-        reasons.push(`Moon in 7th house — strong natal marriage yoga (emotional fulfillment through partnership)`);
-        // Extra boost if AD lord aspects or is dispositor of Moon
+        reasons.push({ rule: 'moonInH7', pts: 10 });
         const moonRashiId = houses.find(h => h.planets.some(p => p.name === 'Moon'))?.rashiId;
         const moonDispositor = moonRashiId ? (RASHIS[moonRashiId - 1]?.lord || null) : null;
         if (moonDispositor && adLord === moonDispositor) {
           score += 8;
-          reasons.push(`${adLord} AD is Moon's dispositor (${moonDispositor}) — activates Moon in 7th`);
+          reasons.push({ rule: 'adIsMoonDispositor', planet: adLord, dispositor: moonDispositor, pts: 8 });
         }
       }
 
@@ -2238,23 +2232,21 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
           return aspH === 12;
         });
         if (saturnAspects12) {
-          // Boost periods where Saturn is involved as MD/AD lord
           if (mdLord === 'Saturn' || adLord === 'Saturn') {
             score += 8;
-            reasons.push(`Saturn natally aspects 12th (bed pleasures) — Saturn period activates marital intimacy`);
+            reasons.push({ rule: 'saturnAspectsH12_dashaLord', pts: 8 });
           } else {
-            // Minor boost even for non-Saturn periods (natal yoga exists)
             score += 2;
-            reasons.push(`Saturn's natal aspect on 12th house supports marriage`);
+            reasons.push({ rule: 'saturnAspectsH12_natal', pts: 2 });
           }
         }
       }
 
       // ── RULE 5: Dasha lord connects to 2nd or 11th house ──
-      if (mdHouse === 2 || mdHouse === 11) { score += 4; reasons.push(`${mdLord} in ${mdHouse}th (gains/family)`); }
-      if (adHouse === 2 || adHouse === 11) { score += 4; reasons.push(`${adLord} in ${adHouse}th (gains/family)`); }
-      if (mdLord === lord2 || mdLord === lord11) { score += 3; reasons.push(`${mdLord} rules 2nd/11th`); }
-      if (adLord === lord2 || adLord === lord11) { score += 3; reasons.push(`${adLord} rules 2nd/11th`); }
+      if (mdHouse === 2 || mdHouse === 11) { score += 4; reasons.push({ rule: 'mdInH2H11', planet: mdLord, house: mdHouse, pts: 4 }); }
+      if (adHouse === 2 || adHouse === 11) { score += 4; reasons.push({ rule: 'adInH2H11', planet: adLord, house: adHouse, pts: 4 }); }
+      if (mdLord === lord2 || mdLord === lord11) { score += 3; reasons.push({ rule: 'mdRulesH2H11', planet: mdLord, pts: 3 }); }
+      if (adLord === lord2 || adLord === lord11) { score += 3; reasons.push({ rule: 'adRulesH2H11', planet: adLord, pts: 3 }); }
 
       // ── RULE 5b: Dasha lords ruling kendra (1,4,7,10) or connected houses ──
       // Saturn ruling 4th = domestic happiness. 4th lord active = setting up home = marriage
@@ -2267,12 +2259,11 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
       // AD lord rules a kendra house (1,4,7,10) — angular lords bring events
       if (adRuledHouses.some(h => [1, 4, 7, 10].includes(h))) {
         score += 5;
-        reasons.push(`${adLord} rules kendra house(s) ${adRuledHouses.filter(h => [1,4,7,10].includes(h)).join(',')}`);
+        reasons.push({ rule: 'adRulesKendra', planet: adLord, houses: adRuledHouses.filter(h => [1,4,7,10].includes(h)), pts: 5 });
       }
-      // MD lord rules a kendra house
       if (mdRuledHouses.some(h => [1, 4, 7, 10].includes(h))) {
         score += 3;
-        reasons.push(`${mdLord} rules kendra house(s) ${mdRuledHouses.filter(h => [1,4,7,10].includes(h)).join(',')}`);
+        reasons.push({ rule: 'mdRulesKendra', planet: mdLord, houses: mdRuledHouses.filter(h => [1,4,7,10].includes(h)), pts: 3 });
       }
 
       // ── RULE 5b-EXTRA: 4th lord antardasha = marriage settlement indicator ──
@@ -2281,23 +2272,22 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
       // and getting married. This is one of the most overlooked marriage triggers.
       if (adRuledHouses.includes(4)) {
         score += 8;
-        reasons.push(`${adLord} is 4th lord (domestic happiness) — marriage + home foundation trigger`);
-        // If AD lord also rules another marriage-related house (2nd=family, 3rd=siblings/celebration), even stronger
+        reasons.push({ rule: 'adIsH4Lord', planet: adLord, pts: 8 });
         if (adRuledHouses.includes(2) || adRuledHouses.includes(3)) {
           score += 4;
-          reasons.push(`${adLord} also rules H${adRuledHouses.includes(2) ? 2 : 3} — family/celebration connection amplifies marriage`);
+          reasons.push({ rule: 'adAlsoRulesH2H3', planet: adLord, house: adRuledHouses.includes(2) ? 2 : 3, pts: 4 });
         }
       }
       if (mdRuledHouses.includes(4)) {
         score += 4;
-        reasons.push(`${mdLord} is 4th lord (domestic happiness) — entire MD supports home/family events`);
+        reasons.push({ rule: 'mdIsH4Lord', planet: mdLord, pts: 4 });
       }
 
       // Special: if one lord rules 4th (home) and the other connects to 7th — marriage + settling down
       if ((mdRuledHouses.includes(4) && (adRuledHouses.includes(7) || adLord === lord7 || adLord === 'Venus')) ||
           (adRuledHouses.includes(4) && (mdRuledHouses.includes(7) || mdLord === lord7 || mdLord === 'Venus'))) {
         score += 6;
-        reasons.push(`4th lord + 7th connection — marriage & setting up home`);
+        reasons.push({ rule: 'h4PlusH7Connection', pts: 6 });
       }
 
       // ── RULE 5c: AD lord's dispositor connects to 7th ──
@@ -2306,20 +2296,18 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
       const adDispositor = adLordRashiId ? (RASHIS[adLordRashiId - 1]?.lord || null) : null;
       if (adDispositor && marriageSignificators.has(adDispositor) && adDispositor !== adLord) {
         score += 5;
-        reasons.push(`${adLord}'s dispositor ${adDispositor} is marriage significator`);
+        reasons.push({ rule: 'adDispositorSignificator', planet: adLord, dispositor: adDispositor, pts: 5 });
       }
 
       // ── RULE 5d: Natural significator bonus ──
-      // Saturn = commitment/responsibility; Jupiter = dharma/ceremony; Venus = love
       if (adLord === 'Saturn' && (mdRuledHouses.includes(7) || marriageSignificators.has(mdLord))) {
         score += 4;
-        reasons.push(`Saturn AD = commitment/permanence with marriage-linked MD`);
+        reasons.push({ rule: 'saturnADWithMarriageMD', pts: 4 });
       }
       if (mdLord === 'Jupiter' || adLord === 'Jupiter') {
-        // Jupiter is the natural ceremony/blessing planet
         const jupLord = mdLord === 'Jupiter' ? 'MD' : 'AD';
         score += 2;
-        reasons.push(`Jupiter ${jupLord} — blesses marriage ceremony`);
+        reasons.push({ rule: 'jupiterDasha', period: jupLord, pts: 2 });
       }
 
       // ── RULE 5e: Mutual connection between MD and AD lords in natal chart ──
@@ -2328,24 +2316,23 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
       const mdDispositor = mdLordRashiId ? (RASHIS[mdLordRashiId - 1]?.lord || null) : null;
       if (mdDispositor === adLord || adDispositor === mdLord) {
         score += 6;
-        reasons.push(`${mdLord}-${adLord} mutual dispositorship — strong period activation`);
+        reasons.push({ rule: 'mutualDispositorship', md: mdLord, ad: adLord, pts: 6 });
       }
-      // MD lord and AD lord in same house or opposite houses
       if (mdHouse && adHouse) {
         if (mdHouse === adHouse) {
           score += 3;
-          reasons.push(`${mdLord} & ${adLord} conjunct natally`);
+          reasons.push({ rule: 'mdAdConjunct', md: mdLord, ad: adLord, house: mdHouse, pts: 3 });
         }
         if (Math.abs(mdHouse - adHouse) === 6 || Math.abs(mdHouse - adHouse) === -6) {
           score += 2;
-          reasons.push(`${mdLord} & ${adLord} in 1-7 axis natally`);
+          reasons.push({ rule: 'mdAdOnAxis', md: mdLord, ad: adLord, pts: 2 });
         }
       }
 
       // ── RULE 6: D9 Navamsha connection ──
       if (navLord7 && (mdLord === navLord7 || adLord === navLord7)) {
         score += 8;
-        reasons.push(`${mdLord === navLord7 ? mdLord : adLord} is D9 7th lord — Navamsha activation`);
+        reasons.push({ rule: 'd9H7Lord', planet: mdLord === navLord7 ? mdLord : adLord, pts: 8 });
       }
 
       // ── RULE 7: Transit checks at multiple points through the AD period ──
@@ -2404,21 +2391,21 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
         // Jupiter transit analysis
         if (jupH === 7) {
           transitScore += 12;
-          transitReasons.push(`Jupiter transits 7th house — strongest marriage transit`);
+          transitReasons.push({ rule: 'jupiterTransitsH7', house: 7, pts: 12 });
         } else if ([1, 5, 9].includes(jupH)) {
           transitScore += 6;
-          transitReasons.push(`Jupiter transits ${jupH}th (trikona) — supports marriage`);
+          transitReasons.push({ rule: 'jupiterTransitsTrikona', house: jupH, pts: 6 });
         } else if ([2, 11].includes(jupH)) {
           transitScore += 4;
-          transitReasons.push(`Jupiter transits ${jupH}th (gains) — supports marriage`);
+          transitReasons.push({ rule: 'jupiterTransitsGains', house: jupH, pts: 4 });
         }
         if (transitJupRashiId === venusRashiId) {
           transitScore += 5;
-          transitReasons.push(`Jupiter transits over natal Venus sign`);
+          transitReasons.push({ rule: 'jupiterOverNatalVenus', pts: 5 });
         }
         if (transitJupRashiId === lord7RashiIdNatal) {
           transitScore += 5;
-          transitReasons.push(`Jupiter transits over natal 7th lord sign`);
+          transitReasons.push({ rule: 'jupiterOverNatalH7Lord', pts: 5 });
         }
         // Jupiter transit over natal Moon — especially powerful if Moon is in 7th
         const moonRashiIdNatal = houses.find(h => h.planets.some(p => p.name === 'Moon'))?.rashiId;
@@ -2426,10 +2413,10 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
           const moonNatalH = getPlanetHouse('Moon');
           if (moonNatalH === 7) {
             transitScore += 10;
-            transitReasons.push(`Jupiter transits over Moon in 7th — activates marriage yoga`);
+            transitReasons.push({ rule: 'jupiterOverMoonInH7', pts: 10 });
           } else {
             transitScore += 3;
-            transitReasons.push(`Jupiter transits over natal Moon sign`);
+            transitReasons.push({ rule: 'jupiterOverNatalMoon', pts: 3 });
           }
         }
         // Jupiter aspects on 7th house
@@ -2437,21 +2424,21 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
           const aspH = ((jupH - 1 + asp - 1) % 12) + 1;
           if (aspH === 7 && jupH !== 7) {
             transitScore += 6;
-            transitReasons.push(`Jupiter aspects 7th house (${asp}th aspect from H${jupH})`);
+            transitReasons.push({ rule: 'jupiterAspectsH7', aspect: asp, fromHouse: jupH, pts: 6 });
           }
         });
 
         // Saturn transit analysis
         if (satH === 7) {
           transitScore += 6;
-          transitReasons.push(`Saturn transits 7th house`);
+          transitReasons.push({ rule: 'saturnTransitsH7', pts: 6 });
         }
         // Saturn aspects: 3rd, 7th, 10th
         [3, 7, 10].forEach(asp => {
           const aspH = ((satH - 1 + asp - 1) % 12) + 1;
           if (aspH === 7 && satH !== 7) {
             transitScore += 6;
-            transitReasons.push(`Saturn aspects 7th house (${asp}th aspect from H${satH})`);
+            transitReasons.push({ rule: 'saturnAspectsH7', aspect: asp, fromHouse: satH, pts: 6 });
           }
         });
 
@@ -2463,13 +2450,13 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
 
         if (jupTouches7 && satTouches7) {
           transitScore += 15;
-          transitReasons.push(`★ DOUBLE TRANSIT — Jupiter + Saturn both activate 7th house`);
+          transitReasons.push({ rule: 'doubleTransitH7', pts: 15 });
         }
 
         // Rahu-Ketu on 1-7 axis
         if (rahuH === 1 || rahuH === 7) {
           transitScore += 5;
-          transitReasons.push(`Rahu-Ketu axis transits 1-7 axis — karmic marriage trigger`);
+          transitReasons.push({ rule: 'rahuKetuOnAxis17', rahuHouse: rahuH, pts: 5 });
         }
 
         // ── Transit over 7th LORD's natal house (not just 7th house) ──
@@ -2480,19 +2467,17 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
             [5, 7, 9].some(a => ((jupH - 1 + a - 1) % 12) + 1 === lord7NatalH);
           if (jupTouchesLord7) {
             transitScore += 5;
-            transitReasons.push(`Jupiter transit activates 7th lord ${lord7} in H${lord7NatalH}`);
+            transitReasons.push({ rule: 'jupiterActivatesH7Lord', lord: lord7, house: lord7NatalH, pts: 5 });
           }
-          // Saturn transit/aspect on 7th lord's natal position
           const satTouchesLord7 = satH === lord7NatalH ||
             [3, 7, 10].some(a => ((satH - 1 + a - 1) % 12) + 1 === lord7NatalH);
           if (satTouchesLord7) {
             transitScore += 5;
-            transitReasons.push(`Saturn transit activates 7th lord ${lord7} in H${lord7NatalH}`);
+            transitReasons.push({ rule: 'saturnActivatesH7Lord', lord: lord7, house: lord7NatalH, pts: 5 });
           }
-          // Double transit on 7th lord (very powerful — equivalent to double transit on 7th house)
           if (jupTouchesLord7 && satTouchesLord7) {
             transitScore += 12;
-            transitReasons.push(`★ DOUBLE TRANSIT on 7th lord ${lord7} — marriage trigger`);
+            transitReasons.push({ rule: 'doubleTransitOnH7Lord', lord: lord7, pts: 12 });
           }
         }
 
@@ -2511,7 +2496,7 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
             adAspects.some(a => ((adTransitH - 1 + a - 1) % 12) + 1 === 7);
           if (adTransitTouches7) {
             transitScore += 6;
-            transitReasons.push(`AD lord ${adLord} transit activates 7th house — dasha-transit resonance`);
+            transitReasons.push({ rule: 'adLordTransitActivatesH7', planet: adLord, pts: 6 });
           }
         }
         // MD lord (if Saturn/Jupiter) transiting/aspecting 7th
@@ -2522,7 +2507,7 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
             mdAspects.some(a => ((mdTransitH - 1 + a - 1) % 12) + 1 === 7);
           if (mdTransitTouches7) {
             transitScore += 4;
-            transitReasons.push(`MD lord ${mdLord} transit activates 7th house — dasha-transit resonance`);
+            transitReasons.push({ rule: 'mdLordTransitActivatesH7', planet: mdLord, pts: 4 });
           }
         }
 
@@ -2534,16 +2519,16 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
             [5, 7, 9].some(a => ((jupH - 1 + a - 1) % 12) + 1 === adHouse);
           if (jupTouchesADLord) {
             transitScore += 8;
-            transitReasons.push(`Jupiter transit activates ${adLord} in H${adHouse} — dasha lord activation`);
+            transitReasons.push({ rule: 'jupiterActivatesADLord', planet: adLord, house: adHouse, pts: 8 });
           }
         }
-        // Saturn transit over AD lord's natal house — also activates (slower, more permanent results)
+        // Saturn transit over AD lord's natal house
         if (adHouse) {
           const satTouchesADLord = satH === adHouse ||
             [3, 7, 10].some(a => ((satH - 1 + a - 1) % 12) + 1 === adHouse);
           if (satTouchesADLord) {
             transitScore += 4;
-            transitReasons.push(`Saturn transit activates ${adLord} in H${adHouse}`);
+            transitReasons.push({ rule: 'saturnActivatesADLord', planet: adLord, house: adHouse, pts: 4 });
           }
         }
 
@@ -2559,24 +2544,23 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
       score += bestTransitScore;
       reasons.push(...bestTransitReasons);
 
-      // ── RULE 10: Age suitability (Sri Lankan norms) ──
+      // ── RULE 10: Age suitability ──
       const avgAge = (ageAtStart + ageAtEnd) / 2;
       if (avgAge >= 22 && avgAge <= 29) {
         score += 14;
-        reasons.push(`Age ${Math.floor(avgAge)} — prime marriage age window`);
+        reasons.push({ rule: 'primeAge', age: Math.floor(avgAge), pts: 14 });
       } else if (avgAge >= 20 && avgAge <= 32) {
         score += 6;
-        reasons.push(`Age ${Math.floor(avgAge)} — suitable marriage age`);
+        reasons.push({ rule: 'suitableAge', age: Math.floor(avgAge), pts: 6 });
       } else if (avgAge >= 18 && avgAge <= 35) {
         score += 2;
-        reasons.push(`Age ${Math.floor(avgAge)} — possible but less typical`);
+        reasons.push({ rule: 'possibleAge', age: Math.floor(avgAge), pts: 2 });
       } else if (avgAge > 40) {
-        // Penalize very late predictions as first marriage
         score -= 10;
-        reasons.push(`Age ${Math.floor(avgAge)} — unlikely for first marriage (penalty)`);
+        reasons.push({ rule: 'lateAgePenalty', age: Math.floor(avgAge), pts: -10 });
       } else if (avgAge < 18) {
         score -= 15;
-        reasons.push(`Age ${Math.floor(avgAge)} — too young (penalty)`);
+        reasons.push({ rule: 'underagePenalty', age: Math.floor(avgAge), pts: -15 });
       }
 
       // Only include windows with meaningful score
@@ -2606,7 +2590,7 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
   // it needs transit activation. The first period with both strong dasha AND double transit wins.
   const primeWindows = windows.filter(w => {
     const avgAge = (parseFloat(w.ageRange.split('-')[0]) + parseFloat(w.ageRange.split('-')[1])) / 2;
-    const hasDoubleTransit = w.reasons.some(r => r.includes('DOUBLE TRANSIT'));
+    const hasDoubleTransit = w.reasons.some(r => r.rule === 'doubleTransitH7' || r.rule === 'doubleTransitOnH7Lord');
     // Threshold lowered from 65 to 40 after correcting aspect formulas (Bug #8 fix)
     // — correct transit scores are naturally lower since only TRUE aspects count now
     return w.score >= 40 && avgAge >= 20 && avgAge <= 30;
@@ -2618,7 +2602,7 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
     const wObj = windows.find(w => w.mahadasha === firstViable.mahadasha && w.antardasha === firstViable.antardasha && w.start === firstViable.start);
     if (wObj) {
       wObj.score += 30;
-      wObj.reasons.push(`★ First strong marriage window in prime age with double transit — marriages manifest at the EARLIEST dasha+transit alignment`);
+      wObj.reasons.push({ rule: 'firstViableWindow', pts: 30 });
       wObj.confidence = wObj.score >= 50 ? 'Very High' : wObj.score >= 35 ? 'High' : wObj.score >= 25 ? 'Medium' : 'Low';
     }
   }
@@ -2633,10 +2617,10 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
       const yearsOver = avgAge - 35;
       const penalty = Math.min(yearsOver * 4, 50); // -4 per year over 35, max -50
       w.score -= penalty;
-      w.reasons.push(`Age ${Math.round(avgAge)} is well past typical first marriage — relevance reduced`);
+      w.reasons.push({ rule: 'lateAgePenaltyPost', age: Math.round(avgAge), pts: -penalty });
     } else if (avgAge < 18) {
       w.score -= 20;
-      w.reasons.push(`Age ${Math.round(avgAge)} is below legal marriage age`);
+      w.reasons.push({ rule: 'underagePenaltyPost', age: Math.round(avgAge), pts: -20 });
     }
     // Recalculate confidence
     w.confidence = w.score >= 50 ? 'Very High' : w.score >= 35 ? 'High' : w.score >= 25 ? 'Medium' : 'Low';
@@ -2667,7 +2651,7 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
         w.score = Math.round(w.score * penaltyFactor);
         w.confidence = w.score >= 50 ? 'Very High' : w.score >= 35 ? 'High' : w.score >= 25 ? 'Medium' : 'Low';
         if (penaltyFactor < 1.0) {
-          w.reasons.push(`⚠ Marriage denial penalty applied (denial score ${marriageDenial.denialScore}/100, severity ${marriageDenial.severity}) — score reduced from ${originalScore} to ${w.score}`);
+          w.reasons.push({ rule: 'denialPenalty', denialScore: marriageDenial.denialScore, severity: marriageDenial.severity, originalScore, newScore: w.score });
         }
       });
 
@@ -2691,7 +2675,7 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
         w.score += 50;
         w.confidence = 'CONFIRMED';
         w.confirmedMarriage = true;
-        w.reasons.push(`★ CONFIRMED: Actual marriage in ${confirmedMarriageYear} falls within this dasha window`);
+        w.reasons.push({ rule: 'confirmedMarriage', year: confirmedMarriageYear });
       }
     });
     windows.sort((a, b) => b.score - a.score);
@@ -3079,64 +3063,65 @@ function calculateVimshottari(moonLongitude, birthDate) {
  * Returns structured Insights manually generated (deterministic)
  */
 function generateDetailedReport(lagna, moonSign, sunSign, houses) {
-  // Helper to find planet house
+  // Architecture: Returns ONLY pure technical data. AI interprets personality,
+  // marriage prospects, wealth outlook, etc. from this technical data.
+  // No hardcoded English sentences or interpretive text.
+
   const getPlanetHouse = (planetName) => {
     return houses.findIndex(h => h.planets.some(p => p.name === planetName)) + 1;
   };
-  
+
   const getHouseLord = (houseNum) => {
     return houses[houseNum-1]?.rashiLord || 'Unknown';
   };
 
-  const fireSigns = ['Mesha', 'Simha', 'Dhanu'];
-  const earthSigns = ['Vrishabha', 'Kanya', 'Makara'];
-  const airSigns = ['Mithuna', 'Tula', 'Kumbha'];
-  const waterSigns = ['Kataka', 'Vrischika', 'Meena'];
-  
-  let character = `You are born with ${lagna.english} Lagna. `;
-  if (fireSigns.includes(lagna.name)) character += "You have a fiery, energetic, and leadership-oriented personality. ";
-  else if (earthSigns.includes(lagna.name)) character += "You are practical, grounded, and value stability. ";
-  else if (airSigns.includes(lagna.name)) character += "You are intellectual, communicative, and social. ";
-  else character += "You are emotional, intuitive, and sensitive. ";
-  
-  character += `Your mind (Moon) is in ${moonSign.english}, making you feel things deeply. `;
-  
-  const lord7 = getHouseLord(7);
-  const planetsIn7 = houses[6].planets.map(p => p.name).join(', ');
-  let marriage = `The 7th house is ruled by ${lord7}. `;
-  if (planetsIn7) marriage += `With ${planetsIn7} in the house of marriage, relationships are a key focus. `;
-  else marriage += "The 7th house has no planets, indicating the ruler's position is most important. ";
-  
-  const lord2 = getHouseLord(2);
-  const lord11 = getHouseLord(11);
-  const lord10 = getHouseLord(10);
-  
-  let wealth = `Wealth: Governed by ${lord2} (Accumulation) and ${lord11} (Gains). `;
-  wealth += `Career: Your 10th house of profession is ruled by ${lord10}. `;
-  
-  if (['Sun', 'Mars', 'Jupiter'].includes(lord10)) {
-     wealth += "Planetary influences suggest potential for leadership or independent business. ";
-  } else {
-     wealth += "You may excel in service-oriented or stable professional roles. ";
-  }
-
-  const lord5 = getHouseLord(5);
-  let children = `The 5th house of creativity and children is ruled by ${lord5}. `;
-  
-  const deepInsights = {
-    'Education': `4th House Lord is ${getHouseLord(4)}. Mercury is in House ${getPlanetHouse('Mercury')}. Good for analytical subjects.`,
-    'Property': `4th House governs home. Mars in House ${getPlanetHouse('Mars')} influences land ownership.`,
-    'LuckyGem': lagna.name === 'Mesha' ? 'Red Coral' : lagna.name === 'Vrishabha' ? 'Diamond' : 'Consult an astrologer',
-    'LuckyColor': lagna.name === 'Mesha' ? 'Red' : lagna.name === 'Vrishabha' ? 'White' : 'Yellow',
+  const ELEMENTS_MAP = {
+    fire: ['Mesha', 'Simha', 'Dhanus'],
+    earth: ['Vrishabha', 'Kanya', 'Makara'],
+    air: ['Mithuna', 'Tula', 'Kumbha'],
+    water: ['Kataka', 'Vrischika', 'Meena'],
   };
-  
+  const lagnaElement = Object.entries(ELEMENTS_MAP).find(([, signs]) => signs.includes(lagna.name))?.[0] || 'mixed';
+  const moonElement = Object.entries(ELEMENTS_MAP).find(([, signs]) => signs.includes(moonSign.name))?.[0] || 'mixed';
+
+  const lord7 = getHouseLord(7);
+  const planetsIn7 = houses[6]?.planets?.map(p => p.name).filter(n => n !== 'Lagna' && n !== 'Ascendant') || [];
+  const lord2 = getHouseLord(2);
+  const lord5 = getHouseLord(5);
+  const lord10 = getHouseLord(10);
+  const lord11 = getHouseLord(11);
+
   return {
-    character,
-    marriage,
-    wealth,
-    children,
-    future: "Your current Dasa period will determine the specific timing of events. Check the timeline below.",
-    deepInsights
+    character: {
+      lagna: { name: lagna.name, english: lagna.english, lord: lagna.lord },
+      lagnaElement,
+      moonSign: { name: moonSign.name, english: moonSign.english, lord: moonSign.lord },
+      moonElement,
+      sunSign: { name: sunSign.name, english: sunSign.english, lord: sunSign.lord },
+    },
+    marriage: {
+      seventhLord: lord7,
+      planetsInSeventh: planetsIn7,
+      seventhHouseRashi: houses[6]?.rashi || houses[6]?.rashiName || null,
+    },
+    wealth: {
+      secondLord: lord2,
+      eleventhLord: lord11,
+      tenthLord: lord10,
+      tenthHousePlanets: houses[9]?.planets?.map(p => p.name).filter(n => n !== 'Lagna') || [],
+    },
+    children: {
+      fifthLord: lord5,
+      planetsInFifth: houses[4]?.planets?.map(p => p.name).filter(n => n !== 'Lagna') || [],
+    },
+    deepInsights: {
+      fourthLord: getHouseLord(4),
+      mercuryHouse: getPlanetHouse('Mercury'),
+      marsHouse: getPlanetHouse('Mars'),
+      jupiterHouse: getPlanetHouse('Jupiter'),
+      saturnHouse: getPlanetHouse('Saturn'),
+      venusHouse: getPlanetHouse('Venus'),
+    },
   };
 }
 
@@ -3289,7 +3274,6 @@ function calculateVimshottariDetailed(moonLongitude, birthDate) {
       start: startDate.toISOString().split('T')[0],
       endDate: endDate.toISOString().split('T')[0],
       years: duration,
-      effects: DASHA_EFFECTS[lord] || {},
       antardashas,
     });
 
@@ -3566,7 +3550,6 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     sinhala: 'ග්‍රහ යෝග විශ්ලේෂණය',
     yogas: yogas.map(y => ({
       ...y,
-      impact: y.strength === 'Very Strong' ? 'Life-defining' : y.strength === 'Strong' ? 'Significant' : 'Moderate',
     })),
     // ── NEW: Include advanced yogas (30+ combinations) ──────────
     advancedYogas: advancedYogas ? advancedYogas.map(y => ({
@@ -3600,10 +3583,10 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const moonElement = Object.entries(ELEMENTS).find(([, signs]) => signs.includes(moonRashi.name))?.[0] || 'mixed';
 
   const ELEMENT_TRAITS = {
-    fire: { en: 'Dynamic, courageous, leader, impulsive, energetic', si: 'ගතික, ධෛර්යවන්ත, නායක, ශක්තිමත්' },
-    earth: { en: 'Practical, stable, materialistic, patient, reliable', si: 'ප්‍රායෝගික, ස්ථාවර, ඉවසිලිවන්ත, විශ්වාසවන්ත' },
-    air: { en: 'Intellectual, communicative, social, adaptable, analytical', si: 'බුද්ධිමත්, සමාජශීලී, අනුවර්තනය වන' },
-    water: { en: 'Emotional, intuitive, nurturing, sensitive, artistic', si: 'හැඟීම්බර, අවබෝධශීලී, සත්කාරශීලී' },
+    fire: { element: 'fire', quality: 'cardinal/fixed/mutable' },
+    earth: { element: 'earth', quality: 'cardinal/fixed/mutable' },
+    air: { element: 'air', quality: 'cardinal/fixed/mutable' },
+    water: { element: 'water', quality: 'cardinal/fixed/mutable' },
   };
 
   const personality = {
@@ -3684,13 +3667,13 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
         const reasons = [];
         const debSignLord = RASHIS[debRashi - 1]?.lord;
         const debSignLordH = getPlanetHouse(debSignLord);
-        if (debSignLordH && [1, 4, 7, 10].includes(debSignLordH)) { cancelled = true; reasons.push(`${debSignLord} in kendra`); }
+        if (debSignLordH && [1, 4, 7, 10].includes(debSignLordH)) { cancelled = true; reasons.push({ rule: 'debLordInKendra', lord: debSignLord, house: debSignLordH }); }
         const exaltations = { Sun: 1, Moon: 2, Mars: 10, Mercury: 6, Jupiter: 4, Venus: 12, Saturn: 7 };
         const exaltLord = RASHIS[(exaltations[pName] || 1) - 1]?.lord;
         const exaltLordH = getPlanetHouse(exaltLord);
-        if (exaltLordH && [1, 4, 7, 10].includes(exaltLordH)) { cancelled = true; reasons.push(`${exaltLord} (exalt lord) in kendra`); }
+        if (exaltLordH && [1, 4, 7, 10].includes(exaltLordH)) { cancelled = true; reasons.push({ rule: 'exaltLordInKendra', lord: exaltLord, house: exaltLordH }); }
         const pH = getPlanetHouse(pName);
-        if (pH && [1, 4, 7, 10].includes(pH)) { cancelled = true; reasons.push(`${pName} itself in kendra`); }
+        if (pH && [1, 4, 7, 10].includes(pH)) { cancelled = true; reasons.push({ rule: 'selfInKendra', planet: pName, house: pH }); }
         if (cancelled) nbYogas.push({ planet: pName, house: pH, reasons, isRajaYoga: reasons.length >= 2 });
       }
       return nbYogas;
@@ -4109,19 +4092,19 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   // 2nd lord in kendra/trikona
   const lord2House = getPlanetHouse(lord2Name);
   if (lord2House && (isInKendra(lord2House) || isInTrikona(lord2House))) {
-    dhanaYogas.push(`${lord2Name} (2nd lord) in house ${lord2House} — wealth accumulation supported`);
+    dhanaYogas.push({ type: 'lord2InKendraTrikona', lord: lord2Name, house: lord2House });
   }
   // 11th lord in kendra
   const lord11House = getPlanetHouse(lord11Name);
   if (lord11House && isInKendra(lord11House)) {
-    dhanaYogas.push(`${lord11Name} (11th lord) in Kendra — strong income gains`);
+    dhanaYogas.push({ type: 'lord11InKendra', lord: lord11Name, house: lord11House });
   }
   // 9th lord (fortune) + 10th lord connection
   const lord9Name = getHouseLord(9);
   const lord9House = getPlanetHouse(lord9Name);
   const lord10House = getPlanetHouse(lord10Name);
   if (lord9House && lord10House && lord9House === lord10House) {
-    dhanaYogas.push(`Raja Yoga: 9th lord (${lord9Name}) and 10th lord (${lord10Name}) conjoin — fortune through career`);
+    dhanaYogas.push({ type: 'rajaYoga', lord9: lord9Name, lord10: lord10Name, house: lord9House });
   }
 
   const career = {
@@ -4149,11 +4132,11 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     ketuInTenth,
     dhanaYogas,
     wealthStrength: ashtakavarga?.sarvashtakavarga ? (() => {
-      // Check bindus in 2nd and 11th house signs
-      const h2RashiIdx = (houses[1]?.rashiId || 1) - 1;
-      const h11RashiIdx = (houses[10]?.rashiId || 1) - 1;
-      const h2Bindus = ashtakavarga.sarvashtakavarga[h2RashiIdx] || 0;
-      const h11Bindus = ashtakavarga.sarvashtakavarga[h11RashiIdx] || 0;
+      // Check bindus in 2nd and 11th house signs (keyed by rashi NAME, not index)
+      const h2RashiName = houses[1]?.rashi;
+      const h11RashiName = houses[10]?.rashi;
+      const h2Bindus = h2RashiName ? (ashtakavarga.sarvashtakavarga[h2RashiName] || 0) : 0;
+      const h11Bindus = h11RashiName ? (ashtakavarga.sarvashtakavarga[h11RashiName] || 0) : 0;
       return { house2Bindus: h2Bindus, house11Bindus: h11Bindus, totalBindus: h2Bindus + h11Bindus };
     })() : null,
     businessVsService: { lord10InKendra: isInKendra(lord10House), lord10InDusthana: isInDusthana(lord10House), lord10House: lord10House },
@@ -4421,9 +4404,11 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
 
       // Factor 7: Ashtakavarga bindus for 5th house
       if (ashtakavarga?.sarvashtakavarga) {
-        const h5Bindus = ashtakavarga.sarvashtakavarga[4]; // 0-indexed
+        // sarvashtakavarga is keyed by rashi NAME, not index — get the 5th house rashi name
+        const h5RashiName = houses[4]?.rashi;
+        const h5Bindus = h5RashiName ? ashtakavarga.sarvashtakavarga[h5RashiName] : null;
         if (h5Bindus >= 30) childScore += 0.5;
-        else if (h5Bindus < 22) childScore -= 0.5;
+        else if (h5Bindus != null && h5Bindus < 22) childScore -= 0.5;
       }
 
       // Factor 8: Saturn/Rahu/Ketu in 5th reduces
@@ -4453,11 +4438,13 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       const count = Math.max(0, Math.round(childScore));
       const maleHints = genderHints.filter(g => g === 'male').length;
       const femaleHints = genderHints.filter(g => g === 'female').length;
-      const genderTendency = maleHints > femaleHints ? 'Sons more likely' : femaleHints > maleHints ? 'Daughters more likely' : 'Mix of sons and daughters';
 
       return {
         count: count >= 3 ? '3 or more' : count.toString(),
-        genderTendency,
+        // Raw gender planet data — AI interprets tendency
+        malePlanetCount: maleHints,
+        femalePlanetCount: femaleHints,
+        genderPlanetsIn5th: genderHints,
         jupiterDebilitated: jupDebilitated,
         marriageDenialImpact,
         score: childScore.toFixed(1),
@@ -4605,17 +4592,18 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
 
           const childNum = i + 1;
           const ordinal = childNum === 1 ? '1st' : childNum === 2 ? '2nd' : childNum === 3 ? '3rd' : `${childNum}th`;
-          // Gender prediction per child
+          // Gender data — raw planet indicators, AI interprets
           const maleIndicators = ['Sun', 'Mars', 'Jupiter'];
           const femaleIndicators = ['Moon', 'Venus'];
           const periodPlanets = [window.period.split('-')[0], window.period.split('-')[1] || ''].filter(Boolean);
-          const isMale = periodPlanets.some(p => maleIndicators.includes(p));
-          const isFemale = periodPlanets.some(p => femaleIndicators.includes(p));
-          const gender = isMale && !isFemale ? 'Son' : isFemale && !isMale ? 'Daughter' : 'Son or Daughter';
+          const malePlanetsDasha = periodPlanets.filter(p => maleIndicators.includes(p));
+          const femalePlanetsDasha = periodPlanets.filter(p => femaleIndicators.includes(p));
 
           childPredictions.push({
             childNumber: ordinal,
-            gender,
+            // Raw gender planet data — AI interprets
+            malePlanetsInDasha: malePlanetsDasha,
+            femalePlanetsInDasha: femalePlanetsDasha,
             predictedYears: window.yearRange,
             peakYear: window.peakYear,
             parentAge: window.age,
@@ -5183,10 +5171,6 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     const activeDasha = currentDasha ? {
       mahadasha: currentDasha.lord,
       antardasha: currentAntardasha?.lord || 'N/A',
-      theme: DASHA_EFFECTS[currentDasha.lord]?.general || '',
-      career: DASHA_EFFECTS[currentDasha.lord]?.career || '',
-      relationship: DASHA_EFFECTS[currentDasha.lord]?.relationship || '',
-      health: DASHA_EFFECTS[currentDasha.lord]?.health || '',
       endsIn: (() => {
         if (!currentAntardasha?.endDate) return 'N/A';
         const adEnd = new Date(currentAntardasha.endDate);
@@ -5257,7 +5241,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       const mdRuledHouses = [];
       for (let i = 1; i <= 12; i++) { if (getHouseLord(i) === activeDasha.mahadasha) mdRuledHouses.push(i); }
       const themes = mdRuledHouses.map(h => HOUSE_SIGNIFICATIONS[h]?.governs?.split(',')[0]?.trim()).filter(Boolean);
-      if (themes.length > 0) lifeThemes.push(`${activeDasha.mahadasha} period focuses on: ${themes.join(', ')}`);
+      if (themes.length > 0) lifeThemes.push({ planet: activeDasha.mahadasha, ruledHouses: mdRuledHouses, primarySignifications: themes });
     }
     
     // From major transits — technical data only
@@ -5328,15 +5312,15 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       const maleficMD = ['Saturn', 'Rahu', 'Ketu', 'Mars'].includes(mdLord);
       const mdFuncNature = getFunctionalNature(lagnaName, mdLord);
       
-      if (mdFuncNature === 'yogaKaraka') { score += 25; reasons.push(`${mdLord} YogaKaraka Mahadasha`); }
-      else if (mdFuncNature === 'benefic') { score += 15; reasons.push(`${mdLord} benefic Mahadasha`); }
-      else if (mdFuncNature === 'malefic') { score -= 10; reasons.push(`${mdLord} challenging Mahadasha`); }
+      if (mdFuncNature === 'yogaKaraka') { score += 25; reasons.push({ rule: 'mdYogaKaraka', planet: mdLord, pts: 25 }); }
+      else if (mdFuncNature === 'benefic') { score += 15; reasons.push({ rule: 'mdBenefic', planet: mdLord, pts: 15 }); }
+      else if (mdFuncNature === 'malefic') { score -= 10; reasons.push({ rule: 'mdMalefic', planet: mdLord, pts: -10 }); }
       
       // Antardasha lord quality
       const adFuncNature = getFunctionalNature(lagnaName, adLord);
-      if (adFuncNature === 'yogaKaraka') { score += 15; reasons.push(`${adLord} YogaKaraka sub-period`); }
-      else if (adFuncNature === 'benefic') { score += 10; reasons.push(`${adLord} benefic sub-period`); }
-      else if (adFuncNature === 'malefic') { score -= 5; reasons.push(`${adLord} challenging sub-period`); }
+      if (adFuncNature === 'yogaKaraka') { score += 15; reasons.push({ rule: 'adYogaKaraka', planet: adLord, pts: 15 }); }
+      else if (adFuncNature === 'benefic') { score += 10; reasons.push({ rule: 'adBenefic', planet: adLord, pts: 10 }); }
+      else if (adFuncNature === 'malefic') { score -= 5; reasons.push({ rule: 'adMalefic', planet: adLord, pts: -5 }); }
       
       // Special period combinations
       if (mdLord === 'Jupiter' && ['Venus', 'Mercury', 'Moon'].includes(adLord)) {
@@ -5845,15 +5829,10 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       return adEnd >= timelineStart && adStart <= timelineEnd;
     }).map(ad => {
       const adLordNature = getFunctionalNature(lagnaName, ad.lord);
-      const adEffects = DASHA_EFFECTS[ad.lord] || {};
       return {
         lord: ad.lord,
         period: `${ad.start} to ${ad.endDate}`,
         nature: adLordNature,
-        theme: adEffects.general?.split('.')[0] || '',
-        career: adEffects.career || '',
-        health: adEffects.health || '',
-        relationship: adEffects.relationship || '',
       };
     });
 
@@ -5862,7 +5841,6 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       period: `${effectiveStart.toISOString().split('T')[0]} to ${effectiveEnd.toISOString().split('T')[0]}`,
       nature: dashaLordNature,
       strength: dashaLordStrength,
-      effects: dasha.effects,
       antardashas: relevantADs,
       // Architecture: AI interprets overallTone from dashaLordNature + strength data
       overallTone: dashaLordNature,
@@ -6589,13 +6567,6 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       if (ageEnd < 0) continue;  // fully pre-birth
       if (ageStart > 80) continue; // implausibly far
 
-      let label = '';
-      if (ageStart <= 5)        label = `native's infancy/early childhood — mother in her peak productive years, health stress or burden likely`;
-      else if (ageStart <= 18)  label = `native's childhood/teens — mother's health or family financial health may be tested`;
-      else if (ageStart <= 38)  label = `native's young adult years — mother likely in her late 40s to 60s, prime window for chronic illness onset`;
-      else if (ageStart <= 55)  label = `native's mid-life — mother is elderly, second major health window`;
-      else                      label = `native's later years — mother in old age, care and health monitoring important`;
-
       windows.push({
         period: `${dp.start} – ${dp.endDate}`,
         nativeAge: `native age ~${Math.max(0,ageStart)}–${ageEnd}`,
@@ -6605,110 +6576,85 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     return windows.slice(0, 5);
   })();
 
-  const motherIsHomemaker = (() => {
-    const moonH = moonFamilyHouse || 0;
-    // Moon in 1,2,3,4,5,7,8,9,12 (not 10th/11th) suggests domestic role
-    const moonNotInCareerHouse = ![10, 11].includes(moonH);
-    // 4th lord not in 10th/11th = not career-focused
-    const lord4NotCareer = lord4FamilyHouse && ![10, 11].includes(lord4FamilyHouse);
-    // If both Moon and 4th lord are away from career houses → homemaker
-    return moonNotInCareerHouse && lord4NotCareer;
-  })();
-
-  // ── MOTHER'S CAREER ANALYSIS (predicted from chart) ──────────
+  // ── MOTHER'S CAREER — RAW PLANETARY DATA (no bias/predictions) ─────
+  // Architecture: Engine provides ONLY raw planet positions, dignities, strengths,
+  // and house placements. AI interprets what career the mother may have had.
+  // NO hardcoded career types, NO scoring, NO homemaker assumptions.
   const motherCareerAnalysis = (() => {
     const moonH = moonFamilyHouse || 0;
     const venusH = venusFamilyHouse || 0;
     const lord4H = lord4FamilyHouse || 0;
     const moonSign = planets.moon?.rashi || '';
-    const moonStrong = advancedShadbala?.moon?.percentage >= 55;
-    const venusStrong = advancedShadbala?.venus?.percentage >= 55;
     const mercH = getPlanetHouse('Mercury') || 0;
-    const mercSign = planets.mercury?.rashi || '';
-    const mercStrong = advancedShadbala?.mercury?.percentage >= 55;
+    const jupH = getPlanetHouse('Jupiter') || 0;
+    const sunH = getPlanetHouse('Sun') || 0;
     const h4pl = h4Family?.planetsInHouse || [];
-    const jupH = jupiterFamilyHouseF || 0;
-    const jupStrong = advancedShadbala?.jupiter?.percentage >= 55;
 
-    // Teaching / Education score
-    const teachingScore = [
-      jupH === 4 || h4pl.includes('Jupiter'),      // Jupiter in 4th = education at home
-      moonSign === 'Kataka' || moonSign === 'Meena', // Nurturing signs
-      mercStrong && (mercH === 4 || mercH === 5),    // Mercury strong near 4th/5th
-      lord4H === 5 || lord4H === 9,                  // 4th lord in education houses
-      jupStrong && (jupH === 5 || jupH === 9),       // Jupiter in education houses
-    ].filter(Boolean).length;
+    // 10th from 4th = mother's career house (1st house of native)
+    const motherCareerHouse = 1; // 10th from 4th
+    const h1ForMotherCareer = houses[0]?.planets?.filter(p => p.name !== 'Lagna').map(p => p.name) || [];
 
-    // Nursing / Healthcare score
-    const nursingScore = [
-      moonH === 6 || moonH === 12,                   // Moon in service/hospital house
-      moonSign === 'Kanya',                           // Virgo = healthcare
-      h4pl.includes('Ketu'),                          // Ketu in 4th = healing/spiritual service
-      lord4H === 6,                                   // 4th lord in 6th = service
-      venusH === 6 || venusH === 12,                  // Venus in service houses
-    ].filter(Boolean).length;
+    // Lord of mother's career house (= lagna lord) and its placement
+    const motherCareerLord = getHouseLord(1);
+    const motherCareerLordHouse = getPlanetHouse(motherCareerLord);
 
-    // Garment / Textile / Fashion score
-    const garmentScore = [
-      venusStrong,                                    // Strong Venus = textiles/beauty
-      venusH === 10 || venusH === 2,                  // Venus in career/wealth house
-      moonSign === 'Tula' || moonSign === 'Vrishabha', // Venus-ruled signs
-      rahuFamilyHouse === 10,                         // Rahu in 10th = factory/mass production
-      h4pl.includes('Venus'),                         // Venus in 4th
-    ].filter(Boolean).length;
-
-    // Government / Clerical score
-    const govScore = [
-      sunFamilyHouse === 10 || sunFamilyHouse === 4,  // Sun in career or home
-      satFamilyHouse === 10,                           // Saturn in 10th = government
-      lord4H === 10 || lord4H === 11,                  // 4th lord in career houses
-      moonH === 10 || moonH === 11,                    // Moon in career house
-    ].filter(Boolean).length;
-
-    // Agriculture / Farming score
-    const farmingScore = [
-      moonSign === 'Vrishabha' || moonSign === 'Kanya' || moonSign === 'Makara', // Earth signs
-      satFamilyHouse === 4,                            // Saturn in 4th = land/agriculture
-      lord4H === 2,                                    // 4th lord in 2nd = family livelihood from land
-      h4pl.includes('Saturn'),                         // Saturn in 4th
-      moonH === 2 || moonH === 4,                      // Moon in home/wealth
-    ].filter(Boolean).length;
-
-    // Domestic / Homemaker score
-    const homemakerScore = [
-      motherIsHomemaker,                               // Already calculated
-      moonH === 4,                                     // Moon in own house = contentment at home
-      !moonStrong && moonH !== 10 && moonH !== 11,     // Weak Moon away from career
-      venusH === 4,                                    // Venus in 4th = domestic comfort
-      lord4H === 4,                                    // 4th lord in 4th = strong home focus
-    ].filter(Boolean).length;
-
-    // Business / Trade score
-    const businessScore = [
-      mercStrong,                                      // Mercury = commerce
-      rahuFamilyHouse === 10 || rahuFamilyHouse === 7, // Rahu = unconventional, trade
-      moonH === 7 || moonH === 10,                     // Moon in partnership/career
-      lord4H === 7 || lord4H === 10,                   // 4th lord in trade houses
-    ].filter(Boolean).length;
+    // 7th from 4th = mother's partnership/public house (10th house of native)
+    const mother7thHouse = 10;
+    const h10ForMother = (houses[9]?.planets || []).filter(p => p.name !== 'Lagna').map(p => p.name);
 
     return {
+      // Raw Moon data (mother karaka)
       moonRashi: moonSign,
+      moonRashiEnglish: planets.moon?.rashiEnglish || '',
       moonHouse: moonH,
-      venusHouse: venusH,
+      moonDignity: planetStrengths.moon?.dignityLevel || 'Neutral',
+      moonShadbala: advancedShadbala?.moon?.percentage || null,
+      moonNakshatra: planets.moon?.nakshatra || '',
+      // D9 Moon confirmation (Navamsha position reveals deeper nature)
+      moonNavamsha: navamsha?.planets?.moon?.navamshaRashi || null,
+      moonNavamshaEnglish: navamsha?.planets?.moon?.navamshaRashiEnglish || null,
+      // 4th house data (mother's house)
+      lord4Planet: lord4Family,
       lord4House: lord4H,
-      motherIsHomemaker,
-      teachingScore,
-      nursingScore,
-      garmentScore,
-      govScore,
-      farmingScore,
-      homemakerScore,
-      businessScore,
+      lord4Dignity: planetStrengths[lord4Family?.toLowerCase()]?.dignityLevel || 'Neutral',
+      lord4Shadbala: advancedShadbala?.[lord4Family?.toLowerCase()]?.percentage || null,
+      // D9 4th lord confirmation
+      lord4Navamsha: navamsha?.planets?.[lord4Family?.toLowerCase()]?.navamshaRashi || null,
+      planetsIn4th: h4pl,
+      aspectsOn4th: h4Family?.aspectingPlanets?.map(a => ({ planet: a.planet, aspect: a.aspect })) || [],
+      // Mother's career house (10th from 4th = H1)
+      motherCareerHousePlanets: h1ForMotherCareer,
+      motherCareerLord,
+      motherCareerLordHouse,
+      motherCareerLordDignity: planetStrengths[motherCareerLord?.toLowerCase()]?.dignityLevel || 'Neutral',
+      motherCareerLordShadbala: advancedShadbala?.[motherCareerLord?.toLowerCase()]?.percentage || null,
+      // Mother's 7th house (10th from native = public/career visibility)
+      mother7thHousePlanets: h10ForMother,
+      // Key planets relevant to career analysis
+      venusHouse: venusH,
+      venusDignity: planetStrengths.venus?.dignityLevel || 'Neutral',
+      venusShadbala: advancedShadbala?.venus?.percentage || null,
+      mercuryHouse: mercH,
+      mercuryDignity: planetStrengths.mercury?.dignityLevel || 'Neutral',
+      mercuryShadbala: advancedShadbala?.mercury?.percentage || null,
+      jupiterHouse: jupH,
+      jupiterDignity: planetStrengths.jupiter?.dignityLevel || 'Neutral',
+      jupiterShadbala: advancedShadbala?.jupiter?.percentage || null,
+      sunHouse: sunH,
+      saturnHouse: satFamilyHouse,
+      rahuHouse: rahuFamilyHouse,
+      // Matrukaraka (Jaimini) for mother
+      matrukaraka: matrukaraka ? { planet: matrukaraka.planet, rashi: matrukaraka.rashi } : null,
+      // D12 for parent chart
+      d12Data: extendedVargas?.D12 ? {
+        d12Lagna: extendedVargas.D12.lagnaRashi,
+        d12Moon: extendedVargas.D12.positions?.moon?.vargaRashi,
+        d12Lord4: extendedVargas.D12.positions?.[lord4Family?.toLowerCase()]?.vargaRashi,
+      } : null,
     };
   })();
 
-  // Mother's personality — AI interprets from Moon sign
-  const MOON_MOTHER_PERSONALITY = {};
+  // Mother's personality — AI interprets from Moon sign (no hardcoded mapping)
 
   // Mother's health risks — technical indicators
   const motherHealthRisks = (() => {
@@ -6758,7 +6704,8 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const nativeMotherbond = {
     hasStrongAbandonmentRisk,
     hasAbandonmentRisk,
-    moonInKendra: [1, 4, 9].includes(moonFamilyHouse),
+    moonInKendra: [1, 4, 7, 10].includes(moonFamilyHouse),  // Kendra = 1,4,7,10 (not 9 which is Trikona)
+    moonInTrikona: [1, 5, 9].includes(moonFamilyHouse),
     moonSatConjunct,
     moonScore: moonFamilyScore,
     lord4InDusthana: lord4InDusthanFamily,
@@ -6774,8 +6721,25 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     moonShadbala: advancedShadbala?.moon ? { percentage: advancedShadbala.moon.percentage, strength: advancedShadbala.moon.strength } : null,
     matrukaraka: matrukaraka ? { planet: matrukaraka.planet, rashi: matrukaraka.rashi } : null,
     d12ParentChart: d12Lagna ? { d12Lagna } : null,
-    motherIsHomemaker,
     motherCareer: motherCareerAnalysis,
+    // ── DERIVED HOUSE CHART — Mother's full chart (4th as lagna) ──
+    // Enables AI to read ALL 12 houses from mother's perspective, not just cherry-picked ones
+    derivedChart: (() => {
+      const baseHouse = 4; // mother's lagna = native's 4th
+      const chart = {};
+      for (let i = 1; i <= 12; i++) {
+        const nativeHouseNum = ((baseHouse - 1 + i - 1) % 12) + 1;
+        const h = houses[nativeHouseNum - 1];
+        const pl = h?.planets?.filter(p => p.name !== 'Lagna').map(p => p.name) || [];
+        chart[i] = {
+          nativeHouse: nativeHouseNum,
+          rashi: h?.rashi,
+          rashiLord: h?.rashiLord,
+          planets: pl,
+        };
+      }
+      return chart;
+    })(),
     hasStrongAbandonmentRisk,
     hasAbandonmentRisk,
     healthRisks: motherHealthRisks,
@@ -6801,8 +6765,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const marsFamilyHouseF = getPlanetHouse('Mars');  // Mars = enterprise, action
   const jupiterFamilyHouseF = getPlanetHouse('Jupiter');
 
-  // Father's personality — AI interprets from Sun sign
-  const SUN_FATHER_PERSONALITY = {};
+  // Father's personality — AI interprets from Sun sign (no hardcoded mapping)
 
   const fatherHealthRisks = (() => {
     const indicators = [];
@@ -6825,7 +6788,8 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   })();
 
   const nativeFatherBond = {
-    sunInKendra: [1, 9, 10].includes(sunFamilyHouse),
+    sunInKendra: [1, 4, 7, 10].includes(sunFamilyHouse),   // Kendra = 1,4,7,10 (not 9 which is Trikona)
+    sunInTrikona: [1, 5, 9].includes(sunFamilyHouse),
     sunInDusthana: sunFamilyHouse && [6, 8, 12].includes(sunFamilyHouse),
     sunScore: sunFamilyScore,
     lord9InDusthana: lord9InDusthan,
@@ -6837,41 +6801,73 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     const marsH = marsFamilyHouseF || 0;
     const lord10Family = getHouseLord(10);
     const lord10FamilyHouse = getPlanetHouse(lord10Family);
-    const h10pl = houses?.[9]?.planetsInHouse || [];
-    const jupH = jupiterFamilyHouseF || 0;
-    const jupSign = planets.jupiter?.rashi || '';
-    const jupStrong = advancedShadbala?.jupiter?.percentage >= 55;
     const h9pl = h9Family?.planetsInHouse || [];
-    const ketuIn9 = h9pl.includes('Ketu');
-    const jupMedicineScore = [
-      jupH === 10,
-      (jupH === 9) && (jupStrong || ketuIn9),
-      jupSign === 'Meena' || jupSign === 'Kataka',
-      (jupH === 9) && jupSign === 'Dhanus',
-      (jupH === 9) && jupSign === 'Kumbha' && ketuIn9,
-      h10pl.includes('Jupiter'),
-    ].filter(Boolean).length;
-    const sunInKanya = planets.sun?.rashi === 'Kanya';
-    const marsInH10 = marsH === 10;
-    const mercuryStrong = advancedShadbala?.mercury?.percentage >= 50;
-    const logisticsScore = [sunInKanya, sunH === 11, marsInH10, planets.mars?.rashi === 'Simha', mercuryStrong].filter(Boolean).length;
-    const rahuH = getPlanetHouse('Rahu') || 0;
-    const businessScore = [sunH === 11, marsInH10, rahuH === 10].filter(Boolean).length;
+    const jupH = jupiterFamilyHouseF || 0;
+    const h10pl = (houses?.[9]?.planets || []).filter(p => p.name !== 'Lagna').map(p => p.name);
+
+    // 10th from 9th = father's career house (6th house of native)
+    const fatherCareerHouse = 6; // 10th from 9th
+    const h6ForFatherCareer = (houses[5]?.planets || []).filter(p => p.name !== 'Lagna').map(p => p.name);
+
+    // Lord of father's career house (= lord of 6th) and its placement
+    const fatherCareerLord = getHouseLord(6);
+    const fatherCareerLordHouse = getPlanetHouse(fatherCareerLord);
+
+    // 7th from 9th = father's partnership/public house (3rd house of native)
+    const father7thHouse = 3;
+    const h3ForFather = (houses[2]?.planets || []).filter(p => p.name !== 'Lagna').map(p => p.name);
+
     return {
+      // Raw Sun data (father karaka)
       sunRashi: planets.sun?.rashi,
+      sunRashiEnglish: planets.sun?.rashiEnglish || '',
       sunHouse: sunH,
+      sunDignity: planetStrengths.sun?.dignityLevel || 'Neutral',
+      sunShadbala: advancedShadbala?.sun?.percentage || null,
+      sunNakshatra: planets.sun?.nakshatra || '',
+      // D9 Sun confirmation (Navamsha position reveals deeper nature)
+      sunNavamsha: navamsha?.planets?.sun?.navamshaRashi || null,
+      sunNavamshaEnglish: navamsha?.planets?.sun?.navamshaRashiEnglish || null,
+      // 9th house data (father's house)
+      lord9Planet: lord9Family,
+      lord9House: lord9FamilyHouse,
+      lord9Dignity: planetStrengths[lord9Family?.toLowerCase()]?.dignityLevel || 'Neutral',
+      lord9Shadbala: advancedShadbala?.[lord9Family?.toLowerCase()]?.percentage || null,
+      // D9 9th lord confirmation
+      lord9Navamsha: navamsha?.planets?.[lord9Family?.toLowerCase()]?.navamshaRashi || null,
+      planetsIn9th: h9pl,
+      aspectsOn9th: h9Family?.aspectingPlanets?.map(a => ({ planet: a.planet, aspect: a.aspect })) || [],
+      // Father's career house (10th from 9th = H6)
+      fatherCareerHousePlanets: h6ForFatherCareer,
+      fatherCareerLord,
+      fatherCareerLordHouse,
+      fatherCareerLordDignity: planetStrengths[fatherCareerLord?.toLowerCase()]?.dignityLevel || 'Neutral',
+      fatherCareerLordShadbala: advancedShadbala?.[fatherCareerLord?.toLowerCase()]?.percentage || null,
+      // Father's 7th house (3rd of native = partnerships/public for father)
+      father7thHousePlanets: h3ForFather,
+      // Key planets for career inference
       marsHouse: marsH,
       marsRashi: planets.mars?.rashi,
+      marsDignity: planetStrengths.mars?.dignityLevel || 'Neutral',
+      marsShadbala: advancedShadbala?.mars?.percentage || null,
       jupiterHouse: jupH,
-      jupiterRashi: jupSign,
-      jupiterStrong: jupStrong,
-      ketuIn9,
-      jupMedicineScore,
-      logisticsScore,
-      businessScore,
-      lord10: lord10Family,
-      lord10House: lord10FamilyHouse,
-      h10Planets: h10pl,
+      jupiterRashi: planets.jupiter?.rashi,
+      jupiterDignity: planetStrengths.jupiter?.dignityLevel || 'Neutral',
+      jupiterShadbala: advancedShadbala?.jupiter?.percentage || null,
+      saturnHouse: satFamilyHouse,
+      rahuHouse: getPlanetHouse('Rahu'),
+      // Native's 10th house data (father often influences native's career)
+      nativeLord10: lord10Family,
+      nativeLord10House: lord10FamilyHouse,
+      nativeH10Planets: h10pl,
+      // Pitrakaraka (Jaimini) for father
+      pitrakaraka: pitrakaraka ? { planet: pitrakaraka.planet, rashi: pitrakaraka.rashi } : null,
+      // D12 for parent chart
+      d12Data: extendedVargas?.D12 ? {
+        d12Lagna: extendedVargas.D12.lagnaRashi,
+        d12Sun: extendedVargas.D12.positions?.sun?.vargaRashi,
+        d12Lord9: extendedVargas.D12.positions?.[lord9Family?.toLowerCase()]?.vargaRashi,
+      } : null,
     };
   })();
 
@@ -6884,6 +6880,24 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     sunShadbala: advancedShadbala?.sun ? { percentage: advancedShadbala.sun.percentage, strength: advancedShadbala.sun.strength } : null,
     pitrakaraka: pitrakaraka ? { planet: pitrakaraka.planet, rashi: pitrakaraka.rashi } : null,
     d12ParentChart: d12Lagna ? { d12Lagna } : null,
+    // ── DERIVED HOUSE CHART — Father's full chart (9th as lagna) ──
+    // Enables AI to read ALL 12 houses from father's perspective, not just cherry-picked ones
+    derivedChart: (() => {
+      const baseHouse = 9;
+      const chart = {};
+      for (let i = 1; i <= 12; i++) {
+        const nativeHouseNum = ((baseHouse - 1 + i - 1) % 12) + 1;
+        const h = houses[nativeHouseNum - 1];
+        const pl = h?.planets?.filter(p => p.name !== 'Lagna').map(p => p.name) || [];
+        chart[i] = {
+          nativeHouse: nativeHouseNum,
+          rashi: h?.rashi,
+          rashiLord: h?.rashiLord,
+          planets: pl,
+        };
+      }
+      return chart;
+    })(),
     healthRisks: fatherHealthRisks,
     lifestrug: fatherStruggles,
     bond: nativeFatherBond,
@@ -6924,8 +6938,37 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     let hasBros = false, hasSis = false;
     const h3pl = h3Family?.planetsInHouse || [];
 
+    // ── Mars karaka strength modulation ──────────────────────────
+    // Mars = natural karaka for siblings (BPHS). Strong Mars = more siblings,
+    // weak/debilitated Mars = fewer siblings regardless of house placements.
+    const marsDignity = planetStrengths.mars?.dignityLevel || 'Neutral';
+    const marsShadbala = advancedShadbala?.mars?.percentage || 50;
+    let marsKarakaMod = 0;
+    if (marsDignity === 'Exalted' || marsShadbala >= 70) marsKarakaMod = 0.4;
+    else if (marsDignity === 'Own Sign' || marsShadbala >= 60) marsKarakaMod = 0.2;
+    else if (marsDignity === 'Debilitated' || marsShadbala < 30) marsKarakaMod = -0.5;
+    else if (marsShadbala < 40) marsKarakaMod = -0.3;
+    // Neutral Mars (not debilitated, not exceptionally weak) = no penalty
+    // This prevents false negatives when Mars is just average (shadbala 38-50)
+
+    // ── Fertile sign bonus ───────────────────────────────────────
+    // BPHS: Water signs (Kataka, Vrischika, Meena) are the most fertile.
+    // If the 3rd or 11th house falls in a fertile sign, sibling count increases.
+    const FERTILE_SIGNS = ['Kataka', 'Vrischika', 'Meena'];
+    const BARREN_SIGNS = ['Mesha', 'Simha', 'Kanya']; 
+    const h3SignFertile = FERTILE_SIGNS.includes(houses[2]?.rashi) ? 0.2 : 0;
+    const h3SignBarren = BARREN_SIGNS.includes(houses[2]?.rashi) ? -0.15 : 0;
+    const h11SignFertile = FERTILE_SIGNS.includes(houses[10]?.rashi) ? 0.2 : 0;
+    const h11SignBarren = BARREN_SIGNS.includes(houses[10]?.rashi) ? -0.15 : 0;
+
     // ── 3rd house = younger co-borns ─────────────────────────────
-    // Planets in the house are the PRIMARY signal — house "strength" alone is insufficient
+    // BPHS principles for sibling count:
+    //   1. Planets IN the house — strongest direct evidence
+    //   2. House lord placement — represents the house even when away (PRIMARY, not secondary)
+    //   3. Aspects on the house — especially important when house is empty
+    //   4. Mars karaka strength — natural sibling indicator regardless of house occupancy
+    //   5. Lord in dusthana = troubled/reduced siblings, NOT zero
+    //
     // Exclude Sun (father karaka), Rahu and Ketu (shadow nodes — reduce, not add siblings)
     const h3SiblingPlanets = h3pl.filter(p => !['Sun', 'Rahu', 'Ketu'].includes(p));
     youngerScore += h3SiblingPlanets.length * 1.2;
@@ -6933,42 +6976,136 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     if (h3pl.includes('Venus'))   { hasSis  = true; youngerScore += 0.4; }
     if (h3pl.includes('Moon'))    { hasSis  = true; youngerScore += 0.3; }
     if (h3pl.includes('Jupiter')) youngerScore += 0.3;
-    if (h3pl.includes('Saturn') || h3pl.includes('Rahu') || h3pl.includes('Ketu')) youngerScore -= 0.4; // nodes reduce sibling count
-    // 3rd lord placement — counts only if lord is well-placed
-    if (!lord3InDusthan && lord3FamilyHouse) youngerScore += 0.4;
-    // Aspects on 3rd from benefics
-    const h3Asp = h3Family?.aspectingPlanets?.map(a => a.planet) || [];
-    if (h3Asp.includes('Mars'))    { hasBros = true; youngerScore += 0.25; }
-    if (h3Asp.includes('Venus'))   { hasSis  = true; youngerScore += 0.25; }
-    if (h3Asp.includes('Jupiter')) youngerScore += 0.2;
+    if (h3pl.includes('Saturn')) youngerScore -= 0.4; // Saturn restricts/delays
+    if (h3pl.includes('Rahu'))   youngerScore -= 0.3; // Rahu = shadow, confuses
+    if (h3pl.includes('Ketu'))   youngerScore -= 0.4; // Ketu = severance
+    // BPHS: Ketu conjunct Mars (sibling karaka) in sibling house = karaka "severed"
+    // Ketu strips Mars of its ability to produce siblings — much stronger denial
+    if (h3pl.includes('Ketu') && h3pl.includes('Mars')) youngerScore -= 0.6;
+    // Rahu as SOLE occupant = illusion, no real siblings. Extra penalty.
+    if (h3pl.includes('Rahu') && h3SiblingPlanets.length === 0) youngerScore -= 0.2;
+    // Saturn aspecting Rahu = restriction on the illusion
+    const h3AspEarly = (h3Family?.aspectingPlanets || []).map(a => a.planet);
+    if (h3pl.includes('Rahu') && h3AspEarly.includes('Saturn')) youngerScore -= 0.15;
+
+    // 3rd lord placement — LORD IS A PRIMARY INDICATOR per BPHS
+    // The lord carries the house's energy wherever it sits. Even in dusthana,
+    // siblings may exist (just troubled/reduced).
+    if (lord3FamilyHouse) {
+      if (lord3FamilyHouse === 3) {
+        // Lord in own house = strongest — ALWAYS gives siblings
+        youngerScore += 0.8;
+      } else if (lord3InDusthan) {
+        // Lord in dusthana = siblings exist but may be troubled/fewer
+        // Base: 0.25. When Mars karaka is strong, compensate further.
+        youngerScore += 0.25;
+        if (marsShadbala >= 50) youngerScore += 0.15; // Strong karaka compensates weak lord
+      } else if (h3SiblingPlanets.length > 0) {
+        // Lord well-placed AND planets present = strong evidence
+        youngerScore += 0.5;
+      } else {
+        // Lord well-placed, house empty = moderate evidence
+        youngerScore += 0.35;
+      }
+      // Special: Mars is both 3rd lord AND natural sibling karaka
+      if (lord3Family === 'Mars') youngerScore += 0.2;
+    }
+
+    // Aspects on 3rd — IMPORTANT when house is empty (only energy reaching the house)
+    const h3Asp = h3AspEarly; // already computed above for Rahu+Saturn check
+    if (h3SiblingPlanets.length > 0) {
+      // Planets present — aspects are confirmation
+      if (h3Asp.includes('Mars'))    { hasBros = true; youngerScore += 0.25; }
+      if (h3Asp.includes('Venus'))   { hasSis  = true; youngerScore += 0.25; }
+      if (h3Asp.includes('Jupiter')) {
+        const jupDig = planetStrengths.jupiter?.dignityLevel || 'Neutral';
+        youngerScore += (jupDig === 'Debilitated') ? 0 : 0.2;
+      }
+    } else {
+      // House empty — aspects are the PRIMARY evidence of energy reaching it
+      if (h3Asp.includes('Mars'))    { hasBros = true; youngerScore += 0.15; }
+      if (h3Asp.includes('Venus'))   { hasSis  = true; youngerScore += 0.15; }
+      if (h3Asp.includes('Jupiter')) {
+        const jupDig = planetStrengths.jupiter?.dignityLevel || 'Neutral';
+        youngerScore += (jupDig === 'Debilitated') ? 0 : 0.15;
+      }
+      // Saturn aspect on empty house = delay/reduction but not elimination
+      if (h3Asp.includes('Saturn')) youngerScore -= 0.1;
+    }
+
     // House strength: only adds bonus when at least one sibling planet is already present
     if (h3SiblingPlanets.length > 0) {
       if (h3Family?.strength === 'very strong') youngerScore += 0.3;
       else if (h3Family?.strength === 'strong') youngerScore += 0.15;
     }
 
+    // Apply Mars karaka modulation + fertile sign bonus to younger siblings
+    // BPHS nuance: If Mars IS the 3rd lord, its lordship compensates karaka weakness.
+    // A debilitated Mars that is also the lord still represents the house — halve the penalty.
+    const marsKarakaYounger = (lord3Family === 'Mars' && marsKarakaMod < 0)
+      ? marsKarakaMod * 0.5 : marsKarakaMod;
+    youngerScore += marsKarakaYounger;
+    youngerScore += h3SignFertile + h3SignBarren;
+
     // ── 11th house = elder co-borns ───────────────────────────────
-    // Same rule: planets are PRIMARY — house strength alone does NOT count
-    // Exclude Sun (father karaka), Saturn (malefic/chronic, reduces count), Moon (mother karaka)
-    // from raw planet count — only true sibling karakas count as planet signals
-    const h11SiblingPlanets = h11pl.filter(p => !['Sun', 'Saturn', 'Moon'].includes(p));
+    // Same BPHS principles: lord is PRIMARY, aspects matter for empty houses.
+    // Exclude Sun (father karaka), Saturn (malefic/chronic, reduces count), Moon (mother karaka),
+    // Rahu and Ketu (shadow nodes — reduce, not add siblings)
+    const h11SiblingPlanets = h11pl.filter(p => !['Sun', 'Saturn', 'Moon', 'Rahu', 'Ketu'].includes(p));
     elderScore += h11SiblingPlanets.length * 1.2;
     if (h11pl.includes('Mars'))    { hasBros = true; elderScore += 0.3; }
     if (h11pl.includes('Venus'))   { hasSis  = true; elderScore += 0.3; }
     // Moon in 11th = mother karaka, NOT an elder sibling indicator — only suppress/ignore
     if (h11pl.includes('Jupiter')) elderScore += 0.2;
     if (h11pl.includes('Saturn'))  elderScore -= 0.4;  // Saturn in 11th reduces elder siblings
-    if (h11pl.includes('Rahu'))    elderScore -= 0.2;
-    // 11th lord in dusthana = weak elder sibling house
-    if (lord11InDusthan) elderScore -= 0.3;
-    else if (lord11FamilyHouse) elderScore += 0.4;
-    // Aspects from benefics on 11th — only count if there's already planet-based evidence
-    // Venus aspecting 11th from H5 (children house) does NOT indicate elder sisters
+    if (h11pl.includes('Rahu'))    elderScore -= 0.3;   // Rahu = shadow node, reduces count
+    if (h11pl.includes('Ketu'))    elderScore -= 0.4;   // Ketu = severance, reduces count
+    // BPHS: Ketu conjunct Mars in sibling house = karaka severed
+    if (h11pl.includes('Ketu') && h11pl.includes('Mars')) elderScore -= 0.6;
+    // Rahu as SOLE occupant = illusion, no real sibling presence. Extra penalty.
+    if (h11pl.includes('Rahu') && h11SiblingPlanets.length === 0) elderScore -= 0.2;
+    // Saturn aspecting Rahu = restriction on the illusion → stronger denial
+    if (h11pl.includes('Rahu') && h11Aspects.some(a => a.planet === 'Saturn')) elderScore -= 0.15;
+
+    // 11th lord placement — LORD IS PRIMARY per BPHS
+    if (lord11FamilyHouse) {
+      if (lord11FamilyHouse === 11) {
+        elderScore += 0.7; // Lord in own house = strong elder siblings
+      } else if (lord11InDusthan) {
+        // Lord in dusthana = elder siblings may exist but fewer/troubled
+        elderScore += 0.25;
+        if (marsShadbala >= 50) elderScore += 0.15; // Strong karaka compensates weak lord
+      } else if (h11SiblingPlanets.length > 0) {
+        elderScore += 0.5;
+      } else {
+        // Lord well-placed, house empty = moderate evidence
+        elderScore += 0.35;
+      }
+      // Special: Mars is 11th lord AND natural sibling karaka
+      if (lord11Family === 'Mars') elderScore += 0.2;
+    }
+
+    // Aspects on 11th — important when house is empty
     if (h11SiblingPlanets.length > 0) {
       if (h11Aspects.some(a => a.planet === 'Mars'))    { hasBros = true; elderScore += 0.2; }
       if (h11Aspects.some(a => a.planet === 'Venus'))   { hasSis  = true; elderScore += 0.2; }
-      if (h11Aspects.some(a => a.planet === 'Jupiter')) elderScore += 0.2;
+      // Jupiter aspect: check dignity — debilitated Jupiter gives weak/no benefit
+      if (h11Aspects.some(a => a.planet === 'Jupiter')) {
+        const jupDig = planetStrengths.jupiter?.dignityLevel || 'Neutral';
+        elderScore += (jupDig === 'Debilitated') ? 0 : 0.2;
+      }
+    } else {
+      // Empty house — aspects are primary energy
+      if (h11Aspects.some(a => a.planet === 'Mars'))    { hasBros = true; elderScore += 0.15; }
+      if (h11Aspects.some(a => a.planet === 'Venus'))   { hasSis  = true; elderScore += 0.15; }
+      // Jupiter aspect on empty house: debilitated Jupiter = no benefit
+      if (h11Aspects.some(a => a.planet === 'Jupiter')) {
+        const jupDig = planetStrengths.jupiter?.dignityLevel || 'Neutral';
+        elderScore += (jupDig === 'Debilitated') ? 0 : 0.15;
+      }
+      if (h11Aspects.some(a => a.planet === 'Saturn'))  elderScore -= 0.1;
     }
+
     // House strength: only adds bonus when sibling-relevant planets are present
     if (h11SiblingPlanets.length > 0) {
       if (h11Family?.strength === 'very strong') elderScore += 0.2;
@@ -6977,23 +7114,286 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     // Hard cap: if Saturn is in 11th, elder count cannot exceed 1 regardless of score
     const saturnIn11 = h11pl.includes('Saturn');
 
-    // ── Venus karaka boosting sisters ─────────────────────────────
+    // Apply Mars karaka modulation + fertile sign bonus to elder siblings
+    // Same lordship compensation: if Mars IS the 11th lord, halve karaka penalty
+    const marsKarakaElder = (lord11Family === 'Mars' && marsKarakaMod < 0)
+      ? marsKarakaMod * 0.5 : marsKarakaMod;
+    elderScore += marsKarakaElder;
+    elderScore += h11SignFertile + h11SignBarren;
 
-    if (venusFamilySibHouse === 3 || venusFamilySibHouse === 11) { hasSis = true; }
+    // ── Ashtakavarga confirmation — SAV bindus in sibling houses ──
+    // SAV bindus represent overall house vitality. High SAV = thriving, low = weak.
+    // For empty houses, SAV is one of the FEW quantitative signals available.
+    // Mars BAV (Bhinnashtakavarga) = Mars's SPECIFIC contribution to each rashi.
+    // Since Mars is the sibling karaka, high Mars BAV in sibling houses = strong
+    // karaka support for siblings even when the house is physically empty.
+    if (ashtakavarga?.sarvashtakavarga) {
+      const h3RashiName = houses[2]?.rashi;
+      const h11RashiName = houses[10]?.rashi;
+      const h3SAV = h3RashiName ? (ashtakavarga.sarvashtakavarga[h3RashiName] || 0) : 0;
+      const h11SAV = h11RashiName ? (ashtakavarga.sarvashtakavarga[h11RashiName] || 0) : 0;
 
-    if (elderScore < 0.3 && youngerScore >= 0.3) {
-      // Only boost elder if 11th house actually has sibling-relevant planets
-      if (h11SiblingPlanets.length > 0) {
-        elderScore += 0.3;
+      // SAV modulates ALL houses — even empty ones (represents latent house energy)
+      if (h3SAV >= 30) youngerScore += 0.3;
+      else if (h3SAV >= 25) youngerScore += 0.1;
+      else if (h3SAV < 22) youngerScore -= 0.2;
+
+      if (h11SAV >= 30) elderScore += 0.3;
+      else if (h11SAV >= 25) elderScore += 0.1;
+      else if (h11SAV < 22) elderScore -= 0.2;
+
+      // Mars BAV — karaka's specific contribution to sibling houses
+      const marsBAV = ashtakavarga.prastarashtakavarga?.Mars;
+      if (marsBAV) {
+        const h3MarsBAV = marsBAV[(houses[2]?.rashiId || 1) - 1] || 0;
+        const h11MarsBAV = marsBAV[(houses[10]?.rashiId || 1) - 1] || 0;
+        // Mars BAV ≥ 5 = strong karaka presence → boost sibling count
+        // Mars BAV ≥ 4 = decent support → small boost
+        // Mars BAV ≤ 1 = very weak karaka → penalty
+        if (h3MarsBAV >= 5) youngerScore += 0.25;
+        else if (h3MarsBAV >= 4) youngerScore += 0.1;
+        else if (h3MarsBAV <= 1) youngerScore -= 0.15;
+
+        if (h11MarsBAV >= 5) elderScore += 0.25;
+        else if (h11MarsBAV >= 4) elderScore += 0.1;
+        else if (h11MarsBAV <= 1) elderScore -= 0.15;
       }
     }
 
-    // ── Adjusted thresholds ────────────────────────────────────────
-    const youngerCount = youngerScore >= 2.8 ? '2+' : youngerScore >= 0.3 ? '1' : '0';
+    // ── D3 (Drekkana) confirmation — BPHS primary varga for siblings ──
+    // D3 is a CONFIRMATION layer — it can strengthen or weaken existing evidence,
+    // but it should NOT create siblings from nothing when the primary house is empty.
+    // Rule: D3 modulates ONLY the score that already has primary evidence (planets in house).
+    const d3Data = extendedVargas?.D3 || null;
+    if (d3Data) {
+      const marsD3Rashi = d3Data.positions?.mars?.vargaRashi;
+      if (marsD3Rashi) {
+        // NOTE: extendedVargas uses ENGLISH rashi names (Aries, Capricorn, etc.)
+        const marsExaltedOrOwn = ['Aries', 'Scorpio', 'Capricorn'].includes(marsD3Rashi);
+        const marsDebilD3 = marsD3Rashi === 'Cancer';
+        // D3 Mars strength modulates ONLY houses with existing planetary evidence
+        // (prevents creating false siblings in empty houses)
+        if (h3SiblingPlanets.length > 0) {
+          if (marsExaltedOrOwn) youngerScore += 0.3;
+          if (marsDebilD3) youngerScore -= 0.3;
+        }
+        if (h11SiblingPlanets.length > 0) {
+          if (marsExaltedOrOwn) elderScore += 0.2;
+          if (marsDebilD3) elderScore -= 0.2;
+        }
+        // D3 Mars debilitation can ALWAYS suppress (even without planets — it reduces the karaka globally)
+        if (marsDebilD3 && h3SiblingPlanets.length === 0) youngerScore -= 0.15;
+        if (marsDebilD3 && h11SiblingPlanets.length === 0) elderScore -= 0.1;
+      }
+    }
+
+    // ── Gender determination — BPHS multi-layer methodology ──────
+    // BPHS priority for sibling gender (highest to lowest weight):
+    //   1. HOUSE LORD'S SIGN — lord of 3rd/11th sitting in even sign = female, odd = male (PRIMARY)
+    //   2. Planets IN the house — Venus/Moon = female, Mars/Sun = male, others = neutral
+    //   3. Aspecting planets — secondary confirmation only
+    //   4. Venus/Moon direct connection to the sibling house = strong female override
+    //   5. House sign — weakest indicator, barely tips the scale
+    //
+    // CRITICAL: Elder and younger gender are determined SEPARATELY.
+    // Elder = 11th house indicators only. Younger = 3rd house indicators only.
+    const EVEN_SIGNS = ['Vrishabha', 'Kataka', 'Kanya', 'Vrischika', 'Makara', 'Meena'];
+    const FEMALE_PLANETS = ['Venus', 'Moon'];
+    const MALE_PLANETS = ['Sun', 'Mars'];
+    // Jupiter = male but weak gender signal (guru, not warrior)
+    // Mercury, Saturn, Rahu, Ketu = gender-neutral — use their sign placement
+
+    // ── ELDER sibling gender (11th house) ─────────────────────────
+    let elderFemale = 0, elderMale = 0;
+    const h11Rashi = houses[10]?.rashi || '';
+
+    // PRIMARY: 11th lord's sign placement (strongest indicator per BPHS)
+    const lord11Rashi = planets[lord11Family?.toLowerCase()]?.rashi || '';
+    if (EVEN_SIGNS.includes(lord11Rashi)) elderFemale += 1.5;
+    else if (lord11Rashi) elderMale += 1.5;
+
+    // Planets in 11th — gendered planets, MODULATED by their sign placement
+    // BPHS: A male planet in a female sign gives mixed/reduced male indication
+    for (const p of h11pl) {
+      const pRashi = planets[p.toLowerCase()]?.rashi || '';
+      const inEvenSign = EVEN_SIGNS.includes(pRashi);
+      if (FEMALE_PLANETS.includes(p)) {
+        // Female planet: strong female, but in odd sign = slightly reduced
+        elderFemale += inEvenSign ? 1.2 : 0.8;
+      } else if (MALE_PLANETS.includes(p)) {
+        // Male planet: strong male, but in EVEN sign = gender is mixed/reduced
+        if (inEvenSign) {
+          elderMale += 0.4;    // much reduced — male planet contradicted by female sign
+          elderFemale += 0.5;  // sign adds female pull
+        } else {
+          elderMale += 1.2;    // male planet in male sign = strong male
+        }
+      } else if (p === 'Jupiter') elderMale += 0.4; // Jupiter = weakly male
+      else {
+        // Neutral planet — use its sign
+        if (inEvenSign) elderFemale += 0.4;
+        else if (pRashi) elderMale += 0.4;
+      }
+    }
+
+    // Aspects on 11th — weak confirmation
+    for (const asp of h11Aspects) {
+      if (FEMALE_PLANETS.includes(asp.planet)) elderFemale += 0.4;
+      else if (MALE_PLANETS.includes(asp.planet)) elderMale += 0.4;
+      else if (asp.planet === 'Jupiter') {
+        // Jupiter aspecting: check its sign for gender lean
+        const jRashi = planets[asp.planet.toLowerCase()]?.rashi || '';
+        if (EVEN_SIGNS.includes(jRashi)) elderFemale += 0.3;
+        else elderMale += 0.3;
+      }
+    }
+
+    // Venus/Moon connection to 11th (karaka override)
+    if (venusFamilySibHouse === 11) elderFemale += 1.5;
+    if (moonFamSibHouse === 11) elderFemale += 1.0;
+
+    // House sign — weakest, tiebreaker only
+    if (EVEN_SIGNS.includes(h11Rashi)) elderFemale += 0.3;
+    else if (h11Rashi) elderMale += 0.3;
+
+    // ── YOUNGER sibling gender (3rd house) ────────────────────────
+    let youngerFemale = 0, youngerMale = 0;
+    const h3Rashi = houses[2]?.rashi || '';
+
+    // PRIMARY: 3rd lord's sign placement
+    const lord3Rashi = planets[lord3Family?.toLowerCase()]?.rashi || '';
+    if (EVEN_SIGNS.includes(lord3Rashi)) youngerFemale += 1.5;
+    else if (lord3Rashi) youngerMale += 1.5;
+
+    // Planets in 3rd — gendered planets, MODULATED by their sign placement
+    for (const p of h3pl) {
+      const pRashi = planets[p.toLowerCase()]?.rashi || '';
+      const inEvenSign = EVEN_SIGNS.includes(pRashi);
+      if (FEMALE_PLANETS.includes(p)) {
+        youngerFemale += inEvenSign ? 1.2 : 0.8;
+      } else if (MALE_PLANETS.includes(p)) {
+        // Male planet in EVEN sign = gender is mixed/reduced
+        if (inEvenSign) {
+          youngerMale += 0.4;
+          youngerFemale += 0.5;
+        } else {
+          youngerMale += 1.2;
+        }
+      } else if (p === 'Jupiter') youngerMale += 0.4;
+      else {
+        if (inEvenSign) youngerFemale += 0.4;
+        else if (pRashi) youngerMale += 0.4;
+      }
+    }
+
+    // Aspects on 3rd
+    const h3AspList = h3Family?.aspectingPlanets || [];
+    for (const asp of h3AspList) {
+      if (FEMALE_PLANETS.includes(asp.planet)) youngerFemale += 0.4;
+      else if (MALE_PLANETS.includes(asp.planet)) youngerMale += 0.4;
+      else if (asp.planet === 'Jupiter') {
+        const jRashi = planets[asp.planet.toLowerCase()]?.rashi || '';
+        if (EVEN_SIGNS.includes(jRashi)) youngerFemale += 0.3;
+        else youngerMale += 0.3;
+      }
+    }
+
+    // Venus/Moon connection to 3rd
+    if (venusFamilySibHouse === 3) youngerFemale += 1.5;
+    if (moonFamSibHouse === 3) youngerFemale += 1.0;
+
+    // House sign — weakest
+    if (EVEN_SIGNS.includes(h3Rashi)) youngerFemale += 0.3;
+    else if (h3Rashi) youngerMale += 0.3;
+
+    // ── Combine: hasBros/hasSis from EITHER elder or younger ──────
+    const elderIsFemale = elderFemale > elderMale;
+    const elderIsMale = elderMale > elderFemale;
+    const youngerIsFemale = youngerFemale > youngerMale;
+    const youngerIsMale = youngerMale > youngerFemale;
+
+    // Define thresholds early — needed for both gender flags and count conversion
+    const youngerThreshold = h3SiblingPlanets.length > 0 ? 0.3 : 0.5;
+    const elderThreshold = h11SiblingPlanets.length > 0 ? 0.3 : 0.5;
+
+    // Set flags based on whether any sibling group leans female/male
+    // IMPORTANT: Use the actual count thresholds, not a lower value.
+    // Gender flags should only be set when the count is ≥ 1.
+    const hasElderSibs = elderScore >= elderThreshold;
+    const hasYoungerSibs = youngerScore >= youngerThreshold;
+    hasSis = (hasElderSibs && elderIsFemale) || (hasYoungerSibs && youngerIsFemale);
+    hasBros = (hasElderSibs && elderIsMale) || (hasYoungerSibs && youngerIsMale);
+    // Close calls = mixed gender — but only when scores are truly ambiguous.
+    // Use relative threshold: if the difference is < 15% of the higher score, it's mixed.
+    // This prevents minor factors from overriding the lord's dominant gender signal.
+    const elderMaxG = Math.max(elderFemale, elderMale, 0.1);
+    const youngerMaxG = Math.max(youngerFemale, youngerMale, 0.1);
+    if (hasElderSibs && Math.abs(elderFemale - elderMale) / elderMaxG < 0.15) { hasSis = true; hasBros = true; }
+    if (hasYoungerSibs && Math.abs(youngerFemale - youngerMale) / youngerMaxG < 0.15) { hasSis = true; hasBros = true; }
+
+    if (elderScore < 0.3 && hasYoungerSibs) {
+      // Boost elder if 11th house has sibling-relevant planets or lord is well-placed
+      if (h11SiblingPlanets.length > 0 || (!lord11InDusthan && lord11FamilyHouse)) {
+        elderScore += 0.2;
+      }
+    }
+
+    // Ensure scores don't go below 0
+    youngerScore = Math.max(0, youngerScore);
+    elderScore = Math.max(0, elderScore);
+
+    // ── Score-to-count conversion ──────────────────────────────────
+    // Key insight: each sibling planet in a house adds ~1.2-1.6 to the score.
+    // So 1 planet → score ~1.5-2.5, 2 planets → score ~3.0-4.0.
+    // For empty houses, the max score from lord+aspects+SAV is ~1.0-1.5.
+    // "Multiple siblings from empty house" requires fertile sign + high SAV confirmation.
+    // Rahu in house (sole occupant) corrupts the fertile potential — no "2" multiplier.
+    function scoreToCount(score, threshold, sibPlanets, signFertile, sav, lordIsMars, rahuSole, marsAspects, rahuPresent) {
+      if (score < threshold) return '0';
+      // Multiple planets in house = direct evidence of multiple siblings
+      if (sibPlanets.length >= 3) return '3+';
+      if (sibPlanets.length >= 2 && score >= 2.5) return '2+';
+      if (sibPlanets.length >= 2) return '2';
+      // Single planet + very high score: lord, karaka, sign, aspects all converge
+      // Score ≥ 2.8 from 1 planet means exceptional multi-factor support
+      // Rahu inflates scores without creating siblings — skip when Rahu is present
+      if (sibPlanets.length >= 1 && !rahuPresent && score >= 2.8) return '2';
+      // Single planet + fertile sign + high SAV → strong evidence for 2
+      const fertileHighSAV = signFertile > 0 && sav >= 30 && !rahuSole;
+      if (sibPlanets.length >= 1 && fertileHighSAV && score >= 1.5) return '2';
+      // Single planet + fertile sign + Mars karaka aspect → karaka confirms siblings
+      // Mars aspect on a fertile house with a planet = very productive for siblings
+      if (sibPlanets.length >= 1 && signFertile > 0 && marsAspects && score >= 1.5) return '2';
+      // Empty house: fertile sign + high SAV can indicate "2" (very strict)
+      if (sibPlanets.length === 0 && fertileHighSAV && score >= 1.2) return '2';
+      // Empty house: Mars as lord + fertile sign = double sibling signification
+      // Mars is the NATURAL sibling karaka, so Mars-ruled fertile house is very productive.
+      // SAV need not be very high — the lord+sign combo is sufficient.
+      // But NOT when Rahu corrupts the house.
+      if (sibPlanets.length === 0 && lordIsMars && signFertile > 0 && !rahuSole && score >= 0.7) return '2';
+      return '1';
+    }
+
+    // Get SAV values for count estimation
+    const h3RashiForCount = houses[2]?.rashi;
+    const h11RashiForCount = houses[10]?.rashi;
+    const h3SAVForCount = h3RashiForCount ? (ashtakavarga?.sarvashtakavarga?.[h3RashiForCount] || 0) : 0;
+    const h11SAVForCount = h11RashiForCount ? (ashtakavarga?.sarvashtakavarga?.[h11RashiForCount] || 0) : 0;
+
+    // Rahu presence flags
+    const h3RahuSole = h3pl.includes('Rahu') && h3SiblingPlanets.length === 0;
+    const h11RahuSole = h11pl.includes('Rahu') && h11SiblingPlanets.length === 0;
+    const h3RahuPresent = h3pl.includes('Rahu');
+    const h11RahuPresent = h11pl.includes('Rahu');
+    // Mars aspect flags — Mars karaka aspecting the sibling house strengthens count
+    const h3MarsAsp = h3Asp.includes('Mars');
+    const h11MarsAsp = h11Aspects.some(a => a.planet === 'Mars');
+
+    const youngerCount = scoreToCount(youngerScore, youngerThreshold, h3SiblingPlanets, h3SignFertile, h3SAVForCount, lord3Family === 'Mars', h3RahuSole, h3MarsAsp, h3RahuPresent);
     // Saturn in 11th caps elder siblings at max "1" (Saturn delays/reduces)
     const elderCount   = saturnIn11
-      ? (elderScore >= 0.3 ? '1' : '0')
-      : (elderScore >= 2.8 ? '2+' : elderScore >= 0.3 ? '1' : '0');
+      ? (elderScore >= elderThreshold ? '1' : '0')
+      : scoreToCount(elderScore, elderThreshold, h11SiblingPlanets, h11SignFertile, h11SAVForCount, lord11Family === 'Mars', h11RahuSole, h11MarsAsp, h11RahuPresent);
 
     let genderNote = '';
     if (hasSis && !hasBros)      genderNote = 'Sisters indicated (Venus/Moon karaka prominent)';
@@ -7003,7 +7403,13 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
 
     const totalScore = youngerScore + elderScore;
     // Count label should reflect the actual elder+younger breakdown, not raw score
-    const actualCount = (elderCount === '2+' ? 2 : parseInt(elderCount) || 0) + (youngerCount === '2+' ? 2 : parseInt(youngerCount) || 0);
+    // Parse count strings: '0', '1', '2', '2+', '3+' → numeric
+    function parseCount(c) {
+      if (c === '3+') return 3;
+      if (c === '2+') return 2;
+      return parseInt(c) || 0;
+    }
+    const actualCount = parseCount(elderCount) + parseCount(youngerCount);
     const countLabel = actualCount >= 3 ? '3 or more' : actualCount >= 1 ? String(actualCount) : '0 or 1';
 
     return {
@@ -7037,12 +7443,47 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     sinhala: 'සොහොයුරු / සොහොයුරියන් ස්වභාවය, සෞඛ්‍යය සහ ජීවිත ගමන',
     h3Analysis: { strength: h3Family?.strength, planetsIn3rd: h3Family?.planetsInHouse || [], aspectsOn3rd: h3Family?.aspectingPlanets || [] },
     h3Lord: { name: lord3Family, house: lord3FamilyHouse },
+    // 11th house = elder siblings (BPHS) — raw data for AI interpretation
+    h11Analysis: { strength: h11Family?.strength, planetsIn11th: h11pl, aspectsOn11th: h11Aspects },
+    h11Lord: { name: lord11Family, house: lord11FamilyHouse },
     marsPosition: { house: marsFamilyHouse, rashi: planets.mars?.rashi, rashiEnglish: planets.mars?.rashiEnglish },
+    marsStrength: {
+      dignity: planetStrengths.mars?.dignityLevel || 'Neutral',
+      shadbala: advancedShadbala?.mars?.percentage || null,
+      navamshaRashi: navamsha?.planets?.mars?.navamshaRashi || null,
+    },
     bhratrkaraka: bhratrkaraka ? { planet: bhratrkaraka.planet, rashi: bhratrkaraka.rashi } : null,
-    d3SiblingChart: d3Lagna ? { d3Lagna } : null,
+    d3SiblingChart: d3Lagna ? {
+      d3Lagna,
+      d3Mars: extendedVargas?.D3?.positions?.mars?.vargaRashi || null,
+      d3Venus: extendedVargas?.D3?.positions?.venus?.vargaRashi || null,
+      d3Lord3: extendedVargas?.D3?.positions?.[lord3Family?.toLowerCase()]?.vargaRashi || null,
+    } : null,
+    // ── Ashtakavarga bindus for sibling houses (advanced improvement) ──
+    // SAV bindus: high (>28) = thriving siblings, low (<22) = weak sibling prospects
+    // Mars BAV bindus in 3rd/11th: Mars's specific contribution to sibling houses
+    ashtakavargaSiblings: ashtakavarga?.sarvashtakavarga ? (() => {
+      const h3RashiName = houses[2]?.rashi;
+      const h11RashiName = houses[10]?.rashi;
+      const h3SAV = h3RashiName ? (ashtakavarga.sarvashtakavarga[h3RashiName] || 0) : 0;
+      const h11SAV = h11RashiName ? (ashtakavarga.sarvashtakavarga[h11RashiName] || 0) : 0;
+      const marsBAV3 = h3RashiName && ashtakavarga.prastarashtakavarga?.Mars
+        ? (ashtakavarga.prastarashtakavarga.Mars[(houses[2]?.rashiId || 1) - 1] || 0) : null;
+      const marsBAV11 = h11RashiName && ashtakavarga.prastarashtakavarga?.Mars
+        ? (ashtakavarga.prastarashtakavarga.Mars[(houses[10]?.rashiId || 1) - 1] || 0) : null;
+      return {
+        h3SAVBindus: h3SAV,
+        h3Quality: h3SAV >= 30 ? 'strong' : h3SAV >= 25 ? 'average' : 'weak',
+        h11SAVBindus: h11SAV,
+        h11Quality: h11SAV >= 30 ? 'strong' : h11SAV >= 25 ? 'average' : 'weak',
+        marsBAVin3rd: marsBAV3,
+        marsBAVin11th: marsBAV11,
+      };
+    })() : null,
     estimatedCount: siblingEstimate,
     planetsIn3rd: siblingCharacters,
     lord3InDusthan,
+    lord11InDusthan,
     maleficsIn3rd: maleficsIn3,
     beneficsIn3rd: beneficsIn3,
     eventPeriods: siblingEventPeriods,
@@ -8845,6 +9286,68 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       // Store cross-validation log on allSections for AI access
       allSections._crossValidation = crossValidationLog;
 
+      // ══════════════════════════════════════════════════════════════
+      // JYOTISH PER-SECTION ENRICHMENT — Deep-merge @prisri/jyotish
+      // data INTO each section for AI prompt enrichment
+      // ══════════════════════════════════════════════════════════════
+      try {
+        const jyotishEngine = require('./jyotish');
+        if (jyotishEngine.isAvailable()) {
+          const enrichments = jyotishEngine.generateSectionEnrichments(date, lat, lng);
+          if (enrichments) {
+            // Map enrichment keys to allSections keys
+            const SECTION_MAP = {
+              yogaAnalysis:    'yogaAnalysis',
+              personality:     'personality',
+              marriage:        'marriage',
+              career:          'career',
+              children:        'children',
+              lifePredictions: 'lifePredictions',
+              mentalHealth:    'mentalHealth',
+              business:        'business',
+              transits:        'transits',
+              realEstate:      'realEstate',
+              employment:      'employment',
+              financial:       'financial',
+              futureTimeline:  'timeline25',
+              health:          'health',
+              foreignTravel:   'foreignTravel',
+              legal:           'legal',
+              education:       'education',
+              luck:            'luck',
+              spiritual:       'spiritual',
+              surpriseInsights:'surpriseInsights',
+              physicalProfile: 'physicalProfile',
+            };
+
+            let mergeCount = 0;
+            for (const [enrichKey, sectionKey] of Object.entries(SECTION_MAP)) {
+              if (enrichments[enrichKey] && allSections[sectionKey]) {
+                // Add jyotish data as a sub-object within each section
+                allSections[sectionKey]._jyotish = enrichments[enrichKey];
+                mergeCount++;
+              }
+            }
+
+            // Attach cross-cutting data to sections that benefit from it
+            if (enrichments.chalitChart) {
+              // Health section gets full chalit for medical house analysis
+              if (allSections.health) allSections.health._chalitChart = enrichments.chalitChart;
+              // Transits section gets chalit for D1-vs-Chalit planet shifts
+              if (allSections.transits) allSections.transits._chalitChart = enrichments.chalitChart;
+            }
+            if (enrichments.allVargas) {
+              // Attach all varga ascendants to personality for AI deep analysis
+              if (allSections.personality) allSections.personality._allVargas = enrichments.allVargas;
+            }
+
+            console.log(`[FullReport] Jyotish enrichments merged into ${mergeCount} sections (${enrichments._computeTimeMs}ms)`);
+          }
+        }
+      } catch (enrichErr) {
+        console.warn('[FullReport] Jyotish section enrichment failed (non-fatal):', enrichErr.message);
+      }
+
       return allSections;
     })(),
     // ── Nadi Astrology Significator System (Umang Taneja methodology) ──
@@ -9035,6 +9538,36 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
         },
       };
     })(),
+
+    // ══════════════════════════════════════════════════════════════
+    // SECTION: ENHANCED ANALYSIS (MIT Libraries — celestine + astrology-insights)
+    // ══════════════════════════════════════════════════════════════
+    enhanced: (() => {
+      try {
+        const enhancedEngine = require('./enhanced');
+        const enhancedData = enhancedEngine.generateEnhancedReport(date, lat, lng);
+        console.log('[FullReport] Enhanced module loaded —', enhancedData._loadedModules, 'features available');
+        return enhancedData;
+      } catch (err) {
+        console.warn('[FullReport] Enhanced module unavailable:', err.message);
+        return null;
+      }
+    })(),
+
+    // ══════════════════════════════════════════════════════════════
+    // SECTION: JYOTISH ANALYSIS (ISC — @prisri/jyotish independent cross-validation)
+    // ══════════════════════════════════════════════════════════════
+    jyotish: (() => {
+      try {
+        const jyotishEngine = require('./jyotish');
+        const jyotishData = jyotishEngine.generateJyotishReport(date, lat, lng);
+        console.log('[FullReport] Jyotish module loaded —', jyotishData?._computeTimeMs || 0, 'ms compute');
+        return jyotishData;
+      } catch (err) {
+        console.warn('[FullReport] Jyotish module unavailable:', err.message);
+        return null;
+      }
+    })(),
   };
 }
 
@@ -9161,13 +9694,13 @@ function getPlanetStrengths(date, lat, lng) {
       const moonH = getPlanetHouse('Moon');
       if (debSignLordHouse && [1, 4, 7, 10].includes(debSignLordHouse)) {
         cancelled = true;
-        reasons.push(`${debSignLord} (lord of debilitation sign) in kendra from Lagna`);
+        reasons.push({ rule: 'debSignLordInKendraFromLagna', lord: debSignLord, house: debSignLordHouse });
       }
       if (moonH && debSignLordHouse) {
         const distFromMoon = ((debSignLordHouse - moonH + 12) % 12) + 1;
         if ([1, 4, 7, 10].includes(distFromMoon)) {
           cancelled = true;
-          reasons.push(`${debSignLord} in kendra from Moon`);
+          reasons.push({ rule: 'debSignLordInKendraFromMoon', lord: debSignLord, house: debSignLordHouse });
         }
       }
 
@@ -9178,7 +9711,7 @@ function getPlanetStrengths(date, lat, lng) {
         const exaltLordHouse = getPlanetHouse(exaltLord);
         if (exaltLordHouse && [1, 4, 7, 10].includes(exaltLordHouse)) {
           cancelled = true;
-          reasons.push(`${exaltLord} (lord of exaltation sign) in kendra`);
+          reasons.push({ rule: 'exaltSignLordInKendra', lord: exaltLord, house: exaltLordHouse });
         }
       }
 
@@ -9186,7 +9719,7 @@ function getPlanetStrengths(date, lat, lng) {
       const pH = getPlanetHouse(p.name);
       if (pH && [1, 4, 7, 10].includes(pH)) {
         cancelled = true;
-        reasons.push(`${p.name} itself in kendra — self-cancellation`);
+        reasons.push({ rule: 'selfInKendra', planet: p.name, house: pH });
       }
 
       // Rule 4: Jupiter aspects the debilitated planet
@@ -9195,7 +9728,7 @@ function getPlanetStrengths(date, lat, lng) {
         const jupToP = ((pH - jupH + 12) % 12) + 1;
         if ([5, 7, 9].includes(jupToP)) {
           cancelled = true;
-          reasons.push(`Jupiter aspects ${p.name} — divine protection`);
+          reasons.push({ rule: 'jupiterAspects', planet: p.name });
         }
       }
 

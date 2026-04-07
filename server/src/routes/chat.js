@@ -13,7 +13,7 @@ const { phoneAuth } = require('../middleware/subscription');
 const { getDb, COLLECTIONS } = require('../config/firebase');
 const { trackCost } = require('../services/costTracker');
 
-const DAILY_LIMIT = 10;
+const DAILY_LIMIT = 5;
 
 // ─── Quota helpers ─────────────────────────────────────────────────────────
 

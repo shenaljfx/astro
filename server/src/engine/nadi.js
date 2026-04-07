@@ -780,29 +780,21 @@ function predictEvent(significatorTable, houseGroupKey) {
   if (strongCount >= 5) {
     eventVerdict = 'very_strong';
     eventStrength = 'Exceptional';
-    eventDescription = `${houseGroup.label}: Very strongly indicated. ${strongCount} planets promise this event — it is almost certain to manifest prominently.`;
   } else if (strongCount >= 3 || (strongCount >= 2 && moderateCount >= 2)) {
     eventVerdict = 'strong';
     eventStrength = 'Strong';
-    eventDescription = `${houseGroup.label}: Strongly indicated. ${strongCount} planets support this event across Planet-Nakshatra-SubLord chain.`;
   } else if (effectiveSupport >= 1.5 || avgScore >= 15) {
     eventVerdict = 'moderate';
     eventStrength = 'Moderate';
-    eventDescription = `${houseGroup.label}: Moderately indicated. Event will manifest but may face delays or reduced intensity.`;
   } else if (deniedCount >= 7 && strongCount === 0 && moderateCount === 0) {
-    // Very strict denial: only when almost ALL planets purely negate and NONE support
     eventVerdict = 'denied';
     eventStrength = 'Denied';
-    eventDescription = `${houseGroup.label}: Mostly denied by Sub-Lord analysis. ${deniedCount} planets negate this event — extremely unlikely to manifest naturally.`;
   } else if (avgScore < -20 && deniedCount >= 5 && effectiveSupport < 1) {
-    // Also denied but with score check
     eventVerdict = 'denied';
     eventStrength = 'Denied';
-    eventDescription = `${houseGroup.label}: Denied — insufficient planetary support and negative average score.`;
   } else {
     eventVerdict = 'weak';
     eventStrength = 'Weak';
-    eventDescription = `${houseGroup.label}: Weakly indicated. Event requires specific Dasha timing and favorable transits to manifest.`;
   }
 
   // Find best Dasha periods for this event
@@ -817,8 +809,10 @@ function predictEvent(significatorTable, houseGroupKey) {
     houseGroupNegative: houseGroup.negative,
     verdict: eventVerdict,
     strength: eventStrength,
-    description: eventDescription,
     averageScore: Math.round(avgScore),
+    strongCount,
+    moderateCount,
+    deniedCount,
     strongPlanets,
     weakPlanets,
     bestDashaPlanets: bestDasaPlanets,
@@ -842,13 +836,13 @@ function assessCombinationStrength(significantHouses, houseGroup) {
   const has11 = matchedPositive.includes(11);
   const matchCount = matchedPositive.length;
 
-  if (matchCount === positive.length) return { grade: 'A+', strength: 100, label: 'Full combination' };
-  if (matchCount >= positive.length - 1 && has11) return { grade: 'A', strength: 90, label: 'Near-complete with gain' };
-  if (has11 && matchCount >= 2) return { grade: 'B+', strength: 80, label: 'Strong with gain house' };
-  if (has11) return { grade: 'B', strength: 70, label: 'Gain house present' };
-  if (matchCount >= 2) return { grade: 'C+', strength: 55, label: 'Partial combination' };
-  if (matchCount === 1) return { grade: 'C', strength: 40, label: 'Single house signified' };
-  return { grade: 'D', strength: 20, label: 'No significant houses' };
+  if (matchCount === positive.length) return { grade: 'A+', strength: 100, matchCount, has11 };
+  if (matchCount >= positive.length - 1 && has11) return { grade: 'A', strength: 90, matchCount, has11 };
+  if (has11 && matchCount >= 2) return { grade: 'B+', strength: 80, matchCount, has11 };
+  if (has11) return { grade: 'B', strength: 70, matchCount, has11 };
+  if (matchCount >= 2) return { grade: 'C+', strength: 55, matchCount, has11 };
+  if (matchCount === 1) return { grade: 'C', strength: 40, matchCount, has11 };
+  return { grade: 'D', strength: 20, matchCount, has11 };
 }
 
 
@@ -864,29 +858,30 @@ function assessCombinationStrength(significantHouses, houseGroup) {
 function gradeEducation(significantHouses) {
   const has = (arr) => arr.every(h => significantHouses.includes(h));
 
-  if (has([4, 9, 11])) return { grade: 'A', description: 'Excellent education with maximum marks', score: 95 };
-  if (has([4, 11])) return { grade: 'B+', description: 'Above average education', score: 80 };
-  if (has([5, 11])) return { grade: 'B', description: 'Intelligent child, above average', score: 78 };
-  if (has([4, 5, 9])) return { grade: 'C+', description: 'Average education', score: 65 };
+  if (has([4, 9, 11])) return { grade: 'A', score: 95, houses: [4, 9, 11] };
+  if (has([4, 11])) return { grade: 'B+', score: 80, houses: [4, 11] };
+  if (has([5, 11])) return { grade: 'B', score: 78, houses: [5, 11] };
+  if (has([4, 5, 9])) return { grade: 'C+', score: 65, houses: [4, 5, 9] };
 
   // Check for failure combinations
-  const hasFailure = [6, 8, 12].filter(h => significantHouses.includes(h)).length >= 2;
+  const failureHouses = [6, 8, 12].filter(h => significantHouses.includes(h));
+  const hasFailure = failureHouses.length >= 2;
   if (hasFailure && !significantHouses.includes(11)) {
-    return { grade: 'F', description: 'Obstacles in education, potential failures', score: 25 };
+    return { grade: 'F', score: 25, houses: failureHouses };
   }
 
   // No inclination: 3,6,8 or 3,6,12 or 3,8,12
   if (has([3, 6, 8]) || has([3, 6, 12]) || has([3, 8, 12])) {
-    return { grade: 'D', description: 'No inclination for formal education', score: 35 };
+    return { grade: 'D', score: 35, houses: significantHouses.filter(h => [3,6,8,12].includes(h)) };
   }
 
   // Scientific bent: 8,12 with good education houses
   if (significantHouses.includes(8) && significantHouses.includes(12) && 
       (significantHouses.includes(4) || significantHouses.includes(9) || significantHouses.includes(11))) {
-    return { grade: 'B-', description: 'Scientific/research bent of mind', score: 72 };
+    return { grade: 'B-', score: 72, houses: significantHouses.filter(h => [4,8,9,11,12].includes(h)) };
   }
 
-  return { grade: 'C', description: 'Average education', score: 60 };
+  return { grade: 'C', score: 60, houses: significantHouses.filter(h => [2,4,5,9,11].includes(h)) };
 }
 
 
@@ -961,11 +956,11 @@ function determineCareerType(significatorTable) {
     else if (allH.includes(7)) businessScore += 1;
   }
 
-  if (serviceScore > businessScore + 3) return { type: 'service', confidence: 'high', description: 'Strongly suited for employment/service career' };
-  if (businessScore > serviceScore + 3) return { type: 'business', confidence: 'high', description: 'Strongly suited for business/entrepreneurship' };
-  if (serviceScore > businessScore) return { type: 'service', confidence: 'moderate', description: 'Leans toward service but can also do business' };
-  if (businessScore > serviceScore) return { type: 'business', confidence: 'moderate', description: 'Leans toward business but can also do service' };
-  return { type: 'both', confidence: 'moderate', description: 'Can succeed in both service and business equally' };
+  if (serviceScore > businessScore + 3) return { type: 'service', confidence: 'high', serviceScore, businessScore };
+  if (businessScore > serviceScore + 3) return { type: 'business', confidence: 'high', serviceScore, businessScore };
+  if (serviceScore > businessScore) return { type: 'service', confidence: 'moderate', serviceScore, businessScore };
+  if (businessScore > serviceScore) return { type: 'business', confidence: 'moderate', serviceScore, businessScore };
+  return { type: 'both', confidence: 'moderate', serviceScore, businessScore };
 }
 
 
@@ -975,20 +970,21 @@ function determineCareerType(significatorTable) {
  *   Mars → Uniform/Military
  *   Jupiter/Mercury/Venus → Corporate world
  *   Rahu/Ketu/Saturn → Small establishments
+ * Returns only the sector classification — AI interprets details.
  */
 function getCareerSectorByPlanet(planetName) {
   const SECTORS = {
-    Sun: { sector: 'Government', description: 'Government job or public sector' },
-    Moon: { sector: 'Government', description: 'Government or public service' },
-    Mars: { sector: 'Uniform/Defence', description: 'Military, police, or uniformed services' },
-    Jupiter: { sector: 'Corporate', description: 'Corporate world or large organizations' },
-    Mercury: { sector: 'Corporate', description: 'Corporate or professional services' },
-    Venus: { sector: 'Corporate', description: 'Corporate, luxury, or creative industries' },
-    Rahu: { sector: 'Small Business', description: 'Small establishments or unconventional work' },
-    Ketu: { sector: 'Small Business', description: 'Small establishments or spiritual work' },
-    Saturn: { sector: 'Small Business', description: 'Small establishments, labor-intensive work' },
+    Sun: 'Government',
+    Moon: 'Government',
+    Mars: 'Uniform/Defence',
+    Jupiter: 'Corporate',
+    Mercury: 'Corporate',
+    Venus: 'Corporate',
+    Rahu: 'Small Business',
+    Ketu: 'Small Business',
+    Saturn: 'Small Business',
   };
-  return SECTORS[planetName] || { sector: 'General', description: 'Various sectors' };
+  return { sector: SECTORS[planetName] || 'General' };
 }
 
 
@@ -1080,8 +1076,8 @@ function generateNadiPredictions(bhavaChalit, houseChart, planets, lagnaRashi, k
         formula: `(${lifeHouseSum} / (${lifeHouseSum} + ${deathHouseSum})) × 120`,
         rawYears: longevityYears,
         estimatedYears: clampedYears,
-        category: clampedYears >= 85 ? 'Long life (Deerghayu)' : clampedYears >= 60 ? 'Medium life (Madhyayu)' : 'Short life (Alpayu)',
-        note: 'This is a Nadi formula estimate. Actual longevity depends on critical Dasha timing and transits.',
+        lifeHouseSum,
+        deathHouseSum,
       };
     }
   } catch (e) {
@@ -1117,7 +1113,8 @@ function generateNadiPredictions(bhavaChalit, houseChart, planets, lagnaRashi, k
       .map(([key, e]) => ({
         event: key,
         label: e.label,
-        reason: `${e.weakPlanets.length} planets negate this through Sub-Lord denial`,
+        deniedPlanetCount: e.weakPlanets.length,
+        averageScore: e.averageScore,
       })),
   };
 }
@@ -1150,7 +1147,6 @@ function predictEventsInDasha(significatorTable, dashaLord, bhuktiLord, antarLor
       results[eventKey] = {
         label: houseGroup.label,
         verdict: 'blocked_by_dasha',
-        description: `${dashaLord} Dasha blocks this event — Sub-Lord negates required houses`,
         dashaScore: dashaAnalysis.score,
       };
       continue;

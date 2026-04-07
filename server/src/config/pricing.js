@@ -50,9 +50,9 @@ const PRICING = {
       label: '$1.99',
     },
     report: {
-      amount: 5.99,
-      amountFormatted: '5.99',
-      label: '$5.99',
+      amount: 3.99,
+      amountFormatted: '3.99',
+      label: '$3.99',
     },
     topUpPackages: [2, 5, 6, 10],
   },

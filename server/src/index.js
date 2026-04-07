@@ -35,6 +35,8 @@ const revenuecatRoutes = require('./routes/revenuecat');
 const pricingRoutes = require('./routes/pricing');
 const weeklyLagnaRoutes = require('./routes/weeklyLagna');
 const readingRoutes = require('./routes/reading');
+const enhancedRoutes = require('./routes/enhanced');
+const jyotishRoutes = require('./routes/jyotish');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -93,6 +95,8 @@ app.use('/api/revenuecat', revenuecatRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/weekly-lagna', weeklyLagnaRoutes);
 app.use('/api/reading', aiLimiter, readingRoutes);
+app.use('/api/enhanced', enhancedRoutes);
+app.use('/api/jyotish', jyotishRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

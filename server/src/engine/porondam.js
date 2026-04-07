@@ -535,6 +535,11 @@ function analyzeDashaCompatibility(brideBirthDate, groomBirthDate, brideLat, bri
         : dashaHarmony === 'conflicting'
           ? 'The current life phases may create friction — a later date could be more harmonious.'
           : 'Neutral life phase compatibility — neither strongly for nor against.',
+      descriptionSi: dashaHarmony === 'harmonious'
+        ? 'දෙදෙනාම අනුකූල ජීවන අවධිවල සිටී — මෙම එක්වීම සඳහා කාලය හිතකරයි.'
+        : dashaHarmony === 'conflicting'
+          ? 'වර්තමාන ජීවන අවධි ගැටුම් ඇති කළ හැක — පසු දිනයක් වඩාත් සුදුසු විය හැකිය.'
+          : 'මධ්‍යස්ථ ජීවන අවධි අනුකූලතාව — ප්‍රබල ලෙස පක්ෂව හෝ විරුද්ධව නොවේ.',
     };
   } catch (e) {
     return { harmony: 'unknown', score: 1, maxScore: 2, error: e.message };
@@ -552,6 +557,7 @@ function analyzeNavamshaCompatibility(brideBirthDate, groomBirthDate, brideLat, 
     
     let score = 0;
     const insights = [];
+    const insightsSi = [];
     
     // 1. Check if D9 Lagna signs are compatible (trine/same/kendra/7th)
     const brideD9Lagna = brideD9.houses?.[0]?.rashiId || 1;
@@ -562,18 +568,22 @@ function analyzeNavamshaCompatibility(brideBirthDate, groomBirthDate, brideLat, 
     if (normalizedDiff === 0) {
       score += 3;
       insights.push('Same marriage chart rising sign — exceptional soul-level connection');
+      insightsSi.push('එකම විවාහ සටහන් ලග්නය — අසාමාන්‍ය ආත්ම මට්ටමේ සම්බන්ධතාවයක්');
     } else if ([4, 8].includes(normalizedDiff)) {
       // Trines (5th/9th from each other)
       score += 2;
       insights.push('Harmonious marriage chart alignment — natural rapport');
+      insightsSi.push('සුසංයෝගී විවාහ සටහන් පෙළගැස්ම — ස්වභාවික සම්බන්ධතාවයක්');
     } else if ([3, 9].includes(normalizedDiff)) {
       // Kendras (4th/10th from each other)
       score += 2;
       insights.push('Strong kendra alignment in marriage charts — solid foundation for partnership');
+      insightsSi.push('විවාහ සටහන්වල ප්‍රබල කේන්ද්‍ර පෙළගැස්ම — හවුල්කාරිත්වයට ශක්තිමත් පදනමක්');
     } else if (normalizedDiff === 6) {
       // 7th house (opposition)
       score += 1;
       insights.push('Opposite marriage chart signs — magnetic attraction but requires adjustment');
+      insightsSi.push('ප්‍රතිවිරුද්ධ විවාහ සටහන් ලකුණු — චුම්බක ආකර්ෂණයක් නමුත් සකස්වීම් අවශ්‍යයි');
     }
     
     // 2. Check Venus placement in each other's D9
@@ -592,6 +602,7 @@ function analyzeNavamshaCompatibility(brideBirthDate, groomBirthDate, brideLat, 
       if (brideVenusD9.rashi === groomVenusD9.rashi) {
         score += 2;
         insights.push('Venus in the same sign in both marriage charts — strong romantic alignment');
+        insightsSi.push('විවාහ සටහන් දෙකේම සිකුරු එකම රාශියේ — ප්‍රබල ප්‍රේමණීය ගැළපුමක්');
       }
     }
     
@@ -602,23 +613,33 @@ function analyzeNavamshaCompatibility(brideBirthDate, groomBirthDate, brideLat, 
     if (brideJupiterD9 && [1, 4, 5, 7, 9, 10].includes(brideJupiterD9.house)) {
       score += 1;
       insights.push('Bride\'s Jupiter well-placed in marriage chart — her husband will be supportive');
+      insightsSi.push('මනාලියගේ ගුරු විවාහ සටහනේ හොඳ ස්ථානයක — සැමියා සහයෝගී වනු ඇත');
     }
     if (groomVenusD9 && [1, 4, 5, 7, 9, 10].includes(groomVenusD9.house)) {
       score += 1;
       insights.push('Groom\'s Venus well-placed in marriage chart — his wife will bring harmony');
+      insightsSi.push('මනාලයාගේ සිකුරු විවාහ සටහනේ හොඳ ස්ථානයක — බිරිඳ සංහිඳියාව ගෙන එනු ඇත');
     }
     
     return {
       brideD9Lagna: brideD9.houses?.[0]?.rashiEnglish || 'Unknown',
+      brideD9LagnaSi: brideD9.houses?.[0]?.rashiSinhala || 'නොදනී',
       groomD9Lagna: groomD9.houses?.[0]?.rashiEnglish || 'Unknown',
+      groomD9LagnaSi: groomD9.houses?.[0]?.rashiSinhala || 'නොදනී',
       score,
       maxScore: 7,
       insights,
+      insightsSi,
       description: score >= 5
         ? 'Excellent marriage chart compatibility — deep soul-level connection likely.'
         : score >= 3
           ? 'Good marriage chart alignment — the relationship has strong spiritual support.'
           : 'Moderate marriage chart compatibility — the bond will grow with effort and understanding.',
+      descriptionSi: score >= 5
+        ? 'විශිෂ්ට විවාහ සටහන් අනුකූලතාව — ගැඹුරු ආත්ම මට්ටමේ සම්බන්ධතාවයක් ඇති විය හැකිය.'
+        : score >= 3
+          ? 'හොඳ විවාහ සටහන් පෙළගැස්ම — සබඳතාවයට ප්‍රබල ආධ්‍යාත්මික සහාය ඇත.'
+          : 'මධ්‍යස්ථ විවාහ සටහන් අනුකූලතාව — උත්සාහයෙන් හා අවබෝධයෙන් බැඳීම වර්ධනය වනු ඇත.',
     };
   } catch (e) {
     return { score: 0, maxScore: 7, insights: [], error: e.message };
@@ -681,23 +702,28 @@ function analyzeMangalaDosha(brideBirthDate, groomBirthDate, brideLat, brideLng,
     
     let severity = 'none';
     let description = '';
+    let descriptionSi = '';
     let score = 2;
     
     if (brideMangala.hasDosha && groomMangala.hasDosha) {
       severity = 'cancelled';
       description = 'Both partners have Mars influence — it cancels out! This is actually favorable.';
+      descriptionSi = 'දෙදෙනාටම කුජ බලපෑමක් ඇත — එය අවලංගු වේ! මෙය ඇත්ත වශයෙන්ම හිතකරයි.';
       score = 2;
     } else if (!brideMangala.hasDosha && !groomMangala.hasDosha) {
       severity = 'none';
       description = 'Neither partner has Mars influence concerns — clean compatibility.';
+      descriptionSi = 'කිසිදු පාර්ශ්වකරුවෙකුට කුජ බලපෑම් ගැටලු නැත — පිරිසිදු අනුකූලතාව.';
       score = 2;
     } else if (brideMangala.cancelled || groomMangala.cancelled) {
       severity = 'mild';
       description = 'One partner has Mars influence but it is neutralized by other factors.';
+      descriptionSi = 'එක් පාර්ශ්වකරුවෙකුට කුජ බලපෑමක් ඇති නමුත් අනෙකුත් සාධක මගින් සමනය වී ඇත.';
       score = 1;
     } else {
       severity = 'present';
       description = 'One partner has Mars influence while the other doesn\'t — may cause friction in temperament. Remedies recommended.';
+      descriptionSi = 'එක් පාර්ශ්වකරුවෙකුට කුජ බලපෑමක් ඇති අතර අනෙකාට නැත — ස්වභාවයේ ගැටුම් ඇති විය හැක. පිළියම් නිර්දේශ කෙරේ.';
       score = 0;
     }
     
@@ -708,6 +734,7 @@ function analyzeMangalaDosha(brideBirthDate, groomBirthDate, brideLat, brideLng,
       score,
       maxScore: 2,
       description,
+      descriptionSi,
     };
   } catch (e) {
     return { severity: 'unknown', score: 1, maxScore: 2, error: e.message };
@@ -754,6 +781,7 @@ function analyzeMarriagePlanetStrength(brideBirthDate, groomBirthDate, brideLat,
       groom,
       overallMarriageStrength: avgCombined,
       assessment: avgCombined >= 65 ? 'Strong marriage potential for both partners' : avgCombined >= 45 ? 'Moderate marriage potential — some areas need attention' : 'Marriage planets are weak — relationship will need conscious effort',
+      assessmentSi: avgCombined >= 65 ? 'දෙදෙනාටම ප්‍රබල විවාහ හැකියාව' : avgCombined >= 45 ? 'මධ්‍යස්ථ විවාහ හැකියාව — සමහර ක්ෂේත්‍රවලට අවධානය අවශ්‍යයි' : 'විවාහ ග්‍රහයන් දුර්වලයි — සබඳතාවයට දැනුවත් උත්සාහයක් අවශ්‍යයි',
       score: avgCombined >= 65 ? 3 : avgCombined >= 45 ? 2 : 1,
       maxScore: 3,
     };
@@ -812,13 +840,14 @@ function findBestWeddingWindow(brideBirthDate, groomBirthDate, brideLat, brideLn
             brideDashaLord: bp.lord,
             groomDashaLord: gp.lord,
             reason: `${bp.lord} period for bride + ${gp.lord} period for groom — both in favorable phases`,
+            reasonSi: `මනාලියට ${bp.lord} කාලය + මනාලයාට ${gp.lord} කාලය — දෙදෙනාම හිතකර අවධිවල`,
           });
         }
       }
     }
     
     return {
-      favorableWindows: overlaps.length > 0 ? overlaps : [{ start: 'No overlapping favorable period found in next 2 years', end: '', reason: 'Consider consulting for specific muhurtha dates' }],
+      favorableWindows: overlaps.length > 0 ? overlaps : [{ start: 'No overlapping favorable period found in next 2 years', startSi: 'ඉදිරි වසර 2ක් තුළ අනුකූල කාල කවුළුවක් හමු නොවුණි', end: '', reason: 'Consider consulting for specific muhurtha dates', reasonSi: 'නිශ්චිත මුහුර්ත දිනයන් සඳහා ජ්‍යෝතිෂවේදියෙකුගෙන් උපදෙස් ගන්න' }],
       bridePeriods: brideFavorable,
       groomPeriods: groomFavorable,
     };
@@ -852,12 +881,12 @@ function calculateAdvancedPorondam(brideBirthDate, groomBirthDate, brideLat, bri
   const combinedPercentage = Math.round((combinedScore / combinedMax) * 100);
   
   // Combined rating
-  let combinedRating, combinedRatingEmoji;
-  if (combinedPercentage >= 80) { combinedRating = 'Exceptional'; combinedRatingEmoji = '💫✨'; }
-  else if (combinedPercentage >= 65) { combinedRating = 'Very Good'; combinedRatingEmoji = '🌟'; }
-  else if (combinedPercentage >= 50) { combinedRating = 'Good'; combinedRatingEmoji = '✨'; }
-  else if (combinedPercentage >= 35) { combinedRating = 'Average'; combinedRatingEmoji = '⭐'; }
-  else { combinedRating = 'Below Average'; combinedRatingEmoji = '🔮'; }
+  let combinedRating, combinedRatingEmoji, combinedRatingSi;
+  if (combinedPercentage >= 80) { combinedRating = 'Exceptional'; combinedRatingEmoji = '💫✨'; combinedRatingSi = 'විශිෂ්ට'; }
+  else if (combinedPercentage >= 65) { combinedRating = 'Very Good'; combinedRatingEmoji = '🌟'; combinedRatingSi = 'ඉතා හොඳ'; }
+  else if (combinedPercentage >= 50) { combinedRating = 'Good'; combinedRatingEmoji = '✨'; combinedRatingSi = 'හොඳ'; }
+  else if (combinedPercentage >= 35) { combinedRating = 'Average'; combinedRatingEmoji = '⭐'; combinedRatingSi = 'සාමාන්‍ය'; }
+  else { combinedRating = 'Below Average'; combinedRatingEmoji = '🔮'; combinedRatingSi = 'සාමාන්‍යයට පහළ'; }
   
   return {
     ...traditional,
@@ -876,6 +905,7 @@ function calculateAdvancedPorondam(brideBirthDate, groomBirthDate, brideLat, bri
       maxScore: combinedMax,
       percentage: combinedPercentage,
       rating: combinedRating,
+      ratingSi: combinedRatingSi,
       ratingEmoji: combinedRatingEmoji,
     },
   };

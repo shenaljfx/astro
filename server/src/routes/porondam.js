@@ -20,6 +20,14 @@ const { trackCost } = require('../services/costTracker');
 const { savePorondamResult, updatePorondamReport } = require('../models/firestore');
 const { getDb, COLLECTIONS } = require('../config/firebase');
 
+// Enhanced engine (graceful — null if unavailable)
+let enhancedEngine = null;
+try { enhancedEngine = require('../engine/enhanced'); } catch (e) { console.warn('[porondam] enhanced engine not available:', e.message); }
+
+// Jyotish engine (graceful — null if unavailable)
+let jyotishEngine = null;
+try { jyotishEngine = require('../engine/jyotish'); } catch (e) { console.warn('[porondam] jyotish engine not available:', e.message); }
+
 // In-memory store for vibe-check links (use Redis/DB in production)
 const vibeLinks = new Map();
 
@@ -89,6 +97,27 @@ router.post('/check', optionalAuth, async (req, res) => {
     try { groomAdvanced = generateAdvancedAnalysis(groomBirthDate, groomLat, groomLng); }
     catch (e) { console.error('Groom advanced analysis error:', e.message); }
 
+    // Enhanced analysis (Gandanta, Tattva, Remedies, Friendships) for both
+    let brideEnhanced = null;
+    let groomEnhanced = null;
+    if (enhancedEngine) {
+      try { brideEnhanced = enhancedEngine.generateEnhancedReport(brideBirthDate, brideLat, brideLng); }
+      catch (e) { console.error('Bride enhanced analysis error:', e.message); }
+      try { groomEnhanced = enhancedEngine.generateEnhancedReport(groomBirthDate, groomLat, groomLng); }
+      catch (e) { console.error('Groom enhanced analysis error:', e.message); }
+    }
+
+    // Jyotish Ashtakoot matching (independent cross-validation)
+    let jyotishMatching = null;
+    if (jyotishEngine) {
+      try {
+        jyotishMatching = jyotishEngine.generatePorondamJyotish(
+          brideBirthDate, brideLat, brideLng,
+          groomBirthDate, groomLat, groomLng
+        );
+      } catch (e) { console.error('Jyotish matching error:', e.message); }
+    }
+
     const responseData = {
       ...result,
       advancedPorondam,
@@ -96,6 +125,9 @@ router.post('/check', optionalAuth, async (req, res) => {
       groomChart,
       brideAdvanced,
       groomAdvanced,
+      brideEnhanced,
+      groomEnhanced,
+      jyotishMatching,
     };
 
     // Save to Firestore — DISABLED
@@ -243,7 +275,7 @@ ${porondamData.brideAdvanced ? `Doshas: ${(porondamData.brideAdvanced.tier1?.dos
 Yogas: ${(porondamData.brideAdvanced.tier1?.advancedYogas?.items || []).slice(0, 10).map(y => y.name + ' (' + y.strength + ')').join(', ') || 'None'}
 Jaimini Atmakaraka: ${porondamData.brideAdvanced.tier1?.jaimini?.atmakaraka?.planet || 'N/A'} — Karakamsha: ${porondamData.brideAdvanced.tier1?.jaimini?.karakamsha?.rashi || 'N/A'}
 Upapada Lagna: ${porondamData.brideAdvanced.tier1?.jaimini?.upapadaLagna?.rashi || 'N/A'} (marriage indicator)
-Past Life Karma: ${porondamData.brideAdvanced.tier3?.pastLife?.pastLife?.pastLifeStory || 'N/A'}
+Past Life Karma: Ketu H${porondamData.brideAdvanced.tier3?.pastLife?.pastLife?.ketuHouse || 'N/A'} — ${porondamData.brideAdvanced.tier3?.pastLife?.pastLife?.ketuThemes?.domain || 'N/A'} (${porondamData.brideAdvanced.tier3?.pastLife?.pastLife?.ketuThemes?.archetype || 'N/A'})
 Karma Balance: Good — ${porondamData.brideAdvanced.tier3?.pastLife?.karmaBalance?.good || 'N/A'}, Challenging — ${porondamData.brideAdvanced.tier3?.pastLife?.karmaBalance?.challenging || 'N/A'}` : 'Not available'}
 
 ADVANCED ANALYSIS — ${groomLabel.toUpperCase()}:
@@ -251,8 +283,31 @@ ${porondamData.groomAdvanced ? `Doshas: ${(porondamData.groomAdvanced.tier1?.dos
 Yogas: ${(porondamData.groomAdvanced.tier1?.advancedYogas?.items || []).slice(0, 10).map(y => y.name + ' (' + y.strength + ')').join(', ') || 'None'}
 Jaimini Atmakaraka: ${porondamData.groomAdvanced.tier1?.jaimini?.atmakaraka?.planet || 'N/A'} — Karakamsha: ${porondamData.groomAdvanced.tier1?.jaimini?.karakamsha?.rashi || 'N/A'}
 Upapada Lagna: ${porondamData.groomAdvanced.tier1?.jaimini?.upapadaLagna?.rashi || 'N/A'} (marriage indicator)
-Past Life Karma: ${porondamData.groomAdvanced.tier3?.pastLife?.pastLife?.pastLifeStory || 'N/A'}
+Past Life Karma: Ketu H${porondamData.groomAdvanced.tier3?.pastLife?.pastLife?.ketuHouse || 'N/A'} — ${porondamData.groomAdvanced.tier3?.pastLife?.pastLife?.ketuThemes?.domain || 'N/A'} (${porondamData.groomAdvanced.tier3?.pastLife?.pastLife?.ketuThemes?.archetype || 'N/A'})
 Karma Balance: Good — ${porondamData.groomAdvanced.tier3?.pastLife?.karmaBalance?.good || 'N/A'}, Challenging — ${porondamData.groomAdvanced.tier3?.pastLife?.karmaBalance?.challenging || 'N/A'}` : 'Not available'}
+
+${porondamData.brideEnhanced ? `═══ ENHANCED ANALYSIS — ${brideLabel.toUpperCase()} (Cross-Validated) ═══
+Gandanta Dosha: ${porondamData.brideEnhanced.gandantaDosha?.hasGandanta ? 'PRESENT — ' + (porondamData.brideEnhanced.gandantaDosha.planets || []).map(p => p.planet).join(', ') : 'None'}
+Ganda Moola Dosha: ${porondamData.brideEnhanced.gandaMoolaDosha?.hasGandaMoola ? 'PRESENT' : 'None'}
+Tattva Balance: Dominant=${porondamData.brideEnhanced.tattvaBalance?.dominant || 'N/A'}, Weak=${porondamData.brideEnhanced.tattvaBalance?.weak || 'balanced'}
+Remedies: ${(porondamData.brideEnhanced.remedies?.weakPlanets || []).slice(0, 3).map(wp => wp.planet + ': ' + (wp.remedy?.gemstone?.name || 'N/A') + ' gemstone, ' + (wp.remedy?.color || 'N/A') + ' color').join(' | ') || 'None needed'}
+Shadbala Cross-Validation: ${porondamData.brideEnhanced.crossValidatedShadbala?.agreement || 'N/A'}% agreement` : ''}
+
+${porondamData.groomEnhanced ? `═══ ENHANCED ANALYSIS — ${groomLabel.toUpperCase()} (Cross-Validated) ═══
+Gandanta Dosha: ${porondamData.groomEnhanced.gandantaDosha?.hasGandanta ? 'PRESENT — ' + (porondamData.groomEnhanced.gandantaDosha.planets || []).map(p => p.planet).join(', ') : 'None'}
+Ganda Moola Dosha: ${porondamData.groomEnhanced.gandaMoolaDosha?.hasGandaMoola ? 'PRESENT' : 'None'}
+Tattva Balance: Dominant=${porondamData.groomEnhanced.tattvaBalance?.dominant || 'N/A'}, Weak=${porondamData.groomEnhanced.tattvaBalance?.weak || 'balanced'}
+Remedies: ${(porondamData.groomEnhanced.remedies?.weakPlanets || []).slice(0, 3).map(wp => wp.planet + ': ' + (wp.remedy?.gemstone?.name || 'N/A') + ' gemstone, ' + (wp.remedy?.color || 'N/A') + ' color').join(' | ') || 'None needed'}
+Shadbala Cross-Validation: ${porondamData.groomEnhanced.crossValidatedShadbala?.agreement || 'N/A'}% agreement` : ''}
+
+${porondamData.jyotishMatching ? `═══ JYOTISH ASHTAKOOT MATCHING (@prisri/jyotish, ISC — Independent Cross-Validation) ═══
+Total Score: ${porondamData.jyotishMatching.totalScore || 0}/36 (${porondamData.jyotishMatching.percentage || 0}%)
+Verdict: ${porondamData.jyotishMatching.verdict || 'N/A'}
+Kootas: ${(porondamData.jyotishMatching.ashtakoot?.kootas || []).map(k => `${k.name}: ${k.score}/${k.maxScore} (${k.area})`).join(', ')}
+${brideLabel} Mangal Dosha (Jyotish): ${porondamData.jyotishMatching.brideMangalDosha?.hasDosha ? 'PRESENT' + (porondamData.jyotishMatching.brideMangalDosha.isHigh ? ' (HIGH)' : '') : 'Not present'} — ${porondamData.jyotishMatching.brideMangalDosha?.description || ''}
+${groomLabel} Mangal Dosha (Jyotish): ${porondamData.jyotishMatching.groomMangalDosha?.hasDosha ? 'PRESENT' + (porondamData.jyotishMatching.groomMangalDosha.isHigh ? ' (HIGH)' : '') : 'Not present'} — ${porondamData.jyotishMatching.groomMangalDosha?.description || ''}
+${brideLabel} Sade Sati: ${porondamData.jyotishMatching.brideSadeSati?.status ? 'ACTIVE' : 'Not active'}
+${groomLabel} Sade Sati: ${porondamData.jyotishMatching.groomSadeSati?.status ? 'ACTIVE' : 'Not active'}` : ''}
 
 ${porondamData.advancedPorondam?.advanced ? `═══ PORONDAM+ ADVANCED ANALYSIS ═══
 COMBINED SCORE: ${porondamData.advancedPorondam.combined?.score || 'N/A'}/${porondamData.advancedPorondam.combined?.maxScore || 'N/A'} (${porondamData.advancedPorondam.combined?.percentage || 'N/A'}%) — ${porondamData.advancedPorondam.combined?.rating || 'N/A'} ${porondamData.advancedPorondam.combined?.ratingEmoji || ''}

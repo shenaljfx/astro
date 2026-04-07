@@ -14,6 +14,14 @@ const { chat, generateAINarrativeReport, translateAdvancedForDisplay, explainCha
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth } = require('../middleware/subscription');
 const { reportLimiter, validateBirthData } = require('../middleware/security');
+
+// Enhanced engine (graceful — null if unavailable)
+let enhancedEngine = null;
+try { enhancedEngine = require('../engine/enhanced'); } catch (e) { console.warn('[horoscope] enhanced engine not available:', e.message); }
+
+// Jyotish engine (graceful — null if unavailable)
+let jyotishEngine = null;
+try { jyotishEngine = require('../engine/jyotish'); } catch (e) { console.warn('[horoscope] jyotish engine not available:', e.message); }
 const { trackCost } = require('../services/costTracker');
 const { saveReport, getCachedReport, saveChartExplanation, getCachedChartExplanation, saveTranslationCache, getCachedTranslation, getUserReports, saveBirthChartCache, getCachedBirthChart } = require('../models/firestore');
 const { parseSLT } = require('../utils/dateUtils');
@@ -30,12 +38,12 @@ const LAGNA_PALAPALA = {
     description: 'Born under Mesha Lagna, you are a natural leader with fiery courage and pioneering spirit. Mars (Kuja) as your Lagna lord blesses you with energy, determination, and a warrior\'s heart.',
     descriptionSi: 'මේෂ ලග්නයෙන් උපන් ඔබ ස්වභාවික නායකයෙකි. කුජ ග්‍රහයා ලග්නාධිපති වන බැවින් ධෛර්යය, අධිෂ්ඨානය සහ සටන්කාමී ස්වභාවය ඔබේ ලක්ෂණයකි.',
     traits: ['Leadership & courage', 'Quick decision-maker', 'Athletic build', 'Short temper but forgiving'],
-    traitsSi: ['නායකත්ව හා ධෛර්යය', 'ඉක්මන් තීරණ ගන්නා', 'ක්‍රියාශීලී ශරීර ගොඩනැගිල්ල', 'කෝපය ඇති නමුත් සමාව දෙන'],
+    traitsSi: ['නායකත්ව හැකියාව සහ ධෛර්යවත් බව', 'ඉක්මන් තීරණ ගන්නා', 'මනා සෞඛ්‍ය සම්පන්න සිරුරක් හිමි', 'ඉක්මන් කේන්තිය සහ ඉක්මනින් සමාව දීම'],
     bodyType: 'Medium to tall, sharp features, reddish complexion',
     career: 'Military, sports, engineering, surgery, entrepreneurship',
     careerSi: 'හමුදා, ක්‍රීඩා, ඉංජිනේරු, ශල්‍ය වෛද්‍ය, ව්‍යාපාර',
     gem: 'Red Coral (රතු පබළු)',
-    luckyColor: 'Red, Orange',
+    luckyColor: 'Red, Orange (රතු, තැඹිලි)',
     luckyDay: 'Tuesday (අඟහරුවාදා)',
   },
   'Vrishabha': {
@@ -44,12 +52,12 @@ const LAGNA_PALAPALA = {
     description: 'Vrishabha Lagna natives are blessed by Venus (Shukra), the planet of beauty and luxury. You possess remarkable patience, artistic talent, and a deep love of comfort and stability.',
     descriptionSi: 'වෘෂභ ලග්නයෙන් උපන් ඔබට සිකුරු ග්‍රහයාගේ ආශීර්වාදය ලැබේ. ඉවසීම, කලාත්මක හැකියාව, සහ සුඛෝපභෝගී ජීවිතයට ඇල්මක් ඔබේ විශේෂ ලක්ෂණයි.',
     traits: ['Patient & reliable', 'Artistic & musical talent', 'Love of luxury & comfort', 'Strong willpower'],
-    traitsSi: ['ඉවසීම සහ විශ්වාසදායක', 'කලාත්මක හා සංගීත හැකියාව', 'සුඛෝපභෝගී ජීවිතයට ප්‍රේමය', 'ශක්තිමත් කැමැත්ත'],
+    traitsSi: ['ඉවසිලිවන්ත සහ විශ්වාසදායක', 'කලාත්මක හා සංගීත හැකියාව', 'සුඛෝපභෝගී ජීවිතයට ඇති කැමැත්ත', 'දැඩි අධිෂ්ඨාන ශක්තිය'],
     bodyType: 'Solid build, beautiful features, pleasant voice',
     career: 'Finance, arts, agriculture, hospitality, music',
     careerSi: 'මූල්‍ය, කලා, කෘෂිකර්මය, ආතිථ්‍ය, සංගීතය',
     gem: 'Diamond (දියමන්ති)',
-    luckyColor: 'White, Cream, Pink',
+    luckyColor: 'White, Cream, Pink (සුදු, ක්‍රීම්, රෝස)',
     luckyDay: 'Friday (සිකුරාදා)',
   },
   'Mithuna': {
@@ -58,12 +66,12 @@ const LAGNA_PALAPALA = {
     description: 'Mercury (Budha) as your Lagna lord makes you highly intellectual, communicative, and versatile. Mithuna Lagna people are natural storytellers and quick learners.',
     descriptionSi: 'බුධ ග්‍රහයා ලග්නාධිපති වන බැවින් ඔබ බුද්ධිමත්, සන්නිවේදනයට දක්ෂ සහ බහුමුඛ පුද්ගලයෙකි. මිථුන ලග්නයේ අය ස්වභාවික කතාකරුවන් ය.',
     traits: ['Intellectual & curious', 'Excellent communicator', 'Adaptable & versatile', 'Restless mind'],
-    traitsSi: ['බුද්ධිමත් හා කුතුහලකාරී', 'විශිෂ්ට සන්නිවේදක', 'අනුවර්තනය වන හා බහුමුඛ', 'නොසන්සුන් මනස'],
+    traitsSi: ['බුද්ධිමත් හා කුතුහලකාරී', 'විශිෂ්ට සන්නිවේදක', 'ඕනෑම තත්වයකට හැඩගැසීමේ හැකියාව', 'නොසන්සුන් මනස'],
     bodyType: 'Slim, youthful appearance, bright eyes',
     career: 'Writing, journalism, teaching, trade, IT',
     careerSi: 'ලේඛනය, මාධ්‍ය, ඉගැන්වීම, වෙළඳාම, තොරතුරු තාක්ෂණය',
     gem: 'Emerald (මරකත)',
-    luckyColor: 'Green, Light Yellow',
+    luckyColor: 'Green, Light Yellow (කොළ, ලා කහ)',
     luckyDay: 'Wednesday (බදාදා)',
   },
   'Kataka': {
@@ -72,12 +80,12 @@ const LAGNA_PALAPALA = {
     description: 'The Moon (Chandra) rules your Lagna, making you deeply emotional, intuitive, and nurturing. Kataka natives have a powerful connection to home, family, and their motherland.',
     descriptionSi: 'චන්ද්‍ර ග්‍රහයා ඔබේ ලග්නාධිපති වන බැවින් ඔබ ගැඹුරු හැඟීම්කාරී, අවබෝධශීලී සහ සත්කාරශීලී පුද්ගලයෙකි. නිවස, පවුල සහ මව්බිම ඔබට ඉතා වැදගත්.',
     traits: ['Deeply emotional & caring', 'Strong intuition', 'Home & family oriented', 'Protective nature'],
-    traitsSi: ['ගැඹුරු හැඟීම්කාරී හා සත්කාරශීලී', 'ශක්තිමත් අවබෝධය', 'නිවස හා පවුල් නැඹුරු', 'ආරක්ෂණ ස්වභාවය'],
+    traitsSi: ['ගැඹුරු හැඟීම් සහිත සහ ආදරණීය', 'ඉහළ අවබෝධ ශක්තිය', 'පවුලට ලැඳි සහ නිවසට ආදරය කරන', 'අන් අයව ආරක්ෂා කිරීමේ ස්වභාවය'],
     bodyType: 'Round face, fair complexion, medium height',
     career: 'Healthcare, hospitality, real estate, psychology, food industry',
     careerSi: 'සෞඛ්‍ය, ආතිථ්‍ය, නිවාස, මනෝවිද්‍යාව, ආහාර කර්මාන්තය',
     gem: 'Pearl (මුතු)',
-    luckyColor: 'White, Silver',
+    luckyColor: 'White, Silver (සුදු, රිදී)',
     luckyDay: 'Monday (සඳුදා)',
   },
   'Simha': {
@@ -86,12 +94,12 @@ const LAGNA_PALAPALA = {
     description: 'The Sun (Surya) as your Lagna lord bestows royal dignity, confidence, and natural authority. Simha Lagna natives command respect and have a magnetic personality.',
     descriptionSi: 'සූර්ය ග්‍රහයා ලග්නාධිපති වන බැවින් රාජ ගෞරවය, ආත්ම විශ්වාසය සහ ස්වභාවික බලය ඔබට හිමි වේ. සිංහ ලග්නයේ අය ගෞරවය දිනාගෙන ආකර්ෂණීය පෞරුෂයක් ඇත.',
     traits: ['Natural leader & authority', 'Generous & warm-hearted', 'Strong self-confidence', 'Proud & dignified'],
-    traitsSi: ['ස්වභාවික නායක හා බලය', 'උදාර හා උණුසුම් හදවත', 'ශක්තිමත් ආත්ම විශ්වාසය', 'ආඩම්බර හා ගෞරවනීය'],
+    traitsSi: ['ස්වභාවික නායකත්වය සහ බලපෑම', 'ත්‍යාගශීලී සහ කරුණාවන්ත හදවත', 'ශක්තිමත් ආත්ම විශ්වාසය', 'අභිමානවත් සහ ගෞරවනීය'],
     bodyType: 'Commanding presence, broad chest, thick hair',
     career: 'Government, politics, administration, entertainment, management',
     careerSi: 'රජය, දේශපාලනය, පරිපාලනය, විනෝදාස්වාදය, කළමනාකරණය',
     gem: 'Ruby (මාණික්‍ය)',
-    luckyColor: 'Gold, Orange, Red',
+    luckyColor: 'Gold, Orange, Red (රන්, තැඹිලි, රතු)',
     luckyDay: 'Sunday (ඉරිදා)',
   },
   'Kanya': {
@@ -100,12 +108,12 @@ const LAGNA_PALAPALA = {
     description: 'Mercury (Budha) governs your Lagna, giving you exceptional analytical ability, attention to detail, and a service-oriented nature. Kanya natives excel in precision work.',
     descriptionSi: 'බුධ ග්‍රහයා ඔබේ ලග්නය පාලනය කරන බැවින් විශ්ලේෂණ හැකියාව, විස්තර කෙරෙහි අවධානය සහ සේවා නැඹුරු ස්වභාවය ඔබේ ලක්ෂණයි.',
     traits: ['Analytical & detail-oriented', 'Practical & organized', 'Health-conscious', 'Perfectionist tendencies'],
-    traitsSi: ['විශ්ලේෂණාත්මක හා විස්තර නැඹුරු', 'ප්‍රායෝගික හා සංවිධානාත්මක', 'සෞඛ්‍ය සැලකිලිමත්', 'පරිපූර්ණතාවාදී ප්‍රවණතා'],
+    traitsSi: ['විශ්ලේෂණාත්මක සහ සියුම් දේ ගැන සැලකිලිමත්', 'ප්‍රායෝගික හා සංවිධානාත්මක', 'සෞඛ්‍ය ගැන සැලකිලිමත් වන', 'සියලු දේ නිවැරදිව කිරීමට ඇති කැමැත්ත'],
     bodyType: 'Slim, delicate features, youthful look',
     career: 'Medicine, accounting, research, editing, nutrition',
     careerSi: 'වෛද්‍ය, ගණකාධිකරණය, පර්යේෂණ, සංස්කරණය, පෝෂණය',
     gem: 'Emerald (මරකත)',
-    luckyColor: 'Green, Earthy tones',
+    luckyColor: 'Green, Earthy tones (කොළ, පස් වර්ණ)',
     luckyDay: 'Wednesday (බදාදා)',
   },
   'Tula': {
@@ -114,40 +122,40 @@ const LAGNA_PALAPALA = {
     description: 'Venus (Shukra) rules your Lagna, blessing you with charm, diplomacy, and a deep sense of justice. Tula natives naturally seek balance and harmony in all things.',
     descriptionSi: 'සිකුරු ග්‍රහයා ඔබේ ලග්නය පාලනය කරන බැවින් ආකර්ෂණීයත්වය, රාජ්‍ය තාන්ත්‍රිකත්වය සහ යුක්තිය පිළිබඳ ගැඹුරු හැඟීමක් ඔබට ලැබේ.',
     traits: ['Diplomatic & fair-minded', 'Charming & sociable', 'Artistic sensibility', 'Seeks balance in all things'],
-    traitsSi: ['රාජ්‍ය තාන්ත්‍රික හා සාධාරණ', 'ආකර්ෂණීය හා සමාජශීලී', 'කලාත්මක සංවේදීතාව', 'සියල්ලෙහි සමතුලිතතාවය සොයයි'],
+    traitsSi: ['සාමකාමී සහ සාධාරණ අදහස් ඇති', 'ආකර්ෂණීය හා සමාජශීලී', 'කලාත්මක සංවේදීතාව', 'සෑම දෙයකම සමබරතාවය ප්‍රිය කරන'],
     bodyType: 'Attractive appearance, symmetrical features, graceful',
     career: 'Law, fashion, art, diplomacy, public relations',
     careerSi: 'නීතිය, විලාසිතා, කලාව, රාජ්‍ය තාන්ත්‍රිකත්වය, මහජන සම්බන්ධතා',
     gem: 'Diamond (දියමන්ති)',
-    luckyColor: 'White, Pastel shades',
+    luckyColor: 'White, Pastel shades (සුදු, ළා වර්ණ)',
     luckyDay: 'Friday (සිකුරාදා)',
   },
   'Vrischika': {
     english: 'Scorpio Lagna',
     sinhala: 'වෘශ්චික ලග්නය',
     description: 'Mars (Kuja) as your Lagna lord gives you intense willpower, magnetic charisma, and deep transformative energy. Vrischika natives are fearless investigators who see beneath the surface.',
-    descriptionSi: 'කුජ ග්‍රහයා ලග්නාධිපති වන බැවින් තීව්‍ර කැමැත්ත, ආකර්ෂණීය පෞරුෂය සහ ගැඹුරු පරිවර්තන ශක්තිය ඔබට ලැබේ. වෘශ්චික ලග්නයේ අය නිර්භීත පර්යේෂකයන් වන අතර පෘෂ්ඨය යට බලති.',
+    descriptionSi: 'කුජ ග්‍රහයා ලග්නාධිපති වන බැවින් ප්‍රබල කැපවීම සහ උනන්දුව, ආකර්ෂණීය පෞරුෂය සහ ගැඹුරු පරිවර්තන ශක්තිය ඔබට ලැබේ. වෘශ්චික ලග්නයේ අය නිර්භීත පර්යේෂකයන් වන අතර පෘෂ්ඨය යට බලති.',
     traits: ['Intense willpower', 'Magnetic personality', 'Deep & mysterious', 'Resilient & transformative'],
-    traitsSi: ['තීව්‍ර කැමැත්ත', 'ආකර්ෂණීය පෞරුෂය', 'ගැඹුරු හා අභිරහස්', 'ප්‍රතිරෝධී හා පරිවර්තනශීලී'],
+    traitsSi: ['ප්‍රබල කැපවීම සහ උනන්දුව', 'ආකර්ෂණීය පෞරුෂය', 'ගැඹුරු සහ ගුප්ත ස්වභාවයක් ඇති', 'දුෂ්කරතා මැඬගෙන නැගීසිටීමේ හැකියාව'],
     bodyType: 'Sharp eyes, intense gaze, medium build, magnetic presence',
     career: 'Research, investigation, surgery, psychology, occult sciences',
     careerSi: 'පර්යේෂණ, විමර්ශන, ශල්‍ය කර්ම, මනෝවිද්‍යාව, ගුප්ත විද්‍යා',
     gem: 'Red Coral (රතු පබළු)',
-    luckyColor: 'Deep Red, Maroon',
+    luckyColor: 'Deep Red, Maroon (තද රතු, මෙරූන්)',
     luckyDay: 'Tuesday (අඟහරුවාදා)',
   },
   'Dhanus': {
     english: 'Sagittarius Lagna',
     sinhala: 'ධනු ලග්නය',
     description: 'Jupiter (Guru) as your Lagna lord bestows wisdom, optimism, and spiritual inclination. Dhanus natives are philosophical seekers and natural teachers.',
-    descriptionSi: 'ගුරු ග්‍රහයා ලග්නාධිපති වන බැවින් ප්‍රඥාව, ශුභවාදය සහ ආධ්‍යාත්මික නැඹුරුව ඔබට ලැබේ. ධනු ලග්නයේ අය දාර්ශනික ගවේෂකයන් සහ ස්වභාවික ගුරුවරුන් වේ.',
+    descriptionSi: 'ගුරු ග්‍රහයා ලග්නාධිපති වන බැවින් ප්‍රඥාව, ශුභවාදය සහ ආධ්‍යාත්මික දේට නැඹුරුව ඔබට ලැබේ. ධනු ලග්නයේ අය දාර්ශනික ගවේෂකයන් සහ ස්වභාවික ගුරුවරුන් වේ.',
     traits: ['Wise & philosophical', 'Optimistic & adventurous', 'Love of learning & travel', 'Honest & straightforward'],
-    traitsSi: ['ප්‍රඥාවන්ත හා දාර්ශනික', 'ශුභවාදී හා සාහසික', 'ඉගෙනීම හා ගමන් කිරීමට ප්‍රේමය', 'අවංක හා කෙළින්ම'],
+    traitsSi: ['ඥානවන්ත සහ දාර්ශනික අදහස් ඇති', 'ශුභවාදී සහ උද්යෝගිමත්', 'ඉගෙනීමට සහ සංචාරයට ඇති දැඩි ඇල්ම', 'අවංක සහ සෘජු ප්‍රකාශ කරන'],
     bodyType: 'Tall, well-proportioned, jovial expression',
     career: 'Education, law, religion, philosophy, publishing',
     careerSi: 'අධ්‍යාපනය, නීතිය, ආගම, දර්ශනය, ප්‍රකාශනය',
     gem: 'Yellow Sapphire (පුෂ්පරාග)',
-    luckyColor: 'Yellow, Gold',
+    luckyColor: 'Yellow, Gold (කහ, රන්)',
     luckyDay: 'Thursday (බ්‍රහස්පතින්දා)',
   },
   'Makara': {
@@ -156,12 +164,12 @@ const LAGNA_PALAPALA = {
     description: 'Saturn (Shani) governs your Lagna, granting you tremendous discipline, patience, and ambition. Makara natives build empires slowly but surely through persistent effort.',
     descriptionSi: 'සෙනසුරු ග්‍රහයා ඔබේ ලග්නය පාලනය කරන බැවින් අති විශාල විනය, ඉවසීම සහ අභිලාෂය ඔබට ලැබේ. මකර ලග්නයේ අය සෙමින් නමුත් තහවුරුව අධිරාජ්‍යයන් ගොඩනඟති.',
     traits: ['Disciplined & ambitious', 'Extremely patient', 'Practical & responsible', 'Traditional values'],
-    traitsSi: ['විනයගරුක හා අභිලාෂකාමී', 'අතිශයින් ඉවසිලිවන්ත', 'ප්‍රායෝගික හා වගකීම්සහගත', 'සාම්ප්‍රදායික වටිනාකම්'],
+    traitsSi: ['විනයගරුක හා අභිලාෂකාමී', 'අතිශයින් ඉවසිලිවන්ත සහ බුද්ධිමත්', 'ප්‍රායෝගික හා වගකීම්සහගත', 'සාම්ප්‍රදායික වටිනාකම්'],
     bodyType: 'Lean, angular features, serious expression, ages well',
     career: 'Administration, engineering, mining, construction, politics',
     careerSi: 'පරිපාලනය, ඉංජිනේරු, පතල්කරණය, ඉදිකිරීම්, දේශපාලනය',
     gem: 'Blue Sapphire (නිල මැණික)',
-    luckyColor: 'Dark Blue, Black',
+    luckyColor: 'Dark Blue, Black (තද නිල්, කළු)',
     luckyDay: 'Saturday (සෙනසුරාදා)',
   },
   'Kumbha': {
@@ -170,12 +178,12 @@ const LAGNA_PALAPALA = {
     description: 'Saturn (Shani) rules your Lagna, combined with Rahu\'s influence giving you an unconventional, progressive, and humanitarian outlook. Kumbha natives think ahead of their time.',
     descriptionSi: 'සෙනසුරු ග්‍රහයා ඔබේ ලග්නය පාලනය කරන අතර රාහුගේ බලපෑම සමඟ ඔබට සාම්ප්‍රදායික නොවන, ප්‍රගතිශීලී සහ මානවවාදී දැක්මක් ලැබේ.',
     traits: ['Progressive & innovative', 'Humanitarian spirit', 'Independent thinker', 'Detached yet friendly'],
-    traitsSi: ['ප්‍රගතිශීලී හා නවෝත්පාදන', 'මානවවාදී ආත්මය', 'ස්වාධීන චින්තකයා', 'විඩබරව නමුත් මිත්‍රශීලී'],
+    traitsSi: ['ප්‍රගතිශීලී සහ නව නිර්මාණාත්මක', 'මානවවාදී ආත්මය', 'ස්වාධීන චින්තකයා', 'ස්වාධීන වුවත් මිත්‍රශීලී'],
     bodyType: 'Tall, distinctive appearance, striking features',
     career: 'Technology, social work, aviation, electronics, astrology',
     careerSi: 'තාක්ෂණය, සමාජ සේවය, ගුවන් සේවය, ඉලෙක්ට්‍රොනිකය, ජ්‍යෝතිෂය',
     gem: 'Blue Sapphire (නිල මැණික)',
-    luckyColor: 'Blue, Electric Blue',
+    luckyColor: 'Blue, Electric Blue (නිල්, විදුලි නිල්)',
     luckyDay: 'Saturday (සෙනසුරාදා)',
   },
   'Meena': {
@@ -184,12 +192,12 @@ const LAGNA_PALAPALA = {
     description: 'Jupiter (Guru) as your Lagna lord grants you deep spirituality, compassion, and artistic genius. Meena natives are empathic dreamers with a strong connection to the divine.',
     descriptionSi: 'ගුරු ග්‍රහයා ලග්නාධිපති වන බැවින් ගැඹුරු ආධ්‍යාත්මිකත්වය, කරුණාව සහ කලාත්මක ප්‍රතිභාව ඔබට ලැබේ. මීන ලග්නයේ අය දිව්‍ය සම්බන්ධතාවයක් ඇති සහානුභූතික සිහින දකින්නන් වේ.',
     traits: ['Spiritually inclined', 'Deeply compassionate', 'Artistic & creative', 'Dreamy & imaginative'],
-    traitsSi: ['ආධ්‍යාත්මික නැඹුරු', 'ගැඹුරු කරුණාව', 'කලාත්මක හා නිර්මාණශීලී', 'සිහින බහුල හා සිතුවිලි'],
+    traitsSi: ['ආධ්‍යාත්මික දේට නැඹුරු', 'ගැඹුරු සහනුකම්පාව සහ කරුණාව', 'කලාත්මක හා නිර්මාණශීලී', 'ප්‍රබල පරිකල්පන ශක්තිය සහ හැඟීම්බර'],
     bodyType: 'Soft features, dreamy eyes, medium build',
     career: 'Spirituality, arts, healing, music, film, charity',
     careerSi: 'ආධ්‍යාත්මිකත්වය, කලාව, සුව කිරීම, සංගීතය, චිත්‍රපට, දානශීලී',
     gem: 'Yellow Sapphire (පුෂ්පරාග)',
-    luckyColor: 'Yellow, Sea Green',
+    luckyColor: 'Yellow, Sea Green (කහ, මුහුදු කොළ)',
     luckyDay: 'Thursday (බ්‍රහස්පතින්දා)',
   },
 };
@@ -280,6 +288,8 @@ router.get('/daily/:sign', (req, res) => {
         luckyColor,
         nakshatra: panchanga.nakshatra.name,
         tithi: panchanga.tithi.name,
+        // Jyotish today data
+        jyotish: jyotishEngine ? jyotishEngine.generateTodayJyotish(6.9271, 79.8612) : null,
       },
     });
   } catch (error) {
@@ -387,6 +397,28 @@ router.post('/birth-chart', optionalAuth, async (req, res) => {
       console.error('Advanced analysis failed (non-fatal):', err.message);
     }
 
+    // Enhanced analysis (Gandanta, Tattva, Remedies, Progressions, etc.)
+    let enhancedAnalysis = null;
+    if (enhancedEngine) {
+      try {
+        enhancedAnalysis = enhancedEngine.generateEnhancedReport(date, birthLat, birthLng);
+        console.log('[birth-chart]   enhanced engine done in ' + (Date.now() - reqStart) + 'ms — ' + (enhancedAnalysis?._loadedModules || '0') + ' features');
+      } catch (err) {
+        console.error('Enhanced analysis failed (non-fatal):', err.message);
+      }
+    }
+
+    // Jyotish analysis (independent Dasha, Chalit, Varga, Mangal Dosha, Sade Sati, etc.)
+    let jyotishAnalysis = null;
+    if (jyotishEngine) {
+      try {
+        jyotishAnalysis = jyotishEngine.generateJyotishReport(date, birthLat, birthLng);
+        console.log('[birth-chart]   jyotish engine done in ' + (Date.now() - reqStart) + 'ms — ' + (jyotishAnalysis?._computeTimeMs || '0') + 'ms compute');
+      } catch (err) {
+        console.error('Jyotish analysis failed (non-fatal):', err.message);
+      }
+    }
+
     const moonNakshatra = getNakshatra(moonSidereal);
     const moonRashi = getRashi(moonSidereal);
     const sunRashi = getRashi(sunSidereal);
@@ -464,6 +496,8 @@ router.post('/birth-chart', optionalAuth, async (req, res) => {
         report: generateDetailedReport(lagna.rashi, moonRashi, sunRashi, houseChart.houses),
         dasaPeriods: calculateVimshottari(moonSidereal, date),
         advancedAnalysis: advancedAnalysis,
+        enhancedAnalysis: enhancedAnalysis,
+        jyotishAnalysis: jyotishAnalysis,
         chartExplanations: null,
     };
 

@@ -102,6 +102,16 @@ export function PricingProvider({ children }) {
     return feat ? feat.amount : 0;
   };
 
+  /**
+   * Get the subscription price label with period suffix.
+   * @returns {string} e.g. "LKR 280/month" or "$4.99/month"
+   */
+  var subscriptionLabel = function() {
+    var sub = pricing.subscription;
+    if (!sub) return '';
+    return sub.label || (pricing.currencySymbol + ' ' + sub.amount + '/' + (sub.period || 'month'));
+  };
+
   var value = {
     pricing: pricing,
     currency: pricing.currency,
@@ -111,6 +121,7 @@ export function PricingProvider({ children }) {
     loaded: loaded,
     priceLabel: priceLabel,
     priceAmount: priceAmount,
+    subscriptionLabel: subscriptionLabel,
   };
 
   return (
@@ -133,6 +144,7 @@ export function usePricing() {
       loaded: false,
       priceLabel: function(f) { return DEFAULT_PRICING[f] ? DEFAULT_PRICING[f].label : ''; },
       priceAmount: function(f) { return DEFAULT_PRICING[f] ? DEFAULT_PRICING[f].amount : 0; },
+      subscriptionLabel: function() { return DEFAULT_PRICING.subscription ? DEFAULT_PRICING.subscription.label : ''; },
     };
   }
   return ctx;

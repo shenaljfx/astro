@@ -10,9 +10,12 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@prisri/jyotish": "^1.0.6",
     "@swisseph/node": "^1.2.2",
+    "astrology-insights": "^2.3.0",
     "astronomia": "^4.2.0",
     "axios": "^1.13.6",
+    "celestine": "^0.2.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "ephemeris": "^2.2.0",
@@ -29,6 +32,8 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
   }
 }

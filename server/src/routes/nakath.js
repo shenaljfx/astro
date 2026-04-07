@@ -11,6 +11,10 @@ const express = require('express');
 const router = express.Router();
 const { calculateRahuKalaya, getDailyNakath, getPanchanga } = require('../engine/astrology');
 
+// Jyotish engine (graceful — null if unavailable)
+let jyotishEngine = null;
+try { jyotishEngine = require('../engine/jyotish'); } catch (e) { console.warn('[nakath] jyotish engine not available:', e.message); }
+
 /**
  * GET /api/nakath/daily
  * 
@@ -71,6 +75,8 @@ router.get('/daily', (req, res) => {
           timezone: 'Asia/Colombo',
           utcOffset: '+05:30',
         },
+        // Jyotish cross-validation (independent panchanga, disha shoola, special yogas)
+        jyotish: jyotishEngine ? jyotishEngine.generateTodayJyotish(lat, lng) : null,
       },
     });
   } catch (error) {
@@ -139,9 +145,17 @@ router.get('/panchanga', (req, res) => {
 
     const panchanga = getPanchanga(date, lat, lng);
 
+    // Jyotish cross-validated panchanga
+    let jyotishPanchanga = null;
+    if (jyotishEngine) {
+      try { jyotishPanchanga = jyotishEngine.getCrossValidatedPanchanga(date, lat, lng); }
+      catch (e) { /* skip */ }
+    }
+
     res.json({
       success: true,
       data: panchanga,
+      jyotishCrossValidation: jyotishPanchanga,
     });
   } catch (error) {
     console.error('Error calculating Panchanga:', error);

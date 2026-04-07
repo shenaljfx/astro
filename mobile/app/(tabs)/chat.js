@@ -20,7 +20,7 @@ import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
 
 var { width: SW } = Dimensions.get('window');
-var DAILY_LIMIT = 10;
+var DAILY_LIMIT = 5;
 var STORAGE_KEY_PREFIX = '@grahachara_chat_usage_';
 
 // Returns per-user storage key (falls back to 'guest' when not logged in)

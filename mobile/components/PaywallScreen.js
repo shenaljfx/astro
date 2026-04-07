@@ -85,12 +85,12 @@ var CONTENT = {
         '📥 Beautiful 15+ page PDF report to keep!',
       ],
       cta: 'Get My Full Life Report',
-      ctaSub: 'Just one quick payment • Yours instantly',
+      ctaSub: 'Price per report • Yours instantly',
     },
     si: {
       badge: '🔥 ගොඩක් අය ගත්තු රිපෝට් එක',
       title: 'ඔයාගේ ජීවිතයේ\nසම්පූර්ණ කතාව 📖',
-      subtitle: 'පිටු 15කට වඩා තියෙන, ඔයාගේ මුළු ජීවිතේම ගැන කියන විශේෂ AI රිපෝට් එක දැන්ම අරගෙන බලන්න!',
+      subtitle: 'පිටු 15කට වඩා තියෙන, ඔයාගේ මුළු ජීවිතේම ගැන කියන විශේෂ රිපෝට් එක දැන්ම අරගෙන බලන්න!',
       features: [
         '📜 ලග්නය හා භාව 12 ගැන ගැඹුරු විස්තර',
         '💍 විවාහය, රස්සාව සහ සල්ලි ලැබෙන විදිහ',
@@ -100,7 +100,7 @@ var CONTENT = {
         '📥 පිටු 15කට වැඩි ලස්සන PDF එකක් ෆෝන් එකටම!',
       ],
       cta: 'මගේ රිපෝට් එක දැන්ම ගන්න',
-      ctaSub: 'එක වරක් පමණක් ගෙවන්න • ක්ෂණිකව ලැබේ',
+      ctaSub: 'එක රිපෝට් එකකට මිල • ක්ෂණිකව ලැබේ',
     },
   },
   porondam: {
@@ -150,6 +150,7 @@ var SHARED = {
     restoreFail: 'Restore failed.',
     oneTime: 'one-time',
     perMonth: '/month',
+    perReport: '/report',
   },
   si: {
     restore: 'ප්‍රතිස්ථාපනය', terms: 'කොන්දේසි', privacy: 'රහස්‍යතාව',
@@ -159,6 +160,7 @@ var SHARED = {
     restoreFail: 'ප්‍රතිස්ථාපනය අසාර්ථකයි.',
     oneTime: 'එක් වරක්',
     perMonth: '/මාසයට',
+    perReport: '/රිපෝට් එකට',
   },
 };
 
@@ -224,7 +226,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
   var insets = useSafeAreaInsets();
   var { language } = useLanguage();
   var lang = language === 'si' ? 'si' : 'en';
-  var { priceLabel } = usePricing();
+  var { priceLabel, isInternational, subscriptionLabel } = usePricing();
 
   var src = source || 'onboarding';
   var content = CONTENT[src] ? CONTENT[src][lang] : CONTENT.onboarding[lang];
@@ -291,20 +293,22 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
   // Get the display price based on source
   var getDisplayPrice = function () {
     if (isOneTime) {
-      // One-time pricing from PricingContext
+      // One-time pricing from PricingContext (geo-aware: LKR or USD)
       return priceLabel(src);
     }
-    // Monthly subscription — try RevenueCat first
+    // Monthly subscription — try RevenueCat first (store-localized price)
     if (offerings && offerings.current) {
       var monthly = offerings.current.availablePackages.find(function (p) {
         return p.packageType === 'MONTHLY' || p.identifier === '$rc_monthly';
       });
       if (monthly && monthly.product) return monthly.product.priceString;
     }
-    return priceLabel('subscription');
+    // Fallback: geo-aware price from PricingContext (LKR 280 or $4.99)
+    return subscriptionLabel();
   };
 
   var getPriceSuffix = function () {
+    if (src === 'report') return shared.perReport;
     if (isOneTime) return '  (' + shared.oneTime + ')';
     return shared.perMonth;
   };
@@ -427,6 +431,10 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
               </LinearGradient>
             </Animated.View>
 
+          </View>
+
+          {/* ── BOTTOM: Price + Error + CTA + Footer ── */}
+          <View style={s.bottomSection}>
             {/* Price */}
             <Animated.View entering={ZoomIn.delay(550).duration(400).springify()} style={s.priceWrap}>
               {loadingOfferings && !isOneTime ? (
@@ -438,10 +446,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
                 </View>
               )}
             </Animated.View>
-          </View>
 
-          {/* ── BOTTOM: Error + CTA + Footer ── */}
-          <View style={s.bottomSection}>
             {/* Error */}
             {error ? (
               <View style={s.errorWrap}>
@@ -664,6 +669,7 @@ var s = StyleSheet.create({
   // ── BOTTOM ──
   bottomSection: {
     alignItems: 'center',
+    zIndex: 2,
   },
   errorWrap: {
     flexDirection: 'row',

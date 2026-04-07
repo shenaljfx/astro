@@ -131,6 +131,83 @@ function YogaBadge({ name, category }) {
   );
 }
 
+// ── Varga Chart Async Loader ──────────────────────────────────
+function VargaChartDisplay({ division, birthDateTime, lat, lng, language }) {
+  var [vargaData, setVargaData] = useState(null);
+  var [vargaLoading, setVargaLoading] = useState(false);
+  var [vargaError, setVargaError] = useState(null);
+
+  useEffect(function () {
+    if (!birthDateTime || !division) return;
+    var cancelled = false;
+    setVargaLoading(true);
+    setVargaError(null);
+    api.getJyotishVarga(division.replace('d', ''), { birthDate: birthDateTime, lat: lat, lng: lng })
+      .then(function (res) {
+        if (cancelled) return;
+        if (res && res.success && res.data) {
+          setVargaData(res.data);
+        } else {
+          setVargaError('No data');
+        }
+      })
+      .catch(function (err) {
+        if (!cancelled) setVargaError(err.message || 'Failed');
+      })
+      .finally(function () {
+        if (!cancelled) setVargaLoading(false);
+      });
+    return function () { cancelled = true; };
+  }, [division, birthDateTime, lat, lng]);
+
+  if (vargaLoading) {
+    return (
+      <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+        <CosmicLoader size={28} color="#06B6D4" />
+      </View>
+    );
+  }
+  if (vargaError || !vargaData) {
+    return (
+      <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+        <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>
+          {language === 'si' ? 'දත්ත නොමැත' : 'No data available'}
+        </Text>
+      </View>
+    );
+  }
+
+  // Render varga planet table
+  var planets = vargaData.planets || {};
+  var ascRashiId = vargaData.ascendant?.rashi;
+  var ascRashi = language === 'si' && ascRashiId ? RASHI_SI[ascRashiId] : (vargaData.ascendant?.rashiName || '--');
+  return (
+    <View style={{ marginTop: 12 }}>
+      <View style={kj.vargaAscRow}>
+        <Text style={kj.vargaAscLabel}>{language === 'si' ? 'ලග්නය' : 'Ascendant'}</Text>
+        <Text style={kj.vargaAscValue}>{ascRashi}</Text>
+      </View>
+      {Object.entries(planets).map(function (entry, i) {
+        var name = entry[0];
+        var p = entry[1];
+        if (!p) return null;
+        var pInfo = PLANET_INFO[name] || {};
+        var pColor = pInfo.color || '#818CF8';
+        var rashiStr = language === 'si' && p.rashi ? RASHI_SI[p.rashi] : (p.rashiName || p.rashi || '--');
+        return (
+          <View key={i} style={kj.vargaPlanetRow}>
+            <View style={[kj.chalitDot, { backgroundColor: pColor }]} />
+            <Text style={[kj.vargaPlanetName, { color: pColor }]}>
+              {language === 'si' ? (pInfo.si || name) : name}
+            </Text>
+            <Text style={kj.vargaPlanetRashi}>{rashiStr}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 // ============================================================
 // Main Kendara Screen
 // ============================================================
@@ -149,6 +226,9 @@ export default function KendaraScreen() {
   const [marakaData, setMarakaData] = useState(null);
   const [marakaLoading, setMarakaLoading] = useState(false);
   const [expandedApala, setExpandedApala] = useState(null);
+  const [jyotishData, setJyotishData] = useState(null);
+  const [jyotishLoading, setJyotishLoading] = useState(false);
+  const [selectedVarga, setSelectedVarga] = useState('d9');
   
   const stepTimers = useRef([]);
   const lastFetchedBirth = useRef(null);
@@ -263,6 +343,36 @@ export default function KendaraScreen() {
     return () => { cancelled = true; };
   }, [hasBirthData, birthDateTime, birthLat, birthLng, refreshKey]);
 
+  // Fetch Jyotish advanced data (Dasha, Mangal Dosha, Sade Sati, Kundli)
+  useEffect(() => {
+    if (!hasBirthData || !birthDateTime) { setJyotishData(null); return; }
+    var cancelled = false;
+    (async () => {
+      try {
+        setJyotishLoading(true);
+        var body = { dateTime: birthDateTime, lat: birthLat, lng: birthLng };
+        var [dashaRes, mangalRes, sadeRes, chalitRes] = await Promise.all([
+          api.getJyotishDasha(body).catch(function() { return null; }),
+          api.getJyotishMangalDosha(body).catch(function() { return null; }),
+          api.getJyotishSadeSati(body).catch(function() { return null; }),
+          api.getJyotishChalit(body).catch(function() { return null; }),
+        ]);
+        if (cancelled) return;
+        setJyotishData({
+          dasha: dashaRes && dashaRes.success ? dashaRes.data : null,
+          mangalDosha: mangalRes && mangalRes.success ? mangalRes.data : null,
+          sadeSati: sadeRes && sadeRes.success ? sadeRes.data : null,
+          chalit: chalitRes && chalitRes.success ? chalitRes.data : null,
+        });
+      } catch (err) {
+        if (!cancelled) console.warn('Jyotish fetch error:', err.message);
+      } finally {
+        if (!cancelled) setJyotishLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [hasBirthData, birthDateTime, birthLat, birthLng, refreshKey]);
+
   // Pull-to-refresh: clear caches and force the effect to re-run
   const onRefresh = useCallback(() => {
     if (fetchingRef.current) return;
@@ -271,6 +381,7 @@ export default function KendaraScreen() {
     AsyncStorage.removeItem(CHART_CACHE_KEY).catch(() => {});
     setChartData(null);
     setMarakaData(null);
+    setJyotishData(null);
     setExpandedApala(null);
     setError(null);
     setRefreshKey(function (k) { return k + 1; });
@@ -649,8 +760,8 @@ export default function KendaraScreen() {
                       <View style={styles.jaiminiMini}>
                         <Text style={styles.jmLabel}>{t('kpKarakamshaLabel') || 'Soul\'s Destination'}</Text>
                         <Text style={styles.jmValue}>{language === 'si' ? (chartData.advancedAnalysis.tier1.jaimini.karakamsha.sinhala || chartData.advancedAnalysis.tier1.jaimini.karakamsha.rashi || 'N/A') : (chartData.advancedAnalysis.tier1.jaimini.karakamsha.rashi || 'N/A')}</Text>
-                        {chartData.advancedAnalysis.tier1.jaimini.karakamsha.interpretation && (
-                          <Text style={styles.jmDesc}>{language === 'si' ? (chartData.advancedAnalysis.tier1.jaimini.karakamsha.interpretationSi || chartData.advancedAnalysis.tier1.jaimini.karakamsha.interpretation) : chartData.advancedAnalysis.tier1.jaimini.karakamsha.interpretation}</Text>
+                        {chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes && (
+                          <Text style={styles.jmDesc}>{language === 'si' ? ((chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes.desireSi || chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes.desire) + ' — ' + (chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes.archetypeSi || chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes.archetype)) : (chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes.desire + ' — ' + chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes.archetype)}</Text>
                         )}
                       </View>
                     )}
@@ -771,16 +882,20 @@ export default function KendaraScreen() {
                 </View>
                 <View style={[styles.advCard, { borderColor: 'rgba(167,139,250,0.15)' }]}>
                   <LinearGradient colors={['rgba(167,139,250,0.08)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} />
-                  {chartData.advancedAnalysis.tier3.pastLife.pastLife?.pastLifeStory && (
+                  {chartData.advancedAnalysis.tier3.pastLife.pastLife?.ketuThemes && (
                     <View style={styles.plRow}>
                       <Text style={styles.plLabel}>{t('kpPastLifeStory') || 'Past Life Story'}</Text>
-                      <Text style={styles.plValue}>{language === 'si' ? (chartData.advancedAnalysis.tier3.pastLife.pastLife.pastLifeStorySi || chartData.advancedAnalysis.tier3.pastLife.pastLife.pastLifeStory) : chartData.advancedAnalysis.tier3.pastLife.pastLife.pastLifeStory}</Text>
+                      <Text style={styles.plValue}>
+                        {language === 'si' ? `කේතු භාවය ${chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuHouse} — ${chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuThemes.domainSi || chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuThemes.domain}` : `Ketu in House ${chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuHouse} — ${chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuThemes.archetype} (${chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuThemes.domain})`}
+                      </Text>
                     </View>
                   )}
-                  {chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection?.direction && (
+                  {chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection?.rahuThemes && (
                     <View style={styles.plRow}>
                       <Text style={styles.plLabel}>{t('kpLifeDirection') || 'This Life\'s Purpose'}</Text>
-                      <Text style={styles.plValue}>{language === 'si' ? (chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.directionSi || chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.direction) : chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.direction}</Text>
+                      <Text style={styles.plValue}>
+                        {language === 'si' ? `රාහු භාවය ${chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuHouse} — ${chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuThemes.growthSi || chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuThemes.growth}` : `Rahu in House ${chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuHouse} — Growth: ${chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuThemes.growth}`}
+                      </Text>
                     </View>
                   )}
                   {chartData.advancedAnalysis.tier3.pastLife.karmaBalance && (
@@ -796,7 +911,7 @@ export default function KendaraScreen() {
                   {chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit?.assessment && (
                     <View style={styles.plRow}>
                       <Text style={styles.plLabel}>{t('kpPastLifeMerit') || 'Past Life Merit'}</Text>
-                      <Text style={styles.plValue}>{language === 'si' ? (chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessmentSi || chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment) : chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment}</Text>
+                      <Text style={styles.plValue}>{language === 'si' ? ({ 'highly_meritorious': 'ඉහළ පිං ගැන්වීම්', 'karmic_debts': 'කර්ම ණය', 'mixed': 'මිශ්‍ර' }[chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment] || chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment) : chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment}</Text>
                     </View>
                   )}
                 </View>
@@ -809,6 +924,258 @@ export default function KendaraScreen() {
                 <Ionicons name="bulb-outline" size={14} color="#FFB800" />
                 <Text style={styles.aiExplainText}>{chartData.chartExplanations.pastLife}</Text>
               </View>
+            )}
+
+            {/* ═══════════════════════════════════════════════ */}
+            {/* ═══ JYOTISH ADVANCED ANALYSIS SECTIONS ═══     */}
+            {/* ═══════════════════════════════════════════════ */}
+
+            {/* ── DASHA TIMELINE ── */}
+            {jyotishData?.dasha && (
+              <Animated.View entering={FadeInDown.delay(820).duration(600)}>
+                <View style={styles.headerRow}>
+                  <Ionicons name="git-branch-outline" size={20} color="#A78BFA" />
+                  <Text style={styles.sectionTitle}>
+                    {language === 'si' ? 'ඔබේ ජීවන කාලරේඛාව' : 'Your Life Timeline'}
+                  </Text>
+                </View>
+                <View style={[styles.advCard, { borderColor: 'rgba(167,139,250,0.18)' }]}>
+                  <LinearGradient colors={['rgba(167,139,250,0.08)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+
+                  {/* Current Period Highlight */}
+                  {jyotishData.dasha.currentMahadasha && (
+                    <View style={kj.currentDashaBox}>
+                      <LinearGradient colors={['rgba(255,140,0,0.12)', 'rgba(255,184,0,0.04)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                      <View style={kj.currentDashaHeader}>
+                        <View style={kj.currentDashaDot} />
+                        <Text style={kj.currentDashaLabel}>{language === 'si' ? 'වත්මන් කාලය' : 'Current Period'}</Text>
+                      </View>
+                      <Text style={kj.currentDashaPlanet}>
+                        {language === 'si' ? (PLANET_INFO[jyotishData.dasha.currentMahadasha.planet]?.si || jyotishData.dasha.currentMahadasha.planet || '--') : (jyotishData.dasha.currentMahadasha.planet || '--')}
+                        {jyotishData.dasha.currentAntardasha ? ' → ' + (language === 'si' ? (PLANET_INFO[jyotishData.dasha.currentAntardasha.planet]?.si || jyotishData.dasha.currentAntardasha.planet) : jyotishData.dasha.currentAntardasha.planet) : ''}
+                      </Text>
+                      {jyotishData.dasha.currentPratyantar && (
+                        <Text style={kj.currentDashaSub}>
+                          {language === 'si' ? 'උප කාලය: ' : 'Sub: '}{language === 'si' ? (PLANET_INFO[jyotishData.dasha.currentPratyantar.planet]?.si || jyotishData.dasha.currentPratyantar.planet) : jyotishData.dasha.currentPratyantar.planet}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+
+                  {/* Timeline bars */}
+                  {(jyotishData.dasha.mahadashas || []).map(function (md, i) {
+                    var now = new Date();
+                    var start = new Date(md.startTime || md.start);
+                    var end = new Date(md.endTime || md.end);
+                    var totalMs = end - start;
+                    var elapsedMs = Math.max(0, Math.min(now - start, totalMs));
+                    var progress = totalMs > 0 ? Math.round((elapsedMs / totalMs) * 100) : 0;
+                    var isCurrent = now >= start && now <= end;
+                    var isPast = now > end;
+                    var barColor = isCurrent ? '#FFB800' : isPast ? 'rgba(255,255,255,0.15)' : 'rgba(167,139,250,0.50)';
+                    var textOp = isPast ? 0.35 : 1;
+                    var years = md.durationYears ? parseFloat(md.durationYears).toFixed(0) : Math.round((end - start) / (365.25 * 24 * 60 * 60 * 1000));
+                    return (
+                      <View key={i} style={[kj.dashaRow, isCurrent && kj.dashaRowCurrent]}>
+                        <View style={kj.dashaLeft}>
+                          <Text style={[kj.dashaPlanet, { opacity: textOp, color: isCurrent ? '#FFB800' : '#FFE8B0' }]}>{language === 'si' ? (PLANET_INFO[md.planet]?.si || md.planet) : md.planet}</Text>
+                          <Text style={[kj.dashaYears, { opacity: textOp }]}>{years}{language === 'si' ? ' අවු' : 'y'}</Text>
+                        </View>
+                        <View style={kj.dashaBarWrap}>
+                          <View style={kj.dashaBarTrack}>
+                            <View style={[kj.dashaBarFill, { width: (isCurrent ? progress : isPast ? 100 : 0) + '%', backgroundColor: barColor }]} />
+                          </View>
+                          <Text style={[kj.dashaDate, { opacity: textOp }]}>
+                            {start.getFullYear()} — {end.getFullYear()}
+                          </Text>
+                        </View>
+                        {isCurrent && <View style={kj.dashaLive} />}
+                      </View>
+                    );
+                  })}
+                </View>
+              </Animated.View>
+            )}
+
+            {/* ── MANGAL DOSHA ── */}
+            {jyotishData?.mangalDosha && (
+              <Animated.View entering={FadeInDown.delay(860).duration(600)}>
+                <View style={styles.headerRow}>
+                  <Ionicons name="flame-outline" size={20} color={jyotishData.mangalDosha.hasDosha ? '#F87171' : '#34D399'} />
+                  <Text style={styles.sectionTitle}>
+                    {language === 'si' ? 'කුජ දෝෂ විශ්ලේෂණය' : 'Mangal Dosha Analysis'}
+                  </Text>
+                </View>
+                <View style={[styles.advCard, {
+                  borderColor: jyotishData.mangalDosha.hasDosha
+                    ? (jyotishData.mangalDosha.isHigh ? 'rgba(239,68,68,0.30)' : 'rgba(245,158,11,0.25)')
+                    : 'rgba(52,211,153,0.20)',
+                  overflow: 'hidden',
+                }]}>
+                  <LinearGradient
+                    colors={jyotishData.mangalDosha.hasDosha
+                      ? ['rgba(239,68,68,0.08)', 'transparent']
+                      : ['rgba(52,211,153,0.08)', 'transparent']}
+                    style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                    <View style={[kj.doshaOrb, {
+                      backgroundColor: jyotishData.mangalDosha.hasDosha ? 'rgba(239,68,68,0.15)' : 'rgba(52,211,153,0.15)',
+                      borderColor: jyotishData.mangalDosha.hasDosha ? 'rgba(239,68,68,0.35)' : 'rgba(52,211,153,0.35)',
+                    }]}>
+                      <Ionicons
+                        name={jyotishData.mangalDosha.hasDosha ? 'flame' : 'shield-checkmark'}
+                        size={26}
+                        color={jyotishData.mangalDosha.hasDosha ? '#EF4444' : '#34D399'}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[kj.doshaStatus, {
+                        color: jyotishData.mangalDosha.hasDosha ? '#F87171' : '#34D399',
+                      }]}>
+                        {jyotishData.mangalDosha.hasDosha
+                          ? (jyotishData.mangalDosha.isHigh
+                            ? (language === 'si' ? '🔴 ප්‍රබල කුජ දෝෂය' : '🔴 Strong Mangal Dosha')
+                            : (language === 'si' ? '🟡 මධ්‍යම කුජ දෝෂය' : '🟡 Moderate Mangal Dosha'))
+                          : (language === 'si' ? '🟢 කුජ දෝෂය නොපවතී' : '🟢 No Mangal Dosha')}
+                      </Text>
+                      {jyotishData.mangalDosha.description && (
+                        <Text style={kj.doshaDesc}>{language === 'si' ? (jyotishData.mangalDosha.descriptionSi || jyotishData.mangalDosha.description) : jyotishData.mangalDosha.description}</Text>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              </Animated.View>
+            )}
+
+            {/* ── SADE SATI STATUS ── */}
+            {jyotishData?.sadeSati && (
+              <Animated.View entering={FadeInDown.delay(900).duration(600)}>
+                <View style={styles.headerRow}>
+                  <Ionicons name="planet-outline" size={20} color={jyotishData.sadeSati.status ? '#F59E0B' : '#34D399'} />
+                  <Text style={styles.sectionTitle}>
+                    {language === 'si' ? 'සාඩේ සාති තත්ත්වය' : 'Sade Sati Status'}
+                  </Text>
+                </View>
+                <View style={[styles.advCard, {
+                  borderColor: jyotishData.sadeSati.status ? 'rgba(245,158,11,0.25)' : 'rgba(52,211,153,0.20)',
+                  overflow: 'hidden',
+                }]}>
+                  <LinearGradient
+                    colors={jyotishData.sadeSati.status
+                      ? ['rgba(245,158,11,0.08)', 'transparent']
+                      : ['rgba(52,211,153,0.08)', 'transparent']}
+                    style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                    <View style={[kj.doshaOrb, {
+                      backgroundColor: jyotishData.sadeSati.status ? 'rgba(245,158,11,0.15)' : 'rgba(52,211,153,0.15)',
+                      borderColor: jyotishData.sadeSati.status ? 'rgba(245,158,11,0.35)' : 'rgba(52,211,153,0.35)',
+                    }]}>
+                      <Text style={{ fontSize: 22 }}>{jyotishData.sadeSati.status ? '🪐' : '🛡️'}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[kj.doshaStatus, {
+                        color: jyotishData.sadeSati.status ? '#F59E0B' : '#34D399',
+                      }]}>
+                        {jyotishData.sadeSati.status
+                          ? (language === 'si' ? '⚠ සාඩේ සාති ක්‍රියාත්මකයි' : '⚠ Sade Sati is Active')
+                          : (language === 'si' ? '✓ සාඩේ සාති කාලය නොවේ' : '✓ Not in Sade Sati Period')}
+                      </Text>
+                      {jyotishData.sadeSati.phase && (
+                        <Text style={kj.doshaDesc}>
+                          {language === 'si' ? 'අදියර: ' : 'Phase: '}{language === 'si' ? ({ 'Rising': 'නැගීම', 'Peak': 'උච්ච', 'Setting': 'බැසීම' }[jyotishData.sadeSati.phase] || jyotishData.sadeSati.phase) : jyotishData.sadeSati.phase}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              </Animated.View>
+            )}
+
+            {/* ── CHALIT CHART (Planet Shifts) ── */}
+            {jyotishData?.chalit && jyotishData.chalit.planets && (
+              <Animated.View entering={FadeInDown.delay(940).duration(600)}>
+                <View style={styles.headerRow}>
+                  <Ionicons name="swap-horizontal-outline" size={20} color="#818CF8" />
+                  <Text style={styles.sectionTitle}>
+                    {language === 'si' ? 'ග්‍රහ භාව මාරු' : 'Planet House Shifts'}
+                  </Text>
+                </View>
+                <View style={[styles.advCard, { borderColor: 'rgba(129,140,248,0.15)' }]}>
+                  <LinearGradient colors={['rgba(129,140,248,0.06)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                  <Text style={kj.chalitDesc}>
+                    {language === 'si'
+                      ? 'චලිත සටහනේ ග්‍රහයින් රාශි සටහනට වඩා වෙනස් භාවවල ක්‍රියා කරයි:'
+                      : 'In Chalit, planets may operate in different houses than the sign chart:'}
+                  </Text>
+                  {(Array.isArray(jyotishData.chalit.planets) ? jyotishData.chalit.planets : []).map(function (p, i) {
+                    var shifted = p.d1House !== p.house && p.d1House && p.house;
+                    if (!shifted) return null;
+                    var pInfo = PLANET_INFO[p.name] || {};
+                    var pColor = pInfo.color || '#818CF8';
+                    return (
+                      <View key={i} style={kj.chalitRow}>
+                        <View style={[kj.chalitDot, { backgroundColor: pColor }]} />
+                        <Text style={[kj.chalitPlanet, { color: pColor }]}>
+                          {language === 'si' ? (pInfo.si || p.name) : p.name}
+                        </Text>
+                        <View style={kj.chalitShiftBadge}>
+                          <Text style={kj.chalitShiftFrom}>H{p.d1House}</Text>
+                          <Ionicons name="arrow-forward" size={10} color="#818CF8" />
+                          <Text style={kj.chalitShiftTo}>H{p.house}</Text>
+                        </View>
+                        <Text style={kj.chalitLabel}>{language === 'si' ? 'මාරු විය' : 'Shifted'}</Text>
+                      </View>
+                    );
+                  })}
+                  {(Array.isArray(jyotishData.chalit.planets) ? jyotishData.chalit.planets : []).filter(function (p) { return p.d1House !== p.house && p.d1House && p.house; }).length === 0 && (
+                    <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+                      <Ionicons name="checkmark-circle" size={24} color="#34D399" />
+                      <Text style={{ color: 'rgba(52,211,153,0.70)', fontSize: 12, fontWeight: '600', marginTop: 6 }}>
+                        {language === 'si' ? 'සියලු ග්‍රහයින් ස්ථානයේම පවතී' : 'All planets remain in their sign houses'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </Animated.View>
+            )}
+
+            {/* ── VARGA CHART PICKER ── */}
+            {hasBirthData && (
+              <Animated.View entering={FadeInDown.delay(980).duration(600)}>
+                <View style={styles.headerRow}>
+                  <Ionicons name="layers-outline" size={20} color="#06B6D4" />
+                  <Text style={styles.sectionTitle}>
+                    {language === 'si' ? 'විභාග සටහන්' : 'Divisional Charts'}
+                  </Text>
+                </View>
+                <View style={[styles.advCard, { borderColor: 'rgba(6,182,212,0.15)' }]}>
+                  <LinearGradient colors={['rgba(6,182,212,0.06)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={kj.vargaPickerRow}>
+                    {[
+                      { key: 'd9', label: 'D9', name: language === 'si' ? 'නවාංශ' : 'Navamsha', sub: language === 'si' ? 'විවාහය' : 'Marriage' },
+                      { key: 'd10', label: 'D10', name: language === 'si' ? 'දශාංශ' : 'Dashamsha', sub: language === 'si' ? 'රැකියාව' : 'Career' },
+                      { key: 'd7', label: 'D7', name: language === 'si' ? 'සප්තාංශ' : 'Saptamsha', sub: language === 'si' ? 'දරුවෝ' : 'Children' },
+                      { key: 'd4', label: 'D4', name: language === 'si' ? 'චතුර්ථාංශ' : 'Chaturthamsha', sub: language === 'si' ? 'වත්කම්' : 'Property' },
+                      { key: 'd24', label: 'D24', name: language === 'si' ? 'චතුර්විංශාංශ' : 'Siddhamsha', sub: language === 'si' ? 'අධ්‍යාපනය' : 'Education' },
+                      { key: 'd20', label: 'D20', name: language === 'si' ? 'විංශාංශ' : 'Vimsamsha', sub: language === 'si' ? 'ආධ්‍යාත්මික' : 'Spiritual' },
+                    ].map(function (v) {
+                      var isActive = selectedVarga === v.key;
+                      return (
+                        <TouchableOpacity key={v.key} activeOpacity={0.7} onPress={function () { setSelectedVarga(v.key); }}>
+                          <View style={[kj.vargaPill, isActive && kj.vargaPillActive]}>
+                            {isActive && <LinearGradient colors={['rgba(6,182,212,0.20)', 'rgba(6,182,212,0.05)']} style={StyleSheet.absoluteFill} />}
+                            <Text style={[kj.vargaPillLabel, isActive && kj.vargaPillLabelActive]}>{v.label}</Text>
+                            <Text style={[kj.vargaPillName, isActive && kj.vargaPillNameActive]}>{v.sub}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                  <VargaChartDisplay division={selectedVarga} birthDateTime={birthDateTime} lat={birthLat} lng={birthLng} language={language} />
+                </View>
+              </Animated.View>
             )}
 
             {/* ═══ MARAKA APALA (Dangerous Periods) ═══ */}
@@ -1295,4 +1662,77 @@ const styles = StyleSheet.create({
   marakaRemedyText: { color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 18, flex: 1 },
   marakaTapHint: { color: 'rgba(255,255,255,0.2)', fontSize: 10, marginTop: 6, fontStyle: 'italic' },
   
+});
+
+// ── Kendara Jyotish Styles ──
+var kj = StyleSheet.create({
+  // Dasha Timeline
+  currentDashaBox: {
+    borderRadius: 14, overflow: 'hidden', padding: 14, marginBottom: 14,
+    borderWidth: 1, borderColor: 'rgba(255,140,0,0.20)',
+  },
+  currentDashaHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  currentDashaDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFB800' },
+  currentDashaLabel: { color: 'rgba(255,184,0,0.60)', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  currentDashaPlanet: { color: '#FFB800', fontSize: 22, fontWeight: '900' },
+  currentDashaSub: { color: 'rgba(255,214,102,0.45)', fontSize: 12, fontWeight: '600', marginTop: 2 },
+
+  dashaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
+  dashaRowCurrent: { backgroundColor: 'rgba(255,184,0,0.04)', borderRadius: 10, marginHorizontal: -6, paddingHorizontal: 6 },
+  dashaLeft: { width: 56, alignItems: 'flex-end' },
+  dashaPlanet: { fontSize: 13, fontWeight: '800' },
+  dashaYears: { color: 'rgba(255,214,102,0.35)', fontSize: 9, fontWeight: '600' },
+  dashaBarWrap: { flex: 1 },
+  dashaBarTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: 3 },
+  dashaBarFill: { height: 6, borderRadius: 3 },
+  dashaDate: { color: 'rgba(255,214,102,0.30)', fontSize: 9, fontWeight: '500' },
+  dashaLive: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFB800' },
+
+  // Dosha/Sade Sati
+  doshaOrb: {
+    width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5,
+  },
+  doshaStatus: { fontSize: 15, fontWeight: '800', marginBottom: 3 },
+  doshaDesc: { color: 'rgba(255,214,102,0.45)', fontSize: 12, lineHeight: 18 },
+
+  // Chalit shifts
+  chalitDesc: { color: 'rgba(255,214,102,0.40)', fontSize: 12, lineHeight: 18, marginBottom: 10 },
+  chalitRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
+  chalitDot: { width: 8, height: 8, borderRadius: 4 },
+  chalitPlanet: { fontSize: 13, fontWeight: '700', width: 60 },
+  chalitShiftBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(129,140,248,0.10)', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: 'rgba(129,140,248,0.20)',
+  },
+  chalitShiftFrom: { color: 'rgba(255,255,255,0.50)', fontSize: 12, fontWeight: '700' },
+  chalitShiftTo: { color: '#818CF8', fontSize: 12, fontWeight: '800' },
+  chalitLabel: { color: 'rgba(129,140,248,0.50)', fontSize: 10, fontWeight: '600', flex: 1, textAlign: 'right' },
+
+  // Varga picker
+  vargaPickerRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
+  vargaPill: {
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center', overflow: 'hidden', minWidth: 70,
+  },
+  vargaPillActive: { borderColor: 'rgba(6,182,212,0.40)' },
+  vargaPillLabel: { color: 'rgba(255,214,102,0.50)', fontSize: 14, fontWeight: '900' },
+  vargaPillLabelActive: { color: '#06B6D4' },
+  vargaPillName: { color: 'rgba(255,214,102,0.30)', fontSize: 9, fontWeight: '600', marginTop: 2 },
+  vargaPillNameActive: { color: 'rgba(6,182,212,0.65)' },
+
+  // Varga chart display
+  vargaAscRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(6,182,212,0.15)',
+    marginBottom: 4,
+  },
+  vargaAscLabel: { color: 'rgba(6,182,212,0.60)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  vargaAscValue: { color: '#06B6D4', fontSize: 16, fontWeight: '800' },
+  vargaPlanetRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' },
+  vargaPlanetName: { fontSize: 13, fontWeight: '700', width: 70 },
+  vargaPlanetRashi: { color: 'rgba(255,214,102,0.55)', fontSize: 13, fontWeight: '600', flex: 1, textAlign: 'right' },
 });

@@ -489,6 +489,7 @@ function detectAdvancedYogas(date, lat, lng) {
           sinhala: 'රාජ යෝගය',
           icon: '👑',
           description: `Lord of ${k}th house (${kendraLord}) and ${t}th house (${trikonaLord}) conjunct in house ${kendraLordHouse}. Grants power, authority, and high social status.`,
+          descriptionSi: `${k} වැනි භාවයේ අධිපති (${kendraLord}) සහ ${t} වැනි භාවයේ අධිපති (${trikonaLord}) ${kendraLordHouse} වැනි භාවයේ එක්ව සිටී. බලය, අධිකාරය සහ ඉහළ සමාජ තත්ත්වය ලබා දේ.`,
           strength: (isInKendra(kendraLordHouse) || isInTrikona(kendraLordHouse)) ? 'Very Strong' : 'Strong',
           category: 'Raja Yoga',
         });
@@ -510,6 +511,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'ධර්ම-කර්මාධිපති යෝගය',
         icon: '⭐',
         description: `9th lord (${lord9}) and 10th lord (${lord10}) conjunct in house ${lord9House}. This is one of the most powerful Raja Yogas — fortune through career, high status.`,
+        descriptionSi: `9 වැනි අධිපති (${lord9}) සහ 10 වැනි අධිපති (${lord10}) ${lord9House} වැනි භාවයේ එක්ව සිටී. ධර්ම-කර්මාධිපති යෝගය — වෘත්තීය ජයග්‍රහණ සහ ඉහළ තත්ත්වය ලබා දෙන ඉතා බලවත් රාජ යෝගයකි.`,
         strength: 'Very Strong',
         category: 'Raja Yoga',
       });
@@ -521,6 +523,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'ධර්ම-කර්ම පරිවර්තන යෝගය',
         icon: '🔄⭐',
         description: `9th lord (${lord9}) in 10th and 10th lord (${lord10}) in 9th — mutual exchange. Extremely powerful for career success and spiritual-material balance.`,
+        descriptionSi: `9 වැනි අධිපති (${lord9}) 10 වැනි භාවයේ සහ 10 වැනි අධිපති (${lord10}) 9 වැනි භාවයේ — අන්‍යෝන්‍ය හුවමාරුවකි. රැකියා ජයග්‍රහණ සහ ආධ්‍යාත්මික-භෞතික සමතුලිතතාව සඳහා අතිශයින් බලවත් ය.`,
         strength: 'Very Strong',
         category: 'Raja Yoga',
       });
@@ -548,6 +551,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'විපරීත රාජ යෝගය',
         icon: '🔄👑',
         description: `${dl.from}th lord (${dl.lord}) in house ${dl.house}. Enemies destroy each other — creating success from adversity. Problems of others become your gain.`,
+        descriptionSi: `${dl.from} වැනි අධිපති (${dl.lord}) ${dl.house} වැනි භාවයේ සිටී. සතුරන් එකිනෙකා විනාශ කරගනී — අසීරුතාවලින් සාර්ථකත්වය උපදී. අන් අයගේ ගැටළු ඔබට වාසිදායක වේ.`,
         strength: 'Strong',
         category: 'Viparita Raja Yoga',
       });
@@ -568,6 +572,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'ධන යෝගය',
       icon: '💰',
       description: `2nd lord (${lord2}) and 11th lord (${lord11}) conjunct in house ${lord2House}. Strong wealth accumulation through steady income and savings.`,
+      descriptionSi: `2 වැනි අධිපති (${lord2}) සහ 11 වැනි අධිපති (${lord11}) ${lord2House} වැනි භාවයේ එක්ව සිටී. ස්ථාවර ආදායම සහ ඉතිරිකිරීම් හරහා ශක්තිමත් ධන සමුච්චයක් ලබා දේ.`,
       strength: 'Strong',
       category: 'Dhana Yoga',
     });
@@ -580,6 +585,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'ලක්ෂ්මී-නාරායණ යෝගය',
       icon: '💎✨',
       description: 'Both Venus and Jupiter in angular houses. Grants exceptional wealth, marital happiness, and divine protection.',
+      descriptionSi: 'සිකුරු සහ ගුරු යන දෙදෙනාම කේන්ද්‍ර භාවවල සිටී. සුවිශේෂ ධනය, විවාහ සතුට සහ දෛවික ආරක්ෂාව ලබා දේ.',
       strength: 'Very Strong',
       category: 'Dhana Yoga',
     });
@@ -626,6 +632,7 @@ function detectAdvancedYogas(date, lat, lng) {
           sinhala: 'නීචභංග රාජ යෝගය',
           icon: '🦅',
           description: `${planetName} is debilitated but cancellation occurs: ${reason}. This transforms weakness into extraordinary strength. From rock bottom to the top — the phoenix yoga.`,
+          descriptionSi: `${planetName} නීච වුවත් නීචභංගය සිදු වී ඇත: ${reason}. මෙය දුර්වලකම අසාමාන්‍ය ශක්තියක් බවට පරිවර්තනය කරයි. පිරිහීමේ සිට උත්කර්ෂය දක්වා — මෙය ෆීනික්ස් යෝගයයි.`,
           strength: 'Very Strong',
           category: 'Neechabhanga',
         });
@@ -642,6 +649,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'චන්ද්‍ර-මංගල යෝගය',
       icon: '🌙🔥',
       description: 'Moon and Mars conjunct — grants wealth through bold action, real estate, and the courage to take risks. Emotionally intense but financially rewarding.',
+      descriptionSi: 'චන්ද්‍ර සහ කුජ එක්ව සිටී — නිර්භීත ක්‍රියාමාර්ග, ඉඩම් සහ අවදානම් ගැනීමේ ධෛර්යය තුළින් ධනය ලබා දේ. හැඟීම්බර නමුත් මූල්‍යමය වශයෙන් ප්‍රතිලාභදායක වේ.',
       strength: 'Strong',
       category: 'Dhana Yoga',
     });
@@ -657,6 +665,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'සුනාපා යෝගය',
         icon: '🌙✨',
         description: 'Planet(s) in 2nd from Moon — grants self-made wealth, good reputation, and the ability to acquire resources through personal effort.',
+        descriptionSi: 'චන්ද්‍රයාගෙන් 2 වැනි භාවයේ ග්‍රහයන් — ස්වයං උත්සාහයෙන් ධනය, යහපත් කීර්තිනාමය සහ පෞද්ගලික වෑයමෙන් සම්පත් ලබා ගැනීමේ හැකියාව ලබා දේ.',
         strength: 'Strong',
         category: 'Moon Yoga',
       });
@@ -671,6 +680,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'අනපා යෝගය',
         icon: '🌙💫',
         description: 'Planet(s) in 12th from Moon — grants charismatic personality, fame, and the power to influence others. Natural leadership quality.',
+        descriptionSi: 'චන්ද්‍රයාගෙන් 12 වැනි භාවයේ ග්‍රහයන් — ආකර්ෂණීය පෞරුෂය, ප්‍රසිද්ධිය සහ අන් අය කෙරෙහි බලපෑම් කිරීමේ ශක්තිය ලබා දේ. ස්වභාවික නායකත්ව ගුණාංගයකි.',
         strength: 'Strong',
         category: 'Moon Yoga',
       });
@@ -683,6 +693,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'දුරුධුරා යෝගය',
         icon: '🌙👑',
         description: 'Moon flanked by planets on both sides — the most powerful Moon yoga. Grants wealth, fame, generosity, and high position. Life is blessed from all directions.',
+        descriptionSi: 'චන්ද්‍රයාගේ දෙපසින්ම ග්‍රහයන් පිහිටා ඇත — ඉතා බලවත් චන්ද්‍ර යෝගයයි. ධනය, කීර්තිය, ත්‍යාගශීලිත්වය සහ ඉහළ තත්ත්වය ලබා දේ. ජීවිතය සෑම දිශාවකින්ම ආශීර්වාද ලැබී ඇත.',
         strength: 'Very Strong',
         category: 'Moon Yoga',
       });
@@ -706,6 +717,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'අධි යෝගය',
         icon: '🏛️',
         description: 'Multiple benefic planets in 6th, 7th, and 8th from Moon. Grants commanding authority, political power, and the ability to defeat all opposition.',
+        descriptionSi: 'චන්ද්‍රයාගෙන් 6, 7 සහ 8 වැනි භාවවල බහු ශුභ ග්‍රහයන් සිටී. විධාන බලය, දේශපාලන බලය සහ සියලු විරුද්ධත්වය පරාජය කිරීමේ හැකියාව ලබා දේ.',
         strength: inH6 + inH7 + inH8 >= 3 ? 'Very Strong' : 'Strong',
         category: 'Raja Yoga',
       });
@@ -723,6 +735,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'සරස්වතී යෝගය',
       icon: '📚',
       description: 'Mercury, Venus, and Jupiter are well placed — grants exceptional intelligence, artistic talent, eloquence in speech, and mastery of knowledge. A scholar\'s combination.',
+      descriptionSi: 'බුධ, සිකුරු සහ ගුරු යහපත් ස්ථානවල පිහිටා ඇත — සුවිශේෂ බුද්ධිය, කලාත්මක හැකියාව, වාග් චාතුර්යය සහ දැනුමේ ප්‍රවීණත්වය ලබා දේ. විද්වතෙකුගේ සංයෝජනයකි.',
       strength: saraswatiInGood.length === 3 ? 'Very Strong' : 'Strong',
       category: 'Education Yoga',
     });
@@ -740,6 +753,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'අමල යෝගය',
         icon: '🕊️',
         description: 'Benefic planet in 10th from Moon — grants an unblemished reputation, ethical conduct, and lasting fame. People naturally trust and respect you.',
+        descriptionSi: 'චන්ද්‍රයාගෙන් 10 වැනි භාවයේ ශුභ ග්‍රහයෙක් — නිර්දෝෂ කීර්තිනාමය, ආචාරශීලී හැසිරීම සහ කල්පවත්නා ප්‍රසිද්ධිය ලබා දේ. මිනිසුන් ස්වභාවිකවම ඔබට විශ්වාස කොට ගෞරව කරති.',
         strength: 'Strong',
         category: 'Character Yoga',
       });
@@ -757,6 +771,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'චාමර යෝගය',
       icon: '🏅',
       description: `Lagna lord ${lagnaLord} is exalted — the soul is born with exceptional strength. Grants royal honors, high position, and a magnetic personality.`,
+      descriptionSi: `ලග්නාධිපති ${lagnaLord} උච්ච වී ඇත — ආත්මය සුවිශේෂ ශක්තියකින් උපත ලබා ඇත. රාජකීය ගෞරව, ඉහළ තත්ත්වය සහ ආකර්ෂණීය පෞරුෂයක් ලබා දේ.`,
       strength: 'Very Strong',
       category: 'Personality Yoga',
     });
@@ -772,6 +787,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'පර්වත යෝගය',
       icon: '🏔️',
       description: 'Benefic planets dominate the angular houses with no malefic obstruction — grants a life of fortune, comfort, fame, and authority like a mountain king.',
+      descriptionSi: 'ශුභ ග්‍රහයන් පාප ග්‍රහ බාධාවකින් තොරව කේන්ද්‍ර භාවවල ආධිපත්‍යය දරයි — කඳුකර රජෙකු මෙන් වාසනාවන්ත, සුවපහසු, ප්‍රසිද්ධ සහ බලවත් ජීවිතයක් ලබා දේ.',
       strength: 'Very Strong',
       category: 'Raja Yoga',
     });
@@ -786,6 +802,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'කහල යෝගය',
       icon: '🥁',
       description: `4th lord (${lord4}) and 9th lord (${lord9}) conjunct in house ${lord4House} — grants boldness, property, fortune through homeland, and a courageous spirit.`,
+      descriptionSi: `4 වැනි අධිපති (${lord4}) සහ 9 වැනි අධිපති (${lord9}) ${lord4House} වැනි භාවයේ එක්ව සිටී — නිර්භීතකම, දේපළ, මව්බිම හරහා වාසනාව සහ ධෛර්යවන්ත ආත්මයක් ලබා දේ.`,
       strength: 'Strong',
       category: 'Dhana Yoga',
     });
@@ -798,6 +815,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'මාලව්‍ය යෝගය',
       icon: '💐',
       description: 'Venus strong in Kendra in own/exalted sign — grants exceptional beauty, artistic talent, luxurious life, and a loving spouse. One of the Panch Mahapurusha Yogas.',
+      descriptionSi: 'සිකුරු කේන්ද්‍රයක ස්වකීය/උච්ච රාශියේ බලවත්ව සිටී — සුවිශේෂ සෞන්දර්යය, කලාත්මක හැකියාව, සුඛෝපභෝගී ජීවිතයක් සහ ආදරණීය සහකරුවෙකු ලබා දේ. පංච මහාපුරුෂ යෝගවලින් එකකි.',
       strength: 'Very Strong',
       category: 'Panch Mahapurusha',
     });
@@ -817,6 +835,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'ශුභ කර්තරි යෝගය',
       icon: '🛡️',
       description: 'Benefic planets on both sides of the Ascendant — a divine protection shield. Life is blessed, obstacles are deflected, and fortune surrounds you.',
+      descriptionSi: 'ලග්නයේ දෙපසින්ම ශුභ ග්‍රහයන් — දෛවික ආරක්ෂණ පළිහකි. ජීවිතය ආශීර්වාදමය, බාධා මග හැරෙන අතර වාසනාව ඔබ වටා කරකැවේ.',
       strength: 'Strong',
       category: 'Protection Yoga',
     });
@@ -833,6 +852,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'පාප කර්තරි යෝගය',
       icon: '⚠️',
       description: 'Malefic planets hemming the Ascendant from both sides — creates pressure, restrictions, and feeling "boxed in" by circumstances. Requires spiritual remedies.',
+      descriptionSi: 'පාප ග්‍රහයන් ලග්නය දෙපසින් වටකර ඇත — පීඩනය, සීමාවන් සහ තත්ත්වයන් මගින් "සීමා වී ඇති" හැඟීමක් ඇති කරයි. ආධ්‍යාත්මික පිළියම් අවශ්‍ය වේ.',
       strength: 'Strong',
       category: 'Dosha Yoga',
     });
@@ -847,6 +867,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'ශකට යෝගය',
         icon: '🎡',
         description: 'Jupiter in 6th, 8th, or 12th from Moon — life goes up and down like a cart wheel. Wealth comes and goes. Need to build resilience and consistent effort.',
+        descriptionSi: 'ගුරු චන්ද්‍රයාගෙන් 6, 8 හෝ 12 වැනි භාවයේ සිටී — ජීවිතය ගැල් රෝදයක් මෙන් ඉහළ පහළ යයි. ධනය පැමිණී යළිත් යන්නේය. ඔරොත්තු දීමේ ශක්තිය හා අඛණ්ඩ උත්සාහය ගොඩනගා ගත යුතුය.',
         strength: 'Moderate',
         category: 'Challenge Yoga',
       });
@@ -863,6 +884,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'වෝෂී යෝගය',
         icon: '☀️✨',
         description: 'Planet in 2nd from Sun — grants eloquent speech, good memory, and the ability to influence through words and presence.',
+        descriptionSi: 'සූර්යයාගෙන් 2 වැනි භාවයේ ග්‍රහයෙක් — වාග් චාතුර්යය, හොඳ මතක ශක්තිය සහ වචනවලින් සහ පැවැත්මෙන් බලපෑම් කිරීමේ හැකියාව ලබා දේ.',
         strength: 'Medium',
         category: 'Sun Yoga',
       });
@@ -882,6 +904,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'උභයචාරී යෝගය',
         icon: '☀️👑',
         description: 'Planets flanking the Sun on both sides — grants royal bearing, kingly generosity, and the ability to be the center of any room. Natural-born leader.',
+        descriptionSi: 'සූර්යයාගේ දෙපසින්ම ග්‍රහයන් සිටී — රාජකීය ගතිගුණ, රජුන්ගේ ත්‍යාගශීලිත්වය සහ ඕනෑම අවස්ථාවක මධ්‍යස්ථානය වීමේ හැකියාව ලබා දේ. ස්වභාවික නායකයෙකි.',
         strength: 'Strong',
         category: 'Sun Yoga',
       });
@@ -895,6 +918,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'ගුරු බල',
       icon: '🙏',
       description: 'Jupiter in an angular house from Lagna — divine protection, wisdom in decision-making, and blessings from teachers and elder mentors.',
+      descriptionSi: 'ගුරු ලග්නයෙන් කේන්ද්‍ර භාවයක සිටී — දෛවික ආරක්ෂාව, තීරණ ගැනීමේ ප්‍රඥාව සහ ගුරුවරුන් හා වැඩිහිටි උපදේශකයන්ගේ ආශීර්වාදය ලැබේ.',
       strength: 'Strong',
       category: 'Benefic Yoga',
     });
@@ -968,35 +992,20 @@ function calculateJaiminiKarakas(date, lat, lng) {
   const karakamshaRashiId = atmakarakaNavamsha?.navamshaRashiId;
   const karakamshaRashi = karakamshaRashiId ? RASHIS[karakamshaRashiId - 1] : null;
 
-  // Interpret Karakamsha
-  const KARAKAMSHA_INTERPRETATIONS = {
-    1: 'Soul desires leadership, independence, and pioneering new paths. Warrior spirit.',
-    2: 'Soul craves material security, beauty, luxury, and sensual pleasures. Artistic nature.',
-    3: 'Soul seeks knowledge, communication, intellectual mastery, and versatility. Writer/teacher.',
-    4: 'Soul wants emotional security, home, nurturing relationships, and protection of loved ones.',
-    5: 'Soul desires creative expression, fame, authority, and recognition. Dramatic flair.',
-    6: 'Soul is drawn to service, healing, problem-solving, and perfecting skills. Analytical mind.',
-    7: 'Soul seeks harmony, partnership, justice, and aesthetic perfection. Diplomat/artist.',
-    8: 'Soul craves transformation, occult knowledge, hidden truths, and depth of experience. Researcher.',
-    9: 'Soul desires wisdom, spiritual growth, travel, teaching, and dharmic living. Philosopher.',
-    10: 'Soul seeks achievement, structure, authority, and lasting legacy. Empire builder.',
-    11: 'Soul craves innovation, humanitarian service, unusual experiences, and breaking boundaries.',
-    12: 'Soul desires liberation (moksha), spiritual practice, foreign lands, and transcendence of material world.',
-  };
-
-  const KARAKAMSHA_INTERPRETATIONS_SI = {
-    1: 'ආත්මය නායකත්වය, ස්වාධීනත්වය සහ නව මාර්ග සොයා යාම ප්‍රාර්ථනා කරයි. සටන්කාමී ආත්මය.',
-    2: 'ආත්මය භෞතික ආරක්ෂාව, සෞන්දර්යය, සුඛෝපභෝගී සහ කලාත්මක ස්වභාවය ප්‍රාර්ථනා කරයි.',
-    3: 'ආත්මය දැනුම, සන්නිවේදනය, බුද්ධිමය ප්‍රාවීණ්‍යතාව සොයයි. ලේඛක/ගුරුවර ස්වභාවය.',
-    4: 'ආත්මය හැඟීම් ආරක්ෂාව, නිවස, පෝෂණ සබඳතා සොයයි.',
-    5: 'ආත්මය නිර්මාණශීලී ප්‍රකාශනය, කීර්තිය, බලය සහ පිළිගැනීම ප්‍රාර්ථනා කරයි.',
-    6: 'ආත්මය සේවය, සුව කිරීම, ගැටලු විසඳීම කෙරෙහි ආකර්ෂිත වේ. විශ්ලේෂණ මනස.',
-    7: 'ආත්මය සාමය, හවුල්කාරිත්වය, යුක්තිය සහ සෞන්දර්යාත්මක පරිපූර්ණතාව සොයයි.',
-    8: 'ආත්මය පරිවර්තනය, ගුප්ත දැනුම, සැඟවුණු සත්‍ය සොයයි. පර්යේෂක ස්වභාවය.',
-    9: 'ආත්මය ප්‍රඥාව, ආධ්‍යාත්මික වර්ධනය, ගමන්, ඉගැන්වීම සොයයි. දාර්ශනික ස්වභාවය.',
-    10: 'ආත්මය ජයග්‍රහණය, ව්‍යුහය, බලය සහ කල්පවතින උරුමයක් සොයයි.',
-    11: 'ආත්මය නවෝත්පාදනය, මානවවාදී සේවය සහ සීමා බිඳීම ප්‍රාර්ථනා කරයි.',
-    12: 'ආත්මය මෝක්ෂය, ආධ්‍යාත්මික පුහුණුව, සහ භෞතික ලෝකය ඉක්මවා යාම ප්‍රාර්ථනා කරයි.',
+  // Karakamsha themes — technical keywords for AI interpretation
+  const KARAKAMSHA_THEMES = {
+    1: { desire: 'leadership', archetype: 'pioneer', domain: 'independence', desireSi: 'නායකත්වය', archetypeSi: 'පුරෝගාමියා', domainSi: 'ස්වාධීනත්වය' },
+    2: { desire: 'material_security', archetype: 'artist', domain: 'wealth_beauty', desireSi: 'භෞතික ආරක්ෂාව', archetypeSi: 'කලාකරු', domainSi: 'ධනය_සෞන්දර්ය' },
+    3: { desire: 'knowledge', archetype: 'communicator', domain: 'intellect', desireSi: 'දැනුම', archetypeSi: 'සන්නිවේදක', domainSi: 'බුද්ධිය' },
+    4: { desire: 'emotional_security', archetype: 'nurturer', domain: 'home_family', desireSi: 'හැඟීම් ආරක්ෂාව', archetypeSi: 'පෝෂකයා', domainSi: 'නිවස_පවුල' },
+    5: { desire: 'creative_expression', archetype: 'performer', domain: 'fame_authority', desireSi: 'නිර්මාණශීලී ප්‍රකාශනය', archetypeSi: 'රංගන ශිල්පියා', domainSi: 'කීර්තිය_අධිකාරය' },
+    6: { desire: 'service', archetype: 'healer', domain: 'problem_solving', desireSi: 'සේවය', archetypeSi: 'වෛද්‍ය', domainSi: 'ගැටලු විසඳීම' },
+    7: { desire: 'harmony', archetype: 'diplomat', domain: 'partnership_justice', desireSi: 'සමගිය', archetypeSi: 'රාජ්‍ය තාන්ත්‍රික', domainSi: 'හවුල්කාරිත්වය_යුක්තිය' },
+    8: { desire: 'transformation', archetype: 'researcher', domain: 'occult_depth', desireSi: 'පරිවර්තනය', archetypeSi: 'පර්යේෂක', domainSi: 'රහස්‍ය_ගැඹුරු' },
+    9: { desire: 'wisdom', archetype: 'philosopher', domain: 'dharma_spirituality', desireSi: 'ප්‍රඥාව', archetypeSi: 'දාර්ශනික', domainSi: 'ධර්මය_ආධ්‍යාත්මිකත්වය' },
+    10: { desire: 'achievement', archetype: 'empire_builder', domain: 'authority_legacy', desireSi: 'ජයග්‍රහණය', archetypeSi: 'අධිරාජ්‍ය නිර්මාතෘ', domainSi: 'අධිකාරය_උරුමය' },
+    11: { desire: 'innovation', archetype: 'humanitarian', domain: 'social_reform', desireSi: 'නව්‍යකරණය', archetypeSi: 'මානවහිතවාදී', domainSi: 'සමාජ ප්‍රතිසංස්කරණය' },
+    12: { desire: 'liberation', archetype: 'mystic', domain: 'moksha_transcendence', desireSi: 'මෝක්ෂය', archetypeSi: 'අධ්‍යාත්මවාදී', domainSi: 'මෝක්ෂය_අතීන්ද්‍රිය' },
   };
 
   // ── ARUDHA LAGNA (AL) — External Image ────────────────────────
@@ -1040,20 +1049,17 @@ function calculateJaiminiKarakas(date, lat, lng) {
       rashi: karakamshaRashi.english,
       rashiName: karakamshaRashi.name,
       sinhala: karakamshaRashi.sinhala,
-      interpretation: KARAKAMSHA_INTERPRETATIONS[karakamshaRashiId] || '',
-      interpretationSi: KARAKAMSHA_INTERPRETATIONS_SI[karakamshaRashiId] || '',
+      themes: KARAKAMSHA_THEMES[karakamshaRashiId] || null,
     } : null,
     arudhaLagna: arudhaLagnaId ? {
       rashiId: arudhaLagnaId,
       rashi: RASHIS[arudhaLagnaId - 1]?.english,
       sinhala: RASHIS[arudhaLagnaId - 1]?.sinhala,
-      meaning: 'How the world perceives you — your public image and reputation',
     } : null,
     upapadaLagna: upapadaId ? {
       rashiId: upapadaId,
       rashi: RASHIS[upapadaId - 1]?.english,
       sinhala: RASHIS[upapadaId - 1]?.sinhala,
-      meaning: 'The nature of your marriage and spouse — derived from the 12th house Arudha',
     } : null,
   };
 }
@@ -1410,10 +1416,6 @@ function calculateBhriguBindu(date) {
     nakshatra: bbNakshatra.name,
     nakshatraSinhala: bbNakshatra.sinhala,
     degreeInSign: (bhriguBindu % 30).toFixed(2),
-    meaning: 'The Bhrigu Bindu is the destiny point — when any planet transits this degree, major life events are triggered. It is the karmic trigger point of the soul.',
-    meaningSi: 'භ්‍රිගු බින්දුව ඉරණම් ලක්ෂ්‍යයි — ඕනෑම ග්‍රහයෙක් මෙම අංශය හරහා ගමන් කරන විට ජීවිතයේ ප්‍රධාන සිදුවීම් ඇති කෙරේ. මෙය ආත්මයේ කර්ම ප්‍රේරක ලක්ෂ්‍යයි.',
-    interpretation: `Bhrigu Bindu falls in ${bbRashi.english} at ${(bhriguBindu % 30).toFixed(1)}° in ${bbNakshatra.name} nakshatra. ${activations.length > 0 ? 'Currently ACTIVATED by ' + activations.map(a => a.planet).join(', ') + ' — significant events unfolding.' : 'Currently not activated by transit planets.'}`,
-    interpretationSi: `භ්‍රිගු බින්දුව ${bbRashi.sinhala} රාශියේ ${(bhriguBindu % 30).toFixed(1)}° ${bbNakshatra.sinhala} නැකතේ පිහිටයි. ${activations.length > 0 ? 'දැනට ' + activations.map(a => { const pi = { Sun: 'රවි', Moon: 'චන්ද්‍ර', Mars: 'කුජ', Mercury: 'බුධ', Jupiter: 'ගුරු', Venus: 'සිකුරු', Saturn: 'ශනි' }; return pi[a.planet] || a.planet; }).join(', ') + ' මගින් සක්‍රිය — වැදගත් සිදුවීම් සිදු වෙමින්.' : 'දැනට ග්‍රහ ගමන් මඟින් සක්‍රිය නොවේ.'}`,
     currentActivations: activations,
     isCurrentlyActive: activations.length > 0,
   };
@@ -1432,20 +1434,20 @@ function calculateAvasthas(date) {
   const results = {};
 
   const BALAADI = [
-    { name: 'Bala', sinhala: 'බාල', range: [0, 6], effect: 'Infant state — planet gives 25% results. Immature energy, needs development.', power: 0.25 },
-    { name: 'Kumara', sinhala: 'කුමාර', range: [6, 12], effect: 'Adolescent state — planet gives 50% results. Growing energy, partial effects.', power: 0.50 },
-    { name: 'Yuva', sinhala: 'යුව', range: [12, 18], effect: 'Youth state — planet gives 100% results. PEAK POWER. This planet is at full strength!', power: 1.0 },
-    { name: 'Vriddha', sinhala: 'වෘද්ධ', range: [18, 24], effect: 'Old state — planet gives 50% results. Wise but declining energy.', power: 0.50 },
-    { name: 'Mrita', sinhala: 'මෘත', range: [24, 30], effect: 'Dead state — planet gives near-zero results. This energy is dormant or blocked.', power: 0.05 },
+    { name: 'Bala', sinhala: 'බාල', range: [0, 6], power: 0.25 },
+    { name: 'Kumara', sinhala: 'කුමාර', range: [6, 12], power: 0.50 },
+    { name: 'Yuva', sinhala: 'යුව', range: [12, 18], power: 1.0 },
+    { name: 'Vriddha', sinhala: 'වෘද්ධ', range: [18, 24], power: 0.50 },
+    { name: 'Mrita', sinhala: 'මෘත', range: [24, 30], power: 0.05 },
   ];
 
   // For odd signs: normal order. For even signs: REVERSE order
   const BALAADI_EVEN = [
-    { name: 'Mrita', sinhala: 'මෘත', range: [0, 6], effect: 'Dead state (reversed in even sign) — dormant energy.', power: 0.05 },
-    { name: 'Vriddha', sinhala: 'වෘද්ධ', range: [6, 12], effect: 'Old state (reversed) — wise but fading.', power: 0.50 },
-    { name: 'Yuva', sinhala: 'යුව', range: [12, 18], effect: 'Youth state — PEAK POWER even in reversed sign!', power: 1.0 },
-    { name: 'Kumara', sinhala: 'කුමාර', range: [18, 24], effect: 'Adolescent (reversed) — growing.', power: 0.50 },
-    { name: 'Bala', sinhala: 'බාල', range: [24, 30], effect: 'Infant (reversed) — just beginning.', power: 0.25 },
+    { name: 'Mrita', sinhala: 'මෘත', range: [0, 6], power: 0.05 },
+    { name: 'Vriddha', sinhala: 'වෘද්ධ', range: [6, 12], power: 0.50 },
+    { name: 'Yuva', sinhala: 'යුව', range: [12, 18], power: 1.0 },
+    { name: 'Kumara', sinhala: 'කුමාර', range: [18, 24], power: 0.50 },
+    { name: 'Bala', sinhala: 'බාල', range: [24, 30], power: 0.25 },
   ];
 
   // Jaagrat/Swapna/Sushupti based on placement
@@ -1481,9 +1483,9 @@ function calculateAvasthas(date) {
     }
 
     const CONSCIOUSNESS_EFFECTS = {
-      'Jaagrat': { sinhala: 'ජාගෘත (අවදි)', effect: 'Planet is FULLY AWAKE — gives maximum results, conscious action', power: 1.0 },
-      'Swapna': { sinhala: 'ස්වප්න (සිහින)', effect: 'Planet is DREAMING — gives partial results, subconscious influence', power: 0.5 },
-      'Sushupti': { sinhala: 'සුෂුප්ති (නිදි)', effect: 'Planet is SLEEPING — minimal results, latent energy waiting to be awakened', power: 0.25 },
+      'Jaagrat': { sinhala: 'ජාගෘත (අවදි)', power: 1.0 },
+      'Swapna': { sinhala: 'ස්වප්න (සිහින)', power: 0.5 },
+      'Sushupti': { sinhala: 'සුෂුප්ති (නිදි)', power: 0.25 },
     };
 
     results[key] = {
@@ -1494,7 +1496,6 @@ function calculateAvasthas(date) {
       balaadi: {
         state: avastha.name,
         sinhala: avastha.sinhala,
-        effect: avastha.effect,
         powerMultiplier: avastha.power,
       },
       consciousness: {
@@ -1783,7 +1784,6 @@ function calculatePratyantardasha(moonLongitude, birthDate) {
     currentAntardasha: currentAD.lord,
     pratyantardashas,
     currentPratyantardasha: pratyantardashas.find(p => p.isCurrent) || null,
-    interpretation: `Currently running: ${currentDasha.lord} Mahadasha → ${currentAD.lord} Antardasha${pratyantardashas.find(p => p.isCurrent) ? ' → ' + pratyantardashas.find(p => p.isCurrent).lord + ' Pratyantardasha' : ''}`,
   };
 }
 
@@ -1860,7 +1860,6 @@ function calculateNadiAmsha(date) {
       exactDegree: degree.toFixed(4),
       rashi: p.rashiEnglish,
       microPosition: `${p.rashiEnglish} ${degree.toFixed(2)}° — Nadi #${clampedNadi} (${nadiName})`,
-      interpretation: `${p.name} is in the ${nadiName} Nadi (${devata} realm, ${guna} quality) at ${degree.toFixed(2)}° of ${p.rashiEnglish}. This precise micro-position reveals the most granular karmic imprint of this planet.`,
     };
   }
 
@@ -1945,7 +1944,6 @@ function calculateKPSubLords(date) {
       subLord,
       subSubLord,
       chain: `${signLord} → ${starLord} → ${subLord} → ${subSubLord}`,
-      interpretation: `${p.name} operates through: ${signLord} (worldly arena) → ${starLord} (life theme) → ${subLord} (specific outcome) → ${subSubLord} (fine-tuning)`,
     };
   }
 
@@ -1980,34 +1978,20 @@ function analyzePastLife(date, lat, lng) {
   const ketuHouse = getPlanetHouse('Ketu');
   const ketuRashi = planets.ketu?.rashiEnglish;
 
-  const KETU_HOUSE_PAST_LIFE = {
-    1: 'You were a strong, independent leader — possibly a warrior, king, or self-made pioneer. You came into this life already knowing how to survive alone.',
-    2: 'You were wealthy and attached to family/possessions in your past life. Your speech had power. You may have been a banker, trader, or wealthy merchant.',
-    3: 'You were a brave communicator — a writer, messenger, soldier, or traveling merchant. Your siblings played a crucial role in your past life.',
-    4: 'You had deep roots in your homeland — possibly a landowner, farmer, or community elder. Your mother\'s lineage carries powerful karma.',
-    5: 'You were a creative genius, scholar, or spiritual practitioner. You may have been a priest, teacher, or performer. Past-life romance karma is strong.',
-    6: 'You were a healer, servant, soldier, or someone who fought against enemies and disease. You carried the karma of service and sacrifice.',
-    7: 'You were deeply involved in partnerships and marriage. Your past life revolved around a significant relationship — possibly karmic soulmate dynamics.',
-    8: 'You were an occultist, mystic, or researcher of hidden knowledge. You may have dealt with death, transformation, or other people\'s resources.',
-    9: 'You were a spiritual teacher, priest, philosopher, or long-distance traveler. Your past life was devoted to dharma and higher learning.',
-    10: 'You were a person of authority — a king, administrator, or public figure. You carried the karma of power and responsibility.',
-    11: 'You were part of a community, group, or network. Your past life involved fulfilling collective aspirations and working toward shared goals.',
-    12: 'You were a monk, hermit, spiritual seeker, or someone who lived in isolation or foreign lands. Liberation (moksha) was your past-life goal.',
-  };
-
-  const KETU_HOUSE_PAST_LIFE_SI = {
-    1: 'ඔබ ශක්තිමත්, ස්වාධීන නායකයෙක් විය — සමහරවිට සටන්කරුවෙක්, රජෙක් හෝ ස්වයං-නිර්මාණ පුරෝගාමියෙක්. ඔබ තනිව ජීවත් වන හැටි දැනටමත් දනී.',
-    2: 'ඔබ පෙර ජන්මයේ ධනවත් වූ අතර පවුලට/දේපල වලට බැඳී සිටියේය. ඔබේ වචනයට බලයක් තිබුණි.',
-    3: 'ඔබ නිර්භීත සන්නිවේදකයෙක් විය — ලේඛකයෙක්, දූතයෙක් හෝ ගමන් කරන වෙළෙන්දෙක්.',
-    4: 'ඔබේ මව්බිමේ ගැඹුරු මූලයන් තිබුණි — සමහරවිට ඉඩම් හිමියෙක්, ගොවියෙක් හෝ ප්‍රජා ප්‍රධානියෙක්.',
-    5: 'ඔබ නිර්මාණශීලී ප්‍රතිභාවන්තයෙක්, විද්වතෙක් හෝ ආධ්‍යාත්මික සාධකයෙක් විය.',
-    6: 'ඔබ වෛද්‍යවරයෙක්, සේවකයෙක් හෝ සතුරන්ට හා රෝගවලට එරෙහිව සටන් කළ කෙනෙක් විය.',
-    7: 'ඔබේ පෙර ජීවිතය සහකරු/සහකාරිය වටා කැරකුණි — කර්ම ආත්ම සහකරු සබඳතා.',
-    8: 'ඔබ ගුප්ත විද්‍යාවේ පර්යේෂකයෙක් විය. මරණය, පරිවර්තනය සම්බන්ධයෙන් ක්‍රියා කළේය.',
-    9: 'ඔබ ආධ්‍යාත්මික ගුරුවරයෙක්, දාර්ශනිකයෙක් හෝ දුර ගමන්කරුවෙක් විය.',
-    10: 'ඔබ බලයේ පුද්ගලයෙක් විය — රජෙක්, පරිපාලකයෙක් හෝ මහජන පුද්ගලයෙක්.',
-    11: 'ඔබ ප්‍රජාවක හෝ සමූහයක කොටසක් විය. සාමූහික අභිලාෂයන් ඉටුකරන ජීවිතයක්.',
-    12: 'ඔබ භික්ෂුවක්, තාපසයෙක් හෝ ආධ්‍යාත්මික ගවේෂකයෙක් විය. මෝක්ෂය ඔබේ ඉලක්කය විය.',
+  // Technical classification of Ketu house themes (AI interprets into narrative)
+  const KETU_HOUSE_THEMES = {
+    1: { domain: 'self-identity', archetype: 'leader/warrior/pioneer', axis: 'independence', domainSi: 'ස්වයං අනන්‍යතාව', archetypeSi: 'නායක/යෝධ/පුරෝගාමී' },
+    2: { domain: 'wealth/speech/family', archetype: 'merchant/trader/banker', axis: 'resources', domainSi: 'ධනය/වචනය/පවුල', archetypeSi: 'වෙළෙන්දා/බැංකුකරු' },
+    3: { domain: 'communication/siblings', archetype: 'writer/messenger/soldier', axis: 'courage', domainSi: 'සන්නිවේදනය/සහෝදර', archetypeSi: 'ලේඛක/පණිවිඩකරු/සෙබළා' },
+    4: { domain: 'home/mother/land', archetype: 'landowner/farmer/elder', axis: 'roots', domainSi: 'නිවස/මව/ඉඩම්', archetypeSi: 'ඉඩම් හිමි/ගොවියා/වැඩිහිටියා' },
+    5: { domain: 'creativity/education/children', archetype: 'scholar/priest/performer', axis: 'expression', domainSi: 'නිර්මාණශීලිත්වය/අධ්‍යාපනය/දරුවන්', archetypeSi: 'ශිෂ්‍ය/පූජක/රංගන ශිල්පියා' },
+    6: { domain: 'service/health/enemies', archetype: 'healer/servant/soldier', axis: 'service', domainSi: 'සේවය/සෞඛ්‍ය/සතුරන්', archetypeSi: 'වෛද්‍ය/සේවක/යෝධ' },
+    7: { domain: 'partnerships/marriage', archetype: 'partner/diplomat/mediator', axis: 'relationships', domainSi: 'හවුල්කාරිත්වය/විවාහය', archetypeSi: 'හවුල්කරු/රාජ්‍ය තාන්ත්‍රික' },
+    8: { domain: 'occult/transformation/death', archetype: 'mystic/researcher/alchemist', axis: 'hidden-knowledge', domainSi: 'රහස්‍ය/පරිවර්තනය/මරණය', archetypeSi: 'අධ්‍යාත්මවාදී/පර්යේෂක' },
+    9: { domain: 'dharma/higher-learning/travel', archetype: 'teacher/philosopher/pilgrim', axis: 'wisdom', domainSi: 'ධර්මය/උසස් අධ්‍යාපනය/සංචාරය', archetypeSi: 'ගුරු/දාර්ශනික/වන්දනා සංචාරක' },
+    10: { domain: 'authority/career/public-life', archetype: 'king/administrator/leader', axis: 'power', domainSi: 'බලය/වෘත්තිය/මහජන ජීවිතය', archetypeSi: 'රජ/පරිපාලක/නායක' },
+    11: { domain: 'community/aspirations/gains', archetype: 'community-leader/networker', axis: 'collective', domainSi: 'ප්‍රජාව/අභිලාෂයන්/ලාභ', archetypeSi: 'ප්‍රජා නායක/ජාලකරු' },
+    12: { domain: 'spirituality/isolation/foreign', archetype: 'monk/hermit/seeker', axis: 'liberation', domainSi: 'ආධ්‍යාත්මිකත්වය/තනිකම/විදේශ', archetypeSi: 'සන්නාසී/තාපස/සොයන්නා' },
   };
 
   // ── 2. 5th HOUSE — Purva Punya (Past-Life Merit) ─────────────
@@ -2017,10 +2001,10 @@ function analyzePastLife(date, lat, lng) {
   const beneficsIn5 = planetsIn5.filter(p => ['Jupiter', 'Venus', 'Mercury', 'Moon'].includes(p));
   const maleficsIn5 = planetsIn5.filter(p => ['Sun', 'Mars', 'Saturn', 'Rahu', 'Ketu'].includes(p));
 
-  let pastLifeMerit = 'Mixed';
-  if (beneficsIn5.length > 0 && maleficsIn5.length === 0) pastLifeMerit = 'Highly Meritorious — you have accumulated significant good karma';
-  else if (maleficsIn5.length > 0 && beneficsIn5.length === 0) pastLifeMerit = 'Karmic Debts — past-life actions require resolution in this life';
-  else if (beneficsIn5.length > 0 && maleficsIn5.length > 0) pastLifeMerit = 'Mixed Karma — both merit and debt from past lives';
+  let pastLifeMerit = 'mixed';
+  if (beneficsIn5.length > 0 && maleficsIn5.length === 0) pastLifeMerit = 'highly_meritorious';
+  else if (maleficsIn5.length > 0 && beneficsIn5.length === 0) pastLifeMerit = 'karmic_debts';
+  else if (beneficsIn5.length > 0 && maleficsIn5.length > 0) pastLifeMerit = 'mixed';
 
   // ── 3. 12th HOUSE — Moksha & Past-Life Endings ────────────────
   const lord12 = getHouseLord(12);
@@ -2034,45 +2018,27 @@ function analyzePastLife(date, lat, lng) {
   const rahuHouse = getPlanetHouse('Rahu');
   const rahuRashi = planets.rahu?.rashiEnglish;
 
-  const RAHU_HOUSE_DIRECTION = {
-    1: 'Soul wants to develop a strong individual identity — break free from relationship dependency.',
-    2: 'Soul wants to build its own wealth and find its own voice — independently of family.',
-    3: 'Soul wants to develop courage, communication skills, and take initiative.',
-    4: 'Soul wants to create a stable home, connect with emotions, and develop inner security.',
-    5: 'Soul wants to express creativity, have children, and experience romance.',
-    6: 'Soul wants to serve others, solve problems, and develop practical skills.',
-    7: 'Soul wants to learn partnership, compromise, and the art of relationships.',
-    8: 'Soul wants to explore the mysteries of life, transformation, and shared resources.',
-    9: 'Soul wants to pursue higher knowledge, travel, and develop philosophical wisdom.',
-    10: 'Soul wants to achieve public status, career success, and leave a legacy.',
-    11: 'Soul wants to connect with community, fulfill aspirations, and serve humanity.',
-    12: 'Soul wants to transcend material attachments, develop spirituality, and find liberation.',
-  };
-
-  const RAHU_HOUSE_DIRECTION_SI = {
-    1: 'ආත්මය ශක්තිමත් තනි පුද්ගල අනන්‍යතාවයක් වර්ධනය කිරීමට කැමතියි — සබඳතා මත යැපීමෙන් නිදහස් වන්න.',
-    2: 'ආත්මය තමන්ගේම ධනය ගොඩනැගීමට සහ තමන්ගේම හඬ සොයා ගැනීමට කැමතියි.',
-    3: 'ආත්මය නිර්භීතකම, සන්නිවේදන හැකියාව සහ මුලපිරීම වර්ධනය කරන්න කැමතියි.',
-    4: 'ආත්මය ස්ථාවර නිවසක් නිර්මාණය කිරීමට සහ අභ්‍යන්තර ආරක්ෂාව වර්ධනය කිරීමට කැමතියි.',
-    5: 'ආත්මය නිර්මාණශීලීත්වය ප්‍රකාශ කිරීමට, දරුවන් ලැබීමට සහ ආදරය අත්විඳීමට කැමතියි.',
-    6: 'ආත්මය අන් අයට සේවය කිරීමට, ගැටලු විසඳීමට සහ ප්‍රායෝගික කුසලතා වර්ධනය කිරීමට කැමතියි.',
-    7: 'ආත්මය හවුල්කාරිත්වය, සම්මුතිය සහ සබඳතා කලාව ඉගෙන ගැනීමට කැමතියි.',
-    8: 'ආත්මය ජීවිතයේ අභිරහස්, පරිවර්තනය සහ හවුල් සම්පත් ගවේෂණය කිරීමට කැමතියි.',
-    9: 'ආත්මය උසස් දැනුම, ගමන් සහ දාර්ශනික ප්‍රඥාව වර්ධනය කිරීමට කැමතියි.',
-    10: 'ආත්මය මහජන තත්ත්වය, වෘත්තීය සාර්ථකත්වය සහ උරුමයක් තැබීමට කැමතියි.',
-    11: 'ආත්මය ප්‍රජාව සමඟ සම්බන්ධ වීමට, අභිලාෂයන් ඉටු කිරීමට සහ මනුෂ්‍යත්වයට සේවය කිරීමට කැමතියි.',
-    12: 'ආත්මය භෞතික බැඳීම් ඉක්මවා ආධ්‍යාත්මිකත්වය වර්ධනය කිරීමට සහ මෝක්ෂය සොයාගැනීමට කැමතියි.',
+  // Technical classification of Rahu house themes (AI interprets into narrative)
+  const RAHU_HOUSE_THEMES = {
+    1: { domain: 'self-identity', growth: 'independence/individuality', challenge: 'relationship-dependency', growthSi: 'ස්වාධීනත්වය/තනි පුද්ගල බව' },
+    2: { domain: 'wealth/speech', growth: 'own-resources/voice', challenge: 'family-dependency', growthSi: 'තමන්ගේ සම්පත්/කටහඬ' },
+    3: { domain: 'courage/communication', growth: 'initiative/expression', challenge: 'passivity', growthSi: 'මුලපිරීම/ප්‍රකාශනය' },
+    4: { domain: 'home/emotions', growth: 'inner-security/stability', challenge: 'external-validation', growthSi: 'අභ්‍යන්තර ආරක්ෂාව/ස්ථාවරත්වය' },
+    5: { domain: 'creativity/children', growth: 'self-expression/romance', challenge: 'community-conformity', growthSi: 'ස්වයං ප්‍රකාශනය/ප්‍රේමය' },
+    6: { domain: 'service/problem-solving', growth: 'practical-skills/health', challenge: 'spiritual-escapism', growthSi: 'ප්‍රායෝගික කුසලතා/සෞඛ්‍ය' },
+    7: { domain: 'partnerships/marriage', growth: 'compromise/relationships', challenge: 'isolation', growthSi: 'සම්මුතිය/සබඳතා' },
+    8: { domain: 'transformation/mysteries', growth: 'shared-resources/depth', challenge: 'material-attachment', growthSi: 'හවුල් සම්පත්/ගැඹුරු' },
+    9: { domain: 'higher-knowledge/travel', growth: 'philosophy/wisdom', challenge: 'narrow-mindedness', growthSi: 'දර්ශනය/ප්‍රඥාව' },
+    10: { domain: 'career/public-status', growth: 'achievement/legacy', challenge: 'domestic-comfort', growthSi: 'ජයග්‍රහණය/උරුමය' },
+    11: { domain: 'community/aspirations', growth: 'collective-service/networking', challenge: 'self-centeredness', growthSi: 'සාමූහික සේවය/ජාලකරණය' },
+    12: { domain: 'spirituality/liberation', growth: 'transcendence/surrender', challenge: 'material-attachment', growthSi: 'අතීන්ද්‍රිය/සමර්පණය' },
   };
 
   return {
-    title: 'Past Life & Karmic Analysis',
-    sinhala: 'පෙර ජන්ම හා කර්ම විශ්ලේෂණය',
-
     pastLife: {
       ketuHouse,
       ketuRashi,
-      pastLifeStory: KETU_HOUSE_PAST_LIFE[ketuHouse] || 'Past life analysis requires precise birth time.',
-      pastLifeStorySi: KETU_HOUSE_PAST_LIFE_SI[ketuHouse] || 'පෙර ජන්ම විශ්ලේෂණයට නිවැරදි උපන් වේලාව අවශ්‍යයි.',
+      ketuThemes: KETU_HOUSE_THEMES[ketuHouse] || null,
     },
 
     pastLifeMerit: {
@@ -2080,36 +2046,29 @@ function analyzePastLife(date, lat, lng) {
       benefics: beneficsIn5,
       malefics: maleficsIn5,
       assessment: pastLifeMerit,
-      assessmentSi: pastLifeMerit === 'Highly Meritorious — you have accumulated significant good karma'
-        ? 'ඉතා පුණ්‍යකර — ඔබ සැලකිය යුතු යහපත් කර්ම රැස් කර ඇත'
-        : pastLifeMerit === 'Karmic Debts — past-life actions require resolution in this life'
-          ? 'කර්ම ණය — පෙර ජන්ම ක්‍රියා මෙම ජීවිතයේ විසඳිය යුතුය'
-          : 'මිශ්‍ර කර්ම — පෙර ජන්ම වලින් පුණ්‍ය හා ණය දෙකම',
       lord5: { name: lord5, house: lord5House },
     },
 
     currentLifeDirection: {
       rahuHouse,
       rahuRashi,
-      direction: RAHU_HOUSE_DIRECTION[rahuHouse] || '',
-      directionSi: RAHU_HOUSE_DIRECTION_SI[rahuHouse] || '',
-      note: 'Rahu shows where your soul wants to GO in this life — the unfamiliar territory you must master.',
+      rahuThemes: RAHU_HOUSE_THEMES[rahuHouse] || null,
     },
 
     pastLifeEndings: {
       twelfthHousePlanets: planetsIn12,
       lord12: { name: lord12, house: lord12House },
-      note: '12th house shows how your previous life ended and what you let go of before being reborn.',
     },
 
     d60Analysis: d60Data ? {
       lagnaRashi: d60Data.lagnaRashi,
-      note: 'The Shashtiamsha (D60) chart is the most precise indicator of past-life karma. Its Lagna reveals the nature of your soul\'s journey across many lifetimes.',
     } : null,
 
     karmaBalance: {
-      ketuAxis: `Ketu in house ${ketuHouse} → Rahu in house ${rahuHouse}`,
-      summary: `Your soul has mastered the qualities of house ${ketuHouse} (${KETU_HOUSE_PAST_LIFE[ketuHouse]?.split('.')[0]}). Now it must develop the qualities of house ${rahuHouse} (${RAHU_HOUSE_DIRECTION[rahuHouse]?.split('—')[0]?.trim()}).`,
+      ketuHouse,
+      rahuHouse,
+      ketuDomain: KETU_HOUSE_THEMES[ketuHouse]?.domain || null,
+      rahuGrowth: RAHU_HOUSE_THEMES[rahuHouse]?.growth || null,
     },
   };
 }
@@ -2166,7 +2125,6 @@ function calculateSarvatobhadraActivations(date, lat, lng) {
       pairNakshatra: vedhaNak,
       activatingPlanets: vedhaPlanets,
       isActive: vedhaPlanets.length > 0,
-      warning: vedhaPlanets.length > 0 ? `${vedhaPlanets.join(', ')} currently in ${vedhaNak} — creating Vedha to your natal Moon star. Be cautious in new ventures.` : 'No Vedha active — transit conditions are favorable.',
     },
   };
 }
