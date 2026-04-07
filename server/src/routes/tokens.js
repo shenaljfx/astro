@@ -10,6 +10,7 @@ const express = require('express');
 const router = express.Router();
 const { phoneAuth } = require('../middleware/subscription');
 const { getTokenBalance } = require('../middleware/tokens');
+const { checkPendingEntitlement, getUserEntitlements, hashInput } = require('../middleware/entitlements');
 const { getDb, COLLECTIONS } = require('../config/firebase');
 
 const TOP_UP_PACKAGES = [100, 250, 500, 1000];
@@ -85,6 +86,57 @@ router.get('/history', phoneAuth, async (req, res) => {
   } catch (err) {
     console.error('[tokens/history] error:', err.message);
     res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+
+// ─── POST /entitlement/check — Check for pending (retryable) entitlement ────
+
+/**
+ * POST /api/tokens/entitlement/check
+ * Body: { type: 'report'|'porondam', inputData: { birthDate, lat, lng, ... } }
+ * Returns: { hasPending: true/false, entitlement: {...} }
+ *
+ * Mobile calls this BEFORE showing paywall — if a pending entitlement exists,
+ * the user can retry generation without paying again.
+ */
+router.post('/entitlement/check', phoneAuth, async (req, res) => {
+  if (!req.user || req.user.authType === 'anonymous') {
+    return res.json({ success: true, hasPending: false });
+  }
+
+  try {
+    const { type, inputData } = req.body;
+    if (!type || !inputData) {
+      return res.status(400).json({ error: 'type and inputData are required' });
+    }
+
+    const pending = await checkPendingEntitlement(req.user.uid, type, inputData);
+
+    res.json({
+      success: true,
+      hasPending: !!pending,
+      entitlement: pending || null,
+    });
+  } catch (err) {
+    console.error('[tokens/entitlement/check] error:', err.message);
+    res.json({ success: true, hasPending: false });
+  }
+});
+
+// ─── GET /entitlements — List user's entitlements ───────────────────────────
+
+router.get('/entitlements', phoneAuth, async (req, res) => {
+  if (!req.user || req.user.authType === 'anonymous') {
+    return res.json({ success: true, entitlements: [] });
+  }
+
+  try {
+    const type = req.query.type || null;
+    const entitlements = await getUserEntitlements(req.user.uid, type);
+    res.json({ success: true, entitlements });
+  } catch (err) {
+    console.error('[tokens/entitlements] error:', err.message);
+    res.json({ success: true, entitlements: [] });
   }
 });
 

@@ -23,6 +23,7 @@ try { enhancedEngine = require('../engine/enhanced'); } catch (e) { console.warn
 let jyotishEngine = null;
 try { jyotishEngine = require('../engine/jyotish'); } catch (e) { console.warn('[horoscope] jyotish engine not available:', e.message); }
 const { trackCost } = require('../services/costTracker');
+const { createOrResumeEntitlement, fulfillEntitlement, recordEntitlementError } = require('../middleware/entitlements');
 const { saveReport, getCachedReport, saveChartExplanation, getCachedChartExplanation, saveTranslationCache, getCachedTranslation, getUserReports, saveBirthChartCache, getCachedBirthChart } = require('../models/firestore');
 const { parseSLT } = require('../utils/dateUtils');
 const { parseBirthDateTime } = require('../services/timezone');
@@ -1013,6 +1014,7 @@ router.post('/full-report', reportLimiter, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 
 router.post('/full-report-ai', reportLimiter, phoneAuth, async (req, res) => {
+  let entitlementId = null;
   try {
     const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null } = req.body;
 
@@ -1069,6 +1071,23 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, async (req, res) => {
 
     // Deduct LKR 15 BEFORE generation — REMOVED: payment handled by RevenueCat subscription
 
+    // ── Entitlement: create or resume (allows free retry on failure) ──
+    if (req.user && req.user.uid && req.user.authType !== 'anonymous') {
+      try {
+        const inputData = { birthDate, lat: reportLat, lng: reportLng, language };
+        const ent = await createOrResumeEntitlement(req.user.uid, 'report', inputData);
+        entitlementId = ent.id;
+        if (ent.isRetry) {
+          console.log(`[AI Report] ♻️ Retry — entitlement ${ent.id} (${ent.retriesLeft} retries left)`);
+        }
+      } catch (entErr) {
+        if (entErr.code === 'ENTITLEMENT_EXHAUSTED') {
+          return res.status(410).json({ error: entErr.message, code: entErr.code });
+        }
+        console.warn('[AI Report] Entitlement check failed (non-critical):', entErr.message);
+      }
+    }
+
     console.log(`[AI Report] Generating narrative report for ${date.toISOString()} at (${reportLat}, ${reportLng}) in ${language}`);
     const startTime = Date.now();
 
@@ -1112,12 +1131,28 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, async (req, res) => {
       generationTime: `${elapsed}ms`,
       data: report,
       tokenUsage: report.tokenUsage || null,
+      entitlementId: entitlementId || null,
     });
+
+    // ── Entitlement: mark as fulfilled (generation succeeded) ──
+    if (entitlementId) {
+      try { await fulfillEntitlement(entitlementId); }
+      catch (e) { console.warn('[AI Report] Entitlement fulfill failed (non-critical):', e.message); }
+    }
   } catch (error) {
     console.error('[AI Report] Error:', error);
+
+    // ── Entitlement: record error (keeps status 'pending' for retry) ──
+    if (entitlementId) {
+      try { await recordEntitlementError(entitlementId, error.message || 'Generation failed'); }
+      catch (e) { console.warn('[AI Report] Entitlement error record failed:', e.message); }
+    }
+
     res.status(500).json({
       error: 'Failed to generate AI report',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      entitlementId: entitlementId || null,
+      canRetry: !!entitlementId,
     });
   }
 });

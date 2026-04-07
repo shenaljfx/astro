@@ -420,6 +420,19 @@ export var getTokenHistory = function() {
   return request('/api/tokens/history');
 };
 
+// ─── Entitlements (retry failed generations without re-payment) ─────────────
+
+export var checkEntitlement = function(type, inputData) {
+  return request('/api/tokens/entitlement/check', {
+    method: 'POST',
+    body: JSON.stringify({ type: type, inputData: inputData }),
+  });
+};
+
+export var getEntitlements = function(type) {
+  return request('/api/tokens/entitlements' + (type ? '?type=' + type : ''));
+};
+
 // ─── Chat Quota API ──────────────────────────────────────────────────────────
 
 export var getChatQuota = function() {
@@ -719,6 +732,9 @@ export default {
   getTokenBalance: getTokenBalance,
   topUpTokens: topUpTokens,
   getTokenHistory: getTokenHistory,
+  // Entitlements (retry failed generations)
+  checkEntitlement: checkEntitlement,
+  getEntitlements: getEntitlements,
   // Chat quota
   getChatQuota: getChatQuota,
   // Notifications

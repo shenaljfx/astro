@@ -19,6 +19,7 @@ const { phoneAuth } = require('../middleware/subscription');
 const { trackCost } = require('../services/costTracker');
 const { savePorondamResult, updatePorondamReport } = require('../models/firestore');
 const { getDb, COLLECTIONS } = require('../config/firebase');
+const { createOrResumeEntitlement, fulfillEntitlement, recordEntitlementError } = require('../middleware/entitlements');
 
 // Enhanced engine (graceful — null if unavailable)
 let enhancedEngine = null;
@@ -42,7 +43,7 @@ const vibeLinks = new Map();
  */
 router.post('/check', optionalAuth, async (req, res) => {
   try {
-    const { bride, groom } = req.body;
+    const { bride, groom, entitlementId } = req.body;
 
     if (!bride?.birthDate || !groom?.birthDate) {
       return res.status(400).json({
@@ -174,11 +175,35 @@ router.post('/check', optionalAuth, async (req, res) => {
  * }
  */
 router.post('/report', phoneAuth, async (req, res) => {
+  let entitlementId = null;
   try {
     const { porondamData, language = 'en', brideName, groomName, porondamId } = req.body;
 
     if (!porondamData) {
       return res.status(400).json({ error: 'porondamData is required' });
+    }
+
+    // ── Entitlement: create or resume (allows free retry on failure) ──
+    if (req.user && req.user.uid && req.user.authType !== 'anonymous') {
+      try {
+        const inputData = {
+          brideBirth: porondamData.bride?.nakshatra?.name || '',
+          groomBirth: porondamData.groom?.nakshatra?.name || '',
+          totalScore: porondamData.totalScore,
+          language,
+        };
+        const ent = await createOrResumeEntitlement(req.user.uid, 'porondam', inputData);
+        entitlementId = ent.id;
+        if (ent.isRetry) {
+          console.log(`[Porondam Report] ♻️ Retry — entitlement ${ent.id} (${ent.retriesLeft} retries left)`);
+        }
+      } catch (entErr) {
+        if (entErr.code === 'ENTITLEMENT_EXHAUSTED') {
+          return res.status(410).json({ error: entErr.message, code: entErr.code });
+        }
+        // Non-critical — continue without entitlement tracking
+        console.warn('[Porondam Report] Entitlement check failed (non-critical):', entErr.message);
+      }
     }
 
     // Payment handled by RevenueCat subscription — no token deduction needed
@@ -423,10 +448,29 @@ WRITE THE REPORT:
         thinkingTokens: result.usage.thoughtsTokenCount || 0,
         totalTokens: result.usage.totalTokenCount || result.usage.total_tokens || 0,
       } : null,
+      entitlementId: entitlementId || null,
     });
+
+    // ── Entitlement: mark as fulfilled (generation succeeded) ──
+    if (entitlementId) {
+      try { await fulfillEntitlement(entitlementId); }
+      catch (e) { console.warn('[Porondam Report] Entitlement fulfill failed (non-critical):', e.message); }
+    }
   } catch (error) {
     console.error('Error generating porondam report:', error);
-    res.status(500).json({ error: 'Failed to generate report', details: error.message });
+
+    // ── Entitlement: record error (keeps status 'pending' for retry) ──
+    if (entitlementId) {
+      try { await recordEntitlementError(entitlementId, error.message || 'Generation failed'); }
+      catch (e) { console.warn('[Porondam Report] Entitlement error record failed:', e.message); }
+    }
+
+    res.status(500).json({
+      error: 'Failed to generate report',
+      details: error.message,
+      entitlementId: entitlementId || null,
+      canRetry: !!entitlementId,
+    });
   }
 });
 

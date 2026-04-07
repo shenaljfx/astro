@@ -912,12 +912,32 @@ export default function ReportScreen() {
       return;
     }
 
-    // Show paywall first — only generate after successful payment
+    // ── Check for pending entitlement (retry after failed generation) ──
+    var isRetry = false;
     try {
-      await showPaywall('report');
-    } catch (e) {
-      // User cancelled payment — do not generate
-      return;
+      var entCheck = await api.checkEntitlement('report', {
+        birthDate: birthDate + 'T' + birthTime + ':00',
+        lat: birthLat,
+        lng: birthLng,
+        language: reportLang,
+      });
+      if (entCheck && entCheck.hasPending) {
+        isRetry = true;
+        console.log('[Report] ♻️ Resuming failed generation — no payment needed (' + entCheck.entitlement.retriesLeft + ' retries left)');
+      }
+    } catch (entErr) {
+      // Non-critical — proceed with normal payment flow
+      console.warn('[Report] Entitlement check failed (non-critical):', entErr.message);
+    }
+
+    // Show paywall only if NOT a retry (pending entitlement = free retry)
+    if (!isRetry) {
+      try {
+        await showPaywall('report');
+      } catch (e) {
+        // User cancelled payment — do not generate
+        return;
+      }
     }
 
     // Payment succeeded — now generate the report

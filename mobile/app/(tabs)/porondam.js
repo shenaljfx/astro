@@ -588,12 +588,31 @@ export default function PorondamScreen() {
       Alert.alert('', T.missing); return;
     }
 
-    // Show paywall first — only check after successful payment
+    // ── Check for pending entitlement (retry after failed generation) ──
+    var isRetry = false;
     try {
-      await showPaywall('porondam');
-    } catch (e) {
-      // User cancelled payment — do not proceed
-      return;
+      var entCheck = await api.checkEntitlement('porondam', {
+        brideBirth: bDate,
+        groomBirth: gDate,
+        language: reportLang,
+      });
+      if (entCheck && entCheck.hasPending) {
+        isRetry = true;
+        console.log('[Porondam] ♻️ Resuming failed generation — no payment needed (' + entCheck.entitlement.retriesLeft + ' retries left)');
+      }
+    } catch (entErr) {
+      // Non-critical — proceed with normal payment flow
+      console.warn('[Porondam] Entitlement check failed (non-critical):', entErr.message);
+    }
+
+    // Show paywall only if NOT a retry (pending entitlement = free retry)
+    if (!isRetry) {
+      try {
+        await showPaywall('porondam');
+      } catch (e) {
+        // User cancelled payment — do not proceed
+        return;
+      }
     }
 
     // Payment succeeded — now run the compatibility check
