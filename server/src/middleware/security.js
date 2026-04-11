@@ -92,12 +92,12 @@ function rateLimitHandler(req, res) {
 }
 
 /**
- * Global limiter — 200 requests per 15 minutes per IP
+ * Global limiter — 500 requests per 15 minutes per IP
  * Generous enough for normal use, blocks abuse
  */
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 500,
   handler: rateLimitHandler,
   standardHeaders: true,
   legacyHeaders: false,
@@ -108,12 +108,12 @@ const globalLimiter = rateLimit({
 });
 
 /**
- * Auth limiter — 10 attempts per 15 minutes per IP
+ * Auth limiter — 20 attempts per 15 minutes per IP
  * Prevents brute force on auth endpoints
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 20,
   handler: (req, res) => {
     res.status(429).json({
       error: 'Too many authentication attempts',
@@ -126,12 +126,12 @@ const authLimiter = rateLimit({
 });
 
 /**
- * AI limiter — 5 requests per minute per IP
+ * AI limiter — 15 requests per minute per IP
  * AI endpoints are expensive (~$0.01–$0.69 each)
  */
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 5,
+  max: 15,
   handler: (req, res) => {
     res.status(429).json({
       error: 'AI rate limit exceeded',
@@ -144,12 +144,12 @@ const aiLimiter = rateLimit({
 });
 
 /**
- * Report limiter — 3 requests per minute per IP
+ * Report limiter — 10 requests per minute per IP
  * Full reports are the most expensive operation ($0.69 each)
  */
 const reportLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 3,
+  max: 10,
   handler: (req, res) => {
     res.status(429).json({
       error: 'Report generation rate limit exceeded',

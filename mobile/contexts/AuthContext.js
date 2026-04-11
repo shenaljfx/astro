@@ -47,7 +47,7 @@ var STORAGE_USER = 'grahachara_user_profile';
 var STORAGE_ONBOARDING = 'grahachara_onboarding_done';
 
 function getBaseUrl() {
-  if (!__DEV__) return 'https://api.grahachara.com';
+  if (!__DEV__) return 'http://api.grahachara.com:3000';
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return 'http://' + window.location.hostname + ':3000';
   }
@@ -245,13 +245,44 @@ export function AuthProvider({ children }) {
         }
 
         if (GoogleSignin && !firebaseUser) {
+          console.log('[Auth] Step 1: Checking Play Services...');
           await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-          var signInResult = await GoogleSignin.signIn();
-          var idToken = signInResult.data?.idToken || signInResult.idToken;
-          if (!idToken) throw new Error('Failed to get Google ID token');
+          console.log('[Auth] Step 2: Play Services OK, calling signIn()...');
+          
+          var signInResult = null;
+          try {
+            signInResult = await GoogleSignin.signIn();
+          } catch (signInErr) {
+            console.error('[Auth] GoogleSignin.signIn() THREW:', signInErr?.code, signInErr?.message);
+            Alert.alert(
+              'Google Sign-In Error',
+              'Code: ' + (signInErr?.code || 'none') + '\nMessage: ' + (signInErr?.message || 'unknown') + '\n\nFull: ' + JSON.stringify(signInErr, Object.getOwnPropertyNames(signInErr || {}), 2)
+            );
+            throw signInErr;
+          }
+          
+          console.log('[Auth] Step 3: signIn() returned, type:', signInResult?.type, 'keys:', Object.keys(signInResult || {}));
+
+          // v13 returns { type: 'cancelled', data: null } when user cancels
+          if (signInResult?.type === 'cancelled') {
+            return { success: false, cancelled: true };
+          }
+
+          // v13 returns { type: 'success', data: { idToken, user, ... } }
+          var idToken = signInResult?.data?.idToken || signInResult?.idToken;
+          console.log('[Auth] Step 4: idToken:', idToken ? 'yes (length=' + idToken.length + ')' : 'NO');
+          if (!idToken) {
+            var debugInfo = JSON.stringify(signInResult, null, 2);
+            console.error('[Auth] No idToken! Full result:', debugInfo);
+            Alert.alert('No ID Token', 'signIn returned:\n' + debugInfo.substring(0, 500));
+            throw new Error('Failed to get Google ID token — signIn returned type: ' + (signInResult?.type || 'unknown'));
+          }
+          
+          console.log('[Auth] Step 5: Creating Firebase credential...');
           var credential = GoogleAuthProvider.credential(idToken);
           var userCredential = await signInWithCredential(firebaseAuth, credential);
           firebaseUser = userCredential.user;
+          console.log('[Auth] Step 6: Firebase signIn success, uid:', firebaseUser?.uid);
         }
       }
 
@@ -314,8 +345,15 @@ export function AuthProvider({ children }) {
         isNewUser: result.isNewUser,
       };
     } catch (err) {
-      // Don't throw for user cancellation
-      if (err && err.code === 'ERR_REQUEST_CANCELED') {
+      console.error('[Auth] signInWithGoogle error:', err?.code, err?.message, err);
+      // Don't throw for user cancellation — v13 uses statusCodes.SIGN_IN_CANCELLED (code "12501")
+      // Also handle legacy ERR_REQUEST_CANCELED and v13 cancelled type
+      if (err && (
+        err.code === 'ERR_REQUEST_CANCELED' ||
+        err.code === '12501' ||
+        err.code === 'SIGN_IN_CANCELLED' ||
+        err.message?.includes('Sign in action cancelled')
+      )) {
         return { success: false, cancelled: true };
       }
       throw err;

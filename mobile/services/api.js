@@ -2,7 +2,11 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 export function getBaseUrl() {
-  if (!__DEV__) return 'https://api.grahachara.com';
+  // Allow env override for any environment
+  var envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl) return envUrl.replace(/\/+$/, '');
+
+  if (!__DEV__) return 'http://api.grahachara.com:3000';
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return 'http://' + window.location.hostname + ':3000';
   }
@@ -31,7 +35,7 @@ export function setDetectedCountry(code) {
 
 async function request(path, opts) {
   if (!opts) opts = {};
-  var timeout = opts._timeout || 12000;
+  var timeout = opts._timeout || 20000;
   var retries = opts._retries || 0;
   delete opts._timeout;
   delete opts._retries;
@@ -178,6 +182,7 @@ export var getFullReport = function(birthDate, lat, lng, language) {
   return request('/api/horoscope/full-report', {
     method: 'POST',
     body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en' }),
+    _timeout: 60000,
   });
 };
 
@@ -260,6 +265,7 @@ export var googleAuth = function(idToken, profile) {
   return request('/api/auth/google', {
     method: 'POST',
     body: JSON.stringify({ idToken: idToken, profile: profile || {} }),
+    _timeout: 30000,
   });
 };
 

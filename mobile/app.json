@@ -1,4 +1,4 @@
-{
+﻿{
   "expo": {
     "name": "ග්‍රහචාර",
     "slug": "grahachara",
@@ -26,10 +26,16 @@
         "backgroundColor": "#0D0B2E"
       },
       "package": "com.grahachara.app",
+      "versionCode": 10,
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "com.android.vending.BILLING"
+      ],
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -50,7 +56,17 @@
         }
       ],
       "expo-asset",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "targetSdkVersion": 35,
+            "compileSdkVersion": 35,
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

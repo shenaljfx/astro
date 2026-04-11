@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "279712940419",
+    "project_id": "nakathai-6c5b7",
+    "storage_bucket": "nakathai-6c5b7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:279712940419:android:ad583877e0e8c7151836b6",
+        "android_client_info": {
+          "package_name": "com.grahachara.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "279712940419-e1hq3ogomd1p0o5em6bn2vq14nsv4omt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.grahachara.app",
+            "certificate_hash": "b834fb4d061c76d03cc942e44f73fb1f117053c2"
+          }
+        },
+        {
+          "client_id": "279712940419-pls7ppd0k0sop1qpjr6gf388lcrhv5c7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.grahachara.app",
+            "certificate_hash": "84eeea11f6d1637671fa7096daed2a6c7d817820"
+          }
+        },
+        {
+          "client_id": "279712940419-rohbq14otfq57sjmn7vm775co13cjipa.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCp8Ij7IwJKPeuAj3Af7otWd4HaUj6Pxs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "279712940419-h9artklh3tivie9to8kp809dikjpesvc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -23,12 +23,12 @@ import {
 
 // Firebase project config — reads from EXPO_PUBLIC_FIREBASE_* env vars (.env file)
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyBzjEAvmO2Rxxfga2qITkj42JnOE-peqsY",
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "nakathai-6c5b7.firebaseapp.com",
   projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "nakathai-6c5b7",
   storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || "nakathai-6c5b7.firebasestorage.app",
   messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "279712940419",
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || "1:279712940419:web:ba7830108e1354621836b6",
 };
 
 if (!firebaseConfig.apiKey) {
@@ -59,7 +59,7 @@ try {
 try {
   const { GoogleSignin } = require('@react-native-google-signin/google-signin');
   GoogleSignin.configure({
-    // webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+    webClientId: '279712940419-rohbq14otfq57sjmn7vm775co13cjipa.apps.googleusercontent.com',
     offlineAccess: true,
   });
 } catch (e) {

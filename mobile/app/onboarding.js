@@ -13,7 +13,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Platform,
   Dimensions, ActivityIndicator, KeyboardAvoidingView, ScrollView,
-  StatusBar, Image, Linking,
+  StatusBar, Image, Linking, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -765,7 +765,10 @@ function GoogleSignInStep({ onContinue, onBack, lang }) {
       onContinue();
     } catch (e) {
       console.error('Google sign-in error:', e);
-      setError(T.googleFail);
+      // Show actual error details for debugging — Alert popup so user can screenshot
+      var errorDetail = 'Code: ' + (e?.code || 'none') + '\nMessage: ' + (e?.message || 'unknown error');
+      Alert.alert('Sign-In Debug', errorDetail);
+      setError(errorDetail);
     } finally { setLoading(false); }
   };
 

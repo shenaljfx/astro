@@ -325,7 +325,7 @@ export default function ChatScreen() {
   }, [msgs, loading]);
 
   var topPad = isDesktop ? 0 : Math.max(insets.top, 10) + 6;
-  var bottomPad = isDesktop ? 0 : Math.max(insets.bottom, 6) + 68;
+  var bottomPad = isDesktop ? 0 : Math.max(insets.bottom, 6) + 8;
 
   // ── DESKTOP LAYOUT ────────────────────────────────────────────────
   if (isDesktop) {
