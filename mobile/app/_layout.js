@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Platform } from 'react-native';
 import { LanguageProvider } from '../contexts/LanguageContext';
@@ -19,6 +19,9 @@ function AppGate() {
   var { isLoggedIn, loading, authReady, user } = useAuth();
   var [showOnboarding, setShowOnboarding] = useState(null); // null = checking
   var [onboardingPassed, setOnboardingPassed] = useState(false);
+  // Track if user was previously logged in (for re-login skip flow)
+  var wasLoggedIn = useRef(false);
+  var [isReturningUser, setIsReturningUser] = useState(false);
 
   // Derive whether onboarding is complete from user profile
   var onboardingDone = user?.onboardingComplete === true;
@@ -27,16 +30,19 @@ function AppGate() {
     if (!authReady) return;
 
     if (!isLoggedIn) {
+      // If user was previously logged in this session, they signed out — mark as returning
+      if (wasLoggedIn.current) {
+        setIsReturningUser(true);
+      }
       // Not logged in — show onboarding (Google Sign-In)
       setOnboardingPassed(false);
       setShowOnboarding(true);
     } else if (!onboardingDone && !onboardingPassed) {
       // Logged in but hasn't finished onboarding (name/birth data step)
-      // Only redirect if user hasn't already completed onboarding this session
       setShowOnboarding(true);
     } else {
       // Logged in and onboarding complete — show main app
-      // Once passed, never go back to onboarding (until sign out)
+      wasLoggedIn.current = true;
       setOnboardingPassed(true);
       setShowOnboarding(false);
     }
@@ -56,7 +62,14 @@ function AppGate() {
   // Show onboarding
   if (showOnboarding) {
     return (
-      <OnboardingScreen onComplete={function() { setOnboardingPassed(true); setShowOnboarding(false); }} />
+      <OnboardingScreen 
+        isReturningUser={isReturningUser}
+        onComplete={function() { 
+          setIsReturningUser(false);
+          setOnboardingPassed(true); 
+          setShowOnboarding(false); 
+        }} 
+      />
     );
   }
 

@@ -211,7 +211,7 @@ var OB = {
     welcomeBtn: "What Do My Stars Say?",
     welcomeHint: "Join 50,000+ Sri Lankans discovering their destiny",
     googleTitle: "Save Your Chart",
-    googleSubtitle: "Sign in with Google to secure your birth chart data",
+    googleSubtitle: "Sign in to keep your Lagna analysis — it'll be lost otherwise",
     googleBtn: "Continue with Google",
     googleFail: "Sign in failed. Please try again.",
     subTitle: "Unlock Premium",
@@ -287,7 +287,7 @@ var OB = {
     welcomeBtn: "\u0db8\u0d9c\u0dda \u0dad\u0dbb\u0dd4 \u0db8\u0ddc\u0d9a\u0da9 \u0d9a\u0dd2\u0dba\u0db1\u0dc0\u0dcf\u0daf?",
     welcomeHint: "\u0dbd\u0d82\u0d9a\u0dcf\u0dc0\u0dda 50,000+ \u0d9a\u0dca \u0dc0\u0dd2\u0dc1\u0dca\u0dc0\u0dcf\u0dc3 \u0d9a\u0dc5 \u0dba\u0dd9\u0daf\u0dd4\u0db8",
     googleTitle: "කේන්දරේ සේව් කරන්න",
-    googleSubtitle: "ඔයාගේ කේන්දර දත්ත සුරකින් සේව් කරන්න Google හරහා පිවිසෙන්න",
+    googleSubtitle: "ඔයාගේ ලග්න විශ්ලේෂණය රැකගන්න — නැත්නම් මකා දැමෙයි",
     googleBtn: "Google \u0dc4\u0dbb\u0dc4\u0dcf \u0db4\u0dd2\u0dc0\u0dd2\u0dc3\u0dd9\u0db1\u0dca\u0db1",
     googleFail: "\u0db4\u0dd2\u0dc0\u0dd2\u0dc3\u0dd3\u0db8 \u0d85\u0dc3\u0dcf\u0dbb\u0dca\u0dae\u0d9a\u0dba\u0dd2. \u0d9a\u0dbb\u0dd4\u0dab\u0dcf\u0d9a\u0dbb \u0db1\u0dd0\u0dc0\u0dad \u0d8b\u0dad\u0dca\u0dc3\u0dcf\u0dc4 \u0d9a\u0dbb\u0db1\u0dca\u0db1.",
     subTitle: "Premium \u0daf\u0dcf\u0d9c\u0db1\u0dca\u0db1 \uD83D\uDC51",
@@ -488,8 +488,8 @@ function GlowCard({ children, style }) {
   return <View style={[g.card, style]}>{children}</View>;
 }
 
-var STEP_LABELS_EN = ['Welcome', 'Birth Info', 'Sign In', 'Your Stars', 'Unlock', 'Done'];
-var STEP_LABELS_SI = ['සාදරයෙන්', 'උපන් දත්ත', 'සාදරයෙන්', 'ලග්නය', 'අගුළු අරින්න', 'සම්පූර්ණ'];
+var STEP_LABELS_EN = ['Welcome', 'Birth Info', 'Your Stars', 'Sign In', 'Unlock', 'Done'];
+var STEP_LABELS_SI = ['සාදරයෙන්', 'උපන් දත්ත', 'ලග්නය', 'සාදරයෙන්', 'අගුළු අරින්න', 'සම්පූර්ණ'];
 
 function StepProgressBar({ current, total, lang }) {
   var labels = lang === 'si' ? STEP_LABELS_SI : STEP_LABELS_EN;
@@ -543,11 +543,11 @@ function LanguageStep({ onSelect }) {
   });
 
   return (
-    <View style={g.center}>
-      <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center', marginBottom: 40 }}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16 }} showsVerticalScrollIndicator={false} bounces={false}>
+      <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center', marginBottom: 30 }}>
         <Animated.View style={floatStyle}>
           <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <AwesomeRashiChakra size={380} />
+            <AwesomeRashiChakra size={Math.min(SH * 0.38, 320)} />
             <Animated.View style={[ls.logoWrap, glowStyle]}>
               <Image source={LOGO} style={ls.logoImg} resizeMode="contain" />
             </Animated.View>
@@ -597,7 +597,7 @@ function LanguageStep({ onSelect }) {
           </LinearGradient>
         </SpringPressable>
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -627,13 +627,16 @@ function WelcomeStep({ onContinue, onBack, lang }) {
   var { priceLabel, isInternational } = usePricing();
   var pulse = useSharedValue(0);
   var haloRotate = useSharedValue(0);
+  // Responsive sizing — scale down on small screens
+  var chakraSize = Math.min(SH * 0.38, 320);
+  var logoSize = Math.min(chakraSize * 0.25, 72);
   useEffect(function () {
     pulse.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
     haloRotate.value = withRepeat(withTiming(360, { duration: 15000, easing: Easing.linear }), -1, false);
   }, []);
   var pulseStyle = useAnimatedStyle(function () {
     return {
-      transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.1]) }],
+      transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.08]) }],
       opacity: interpolate(pulse.value, [0, 1], [0.85, 1]),
     };
   });
@@ -642,7 +645,7 @@ function WelcomeStep({ onContinue, onBack, lang }) {
   });
 
   return (
-    <View style={g.center}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 0, paddingBottom: 16 }} showsVerticalScrollIndicator={false} bounces={false}>
       <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center' }}>
         {/* Rotating halo ring */}
         <Animated.View style={[ws.haloRing, haloStyle]}>
@@ -653,14 +656,14 @@ function WelcomeStep({ onContinue, onBack, lang }) {
           />
         </Animated.View>
         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-          <AwesomeRashiChakra size={400} />
-          <Animated.View style={[ws.logoRing, pulseStyle]}>
+          <AwesomeRashiChakra size={chakraSize} />
+          <Animated.View style={[ws.logoRing, { width: logoSize + 28, height: logoSize + 28, borderRadius: (logoSize + 28) / 2 }, pulseStyle]}>
             <LinearGradient
               colors={['rgba(255,184,0,0.25)', 'rgba(255,140,0,0.15)', 'rgba(255,184,0,0.1)']}
-              style={ws.logoInner}
+              style={[ws.logoInner, { width: logoSize + 16, height: logoSize + 16, borderRadius: (logoSize + 16) / 2 }]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             >
-              <Image source={LOGO} style={ws.logoImg} resizeMode="contain" />
+              <Image source={LOGO} style={{ width: logoSize, height: logoSize, borderRadius: logoSize / 2 }} resizeMode="contain" />
             </LinearGradient>
           </Animated.View>
         </View>
@@ -681,23 +684,22 @@ function WelcomeStep({ onContinue, onBack, lang }) {
         </View>
       </Animated.View>
 
-      <Animated.View entering={FadeInUp.delay(900).duration(600)} style={{ width: '100%', marginTop: 40 }}>
+      <Animated.View entering={FadeInUp.delay(900).duration(600)} style={{ width: '100%', marginTop: 20 }}>
         <PrimaryButton label={T.welcomeBtn} onPress={onContinue} icon="sparkles" />
         <Text style={g.hint}>{T.welcomeHint}</Text>
         <GhostButton label={lang === 'si' ? 'භාෂාව වෙනස් කරන්න' : 'Change Language'} onPress={onBack} icon={<GoldenIcon name="globe" size={16} />} />
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 }
 
 var ws = StyleSheet.create({
   haloRing: { position: 'absolute', top: -12, width: 124, height: 124, borderRadius: 62, overflow: 'hidden' },
   haloGrad: { width: '100%', height: '100%', borderRadius: 62, opacity: 0.25 },
-  logoRing: { width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: 'rgba(255,184,0,0.4)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-  logoInner: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
-  logoImg:  { width: 72, height: 72, borderRadius: 36 },
-  titleSi: { fontSize: 40, fontWeight: '900', color: '#FFB800', letterSpacing: 2, ...textShadow('rgba(255,184,0,0.6)', { width: 0, height: 0 }, 16), marginBottom: 2, textAlign: 'center' },
-  titleEn: { fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.3)', letterSpacing: 4, marginBottom: 6, textAlign: 'center' },
+  logoRing: { borderWidth: 2, borderColor: 'rgba(255,184,0,0.4)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  logoInner: { alignItems: 'center', justifyContent: 'center' },
+  titleSi: { fontSize: 36, fontWeight: '900', color: '#FFB800', letterSpacing: 2, ...textShadow('rgba(255,184,0,0.6)', { width: 0, height: 0 }, 16), marginBottom: 2, textAlign: 'center' },
+  titleEn: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.3)', letterSpacing: 4, marginBottom: 4, textAlign: 'center' },
   subtitle: { fontSize: 15, fontWeight: '600', color: '#FFD666', marginBottom: 4 },
   featureList: { marginTop: 28, alignSelf: 'stretch', gap: 12 },
   featureLine: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 8 },
@@ -710,7 +712,7 @@ var ws = StyleSheet.create({
 //  STEP 1: GOOGLE SIGN-IN
 // ═══════════════════════════════════════════════════════════════════════
 
-function GoogleSignInStep({ onContinue, onBack, lang }) {
+function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
   var T = OB[lang] || OB.en;
   var [loading, setLoading] = useState(false);
   var [error, setError] = useState('');
@@ -719,6 +721,17 @@ function GoogleSignInStep({ onContinue, onBack, lang }) {
   var logoFloat = useSharedValue(0);
   var iconBounce = useSharedValue(0);
   var iconGlow = useSharedValue(0);
+  // Responsive sizing
+  var chakraSize = Math.min(SH * 0.32, 280);
+  var logoImgSize = Math.min(chakraSize * 0.18, 48);
+
+  // Override title/subtitle for returning users
+  var title = isReturningUser 
+    ? (lang === 'si' ? 'නැවත සාදරයෙන් 🙏' : 'Welcome Back 🙏')
+    : T.googleTitle;
+  var subtitle = isReturningUser
+    ? (lang === 'si' ? 'ඔයාගේ කේන්දරය බලන්න Google හරහා පිවිසෙන්න' : 'Sign in to access your chart & predictions')
+    : T.googleSubtitle;
 
   useEffect(function () {
     googlePulse.value = withRepeat(withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sin) }), -1, true);
@@ -771,7 +784,7 @@ function GoogleSignInStep({ onContinue, onBack, lang }) {
   };
 
   return (
-    <View style={[g.stepWrap, { flex: 1, justifyContent: 'space-between' }]}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 }} showsVerticalScrollIndicator={false} bounces={false}>
 
       {/* ── Top Section ── */}
       <View style={{ alignItems: 'center' }}>
@@ -781,21 +794,21 @@ function GoogleSignInStep({ onContinue, onBack, lang }) {
           <Animated.View style={[gs.headerIconBg, Platform.OS !== 'web' ? { shadowColor: '#FFB800' } : {}, iconAnim, glowAnim]}>
             <GoldenIcon name="lock" size={22} />
           </Animated.View>
-          <Text style={gs.headerTitle}>{T.googleTitle}</Text>
-          <Text style={gs.headerSub}>{T.googleSubtitle}</Text>
+          <Text style={gs.headerTitle}>{title}</Text>
+          <Text style={gs.headerSub}>{subtitle}</Text>
         </Animated.View>
 
         {/* ── Platform Logo ── */}
-        <Animated.View entering={FadeInUp.delay(200).duration(500)} style={[{ marginBottom: 14, alignItems: 'center' }, floatStyle]}>
+        <Animated.View entering={FadeInUp.delay(200).duration(500)} style={[{ marginBottom: 10, alignItems: 'center' }, floatStyle]}>
           <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <AwesomeRashiChakra size={360} />
-            <Animated.View style={[gs.platformLogoOuter, pulseStyle]}>
-              <View style={gs.platformLogoInner}>
+            <AwesomeRashiChakra size={chakraSize} />
+            <Animated.View style={[gs.platformLogoOuter, { width: logoImgSize + 28, height: logoImgSize + 28, borderRadius: (logoImgSize + 28) / 2 }, pulseStyle]}>
+              <View style={[gs.platformLogoInner, { width: logoImgSize + 18, height: logoImgSize + 18, borderRadius: (logoImgSize + 18) / 2 }]}>
                 <LinearGradient
                   colors={['rgba(255,140,0,0.06)', 'rgba(255,255,255,0.02)']}
                   style={StyleSheet.absoluteFill}
                 />
-                <Image source={LOGO} style={gs.platformLogoImg} resizeMode="contain" />
+                <Image source={LOGO} style={{ width: logoImgSize, height: logoImgSize }} resizeMode="contain" />
               </View>
             </Animated.View>
           </View>
@@ -919,10 +932,10 @@ function GoogleSignInStep({ onContinue, onBack, lang }) {
           </Text>
         </Animated.View>
 
-        <GhostButton label={T.back || 'Back'} onPress={onBack} />
+        {onBack ? <GhostButton label={T.back || 'Back'} onPress={onBack} /> : null}
       </View>
 
-    </View>
+    </ScrollView>
   );
 }
 
@@ -933,9 +946,8 @@ var gs = StyleSheet.create({
   headerSub: { fontSize: 13, color: 'rgba(255,200,80,0.6)', textAlign: 'center', marginTop: 4, lineHeight: 18 },
 
   /* Platform Logo */
-  platformLogoOuter: { width: 80, height: 80, borderRadius: 40, borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 10, ...boxShadow('#FF8C00', { width: 0, height: 0 }, 0.25, 16), elevation: 0 },
-  platformLogoInner: { width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  platformLogoImg: { width: 52, height: 52 },
+  platformLogoOuter: { borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 10, ...boxShadow('#FF8C00', { width: 0, height: 0 }, 0.25, 16), elevation: 0 },
+  platformLogoInner: { backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
 
   /* Secure badge */
   secureRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
@@ -1046,14 +1058,14 @@ function SubscriptionStep({ onContinue, lang, displayName }) {
   };
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 40, justifyContent: 'space-between' }} showsVerticalScrollIndicator={false} bounces={false}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 4, paddingBottom: 24, justifyContent: 'space-between' }} showsVerticalScrollIndicator={false} bounces={false}>
       <View>
         {/* ── Personalized loss-aversion header ── */}
-        <Animated.View entering={FadeInDown.duration(500)} style={{ alignItems: 'center', marginBottom: 4 }}>
+        <Animated.View entering={FadeInDown.duration(500)} style={{ alignItems: 'center', marginBottom: 2 }}>
           <Text style={{ fontSize: 13, fontWeight: '700', color: '#FF6B6B', textAlign: 'center', letterSpacing: 0.5, marginBottom: 6 }}>
             {lang === 'si' 
-              ? '⚠️ ඔයාගේ කේන්දරේ තාවකාලිකයි — දැන්ම සේව් කරගන්න!'
-              : '⚠️ Your chart will be lost — unlock to keep it!'}
+              ? '⚠️ ඔයාගේ ලග්න විශ්ලේෂණය මකා දැමෙයි — දැන්ම unlock කරන්න!'
+              : '⚠️ Your Lagna analysis will be deleted — unlock now to keep it!'}
           </Text>
         </Animated.View>
         
@@ -1779,7 +1791,7 @@ function BirthDataStep({ onComplete, lang }) {
       {/* ✨ "Written in the Stars" — name & birth data as constellation */}
       <WrittenInTheStars name={displayName} dateStr={dateDisplay} timeStr={timeDisplay} page={page} />
       {/* Spacer to push form content below the constellation zone */}
-      <View style={{ height: SH * 0.16 }} />
+      <View style={{ height: Math.min(SH * 0.12, 90) }} />
       {renderProgress()}
       {page === 0 ? renderNamePage()
         : page === 1 ? renderDatePage()
@@ -2078,7 +2090,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     var traits = lang === 'si' ? (lagnaDetails.traitsSi || lagnaDetails.traits || []) : (lagnaDetails.traits || []);
 
     return (
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 4, paddingBottom: 60, justifyContent: 'space-between' }} showsVerticalScrollIndicator={false} bounces={false} overScrollMode="never">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 4, paddingBottom: 30, justifyContent: 'space-between' }} showsVerticalScrollIndicator={false} bounces={false} overScrollMode="never">
         {/* Top: Lagna reveal orb + name */}
         <View>
           <View style={lr.revealCenter}>
@@ -2189,28 +2201,74 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
           ) : null}
         </View>
 
-        {/* Bottom: Teaser blur + unlock CTA */}
+        {/* Bottom: Premium teaser with gradient reveal — creates powerful curiosity gap */}
         <Animated.View entering={FadeInUp.delay(1800).duration(600)} style={{ marginTop: 8 }}>
-          {/* Blurred premium teaser — creates curiosity gap */}
-          <View style={{ backgroundColor: 'rgba(255,184,0,0.05)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)', marginBottom: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <Ionicons name="lock-closed" size={14} color="#FFB800" />
-              <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFB800', letterSpacing: 0.5 }}>
-                {lang === 'si' ? '🔒 PREMIUM විස්තර — අගුළු අරින්න' : '🔒 PREMIUM DETAILS — Unlock to reveal'}
-              </Text>
-            </View>
-            <View style={{ gap: 4 }}>
-              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
-                {lang === 'si' ? '💍 විවාහ කාලය: ████████████' : '💍 Marriage period: ████████████'}
-              </Text>
-              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
-                {lang === 'si' ? '💰 ධන යෝගය: ████████████████' : '💰 Wealth yoga: ████████████████'}
-              </Text>
-              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
-                {lang === 'si' ? '⚠️ ඉදිරි අවදානම්: ██████████' : '⚠️ Upcoming dangers: ██████████'}
-              </Text>
-            </View>
+
+          {/* ── Locked Premium Insights Card ── */}
+          <View style={{ borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,184,0,0.18)', marginBottom: 14 }}>
+            <LinearGradient
+              colors={['rgba(255,184,0,0.08)', 'rgba(15,10,30,0.95)', 'rgba(8,6,22,0.98)']}
+              style={{ padding: 14 }}
+              start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+            >
+              {/* Header */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,184,0,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)' }}>
+                  <Ionicons name="lock-closed" size={13} color="#FFB800" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFB800', letterSpacing: 0.5 }}>
+                    {lang === 'si' ? 'PREMIUM අනාවැකි' : 'PREMIUM PREDICTIONS'}
+                  </Text>
+                  <Text style={{ fontSize: 9, fontWeight: '600', color: 'rgba(255,184,0,0.5)', letterSpacing: 1, marginTop: 1 }}>
+                    {lang === 'si' ? 'අගුළු අරින්න සම්පූර්ණ කේන්දරය බලන්න' : 'UNLOCK TO REVEAL YOUR FULL CHART'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Locked insight rows with partial reveal + blur effect */}
+              <View style={{ gap: 8 }}>
+                {[
+                  { emoji: '💍', label: lang === 'si' ? 'විවාහ කාලය' : 'Marriage Period', hint: lang === 'si' ? 'ඔයාගේ 7 වන භාවය දැක්...' : 'Your 7th house shows...', color: '#FF6B9D' },
+                  { emoji: '💰', label: lang === 'si' ? 'ධන යෝගය' : 'Wealth Yoga', hint: lang === 'si' ? 'ධනය සඳහා ශුභ කාල...' : 'Auspicious periods for...', color: '#34D399' },
+                  { emoji: '💼', label: lang === 'si' ? 'වෘත්තිය මාර්ගය' : 'Career Path', hint: lang === 'si' ? '10 වන භාවයේ ග්‍රහ...' : '10th house planets reveal...', color: '#60A5FA' },
+                  { emoji: '⚠️', label: lang === 'si' ? 'ඉදිරි අවදානම්' : 'Upcoming Challenges', hint: lang === 'si' ? 'ශනි ගෝචරය...' : 'Saturn transit indicates...', color: '#FBBF24' },
+                  { emoji: '🏥', label: lang === 'si' ? 'සෞඛ්‍ය' : 'Health Insights', hint: lang === 'si' ? '6 වන භාවය...' : '6th house placement...', color: '#F472B6' },
+                  { emoji: '✨', label: lang === 'si' ? 'මහා දශා අනාවැකි' : 'Dasha Predictions', hint: lang === 'si' ? 'ඔයාගේ වත්මන් දශාව...' : 'Your current dasha period...', color: '#A78BFA' },
+                ].map(function (item, i) {
+                  return (
+                    <Animated.View key={i} entering={FadeInDown.delay(1900 + i * 100).duration(300)}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' }}>
+                        <Text style={{ fontSize: 16 }}>{item.emoji}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: item.color, marginBottom: 2 }}>{item.label}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic' }}>{item.hint}</Text>
+                            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)', letterSpacing: -1 }}> ████████</Text>
+                          </View>
+                        </View>
+                        <Ionicons name="lock-closed" size={11} color="rgba(255,184,0,0.35)" />
+                      </View>
+                    </Animated.View>
+                  );
+                })}
+              </View>
+
+              {/* Bottom fade gradient — "there's more below" hint */}
+              <LinearGradient
+                colors={['transparent', 'rgba(8,6,22,0.9)']}
+                style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 40, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}
+              />
+            </LinearGradient>
           </View>
+
+          {/* Urgency nudge */}
+          <View style={{ alignItems: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(255,100,100,0.7)', textAlign: 'center' }}>
+              {lang === 'si' ? '⏳ මේ විශ්ලේෂණය තාවකාලිකයි — අගුළු නොඅරියොත් මකා දැමෙයි' : '⏳ This analysis is temporary — unlock now or it will be deleted'}
+            </Text>
+          </View>
+
           <PrimaryButton label={lang === 'si' ? 'සම්පූර්ණ කේන්දරේ අගුළු අරින්න 🔓' : 'Unlock My Full Chart 🔓'} onPress={onContinue} icon="sparkles" />
           <GhostButton label={T.revealSkip} onPress={onContinue} />
         </Animated.View>
@@ -2337,8 +2395,9 @@ function CompleteStep({ lang, onDone }) {
 //  MAIN ONBOARDING SCREEN
 // ═══════════════════════════════════════════════════════════════════════
 
-export default function OnboardingScreen({ onComplete }) {
-  var [step, setStep] = useState(-1);
+export default function OnboardingScreen({ onComplete, isReturningUser }) {
+  // If returning user (logged out and back), skip directly to Google Sign-In
+  var [step, setStep] = useState(isReturningUser ? 3 : -1);
   var { language: ctxLang, switchLanguage } = useLanguage();
   var { completeOnboarding } = useAuth();
   var [lang, setLang] = useState(ctxLang || 'si');
@@ -2352,15 +2411,26 @@ export default function OnboardingScreen({ onComplete }) {
     setStep(0);
   };
 
-  // NEW FLOW: Birth data BEFORE sign-in (sunk cost → commitment)
+  // NEW FLOW: Birth data → Lagna Reveal (no auth needed) → Sign-In → Subscription
   var handleBirthDataComplete = function (name, data) {
     setDisplayName(name);
     setBirthData(data);
-    setStep(2); // → Google Sign-In (to "save your chart data")
+    setStep(2); // → Lagna Reveal (teaser — uses optionalAuth, works without login)
   };
 
-  // After Lagna reveal teaser → subscription paywall (at emotional peak)
+  // After Lagna reveal teaser → Google Sign-In ("save your chart")
   var handleLagnaRevealDone = function () {
+    setStep(3); // → Google Sign-In (to "save your chart data")
+  };
+
+  // After Google Sign-In → subscription paywall (at emotional peak)
+  // If returning user, skip directly to the app (they already have birth data + subscription)
+  var handleGoogleSignInDone = function () {
+    if (isReturningUser) {
+      // Returning user — skip to complete, their data is already on the server
+      if (onComplete) onComplete();
+      return;
+    }
     setStep(4); // → Subscription (paywall at dopamine peak)
   };
 
@@ -2382,8 +2452,8 @@ export default function OnboardingScreen({ onComplete }) {
   // Step -1: Language Selection
   // Step 0:  Welcome (curiosity hook)
   // Step 1:  Birth Data (commitment — user invests 2-3 min)
-  // Step 2:  Google Sign-In ("save your chart data")
-  // Step 3:  Lagna Reveal TEASER (dopamine peak → show chart, blur premium)
+  // Step 2:  Lagna Reveal TEASER (dopamine peak — optionalAuth, works pre-login)
+  // Step 3:  Google Sign-In ("save your chart data" — emotional investment)
   // Step 4:  Subscription (paywall at emotional peak, loss aversion)
   // Step 5:  Complete
   // ═══════════════════════════════════════════════════════════════
@@ -2392,8 +2462,8 @@ export default function OnboardingScreen({ onComplete }) {
       case -1: return <LanguageStep onSelect={handleLanguageSelect} />;
       case 0: return <WelcomeStep onContinue={function () { setStep(1); }} onBack={function () { setStep(-1); }} lang={lang} />;
       case 1: return <BirthDataStep onComplete={handleBirthDataComplete} lang={lang} />;
-      case 2: return <GoogleSignInStep onContinue={function () { setStep(3); }} onBack={function () { setStep(1); }} lang={lang} />;
-      case 3: return <LagnaRevealStep birthData={birthData} displayName={displayName} onContinue={handleLagnaRevealDone} lang={lang} />;
+      case 2: return <LagnaRevealStep birthData={birthData} displayName={displayName} onContinue={handleLagnaRevealDone} lang={lang} />;
+      case 3: return <GoogleSignInStep onContinue={handleGoogleSignInDone} onBack={isReturningUser ? null : function () { setStep(2); }} lang={lang} isReturningUser={isReturningUser} />;
       case 4: return <SubscriptionStep onContinue={handleSubscriptionDone} lang={lang} displayName={displayName} />;
       case 5: return <CompleteStep lang={lang} onDone={onComplete} />;
       default: return <LanguageStep onSelect={handleLanguageSelect} />;
@@ -2409,7 +2479,7 @@ export default function OnboardingScreen({ onComplete }) {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <View style={{ flex: 1, paddingTop: insets.top + 8, paddingBottom: Math.max(insets.bottom, 12), overflow: 'hidden' }}>
-          {step >= 0 ? (
+          {step >= 0 && !isReturningUser ? (
             <View style={{ paddingHorizontal: 24, paddingTop: 4 }}>
               <StepProgressBar current={step} total={TOTAL_MAIN_STEPS} lang={lang} />
             </View>
