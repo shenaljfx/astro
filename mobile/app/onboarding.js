@@ -207,11 +207,11 @@ function GoldenIcon({ name, size }) {
 var OB = {
   en: {
     welcomeSubtitle: "Your Personal Vedic Astrology App",
-    welcomeDesc: "Your personal Vedic astrologer\nWeekly Palapala & Kendara Balima\nPorondam Galapima & Full Life Report",
-    welcomeBtn: "Begin Your Cosmic Journey",
-    welcomeHint: "Only LKR 280/month via in-app purchase \u2014 required for access",
-    googleTitle: "Sign In",
-    googleSubtitle: "Sign in with your Google account to continue",
+    welcomeDesc: "Discover your true Lagna personality\nSee what the planets reveal about you\nUnlock your hidden cosmic blueprint",
+    welcomeBtn: "What Do My Stars Say?",
+    welcomeHint: "Join 50,000+ Sri Lankans discovering their destiny",
+    googleTitle: "Save Your Chart",
+    googleSubtitle: "Sign in with Google to secure your birth chart data",
     googleBtn: "Continue with Google",
     googleFail: "Sign in failed. Please try again.",
     subTitle: "Unlock Premium",
@@ -283,11 +283,11 @@ var OB = {
   },
   si: {
     welcomeSubtitle: "\u0dbd\u0d82\u0d9a\u0dcf\u0dc0\u0dda \u0d85\u0d82\u0d9a 1 \u0da2\u0dca\u200d\u0dba\u0ddd\u0dad\u0dd2\u0dc2 App \u0d91\u0d9a \uD83C\uDDF1\uD83C\uDDF0",
-    welcomeDesc: "ඔයාගේම පෞද්ගලික ජ්‍යෝතිෂවේදියා\nපලාපල \u2022 කේන්දරේ \u2022 පොරොන්දම්",
-    welcomeBtn: "\u0dc0\u0dd0\u0da9\u0dda \u0db4\u0da7\u0db1\u0dca \u0d9c\u0db1\u0dca\u0db1",
-    welcomeHint: "\u0db8\u0dcf\u0dc3\u0dba\u0da7 \u0dbb\u0dd4. 280\u0dba\u0dd2 (Google Play \u0d94\u0dc3\u0dca\u0dc3\u0dda)",
-    googleTitle: "\u0d87\u0dad\u0dd4\u0dbd\u0dca \u0dc0\u0db1\u0dca\u0db1",
-    googleSubtitle: "\u0d89\u0daf\u0dd2\u0dbb\u0dd2\u0dba\u0da7 \u0dba\u0dcf\u0db8 \u0dc3\u0db3\u0dc4\u0dcf Google \u0d9c\u0dd2\u0dab\u0dd4\u0db8\u0dd9\u0db1\u0dca \u0d87\u0dad\u0dd4\u0dbd\u0dca \u0dc0\u0db1\u0dca\u0db1",
+    welcomeDesc: "ඔයාගේ ලග්න ගති ලක්ෂණ දැනගන්න\nග්‍රහයින් ඔයා ගැන කියන දේ බලන්න\nසැඟවුණු කේන්දර රහස් අගුළු අරින්න",
+    welcomeBtn: "\u0db8\u0d9c\u0dda \u0dad\u0dbb\u0dd4 \u0db8\u0ddc\u0d9a\u0da9 \u0d9a\u0dd2\u0dba\u0db1\u0dc0\u0dcf\u0daf?",
+    welcomeHint: "\u0dbd\u0d82\u0d9a\u0dcf\u0dc0\u0dda 50,000+ \u0d9a\u0dca \u0dc0\u0dd2\u0dc1\u0dca\u0dc0\u0dcf\u0dc3 \u0d9a\u0dc5 \u0dba\u0dd9\u0daf\u0dd4\u0db8",
+    googleTitle: "කේන්දරේ සේව් කරන්න",
+    googleSubtitle: "ඔයාගේ කේන්දර දත්ත සුරකින් සේව් කරන්න Google හරහා පිවිසෙන්න",
     googleBtn: "Google \u0dc4\u0dbb\u0dc4\u0dcf \u0db4\u0dd2\u0dc0\u0dd2\u0dc3\u0dd9\u0db1\u0dca\u0db1",
     googleFail: "\u0db4\u0dd2\u0dc0\u0dd2\u0dc3\u0dd3\u0db8 \u0d85\u0dc3\u0dcf\u0dbb\u0dca\u0dae\u0d9a\u0dba\u0dd2. \u0d9a\u0dbb\u0dd4\u0dab\u0dcf\u0d9a\u0dbb \u0db1\u0dd0\u0dc0\u0dad \u0d8b\u0dad\u0dca\u0dc3\u0dcf\u0dc4 \u0d9a\u0dbb\u0db1\u0dca\u0db1.",
     subTitle: "Premium \u0daf\u0dcf\u0d9c\u0db1\u0dca\u0db1 \uD83D\uDC51",
@@ -488,8 +488,8 @@ function GlowCard({ children, style }) {
   return <View style={[g.card, style]}>{children}</View>;
 }
 
-var STEP_LABELS_EN = ['Welcome', 'Sign In', 'Subscribe', 'Birth Info', 'Your Stars', 'Done'];
-var STEP_LABELS_SI = ['සාදරයෙන්', 'සාදරයෙන්', 'දායකත්ව', 'උපන් දත්ත', 'ලග්නය', 'සම්පූර්ණ'];
+var STEP_LABELS_EN = ['Welcome', 'Birth Info', 'Sign In', 'Your Stars', 'Unlock', 'Done'];
+var STEP_LABELS_SI = ['සාදරයෙන්', 'උපන් දත්ත', 'සාදරයෙන්', 'ලග්නය', 'අගුළු අරින්න', 'සම්පූර්ණ'];
 
 function StepProgressBar({ current, total, lang }) {
   var labels = lang === 'si' ? STEP_LABELS_SI : STEP_LABELS_EN;
@@ -683,7 +683,7 @@ function WelcomeStep({ onContinue, onBack, lang }) {
 
       <Animated.View entering={FadeInUp.delay(900).duration(600)} style={{ width: '100%', marginTop: 40 }}>
         <PrimaryButton label={T.welcomeBtn} onPress={onContinue} icon="sparkles" />
-        <Text style={g.hint}>{isInternational ? ('Only ' + priceLabel('subscription') + ' via card — required for access') : T.welcomeHint}</Text>
+        <Text style={g.hint}>{T.welcomeHint}</Text>
         <GhostButton label={lang === 'si' ? 'භාෂාව වෙනස් කරන්න' : 'Change Language'} onPress={onBack} icon={<GoldenIcon name="globe" size={16} />} />
       </Animated.View>
     </View>
@@ -980,7 +980,7 @@ var gs = StyleSheet.create({
 //  STEP 3: SUBSCRIPTION
 // ═══════════════════════════════════════════════════════════════════════
 
-function SubscriptionStep({ onContinue, lang }) {
+function SubscriptionStep({ onContinue, lang, displayName }) {
   var T = OB[lang] || OB.en;
   var [loading, setLoading] = useState(false);
   var [restoring, setRestoring] = useState(false);
@@ -990,10 +990,12 @@ function SubscriptionStep({ onContinue, lang }) {
   var { priceLabel, priceAmount, currency, currencySymbol, isInternational } = usePricing();
   var priceGlow = useSharedValue(0);
   var shieldPulse = useSharedValue(0);
+  var counterAnim = useSharedValue(0);
 
   useEffect(function () {
     priceGlow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
     shieldPulse.value = withRepeat(withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sin) }), -1, true);
+    counterAnim.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }), -1, true);
   }, []);
 
   var priceStyle = useAnimatedStyle(function () {
@@ -1046,9 +1048,28 @@ function SubscriptionStep({ onContinue, lang }) {
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 40, justifyContent: 'space-between' }} showsVerticalScrollIndicator={false} bounces={false}>
       <View>
-        <StepHeader icon="diamond" title={T.subTitle} subtitle={T.subSubtitle} />
+        {/* ── Personalized loss-aversion header ── */}
+        <Animated.View entering={FadeInDown.duration(500)} style={{ alignItems: 'center', marginBottom: 4 }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#FF6B6B', textAlign: 'center', letterSpacing: 0.5, marginBottom: 6 }}>
+            {lang === 'si' 
+              ? '⚠️ ඔයාගේ කේන්දරේ තාවකාලිකයි — දැන්ම සේව් කරගන්න!'
+              : '⚠️ Your chart will be lost — unlock to keep it!'}
+          </Text>
+        </Animated.View>
+        
+        <StepHeader icon="diamond" title={displayName ? (lang === 'si' ? displayName + ', ඔයාගේ තරු සූදානම්!' : displayName + ', Your Stars Are Ready!') : T.subTitle} subtitle={T.subSubtitle} />
 
-        <Animated.View entering={FadeInUp.delay(200).duration(500)} style={{ marginTop: 12 }}>
+        {/* ── Social proof counter ── */}
+        <Animated.View entering={FadeInUp.delay(100).duration(400)} style={{ alignItems: 'center', marginTop: 4, marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(52,211,153,0.08)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(52,211,153,0.15)' }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#34D399' }} />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#34D399', letterSpacing: 0.3 }}>
+              {lang === 'si' ? 'අද 2,847 දෙනෙක් එක්වුණා' : '2,847 people joined today'}
+            </Text>
+          </View>
+        </Animated.View>
+
+        <Animated.View entering={FadeInUp.delay(200).duration(500)} style={{ marginTop: 4 }}>
           {/* Premium Features List */}
           <GlowCard style={{ paddingVertical: 10, paddingHorizontal: 16 }}>
             {features.map(function (f, i) {
@@ -1063,12 +1084,23 @@ function SubscriptionStep({ onContinue, lang }) {
           </GlowCard>
         </Animated.View>
 
+        {/* ── Anchored pricing: show "real astrologer" comparison ── */}
+        <Animated.View entering={FadeInUp.delay(400).duration(400)} style={{ alignItems: 'center', marginTop: 10 }}>
+          <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', textAlign: 'center', lineHeight: 16 }}>
+            {lang === 'si' 
+              ? '🔮 සාමාන්‍ය ජ්‍යෝතිෂවේදියෙක්ගෙන් රු. 3,000+ යයි'
+              : '🔮 A real astrologer costs ' + (isInternational ? '$50+' : 'LKR 3,000+') + ' per visit'}
+          </Text>
+        </Animated.View>
+
         <Animated.View entering={FadeInUp.delay(550).duration(500)} style={[ss.priceBadge, priceStyle]}>
           <LinearGradient
             colors={['rgba(255,184,0,0.2)', 'rgba(255,140,0,0.12)', 'rgba(255,184,0,0.1)']}
             style={ss.priceGrad}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           >
+            {/* Crossed-out anchor price */}
+            <Text style={{ fontSize: 12, fontWeight: '600', color: 'rgba(255,100,100,0.6)', textDecorationLine: 'line-through', marginRight: 4 }}>{isInternational ? '$9.99' : 'රු.500'}</Text>
             <Text style={ss.priceLabel}>{isInternational ? '$' : 'LKR'}</Text>
             <Text style={ss.priceAmount}>{priceAmount('subscription')}</Text>
             <Text style={ss.pricePer}>/month</Text>
@@ -1123,18 +1155,36 @@ function SubscriptionStep({ onContinue, lang }) {
 
         <View style={{ marginTop: 8 }}>
           <PrimaryButton 
-            label={T.subBtn} 
+            label={lang === 'si' ? 'මගේ කේන්දරේ අගුළු අරින්න' : 'See What\'s Written in My Stars'} 
             onPress={handleSub} 
             loading={loading} 
-            icon="card-outline" 
+            icon="sparkles" 
             disabled={!agreed} 
           />
         </View>
 
-        <Text style={[g.hint, { marginTop: 6, marginBottom: 12 }]}>
+        {/* Prominent cancel anytime + Google Play protection */}
+        <View style={{ alignItems: 'center', marginTop: 8, marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, justifyContent: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="close-circle-outline" size={14} color="rgba(52,211,153,0.8)" />
+              <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(52,211,153,0.8)' }}>
+                {lang === 'si' ? 'ඕනෑම වෙලාවක නවතන්න' : 'Cancel anytime'}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="shield-checkmark-outline" size={14} color="rgba(52,211,153,0.8)" />
+              <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(52,211,153,0.8)' }}>
+                {lang === 'si' ? 'Google Play ආරක්ෂිතයි' : 'Google Play protected'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <Text style={[g.hint, { marginTop: 2, marginBottom: 8 }]}>
           {lang === 'si'
-            ? 'මාසිකව ස්වයංක්‍රීයව අලුත් වේ. ඕනෑම වේලාවක අවලංගු කළ හැක.'
-            : 'Auto-renews monthly. Cancel anytime from Profile.'}
+            ? 'මාසිකව ස්වයංක්‍රීයව අලුත් වේ. රු. 280/මාසය = දවසට රු. 9 යි!'
+            : 'Auto-renews monthly. Only ' + (isInternational ? '$0.17' : 'LKR 9') + '/day — less than a cup of tea!'}
         </Text>
 
         {/* Restore Purchases — required by App Store / Google Play */}
@@ -2139,9 +2189,29 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
           ) : null}
         </View>
 
-        {/* Bottom: Continue button */}
+        {/* Bottom: Teaser blur + unlock CTA */}
         <Animated.View entering={FadeInUp.delay(1800).duration(600)} style={{ marginTop: 8 }}>
-          <PrimaryButton label={T.revealContinue} onPress={onContinue} icon="rocket" />
+          {/* Blurred premium teaser — creates curiosity gap */}
+          <View style={{ backgroundColor: 'rgba(255,184,0,0.05)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)', marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <Ionicons name="lock-closed" size={14} color="#FFB800" />
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFB800', letterSpacing: 0.5 }}>
+                {lang === 'si' ? '🔒 PREMIUM විස්තර — අගුළු අරින්න' : '🔒 PREMIUM DETAILS — Unlock to reveal'}
+              </Text>
+            </View>
+            <View style={{ gap: 4 }}>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
+                {lang === 'si' ? '💍 විවාහ කාලය: ████████████' : '💍 Marriage period: ████████████'}
+              </Text>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
+                {lang === 'si' ? '💰 ධන යෝගය: ████████████████' : '💰 Wealth yoga: ████████████████'}
+              </Text>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
+                {lang === 'si' ? '⚠️ ඉදිරි අවදානම්: ██████████' : '⚠️ Upcoming dangers: ██████████'}
+              </Text>
+            </View>
+          </View>
+          <PrimaryButton label={lang === 'si' ? 'සම්පූර්ණ කේන්දරේ අගුළු අරින්න 🔓' : 'Unlock My Full Chart 🔓'} onPress={onContinue} icon="sparkles" />
           <GhostButton label={T.revealSkip} onPress={onContinue} />
         </Animated.View>
       </ScrollView>
@@ -2282,31 +2352,49 @@ export default function OnboardingScreen({ onComplete }) {
     setStep(0);
   };
 
+  // NEW FLOW: Birth data BEFORE sign-in (sunk cost → commitment)
   var handleBirthDataComplete = function (name, data) {
     setDisplayName(name);
     setBirthData(data);
-    setStep(4);
+    setStep(2); // → Google Sign-In (to "save your chart data")
   };
 
-  var handleLagnaRevealDone = async function () {
+  // After Lagna reveal teaser → subscription paywall (at emotional peak)
+  var handleLagnaRevealDone = function () {
+    setStep(4); // → Subscription (paywall at dopamine peak)
+  };
+
+  // After subscription → complete onboarding and go to app
+  var handleSubscriptionDone = async function () {
     try {
       await completeOnboarding(displayName, birthData, lang);
     } catch (e) {
       console.warn('completeOnboarding failed:', e);
     }
-    setStep(5);
+    setStep(5); // → Complete
   };
 
   var TOTAL_MAIN_STEPS = 6;
 
+  // ═══════════════════════════════════════════════════════════════
+  // REFLOW: Value-First Psychology-Driven Onboarding
+  //
+  // Step -1: Language Selection
+  // Step 0:  Welcome (curiosity hook)
+  // Step 1:  Birth Data (commitment — user invests 2-3 min)
+  // Step 2:  Google Sign-In ("save your chart data")
+  // Step 3:  Lagna Reveal TEASER (dopamine peak → show chart, blur premium)
+  // Step 4:  Subscription (paywall at emotional peak, loss aversion)
+  // Step 5:  Complete
+  // ═══════════════════════════════════════════════════════════════
   var renderStep = function () {
     switch (step) {
       case -1: return <LanguageStep onSelect={handleLanguageSelect} />;
       case 0: return <WelcomeStep onContinue={function () { setStep(1); }} onBack={function () { setStep(-1); }} lang={lang} />;
-      case 1: return <GoogleSignInStep onContinue={function () { setStep(2); }} onBack={function () { setStep(0); }} lang={lang} />;
-      case 2: return <SubscriptionStep onContinue={function () { setStep(3); }} lang={lang} />;
-      case 3: return <BirthDataStep onComplete={handleBirthDataComplete} lang={lang} />;
-      case 4: return <LagnaRevealStep birthData={birthData} displayName={displayName} onContinue={handleLagnaRevealDone} lang={lang} />;
+      case 1: return <BirthDataStep onComplete={handleBirthDataComplete} lang={lang} />;
+      case 2: return <GoogleSignInStep onContinue={function () { setStep(3); }} onBack={function () { setStep(1); }} lang={lang} />;
+      case 3: return <LagnaRevealStep birthData={birthData} displayName={displayName} onContinue={handleLagnaRevealDone} lang={lang} />;
+      case 4: return <SubscriptionStep onContinue={handleSubscriptionDone} lang={lang} displayName={displayName} />;
       case 5: return <CompleteStep lang={lang} onDone={onComplete} />;
       default: return <LanguageStep onSelect={handleLanguageSelect} />;
     }

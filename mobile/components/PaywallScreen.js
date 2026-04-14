@@ -47,30 +47,30 @@ var LOGO_SIZE = IS_SMALL ? 76 : 92;
 var CONTENT = {
   onboarding: {
     en: {
-      badge: '🌟 JOIN 50,000+ HAPPY USERS',
-      title: 'Discover Your\nTrue Life Path! ✨',
-      subtitle: 'Curious about your future? Let\'s unlock what the universe has planned just for you!',
+      badge: '🟢 2,847 PEOPLE JOINED TODAY',
+      title: 'Your Chart Is\nReady to Unlock! ✨',
+      subtitle: 'Don\'t lose the birth chart you just created — unlock full access to see everything the stars reveal about you!',
       features: [
         '🔮 Your full birth chart, explained simply',
         '⚠️ Alerts for bad times, Maraka & Apala',
         '🪐 See how planets affect your daily life',
         '💬 Chat with our AI Astrologer anytime',
       ],
-      cta: 'Unlock My Destiny Now',
-      ctaSub: 'Cancel anytime • No hidden charges',
+      cta: 'See What\'s Written in My Stars',
+      ctaSub: 'Cancel anytime • No hidden charges • Protected by Google Play',
     },
     si: {
-      badge: '🌟 50,000+ කට වඩා විශ්වාස කළ යෙදුම',
-      title: 'ඉදිරියට මොකද\nවෙන්නේ බලමුද? ✨',
-      subtitle: 'කේන්දරේ ගැන හැමදේම ලේසියෙන්ම, ඔයාගේ ෆෝන් එකෙන්ම දැන්ම දැනගන්න!',
+      badge: '🟢 අද 2,847 දෙනෙක් එක්වුණා',
+      title: 'ඔයාගේ කේන්දරේ\nඅගුළු අරින්න! ✨',
+      subtitle: 'ඔයා දැන් හැදුවු කේන්දරේ නැති වෙන්න දෙන්න එපා — ඔයාගේ තරු කියන හැමදේම දැන්ම බලන්න!',
       features: [
         '🔮 කේන්දරේ සම්පූර්ණ විස්තරය සිංහලෙන්ම',
         '⚠️ මාරක, අපල එන කාල කලින්ම දැනගමු',
         '🪐 දවසේ සහ සතියේ පලාපල ඔයාටම',
         '💬 ඕනෑම ප්‍රශ්නයක් අපේ AI එකෙන් අහන්න',
       ],
-      cta: 'මගේ විස්තරය දැන්ම බලන්න',
-      ctaSub: 'මාසික ගෙවීමක් • ඕනෑම වෙලාවක අයින් වෙන්න පුළුවන්',
+      cta: 'මගේ තරු මොනවද කියන්නේ බලන්න',
+      ctaSub: 'ඕනෑම වෙලාවක නවතන්න • Google Play ආරක්ෂිතයි',
     },
   },
   report: {
@@ -452,9 +452,27 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
               {loadingOfferings && !isOneTime ? (
                 <ActivityIndicator size="small" color={accent.primary} />
               ) : (
-                <View style={s.priceRow}>
-                  <Text style={[s.priceAmount, { color: accent.primary }]}>{getDisplayPrice()}</Text>
-                  <Text style={s.pricePeriod}>{getPriceSuffix()}</Text>
+                <View style={{ alignItems: 'center' }}>
+                  {/* Anchoring: show comparison to real astrologer */}
+                  {!isOneTime ? (
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 4, textAlign: 'center' }}>
+                      {lang === 'si' ? '🔮 සාමාන්‍ය ජ්‍යෝතිෂවේදියෙක්ගෙන් රු. 3,000+' : '🔮 A real astrologer costs ' + (isInternational ? '$50+' : 'LKR 3,000+') + ' per visit'}
+                    </Text>
+                  ) : null}
+                  <View style={s.priceRow}>
+                    {/* Crossed-out anchor price */}
+                    {!isOneTime ? (
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,100,100,0.5)', textDecorationLine: 'line-through', marginRight: 6 }}>{isInternational ? '$9.99' : 'රු.500'}</Text>
+                    ) : null}
+                    <Text style={[s.priceAmount, { color: accent.primary }]}>{getDisplayPrice()}</Text>
+                    <Text style={s.pricePeriod}>{getPriceSuffix()}</Text>
+                  </View>
+                  {/* Per-day breakdown */}
+                  {!isOneTime ? (
+                    <Text style={{ fontSize: 10, color: 'rgba(52,211,153,0.7)', fontWeight: '600', marginTop: 2 }}>
+                      {lang === 'si' ? '= දවසට රු. 9 යි! එක තේ එකකටත් වඩා අඩුයි ☕' : '= Only ' + (isInternational ? '$0.17' : 'LKR 9') + '/day — less than a cup of tea ☕'}
+                    </Text>
+                  ) : null}
                 </View>
               )}
             </Animated.View>
