@@ -37,7 +37,7 @@ import {
 } from '../services/revenuecat';
 import { auth as firebaseAuth, GoogleAuthProvider, signInWithPopup, signInWithCredential } from '../services/firebase';
 import Constants from 'expo-constants';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import PaywallScreen from '../components/PaywallScreen';
 
 var AuthContext = createContext(null);
@@ -254,10 +254,6 @@ export function AuthProvider({ children }) {
             signInResult = await GoogleSignin.signIn();
           } catch (signInErr) {
             console.error('[Auth] GoogleSignin.signIn() THREW:', signInErr?.code, signInErr?.message);
-            Alert.alert(
-              'Google Sign-In Error',
-              'Code: ' + (signInErr?.code || 'none') + '\nMessage: ' + (signInErr?.message || 'unknown') + '\n\nFull: ' + JSON.stringify(signInErr, Object.getOwnPropertyNames(signInErr || {}), 2)
-            );
             throw signInErr;
           }
           
@@ -274,7 +270,6 @@ export function AuthProvider({ children }) {
           if (!idToken) {
             var debugInfo = JSON.stringify(signInResult, null, 2);
             console.error('[Auth] No idToken! Full result:', debugInfo);
-            Alert.alert('No ID Token', 'signIn returned:\n' + debugInfo.substring(0, 500));
             throw new Error('Failed to get Google ID token — signIn returned type: ' + (signInResult?.type || 'unknown'));
           }
           

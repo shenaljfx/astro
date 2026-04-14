@@ -765,9 +765,7 @@ function GoogleSignInStep({ onContinue, onBack, lang }) {
       onContinue();
     } catch (e) {
       console.error('Google sign-in error:', e);
-      // Show actual error details for debugging — Alert popup so user can screenshot
-      var errorDetail = 'Code: ' + (e?.code || 'none') + '\nMessage: ' + (e?.message || 'unknown error');
-      Alert.alert('Sign-In Debug', errorDetail);
+      var errorDetail = (e?.message || 'Sign-in failed. Please try again.');
       setError(errorDetail);
     } finally { setLoading(false); }
   };

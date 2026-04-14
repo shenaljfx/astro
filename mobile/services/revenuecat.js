@@ -45,11 +45,15 @@ if (MOCK_PAYMENTS) {
   console.log('[RevenueCat] 🧪 MOCK MODE — all purchases will auto-succeed');
 }
 
-// Product identifiers (must match RevenueCat dashboard)
+// Product identifiers (must match RevenueCat dashboard & Google Play Console)
 var PRODUCT_IDS = {
+  // Subscriptions
   monthly: 'monthly',
   yearly: 'yearly',
   lifetime: 'lifetime',
+  // One-time purchases
+  full_report: 'full_report',
+  porondam_check: 'porondam_check',
 };
 
 var _initialized = false;
@@ -272,6 +276,63 @@ export async function purchasePackage(pkg) {
   }
 }
 
+/**
+ * Purchase a one-time (non-subscription) product by its product ID.
+ * Use for report & porondam one-time payments.
+ * @param {string} productId — e.g. 'full_report' or 'porondam_check'
+ * @returns {Object} { customerInfo, productIdentifier, purchased: true }
+ */
+export async function purchaseOneTimeProduct(productId) {
+  if (MOCK_PAYMENTS) {
+    console.log('[RevenueCat] 🧪 Mock one-time purchase:', productId);
+    return {
+      customerInfo: null,
+      productIdentifier: productId,
+      purchased: true,
+    };
+  }
+  if (!Purchases) throw new Error('Purchases not available on this platform');
+  try {
+    // Get offerings to find the package with this product
+    var offerings = await Purchases.getOfferings();
+    var pkg = null;
+    if (offerings && offerings.current) {
+      pkg = offerings.current.availablePackages.find(function(p) {
+        return p.product && p.product.identifier === productId;
+      });
+    }
+    // If found in offerings, purchase as package
+    if (pkg) {
+      var result = await Purchases.purchasePackage(pkg);
+      console.log('[RevenueCat] ✔ One-time purchase complete:', productId);
+      return {
+        customerInfo: result.customerInfo,
+        productIdentifier: productId,
+        purchased: true,
+      };
+    }
+    // Fallback: purchase directly by product ID (StoreProduct)
+    var products = await Purchases.getProducts([productId]);
+    if (!products || products.length === 0) {
+      throw new Error('Product not found: ' + productId);
+    }
+    var storeResult = await Purchases.purchaseStoreProduct(products[0]);
+    console.log('[RevenueCat] ✔ One-time purchase (direct) complete:', productId);
+    return {
+      customerInfo: storeResult.customerInfo,
+      productIdentifier: productId,
+      purchased: true,
+    };
+  } catch (err) {
+    if (err.userCancelled) {
+      console.log('[RevenueCat] One-time purchase cancelled by user');
+      throw new Error('Payment cancelled');
+    }
+    console.error('[RevenueCat] ✘ One-time purchase failed:', err.message);
+    throw err;
+  }
+}
+
 // ─── Paywall (RevenueCat UI) ────────────────────────────────────
 
 /**
@@ -430,6 +491,7 @@ export default {
   getActiveSubscription: getActiveSubscription,
   getOfferings: getOfferings,
   purchasePackage: purchasePackage,
+  purchaseOneTimeProduct: purchaseOneTimeProduct,
   presentPaywall: presentPaywall,
   presentPaywallIfNeeded: presentPaywallIfNeeded,
   presentCustomerCenter: presentCustomerCenter,

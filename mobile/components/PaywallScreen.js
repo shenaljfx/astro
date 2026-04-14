@@ -31,7 +31,9 @@ import { usePricing } from '../contexts/PricingContext';
 import {
   getOfferings,
   purchasePackage,
+  purchaseOneTimeProduct,
   restorePurchases,
+  PRODUCT_IDS,
 } from '../services/revenuecat';
 import AwesomeRashiChakra from './AwesomeRashiChakra';
 
@@ -317,11 +319,21 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
     setPurchasing(true);
     setError('');
     try {
-      var pkg = getMonthlyPackage();
-      if (!pkg) { setError(shared.purchaseFail); setPurchasing(false); return; }
-      var result = await purchasePackage(pkg);
-      if (result && result.isProActive) {
-        if (onPurchased) onPurchased(result);
+      if (isOneTime) {
+        // One-time purchase: report or porondam
+        var productId = src === 'report' ? PRODUCT_IDS.full_report : PRODUCT_IDS.porondam_check;
+        var otResult = await purchaseOneTimeProduct(productId);
+        if (otResult && otResult.purchased) {
+          if (onPurchased) onPurchased(otResult);
+        }
+      } else {
+        // Subscription purchase (monthly)
+        var pkg = getMonthlyPackage();
+        if (!pkg) { setError(shared.purchaseFail); setPurchasing(false); return; }
+        var result = await purchasePackage(pkg);
+        if (result && result.isProActive) {
+          if (onPurchased) onPurchased(result);
+        }
       }
     } catch (e) {
       var msg = e && e.message ? e.message : '';
