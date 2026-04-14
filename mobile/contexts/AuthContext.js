@@ -47,7 +47,7 @@ var STORAGE_USER = 'grahachara_user_profile';
 var STORAGE_ONBOARDING = 'grahachara_onboarding_done';
 
 function getBaseUrl() {
-  if (!__DEV__) return 'http://api.grahachara.com:3000';
+  if (!__DEV__) return 'https://api.grahachara.com';
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return 'http://' + window.location.hostname + ':3000';
   }

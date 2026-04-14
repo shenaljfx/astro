@@ -36,7 +36,7 @@ if (!IS_WEB) {
 
 // ─── Configuration ──────────────────────────────────────────────
 
-var API_KEY = 'test_HEXfZuAHTOTqeKIMHBufSePFMBB';
+var API_KEY = 'goog_PejQORDlHxpiMNuGwhLLnwavkEy';
 var ENTITLEMENT_ID = 'Grahachara Pro';
 
 // Mock payments — bypass RevenueCat when EXPO_PUBLIC_MOCK_PAYMENTS=true

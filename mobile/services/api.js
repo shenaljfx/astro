@@ -6,7 +6,7 @@ export function getBaseUrl() {
   var envUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envUrl) return envUrl.replace(/\/+$/, '');
 
-  if (!__DEV__) return 'http://api.grahachara.com:3000';
+  if (!__DEV__) return 'https://api.grahachara.com';
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return 'http://' + window.location.hostname + ':3000';
   }
