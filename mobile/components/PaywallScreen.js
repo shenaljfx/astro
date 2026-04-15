@@ -39,8 +39,9 @@ import AwesomeRashiChakra from './AwesomeRashiChakra';
 
 var { width: SW, height: SH } = Dimensions.get('window');
 var IS_SMALL = SH < 700;
-var CHAKRA_SIZE = Math.min(SW * 0.75, IS_SMALL ? 220 : 280);
-var LOGO_SIZE = IS_SMALL ? 76 : 92;
+var IS_MEDIUM = SH < 800;
+var CHAKRA_SIZE = Math.min(SW * 0.55, IS_SMALL ? 160 : IS_MEDIUM ? 200 : 260);
+var LOGO_SIZE = IS_SMALL ? 60 : IS_MEDIUM ? 72 : 92;
 
 // ─── Context-specific content ────────────────────────────────────
 
@@ -452,7 +453,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
         ) : null}
 
         {/* ─── Fixed content — flex fills screen ─── */}
-        <View style={[s.fixedContent, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
+        <View style={[s.fixedContent, { paddingTop: insets.top + 6, paddingBottom: Math.max(insets.bottom, 8) + 4 }]}>
 
           {/* ── TOP: Rashi Chakra + Logo ── */}
           <View style={s.topSection}>
@@ -665,7 +666,7 @@ var s = StyleSheet.create({
   // Fixed layout — fills screen
   fixedContent: {
     flex: 1,
-    paddingHorizontal: 22,
+    paddingHorizontal: 18,
     justifyContent: 'space-between',
   },
 
@@ -701,9 +702,9 @@ var s = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 0,
   },
-  badgeWrap: { alignItems: 'center', marginBottom: IS_SMALL ? 8 : 12 },
+  badgeWrap: { alignItems: 'center', marginBottom: IS_SMALL ? 4 : 6 },
   badgePill: {
     borderWidth: 1,
     borderColor: 'rgba(255,184,0,0.15)',
@@ -718,44 +719,45 @@ var s = StyleSheet.create({
     textAlign: 'center',
   },
 
-  titleWrap: { alignItems: 'center', marginBottom: IS_SMALL ? 10 : 14 },
+  titleWrap: { alignItems: 'center', marginBottom: IS_SMALL ? 6 : 8 },
   heroTitle: {
-    fontSize: IS_SMALL ? 24 : 30,
+    fontSize: IS_SMALL ? 20 : IS_MEDIUM ? 24 : 30,
     fontWeight: '900',
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: 0.3,
-    lineHeight: IS_SMALL ? 30 : 38,
+    lineHeight: IS_SMALL ? 26 : IS_MEDIUM ? 30 : 38,
     ...textShadow('rgba(147,51,234,0.3)', { width: 0, height: 3 }, 14),
   },
   heroSub: {
     color: 'rgba(255,220,150,0.50)',
-    fontSize: IS_SMALL ? 11 : 12,
+    fontSize: IS_SMALL ? 10 : 11,
     fontWeight: '600',
-    marginTop: 6,
+    marginTop: 4,
     letterSpacing: 0.2,
     textAlign: 'center',
-    lineHeight: IS_SMALL ? 16 : 18,
+    lineHeight: IS_SMALL ? 14 : 16,
+    paddingHorizontal: 8,
   },
 
   featCard: {
     width: '100%',
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
     overflow: 'hidden',
-    marginBottom: IS_SMALL ? 4 : 8,
+    marginBottom: IS_SMALL ? 2 : 4,
     ...boxShadow('rgba(147,51,234,0.12)', { width: 0, height: 4 }, 0.4, 12),
   },
   featCardInner: {
-    paddingVertical: IS_SMALL ? 6 : 8,
+    paddingVertical: IS_SMALL ? 2 : 4,
     paddingHorizontal: 4,
   },
   featRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: IS_SMALL ? 5 : 6,
-    paddingHorizontal: 12,
+    paddingVertical: IS_SMALL ? 3 : 4,
+    paddingHorizontal: 10,
   },
   featDot: {
     width: 4, height: 4, borderRadius: 2,
@@ -764,17 +766,17 @@ var s = StyleSheet.create({
   },
   featText: {
     color: 'rgba(255,245,220,0.90)',
-    fontSize: IS_SMALL ? 12 : 13,
+    fontSize: IS_SMALL ? 11 : 12,
     fontWeight: '600',
     letterSpacing: 0.15,
-    lineHeight: IS_SMALL ? 16 : 19,
+    lineHeight: IS_SMALL ? 14 : 17,
     flex: 1,
   },
 
   priceWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: IS_SMALL ? 6 : 8,
+    paddingVertical: IS_SMALL ? 3 : 5,
   },
   priceRow: {
     flexDirection: 'row',
@@ -782,16 +784,16 @@ var s = StyleSheet.create({
     gap: 4,
   },
   priceAmount: {
-    fontSize: IS_SMALL ? 30 : 38,
+    fontSize: IS_SMALL ? 26 : IS_MEDIUM ? 32 : 38,
     fontWeight: '900',
     letterSpacing: -1,
     ...textShadow('rgba(255,184,0,0.45)', { width: 0, height: 0 }, 16),
   },
   pricePeriod: {
-    fontSize: IS_SMALL ? 12 : 14,
+    fontSize: IS_SMALL ? 11 : 13,
     fontWeight: '700',
     color: 'rgba(255,220,160,0.55)',
-    marginBottom: IS_SMALL ? 4 : 6,
+    marginBottom: IS_SMALL ? 3 : 5,
   },
 
   // ── BOTTOM ──
@@ -817,7 +819,7 @@ var s = StyleSheet.create({
 
   ctaOuter: {
     position: 'relative',
-    marginBottom: 8,
+    marginBottom: 4,
     width: '100%',
   },
   ctaHalo: {
@@ -830,7 +832,7 @@ var s = StyleSheet.create({
   },
   ctaBtn: {
     borderRadius: 20,
-    paddingVertical: IS_SMALL ? 14 : 16,
+    paddingVertical: IS_SMALL ? 12 : 14,
   },
   ctaInner: {
     flexDirection: 'row',
@@ -840,7 +842,7 @@ var s = StyleSheet.create({
   },
   ctaText: {
     color: '#FFF',
-    fontSize: IS_SMALL ? 15 : 17,
+    fontSize: IS_SMALL ? 14 : 16,
     fontWeight: '900',
     letterSpacing: 0.6,
   },
@@ -848,9 +850,9 @@ var s = StyleSheet.create({
   ctaSub: {
     textAlign: 'center',
     color: 'rgba(255,255,255,0.35)',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '500',
-    marginBottom: IS_SMALL ? 8 : 12,
+    marginBottom: IS_SMALL ? 4 : 6,
     letterSpacing: 0.2,
   },
 
@@ -859,7 +861,7 @@ var s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   footerText: {
     color: 'rgba(255,255,255,0.25)',

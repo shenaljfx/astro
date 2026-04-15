@@ -82,6 +82,26 @@ export function PricingProvider({ children }) {
   var isInternational = pricing.currency === 'USD';
 
   /**
+   * Update pricing based on a new country code.
+   * Called when user selects a birth city outside Sri Lanka.
+   * @param {string} code — e.g. 'LK', 'US', 'IN', 'GB'
+   */
+  var updateCountry = function(code) {
+    if (!code || code === countryCode) return;
+    setCountryCode(code);
+    setDetectedCountry(code);
+    api.getPricing(code)
+      .then(function(res) {
+        if (res && res.success) {
+          setPricing(res);
+        }
+      })
+      .catch(function() {
+        // Keep current pricing
+      });
+  };
+
+  /**
    * Get a formatted price label for a feature.
    * @param {'porondam'|'report'|'subscription'} feature
    * @returns {string} e.g. "LKR 100" or "$2"
@@ -122,6 +142,7 @@ export function PricingProvider({ children }) {
     priceLabel: priceLabel,
     priceAmount: priceAmount,
     subscriptionLabel: subscriptionLabel,
+    updateCountry: updateCountry,
   };
 
   return (
@@ -145,6 +166,7 @@ export function usePricing() {
       priceLabel: function(f) { return DEFAULT_PRICING[f] ? DEFAULT_PRICING[f].label : ''; },
       priceAmount: function(f) { return DEFAULT_PRICING[f] ? DEFAULT_PRICING[f].amount : 0; },
       subscriptionLabel: function() { return DEFAULT_PRICING.subscription ? DEFAULT_PRICING.subscription.label : ''; },
+      updateCountry: function() {},
     };
   }
   return ctx;

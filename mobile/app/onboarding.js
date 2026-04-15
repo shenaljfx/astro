@@ -1225,14 +1225,21 @@ var LOCKED_PREVIEWS = {
   ],
 };
 
-function SubscriptionStep({ onContinue, lang, displayName }) {
+function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
   var T = OB[lang] || OB.en;
   var [loading, setLoading] = useState(false);
   var [restoring, setRestoring] = useState(false);
   var [payError, setPayError] = useState('');
   var [agreed, setAgreed] = useState(false);
   var { activateSubscription, restorePurchases } = useAuth();
-  var { priceLabel, priceAmount, currency, currencySymbol, isInternational } = usePricing();
+  var { priceLabel, priceAmount, currency, currencySymbol, isInternational, updateCountry } = usePricing();
+
+  // ── Auto-detect country from birth city and update pricing ──
+  useEffect(function () {
+    if (birthData && birthData.countryCode && birthData.countryCode !== 'LK') {
+      updateCountry(birthData.countryCode);
+    }
+  }, [birthData]);
 
   // ── Countdown Timer (starts at 14:59, resets at 0) ──
   var [countdown, setCountdown] = useState(14 * 60 + 59);
@@ -1949,6 +1956,7 @@ function BirthDataStep({ onComplete, lang }) {
           lat: selectedCity ? selectedCity.lat : 6.9271,
           lng: selectedCity ? selectedCity.lng : 79.8612,
           locationName: selectedCity ? (selectedCity.name + (selectedCity.country ? ', ' + selectedCity.country : '')) : 'Colombo',
+          countryCode: selectedCity ? (selectedCity.countryCode || 'LK') : 'LK',
           timezone: 'Asia/Colombo',
         };
       }
@@ -2870,7 +2878,7 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
       case 1: return <BirthDataStep onComplete={handleBirthDataComplete} lang={lang} />;
       case 2: return <LagnaRevealStep birthData={birthData} displayName={displayName} onContinue={handleLagnaRevealDone} lang={lang} />;
       case 3: return <GoogleSignInStep onContinue={handleGoogleSignInDone} onBack={isReturningUser ? null : function () { setStep(2); }} lang={lang} isReturningUser={isReturningUser} />;
-      case 4: return <SubscriptionStep onContinue={handleSubscriptionDone} lang={lang} displayName={displayName} />;
+      case 4: return <SubscriptionStep onContinue={handleSubscriptionDone} lang={lang} displayName={displayName} birthData={birthData} />;
       case 5: return <CompleteStep lang={lang} onDone={onComplete} />;
       default: return <LanguageStep onSelect={handleLanguageSelect} />;
     }
