@@ -14,8 +14,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, {
   Circle, Text as SvgText, G, Line, Defs, RadialGradient, LinearGradient,
-  Stop, Path, Polygon, Ellipse,
+  Stop, Path, Polygon, Ellipse, Image as SvgImage,
 } from 'react-native-svg';
+import { ZODIAC_IMAGES } from './ZodiacIcons';
 
 // ═══════════════════════════════════════════════════════
 // ZODIAC SVG MINI-PATHS  (drawn at origin, scale to ~1em)
@@ -131,7 +132,7 @@ function makeStarDots(n, rMin, rMax, cx, cy) {
 // COMPONENT
 // ═══════════════════════════════════════════════════════
 
-export default function AwesomeRashiChakra({ size = 320 }) {
+export default function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
   var cx = size / 2;
   var cy = size / 2;
 
@@ -424,22 +425,20 @@ export default function AwesomeRashiChakra({ size = 320 }) {
               var midDeg = i * 30 + 15;
               var midRad = ((midDeg - 90) * Math.PI) / 180;
 
-              // Glyph position (upper portion of wedge)
-              var glyphR = RsegMid + 7;
+              // Center the image in the wedge band
+              var glyphR = RsegMid;
               var gx = cx + glyphR * Math.cos(midRad);
               var gy = cy + glyphR * Math.sin(midRad);
-
-              // Name position (lower portion of wedge)
-              var nameR = RsegMid - 9;
-              var nx = (cx + nameR * Math.cos(midRad)).toFixed(2);
-              var ny = (cy + nameR * Math.sin(midRad)).toFixed(2);
 
               // Jewel dot at outer edge
               var jx = (cx + (RsegOut - 4.5) * Math.cos(midRad)).toFixed(2);
               var jy = (cy + (RsegOut - 4.5) * Math.sin(midRad)).toFixed(2);
 
-              // Scale factor for glyph
-              var glyphScale = size * 0.0028;
+              // Image sized to fit within wedge without overlapping neighbors
+              // Wedge arc length at RsegMid ≈ 2π * RsegMid / 12 — use ~60% of that
+              var wedgeArc = (2 * Math.PI * RsegMid) / 12;
+              var wedgeDepth = RsegOut - RsegIn;
+              var imgSize = Math.min(wedgeArc * 0.58, wedgeDepth * 0.60);
 
               return (
                 <G key={'zl' + i}>
@@ -447,29 +446,18 @@ export default function AwesomeRashiChakra({ size = 320 }) {
                   <Circle cx={jx} cy={jy} r="2.4" fill={r.pri} opacity={0.82} />
                   <Circle cx={jx} cy={jy} r="4.5" fill={r.pri} opacity={0.1} />
 
-                  {/* SVG zodiac glyph (no emoji) */}
-                  <Path
-                    d={ZODIAC_PATHS[i]}
-                    stroke="#FFD98E"
-                    strokeWidth={1.4 / glyphScale}
-                    fill="none"
-                    opacity={0.92}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    transform={
-                      'translate(' + gx.toFixed(2) + ',' + gy.toFixed(2) + ')' +
-                      ' rotate(' + midDeg + ')' +
-                      ' scale(' + glyphScale.toFixed(3) + ')'
-                    }
-                  />
+                  {/* Subtle glow behind image */}
+                  <Circle cx={gx.toFixed(2)} cy={gy.toFixed(2)} r={imgSize * 0.42} fill={r.pri} opacity={0.08} />
 
-                  {/* 3-letter name */}
-                  <SvgText x={nx} y={ny}
-                    fill="#FBBF24" opacity={0.82}
-                    fontSize={fname} fontWeight="600"
-                    textAnchor="middle" alignmentBaseline="central"
-                    transform={'rotate(' + midDeg + ',' + nx + ',' + ny + ')'}
-                  >{r.name}</SvgText>
+                  {/* Zodiac image (base64 inline) — properly sized to wedge */}
+                  <SvgImage
+                    x={gx - imgSize / 2}
+                    y={gy - imgSize / 2}
+                    width={imgSize}
+                    height={imgSize}
+                    href={ZODIAC_IMAGES[i].uri}
+                    opacity={0.95}
+                  />
                 </G>
               );
             })}
@@ -560,10 +548,34 @@ export default function AwesomeRashiChakra({ size = 320 }) {
           })}
 
           {/* Core concentric discs */}
-          <Circle cx={cx} cy={cy} r={Rcenter * 1.1} fill="#D4A84C" opacity={0.25} />
-          <Circle cx={cx} cy={cy} r={Rcenter * 0.72} fill="#FFE4A0" opacity={0.5} />
-          <Circle cx={cx} cy={cy} r={Rcenter * 0.38} fill="#FFF8E1" opacity={0.85} />
-          <Circle cx={cx} cy={cy} r={Rcenter * 0.16} fill="#FFFFFF" opacity={1} />
+          <Circle cx={cx} cy={cy} r={Rcenter * 1.1} fill="#D4A84C" opacity={0.15} />
+          <Circle cx={cx} cy={cy} r={Rcenter * 0.72} fill="#FFE4A0" opacity={0.25} />
+          <Circle cx={cx} cy={cy} r={Rcenter * 0.38} fill="#FFF8E1" opacity={0.45} />
+
+          {/* Active zodiac sign in center — large prominent image */}
+          {activeSignIndex != null && ZODIAC_IMAGES[activeSignIndex] && (() => {
+            var imgR = Rorbit * 0.88;
+            return (
+              <G>
+                {/* Outer golden ring */}
+                <Circle cx={cx} cy={cy} r={imgR + 4} fill="none" stroke="rgba(255,214,102,0.22)" strokeWidth="1.5" />
+                <Circle cx={cx} cy={cy} r={imgR + 1.5} fill="none" stroke="rgba(255,184,0,0.12)" strokeWidth="0.8" />
+                {/* Dark backdrop for contrast */}
+                <Circle cx={cx} cy={cy} r={imgR} fill="rgba(4,3,12,0.55)" />
+                {/* The zodiac image */}
+                <SvgImage
+                  x={cx - imgR}
+                  y={cy - imgR}
+                  width={imgR * 2}
+                  height={imgR * 2}
+                  href={ZODIAC_IMAGES[activeSignIndex].uri}
+                  opacity={0.92}
+                />
+                {/* Subtle inner vignette ring */}
+                <Circle cx={cx} cy={cy} r={imgR - 1} fill="none" stroke="rgba(255,214,102,0.08)" strokeWidth="0.5" />
+              </G>
+            );
+          })()}
         </Svg>
       </Animated.View>
 

@@ -1,12 +1,12 @@
 ﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
-  StyleSheet, Platform, Dimensions,
+  StyleSheet, Platform, Dimensions, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, Line, G, Text as SvgText, Defs, RadialGradient, Stop, Ellipse, Path } from 'react-native-svg';
+import Svg, { Circle, Line, G, Text as SvgText, Defs, RadialGradient, Stop, Ellipse, Path, Image as SvgImage } from 'react-native-svg';
 import Animated, {
   FadeInDown, FadeInUp,
   useSharedValue, useAnimatedStyle, useAnimatedScrollHandler,
@@ -26,9 +26,10 @@ import api from '../../services/api';
 import { Colors, Typography, Gradients, Spacing } from '../../constants/theme';
 import SriLankanChart from '../../components/SriLankanChart';
 import { boxShadow, textShadow } from '../../utils/shadow';
+import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
 
 var { width: SCREEN_WIDTH } = Dimensions.get('window');
-var CHAKRA_HERO_SIZE = Math.min(SCREEN_WIDTH * 0.52, 220);
+var CHAKRA_HERO_SIZE = Math.min(SCREEN_WIDTH * 0.88, 380);
 
 // Approximate moon phase from current date (fallback when server data not yet loaded)
 // Returns 1-30 tithi number based on synodic month (~29.53 days)
@@ -75,9 +76,9 @@ function CosmicOrrery({ size, activeIndex, tithiNum }) {
   var coreR = vb * 0.055;
   var u = vb / 300;
 
-  var nodeR = Math.max(u * 8, 5);
-  var activeNodeR = Math.max(u * 13, 8);
-  var activeGlowR = Math.max(u * 18, 11);
+  var nodeR = Math.max(u * 10, 6);
+  var activeNodeR = Math.max(u * 16, 10);
+  var activeGlowR = Math.max(u * 22, 14);
   var activeBgR = Math.max(u * 11, 7);
   var fontSize = Math.max(u * 11, 7);
   var activeFontSize = Math.max(u * 14, 9);
@@ -285,14 +286,19 @@ function CosmicOrrery({ size, activeIndex, tithiNum }) {
         var y = cy + zodiacR * Math.sin(angle);
         var isActive = i === activeIndex;
         var col = ZODIAC_COLORS[i];
+        var imgSize = isActive ? activeNodeR * 2.2 : nodeR * 2.4;
 
         if (isActive) {
           return (
             <G key={'z' + i}>
               <Circle cx={x} cy={y} r={activeGlowR} fill="url(#oActiveNode)" />
               <Circle cx={x} cy={y} r={activeNodeR} fill="rgba(255,184,0,0.10)" stroke="rgba(255,214,102,0.50)" strokeWidth={1.2} />
-              <Circle cx={x} cy={y} r={activeBgR} fill="rgba(20,10,40,0.7)" />
-              <SvgText x={x} y={y + activeFontSize * 0.38} fontSize={activeFontSize} fill="#FFD666" textAnchor="middle" fontWeight="bold">{sign}</SvgText>
+              <SvgImage
+                x={x - imgSize / 2} y={y - imgSize / 2}
+                width={imgSize} height={imgSize}
+                href={ZODIAC_IMAGES[i].uri}
+                opacity={1}
+              />
             </G>
           );
         }
@@ -301,7 +307,12 @@ function CosmicOrrery({ size, activeIndex, tithiNum }) {
           <G key={'z' + i}>
             <Circle cx={x} cy={y} r={nodeR + 2 * u} fill={col} opacity={0.06} />
             <Circle cx={x} cy={y} r={nodeR} fill="rgba(10,7,4,0.75)" stroke={col + '40'} strokeWidth={0.7} />
-            <SvgText x={x} y={y + fontSize * 0.38} fontSize={fontSize} fill={col} textAnchor="middle" opacity={0.75}>{sign}</SvgText>
+            <SvgImage
+              x={x - imgSize / 2} y={y - imgSize / 2}
+              width={imgSize} height={imgSize}
+              href={ZODIAC_IMAGES[i].uri}
+              opacity={0.88}
+            />
           </G>
         );
       })}
@@ -461,7 +472,7 @@ export default function HomeScreen() {
   useEffect(function () {
     if (!hasBirthData || !birthDateTime) return;
     api.getJyotishPersonalized({
-      dateTime: birthDateTime,
+      birthDate: birthDateTime,
       lat: birthLat,
       lng: birthLng,
     })
@@ -603,20 +614,18 @@ export default function HomeScreen() {
           {/* ═══ RASHI CHAKRA — Center piece ═══ */}
           <View style={s.chakraHeroWrap}>
             <View style={s.chakraContainer}>
-              <AwesomeRashiChakra size={chakraSize} />
+              <AwesomeRashiChakra size={chakraSize} activeSignIndex={activeNakIndex} />
             </View>
-            {/* Sign info row below chakra */}
+            {/* Sign name below chakra */}
             <View style={s.chakraOverlayInfo}>
-              <View style={s.chakraSignBadge}>
-                <LinearGradient colors={['rgba(255,184,0,0.30)', 'rgba(255,140,0,0.15)']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-                <Text style={s.chakraSignSymbol}>{ZODIAC_SIGNS[activeNakIndex]}</Text>
-              </View>
-              <View style={s.chakraSignTextWrap}>
-                <Text style={s.dashHeroLabel}>{language === 'si' ? 'අද රාශිය' : "TODAY'S SIGN"}</Text>
-                <Text style={s.dashSignNameLarge}>{language === 'si' ? (ZODIAC_NAMES_SI[activeNakIndex] || ZODIAC_NAMES_EN[activeNakIndex]) : ZODIAC_NAMES_EN[activeNakIndex]}</Text>
-              </View>
-              <View style={s.chakraSignSubBadge}>
-                <Text style={s.dashSignNameSub}>{language === 'si' ? ZODIAC_NAMES_EN[activeNakIndex] : (ZODIAC_NAMES_SI[activeNakIndex] || '')}</Text>
+              <View style={s.chakraSignTextRow}>
+                <View style={s.chakraSignTextWrap}>
+                  <Text style={s.dashHeroLabel}>{language === 'si' ? 'අද රාශිය' : "TODAY'S SIGN"}</Text>
+                  <Text style={s.dashSignNameLarge}>{language === 'si' ? (ZODIAC_NAMES_SI[activeNakIndex] || ZODIAC_NAMES_EN[activeNakIndex]) : ZODIAC_NAMES_EN[activeNakIndex]}</Text>
+                </View>
+                <View style={s.chakraSignSubBadge}>
+                  <Text style={s.dashSignNameSub}>{language === 'si' ? ZODIAC_NAMES_EN[activeNakIndex] : (ZODIAC_NAMES_SI[activeNakIndex] || '')}</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -851,7 +860,7 @@ export default function HomeScreen() {
             <View style={s.lagnaHeroLeft}>
               <View style={s.lagnaSignBig}>
                 <LinearGradient colors={['rgba(255,184,0,0.28)', 'rgba(255,140,0,0.12)']} style={StyleSheet.absoluteFillObject} />
-                <Text style={s.lagnaSignEmoji}>{ZODIAC_SIGNS[lagnaIdx]}</Text>
+                <Image source={ZODIAC_IMAGES[lagnaIdx]} style={s.lagnaSignImage} />
               </View>
             </View>
             <View style={s.lagnaHeroRight}>
@@ -1272,7 +1281,7 @@ export default function HomeScreen() {
                       )}
                       <View style={s.wlCardRow}>
                         <View style={[s.wlSignBadge, { borderColor: outlookCfg.border, backgroundColor: outlookCfg.bg }]}>
-                          <Text style={s.wlSignEmoji}>{report.symbol}</Text>
+                          <Image source={ZODIAC_IMAGES[(report.lagnaId || 1) - 1]} style={s.wlSignImage} />
                         </View>
                         <View style={s.wlCardInfo}>
                           <View style={s.wlNameRow}>
@@ -1665,8 +1674,8 @@ var s = StyleSheet.create({
   // Rashi Chakra Hero
   chakraHeroWrap: {
     alignItems: 'center',
-    paddingTop: 14,
-    paddingBottom: 6,
+    paddingTop: 8,
+    paddingBottom: 2,
   },
   chakraContainer: {
     width: CHAKRA_HERO_SIZE,
@@ -1677,22 +1686,31 @@ var s = StyleSheet.create({
     marginBottom: 8,
   },
   chakraOverlayInfo: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 6,
     paddingHorizontal: 18,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   chakraSignBadge: {
-    width: 42, height: 42, borderRadius: 21, overflow: 'hidden',
+    width: 72, height: 72, borderRadius: 36, overflow: 'hidden',
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.35)',
-    backgroundColor: 'rgba(10,7,4,0.60)',
+    borderWidth: 2, borderColor: 'rgba(255,184,0,0.55)',
+    backgroundColor: 'rgba(10,7,4,0.70)',
+    ...boxShadow('rgba(255,184,0,0.25)', { width: 0, height: 0 }, 0.8, 20),
   },
   chakraSignSymbol: {
-    fontSize: 22, color: '#FFD666',
-    ...textShadow('rgba(255,214,102,0.8)', { width: 0, height: 0 }, 12),
+    fontSize: 34, color: '#FFD666',
+    ...textShadow('rgba(255,214,102,0.9)', { width: 0, height: 0 }, 18),
+  },
+  chakraSignImage: {
+    width: 52, height: 52, resizeMode: 'contain',
+  },
+  chakraSignTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   chakraSignTextWrap: {
     flex: 1,
@@ -1704,8 +1722,8 @@ var s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)',
   },
 
-  dashHeroLabel: { color: 'rgba(255,214,102,0.50)', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 2 },
-  dashSignNameLarge: { color: '#FFF1D0', fontSize: 20, fontWeight: '900', letterSpacing: 0.3, lineHeight: 26, ...textShadow('rgba(255,184,0,0.30)', { width: 0, height: 1 }, 8) },
+  dashHeroLabel: { color: 'rgba(255,214,102,0.55)', fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
+  dashSignNameLarge: { color: '#FFF1D0', fontSize: 22, fontWeight: '900', letterSpacing: 0.3, lineHeight: 28, ...textShadow('rgba(255,184,0,0.35)', { width: 0, height: 1 }, 10) },
   dashSignNameSub: { color: 'rgba(255,214,102,0.65)', fontSize: 12, fontWeight: '700' },
   nakPill: {
     flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center',
@@ -1800,25 +1818,29 @@ var s = StyleSheet.create({
   // Lagna Hero
   lagnaHero: {
     flexDirection: 'row', alignItems: 'center', marginHorizontal: 14, marginBottom: 14,
-    borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,140,0,0.18)',
-    padding: 14, gap: 14,
+    borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,140,0,0.22)',
+    padding: 16, gap: 16,
   },
   lagnaHeroLeft: { alignItems: 'center' },
   lagnaSignBig: {
-    width: 60, height: 60, borderRadius: 18, overflow: 'hidden',
+    width: 96, height: 96, borderRadius: 28, overflow: 'hidden',
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.35)',
+    borderWidth: 2, borderColor: 'rgba(255,184,0,0.55)',
+    ...boxShadow('rgba(255,184,0,0.20)', { width: 0, height: 0 }, 0.8, 18),
   },
   lagnaSignEmoji: {
-    fontSize: 30, ...textShadow('rgba(255,214,102,0.8)', { width: 0, height: 0 }, 14),
+    fontSize: 46, ...textShadow('rgba(255,214,102,0.9)', { width: 0, height: 0 }, 20),
+  },
+  lagnaSignImage: {
+    width: 72, height: 72, resizeMode: 'contain',
   },
   lagnaHeroRight: { flex: 1 },
   lagnaHeroLabel: {
-    color: 'rgba(255,214,102,0.50)', fontSize: 10, fontWeight: '700',
-    letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 3,
+    color: 'rgba(255,214,102,0.55)', fontSize: 11, fontWeight: '700',
+    letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 4,
   },
-  lagnaHeroName: { color: '#FFB800', fontSize: 22, fontWeight: '900', letterSpacing: 0.3, ...textShadow('rgba(255,184,0,0.35)', { width: 0, height: 1 }, 8) },
-  lagnaHeroSub: { color: 'rgba(255,214,102,0.55)', fontSize: 12, fontWeight: '600', marginTop: 1 },
+  lagnaHeroName: { color: '#FFB800', fontSize: 26, fontWeight: '900', letterSpacing: 0.3, ...textShadow('rgba(255,184,0,0.40)', { width: 0, height: 1 }, 10) },
+  lagnaHeroSub: { color: 'rgba(255,214,102,0.60)', fontSize: 13, fontWeight: '600', marginTop: 2 },
   lagnaLordPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8,
     alignSelf: 'flex-start', backgroundColor: 'rgba(255,184,0,0.08)',
@@ -1968,18 +1990,19 @@ var s = StyleSheet.create({
     borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
   },
   wlCardRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   wlSignBadge: {
-    width: 38, height: 38, borderRadius: 12,
+    width: 56, height: 56, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
-  wlSignEmoji: { fontSize: 18 },
+  wlSignEmoji: { fontSize: 26 },
+  wlSignImage: { width: 42, height: 42, resizeMode: 'contain' },
   wlCardInfo: { flex: 1 },
   wlNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  wlSignName: { color: '#FFF1D0', fontSize: 14, fontWeight: '800' },
-  wlSignNameSub: { color: 'rgba(255,214,102,0.40)', fontSize: 11, fontWeight: '600', marginTop: 1 },
+  wlSignName: { color: '#FFF1D0', fontSize: 15, fontWeight: '800' },
+  wlSignNameSub: { color: 'rgba(255,214,102,0.40)', fontSize: 12, fontWeight: '600', marginTop: 1 },
   wlYouBadge: {
     backgroundColor: 'rgba(255,184,0,0.20)', borderRadius: 6,
     paddingHorizontal: 6, paddingVertical: 2,

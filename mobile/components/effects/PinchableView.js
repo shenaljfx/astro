@@ -1,9 +1,10 @@
 /**
  * PinchableView — Wraps content with pinch-to-zoom and pan gestures.
  * Uses react-native-gesture-handler + Reanimated for 60fps performance.
+ * On web, GestureDetector causes stray DOM text nodes, so we skip it.
  */
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -81,6 +82,16 @@ export default function PinchableView({
       { scale: scale.value },
     ],
   }));
+
+  // On web, GestureDetector injects stray DOM nodes that cause
+  // "Unexpected text node" warnings — pinch/pan isn't useful on web anyway
+  if (Platform.OS === 'web') {
+    return (
+      <View style={[styles.container, style]}>
+        {children}
+      </View>
+    );
+  }
 
   return (
     <GestureDetector gesture={composedGesture}>

@@ -142,7 +142,7 @@ function VargaChartDisplay({ division, birthDateTime, lat, lng, language }) {
     var cancelled = false;
     setVargaLoading(true);
     setVargaError(null);
-    api.getJyotishVarga(division.replace('d', ''), { birthDate: birthDateTime, lat: lat, lng: lng })
+    api.getJyotishVarga(division, { birthDate: birthDateTime, lat: lat, lng: lng })
       .then(function (res) {
         if (cancelled) return;
         if (res && res.success && res.data) {
@@ -350,7 +350,7 @@ export default function KendaraScreen() {
     (async () => {
       try {
         setJyotishLoading(true);
-        var body = { dateTime: birthDateTime, lat: birthLat, lng: birthLng };
+        var body = { birthDate: birthDateTime, lat: birthLat, lng: birthLng };
         var [dashaRes, mangalRes, sadeRes, chalitRes] = await Promise.all([
           api.getJyotishDasha(body).catch(function() { return null; }),
           api.getJyotishMangalDosha(body).catch(function() { return null; }),

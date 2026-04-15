@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Line, Rect } from 'react-native-svg';
+import { ZODIAC_IMAGES } from './ZodiacIcons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -239,9 +240,32 @@ export default function SriLankanChart({ rashiChart, lagnaRashiId, language, cha
       <View style={styles.row}>
         {renderEdge(4)}
         <View style={[styles.cell, styles.centerCell, { width: cellW, height: cellH }]}>
+          {ZODIAC_IMAGES[lagnaRashiId - 1] && (
+            <Image
+              source={ZODIAC_IMAGES[lagnaRashiId - 1]}
+              style={{
+                width: cellW * 0.48,
+                height: cellW * 0.48,
+                opacity: 0.18,
+                position: 'absolute',
+              }}
+              resizeMode="contain"
+            />
+          )}
           <Text style={[styles.centerTitle, isSmall && { fontSize: 8 }]}>
             {language === 'si' ? '\u0DBB\u0DCF\u0DC1\u0DD2 \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA' : 'Rashi Kendara'}
           </Text>
+          {ZODIAC_IMAGES[lagnaRashiId - 1] && (
+            <Image
+              source={ZODIAC_IMAGES[lagnaRashiId - 1]}
+              style={{
+                width: isSmall ? 28 : 38,
+                height: isSmall ? 28 : 38,
+                marginVertical: 2,
+              }}
+              resizeMode="contain"
+            />
+          )}
           <Text style={[styles.centerLagna, isSmall && { fontSize: 11 }]}>{lagnaName}</Text>
           <Text style={[styles.centerSub, isSmall && { fontSize: 7 }]}>
             {language === 'si' ? '\u0DBD\u0D9C\u0DCA\u0DB1\u0DBA' : 'Lagna'}

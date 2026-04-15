@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet,
-  Platform, TextInput, Alert, ActivityIndicator,
+  Platform, TextInput, Alert, ActivityIndicator, Image,
   Dimensions, StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +21,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePricing } from '../../contexts/PricingContext';
 import CitySearchPicker from '../../components/CitySearchPicker';
 import { boxShadow, textShadow } from '../../utils/shadow';
+import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
+import AwesomeRashiChakra from '../../components/AwesomeRashiChakra';
 
 var SW = Dimensions.get('window').width;
 var SH = Dimensions.get('window').height;
@@ -511,16 +513,21 @@ function ProfileScreen() {
             /* ── LOGGED IN STATE ── */
             <View style={s.heroContent}>
 
+              {/* Rashi Chakra — subtle background behind mandala */}
+              <View style={s.rashiChakraBg}>
+                <AwesomeRashiChakra size={Math.min(SW * 0.75, 280)} />
+              </View>
+
               {/* Mandala + avatar */}
               <View style={s.mandalaContainer}>
                 <BirthMandala lagnaIndex={lagnaIdx} moonIndex={moonIdx} size={150} />
                 {/* Outer ring */}
                 <View style={s.avatarRing} />
-                {/* Avatar core */}
+                {/* Avatar core — zodiac sign image */}
                 <View style={s.avatarCore}>
                   <LinearGradient colors={['#14082A','#0C0418']} style={StyleSheet.absoluteFill} />
                   <LinearGradient colors={['rgba(255,140,0,0.25)','transparent']} style={{position:'absolute',top:0,left:0,right:0,height:'55%',borderTopLeftRadius:32,borderTopRightRadius:32}} />
-                  <Ionicons name="person" size={34} color="#C4B5FD" />
+                  <Image source={ZODIAC_IMAGES[lagnaIdx]} style={s.avatarZodiacImage} />
                 </View>
                 {/* Subscription badge */}
                 <View style={[s.badge, isSubscribed ? s.badgePremium : s.badgeFree]}>
@@ -740,9 +747,11 @@ var s = StyleSheet.create({
 
   // ── Logged-in hero ─────────────────────────────────────────────────
   heroContent:      { alignItems: 'center', paddingTop: 36, paddingBottom: 28, paddingHorizontal: 20 },
+  rashiChakraBg:    { position: 'absolute', top: -20, left: (SW - Math.min(SW * 0.75, 280)) / 2 - 16, opacity: 0.10, pointerEvents: 'none' },
   mandalaContainer: { width: 150, height: 150, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
-  avatarRing:       { position:'absolute', width: 86, height: 86, borderRadius: 43, borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.3)', borderStyle: 'dashed' },
-  avatarCore:       { position:'absolute', width: 66, height: 66, borderRadius: 33, alignItems:'center', justifyContent:'center', overflow:'hidden', borderWidth: 2, borderColor: 'rgba(196,181,253,0.45)' },
+  avatarRing:       { position:'absolute', width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: 'rgba(255,140,0,0.35)', borderStyle: 'dashed' },
+  avatarCore:       { position:'absolute', width: 78, height: 78, borderRadius: 39, alignItems:'center', justifyContent:'center', overflow:'hidden', borderWidth: 2.5, borderColor: 'rgba(255,184,0,0.55)' },
+  avatarZodiacImage:{ width: 56, height: 56, resizeMode: 'contain' },
   badge:            { position:'absolute', bottom: 8, right: 8, width: 28, height: 28, borderRadius: 14, alignItems:'center', justifyContent:'center', overflow:'hidden', borderWidth: 2, borderColor: '#0D0720' },
   badgePremium:     {},
   badgeFree:        {},

@@ -1,12 +1,23 @@
 import { Stack } from 'expo-router';
 import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, LogBox } from 'react-native';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { PricingProvider } from '../contexts/PricingContext';
 import OnboardingScreen from './onboarding';
 import CosmicLoader from '../components/effects/CosmicLoader';
+
+// Suppress known harmless warnings from third-party libs on web
+// - "Unexpected text node" comes from react-native-gesture-handler's GestureDetector on web
+// - "findDOMNode is deprecated" comes from react-native-reanimated on web
+// - "Property [opacity] may be overwritten" is a Reanimated layout animation warning
+LogBox.ignoreLogs([
+  'Unexpected text node',
+  'findDOMNode is deprecated',
+  'Property [opacity] may be overwritten',
+  '[Reanimated] Property',
+]);
 
 // Fix white background on web — inject CSS into html/body
 if (Platform.OS === 'web' && typeof document !== 'undefined') {

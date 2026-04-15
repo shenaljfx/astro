@@ -33,6 +33,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import AwesomeRashiChakra from '../components/AwesomeRashiChakra';
 import Svg, { Defs, LinearGradient as SvgGrad, Stop, Path, Circle, Rect, G, Ellipse } from 'react-native-svg';
 import { boxShadow, textShadow } from '../utils/shadow';
+import { ZODIAC_IMAGES, ZODIAC_IMAGE_MAP as ZODIAC_IMG_MAP } from '../components/ZodiacIcons';
 
 var { width: SW, height: SH } = Dimensions.get('window');
 var LOGO = require('../assets/logo.png');
@@ -988,7 +989,7 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
       <View style={{ alignItems: 'center' }}>
 
         {/* ── Premium Header ── */}
-        <Animated.View entering={FadeInDown.duration(600)} style={{ alignItems: 'center', marginBottom: 6 }}>
+        <Animated.View entering={FadeInDown.duration(600)} style={{ alignItems: 'center', marginBottom: 6, zIndex: 10 }}>
           <Animated.View style={[gs.headerIconBg, Platform.OS !== 'web' ? { shadowColor: '#FFB800' } : {}, iconAnim, glowAnim]}>
             <GoldenIcon name="lock" size={22} />
           </Animated.View>
@@ -2048,12 +2049,20 @@ var ZODIAC_SYMBOLS = {
   'Mesha': '♈', 'Vrishabha': '♉', 'Mithuna': '♊', 'Kataka': '♋',
   'Simha': '♌', 'Kanya': '♍', 'Tula': '♎', 'Vrischika': '♏',
   'Dhanus': '♐', 'Makara': '♑', 'Kumbha': '♒', 'Meena': '♓',
+  'Aries': '♈', 'Taurus': '♉', 'Gemini': '♊', 'Cancer': '♋',
+  'Leo': '♌', 'Virgo': '♍', 'Libra': '♎', 'Scorpio': '♏',
+  'Sagittarius': '♐', 'Capricorn': '♑', 'Aquarius': '♒', 'Pisces': '♓',
 };
+
+var ZODIAC_IMAGE_MAP = ZODIAC_IMG_MAP;
 
 var ZODIAC_ELEMENTS = {
   'Mesha': 'fire', 'Vrishabha': 'earth', 'Mithuna': 'air', 'Kataka': 'water',
   'Simha': 'fire', 'Kanya': 'earth', 'Tula': 'air', 'Vrischika': 'water',
   'Dhanus': 'fire', 'Makara': 'earth', 'Kumbha': 'air', 'Meena': 'water',
+  'Aries': 'fire', 'Taurus': 'earth', 'Gemini': 'air', 'Cancer': 'water',
+  'Leo': 'fire', 'Virgo': 'earth', 'Libra': 'air', 'Scorpio': 'water',
+  'Sagittarius': 'fire', 'Capricorn': 'earth', 'Aquarius': 'air', 'Pisces': 'water',
 };
 
 var ELEMENT_COLORS = {
@@ -2068,6 +2077,17 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
   var [phase, setPhase] = useState('loading');
   var [chartData, setChartData] = useState(null);
   var [error, setError] = useState('');
+  var [cycleIdx, setCycleIdx] = useState(0);
+
+  // Zodiac sign cycling animation during loading
+  useEffect(function () {
+    if (phase !== 'loading') return;
+    var speed = 280; // cycle speed (ms) — slower for clear visibility
+    var interval = setInterval(function () {
+      setCycleIdx(function (prev) { return (prev + 1) % 12; });
+    }, speed);
+    return function () { clearInterval(interval); };
+  }, [phase]);
 
   // Animations
   var orbGlow = useSharedValue(0);
@@ -2077,9 +2097,10 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
   var ringScale2 = useSharedValue(0);
   var ringScale3 = useSharedValue(0);
   var ringScale4 = useSharedValue(0);
-  var symbolScale = useSharedValue(0);
+  var symbolScale = useSharedValue(0.01);
   var symbolRotate = useSharedValue(-180);
   var detailsOpacity = useSharedValue(0);
+  var heroImageOpacity = useSharedValue(0);
   var shimmerX = useSharedValue(-1);
   var particleAngle = useSharedValue(0);
   var loadTextGlow = useSharedValue(0);
@@ -2097,7 +2118,24 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
         var result = await getBirthChartBasic(birthData.dateTime, birthData.lat, birthData.lng, lang);
         if (result && result.data) {
           setChartData(result.data);
-          setTimeout(function () { setPhase('reveal'); }, 3000);
+          // Slow-down cycle: decelerate and land on correct sign
+          var targetIdx = result.data.lagna && result.data.lagna.rashiId ? result.data.lagna.rashiId - 1 : 0;
+          var slowSteps = [250, 300, 360, 430, 520, 620, 750, 900, 1100];
+          var currentStep = 0;
+          var slowInterval;
+          function doSlowStep() {
+            if (currentStep < slowSteps.length) {
+              setCycleIdx(function (prev) { return (prev + 1) % 12; });
+              currentStep++;
+              slowInterval = setTimeout(doSlowStep, slowSteps[currentStep - 1]);
+            } else {
+              // Land exactly on the correct sign
+              setCycleIdx(targetIdx);
+              setTimeout(function () { setPhase('reveal'); }, 800);
+            }
+          }
+          // Wait a moment then begin slowdown
+          setTimeout(function () { doSlowStep(); }, 600);
         } else {
           setPhase('skip');
         }
@@ -2157,6 +2195,8 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
         withSpring(1, { damping: 8, stiffness: 100 })
       );
       symbolRotate.value = withDelay(300, withSpring(0, { damping: 10, stiffness: 60 }));
+      // Fade in the hero zodiac image separately (avoids Image+transform bugs)
+      heroImageOpacity.value = withDelay(300, withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) }));
       detailsOpacity.value = withDelay(1400, withTiming(1, { duration: 700 }));
     }
   }, [phase]);
@@ -2182,6 +2222,10 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
   var ring4Style = makeRingStyle(ringScale4, true);
   var symbolStyle = useAnimatedStyle(function () {
     return { transform: [{ scale: symbolScale.value }, { rotate: symbolRotate.value + 'deg' }] };
+  });
+  // Separate style for zodiac image — opacity only (no transform), avoids Image+transform rendering bugs
+  var heroImageStyle = useAnimatedStyle(function () {
+    return { opacity: heroImageOpacity.value };
   });
   var detailStyle = useAnimatedStyle(function () {
     return { opacity: detailsOpacity.value };
@@ -2242,55 +2286,48 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
   var vortexTime = birthData ? (birthData.dateTime || '').split('T')[1] || '' : '';
 
   // ═══════════════════════════════════════════════════════════
-  //  LOADING PHASE — Cinematic cosmic energy buildup
+  //  LOADING PHASE — Zodiac sign cycling animation
   // ═══════════════════════════════════════════════════════════
+  var CYCLE_SIGN_NAMES = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+  var CYCLE_COLORS = ['#FF4500','#8B6914','#4A90D9','#1E90FF','#FF4500','#8B6914','#4A90D9','#1E90FF','#FF4500','#8B6914','#4A90D9','#1E90FF'];
+
   if (phase === 'loading') {
+    var cycleColor = CYCLE_COLORS[cycleIdx] || '#FFB800';
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
+        {/* Background Rashi Chakra */}
+        <View style={{ position: 'absolute', opacity: 0.10, pointerEvents: 'none' }}>
+          <AwesomeRashiChakra size={Math.min(SW * 0.95, 360)} />
+        </View>
+
         {/* Background radial pulse */}
         <Animated.View style={[{ position: 'absolute', width: SH * 0.6, height: SH * 0.6, borderRadius: SH * 0.3, backgroundColor: 'rgba(255,140,0,0.04)' }, bgPulseStyle]} />
 
         <StarVortex name={displayName || ''} dateStr={vortexDate} timeStr={vortexTime} />
 
         <View style={{ width: 220, height: 220, alignItems: 'center', justifyContent: 'center' }}>
-          {/* Expanding rings — 4 layers for depth */}
-          <Animated.View style={[lr.ring, { width: 220, height: 220, borderRadius: 110, borderColor: '#FF6D00' }, ring1Style]} />
-          <Animated.View style={[lr.ring, { width: 190, height: 190, borderRadius: 95, borderColor: '#FFB800' }, ring2Style]} />
-          <Animated.View style={[lr.ring, { width: 160, height: 160, borderRadius: 80, borderColor: '#FFD54F' }, ring3Style]} />
-          <Animated.View style={[lr.ring, { width: 130, height: 130, borderRadius: 65, borderColor: '#FFF176' }, ring4Style]} />
-
-          {/* Orbiting particles — inner ring */}
-          {innerParticles.map(function (pStyle, i) {
-            return (
-              <Animated.View key={'ip' + i} style={pStyle}>
-                <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#FFD54F', ...boxShadow('#FFB800', { width: 0, height: 0 }, 1, 6) }} />
-              </Animated.View>
-            );
-          })}
-          {/* Orbiting particles — outer ring */}
-          {outerParticles.map(function (pStyle, i) {
-            return (
-              <Animated.View key={'op' + i} style={pStyle}>
-                <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#FFB800' }} />
-              </Animated.View>
-            );
-          })}
-
-          {/* Central energy orb — large with glass effect */}
-          <Animated.View style={[{ width: 100, height: 100, borderRadius: 50, overflow: 'hidden', ...boxShadow('#FFB800', { width: 0, height: 0 }, 1, 40) }, orbStyle]}>
-            <LinearGradient
-              colors={['#FFF176', '#FFD54F', '#FFB800', '#FF8C00', '#E65100']}
-              style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 50 }}
-              start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
-            >
-              {/* Glass shine */}
+          {/* Cycling zodiac image orb */}
+          <Animated.View style={[{ width: 140, height: 140, alignItems: 'center', justifyContent: 'center' }, orbStyle]}>
+            {/* Background circle */}
+            <View style={{ position: 'absolute', width: 140, height: 140, borderRadius: 70, overflow: 'hidden', ...boxShadow('#FFB800', { width: 0, height: 0 }, 1, 45) }}>
               <LinearGradient
-                colors={['rgba(255,255,255,0.45)', 'rgba(255,255,255,0.1)', 'transparent']}
-                style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '45%', borderTopLeftRadius: 50, borderTopRightRadius: 50 }}
+                colors={['rgba(255,241,118,0.25)', 'rgba(255,184,0,0.15)', 'rgba(255,140,0,0.10)']}
+                style={{ width: 140, height: 140 }}
+                start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
               />
-              <Text style={{ fontSize: 44, ...textShadow('rgba(0,0,0,0.3)', { width: 0, height: 2 }, 8) }}>{'\u2728'}</Text>
-            </LinearGradient>
+            </View>
+            {/* Border ring */}
+            <View style={{ position: 'absolute', width: 140, height: 140, borderRadius: 70, borderWidth: 2.5, borderColor: 'rgba(255,184,0,0.50)' }} />
+            {/* Zodiac image — NOT inside overflow:hidden */}
+            <Image source={ZODIAC_IMAGES[cycleIdx]} resizeMode="contain" style={{ width: 100, height: 100 }} />
           </Animated.View>
+
+          {/* Sign name cycling below the orb */}
+          <View style={{ position: 'absolute', bottom: 10 }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: 'rgba(255,214,102,0.7)', textAlign: 'center', letterSpacing: 1 }}>
+              {CYCLE_SIGN_NAMES[cycleIdx]}
+            </Text>
+          </View>
         </View>
 
         {/* Loading text with glow */}
@@ -2331,7 +2368,8 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     var personality = chartData.personality || {};
     var element = ZODIAC_ELEMENTS[lagna.name] || 'fire';
     var elemColors = ELEMENT_COLORS[element];
-    var zodiacSymbol = ZODIAC_SYMBOLS[lagna.name] || '⭐';
+    var zodiacSymbol = ZODIAC_SYMBOLS[lagna.name] || ZODIAC_SYMBOLS[lagna.english] || '⭐';
+    var zodiacImage = ZODIAC_IMAGE_MAP[lagna.name] || ZODIAC_IMAGE_MAP[lagna.english] || (lagna.rashiId ? ZODIAC_IMAGES[lagna.rashiId - 1] : null);
     var lagnaName = lang === 'si' ? (lagna.sinhala || lagna.english) : (lagna.english || lagna.name);
     var lagnaSubname = lang === 'si' ? (lagnaDetails.english || lagna.english) : (lagnaDetails.sinhala || lagna.sinhala);
     var moonName = lang === 'si' ? (moonSign.sinhala || moonSign.english) : (moonSign.english || moonSign.name);
@@ -2348,59 +2386,62 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
         {/* Big Bang flash overlay */}
         <Animated.View style={[{ position: 'absolute', top: -100, left: -100, right: -100, bottom: -100, backgroundColor: '#FFB800', zIndex: 100, pointerEvents: 'none' }, bigBangStyle]} />
 
-        {/* ── HERO: Compact Zodiac Orb + Lagna Name ── */}
-        <View style={{ alignItems: 'center', marginTop: isSmallScreen ? 4 : 10 }}>
-          <View style={{ width: 120, height: 120, alignItems: 'center', justifyContent: 'center' }}>
-            {/* Ambient rings */}
-            <Animated.View style={[lr.ring, { width: 120, height: 120, borderRadius: 60, borderColor: elemColors[0], borderWidth: 1.5 }, ring1Style]} />
-            <Animated.View style={[lr.ring, { width: 104, height: 104, borderRadius: 52, borderColor: elemColors[1] }, ring2Style]} />
+        {/* ── Background Rashi Chakra ── */}
+        <View style={{ position: 'absolute', top: SH * 0.08, left: (SW - Math.min(SW * 0.85, 320)) / 2 - 20, opacity: 0.12, pointerEvents: 'none' }}>
+          <AwesomeRashiChakra size={Math.min(SW * 0.85, 320)} />
+        </View>
 
-            {/* Orbiting dots */}
-            {innerParticles.slice(0, 4).map(function (pStyle, i) {
-              return (
-                <Animated.View key={'rp' + i} style={pStyle}>
-                  <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: elemColors[2], ...boxShadow(elemColors[1], { width: 0, height: 0 }, 1, 3) }} />
-                </Animated.View>
-              );
-            })}
-
-            {/* Main zodiac orb */}
-            <Animated.View style={[{ width: 76, height: 76, borderRadius: 38, overflow: 'hidden', ...boxShadow(elemColors[0], { width: 0, height: 0 }, 1, 30) }, symbolStyle]}>
-              <LinearGradient
-                colors={[elemColors[2], elemColors[1], elemColors[0]]}
-                style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 38 }}
-                start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
-              >
+        {/* ── HERO: Large Zodiac Image + Lagna Name ── */}
+        <View style={{ alignItems: 'center', marginTop: isSmallScreen ? 8 : 16 }}>
+          {/* Main zodiac image — large and prominent */}
+          <View style={{ width: 190, height: 190, alignItems: 'center', justifyContent: 'center' }}>
+            {/* Background gradient circle — animated with scale/rotate */}
+            <Animated.View style={[{ position: 'absolute', width: 190, height: 190, alignItems: 'center', justifyContent: 'center' }, symbolStyle]}>
+              <View style={{ width: 190, height: 190, borderRadius: 95, overflow: 'hidden', ...boxShadow(elemColors[0], { width: 0, height: 0 }, 1, 60) }}>
                 <LinearGradient
-                  colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.08)', 'transparent']}
-                  style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '48%', borderTopLeftRadius: 38, borderTopRightRadius: 38 }}
+                  colors={[elemColors[2] + '40', elemColors[1] + '25', elemColors[0] + '15']}
+                  style={{ width: 190, height: 190 }}
+                  start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
                 />
-                <Text style={{ fontSize: 36, color: '#FFF1D0', ...textShadow('rgba(0,0,0,0.5)', { width: 0, height: 2 }, 10) }}>{zodiacSymbol}</Text>
-              </LinearGradient>
+              </View>
+            </Animated.View>
+            {/* Border ring — animated with scale/rotate */}
+            <Animated.View style={[{ position: 'absolute', width: 190, height: 190, borderRadius: 95, borderWidth: 2.5, borderColor: elemColors[1] + '50' }, symbolStyle]} />
+            {/* Zodiac image — fade in only, NO transform wrapper (avoids Image+transform rendering bugs) */}
+            <Animated.View style={[{ alignItems: 'center', justifyContent: 'center' }, heroImageStyle]}>
+              {zodiacImage ? (
+                <Image source={zodiacImage} resizeMode="contain" style={{ width: 140, height: 140 }} />
+              ) : (
+                <Text style={{ fontSize: 52, color: '#FFF1D0', ...textShadow('rgba(0,0,0,0.5)', { width: 0, height: 2 }, 10) }}>{zodiacSymbol}</Text>
+              )}
             </Animated.View>
           </View>
 
           {/* Lagna name — tight spacing */}
-          <Animated.View entering={FadeInDown.delay(600).duration(400)} style={{ alignItems: 'center', marginTop: 4 }}>
-            <Text style={{ fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.4)', letterSpacing: 3, textTransform: 'uppercase' }}>{T.revealYourLagna}</Text>
-            <Text style={{ fontSize: 26, fontWeight: '900', color: elemColors[1], letterSpacing: 1, marginTop: 1, ...textShadow(elemColors[0] + '80', { width: 0, height: 0 }, 16) }}>{lagnaName}</Text>
-            {lagnaSubname ? <Text style={{ fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{lagnaSubname}</Text> : null}
+          <Animated.View entering={FadeInDown.delay(600).duration(400)} style={{ alignItems: 'center', marginTop: 10 }}>
+            <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.45)', letterSpacing: 3.5, textTransform: 'uppercase' }}>{T.revealYourLagna}</Text>
+            <Text style={{ fontSize: 34, fontWeight: '900', color: elemColors[1], letterSpacing: 1.2, marginTop: 3, ...textShadow(elemColors[0] + '80', { width: 0, height: 0 }, 20) }}>{lagnaName}</Text>
+            {lagnaSubname ? <Text style={{ fontSize: 15, fontWeight: '500', color: 'rgba(255,255,255,0.40)', marginTop: 3 }}>{lagnaSubname}</Text> : null}
           </Animated.View>
         </View>
 
         {/* ── THREE SIGN CARDS — compact row ── */}
-        <Animated.View entering={FadeInDown.delay(800).duration(400)} style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
+        <Animated.View entering={FadeInDown.delay(800).duration(400)} style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
           {[
-            { emoji: ZODIAC_SYMBOLS[moonSign.name] || '🌙', label: T.revealMoonSign, value: moonName, color: '#A78BFA' },
-            { emoji: '\u2B50', label: T.revealNakshatra, value: lang === 'si' ? (nakshatraSinhala || nakshatraName) : nakshatraName, color: '#FFB800' },
-            { emoji: ZODIAC_SYMBOLS[sunSign.name] || '☀️', label: T.revealSunSign, value: sunName, color: '#FF6B9D' },
+            { emoji: ZODIAC_SYMBOLS[moonSign.name] || ZODIAC_SYMBOLS[moonSign.english] || '🌙', image: ZODIAC_IMAGE_MAP[moonSign.name] || ZODIAC_IMAGE_MAP[moonSign.english] || null, label: T.revealMoonSign, value: moonName, color: '#A78BFA' },
+            { emoji: '\u2B50', image: null, label: T.revealNakshatra, value: lang === 'si' ? (nakshatraSinhala || nakshatraName) : nakshatraName, color: '#FFB800' },
+            { emoji: ZODIAC_SYMBOLS[sunSign.name] || ZODIAC_SYMBOLS[sunSign.english] || '☀️', image: ZODIAC_IMAGE_MAP[sunSign.name] || ZODIAC_IMAGE_MAP[sunSign.english] || null, label: T.revealSunSign, value: sunName, color: '#FF6B9D' },
           ].map(function (card, i) {
             return (
-              <View key={i} style={{ flex: 1, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: card.color + '18' }}>
-                <LinearGradient colors={[card.color + '10', 'rgba(15,10,30,0.5)']} style={{ paddingVertical: 10, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 18, marginBottom: 3 }}>{card.emoji}</Text>
-                  <Text style={{ fontSize: 7, fontWeight: '700', color: 'rgba(255,255,255,0.35)', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 2 }}>{card.label}</Text>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: card.color, textAlign: 'center', paddingHorizontal: 2 }} numberOfLines={1}>{card.value}</Text>
+              <View key={i} style={{ flex: 1, borderRadius: 14, overflow: 'hidden', borderWidth: 1.5, borderColor: card.color + '22' }}>
+                <LinearGradient colors={[card.color + '14', 'rgba(15,10,30,0.5)']} style={{ paddingVertical: 14, alignItems: 'center' }}>
+                  {card.image ? (
+                    <Image source={card.image} resizeMode="contain" style={{ width: 44, height: 44, marginBottom: 5 }} />
+                  ) : (
+                    <Text style={{ fontSize: 28, marginBottom: 5 }}>{card.emoji}</Text>
+                  )}
+                  <Text style={{ fontSize: 8, fontWeight: '700', color: 'rgba(255,255,255,0.40)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 }}>{card.label}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: card.color, textAlign: 'center', paddingHorizontal: 4 }} numberOfLines={1}>{card.value}</Text>
                 </LinearGradient>
               </View>
             );
