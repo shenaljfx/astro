@@ -2565,7 +2565,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     var isSmallScreen = SH < 700;
 
     return (
-      <View style={{ flex: 1, paddingHorizontal: 20 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 16 }} showsVerticalScrollIndicator={false} bounces={false}>
 
         {/* Big Bang flash overlay */}
         <Animated.View style={[{ position: 'absolute', top: -100, left: -100, right: -100, bottom: -100, backgroundColor: '#FFB800', zIndex: 100, pointerEvents: 'none' }, bigBangStyle]} />
@@ -2718,7 +2718,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
           <PrimaryButton label={lang === 'si' ? '🔓 මගේ සම්පූර්ණ ඉරණම අගුළු අරින්න' : '🔓 Unlock My Complete Destiny Now'} onPress={onContinue} icon="sparkles" />
           <GhostButton label={T.revealSkip} onPress={onContinue} />
         </Animated.View>
-      </View>
+      </ScrollView>
     );
   }
 
