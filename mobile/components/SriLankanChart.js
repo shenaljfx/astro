@@ -253,7 +253,7 @@ export default function SriLankanChart({ rashiChart, lagnaRashiId, language, cha
             />
           )}
           <Text style={[styles.centerTitle, isSmall && { fontSize: 8 }]}>
-            {language === 'si' ? '\u0DBB\u0DCF\u0DC1\u0DD2 \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA' : 'Rashi Kendara'}
+            {language === 'si' ? '\u0DBB\u0DCF\u0DC1\u0DD2 \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA' : 'Birth Chart'}
           </Text>
           {ZODIAC_IMAGES[lagnaRashiId - 1] && (
             <Image
@@ -268,7 +268,7 @@ export default function SriLankanChart({ rashiChart, lagnaRashiId, language, cha
           )}
           <Text style={[styles.centerLagna, isSmall && { fontSize: 11 }]}>{lagnaName}</Text>
           <Text style={[styles.centerSub, isSmall && { fontSize: 7 }]}>
-            {language === 'si' ? '\u0DBD\u0D9C\u0DCA\u0DB1\u0DBA' : 'Lagna'}
+            {language === 'si' ? '\u0DBD\u0D9C\u0DCA\u0DB1\u0DBA' : 'Rising Sign'}
           </Text>
         </View>
         {renderEdge(10)}

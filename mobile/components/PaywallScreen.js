@@ -47,29 +47,31 @@ var LOGO_SIZE = IS_SMALL ? 76 : 92;
 var CONTENT = {
   onboarding: {
     en: {
-      badge: '🟢 2,847 PEOPLE JOINED TODAY',
-      title: 'Your Chart Is\nReady to Unlock! ✨',
-      subtitle: 'Don\'t lose the birth chart you just created — unlock full access to see everything the stars reveal about you!',
+      badge: '� LIMITED LAUNCH OFFER',
+      title: 'Your Destiny Chart\nIs Ready! ✨',
+      subtitle: 'We\'ve already decoded your birth chart — don\'t let this cosmic reading vanish forever!',
       features: [
         '🔮 Your full birth chart, explained simply',
-        '⚠️ Alerts for bad times, Maraka & Apala',
+        '⚠️ Get warned before bad planetary periods hit',
         '🪐 See how planets affect your daily life',
         '💬 Chat with our AI Astrologer anytime',
+        '💍 Marriage, wealth & career timing revealed',
       ],
-      cta: 'See What\'s Written in My Stars',
+      cta: 'Unlock My Complete Destiny 🔓',
       ctaSub: 'Cancel anytime • No hidden charges • Protected by Google Play',
     },
     si: {
-      badge: '🟢 අද 2,847 දෙනෙක් එක්වුණා',
-      title: 'ඔයාගේ කේන්දරේ\nඅගුළු අරින්න! ✨',
-      subtitle: 'ඔයා දැන් හැදුවු කේන්දරේ නැති වෙන්න දෙන්න එපා — ඔයාගේ තරු කියන හැමදේම දැන්ම බලන්න!',
+      badge: '� සීමිත පිරිනැමීමක්',
+      title: 'ඔයාගේ කේන්දරේ\nසූදානම්! ✨',
+      subtitle: 'ඔයාගේ කේන්දරේ දැනටමත් සකස් කළා — මේ ග්‍රහ කියවීම සදහටම අහිමි වෙන්න දෙන්න එපා!',
       features: [
         '🔮 කේන්දරේ සම්පූර්ණ විස්තරය සිංහලෙන්ම',
         '⚠️ මාරක, අපල එන කාල කලින්ම දැනගමු',
         '🪐 දවසේ සහ සතියේ පලාපල ඔයාටම',
         '💬 ඕනෑම ප්‍රශ්නයක් අපේ AI එකෙන් අහන්න',
+        '💍 විවාහය, ධනය, රස්සාව — සියල්ල',
       ],
-      cta: 'මගේ තරු මොනවද කියන්නේ බලන්න',
+      cta: '🔓 මගේ සම්පූර්ණ ඉරණම අගුළු අරින්න',
       ctaSub: 'ඕනෑම වෙලාවක නවතන්න • Google Play ආරක්ෂිතයි',
     },
   },
@@ -181,6 +183,20 @@ for (var _pi = 0; _pi < 12; _pi++) {
   });
 }
 
+// ─── Paywall Testimonials ─────────────────────────────────────
+var PW_TESTIMONIALS = {
+  en: [
+    { name: 'Amaya K.', text: '"The danger period warning literally saved my career!"', stars: 5 },
+    { name: 'Dinesh R.', text: '"Marriage chart accuracy was unreal. Mind blown."', stars: 5 },
+    { name: 'Priya M.', text: '"Worth every rupee. AI caught what no astrologer did."', stars: 5 },
+  ],
+  si: [
+    { name: 'අමායා කේ.', text: '"අවදානම් කාල ඇඟවීම නිසා රස්සාව බේරුණා!"', stars: 5 },
+    { name: 'දිනේෂ් ආර්.', text: '"විවාහ කේන්දරේ 100% හරි ගියා. ඇදහිය නොහැකියි."', stars: 5 },
+    { name: 'ප්‍රියා එම්.', text: '"AI එකෙන් ජ්‍යෝතිෂවේදියෙක්වත් නොකියපු දේ කිව්වා."', stars: 5 },
+  ],
+};
+
 function SingleParticle({ p }) {
   var anim = useSharedValue(0);
   useEffect(function () {
@@ -242,10 +258,47 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
   var [restoring, setRestoring] = useState(false);
   var [error, setError] = useState('');
 
+  // ── Countdown Timer ──
+  var [countdown, setCountdown] = useState(14 * 60 + 59);
+  useEffect(function () {
+    if (!visible) return;
+    var timer = setInterval(function () {
+      setCountdown(function (prev) { return prev > 0 ? prev - 1 : 14 * 60 + 59; });
+    }, 1000);
+    return function () { clearInterval(timer); };
+  }, [visible]);
+  var countdownMin = Math.floor(countdown / 60);
+  var countdownSec = countdown % 60;
+  var countdownStr = (countdownMin < 10 ? '0' : '') + countdownMin + ':' + (countdownSec < 10 ? '0' : '') + countdownSec;
+
+  // ── Live user counter ──
+  var [liveUsers, setLiveUsers] = useState(2847);
+  useEffect(function () {
+    if (!visible) return;
+    var userTimer = setInterval(function () {
+      setLiveUsers(function (prev) { return prev + Math.floor(Math.random() * 3) + 1; });
+    }, 3000 + Math.random() * 5000);
+    return function () { clearInterval(userTimer); };
+  }, [visible]);
+
+  // ── Rotating testimonial ──
+  var [testimonialIdx, setTestimonialIdx] = useState(0);
+  useEffect(function () {
+    if (!visible) return;
+    var tTimer = setInterval(function () {
+      setTestimonialIdx(function (prev) { return (prev + 1) % PW_TESTIMONIALS.en.length; });
+    }, 4000);
+    return function () { clearInterval(tTimer); };
+  }, [visible]);
+  var pwTestimonials = lang === 'si' ? PW_TESTIMONIALS.si : PW_TESTIMONIALS.en;
+  var currentTestimonial = pwTestimonials[testimonialIdx];
+
   // Animations
   var btnGlow = useSharedValue(0);
   var btnPulse = useSharedValue(0);
   var chakraRotate = useSharedValue(0);
+  var timerFlash = useSharedValue(0);
+  var liveDotPulse = useSharedValue(0);
 
   useEffect(function () {
     btnGlow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
@@ -255,6 +308,8 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
       withTiming(0, { duration: 1000 })
     ), -1, false);
     chakraRotate.value = withRepeat(withTiming(360, { duration: 90000, easing: Easing.linear }), -1, false);
+    timerFlash.value = withRepeat(withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    liveDotPulse.value = withRepeat(withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.sin) }), -1, true);
   }, []);
 
   var btnGlowStyle = useAnimatedStyle(function () {
@@ -270,6 +325,17 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
 
   var chakraStyle = useAnimatedStyle(function () {
     return { transform: [{ rotate: chakraRotate.value + 'deg' }] };
+  });
+
+  var timerPulseStyle = useAnimatedStyle(function () {
+    return { opacity: interpolate(timerFlash.value, [0, 0.5, 1], [0.8, 1, 0.8]) };
+  });
+
+  var liveDotStyle = useAnimatedStyle(function () {
+    return {
+      transform: [{ scale: interpolate(liveDotPulse.value, [0, 1], [0.8, 1.3]) }],
+      opacity: interpolate(liveDotPulse.value, [0, 1], [0.5, 1]),
+    };
   });
 
   // Load offerings
@@ -408,15 +474,27 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
 
           {/* ── MIDDLE: Badge + Title + Features + Price ── */}
           <View style={s.middleSection}>
-            {/* Badge */}
-            <Animated.View entering={FadeInDown.delay(200).duration(400)} style={s.badgeWrap}>
-              <LinearGradient
-                colors={[accent.primary + '1F', 'rgba(147,51,234,0.08)']}
-                style={s.badgePill}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              >
-                <Text style={[s.badgeText, { color: accent.primary }]}>{content.badge}</Text>
-              </LinearGradient>
+            {/* Urgency Countdown Timer */}
+            <Animated.View entering={FadeInDown.delay(150).duration(400)} style={s.badgeWrap}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,60,60,0.08)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,60,60,0.2)' }}>
+                <Ionicons name="timer-outline" size={13} color="#FF6B6B" />
+                <Text style={{ fontSize: 9, fontWeight: '800', color: '#FF6B6B', letterSpacing: 0.5 }}>
+                  {lang === 'si' ? 'පිරිනැමීම අවසන් වෙයි:' : 'OFFER ENDS IN:'}
+                </Text>
+                <Animated.View style={[{ backgroundColor: 'rgba(255,60,60,0.15)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }, timerPulseStyle]}>
+                  <Text style={{ fontSize: 12, fontWeight: '900', color: '#FF4444', fontVariant: ['tabular-nums'], letterSpacing: 1 }}>{countdownStr}</Text>
+                </Animated.View>
+              </View>
+            </Animated.View>
+
+            {/* Live Counter */}
+            <Animated.View entering={FadeInDown.delay(200).duration(350)} style={{ marginBottom: IS_SMALL ? 6 : 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Animated.View style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#34D399' }, liveDotStyle]} />
+                <Text style={{ fontSize: 9, fontWeight: '700', color: '#34D399', letterSpacing: 0.3 }}>
+                  {lang === 'si' ? 'අද ' + liveUsers.toLocaleString() + ' දෙනෙක් එක්වුණා' : liveUsers.toLocaleString() + ' people joined today'}
+                </Text>
+              </View>
             </Animated.View>
 
             {/* Title */}
@@ -442,6 +520,19 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
                 })}
               </LinearGradient>
             </Animated.View>
+
+            {/* Testimonial */}
+            {src === 'onboarding' ? (
+              <Animated.View entering={FadeInDown.delay(450).duration(400)} style={{ width: '100%', marginBottom: IS_SMALL ? 2 : 4 }}>
+                <View style={{ backgroundColor: 'rgba(167,139,250,0.05)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 10, borderWidth: 1, borderColor: 'rgba(167,139,250,0.10)' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 2 }}>
+                    {[0, 1, 2, 3, 4].map(function (s) { return <Ionicons key={s} name="star" size={9} color="#FFB800" />; })}
+                    <Text style={{ fontSize: 8, fontWeight: '700', color: 'rgba(255,255,255,0.35)', marginLeft: 3 }}>{currentTestimonial.name}</Text>
+                  </View>
+                  <Text style={{ fontSize: 10, fontWeight: '600', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', lineHeight: 14 }} numberOfLines={2}>{currentTestimonial.text}</Text>
+                </View>
+              </Animated.View>
+            ) : null}
 
           </View>
 
@@ -469,9 +560,16 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
                   </View>
                   {/* Per-day breakdown */}
                   {!isOneTime ? (
-                    <Text style={{ fontSize: 10, color: 'rgba(52,211,153,0.7)', fontWeight: '600', marginTop: 2 }}>
-                      {lang === 'si' ? '= දවසට රු. 9 යි! එක තේ එකකටත් වඩා අඩුයි ☕' : '= Only ' + (isInternational ? '$0.17' : 'LKR 9') + '/day — less than a cup of tea ☕'}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <View style={{ backgroundColor: 'rgba(52,211,153,0.12)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                        <Text style={{ fontSize: 8, fontWeight: '800', color: '#34D399' }}>
+                          {isInternational ? 'SAVE 50%' : 'SAVE 44%'}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 9, color: 'rgba(52,211,153,0.7)', fontWeight: '600' }}>
+                        {lang === 'si' ? 'දවසට රු. 9 — තේ එකකටත් වඩා අඩුයි ☕' : 'Only ' + (isInternational ? '$0.17' : 'LKR 9') + '/day ☕'}
+                      </Text>
+                    </View>
                   ) : null}
                 </View>
               )}
@@ -503,7 +601,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
                       <ActivityIndicator size="small" color="#FFF" />
                     ) : (
                       <View style={s.ctaInner}>
-                        <Ionicons name={src === 'porondam' ? 'heart' : src === 'report' ? 'document-text' : 'sparkles'} size={18} color="#FFF" />
+                        <Ionicons name={src === 'porondam' ? 'heart' : src === 'report' ? 'document-text' : 'lock-open'} size={18} color="#FFF" />
                         <Text style={s.ctaText}>{content.cta}</Text>
                         <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
                       </View>

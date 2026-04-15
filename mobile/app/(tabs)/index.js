@@ -635,7 +635,7 @@ export default function HomeScreen() {
             <View style={s.nakPill}>
               <LinearGradient colors={['rgba(255,214,102,0.10)', 'rgba(255,140,0,0.06)']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
               <Ionicons name="star" size={12} color="#FFD666" />
-              <Text style={s.nakPillLabel}>{language === 'si' ? 'නක්ෂත්‍රය' : 'Nakshatra'}</Text>
+              <Text style={s.nakPillLabel}>{language === 'si' ? 'නක්ෂත්‍රය' : 'Lunar Mansion'}</Text>
               <View style={s.nakPillDot} />
               <Text style={s.nakPillValue}>{todayNakshatra}</Text>
             </View>
@@ -668,7 +668,7 @@ export default function HomeScreen() {
                 <Ionicons name="sparkles-outline" size={16} color="#34D399" />
               </View>
               <Text style={s.dashCellValue} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.65}>{tithiVal}</Text>
-              <Text style={s.dashCellLabel}>{language === 'si' ? 'තිථි' : 'Tithi'}</Text>
+              <Text style={s.dashCellLabel}>{language === 'si' ? 'තිථි' : 'Lunar Day'}</Text>
             </View>
             <View style={s.dashCell}>
               <View style={[s.dashCellIcon, { backgroundColor: 'rgba(103,232,249,0.10)' }]}>
@@ -691,8 +691,8 @@ export default function HomeScreen() {
               <View style={s.rahuContent}>
                 <Text style={[s.rahuTitle, rahuActive && s.rahuTitleActive]}>
                   {rahuActive
-                    ? (language === 'si' ? '⚠ රාහු කාලය සක්‍රීයයි' : '⚠ Rahu Kalaya Active')
-                    : (language === 'si' ? 'රාහු කාල' : 'Rahu Kalaya')
+                    ? (language === 'si' ? '⚠ රාහු කාලය සක්‍රීයයි' : '⚠ Inauspicious Period Active')
+                    : (language === 'si' ? 'රාහු කාල' : 'Inauspicious Window')
                   }
                 </Text>
                 <Text style={[s.rahuTime, rahuActive && s.rahuTimeActive]}>
@@ -864,7 +864,7 @@ export default function HomeScreen() {
               </View>
             </View>
             <View style={s.lagnaHeroRight}>
-              <Text style={s.lagnaHeroLabel}>{language === 'si' ? 'ලග්නය' : 'LAGNA'}</Text>
+              <Text style={s.lagnaHeroLabel}>{language === 'si' ? 'ලග්නය' : 'RISING SIGN'}</Text>
               <Text style={s.lagnaHeroName}>{lagnaName}</Text>
               {lagnaEn && language === 'si' ? <Text style={s.lagnaHeroSub}>{lagnaEn}</Text> : null}
               {lagna?.lord ? (
@@ -895,7 +895,7 @@ export default function HomeScreen() {
             <Animated.View entering={FadeInDown.delay(520).springify()} style={[s.glassTrioCard, { borderColor: 'rgba(52,211,153,0.18)' }]}>
               <LinearGradient colors={['rgba(52,211,153,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
               <Text style={s.glassTrioEmoji}>✦</Text>
-              <Text style={s.glassTrioLabel}>{language === 'si' ? 'නක්ෂත්‍ර' : 'Nakshatra'}</Text>
+              <Text style={s.glassTrioLabel}>{language === 'si' ? 'නක්ෂත්‍ර' : 'Birth Star'}</Text>
               <Text style={[s.glassTrioValue, { color: '#34D399' }]}>{nakName}</Text>
             </Animated.View>
           </View>

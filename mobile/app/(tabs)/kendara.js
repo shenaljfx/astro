@@ -1003,7 +1003,7 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="flame-outline" size={20} color={jyotishData.mangalDosha.hasDosha ? '#F87171' : '#34D399'} />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'කුජ දෝෂ විශ්ලේෂණය' : 'Mangal Dosha Analysis'}
+                    {language === 'si' ? 'කුජ දෝෂ විශ්ලේෂණය' : 'Mars Influence Analysis'}
                   </Text>
                 </View>
                 <View style={[styles.advCard, {
@@ -1054,7 +1054,7 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="planet-outline" size={20} color={jyotishData.sadeSati.status ? '#F59E0B' : '#34D399'} />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'සාඩේ සාති තත්ත්වය' : 'Sade Sati Status'}
+                    {language === 'si' ? 'සාඩේ සාති තත්ත්වය' : 'Saturn Transit Status'}
                   </Text>
                 </View>
                 <View style={[styles.advCard, {
@@ -1154,12 +1154,12 @@ export default function KendaraScreen() {
                   <LinearGradient colors={['rgba(6,182,212,0.06)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={kj.vargaPickerRow}>
                     {[
-                      { key: 'd9', label: 'D9', name: language === 'si' ? 'නවාංශ' : 'Navamsha', sub: language === 'si' ? 'විවාහය' : 'Marriage' },
-                      { key: 'd10', label: 'D10', name: language === 'si' ? 'දශාංශ' : 'Dashamsha', sub: language === 'si' ? 'රැකියාව' : 'Career' },
-                      { key: 'd7', label: 'D7', name: language === 'si' ? 'සප්තාංශ' : 'Saptamsha', sub: language === 'si' ? 'දරුවෝ' : 'Children' },
-                      { key: 'd4', label: 'D4', name: language === 'si' ? 'චතුර්ථාංශ' : 'Chaturthamsha', sub: language === 'si' ? 'වත්කම්' : 'Property' },
-                      { key: 'd24', label: 'D24', name: language === 'si' ? 'චතුර්විංශාංශ' : 'Siddhamsha', sub: language === 'si' ? 'අධ්‍යාපනය' : 'Education' },
-                      { key: 'd20', label: 'D20', name: language === 'si' ? 'විංශාංශ' : 'Vimsamsha', sub: language === 'si' ? 'ආධ්‍යාත්මික' : 'Spiritual' },
+                      { key: 'd9', label: 'D9', name: language === 'si' ? 'නවාංශ' : 'Marriage Chart', sub: language === 'si' ? 'විවාහය' : 'Marriage' },
+                      { key: 'd10', label: 'D10', name: language === 'si' ? 'දශාංශ' : 'Career Chart', sub: language === 'si' ? 'රැකියාව' : 'Career' },
+                      { key: 'd7', label: 'D7', name: language === 'si' ? 'සප්තාංශ' : 'Children Chart', sub: language === 'si' ? 'දරුවෝ' : 'Children' },
+                      { key: 'd4', label: 'D4', name: language === 'si' ? 'චතුර්ථාංශ' : 'Property Chart', sub: language === 'si' ? 'වත්කම්' : 'Property' },
+                      { key: 'd24', label: 'D24', name: language === 'si' ? 'චතුර්විංශාංශ' : 'Education Chart', sub: language === 'si' ? 'අධ්‍යාපනය' : 'Education' },
+                      { key: 'd20', label: 'D20', name: language === 'si' ? 'විංශාංශ' : 'Spiritual Chart', sub: language === 'si' ? 'ආධ්‍යාත්මික' : 'Spiritual' },
                     ].map(function (v) {
                       var isActive = selectedVarga === v.key;
                       return (
@@ -1184,7 +1184,7 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="shield-outline" size={20} color="#f87171" />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'මාරක අපල — භයානක කාල' : 'Maraka Apala — Dangerous Periods'}
+                    {language === 'si' ? 'මාරක අපල — භයානක කාල' : 'Challenging & Dangerous Periods'}
                   </Text>
                 </View>
 
