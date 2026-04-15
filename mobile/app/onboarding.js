@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Onboarding Flow — Mobile-First Cosmic Design
  * Step -1: Language Selection (Sinhala / English)
  * Step 0:  Welcome
@@ -206,154 +206,154 @@ function GoldenIcon({ name, size }) {
 
 var OB = {
   en: {
-    welcomeSubtitle: "Your Personal Vedic Astrology App",
-    welcomeDesc: "Discover your true Lagna personality\nSee what the planets reveal about you\nUnlock your hidden cosmic blueprint",
-    welcomeBtn: "What Do My Stars Say?",
-    welcomeHint: "Join 50,000+ Sri Lankans discovering their destiny",
-    googleTitle: "Save Your Chart",
-    googleSubtitle: "Sign in to keep your Lagna analysis — it'll be lost otherwise",
-    googleBtn: "Continue with Google",
+    welcomeSubtitle: "The Universe Has a Message for You",
+    welcomeDesc: "Your Lagna holds secrets you've never heard\nThe planets are whispering — are you listening?\nYour cosmic destiny is waiting to be decoded",
+    welcomeBtn: "Reveal My Destiny Now",
+    welcomeHint: "Thousands are discovering what their stars hide",
+    googleTitle: "Your Chart Will Disappear!",
+    googleSubtitle: "This one-of-a-kind cosmic reading vanishes if you don't save it now",
+    googleBtn: "Save My Reading",
     googleFail: "Sign in failed. Please try again.",
-    subTitle: "Unlock Premium",
-    subSubtitle: "Full access to all cosmic features",
-    subFeature1: "Weekly Lagna Palapala",
-    subFeature2: "Full Vedic Birth Chart (Kendara)",
-    subFeature3: "Marriage Compatibility (Porondam)",
-    subFeature4: "Complete Life Report with AI",
-    subFeature5: "Weekly Nakath & Rahu Alerts",
-    subFeature6: "Personalised Predictions",
+    subTitle: "90% Of Your Destiny Is Still Hidden! 🌟",
+    subSubtitle: "Your ultimate power and wealth secrets are locked \u2014 unlock them now",
+    subFeature1: "Weekly destiny forecast only for your Lagna",
+    subFeature2: "Your complete birth chart — fully decoded",
+    subFeature3: "Find your true soulmate match score",
+    subFeature4: "AI reads your past, present & future",
+    subFeature5: "Get warned before bad planetary periods hit",
+    subFeature6: "Secret predictions visible only to you",
     subPerDay: "/day",
     subNote: "Billed via Google Play / App Store",
     subNetworks: "Google Play \u2022 App Store \u2022 All cards accepted",
-    subBtn: "Activate Premium",
+    subBtn: "Show Me Everything",
     subPayFail: "Payment failed. Please try again or use a different card.",
     subFailed: "Subscription failed",
-    nameTitle: "What's Your Name?",
-    nameSubtitle: "We'll personalise everything for you",
+    nameTitle: "Your Stars Are Calling You",
+    nameSubtitle: "Type your name — the cosmos is already reading it",
     nameLabel: "YOUR NAME",
     namePlaceholder: "Enter your name",
     nameError: "Please enter your name (min 2 chars)",
-    dateTitle: "Birth Date",
-    dateSubtitle: "For accurate Vedic readings",
+    dateTitle: "This Date Changed Everything",
+    dateSubtitle: "The exact day the universe wrote your fate",
     yearLabel: "YEAR",
     yearPlaceholder: "1995",
     monthLabel: "MONTH",
     dayLabel: "DAY",
     dayPlaceholder: "15",
     dateError: "Please enter a valid birth date",
-    dateHint: "Birth date helps us calculate your Lagna chart",
-    timeTitle: "Birth Time",
-    timeSubtitle: "Check your birth certificate",
+    dateHint: "This unlocks your ruling planet and zodiac lord",
+    timeTitle: "The Exact Moment That Defines You",
+    timeSubtitle: "One minute difference = completely different destiny",
     hourLabel: "HOUR",
     minuteLabel: "MINUTE",
     timeHint: "Exact time = precise Lagna chart.\nIf unknown, skip \u2014 we'll use 12:00 PM.",
-    placeTitle: "Birth Place",
-    placeSubtitle: "Search any city worldwide",
+    placeTitle: "Where Your Destiny Was Written",
+    placeSubtitle: "The sky above your birthplace holds the answer",
     placeSearch: "Search any city...",
-    placeHint: "Search any city in the world for accurate coordinates.\nDefault: Colombo, Sri Lanka",
+    placeHint: "Different location = different planetary angles.\nThis makes your chart uniquely yours.",
     subProgressName: "Name",
     subProgressDate: "Date",
     subProgressTime: "Time",
     subProgressPlace: "Place",
     back: "Back",
-    continueBtn: "Continue",
-    completeSetup: "Complete Setup",
+    continueBtn: "Reveal Next",
+    completeSetup: "Decode My Stars",
     skipBirth: "Skip \u2014 add later in Profile",
     saveFailed: "Failed to save. Please try again.",
-    completeTitle: "You're All Set!",
-    completeSubtitle: "Your cosmic journey begins now",
-    completeLoading: "Calculating your stars...",
+    completeTitle: "The Stars Have Spoken!",
+    completeSubtitle: "Your personal cosmic universe is ready",
+    completeLoading: "Activating your star map...",
     // Lagna Reveal
-    revealLoading: "Reading the celestial map...",
-    revealLoadingSub: "Aligning planets to your birth moment",
-    revealYourLagna: "Your Ascendant",
+    revealLoading: "Decoding your celestial DNA...",
+    revealLoadingSub: "Mapping 9 planets to your exact birth second",
+    revealYourLagna: "Your Rising Sign",
     revealMoonSign: "Moon Sign",
     revealSunSign: "Sun Sign",
     revealNakshatra: "Birth Star",
-    revealTraits: "Your Cosmic Personality",
+    revealTraits: "Your Hidden Cosmic Superpowers",
     revealLagnaTraits: "Lagna Traits",
     revealMoonTraits: "Moon Traits",
-    revealGem: "Lucky Gem",
-    revealColor: "Lucky Color",
-    revealDay: "Lucky Day",
-    revealCareer: "Career Path",
-    revealContinue: "Enter the Cosmos",
+    revealGem: "Your Power Stone",
+    revealColor: "Your Power Color",
+    revealDay: "Your Luckiest Day",
+    revealCareer: "Your Destined Path",
+    revealContinue: "Unlock My Complete Destiny 🔓",
     revealSkip: "Skip to Dashboard",
     months: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
   },
   si: {
-    welcomeSubtitle: "\u0dbd\u0d82\u0d9a\u0dcf\u0dc0\u0dda \u0d85\u0d82\u0d9a 1 \u0da2\u0dca\u200d\u0dba\u0ddd\u0dad\u0dd2\u0dc2 App \u0d91\u0d9a \uD83C\uDDF1\uD83C\uDDF0",
-    welcomeDesc: "ඔයාගේ ලග්න ගති ලක්ෂණ දැනගන්න\nග්‍රහයින් ඔයා ගැන කියන දේ බලන්න\nසැඟවුණු කේන්දර රහස් අගුළු අරින්න",
-    welcomeBtn: "\u0db8\u0d9c\u0dda \u0dad\u0dbb\u0dd4 \u0db8\u0ddc\u0d9a\u0da9 \u0d9a\u0dd2\u0dba\u0db1\u0dc0\u0dcf\u0daf?",
-    welcomeHint: "\u0dbd\u0d82\u0d9a\u0dcf\u0dc0\u0dda 50,000+ \u0d9a\u0dca \u0dc0\u0dd2\u0dc1\u0dca\u0dc0\u0dcf\u0dc3 \u0d9a\u0dc5 \u0dba\u0dd9\u0daf\u0dd4\u0db8",
-    googleTitle: "කේන්දරේ සේව් කරන්න",
-    googleSubtitle: "ඔයාගේ ලග්න විශ්ලේෂණය රැකගන්න — නැත්නම් මකා දැමෙයි",
-    googleBtn: "Google \u0dc4\u0dbb\u0dc4\u0dcf \u0db4\u0dd2\u0dc0\u0dd2\u0dc3\u0dd9\u0db1\u0dca\u0db1",
+    welcomeSubtitle: "විශ්වය ඔබට පණිවිඩයක් එවා ඇත",
+    welcomeDesc: "ඔබේ ලග්නයේ ඔබ කවදාවත් නොඇසූ රහස් තිබේ\nග්‍රහයන් ඔබ ගැන මොනවද කියන්නේ?\nඔබේ ඉරණම විකේතනය වීමට බලා සිටී",
+    welcomeBtn: "මගේ ඉරණම දැන් හෙළි කරන්න",
+    welcomeHint: "දහස් ගණනක් තම තරු රහස් සොයාගනිමින් සිටී",
+    googleTitle: "ඔබේ කේන්දරය අතුරුදහන් වේ!",
+    googleSubtitle: "මේ අද්විතීය ග්‍රහ කියවීම දැන් Save නොකළොත් සදහටම නැතිවේ",
+    googleBtn: "මගේ කියවීම Save කරන්න",
     googleFail: "\u0db4\u0dd2\u0dc0\u0dd2\u0dc3\u0dd3\u0db8 \u0d85\u0dc3\u0dcf\u0dbb\u0dca\u0dae\u0d9a\u0dba\u0dd2. \u0d9a\u0dbb\u0dd4\u0dab\u0dcf\u0d9a\u0dbb \u0db1\u0dd0\u0dc0\u0dad \u0d8b\u0dad\u0dca\u0dc3\u0dcf\u0dc4 \u0d9a\u0dbb\u0db1\u0dca\u0db1.",
-    subTitle: "Premium \u0daf\u0dcf\u0d9c\u0db1\u0dca\u0db1 \uD83D\uDC51",
-    subSubtitle: "\u0d85\u0db1\u0dcf\u0d9c\u0dad\u0dda \u0d9c\u0dd0\u0db1 \u0d94\u0d9a\u0dca\u0d9a\u0ddc\u0db8 \u0daf\u0dd0\u0db1\u0d9c\u0db1\u0dca\u0db1",
-    subFeature1: "\u0dc3\u0dad\u0dd2\u0db4\u0dad\u0dcf \u0dbd\u0d9c\u0dca\u0db1 \u0db4\u0dbd\u0dcf\u0db4\u0dbd",
-    subFeature2: "\u0dc3\u0db8\u0dca\u0db4\u0dd6\u0dbb\u0dca\u0dab \u0d9a\u0dda\u0db1\u0dca\u0daf\u0dbb\u0dda",
-    subFeature3: "\u0db4\u0ddc\u0dbb\u0ddc\u0db1\u0dca\u0daf\u0db8\u0dca \u0d9c\u0dd0\u0dbd\u0db4\u0dd3\u0db8",
-    subFeature4: "AI \u0d91\u0d9a\u0dd9\u0db1\u0dca \u0d85\u0dc4\u0dbd\u0dcf \u0daf\u0dd0\u0db1\u0d9c\u0db1\u0dca\u0db1",
-    subFeature5: "\u0db1\u0dd0\u0d9a\u0dd0\u0dad\u0dca \u0dc3\u0dc4 \u0dbb\u0dcf\u0dc4\u0dd4 \u0d9a\u0dcf\u0dbd\u0dda",
-    subFeature6: "\u0d94\u0dba\u0dcf\u0da7\u0db8 \u0dc4\u0dbb\u0dd2\u0dba\u0db1 \u0d85\u0db1\u0dcf\u0dc0\u0dd0\u0d9a\u0dd2",
+    subTitle: "ඔබේ ඉරණමෙන් 90%ක්ම සැඟවිලා! 🌟",
+    subSubtitle: "ඔබේ සැබෑ ධනය, දියුණුව සහ අනාගත රහස් අගුළු වැටී ඇත \u2014 දැන්ම අරින්න",
+    subFeature1: "ඔබේ ලග්නයට පමණක් සතිපතා ඉරණම් අනාවැකි",
+    subFeature2: "ඔබේ සම්පූර්ණ උපන් කේන්දරය — සියල්ල විකේතනය",
+    subFeature3: "ඔබේ සැබෑ ආත්ම සහකරු ගැළපීම් ලකුණු",
+    subFeature4: "AI ඔබේ අතීතය, වර්තමානය සහ අනාගතය කියවයි",
+    subFeature5: "නරක ග්‍රහ කාල පැමිණෙන්නට පෙර අනතුරු ඇඟවීම්",
+    subFeature6: "ඔබට පමණක් පෙනෙන රහස් අනාවැකි",
     subPerDay: "/\u0daf\u0dc0\u0dc3\u0da7",
     subNote: "Google Play / App Store \u0d94\u0dc3\u0dca\u0dc3\u0dda \u0d9c\u0dd9\u0dc0\u0db1\u0dca\u0db1 \u26A1",
     subNetworks: "Google Play \u2022 App Store \u2022 \u0dc3\u0dd2\u0dba\u0dbd\u0dd4\u0db8 \u0d9a\u0dcf\u0da9\u0dca\u0db4\u0dad\u0dca",
-    subBtn: "Activate Premium",
+    subBtn: "සියල්ල මට පෙන්වන්න",
     subPayFail: "\u0d9c\u0dd9\u0dc0\u0dd3\u0db8 \u0d85\u0dc3\u0dcf\u0dbb\u0dca\u0dae\u0d9a\u0dba\u0dd2. \u0d86\u0dba\u0dd2 \u0db6\u0dbd\u0db1\u0dca\u0db1.",
     subFailed: "\u0d87\u0d9a\u0dca\u0da7\u0dd2\u0dc0\u0dca \u0dc0\u0dd4\u0db1\u0dda \u0db1\u0dd1",
-    nameTitle: "\u0d94\u0dba\u0dcf\u0d9c\u0dda \u0db1\u0db8?",
-    nameSubtitle: "\u0d9a\u0dda\u0db1\u0dca\u0daf\u0dbb\u0dda \u0dc4\u0daf\u0db1\u0dca\u0db1 \u0db1\u0db8 \u0d95\u0db1",
-    nameLabel: "\u0db1\u0db8",
-    namePlaceholder: "\u0db1\u0db8 \u0db8\u0dd9\u0dad\u0db1 \u0d9c\u0dc4\u0db1\u0dca\u0db1",
-    nameError: "\u0db1\u0db8 \u0daf\u0dcf\u0dbd\u0dcf \u0d89\u0db1\u0dca\u0db1\u0d9a\u0ddd",
-    dateTitle: "\u0d89\u0db4\u0daf\u0dd4\u0db1 \u0daf\u0dd2\u0db1\u0dba",
-    dateSubtitle: "\u0d85\u0db1\u0dcf\u0dc0\u0dd0\u0d9a\u0dd2 \u0dc4\u0dbb\u0dd2\u0dba\u0da7\u0db8 \u0d9a\u0dd2\u0dba\u0db1\u0dca\u0db1 \u0db8\u0dda\u0d9a \u0d95\u0db1",
+    nameTitle: "තරු ඔබව කැඳවනවා",
+    nameSubtitle: "ඔබේ නම ලියන්න — විශ්වය දැනටමත් එය කියවමින් සිටී",
+    nameLabel: "නම",
+    namePlaceholder: "ඔබේ නම ලියන්න",
+    nameError: "නම දාලා ඉන්නකෝ",
+    dateTitle: "මේ දිනය සියල්ල වෙනස් කළා",
+    dateSubtitle: "විශ්වය ඔබේ ඉරණම ලියූ නිශ්චිත දිනය",
     yearLabel: "\u0d85\u0dc0\u0dd4\u0dbb\u0dd4\u0daf\u0dca\u0daf",
     yearPlaceholder: "1995",
     monthLabel: "\u0db8\u0dcf\u0dc3\u0dba",
     dayLabel: "\u0daf\u0dd2\u0db1\u0dba",
     dayPlaceholder: "15",
-    dateError: "\u0d89\u0db4\u0daf\u0dd4\u0db1 \u0daf\u0dd2\u0db1\u0dba \u0dc4\u0dbb\u0dd2\u0dba\u0da7 \u0daf\u0dcf\u0db1\u0dca\u0db1",
-    dateHint: "\u0db1\u0dd0\u0d9a\u0dd0\u0dad\u0dca, \u0dbd\u0d9c\u0dca\u0db1 \u0db6\u0dbd\u0db1\u0dca\u0db1 \u0db8\u0dda\u0d9a \u0d95\u0db1\u0db8\u0dba\u0dd2",
-    timeTitle: "\u0d89\u0db4\u0daf\u0dd4\u0db1 \u0dc0\u0dd9\u0dbd\u0dcf\u0dc0",
-    timeSubtitle: "\u0d89\u0db4\u0dca\u0db4\u0dd0\u0db1\u0dca\u0db1\u0dd9 \u0dad\u0dd2\u0dba\u0dd9\u0db1 \u0dc0\u0dd9\u0dbd\u0dcf\u0dc0",
+    dateError: "උපදින දිනය හරියට දාන්න",
+    dateHint: "මෙය ඔබේ ලග්නාධිපති ග්‍රහයා සහ රාශි පාලකයා හෙළි කරයි",
+    timeTitle: "ඔබව නිර්වචනය කරන නිශ්චිත මොහොත",
+    timeSubtitle: "එක මිනිත්තුවක වෙනසක් = සම්පූර්ණයෙන්ම වෙනස් ඉරණමක්",
     hourLabel: "\u0db4\u0dd0\u0dba",
     minuteLabel: "\u0db8\u0dd2\u0db1\u0dd2\u0dad\u0dca\u0dad\u0dd4",
-    timeHint: "\u0dc0\u0dd9\u0dbd\u0dcf\u0dc0 \u0dc4\u0dbb\u0dd2\u0dba\u0da7 \u0daf\u0db1\u0dca\u0db1\u0dc0\u0db1\u0db8\u0dca \u0d9c\u0dc4\u0db1\u0dca\u0db1.\n\u0daf\u0db1\u0dca\u0db1\u0dda \u0db1\u0dd0\u0dad\u0dca\u0db1\u0db8\u0dca \u0dc4\u0dd2\u0dc3\u0dca\u0dc0 \u0dad\u0dd2\u0dba\u0db1\u0dca\u0db1.",
-    placeTitle: "\u0d89\u0db4\u0daf\u0dd4\u0db1 \u0d9c\u0db8?",
-    placeSubtitle: "\u0dc0\u0dd2\u0dc1\u0dca\u0dc0\u0dba\u0dda \u0d94\u0db1\u0dd1\u0db8 \u0db1\u0d9c\u0dbb\u0dba\u0d9a\u0dca \u0dc3\u0ddc\u0dba\u0db1\u0dca\u0db1",
-    placeSearch: "\u0db1\u0d9c\u0dbb\u0dba \u0dc3\u0ddc\u0dba\u0db1\u0dca\u0db1...",
-    placeHint: "\u0dc0\u0dd2\u0dc1\u0dca\u0dc0\u0dba\u0dda \u0d94\u0db1\u0dd1\u0db8 \u0db1\u0d9c\u0dbb\u0dba\u0d9a\u0dca \u0dc3\u0ddc\u0dba\u0db1\u0dca\u0db1.\n\u0dc3\u0dca\u0dc0\u0dba\u0d82\u0d9a\u0dca\u200d\u0dbb\u0dd3\u0dba: \u0d9a\u0ddc\u0dc5\u0db9, \u0dc1\u0dca\u200d\u0dbb\u0dd3 \u0dbd\u0d82\u0d9a\u0dcf\u0dc0",
-    subProgressName: "\u0db1\u0db8",
-    subProgressDate: "\u0daf\u0dd2\u0db1\u0dba",
-    subProgressTime: "\u0dc0\u0dd9\u0dbd\u0dcf\u0dc0",
-    subProgressPlace: "\u0d9c\u0db8",
-    back: "\u0db4\u0dc3\u0dca\u0dc3\u0da7",
-    continueBtn: "\u0d89\u0dc3\u0dca\u0dc3\u0dbb\u0dc4\u0da7",
-    completeSetup: "\u0d94\u0d9a\u0dca\u0d9a\u0ddc\u0db8 \u0dc4\u0dbb\u0dd2",
-    skipBirth: "\u0dc0\u0dd2\u0dc3\u0dca\u0dad\u0dbb \u0db4\u0dc3\u0dca\u0dc3\u0dda \u0daf\u0dcf\u0db1\u0dca\u0db1\u0db8\u0dca",
-    saveFailed: "\u0dc3\u0dda\u0dc0\u0dca \u0dc0\u0dd4\u0db1\u0dda \u0db1\u0dd1. \u0d86\u0dba\u0dd2 \u0db6\u0dbd\u0db1\u0dca\u0db1.",
-    completeTitle: "\u0d9c\u0db8\u0db1 \u0db4\u0da7\u0db1\u0dca \u0d9c\u0db8\u0dd4! \uD83C\uDF1F",
-    completeSubtitle: "\u0d94\u0dba\u0dcf\u0d9c\u0dda \u0da2\u0dca\u200d\u0dba\u0ddd\u0dad\u0dd2\u0dc2 \u0d9c\u0db8\u0db1 \u0d86\u0dbb\u0db8\u0dca\u0db7\u0dba\u0dd2",
-    completeLoading: "\u0dad\u0dbb\u0dd4 \u0dbb\u0da7\u0dcf \u0d9c\u0dab\u0db1\u0dba \u0d9a\u0dbb\u0db8\u0dd2\u0db1\u0dca...",
+    timeHint: "හරියටම වේලාව = නිරවද්‍ය කේන්දරය.\nදන්නේ නැත්නම් මඟ හරින්න.",
+    placeTitle: "ඔබේ ඉරණම ලියැවුණු ස්ථානය",
+    placeSubtitle: "ඔබ උපන් ස්ථානයේ අහස පිළිතුර රඳවා ඇත",
+    placeSearch: "නගරය සොයන්න...",
+    placeHint: "වෙනස් ස්ථානයක් = වෙනස් ග්‍රහ කෝණ.\nමෙය ඔබේ කේන්දරය අද්විතීය කරයි.",
+    subProgressName: "නම",
+    subProgressDate: "දිනය",
+    subProgressTime: "වේලාව",
+    subProgressPlace: "ස්ථානය",
+    back: "පසුපසට",
+    continueBtn: "ඊළඟ රහස",
+    completeSetup: "මගේ තරු විකේතනය කරන්න",
+    skipBirth: "පසුව Profile එකෙන් දාන්නම්",
+    saveFailed: "සේව් වුනේ නැත. ආයි බලන්න.",
+    completeTitle: "තරු කතා කළා!",
+    completeSubtitle: "ඔබේම පෞද්ගලික තාරකා විශ්වය සූදානම්",
+    completeLoading: "ඔබේ තරු සිතියම සක්‍රීය කරමින්...",
     // Lagna Reveal
-    revealLoading: "පෙරදිග ජ්‍යොතිෂයට අනුව කේන්දරය සකසමින්...",
-    revealLoadingSub: "උපන් මොහොතේ තරු රටා සහ ග්‍රහ පිහිටීම් ගණනය කරමින් පවතී",
-    revealYourLagna: "ඔබගේ උපන් ලග්නය",
+    revealLoading: "ඔබේ තාරකා DNA විකේතනය කරමින්...",
+    revealLoadingSub: "ඔබ උපන් නිශ්චිත තත්පරයට ග්‍රහ 9 සිතියම්ගත කරමින්",
+    revealYourLagna: "ඔබේ ලග්නය",
     revealMoonSign: "චන්ද්‍ර රාශිය",
     revealSunSign: "සූර්ය රාශිය",
     revealNakshatra: "උපන් නැකත",
-    revealTraits: "ඔබටම ආවේණික ගතිලක්ෂණ",
+    revealTraits: "ඔබේ සැඟවුණු විශ්ව ශක්තීන්",
     revealLagnaTraits: "ලග්න ලක්ෂණ",
     revealMoonTraits: "චන්ද්‍ර ලක්ෂණ",
-    revealGem: "සුබ මැණික් වර්ගය",
-    revealColor: "වඩාත් සුබ වර්ණය",
-    revealDay: "සියලු කටයුතු වලට සුබ දිනය",
-    revealCareer: "සාර්ථක වෘත්තීය ක්ෂේත්‍ර",
-    revealContinue: "ග්‍රහ ලොවට පිවිසෙන්න",
+    revealGem: "ඔබේ ශක්ති මැණික",
+    revealColor: "ඔබේ ශක්ති වර්ණය",
+    revealDay: "ඔබේ වාසනාවන්තම දිනය",
+    revealCareer: "ඔබේ නියමිත මාවත",
+    revealContinue: "මගේ සම්පූර්ණ අනාගත රහස් අගුළු අරින්න 🔓",
     revealSkip: "මගහැර ඉදිරියට යන්න",
     months: ["\u0da2\u0db1","\u0db4\u0dd9\u0db6","\u0db8\u0dcf\u0dbb\u0dca","\u0d85\u0db4\u0dca\u200d","\u0db8\u0dd0","\u0da2\u0dd6","\u0da2\u0dd6\u0dbd\u0dd2","\u0d85\u0d9c\u0ddd","\u0dc3\u0dd0\u0db4\u0dca","\u0d94\u0d9a\u0dca","\u0db1\u0ddc","\u0daf\u0dd9"],
   },
@@ -488,8 +488,8 @@ function GlowCard({ children, style }) {
   return <View style={[g.card, style]}>{children}</View>;
 }
 
-var STEP_LABELS_EN = ['Welcome', 'Birth Info', 'Your Stars', 'Sign In', 'Unlock', 'Done'];
-var STEP_LABELS_SI = ['සාදරයෙන්', 'උපන් දත්ත', 'ලග්නය', 'සාදරයෙන්', 'අගුළු අරින්න', 'සම්පූර්ණ'];
+var STEP_LABELS_EN = ['Welcome', 'Birth Info', 'Your Stars', 'Save', 'Premium', 'Done'];
+var STEP_LABELS_SI = ['සාදරයෙන්', 'උපන් දත්ත', 'ඔබේ තරු', 'සුරකින්න', 'ප්‍රිමියම්', 'සම්පූර්ණ'];
 
 function StepProgressBar({ current, total, lang }) {
   var labels = lang === 'si' ? STEP_LABELS_SI : STEP_LABELS_EN;
@@ -517,150 +517,328 @@ function StepProgressBar({ current, total, lang }) {
 
 
 // ═══════════════════════════════════════════════════════════════════════
-//  STEP -1: LANGUAGE SELECTION
+//  STEP -1: LANGUAGE SELECTION — Global-First, Button-Focused Layout
+//  Compact hero → big prominent language buttons → users tap within 2s
+//  Content is universal/global — no country-specific branding
 // ═══════════════════════════════════════════════════════════════════════
 
 function LanguageStep({ onSelect }) {
-  var glow = useSharedValue(0);
-  var float = useSharedValue(0);
   var titleScale = useSharedValue(0);
+  var ringRotate = useSharedValue(0);
+  var orbPulse = useSharedValue(0);
+  var logoGlow = useSharedValue(0);
+  var btnShimmer = useSharedValue(0);
+  var [selectedLang, setSelectedLang] = useState(null);
+
   useEffect(function () {
-    glow.value = withRepeat(withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sin) }), -1, true);
-    float.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    titleScale.value = withDelay(400, withSpring(1, { damping: 12, stiffness: 120 }));
+    titleScale.value = withDelay(300, withSpring(1, { damping: 14, stiffness: 100 }));
+    ringRotate.value = withRepeat(withTiming(360, { duration: 25000, easing: Easing.linear }), -1, false);
+    orbPulse.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    logoGlow.value = withRepeat(withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }), -1, true);
+    btnShimmer.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
   }, []);
-  var glowStyle = useAnimatedStyle(function () {
-    return {
-      opacity: interpolate(glow.value, [0, 1], [0.5, 1]),
-      transform: [{ scale: interpolate(glow.value, [0, 1], [0.95, 1.05]) }],
-    };
-  });
-  var floatStyle = useAnimatedStyle(function () {
-    return { transform: [{ translateY: interpolate(float.value, [0, 1], [-8, 8]) }] };
-  });
+
   var titleAnim = useAnimatedStyle(function () {
     return { transform: [{ scale: titleScale.value }], opacity: titleScale.value };
   });
+  var ringStyle = useAnimatedStyle(function () {
+    return { transform: [{ rotate: ringRotate.value + 'deg' }] };
+  });
+  var orbGlowStyle = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(orbPulse.value, [0, 1], [0.12, 0.3]),
+      transform: [{ scale: interpolate(orbPulse.value, [0, 1], [0.9, 1.1]) }],
+    };
+  });
+  var logoStyle = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(logoGlow.value, [0, 1], [0.88, 1]),
+      transform: [{ scale: interpolate(logoGlow.value, [0, 1], [1, 1.06]) }],
+    };
+  });
+  var shimmerStyle = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(btnShimmer.value, [0, 0.5, 1], [0.6, 1, 0.6]),
+    };
+  });
+
+  var handleSelect = function (lang) {
+    setSelectedLang(lang);
+    setTimeout(function () { onSelect(lang); }, 300);
+  };
+
+  // Hero — big chakra with prominent logo
+  var chakraSize = Math.min(SH * 0.34, 300);
+  var logoSize = Math.min(chakraSize * 0.3, 80);
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16 }} showsVerticalScrollIndicator={false} bounces={false}>
-      <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center', marginBottom: 30 }}>
-        <Animated.View style={floatStyle}>
-          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <AwesomeRashiChakra size={Math.min(SH * 0.38, 320)} />
-            <Animated.View style={[ls.logoWrap, glowStyle]}>
-              <Image source={LOGO} style={ls.logoImg} resizeMode="contain" />
+    <View style={{ flex: 1 }}>
+      {/* Ambient background glow orbs */}
+      <Animated.View style={[ls.ambientOrb, ls.ambientOrb1, orbGlowStyle]} />
+      <Animated.View style={[ls.ambientOrb, ls.ambientOrb2, orbGlowStyle]} />
+      <Animated.View style={[ls.ambientOrb, ls.ambientOrb3, orbGlowStyle]} />
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16 }} showsVerticalScrollIndicator={false} bounces={false}>
+
+        {/* ═══ COMPACT HERO: Chakra + Logo + Title ═══ */}
+        <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center', marginBottom: 20 }}>
+
+          {/* Rotating cosmic ring */}
+          <Animated.View style={[ls.cosmicRing, { width: chakraSize + 32, height: chakraSize + 32, borderRadius: (chakraSize + 32) / 2 }, ringStyle]}>
+            <View style={[ls.cosmicRingInner, { width: chakraSize + 28, height: chakraSize + 28, borderRadius: (chakraSize + 28) / 2 }]} />
+          </Animated.View>
+
+          {/* Chakra + Logo centered inside */}
+          <View style={{ alignItems: 'center', justifyContent: 'center', width: chakraSize, height: chakraSize }}>
+            <AwesomeRashiChakra size={chakraSize} />
+            <Animated.View style={[ls.logoOrb, { width: logoSize + 24, height: logoSize + 24, borderRadius: (logoSize + 24) / 2 }, logoStyle]}>
+              <LinearGradient
+                colors={['rgba(255,184,0,0.25)', 'rgba(255,140,0,0.15)', 'rgba(255,184,0,0.08)']}
+                style={[ls.logoOrbInner, { width: logoSize + 12, height: logoSize + 12, borderRadius: (logoSize + 12) / 2 }]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              >
+                <Image source={LOGO} style={{ width: logoSize, height: logoSize, borderRadius: logoSize / 2 }} resizeMode="contain" />
+              </LinearGradient>
             </Animated.View>
           </View>
+
+          {/* App name — English-first for global appeal */}
+          <Animated.View style={[titleAnim, { alignItems: 'center', marginTop: 6 }]}>
+            <Text style={ls.mainTitleEn}>Grahachara</Text>
+            <Text style={ls.mainTitleSi}>{'\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB'}</Text>
+            <Text style={ls.tagline}>Vedic Astrology & Horoscope</Text>
+          </Animated.View>
         </Animated.View>
-        <Animated.View style={titleAnim}>
-          <Text style={ls.mainTitleSi}>{'\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB'}</Text>
-          <Text style={ls.mainTitleEn}>Grahachara</Text>
+
+        {/* ═══ LANGUAGE PROMPT — bilingual, globally neutral ═══ */}
+        <Animated.View entering={FadeIn.delay(400).duration(500)} style={ls.promptWrap}>
+          <View style={ls.promptDividerLeft}>
+            <LinearGradient colors={['transparent', 'rgba(255,184,0,0.3)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+          </View>
+          <Text style={ls.promptText}>Select Language  {'\u2022'}  {'\u0DB7\u0DCF\u0DC2\u0DCF\u0DC0 \u0DAD\u0DDD\u0DBB\u0DB1\u0DCA\u0DB1'}</Text>
+          <View style={ls.promptDividerRight}>
+            <LinearGradient colors={['rgba(255,184,0,0.3)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+          </View>
         </Animated.View>
-        <View style={ls.divider}>
-          <LinearGradient colors={['transparent', '#FF8C00', '#FFB800', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-        </View>
-        <Text style={ls.siTitle}>{'\u0db7\u0dcf\u0dc2\u0dcf\u0dc0 \u0dad\u0ddd\u0dbb\u0db1\u0dca\u0db1'}</Text>
-        <Text style={ls.enTitle}>Select Your Language</Text>
-      </Animated.View>
 
-      <Animated.View entering={FadeInUp.delay(300).duration(600)} style={{ width: '100%' }}>
-        <SpringPressable style={ls.langBtn} onPress={function () { onSelect('si'); }} haptic="medium" scalePressed={0.95}>
-          <LinearGradient colors={['#FF8C00', '#FF6D00']} style={ls.langGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <View style={ls.langInner}>
-              <View style={ls.langIconWrap}>
-                <GoldenIcon name="lk" size={32} />
+        {/* ═══ LANGUAGE BUTTONS — Big, bold, impossible to miss ═══ */}
+        <Animated.View entering={FadeInUp.delay(300).duration(700)} style={{ width: '100%', gap: 14, marginTop: 20 }}>
+
+          {/* ── ENGLISH BUTTON (global-first — top position) ── */}
+          <SpringPressable
+            style={[ls.langCard, selectedLang === 'en' && ls.langCardSelectedEn]}
+            onPress={function () { handleSelect('en'); }}
+            haptic="medium"
+            scalePressed={0.96}
+          >
+            <LinearGradient
+              colors={selectedLang === 'en' ? ['#6366F1', '#4338CA'] : ['rgba(99,102,241,0.12)', 'rgba(99,102,241,0.04)']}
+              style={ls.langCardGrad}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            >
+              <View style={ls.langCardRow}>
+                <View style={[ls.langIconCircle, selectedLang === 'en' && ls.langIconCircleActiveEn]}>
+                  <Ionicons name="globe-outline" size={26} color={selectedLang === 'en' ? '#E0E7FF' : '#A5B4FC'} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[ls.langPrimary, selectedLang === 'en' && ls.langPrimaryActive]}>English</Text>
+                  <Text style={[ls.langSecondary, selectedLang === 'en' && ls.langSecondaryActive]}>International</Text>
+                </View>
+                <Animated.View style={selectedLang !== 'en' ? shimmerStyle : undefined}>
+                  <View style={[ls.arrowCircle, selectedLang === 'en' && ls.arrowCircleActiveEn]}>
+                    <Ionicons name="chevron-forward" size={18} color={selectedLang === 'en' ? '#FFFFFF' : 'rgba(255,255,255,0.4)'} />
+                  </View>
+                </Animated.View>
               </View>
-              <View>
-                <Text style={ls.langLabel}>{'\u0dc3\u0dd2\u0d82\u0dc4\u0dbd'}</Text>
-                <Text style={ls.langSub}>Sinhala</Text>
+            </LinearGradient>
+          </SpringPressable>
+
+          {/* ── SINHALA BUTTON ── */}
+          <SpringPressable
+            style={[ls.langCard, selectedLang === 'si' && ls.langCardSelectedSi]}
+            onPress={function () { handleSelect('si'); }}
+            haptic="medium"
+            scalePressed={0.96}
+          >
+            <LinearGradient
+              colors={selectedLang === 'si' ? ['#FF8C00', '#E65100'] : ['rgba(255,140,0,0.12)', 'rgba(255,140,0,0.04)']}
+              style={ls.langCardGrad}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            >
+              <View style={ls.langCardRow}>
+                <View style={[ls.langIconCircle, selectedLang === 'si' && ls.langIconCircleActiveSi]}>
+                  <Text style={{ fontSize: 24 }}>{'\u0DC3\u0DD2'}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[ls.langPrimary, selectedLang === 'si' && ls.langPrimaryActive]}>{'\u0DC3\u0DD2\u0D82\u0DC4\u0DBD'}</Text>
+                  <Text style={[ls.langSecondary, selectedLang === 'si' && ls.langSecondaryActive]}>Sinhala</Text>
+                </View>
+                <Animated.View style={selectedLang !== 'si' ? shimmerStyle : undefined}>
+                  <View style={[ls.arrowCircle, selectedLang === 'si' && ls.arrowCircleActiveSi]}>
+                    <Ionicons name="chevron-forward" size={18} color={selectedLang === 'si' ? '#FFFFFF' : 'rgba(255,255,255,0.4)'} />
+                  </View>
+                </Animated.View>
               </View>
+            </LinearGradient>
+          </SpringPressable>
+        </Animated.View>
+
+        {/* ═══ FOOTER — global-first trust signals ═══ */}
+        <Animated.View entering={FadeIn.delay(700).duration(500)} style={ls.footer}>
+          <View style={ls.footerDivider}>
+            <LinearGradient colors={['transparent', 'rgba(255,184,0,0.15)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+          </View>
+          <View style={ls.trustRow}>
+            <View style={ls.trustItem}>
+              <Ionicons name="star" size={12} color="rgba(255,184,0,0.5)" />
+              <Text style={ls.trustText}>50K+ Users</Text>
             </View>
-            <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.7)" />
-          </LinearGradient>
-        </SpringPressable>
-
-        <View style={{ height: 14 }} />
-
-        <SpringPressable style={ls.langBtn} onPress={function () { onSelect('en'); }} haptic="medium" scalePressed={0.95}>
-          <LinearGradient colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)']} style={ls.langGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <View style={ls.langInner}>
-              <View style={ls.langIconWrap}>
-                <GoldenIcon name="globe" size={32} />
-              </View>
-              <View>
-                <Text style={ls.langLabel}>English</Text>
-                <Text style={ls.langSub}>{'\u0d89\u0d82\u0d9c\u0dca\u200d\u0dbb\u0dd3\u0dc3\u0dd2'}</Text>
-              </View>
+            <Text style={ls.trustDot}>{'\u2022'}</Text>
+            <View style={ls.trustItem}>
+              <Ionicons name="shield-checkmark" size={12} color="rgba(16,185,129,0.5)" />
+              <Text style={ls.trustText}>Vedic Accuracy</Text>
             </View>
-            <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.4)" />
-          </LinearGradient>
-        </SpringPressable>
-      </Animated.View>
-    </ScrollView>
+            <Text style={ls.trustDot}>{'\u2022'}</Text>
+            <View style={ls.trustItem}>
+              <Ionicons name="earth" size={12} color="rgba(99,102,241,0.5)" />
+              <Text style={ls.trustText}>Worldwide</Text>
+            </View>
+          </View>
+        </Animated.View>
+      </ScrollView>
+    </View>
   );
 }
 
 var ls = StyleSheet.create({
-  logoWrap: { width: 90, height: 90, borderRadius: 24, overflow: 'hidden', marginBottom: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(20,12,50,0.6)', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.25)' },
-  logoImg:  { width: 80, height: 80, borderRadius: 20 },
-  mainTitleSi: { fontSize: 44, fontWeight: '900', color: '#FFB800', letterSpacing: 2, ...textShadow('rgba(255,184,0,0.6)', { width: 0, height: 0 }, 20), textAlign: 'center' },
-  mainTitleEn: { fontSize: 16, fontWeight: '600', color: 'rgba(255,255,255,0.35)', letterSpacing: 4, marginTop: 2, textAlign: 'center' },
-  divider: { width: 60, height: 3, borderRadius: 2, marginVertical: 16, overflow: 'hidden' },
-  siTitle: { fontSize: 22, fontWeight: '700', color: '#FFD666', marginBottom: 4 },
-  enTitle: { fontSize: 15, color: 'rgba(255,255,255,0.5)' },
-  langBtn: { borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  langGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 22, paddingHorizontal: 22, borderRadius: 18 },
-  langInner: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  langIconWrap: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,184,0,0.1)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.2)', alignItems: 'center', justifyContent: 'center' },
-  langLabel: { fontSize: 24, fontWeight: '700', color: '#FFF1D0' },
-  langSub: { fontSize: 13, color: 'rgba(255,255,255,0.55)', marginTop: 2 },
+  // Ambient background orbs
+  ambientOrb:  { position: 'absolute', borderRadius: 999 },
+  ambientOrb1: { width: 280, height: 280, backgroundColor: 'rgba(147,51,234,0.07)', top: -60, right: -80 },
+  ambientOrb2: { width: 220, height: 220, backgroundColor: 'rgba(255,140,0,0.05)', bottom: -30, left: -50 },
+  ambientOrb3: { width: 180, height: 180, backgroundColor: 'rgba(99,102,241,0.05)', top: '40%', left: -40 },
+
+  // Rotating cosmic ring
+  cosmicRing:      { position: 'absolute', borderWidth: 1, borderColor: 'rgba(255,184,0,0.1)', alignItems: 'center', justifyContent: 'center' },
+  cosmicRingInner: { borderWidth: 1, borderColor: 'rgba(147,51,234,0.08)', borderStyle: 'dashed' },
+
+  // Logo orb
+  logoOrb:      { borderWidth: 2, borderColor: 'rgba(255,184,0,0.4)', alignItems: 'center', justifyContent: 'center', ...boxShadow('rgba(255,184,0,0.4)', { width: 0, height: 0 }, 0.6, 24) },
+  logoOrbInner: { alignItems: 'center', justifyContent: 'center' },
+
+  // Titles — English-first, Sinhala subtle
+  mainTitleEn: { fontSize: 30, fontWeight: '900', color: '#FFB800', letterSpacing: 1, ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 16), textAlign: 'center' },
+  mainTitleSi: { fontSize: 14, fontWeight: '600', color: 'rgba(255,220,140,0.4)', letterSpacing: 2, marginTop: 2, textAlign: 'center' },
+  tagline:     { fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.35)', marginTop: 6, textAlign: 'center', letterSpacing: 0.5 },
+
+  // Bilingual prompt — centered divider style
+  promptWrap:         { flexDirection: 'row', alignItems: 'center', width: '100%', marginTop: 4 },
+  promptDividerLeft:  { flex: 1, height: 1, overflow: 'hidden' },
+  promptDividerRight: { flex: 1, height: 1, overflow: 'hidden' },
+  promptText:         { fontSize: 13, fontWeight: '600', color: 'rgba(255,220,140,0.6)', paddingHorizontal: 12 },
+
+  // Language cards — big and prominent
+  langCard:           { borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.06)' },
+  langCardSelectedEn: { borderColor: 'rgba(99,102,241,0.5)', ...boxShadow('rgba(99,102,241,0.35)', { width: 0, height: 4 }, 0.8, 20) },
+  langCardSelectedSi: { borderColor: 'rgba(255,140,0,0.5)', ...boxShadow('rgba(255,140,0,0.3)', { width: 0, height: 4 }, 0.8, 20) },
+  langCardGrad:       { paddingVertical: 22, paddingHorizontal: 20, borderRadius: 20 },
+  langCardRow:        { flexDirection: 'row', alignItems: 'center', gap: 14 },
+
+  // Icon circle (replaces flag)
+  langIconCircle:         { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
+  langIconCircleActiveEn: { backgroundColor: 'rgba(99,102,241,0.25)', borderColor: 'rgba(165,180,252,0.4)' },
+  langIconCircleActiveSi: { backgroundColor: 'rgba(255,140,0,0.2)', borderColor: 'rgba(255,184,0,0.4)' },
+
+  // Text
+  langPrimary:       { fontSize: 22, fontWeight: '800', color: '#FFF1D0' },
+  langPrimaryActive: { color: '#FFFFFF' },
+  langSecondary:       { fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.35)', marginTop: 2 },
+  langSecondaryActive: { color: 'rgba(255,255,255,0.7)' },
+
+  // Arrow circle (CTA indicator — replaces radio)
+  arrowCircle:         { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
+  arrowCircleActiveEn: { backgroundColor: 'rgba(99,102,241,0.4)', borderColor: 'rgba(165,180,252,0.5)' },
+  arrowCircleActiveSi: { backgroundColor: 'rgba(255,140,0,0.4)', borderColor: 'rgba(255,184,0,0.5)' },
+
+  // Footer — trust signals
+  footer:        { marginTop: 24, alignItems: 'center' },
+  footerDivider: { width: 140, height: 1, borderRadius: 1, overflow: 'hidden', marginBottom: 12 },
+  trustRow:      { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  trustItem:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  trustText:     { fontSize: 11, color: 'rgba(255,255,255,0.25)', fontWeight: '500' },
+  trustDot:      { fontSize: 8, color: 'rgba(255,255,255,0.15)' },
 });
 
 
 // ═══════════════════════════════════════════════════════════════════════
-//  STEP 0: WELCOME
+//  STEP 0: WELCOME — Single-screen, no-scroll, no fake numbers
+//  Everything fits in one viewport: hero + features + CTA
 // ═══════════════════════════════════════════════════════════════════════
 
 function WelcomeStep({ onContinue, onBack, lang }) {
   var T = OB[lang] || OB.en;
-  var { priceLabel, isInternational } = usePricing();
   var pulse = useSharedValue(0);
   var haloRotate = useSharedValue(0);
-  // Responsive sizing — scale down on small screens
-  var chakraSize = Math.min(SH * 0.38, 320);
-  var logoSize = Math.min(chakraSize * 0.25, 72);
+  var ctaGlow = useSharedValue(0);
+
+  // Hero — big chakra with prominent logo
+  var chakraSize = Math.min(SH * 0.3, 260);
+  var logoSize = Math.min(chakraSize * 0.3, 72);
+
   useEffect(function () {
     pulse.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
     haloRotate.value = withRepeat(withTiming(360, { duration: 15000, easing: Easing.linear }), -1, false);
+    ctaGlow.value = withRepeat(withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }), -1, true);
   }, []);
+
   var pulseStyle = useAnimatedStyle(function () {
     return {
-      transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.08]) }],
-      opacity: interpolate(pulse.value, [0, 1], [0.85, 1]),
+      transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.06]) }],
+      opacity: interpolate(pulse.value, [0, 1], [0.9, 1]),
     };
   });
   var haloStyle = useAnimatedStyle(function () {
     return { transform: [{ rotate: haloRotate.value + 'deg' }] };
   });
+  var ctaGlowStyle = useAnimatedStyle(function () {
+    if (Platform.OS === 'web') return {};
+    return {
+      shadowColor: '#FF8C00',
+      shadowOpacity: interpolate(ctaGlow.value, [0, 1], [0.4, 0.9]),
+      shadowRadius: interpolate(ctaGlow.value, [0, 1], [10, 26]),
+      shadowOffset: { width: 0, height: 4 },
+    };
+  });
+
+  // Feature items — compact horizontal rows
+  var FEATURES = lang === 'si' ? [
+    { icon: 'compass-outline', color: '#A78BFA', text: 'ඔබ ගැන ඔබම නොදන්නා ලග්න රහස්' },
+    { icon: 'planet-outline', color: '#FFB800', text: 'ග්‍රහයන් ඔබේ ජීවිතය පාලනය කරන හැටි' },
+    { icon: 'heart-outline', color: '#FF6B9D', text: 'ඔබේ ආත්ම සහකරු කවුද? පොරොන්දම බලන්න' },
+    { icon: 'sparkles-outline', color: '#4CC9F0', text: 'AI ඔබේ අනාගතය කියවයි — ඔබට පමණයි' },
+  ] : [
+    { icon: 'compass-outline', color: '#A78BFA', text: 'Lagna secrets you don\'t know about yourself' },
+    { icon: 'planet-outline', color: '#FFB800', text: 'See how planets are controlling your life' },
+    { icon: 'heart-outline', color: '#FF6B9D', text: 'Who is your soulmate? Check Porondam' },
+    { icon: 'sparkles-outline', color: '#4CC9F0', text: 'AI reads your future — for your eyes only' },
+  ];
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 0, paddingBottom: 16 }} showsVerticalScrollIndicator={false} bounces={false}>
-      <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center' }}>
-        {/* Rotating halo ring */}
-        <Animated.View style={[ws.haloRing, haloStyle]}>
-          <LinearGradient
-            colors={['#FF8C00', '#FFB800', '#FF6D00', '#FF8C00']}
-            style={ws.haloGrad}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          />
+    <View style={{ flex: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 0, paddingBottom: 8 }}>
+
+      {/* ═══ HERO — Compact chakra + title ═══ */}
+      <Animated.View entering={FadeInDown.duration(700)} style={{ alignItems: 'center' }}>
+        {/* Rotating halo */}
+        <Animated.View style={[ws.haloRing, { width: chakraSize + 20, height: chakraSize + 20, borderRadius: (chakraSize + 20) / 2 }, haloStyle]}>
+          <LinearGradient colors={['#FF8C00', '#FFB800', '#FF6D00', '#FF8C00']} style={[ws.haloGrad, { borderRadius: (chakraSize + 20) / 2 }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
         </Animated.View>
-        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+
+        {/* Chakra + Logo */}
+        <View style={{ alignItems: 'center', justifyContent: 'center', width: chakraSize, height: chakraSize }}>
           <AwesomeRashiChakra size={chakraSize} />
-          <Animated.View style={[ws.logoRing, { width: logoSize + 28, height: logoSize + 28, borderRadius: (logoSize + 28) / 2 }, pulseStyle]}>
+          <Animated.View style={[ws.logoRing, { width: logoSize + 20, height: logoSize + 20, borderRadius: (logoSize + 20) / 2 }, pulseStyle]}>
             <LinearGradient
               colors={['rgba(255,184,0,0.25)', 'rgba(255,140,0,0.15)', 'rgba(255,184,0,0.1)']}
-              style={[ws.logoInner, { width: logoSize + 16, height: logoSize + 16, borderRadius: (logoSize + 16) / 2 }]}
+              style={[ws.logoInner, { width: logoSize + 10, height: logoSize + 10, borderRadius: (logoSize + 10) / 2 }]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             >
               <Image source={LOGO} style={{ width: logoSize, height: logoSize, borderRadius: logoSize / 2 }} resizeMode="contain" />
@@ -668,43 +846,63 @@ function WelcomeStep({ onContinue, onBack, lang }) {
           </Animated.View>
         </View>
 
-        <Text style={ws.titleSi}>{'\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB'}</Text>
         <Text style={ws.titleEn}>Grahachara</Text>
+        <Text style={ws.titleSi}>{'\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB'}</Text>
         <Text style={ws.subtitle}>{T.welcomeSubtitle}</Text>
+      </Animated.View>
 
-        <View style={ws.featureList}>
-          {T.welcomeDesc.split('\n').map(function (line, i) {
-            return (
-              <Animated.View key={i} entering={FadeInDown.delay(500 + i * 150).duration(400)} style={ws.featureLine}>
-                <LinearGradient colors={['#FF8C00', '#FFB800']} style={ws.featureDot} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-                <Text style={ws.featureText}>{line.replace(/[•&]/g, '').trim()}</Text>
-              </Animated.View>
-            );
-          })}
+      {/* ═══ FEATURE LIST — compact icon rows ═══ */}
+      <View style={ws.featureList}>
+        {FEATURES.map(function (f, i) {
+          return (
+            <Animated.View key={i} entering={FadeInUp.delay(250 + i * 80).duration(400)} style={ws.featureRow}>
+              <View style={[ws.featureIcon, { backgroundColor: f.color + '12', borderColor: f.color + '25' }]}>
+                <Ionicons name={f.icon} size={18} color={f.color} />
+              </View>
+              <Text style={ws.featureText}>{f.text}</Text>
+            </Animated.View>
+          );
+        })}
+      </View>
+
+      {/* ═══ CTA — teaser + button + change language ═══ */}
+      <Animated.View entering={FadeInUp.delay(600).duration(500)} style={{ width: '100%' }}>
+        {/* Curiosity hook */}
+        <View style={ws.teaserRow}>
+          <Ionicons name="time-outline" size={15} color="#FFB800" />
+          <Text style={ws.teaserText}>
+            {lang === 'si' ? 'ඔබේ ඉරණම තීරණය කරන ග්‍රහ රහස දැන්ම සොයාගන්න' : 'The planets already know your future — do you?'}
+          </Text>
         </View>
-      </Animated.View>
 
-      <Animated.View entering={FadeInUp.delay(900).duration(600)} style={{ width: '100%', marginTop: 20 }}>
-        <PrimaryButton label={T.welcomeBtn} onPress={onContinue} icon="sparkles" />
-        <Text style={g.hint}>{T.welcomeHint}</Text>
-        <GhostButton label={lang === 'si' ? 'භාෂාව වෙනස් කරන්න' : 'Change Language'} onPress={onBack} icon={<GoldenIcon name="globe" size={16} />} />
+        <Animated.View style={ctaGlowStyle}>
+          <PrimaryButton label={T.welcomeBtn} onPress={onContinue} icon="sparkles" />
+        </Animated.View>
+
+        <GhostButton label={lang === 'si' ? '\u0DB7\u0DCF\u0DC2\u0DCF\u0DC0 \u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1' : 'Change Language'} onPress={onBack} icon={<Ionicons name="globe-outline" size={14} color="rgba(255,255,255,0.4)" />} />
       </Animated.View>
-    </ScrollView>
+    </View>
   );
 }
 
 var ws = StyleSheet.create({
-  haloRing: { position: 'absolute', top: -12, width: 124, height: 124, borderRadius: 62, overflow: 'hidden' },
-  haloGrad: { width: '100%', height: '100%', borderRadius: 62, opacity: 0.25 },
-  logoRing: { borderWidth: 2, borderColor: 'rgba(255,184,0,0.4)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  haloRing: { position: 'absolute', top: -6, overflow: 'hidden' },
+  haloGrad: { width: '100%', height: '100%', opacity: 0.18 },
+  logoRing: { borderWidth: 2, borderColor: 'rgba(255,184,0,0.4)', alignItems: 'center', justifyContent: 'center' },
   logoInner: { alignItems: 'center', justifyContent: 'center' },
-  titleSi: { fontSize: 36, fontWeight: '900', color: '#FFB800', letterSpacing: 2, ...textShadow('rgba(255,184,0,0.6)', { width: 0, height: 0 }, 16), marginBottom: 2, textAlign: 'center' },
-  titleEn: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.3)', letterSpacing: 4, marginBottom: 4, textAlign: 'center' },
-  subtitle: { fontSize: 15, fontWeight: '600', color: '#FFD666', marginBottom: 4 },
-  featureList: { marginTop: 28, alignSelf: 'stretch', gap: 12 },
-  featureLine: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 8 },
-  featureDot: { width: 8, height: 8, borderRadius: 4 },
-  featureText: { fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 22 },
+  titleEn: { fontSize: 26, fontWeight: '900', color: '#FFB800', letterSpacing: 1, ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12), marginTop: 4, textAlign: 'center' },
+  titleSi: { fontSize: 13, fontWeight: '600', color: 'rgba(255,220,140,0.35)', letterSpacing: 2, marginBottom: 1, textAlign: 'center' },
+  subtitle: { fontSize: 13, fontWeight: '600', color: 'rgba(255,220,140,0.65)', textAlign: 'center' },
+
+  // Feature list — horizontal icon + text rows
+  featureList: { gap: 10, marginTop: 8 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  featureIcon: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  featureText: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.7)', flex: 1, lineHeight: 19 },
+
+  // Teaser row
+  teaserRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 12, backgroundColor: 'rgba(255,184,0,0.05)', paddingVertical: 9, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,184,0,0.08)' },
+  teaserText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,220,140,0.75)' },
 });
 
 
@@ -1287,13 +1485,14 @@ function buildConstellationPoints(text, centerX, centerY, letterSize) {
   var points = [];
   if (!text) return points;
   var upper = text.toUpperCase();
-  var totalW = upper.length * (letterSize * 1.1);
+  var spacing = letterSize * 1.5;
+  var totalW = upper.length * spacing;
   var startX = centerX - totalW / 2;
   for (var c = 0; c < upper.length; c++) {
     var ch = upper[c];
     var starMap = LETTER_STARS[ch];
     if (!starMap) continue;
-    var offX = startX + c * letterSize * 1.1;
+    var offX = startX + c * spacing;
     for (var s = 0; s < starMap.length; s++) {
       var sx = offX + (starMap[s][0] / 5) * letterSize;
       var sy = centerY + (starMap[s][1] / 7) * letterSize * 1.2;
@@ -1375,17 +1574,18 @@ function ConstellationLine({ x1, y1, x2, y2, delay }) {
 
 function WrittenInTheStars({ name, dateStr, timeStr, page }) {
   // Name constellation centered in the top zone, date/time below it
-  var constellationH = SH * 0.16;
+  var constellationH = Math.min(SH * 0.14, 110);
+  var containerW = SW - 48;
   var namePoints = useMemo(function () {
     var nameToShow = (name || '').substring(0, 10);
     if (!nameToShow) return [];
-    return buildConstellationPoints(nameToShow, SW / 2, constellationH * 0.28, Math.min(32, (SW - 48) / Math.max(nameToShow.length, 1) / 1.1));
+    return buildConstellationPoints(nameToShow, containerW / 2, constellationH * 0.28, Math.min(24, containerW / Math.max(nameToShow.length, 1) / 1.5));
   }, [name]);
 
   var digitPoints = useMemo(function () {
     var digits = (dateStr || '') + ' ' + (timeStr || '');
     if (!digits.trim()) return [];
-    return buildConstellationPoints(digits.substring(0, 16), SW / 2, constellationH * 0.72, 13);
+    return buildConstellationPoints(digits.substring(0, 16), containerW / 2, constellationH * 0.78, 9);
   }, [dateStr, timeStr]);
 
   if (namePoints.length === 0 && digitPoints.length === 0) return null;
@@ -1402,7 +1602,7 @@ function WrittenInTheStars({ name, dateStr, timeStr, page }) {
   }
 
   return (
-    <View style={{ position: 'absolute', top: 8, left: 0, right: 0, height: constellationH, pointerEvents: 'none', zIndex: 2, overflow: 'visible' }}>
+    <View style={{ position: 'absolute', height: constellationH, pointerEvents: 'none', zIndex: 2, overflow: 'visible', alignSelf: 'center', width: SW - 48 }}>
       {/* Constellation lines connecting nearby name stars */}
       {nameLines.map(function (line, i) {
         return <ConstellationLine key={'cl' + i} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} delay={line.delay} />;
@@ -1603,11 +1803,24 @@ function BirthDataStep({ onComplete, lang }) {
     );
   };
 
+  /* Constellation element for embedding in pages */
+  var dateDisplay = (year || '') + (month !== null ? '-' + (month + 1) : '') + (day ? '-' + day : '');
+  var timeDisplay = (hour || '') + (minute ? ':' + minute : '') + (hour ? ' ' + ampm : '');
+  var renderConstellation = function () {
+    return (
+      <View style={{ alignItems: 'center', height: Math.min(SH * 0.14, 110), justifyContent: 'center', marginBottom: 8 }}>
+        <WrittenInTheStars name={displayName} dateStr={dateDisplay} timeStr={timeDisplay} page={page} />
+      </View>
+    );
+  };
+
   /* PAGE 0: Name */
   var renderNamePage = function () {
+    var nameTeaser = lang === 'si' ? '🔮 ඔබේ නම ඇතුළත් කළ පසු, තරු ඔබ ගැන කුමක් සැඟවූවාද යන්න හෙළි වේ' : '🔮 The moment you type your name, the stars begin revealing what they\'ve been hiding about you';
     return (
-      <Animated.View key="name" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'space-between' }}>
+      <Animated.View key="name" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
+          {renderConstellation()}
           <StepHeader title={T.nameTitle} subtitle={T.nameSubtitle} />
           <GlowCard style={{ marginTop: 12 }}>
             <Text style={g.inputLabel}>{T.nameLabel}</Text>
@@ -1622,14 +1835,15 @@ function BirthDataStep({ onComplete, lang }) {
             />
             {error && page === 0 ? <Text style={g.error}>{error}</Text> : null}
           </GlowCard>
-        </View>
-        <View style={{ marginBottom: 8 }}>
-          <PrimaryButton
-            label={T.continueBtn}
-            onPress={function () { if (displayName.trim().length >= 2) setPage(1); else setError(T.nameError); }}
-            disabled={displayName.trim().length < 2}
-            icon="arrow-forward"
-          />
+          <Text style={[g.hint, { marginTop: 14, color: '#FFD666', fontSize: 12, lineHeight: 18 }]}>{nameTeaser}</Text>
+          <View style={{ marginTop: 24 }}>
+            <PrimaryButton
+              label={T.continueBtn}
+              onPress={function () { if (displayName.trim().length >= 2) setPage(1); else setError(T.nameError); }}
+              disabled={displayName.trim().length < 2}
+              icon="arrow-forward"
+            />
+          </View>
         </View>
       </Animated.View>
     );
@@ -1637,9 +1851,11 @@ function BirthDataStep({ onComplete, lang }) {
 
   /* PAGE 1: Date */
   var renderDatePage = function () {
+    var dateTeaser = lang === 'si' ? '⭐ ඔබ උපන් මොහොතේ ග්‍රහ 9 හරියටම කොතනද තිබුණේ? ඊළඟ පියවරේදී ඔබම බලන්න' : '⭐ Where exactly were the 9 planets the second you were born? You\'re about to find out';
     return (
-      <Animated.View key="date" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'space-between' }}>
+      <Animated.View key="date" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
+          {renderConstellation()}
           <StepHeader title={T.dateTitle} subtitle={T.dateSubtitle} />
 
           <GlowCard style={{ marginTop: 12, paddingVertical: 12, paddingHorizontal: 14 }}>
@@ -1666,9 +1882,8 @@ function BirthDataStep({ onComplete, lang }) {
               })}
             </View>
           </GlowCard>
-        </View>
+          <Text style={[g.hint, { marginTop: 10, color: '#FFD666', fontSize: 12, lineHeight: 18 }]}>{dateTeaser}</Text>
 
-        <View>
           <View style={bd.navRow}>
             <TouchableOpacity onPress={function () { setPage(0); }} style={bd.backBtn}>
               <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.5)" />
@@ -1685,12 +1900,14 @@ function BirthDataStep({ onComplete, lang }) {
 
   /* PAGE 2: Time */
   var renderTimePage = function () {
+    var timeTeaser = lang === 'si' ? '🌙 උපන් වේලාව ඔබේ ලග්නය තීරණය කරයි — ඔබේ මුළු ජීවිතයේම සැඟවුණු සැලැස්ම එයයි' : '🌙 This is the single most important detail — it determines your entire Lagna and life path';
     return (
-      <Animated.View key="time" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'space-between' }}>
+      <Animated.View key="time" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
+          {renderConstellation()}
           <StepHeader title={T.timeTitle} subtitle={T.timeSubtitle} />
 
-          <GlowCard style={{ marginTop: 20 }}>
+          <GlowCard style={{ marginTop: 14 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={{ flex: 1 }}>
                 <Text style={g.inputLabel}>{T.hourLabel}</Text>
@@ -1716,9 +1933,8 @@ function BirthDataStep({ onComplete, lang }) {
           </GlowCard>
 
           <Text style={[g.hint, { marginTop: 8 }]}>{'\uD83D\uDCA1'} {T.timeHint}</Text>
-        </View>
+          <Text style={[g.hint, { marginTop: 6, color: '#FFD666', fontSize: 12, lineHeight: 18 }]}>{timeTeaser}</Text>
 
-        <View>
           <View style={bd.navRow}>
             <TouchableOpacity onPress={function () { setPage(1); }} style={bd.backBtn}>
               <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.5)" />
@@ -1735,12 +1951,14 @@ function BirthDataStep({ onComplete, lang }) {
 
   /* PAGE 3: Place */
   var renderPlacePage = function () {
+    var placeTeaser = lang === 'si' ? '✨ අවසාන පියවර! තත්පර කිහිපයකින් ඔබේ සම්පූර්ණ ඉරණම සහ සැඟවුණු කේන්දරය හෙළි වේ' : '✨ Final step! In seconds you\'ll see your complete birth chart and hidden destiny revealed';
     return (
-      <Animated.View key="place" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'space-between' }}>
+      <Animated.View key="place" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
+          {renderConstellation()}
           <StepHeader title={T.placeTitle} subtitle={T.placeSubtitle} />
 
-          <View style={{ marginTop: 16 }}>
+          <View style={{ marginTop: 12 }}>
             <CitySearchPicker
               selectedCity={selectedCity}
               onSelect={function (city) { setSelectedCity(city); }}
@@ -1764,9 +1982,8 @@ function BirthDataStep({ onComplete, lang }) {
           ) : null}
 
           <Text style={[g.hint, { marginTop: 6 }]}>{'\uD83C\uDF0D'} {T.placeHint}</Text>
-        </View>
+          <Text style={[g.hint, { marginTop: 6, color: '#FFD666', fontSize: 12, lineHeight: 18 }]}>{placeTeaser}</Text>
 
-        <View>
           <View style={bd.navRow}>
             <TouchableOpacity onPress={function () { setPage(2); }} style={bd.backBtn}>
               <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.5)" />
@@ -1782,16 +1999,8 @@ function BirthDataStep({ onComplete, lang }) {
     );
   };
 
-  // Build display strings for constellation
-  var dateDisplay = (year || '') + (month !== null ? '-' + (month + 1) : '') + (day ? '-' + day : '');
-  var timeDisplay = (hour || '') + (minute ? ':' + minute : '') + (hour ? ' ' + ampm : '');
-
   return (
-    <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 0, paddingBottom: 8, position: 'relative' }}>
-      {/* ✨ "Written in the Stars" — name & birth data as constellation */}
-      <WrittenInTheStars name={displayName} dateStr={dateDisplay} timeStr={timeDisplay} page={page} />
-      {/* Spacer to push form content below the constellation zone */}
-      <View style={{ height: Math.min(SH * 0.12, 90) }} />
+    <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 0, paddingBottom: 8 }}>
       {renderProgress()}
       {page === 0 ? renderNamePage()
         : page === 1 ? renderDatePage()
@@ -1802,7 +2011,7 @@ function BirthDataStep({ onComplete, lang }) {
 }
 
 var bd = StyleSheet.create({
-  progressRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  progressRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   progressItem: { flex: 1, alignItems: 'center' },
   progressLine: { width: '100%', height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 6 },
   progressLineActive: { backgroundColor: 'rgba(255,184,0,0.5)' },
@@ -1825,7 +2034,7 @@ var bd = StyleSheet.create({
   chartPreview: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 14, marginTop: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)' },
   chartPreviewIcon: { fontSize: 24 },
   chartPreviewText: { color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '500', fontStyle: 'italic', flex: 1 },
-  navRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 12 },
+  navRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 12 },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 14, paddingHorizontal: 6 },
   backText: { color: 'rgba(255,255,255,0.5)', fontSize: 14, fontWeight: '500' },
 });
@@ -1862,16 +2071,20 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
 
   // Animations
   var orbGlow = useSharedValue(0);
-  var orbScale = useSharedValue(0.2);
+  var orbScale = useSharedValue(0.01);
   var orbRotate = useSharedValue(0);
   var ringScale1 = useSharedValue(0);
   var ringScale2 = useSharedValue(0);
   var ringScale3 = useSharedValue(0);
+  var ringScale4 = useSharedValue(0);
   var symbolScale = useSharedValue(0);
   var symbolRotate = useSharedValue(-180);
   var detailsOpacity = useSharedValue(0);
   var shimmerX = useSharedValue(-1);
   var particleAngle = useSharedValue(0);
+  var loadTextGlow = useSharedValue(0);
+  var bigBang = useSharedValue(0);
+  var bgPulse = useSharedValue(0);
 
   // Fetch chart data
   useEffect(function () {
@@ -1884,8 +2097,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
         var result = await getBirthChartBasic(birthData.dateTime, birthData.lat, birthData.lng, lang);
         if (result && result.data) {
           setChartData(result.data);
-          // Start reveal animation after a dramatic pause
-          setTimeout(function () { setPhase('reveal'); }, 2200);
+          setTimeout(function () { setPhase('reveal'); }, 3000);
         } else {
           setPhase('skip');
         }
@@ -1897,106 +2109,118 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     fetchChart();
   }, []);
 
-  // Loading phase animations
+  // Loading phase — cinematic buildup
   useEffect(function () {
-    orbGlow.value = withRepeat(withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }), -1, true);
-    orbScale.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1000, easing: Easing.out(Easing.cubic) }),
-        withTiming(0.85, { duration: 1000, easing: Easing.inOut(Easing.sin) })
-      ), -1, true
+    // Orb: starts tiny, slowly grows with breathing
+    orbScale.value = withSequence(
+      withTiming(0.3, { duration: 800, easing: Easing.out(Easing.cubic) }),
+      withRepeat(withSequence(
+        withTiming(1.05, { duration: 1500, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0.85, { duration: 1500, easing: Easing.inOut(Easing.sin) })
+      ), -1, true)
     );
-    orbRotate.value = withRepeat(withTiming(360, { duration: 20000, easing: Easing.linear }), -1, false);
-    ringScale1.value = withRepeat(
-      withSequence(
-        withTiming(1.3, { duration: 2500, easing: Easing.out(Easing.cubic) }),
-        withTiming(0.8, { duration: 2500, easing: Easing.inOut(Easing.sin) })
-      ), -1, true
-    );
-    ringScale2.value = withDelay(500, withRepeat(
-      withSequence(
-        withTiming(1.4, { duration: 3000, easing: Easing.out(Easing.cubic) }),
-        withTiming(0.7, { duration: 3000, easing: Easing.inOut(Easing.sin) })
-      ), -1, true
-    ));
-    ringScale3.value = withDelay(1000, withRepeat(
-      withSequence(
-        withTiming(1.5, { duration: 3500, easing: Easing.out(Easing.cubic) }),
-        withTiming(0.6, { duration: 3500, easing: Easing.inOut(Easing.sin) })
-      ), -1, true
-    ));
-    particleAngle.value = withRepeat(withTiming(360, { duration: 8000, easing: Easing.linear }), -1, false);
-    shimmerX.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.linear }), -1, false);
+    orbGlow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    orbRotate.value = withRepeat(withTiming(360, { duration: 25000, easing: Easing.linear }), -1, false);
+    // Rings expand outward in staggered waves
+    ringScale1.value = withRepeat(withSequence(
+      withTiming(1.6, { duration: 2800, easing: Easing.out(Easing.cubic) }),
+      withTiming(0.6, { duration: 2800, easing: Easing.inOut(Easing.sin) })
+    ), -1, true);
+    ringScale2.value = withDelay(400, withRepeat(withSequence(
+      withTiming(1.8, { duration: 3200, easing: Easing.out(Easing.cubic) }),
+      withTiming(0.5, { duration: 3200, easing: Easing.inOut(Easing.sin) })
+    ), -1, true));
+    ringScale3.value = withDelay(800, withRepeat(withSequence(
+      withTiming(2.0, { duration: 3600, easing: Easing.out(Easing.cubic) }),
+      withTiming(0.4, { duration: 3600, easing: Easing.inOut(Easing.sin) })
+    ), -1, true));
+    ringScale4.value = withDelay(1200, withRepeat(withSequence(
+      withTiming(2.2, { duration: 4000, easing: Easing.out(Easing.cubic) }),
+      withTiming(0.3, { duration: 4000, easing: Easing.inOut(Easing.sin) })
+    ), -1, true));
+    particleAngle.value = withRepeat(withTiming(360, { duration: 6000, easing: Easing.linear }), -1, false);
+    loadTextGlow.value = withRepeat(withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.sin) }), -1, true);
+    bgPulse.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
   }, []);
 
-  // Reveal phase animations
+  // Reveal phase — dramatic entrance
   useEffect(function () {
     if (phase === 'reveal') {
-      symbolScale.value = withSequence(
-        withDelay(200, withSpring(1.4, { damping: 6, stiffness: 150 })),
-        withSpring(1, { damping: 10, stiffness: 120 })
+      // Big bang flash
+      bigBang.value = withSequence(
+        withTiming(1, { duration: 200 }),
+        withTiming(0, { duration: 800, easing: Easing.out(Easing.cubic) })
       );
-      symbolRotate.value = withDelay(200, withSpring(0, { damping: 12, stiffness: 80 }));
-      detailsOpacity.value = withDelay(1200, withTiming(1, { duration: 800 }));
+      // Symbol bursts in with overshoot
+      symbolScale.value = withSequence(
+        withDelay(300, withSpring(1.6, { damping: 4, stiffness: 200 })),
+        withSpring(1, { damping: 8, stiffness: 100 })
+      );
+      symbolRotate.value = withDelay(300, withSpring(0, { damping: 10, stiffness: 60 }));
+      detailsOpacity.value = withDelay(1400, withTiming(1, { duration: 700 }));
     }
   }, [phase]);
 
   var orbStyle = useAnimatedStyle(function () {
     return {
       transform: [{ scale: orbScale.value }],
-      opacity: interpolate(orbGlow.value, [0, 1], [0.6, 1]),
+      opacity: interpolate(orbGlow.value, [0, 1], [0.7, 1]),
     };
   });
-  var ring1Style = useAnimatedStyle(function () {
-    return {
-      transform: [{ scale: ringScale1.value }, { rotate: orbRotate.value + 'deg' }],
-      opacity: interpolate(ringScale1.value, [0.8, 1.3], [0.4, 0.1]),
-    };
-  });
-  var ring2Style = useAnimatedStyle(function () {
-    return {
-      transform: [{ scale: ringScale2.value }, { rotate: -orbRotate.value * 0.7 + 'deg' }],
-      opacity: interpolate(ringScale2.value, [0.7, 1.4], [0.3, 0.05]),
-    };
-  });
-  var ring3Style = useAnimatedStyle(function () {
-    return {
-      transform: [{ scale: ringScale3.value }, { rotate: orbRotate.value * 0.4 + 'deg' }],
-      opacity: interpolate(ringScale3.value, [0.6, 1.5], [0.2, 0.02]),
-    };
-  });
+  var makeRingStyle = function (scaleVal, reverse) {
+    return useAnimatedStyle(function () {
+      var rot = reverse ? -orbRotate.value * 0.6 : orbRotate.value;
+      return {
+        transform: [{ scale: scaleVal.value }, { rotate: rot + 'deg' }],
+        opacity: interpolate(scaleVal.value, [0.3, 2.2], [0.5, 0.02]),
+      };
+    });
+  };
+  var ring1Style = makeRingStyle(ringScale1, false);
+  var ring2Style = makeRingStyle(ringScale2, true);
+  var ring3Style = makeRingStyle(ringScale3, false);
+  var ring4Style = makeRingStyle(ringScale4, true);
   var symbolStyle = useAnimatedStyle(function () {
-    return {
-      transform: [{ scale: symbolScale.value }, { rotate: symbolRotate.value + 'deg' }],
-    };
+    return { transform: [{ scale: symbolScale.value }, { rotate: symbolRotate.value + 'deg' }] };
   });
   var detailStyle = useAnimatedStyle(function () {
     return { opacity: detailsOpacity.value };
   });
+  var bigBangStyle = useAnimatedStyle(function () {
+    return {
+      opacity: bigBang.value,
+      transform: [{ scale: interpolate(bigBang.value, [0, 1], [3, 1]) }],
+    };
+  });
+  var loadGlowStyle = useAnimatedStyle(function () {
+    if (Platform.OS === 'web') return {};
+    return {
+      shadowColor: '#FFB800',
+      shadowOpacity: interpolate(loadTextGlow.value, [0, 1], [0.3, 0.9]),
+      shadowRadius: interpolate(loadTextGlow.value, [0, 1], [4, 20]),
+      shadowOffset: { width: 0, height: 0 },
+    };
+  });
+  var bgPulseStyle = useAnimatedStyle(function () {
+    return { opacity: interpolate(bgPulse.value, [0, 1], [0, 0.15]) };
+  });
 
-  var makeParticle = function (idx, count) {
+  // Orbiting particles — 12 particles for premium feel
+  var makeParticle = function (idx, count, radius) {
     var angle = (360 / count) * idx;
     return useAnimatedStyle(function () {
       var a = ((particleAngle.value + angle) * Math.PI) / 180;
-      var r = 70;
+      var r = radius;
       return {
         position: 'absolute',
         left: Math.cos(a) * r,
         top: Math.sin(a) * r,
-        opacity: interpolate(orbGlow.value, [0, 1], [0.2, 0.8]),
+        opacity: interpolate(orbGlow.value, [0, 1], [0.15, 0.9]),
       };
     });
   };
-
-  var p0 = makeParticle(0, 8);
-  var p1 = makeParticle(1, 8);
-  var p2 = makeParticle(2, 8);
-  var p3 = makeParticle(3, 8);
-  var p4 = makeParticle(4, 8);
-  var p5 = makeParticle(5, 8);
-  var p6 = makeParticle(6, 8);
-  var p7 = makeParticle(7, 8);
-  var particles = [p0, p1, p2, p3, p4, p5, p6, p7];
+  var innerParticles = [0,1,2,3,4,5].map(function(i) { return makeParticle(i, 6, 55); });
+  var outerParticles = [0,1,2,3,4,5,6,7].map(function(i) { return makeParticle(i, 8, 90); });
 
   // Auto-skip if no birth data
   useEffect(function () {
@@ -2006,7 +2230,6 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     }
   }, [phase]);
 
-  // Skip directly if no birth data
   if (phase === 'skip') {
     return (
       <View style={g.center}>
@@ -2015,52 +2238,79 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     );
   }
 
-  // Build date/time strings for vortex
   var vortexDate = birthData ? (birthData.dateTime || '').split('T')[0] : '';
   var vortexTime = birthData ? (birthData.dateTime || '').split('T')[1] || '' : '';
 
-  // Loading phase
+  // ═══════════════════════════════════════════════════════════
+  //  LOADING PHASE — Cinematic cosmic energy buildup
+  // ═══════════════════════════════════════════════════════════
   if (phase === 'loading') {
     return (
-      <View style={g.center}>
-        {/* ✨ Star vortex — name & birth data spiral into the center */}
-        <StarVortex name={displayName || ''} dateStr={vortexDate} timeStr={vortexTime} />
-        <View style={{ width: 200, height: 200, alignItems: 'center', justifyContent: 'center' }}>
-          {/* Pulsing orbital rings */}
-          <Animated.View style={[lr.ring, { width: 200, height: 200, borderRadius: 100, borderColor: '#FFB800' }, ring1Style]} />
-          <Animated.View style={[lr.ring, { width: 170, height: 170, borderRadius: 85, borderColor: '#FF8C00' }, ring2Style]} />
-          <Animated.View style={[lr.ring, { width: 140, height: 140, borderRadius: 70, borderColor: '#FFD54F' }, ring3Style]} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
+        {/* Background radial pulse */}
+        <Animated.View style={[{ position: 'absolute', width: SH * 0.6, height: SH * 0.6, borderRadius: SH * 0.3, backgroundColor: 'rgba(255,140,0,0.04)' }, bgPulseStyle]} />
 
-          {/* Orbiting particles */}
-          {particles.map(function (pStyle, i) {
+        <StarVortex name={displayName || ''} dateStr={vortexDate} timeStr={vortexTime} />
+
+        <View style={{ width: 220, height: 220, alignItems: 'center', justifyContent: 'center' }}>
+          {/* Expanding rings — 4 layers for depth */}
+          <Animated.View style={[lr.ring, { width: 220, height: 220, borderRadius: 110, borderColor: '#FF6D00' }, ring1Style]} />
+          <Animated.View style={[lr.ring, { width: 190, height: 190, borderRadius: 95, borderColor: '#FFB800' }, ring2Style]} />
+          <Animated.View style={[lr.ring, { width: 160, height: 160, borderRadius: 80, borderColor: '#FFD54F' }, ring3Style]} />
+          <Animated.View style={[lr.ring, { width: 130, height: 130, borderRadius: 65, borderColor: '#FFF176' }, ring4Style]} />
+
+          {/* Orbiting particles — inner ring */}
+          {innerParticles.map(function (pStyle, i) {
             return (
-              <Animated.View key={i} style={pStyle}>
-                <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#FFB800' }} />
+              <Animated.View key={'ip' + i} style={pStyle}>
+                <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#FFD54F', ...boxShadow('#FFB800', { width: 0, height: 0 }, 1, 6) }} />
+              </Animated.View>
+            );
+          })}
+          {/* Orbiting particles — outer ring */}
+          {outerParticles.map(function (pStyle, i) {
+            return (
+              <Animated.View key={'op' + i} style={pStyle}>
+                <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#FFB800' }} />
               </Animated.View>
             );
           })}
 
-          {/* Central orb */}
-          <Animated.View style={[lr.centerOrb, orbStyle]}>
+          {/* Central energy orb — large with glass effect */}
+          <Animated.View style={[{ width: 100, height: 100, borderRadius: 50, overflow: 'hidden', ...boxShadow('#FFB800', { width: 0, height: 0 }, 1, 40) }, orbStyle]}>
             <LinearGradient
-              colors={['#FFD54F', '#FFB800', '#FF8C00', '#E65100']}
-              style={lr.centerOrbGrad}
+              colors={['#FFF176', '#FFD54F', '#FFB800', '#FF8C00', '#E65100']}
+              style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 50 }}
               start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
             >
-              <Text style={lr.centerOrbEmoji}>{'\u2728'}</Text>
+              {/* Glass shine */}
+              <LinearGradient
+                colors={['rgba(255,255,255,0.45)', 'rgba(255,255,255,0.1)', 'transparent']}
+                style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '45%', borderTopLeftRadius: 50, borderTopRightRadius: 50 }}
+              />
+              <Text style={{ fontSize: 44, ...textShadow('rgba(0,0,0,0.3)', { width: 0, height: 2 }, 8) }}>{'\u2728'}</Text>
             </LinearGradient>
           </Animated.View>
         </View>
 
-        <Animated.Text entering={FadeIn.delay(300).duration(600)} style={lr.loadingTitle}>{T.revealLoading}</Animated.Text>
-        <Animated.Text entering={FadeIn.delay(700).duration(600)} style={lr.loadingSub}>{T.revealLoadingSub}</Animated.Text>
+        {/* Loading text with glow */}
+        <Animated.View style={[{ marginTop: 36, alignItems: 'center' }, loadGlowStyle]}>
+          <Animated.Text entering={FadeIn.delay(300).duration(600)} style={{ fontSize: 22, fontWeight: '900', color: '#FFD666', textAlign: 'center', letterSpacing: 0.5, ...textShadow('rgba(255,184,0,0.6)', { width: 0, height: 0 }, 16) }}>
+            {T.revealLoading}
+          </Animated.Text>
+          <Animated.Text entering={FadeIn.delay(700).duration(600)} style={{ fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 10, lineHeight: 18 }}>
+            {T.revealLoadingSub}
+          </Animated.Text>
+        </Animated.View>
 
-        {/* Animated dots */}
-        <View style={lr.dotsRow}>
+        {/* Pulsing progress dots */}
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 28, justifyContent: 'center' }}>
           {[0, 1, 2].map(function (i) {
             return (
-              <Animated.View key={i} entering={FadeIn.delay(1000 + i * 200).duration(400)} style={lr.dot}>
-                <LinearGradient colors={['#FFB800', '#FF8C00']} style={lr.dotGrad} />
+              <Animated.View key={i} entering={FadeIn.delay(1200 + i * 250).duration(400)}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, overflow: 'hidden', ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.8, 8) }}>
+                  <LinearGradient colors={['#FFD54F', '#FFB800', '#FF8C00']} style={{ width: '100%', height: '100%' }} />
+                </View>
               </Animated.View>
             );
           })}
@@ -2069,7 +2319,9 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     );
   }
 
-  // Reveal phase
+  // ═══════════════════════════════════════════════════════════
+  //  REVEAL PHASE — Premium birth chart reveal
+  // ═══════════════════════════════════════════════════════════
   if (phase === 'reveal' && chartData) {
     var lagna = chartData.lagna || {};
     var lagnaDetails = chartData.lagnaDetails || {};
@@ -2086,197 +2338,158 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     var sunName = lang === 'si' ? (sunSign.sinhala || sunSign.english) : (sunSign.english || sunSign.name);
     var nakshatraName = nakshatra.name || '';
     var nakshatraSinhala = nakshatra.sinhala || '';
-    var lagnaDesc = lang === 'si' ? (lagnaDetails.descriptionSi || lagnaDetails.description || '') : (lagnaDetails.description || '');
     var traits = lang === 'si' ? (lagnaDetails.traitsSi || lagnaDetails.traits || []) : (lagnaDetails.traits || []);
 
+    var isSmallScreen = SH < 700;
+
     return (
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 4, paddingBottom: 30, justifyContent: 'space-between' }} showsVerticalScrollIndicator={false} bounces={false} overScrollMode="never">
-        {/* Top: Lagna reveal orb + name */}
-        <View>
-          <View style={lr.revealCenter}>
-            <View style={{ width: 140, height: 140, alignItems: 'center', justifyContent: 'center' }}>
-              {/* Ambient rings */}
-              <Animated.View style={[lr.ring, { width: 140, height: 140, borderRadius: 70, borderColor: elemColors[0] }, ring1Style]} />
-              <Animated.View style={[lr.ring, { width: 120, height: 120, borderRadius: 60, borderColor: elemColors[1] }, ring2Style]} />
+      <View style={{ flex: 1, paddingHorizontal: 20 }}>
 
-              {/* Orbiting particles */}
-              {particles.map(function (pStyle, i) {
-                return (
-                  <Animated.View key={i} style={pStyle}>
-                    <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: elemColors[2] }} />
-                  </Animated.View>
-                );
-              })}
+        {/* Big Bang flash overlay */}
+        <Animated.View style={[{ position: 'absolute', top: -100, left: -100, right: -100, bottom: -100, backgroundColor: '#FFB800', zIndex: 100, pointerEvents: 'none' }, bigBangStyle]} />
 
-              {/* Zodiac symbol */}
-              <Animated.View style={[lr.symbolOrb, symbolStyle]}>
+        {/* ── HERO: Compact Zodiac Orb + Lagna Name ── */}
+        <View style={{ alignItems: 'center', marginTop: isSmallScreen ? 4 : 10 }}>
+          <View style={{ width: 120, height: 120, alignItems: 'center', justifyContent: 'center' }}>
+            {/* Ambient rings */}
+            <Animated.View style={[lr.ring, { width: 120, height: 120, borderRadius: 60, borderColor: elemColors[0], borderWidth: 1.5 }, ring1Style]} />
+            <Animated.View style={[lr.ring, { width: 104, height: 104, borderRadius: 52, borderColor: elemColors[1] }, ring2Style]} />
+
+            {/* Orbiting dots */}
+            {innerParticles.slice(0, 4).map(function (pStyle, i) {
+              return (
+                <Animated.View key={'rp' + i} style={pStyle}>
+                  <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: elemColors[2], ...boxShadow(elemColors[1], { width: 0, height: 0 }, 1, 3) }} />
+                </Animated.View>
+              );
+            })}
+
+            {/* Main zodiac orb */}
+            <Animated.View style={[{ width: 76, height: 76, borderRadius: 38, overflow: 'hidden', ...boxShadow(elemColors[0], { width: 0, height: 0 }, 1, 30) }, symbolStyle]}>
+              <LinearGradient
+                colors={[elemColors[2], elemColors[1], elemColors[0]]}
+                style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 38 }}
+                start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
+              >
                 <LinearGradient
-                  colors={[elemColors[2], elemColors[1], elemColors[0]]}
-                  style={lr.symbolOrbGrad}
-                  start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
-                >
-                  <LinearGradient
-                    colors={['rgba(255,255,255,0.30)', 'rgba(255,255,255,0.05)', 'transparent']}
-                    style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 50, borderTopRightRadius: 50 }}
-                    start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
-                  />
-                  <Text style={lr.zodiacSymbol}>{zodiacSymbol}</Text>
-                </LinearGradient>
-              </Animated.View>
-            </View>
-
-            {/* Lagna name */}
-            <Animated.View entering={FadeInDown.delay(600).duration(500)} style={lr.lagnaNameWrap}>
-              <Text style={lr.revealLabel}>{T.revealYourLagna}</Text>
-              <Text style={[lr.lagnaName, { color: elemColors[1] }]}>{lagnaName}</Text>
-              {lagnaSubname ? <Text style={lr.lagnaSubname}>{lagnaSubname}</Text> : null}
+                  colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.08)', 'transparent']}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '48%', borderTopLeftRadius: 38, borderTopRightRadius: 38 }}
+                />
+                <Text style={{ fontSize: 36, color: '#FFF1D0', ...textShadow('rgba(0,0,0,0.5)', { width: 0, height: 2 }, 10) }}>{zodiacSymbol}</Text>
+              </LinearGradient>
             </Animated.View>
           </View>
 
-          {/* Three sign cards — Moon, Nakshatra, Sun */}
-          <Animated.View entering={FadeInDown.delay(900).duration(500)} style={lr.tripleRow}>
-            <View style={lr.tripleCard}>
-              <Text style={lr.tripleEmoji}>{ZODIAC_SYMBOLS[moonSign.name] || '🌙'}</Text>
-              <Text style={lr.tripleLabel}>{T.revealMoonSign}</Text>
-              <Text style={lr.tripleValue}>{moonName}</Text>
-            </View>
-            <View style={[lr.tripleCard, lr.tripleCardCenter]}>
-              <Text style={lr.tripleEmoji}>{'\u2B50'}</Text>
-              <Text style={lr.tripleLabel}>{T.revealNakshatra}</Text>
-              <Text style={lr.tripleValue}>{lang === 'si' ? (nakshatraSinhala || nakshatraName) : nakshatraName}</Text>
-            </View>
-            <View style={lr.tripleCard}>
-              <Text style={lr.tripleEmoji}>{ZODIAC_SYMBOLS[sunSign.name] || '☀️'}</Text>
-              <Text style={lr.tripleLabel}>{T.revealSunSign}</Text>
-              <Text style={lr.tripleValue}>{sunName}</Text>
-            </View>
+          {/* Lagna name — tight spacing */}
+          <Animated.View entering={FadeInDown.delay(600).duration(400)} style={{ alignItems: 'center', marginTop: 4 }}>
+            <Text style={{ fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.4)', letterSpacing: 3, textTransform: 'uppercase' }}>{T.revealYourLagna}</Text>
+            <Text style={{ fontSize: 26, fontWeight: '900', color: elemColors[1], letterSpacing: 1, marginTop: 1, ...textShadow(elemColors[0] + '80', { width: 0, height: 0 }, 16) }}>{lagnaName}</Text>
+            {lagnaSubname ? <Text style={{ fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{lagnaSubname}</Text> : null}
           </Animated.View>
-
-          {/* Traits chips */}
-          {traits.length > 0 ? (
-            <Animated.View entering={FadeInDown.delay(1200).duration(500)} style={{ marginTop: 14 }}>
-              <Text style={lr.sectionTitle}>{T.revealTraits}</Text>
-              <View style={lr.traitsWrap}>
-                {traits.slice(0, 6).map(function (trait, i) {
-                  return (
-                    <Animated.View key={i} entering={FadeInDown.delay(1300 + i * 80).duration(250)} style={lr.traitChip}>
-                      <LinearGradient
-                        colors={['rgba(255,184,0,0.12)', 'rgba(255,140,0,0.06)']}
-                        style={StyleSheet.absoluteFill}
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                      />
-                      <Text style={lr.traitText}>{trait}</Text>
-                    </Animated.View>
-                  );
-                })}
-              </View>
-            </Animated.View>
-          ) : null}
-
-          {/* Lucky details row */}
-          {lagnaDetails.gem || lagnaDetails.luckyColor || lagnaDetails.luckyDay ? (
-            <Animated.View entering={FadeInDown.delay(1500).duration(500)} style={lr.luckyRow}>
-              {lagnaDetails.gem ? (
-                <View style={lr.luckyItem}>
-                  <Text style={lr.luckyEmoji}>{'\uD83D\uDC8E'}</Text>
-                  <Text style={lr.luckyLabel}>{T.revealGem}</Text>
-                  <Text style={lr.luckyValue}>{lagnaDetails.gem}</Text>
-                </View>
-              ) : null}
-              {lagnaDetails.luckyColor ? (
-                <View style={lr.luckyItem}>
-                  <Text style={lr.luckyEmoji}>{'\uD83C\uDFA8'}</Text>
-                  <Text style={lr.luckyLabel}>{T.revealColor}</Text>
-                  <Text style={lr.luckyValue}>{lagnaDetails.luckyColor}</Text>
-                </View>
-              ) : null}
-              {lagnaDetails.luckyDay ? (
-                <View style={lr.luckyItem}>
-                  <Text style={lr.luckyEmoji}>{'\uD83D\uDCC5'}</Text>
-                  <Text style={lr.luckyLabel}>{T.revealDay}</Text>
-                  <Text style={lr.luckyValue}>{lagnaDetails.luckyDay}</Text>
-                </View>
-              ) : null}
-            </Animated.View>
-          ) : null}
         </View>
 
-        {/* Bottom: Premium teaser with gradient reveal — creates powerful curiosity gap */}
-        <Animated.View entering={FadeInUp.delay(1800).duration(600)} style={{ marginTop: 8 }}>
+        {/* ── THREE SIGN CARDS — compact row ── */}
+        <Animated.View entering={FadeInDown.delay(800).duration(400)} style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
+          {[
+            { emoji: ZODIAC_SYMBOLS[moonSign.name] || '🌙', label: T.revealMoonSign, value: moonName, color: '#A78BFA' },
+            { emoji: '\u2B50', label: T.revealNakshatra, value: lang === 'si' ? (nakshatraSinhala || nakshatraName) : nakshatraName, color: '#FFB800' },
+            { emoji: ZODIAC_SYMBOLS[sunSign.name] || '☀️', label: T.revealSunSign, value: sunName, color: '#FF6B9D' },
+          ].map(function (card, i) {
+            return (
+              <View key={i} style={{ flex: 1, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: card.color + '18' }}>
+                <LinearGradient colors={[card.color + '10', 'rgba(15,10,30,0.5)']} style={{ paddingVertical: 10, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 18, marginBottom: 3 }}>{card.emoji}</Text>
+                  <Text style={{ fontSize: 7, fontWeight: '700', color: 'rgba(255,255,255,0.35)', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 2 }}>{card.label}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: card.color, textAlign: 'center', paddingHorizontal: 2 }} numberOfLines={1}>{card.value}</Text>
+                </LinearGradient>
+              </View>
+            );
+          })}
+        </Animated.View>
 
-          {/* ── Locked Premium Insights Card ── */}
-          <View style={{ borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,184,0,0.18)', marginBottom: 14 }}>
-            <LinearGradient
-              colors={['rgba(255,184,0,0.08)', 'rgba(15,10,30,0.95)', 'rgba(8,6,22,0.98)']}
-              style={{ padding: 14 }}
-              start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-            >
-              {/* Header */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,184,0,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)' }}>
-                  <Ionicons name="lock-closed" size={13} color="#FFB800" />
+        {/* ── TRAITS — horizontal pill row ── */}
+        {traits.length > 0 ? (
+          <Animated.View entering={FadeInDown.delay(1000).duration(400)} style={{ marginTop: 10 }}>
+            <Text style={{ fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.35)', letterSpacing: 2, textTransform: 'uppercase', textAlign: 'center', marginBottom: 6 }}>{T.revealTraits}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, justifyContent: 'center' }}>
+              {traits.slice(0, 4).map(function (trait, i) {
+                return (
+                  <View key={i} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)', backgroundColor: 'rgba(255,184,0,0.06)' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFD666' }}>{trait}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Animated.View>
+        ) : null}
+
+        {/* ── LUCKY DETAILS — compact inline row ── */}
+        {lagnaDetails.gem || lagnaDetails.luckyColor || lagnaDetails.luckyDay ? (
+          <Animated.View entering={FadeInDown.delay(1200).duration(400)} style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
+            {[
+              lagnaDetails.gem ? { emoji: '\uD83D\uDC8E', label: T.revealGem, value: lagnaDetails.gem } : null,
+              lagnaDetails.luckyColor ? { emoji: '\uD83C\uDFA8', label: T.revealColor, value: lagnaDetails.luckyColor } : null,
+              lagnaDetails.luckyDay ? { emoji: '\uD83D\uDCC5', label: T.revealDay, value: lagnaDetails.luckyDay } : null,
+            ].filter(Boolean).map(function (item, i) {
+              return (
+                <View key={i} style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+                  <Text style={{ fontSize: 16, marginBottom: 2 }}>{item.emoji}</Text>
+                  <Text style={{ fontSize: 7, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2, textAlign: 'center' }}>{item.label}</Text>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.65)', textAlign: 'center' }} numberOfLines={1}>{item.value}</Text>
                 </View>
+              );
+            })}
+          </Animated.View>
+        ) : null}
+
+        {/* ── Spacer pushes CTA to bottom ── */}
+        <View style={{ flex: 1, minHeight: 8 }} />
+
+        {/* ── PREMIUM NUDGE — slim banner ── */}
+        <Animated.View entering={FadeInUp.delay(1400).duration(500)}>
+          <View style={{ borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,184,0,0.2)', marginBottom: 10 }}>
+            <LinearGradient
+              colors={['rgba(255,184,0,0.08)', 'rgba(15,10,30,0.9)']}
+              style={{ paddingVertical: 12, paddingHorizontal: 14 }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <LinearGradient colors={['#FFB800', '#FF8C00']} style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="lock-closed" size={13} color="#FFF1D0" />
+                </LinearGradient>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFB800', letterSpacing: 0.5 }}>
-                    {lang === 'si' ? 'PREMIUM අනාවැකි' : 'PREMIUM PREDICTIONS'}
-                  </Text>
-                  <Text style={{ fontSize: 9, fontWeight: '600', color: 'rgba(255,184,0,0.5)', letterSpacing: 1, marginTop: 1 }}>
-                    {lang === 'si' ? 'අගුළු අරින්න සම්පූර්ණ කේන්දරය බලන්න' : 'UNLOCK TO REVEAL YOUR FULL CHART'}
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: '#FFB800', letterSpacing: 0.5 }}>
+                    {lang === 'si' ? 'ඔබේ ඉරණමෙන් 90%ක්ම සැඟවිලා! 🌟' : '90% OF YOUR DESTINY IS HIDDEN! 🌟'}
                   </Text>
                 </View>
               </View>
 
-              {/* Locked insight rows with partial reveal + blur effect */}
-              <View style={{ gap: 8 }}>
+              {/* Slim locked items — 2x2 grid */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
                 {[
-                  { emoji: '💍', label: lang === 'si' ? 'විවාහ කාලය' : 'Marriage Period', hint: lang === 'si' ? 'ඔයාගේ 7 වන භාවය දැක්...' : 'Your 7th house shows...', color: '#FF6B9D' },
-                  { emoji: '💰', label: lang === 'si' ? 'ධන යෝගය' : 'Wealth Yoga', hint: lang === 'si' ? 'ධනය සඳහා ශුභ කාල...' : 'Auspicious periods for...', color: '#34D399' },
-                  { emoji: '💼', label: lang === 'si' ? 'වෘත්තිය මාර්ගය' : 'Career Path', hint: lang === 'si' ? '10 වන භාවයේ ග්‍රහ...' : '10th house planets reveal...', color: '#60A5FA' },
-                  { emoji: '⚠️', label: lang === 'si' ? 'ඉදිරි අවදානම්' : 'Upcoming Challenges', hint: lang === 'si' ? 'ශනි ගෝචරය...' : 'Saturn transit indicates...', color: '#FBBF24' },
-                  { emoji: '🏥', label: lang === 'si' ? 'සෞඛ්‍ය' : 'Health Insights', hint: lang === 'si' ? '6 වන භාවය...' : '6th house placement...', color: '#F472B6' },
-                  { emoji: '✨', label: lang === 'si' ? 'මහා දශා අනාවැකි' : 'Dasha Predictions', hint: lang === 'si' ? 'ඔයාගේ වත්මන් දශාව...' : 'Your current dasha period...', color: '#A78BFA' },
+                  { emoji: '💍', label: lang === 'si' ? 'ආත්ම සහකරු එන කාලය' : 'Soulmate Timing', color: '#FF6B9D' },
+                  { emoji: '💰', label: lang === 'si' ? 'ධනය සහ වාසනාව' : 'Wealth Destiny', color: '#34D399' },
+                  { emoji: '💼', label: lang === 'si' ? 'දියුණුවන මාර්ගය' : 'Ultimate Career', color: '#60A5FA' },
+                  { emoji: '⚠️', label: lang === 'si' ? 'සැඟවුණු අවදානම්' : 'Hidden Dangers', color: '#FBBF24' },
                 ].map(function (item, i) {
                   return (
-                    <Animated.View key={i} entering={FadeInDown.delay(1900 + i * 100).duration(300)}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' }}>
-                        <Text style={{ fontSize: 16 }}>{item.emoji}</Text>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: item.color, marginBottom: 2 }}>{item.label}</Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic' }}>{item.hint}</Text>
-                            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)', letterSpacing: -1 }}> ████████</Text>
-                          </View>
-                        </View>
-                        <Ionicons name="lock-closed" size={11} color="rgba(255,184,0,0.35)" />
-                      </View>
-                    </Animated.View>
+                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, width: '48%', paddingVertical: 5, paddingHorizontal: 8, backgroundColor: 'rgba(255,255,255,0.025)', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' }}>
+                      <Text style={{ fontSize: 13 }}>{item.emoji}</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: item.color, flex: 1 }} numberOfLines={1}>{item.label}</Text>
+                      <Ionicons name="lock-closed" size={10} color="rgba(255,184,0,0.35)" />
+                    </View>
                   );
                 })}
               </View>
-
-              {/* Bottom fade gradient — "there's more below" hint */}
-              <LinearGradient
-                colors={['transparent', 'rgba(8,6,22,0.9)']}
-                style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 40, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}
-              />
             </LinearGradient>
           </View>
 
-          {/* Urgency nudge */}
-          <View style={{ alignItems: 'center', marginBottom: 8 }}>
-            <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(255,100,100,0.7)', textAlign: 'center' }}>
-              {lang === 'si' ? '⏳ මේ විශ්ලේෂණය තාවකාලිකයි — අගුළු නොඅරියොත් මකා දැමෙයි' : '⏳ This analysis is temporary — unlock now or it will be deleted'}
-            </Text>
-          </View>
-
-          <PrimaryButton label={lang === 'si' ? 'සම්පූර්ණ කේන්දරේ අගුළු අරින්න 🔓' : 'Unlock My Full Chart 🔓'} onPress={onContinue} icon="sparkles" />
+          <PrimaryButton label={lang === 'si' ? 'මගේ සම්පූර්ණ අනාගත රහස් අගුළු අරින්න 🔓' : 'Unlock My Complete Destiny 🔓'} onPress={onContinue} icon="sparkles" />
           <GhostButton label={T.revealSkip} onPress={onContinue} />
         </Animated.View>
-      </ScrollView>
+      </View>
     );
   }
 
-  // Fallback
   return (
     <View style={g.center}>
       <CosmicLoader size={56} color="#FFB800" />
@@ -2286,37 +2499,6 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
 
 var lr = StyleSheet.create({
   ring: { position: 'absolute', borderWidth: 1.5, borderStyle: 'dashed' },
-  centerOrb: { width: 80, height: 80, borderRadius: 40, overflow: 'hidden', ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.8, 30), elevation: 0 },
-  centerOrbGrad: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 40 },
-  centerOrbEmoji: { fontSize: 36 },
-  loadingTitle: { fontSize: 22, fontWeight: '800', color: '#FFD666', textAlign: 'center', marginTop: 32, ...textShadow('rgba(255,184,0,0.4)', { width: 0, height: 0 }, 12) },
-  loadingSub: { fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 8 },
-  dotsRow: { flexDirection: 'row', gap: 8, marginTop: 24, justifyContent: 'center' },
-  dot: { width: 8, height: 8, borderRadius: 4, overflow: 'hidden' },
-  dotGrad: { width: '100%', height: '100%' },
-  revealCenter: { alignItems: 'center', marginBottom: 4 },
-  symbolOrb: { width: 90, height: 90, borderRadius: 45, overflow: 'hidden', ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.9, 35), elevation: 0 },
-  symbolOrbGrad: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 45 },
-  zodiacSymbol: { fontSize: 42, color: '#FFF1D0', ...textShadow('rgba(0,0,0,0.5)', { width: 0, height: 2 }, 8) },
-  lagnaNameWrap: { alignItems: 'center', marginTop: 10 },
-  revealLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.4)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 2 },
-  lagnaName: { fontSize: 28, fontWeight: '900', letterSpacing: 1, ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 16) },
-  lagnaSubname: { fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.35)', marginTop: 1 },
-  tripleRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  tripleCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  tripleCardCenter: { borderColor: 'rgba(255,184,0,0.15)', backgroundColor: 'rgba(255,184,0,0.04)' },
-  tripleEmoji: { fontSize: 20, marginBottom: 4 },
-  tripleLabel: { fontSize: 8, fontWeight: '700', color: 'rgba(255,255,255,0.35)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 },
-  tripleValue: { fontSize: 12, fontWeight: '700', color: '#FFD666', textAlign: 'center' },
-  sectionTitle: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.4)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8, textAlign: 'center' },
-  traitsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },
-  traitChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)', overflow: 'hidden' },
-  traitText: { fontSize: 11, fontWeight: '600', color: '#FFD666' },
-  luckyRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  luckyItem: { flex: 1, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  luckyEmoji: { fontSize: 18, marginBottom: 3 },
-  luckyLabel: { fontSize: 8, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 2, textAlign: 'center' },
-  luckyValue: { fontSize: 10, fontWeight: '600', color: 'rgba(255,255,255,0.65)', textAlign: 'center' },
 });
 
 
