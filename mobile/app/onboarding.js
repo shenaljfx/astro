@@ -211,9 +211,9 @@ var OB = {
     welcomeDesc: "Your Lagna holds secrets you've never heard\nThe planets are whispering — are you listening?\nYour cosmic destiny is waiting to be decoded",
     welcomeBtn: "Reveal My Destiny Now",
     welcomeHint: "Thousands are discovering what their stars hide",
-    googleTitle: "Your Chart Will Disappear!",
-    googleSubtitle: "This one-of-a-kind cosmic reading vanishes if you don't save it now",
-    googleBtn: "Save My Reading",
+    googleTitle: "Welcome to Grahachara ✨",
+    googleSubtitle: "Sign in to securely save your exact birth chart & get personalized daily predictions",
+    googleBtn: "Continue with Google",
     googleFail: "Sign in failed. Please try again.",
     subTitle: "90% Of Your Destiny Is Still Hidden! 🌟",
     subSubtitle: "Your ultimate power and wealth secrets are locked \u2014 unlock them now",
@@ -287,9 +287,9 @@ var OB = {
     welcomeDesc: "ඔබේ ලග්නයේ ඔබ කවදාවත් නොඇසූ රහස් තිබේ\nග්‍රහයන් ඔබ ගැන මොනවද කියන්නේ?\nඔබේ ඉරණම විකේතනය වීමට බලා සිටී",
     welcomeBtn: "මගේ ඉරණම දැන් හෙළි කරන්න",
     welcomeHint: "දහස් ගණනක් තම තරු රහස් සොයාගනිමින් සිටී",
-    googleTitle: "ඔබේ කේන්දරය අතුරුදහන් වේ!",
-    googleSubtitle: "මේ අද්විතීය ග්‍රහ කියවීම දැන් Save නොකළොත් සදහටම නැතිවේ",
-    googleBtn: "මගේ කියවීම Save කරන්න",
+    googleTitle: "ග්‍රහචාර වෙත සාදරයෙන් පිළිගනිමු ✨",
+    googleSubtitle: "ඔබේ ග්‍රහ සටහන සහ දිනපතා අකුරටම පලාපල දැනගන්න ගිණුමක් සාදන්න",
+    googleBtn: "Google හරහා පිවිසෙන්න",
     googleFail: "\u0db4\u0dd2\u0dc0\u0dd2\u0dc3\u0dd3\u0db8 \u0d85\u0dc3\u0dcf\u0dbb\u0dca\u0dae\u0d9a\u0dba\u0dd2. \u0d9a\u0dbb\u0dd4\u0dab\u0dcf\u0d9a\u0dbb \u0db1\u0dd0\u0dc0\u0dad \u0d8b\u0dad\u0dca\u0dc3\u0dcf\u0dc4 \u0d9a\u0dbb\u0db1\u0dca\u0db1.",
     subTitle: "ඔබේ ඉරණමෙන් 90%ක්ම සැඟවිලා! 🌟",
     subSubtitle: "ඔබේ සැබෑ ධනය, දියුණුව සහ අනාගත රහස් අගුළු වැටී ඇත \u2014 දැන්ම අරින්න",
@@ -929,7 +929,7 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
     ? (lang === 'si' ? 'නැවත සාදරයෙන් 🙏' : 'Welcome Back 🙏')
     : T.googleTitle;
   var subtitle = isReturningUser
-    ? (lang === 'si' ? 'ඔයාගේ කේන්දරය බලන්න Google හරහා පිවිසෙන්න' : 'Sign in to access your chart & predictions')
+    ? (lang === 'si' ? 'ඔයාගේ ග්‍රහ සටහන සහ පලාපල බලන්න පිවිසෙන්න' : 'Sign in to access your birth chart & daily predictions')
     : T.googleSubtitle;
 
   useEffect(function () {
@@ -1036,12 +1036,17 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
             style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
           />
           <View style={gs.benefitList}>
-            {[
-              { icon: 'shield-checkmark', color: '#34D399', text: lang === 'si' ? 'ඉතා ආරක්ෂිත සහ පහසු පිවිසුම' : 'Secure & easy sign-in' },
-              { icon: 'key-outline', color: '#FFB800', text: lang === 'si' ? 'මුරපද (Passwords) අවශ්‍ය නැත' : 'No passwords to remember' },
-              { icon: 'cloud-done-outline', color: '#4CC9F0', text: lang === 'si' ? 'ඔබගේ පුද්ගලික දත්ත 100% ආරක්ෂිතයි' : 'Your data stays private' },
-              { icon: 'sync-outline', color: '#FF8C00', text: lang === 'si' ? 'ඕනෑම උපාංගයකින් පිවිසීමේ හැකියාව' : 'Sync across all your devices' },
-            ].map(function (b, i) {
+            {(isReturningUser ? [
+              { icon: 'reload-outline', color: '#4CC9F0', text: lang === 'si' ? 'ඔබගේ කේන්දරය යළි ලබාගන්න' : 'Restore your saved Birth Chart' },
+              { icon: 'calendar-outline', color: '#FFB800', text: lang === 'si' ? 'ඔබගේ දිනපතා ග්‍රහ පලාපල' : 'Continue your daily predictions' },
+              { icon: 'people-outline', color: '#FF8C00', text: lang === 'si' ? 'ඔබේ පවුලේ අයගේ කේන්දර' : 'Access your saved profiles' },
+              { icon: 'sync-outline', color: '#34D399', text: lang === 'si' ? 'ඕනෑම උපාංගයකින් පිවිසෙන්න' : 'Securely sync your data' },
+            ] : [
+              { icon: 'star-outline', color: '#FFB800', text: lang === 'si' ? 'ඔබේ උපන් ග්‍රහ සටහන සුරකින්න' : 'Save your unique Birth Chart' },
+              { icon: 'calendar-outline', color: '#4CC9F0', text: lang === 'si' ? 'දිනපතා පෞද්ගලික පලාපල' : 'Get daily personalized predictions' },
+              { icon: 'heart-outline', color: '#FF8C00', text: lang === 'si' ? 'පොරොන්දම් ගැලපීම පරීක්ෂා කරන්න' : 'Check compatibility with anyone' },
+              { icon: 'cloud-done-outline', color: '#34D399', text: lang === 'si' ? 'ඔබේ දත්ත 100% සුරක්ෂිතයි' : 'Secure backup in the cloud' },
+            ]).map(function (b, i) {
               return (
                 <Animated.View key={i} entering={FadeInDown.delay(400 + i * 60).duration(250)} style={gs.benefitRow}>
                   <View style={[gs.benefitIconWrap, { backgroundColor: b.color + '15', borderColor: b.color + '30' }]}>
@@ -1377,44 +1382,46 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
     } finally { setRestoring(false); }
   };
 
+  var isSmall = SH < 700;
+
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 0, paddingBottom: 20 }} showsVerticalScrollIndicator={false} bounces={false}>
+    <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 0, paddingBottom: 8 }}>
 
       {/* ═══ URGENCY BANNER — Countdown timer ═══ */}
-      <Animated.View entering={FadeInDown.duration(400)} style={[{ borderRadius: 12, borderWidth: 1.5, paddingVertical: 8, paddingHorizontal: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, urgencyStyle]}>
-        <Ionicons name="timer-outline" size={16} color="#FF6B6B" />
-        <Text style={{ fontSize: 12, fontWeight: '800', color: '#FF6B6B', letterSpacing: 0.3 }}>
+      <Animated.View entering={FadeInDown.duration(400)} style={[{ borderRadius: 10, borderWidth: 1.5, paddingVertical: 6, paddingHorizontal: 10, marginBottom: isSmall ? 4 : 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, urgencyStyle]}>
+        <Ionicons name="timer-outline" size={14} color="#FF6B6B" />
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#FF6B6B', letterSpacing: 0.3 }}>
           {lang === 'si' ? 'මෙම පිරිනැමීම අවසන් වෙයි:' : 'LAUNCH OFFER ENDS IN:'}
         </Text>
-        <Animated.View style={[{ backgroundColor: 'rgba(255,60,60,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }, timerStyle]}>
-          <Text style={{ fontSize: 16, fontWeight: '900', color: '#FF4444', fontVariant: ['tabular-nums'], letterSpacing: 1 }}>{countdownStr}</Text>
+        <Animated.View style={[{ backgroundColor: 'rgba(255,60,60,0.15)', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }, timerStyle]}>
+          <Text style={{ fontSize: 14, fontWeight: '900', color: '#FF4444', fontVariant: ['tabular-nums'], letterSpacing: 1 }}>{countdownStr}</Text>
         </Animated.View>
       </Animated.View>
 
       {/* ═══ PERSONALIZED HEADER ═══ */}
-      <Animated.View entering={FadeInDown.delay(100).duration(500)} style={{ alignItems: 'center', marginBottom: 6 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-          <View style={{ width: 34, height: 34, borderRadius: 17, overflow: 'hidden', ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.8, 12) }}>
-            <LinearGradient colors={['#FFD700', '#FF8C00']} style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="diamond" size={18} color="#FFF1D0" />
+      <Animated.View entering={FadeInDown.delay(100).duration(500)} style={{ alignItems: 'center', marginBottom: isSmall ? 2 : 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <View style={{ width: 28, height: 28, borderRadius: 14, overflow: 'hidden', ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.8, 10) }}>
+            <LinearGradient colors={['#FFD700', '#FF8C00']} style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="diamond" size={15} color="#FFF1D0" />
             </LinearGradient>
           </View>
         </View>
-        <Text style={{ fontSize: 24, fontWeight: '900', color: '#FFFFFF', textAlign: 'center', letterSpacing: 0.3, lineHeight: 30, ...textShadow('rgba(147,51,234,0.3)', { width: 0, height: 3 }, 14) }}>
+        <Text style={{ fontSize: isSmall ? 18 : 22, fontWeight: '900', color: '#FFFFFF', textAlign: 'center', letterSpacing: 0.3, lineHeight: isSmall ? 24 : 28, ...textShadow('rgba(147,51,234,0.3)', { width: 0, height: 3 }, 14) }}>
           {displayName
             ? (lang === 'si' ? displayName + ',\nඔබේ ඉරණම අගුළු ඇරෙන්න යයි!' : displayName + ',\nYour Destiny Is About to\nBe Revealed!')
             : (lang === 'si' ? 'ඔබේ ඉරණමෙන් 90%ක්ම සැඟවිලා! 🌟' : '90% Of Your Destiny\nIs Still Hidden! 🌟')}
         </Text>
-        <Text style={{ fontSize: 12, fontWeight: '600', color: 'rgba(255,220,150,0.55)', textAlign: 'center', marginTop: 5, lineHeight: 17, paddingHorizontal: 10 }}>
+        <Text style={{ fontSize: 10, fontWeight: '600', color: 'rgba(255,220,150,0.55)', textAlign: 'center', marginTop: 3, lineHeight: 14, paddingHorizontal: 10 }}>
           {T.subSubtitle}
         </Text>
       </Animated.View>
 
       {/* ═══ LIVE SOCIAL PROOF — animated counter ═══ */}
-      <Animated.View entering={FadeInUp.delay(150).duration(400)} style={{ alignItems: 'center', marginBottom: 10 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(52,211,153,0.06)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(52,211,153,0.12)' }}>
-          <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#34D399' }, dotStyle]} />
-          <Text style={{ fontSize: 11, fontWeight: '700', color: '#34D399', letterSpacing: 0.3 }}>
+      <Animated.View entering={FadeInUp.delay(150).duration(400)} style={{ alignItems: 'center', marginBottom: isSmall ? 4 : 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(52,211,153,0.06)', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(52,211,153,0.12)' }}>
+          <Animated.View style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#34D399' }, dotStyle]} />
+          <Text style={{ fontSize: 10, fontWeight: '700', color: '#34D399', letterSpacing: 0.3 }}>
             {lang === 'si' ? 'අද ' + liveUsers.toLocaleString() + ' දෙනෙක් එක්වුණා' : liveUsers.toLocaleString() + ' people joined today'}
           </Text>
         </View>
@@ -1423,24 +1430,24 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
       {/* ═══ BLURRED LOCKED PREVIEWS — "what you're missing" ═══ */}
       <Animated.View entering={FadeInUp.delay(250).duration(500)}>
         <Animated.View style={lockShakeStyle}>
-          <View style={{ borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)', marginBottom: 10 }}>
-            <LinearGradient colors={['rgba(255,184,0,0.06)', 'rgba(15,10,30,0.95)']} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <Ionicons name="lock-closed" size={12} color="#FFB800" />
-                <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFB800', letterSpacing: 1.2, textTransform: 'uppercase' }}>
+          <View style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)', marginBottom: isSmall ? 4 : 6 }}>
+            <LinearGradient colors={['rgba(255,184,0,0.06)', 'rgba(15,10,30,0.95)']} style={{ paddingVertical: 8, paddingHorizontal: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                <Ionicons name="lock-closed" size={10} color="#FFB800" />
+                <Text style={{ fontSize: 9, fontWeight: '800', color: '#FFB800', letterSpacing: 1, textTransform: 'uppercase' }}>
                   {lang === 'si' ? 'ඔබට පමණක් — සැඟවුණු අනාවැකි' : 'YOUR HIDDEN PREDICTIONS — LOCKED'}
                 </Text>
               </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
                 {lockedPreviews.map(function (item, i) {
                   return (
-                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, width: '48%', paddingVertical: 7, paddingHorizontal: 8, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' }}>
-                      <Text style={{ fontSize: 15 }}>{item.emoji}</Text>
+                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: '48%', paddingVertical: 4, paddingHorizontal: 6, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' }}>
+                      <Text style={{ fontSize: 12 }}>{item.emoji}</Text>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 9, fontWeight: '700', color: item.color, letterSpacing: 0.2 }} numberOfLines={1}>{item.label}</Text>
-                        <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.25)', marginTop: 1, letterSpacing: 1 }}>{item.value}</Text>
+                        <Text style={{ fontSize: 8, fontWeight: '700', color: item.color, letterSpacing: 0.2 }} numberOfLines={1}>{item.label}</Text>
+                        <Text style={{ fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.25)', marginTop: 1, letterSpacing: 1 }}>{item.value}</Text>
                       </View>
-                      <Ionicons name="lock-closed" size={9} color="rgba(255,184,0,0.3)" />
+                      <Ionicons name="lock-closed" size={8} color="rgba(255,184,0,0.3)" />
                     </View>
                   );
                 })}
@@ -1451,14 +1458,14 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
       </Animated.View>
 
       {/* ═══ FEATURES LIST — compact ═══ */}
-      <Animated.View entering={FadeInUp.delay(350).duration(500)} style={{ marginBottom: 6 }}>
-        <GlowCard style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
+      <Animated.View entering={FadeInUp.delay(350).duration(500)} style={{ marginBottom: isSmall ? 2 : 4 }}>
+        <GlowCard style={{ paddingVertical: 2, paddingHorizontal: 12 }}>
           {features.map(function (f, i) {
             return (
-              <Animated.View key={i} entering={FadeInDown.delay(300 + i * 40).duration(200)} style={ss.featureRow}>
-                <Ionicons name="checkmark-circle" size={16} color="#34D399" />
-                <Ionicons name={f.icon} size={14} color={f.color} style={{ marginLeft: 6 }} />
-                <Text style={ss.featureText}>{f.text}</Text>
+              <Animated.View key={i} entering={FadeInDown.delay(300 + i * 40).duration(200)} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: isSmall ? 4 : 5, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' }}>
+                <Ionicons name="checkmark-circle" size={14} color="#34D399" />
+                <Ionicons name={f.icon} size={12} color={f.color} style={{ marginLeft: 5 }} />
+                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, flex: 1, lineHeight: 15, marginLeft: 6 }}>{f.text}</Text>
               </Animated.View>
             );
           })}
@@ -1466,17 +1473,20 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
       </Animated.View>
 
       {/* ═══ TESTIMONIAL — rotating social proof ═══ */}
-      <Animated.View entering={FadeInUp.delay(450).duration(400)} style={{ marginBottom: 8 }}>
-        <View style={{ backgroundColor: 'rgba(167,139,250,0.06)', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(167,139,250,0.12)' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+      <Animated.View entering={FadeInUp.delay(450).duration(400)} style={{ marginBottom: isSmall ? 4 : 6 }}>
+        <View style={{ backgroundColor: 'rgba(167,139,250,0.06)', borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(167,139,250,0.12)' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 2 }}>
             {[0, 1, 2, 3, 4].map(function (s) {
-              return <Ionicons key={s} name="star" size={11} color="#FFB800" />;
+              return <Ionicons key={s} name="star" size={9} color="#FFB800" />;
             })}
-            <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>{currentTestimonial.name}</Text>
+            <Text style={{ fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.4)', marginLeft: 3 }}>{currentTestimonial.name}</Text>
           </View>
-          <Text style={{ fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.65)', fontStyle: 'italic', lineHeight: 17 }}>{currentTestimonial.text}</Text>
+          <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.65)', fontStyle: 'italic', lineHeight: 15 }} numberOfLines={2}>{currentTestimonial.text}</Text>
         </View>
       </Animated.View>
+
+      {/* ═══ Spacer pushes bottom content down ═══ */}
+      <View style={{ flex: 1, minHeight: 2 }} />
 
       {/* ═══ PRICE SECTION — anchored comparison ═══ */}
       <Animated.View entering={FadeInUp.delay(500).duration(400)} style={{ alignItems: 'center', marginBottom: 4 }}>
@@ -1490,18 +1500,18 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
       <Animated.View entering={FadeInUp.delay(550).duration(500)} style={[ss.priceBadge, priceStyle]}>
         <LinearGradient
           colors={['rgba(255,184,0,0.2)', 'rgba(255,140,0,0.12)', 'rgba(255,184,0,0.1)']}
-          style={ss.priceGrad}
+          style={{ flexDirection: 'row', alignItems: 'baseline', paddingVertical: isSmall ? 8 : 12, paddingHorizontal: 24, gap: 4 }}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         >
-          <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,100,100,0.6)', textDecorationLine: 'line-through', marginRight: 4 }}>{isInternational ? '$9.99' : 'රු.500'}</Text>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,100,100,0.6)', textDecorationLine: 'line-through', marginRight: 3 }}>{isInternational ? '$9.99' : 'රු.500'}</Text>
           <Text style={ss.priceLabel}>{isInternational ? '$' : 'LKR'}</Text>
-          <Text style={ss.priceAmount}>{priceAmount('subscription')}</Text>
+          <Text style={{ fontSize: isSmall ? 34 : 40, fontWeight: '900', color: '#FFB800', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12) }}>{priceAmount('subscription')}</Text>
           <Text style={ss.pricePer}>/month</Text>
         </LinearGradient>
       </Animated.View>
 
       {/* Per-day breakdown with save percentage */}
-      <Animated.View entering={FadeInUp.delay(600).duration(400)} style={{ alignItems: 'center', marginTop: 4, marginBottom: 6 }}>
+      <Animated.View entering={FadeInUp.delay(600).duration(400)} style={{ alignItems: 'center', marginTop: 4, marginBottom: isSmall ? 6 : 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <View style={{ backgroundColor: 'rgba(52,211,153,0.12)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
             <Text style={{ fontSize: 10, fontWeight: '800', color: '#34D399' }}>
@@ -1515,7 +1525,7 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
       </Animated.View>
 
       {/* ═══ TERMS CHECKBOX ═══ */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: isSmall ? 8 : 12 }}>
         <TouchableOpacity onPress={function () { setAgreed(!agreed); }} activeOpacity={0.7}>
           <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: agreed ? '#FF8C00' : 'rgba(255,255,255,0.3)', backgroundColor: agreed ? '#FF8C00' : 'rgba(0,0,0,0.2)', alignItems: 'center', justifyContent: 'center' }}>
             {agreed ? <Ionicons name="checkmark" size={16} color="#FFF" /> : null}
@@ -1539,7 +1549,7 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
       {/* ═══ ERROR ═══ */}
       {payError ? (
         <Animated.View entering={FadeInDown.duration(300)} style={ss.payErrorWrap}>
-          <Ionicons name="alert-circle" size={16} color="#FF6B6B" />
+          <Ionicons name="alert-circle" size={14} color="#FF6B6B" />
           <Text style={ss.payErrorText}>{payError}</Text>
         </Animated.View>
       ) : null}
@@ -1555,50 +1565,42 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
         />
       </Animated.View>
 
-      {/* ═══ TRUST BADGES — cancel + security ═══ */}
-      <View style={{ alignItems: 'center', marginTop: 6, marginBottom: 4 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, justifyContent: 'center' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-            <Ionicons name="close-circle-outline" size={13} color="rgba(52,211,153,0.8)" />
-            <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(52,211,153,0.8)' }}>
+      {/* ═══ TRUST + FOOTER — single compact row ═══ */}
+      <View style={{ alignItems: 'center', marginTop: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <Ionicons name="close-circle-outline" size={11} color="rgba(52,211,153,0.8)" />
+            <Text style={{ fontSize: 9, fontWeight: '700', color: 'rgba(52,211,153,0.8)' }}>
               {lang === 'si' ? 'ඕනෑම වෙලාවක නවතන්න' : 'Cancel anytime'}
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-            <Ionicons name="shield-checkmark-outline" size={13} color="rgba(52,211,153,0.8)" />
-            <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(52,211,153,0.8)' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <Ionicons name="shield-checkmark-outline" size={11} color="rgba(52,211,153,0.8)" />
+            <Text style={{ fontSize: 9, fontWeight: '700', color: 'rgba(52,211,153,0.8)' }}>
               {lang === 'si' ? 'Google Play ආරක්ෂිතයි' : 'Google Play protected'}
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-            <Ionicons name="card-outline" size={13} color="rgba(52,211,153,0.8)" />
-            <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(52,211,153,0.8)' }}>
-              {lang === 'si' ? 'නිදහස් අත්හදා බැලීම' : '100% Safe'}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <Ionicons name="card-outline" size={11} color="rgba(52,211,153,0.8)" />
+            <Text style={{ fontSize: 9, fontWeight: '700', color: 'rgba(52,211,153,0.8)' }}>
+              {lang === 'si' ? '100% ආරක්ෂිතයි' : '100% Safe'}
             </Text>
           </View>
         </View>
+        <TouchableOpacity
+          onPress={handleRestore}
+          disabled={restoring}
+          style={{ paddingVertical: 4, paddingHorizontal: 12 }}
+          activeOpacity={0.7}
+        >
+          <Text style={{ color: 'rgba(255,184,0,0.5)', fontSize: 10, textDecorationLine: 'underline' }}>
+            {restoring
+              ? (lang === 'si' ? 'ප්‍රතිස්ථාපනය වෙමින්...' : 'Restoring...')
+              : (lang === 'si' ? 'මිලදී ගැනීම් ප්‍රතිස්ථාපනය' : 'Restore Purchases')}
+          </Text>
+        </TouchableOpacity>
       </View>
-
-      {/* ═══ FOOTER ═══ */}
-      <Text style={[g.hint, { marginTop: 2, textAlign: 'center' }]}>
-        {lang === 'si'
-          ? 'මාසිකව ස්වයංක්‍රීයව අලුත් වේ. රු. 280/මාසය'
-          : 'Auto-renews monthly. ' + T.subNote}
-      </Text>
-
-      <TouchableOpacity
-        onPress={handleRestore}
-        disabled={restoring}
-        style={{ alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 16 }}
-        activeOpacity={0.7}
-      >
-        <Text style={{ color: 'rgba(255,184,0,0.5)', fontSize: 11, textDecorationLine: 'underline' }}>
-          {restoring
-            ? (lang === 'si' ? 'ප්‍රතිස්ථාපනය වෙමින්...' : 'Restoring...')
-            : (lang === 'si' ? 'මිලදී ගැනීම් ප්‍රතිස්ථාපනය' : 'Restore Purchases')}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -2565,7 +2567,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     var isSmallScreen = SH < 700;
 
     return (
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 16 }} showsVerticalScrollIndicator={false} bounces={false}>
+      <View style={{ flex: 1, paddingHorizontal: 20, paddingBottom: 16 }}>
 
         {/* Big Bang flash overlay */}
         <Animated.View style={[{ position: 'absolute', top: -100, left: -100, right: -100, bottom: -100, backgroundColor: '#FFB800', zIndex: 100, pointerEvents: 'none' }, bigBangStyle]} />
@@ -2576,25 +2578,25 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
         </View>
 
         {/* ── HERO: Large Zodiac Image + Lagna Name ── */}
-        <View style={{ alignItems: 'center', marginTop: isSmallScreen ? 8 : 16 }}>
+        <View style={{ alignItems: 'center', marginTop: isSmallScreen ? 4 : 8 }}>
           {/* Main zodiac image — large and prominent */}
-          <View style={{ width: 190, height: 190, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: isSmallScreen ? 140 : 170, height: isSmallScreen ? 140 : 170, alignItems: 'center', justifyContent: 'center' }}>
             {/* Background gradient circle — animated with scale/rotate */}
-            <Animated.View style={[{ position: 'absolute', width: 190, height: 190, alignItems: 'center', justifyContent: 'center' }, symbolStyle]}>
-              <View style={{ width: 190, height: 190, borderRadius: 95, overflow: 'hidden', ...boxShadow(elemColors[0], { width: 0, height: 0 }, 1, 60) }}>
+            <Animated.View style={[{ position: 'absolute', width: isSmallScreen ? 140 : 170, height: isSmallScreen ? 140 : 170, alignItems: 'center', justifyContent: 'center' }, symbolStyle]}>
+              <View style={{ width: isSmallScreen ? 140 : 170, height: isSmallScreen ? 140 : 170, borderRadius: isSmallScreen ? 70 : 85, overflow: 'hidden', ...boxShadow(elemColors[0], { width: 0, height: 0 }, 1, 60) }}>
                 <LinearGradient
                   colors={[elemColors[2] + '40', elemColors[1] + '25', elemColors[0] + '15']}
-                  style={{ width: 190, height: 190 }}
+                  style={{ width: isSmallScreen ? 140 : 170, height: isSmallScreen ? 140 : 170 }}
                   start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
                 />
               </View>
             </Animated.View>
             {/* Border ring — animated with scale/rotate */}
-            <Animated.View style={[{ position: 'absolute', width: 190, height: 190, borderRadius: 95, borderWidth: 2.5, borderColor: elemColors[1] + '50' }, symbolStyle]} />
+            <Animated.View style={[{ position: 'absolute', width: isSmallScreen ? 140 : 170, height: isSmallScreen ? 140 : 170, borderRadius: isSmallScreen ? 70 : 85, borderWidth: 2.5, borderColor: elemColors[1] + '50' }, symbolStyle]} />
             {/* Zodiac image — fade in only, NO transform wrapper (avoids Image+transform rendering bugs) */}
             <Animated.View style={[{ alignItems: 'center', justifyContent: 'center' }, heroImageStyle]}>
               {zodiacImage ? (
-                <Image source={zodiacImage} resizeMode="contain" style={{ width: 140, height: 140 }} />
+                <Image source={zodiacImage} resizeMode="contain" style={{ width: isSmallScreen ? 100 : 120, height: isSmallScreen ? 100 : 120 }} />
               ) : (
                 <Text style={{ fontSize: 52, color: '#FFF1D0', ...textShadow('rgba(0,0,0,0.5)', { width: 0, height: 2 }, 10) }}>{zodiacSymbol}</Text>
               )}
@@ -2602,30 +2604,30 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
           </View>
 
           {/* Lagna name — tight spacing */}
-          <Animated.View entering={FadeInDown.delay(600).duration(400)} style={{ alignItems: 'center', marginTop: 10 }}>
+          <Animated.View entering={FadeInDown.delay(600).duration(400)} style={{ alignItems: 'center', marginTop: 6 }}>
             <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.45)', letterSpacing: 3.5, textTransform: 'uppercase' }}>{T.revealYourLagna}</Text>
-            <Text style={{ fontSize: 34, fontWeight: '900', color: elemColors[1], letterSpacing: 1.2, marginTop: 3, ...textShadow(elemColors[0] + '80', { width: 0, height: 0 }, 20) }}>{lagnaName}</Text>
-            {lagnaSubname ? <Text style={{ fontSize: 15, fontWeight: '500', color: 'rgba(255,255,255,0.40)', marginTop: 3 }}>{lagnaSubname}</Text> : null}
+            <Text style={{ fontSize: 28, fontWeight: '900', color: elemColors[1], letterSpacing: 1.2, marginTop: 2, ...textShadow(elemColors[0] + '80', { width: 0, height: 0 }, 20) }}>{lagnaName}</Text>
+            {lagnaSubname ? <Text style={{ fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.40)', marginTop: 2 }}>{lagnaSubname}</Text> : null}
           </Animated.View>
         </View>
 
         {/* ── THREE SIGN CARDS — compact row ── */}
-        <Animated.View entering={FadeInDown.delay(800).duration(400)} style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+        <Animated.View entering={FadeInDown.delay(800).duration(400)} style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
           {[
             { emoji: ZODIAC_SYMBOLS[moonSign.name] || ZODIAC_SYMBOLS[moonSign.english] || '🌙', image: ZODIAC_IMAGE_MAP[moonSign.name] || ZODIAC_IMAGE_MAP[moonSign.english] || null, label: T.revealMoonSign, value: moonName, color: '#A78BFA' },
             { emoji: '\u2B50', image: null, label: T.revealNakshatra, value: lang === 'si' ? (nakshatraSinhala || nakshatraName) : nakshatraName, color: '#FFB800' },
             { emoji: ZODIAC_SYMBOLS[sunSign.name] || ZODIAC_SYMBOLS[sunSign.english] || '☀️', image: ZODIAC_IMAGE_MAP[sunSign.name] || ZODIAC_IMAGE_MAP[sunSign.english] || null, label: T.revealSunSign, value: sunName, color: '#FF6B9D' },
           ].map(function (card, i) {
             return (
-              <View key={i} style={{ flex: 1, borderRadius: 14, overflow: 'hidden', borderWidth: 1.5, borderColor: card.color + '22' }}>
-                <LinearGradient colors={[card.color + '14', 'rgba(15,10,30,0.5)']} style={{ paddingVertical: 14, alignItems: 'center' }}>
+              <View key={i} style={{ flex: 1, borderRadius: 12, overflow: 'hidden', borderWidth: 1.5, borderColor: card.color + '22' }}>
+                <LinearGradient colors={[card.color + '14', 'rgba(15,10,30,0.5)']} style={{ paddingVertical: 10, alignItems: 'center' }}>
                   {card.image ? (
-                    <Image source={card.image} resizeMode="contain" style={{ width: 44, height: 44, marginBottom: 5 }} />
+                    <Image source={card.image} resizeMode="contain" style={{ width: 36, height: 36, marginBottom: 4 }} />
                   ) : (
-                    <Text style={{ fontSize: 28, marginBottom: 5 }}>{card.emoji}</Text>
+                    <Text style={{ fontSize: 24, marginBottom: 4 }}>{card.emoji}</Text>
                   )}
-                  <Text style={{ fontSize: 8, fontWeight: '700', color: 'rgba(255,255,255,0.40)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 }}>{card.label}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: card.color, textAlign: 'center', paddingHorizontal: 4 }} numberOfLines={1}>{card.value}</Text>
+                  <Text style={{ fontSize: 7, fontWeight: '700', color: 'rgba(255,255,255,0.40)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 }}>{card.label}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: card.color, textAlign: 'center', paddingHorizontal: 4 }} numberOfLines={1}>{card.value}</Text>
                 </LinearGradient>
               </View>
             );
@@ -2634,13 +2636,13 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
 
         {/* ── TRAITS — horizontal pill row ── */}
         {traits.length > 0 ? (
-          <Animated.View entering={FadeInDown.delay(1000).duration(400)} style={{ marginTop: 10 }}>
-            <Text style={{ fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.35)', letterSpacing: 2, textTransform: 'uppercase', textAlign: 'center', marginBottom: 6 }}>{T.revealTraits}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, justifyContent: 'center' }}>
+          <Animated.View entering={FadeInDown.delay(1000).duration(400)} style={{ marginTop: 8 }}>
+            <Text style={{ fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.35)', letterSpacing: 2, textTransform: 'uppercase', textAlign: 'center', marginBottom: 4 }}>{T.revealTraits}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
               {traits.slice(0, 4).map(function (trait, i) {
                 return (
-                  <View key={i} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)', backgroundColor: 'rgba(255,184,0,0.06)' }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFD666' }}>{trait}</Text>
+                  <View key={i} style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)', backgroundColor: 'rgba(255,184,0,0.06)' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#FFD666' }}>{trait}</Text>
                   </View>
                 );
               })}
@@ -2650,16 +2652,16 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
 
         {/* ── LUCKY DETAILS — compact inline row ── */}
         {lagnaDetails.gem || lagnaDetails.luckyColor || lagnaDetails.luckyDay ? (
-          <Animated.View entering={FadeInDown.delay(1200).duration(400)} style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
+          <Animated.View entering={FadeInDown.delay(1200).duration(400)} style={{ flexDirection: 'row', gap: 5, marginTop: 8 }}>
             {[
               lagnaDetails.gem ? { emoji: '\uD83D\uDC8E', label: T.revealGem, value: lagnaDetails.gem } : null,
               lagnaDetails.luckyColor ? { emoji: '\uD83C\uDFA8', label: T.revealColor, value: lagnaDetails.luckyColor } : null,
               lagnaDetails.luckyDay ? { emoji: '\uD83D\uDCC5', label: T.revealDay, value: lagnaDetails.luckyDay } : null,
             ].filter(Boolean).map(function (item, i) {
               return (
-                <View key={i} style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
-                  <Text style={{ fontSize: 16, marginBottom: 2 }}>{item.emoji}</Text>
-                  <Text style={{ fontSize: 7, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2, textAlign: 'center' }}>{item.label}</Text>
+                <View key={i} style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 4, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+                  <Text style={{ fontSize: 14, marginBottom: 1 }}>{item.emoji}</Text>
+                  <Text style={{ fontSize: 7, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 1, textAlign: 'center' }}>{item.label}</Text>
                   <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.65)', textAlign: 'center' }} numberOfLines={1}>{item.value}</Text>
                 </View>
               );
@@ -2668,19 +2670,19 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
         ) : null}
 
         {/* ── Spacer pushes CTA to bottom ── */}
-        <View style={{ flex: 1, minHeight: 8 }} />
+        <View style={{ flex: 1, minHeight: 4 }} />
 
         {/* ── PREMIUM NUDGE — urgency-driven banner ── */}
         <Animated.View entering={FadeInUp.delay(1400).duration(500)}>
-          <View style={{ borderRadius: 14, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,60,60,0.2)', marginBottom: 8 }}>
+          <View style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,60,60,0.2)', marginBottom: 6 }}>
             <LinearGradient
               colors={['rgba(255,60,60,0.06)', 'rgba(255,184,0,0.06)', 'rgba(15,10,30,0.95)']}
-              style={{ paddingVertical: 12, paddingHorizontal: 14 }}
+              style={{ paddingVertical: 10, paddingHorizontal: 12 }}
             >
               {/* Warning header */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,60,60,0.12)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,60,60,0.25)' }}>
-                  <Ionicons name="warning" size={14} color="#FF6B6B" />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,60,60,0.12)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,60,60,0.25)' }}>
+                  <Ionicons name="warning" size={12} color="#FF6B6B" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 13, fontWeight: '900', color: '#FF6B6B', letterSpacing: 0.3 }}>
@@ -2693,7 +2695,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
               </View>
 
               {/* Locked items — 2x2 grid */}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
                 {[
                   { emoji: '💍', label: lang === 'si' ? 'ආත්ම සහකරු එන කාලය' : 'Best Marriage Year', value: '20██', color: '#FF6B9D' },
                   { emoji: '💰', label: lang === 'si' ? 'ධනය ලැබෙන කාලය' : 'Wealth Peak Period', value: '████', color: '#34D399' },
@@ -2701,11 +2703,11 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
                   { emoji: '⚠️', label: lang === 'si' ? 'ඊළඟ අවදානම් කාලය' : 'Next Danger Period', value: '██/██', color: '#FBBF24' },
                 ].map(function (item, i) {
                   return (
-                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, width: '48%', paddingVertical: 6, paddingHorizontal: 8, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' }}>
-                      <Text style={{ fontSize: 14 }}>{item.emoji}</Text>
+                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: '48%', paddingVertical: 4, paddingHorizontal: 6, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 7, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' }}>
+                      <Text style={{ fontSize: 12 }}>{item.emoji}</Text>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 9, fontWeight: '700', color: item.color }} numberOfLines={1}>{item.label}</Text>
-                        <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.2)', letterSpacing: 1, marginTop: 1 }}>{item.value}</Text>
+                        <Text style={{ fontSize: 8, fontWeight: '700', color: item.color }} numberOfLines={1}>{item.label}</Text>
+                        <Text style={{ fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.2)', letterSpacing: 1, marginTop: 1 }}>{item.value}</Text>
                       </View>
                       <Ionicons name="lock-closed" size={9} color="rgba(255,184,0,0.3)" />
                     </View>
@@ -2718,7 +2720,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
           <PrimaryButton label={lang === 'si' ? '🔓 මගේ සම්පූර්ණ ඉරණම අගුළු අරින්න' : '🔓 Unlock My Complete Destiny Now'} onPress={onContinue} icon="sparkles" />
           <GhostButton label={T.revealSkip} onPress={onContinue} />
         </Animated.View>
-      </ScrollView>
+      </View>
     );
   }
 
@@ -2892,7 +2894,7 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <View style={{ flex: 1, paddingTop: insets.top + 8, paddingBottom: Math.max(insets.bottom, 12), overflow: 'hidden' }}>
+        <View style={{ flex: 1, paddingTop: insets.top + 8, paddingBottom: Math.max(insets.bottom, 12) }}>
           {step >= 0 && !isReturningUser ? (
             <View style={{ paddingHorizontal: 24, paddingTop: 4 }}>
               <StepProgressBar current={step} total={TOTAL_MAIN_STEPS} lang={lang} />

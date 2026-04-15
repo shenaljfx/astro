@@ -40,8 +40,8 @@ import AwesomeRashiChakra from './AwesomeRashiChakra';
 var { width: SW, height: SH } = Dimensions.get('window');
 var IS_SMALL = SH < 700;
 var IS_MEDIUM = SH < 800;
-var CHAKRA_SIZE = Math.min(SW * 0.55, IS_SMALL ? 160 : IS_MEDIUM ? 200 : 260);
-var LOGO_SIZE = IS_SMALL ? 60 : IS_MEDIUM ? 72 : 92;
+var CHAKRA_SIZE = Math.min(SW * 0.82, IS_SMALL ? 240 : IS_MEDIUM ? 300 : 360);
+var LOGO_SIZE = IS_SMALL ? 70 : IS_MEDIUM ? 85 : 105;
 
 // ─── Context-specific content ────────────────────────────────────
 
@@ -245,7 +245,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
   var insets = useSafeAreaInsets();
   var { language } = useLanguage();
   var lang = language === 'si' ? 'si' : 'en';
-  var { priceLabel, isInternational, subscriptionLabel } = usePricing();
+  var { priceLabel, priceAmount, isInternational } = usePricing();
 
   var src = source || 'onboarding';
   var content = CONTENT[src] ? CONTENT[src][lang] : CONTENT.onboarding[lang];
@@ -372,8 +372,9 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
       });
       if (monthly && monthly.product) return monthly.product.priceString;
     }
-    // Fallback: geo-aware price from PricingContext (LKR 280 or $4.99)
-    return subscriptionLabel();
+    // Fallback: geo-aware price from PricingContext — amount only (suffix added separately)
+    var sym = isInternational ? '$' : 'LKR ';
+    return sym + priceAmount('subscription');
   };
 
   var getPriceSuffix = function () {
@@ -452,14 +453,16 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
           </Animated.View>
         ) : null}
 
-        {/* ─── Fixed content — flex fills screen ─── */}
-        <View style={[s.fixedContent, { paddingTop: insets.top + 6, paddingBottom: Math.max(insets.bottom, 8) + 4 }]}>
+        {/* ─── Fixed content — fits screen without scrolling ─── */}
+        <View
+          style={{ flex: 1, justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: insets.top + 6, paddingBottom: Math.max(insets.bottom, 8) + 4 }}
+        >
 
           {/* ── TOP: Rashi Chakra + Logo ── */}
           <View style={s.topSection}>
             <Animated.View entering={FadeIn.delay(100).duration(800)} style={s.chakraLogoWrap}>
-              <Animated.View style={[s.chakraAbsolute, chakraStyle]}>
-                <View style={{ opacity: 0.22 }}>
+              <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }, chakraStyle]}>
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', opacity: 0.22 }}>
                   <AwesomeRashiChakra size={CHAKRA_SIZE} />
                 </View>
               </Animated.View>
@@ -663,7 +666,7 @@ var s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 
-  // Fixed layout — fills screen
+  // Scrollable layout — fills screen
   fixedContent: {
     flex: 1,
     paddingHorizontal: 18,
@@ -673,16 +676,10 @@ var s = StyleSheet.create({
   // ── TOP ──
   topSection: {
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   chakraLogoWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: CHAKRA_SIZE,
-    height: CHAKRA_SIZE,
-    alignSelf: 'center',
-  },
-  chakraAbsolute: {
-    position: 'absolute',
     width: CHAKRA_SIZE,
     height: CHAKRA_SIZE,
     alignItems: 'center',
