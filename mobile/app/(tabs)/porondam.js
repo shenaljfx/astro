@@ -1,8 +1,8 @@
-﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, Platform, ActivityIndicator, Share, Alert,
-  LayoutAnimation, UIManager, Dimensions,
+  LayoutAnimation, UIManager, Dimensions, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,7 +27,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { Colors, Typography } from '../../constants/theme';
 import { boxShadow, textShadow } from '../../utils/shadow';
+import TabBackground from '../../components/TabBackground';
 import { generatePorondamHTML, loadLogoBase64 } from '../../utils/pdfReportGenerator';
+import RadarChart from '../../components/RadarChart';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -53,6 +55,23 @@ var RASHI_SI = {
   Leo: 'සිංහ', Virgo: 'කන්‍යා', Libra: 'තුලා', Scorpio: 'වෘශ්චික',
   Sagittarius: 'ධනු', Capricorn: 'මකර', Aquarius: 'කුම්භ', Pisces: 'මීන',
 };
+
+// Zodiac sign images by rashi ID (1=Aries...12=Pisces)
+var ZODIAC_IMAGES = {
+  1: require('../../assets/zodiac/aries.png'),
+  2: require('../../assets/zodiac/taurus.png'),
+  3: require('../../assets/zodiac/gemini.png'),
+  4: require('../../assets/zodiac/cancer.png'),
+  5: require('../../assets/zodiac/leo.png'),
+  6: require('../../assets/zodiac/virgo.png'),
+  7: require('../../assets/zodiac/libra.png'),
+  8: require('../../assets/zodiac/scorpio.png'),
+  9: require('../../assets/zodiac/sagittarius.png'),
+  10: require('../../assets/zodiac/capricorn.png'),
+  11: require('../../assets/zodiac/aquarius.png'),
+  12: require('../../assets/zodiac/pisces.png'),
+};
+var RASHI_NAMES = ['', 'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
 
 // Yoga category/strength Sinhala
 var YOGA_CAT_SI = { 'Raja Yoga': 'රාජ යෝගය', 'Dhana Yoga': 'ධන යෝගය', 'Gnana Yoga': 'ඥාන යෝගය', 'Pancha Mahapurusha': 'පංච මහා පුරුෂ', 'Chandra Yoga': 'චන්ද්‍ර යෝගය', 'Special': 'විශේෂ', 'Arishta': 'අරිෂ්ට' };
@@ -312,36 +331,99 @@ var lsStyles = StyleSheet.create({
   progressHint: { color: 'rgba(255,255,255,0.25)', fontSize: 11, fontWeight: '600' },
 });
 
-// Score Gauge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function ScoreGauge({ score, maxScore, rating, ratingEmoji, ratingSinhala, language, onShare, T }) {
+function ScoreGauge({ score, maxScore, rating, ratingEmoji, ratingSinhala, language, onShare, T, brideName, groomName, factors, brideRashiId, groomRashiId }) {
   var pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
   var color = pct >= 75 ? '#34D399' : pct >= 50 ? '#FFB800' : pct >= 30 ? '#F97316' : '#F87171';
 
-  // Enhanced color-coded compatibility labels
   var cosmicLabel = pct >= 75
-    ? (language === 'si' ? '✨ \u0DAF\u0DD2\u0DC0\u0DCA\u200D\u0DBA \u0D9C\u0DD0\u0DC5\u0DB4\u0DD3\u0DB8' : '✨ Celestial Union')
+    ? (language === 'si' ? '✨ දිව්‍ය ගැළපීම' : '✨ Celestial Union')
     : pct >= 50
-    ? (language === 'si' ? '💫 \u0DAD\u0DCF\u0DBB\u0D9A\u0DCF \u0D9C\u0DD0\u0DC5\u0DB4\u0DD3\u0DB8' : '💫 Star-Crossed Harmony')
+    ? (language === 'si' ? '💫 තාරකා ගැළපීම' : '💫 Star-Crossed Harmony')
     : pct >= 30
-    ? (language === 'si' ? '🌅 \u0DB6\u0DCA\u200D\u0DBB\u0DC4\u0DCA\u0DB8\u0DCF\u0DAB\u0DCA\u0DA9 \u0D9C\u0DCF\u0DAE\u0DCF\u0DC0' : '🌅 Cosmic Journey')
-    : (language === 'si' ? '⚔️ \u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0D85\u0DB7\u0DD2\u0DBA\u0DDD\u0D9C\u0DBA' : '⚔️ Galactic Challenge');
+    ? (language === 'si' ? '🌅 බ්‍රහ්මාණ්ඩ ගාඡාව' : '🌅 Cosmic Journey')
+    : (language === 'si' ? '⚔️ ජ්‍යෝතිෂ අභියෝගය' : '⚔️ Galactic Challenge');
 
   var label = language === 'si' && ratingSinhala ? ratingSinhala : rating;
+  var brideZodiac = ZODIAC_IMAGES[brideRashiId] || ZODIAC_IMAGES[1];
+  var groomZodiac = ZODIAC_IMAGES[groomRashiId] || ZODIAC_IMAGES[1];
+  var brideRashiName = RASHI_NAMES[brideRashiId] || 'Aries';
+  var groomRashiName = RASHI_NAMES[groomRashiId] || 'Aries';
+
   return (
-    <Glass accent>
-      <View style={sty.gaugeRow}>
-        <BinaryStarOrbit pct={pct} color={color} />
-        <View style={sty.gaugeInfo}>
-          <Text style={[sty.gaugeCosmicLabel, { color: color }]}>{cosmicLabel}</Text>
-          <Text style={sty.gaugeRating}>{ratingEmoji || '💍'} {label}</Text>
-          <Text style={sty.gaugeScoreText}>{score}/{maxScore} {T.overall}</Text>
+    <View>
+      {/* Avatar circles with zodiac signs */}
+      <Glass accent style={{ marginBottom: 14 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 24, paddingVertical: 16 }}>
+          <View style={{ alignItems: 'center' }}>
+            <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: 'rgba(249,168,212,0.10)', borderWidth: 2, borderColor: 'rgba(249,168,212,0.30)', alignItems: 'center', justifyContent: 'center', marginBottom: 8, overflow: 'hidden' }}>
+              <Image source={brideZodiac} style={{ width: 52, height: 52 }} resizeMode="contain" />
+            </View>
+            <Text style={{ color: '#F9A8D4', fontSize: 13, fontWeight: '800' }}>{brideName || (language === 'si' ? 'මනාලිය' : 'Bride')}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: '600', marginTop: 2 }}>{language === 'si' ? (RASHI_SI[brideRashiName] || brideRashiName) : brideRashiName}</Text>
+          </View>
+          <View style={{ alignItems: 'center' }}>
+            <View style={{ width: 60, height: 60, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: color + '50', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 22, fontWeight: '900', color: color }}>{pct}<Text style={{ fontSize: 12 }}>%</Text></Text>
+            </View>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: '600', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              {language === 'si' ? 'ගැළපීම' : 'Match'}
+            </Text>
+          </View>
+          <View style={{ alignItems: 'center' }}>
+            <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: 'rgba(147,197,253,0.10)', borderWidth: 2, borderColor: 'rgba(147,197,253,0.30)', alignItems: 'center', justifyContent: 'center', marginBottom: 8, overflow: 'hidden' }}>
+              <Image source={groomZodiac} style={{ width: 52, height: 52 }} resizeMode="contain" />
+            </View>
+            <Text style={{ color: '#93C5FD', fontSize: 13, fontWeight: '800' }}>{groomName || (language === 'si' ? 'මනාලයා' : 'Groom')}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: '600', marginTop: 2 }}>{language === 'si' ? (RASHI_SI[groomRashiName] || groomRashiName) : groomRashiName}</Text>
+          </View>
+        </View>
+        <View style={{ alignItems: 'center', paddingBottom: 12 }}>
+          <Text style={{ color: color, fontSize: 16, fontWeight: '800', marginBottom: 4 }}>
+            {language === 'si' ? 'එකාබද්ධ ගැළපීම  ~ ' + pct + '%' : 'Overall compatibility  ~ ' + pct + '%'}
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: '600' }}>{cosmicLabel}</Text>
+        </View>
+      </Glass>
+
+      {/* Radar Chart */}
+      {factors && factors.length >= 3 && (
+        <Glass style={{ marginBottom: 14, alignItems: 'center', paddingVertical: 20 }}>
+          <RadarChart
+            factors={factors}
+            size={Math.min(W - 24, 420)}
+            color1="#A78BFA"
+            color2="#FFB800"
+            animated={true}
+            labels={factors.map(function (f) {
+              var friendly = {
+                Dina: language === 'si' ? 'දෛනික හැඟීම්' : 'Daily Vibes',
+                Gana: language === 'si' ? 'ස්වභාවය' : 'Temperament',
+                Yoni: language === 'si' ? 'සමීපතාව' : 'Intimacy',
+                Rashi: language === 'si' ? 'මානසික ගැළපීම' : 'Mind Match',
+                Vasya: language === 'si' ? 'ආකර්ෂණය' : 'Attraction',
+                Nadi: language === 'si' ? 'සෞඛ්‍යය' : 'Health',
+                Mahendra: language === 'si' ? 'සමෘද්ධිය' : 'Prosperity',
+              };
+              return friendly[f.name] || (language === 'si' && f.sinhala ? f.sinhala : f.name);
+            })}
+          />
+        </Glass>
+      )}
+
+      {/* Rating + Actions */}
+      <Glass>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View>
+            <Text style={sty.gaugeRating}>{ratingEmoji || '💍'} {label}</Text>
+            <Text style={sty.gaugeScoreText}>{score}/{maxScore} {T.overall}</Text>
+          </View>
           <TouchableOpacity style={sty.shareChip} onPress={onShare} activeOpacity={0.7}>
             <Ionicons name="share-social-outline" size={14} color="#FF8C00" />
             <Text style={sty.shareChipText}>{T.shareBtn}</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </Glass>
+      </Glass>
+    </View>
   );
 }
 
@@ -716,6 +798,7 @@ export default function PorondamScreen() {
     return (
       <DesktopScreenWrapper routeName="porondam">
         <View style={{ flex: 1, backgroundColor: '#0C0208', justifyContent: 'center', alignItems: 'center' }}>
+          <TabBackground tabName="porondam" />
           <PorondamCosmicLoader brideName={bName} groomName={gName} language={language} />
         </View>
       </DesktopScreenWrapper>
@@ -725,6 +808,7 @@ export default function PorondamScreen() {
   return (
     <DesktopScreenWrapper routeName="porondam">
     <View style={{ flex: 1, backgroundColor: '#0C0208' }}>
+      <TabBackground tabName="porondam" />
       <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop]} showsVerticalScrollIndicator={false}>
         <View style={[sty.scrollInner, isDesktop && sty.scrollInnerDesktop]}>
 
@@ -859,7 +943,10 @@ export default function PorondamScreen() {
               <ScoreGauge score={data.totalScore} maxScore={data.maxPossibleScore}
                 rating={data.rating} ratingEmoji={data.ratingEmoji}
                 ratingSinhala={data.ratingSinhala} language={language}
-                onShare={shareResult} T={T} />
+                onShare={shareResult} T={T}
+                brideName={bName} groomName={gName} factors={data.factors}
+                brideRashiId={data.brideChart && data.brideChart.lagnaRashiId}
+                groomRashiId={data.groomChart && data.groomChart.lagnaRashiId} />
             </Animated.View>
 
             {/* Action buttons row */}
@@ -886,24 +973,43 @@ export default function PorondamScreen() {
             </Animated.View>
 
             <View style={[sty.charts, WIDE && sty.chartsWide]}>
-              {data.brideChart && (
-                <Animated.View entering={SlideInLeft.springify().damping(14).stiffness(80).delay(200)} style={WIDE ? sty.chartCol : undefined}>
+              {data.brideChart && data.brideChart.rashiChart && (
+                <Animated.View entering={FadeInUp.delay(200).duration(600).springify()} style={WIDE ? sty.chartCol : undefined}>
                   <Glass style={sty.chartCard}>
-                    <Text style={sty.chartTitle}>{T.brideChart}</Text>
-                    <SriLankanChart rashiChart={data.brideChart.rashiChart} lagnaRashiId={data.brideChart.lagnaRashiId} language={language}
-                      chartSize={WIDE ? Math.min(320, (W - 140) / 2) : MOBILE_CHART} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F9A8D4' }} />
+                      <Text style={sty.chartTitle}>{T.brideChart}</Text>
+                    </View>
+                    <View style={{ alignItems: 'center' }}>
+                      <SriLankanChart rashiChart={data.brideChart.rashiChart} lagnaRashiId={data.brideChart.lagnaRashiId} language={language}
+                        chartSize={WIDE ? Math.min(320, (W - 140) / 2) : MOBILE_CHART} />
+                    </View>
                   </Glass>
                 </Animated.View>
               )}
-              <Animated.View entering={ZoomIn.delay(500).duration(700)} style={[sty.heartBridge, WIDE && sty.heartBridgeWide]}>
-                <Text style={{ fontSize: 24 }}>{'\uD83D\uDC95'}</Text>
-              </Animated.View>
-              {data.groomChart && (
-                <Animated.View entering={SlideInRight.springify().damping(14).stiffness(80).delay(350)} style={WIDE ? sty.chartCol : undefined}>
+              {WIDE && (
+                <Animated.View entering={ZoomIn.delay(500).duration(700)} style={[sty.heartBridge, sty.heartBridgeWide]}>
+                  <Text style={{ fontSize: 24 }}>{'\uD83D\uDC95'}</Text>
+                </Animated.View>
+              )}
+              {!WIDE && data.brideChart && data.groomChart && (
+                <Animated.View entering={ZoomIn.delay(400).duration(500)} style={{ alignItems: 'center', paddingVertical: 6 }}>
+                  <View style={{ width: 1, height: 20, backgroundColor: 'rgba(255,140,0,0.15)' }} />
+                  <Text style={{ fontSize: 20, marginVertical: 2 }}>{'\uD83D\uDC95'}</Text>
+                  <View style={{ width: 1, height: 20, backgroundColor: 'rgba(255,140,0,0.15)' }} />
+                </Animated.View>
+              )}
+              {data.groomChart && data.groomChart.rashiChart && (
+                <Animated.View entering={FadeInUp.delay(400).duration(600).springify()} style={WIDE ? sty.chartCol : undefined}>
                   <Glass style={sty.chartCard}>
-                    <Text style={sty.chartTitle}>{T.groomChart}</Text>
-                    <SriLankanChart rashiChart={data.groomChart.rashiChart} lagnaRashiId={data.groomChart.lagnaRashiId} language={language}
-                      chartSize={WIDE ? Math.min(320, (W - 140) / 2) : MOBILE_CHART} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#93C5FD' }} />
+                      <Text style={sty.chartTitle}>{T.groomChart}</Text>
+                    </View>
+                    <View style={{ alignItems: 'center' }}>
+                      <SriLankanChart rashiChart={data.groomChart.rashiChart} lagnaRashiId={data.groomChart.lagnaRashiId} language={language}
+                        chartSize={WIDE ? Math.min(320, (W - 140) / 2) : MOBILE_CHART} />
+                    </View>
                   </Glass>
                 </Animated.View>
               )}

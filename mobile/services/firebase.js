@@ -15,13 +15,20 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import {
+  initializeAuth,
   getAuth as _getAuth,
+  getReactNativePersistence,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithCredential,
 } from 'firebase/auth';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Firebase project config — reads from EXPO_PUBLIC_FIREBASE_* env vars (.env file)
+// IMPORTANT: The Firebase JS SDK is a WEB SDK even on React Native.
+// Always use the WEB apiKey + WEB appId here. The native Google Sign-In
+// reads from google-services.json independently — it does NOT use this config.
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyBzjEAvmO2Rxxfga2qITkj42JnOE-peqsY",
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "nakathai-6c5b7.firebaseapp.com",
@@ -47,7 +54,21 @@ try {
     app = getApps()[0];
   }
   firestore = getFirestore(app);
-  auth = _getAuth(app);
+
+  // CRITICAL: Use initializeAuth with React Native persistence instead of getAuth().
+  // getAuth() defaults to browserLocalPersistence (window.localStorage) which does NOT
+  // exist in React Native production builds. This causes the misleading
+  // "auth/network-request-failed" error. Expo Go polyfills localStorage so it works
+  // there but breaks in EAS/production builds.
+  try {
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch (initAuthErr) {
+    // If auth was already initialized (e.g. hot reload), fall back to getAuth
+    console.log('initializeAuth fallback:', initAuthErr.code || initAuthErr.message);
+    auth = _getAuth(app);
+  }
 } catch (err) {
   console.warn('⚠️ Firebase init failed:', err.message);
 }

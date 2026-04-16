@@ -21,6 +21,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePricing } from '../../contexts/PricingContext';
 import CitySearchPicker from '../../components/CitySearchPicker';
 import { boxShadow, textShadow } from '../../utils/shadow';
+import TabBackground from '../../components/TabBackground';
 import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
 import AwesomeRashiChakra from '../../components/AwesomeRashiChakra';
 
@@ -442,6 +443,7 @@ function ProfileScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: '#06020C' }}>
+        <TabBackground tabName="profile" />
         <View style={s.centered}>
           <CosmicLoader size={56} color="#FF8C00" text={t('loading')} textColor="#FF8C00" />
         </View>
@@ -461,6 +463,7 @@ function ProfileScreen() {
   return (
     <DesktopScreenWrapper routeName="profile">
     <View style={{ flex: 1, backgroundColor: '#06020C' }}>
+      <TabBackground tabName="profile" />
       <StatusBar barStyle="light-content" />
       <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
 

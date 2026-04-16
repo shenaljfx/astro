@@ -9,7 +9,7 @@
  * Step 5:  Complete
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Platform,
   Dimensions, ActivityIndicator, KeyboardAvoidingView, ScrollView,
@@ -22,6 +22,7 @@ import Animated, {
   FadeInDown, FadeInUp, FadeIn,
   useSharedValue, useAnimatedStyle, withRepeat, withTiming,
   withSpring, withSequence, withDelay, interpolate, Easing,
+  runOnJS, FadeOut,
 } from 'react-native-reanimated';
 import SpringPressable from '../components/effects/SpringPressable';
 import CosmicLoader from '../components/effects/CosmicLoader';
@@ -31,12 +32,296 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePricing } from '../contexts/PricingContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import AwesomeRashiChakra from '../components/AwesomeRashiChakra';
-import Svg, { Defs, LinearGradient as SvgGrad, Stop, Path, Circle, Rect, G, Ellipse } from 'react-native-svg';
+import Svg, { Defs, LinearGradient as SvgGrad, Stop, Path, Circle, Rect, G, Ellipse, RadialGradient as SvgRadGrad } from 'react-native-svg';
 import { boxShadow, textShadow } from '../utils/shadow';
 import { ZODIAC_IMAGES, ZODIAC_IMAGE_MAP as ZODIAC_IMG_MAP } from '../components/ZodiacIcons';
 
 var { width: SW, height: SH } = Dimensions.get('window');
 var LOGO = require('../assets/logo.png');
+
+
+// ═══════════════════════════════════════════════════════════════════════
+//  CINEMATIC COMPONENTS — Movie-quality onboarding experience
+// ═══════════════════════════════════════════════════════════════════════
+
+// ── Animated Starfield Background ──────────────────────────────────
+// Persistent parallax starfield that runs behind ALL onboarding steps
+// Multiple layers for depth: distant dim stars, mid-range, and close bright ones
+
+var STAR_LAYERS = [];
+// Generate 3 layers of stars (seeded positions so they don't regenerate)
+(function () {
+  // Layer 1: distant dim stars (many, small, slow)
+  var layer1 = [];
+  for (var i = 0; i < 60; i++) {
+    layer1.push({
+      x: ((i * 7919 + 3571) % 1000) / 10,   // pseudo-random 0-100%
+      y: ((i * 6271 + 1433) % 1000) / 10,
+      size: 1 + ((i * 3137) % 100) / 100,    // 1-2px
+      opacity: 0.15 + ((i * 4219) % 100) / 250,  // 0.15-0.55
+      twinkleSpeed: 3000 + ((i * 2399) % 4000),
+      twinkleDelay: ((i * 1847) % 3000),
+    });
+  }
+  // Layer 2: mid-range stars
+  var layer2 = [];
+  for (var i = 0; i < 30; i++) {
+    layer2.push({
+      x: ((i * 5431 + 2917) % 1000) / 10,
+      y: ((i * 8513 + 4219) % 1000) / 10,
+      size: 1.5 + ((i * 2741) % 100) / 60,   // 1.5-3.2px
+      opacity: 0.3 + ((i * 3719) % 100) / 200,
+      twinkleSpeed: 2000 + ((i * 1913) % 3000),
+      twinkleDelay: ((i * 2371) % 2500),
+    });
+  }
+  // Layer 3: close bright stars (few, larger, faster twinkle)
+  var layer3 = [];
+  for (var i = 0; i < 12; i++) {
+    layer3.push({
+      x: ((i * 9721 + 1571) % 1000) / 10,
+      y: ((i * 4517 + 7919) % 1000) / 10,
+      size: 2.5 + ((i * 1847) % 100) / 50,   // 2.5-4.5px
+      opacity: 0.5 + ((i * 6197) % 100) / 300,
+      twinkleSpeed: 1500 + ((i * 3571) % 2000),
+      twinkleDelay: ((i * 997) % 2000),
+    });
+  }
+  STAR_LAYERS.push(layer1, layer2, layer3);
+})();
+
+function TwinklingStar({ star, layerSpeed }) {
+  var twinkle = useSharedValue(0);
+  useEffect(function () {
+    twinkle.value = withDelay(star.twinkleDelay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: star.twinkleSpeed * 0.4, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: star.twinkleSpeed * 0.6, easing: Easing.inOut(Easing.sin) })
+        ), -1, false
+      )
+    );
+  }, []);
+  var style = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(twinkle.value, [0, 1], [star.opacity * 0.3, star.opacity]),
+      transform: [{ scale: interpolate(twinkle.value, [0, 1], [0.6, 1.2]) }],
+    };
+  });
+  return (
+    <Animated.View style={[{
+      position: 'absolute',
+      left: star.x + '%',
+      top: star.y + '%',
+      width: star.size,
+      height: star.size,
+      borderRadius: star.size / 2,
+      backgroundColor: '#FFF8E1',
+    }, style]} />
+  );
+}
+
+function CinematicStarfield() {
+  var nebulaShift = useSharedValue(0);
+  useEffect(function () {
+    nebulaShift.value = withRepeat(
+      withTiming(1, { duration: 20000, easing: Easing.inOut(Easing.sin) }),
+      -1, true
+    );
+  }, []);
+  var nebula1 = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(nebulaShift.value, [0, 1], [0.03, 0.08]),
+      transform: [
+        { translateX: interpolate(nebulaShift.value, [0, 1], [-20, 20]) },
+        { translateY: interpolate(nebulaShift.value, [0, 1], [10, -15]) },
+      ],
+    };
+  });
+  var nebula2 = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(nebulaShift.value, [0, 1], [0.05, 0.02]),
+      transform: [
+        { translateX: interpolate(nebulaShift.value, [0, 1], [15, -25]) },
+        { translateY: interpolate(nebulaShift.value, [0, 1], [-10, 20]) },
+      ],
+    };
+  });
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Nebula clouds */}
+      <Animated.View style={[{ position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(147,51,234,0.12)', top: -50, right: -80 }, nebula1]} />
+      <Animated.View style={[{ position: 'absolute', width: 250, height: 250, borderRadius: 125, backgroundColor: 'rgba(255,140,0,0.08)', bottom: SH * 0.2, left: -60 }, nebula2]} />
+      <Animated.View style={[{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(59,130,246,0.06)', top: SH * 0.4, right: -40 }, nebula1]} />
+      {/* Star layers */}
+      {STAR_LAYERS[0].map(function (s, i) { return <TwinklingStar key={'s1_' + i} star={s} layerSpeed={0.3} />; })}
+      {STAR_LAYERS[1].map(function (s, i) { return <TwinklingStar key={'s2_' + i} star={s} layerSpeed={0.6} />; })}
+      {STAR_LAYERS[2].map(function (s, i) { return <TwinklingStar key={'s3_' + i} star={s} layerSpeed={1} />; })}
+    </View>
+  );
+}
+
+
+// ── Vignette Overlay ───────────────────────────────────────────────
+// Dark gradient around screen edges — cinematic lens effect
+function VignetteOverlay() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Top vignette */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.6)', 'transparent']}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: SH * 0.15 }}
+      />
+      {/* Bottom vignette */}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.5)']}
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: SH * 0.12 }}
+      />
+      {/* Left edge */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.35)', 'transparent']}
+        start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+        style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 40 }}
+      />
+      {/* Right edge */}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.35)']}
+        start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+        style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 40 }}
+      />
+    </View>
+  );
+}
+
+
+// ── Typewriter Text ────────────────────────────────────────────────
+// Text reveals letter by letter for dramatic cinematic feel
+function TypewriterText({ text, style, delay, speed, onComplete }) {
+  var [displayed, setDisplayed] = useState('');
+  var charDelay = speed || 35;
+  var startDelay = delay || 0;
+  useEffect(function () {
+    if (!text) return;
+    setDisplayed('');
+    var idx = 0;
+    var timeout = setTimeout(function tick() {
+      idx++;
+      setDisplayed(text.substring(0, idx));
+      if (idx < text.length) {
+        timeout = setTimeout(tick, charDelay);
+      } else if (onComplete) {
+        onComplete();
+      }
+    }, startDelay);
+    return function () { clearTimeout(timeout); };
+  }, [text]);
+  return <Text style={style}>{displayed}<Text style={{ opacity: displayed.length < (text || '').length ? 1 : 0, color: '#FFB800' }}>|</Text></Text>;
+}
+
+
+// ── Constellation Progress Bar ─────────────────────────────────────
+// Stars connected by lines — each completed step lights up a star
+function ConstellationProgress({ current, total, lang }) {
+  var labels = lang === 'si' ? STEP_LABELS_SI : STEP_LABELS_EN;
+  var starPositions = useMemo(function () {
+    // Generate slightly varied Y positions for constellation effect
+    var offsets = [0, -8, 4, -6, 2, -4];
+    var positions = [];
+    for (var i = 0; i < total; i++) {
+      positions.push({
+        x: total > 1 ? (i / (total - 1)) : 0.5,
+        yOffset: offsets[i % offsets.length],
+      });
+    }
+    return positions;
+  }, [total]);
+
+  return (
+    <View style={{ height: 50, marginBottom: 4 }}>
+      {/* Constellation lines */}
+      <View style={{ position: 'absolute', top: 18, left: 16, right: 16, height: 20 }}>
+        {starPositions.map(function (pos, i) {
+          if (i === 0) return null;
+          var prevPos = starPositions[i - 1];
+          var lineWidth = (pos.x - prevPos.x) * (SW - 80);
+          var isLit = i <= current;
+          return (
+            <View key={'line_' + i} style={{
+              position: 'absolute',
+              left: prevPos.x * (SW - 80) + 6,
+              top: 5 + prevPos.yOffset + (pos.yOffset - prevPos.yOffset) / 2,
+              width: lineWidth,
+              height: 1.5,
+              backgroundColor: isLit ? 'rgba(255,184,0,0.45)' : 'rgba(255,255,255,0.08)',
+              borderRadius: 1,
+              transform: [{ rotate: Math.atan2(pos.yOffset - prevPos.yOffset, lineWidth) + 'rad' }],
+            }} />
+          );
+        })}
+      </View>
+      {/* Stars */}
+      {starPositions.map(function (pos, i) {
+        var isActive = i === current;
+        var isComplete = i < current;
+        var isFuture = i > current;
+        var starSize = isActive ? 14 : isComplete ? 10 : 7;
+        return (
+          <View key={'star_' + i} style={{
+            position: 'absolute',
+            left: 16 + pos.x * (SW - 80) - starSize / 2 + 6,
+            top: 18 + pos.yOffset - starSize / 2 + 5,
+            width: starSize,
+            height: starSize,
+            borderRadius: starSize / 2,
+            backgroundColor: isFuture ? 'rgba(255,255,255,0.12)' : isActive ? '#FFB800' : 'rgba(255,184,0,0.6)',
+            borderWidth: isActive ? 2 : 0,
+            borderColor: isActive ? 'rgba(255,184,0,0.8)' : 'transparent',
+            ...(isActive ? boxShadow('#FFB800', { width: 0, height: 0 }, 0.9, 12) : {}),
+          }} />
+        );
+      })}
+      {/* Chapter label */}
+      <Text style={{ position: 'absolute', bottom: 0, alignSelf: 'center', fontSize: 10, color: 'rgba(255,214,102,0.4)', fontWeight: '600', letterSpacing: 1.5, textTransform: 'uppercase', width: '100%', textAlign: 'center' }}>
+        {lang === 'si' ? ('පියවර ' + (current + 1) + ' / ' + total) : ('Chapter ' + (current + 1) + ' of ' + total)}
+        {labels[current] ? '  ·  ' + labels[current] : ''}
+      </Text>
+    </View>
+  );
+}
+
+
+// ── Cinematic Scene Transition ─────────────────────────────────────
+// Fade to black → hold → fade in next scene (like movie scene changes)
+function SceneTransition({ children, sceneKey }) {
+  var opacity = useSharedValue(0);
+  useEffect(function () {
+    // Fade in
+    opacity.value = 0;
+    opacity.value = withDelay(100, withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) }));
+  }, [sceneKey]);
+  var animStyle = useAnimatedStyle(function () {
+    return { opacity: opacity.value };
+  });
+  return (
+    <Animated.View style={[{ flex: 1 }, animStyle]}>
+      {children}
+    </Animated.View>
+  );
+}
+
+// ── Scene Black Curtain ────────────────────────────────────────────
+// Full-screen black overlay that fades in/out during step transitions
+function SceneBlackCurtain({ opacity }) {
+  var style = useAnimatedStyle(function () {
+    return {
+      opacity: opacity.value,
+      pointerEvents: opacity.value > 0.01 ? 'auto' : 'none',
+    };
+  });
+  return (
+    <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#030014', zIndex: 999 }, style]} />
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 //  GOLDEN 3D SVG ICONS
@@ -208,16 +493,17 @@ function GoldenIcon({ name, size }) {
 var OB = {
   en: {
     welcomeSubtitle: "The Universe Has a Message for You",
-    welcomeDesc: "Your Lagna holds secrets you've never heard\nThe planets are whispering — are you listening?\nYour cosmic destiny is waiting to be decoded",
+    welcomeDesc: "Your rising sign holds secrets you've never heard\nThe planets are whispering — are you listening?\nYour cosmic destiny is waiting to be decoded",
     welcomeBtn: "Reveal My Destiny Now",
     welcomeHint: "Thousands are discovering what their stars hide",
-    googleTitle: "Welcome to Grahachara ✨",
-    googleSubtitle: "Sign in to securely save your exact birth chart & get personalized daily predictions",
+    nasaBadge: "🛰️ Powered by NASA JPL planetary data — 100× more accurate than traditional almanacs",
+    googleTitle: "Your Stars Await ✨",
+    googleSubtitle: "Sign in to securely save your birth chart & get personalized daily predictions",
     googleBtn: "Continue with Google",
     googleFail: "Sign in failed. Please try again.",
     subTitle: "90% Of Your Destiny Is Still Hidden! 🌟",
     subSubtitle: "Your ultimate power and wealth secrets are locked \u2014 unlock them now",
-    subFeature1: "Weekly destiny forecast only for your Lagna",
+    subFeature1: "Weekly destiny forecast based on your rising sign",
     subFeature2: "Your complete birth chart — fully decoded",
     subFeature3: "Find your true soulmate match score",
     subFeature4: "AI reads your past, present & future",
@@ -247,7 +533,7 @@ var OB = {
     timeSubtitle: "One minute difference = completely different destiny",
     hourLabel: "HOUR",
     minuteLabel: "MINUTE",
-    timeHint: "Exact time = precise Lagna chart.\nIf unknown, skip \u2014 we'll use 12:00 PM.",
+    timeHint: "Exact time = precise birth chart.\nIf unknown, skip \u2014 we'll use 12:00 PM.",
     placeTitle: "Where Your Destiny Was Written",
     placeSubtitle: "The sky above your birthplace holds the answer",
     placeSearch: "Search any city...",
@@ -272,7 +558,7 @@ var OB = {
     revealSunSign: "Sun Sign",
     revealNakshatra: "Birth Star",
     revealTraits: "Your Hidden Cosmic Superpowers",
-    revealLagnaTraits: "Lagna Traits",
+    revealLagnaTraits: "Rising Sign Traits",
     revealMoonTraits: "Moon Traits",
     revealGem: "Your Power Stone",
     revealColor: "Your Power Color",
@@ -287,6 +573,7 @@ var OB = {
     welcomeDesc: "ඔබේ ලග්නයේ ඔබ කවදාවත් නොඇසූ රහස් තිබේ\nග්‍රහයන් ඔබ ගැන මොනවද කියන්නේ?\nඔබේ ඉරණම විකේතනය වීමට බලා සිටී",
     welcomeBtn: "මගේ ඉරණම දැන් හෙළි කරන්න",
     welcomeHint: "දහස් ගණනක් තම තරු රහස් සොයාගනිමින් සිටී",
+    nasaBadge: "🛰️ NASA JPL ග්‍රහ දත්ත භාවිතයෙන් — සාම්ප්‍රදායික පංචාංගයට වඩා 100 ගුණයක් නිවැරදියි",
     googleTitle: "ග්‍රහචාර වෙත සාදරයෙන් පිළිගනිමු ✨",
     googleSubtitle: "ඔබේ ග්‍රහ සටහන සහ දිනපතා අකුරටම පලාපල දැනගන්න ගිණුමක් සාදන්න",
     googleBtn: "Google හරහා පිවිසෙන්න",
@@ -479,7 +766,7 @@ function StepHeader({ icon, iconColor, title, subtitle }) {
           <GoldenIcon name={icon} size={28} />
         </Animated.View>
       ) : null}
-      <Text style={g.headerTitle}>{title}</Text>
+      <TypewriterText text={title} style={g.headerTitle} delay={300} speed={30} />
       {subtitle ? <Text style={g.headerSub}>{subtitle}</Text> : null}
     </Animated.View>
   );
@@ -493,27 +780,7 @@ var STEP_LABELS_EN = ['Welcome', 'Birth Info', 'Your Stars', 'Save', 'Premium', 
 var STEP_LABELS_SI = ['සාදරයෙන්', 'උපන් දත්ත', 'ඔබේ තරු', 'සුරකින්න', 'ප්‍රිමියම්', 'සම්පූර්ණ'];
 
 function StepProgressBar({ current, total, lang }) {
-  var labels = lang === 'si' ? STEP_LABELS_SI : STEP_LABELS_EN;
-  var progress = total > 1 ? current / (total - 1) : 0;
-  return (
-    <View style={g.progressWrap}>
-      <View style={g.progressTrack}>
-        <Animated.View
-          entering={FadeIn.duration(300)}
-          style={[g.progressFill, { width: (progress * 100) + '%' }]}
-        >
-          <LinearGradient
-            colors={['#FF8C00', '#FFB800']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-          />
-        </Animated.View>
-      </View>
-      <Text style={g.progressLabel}>
-        {(current + 1) + ' / ' + total + (labels[current] ? ' — ' + labels[current] : '')}
-      </Text>
-    </View>
-  );
+  return <ConstellationProgress current={current} total={total} lang={lang} />;
 }
 
 
@@ -849,7 +1116,7 @@ function WelcomeStep({ onContinue, onBack, lang }) {
 
         <Text style={ws.titleEn}>Grahachara</Text>
         <Text style={ws.titleSi}>{'\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB'}</Text>
-        <Text style={ws.subtitle}>{T.welcomeSubtitle}</Text>
+        <TypewriterText text={T.welcomeSubtitle} style={ws.subtitle} delay={800} speed={30} />
       </Animated.View>
 
       {/* ═══ FEATURE LIST — compact icon rows ═══ */}
@@ -868,6 +1135,13 @@ function WelcomeStep({ onContinue, onBack, lang }) {
 
       {/* ═══ CTA — teaser + button + change language ═══ */}
       <Animated.View entering={FadeInUp.delay(600).duration(500)} style={{ width: '100%' }}>
+        {/* NASA accuracy badge */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(167,139,250,0.08)', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(167,139,250,0.15)' }}>
+          <Text style={{ color: 'rgba(255,220,180,0.7)', fontSize: 11, fontWeight: '700', textAlign: 'center', lineHeight: 17 }}>
+            {T.nasaBadge}
+          </Text>
+        </View>
+
         {/* Curiosity hook */}
         <View style={ws.teaserRow}>
           <Ionicons name="time-outline" size={15} color="#FFB800" />
@@ -993,7 +1267,7 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
           <Animated.View style={[gs.headerIconBg, Platform.OS !== 'web' ? { shadowColor: '#FFB800' } : {}, iconAnim, glowAnim]}>
             <GoldenIcon name="lock" size={22} />
           </Animated.View>
-          <Text style={gs.headerTitle}>{title}</Text>
+          <TypewriterText text={title} style={gs.headerTitle} delay={400} speed={40} />
           <Text style={gs.headerSub}>{subtitle}</Text>
         </Animated.View>
 
@@ -2087,7 +2361,7 @@ function BirthDataStep({ onComplete, lang }) {
 
   /* PAGE 2: Time */
   var renderTimePage = function () {
-    var timeTeaser = lang === 'si' ? '🌙 උපන් වේලාව ඔබේ ලග්නය තීරණය කරයි — ඔබේ මුළු ජීවිතයේම සැඟවුණු සැලැස්ම එයයි' : '🌙 This is the single most important detail — it determines your entire Lagna and life path';
+    var timeTeaser = lang === 'si' ? '🌙 උපන් වේලාව ඔබේ ලග්නය තීරණය කරයි — ඔබේ මුළු ජීවිතයේම සැඟවුණු සැලැස්ම එයයි' : '🌙 This is the single most important detail — it determines your entire rising sign and life path';
     return (
       <Animated.View key="time" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
@@ -2557,7 +2831,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     var zodiacSymbol = ZODIAC_SYMBOLS[lagna.name] || ZODIAC_SYMBOLS[lagna.english] || '⭐';
     var zodiacImage = ZODIAC_IMAGE_MAP[lagna.name] || ZODIAC_IMAGE_MAP[lagna.english] || (lagna.rashiId ? ZODIAC_IMAGES[lagna.rashiId - 1] : null);
     var lagnaName = lang === 'si' ? (lagna.sinhala || lagna.english) : (lagna.english || lagna.name);
-    var lagnaSubname = lang === 'si' ? (lagnaDetails.english || lagna.english) : (lagnaDetails.sinhala || lagna.sinhala);
+    var lagnaSubname = lang === 'si' ? (lagnaDetails.english || lagna.english) : '';
     var moonName = lang === 'si' ? (moonSign.sinhala || moonSign.english) : (moonSign.english || moonSign.name);
     var sunName = lang === 'si' ? (sunSign.sinhala || sunSign.english) : (sunSign.english || sunSign.name);
     var nakshatraName = nakshatra.name || '';
@@ -2567,7 +2841,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     var isSmallScreen = SH < 700;
 
     return (
-      <View style={{ flex: 1, paddingHorizontal: 20, paddingBottom: 16 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 16 }} bounces={false} showsVerticalScrollIndicator={false}>
 
         {/* Big Bang flash overlay */}
         <Animated.View style={[{ position: 'absolute', top: -100, left: -100, right: -100, bottom: -100, backgroundColor: '#FFB800', zIndex: 100, pointerEvents: 'none' }, bigBangStyle]} />
@@ -2653,11 +2927,18 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
         {/* ── LUCKY DETAILS — compact inline row ── */}
         {lagnaDetails.gem || lagnaDetails.luckyColor || lagnaDetails.luckyDay ? (
           <Animated.View entering={FadeInDown.delay(1200).duration(400)} style={{ flexDirection: 'row', gap: 5, marginTop: 8 }}>
-            {[
-              lagnaDetails.gem ? { emoji: '\uD83D\uDC8E', label: T.revealGem, value: lagnaDetails.gem } : null,
-              lagnaDetails.luckyColor ? { emoji: '\uD83C\uDFA8', label: T.revealColor, value: lagnaDetails.luckyColor } : null,
-              lagnaDetails.luckyDay ? { emoji: '\uD83D\uDCC5', label: T.revealDay, value: lagnaDetails.luckyDay } : null,
-            ].filter(Boolean).map(function (item, i) {
+            {(function () {
+              // Strip Sinhala parenthetical text for English mode e.g. "Ruby (මාණික්‍ය)" → "Ruby"
+              var cleanVal = function (v) {
+                if (!v) return v;
+                if (lang === 'si') return v;
+                return v.replace(/\s*\([\u0D80-\u0DFF\s,]+\)/g, '').trim();
+              };
+              return [
+                lagnaDetails.gem ? { emoji: '\uD83D\uDC8E', label: T.revealGem, value: cleanVal(lagnaDetails.gem) } : null,
+                lagnaDetails.luckyColor ? { emoji: '\uD83C\uDFA8', label: T.revealColor, value: cleanVal(lagnaDetails.luckyColor) } : null,
+                lagnaDetails.luckyDay ? { emoji: '\uD83D\uDCC5', label: T.revealDay, value: cleanVal(lagnaDetails.luckyDay) } : null,
+              ].filter(Boolean).map(function (item, i) {
               return (
                 <View key={i} style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 4, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
                   <Text style={{ fontSize: 14, marginBottom: 1 }}>{item.emoji}</Text>
@@ -2665,12 +2946,13 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
                   <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.65)', textAlign: 'center' }} numberOfLines={1}>{item.value}</Text>
                 </View>
               );
-            })}
+            });
+            })()}
           </Animated.View>
         ) : null}
 
         {/* ── Spacer pushes CTA to bottom ── */}
-        <View style={{ flex: 1, minHeight: 4 }} />
+        <View style={{ flex: 1, minHeight: 4, maxHeight: 24 }} />
 
         {/* ── PREMIUM NUDGE — urgency-driven banner ── */}
         <Animated.View entering={FadeInUp.delay(1400).duration(500)}>
@@ -2720,7 +3002,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
           <PrimaryButton label={lang === 'si' ? '🔓 මගේ සම්පූර්ණ ඉරණම අගුළු අරින්න' : '🔓 Unlock My Complete Destiny Now'} onPress={onContinue} icon="sparkles" />
           <GhostButton label={T.revealSkip} onPress={onContinue} />
         </Animated.View>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -2821,33 +3103,46 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
   var [displayName, setDisplayName] = useState('');
   var insets = useSafeAreaInsets();
 
+  var [transitioning, setTransitioning] = useState(false);
+  var sceneBlack = useSharedValue(0);
+
+  // Cinematic step change — fade to black, switch, fade in
+  var cinematicSetStep = function (nextStep) {
+    if (transitioning) return;
+    setTransitioning(true);
+    sceneBlack.value = withTiming(1, { duration: 350, easing: Easing.inOut(Easing.cubic) });
+    setTimeout(function () {
+      setStep(nextStep);
+      sceneBlack.value = withDelay(100, withTiming(0, { duration: 500, easing: Easing.out(Easing.cubic) }));
+      setTimeout(function () { setTransitioning(false); }, 600);
+    }, 400);
+  };
+
   var handleLanguageSelect = function (selectedLang) {
     setLang(selectedLang);
     switchLanguage(selectedLang);
-    setStep(0);
+    cinematicSetStep(0);
   };
 
   // NEW FLOW: Birth data → Lagna Reveal (no auth needed) → Sign-In → Subscription
   var handleBirthDataComplete = function (name, data) {
     setDisplayName(name);
     setBirthData(data);
-    setStep(2); // → Lagna Reveal (teaser — uses optionalAuth, works without login)
+    cinematicSetStep(2); // → Lagna Reveal
   };
 
   // After Lagna reveal teaser → Google Sign-In ("save your chart")
   var handleLagnaRevealDone = function () {
-    setStep(3); // → Google Sign-In (to "save your chart data")
+    cinematicSetStep(3); // → Google Sign-In
   };
 
   // After Google Sign-In → subscription paywall (at emotional peak)
-  // If returning user, skip directly to the app (they already have birth data + subscription)
   var handleGoogleSignInDone = function () {
     if (isReturningUser) {
-      // Returning user — skip to complete, their data is already on the server
       if (onComplete) onComplete();
       return;
     }
-    setStep(4); // → Subscription (paywall at dopamine peak)
+    cinematicSetStep(4); // → Subscription
   };
 
   // After subscription → complete onboarding and go to app
@@ -2857,7 +3152,7 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
     } catch (e) {
       console.warn('completeOnboarding failed:', e);
     }
-    setStep(5); // → Complete
+    cinematicSetStep(5); // → Complete
   };
 
   var TOTAL_MAIN_STEPS = 6;
@@ -2876,10 +3171,10 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
   var renderStep = function () {
     switch (step) {
       case -1: return <LanguageStep onSelect={handleLanguageSelect} />;
-      case 0: return <WelcomeStep onContinue={function () { setStep(1); }} onBack={function () { setStep(-1); }} lang={lang} />;
+      case 0: return <WelcomeStep onContinue={function () { cinematicSetStep(1); }} onBack={function () { cinematicSetStep(-1); }} lang={lang} />;
       case 1: return <BirthDataStep onComplete={handleBirthDataComplete} lang={lang} />;
       case 2: return <LagnaRevealStep birthData={birthData} displayName={displayName} onContinue={handleLagnaRevealDone} lang={lang} />;
-      case 3: return <GoogleSignInStep onContinue={handleGoogleSignInDone} onBack={isReturningUser ? null : function () { setStep(2); }} lang={lang} isReturningUser={isReturningUser} />;
+      case 3: return <GoogleSignInStep onContinue={handleGoogleSignInDone} onBack={isReturningUser ? null : function () { cinematicSetStep(2); }} lang={lang} isReturningUser={isReturningUser} />;
       case 4: return <SubscriptionStep onContinue={handleSubscriptionDone} lang={lang} displayName={displayName} birthData={birthData} />;
       case 5: return <CompleteStep lang={lang} onDone={onComplete} />;
       default: return <LanguageStep onSelect={handleLanguageSelect} />;
@@ -2887,8 +3182,12 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#000000' }}>
+    <View style={{ flex: 1, backgroundColor: '#030014' }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* ── Persistent Cinematic Starfield ── */}
+      <CinematicStarfield />
+
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: 'transparent', overflow: 'hidden' }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -2900,9 +3199,17 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
               <StepProgressBar current={step} total={TOTAL_MAIN_STEPS} lang={lang} />
             </View>
           ) : null}
-          {renderStep()}
+          <SceneTransition sceneKey={step}>
+            {renderStep()}
+          </SceneTransition>
         </View>
       </KeyboardAvoidingView>
+
+      {/* ── Cinematic Vignette Overlay ── */}
+      <VignetteOverlay />
+
+      {/* ── Fade-to-Black Transition Curtain ── */}
+      <SceneBlackCurtain opacity={sceneBlack} />
     </View>
   );
 }

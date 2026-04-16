@@ -18,6 +18,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
+import TabBackground from '../../components/TabBackground';
 
 var { width: SW } = Dimensions.get('window');
 var DAILY_LIMIT = 5;
@@ -332,6 +333,7 @@ export default function ChatScreen() {
     return (
       <DesktopScreenWrapper routeName="chat">
         <View style={{ flex: 1, backgroundColor: '#0C0602' }}>
+          <TabBackground tabName="chat" />
           <View style={sd.shell}>
             <View style={sd.panel}>
 
@@ -460,6 +462,7 @@ export default function ChatScreen() {
   return (
     <DesktopScreenWrapper routeName="chat">
     <View style={{ flex: 1, backgroundColor: '#0C0602' }}>
+      <TabBackground tabName="chat" />
       <View style={[s.header, { paddingTop: topPad }]}>
         <View style={s.avatar}>
           <LinearGradient colors={mode === 'dream' ? ['#FF8C00', '#E65100'] : ['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} />

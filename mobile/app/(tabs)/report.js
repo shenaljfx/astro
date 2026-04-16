@@ -37,7 +37,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
-
+import TabBackground from '../../components/TabBackground';
 var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var MAX_SAVED_REPORTS = 20;
 
@@ -567,6 +567,174 @@ var sc = StyleSheet.create({
 });
 
 // ══════════════════════════════════════════
+// COSMIC DNA STRIP — Quick-nav score orbs
+// Horizontal scrollable row of glowing orbs
+// Tap an orb → scrolls to that section
+// ══════════════════════════════════════════
+var DNA_ITEMS = [
+  { key: 'career', emoji: '💼', label: 'Career', labelSi: 'රැකියාව' },
+  { key: 'marriage', emoji: '💍', label: 'Love', labelSi: 'ආදරය' },
+  { key: 'health', emoji: '❤️', label: 'Health', labelSi: 'සෞඛ්‍යය' },
+  { key: 'financial', emoji: '💰', label: 'Wealth', labelSi: 'මුදල්' },
+  { key: 'luck', emoji: '🍀', label: 'Luck', labelSi: 'වාසනාව' },
+  { key: 'education', emoji: '🎓', label: 'Study', labelSi: 'අධ්‍යාපන' },
+  { key: 'children', emoji: '👶', label: 'Children', labelSi: 'දරු' },
+  { key: 'foreignTravel', emoji: '✈️', label: 'Travel', labelSi: 'විදේශ' },
+  { key: 'spiritual', emoji: '🙏', label: 'Spirit', labelSi: 'ආත්ම' },
+];
+
+function DnaOrb({ item, score, isSi, index, onPress }) {
+  var orbScale = useSharedValue(0);
+  useEffect(function () {
+    orbScale.value = withDelay(index * 80, withSpring(1, { damping: 12, stiffness: 120 }));
+  }, []);
+  var orbAnim = useAnimatedStyle(function () {
+    return { transform: [{ scale: orbScale.value }], opacity: interpolate(orbScale.value, [0, 0.5, 1], [0, 0.5, 1]) };
+  });
+  var getColor = function (s) {
+    if (s >= 75) return '#10B981';
+    if (s >= 55) return '#3B82F6';
+    if (s >= 35) return '#FBBF24';
+    return '#EF4444';
+  };
+  var color = score != null ? getColor(score) : 'rgba(255,255,255,0.15)';
+  var hasScore = score != null;
+
+  return (
+    <Animated.View style={orbAnim}>
+      <SpringPressable haptic="light" onPress={function () { onPress(item.key); }} style={dna.orbWrap}>
+        <View style={[dna.orbRing, { borderColor: hasScore ? color + '50' : 'rgba(255,255,255,0.08)', shadowColor: hasScore ? color : 'transparent' }]}>
+          <LinearGradient
+            colors={hasScore ? [color + '20', color + '08'] : ['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.02)']}
+            style={dna.orbInner}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          >
+            {hasScore ? (
+              <Text style={[dna.orbScore, { color: color }]}>{score}</Text>
+            ) : (
+              <Text style={dna.orbEmoji}>{item.emoji}</Text>
+            )}
+          </LinearGradient>
+        </View>
+        <Text style={dna.orbLabel} numberOfLines={1}>{isSi ? item.labelSi : item.label}</Text>
+      </SpringPressable>
+    </Animated.View>
+  );
+}
+
+function CosmicDnaStrip({ scoreMap, isSi, onOrbPress }) {
+  return (
+    <Animated.View entering={FadeInDown.delay(200).duration(700)}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={dna.scroll}>
+        {DNA_ITEMS.map(function (item, idx) {
+          return <DnaOrb key={item.key} item={item} score={scoreMap[item.key] || null} isSi={isSi} index={idx} onPress={onOrbPress} />;
+        })}
+      </ScrollView>
+    </Animated.View>
+  );
+}
+
+var dna = StyleSheet.create({
+  scroll: { paddingHorizontal: 12, paddingVertical: 8, gap: 4 },
+  orbWrap: { alignItems: 'center', width: 62, marginHorizontal: 2 },
+  orbRing: {
+    width: 48, height: 48, borderRadius: 24, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 10, elevation: 0,
+  },
+  orbInner: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  orbScore: { fontSize: 16, fontWeight: '900' },
+  orbEmoji: { fontSize: 18 },
+  orbLabel: { fontSize: 9, color: 'rgba(255,214,102,0.50)', fontWeight: '600', marginTop: 4, textAlign: 'center' },
+});
+
+// ══════════════════════════════════════════
+// READING PROGRESS BAR — fills as you scroll
+// ══════════════════════════════════════════
+function ReadingProgressBar({ scrollProgress, sectionCount, currentChapter, reportLang }) {
+  var barWidth = useAnimatedStyle(function () {
+    return { width: (scrollProgress.value * 100) + '%' };
+  });
+  var labelOpacity = useAnimatedStyle(function () {
+    return { opacity: scrollProgress.value > 0.02 ? 1 : 0 };
+  });
+  var isSi = reportLang === 'si';
+
+  return (
+    <View style={rpb.wrap}>
+      <View style={rpb.track}>
+        <Animated.View style={[rpb.fill, barWidth]}>
+          <LinearGradient
+            colors={['#FF8C00', '#FFB800', '#FFD700']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+          />
+        </Animated.View>
+      </View>
+      <Animated.View style={[rpb.labelWrap, labelOpacity]}>
+        <Text style={rpb.labelText}>
+          {isSi ? 'පරිච්ඡේදය ' + currentChapter + '/' + sectionCount : 'Ch. ' + currentChapter + '/' + sectionCount}
+        </Text>
+      </Animated.View>
+    </View>
+  );
+}
+
+var rpb = StyleSheet.create({
+  wrap: { position: 'absolute', top: Platform.OS === 'ios' ? 96 : 76, left: 0, right: 0, zIndex: 100, paddingHorizontal: 16 },
+  track: { height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 1.5, overflow: 'hidden' },
+  labelWrap: { alignSelf: 'flex-end', marginTop: 3 },
+  labelText: { fontSize: 9, color: 'rgba(255,184,0,0.55)', fontWeight: '700' },
+});
+
+// ══════════════════════════════════════════
+// CONSTELLATION DIVIDER — animated dots + lines between sections
+// ══════════════════════════════════════════
+function ConstellationDivider({ index }) {
+  var twinkle = useSharedValue(0.3);
+  useEffect(function () {
+    twinkle.value = withRepeat(withSequence(
+      withTiming(0.8, { duration: 1500 + index * 200, easing: Easing.inOut(Easing.sin) }),
+      withTiming(0.2, { duration: 1200 + index * 150, easing: Easing.inOut(Easing.sin) })
+    ), -1, true);
+  }, []);
+  var starStyle = useAnimatedStyle(function () { return { opacity: twinkle.value }; });
+
+  // Random constellation pattern per index
+  var patternSeed = (index * 7 + 3) % 5;
+  var starPositions = [
+    [0.12, 0.25, 0.42, 0.58, 0.75, 0.88], // even spread
+    [0.08, 0.22, 0.38, 0.62, 0.78, 0.92], // offset
+    [0.15, 0.30, 0.45, 0.55, 0.70, 0.85], // centered
+    [0.10, 0.28, 0.40, 0.60, 0.72, 0.90], // wider
+    [0.18, 0.32, 0.48, 0.52, 0.68, 0.82], // tight center
+  ][patternSeed];
+
+  return (
+    <View style={cdv.wrap}>
+      <View style={cdv.line} />
+      {starPositions.map(function (pos, i) {
+        var sz = (i % 3 === 0) ? 3 : 2;
+        return (
+          <Animated.View key={i} style={[cdv.star, {
+            left: (pos * 100) + '%', width: sz, height: sz, borderRadius: sz / 2,
+            marginLeft: -sz / 2,
+          }, starStyle]} />
+        );
+      })}
+      <View style={cdv.line} />
+    </View>
+  );
+}
+
+var cdv = StyleSheet.create({
+  wrap: { flexDirection: 'row', alignItems: 'center', marginVertical: 6, height: 12, position: 'relative' },
+  line: { flex: 1, height: 0.5, backgroundColor: 'rgba(255,184,0,0.06)' },
+  star: { position: 'absolute', backgroundColor: 'rgba(255,200,80,0.5)', shadowColor: '#FFD700', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 4, elevation: 0 },
+});
+
+// ══════════════════════════════════════════
 // COSMIC LOADING ANIMATION
 // ══════════════════════════════════════════
 var LOADING_STAGES = {
@@ -757,6 +925,8 @@ export default function ReportScreen() {
   // Flow states: 'form' -> 'loading' -> 'report'
   var [screenState, setScreenState] = useState('form');
   var [savedReports, setSavedReports] = useState([]);
+  var scrollProgress = useSharedValue(0);
+  var [currentChapter, setCurrentChapter] = useState(1);
 
   // ── Load saved reports from AsyncStorage on mount ──
   useEffect(function() {
@@ -1033,6 +1203,7 @@ export default function ReportScreen() {
   if (screenState === 'loading') {
     return (
       <View style={{ flex: 1, backgroundColor: '#020C06' }}>
+        <TabBackground tabName="report" />
         <View style={s.loadingFull}>
           <CosmicLoader userName={userName} language={reportLang} />
         </View>
@@ -1058,7 +1229,18 @@ export default function ReportScreen() {
     return (
       <DesktopScreenWrapper routeName="report">
       <View style={{ flex: 1, backgroundColor: '#020C06' }}>
-        <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
+        <TabBackground tabName="report" />
+        <ReadingProgressBar scrollProgress={scrollProgress} sectionCount={SECTION_KEYS.length} currentChapter={currentChapter} reportLang={reportLang} />
+        <Animated.ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}
+          onScroll={function(e) {
+            var y = e.nativeEvent.contentOffset.y;
+            var h = e.nativeEvent.contentSize.height - e.nativeEvent.layoutMeasurement.height;
+            if (h > 0) { scrollProgress.value = Math.min(1, Math.max(0, y / h)); }
+            var sectionIdx = Math.floor((y / (h || 1)) * SECTION_KEYS.length) + 1;
+            setCurrentChapter(Math.min(SECTION_KEYS.length, Math.max(1, sectionIdx)));
+          }}
+          scrollEventThrottle={16}
+        >
           <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
 
           {/* ═══ HERO TITLE ═══ */}
@@ -1252,6 +1434,9 @@ export default function ReportScreen() {
             </Animated.View>
           )}
 
+          {/* ═══ COSMIC DNA STRIP ═══ */}
+          <CosmicDnaStrip scoreMap={overviewScores.map} isSi={reportLang === 'si'} onOrbPress={function() {}} />
+
           {/* ═══ SECTION DIVIDER ═══ */}
           <Animated.View entering={FadeInDown.delay(300).duration(600)}>
             <View style={s.sectionDivider}>
@@ -1268,7 +1453,10 @@ export default function ReportScreen() {
               if (!aiNarrative || !aiNarrative.narrative) return null;
               var rawDataKey = key === 'marriedLife' ? 'marriage' : key;
               var rawData = (report.sections || {})[rawDataKey] || (aiReport.rawSections || {})[rawDataKey] || null;
-              return <SectionCard key={key} sectionKey={key} data={null} index={index} t={t} aiNarrative={aiNarrative} reportLang={reportLang} rawData={rawData} />;
+              return <React.Fragment key={key}>
+                {index > 0 && <ConstellationDivider index={index} />}
+                <SectionCard sectionKey={key} data={null} index={index} t={t} aiNarrative={aiNarrative} reportLang={reportLang} rawData={rawData} />
+              </React.Fragment>;
             })
           )}
 
@@ -1291,7 +1479,7 @@ export default function ReportScreen() {
 
           <View style={{ height: isDesktop ? 32 : 120 }} />
           </View>
-        </ScrollView>
+        </Animated.ScrollView>
       </View>
       </DesktopScreenWrapper>
     );
@@ -1301,6 +1489,7 @@ export default function ReportScreen() {
   return (
     <DesktopScreenWrapper routeName="report">
     <View style={{ flex: 1, backgroundColor: '#020C06' }}>
+      <TabBackground tabName="report" />
       <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
         <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
         {/* Header */}

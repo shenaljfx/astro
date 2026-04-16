@@ -21,14 +21,14 @@
  *
  *   return (
  *     <DesktopScreenWrapper routeName="index">
- *       <View style={{ flex: 1, backgroundColor: '#000' }}>...</View>
+ *       <CosmicBackground>...</CosmicBackground>
  *     </DesktopScreenWrapper>
  *   );
  */
 
 import React, { createContext, useContext } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { DesktopTopBar } from './DesktopLayout';
+import { View, StyleSheet, Platform } from 'react-native';
+import { DesktopTopBar, TOPBAR_H } from './DesktopLayout';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -38,7 +38,7 @@ export function useDesktopCtx() { return useContext(DesktopCtx); }
 
 export default function DesktopScreenWrapper({ routeName, balance, children }) {
   var isDesktop = useIsDesktop();
-  var { language, toggleLanguage } = useLanguage();
+  var { language } = useLanguage();
 
   if (!isDesktop) {
     return (
@@ -48,16 +48,13 @@ export default function DesktopScreenWrapper({ routeName, balance, children }) {
     );
   }
 
-  // Desktop: column container — topbar (fixed height) + scrollable content (flex:1)
   return (
     <DesktopCtx.Provider value={true}>
       <View style={dw.root}>
-        {/* ── Top bar: 64px, never scrolls ── */}
-        <View style={dw.topBarSlot}>
-          <DesktopTopBar routeName={routeName} language={language} balance={balance || null} onToggleLanguage={toggleLanguage} />
-        </View>
-        {/* ── Content area: fills all remaining height ── */}
-        <View style={dw.contentSlot}>
+        {/* Fixed top bar */}
+        <DesktopTopBar routeName={routeName} language={language} balance={balance || null} />
+        {/* Screen content — flex:1, no extra padding */}
+        <View style={dw.body}>
           {children}
         </View>
       </View>
@@ -70,18 +67,10 @@ var dw = StyleSheet.create({
     flex: 1,
     flexDirection: 'column',
     backgroundColor: '#04030C',
+    overflow: 'hidden',
   },
-  topBarSlot: {
-    zIndex: 10,
-    backgroundColor: 'rgba(8,5,22,0.97)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-  },
-  contentSlot: {
+  body: {
     flex: 1,
     overflow: 'hidden',
-    // On web: ensure children that use ScrollView with contentContainerStyle
-    // maxWidth+alignSelf actually render centred
-    alignItems: 'stretch',
   },
 });
