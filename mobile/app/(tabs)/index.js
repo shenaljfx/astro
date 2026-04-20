@@ -26,7 +26,7 @@ import api from '../../services/api';
 import { Colors, Typography, Gradients, Spacing } from '../../constants/theme';
 import SriLankanChart from '../../components/SriLankanChart';
 import RealisticMoon from '../../components/RealisticMoon';
-import CosmicBackground from '../../components/CosmicBackground';
+import PremiumBackground from '../../components/PremiumBackground';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
 
@@ -1096,7 +1096,7 @@ export default function HomeScreen() {
                   <Text style={{ fontSize: 22 }}>🔮</Text>
                 </View>
                 <View style={s.wbTextCol}>
-                  <Text style={s.wbTitle}>{language === 'si' ? 'සතිපතා ලග්න පලාපල' : 'Weekly Lagna Palapala'}</Text>
+                  <Text style={s.wbTitle}>{language === 'si' ? 'සතිපතා ලග්න පලාපල' : 'Weekly Forecast'}</Text>
                   {weekLabel ? <Text style={s.wbWeek}>{weekLabel}</Text> : null}
                   {userReport ? (
                     <View style={s.wbTeaser}>
@@ -1549,7 +1549,7 @@ export default function HomeScreen() {
             <View style={s.wlHeaderLeft}>
               <Text style={{ fontSize: 22 }}>🔮</Text>
               <View>
-                <Text style={s.wlTitle}>{language === 'si' ? 'සතිපතා ලග්න පලාපල' : 'Weekly Lagna Palapala'}</Text>
+                <Text style={s.wlTitle}>{language === 'si' ? 'සතිපතා ලග්න පලාපල' : 'Weekly Forecast'}</Text>
                 {weekLabel ? <Text style={s.wlWeekLabel}>{weekLabel}</Text> : null}
               </View>
             </View>
@@ -1828,7 +1828,7 @@ export default function HomeScreen() {
   return (
     <DesktopScreenWrapper routeName="index">
       <View style={{ flex: 1, backgroundColor: '#020508' }}>
-        <CosmicBackground />
+        <PremiumBackground />
         <Animated.ScrollView
           ref={scrollRef}
           style={s.flex}

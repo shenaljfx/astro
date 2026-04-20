@@ -103,7 +103,7 @@ function SidebarLogo({ collapsed }) {
       </View>
       {!collapsed && (
         <View style={{ marginLeft: 12, flex: 1, minWidth: 0 }}>
-          <Text style={sb.logoTitle}>NAKATH</Text>
+          <Text style={sb.logoTitle}>GRAHACHARA</Text>
           <Text style={sb.logoSubtitle}>AI · Vedic Guide</Text>
         </View>
       )}

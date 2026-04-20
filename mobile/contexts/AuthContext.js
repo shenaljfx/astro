@@ -60,6 +60,48 @@ function getBaseUrl() {
   return 'http://localhost:3000';
 }
 
+function maskValue(value, visibleChars) {
+  if (!value || typeof value !== 'string') return 'missing';
+  if (value.length <= visibleChars) return value;
+  return '...' + value.slice(-visibleChars);
+}
+
+function getAuthDebugContext() {
+  var options = firebaseAuth?.app?.options || {};
+  return {
+    platform: Platform.OS,
+    projectId: options.projectId || 'missing',
+    appId: maskValue(options.appId, 10),
+    apiKey: maskValue(options.apiKey, 6),
+    apiBaseUrl: getBaseUrl(),
+    authReady: !!firebaseAuth,
+  };
+}
+
+function buildAuthError(stage, err, extra) {
+  var context = {
+    ...getAuthDebugContext(),
+    stage: stage,
+    code: err?.code || 'unknown',
+    nativeMessage: err?.message || 'Unknown auth error',
+    ...extra,
+  };
+  var message =
+    'Google sign-in failed at ' + context.stage +
+    ' [' + context.code + ']: ' + context.nativeMessage +
+    ' | platform=' + context.platform +
+    ' | project=' + context.projectId +
+    ' | app=' + context.appId +
+    ' | apiKey=' + context.apiKey +
+    ' | api=' + context.apiBaseUrl;
+  var wrapped = new Error(message);
+  wrapped.code = context.code;
+  wrapped.stage = context.stage;
+  wrapped.details = context;
+  wrapped.cause = err;
+  return wrapped;
+}
+
 export function AuthProvider({ children }) {
   var [user, setUser] = useState(null);
   var [token, setToken] = useState(null);
@@ -221,11 +263,17 @@ export function AuthProvider({ children }) {
 
   // Sign in with Google via Firebase Auth
   var signInWithGoogle = useCallback(async function() {
+    var currentStage = 'start';
     try {
       var firebaseUser = null;
 
+      if (!firebaseAuth) {
+        throw buildAuthError('firebase-init', new Error('Firebase auth was not initialized'));
+      }
+
       if (Platform.OS === 'web') {
         // Web: use popup-based Google sign-in
+        currentStage = 'google-popup';
         var provider = new GoogleAuthProvider();
         var result = await signInWithPopup(firebaseAuth, provider);
         firebaseUser = result.user;
@@ -239,18 +287,21 @@ export function AuthProvider({ children }) {
         } catch (e) {
           // Fallback: try expo-auth-session for Google
           console.warn('Google Sign-In native module not available, trying web fallback');
+          currentStage = 'google-popup-fallback';
           var provider = new GoogleAuthProvider();
           var result = await signInWithPopup(firebaseAuth, provider);
           firebaseUser = result.user;
         }
 
         if (GoogleSignin && !firebaseUser) {
-          console.log('[Auth] Step 1: Checking Play Services...');
+          currentStage = 'play-services';
+          console.log('[Auth] Step 1: Checking Play Services...', getAuthDebugContext());
           await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
           console.log('[Auth] Step 2: Play Services OK, calling signIn()...');
           
           var signInResult = null;
           try {
+            currentStage = 'google-signin';
             signInResult = await GoogleSignin.signIn();
           } catch (signInErr) {
             console.error('[Auth] GoogleSignin.signIn() THREW:', signInErr?.code, signInErr?.message);
@@ -265,6 +316,7 @@ export function AuthProvider({ children }) {
           }
 
           // v13 returns { type: 'success', data: { idToken, user, ... } }
+          currentStage = 'google-id-token';
           var idToken = signInResult?.data?.idToken || signInResult?.idToken;
           console.log('[Auth] Step 4: idToken:', idToken ? 'yes (length=' + idToken.length + ')' : 'NO');
           if (!idToken) {
@@ -273,20 +325,76 @@ export function AuthProvider({ children }) {
             throw new Error('Failed to get Google ID token — signIn returned type: ' + (signInResult?.type || 'unknown'));
           }
           
-          console.log('[Auth] Step 5: Creating Firebase credential...');
-          var credential = GoogleAuthProvider.credential(idToken);
-          var userCredential = await signInWithCredential(firebaseAuth, credential);
-          firebaseUser = userCredential.user;
-          console.log('[Auth] Step 6: Firebase signIn success, uid:', firebaseUser?.uid);
+          // On native, skip signInWithCredential (Firebase JS SDK REST calls
+          // fail on Android due to API key restrictions). Send the raw Google
+          // ID token directly to our server which verifies it server-side.
+          console.log('[Auth] Step 5: Skipping Firebase credential on native, sending Google token to server...');
+          currentStage = 'backend-auth';
+          var googleUser = signInResult?.data?.user || signInResult?.user || {};
+          var result = await apiGoogleAuth(idToken, {
+            displayName: googleUser.name || googleUser.givenName || '',
+            email: googleUser.email || '',
+            photoURL: googleUser.photo || '',
+          });
+          console.log('[Auth] Step 6: Server auth result:', result?.success);
+
+          if (!result.success) {
+            throw new Error(result.error || 'Authentication failed');
+          }
+
+          var authToken = result.token;
+          var userData = result.user;
+
+          currentStage = 'persist-session';
+          await AsyncStorage.setItem(STORAGE_TOKEN, authToken);
+          await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
+
+          setToken(authToken);
+          setUser(userData);
+          setSubscription(userData.subscription || null);
+
+          setAuthTokenGetter(function() {
+            return Promise.resolve(authToken);
+          });
+
+          // Login to RevenueCat with Firebase UID
+          if (userData.uid) {
+            try {
+              await rcLoginUser(userData.uid);
+              var isActive = await checkEntitlement();
+              if (isActive) {
+                var activeSub = await getActiveSubscription();
+                var sub = {
+                  status: 'active',
+                  plan: activeSub ? activeSub.plan : 'pro',
+                  expiresAt: activeSub ? activeSub.expiresDate : null,
+                  willRenew: activeSub ? activeSub.willRenew : true,
+                };
+                setSubscription(sub);
+                userData.subscription = sub;
+                await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
+              }
+            } catch (rcErr) {
+              console.warn('[Auth] RevenueCat login after Google auth failed (non-fatal):', rcErr.message);
+            }
+          }
+
+          return {
+            success: true,
+            user: userData,
+            isNewUser: result.isNewUser,
+          };
         }
       }
 
       if (!firebaseUser) throw new Error('Google Sign-In failed');
 
-      // Get Firebase ID token
+      // Web path: get Firebase ID token and send to server
+      currentStage = 'firebase-id-token';
       var idToken = await firebaseUser.getIdToken();
 
       // Send to our server for JWT + user creation
+      currentStage = 'backend-auth';
       var result = await apiGoogleAuth(idToken, {
         displayName: firebaseUser.displayName,
         email: firebaseUser.email,
@@ -300,6 +408,7 @@ export function AuthProvider({ children }) {
       var authToken = result.token;
       var userData = result.user;
 
+      currentStage = 'persist-session';
       await AsyncStorage.setItem(STORAGE_TOKEN, authToken);
       await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
 
@@ -340,7 +449,7 @@ export function AuthProvider({ children }) {
         isNewUser: result.isNewUser,
       };
     } catch (err) {
-      console.error('[Auth] signInWithGoogle error:', err?.code, err?.message, err);
+      console.error('[Auth] signInWithGoogle error:', currentStage, err?.code, err?.message, err?.details || err);
       // Don't throw for user cancellation — v13 uses statusCodes.SIGN_IN_CANCELLED (code "12501")
       // Also handle legacy ERR_REQUEST_CANCELED and v13 cancelled type
       if (err && (
@@ -351,7 +460,8 @@ export function AuthProvider({ children }) {
       )) {
         return { success: false, cancelled: true };
       }
-      throw err;
+      if (err?.details?.stage) throw err;
+      throw buildAuthError(currentStage, err);
     }
   }, []);
 

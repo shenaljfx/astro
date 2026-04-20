@@ -20,7 +20,7 @@ import { Colors, Typography, Spacing } from '../../constants/theme';
 import CosmicCard from '../../components/ui/CosmicCard';
 import SectionHeader from '../../components/ui/SectionHeader';
 import { boxShadow, textShadow } from '../../utils/shadow';
-import TabBackground from '../../components/TabBackground';
+import PremiumBackground from '../../components/PremiumBackground';
 
 const CHART_CACHE_KEY = '@grahachara_chart_cache';
 
@@ -1460,8 +1460,8 @@ export default function KendaraScreen() {
 
   return (
     <DesktopScreenWrapper routeName="kendara">
-    <View style={{ flex: 1, backgroundColor: '#0C0810' }}>
-      <TabBackground tabName="kendara" />
+    <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+      <PremiumBackground />
       <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#60A5FA" />}>
         <View style={[styles.content, isDesktop && styles.contentDesktop]}>
           <Animated.View entering={FadeIn.duration(700)} style={styles.pageTitleRow}>

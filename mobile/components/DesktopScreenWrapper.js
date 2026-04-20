@@ -21,7 +21,7 @@
  *
  *   return (
  *     <DesktopScreenWrapper routeName="index">
- *       <CosmicBackground>...</CosmicBackground>
+ *       <PremiumBackground>...</PremiumBackground>
  *     </DesktopScreenWrapper>
  *   );
  */

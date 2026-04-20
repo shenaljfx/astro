@@ -27,7 +27,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { Colors, Typography } from '../../constants/theme';
 import { boxShadow, textShadow } from '../../utils/shadow';
-import TabBackground from '../../components/TabBackground';
+import PremiumBackground from '../../components/PremiumBackground';
 import { generatePorondamHTML, loadLogoBase64 } from '../../utils/pdfReportGenerator';
 import RadarChart from '../../components/RadarChart';
 
@@ -458,7 +458,7 @@ function FactorBar({ f, index, language }) {
 // Labels
 var L = {
   en: {
-    title: 'Porondam', subtitle: 'Marriage Compatibility Check',
+    title: 'Compatibility', subtitle: 'Marriage Compatibility Check',
     bride: '\uD83D\uDC70 Bride', groom: '\uD83E\uDD35 Groom',
     namePh: 'Name (optional)',
     yearPh: 'YYYY', monthPh: 'MM', dayPh: 'DD', hourPh: 'HH', minutePh: 'MM',
@@ -466,7 +466,7 @@ var L = {
     birthPlace: 'Birth Place',
     timeHint: '* Check birth certificate for exact time',
     checkBtn: '\uD83D\uDC8D Check Compatibility',
-    brideChart: "Bride's Kendara", groomChart: "Groom's Kendara",
+    brideChart: "Bride's Chart", groomChart: "Groom's Chart",
     factors: 'Compatibility Factors', factorsSub: '7 Factors \u00B7 20 Points',
     doshas: 'Doshas', report: 'Astrology Report',
     reportQ: 'Get detailed analysis in:',
@@ -788,7 +788,7 @@ export default function PorondamScreen() {
     try {
       var msg = language === 'si'
         ? '\u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) \u2014 ' + (data.ratingSinhala || data.rating) + '\n\nGrahachara \uD83D\uDC8D'
-        : 'Porondam: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) \u2014 ' + data.rating + '\n\nGrahachara \uD83D\uDC8D';
+        : 'Compatibility: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) \u2014 ' + data.rating + '\n\nGrahachara \uD83D\uDC8D';
       await Share.share({ message: msg });
     } catch (e) {}
   };
@@ -797,8 +797,8 @@ export default function PorondamScreen() {
   if (loading) {
     return (
       <DesktopScreenWrapper routeName="porondam">
-        <View style={{ flex: 1, backgroundColor: '#0C0208', justifyContent: 'center', alignItems: 'center' }}>
-          <TabBackground tabName="porondam" />
+        <View style={{ flex: 1, backgroundColor: '#04030C', justifyContent: 'center', alignItems: 'center' }}>
+          <PremiumBackground />
           <PorondamCosmicLoader brideName={bName} groomName={gName} language={language} />
         </View>
       </DesktopScreenWrapper>
@@ -807,8 +807,8 @@ export default function PorondamScreen() {
 
   return (
     <DesktopScreenWrapper routeName="porondam">
-    <View style={{ flex: 1, backgroundColor: '#0C0208' }}>
-      <TabBackground tabName="porondam" />
+    <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+      <PremiumBackground />
       <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop]} showsVerticalScrollIndicator={false}>
         <View style={[sty.scrollInner, isDesktop && sty.scrollInnerDesktop]}>
 

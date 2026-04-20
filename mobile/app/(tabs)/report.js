@@ -37,7 +37,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
-import TabBackground from '../../components/TabBackground';
+import PremiumBackground from '../../components/PremiumBackground';
 var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var MAX_SAVED_REPORTS = 20;
 
@@ -1202,8 +1202,8 @@ export default function ReportScreen() {
   // ── FULL SCREEN LOADING ──────────────────────────────────
   if (screenState === 'loading') {
     return (
-      <View style={{ flex: 1, backgroundColor: '#020C06' }}>
-        <TabBackground tabName="report" />
+      <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+        <PremiumBackground />
         <View style={s.loadingFull}>
           <CosmicLoader userName={userName} language={reportLang} />
         </View>
@@ -1228,8 +1228,8 @@ export default function ReportScreen() {
 
     return (
       <DesktopScreenWrapper routeName="report">
-      <View style={{ flex: 1, backgroundColor: '#020C06' }}>
-        <TabBackground tabName="report" />
+      <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+        <PremiumBackground />
         <ReadingProgressBar scrollProgress={scrollProgress} sectionCount={SECTION_KEYS.length} currentChapter={currentChapter} reportLang={reportLang} />
         <Animated.ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}
           onScroll={function(e) {
@@ -1488,8 +1488,8 @@ export default function ReportScreen() {
   // ── INPUT FORM (default view) ────────────────────────────
   return (
     <DesktopScreenWrapper routeName="report">
-    <View style={{ flex: 1, backgroundColor: '#020C06' }}>
-      <TabBackground tabName="report" />
+    <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+      <PremiumBackground />
       <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
         <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
         {/* Header */}

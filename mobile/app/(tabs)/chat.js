@@ -18,7 +18,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
-import TabBackground from '../../components/TabBackground';
+import PremiumBackground from '../../components/PremiumBackground';
 
 var { width: SW } = Dimensions.get('window');
 var DAILY_LIMIT = 5;
@@ -186,7 +186,7 @@ function QuickChips({ onSelect, language, mode }) {
         { icon: 'airplane-outline', label: 'රට යන්න පුළුවන්ද?' },
       ]
     : [
-        { icon: 'sunny-outline', label: "Today's Nakath?" },
+        { icon: 'sunny-outline', label: "Today's Auspicious Times?" },
         { icon: 'heart-outline', label: 'Love Forecast?' },
         { icon: 'time-outline', label: 'Rahu Period?' },
         { icon: 'color-palette-outline', label: 'Lucky Color?' },
@@ -332,8 +332,8 @@ export default function ChatScreen() {
   if (isDesktop) {
     return (
       <DesktopScreenWrapper routeName="chat">
-        <View style={{ flex: 1, backgroundColor: '#0C0602' }}>
-          <TabBackground tabName="chat" />
+        <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+          <PremiumBackground />
           <View style={sd.shell}>
             <View style={sd.panel}>
 
@@ -461,8 +461,8 @@ export default function ChatScreen() {
   // ── MOBILE LAYOUT ──────────────────────────────────────────────────
   return (
     <DesktopScreenWrapper routeName="chat">
-    <View style={{ flex: 1, backgroundColor: '#0C0602' }}>
-      <TabBackground tabName="chat" />
+    <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+      <PremiumBackground />
       <View style={[s.header, { paddingTop: topPad }]}>
         <View style={s.avatar}>
           <LinearGradient colors={mode === 'dream' ? ['#FF8C00', '#E65100'] : ['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} />

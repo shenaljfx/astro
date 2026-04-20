@@ -13,7 +13,12 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const { getDb, getAuth, COLLECTIONS } = require('../config/firebase');
+
+// Google OAuth web client ID — used to verify raw Google ID tokens from Android
+const GOOGLE_WEB_CLIENT_ID = '279712940419-rohbq14otfq57sjmn7vm775co13cjipa.apps.googleusercontent.com';
+const googleClient = new OAuth2Client(GOOGLE_WEB_CLIENT_ID);
 
 // JWT secret — MUST be set via environment variable in production
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -127,21 +132,54 @@ router.post('/google', async (req, res) => {
       return res.status(400).json({ error: 'Firebase ID token is required' });
     }
 
-    // Verify the Firebase ID token
+    // Verify the token — try Firebase ID token first, then raw Google ID token
     const auth = getAuth();
     let decodedToken = null;
 
     if (auth) {
+      // 1) Try Firebase ID token (from web clients using signInWithCredential)
       try {
         decodedToken = await auth.verifyIdToken(idToken);
       } catch (verifyErr) {
-        console.error('Firebase token verification failed:', verifyErr.message);
-        return res.status(401).json({ error: 'Invalid or expired token' });
+        console.log('[auth/google] Firebase verifyIdToken failed, trying raw Google token...', verifyErr.code || verifyErr.message);
+
+        // 2) Fallback: verify as raw Google ID token (from Android native sign-in)
+        try {
+          const ticket = await googleClient.verifyIdToken({
+            idToken: idToken,
+            audience: GOOGLE_WEB_CLIENT_ID,
+          });
+          const payload = ticket.getPayload();
+
+          // Look up or create a Firebase Auth user for this Google account
+          let firebaseUser;
+          try {
+            firebaseUser = await auth.getUserByEmail(payload.email);
+          } catch (lookupErr) {
+            // User doesn't exist in Firebase Auth yet — create them
+            firebaseUser = await auth.createUser({
+              email: payload.email,
+              displayName: payload.name || profile?.displayName || 'Cosmic Seeker',
+              photoURL: payload.picture || profile?.photoURL || null,
+            });
+            console.log(`🆕 Created Firebase Auth user for Google account: ${payload.email}`);
+          }
+
+          decodedToken = {
+            uid: firebaseUser.uid,
+            email: payload.email,
+            name: payload.name || profile?.displayName,
+            picture: payload.picture || profile?.photoURL,
+          };
+          console.log('[auth/google] Verified raw Google ID token for:', payload.email);
+        } catch (googleErr) {
+          console.error('Both Firebase and Google token verification failed:', googleErr.message);
+          return res.status(401).json({ error: 'Invalid or expired token' });
+        }
       }
     } else {
       // No Firebase Admin — dev mode fallback
       console.warn('[auth/google] No Firebase Admin available — using dev mode');
-      // In dev mode, create a mock decoded token from the profile
       decodedToken = {
         uid: 'dev_' + (profile?.email || 'user').replace(/[^a-z0-9]/gi, '_'),
         email: profile?.email || 'dev@grahachara.com',

@@ -180,7 +180,7 @@ export default function PredictionsScreen() {
         )}
         {annualData.muddaDasha && annualData.muddaDasha.length > 0 && (
           <View style={s.munthaBox}>
-            <Text style={s.sectionTitle}>{si ? 'මුද්දා දශා' : 'Mudda Dasha'}</Text>
+            <Text style={s.sectionTitle}>{si ? 'මුද්දා දශා' : 'Annual Periods'}</Text>
             {annualData.muddaDasha.slice(0, 5).map(function (d, i) {
               return (
                 <View key={i} style={s.dashRow}>
