@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Platform, LogBox } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { PricingProvider } from '../contexts/PricingContext';
@@ -101,14 +102,16 @@ var gs = StyleSheet.create({
 
 export default function RootLayout() {
   return (
-    <View style={{ flex: 1, backgroundColor: '#030014' }}>
-      <LanguageProvider>
-        <PricingProvider>
-          <AuthProvider>
-            <AppGate />
-          </AuthProvider>
-        </PricingProvider>
-      </LanguageProvider>
-    </View>
+    <SafeAreaProvider>
+      <View style={{ flex: 1, backgroundColor: '#030014' }}>
+        <LanguageProvider>
+          <PricingProvider>
+            <AuthProvider>
+              <AppGate />
+            </AuthProvider>
+          </PricingProvider>
+        </LanguageProvider>
+      </View>
+    </SafeAreaProvider>
   );
 }

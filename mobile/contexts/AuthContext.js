@@ -17,7 +17,7 @@
  * - saveBirthData(birthData), updateProfile(data), signOut()
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setAuthTokenGetter } from '../services/api';
 import {
@@ -137,8 +137,11 @@ export function AuthProvider({ children }) {
   var [authReady, setAuthReady] = useState(false);
   var [subscription, setSubscription] = useState(null);
   var [paywallVisible, setPaywallVisible] = useState(false);
-  var [paywallResolve, setPaywallResolve] = useState(null);
   var [paywallSource, setPaywallSource] = useState('onboarding');
+  // Use a ref for the resolve/reject pair so it's read fresh by the modal
+  // close/purchase callbacks (avoids stale closures and a race where the
+  // paywall opens but the resolver hasn't been committed to state yet).
+  var paywallResolverRef = useRef(null);
 
   // Initialize: Load saved token on app start
   useEffect(function() {
@@ -529,7 +532,8 @@ export function AuthProvider({ children }) {
   // Activate subscription — show custom Paywall
   var activateSubscription = useCallback(async function() {
     return new Promise(function(resolve, reject) {
-      setPaywallResolve({ resolve: resolve, reject: reject });
+      paywallResolverRef.current = { resolve: resolve, reject: reject };
+      setPaywallSource('onboarding');
       setPaywallVisible(true);
     });
   }, []);
@@ -537,6 +541,8 @@ export function AuthProvider({ children }) {
   // Called when purchase succeeds in PaywallScreen
   var handlePaywallPurchased = useCallback(async function(result) {
     setPaywallVisible(false);
+    var resolver = paywallResolverRef.current;
+    paywallResolverRef.current = null;
     try {
       var activeSub = await getActiveSubscription();
       var sub = {
@@ -552,26 +558,19 @@ export function AuthProvider({ children }) {
         AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
         return updated;
       });
-      if (paywallResolve) {
-        if (paywallResolve.resolve) paywallResolve.resolve({ success: true, subscription: sub });
-        setPaywallResolve(null);
-      }
+      if (resolver && resolver.resolve) resolver.resolve({ success: true, subscription: sub });
     } catch (err) {
-      if (paywallResolve) {
-        if (paywallResolve.resolve) paywallResolve.resolve({ success: true });
-        setPaywallResolve(null);
-      }
+      if (resolver && resolver.resolve) resolver.resolve({ success: true });
     }
-  }, [paywallResolve]);
+  }, []);
 
   // Called when paywall is closed without purchase
   var handlePaywallClose = useCallback(function() {
     setPaywallVisible(false);
-    if (paywallResolve) {
-      if (paywallResolve.reject) paywallResolve.reject(new Error('Payment cancelled'));
-      setPaywallResolve(null);
-    }
-  }, [paywallResolve]);
+    var resolver = paywallResolverRef.current;
+    paywallResolverRef.current = null;
+    if (resolver && resolver.reject) resolver.reject(new Error('Payment cancelled'));
+  }, []);
 
   // Cancel subscription — opens RevenueCat Customer Center
   var cancelSubscription = useCallback(async function() {
@@ -731,7 +730,7 @@ export function AuthProvider({ children }) {
     showPaywall: function(source) {
       return new Promise(function(resolve, reject) {
         setPaywallSource(source || 'onboarding');
-        setPaywallResolve({ resolve: resolve, reject: reject });
+        paywallResolverRef.current = { resolve: resolve, reject: reject };
         setPaywallVisible(true);
       });
     },

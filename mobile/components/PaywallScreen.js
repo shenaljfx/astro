@@ -422,10 +422,18 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
     finally { setRestoring(false); }
   };
 
-  if (!visible) return null;
-
+  // Always render the Modal — let React Native's <Modal> handle visibility
+  // via the `visible` prop. Returning null here can cause the modal not to
+  // appear at all on Android when state updates batch in unusual orders
+  // (observed on RN 0.76+ with the new architecture).
   return (
-    <Modal visible={visible} animationType="fade" transparent={false} statusBarTranslucent>
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent={false}
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <View style={s.container}>
 
