@@ -49,6 +49,13 @@ const translations = {
     tabProfile: 'Profile',
     tabReport: 'Report',
 
+    // Theme
+    themeTitle: 'Appearance',
+    themeAuto: 'Auto',
+    themeLight: 'Dawn',
+    themeDusk: 'Dusk',
+    themeSubtitle: 'Choose how Grahachara feels.',
+
     // Token / micro-transaction
     tokenBalance: 'Balance',
     tokenTopUp: 'Top Up',
@@ -327,6 +334,11 @@ const translations = {
     saveBirthData: '💾 Save Birth Data',
     language: 'Language',
     notifications: 'Notifications',
+    notifPermissionNeeded: 'Enable Notifications',
+    notifPermissionDesc: 'Allow notifications to receive cosmic alerts and horoscope updates.',
+    notifPermissionBtn: 'Grant Permission',
+    notifPermissionDenied: 'Notifications are blocked. Please enable them in your device Settings.',
+    notifOpenSettings: 'Open Settings',
     dailyCelestialPush: 'Weekly Celestial Push',
     rahuKalayaAlerts: 'Inauspicious Period Alerts',
     marakaApalaAlerts: 'Danger Period Alerts',
@@ -414,6 +426,13 @@ const translations = {
     tabHoroscope: 'පලාපල',
     tabProfile: 'මම',
     tabReport: 'රිපෝට්',
+
+    // Theme
+    themeTitle: 'පෙනුම',
+    themeAuto: 'ස්වයංක්‍රීය',
+    themeLight: 'උදෑසන',
+    themeDusk: 'සඳ එළිය',
+    themeSubtitle: 'ග්‍රහචාරයේ පෙනුම තෝරන්න.',
 
     // Token / micro-transaction
     tokenBalance: 'ශේෂය',
@@ -795,6 +814,11 @@ const translations = {
     saveBirthData: '💾 විස්තර සේව් කරන්න',
     language: 'භාෂාව',
     notifications: 'දැනුම්දීම්',
+    notifPermissionNeeded: 'දැනුම්දීම් සක්‍රිය කරන්න',
+    notifPermissionDesc: 'තාරකා අනතුරු ඇඟවීම් සහ පලාපල යාවත්කාලීන ලබා ගැනීමට දැනුම්දීම් අවසර දෙන්න.',
+    notifPermissionBtn: 'අවසරය දෙන්න',
+    notifPermissionDenied: 'දැනුම්දීම් අවහිර කර ඇත. කරුණාකර ඔබගේ උපාංග සැකසුම් වලින් සක්‍රිය කරන්න.',
+    notifOpenSettings: 'සැකසුම් විවෘත කරන්න',
     dailyCelestialPush: 'සතිපතා තාරකා දැනුම්දීම',
     rahuKalayaAlerts: 'රාහු කාල අනතුරු ඇඟවීම්',
     marakaApalaAlerts: 'මාරක අපල දැනුම්දීම්',

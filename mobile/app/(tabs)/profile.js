@@ -17,12 +17,19 @@ import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScr
 import SpringPressable from '../../components/effects/SpringPressable';
 import CosmicLoader from '../../components/effects/CosmicLoader';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { screenColors } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePricing } from '../../contexts/PricingContext';
 import CitySearchPicker from '../../components/CitySearchPicker';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import PremiumBackground from '../../components/PremiumBackground';
 import useScreenInsets from '../../hooks/useScreenInsets';
+import { registerForPushNotifications } from '../../services/notifications';
+import { updateNotificationPreferences } from '../../services/api';
+import * as Notifications from 'expo-notifications';
+import * as Linking from 'expo-linking';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
 import AwesomeRashiChakra from '../../components/AwesomeRashiChakra';
 
@@ -215,6 +222,9 @@ var lp = StyleSheet.create({
   text:       { fontSize: 14, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
   textActive: { color: '#FFF1D0', fontWeight: '800' },
 });
+
+// ─────────────────────────────────────────────────────────────────────
+//  THEME PICKER (Auto / Dawn / Dusk)
 
 // ─────────────────────────────────────────────────────────────────────
 //  STAT PILL
@@ -433,6 +443,8 @@ var bf = StyleSheet.create({
 // ─────────────────────────────────────────────────────────────────────
 function ProfileScreen() {
   var { language, switchLanguage, t } = useLanguage();
+  var { colors, gradients, resolved } = useTheme();
+  var sc = screenColors(colors);
   var isDesktop = useDesktopCtx();
   var insets = useScreenInsets();
   var { priceLabel } = usePricing();
@@ -442,12 +454,91 @@ function ProfileScreen() {
     restorePurchases, presentCustomerCenter,
   } = useAuth();
 
+  // ── Notification permission & preference state ──
+  var NOTIF_PREFS_KEY = '@grahachara_notif_prefs';
+  var [notifPermission, setNotifPermission] = useState('undetermined'); // 'granted' | 'denied' | 'undetermined'
+  var [notifPrefs, setNotifPrefs] = useState({
+    dailyPalapa: true,
+    rahuKalayaAlerts: true,
+    marakaApalaAlerts: true,
+    transitAlerts: false,
+  });
+  var [notifLoading, setNotifLoading] = useState(false);
+
+  // Check permission + load saved prefs on mount
+  useEffect(function () {
+    (async function () {
+      try {
+        var { status } = await Notifications.getPermissionsAsync();
+        setNotifPermission(status);
+        var saved = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+        if (saved) {
+          try { setNotifPrefs(JSON.parse(saved)); } catch (e) { /* ignore parse errors */ }
+        }
+      } catch (e) {
+        if (__DEV__) console.warn('[Profile] Notif perm check failed:', e);
+      }
+    })();
+  }, []);
+
+  var requestNotifPermission = async function () {
+    try {
+      setNotifLoading(true);
+      var { status } = await Notifications.getPermissionsAsync();
+      if (status === 'granted') {
+        setNotifPermission('granted');
+        await registerForPushNotifications();
+        return;
+      }
+      // First-time request
+      if (status === 'undetermined') {
+        var result = await Notifications.requestPermissionsAsync();
+        setNotifPermission(result.status);
+        if (result.status === 'granted') {
+          await registerForPushNotifications();
+        }
+        return;
+      }
+      // Denied — direct user to Settings
+      if (Platform.OS === 'web') {
+        Alert.alert(t('notifPermissionNeeded'), t('notifPermissionDenied'));
+      } else {
+        Alert.alert(
+          t('notifPermissionNeeded'),
+          t('notifPermissionDenied'),
+          [
+            { text: t('cancel'), style: 'cancel' },
+            { text: t('notifOpenSettings'), onPress: function () { Linking.openSettings(); } },
+          ]
+        );
+      }
+    } catch (e) {
+      if (__DEV__) console.warn('[Profile] Permission request failed:', e);
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  var toggleNotifPref = function (key) {
+    return async function (newValue) {
+      var updated = Object.assign({}, notifPrefs);
+      updated[key] = newValue;
+      setNotifPrefs(updated);
+      // Persist locally
+      try { await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(updated)); } catch (e) { /* ignore */ }
+      // Sync with server (fire-and-forget; don't block UI)
+      updateNotificationPreferences(updated).catch(function (e) {
+        if (__DEV__) console.warn('[Profile] Failed to sync notif prefs:', e);
+      });
+    };
+  };
+
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <PremiumBackground />
         <View style={s.centered}>
-          <CosmicLoader size={56} color="#FF8C00" text={t('loading')} textColor="#FF8C00" />
+          <CosmicLoader size={56} color={sc.iconAccent} text={t('loading')} textColor={sc.iconAccent} />
         </View>
       </View>
     );
@@ -464,16 +555,16 @@ function ProfileScreen() {
 
   return (
     <DesktopScreenWrapper routeName="profile">
-    <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <PremiumBackground />
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle={colors.statusBarStyle} />
       <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
 
         {/* ═══ HERO CARD ══════════════════════════════════════════════ */}
         <Animated.View entering={FadeIn.duration(900)} style={s.heroCard}>
           {/* Deep space bg */}
           <LinearGradient
-            colors={['#0D0720', '#08041A', '#050210']}
+            colors={gradients.profileHero}
             style={StyleSheet.absoluteFill}
           />
           {/* Purple nebula top-left */}
@@ -682,9 +773,33 @@ function ProfileScreen() {
             <Animated.View entering={FadeInDown.delay(360).duration(700)}>
               <GCard accent="#4CC9F0">
                 <SectionHeader icon="notifications-outline" title={t('notifications')} color="#4CC9F0" />
-                <SettingRow icon="sunny-outline"    label={t('dailyCelestialPush')}    type="switch" value={true}  iconColor="#FFB800" />
-                <SettingRow icon="moon-outline"     label={t('rahuKalayaAlerts')}      type="switch" value={true}  iconColor="#A78BFA" />
-                <SettingRow icon="location-outline" label={t('syncHoroscopeLocation')} type="switch" value={false} iconColor="#34D399" last />
+                {notifPermission !== 'granted' ? (
+                  <View style={{ paddingVertical: 8 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, lineHeight: 19, marginBottom: 12 }}>
+                      {notifPermission === 'denied' ? t('notifPermissionDenied') : t('notifPermissionDesc')}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={requestNotifPermission}
+                      disabled={notifLoading}
+                      activeOpacity={0.8}
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(76,201,240,0.3)' }}
+                    >
+                      <LinearGradient colors={['rgba(76,201,240,0.15)', 'rgba(76,201,240,0.05)']} style={StyleSheet.absoluteFill} />
+                      <Ionicons name={notifPermission === 'denied' ? 'settings-outline' : 'notifications-outline'} size={16} color="#4CC9F0" />
+                      <Text style={{ color: '#4CC9F0', fontWeight: '700', fontSize: 13 }}>
+                        {notifPermission === 'denied' ? t('notifOpenSettings') : t('notifPermissionBtn')}
+                      </Text>
+                      {notifLoading && <ActivityIndicator size="small" color="#4CC9F0" style={{ marginLeft: 4 }} />}
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <>
+                    <SettingRow icon="sunny-outline"    label={t('dailyCelestialPush')}    type="switch" value={notifPrefs.dailyPalapa}       onToggle={toggleNotifPref('dailyPalapa')}       iconColor="#FFB800" />
+                    <SettingRow icon="moon-outline"     label={t('rahuKalayaAlerts')}      type="switch" value={notifPrefs.rahuKalayaAlerts}   onToggle={toggleNotifPref('rahuKalayaAlerts')}   iconColor="#A78BFA" />
+                    <SettingRow icon="alert-circle-outline" label={t('marakaApalaAlerts')} type="switch" value={notifPrefs.marakaApalaAlerts}  onToggle={toggleNotifPref('marakaApalaAlerts')}  iconColor="#F87171" />
+                    <SettingRow icon="planet-outline"   label={t('transitAlerts')}         type="switch" value={notifPrefs.transitAlerts}      onToggle={toggleNotifPref('transitAlerts')}      iconColor="#34D399" last />
+                  </>
+                )}
               </GCard>
             </Animated.View>
 

@@ -31,6 +31,7 @@ import { getBirthChartBasic } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { usePricing } from '../contexts/PricingContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 import useResponsive from '../hooks/useResponsive';
 import usePricingForBirth from '../hooks/usePricingForBirth';
 import AwesomeRashiChakra from '../components/AwesomeRashiChakra';
@@ -2964,6 +2965,7 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
   // If returning user (logged out and back), skip directly to Google Sign-In
   var [step, setStep] = useState(isReturningUser ? 3 : -1);
   var { language: ctxLang, switchLanguage } = useLanguage();
+  var { colors, resolved } = useTheme();
   var { completeOnboarding } = useAuth();
   var [lang, setLang] = useState(ctxLang || 'si');
   var [birthData, setBirthData] = useState(null);
@@ -3049,8 +3051,8 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#030014' }}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar barStyle={colors.statusBarStyle} translucent backgroundColor="transparent" />
 
       {/* ── Persistent Cinematic Starfield ── */}
       <CinematicStarfield />

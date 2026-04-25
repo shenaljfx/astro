@@ -20,6 +20,7 @@ import Animated, {
   withRepeat, withTiming, withSequence, withDelay,
   Easing, interpolate,
 } from 'react-native-reanimated';
+import { useTheme } from '../contexts/ThemeContext';
 
 var W = Dimensions.get('window').width;
 var H = Dimensions.get('window').height;
@@ -362,4 +363,98 @@ function PremiumBackground() {
 
 // Memoized: takes no props, so it should never re-render once mounted.
 // Eliminates background re-renders when parent screens update state.
-export default React.memo(PremiumBackground);
+var PremiumBackgroundDusk = React.memo(PremiumBackground);
+
+/* ═══════════════════════════════════════════════════
+   DAWN — calm, light, near-static (battery-friendly)
+   ═══════════════════════════════════════════════════ */
+function PremiumBackgroundDawnInner() {
+  var nebPulse = useSharedValue(0.18);
+  useEffect(function () {
+    nebPulse.value = withRepeat(withSequence(
+      withTiming(0.32, { duration: 14000, easing: Easing.inOut(Easing.sin) }),
+      withTiming(0.14, { duration: 16000, easing: Easing.inOut(Easing.sin) })
+    ), -1, true);
+  }, []);
+  var nebStyle = useAnimatedStyle(function () { return { opacity: nebPulse.value }; });
+
+  // 10 faint gold dots only — no shooting stars, no dust
+  var dots = useMemo(function () {
+    var a = [];
+    for (var i = 0; i < 10; i++) {
+      a.push({
+        id: 'd' + i,
+        x: Math.random() * W,
+        y: 60 + Math.random() * H * 0.7,
+        size: 1.2 + Math.random() * 0.8,
+        delay: Math.random() * 4000,
+        dur: 3500 + Math.random() * 2500,
+        color: 'rgba(212,160,86,0.45)',
+      });
+    }
+    return a;
+  }, []);
+
+  return (
+    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+      {/* Ivory → cream gradient */}
+      <LinearGradient
+        colors={['#FFFCF5', '#FBF7F0', '#F6EFE0', '#EFE5D0']}
+        locations={[0, 0.35, 0.7, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
+      {/* Soft sage / lavender glow patches (breathing) */}
+      <Animated.View style={[{
+        position: 'absolute',
+        top: -H * 0.05, left: -W * 0.2,
+        width: W * 0.9, height: H * 0.45,
+        borderRadius: W * 0.45,
+        backgroundColor: 'rgba(124,91,214,0.08)',
+      }, nebStyle]} />
+      <Animated.View style={[{
+        position: 'absolute',
+        bottom: -H * 0.08, right: -W * 0.25,
+        width: W * 0.95, height: H * 0.5,
+        borderRadius: W * 0.475,
+        backgroundColor: 'rgba(212,160,86,0.10)',
+      }, nebStyle]} />
+      <Animated.View style={[{
+        position: 'absolute',
+        top: H * 0.28, right: -W * 0.15,
+        width: W * 0.6, height: H * 0.35,
+        borderRadius: W * 0.3,
+        backgroundColor: 'rgba(79,157,123,0.06)',
+      }, nebStyle]} />
+      {/* Faint gold dots — same Star primitive but very subtle */}
+      {dots.map(function (d) {
+        return <Star key={d.id} x={d.x} y={d.y} size={d.size} delay={d.delay} dur={d.dur} color={d.color} />;
+      })}
+      {/* Soft top + bottom haze */}
+      <LinearGradient
+        colors={['rgba(255,252,245,0.50)', 'transparent']}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: H * 0.15 }}
+      />
+      <LinearGradient
+        colors={['transparent', 'rgba(239,229,208,0.60)']}
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: H * 0.20 }}
+      />
+    </View>
+  );
+}
+var PremiumBackgroundDawn = React.memo(PremiumBackgroundDawnInner);
+
+/* ═══════════════════════════════════════════════════
+   THEME SWITCHER — picks variant based on resolved theme.
+   Uses `key` so the inner memo'd component fully remounts
+   when the theme flips (avoids stale animations).
+   ═══════════════════════════════════════════════════ */
+function ThemedPremiumBackground() {
+  var ctx = useTheme();
+  var resolved = (ctx && ctx.resolved) || 'dusk';
+  if (resolved === 'light') {
+    return <PremiumBackgroundDawn key="dawn" />;
+  }
+  return <PremiumBackgroundDusk key="dusk" />;
+}
+
+export default ThemedPremiumBackground;

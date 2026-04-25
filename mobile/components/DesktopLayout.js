@@ -44,10 +44,6 @@ export var NAV_ITEMS = [
     icon: 'heart-circle-outline',  iconFocused: 'heart-circle',
     gradient: ['#F472B6','#DB2777'],
     description: 'Compatibility score',      descriptionSi: '\u0d9c\u0dd0\u0dbd\u0db4\u0dd3\u0db8\u0dca \u0dbd\u0d9a\u0dd4\u0dab\u0dd4' },
-  { name: 'profile',  title: 'Aura',   titleSi: '\u0db8\u0db8',
-    icon: 'person-circle-outline', iconFocused: 'person-circle',
-    gradient: ['#4CC9F0','#3B82F6'],
-    description: 'Your birth profile',       descriptionSi: '\u0d94\u0db6\u0dda \u0da2\u0db1\u0dca\u0db8 \u0daf\u0dad\u0dca' },
 ];
 
 export var SIDEBAR_W_EXPANDED  = 260;

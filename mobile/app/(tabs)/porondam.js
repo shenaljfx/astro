@@ -26,7 +26,8 @@ import useScreenInsets from '../../hooks/useScreenInsets';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
-import { Colors, Typography } from '../../constants/theme';
+import { Colors, Typography, screenColors } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import PremiumBackground from '../../components/PremiumBackground';
 import { generatePorondamHTML, loadLogoBase64 } from '../../utils/pdfReportGenerator';
@@ -561,6 +562,8 @@ function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTim
 export default function PorondamScreen() {
   var { language } = useLanguage();
   var { isLoggedIn, showPaywall } = useAuth();
+  var { colors, gradients, resolved } = useTheme();
+  var sc = screenColors(colors);
   var T = L[language] || L.en;
   var isDesktop = useDesktopCtx();
   var insets = useScreenInsets();
@@ -824,7 +827,7 @@ export default function PorondamScreen() {
   if (loading) {
     return (
       <DesktopScreenWrapper routeName="porondam">
-        <View style={{ flex: 1, backgroundColor: '#04030C', justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg }}>
           <PremiumBackground />
           <PorondamCosmicLoader brideName={bName} groomName={gName} language={language} />
         </View>
@@ -834,7 +837,7 @@ export default function PorondamScreen() {
 
   return (
     <DesktopScreenWrapper routeName="porondam">
-    <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <PremiumBackground />
       <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
         <View style={[sty.scrollInner, isDesktop && sty.scrollInnerDesktop]}>
@@ -842,15 +845,15 @@ export default function PorondamScreen() {
         <Animated.View entering={FadeInDown.duration(600)}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <View style={{ flex: 1 }}>
-              <Text style={sty.title}>{T.title}</Text>
-              <Text style={sty.subtitle}>{T.subtitle}</Text>
+              <Text style={[sty.title, { color: sc.sectionTitle }]}>{T.title}</Text>
+              <Text style={[sty.subtitle, { color: sc.labelColor }]}>{T.subtitle}</Text>
             </View>
             {savedChecks.length > 0 && !collapsed && (
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: 'rgba(255,140,0,0.08)', borderWidth: 1, borderColor: 'rgba(255,140,0,0.18)', marginTop: 4 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.accentMuted, borderWidth: 1, borderColor: colors.borderAccent, marginTop: 4 }}
                 onPress={function() { setShowHistory(!showHistory); }} activeOpacity={0.7}>
-                <Ionicons name={showHistory ? 'close-outline' : 'time-outline'} size={14} color="#FF8C00" />
-                <Text style={{ color: '#FF8C00', fontSize: 11, fontWeight: '700' }}>{savedChecks.length}</Text>
+                <Ionicons name={showHistory ? 'close-outline' : 'time-outline'} size={14} color={sc.iconAccent} />
+                <Text style={{ color: sc.iconAccent, fontSize: 11, fontWeight: '700' }}>{savedChecks.length}</Text>
               </TouchableOpacity>
             )}
           </View>

@@ -2,7 +2,8 @@ import { boxShadow, textShadow } from '../../utils/shadow';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Colors, Spacing, Typography } from '../../constants/theme';
+import { Spacing, Typography } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function SectionHeader({
   title,
@@ -11,6 +12,7 @@ export default function SectionHeader({
   delay = 0,
   style,
 }) {
+  var { colors } = useTheme();
   return (
     <Animated.View
       entering={FadeInDown.delay(delay).duration(400).springify()}
@@ -18,10 +20,10 @@ export default function SectionHeader({
     >
       <View style={styles.row}>
         {icon && <Text style={styles.icon}>{icon}</Text>}
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
       </View>
-      {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
-      <View style={styles.divider} />
+      {subtitle && <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text>}
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
     </Animated.View>
   );
 }
@@ -40,17 +42,13 @@ const styles = StyleSheet.create({
   },
   title: {
     ...Typography.title3,
-    color: Colors.textPrimary,
-    ...textShadow('rgba(255,184,0,0.20)', { width: 0, height: 1 }, 6),
   },
   subtitle: {
     ...Typography.caption,
-    color: Colors.textMuted,
     marginTop: 4,
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.border,
     marginTop: 12,
   },
 });

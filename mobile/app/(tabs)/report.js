@@ -39,6 +39,8 @@ import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import PremiumBackground from '../../components/PremiumBackground';
 import useScreenInsets from '../../hooks/useScreenInsets';
+import { useTheme } from '../../contexts/ThemeContext';
+import { screenColors } from '../../constants/theme';
 var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var MAX_SAVED_REPORTS = 20;
 
@@ -901,6 +903,8 @@ var cl = StyleSheet.create({
 export default function ReportScreen() {
   var { t, language } = useLanguage();
   var { user, showPaywall } = useAuth();
+  var { colors, gradients, resolved } = useTheme();
+  var sc = screenColors(colors);
   var isDesktop = useDesktopCtx();
   var insets = useScreenInsets();
   var [birthDate, setBirthDate] = useState('1998-10-09');
@@ -1235,7 +1239,7 @@ export default function ReportScreen() {
   // ── FULL SCREEN LOADING ──────────────────────────────────
   if (screenState === 'loading') {
     return (
-      <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+      <View style={{ flex: 1 }}>
         <PremiumBackground />
         <View style={s.loadingFull}>
           <CosmicLoader userName={userName} language={reportLang} />
@@ -1261,7 +1265,7 @@ export default function ReportScreen() {
 
     return (
       <DesktopScreenWrapper routeName="report">
-      <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <PremiumBackground />
         <ReadingProgressBar scrollProgress={scrollProgress} sectionCount={SECTION_KEYS.length} currentChapter={currentChapter} reportLang={reportLang} />
         <Animated.ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}
@@ -1521,14 +1525,14 @@ export default function ReportScreen() {
   // ── INPUT FORM (default view) ────────────────────────────
   return (
     <DesktopScreenWrapper routeName="report">
-    <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <PremiumBackground />
       <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
         <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
         {/* Header */}
         <Animated.View entering={FadeInDown.delay(100).duration(800)}>
-          <Text style={s.title}>{t('reportTitle')}</Text>
-          <Text style={s.subtitle}>{t('reportSubtitle')}</Text>
+          <Text style={[s.title, { color: sc.sectionTitle }]}>{t('reportTitle')}</Text>
+          <Text style={[s.subtitle, { color: sc.labelColor }]}>{t('reportSubtitle')}</Text>
         </Animated.View>
 
         {/* Input Form */}

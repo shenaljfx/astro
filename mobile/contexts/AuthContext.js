@@ -19,7 +19,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { setAuthTokenGetter } from '../services/api';
+import { setAuthTokenGetter, getBaseUrl } from '../services/api';
 import {
   googleAuth as apiGoogleAuth,
   completeOnboarding as apiCompleteOnboarding,
@@ -37,7 +37,6 @@ import {
 } from '../services/revenuecat';
 import { registerForPushNotifications } from '../services/notifications';
 import { auth as firebaseAuth, GoogleAuthProvider, signInWithPopup, signInWithCredential } from '../services/firebase';
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import PaywallScreen from '../components/PaywallScreen';
 
@@ -47,20 +46,6 @@ var STORAGE_TOKEN = 'grahachara_auth_token';
 var STORAGE_USER = 'grahachara_user_profile';
 var STORAGE_ONBOARDING = 'grahachara_onboarding_done';
 var STORAGE_PUSH_REGISTERED = 'grahachara_push_registered_for';
-
-function getBaseUrl() {
-  if (!__DEV__) return 'https://api.grahachara.com';
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return 'http://' + window.location.hostname + ':3000';
-  }
-  var host = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost || Constants.manifest2?.extra?.expoGo?.debuggerHost;
-  if (host) return 'http://' + host.split(':')[0] + ':3000';
-  
-  // Fallback for Android Emulator
-  if (Platform.OS === 'android') return 'http://10.0.2.2:3000';
-  
-  return 'http://localhost:3000';
-}
 
 // Register push token with server after auth. Idempotent — only POSTs once
 // per (uid, token) pair via AsyncStorage marker so we don't spam the API.

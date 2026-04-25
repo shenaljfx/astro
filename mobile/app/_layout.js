@@ -4,10 +4,12 @@ import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Platform, LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LanguageProvider } from '../contexts/LanguageContext';
+import { ThemeProvider } from '../contexts/ThemeContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { PricingProvider } from '../contexts/PricingContext';
 import OnboardingScreen from './onboarding';
 import CosmicLoader from '../components/effects/CosmicLoader';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Suppress known harmless warnings from third-party libs on web
 // - "Unexpected text node" comes from react-native-gesture-handler's GestureDetector on web
@@ -20,15 +22,39 @@ LogBox.ignoreLogs([
   '[Reanimated] Property',
 ]);
 
-// Fix white background on web — inject CSS into html/body
+// On web LogBox doesn't run, so the same warnings leak to the browser
+// console. Filter them out of console.error directly.
+if (Platform.OS === 'web' && typeof console !== 'undefined' && !console.__grahacharaFiltered) {
+  var _origErr = console.error;
+  var IGNORE_PATTERNS = [
+    'Unexpected text node',
+    'findDOMNode is deprecated',
+    'Property [opacity] may be overwritten',
+    '[Reanimated] Property',
+  ];
+  console.error = function () {
+    try {
+      var first = arguments[0];
+      var msg = typeof first === 'string' ? first : (first && first.message) || '';
+      for (var i = 0; i < IGNORE_PATTERNS.length; i++) {
+        if (msg && msg.indexOf(IGNORE_PATTERNS[i]) !== -1) return;
+      }
+    } catch (_) { /* fall through */ }
+    return _origErr.apply(console, arguments);
+  };
+  console.__grahacharaFiltered = true;
+}
+
+// Fix white background on web — initial color only (theme paints over)
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   var style = document.createElement('style');
-  style.textContent = 'html,body,#root{background-color:#030014!important;margin:0;padding:0;overflow:hidden;height:100%;width:100%;}';
+  style.textContent = 'html,body,#root{margin:0;padding:0;overflow:hidden;height:100%;width:100%;}';
   document.head.appendChild(style);
 }
 
 function AppGate() {
   var { isLoggedIn, loading, authReady, user } = useAuth();
+  var { resolved } = useTheme();
   var [showOnboarding, setShowOnboarding] = useState(null); // null = checking
   var [onboardingPassed, setOnboardingPassed] = useState(false);
   // Track if user was previously logged in (for re-login skip flow)
@@ -63,9 +89,9 @@ function AppGate() {
   // Still loading
   if (loading || showOnboarding === null) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#000000' }}>
+      <View style={{ flex: 1, backgroundColor: resolved === 'light' ? '#FBF7F0' : '#1A1730' }}>
         <View style={gs.loadingContainer}>
-          <CosmicLoader size={56} color="#7dd3fc" />
+          <CosmicLoader size={56} color={resolved === 'light' ? '#7C5BD6' : '#B7A6F0'} />
         </View>
       </View>
     );
@@ -88,7 +114,7 @@ function AppGate() {
   // Main app
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style={resolved === 'light' ? 'dark' : 'light'} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
       </Stack>
@@ -100,18 +126,29 @@ var gs = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
 
+function ThemedRootView({ children }) {
+  var { colors } = useTheme();
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {children}
+    </View>
+  );
+}
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <View style={{ flex: 1, backgroundColor: '#030014' }}>
-        <LanguageProvider>
-          <PricingProvider>
-            <AuthProvider>
-              <AppGate />
-            </AuthProvider>
-          </PricingProvider>
-        </LanguageProvider>
-      </View>
+      <LanguageProvider>
+        <ThemeProvider>
+          <ThemedRootView>
+            <PricingProvider>
+              <AuthProvider>
+                <AppGate />
+              </AuthProvider>
+            </PricingProvider>
+          </ThemedRootView>
+        </ThemeProvider>
+      </LanguageProvider>
     </SafeAreaProvider>
   );
 }

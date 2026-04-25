@@ -31,11 +31,13 @@ import { View, StyleSheet, Platform, StatusBar, ScrollView } from 'react-native'
 import Animated from 'react-native-reanimated';
 import useScreenInsets from '../../hooks/useScreenInsets';
 import useResponsive from '../../hooks/useResponsive';
-import { Colors, Layout } from '../../constants/theme';
+import { Layout } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function Screen(props) {
   var insets = useScreenInsets();
   var resp = useResponsive();
+  var { colors } = useTheme();
   var isWide = resp.isTablet || resp.width >= Layout.breakpointDesktop;
 
   var content = props.children;
@@ -76,9 +78,9 @@ export default function Screen(props) {
   }
 
   return (
-    <View style={styles.root} testID={props.testID}>
+    <View style={[styles.root, { backgroundColor: colors.bg }]} testID={props.testID}>
       {Platform.OS !== 'web' ? (
-        <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+        <StatusBar barStyle={colors.statusBarStyle} translucent backgroundColor="transparent" />
       ) : null}
       {props.background}
       {body}
@@ -88,7 +90,7 @@ export default function Screen(props) {
 }
 
 var styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1 },
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 16 },
 });

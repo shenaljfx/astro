@@ -20,11 +20,10 @@ import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import PremiumBackground from '../../components/PremiumBackground';
 import useKeyboard from '../../hooks/useKeyboard';
+import { useTheme } from '../../contexts/ThemeContext';
+import { screenColors } from '../../constants/theme';
 
-// Tab bar visual height (must mirror BAR_H + 20 in (tabs)/_layout.js).
-// When the keyboard is closed the tab bar overlays the bottom of the
-// screen, so the chat input must reserve this much padding to stay visible.
-var TAB_BAR_OVERLAY = 125;
+import { TAB_BAR_VISUAL_HEIGHT } from './_layout';
 
 var { width: SW } = Dimensions.get('window');
 var DAILY_LIMIT = 5;
@@ -245,6 +244,8 @@ function QuickChips({ onSelect, language, mode }) {
 export default function ChatScreen() {
   var { t, language } = useLanguage();
   var { user } = useAuth();
+  var { colors, gradients, resolved } = useTheme();
+  var sc = screenColors(colors);
   var insets = useSafeAreaInsets();
   var isDesktop = useDesktopCtx();
   var [msg, setMsg] = useState('');
@@ -340,13 +341,13 @@ export default function ChatScreen() {
     ? 0
     : (kb.isOpen
         ? Math.max(insets.bottom, 6) + 8
-        : TAB_BAR_OVERLAY + 8);
+        : TAB_BAR_VISUAL_HEIGHT + Math.max(insets.bottom, 4));
 
   // ── DESKTOP LAYOUT ────────────────────────────────────────────────
   if (isDesktop) {
     return (
       <DesktopScreenWrapper routeName="chat">
-        <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+        <View style={{ flex: 1, backgroundColor: colors.bg }}>
           <PremiumBackground />
           <View style={sd.shell}>
             <View style={sd.panel}>
@@ -475,15 +476,15 @@ export default function ChatScreen() {
   // ── MOBILE LAYOUT ──────────────────────────────────────────────────
   return (
     <DesktopScreenWrapper routeName="chat">
-    <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <PremiumBackground />
       <View style={[s.header, { paddingTop: topPad }]}>
         <View style={s.avatar}>
-          <LinearGradient colors={mode === 'dream' ? ['#FF8C00', '#E65100'] : ['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={gradients.orangeButton} style={StyleSheet.absoluteFill} />
           <Ionicons name={mode === 'dream' ? 'moon' : 'sparkles'} size={18} color="#FFF" />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={s.title}>{mode === 'dream' ? t('chatDreamTitle') : t('chatTitle')}</Text>
+          <Text style={[s.title, { color: sc.sectionTitle }]}>{mode === 'dream' ? t('chatDreamTitle') : t('chatTitle')}</Text>
           <View style={s.statusRow}>
             <View style={[s.statusDot, { backgroundColor: loading ? '#FFB800' : '#34D399' }]} />
             <Text style={s.statusText}>{loading ? t('consultingCosmos') : t('askUniverse')}</Text>

@@ -16,7 +16,8 @@ import PinchableView from '../../components/effects/PinchableView';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
-import { Colors, Typography, Spacing } from '../../constants/theme';
+import { Colors, Typography, Spacing, screenColors } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import CosmicCard from '../../components/ui/CosmicCard';
 import SectionHeader from '../../components/ui/SectionHeader';
 import { boxShadow, textShadow } from '../../utils/shadow';
@@ -217,6 +218,8 @@ function VargaChartDisplay({ division, birthDateTime, lat, lng, language }) {
 export default function KendaraScreen() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
+  const { colors, gradients, resolved } = useTheme();
+  const sc = screenColors(colors);
   const router = useRouter();
   var isDesktop = useDesktopCtx();
   var insets = useScreenInsets();
@@ -1462,16 +1465,16 @@ export default function KendaraScreen() {
 
   return (
     <DesktopScreenWrapper routeName="kendara">
-    <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <PremiumBackground />
-      <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#60A5FA" />}>
+      <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={sc.iconAccent} />}>
         <View style={[styles.content, isDesktop && styles.contentDesktop, !isDesktop && { paddingTop: insets.contentTop }]}>
           <Animated.View entering={FadeIn.duration(700)} style={styles.pageTitleRow}>
             <View>
-              <Text style={styles.pageTitle}>
+              <Text style={[styles.pageTitle, { color: sc.iconAccent }]}>
                 {t('kpYourHoroscope') || 'Your Horoscope'}
               </Text>
-              <Text style={styles.pageSubtitle}>
+              <Text style={[styles.pageSubtitle, { color: sc.labelColor }]}>
                 {user && user.birthData && user.birthData.dateTime
                   ? new Date(user.birthData.dateTime).toLocaleDateString() + '  ' + toSLT(user.birthData.dateTime)
                   : ''}
@@ -1479,8 +1482,8 @@ export default function KendaraScreen() {
             </View>
             {user?.birthData && (
               <View style={styles.lagnaOrb}>
-                <LinearGradient colors={['#FF8C00', '#E65100']} style={StyleSheet.absoluteFill} />
-                <Ionicons name="planet" size={22} color="#FFB800" />
+                <LinearGradient colors={gradients.orangeButton} style={StyleSheet.absoluteFill} />
+                <Ionicons name="planet" size={22} color={sc.iconAccent} />
               </View>
             )}
           </Animated.View>

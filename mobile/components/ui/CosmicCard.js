@@ -2,10 +2,32 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Colors, BorderRadius, Spacing, Shadows, Gradients } from '../../constants/theme';
+import { BorderRadius, Spacing, Shadows } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { boxShadow, textShadow } from '../../utils/shadow';
 
-const VARIANT_CONFIG = {
+const LIGHT_VARIANTS = {
+  hero: {
+    gradient: ['#FFFFFF', '#FBF7F0'],
+    borderColor: 'rgba(212,160,86,0.22)',
+    borderWidth: 1,
+    shadow: Shadows.softGlow,
+  },
+  content: {
+    gradient: ['#FFFFFF', '#F9F5EC'],
+    borderColor: 'rgba(212,160,86,0.12)',
+    borderWidth: 1,
+    shadow: Shadows.sm,
+  },
+  surface: {
+    gradient: ['#F9F5EC', '#F3EBDD'],
+    borderColor: 'rgba(212,160,86,0.10)',
+    borderWidth: 0.5,
+    shadow: null,
+  },
+};
+
+const DUSK_VARIANTS = {
   hero: {
     gradient: ['rgba(20,12,8,0.48)', 'rgba(12,6,4,0.55)'],
     borderColor: 'rgba(255,184,0,0.22)',
@@ -36,9 +58,11 @@ export default function CosmicCard({
   animated = true,
   noPadding = false,
 }) {
+  const { colors, resolved } = useTheme();
+  const VARIANT_CONFIG = resolved === 'light' ? LIGHT_VARIANTS : DUSK_VARIANTS;
   const config = VARIANT_CONFIG[variant] || VARIANT_CONFIG.content;
   const borderColor = accentColor
-    ? (typeof accentColor === 'string' ? accentColor : Colors.cardBorderHero)
+    ? (typeof accentColor === 'string' ? accentColor : colors.cardBorderHero)
     : config.borderColor;
 
   const inner = (
@@ -85,7 +109,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   glowShadow: {
-    ...boxShadow(Colors.primaryGlow, { width: 0, height: 0 }, 0.6, 16),
+    ...boxShadow('rgba(124,91,214,0.30)', { width: 0, height: 0 }, 0.6, 16),
     elevation: 8,
   },
 });

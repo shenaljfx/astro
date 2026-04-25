@@ -198,7 +198,7 @@ export const Layout = {
   // Fixed visual height of floating headers in tab screens.
   headerHeight: 64,
   // Tab bar visual height (excluding bottom safe-area inset).
-  tabBarHeight: 60,
+  tabBarHeight: 88,
   // Maximum content width on tablets / desktop. Tab screens centre
   // their ScrollView at this width to avoid 100ch-wide text columns.
   maxContent: 680,
@@ -274,3 +274,306 @@ export const Gradients = {
   contentCard:   ['rgba(16,10,6,0.55)', 'rgba(8,5,3,0.65)'],
   surfaceCard:   ['rgba(10,7,4,0.60)', 'rgba(6,4,3,0.70)'],
 };
+
+/**
+ * ────────────────────────────────────────────────────────────
+ *  Runtime Palettes — used by ThemeContext / useTheme().
+ *  Two modes share the same semantic keys so screens can read
+ *  `colors.bg`, `colors.surface`, `colors.text` etc. without
+ *  caring which mode is active.
+ *
+ *  Legacy `Colors` / `Gradients` exports above remain unchanged
+ *  for back-compat with the ~10 files that import them today.
+ * ────────────────────────────────────────────────────────────
+ */
+const _lightPalette = {
+  mode: 'light',
+  // Backgrounds — Warm sandstone / parchment
+  bg: '#FAF6EE',
+  bgMid: '#F2EBDC',
+  bgDeep: '#E8DFC8',
+  surface: '#FFFFFF',
+  surfaceMuted: '#F5EFE2',
+  surfaceElevated: '#FFFEFA',
+  surfacePressed: '#EDE6D4',
+  // Brand — Deep amethyst (richer than before)
+  primary: '#6B46C1',
+  primaryLight: '#9F7AEA',
+  primaryDark: '#4C2E8A',
+  primaryMuted: 'rgba(107,70,193,0.08)',
+  primaryGlow: 'rgba(107,70,193,0.14)',
+  // Accent — Burnished brass / antiqued gold
+  accent: '#B8860B',
+  accentLight: '#D4A732',
+  accentDark: '#8B6914',
+  accentMuted: 'rgba(184,134,11,0.10)',
+  accentGlow: 'rgba(184,134,11,0.18)',
+  // Sage / nature
+  sage: '#3D8B6E',
+  sageMuted: 'rgba(61,139,110,0.10)',
+  // Text — Deep sepia ink
+  text: '#2C2418',
+  textPrimary: '#2C2418',
+  textSecondary: '#5C5244',
+  textMuted: '#9A8E7E',
+  textAccent: '#8B6914',
+  textOnAccent: '#FFFDF6',
+  textDisabled: '#C4BAA8',
+  // Borders — Warm, earthy
+  border: 'rgba(44,36,24,0.08)',
+  borderLight: 'rgba(44,36,24,0.04)',
+  borderFocus: 'rgba(107,70,193,0.25)',
+  borderAccent: 'rgba(184,134,11,0.25)',
+  // Glass / nav (warm frosted cream)
+  glass: 'rgba(255,253,246,0.82)',
+  glassBorder: 'rgba(44,36,24,0.06)',
+  glassHighlight: 'rgba(255,255,255,0.60)',
+  // Status — Earthy tones
+  success: '#3D8B6E',
+  warning: '#C48A22',
+  danger: '#B84233',
+  info: '#4A7FB5',
+  // Per-tab accents
+  tabHome: '#B8860B',
+  tabKendara: '#4A7FB5',
+  tabReport: '#C48A22',
+  tabPorondam: '#7B6DAD',
+  tabChat: '#4A7FB5',
+  // Extended tokens for screen compat
+  secondary: '#4A7FB5',
+  secondaryLight: '#7BA4CC',
+  teal: '#3D8B6E',
+  cosmicRose: '#B85A6A',
+  auroraGreen: '#3D8B6E',
+  cardGlow: 'rgba(184,134,11,0.10)',
+  cardBorderHero: 'rgba(184,134,11,0.18)',
+  cardBorderContent: 'rgba(44,36,24,0.06)',
+  backgroundCard: '#FFFEFA',
+  backgroundCardHover: '#FFFFFF',
+  backgroundInput: '#F5EFE2',
+  backgroundModal: 'rgba(250,246,238,0.97)',
+  buttonPrimary: '#B8860B',
+  buttonPrimaryLight: '#D4A732',
+  buttonPrimaryDark: '#8B6914',
+  buttonGlow: 'rgba(184,134,11,0.35)',
+  buttonBorder: 'rgba(184,134,11,0.30)',
+  statusBarStyle: 'dark-content',
+  // Home-specific tokens
+  bgCard: '#FFFEFA',
+  bgWarm: '#F2EBDC',
+  gold: '#B8860B',
+  goldLight: '#D4A732',
+  goldDark: '#8B6914',
+  goldShimmer: '#E8D09C',
+  goldMuted: 'rgba(184,134,11,0.08)',
+  goldGlow: 'rgba(184,134,11,0.14)',
+  goldBorder: 'rgba(184,134,11,0.12)',
+  goldSubtle: 'rgba(184,134,11,0.04)',
+  textGold: '#8B6914',
+  textLight: '#B8A078',
+  successBg: 'rgba(61,139,110,0.07)',
+  dangerBg: 'rgba(184,66,51,0.07)',
+  warningBg: 'rgba(196,138,34,0.07)',
+  purple: '#7B6DAD',
+  purpleBg: 'rgba(123,109,173,0.07)',
+  blue: '#4A7FB5',
+  blueBg: 'rgba(74,127,181,0.07)',
+  rose: '#B85A6A',
+  roseBg: 'rgba(184,90,106,0.07)',
+  tealBg: 'rgba(61,139,110,0.07)',
+  shadow: 'rgba(184,134,11,0.08)',
+  divider: 'rgba(184,134,11,0.06)',
+  // Rahu
+  rahuActive: '#B84233',
+  rahuInactive: '#3D8B6E',
+  // Scores
+  scoreExcellent: '#3D8B6E',
+  scoreGood: '#4A7FB5',
+  scoreAverage: '#C48A22',
+  scorePoor: '#B84233',
+};
+
+const _duskPalette = {
+  mode: 'dusk',
+  // Backgrounds — Soft indigo (no pure black)
+  bg: '#1A1730',
+  bgMid: '#221E3C',
+  bgDeep: '#13102A',
+  surface: '#252046',
+  surfaceMuted: '#1F1B3A',
+  surfaceElevated: '#2C2752',
+  surfacePressed: '#181530',
+  // Brand
+  primary: '#B7A6F0',
+  primaryLight: '#D4C7FF',
+  primaryDark: '#7C5BD6',
+  primaryMuted: 'rgba(183,166,240,0.15)',
+  primaryGlow: 'rgba(183,166,240,0.30)',
+  // Accent — gold
+  accent: '#E8C07A',
+  accentLight: '#F4D899',
+  accentDark: '#B8945A',
+  accentMuted: 'rgba(232,192,122,0.15)',
+  accentGlow: 'rgba(232,192,122,0.30)',
+  // Sage
+  sage: '#6FBFA0',
+  sageMuted: 'rgba(111,191,160,0.15)',
+  // Text
+  text: '#F0EAFA',
+  textPrimary: '#F0EAFA',
+  textSecondary: 'rgba(240,234,250,0.78)',
+  textMuted: 'rgba(240,234,250,0.50)',
+  textAccent: '#F4D899',
+  textOnAccent: '#1A1730',
+  textDisabled: 'rgba(240,234,250,0.30)',
+  // Borders
+  border: 'rgba(255,255,255,0.06)',
+  borderLight: 'rgba(255,255,255,0.10)',
+  borderFocus: 'rgba(183,166,240,0.40)',
+  borderAccent: 'rgba(232,192,122,0.30)',
+  // Glass (dark frosted)
+  glass: 'rgba(26,23,48,0.65)',
+  glassBorder: 'rgba(255,255,255,0.08)',
+  glassHighlight: 'rgba(255,255,255,0.06)',
+  // Status
+  success: '#6FBFA0',
+  warning: '#E8C07A',
+  danger: '#E07A7A',
+  info: '#8AA8E0',
+  // Per-tab accents (full saturation, dark bg)
+  tabHome: '#D4A056',
+  tabKendara: '#7B9CC4',
+  tabReport: '#E8C07A',
+  tabPorondam: '#9B8ABF',
+  tabChat: '#7B9CC4',
+  // Extended tokens for screen compat
+  secondary: '#8AA8E0',
+  secondaryLight: '#A8C0F0',
+  teal: '#6FBFA0',
+  cosmicRose: '#E07A9A',
+  auroraGreen: '#6FBFA0',
+  cardGlow: 'rgba(183,166,240,0.12)',
+  cardBorderHero: 'rgba(232,192,122,0.18)',
+  cardBorderContent: 'rgba(255,255,255,0.06)',
+  backgroundCard: 'rgba(37,32,70,0.65)',
+  backgroundCardHover: 'rgba(44,39,82,0.75)',
+  backgroundInput: 'rgba(31,27,58,0.70)',
+  backgroundModal: 'rgba(26,23,48,0.96)',
+  buttonPrimary: '#E8C07A',
+  buttonPrimaryLight: '#F4D899',
+  buttonPrimaryDark: '#B8945A',
+  buttonGlow: 'rgba(232,192,122,0.50)',
+  buttonBorder: 'rgba(232,192,122,0.35)',
+  statusBarStyle: 'light-content',
+  // Home-specific tokens
+  bgCard: '#252046',
+  bgWarm: '#1F1B3A',
+  gold: '#E8C07A',
+  goldLight: '#F4D899',
+  goldDark: '#B8945A',
+  goldShimmer: '#F4D899',
+  goldMuted: 'rgba(232,192,122,0.15)',
+  goldGlow: 'rgba(232,192,122,0.22)',
+  goldBorder: 'rgba(232,192,122,0.15)',
+  goldSubtle: 'rgba(232,192,122,0.06)',
+  textGold: '#E8C07A',
+  textLight: '#B8945A',
+  successBg: 'rgba(111,191,160,0.12)',
+  dangerBg: 'rgba(224,122,122,0.12)',
+  warningBg: 'rgba(232,192,122,0.12)',
+  purple: '#B7A6F0',
+  purpleBg: 'rgba(183,166,240,0.12)',
+  blue: '#8AA8E0',
+  blueBg: 'rgba(138,168,224,0.12)',
+  rose: '#E07A9A',
+  roseBg: 'rgba(224,122,154,0.12)',
+  tealBg: 'rgba(111,191,160,0.12)',
+  shadow: 'rgba(183,166,240,0.15)',
+  divider: 'rgba(255,255,255,0.06)',
+  // Rahu
+  rahuActive: '#E07A7A',
+  rahuInactive: '#6FBFA0',
+  // Scores
+  scoreExcellent: '#6FBFA0',
+  scoreGood: '#8AA8E0',
+  scoreAverage: '#E8C07A',
+  scorePoor: '#E07A7A',
+};
+
+const _lightGradients = {
+  bg: ['#FAF6EE', '#F2EBDC', '#E8DFC8'],
+  hero: ['#FFFEFA', '#FAF6EE'],
+  card: ['#FFFEFA', '#F5EFE2'],
+  accent: ['#D4A732', '#B8860B', '#8B6914'],
+  primary: ['#9F7AEA', '#6B46C1', '#4C2E8A'],
+  aurora: ['rgba(184,134,11,0.06)', 'rgba(107,70,193,0.05)', 'rgba(61,139,110,0.04)'],
+  deepSpace: ['#FAF6EE', '#F2EBDC', '#E8DFC8'],
+  orangeButton: ['#D4A732', '#B8860B', '#8B6914'],
+  heroCard: ['#FFFEFA', '#FAF6EE'],
+  surfaceCard: ['#FFFEFA', '#F5EFE2'],
+  nebulaPurple: ['#9F7AEA', '#6B46C1', '#4C2E8A'],
+  profileHero: ['#F2EBDC', '#E8DFC8', '#DDD3BD'],
+  celestialGold: ['#D4A732', '#B8860B', '#8B6914'],
+};
+
+const _duskGradients = {
+  bg: ['#1A1730', '#221E3C', '#13102A'],
+  hero: ['#2C2752', '#1A1730'],
+  card: ['rgba(37,32,70,0.85)', 'rgba(26,23,48,0.92)'],
+  accent: ['#F4D899', '#E8C07A', '#B8945A'],
+  primary: ['#D4C7FF', '#B7A6F0', '#7C5BD6'],
+  aurora: ['rgba(232,192,122,0.18)', 'rgba(183,166,240,0.14)', 'rgba(111,191,160,0.10)'],
+  deepSpace: ['#13102A', '#1A1730', '#221E3C'],
+  orangeButton: ['#E8C07A', '#D4A056', '#B8945A'],
+  heroCard: ['rgba(44,39,82,0.60)', 'rgba(26,23,48,0.75)'],
+  surfaceCard: ['rgba(37,32,70,0.60)', 'rgba(31,27,58,0.70)'],
+  nebulaPurple: ['#D4C7FF', '#B7A6F0', '#7C5BD6'],
+  profileHero: ['#0D0720', '#08041A', '#050210'],
+  celestialGold: ['#F4D899', '#E8C07A', '#B8945A'],
+};
+
+export const Palettes = {
+  light: _lightPalette,
+  dusk: _duskPalette,
+};
+
+export const ThemedGradients = {
+  light: _lightGradients,
+  dusk: _duskGradients,
+};
+
+/**
+ * screenColors(colors) — derives commonly-used accent/text tokens
+ * for screens that have large dark-themed stylesheets. Screens
+ * can call this once and spread the result for inline overrides.
+ */
+export function screenColors(colors) {
+  var isDusk = colors.mode === 'dusk';
+  return {
+    accent: colors.accent,
+    accentLight: colors.accentLight,
+    accentDark: colors.accentDark,
+    accentMuted: colors.accentMuted,
+    accentGlow: colors.accentGlow,
+    text: colors.text,
+    textSec: colors.textSecondary,
+    textMuted: colors.textMuted,
+    textAccent: colors.textAccent,
+    bg: colors.bg,
+    surface: colors.surface,
+    surfaceMuted: colors.surfaceMuted,
+    border: colors.border,
+    borderLight: colors.borderLight,
+    card: isDusk ? 'rgba(255,255,255,0.04)' : 'rgba(42,36,64,0.04)',
+    cardBorder: isDusk ? 'rgba(255,255,255,0.07)' : 'rgba(42,36,64,0.08)',
+    mutedOverlay: isDusk ? 'rgba(255,255,255,0.06)' : 'rgba(42,36,64,0.04)',
+    labelColor: isDusk ? 'rgba(255,214,102,0.50)' : 'rgba(90,83,110,0.70)',
+    faintText: isDusk ? 'rgba(255,214,102,0.40)' : 'rgba(90,83,110,0.55)',
+    veryFaintText: isDusk ? 'rgba(255,214,102,0.35)' : 'rgba(90,83,110,0.45)',
+    subtleBorder: isDusk ? 'rgba(255,255,255,0.04)' : 'rgba(42,36,64,0.05)',
+    iconAccent: isDusk ? '#FFB800' : '#D4A056',
+    sectionTitle: isDusk ? '#FFE8B0' : '#2A2440',
+    statusBar: colors.statusBarStyle,
+  };
+}
+
