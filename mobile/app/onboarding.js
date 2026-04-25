@@ -31,6 +31,8 @@ import { getBirthChartBasic } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { usePricing } from '../contexts/PricingContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import useResponsive from '../hooks/useResponsive';
+import usePricingForBirth from '../hooks/usePricingForBirth';
 import AwesomeRashiChakra from '../components/AwesomeRashiChakra';
 import Svg, { Defs, LinearGradient as SvgGrad, Stop, Path, Circle, Rect, G, Ellipse, RadialGradient as SvgRadGrad } from 'react-native-svg';
 import { boxShadow, textShadow } from '../utils/shadow';
@@ -1091,7 +1093,12 @@ function WelcomeStep({ onContinue, onBack, lang }) {
   ];
 
   return (
-    <View style={{ flex: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 0, paddingBottom: 8 }}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 0, paddingBottom: 16 }}
+      showsVerticalScrollIndicator={false}
+      bounces={false}
+    >
 
       {/* ═══ HERO — Compact chakra + title ═══ */}
       <Animated.View entering={FadeInDown.duration(700)} style={{ alignItems: 'center' }}>
@@ -1156,7 +1163,7 @@ function WelcomeStep({ onContinue, onBack, lang }) {
 
         <GhostButton label={lang === 'si' ? '\u0DB7\u0DCF\u0DC2\u0DCF\u0DC0 \u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1' : 'Change Language'} onPress={onBack} icon={<Ionicons name="globe-outline" size={14} color="rgba(255,255,255,0.4)" />} />
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -1511,110 +1518,29 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
   var [payError, setPayError] = useState('');
   var [agreed, setAgreed] = useState(false);
   var { activateSubscription, restorePurchases } = useAuth();
-  var { priceLabel, priceAmount, currency, currencySymbol, isInternational, updateCountry } = usePricing();
+  // usePricingForBirth syncs the global pricing context to the user's
+  // birth-city country. Birth city always wins over device locale.
+  var { priceLabel, priceAmount, currency, currencySymbol, isInternational } = usePricingForBirth(birthData);
 
-  // ── Auto-detect country from birth city and update pricing ──
-  useEffect(function () {
-    if (birthData && birthData.countryCode && birthData.countryCode !== 'LK') {
-      updateCountry(birthData.countryCode);
-    }
-  }, [birthData]);
-
-  // ── Countdown Timer (starts at 14:59, resets at 0) ──
-  var [countdown, setCountdown] = useState(14 * 60 + 59);
-  useEffect(function () {
-    var timer = setInterval(function () {
-      setCountdown(function (prev) { return prev > 0 ? prev - 1 : 14 * 60 + 59; });
-    }, 1000);
-    return function () { clearInterval(timer); };
-  }, []);
-  var countdownMin = Math.floor(countdown / 60);
-  var countdownSec = countdown % 60;
-  var countdownStr = (countdownMin < 10 ? '0' : '') + countdownMin + ':' + (countdownSec < 10 ? '0' : '') + countdownSec;
-
-  // ── Live user counter (ticks up randomly) ──
-  var [liveUsers, setLiveUsers] = useState(2847);
-  useEffect(function () {
-    var userTimer = setInterval(function () {
-      setLiveUsers(function (prev) { return prev + Math.floor(Math.random() * 3) + 1; });
-    }, 3000 + Math.random() * 5000);
-    return function () { clearInterval(userTimer); };
-  }, []);
-
-  // ── Rotating testimonial ──
-  var [testimonialIdx, setTestimonialIdx] = useState(Math.floor(Math.random() * TESTIMONIALS.en.length));
-  useEffect(function () {
-    var tTimer = setInterval(function () {
-      setTestimonialIdx(function (prev) { return (prev + 1) % TESTIMONIALS.en.length; });
-    }, 5000);
-    return function () { clearInterval(tTimer); };
-  }, []);
-  var testimonials = lang === 'si' ? TESTIMONIALS.si : TESTIMONIALS.en;
-  var currentTestimonial = testimonials[testimonialIdx];
-  var lockedPreviews = lang === 'si' ? LOCKED_PREVIEWS.si : LOCKED_PREVIEWS.en;
-
-  // ── Animations ──
+  // ── Animations (kept: only what's used in the rebuilt paywall) ──
   var priceGlow = useSharedValue(0);
-  var urgencyPulse = useSharedValue(0);
   var ctaScale = useSharedValue(0);
-  var lockShake = useSharedValue(0);
-  var timerFlash = useSharedValue(0);
-  var dotPulse = useSharedValue(0);
 
   useEffect(function () {
     priceGlow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    urgencyPulse.value = withRepeat(withSequence(
-      withTiming(1, { duration: 600, easing: Easing.out(Easing.quad) }),
-      withTiming(0, { duration: 600, easing: Easing.in(Easing.quad) })
-    ), -1, false);
     ctaScale.value = withRepeat(withSequence(
       withTiming(1, { duration: 1200, easing: Easing.out(Easing.quad) }),
       withTiming(0, { duration: 1200, easing: Easing.in(Easing.quad) }),
       withTiming(0, { duration: 800 })
     ), -1, false);
-    lockShake.value = withRepeat(withSequence(
-      withDelay(3000, withSequence(
-        withTiming(1, { duration: 60 }),
-        withTiming(-1, { duration: 60 }),
-        withTiming(1, { duration: 60 }),
-        withTiming(-1, { duration: 60 }),
-        withTiming(0, { duration: 60 })
-      ))
-    ), -1, false);
-    timerFlash.value = withRepeat(withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    dotPulse.value = withRepeat(withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.sin) }), -1, true);
   }, []);
 
   var priceStyle = useAnimatedStyle(function () {
     return { transform: [{ scale: interpolate(priceGlow.value, [0, 1], [1, 1.06]) }] };
   });
 
-  var urgencyStyle = useAnimatedStyle(function () {
-    return {
-      backgroundColor: 'rgba(255,60,60,' + interpolate(urgencyPulse.value, [0, 1], [0.08, 0.18]).toFixed(3) + ')',
-      borderColor: 'rgba(255,60,60,' + interpolate(urgencyPulse.value, [0, 1], [0.2, 0.5]).toFixed(3) + ')',
-    };
-  });
-
   var ctaPulseStyle = useAnimatedStyle(function () {
-    return {
-      transform: [{ scale: interpolate(ctaScale.value, [0, 1], [1, 1.04]) }],
-    };
-  });
-
-  var lockShakeStyle = useAnimatedStyle(function () {
-    return { transform: [{ translateX: interpolate(lockShake.value, [-1, 0, 1], [-3, 0, 3]) }] };
-  });
-
-  var timerStyle = useAnimatedStyle(function () {
-    return { opacity: interpolate(timerFlash.value, [0, 0.5, 1], [0.8, 1, 0.8]) };
-  });
-
-  var dotStyle = useAnimatedStyle(function () {
-    return {
-      transform: [{ scale: interpolate(dotPulse.value, [0, 1], [0.8, 1.3]) }],
-      opacity: interpolate(dotPulse.value, [0, 1], [0.5, 1]),
-    };
+    return { transform: [{ scale: interpolate(ctaScale.value, [0, 1], [1, 1.04]) }] };
   });
 
   var features = [
@@ -1656,168 +1582,119 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
     } finally { setRestoring(false); }
   };
 
-  var isSmall = SH < 700;
+  var resp = useResponsive();
+  var isSmall = resp.isSmall;
+
+  // ── Compact, scrollable paywall ───────────────────────────────
+  // Removed (caused overlap on real devices):
+  //  • Countdown timer banner
+  //  • Live-users counter
+  //  • Locked-previews 4-tile grid
+  //  • Rotating testimonial
+  // Kept: headline → price → 4 features → terms → CTA → footer.
+  var headline = displayName
+    ? (lang === 'si' ? displayName + ', ඔබේ සම්පූර්ණ ග්‍රහ සටහන අගුළු අරින්න' : displayName + ', unlock your full chart')
+    : (lang === 'si' ? 'ඔබේ සම්පූර්ණ ග්‍රහ සටහන අගුළු අරින්න' : 'Unlock your full chart');
 
   return (
-    <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 0, paddingBottom: 8 }}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 22, paddingTop: 4, paddingBottom: 20 }}
+      showsVerticalScrollIndicator={false}
+      bounces={false}
+      keyboardShouldPersistTaps="handled"
+    >
 
-      {/* ═══ URGENCY BANNER — Countdown timer ═══ */}
-      <Animated.View entering={FadeInDown.duration(400)} style={[{ borderRadius: 10, borderWidth: 1.5, paddingVertical: 6, paddingHorizontal: 10, marginBottom: isSmall ? 4 : 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, urgencyStyle]}>
-        <Ionicons name="timer-outline" size={14} color="#FF6B6B" />
-        <Text style={{ fontSize: 11, fontWeight: '800', color: '#FF6B6B', letterSpacing: 0.3 }}>
-          {lang === 'si' ? 'මෙම පිරිනැමීම අවසන් වෙයි:' : 'LAUNCH OFFER ENDS IN:'}
-        </Text>
-        <Animated.View style={[{ backgroundColor: 'rgba(255,60,60,0.15)', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }, timerStyle]}>
-          <Text style={{ fontSize: 14, fontWeight: '900', color: '#FF4444', fontVariant: ['tabular-nums'], letterSpacing: 1 }}>{countdownStr}</Text>
-        </Animated.View>
-      </Animated.View>
-
-      {/* ═══ PERSONALIZED HEADER ═══ */}
-      <Animated.View entering={FadeInDown.delay(100).duration(500)} style={{ alignItems: 'center', marginBottom: isSmall ? 2 : 4 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <View style={{ width: 28, height: 28, borderRadius: 14, overflow: 'hidden', ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.8, 10) }}>
-            <LinearGradient colors={['#FFD700', '#FF8C00']} style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="diamond" size={15} color="#FFF1D0" />
-            </LinearGradient>
-          </View>
+      {/* ═══ HEADER ═══ */}
+      <Animated.View entering={FadeInDown.duration(450)} style={{ alignItems: 'center', marginBottom: 14 }}>
+        <View style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden', marginBottom: 10, ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.7, 14) }}>
+          <LinearGradient colors={['#FFD700', '#FF8C00']} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="diamond" size={22} color="#FFF1D0" />
+          </LinearGradient>
         </View>
-        <Text style={{ fontSize: isSmall ? 18 : 22, fontWeight: '900', color: '#FFFFFF', textAlign: 'center', letterSpacing: 0.3, lineHeight: isSmall ? 24 : 28, ...textShadow('rgba(147,51,234,0.3)', { width: 0, height: 3 }, 14) }}>
-          {displayName
-            ? (lang === 'si' ? displayName + ',\nඔබේ ඉරණම අගුළු ඇරෙන්න යයි!' : displayName + ',\nYour Destiny Is About to\nBe Revealed!')
-            : (lang === 'si' ? 'ඔබේ ඉරණමෙන් 90%ක්ම සැඟවිලා! 🌟' : '90% Of Your Destiny\nIs Still Hidden! 🌟')}
+        <Text
+          numberOfLines={2}
+          style={{ fontSize: isSmall ? 19 : 22, fontWeight: '800', color: '#FFF8E0', textAlign: 'center', letterSpacing: 0.2, lineHeight: isSmall ? 24 : 28, paddingHorizontal: 4 }}
+        >
+          {headline}
         </Text>
-        <Text style={{ fontSize: 10, fontWeight: '600', color: 'rgba(255,220,150,0.55)', textAlign: 'center', marginTop: 3, lineHeight: 14, paddingHorizontal: 10 }}>
+        <Text style={{ fontSize: 12, fontWeight: '500', color: 'rgba(255,220,150,0.6)', textAlign: 'center', marginTop: 6, lineHeight: 16, paddingHorizontal: 8 }}>
           {T.subSubtitle}
         </Text>
       </Animated.View>
 
-      {/* ═══ LIVE SOCIAL PROOF — animated counter ═══ */}
-      <Animated.View entering={FadeInUp.delay(150).duration(400)} style={{ alignItems: 'center', marginBottom: isSmall ? 4 : 6 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(52,211,153,0.06)', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(52,211,153,0.12)' }}>
-          <Animated.View style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#34D399' }, dotStyle]} />
-          <Text style={{ fontSize: 10, fontWeight: '700', color: '#34D399', letterSpacing: 0.3 }}>
-            {lang === 'si' ? 'අද ' + liveUsers.toLocaleString() + ' දෙනෙක් එක්වුණා' : liveUsers.toLocaleString() + ' people joined today'}
+      {/* ═══ PRICE ═══ */}
+      <Animated.View entering={FadeInUp.delay(100).duration(400)} style={[ss.priceBadge, { alignSelf: 'center', marginBottom: 8 }, priceStyle]}>
+        <LinearGradient
+          colors={['rgba(255,184,0,0.22)', 'rgba(255,140,0,0.10)']}
+          style={{ flexDirection: 'row', alignItems: 'baseline', paddingVertical: 12, paddingHorizontal: 22, gap: 4 }}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        >
+          <Text style={ss.priceLabel}>{isInternational ? '$' : 'LKR'}</Text>
+          <Text style={{ fontSize: isSmall ? 36 : 42, fontWeight: '900', color: '#FFB800', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12) }}>
+            {priceAmount('subscription')}
           </Text>
-        </View>
+          <Text style={ss.pricePer}>/{lang === 'si' ? 'මාසයට' : 'month'}</Text>
+        </LinearGradient>
       </Animated.View>
+      <View style={{ alignItems: 'center', marginBottom: 16 }}>
+        <Text style={{ fontSize: 11, color: 'rgba(52,211,153,0.85)', fontWeight: '600' }}>
+          {lang === 'si'
+            ? 'ඕනෑම වෙලාවක නවතන්න — දින 7ක් නිදහස්'
+            : (isInternational ? 'Cancel anytime · ~$0.17/day' : 'Cancel anytime · ~LKR 9/day')}
+        </Text>
+      </View>
 
-      {/* ═══ BLURRED LOCKED PREVIEWS — "what you're missing" ═══ */}
-      <Animated.View entering={FadeInUp.delay(250).duration(500)}>
-        <Animated.View style={lockShakeStyle}>
-          <View style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)', marginBottom: isSmall ? 4 : 6 }}>
-            <LinearGradient colors={['rgba(255,184,0,0.06)', 'rgba(15,10,30,0.95)']} style={{ paddingVertical: 8, paddingHorizontal: 10 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 }}>
-                <Ionicons name="lock-closed" size={10} color="#FFB800" />
-                <Text style={{ fontSize: 9, fontWeight: '800', color: '#FFB800', letterSpacing: 1, textTransform: 'uppercase' }}>
-                  {lang === 'si' ? 'ඔබට පමණක් — සැඟවුණු අනාවැකි' : 'YOUR HIDDEN PREDICTIONS — LOCKED'}
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
-                {lockedPreviews.map(function (item, i) {
-                  return (
-                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: '48%', paddingVertical: 4, paddingHorizontal: 6, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' }}>
-                      <Text style={{ fontSize: 12 }}>{item.emoji}</Text>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 8, fontWeight: '700', color: item.color, letterSpacing: 0.2 }} numberOfLines={1}>{item.label}</Text>
-                        <Text style={{ fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.25)', marginTop: 1, letterSpacing: 1 }}>{item.value}</Text>
-                      </View>
-                      <Ionicons name="lock-closed" size={8} color="rgba(255,184,0,0.3)" />
-                    </View>
-                  );
-                })}
-              </View>
-            </LinearGradient>
-          </View>
-        </Animated.View>
-      </Animated.View>
-
-      {/* ═══ FEATURES LIST — compact ═══ */}
-      <Animated.View entering={FadeInUp.delay(350).duration(500)} style={{ marginBottom: isSmall ? 2 : 4 }}>
-        <GlowCard style={{ paddingVertical: 2, paddingHorizontal: 12 }}>
+      {/* ═══ FEATURES ═══ */}
+      <Animated.View entering={FadeInUp.delay(180).duration(400)} style={{ marginBottom: 16 }}>
+        <GlowCard style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
           {features.map(function (f, i) {
             return (
-              <Animated.View key={i} entering={FadeInDown.delay(300 + i * 40).duration(200)} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: isSmall ? 4 : 5, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' }}>
-                <Ionicons name="checkmark-circle" size={14} color="#34D399" />
-                <Ionicons name={f.icon} size={12} color={f.color} style={{ marginLeft: 5 }} />
-                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, flex: 1, lineHeight: 15, marginLeft: 6 }}>{f.text}</Text>
-              </Animated.View>
+              <View
+                key={i}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingVertical: 8,
+                  borderBottomWidth: i === features.length - 1 ? 0 : 1,
+                  borderBottomColor: 'rgba(255,255,255,0.04)',
+                  gap: 10,
+                }}
+              >
+                <Ionicons name="checkmark-circle" size={16} color="#34D399" />
+                <Ionicons name={f.icon} size={14} color={f.color} />
+                <Text
+                  style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12.5, flex: 1, lineHeight: 17 }}
+                  numberOfLines={2}
+                >
+                  {f.text}
+                </Text>
+              </View>
             );
           })}
         </GlowCard>
       </Animated.View>
 
-      {/* ═══ TESTIMONIAL — rotating social proof ═══ */}
-      <Animated.View entering={FadeInUp.delay(450).duration(400)} style={{ marginBottom: isSmall ? 4 : 6 }}>
-        <View style={{ backgroundColor: 'rgba(167,139,250,0.06)', borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(167,139,250,0.12)' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 2 }}>
-            {[0, 1, 2, 3, 4].map(function (s) {
-              return <Ionicons key={s} name="star" size={9} color="#FFB800" />;
-            })}
-            <Text style={{ fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.4)', marginLeft: 3 }}>{currentTestimonial.name}</Text>
-          </View>
-          <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.65)', fontStyle: 'italic', lineHeight: 15 }} numberOfLines={2}>{currentTestimonial.text}</Text>
-        </View>
-      </Animated.View>
-
-      {/* ═══ Spacer pushes bottom content down ═══ */}
-      <View style={{ flex: 1, minHeight: 2 }} />
-
-      {/* ═══ PRICE SECTION — anchored comparison ═══ */}
-      <Animated.View entering={FadeInUp.delay(500).duration(400)} style={{ alignItems: 'center', marginBottom: 4 }}>
-        <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'center', lineHeight: 14 }}>
-          {lang === 'si'
-            ? '🔮 සාමාන්‍ය ජ්‍යෝතිෂවේදියෙක්ගෙන් රු. 3,000+ යයි'
-            : '🔮 A real astrologer costs ' + (isInternational ? '$50+' : 'LKR 3,000+') + ' per visit'}
-        </Text>
-      </Animated.View>
-
-      <Animated.View entering={FadeInUp.delay(550).duration(500)} style={[ss.priceBadge, priceStyle]}>
-        <LinearGradient
-          colors={['rgba(255,184,0,0.2)', 'rgba(255,140,0,0.12)', 'rgba(255,184,0,0.1)']}
-          style={{ flexDirection: 'row', alignItems: 'baseline', paddingVertical: isSmall ? 8 : 12, paddingHorizontal: 24, gap: 4 }}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        >
-          <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,100,100,0.6)', textDecorationLine: 'line-through', marginRight: 3 }}>{isInternational ? '$9.99' : 'රු.500'}</Text>
-          <Text style={ss.priceLabel}>{isInternational ? '$' : 'LKR'}</Text>
-          <Text style={{ fontSize: isSmall ? 34 : 40, fontWeight: '900', color: '#FFB800', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12) }}>{priceAmount('subscription')}</Text>
-          <Text style={ss.pricePer}>/month</Text>
-        </LinearGradient>
-      </Animated.View>
-
-      {/* Per-day breakdown with save percentage */}
-      <Animated.View entering={FadeInUp.delay(600).duration(400)} style={{ alignItems: 'center', marginTop: 4, marginBottom: isSmall ? 6 : 10 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <View style={{ backgroundColor: 'rgba(52,211,153,0.12)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-            <Text style={{ fontSize: 10, fontWeight: '800', color: '#34D399' }}>
-              {isInternational ? 'SAVE 50%' : 'SAVE 44%'}
-            </Text>
-          </View>
-          <Text style={{ fontSize: 10, color: 'rgba(52,211,153,0.7)', fontWeight: '600' }}>
-            {lang === 'si' ? '= දවසට රු. 9 — එක තේ එකකටත් වඩා අඩුයි ☕' : '= Only ' + (isInternational ? '$0.17' : 'LKR 9') + '/day — less than a cup of tea ☕'}
-          </Text>
-        </View>
-      </Animated.View>
-
-      {/* ═══ TERMS CHECKBOX ═══ */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: isSmall ? 8 : 12 }}>
-        <TouchableOpacity onPress={function () { setAgreed(!agreed); }} activeOpacity={0.7}>
+      {/* ═══ TERMS ═══ */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', paddingHorizontal: 8 }}>
+        <TouchableOpacity onPress={function () { setAgreed(!agreed); }} activeOpacity={0.7} hitSlop={8}>
           <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: agreed ? '#FF8C00' : 'rgba(255,255,255,0.3)', backgroundColor: agreed ? '#FF8C00' : 'rgba(0,0,0,0.2)', alignItems: 'center', justifyContent: 'center' }}>
             {agreed ? <Ionicons name="checkmark" size={16} color="#FFF" /> : null}
           </View>
         </TouchableOpacity>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }} onPress={function () { setAgreed(!agreed); }}>
-            {lang === 'si' ? 'මම ' : 'I agree to the '}
+        <Text
+          style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, lineHeight: 18, flexShrink: 1 }}
+          onPress={function () { setAgreed(!agreed); }}
+        >
+          {lang === 'si' ? 'මම ' : 'I agree to the '}
+          <Text
+            style={{ color: '#FF8C00', textDecorationLine: 'underline', fontWeight: '600' }}
+            onPress={function () { Linking.openURL('https://grahachara.com/legal/terms.html'); }}
+          >
+            {lang === 'si' ? 'නියමයන් සහ කොන්දේසිවලට' : 'Terms & Conditions'}
           </Text>
-          <TouchableOpacity onPress={function () { Linking.openURL('https://grahachara.com/legal/terms.html'); }} activeOpacity={0.6}>
-            <Text style={{ color: '#FF8C00', fontSize: 12, textDecorationLine: 'underline', fontWeight: '500' }}>
-              {lang === 'si' ? 'නියමයන් සහ කොන්දේසිවලට' : 'Terms & Conditions'}
-            </Text>
-          </TouchableOpacity>
-          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }} onPress={function () { setAgreed(!agreed); }}>
-            {lang === 'si' ? ' එකඟ වෙමි' : ''}
-          </Text>
-        </View>
+          {lang === 'si' ? ' එකඟ වෙමි' : ''}
+        </Text>
       </View>
 
       {/* ═══ ERROR ═══ */}
@@ -1828,10 +1705,10 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
         </Animated.View>
       ) : null}
 
-      {/* ═══ CTA BUTTON — pulsing with urgency ═══ */}
-      <Animated.View entering={FadeInUp.delay(700).duration(500)} style={ctaPulseStyle}>
+      {/* ═══ CTA ═══ */}
+      <Animated.View entering={FadeInUp.delay(260).duration(400)} style={ctaPulseStyle}>
         <PrimaryButton
-          label={lang === 'si' ? '🔓 මගේ සම්පූර්ණ ඉරණම අගුළු අරින්න' : '🔓 Unlock My Complete Destiny Now'}
+          label={lang === 'si' ? 'සම්පූර්ණ ග්‍රහ සටහන අගුළු අරින්න' : 'Unlock Full Chart'}
           onPress={handleSub}
           loading={loading}
           icon="sparkles"
@@ -1839,42 +1716,31 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
         />
       </Animated.View>
 
-      {/* ═══ TRUST + FOOTER — single compact row ═══ */}
-      <View style={{ alignItems: 'center', marginTop: 8 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-            <Ionicons name="close-circle-outline" size={11} color="rgba(52,211,153,0.8)" />
-            <Text style={{ fontSize: 9, fontWeight: '700', color: 'rgba(52,211,153,0.8)' }}>
-              {lang === 'si' ? 'ඕනෑම වෙලාවක නවතන්න' : 'Cancel anytime'}
+      {/* ═══ FOOTER — trust + restore ═══ */}
+      <View style={{ alignItems: 'center', marginTop: 14, gap: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="shield-checkmark-outline" size={11} color="rgba(52,211,153,0.85)" />
+            <Text style={{ fontSize: 10, fontWeight: '600', color: 'rgba(52,211,153,0.85)' }}>
+              {lang === 'si' ? 'Google Play' : 'Google Play'}
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-            <Ionicons name="shield-checkmark-outline" size={11} color="rgba(52,211,153,0.8)" />
-            <Text style={{ fontSize: 9, fontWeight: '700', color: 'rgba(52,211,153,0.8)' }}>
-              {lang === 'si' ? 'Google Play ආරක්ෂිතයි' : 'Google Play protected'}
-            </Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-            <Ionicons name="card-outline" size={11} color="rgba(52,211,153,0.8)" />
-            <Text style={{ fontSize: 9, fontWeight: '700', color: 'rgba(52,211,153,0.8)' }}>
-              {lang === 'si' ? '100% ආරක්ෂිතයි' : '100% Safe'}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="lock-closed-outline" size={11} color="rgba(52,211,153,0.85)" />
+            <Text style={{ fontSize: 10, fontWeight: '600', color: 'rgba(52,211,153,0.85)' }}>
+              {lang === 'si' ? 'ආරක්ෂිතයි' : 'Secure'}
             </Text>
           </View>
         </View>
-        <TouchableOpacity
-          onPress={handleRestore}
-          disabled={restoring}
-          style={{ paddingVertical: 4, paddingHorizontal: 12 }}
-          activeOpacity={0.7}
-        >
-          <Text style={{ color: 'rgba(255,184,0,0.5)', fontSize: 10, textDecorationLine: 'underline' }}>
+        <TouchableOpacity onPress={handleRestore} disabled={restoring} activeOpacity={0.7} hitSlop={8}>
+          <Text style={{ color: 'rgba(255,184,0,0.6)', fontSize: 11, textDecorationLine: 'underline' }}>
             {restoring
               ? (lang === 'si' ? 'ප්‍රතිස්ථාපනය වෙමින්...' : 'Restoring...')
               : (lang === 'si' ? 'මිලදී ගැනීම් ප්‍රතිස්ථාපනය' : 'Restore Purchases')}
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -2534,6 +2400,7 @@ var ELEMENT_COLORS = {
 
 function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
   var T = OB[lang] || OB.en;
+  var resp = useResponsive();
   var [phase, setPhase] = useState('loading');
   var [chartData, setChartData] = useState(null);
   var [error, setError] = useState('');
@@ -2838,7 +2705,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     var nakshatraSinhala = nakshatra.sinhala || '';
     var traits = lang === 'si' ? (lagnaDetails.traitsSi || lagnaDetails.traits || []) : (lagnaDetails.traits || []);
 
-    var isSmallScreen = SH < 700;
+    var isSmallScreen = resp.isSmall;
 
     return (
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 16 }} bounces={false} showsVerticalScrollIndicator={false}>

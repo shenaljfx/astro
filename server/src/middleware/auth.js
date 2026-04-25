@@ -18,8 +18,15 @@ function tryAppJwt(token) {
     const jwt = require('jsonwebtoken');
     const JWT_SECRET = process.env.JWT_SECRET;
     if (!JWT_SECRET) {
-      console.warn('[auth] JWT_SECRET not set — JWT verification disabled');
+      if (process.env.NODE_ENV === 'production') {
+        // Fail closed in production — never verify without a secret
+        throw new Error('JWT_SECRET must be set in production');
+      }
+      console.warn('[auth] JWT_SECRET not set — JWT verification disabled (dev only)');
       return null;
+    }
+    if (process.env.NODE_ENV === 'production' && JWT_SECRET.length < 32) {
+      throw new Error('JWT_SECRET too short for production (need >= 32 chars)');
     }
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded && (decoded.type === 'google-auth' || decoded.type === 'phone-auth')) {

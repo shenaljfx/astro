@@ -38,6 +38,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import PremiumBackground from '../../components/PremiumBackground';
+import useScreenInsets from '../../hooks/useScreenInsets';
 var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var MAX_SAVED_REPORTS = 20;
 
@@ -901,6 +902,7 @@ export default function ReportScreen() {
   var { t, language } = useLanguage();
   var { user, showPaywall } = useAuth();
   var isDesktop = useDesktopCtx();
+  var insets = useScreenInsets();
   var [birthDate, setBirthDate] = useState('1998-10-09');
   var [birthTime, setBirthTime] = useState('09:16');
   var [birthLocation, setBirthLocation] = useState('Colombo');
@@ -1180,11 +1182,42 @@ export default function ReportScreen() {
           printWindow.print();
         }
       } else {
-        var result = await Print.printToFileAsync({ html: html, base64: false });
+        // A4 dimensions in points. Explicit dimensions reduce
+        // ExpoPrint.printToFileAsync rejections on Android with large HTML.
+        var printOpts = { html: html, base64: false, width: 595, height: 842 };
+        var result;
+        try {
+          result = await Print.printToFileAsync(printOpts);
+        } catch (printErr) {
+          // Fallback: minimal HTML so the user still gets a usable PDF
+          if (__DEV__) console.warn('[Report] printToFileAsync failed, retrying with minimal HTML:', printErr && printErr.message);
+          var sectionsHtml = '';
+          try {
+            SECTION_KEYS.forEach(function(k, i) {
+              var n = aiReport && aiReport.narrativeSections && aiReport.narrativeSections[k];
+              if (!n) return;
+              var title = (resolvedTitles && resolvedTitles[i]) || k;
+              var content = String(n.content || n.text || '').replace(/[<>]/g, '');
+              sectionsHtml += '<h2>' + title + '</h2><p>' + content + '</p>';
+            });
+          } catch (e) { /* ignore — best effort */ }
+          var fallback = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Report</title>'
+            + '<style>body{font-family:sans-serif;padding:24px;color:#222;line-height:1.6;}h1{color:#7C3AED;}h2{margin-top:18px;color:#5B21B6;}p{margin:6px 0;}</style>'
+            + '</head><body>'
+            + '<h1>' + (isSi ? '\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0' : 'Grahachara Report') + '</h1>'
+            + '<p><b>' + (userName || '') + '</b></p>'
+            + '<p>' + (birthDate || '') + ' ' + (birthTime || '') + '</p>'
+            + sectionsHtml
+            + '</body></html>';
+          result = await Print.printToFileAsync({ html: fallback, base64: false, width: 595, height: 842 });
+        }
         await Sharing.shareAsync(result.uri, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: fileName });
       }
     } catch (err) {
-      Alert.alert('❌', err.message || (isSi ? 'PDF සැකසීමට අසමත් විය' : 'Failed to generate PDF'));
+      Alert.alert(
+        isSi ? '\u0DAF\u0DDD\u0DC2\u0DBA\u0D9A\u0DD2' : 'Error',
+        isSi ? 'PDF \u0DC3\u0DD0\u0D9A\u0DC3\u0DD3\u0DB8\u0DA7 \u0D85\u0DC3\u0DB8\u0DAD\u0DCA \u0DC0\u0DD2\u0DBA. \u0DB1\u0DD0\u0DC0\u0DAD \u0D8B\u0DAD\u0DCA\u0DC3\u0DC4 \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1.' : 'Failed to generate PDF. Please try again.'
+      );
     }
   };
 
@@ -1231,7 +1264,7 @@ export default function ReportScreen() {
       <View style={{ flex: 1, backgroundColor: '#04030C' }}>
         <PremiumBackground />
         <ReadingProgressBar scrollProgress={scrollProgress} sectionCount={SECTION_KEYS.length} currentChapter={currentChapter} reportLang={reportLang} />
-        <Animated.ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}
+        <Animated.ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}
           onScroll={function(e) {
             var y = e.nativeEvent.contentOffset.y;
             var h = e.nativeEvent.contentSize.height - e.nativeEvent.layoutMeasurement.height;
@@ -1490,7 +1523,7 @@ export default function ReportScreen() {
     <DesktopScreenWrapper routeName="report">
     <View style={{ flex: 1, backgroundColor: '#04030C' }}>
       <PremiumBackground />
-      <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
         <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
         {/* Header */}
         <Animated.View entering={FadeInDown.delay(100).duration(800)}>

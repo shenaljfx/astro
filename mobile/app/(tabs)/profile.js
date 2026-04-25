@@ -22,6 +22,7 @@ import { usePricing } from '../../contexts/PricingContext';
 import CitySearchPicker from '../../components/CitySearchPicker';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import PremiumBackground from '../../components/PremiumBackground';
+import useScreenInsets from '../../hooks/useScreenInsets';
 import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
 import AwesomeRashiChakra from '../../components/AwesomeRashiChakra';
 
@@ -433,6 +434,7 @@ var bf = StyleSheet.create({
 function ProfileScreen() {
   var { language, switchLanguage, t } = useLanguage();
   var isDesktop = useDesktopCtx();
+  var insets = useScreenInsets();
   var { priceLabel } = usePricing();
   var {
     user, loading, isLoggedIn, subscription, isSubscribed,
@@ -465,7 +467,7 @@ function ProfileScreen() {
     <View style={{ flex: 1, backgroundColor: '#04030C' }}>
       <PremiumBackground />
       <StatusBar barStyle="light-content" />
-      <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
 
         {/* ═══ HERO CARD ══════════════════════════════════════════════ */}
         <Animated.View entering={FadeIn.duration(900)} style={s.heroCard}>

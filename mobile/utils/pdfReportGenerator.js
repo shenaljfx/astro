@@ -26,10 +26,16 @@ import * as FileSystem from 'expo-file-system';
 
 var LOGO_ASSET = require('../assets/logo.png');
 
+// In-memory cache so loadLogoBase64() runs at most once per app session.
+// The logo is ~50-100 KB; reading + base64-encoding it is slow enough to
+// matter at PDF-generation time on low-end Android devices.
+var _logoBase64Cache = null;
+
 // ════════════════════════════════════════════════
 // LOGO LOADER — cross-platform base64 embedding
 // ════════════════════════════════════════════════
 async function loadLogoBase64() {
+  if (_logoBase64Cache) return _logoBase64Cache;
   try {
     if (Platform.OS === 'web') {
       // On web, resolve the asset URI and fetch it
@@ -39,7 +45,7 @@ async function loadLogoBase64() {
       if (!uri) return null;
       var response = await fetch(uri);
       var blob = await response.blob();
-      return await new Promise(function(resolve) {
+      var b64 = await new Promise(function(resolve) {
         var reader = new FileReader();
         reader.onloadend = function() {
           var dataUrl = reader.result;
@@ -48,15 +54,18 @@ async function loadLogoBase64() {
         reader.onerror = function() { resolve(null); };
         reader.readAsDataURL(blob);
       });
+      if (b64) _logoBase64Cache = b64;
+      return b64;
     } else {
       var asset = Asset.fromModule(LOGO_ASSET);
       await asset.downloadAsync();
       if (!asset.localUri) return null;
       var base64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+      if (base64) _logoBase64Cache = base64;
       return base64;
     }
   } catch (e) {
-    console.warn('Failed to load logo for PDF:', e);
+    if (__DEV__) console.warn('Failed to load logo for PDF:', e && e.message);
     return null;
   }
 }
@@ -115,10 +124,16 @@ function sharedCSS(accentHue) {
     ? { h:'#EC4899',bg1:'#831843',bg2:'#BE185D',bg3:'#EC4899',bg4:'#F9A8D4',wa:'rgba(236,72,153,0.03)',co:'rgba(236,72,153,0.12)',hc:'rgba(236,72,153,0.5)',fc:'rgba(236,72,153,0.3)',fb:'rgba(236,72,153,0.06)' }
     : { h:'#7C3AED',bg1:'#1E1B4B',bg2:'#312E81',bg3:'#4C1D95',bg4:'#7C3AED',wa:'rgba(124,58,237,0.03)',co:'rgba(124,58,237,0.12)',hc:'rgba(124,58,237,0.5)',fc:'rgba(124,58,237,0.4)',fb:'rgba(124,58,237,0.06)' };
 
-  return '@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@300;400;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap");'
+  return ''
+    // NOTE: external @import of Google Fonts removed — it caused
+    // ExpoPrint.printToFileAsync to reject on Android when the network was
+    // unavailable or slow at print time. System fonts (Roboto on Android,
+    // San Francisco on iOS) cover Latin; Noto Sans Sinhala ships as a
+    // system font on Android API 23+ and iOS 13+, so Sinhala renders
+    // correctly without a remote fetch.
     +':root{--ac:'+ac.h+';--gold:#FBBF24;--gold-l:#FDE68A;--txt:#1F2937;}'
     +'@page{margin:0;size:A4;}*{box-sizing:border-box;margin:0;padding:0;}'
-    +'body{font-family:"Inter","Noto Sans Sinhala",-apple-system,sans-serif;color:var(--txt);line-height:1.7;font-size:13px;background:#fff;}'
+    +'body{font-family:-apple-system,"Roboto","Noto Sans Sinhala","Iskoola Pota",sans-serif;color:var(--txt);line-height:1.7;font-size:13px;background:#fff;}'
     // Watermark
     +'.wm{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);font-size:90px;font-weight:900;color:'+ac.wa+';letter-spacing:16px;white-space:nowrap;z-index:0;pointer-events:none;user-select:none;}'
     // Corners

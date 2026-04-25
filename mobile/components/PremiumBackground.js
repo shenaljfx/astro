@@ -182,7 +182,7 @@ var DustParticle = React.memo(function ({ startX, startY, size, dur, delay, opac
 /* ═══════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════ */
-export default function PremiumBackground() {
+function PremiumBackground() {
 
   /* ── Stars (~85 total, 4 tiers, ~10% warm gold tint) ── */
   var stars = useMemo(function () {
@@ -359,3 +359,7 @@ export default function PremiumBackground() {
     </View>
   );
 }
+
+// Memoized: takes no props, so it should never re-render once mounted.
+// Eliminates background re-renders when parent screens update state.
+export default React.memo(PremiumBackground);

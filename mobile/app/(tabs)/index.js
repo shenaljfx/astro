@@ -20,6 +20,7 @@ import PinchableView from '../../components/effects/PinchableView';
 import CosmicCard from '../../components/ui/CosmicCard';
 import SectionHeader from '../../components/ui/SectionHeader';
 import AwesomeRashiChakra from '../../components/AwesomeRashiChakra';
+import useScreenInsets from '../../hooks/useScreenInsets';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -362,6 +363,7 @@ export default function HomeScreen() {
   var { t, language } = useLanguage();
   var { user } = useAuth();
   var isDesktop = useDesktopCtx();
+  var insets = useScreenInsets();
   var router = useRouter();
   var [data, setData] = useState(null);
   var [chartData, setChartData] = useState(null);
@@ -1832,7 +1834,7 @@ export default function HomeScreen() {
         <Animated.ScrollView
           ref={scrollRef}
           style={s.flex}
-          contentContainerStyle={[s.content, isDesktop && s.contentDesktop]}
+          contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]}
           showsVerticalScrollIndicator={false}
           overScrollMode="never"
           onScroll={scrollHandler}

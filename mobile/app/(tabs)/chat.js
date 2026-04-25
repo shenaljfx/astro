@@ -19,6 +19,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import PremiumBackground from '../../components/PremiumBackground';
+import useKeyboard from '../../hooks/useKeyboard';
+
+// Tab bar visual height (must mirror BAR_H + 20 in (tabs)/_layout.js).
+// When the keyboard is closed the tab bar overlays the bottom of the
+// screen, so the chat input must reserve this much padding to stay visible.
+var TAB_BAR_OVERLAY = 125;
 
 var { width: SW } = Dimensions.get('window');
 var DAILY_LIMIT = 5;
@@ -326,7 +332,15 @@ export default function ChatScreen() {
   }, [msgs, loading]);
 
   var topPad = isDesktop ? 0 : Math.max(insets.top, 10) + 6;
-  var bottomPad = isDesktop ? 0 : Math.max(insets.bottom, 6) + 8;
+  // When keyboard is open the tab bar auto-hides (tabBarHideOnKeyboard:true).
+  // When closed, we must reserve the full tab-bar overlay height so the
+  // input row isn't hidden behind the floating nav bar.
+  var kb = useKeyboard();
+  var bottomPad = isDesktop
+    ? 0
+    : (kb.isOpen
+        ? Math.max(insets.bottom, 6) + 8
+        : TAB_BAR_OVERLAY + 8);
 
   // ── DESKTOP LAYOUT ────────────────────────────────────────────────
   if (isDesktop) {
@@ -486,7 +500,11 @@ export default function ChatScreen() {
       <ModeToggle mode={mode} setMode={setMode} t={t} />
       <LimitCard remaining={remaining} t={t} />
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 60 : 0}
+      >
         <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={s.msgList} showsVerticalScrollIndicator={false} overScrollMode="never" bounces={false}>
           {msgs.map(function (m, i) { return <ChatBubble key={i} msg={m} />; })}
           {loading && (

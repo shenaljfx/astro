@@ -22,6 +22,7 @@ import MarkdownText from '../../components/MarkdownText';
 import SpringPressable from '../../components/effects/SpringPressable';
 import CosmicLoader from '../../components/effects/CosmicLoader';
 import CitySearchPicker from '../../components/CitySearchPicker';
+import useScreenInsets from '../../hooks/useScreenInsets';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -562,6 +563,7 @@ export default function PorondamScreen() {
   var { isLoggedIn, showPaywall } = useAuth();
   var T = L[language] || L.en;
   var isDesktop = useDesktopCtx();
+  var insets = useScreenInsets();
 
   var [bDate, setBDate] = useState('1998-01-15');
   var [bTime, setBTime] = useState('08:30');
@@ -776,11 +778,36 @@ export default function PorondamScreen() {
           printWindow.print();
         }
       } else {
-        var result = await Print.printToFileAsync({ html: html, base64: false });
+        // A4 dimensions in points (1 inch = 72pt). Explicit dimensions help
+        // the Android renderer; without them some devices reject the print
+        // when HTML is large or contains heavy SVG.
+        var printOpts = { html: html, base64: false, width: 595, height: 842 };
+        var result;
+        try {
+          result = await Print.printToFileAsync(printOpts);
+        } catch (printErr) {
+          // Fallback: retry once with a minimal HTML (text-only) so the user
+          // still gets a PDF rather than losing their generated content.
+          if (__DEV__) console.warn('[Porondam] printToFileAsync failed, retrying with minimal HTML:', printErr && printErr.message);
+          var fallback = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Porondam</title>'
+            + '<style>body{font-family:sans-serif;padding:24px;color:#222;line-height:1.6;}h1{color:#7C3AED;}h2{margin-top:18px;}p{margin:6px 0;}</style>'
+            + '</head><body>'
+            + '<h1>' + (isSi ? '\u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA' : 'Porondam Report') + '</h1>'
+            + '<p><b>' + (bName || 'Bride') + ' &amp; ' + (gName || 'Groom') + '</b></p>'
+            + '<p>' + (isSi ? '\u0DBD\u0D9A\u0DD4\u0DAB\u0DD4' : 'Score') + ': ' + (data.totalScore || 0) + ' / ' + (data.maxPossibleScore || 20) + ' (' + (data.percentage || 0) + '%)</p>'
+            + '<p>' + (data.ratingSinhala || data.rating || '') + '</p>'
+            + (report && report.summary ? '<h2>' + (isSi ? '\u0DC3\u0DCF\u0DBB\u0DCF\u0D82\u0DC1\u0DBA' : 'Summary') + '</h2><p>' + String(report.summary).replace(/[<>]/g, '') + '</p>' : '')
+            + '</body></html>';
+          result = await Print.printToFileAsync({ html: fallback, base64: false, width: 595, height: 842 });
+        }
         await Sharing.shareAsync(result.uri, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: fileName });
       }
     } catch (err) {
-      Alert.alert('❌', err.message || (isSi ? 'PDF \u0DC3\u0DD0\u0D9A\u0DC3\u0DD3\u0DB8\u0DA7 \u0D85\u0DC3\u0DB8\u0DAD\u0DCA \u0DC0\u0DD2\u0DBA' : 'Failed to generate PDF'));
+      var isSiErr = language === 'si';
+      Alert.alert(
+        isSiErr ? '\u0DAF\u0DDD\u0DC2\u0DBA\u0D9A\u0DD2' : 'Error',
+        isSiErr ? 'PDF \u0DC3\u0DD0\u0D9A\u0DC3\u0DD3\u0DB8\u0DA7 \u0D85\u0DC3\u0DB8\u0DAD\u0DCA \u0DC0\u0DD2\u0DBA. \u0DB1\u0DD0\u0DC0\u0DAD \u0D8B\u0DAD\u0DCA\u0DC3\u0DC4 \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1.' : 'Failed to generate PDF. Please try again.'
+      );
     }
   };
 
@@ -809,7 +836,7 @@ export default function PorondamScreen() {
     <DesktopScreenWrapper routeName="porondam">
     <View style={{ flex: 1, backgroundColor: '#04030C' }}>
       <PremiumBackground />
-      <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop]} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
         <View style={[sty.scrollInner, isDesktop && sty.scrollInnerDesktop]}>
 
         <Animated.View entering={FadeInDown.duration(600)}>

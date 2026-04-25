@@ -22,7 +22,7 @@ import Animated, {
 var AnimatedPolygon = Animated.createAnimatedComponent(Polygon);
 var AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-export default function RadarChart({ factors, size, color1, color2, labels, animated }) {
+function RadarChart({ factors, size, color1, color2, labels, animated }) {
   if (!factors || factors.length < 3) return null;
   if (size === undefined) size = 240;
   if (color1 === undefined) color1 = '#A78BFA';
@@ -250,3 +250,6 @@ export default function RadarChart({ factors, size, color1, color2, labels, anim
     </View>
   );
 }
+
+// Memoized to prevent re-renders when props are stable.
+export default React.memo(RadarChart);

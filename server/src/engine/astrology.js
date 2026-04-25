@@ -19,6 +19,12 @@
 const { moonposition, solar, julian, base, nutation: nutationMod } = require('astronomia');
 const ephemeris = require('ephemeris');
 
+// Debug logger — gated by DEBUG_ASTRO=1 env var. Defaults to no-op so production
+// is not flooded with diagnostic output (which was costing hundreds of ms per
+// full report on the previous build).
+const DEBUG_ASTRO = process.env.DEBUG_ASTRO === '1';
+const debugLog = DEBUG_ASTRO ? console.log.bind(console) : function(){};
+
 // ---------------------------------------------------------------------------
 // Swiss Ephemeris — high-precision planetary calculation engine (0.001 arcsec)
 // Replaces Moshier/Meeus for all critical calculations while keeping the old
@@ -1970,7 +1976,7 @@ function assessMarriageDenial(date, lat, lng) {
   else if (denialScore >= 10) severity = 'MILD';
   else severity = 'NONE';
 
-  console.log(`[MarriageDenial] Score: ${denialScore}/100, Severity: ${severity}, Afflictions: ${afflictions.length}, Supportive: ${supportive.length}`);
+  debugLog(`[MarriageDenial] Score: ${denialScore}/100, Severity: ${severity}, Afflictions: ${afflictions.length}, Supportive: ${supportive.length}`);
 
   return {
     denialScore,
@@ -2093,9 +2099,9 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
   const rahuDispositor = rahuHouse ? getHouseLord(rahuHouse) : null;
   const ketuDispositor = ketuHouse ? getHouseLord(ketuHouse) : null;
 
-  console.log('[MarriageTiming] Lagna:', lagnaName, '| 7th lord:', lord7, 'in H' + lord7House);
-  console.log('[MarriageTiming] Significators:', [...marriageSignificators].join(', '));
-  console.log('[MarriageTiming] Planets aspecting 7th:', planetsAspecting7.join(', '));
+  debugLog('[MarriageTiming] Lagna:', lagnaName, '| 7th lord:', lord7, 'in H' + lord7House);
+  debugLog('[MarriageTiming] Significators:', [...marriageSignificators].join(', '));
+  debugLog('[MarriageTiming] Planets aspecting 7th:', planetsAspecting7.join(', '));
 
   // ═══════════════════════════════════════════════════════════
   // SCAN EACH ANTARDASHA FOR MARRIAGE POTENTIAL
@@ -2657,7 +2663,7 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
 
       // Re-sort after penalty
       windows.sort((a, b) => b.score - a.score);
-      console.log(`[MarriageTiming] Denial penalty applied: factor ${penaltyFactor}, denialScore ${marriageDenial.denialScore}`);
+      debugLog(`[MarriageTiming] Denial penalty applied: factor ${penaltyFactor}, denialScore ${marriageDenial.denialScore}`);
     }
   } catch (e) {
     console.error('[MarriageTiming] Error in denial assessment:', e.message);
@@ -2679,7 +2685,7 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
       }
     });
     windows.sort((a, b) => b.score - a.score);
-    console.log(`[MarriageTiming] Confirmed marriage year ${confirmedMarriageYear} — boosted matching windows`);
+    debugLog(`[MarriageTiming] Confirmed marriage year ${confirmedMarriageYear} — boosted matching windows`);
   }
 
   // ── Build summary ──
@@ -3480,7 +3486,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     advancedDoshas = advanced.detectDoshas(date, lat, lng);
     kpSubLords = advanced.calculateKPSubLords(date);
     nadiAmsha = advanced.calculateNadiAmsha(date);
-    console.log('[FullReport] Advanced enrichment loaded — Shadbala, Jaimini, Vargas, Yogas, Doshas, KP, Nadi');
+    debugLog('[FullReport] Advanced enrichment loaded — Shadbala, Jaimini, Vargas, Yogas, Doshas, KP, Nadi');
   } catch (err) {
     console.warn('[FullReport] Advanced enrichment unavailable:', err.message);
   }
@@ -3493,7 +3499,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   try {
     const nadi = require('./nadi');
     nadiPredictions = nadi.generateNadiPredictions(bhavaChalit, houseChart, planets, lagna.rashi, kpSubLords);
-    console.log('[FullReport] Nadi Significator System loaded —', Object.keys(nadiPredictions.significatorTable).length, 'planets analyzed');
+    debugLog('[FullReport] Nadi Significator System loaded —', Object.keys(nadiPredictions.significatorTable).length, 'planets analyzed');
   } catch (err) {
     console.warn('[FullReport] Nadi Significator System unavailable:', err.message);
   }
@@ -9255,12 +9261,12 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
 
       // Log results
       if (crossValidationLog.length > 0) {
-        console.log(`[CrossValidation] Applied ${crossValidationLog.length} score adjustments:`);
+        debugLog(`[CrossValidation] Applied ${crossValidationLog.length} score adjustments:`);
         crossValidationLog.forEach(adj => {
-          console.log(`  ⚖️ ${adj.section}: ${adj.from} → ${adj.to} | ${adj.reason}`);
+          debugLog(`  ⚖️ ${adj.section}: ${adj.from} → ${adj.to} | ${adj.reason}`);
         });
       } else {
-        console.log('[CrossValidation] All scores are logically consistent — no adjustments needed');
+        debugLog('[CrossValidation] All scores are logically consistent — no adjustments needed');
       }
 
       // Attach cross-validation metadata to each adjusted section
@@ -9341,7 +9347,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
               if (allSections.personality) allSections.personality._allVargas = enrichments.allVargas;
             }
 
-            console.log(`[FullReport] Jyotish enrichments merged into ${mergeCount} sections (${enrichments._computeTimeMs}ms)`);
+            debugLog(`[FullReport] Jyotish enrichments merged into ${mergeCount} sections (${enrichments._computeTimeMs}ms)`);
           }
         }
       } catch (enrichErr) {
@@ -9546,7 +9552,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       try {
         const enhancedEngine = require('./enhanced');
         const enhancedData = enhancedEngine.generateEnhancedReport(date, lat, lng);
-        console.log('[FullReport] Enhanced module loaded —', enhancedData._loadedModules, 'features available');
+        debugLog('[FullReport] Enhanced module loaded —', enhancedData._loadedModules, 'features available');
         return enhancedData;
       } catch (err) {
         console.warn('[FullReport] Enhanced module unavailable:', err.message);

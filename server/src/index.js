@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const morgan = require('morgan');
 
 // Firebase initialization
@@ -56,6 +57,16 @@ app.use(helmet({
 // 3. Request logging
 app.use(morgan('dev'));
 
+// 3b. gzip compression — large JSON reports compress 5-10x. Skip for already
+// compressed payloads (images) and respect the standard Cache-Control hint.
+app.use(compression({
+  threshold: 1024,
+  filter: function(req, res){
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  },
+}));
+
 // 4. Body parsers with size limits
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -107,7 +118,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🪐 Grahachara Server running on port ${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   AI Provider: ${process.env.AI_PROVIDER || 'openai'}`);
@@ -125,5 +136,12 @@ app.listen(PORT, () => {
     console.error('   ⚠️  Notification scheduler failed to start:', err.message);
   }
 });
+
+// HTTP keep-alive + request timeouts — prevent hung connections during long
+// AI report generation (Gemini calls can take 2-3 min) while still capping
+// at a hard ceiling so dead clients don't accumulate.
+server.setTimeout(360000);          // 6 min hard ceiling per request
+server.keepAliveTimeout = 70000;    // 70s — must exceed common LB idle (60s)
+server.headersTimeout = 75000;      // must exceed keepAliveTimeout
 
 module.exports = app;

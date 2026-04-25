@@ -189,6 +189,36 @@ export const Shadows = {
   },
 };
 
+// ────────────────────────────────────────────────────────────
+//  Layout — fixed chrome dimensions used by useScreenInsets
+//  and the <Screen> wrapper. Keep these in sync with the
+//  TabBar in (tabs)/_layout.js and the floating headers.
+// ────────────────────────────────────────────────────────────
+export const Layout = {
+  // Fixed visual height of floating headers in tab screens.
+  headerHeight: 64,
+  // Tab bar visual height (excluding bottom safe-area inset).
+  tabBarHeight: 60,
+  // Maximum content width on tablets / desktop. Tab screens centre
+  // their ScrollView at this width to avoid 100ch-wide text columns.
+  maxContent: 680,
+  // Breakpoint widths.
+  breakpointNarrow: 360,   // small Androids / iPhone SE 1
+  breakpointTablet: 600,   // smallest dimension >= this → tablet
+  breakpointDesktop: 1024,
+};
+
+/**
+ * scaledFont(size, scale) — multiply a base font size by the clamped
+ * scale factor from useResponsive(). Keeps text readable across
+ * 320dp phones and 11" tablets without overshooting.
+ */
+export function scaledFont(size, scale) {
+  if (!scale || scale === 1) return size;
+  return Math.round(size * scale);
+}
+
+
 export const Animations = {
   spring: { damping: 15, stiffness: 150, mass: 1 },
   springBouncy: { damping: 8, stiffness: 300, mass: 0.8 },

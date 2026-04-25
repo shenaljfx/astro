@@ -132,7 +132,7 @@ function makeStarDots(n, rMin, rMax, cx, cy) {
 // COMPONENT
 // ═══════════════════════════════════════════════════════
 
-export default function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
+function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
   var cx = size / 2;
   var cy = size / 2;
 
@@ -582,3 +582,6 @@ export default function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
     </View>
   );
 }
+
+// Memoized to prevent re-renders when props are stable.
+export default React.memo(AwesomeRashiChakra);

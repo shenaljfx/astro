@@ -447,6 +447,7 @@ export default function TabLayout() {
           return {
             headerShown: true, headerTransparent: true, headerTitleAlign: 'center',
             tabBarStyle: { height: TAB_BAR_HEIGHT },
+            tabBarHideOnKeyboard: true,
             animation: 'none',
             lazy: false,
           headerTitle: function () {

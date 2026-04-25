@@ -15,7 +15,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Modal, StatusBar,
-  Dimensions, ActivityIndicator, Linking, Platform, Image,
+  Dimensions, ActivityIndicator, Linking, Platform, Image, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,8 +40,9 @@ import AwesomeRashiChakra from './AwesomeRashiChakra';
 var { width: SW, height: SH } = Dimensions.get('window');
 var IS_SMALL = SH < 700;
 var IS_MEDIUM = SH < 800;
-var CHAKRA_SIZE = Math.min(SW * 0.82, IS_SMALL ? 240 : IS_MEDIUM ? 300 : 360);
-var LOGO_SIZE = IS_SMALL ? 70 : IS_MEDIUM ? 85 : 105;
+// Smaller chakra so logo + chakra container doesn't dominate the scroll on small phones
+var CHAKRA_SIZE = Math.min(SW * 0.62, IS_SMALL ? 200 : IS_MEDIUM ? 240 : 280);
+var LOGO_SIZE = IS_SMALL ? 64 : IS_MEDIUM ? 76 : 90;
 
 // ─── Context-specific content ────────────────────────────────────
 
@@ -259,47 +260,10 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
   var [restoring, setRestoring] = useState(false);
   var [error, setError] = useState('');
 
-  // ── Countdown Timer ──
-  var [countdown, setCountdown] = useState(14 * 60 + 59);
-  useEffect(function () {
-    if (!visible) return;
-    var timer = setInterval(function () {
-      setCountdown(function (prev) { return prev > 0 ? prev - 1 : 14 * 60 + 59; });
-    }, 1000);
-    return function () { clearInterval(timer); };
-  }, [visible]);
-  var countdownMin = Math.floor(countdown / 60);
-  var countdownSec = countdown % 60;
-  var countdownStr = (countdownMin < 10 ? '0' : '') + countdownMin + ':' + (countdownSec < 10 ? '0' : '') + countdownSec;
-
-  // ── Live user counter ──
-  var [liveUsers, setLiveUsers] = useState(2847);
-  useEffect(function () {
-    if (!visible) return;
-    var userTimer = setInterval(function () {
-      setLiveUsers(function (prev) { return prev + Math.floor(Math.random() * 3) + 1; });
-    }, 3000 + Math.random() * 5000);
-    return function () { clearInterval(userTimer); };
-  }, [visible]);
-
-  // ── Rotating testimonial ──
-  var [testimonialIdx, setTestimonialIdx] = useState(0);
-  useEffect(function () {
-    if (!visible) return;
-    var tTimer = setInterval(function () {
-      setTestimonialIdx(function (prev) { return (prev + 1) % PW_TESTIMONIALS.en.length; });
-    }, 4000);
-    return function () { clearInterval(tTimer); };
-  }, [visible]);
-  var pwTestimonials = lang === 'si' ? PW_TESTIMONIALS.si : PW_TESTIMONIALS.en;
-  var currentTestimonial = pwTestimonials[testimonialIdx];
-
-  // Animations
+  // Animations — kept minimal: button glow + chakra rotation
   var btnGlow = useSharedValue(0);
   var btnPulse = useSharedValue(0);
   var chakraRotate = useSharedValue(0);
-  var timerFlash = useSharedValue(0);
-  var liveDotPulse = useSharedValue(0);
 
   useEffect(function () {
     btnGlow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
@@ -309,8 +273,6 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
       withTiming(0, { duration: 1000 })
     ), -1, false);
     chakraRotate.value = withRepeat(withTiming(360, { duration: 90000, easing: Easing.linear }), -1, false);
-    timerFlash.value = withRepeat(withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    liveDotPulse.value = withRepeat(withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.sin) }), -1, true);
   }, []);
 
   var btnGlowStyle = useAnimatedStyle(function () {
@@ -328,17 +290,6 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
     return { transform: [{ rotate: chakraRotate.value + 'deg' }] };
   });
 
-  var timerPulseStyle = useAnimatedStyle(function () {
-    return { opacity: interpolate(timerFlash.value, [0, 0.5, 1], [0.8, 1, 0.8]) };
-  });
-
-  var liveDotStyle = useAnimatedStyle(function () {
-    return {
-      transform: [{ scale: interpolate(liveDotPulse.value, [0, 1], [0.8, 1.3]) }],
-      opacity: interpolate(liveDotPulse.value, [0, 1], [0.5, 1]),
-    };
-  });
-
   // Load offerings
   useEffect(function () {
     if (!visible) return;
@@ -351,12 +302,30 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
   }, [visible]);
 
   var getMonthlyPackage = useCallback(function () {
-    if (!offerings || !offerings.current) return null;
-    var pkgs = offerings.current.availablePackages;
-    return pkgs.find(function (p) {
+    if (!offerings) return null;
+    // 1) Try current offering first
+    var pools = [];
+    if (offerings.current && offerings.current.availablePackages) {
+      pools.push(offerings.current.availablePackages);
+    }
+    // 2) Fallback: scan ALL offerings (covers "current not set in dashboard" case)
+    if (offerings.all) {
+      Object.keys(offerings.all).forEach(function (k) {
+        var off = offerings.all[k];
+        if (off && off.availablePackages && (!offerings.current || k !== offerings.current.identifier)) {
+          pools.push(off.availablePackages);
+        }
+      });
+    }
+    var matcher = function (p) {
       return p.packageType === 'MONTHLY' || p.identifier === '$rc_monthly' ||
         (p.product && p.product.identifier && p.product.identifier.indexOf('monthly') !== -1);
-    });
+    };
+    for (var i = 0; i < pools.length; i++) {
+      var hit = pools[i].find(matcher);
+      if (hit) return hit;
+    }
+    return null;
   }, [offerings]);
 
   // Get the display price based on source
@@ -393,18 +362,48 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
         var otResult = await purchaseOneTimeProduct(productId);
         if (otResult && otResult.purchased) {
           if (onPurchased) onPurchased(otResult);
+        } else {
+          setError(shared.purchaseFail);
         }
       } else {
         // Subscription purchase (monthly)
         var pkg = getMonthlyPackage();
-        if (!pkg) { setError(shared.purchaseFail); setPurchasing(false); return; }
+        if (!pkg) {
+          // Fallback: no offering/package configured — try direct product purchase
+          try {
+            var direct = await purchaseOneTimeProduct(PRODUCT_IDS.monthly);
+            if (direct && direct.isProActive) {
+              if (onPurchased) onPurchased(direct);
+              setPurchasing(false);
+              return;
+            }
+            if (direct && direct.purchased && !direct.isProActive) {
+              setError(shared.purchaseFail);
+              setPurchasing(false);
+              return;
+            }
+          } catch (directErr) {
+            if (directErr && directErr.message === 'Payment cancelled') {
+              setPurchasing(false);
+              return;
+            }
+            setError(shared.purchaseFail);
+            setPurchasing(false);
+            return;
+          }
+          setError(shared.purchaseFail);
+          setPurchasing(false);
+          return;
+        }
         var result = await purchasePackage(pkg);
         if (result && result.isProActive) {
           if (onPurchased) onPurchased(result);
+        } else {
+          setError(shared.purchaseFail);
         }
       }
     } catch (e) {
-      var msg = e && e.message ? e.message : '';
+      var msg = e && e.message ? e.message : String(e);
       if (msg.indexOf('cancelled') === -1 && msg.indexOf('cancel') === -1) {
         setError(shared.purchaseFail);
       }
@@ -453,198 +452,137 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
           </Animated.View>
         ) : null}
 
-        {/* ─── Fixed content — fits screen without scrolling ─── */}
-        <View
-          style={{ flex: 1, justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: insets.top + 6, paddingBottom: Math.max(insets.bottom, 8) + 4 }}
+        {/* ─── Scrollable content — no overlap on any device ─── */}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingHorizontal: 18,
+            paddingTop: insets.top + (onClose ? 56 : 12),
+            paddingBottom: Math.max(insets.bottom, 12) + 16,
+            alignItems: 'center',
+          }}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
         >
 
-          {/* ── TOP: Rashi Chakra + Logo ── */}
-          <View style={s.topSection}>
-            <Animated.View entering={FadeIn.delay(100).duration(800)} style={s.chakraLogoWrap}>
-              <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }, chakraStyle]}>
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', opacity: 0.22 }}>
-                  <AwesomeRashiChakra size={CHAKRA_SIZE} />
-                </View>
-              </Animated.View>
-              <View style={[s.logoCircle, { width: LOGO_SIZE, height: LOGO_SIZE, borderRadius: LOGO_SIZE / 2, borderColor: accent.primary + '40' }]}>
-                <Image
-                  source={require('../assets/logo.png')}
-                  style={{ width: LOGO_SIZE - 10, height: LOGO_SIZE - 10, borderRadius: (LOGO_SIZE - 10) / 2 }}
-                  resizeMode="cover"
-                />
+          {/* ── Logo + rotating chakra (smaller, no overlap) ── */}
+          <Animated.View entering={FadeIn.delay(100).duration(800)} style={s.chakraLogoWrap}>
+            <Animated.View style={[StyleSheet.absoluteFill, chakraStyle]}>
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', opacity: 0.22 }}>
+                <AwesomeRashiChakra size={CHAKRA_SIZE} />
               </View>
             </Animated.View>
-          </View>
+            <View style={[s.logoCircle, { width: LOGO_SIZE, height: LOGO_SIZE, borderRadius: LOGO_SIZE / 2, borderColor: accent.primary + '40' }]}>
+              <Image
+                source={require('../assets/logo.png')}
+                style={{ width: LOGO_SIZE - 10, height: LOGO_SIZE - 10, borderRadius: (LOGO_SIZE - 10) / 2 }}
+                resizeMode="cover"
+              />
+            </View>
+          </Animated.View>
 
-          {/* ── MIDDLE: Badge + Title + Features + Price ── */}
-          <View style={s.middleSection}>
-            {/* Urgency Countdown Timer */}
-            <Animated.View entering={FadeInDown.delay(150).duration(400)} style={s.badgeWrap}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,60,60,0.08)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,60,60,0.2)' }}>
-                <Ionicons name="timer-outline" size={13} color="#FF6B6B" />
-                <Text style={{ fontSize: 9, fontWeight: '800', color: '#FF6B6B', letterSpacing: 0.5 }}>
-                  {lang === 'si' ? 'පිරිනැමීම අවසන් වෙයි:' : 'OFFER ENDS IN:'}
-                </Text>
-                <Animated.View style={[{ backgroundColor: 'rgba(255,60,60,0.15)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }, timerPulseStyle]}>
-                  <Text style={{ fontSize: 12, fontWeight: '900', color: '#FF4444', fontVariant: ['tabular-nums'], letterSpacing: 1 }}>{countdownStr}</Text>
-                </Animated.View>
+          {/* ── Title + subtitle ── */}
+          <Animated.View entering={FadeInDown.delay(250).duration(500)} style={s.titleWrap}>
+            <Text style={s.heroTitle}>{content.title}</Text>
+            <Text style={s.heroSub}>{content.subtitle}</Text>
+          </Animated.View>
+
+          {/* ── Features ── */}
+          <Animated.View entering={FadeInDown.delay(350).duration(500)} style={s.featCard}>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.04)', 'rgba(147,51,234,0.03)', 'rgba(255,184,0,0.015)']}
+              style={s.featCardInner}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            >
+              {content.features.map(function (feat, i) {
+                return (
+                  <View key={i} style={s.featRow}>
+                    <View style={[s.featDot, { backgroundColor: accent.primary }]} />
+                    <Text style={s.featText} numberOfLines={2}>{feat}</Text>
+                  </View>
+                );
+              })}
+            </LinearGradient>
+          </Animated.View>
+
+          {/* ── Price ── */}
+          <Animated.View entering={ZoomIn.delay(450).duration(400).springify()} style={s.priceWrap}>
+            {loadingOfferings && !isOneTime ? (
+              <ActivityIndicator size="small" color={accent.primary} />
+            ) : (
+              <View style={s.priceRow}>
+                <Text style={[s.priceAmount, { color: accent.primary }]} numberOfLines={1}>{getDisplayPrice()}</Text>
+                <Text style={s.pricePeriod} numberOfLines={1}>{getPriceSuffix()}</Text>
               </View>
-            </Animated.View>
+            )}
+          </Animated.View>
 
-            {/* Live Counter */}
-            <Animated.View entering={FadeInDown.delay(200).duration(350)} style={{ marginBottom: IS_SMALL ? 6 : 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Animated.View style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#34D399' }, liveDotStyle]} />
-                <Text style={{ fontSize: 9, fontWeight: '700', color: '#34D399', letterSpacing: 0.3 }}>
-                  {lang === 'si' ? 'අද ' + liveUsers.toLocaleString() + ' දෙනෙක් එක්වුණා' : liveUsers.toLocaleString() + ' people joined today'}
-                </Text>
-              </View>
-            </Animated.View>
+          {/* ── Error ── */}
+          {error ? (
+            <View style={s.errorWrap}>
+              <Ionicons name="alert-circle" size={13} color="#FF6B6B" />
+              <Text style={s.errorText} numberOfLines={4}>{error}</Text>
+            </View>
+          ) : null}
 
-            {/* Title */}
-            <Animated.View entering={FadeInDown.delay(300).duration(500)} style={s.titleWrap}>
-              <Text style={s.heroTitle}>{content.title}</Text>
-              <Text style={s.heroSub}>{content.subtitle}</Text>
-            </Animated.View>
-
-            {/* Features */}
-            <Animated.View entering={FadeInDown.delay(400).duration(500)} style={s.featCard}>
-              <LinearGradient
-                colors={['rgba(255,255,255,0.04)', 'rgba(147,51,234,0.03)', 'rgba(255,184,0,0.015)']}
-                style={s.featCardInner}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          {/* ── CTA ── */}
+          <Animated.View entering={FadeInUp.delay(550).duration(500)} style={s.ctaOuter}>
+            <Animated.View style={[s.ctaHalo, btnShadowStyle, { backgroundColor: accent.primary + '1F' }]} />
+            <Animated.View style={btnGlowStyle}>
+              <TouchableOpacity
+                onPress={handlePurchase}
+                disabled={purchasing || (!isOneTime && loadingOfferings)}
+                activeOpacity={0.85}
               >
-                {content.features.map(function (feat, i) {
-                  return (
-                    <View key={i} style={s.featRow}>
-                      <View style={[s.featDot, { backgroundColor: accent.primary }]} />
-                      <Text style={s.featText} numberOfLines={2}>{feat}</Text>
-                    </View>
-                  );
-                })}
-              </LinearGradient>
-            </Animated.View>
-
-            {/* Testimonial */}
-            {src === 'onboarding' ? (
-              <Animated.View entering={FadeInDown.delay(450).duration(400)} style={{ width: '100%', marginBottom: IS_SMALL ? 2 : 4 }}>
-                <View style={{ backgroundColor: 'rgba(167,139,250,0.05)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 10, borderWidth: 1, borderColor: 'rgba(167,139,250,0.10)' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 2 }}>
-                    {[0, 1, 2, 3, 4].map(function (s) { return <Ionicons key={s} name="star" size={9} color="#FFB800" />; })}
-                    <Text style={{ fontSize: 8, fontWeight: '700', color: 'rgba(255,255,255,0.35)', marginLeft: 3 }}>{currentTestimonial.name}</Text>
-                  </View>
-                  <Text style={{ fontSize: 10, fontWeight: '600', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', lineHeight: 14 }} numberOfLines={2}>{currentTestimonial.text}</Text>
-                </View>
-              </Animated.View>
-            ) : null}
-
-          </View>
-
-          {/* ── BOTTOM: Price + Error + CTA + Footer ── */}
-          <View style={s.bottomSection}>
-            {/* Price */}
-            <Animated.View entering={ZoomIn.delay(550).duration(400).springify()} style={s.priceWrap}>
-              {loadingOfferings && !isOneTime ? (
-                <ActivityIndicator size="small" color={accent.primary} />
-              ) : (
-                <View style={{ alignItems: 'center' }}>
-                  {/* Anchoring: show comparison to real astrologer */}
-                  {!isOneTime ? (
-                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 4, textAlign: 'center' }}>
-                      {lang === 'si' ? '🔮 සාමාන්‍ය ජ්‍යෝතිෂවේදියෙක්ගෙන් රු. 3,000+' : '🔮 A real astrologer costs ' + (isInternational ? '$50+' : 'LKR 3,000+') + ' per visit'}
-                    </Text>
-                  ) : null}
-                  <View style={s.priceRow}>
-                    {/* Crossed-out anchor price */}
-                    {!isOneTime ? (
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,100,100,0.5)', textDecorationLine: 'line-through', marginRight: 6 }}>{isInternational ? '$9.99' : 'රු.500'}</Text>
-                    ) : null}
-                    <Text style={[s.priceAmount, { color: accent.primary }]}>{getDisplayPrice()}</Text>
-                    <Text style={s.pricePeriod}>{getPriceSuffix()}</Text>
-                  </View>
-                  {/* Per-day breakdown */}
-                  {!isOneTime ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                      <View style={{ backgroundColor: 'rgba(52,211,153,0.12)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                        <Text style={{ fontSize: 8, fontWeight: '800', color: '#34D399' }}>
-                          {isInternational ? 'SAVE 50%' : 'SAVE 44%'}
-                        </Text>
-                      </View>
-                      <Text style={{ fontSize: 9, color: 'rgba(52,211,153,0.7)', fontWeight: '600' }}>
-                        {lang === 'si' ? 'දවසට රු. 9 — තේ එකකටත් වඩා අඩුයි ☕' : 'Only ' + (isInternational ? '$0.17' : 'LKR 9') + '/day ☕'}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-              )}
-            </Animated.View>
-
-            {/* Error */}
-            {error ? (
-              <View style={s.errorWrap}>
-                <Ionicons name="alert-circle" size={13} color="#FF6B6B" />
-                <Text style={s.errorText} numberOfLines={2}>{error}</Text>
-              </View>
-            ) : null}
-
-            {/* CTA Button */}
-            <Animated.View entering={FadeInUp.delay(650).duration(500)} style={s.ctaOuter}>
-              <Animated.View style={[s.ctaHalo, btnShadowStyle, { backgroundColor: accent.primary + '1F' }]} />
-              <Animated.View style={btnGlowStyle}>
-                <TouchableOpacity
-                  onPress={handlePurchase}
-                  disabled={purchasing || (!isOneTime && loadingOfferings)}
-                  activeOpacity={0.85}
+                <LinearGradient
+                  colors={purchasing ? ['#555', '#444'] : accent.gradient}
+                  style={s.ctaBtn}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 >
-                  <LinearGradient
-                    colors={purchasing ? ['#555', '#444'] : accent.gradient}
-                    style={s.ctaBtn}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                  >
-                    {purchasing ? (
-                      <ActivityIndicator size="small" color="#FFF" />
-                    ) : (
-                      <View style={s.ctaInner}>
-                        <Ionicons name={src === 'porondam' ? 'heart' : src === 'report' ? 'document-text' : 'lock-open'} size={18} color="#FFF" />
-                        <Text style={s.ctaText}>{content.cta}</Text>
-                        <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
-                      </View>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-              </Animated.View>
+                  {purchasing ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <View style={s.ctaInner}>
+                      <Ionicons name={src === 'porondam' ? 'heart' : src === 'report' ? 'document-text' : 'lock-open'} size={18} color="#FFF" />
+                      <Text style={s.ctaText} numberOfLines={1}>{content.cta}</Text>
+                      <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
+                    </View>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
             </Animated.View>
+          </Animated.View>
 
-            {/* Sub-CTA */}
-            <Text style={s.ctaSub}>{content.ctaSub}</Text>
+          {/* ── Sub-CTA ── */}
+          <Text style={s.ctaSub}>{content.ctaSub}</Text>
 
-            {/* Footer */}
-            <View style={s.footerRow}>
-              <Ionicons name="shield-checkmark-outline" size={10} color="#34D399" />
-              <Text style={s.footerText}>
-                {Platform.OS === 'ios' ? shared.secured.replace('Google Play', 'App Store') : shared.secured}
-              </Text>
-            </View>
-            <View style={s.footerLinksRow}>
-              {!isOneTime ? (
-                <>
-                  <TouchableOpacity onPress={handleRestore} disabled={restoring}>
-                    <Text style={[s.footerLink, { color: accent.primary + '80' }]}>{restoring ? '...' : shared.restore}</Text>
-                  </TouchableOpacity>
-                  <Text style={s.footerDot}>{'\u00B7'}</Text>
-                </>
-              ) : null}
-              <TouchableOpacity onPress={function () { Linking.openURL('https://grahachara.com/legal/terms.html'); }}>
-                <Text style={[s.footerLink, { color: accent.primary + '80' }]}>{shared.terms}</Text>
-              </TouchableOpacity>
-              <Text style={s.footerDot}>{'\u00B7'}</Text>
-              <TouchableOpacity onPress={function () { Linking.openURL('https://grahachara.com/legal/privacy.html'); }}>
-                <Text style={[s.footerLink, { color: accent.primary + '80' }]}>{shared.privacy}</Text>
-              </TouchableOpacity>
-            </View>
+          {/* ── Footer ── */}
+          <View style={s.footerRow}>
+            <Ionicons name="shield-checkmark-outline" size={10} color="#34D399" />
+            <Text style={s.footerText}>
+              {Platform.OS === 'ios' ? shared.secured.replace('Google Play', 'App Store') : shared.secured}
+            </Text>
+          </View>
+          <View style={s.footerLinksRow}>
+            {!isOneTime ? (
+              <>
+                <TouchableOpacity onPress={handleRestore} disabled={restoring}>
+                  <Text style={[s.footerLink, { color: accent.primary + '80' }]}>{restoring ? '...' : shared.restore}</Text>
+                </TouchableOpacity>
+                <Text style={s.footerDot}>{'\u00B7'}</Text>
+              </>
+            ) : null}
+            <TouchableOpacity onPress={function () { Linking.openURL('https://grahachara.com/legal/terms.html'); }}>
+              <Text style={[s.footerLink, { color: accent.primary + '80' }]}>{shared.terms}</Text>
+            </TouchableOpacity>
+            <Text style={s.footerDot}>{'\u00B7'}</Text>
+            <TouchableOpacity onPress={function () { Linking.openURL('https://grahachara.com/legal/privacy.html'); }}>
+              <Text style={[s.footerLink, { color: accent.primary + '80' }]}>{shared.privacy}</Text>
+            </TouchableOpacity>
           </View>
 
-        </View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -684,6 +622,7 @@ var s = StyleSheet.create({
     height: CHAKRA_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: IS_SMALL ? 4 : 8,
   },
   logoCircle: {
     alignItems: 'center',
@@ -716,7 +655,7 @@ var s = StyleSheet.create({
     textAlign: 'center',
   },
 
-  titleWrap: { alignItems: 'center', marginBottom: IS_SMALL ? 6 : 8 },
+  titleWrap: { alignItems: 'center', marginBottom: IS_SMALL ? 8 : 12, width: '100%' },
   heroTitle: {
     fontSize: IS_SMALL ? 20 : IS_MEDIUM ? 24 : 30,
     fontWeight: '900',
@@ -743,7 +682,7 @@ var s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
     overflow: 'hidden',
-    marginBottom: IS_SMALL ? 2 : 4,
+    marginBottom: IS_SMALL ? 8 : 12,
     ...boxShadow('rgba(147,51,234,0.12)', { width: 0, height: 4 }, 0.4, 12),
   },
   featCardInner: {
@@ -773,24 +712,26 @@ var s = StyleSheet.create({
   priceWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: IS_SMALL ? 3 : 5,
+    paddingVertical: IS_SMALL ? 8 : 12,
+    width: '100%',
   },
   priceRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'baseline',
+    justifyContent: 'center',
     gap: 4,
+    flexWrap: 'nowrap',
   },
   priceAmount: {
-    fontSize: IS_SMALL ? 26 : IS_MEDIUM ? 32 : 38,
+    fontSize: IS_SMALL ? 30 : IS_MEDIUM ? 36 : 42,
     fontWeight: '900',
     letterSpacing: -1,
     ...textShadow('rgba(255,184,0,0.45)', { width: 0, height: 0 }, 16),
   },
   pricePeriod: {
-    fontSize: IS_SMALL ? 11 : 13,
+    fontSize: IS_SMALL ? 12 : 14,
     fontWeight: '700',
     color: 'rgba(255,220,160,0.55)',
-    marginBottom: IS_SMALL ? 3 : 5,
   },
 
   // ── BOTTOM ──
@@ -816,7 +757,8 @@ var s = StyleSheet.create({
 
   ctaOuter: {
     position: 'relative',
-    marginBottom: 4,
+    marginTop: 4,
+    marginBottom: 8,
     width: '100%',
   },
   ctaHalo: {

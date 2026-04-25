@@ -56,7 +56,7 @@ const PLANET_INFO = {
 //   rashiForHouse(N) = ((lagnaRashiId - 1 + (N - 1)) % 12) + 1
 // ============================================================
 
-export default function SriLankanChart({ rashiChart, lagnaRashiId, language, chartSize: customSize }) {
+function SriLankanChart({ rashiChart, lagnaRashiId, language, chartSize: customSize }) {
   const chartSize = customSize || Math.min(SCREEN_WIDTH - 40, 360);
   const cellW = chartSize / 3;
   const cellH = chartSize / 3;
@@ -385,3 +385,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end', alignItems: 'flex-start',
   },
 });
+
+// Memoized to prevent re-renders when props are stable.
+export default React.memo(SriLankanChart);

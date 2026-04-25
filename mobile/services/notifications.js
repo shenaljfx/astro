@@ -64,7 +64,7 @@ export async function registerForPushNotifications() {
 
   // Only real devices can receive push notifications
   if (!Device.isDevice) {
-    console.log('[Notifications] Push notifications require a physical device');
+    if (__DEV__) console.log('[Notifications] Push notifications require a physical device');
     return null;
   }
 
@@ -79,22 +79,29 @@ export async function registerForPushNotifications() {
   }
 
   if (finalStatus !== 'granted') {
-    console.log('[Notifications] Permission not granted');
+    if (__DEV__) console.log('[Notifications] Permission not granted');
     return null;
   }
 
-  // Get the Expo push token
+  // Get the Expo push token — use real EAS projectId from app.json
   try {
-    var tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: 'grahachara', // Your Expo project ID
-    });
+    var Constants = require('expo-constants').default;
+    var projectId =
+      (Constants && Constants.expoConfig && Constants.expoConfig.extra && Constants.expoConfig.extra.eas && Constants.expoConfig.extra.eas.projectId) ||
+      (Constants && Constants.easConfig && Constants.easConfig.projectId) ||
+      null;
+    if (!projectId) {
+      if (__DEV__) console.warn('[Notifications] No EAS projectId found — cannot get push token');
+      return null;
+    }
+    var tokenData = await Notifications.getExpoPushTokenAsync({ projectId: projectId });
     token = tokenData.data;
-    console.log('[Notifications] Push token:', token);
+    if (__DEV__) console.log('[Notifications] Push token:', token);
 
     // Cache token locally
     await AsyncStorage.setItem('pushToken', token);
   } catch (err) {
-    console.error('[Notifications] Token error:', err);
+    console.warn('[Notifications] Token error:', err && err.message);
   }
 
   // Setup Android channels

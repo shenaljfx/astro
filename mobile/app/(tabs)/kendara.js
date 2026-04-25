@@ -21,6 +21,7 @@ import CosmicCard from '../../components/ui/CosmicCard';
 import SectionHeader from '../../components/ui/SectionHeader';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import PremiumBackground from '../../components/PremiumBackground';
+import useScreenInsets from '../../hooks/useScreenInsets';
 
 const CHART_CACHE_KEY = '@grahachara_chart_cache';
 
@@ -218,6 +219,7 @@ export default function KendaraScreen() {
   const { user } = useAuth();
   const router = useRouter();
   var isDesktop = useDesktopCtx();
+  var insets = useScreenInsets();
 
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -1463,7 +1465,7 @@ export default function KendaraScreen() {
     <View style={{ flex: 1, backgroundColor: '#04030C' }}>
       <PremiumBackground />
       <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#60A5FA" />}>
-        <View style={[styles.content, isDesktop && styles.contentDesktop]}>
+        <View style={[styles.content, isDesktop && styles.contentDesktop, !isDesktop && { paddingTop: insets.contentTop }]}>
           <Animated.View entering={FadeIn.duration(700)} style={styles.pageTitleRow}>
             <View>
               <Text style={styles.pageTitle}>
@@ -1484,7 +1486,7 @@ export default function KendaraScreen() {
           </Animated.View>
           {renderContent()}
         </View>
-        <View style={{ height: isDesktop ? 32 : 110 }} />
+        <View style={{ height: isDesktop ? 32 : insets.contentBottom }} />
       </ScrollView>
     </View>
     </DesktopScreenWrapper>

@@ -41,9 +41,6 @@ var ENTITLEMENT_ID = 'Grahachara Pro';
 
 // Mock payments — bypass RevenueCat when EXPO_PUBLIC_MOCK_PAYMENTS=true
 var MOCK_PAYMENTS = process.env.EXPO_PUBLIC_MOCK_PAYMENTS === 'true';
-if (MOCK_PAYMENTS) {
-  console.log('[RevenueCat] 🧪 MOCK MODE — all purchases will auto-succeed');
-}
 
 // Product identifiers (must match RevenueCat dashboard & Google Play Console)
 var PRODUCT_IDS = {
@@ -56,6 +53,8 @@ var PRODUCT_IDS = {
   porondam_check: 'porondam_check',
 };
 
+export { PRODUCT_IDS, ENTITLEMENT_ID };
+
 var _initialized = false;
 
 // ─── Initialize RevenueCat ──────────────────────────────────────
@@ -66,33 +65,22 @@ var _initialized = false;
  */
 export async function initRevenueCat(appUserID) {
   if (_initialized) return;
-  if (MOCK_PAYMENTS) {
-    _initialized = true;
-    console.log('[RevenueCat] 🧪 Mock init — skipping SDK setup');
-    return;
-  }
-  if (!Purchases) {
-    console.log('[RevenueCat] Skipped init (web/unavailable)');
-    _initialized = true;
-    return;
-  }
+  if (MOCK_PAYMENTS) { _initialized = true; return; }
+  if (!Purchases) { _initialized = true; return; }
 
   try {
-    // Enable verbose logging in dev
     if (__DEV__) {
-      Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+      Purchases.setLogLevel(LOG_LEVEL.WARN);
     }
 
-    // Configure with API key
     await Purchases.configure({
       apiKey: API_KEY,
       appUserID: appUserID || null,
     });
 
     _initialized = true;
-    console.log('[RevenueCat] ✔ Initialized' + (appUserID ? ' for user: ' + appUserID : ' (anonymous)'));
   } catch (err) {
-    console.error('[RevenueCat] ✘ Init failed:', err.message);
+    console.warn('[RevenueCat] Init failed:', err && err.message);
     throw err;
   }
 }
@@ -106,14 +94,13 @@ export async function initRevenueCat(appUserID) {
  * @returns {Object} { customerInfo, created }
  */
 export async function loginUser(appUserID) {
-  if (MOCK_PAYMENTS) { console.log('[RevenueCat] 🧪 Mock login:', appUserID); return { customerInfo: null, created: false }; }
+  if (MOCK_PAYMENTS) return { customerInfo: null, created: false };
   if (!Purchases) return { customerInfo: null, created: false };
   try {
     var result = await Purchases.logIn(appUserID);
-    console.log('[RevenueCat] ✔ Logged in as:', appUserID, 'created:', result.created);
     return result;
   } catch (err) {
-    console.error('[RevenueCat] ✘ Login failed:', err.message);
+    console.warn('[RevenueCat] Login failed:', err && err.message);
     throw err;
   }
 }
@@ -123,14 +110,13 @@ export async function loginUser(appUserID) {
  * Call when the user signs out of your app.
  */
 export async function logoutUser() {
-  if (MOCK_PAYMENTS) { console.log('[RevenueCat] 🧪 Mock logout'); return null; }
+  if (MOCK_PAYMENTS) return null;
   if (!Purchases) return null;
   try {
     var info = await Purchases.logOut();
-    console.log('[RevenueCat] ✔ Logged out');
     return info;
   } catch (err) {
-    console.error('[RevenueCat] ✘ Logout failed:', err.message);
+    console.warn('[RevenueCat] Logout failed:', err && err.message);
     throw err;
   }
 }
@@ -227,15 +213,14 @@ export async function getOfferings() {
       },
     };
   }
-  if (!Purchases) return null;
+  if (!Purchases) {
+    return null;
+  }
   try {
     var offerings = await Purchases.getOfferings();
-    if (!offerings.current) {
-      console.warn('[RevenueCat] No current offering configured');
-    }
     return offerings;
   } catch (err) {
-    console.error('[RevenueCat] ✘ Get offerings failed:', err.message);
+    console.warn('[RevenueCat] getOfferings failed:', err && err.message);
     return null;
   }
 }
@@ -257,10 +242,12 @@ export async function purchasePackage(pkg) {
     };
   }
   if (!Purchases) throw new Error('Purchases not available on this platform');
+  if (!pkg) {
+    throw new Error('No package selected');
+  }
   try {
     var result = await Purchases.purchasePackage(pkg);
     var isActive = result.customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
-    console.log('[RevenueCat] ✔ Purchase complete, pro active:', isActive);
     return {
       customerInfo: result.customerInfo,
       productIdentifier: pkg.product.identifier,
@@ -268,10 +255,9 @@ export async function purchasePackage(pkg) {
     };
   } catch (err) {
     if (err.userCancelled) {
-      console.log('[RevenueCat] Purchase cancelled by user');
       throw new Error('Payment cancelled');
     }
-    console.error('[RevenueCat] ✘ Purchase failed:', err.message);
+    console.warn('[RevenueCat] Purchase failed:', err && err.message);
     throw err;
   }
 }
@@ -284,11 +270,11 @@ export async function purchasePackage(pkg) {
  */
 export async function purchaseOneTimeProduct(productId) {
   if (MOCK_PAYMENTS) {
-    console.log('[RevenueCat] 🧪 Mock one-time purchase:', productId);
     return {
       customerInfo: null,
       productIdentifier: productId,
       purchased: true,
+      isProActive: true,
     };
   }
   if (!Purchases) throw new Error('Purchases not available on this platform');
@@ -296,39 +282,53 @@ export async function purchaseOneTimeProduct(productId) {
     // Get offerings to find the package with this product
     var offerings = await Purchases.getOfferings();
     var pkg = null;
-    if (offerings && offerings.current) {
+    if (offerings && offerings.current && offerings.current.availablePackages) {
       pkg = offerings.current.availablePackages.find(function(p) {
         return p.product && p.product.identifier === productId;
       });
     }
-    // If found in offerings, purchase as package
+    // Also scan all offerings if not found in current
+    if (!pkg && offerings && offerings.all) {
+      var keys = Object.keys(offerings.all);
+      for (var k = 0; k < keys.length; k++) {
+        var off = offerings.all[keys[k]];
+        if (off && off.availablePackages) {
+          var found = off.availablePackages.find(function (p) {
+            return p.product && p.product.identifier === productId;
+          });
+          if (found) { pkg = found; break; }
+        }
+      }
+    }
+    // If found in offerings, purchase as package (preferred path)
     if (pkg) {
       var result = await Purchases.purchasePackage(pkg);
-      console.log('[RevenueCat] ✔ One-time purchase complete:', productId);
+      var isActiveA = result.customerInfo && result.customerInfo.entitlements && result.customerInfo.entitlements.active && result.customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
       return {
         customerInfo: result.customerInfo,
         productIdentifier: productId,
         purchased: true,
+        isProActive: isActiveA,
       };
     }
-    // Fallback: purchase directly by product ID (StoreProduct)
+    // Fallback: no offering configured — buy by product ID directly (StoreProduct)
     var products = await Purchases.getProducts([productId]);
     if (!products || products.length === 0) {
-      throw new Error('Product not found: ' + productId);
+      throw new Error('Product unavailable');
     }
     var storeResult = await Purchases.purchaseStoreProduct(products[0]);
-    console.log('[RevenueCat] ✔ One-time purchase (direct) complete:', productId);
+    var isActiveB = storeResult.customerInfo && storeResult.customerInfo.entitlements && storeResult.customerInfo.entitlements.active && storeResult.customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
     return {
       customerInfo: storeResult.customerInfo,
       productIdentifier: productId,
       purchased: true,
+      isProActive: isActiveB,
     };
   } catch (err) {
-    if (err.userCancelled) {
-      console.log('[RevenueCat] One-time purchase cancelled by user');
+    if (err && err.userCancelled) {
       throw new Error('Payment cancelled');
     }
-    console.error('[RevenueCat] ✘ One-time purchase failed:', err.message);
+    console.warn('[RevenueCat] Purchase failed:', err && err.message);
     throw err;
   }
 }
@@ -341,8 +341,8 @@ export async function purchaseOneTimeProduct(productId) {
  * @returns {boolean} true if purchase/restore succeeded
  */
 export async function presentPaywall() {
-  if (MOCK_PAYMENTS) { console.log('[RevenueCat] 🧪 Mock paywall — auto-purchased'); return true; }
-  if (IS_WEB) { console.warn('[RevenueCat] Paywall not available on web'); return false; }
+  if (MOCK_PAYMENTS) return true;
+  if (IS_WEB) return false;
   try {
     var RevenueCatUI = require('react-native-purchases-ui').default;
     var PAYWALL_RESULT = require('react-native-purchases-ui').PAYWALL_RESULT;
@@ -352,22 +352,15 @@ export async function presentPaywall() {
     switch (result) {
       case PAYWALL_RESULT.PURCHASED:
       case PAYWALL_RESULT.RESTORED:
-        console.log('[RevenueCat] ✔ Paywall: purchase/restore succeeded');
-        return true;
       case PAYWALL_RESULT.NOT_PRESENTED:
-        console.log('[RevenueCat] Paywall not presented (already subscribed?)');
         return true;
       case PAYWALL_RESULT.ERROR:
-        console.warn('[RevenueCat] Paywall error');
-        return false;
       case PAYWALL_RESULT.CANCELLED:
-        console.log('[RevenueCat] Paywall cancelled by user');
-        return false;
       default:
         return false;
     }
   } catch (err) {
-    console.error('[RevenueCat] ✘ Present paywall failed:', err.message);
+    console.warn('[RevenueCat] Paywall failed:', err && err.message);
     throw err;
   }
 }
@@ -378,8 +371,8 @@ export async function presentPaywall() {
  * @returns {boolean} true if user has entitlement (either already or after purchase)
  */
 export async function presentPaywallIfNeeded() {
-  if (MOCK_PAYMENTS) { console.log('[RevenueCat] 🧪 Mock paywall if needed — already pro'); return true; }
-  if (IS_WEB) { console.warn('[RevenueCat] Paywall not available on web'); return false; }
+  if (MOCK_PAYMENTS) return true;
+  if (IS_WEB) return false;
   try {
     var RevenueCatUI = require('react-native-purchases-ui').default;
     var PAYWALL_RESULT = require('react-native-purchases-ui').PAYWALL_RESULT;
@@ -399,7 +392,7 @@ export async function presentPaywallIfNeeded() {
         return false;
     }
   } catch (err) {
-    console.error('[RevenueCat] ✘ Present paywall if needed failed:', err.message);
+    console.warn('[RevenueCat] Paywall failed:', err && err.message);
     throw err;
   }
 }
@@ -411,31 +404,19 @@ export async function presentPaywallIfNeeded() {
  * Allows users to: cancel, request refund, change plan, restore purchases.
  */
 export async function presentCustomerCenter() {
-  if (IS_WEB) { console.warn('[RevenueCat] Customer Center not available on web'); return; }
+  if (IS_WEB) return;
   try {
     var RevenueCatUI = require('react-native-purchases-ui').default;
 
     await RevenueCatUI.presentCustomerCenter({
       callbacks: {
-        onFeedbackSurveyCompleted: function(param) {
-          console.log('[RevenueCat] Feedback survey completed:', param.feedbackSurveyOptionId);
-        },
-        onShowingManageSubscriptions: function() {
-          console.log('[RevenueCat] Showing manage subscriptions');
-        },
-        onRestoreStarted: function() {
-          console.log('[RevenueCat] Restore started from Customer Center');
-        },
-        onRestoreCompleted: function(param) {
-          console.log('[RevenueCat] Restore completed from Customer Center');
-        },
         onRestoreFailed: function(param) {
-          console.warn('[RevenueCat] Restore failed from Customer Center:', param.error);
+          console.warn('[RevenueCat] Restore failed:', param && param.error);
         },
       },
     });
   } catch (err) {
-    console.error('[RevenueCat] ✘ Present customer center failed:', err.message);
+    console.warn('[RevenueCat] Customer Center failed:', err && err.message);
     throw err;
   }
 }
@@ -452,10 +433,9 @@ export async function restorePurchases() {
   try {
     var customerInfo = await Purchases.restorePurchases();
     var isActive = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
-    console.log('[RevenueCat] ✔ Purchases restored, pro active:', isActive);
     return { customerInfo: customerInfo, isProActive: isActive };
   } catch (err) {
-    console.error('[RevenueCat] ✘ Restore purchases failed:', err.message);
+    console.warn('[RevenueCat] Restore failed:', err && err.message);
     throw err;
   }
 }

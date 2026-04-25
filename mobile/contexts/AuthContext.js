@@ -35,6 +35,7 @@ import {
   restorePurchases,
   addCustomerInfoListener,
 } from '../services/revenuecat';
+import { registerForPushNotifications } from '../services/notifications';
 import { auth as firebaseAuth, GoogleAuthProvider, signInWithPopup, signInWithCredential } from '../services/firebase';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
@@ -45,6 +46,7 @@ var AuthContext = createContext(null);
 var STORAGE_TOKEN = 'grahachara_auth_token';
 var STORAGE_USER = 'grahachara_user_profile';
 var STORAGE_ONBOARDING = 'grahachara_onboarding_done';
+var STORAGE_PUSH_REGISTERED = 'grahachara_push_registered_for';
 
 function getBaseUrl() {
   if (!__DEV__) return 'https://api.grahachara.com';
@@ -58,6 +60,32 @@ function getBaseUrl() {
   if (Platform.OS === 'android') return 'http://10.0.2.2:3000';
   
   return 'http://localhost:3000';
+}
+
+// Register push token with server after auth. Idempotent — only POSTs once
+// per (uid, token) pair via AsyncStorage marker so we don't spam the API.
+async function registerPushTokenWithServer(authToken, uid) {
+  try {
+    if (!authToken || !uid) return;
+    var pushToken = await registerForPushNotifications();
+    if (!pushToken) return;
+    var marker = await AsyncStorage.getItem(STORAGE_PUSH_REGISTERED);
+    var key = uid + ':' + pushToken;
+    if (marker === key) return; // already registered this pair
+    var res = await fetch(getBaseUrl() + '/api/notifications/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + authToken,
+      },
+      body: JSON.stringify({ pushToken: pushToken, platform: Platform.OS }),
+    });
+    if (res && res.ok) {
+      await AsyncStorage.setItem(STORAGE_PUSH_REGISTERED, key);
+    }
+  } catch (err) {
+    if (__DEV__) console.warn('[Auth] Push register failed (non-fatal):', err && err.message);
+  }
 }
 
 function maskValue(value, visibleChars) {
@@ -204,6 +232,9 @@ export function AuthProvider({ children }) {
 
         // Refresh profile from server in background
         refreshProfile(savedToken);
+
+        // Register for push notifications (idempotent, fires once per token)
+        registerPushTokenWithServer(savedToken, userData.uid);
       }
     } catch (err) {
       console.warn('Failed to load saved auth:', err.message);
@@ -378,6 +409,9 @@ export function AuthProvider({ children }) {
               console.warn('[Auth] RevenueCat login after Google auth failed (non-fatal):', rcErr.message);
             }
           }
+
+          // Register for push notifications (idempotent)
+          registerPushTokenWithServer(authToken, userData.uid);
 
           return {
             success: true,

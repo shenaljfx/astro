@@ -623,7 +623,7 @@ function PhaseTransition({ tithiNum, children }) {
   );
 }
 
-export default function RealisticMoon({ size, tithiNum, animate, showStars }) {
+function RealisticMoon({ size, tithiNum, animate, showStars }) {
   if (size === undefined) size = 160;
   if (tithiNum === undefined) tithiNum = 8;
   if (animate === undefined) animate = true;
@@ -648,3 +648,5 @@ export default function RealisticMoon({ size, tithiNum, animate, showStars }) {
   }
   return moonContent;
 }
+// Memoized to prevent re-renders when props are stable.
+export default React.memo(RealisticMoon);

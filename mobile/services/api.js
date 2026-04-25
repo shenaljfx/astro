@@ -42,10 +42,10 @@ async function request(path, opts) {
   var url = BASE + path;
   var method = opts.method || 'GET';
   var startMs = Date.now();
-  console.log('[API] ▶ ' + method + ' ' + url + (retries > 0 ? ' (retry ' + retries + ')' : '') + ' timeout=' + timeout + 'ms');
+  if (__DEV__) console.log('[API] ▶ ' + method + ' ' + url + (retries > 0 ? ' (retry ' + retries + ')' : '') + ' timeout=' + timeout + 'ms');
   var controller = new AbortController();
   var timer = setTimeout(function() {
-    console.log('[API] ⏰ TIMEOUT after ' + timeout + 'ms: ' + url);
+    if (__DEV__) console.log('[API] ⏰ TIMEOUT after ' + timeout + 'ms: ' + url);
     controller.abort('Request timeout');
   }, timeout);
 
@@ -67,10 +67,10 @@ async function request(path, opts) {
         hasToken = true;
       }
     } catch (e) {
-      console.log('[API] ⚠ Token getter failed:', e.message);
+      if (__DEV__) console.log('[API] ⚠ Token getter failed:', e.message);
     }
   }
-  console.log('[API]   auth=' + (hasToken ? 'yes' : 'no') + ' body=' + (opts.body ? opts.body.length + 'b' : 'none'));
+  if (__DEV__) console.log('[API]   auth=' + (hasToken ? 'yes' : 'no') + ' body=' + (opts.body ? opts.body.length + 'b' : 'none'));
 
   try {
     var res = await fetch(url, {
@@ -80,38 +80,38 @@ async function request(path, opts) {
     });
     clearTimeout(timer);
     var elapsed = Date.now() - startMs;
-    console.log('[API] ◀ ' + res.status + ' ' + url + ' (' + elapsed + 'ms)');
+    if (__DEV__) console.log('[API] ◀ ' + res.status + ' ' + url + ' (' + elapsed + 'ms)');
     var text = await res.text();
     var json;
     try {
       json = JSON.parse(text);
     } catch (parseErr) {
-      console.error('[API] ✖ JSON parse failed for ' + url + ':', text.substring(0, 200));
+      if (__DEV__) console.error('[API] ✖ JSON parse failed for ' + url + ':', text.substring(0, 200));
       throw new Error('Invalid server response (not JSON)');
     }
     if (!res.ok) {
-      console.error('[API] ✖ HTTP ' + res.status + ' ' + url + ':', json.error || text.substring(0, 200));
+      if (__DEV__) console.error('[API] ✖ HTTP ' + res.status + ' ' + url + ':', json.error || text.substring(0, 200));
       throw new Error(json.error || 'HTTP ' + res.status);
     }
-    console.log('[API] ✔ success=' + json.success + ' hasData=' + !!(json.data));
+    if (__DEV__) console.log('[API] ✔ success=' + json.success + ' hasData=' + !!(json.data));
     return json;
   } catch (err) {
     clearTimeout(timer);
     var elapsed2 = Date.now() - startMs;
     // Detect abort (timeout or manual cancel)
     if (err && (err.name === 'AbortError' || (err.message && err.message.indexOf('abort') !== -1))) {
-      console.log('[API] ✖ ABORT ' + url + ' after ' + elapsed2 + 'ms: ' + (err.message || 'no reason'));
+      if (__DEV__) console.log('[API] ✖ ABORT ' + url + ' after ' + elapsed2 + 'ms: ' + (err.message || 'no reason'));
       var abortErr = new Error('Request timeout — server took too long (' + elapsed2 + 'ms)');
       abortErr.name = 'AbortError';
       throw abortErr;
     }
     // Network errors (e.g. "Network request failed") — retry once
     if (retries < 1 && err && err.message && (err.message.indexOf('Network') !== -1 || err.message.indexOf('network') !== -1 || err.message.indexOf('Failed to fetch') !== -1)) {
-      console.log('[API] ✖ NETWORK ERROR ' + url + ' after ' + elapsed2 + 'ms: ' + err.message + ' — retrying in 2s...');
+      if (__DEV__) console.log('[API] ✖ NETWORK ERROR ' + url + ' after ' + elapsed2 + 'ms: ' + err.message + ' — retrying in 2s...');
       await new Promise(function(r) { setTimeout(r, 2000); });
       return request(path, { ...opts, _timeout: timeout, _retries: retries + 1 });
     }
-    console.error('[API] ✖ ERROR ' + url + ' after ' + elapsed2 + 'ms:', err.name, err.message);
+    if (__DEV__) console.error('[API] ✖ ERROR ' + url + ' after ' + elapsed2 + 'ms:', err.name, err.message);
     throw err;
   }
 }
@@ -182,7 +182,7 @@ export var getFullReport = function(birthDate, lat, lng, language) {
   return request('/api/horoscope/full-report', {
     method: 'POST',
     body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en' }),
-    _timeout: 60000,
+    _timeout: 300000,
   });
 };
 
