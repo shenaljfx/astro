@@ -158,7 +158,7 @@ router.post('/check', optionalAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error calculating Porondam:', error);
-    res.status(500).json({ error: 'Failed to calculate Porondam', details: error.message });
+    res.status(500).json({ error: 'Failed to calculate Porondam', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -467,7 +467,7 @@ WRITE THE REPORT:
 
     res.status(500).json({
       error: 'Failed to generate report',
-      details: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
       entitlementId: entitlementId || null,
       canRetry: !!entitlementId,
     });
@@ -532,7 +532,7 @@ router.post('/vibe-link', (req, res) => {
     });
   } catch (error) {
     console.error('Error generating vibe link:', error);
-    res.status(500).json({ error: 'Failed to generate vibe link', details: error.message });
+    res.status(500).json({ error: 'Failed to generate vibe link', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -585,7 +585,7 @@ router.post('/vibe-check/:linkId', (req, res) => {
     });
   } catch (error) {
     console.error('Error processing vibe check:', error);
-    res.status(500).json({ error: 'Failed to process vibe check', details: error.message });
+    res.status(500).json({ error: 'Failed to process vibe check', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 

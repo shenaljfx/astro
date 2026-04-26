@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
-import { View, Platform } from 'react-native';
+import { View, Platform, InteractionManager } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop, Path, G, ClipPath } from 'react-native-svg';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, withSpring, withDelay, interpolate, Easing } from 'react-native-reanimated';
 
@@ -7,6 +7,16 @@ var cachedColorPixels = null;
 var cachedNormPixels = null;
 var TWIDTH = 512;
 var THEIGHT = 256;
+
+// Pre-warm the lunar texture cache after interactions settle (avoids blocking JS thread on mount)
+if (Platform.OS !== 'web') {
+  InteractionManager.runAfterInteractions(function () {
+    // Trigger lazy generation in background — result is cached for assembleMoonScene()
+    setTimeout(function () {
+      try { buildLunarColorMap(); } catch (e) { /* silent */ }
+    }, 500);
+  });
+}
 
 var _rngState = 42;
 function _nextRand() {

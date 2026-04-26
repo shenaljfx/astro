@@ -17,8 +17,7 @@ import SpringPressable from '../../components/effects/SpringPressable';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
-import { boxShadow, textShadow } from '../../utils/shadow';
-import PremiumBackground from '../../components/PremiumBackground';
+import { boxShadow } from '../../utils/shadow';
 import useKeyboard from '../../hooks/useKeyboard';
 import { useTheme } from '../../contexts/ThemeContext';
 import { screenColors } from '../../constants/theme';
@@ -322,7 +321,19 @@ export default function ChatScreen() {
         setRemaining(Math.max(0, DAILY_LIMIT - usage.count));
       }
     } catch (e) {
-      setMsgs(function (p) { return p.concat([{ role: 'assistant', content: t('cosmosConnectionFailed') }]); });
+      var errMsg;
+      if (e && e.name === 'AbortError') {
+        errMsg = t('chatTimeout');
+      } else if (e && e.statusCode === 401) {
+        errMsg = t('chatAuthExpired');
+      } else if (e && e.statusCode === 429) {
+        errMsg = t('chatRateLimit');
+      } else if (e && e.message && (e.message.indexOf('Network') !== -1 || e.message.indexOf('network') !== -1 || e.message.indexOf('Failed to fetch') !== -1)) {
+        errMsg = t('cosmosConnectionFailed');
+      } else {
+        errMsg = t('starsClouded');
+      }
+      setMsgs(function (p) { return p.concat([{ role: 'assistant', content: errMsg }]); });
     } finally {
       setLoading(false);
     }
@@ -348,7 +359,6 @@ export default function ChatScreen() {
     return (
       <DesktopScreenWrapper routeName="chat">
         <View style={{ flex: 1, backgroundColor: colors.bg }}>
-          <PremiumBackground />
           <View style={sd.shell}>
             <View style={sd.panel}>
 
@@ -477,7 +487,6 @@ export default function ChatScreen() {
   return (
     <DesktopScreenWrapper routeName="chat">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <PremiumBackground />
       <View style={[s.header, { paddingTop: topPad }]}>
         <View style={s.avatar}>
           <LinearGradient colors={gradients.orangeButton} style={StyleSheet.absoluteFill} />

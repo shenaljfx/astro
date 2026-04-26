@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeInDown, FadeIn,
   useSharedValue, useAnimatedStyle,
-  withRepeat, withSequence, withTiming, withSpring,
+  withRepeat, withSequence, withTiming,
   interpolate, Easing,
 } from 'react-native-reanimated';
 import Svg, { Circle, Path, G, Defs, RadialGradient as SvgRadialGradient, Stop } from 'react-native-svg';
@@ -23,7 +23,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePricing } from '../../contexts/PricingContext';
 import CitySearchPicker from '../../components/CitySearchPicker';
 import { boxShadow, textShadow } from '../../utils/shadow';
-import PremiumBackground from '../../components/PremiumBackground';
 import useScreenInsets from '../../hooks/useScreenInsets';
 import { registerForPushNotifications } from '../../services/notifications';
 import { updateNotificationPreferences } from '../../services/api';
@@ -536,7 +535,6 @@ function ProfileScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
-        <PremiumBackground />
         <View style={s.centered}>
           <CosmicLoader size={56} color={sc.iconAccent} text={t('loading')} textColor={sc.iconAccent} />
         </View>
@@ -556,7 +554,6 @@ function ProfileScreen() {
   return (
     <DesktopScreenWrapper routeName="profile">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <PremiumBackground />
       <StatusBar barStyle={colors.statusBarStyle} />
       <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
 
@@ -730,7 +727,7 @@ function ProfileScreen() {
                       </Text>
                     </View>
                     <TouchableOpacity style={s.cancelBtn} onPress={function () {
-                      presentCustomerCenter().catch(function(e) { console.warn('Customer Center error:', e.message); });
+                      presentCustomerCenter().catch(function(e) { if (__DEV__) console.warn('Customer Center error:', e.message); });
                     }}>
                       <Text style={s.cancelBtnText}>{t('manageSub') || t('subCancel')}</Text>
                     </TouchableOpacity>
@@ -807,9 +804,14 @@ function ProfileScreen() {
             <Animated.View entering={FadeInDown.delay(420).duration(700)}>
               <GCard accent="#FFB800">
                 <SectionHeader icon="information-circle-outline" title={t('about')} color="#FFB800" />
-                <SettingRow icon="star-outline"              label={t('rateCosmicAlignment')} iconColor="#FFB800" />
-                <SettingRow icon="document-text-outline"     label={t('sacredScrolls')}       iconColor="#C4B5FD" />
-                <SettingRow icon="shield-checkmark-outline"  label={t('privacyPolicy')}       iconColor="#34D399" last />
+                <SettingRow icon="star-outline"              label={t('rateCosmicAlignment')} iconColor="#FFB800" onPress={function () {
+                  var storeUrl = Platform.OS === 'ios'
+                    ? 'https://apps.apple.com/app/id6740091498'
+                    : 'https://play.google.com/store/apps/details?id=com.grahachara.app';
+                  Linking.openURL(storeUrl);
+                }} />
+                <SettingRow icon="document-text-outline"     label={t('sacredScrolls')}       iconColor="#C4B5FD" onPress={function () { Linking.openURL('https://grahachara.com/legal/terms.html'); }} />
+                <SettingRow icon="shield-checkmark-outline"  label={t('privacyPolicy')}       iconColor="#34D399" onPress={function () { Linking.openURL('https://grahachara.com/legal/privacy.html'); }} last />
               </GCard>
             </Animated.View>
 

@@ -136,7 +136,7 @@ export function AuthProvider({ children }) {
   // Listen for RevenueCat subscription changes in real-time
   useEffect(function() {
     var unsubscribe = addCustomerInfoListener(function(update) {
-      console.log('[Auth] RevenueCat update — pro active:', update.isProActive);
+      if (__DEV__) console.log('[Auth] RevenueCat update — pro active:', update.isProActive);
       if (update.isProActive) {
         var activeSub = update.activeSubscription;
         var sub = {
@@ -195,7 +195,7 @@ export function AuthProvider({ children }) {
           try {
             await rcLoginUser(userData.uid);
           } catch (rcErr) {
-            console.warn('[Auth] RevenueCat login failed (non-fatal):', rcErr.message);
+            if (__DEV__) console.warn('[Auth] RevenueCat login failed (non-fatal):', rcErr.message);
           }
         }
 
@@ -215,7 +215,7 @@ export function AuthProvider({ children }) {
             await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
           }
         } catch (rcErr) {
-          console.warn('[Auth] RevenueCat entitlement check failed (non-fatal):', rcErr.message);
+          if (__DEV__) console.warn('[Auth] RevenueCat entitlement check failed (non-fatal):', rcErr.message);
         }
 
         // Refresh profile from server in background
@@ -225,7 +225,7 @@ export function AuthProvider({ children }) {
         registerPushTokenWithServer(savedToken, userData.uid);
       }
     } catch (err) {
-      console.warn('Failed to load saved auth:', err.message);
+      if (__DEV__) console.warn('Failed to load saved auth:', err.message);
     } finally {
       setLoading(false);
       setAuthReady(true);
@@ -241,9 +241,15 @@ export function AuthProvider({ children }) {
         },
       });
       if (res.status === 401) {
-        // Token invalid or expired
-        console.warn('Profile refresh returned 401, signing out');
-        await AsyncStorage.multiRemove([STORAGE_TOKEN, STORAGE_USER, STORAGE_ONBOARDING]);
+        // Token invalid or expired — defer sign-out if user might have unsaved data
+        if (__DEV__) console.warn('Profile refresh returned 401');
+        // Store a flag so screens can save data before we clear auth state
+        try {
+          await AsyncStorage.setItem('@grahachara_auth_expired', 'true');
+        } catch (e) { /* non-critical */ }
+        // Give screens 2s to persist any in-flight data, then clear auth
+        await new Promise(function(r) { setTimeout(r, 2000); });
+        await AsyncStorage.multiRemove([STORAGE_TOKEN, STORAGE_USER, STORAGE_ONBOARDING, '@grahachara_auth_expired']);
         setToken(null);
         setUser(null);
         setSubscription(null);
@@ -276,7 +282,7 @@ export function AuthProvider({ children }) {
         setSubscription(json.user.subscription || null);
       }
     } catch (err) {
-      console.warn('Profile refresh failed:', err.message);
+      if (__DEV__) console.warn('Profile refresh failed:', err.message);
     }
   }
 
@@ -305,7 +311,7 @@ export function AuthProvider({ children }) {
           GoogleSignin = gsiModule.GoogleSignin;
         } catch (e) {
           // Fallback: try expo-auth-session for Google
-          console.warn('Google Sign-In native module not available, trying web fallback');
+          if (__DEV__) console.warn('Google Sign-In native module not available, trying web fallback');
           currentStage = 'google-popup-fallback';
           var provider = new GoogleAuthProvider();
           var result = await signInWithPopup(firebaseAuth, provider);
@@ -314,20 +320,20 @@ export function AuthProvider({ children }) {
 
         if (GoogleSignin && !firebaseUser) {
           currentStage = 'play-services';
-          console.log('[Auth] Step 1: Checking Play Services...', getAuthDebugContext());
+          if (__DEV__) console.log('[Auth] Step 1: Checking Play Services...', getAuthDebugContext());
           await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-          console.log('[Auth] Step 2: Play Services OK, calling signIn()...');
+          if (__DEV__) console.log('[Auth] Step 2: Play Services OK, calling signIn()...');
           
           var signInResult = null;
           try {
             currentStage = 'google-signin';
             signInResult = await GoogleSignin.signIn();
           } catch (signInErr) {
-            console.error('[Auth] GoogleSignin.signIn() THREW:', signInErr?.code, signInErr?.message);
+            if (__DEV__) console.error('[Auth] GoogleSignin.signIn() THREW:', signInErr?.code, signInErr?.message);
             throw signInErr;
           }
           
-          console.log('[Auth] Step 3: signIn() returned, type:', signInResult?.type, 'keys:', Object.keys(signInResult || {}));
+          if (__DEV__) console.log('[Auth] Step 3: signIn() returned, type:', signInResult?.type, 'keys:', Object.keys(signInResult || {}));
 
           // v13 returns { type: 'cancelled', data: null } when user cancels
           if (signInResult?.type === 'cancelled') {
@@ -337,17 +343,17 @@ export function AuthProvider({ children }) {
           // v13 returns { type: 'success', data: { idToken, user, ... } }
           currentStage = 'google-id-token';
           var idToken = signInResult?.data?.idToken || signInResult?.idToken;
-          console.log('[Auth] Step 4: idToken:', idToken ? 'yes (length=' + idToken.length + ')' : 'NO');
+          if (__DEV__) console.log('[Auth] Step 4: idToken:', idToken ? 'yes (length=' + idToken.length + ')' : 'NO');
           if (!idToken) {
             var debugInfo = JSON.stringify(signInResult, null, 2);
-            console.error('[Auth] No idToken! Full result:', debugInfo);
+            if (__DEV__) console.error('[Auth] No idToken! Full result:', debugInfo);
             throw new Error('Failed to get Google ID token — signIn returned type: ' + (signInResult?.type || 'unknown'));
           }
           
           // On native, skip signInWithCredential (Firebase JS SDK REST calls
           // fail on Android due to API key restrictions). Send the raw Google
           // ID token directly to our server which verifies it server-side.
-          console.log('[Auth] Step 5: Skipping Firebase credential on native, sending Google token to server...');
+          if (__DEV__) console.log('[Auth] Step 5: Skipping Firebase credential on native, sending Google token to server...');
           currentStage = 'backend-auth';
           var googleUser = signInResult?.data?.user || signInResult?.user || {};
           var result = await apiGoogleAuth(idToken, {
@@ -355,7 +361,7 @@ export function AuthProvider({ children }) {
             email: googleUser.email || '',
             photoURL: googleUser.photo || '',
           });
-          console.log('[Auth] Step 6: Server auth result:', result?.success);
+          if (__DEV__) console.log('[Auth] Step 6: Server auth result:', result?.success);
 
           if (!result.success) {
             throw new Error(result.error || 'Authentication failed');
@@ -394,7 +400,7 @@ export function AuthProvider({ children }) {
                 await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
               }
             } catch (rcErr) {
-              console.warn('[Auth] RevenueCat login after Google auth failed (non-fatal):', rcErr.message);
+              if (__DEV__) console.warn('[Auth] RevenueCat login after Google auth failed (non-fatal):', rcErr.message);
             }
           }
 
@@ -461,7 +467,7 @@ export function AuthProvider({ children }) {
             await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
           }
         } catch (rcErr) {
-          console.warn('[Auth] RevenueCat login after Google auth failed (non-fatal):', rcErr.message);
+          if (__DEV__) console.warn('[Auth] RevenueCat login after Google auth failed (non-fatal):', rcErr.message);
         }
       }
 
@@ -471,7 +477,7 @@ export function AuthProvider({ children }) {
         isNewUser: result.isNewUser,
       };
     } catch (err) {
-      console.error('[Auth] signInWithGoogle error:', currentStage, err?.code, err?.message, err?.details || err);
+      if (__DEV__) console.error('[Auth] signInWithGoogle error:', currentStage, err?.code, err?.message, err?.details || err);
       // Don't throw for user cancellation — v13 uses statusCodes.SIGN_IN_CANCELLED (code "12501")
       // Also handle legacy ERR_REQUEST_CANCELED and v13 cancelled type
       if (err && (
@@ -509,7 +515,7 @@ export function AuthProvider({ children }) {
       await AsyncStorage.setItem(STORAGE_ONBOARDING, 'true');
       return { success: true };
     } catch (err) {
-      console.error('Complete onboarding error:', err);
+      if (__DEV__) console.error('Complete onboarding error:', err);
       throw err;
     }
   }, []);
@@ -590,7 +596,7 @@ export function AuthProvider({ children }) {
       setSubscription(sub);
       return { success: true, subscription: sub };
     } catch (err) {
-      console.warn('Subscription check failed:', err.message);
+      if (__DEV__) console.warn('Subscription check failed:', err.message);
       return { success: false };
     }
   }, []);
@@ -629,7 +635,7 @@ export function AuthProvider({ children }) {
         return updated;
       });
     } catch (err) {
-      console.error('Save birth data error:', err);
+      if (__DEV__) console.error('Save birth data error:', err);
       throw err;
     }
   }, [token]);
@@ -653,7 +659,7 @@ export function AuthProvider({ children }) {
       }
       return json;
     } catch (err) {
-      console.error('Update profile error:', err);
+      if (__DEV__) console.error('Update profile error:', err);
       throw err;
     }
   }, [token]);
@@ -670,7 +676,7 @@ export function AuthProvider({ children }) {
       try {
         await rcLogoutUser();
       } catch (rcErr) {
-        console.warn('[Auth] RevenueCat logout failed (non-fatal):', rcErr.message);
+        if (__DEV__) console.warn('[Auth] RevenueCat logout failed (non-fatal):', rcErr.message);
       }
 
       // Clear all stored auth data
@@ -684,7 +690,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       setToken(null);
     } catch (err) {
-      console.error('Sign out error:', err);
+      if (__DEV__) console.error('Sign out error:', err);
       // Force clear state even if AsyncStorage fails
       setAuthTokenGetter(null);
       setSubscription(null);

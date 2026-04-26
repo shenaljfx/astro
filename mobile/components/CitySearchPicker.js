@@ -98,7 +98,7 @@ export default function CitySearchPicker({ selectedCity, onSelect, lang, accentC
         });
         setResults(mapped);
       } catch (err) {
-        console.warn('Geocoding error:', err);
+        if (__DEV__) console.warn('Geocoding error:', err);
         setResults([]);
       }
       setSearching(false);

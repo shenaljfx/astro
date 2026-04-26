@@ -56,8 +56,11 @@ function tryAppJwt(token) {
 function requireAuth(req, res, next) {
   const auth = getAuth();
   
-  // If Firebase not configured, allow anonymous with a guest UID
+  // If Firebase not configured, allow anonymous ONLY in dev
   if (!auth) {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ error: 'Authentication service unavailable' });
+    }
     req.user = { uid: 'anonymous', email: null, anonymous: true };
     return next();
   }

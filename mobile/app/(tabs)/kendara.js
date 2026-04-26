@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Dimensions, Platform
+  StyleSheet, Dimensions, Platform
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing, interpolate } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, interpolate } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
 import SriLankanChart from '../../components/SriLankanChart';
@@ -16,12 +16,9 @@ import PinchableView from '../../components/effects/PinchableView';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
-import { Colors, Typography, Spacing, screenColors } from '../../constants/theme';
+import { screenColors } from '../../constants/theme';
 import { useTheme } from '../../contexts/ThemeContext';
-import CosmicCard from '../../components/ui/CosmicCard';
-import SectionHeader from '../../components/ui/SectionHeader';
 import { boxShadow, textShadow } from '../../utils/shadow';
-import PremiumBackground from '../../components/PremiumBackground';
 import useScreenInsets from '../../hooks/useScreenInsets';
 
 const CHART_CACHE_KEY = '@grahachara_chart_cache';
@@ -76,17 +73,20 @@ function formatDegree(deg) {
   return String(d).padStart(2, '0') + '\u00B0' + String(m).padStart(2, '0');
 }
 
-function toSLT(isoOrObj) {
+function formatBirthTime(isoOrObj) {
   if (!isoOrObj) return '--:--';
   if (typeof isoOrObj === 'object' && isoOrObj.display) return isoOrObj.display;
   const d = new Date(isoOrObj);
   if (isNaN(d.getTime())) return '--:--';
-  const slt = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-  const h = slt.getUTCHours();
-  const m = slt.getUTCMinutes();
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return String(h12).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+  try {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch (e) {
+    const h = d.getHours();
+    const m = d.getMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return String(h12).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+  }
 }
 
 // ── Chart Glow Aura wrapper ──────────────────────────────────────────
@@ -341,7 +341,7 @@ export default function KendaraScreen() {
           setMarakaData(res.data);
         }
       } catch (err) {
-        if (!cancelled) console.warn('Maraka Apala fetch error:', err.message);
+        if (!cancelled && __DEV__) console.warn('Maraka Apala fetch error:', err.message);
       } finally {
         if (!cancelled) setMarakaLoading(false);
       }
@@ -371,7 +371,7 @@ export default function KendaraScreen() {
           chalit: chalitRes && chalitRes.success ? chalitRes.data : null,
         });
       } catch (err) {
-        if (!cancelled) console.warn('Jyotish fetch error:', err.message);
+        if (!cancelled && __DEV__) console.warn('Jyotish fetch error:', err.message);
       } finally {
         if (!cancelled) setJyotishLoading(false);
       }
@@ -412,12 +412,12 @@ export default function KendaraScreen() {
         { icon: 'globe-outline', text: 'සේවාදායකයට සම්බන්ධ වෙමින්...', key: 1 },
         { icon: 'planet-outline', text: 'ග්‍රහ ස්ථාන ගණනය කරමින්...', key: 2 },
         { icon: 'language-outline', text: 'සිංහලට පරිවර්තනය කරමින්...', key: 3 },
-        { icon: 'sparkles-outline', text: 'ජ්‍යෝතිෂ විශ්ලේෂණය සකසමින්...', key: 4 },
+        { icon: 'sparkles-outline', text: 'ඔබේ සටහන සකසමින්...', key: 4 },
         { icon: 'checkmark-circle-outline', text: 'සූදානම්!', key: 5 },
       ] : [
         { icon: 'globe-outline', text: 'Connecting to server...', key: 1 },
         { icon: 'planet-outline', text: 'Calculating planet positions...', key: 2 },
-        { icon: 'telescope-outline', text: 'Analyzing yogas & doshas...', key: 3 },
+        { icon: 'telescope-outline', text: 'Analyzing planetary patterns...', key: 3 },
         { icon: 'sparkles-outline', text: 'Building your chart...', key: 4 },
         { icon: 'checkmark-circle-outline', text: 'Ready!', key: 5 },
       ];
@@ -525,7 +525,7 @@ export default function KendaraScreen() {
         <View style={styles.detailsCard}>
           <Text style={styles.cardTitle}>{t('kpChartDetails') || 'Chart Summary'}</Text>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('kpRisingStar') || 'Rising Star'}:</Text>
+            <Text style={styles.infoLabel}>{t('kpRisingStar') || 'Rising Sign'}:</Text>
             <Text style={styles.infoValue}>
               {language === 'si'
                 ? (chartData.lagna && (chartData.lagna.sinhala || chartData.lagna.name))
@@ -606,7 +606,7 @@ export default function KendaraScreen() {
             <View style={styles.headerRow}>
               <Ionicons name="apps-outline" size={20} color="#FFB800" />
               <Text style={styles.sectionTitle}>
-                {t('kpNavamsaChart') || 'Marriage & Soul Chart'}
+                {t('kpNavamsaChart') || 'Relationship & Inner Self Chart'}
               </Text>
             </View>
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -651,7 +651,7 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="alert-circle-outline" size={20} color="#f87171" />
                   <Text style={styles.sectionTitle}>
-                    {t('kpDoshaTitle') || 'Challenges to Watch Out For'}
+                    {t('kpDoshaTitle') || 'Areas to Be Mindful Of'}
                   </Text>
                 </View>
                 <View style={styles.advCard}>
@@ -698,7 +698,7 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="star-outline" size={20} color="#FFB800" />
                   <Text style={styles.sectionTitle}>
-                    {t('kpYogaTitle') || 'Your Special Gifts & Blessings'}
+                    {t('kpYogaTitle') || 'Your Natural Strengths & Talents'}
                   </Text>
                   <View style={styles.countBadge}>
                     <Text style={styles.countText}>{chartData.advancedAnalysis.tier1.advancedYogas.found}</Text>
@@ -710,8 +710,8 @@ export default function KendaraScreen() {
                     var strColor = y.strength === 'Very Strong' ? '#10b981' : y.strength === 'Strong' ? '#34d399' : '#6b7280';
                     var strLabel = y.strength === 'Very Strong' ? t('kpVeryStrong') : y.strength === 'Strong' ? t('kpStrong') : t('kpModerate');
                     var catLabel = language === 'si'
-                      ? (y.category === 'Raja Yoga' ? 'රාජ යෝගය' : y.category === 'Dhana Yoga' ? 'ධන යෝගය' : y.category?.includes('Dosha') ? 'දෝෂ යෝගය' : 'විශේෂ යෝගය')
-                      : y.category;
+                      ? (y.category === 'Raja Yoga' ? 'නායකත්ව ශක්තිය' : y.category === 'Dhana Yoga' ? 'සමෘද්ධි ශක්තිය' : y.category?.includes('Dosha') ? 'අභියෝග' : 'විශේෂ හැකියාව')
+                      : (y.category === 'Raja Yoga' ? 'Leadership' : y.category === 'Dhana Yoga' ? 'Prosperity' : y.category?.includes('Dosha') ? 'Challenge' : 'Special Talent');
                     return (
                       <View key={i} style={styles.yogaItem}>
                         <View style={styles.yogaTop}>
@@ -745,14 +745,14 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="compass-outline" size={20} color="#FF8C00" />
                   <Text style={styles.sectionTitle}>
-                    {t('kpJaiminiTitle') || 'Your Soul\'s Purpose'}
+                    {t('kpJaiminiTitle') || 'Your Life Direction'}
                   </Text>
                 </View>
                 <View style={styles.advCard}>
                   {chartData.advancedAnalysis.tier1.jaimini.atmakaraka && (
                     <View style={styles.jaiminiHighlight}>
                       <LinearGradient colors={['rgba(255,140,0,0.12)', 'rgba(255,140,0,0.03)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-                      <Text style={styles.jaiminiLabel}>{t('kpSoulPlanet') || 'Your Soul Planet'}</Text>
+                      <Text style={styles.jaiminiLabel}>{t('kpSoulPlanet') || 'Your Core Planet'}</Text>
                       <Text style={styles.jaiminiValue}>{(() => { var p = chartData.advancedAnalysis.tier1.jaimini.atmakaraka.planet || ''; var pi = PLANET_INFO[p]; return language === 'si' && pi ? pi.si : p; })()}</Text>
                       {chartData.advancedAnalysis.tier1.jaimini.karakas && (
                         <Text style={styles.jaiminiSub}>
@@ -764,7 +764,7 @@ export default function KendaraScreen() {
                   <View style={styles.jaiminiGrid}>
                     {chartData.advancedAnalysis.tier1.jaimini.karakamsha && (
                       <View style={styles.jaiminiMini}>
-                        <Text style={styles.jmLabel}>{t('kpKarakamshaLabel') || 'Soul\'s Destination'}</Text>
+                        <Text style={styles.jmLabel}>{t('kpKarakamshaLabel') || 'Life\'s Calling'}</Text>
                         <Text style={styles.jmValue}>{language === 'si' ? (chartData.advancedAnalysis.tier1.jaimini.karakamsha.sinhala || chartData.advancedAnalysis.tier1.jaimini.karakamsha.rashi || 'N/A') : (chartData.advancedAnalysis.tier1.jaimini.karakamsha.rashi || 'N/A')}</Text>
                         {chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes && (
                           <Text style={styles.jmDesc}>{language === 'si' ? ((chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes.desireSi || chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes.desire) + ' — ' + (chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes.archetypeSi || chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes.archetype)) : (chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes.desire + ' — ' + chartData.advancedAnalysis.tier1.jaimini.karakamsha.themes.archetype)}</Text>
@@ -883,30 +883,30 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="time-outline" size={20} color="#a78bfa" />
                   <Text style={styles.sectionTitle}>
-                    {t('kpPastLifeTitle') || 'Your Past Life Story'}
+                    {t('kpPastLifeTitle') || 'Your Deeper Patterns'}
                   </Text>
                 </View>
                 <View style={[styles.advCard, { borderColor: 'rgba(167,139,250,0.15)' }]}>
                   <LinearGradient colors={['rgba(167,139,250,0.08)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} />
                   {chartData.advancedAnalysis.tier3.pastLife.pastLife?.ketuThemes && (
                     <View style={styles.plRow}>
-                      <Text style={styles.plLabel}>{t('kpPastLifeStory') || 'Past Life Story'}</Text>
+                      <Text style={styles.plLabel}>{t('kpPastLifeStory') || 'Core Tendencies'}</Text>
                       <Text style={styles.plValue}>
-                        {language === 'si' ? `කේතු භාවය ${chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuHouse} — ${chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuThemes.domainSi || chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuThemes.domain}` : `Ketu in House ${chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuHouse} — ${chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuThemes.archetype} (${chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuThemes.domain})`}
+                        {language === 'si' ? (chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuThemes.domainSi || chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuThemes.domain) : `${chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuThemes.archetype} — ${chartData.advancedAnalysis.tier3.pastLife.pastLife.ketuThemes.domain}`}
                       </Text>
                     </View>
                   )}
                   {chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection?.rahuThemes && (
                     <View style={styles.plRow}>
-                      <Text style={styles.plLabel}>{t('kpLifeDirection') || 'This Life\'s Purpose'}</Text>
+                      <Text style={styles.plLabel}>{t('kpLifeDirection') || 'Growth Direction'}</Text>
                       <Text style={styles.plValue}>
-                        {language === 'si' ? `රාහු භාවය ${chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuHouse} — ${chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuThemes.growthSi || chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuThemes.growth}` : `Rahu in House ${chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuHouse} — Growth: ${chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuThemes.growth}`}
+                        {language === 'si' ? (chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuThemes.growthSi || chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuThemes.growth) : chartData.advancedAnalysis.tier3.pastLife.currentLifeDirection.rahuThemes.growth}
                       </Text>
                     </View>
                   )}
                   {chartData.advancedAnalysis.tier3.pastLife.karmaBalance && (
                     <View style={styles.plRow}>
-                      <Text style={styles.plLabel}>{t('kpKarmaBalance') || 'Karma Balance'}</Text>
+                      <Text style={styles.plLabel}>{t('kpKarmaBalance') || 'Life Balance'}</Text>
                       <Text style={styles.plValue}>
                         {t('kpGood') || 'Good'}: {chartData.advancedAnalysis.tier3.pastLife.karmaBalance.good || 0}
                         {'  •  '}
@@ -916,8 +916,8 @@ export default function KendaraScreen() {
                   )}
                   {chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit?.assessment && (
                     <View style={styles.plRow}>
-                      <Text style={styles.plLabel}>{t('kpPastLifeMerit') || 'Past Life Merit'}</Text>
-                      <Text style={styles.plValue}>{language === 'si' ? ({ 'highly_meritorious': 'ඉහළ පිං ගැන්වීම්', 'karmic_debts': 'කර්ම ණය', 'mixed': 'මිශ්‍ර' }[chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment] || chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment) : chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment}</Text>
+                      <Text style={styles.plLabel}>{t('kpPastLifeMerit') || 'Inherent Strengths'}</Text>
+                      <Text style={styles.plValue}>{language === 'si' ? ({ 'highly_meritorious': 'ඉහළ ස්වභාවික ශක්ති', 'karmic_debts': 'වර්ධනය කළ යුතු ක්ෂේත්‍ර', 'mixed': 'සමබර' }[chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment] || chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment) : ({ 'highly_meritorious': 'Strong Natural Abilities', 'karmic_debts': 'Areas for Growth', 'mixed': 'Balanced' }[chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment] || chartData.advancedAnalysis.tier3.pastLife.pastLifeMerit.assessment)}</Text>
                     </View>
                   )}
                 </View>
@@ -1009,7 +1009,7 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="flame-outline" size={20} color={jyotishData.mangalDosha.hasDosha ? '#F87171' : '#34D399'} />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'කුජ දෝෂ විශ්ලේෂණය' : 'Mars Influence Analysis'}
+                    {language === 'si' ? 'අංගහරු ප්‍රභාව විශ්ලේෂණය' : 'Mars Influence Analysis'}
                   </Text>
                 </View>
                 <View style={[styles.advCard, {
@@ -1041,9 +1041,9 @@ export default function KendaraScreen() {
                       }]}>
                         {jyotishData.mangalDosha.hasDosha
                           ? (jyotishData.mangalDosha.isHigh
-                            ? (language === 'si' ? '🔴 ප්‍රබල කුජ දෝෂය' : '🔴 Strong Mangal Dosha')
-                            : (language === 'si' ? '🟡 මධ්‍යම කුජ දෝෂය' : '🟡 Moderate Mangal Dosha'))
-                          : (language === 'si' ? '🟢 කුජ දෝෂය නොපවතී' : '🟢 No Mangal Dosha')}
+                            ? (language === 'si' ? '🔴 ප්‍රබල අංගහරු ප්‍රභාවය' : '🔴 Strong Mars Influence')
+                            : (language === 'si' ? '🟡 මධ්‍යම අංගහරු ප්‍රභාවය' : '🟡 Moderate Mars Influence'))
+                          : (language === 'si' ? '🟢 විශේෂ අංගහරු ප්‍රභාවයක් නැත' : '🟢 No Significant Mars Influence')}
                       </Text>
                       {jyotishData.mangalDosha.description && (
                         <Text style={kj.doshaDesc}>{language === 'si' ? (jyotishData.mangalDosha.descriptionSi || jyotishData.mangalDosha.description) : jyotishData.mangalDosha.description}</Text>
@@ -1060,7 +1060,7 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="planet-outline" size={20} color={jyotishData.sadeSati.status ? '#F59E0B' : '#34D399'} />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'සාඩේ සාති තත්ත්වය' : 'Saturn Transit Status'}
+                    {language === 'si' ? 'ශනි පැමිණීම තත්ත්වය' : 'Saturn Transit Status'}
                   </Text>
                 </View>
                 <View style={[styles.advCard, {
@@ -1085,8 +1085,8 @@ export default function KendaraScreen() {
                         color: jyotishData.sadeSati.status ? '#F59E0B' : '#34D399',
                       }]}>
                         {jyotishData.sadeSati.status
-                          ? (language === 'si' ? '⚠ සාඩේ සාති ක්‍රියාත්මකයි' : '⚠ Sade Sati is Active')
-                          : (language === 'si' ? '✓ සාඩේ සාති කාලය නොවේ' : '✓ Not in Sade Sati Period')}
+                          ? (language === 'si' ? '⚠ ශනි පැමිණීම ක්‍රියාත්මකයි' : '⚠ Saturn Transit is Active')
+                          : (language === 'si' ? '✓ ශනි පැමිණීම ක්‍රියාත්මක නැත' : '✓ Saturn Transit Not Active')}
                       </Text>
                       {jyotishData.sadeSati.phase && (
                         <Text style={kj.doshaDesc}>
@@ -1105,15 +1105,15 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="swap-horizontal-outline" size={20} color="#818CF8" />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'ග්‍රහ භාව මාරු' : 'Planet House Shifts'}
+                    {language === 'si' ? 'ග්‍රහ භාව වෙනස්වීම්' : 'Planet Behavioral Shifts'}
                   </Text>
                 </View>
                 <View style={[styles.advCard, { borderColor: 'rgba(129,140,248,0.15)' }]}>
                   <LinearGradient colors={['rgba(129,140,248,0.06)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                   <Text style={kj.chalitDesc}>
                     {language === 'si'
-                      ? 'චලිත සටහනේ ග්‍රහයින් රාශි සටහනට වඩා වෙනස් භාවවල ක්‍රියා කරයි:'
-                      : 'In Chalit, planets may operate in different houses than the sign chart:'}
+                      ? 'මෙම සටහනේ ග්‍රහයින් අපේක්ෂිත ස්ථානයට වඩා වෙනස් ප්‍රදේශවල ක්‍රියා කරයි:'
+                      : 'Some planets express their energy differently than their base position suggests:'}
                   </Text>
                   {(Array.isArray(jyotishData.chalit.planets) ? jyotishData.chalit.planets : []).map(function (p, i) {
                     var shifted = p.d1House !== p.house && p.d1House && p.house;
@@ -1153,19 +1153,19 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="layers-outline" size={20} color="#06B6D4" />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'විභාග සටහන්' : 'Divisional Charts'}
+                    {language === 'si' ? 'විශේෂ සටහන්' : 'Detailed Charts'}
                   </Text>
                 </View>
                 <View style={[styles.advCard, { borderColor: 'rgba(6,182,212,0.15)' }]}>
                   <LinearGradient colors={['rgba(6,182,212,0.06)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={kj.vargaPickerRow}>
                     {[
-                      { key: 'd9', label: 'D9', name: language === 'si' ? 'නවාංශ' : 'Marriage Chart', sub: language === 'si' ? 'විවාහය' : 'Marriage' },
-                      { key: 'd10', label: 'D10', name: language === 'si' ? 'දශාංශ' : 'Career Chart', sub: language === 'si' ? 'රැකියාව' : 'Career' },
-                      { key: 'd7', label: 'D7', name: language === 'si' ? 'සප්තාංශ' : 'Children Chart', sub: language === 'si' ? 'දරුවෝ' : 'Children' },
-                      { key: 'd4', label: 'D4', name: language === 'si' ? 'චතුර්ථාංශ' : 'Property Chart', sub: language === 'si' ? 'වත්කම්' : 'Property' },
-                      { key: 'd24', label: 'D24', name: language === 'si' ? 'චතුර්විංශාංශ' : 'Education Chart', sub: language === 'si' ? 'අධ්‍යාපනය' : 'Education' },
-                      { key: 'd20', label: 'D20', name: language === 'si' ? 'විංශාංශ' : 'Spiritual Chart', sub: language === 'si' ? 'ආධ්‍යාත්මික' : 'Spiritual' },
+                      { key: 'd9', label: 'D9', name: language === 'si' ? 'නවාංශ' : 'Relationships', sub: language === 'si' ? 'සම්බන්ධ' : 'Relationships' },
+                      { key: 'd10', label: 'D10', name: language === 'si' ? 'දශාංශ' : 'Career', sub: language === 'si' ? 'රැකියාව' : 'Career' },
+                      { key: 'd7', label: 'D7', name: language === 'si' ? 'සප්තාංශ' : 'Children', sub: language === 'si' ? 'දරුවෝ' : 'Children' },
+                      { key: 'd4', label: 'D4', name: language === 'si' ? 'චතුර්ථාංශ' : 'Property & Assets', sub: language === 'si' ? 'වත්කම්' : 'Assets' },
+                      { key: 'd24', label: 'D24', name: language === 'si' ? 'චතුර්විංශාංශ' : 'Education & Learning', sub: language === 'si' ? 'අධ්‍යාපනය' : 'Learning' },
+                      { key: 'd20', label: 'D20', name: language === 'si' ? 'විංශාංශ' : 'Inner Growth', sub: language === 'si' ? 'ආල්මික' : 'Growth' },
                     ].map(function (v) {
                       var isActive = selectedVarga === v.key;
                       return (
@@ -1190,7 +1190,7 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="shield-outline" size={20} color="#f87171" />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'මාරක අපල — භයානක කාල' : 'Challenging & Dangerous Periods'}
+                    {language === 'si' ? 'සංවේදී කාල' : 'Sensitive Periods'}
                   </Text>
                 </View>
 
@@ -1198,7 +1198,7 @@ export default function KendaraScreen() {
                   <View style={[styles.advCard, { alignItems: 'center', paddingVertical: 24 }]}>
                     <CosmicLoader size={28} color="#f87171" />
                     <Text style={{ color: 'rgba(255,255,255,0.4)', marginTop: 10, fontSize: 13 }}>
-                      {language === 'si' ? 'මාරක අපල ගණනය කරමින්...' : 'Calculating dangerous periods...'}
+                      {language === 'si' ? 'සංවේදී කාල විශ්ලේෂණය කරමින්...' : 'Analyzing sensitive periods...'}
                     </Text>
                   </View>
                 ) : marakaData ? (
@@ -1249,8 +1249,8 @@ export default function KendaraScreen() {
                               : '#10b981',
                           }]}>
                             {language === 'si'
-                              ? (marakaData.status === 'CRITICAL' ? '⛔ අතිශය භයානක' : marakaData.status === 'HIGH' ? '🔴 භයානක' : marakaData.status === 'MODERATE' ? '🟡 සැලකිලිමත් වන්න' : '🟢 ආරක්ෂිතයි')
-                              : (marakaData.status === 'CRITICAL' ? '⛔ Critical Danger' : marakaData.status === 'HIGH' ? '🔴 High Danger' : marakaData.status === 'MODERATE' ? '🟡 Caution' : '🟢 Safe')}
+                              ? (marakaData.status === 'CRITICAL' ? '⚠️ ඉහළ සංවේදිතාව' : marakaData.status === 'HIGH' ? '🔶 සංවේදී කාලය' : marakaData.status === 'MODERATE' ? '🟡 සැලකිලිමත් වන්න' : '🟢 හොඳින් ඉදිරියට')
+                              : (marakaData.status === 'CRITICAL' ? '⚠️ High Sensitivity' : marakaData.status === 'HIGH' ? '🔶 Elevated Sensitivity' : marakaData.status === 'MODERATE' ? '🟡 Be Mindful' : '🟢 Clear Ahead')}
                           </Text>
                           <Text style={styles.marakaStatusDesc}>
                             {language === 'si' ? marakaData.statusSi : marakaData.statusEn}
@@ -1328,7 +1328,7 @@ export default function KendaraScreen() {
                                     {isExpanded && apala.remedies && apala.remedies.length > 0 && (
                                       <Animated.View entering={FadeIn.duration(300)} style={styles.marakaRemediesBox}>
                                         <Text style={styles.marakaRemediesTitle}>
-                                          {language === 'si' ? '🙏 පරිහාර' : '🙏 Remedies'}
+                                          {language === 'si' ? '� මඟ පෙන්වීම්' : '💡 Guidance'}
                                         </Text>
                                         {apala.remedies.map(function(r, ri) {
                                           return (
@@ -1344,7 +1344,7 @@ export default function KendaraScreen() {
                                     )}
                                     {!isExpanded && apala.remedies && apala.remedies.length > 0 && (
                                       <Text style={styles.marakaTapHint}>
-                                        {language === 'si' ? '↓ පරිහාර බැලීමට ඔබන්න' : '↓ Tap for remedies'}
+                                        {language === 'si' ? '↓ මඟ පෙන්වීම් බැලීමට ඔබන්න' : '↓ Tap for guidance'}
                                       </Text>
                                     )}
                                   </View>
@@ -1403,7 +1403,7 @@ export default function KendaraScreen() {
                                         {apala.remedies && apala.remedies.length > 0 && (
                                           <View style={styles.marakaRemediesBox}>
                                             <Text style={styles.marakaRemediesTitle}>
-                                              {language === 'si' ? '🙏 පරිහාර' : '🙏 Remedies'}
+                                              {language === 'si' ? '� මඟ පෙන්වීම්' : '💡 Guidance'}
                                             </Text>
                                             {apala.remedies.map(function(r, ri) {
                                               return (
@@ -1438,10 +1438,10 @@ export default function KendaraScreen() {
                       <View style={[styles.advCard, { alignItems: 'center', paddingVertical: 20 }]}>
                         <Ionicons name="shield-checkmark" size={32} color="#10b981" />
                         <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 15, marginTop: 8 }}>
-                          {language === 'si' ? 'ආරක්ෂිත කාලයයි' : 'You\'re in a Safe Period'}
+                          {language === 'si' ? 'හොඳ කාලයයි' : 'You\'re in a Clear Period'}
                         </Text>
                         <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
-                          {language === 'si' ? 'ළඟදී මාරක අපල කාලයක් නැත' : 'No dangerous periods detected in the near future'}
+                          {language === 'si' ? 'ඉදිරියේ සංවේදී කාලයක් නැත' : 'No sensitive periods ahead — a favorable time'}
                         </Text>
                       </View>
                     )}
@@ -1466,7 +1466,6 @@ export default function KendaraScreen() {
   return (
     <DesktopScreenWrapper routeName="kendara">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <PremiumBackground />
       <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={sc.iconAccent} />}>
         <View style={[styles.content, isDesktop && styles.contentDesktop, !isDesktop && { paddingTop: insets.contentTop }]}>
           <Animated.View entering={FadeIn.duration(700)} style={styles.pageTitleRow}>
@@ -1476,7 +1475,7 @@ export default function KendaraScreen() {
               </Text>
               <Text style={[styles.pageSubtitle, { color: sc.labelColor }]}>
                 {user && user.birthData && user.birthData.dateTime
-                  ? new Date(user.birthData.dateTime).toLocaleDateString() + '  ' + toSLT(user.birthData.dateTime)
+                  ? new Date(user.birthData.dateTime).toLocaleDateString() + '  ' + formatBirthTime(user.birthData.dateTime)
                   : ''}
               </Text>
             </View>

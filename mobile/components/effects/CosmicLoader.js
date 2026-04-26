@@ -7,16 +7,21 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle,
   withRepeat, withTiming, withSequence, withDelay,
-  interpolate, Easing,
+  interpolate, Easing, cancelAnimation,
 } from 'react-native-reanimated';
 import { boxShadow, textShadow } from '../../utils/shadow';
+import useReducedMotion from '../../hooks/useReducedMotion';
 
 const ORBIT_COLORS = ['#FBBF24', '#C084FC', '#34D399', '#60A5FA', '#F472B6'];
 
-function OrbitDot({ index, count, radius, duration, color, dotSize }) {
+function OrbitDot({ index, count, radius, duration, color, dotSize, skipAnim }) {
   const angle = useSharedValue(((2 * Math.PI) / count) * index);
 
   useEffect(() => {
+    if (skipAnim) {
+      cancelAnimation(angle);
+      return;
+    }
     angle.value = withRepeat(
       withTiming(angle.value + 2 * Math.PI, {
         duration: duration,
@@ -24,7 +29,8 @@ function OrbitDot({ index, count, radius, duration, color, dotSize }) {
       }),
       -1
     );
-  }, []);
+    return function () { cancelAnimation(angle); };
+  }, [skipAnim]);
 
   const dotStyle = useAnimatedStyle(() => {
     const x = Math.cos(angle.value) * radius;
@@ -69,11 +75,17 @@ export default function CosmicLoader({
   textColor = 'rgba(255,255,255,0.6)',
   style,
 }) {
+  const reduced = useReducedMotion();
   const coreScale = useSharedValue(0.8);
   const ringRotation = useSharedValue(0);
   const ringOpacity = useSharedValue(0.3);
 
   useEffect(() => {
+    if (reduced) {
+      cancelAnimation(coreScale); cancelAnimation(ringRotation); cancelAnimation(ringOpacity);
+      coreScale.value = 1; ringRotation.value = 0; ringOpacity.value = 0.4;
+      return;
+    }
     coreScale.value = withRepeat(
       withSequence(
         withTiming(1.2, { duration: 800, easing: Easing.inOut(Easing.sin) }),
@@ -92,7 +104,10 @@ export default function CosmicLoader({
       ),
       -1, true
     );
-  }, []);
+    return function () {
+      cancelAnimation(coreScale); cancelAnimation(ringRotation); cancelAnimation(ringOpacity);
+    };
+  }, [reduced]);
 
   const coreStyle = useAnimatedStyle(() => ({
     transform: [{ scale: coreScale.value }],
@@ -106,7 +121,7 @@ export default function CosmicLoader({
   const coreSize = size * 0.25;
   const orbitRadius = size * 0.35;
   const dotSize = size * 0.1;
-  const orbitCount = 5;
+  const orbitCount = reduced ? 3 : 5;
   const duration = 2400;
 
   return (
@@ -135,6 +150,7 @@ export default function CosmicLoader({
             duration={duration + i * 200}
             color={c}
             dotSize={dotSize}
+            skipAnim={reduced}
           />
         ))}
 

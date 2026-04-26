@@ -69,9 +69,8 @@ function phoneAuth(req, res, next) {
     }
   } catch (e) { /* ignore */ }
 
-  // No valid auth
-  req.user = { uid: 'anonymous', authType: 'anonymous' };
-  next();
+  // No valid auth — fail closed
+  return res.status(401).json({ error: 'Authentication required' });
 }
 
 /**
@@ -91,7 +90,10 @@ function requireSubscription(req, res, next) {
 
   const db = getDb();
   if (!db) {
-    // No database — allow in dev mode
+    // No database — allow in dev mode only
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ error: 'Subscription service unavailable' });
+    }
     return next();
   }
 
@@ -163,8 +165,11 @@ function requireSubscription(req, res, next) {
     })
     .catch(err => {
       console.error('Subscription check error:', err);
-      // On error, allow access (graceful degradation)
-      next();
+      // Fail closed — deny access when we can't verify subscription
+      return res.status(503).json({
+        error: 'Subscription verification temporarily unavailable',
+        message: 'Please try again in a moment.',
+      });
     });
 }
 

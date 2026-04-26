@@ -53,7 +53,7 @@ router.post('/kundli', requireEngine, (req, res) => {
 
     res.json({ success: true, data: report });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate Kundli', details: error.message });
+    res.status(500).json({ error: 'Failed to generate Kundli', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -74,7 +74,7 @@ router.post('/chalit', requireEngine, (req, res) => {
 
     res.json({ success: true, data: chalit });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate Chalit chart', details: error.message });
+    res.status(500).json({ error: 'Failed to generate Chalit chart', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -102,7 +102,7 @@ router.post('/varga/:division', requireEngine, (req, res) => {
 
     res.json({ success: true, division, data: varga });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate Varga chart', details: error.message });
+    res.status(500).json({ error: 'Failed to generate Varga chart', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -123,7 +123,7 @@ router.post('/dasha', requireEngine, (req, res) => {
 
     res.json({ success: true, data: dasha });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to calculate Dasha', details: error.message });
+    res.status(500).json({ error: 'Failed to calculate Dasha', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -144,7 +144,7 @@ router.post('/mangal-dosha', requireEngine, (req, res) => {
 
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to check Mangal Dosha', details: error.message });
+    res.status(500).json({ error: 'Failed to check Mangal Dosha', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -165,7 +165,7 @@ router.post('/sade-sati', requireEngine, (req, res) => {
 
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to check Sade Sati', details: error.message });
+    res.status(500).json({ error: 'Failed to check Sade Sati', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -186,7 +186,7 @@ router.post('/tara-balam', requireEngine, (req, res) => {
 
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to calculate Tara Balam', details: error.message });
+    res.status(500).json({ error: 'Failed to calculate Tara Balam', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -207,7 +207,7 @@ router.post('/chandrashtama', requireEngine, (req, res) => {
 
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to check Chandrashtama', details: error.message });
+    res.status(500).json({ error: 'Failed to check Chandrashtama', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -221,7 +221,7 @@ router.get('/disha-shoola', requireEngine, (req, res) => {
     const result = jyotishEngine.getDishaShoola(date);
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to get Disha Shoola', details: error.message });
+    res.status(500).json({ error: 'Failed to get Disha Shoola', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -236,7 +236,7 @@ router.get('/today', requireEngine, (req, res) => {
     const result = jyotishEngine.generateTodayJyotish(lat, lng);
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate today data', details: error.message });
+    res.status(500).json({ error: 'Failed to generate today data', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -257,7 +257,7 @@ router.post('/personalized', requireEngine, (req, res) => {
 
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate personalized data', details: error.message });
+    res.status(500).json({ error: 'Failed to generate personalized data', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -283,7 +283,7 @@ router.post('/match', requireEngine, (req, res) => {
 
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to match kundlis', details: error.message });
+    res.status(500).json({ error: 'Failed to match kundlis', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -300,7 +300,7 @@ router.get('/panchanga', requireEngine, (req, res) => {
     const result = jyotishEngine.getCrossValidatedPanchanga(date, lat, lng);
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to get Panchanga', details: error.message });
+    res.status(500).json({ error: 'Failed to get Panchanga', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -313,7 +313,7 @@ router.get('/special-yogas', requireEngine, (req, res) => {
     const result = jyotishEngine.getTodaySpecialYogas();
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to get Special Yogas', details: error.message });
+    res.status(500).json({ error: 'Failed to get Special Yogas', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 

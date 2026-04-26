@@ -5,6 +5,25 @@ const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
 
+// ─── Production safety guards (fail fast at boot) ───────────────
+// These prevent dev-only escape hatches from accidentally shipping to prod.
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+if (IS_PROD) {
+  if (process.env.MOCK_PAYMENTS === 'true') {
+    throw new Error('FATAL: MOCK_PAYMENTS=true cannot be enabled in production. This bypasses all subscription checks.');
+  }
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    throw new Error('FATAL: JWT_SECRET must be set and >= 32 chars in production. Generate one: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"');
+  }
+  if (!process.env.REVENUECAT_WEBHOOK_AUTH_KEY) {
+    throw new Error('FATAL: REVENUECAT_WEBHOOK_AUTH_KEY must be set in production. Without it, anyone can forge subscription webhooks.');
+  }
+  if (!process.env.GOOGLE_OAUTH_CLIENT_ID) {
+    throw new Error('FATAL: GOOGLE_OAUTH_CLIENT_ID must be set in production.');
+  }
+}
+
 // Firebase initialization
 const { initFirebase } = require('./config/firebase');
 initFirebase();
@@ -49,7 +68,7 @@ app.use(cors(corsOptions));
 
 // 2. Helmet — security headers (HSTS, X-Frame-Options, etc.)
 app.use(helmet({
-  contentSecurityPolicy: false,          // Disable CSP in dev (blocks cross-origin fetch)
+  contentSecurityPolicy: IS_PROD ? undefined : false,  // Enable default CSP in production
   crossOriginResourcePolicy: false,      // Allow cross-origin resource loading
   crossOriginOpenerPolicy: false,
 }));
@@ -114,7 +133,7 @@ app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({
     error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    // Never leak error details in production
   });
 });
 

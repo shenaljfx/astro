@@ -28,14 +28,22 @@ const WEBHOOK_AUTH_KEY = process.env.REVENUECAT_WEBHOOK_AUTH_KEY || '';
 
 /**
  * Verify webhook authenticity via Authorization header.
+ * In production, REVENUECAT_WEBHOOK_AUTH_KEY MUST be set (enforced at boot).
+ * In dev, if unset we log a warning but allow (for local testing).
  */
 function verifyWebhook(req, res, next) {
-  if (WEBHOOK_AUTH_KEY) {
-    var authHeader = req.headers['authorization'] || '';
-    if (authHeader !== 'Bearer ' + WEBHOOK_AUTH_KEY) {
-      console.warn('[RevenueCat Webhook] ✘ Unauthorized request');
-      return res.status(401).json({ error: 'Unauthorized' });
+  if (!WEBHOOK_AUTH_KEY) {
+    if (process.env.NODE_ENV === 'production') {
+      // Boot guard should already prevent this, but defense in depth
+      return res.status(500).json({ error: 'Webhook auth not configured' });
     }
+    console.warn('[RevenueCat Webhook] ⚠ REVENUECAT_WEBHOOK_AUTH_KEY not set — accepting all webhooks (dev only)');
+    return next();
+  }
+  var authHeader = req.headers['authorization'] || '';
+  if (authHeader !== 'Bearer ' + WEBHOOK_AUTH_KEY) {
+    console.warn('[RevenueCat Webhook] ✘ Unauthorized request');
+    return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
 }

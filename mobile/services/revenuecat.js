@@ -30,7 +30,7 @@ if (!IS_WEB) {
     Purchases = _mod.default || _mod;
     LOG_LEVEL = _mod.LOG_LEVEL;
   } catch (e) {
-    console.warn('[RevenueCat] Native module not available:', e.message);
+    if (__DEV__) console.warn('[RevenueCat] Native module not available:', e.message);
   }
 }
 
@@ -80,7 +80,7 @@ export async function initRevenueCat(appUserID) {
 
     _initialized = true;
   } catch (err) {
-    console.warn('[RevenueCat] Init failed:', err && err.message);
+    if (__DEV__) console.warn('[RevenueCat] Init failed:', err && err.message);
     throw err;
   }
 }
@@ -100,7 +100,7 @@ export async function loginUser(appUserID) {
     var result = await Purchases.logIn(appUserID);
     return result;
   } catch (err) {
-    console.warn('[RevenueCat] Login failed:', err && err.message);
+    if (__DEV__) console.warn('[RevenueCat] Login failed:', err && err.message);
     throw err;
   }
 }
@@ -116,7 +116,7 @@ export async function logoutUser() {
     var info = await Purchases.logOut();
     return info;
   } catch (err) {
-    console.warn('[RevenueCat] Logout failed:', err && err.message);
+    if (__DEV__) console.warn('[RevenueCat] Logout failed:', err && err.message);
     throw err;
   }
 }
@@ -135,7 +135,7 @@ export async function checkEntitlement() {
     var isActive = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
     return isActive;
   } catch (err) {
-    console.warn('[RevenueCat] ✘ Entitlement check failed:', err.message);
+    if (__DEV__) console.warn('[RevenueCat] ✘ Entitlement check failed:', err.message);
     return false;
   }
 }
@@ -151,7 +151,7 @@ export async function getCustomerInfo() {
     var info = await Purchases.getCustomerInfo();
     return info;
   } catch (err) {
-    console.warn('[RevenueCat] ✘ Get customer info failed:', err.message);
+    if (__DEV__) console.warn('[RevenueCat] ✘ Get customer info failed:', err.message);
     return null;
   }
 }
@@ -189,7 +189,7 @@ export async function getActiveSubscription() {
       store: entitlement.store,
     };
   } catch (err) {
-    console.warn('[RevenueCat] ✘ Get active subscription failed:', err.message);
+    if (__DEV__) console.warn('[RevenueCat] ✘ Get active subscription failed:', err.message);
     return null;
   }
 }
@@ -220,7 +220,7 @@ export async function getOfferings() {
     var offerings = await Purchases.getOfferings();
     return offerings;
   } catch (err) {
-    console.warn('[RevenueCat] getOfferings failed:', err && err.message);
+    if (__DEV__) console.warn('[RevenueCat] getOfferings failed:', err && err.message);
     return null;
   }
 }
@@ -234,7 +234,7 @@ export async function getOfferings() {
  */
 export async function purchasePackage(pkg) {
   if (MOCK_PAYMENTS) {
-    console.log('[RevenueCat] 🧪 Mock purchase — auto-succeeding');
+    if (__DEV__) console.log('[RevenueCat] 🧪 Mock purchase — auto-succeeding');
     return {
       customerInfo: { entitlements: { active: { [ENTITLEMENT_ID]: { isActive: true } } } },
       productIdentifier: pkg?.product?.identifier || 'mock_monthly',
@@ -257,7 +257,7 @@ export async function purchasePackage(pkg) {
     if (err.userCancelled) {
       throw new Error('Payment cancelled');
     }
-    console.warn('[RevenueCat] Purchase failed:', err && err.message);
+    if (__DEV__) console.warn('[RevenueCat] Purchase failed:', err && err.message);
     throw err;
   }
 }
@@ -328,7 +328,7 @@ export async function purchaseOneTimeProduct(productId) {
     if (err && err.userCancelled) {
       throw new Error('Payment cancelled');
     }
-    console.warn('[RevenueCat] Purchase failed:', err && err.message);
+    if (__DEV__) console.warn('[RevenueCat] Purchase failed:', err && err.message);
     throw err;
   }
 }
@@ -360,7 +360,7 @@ export async function presentPaywall() {
         return false;
     }
   } catch (err) {
-    console.warn('[RevenueCat] Paywall failed:', err && err.message);
+    if (__DEV__) console.warn('[RevenueCat] Paywall failed:', err && err.message);
     throw err;
   }
 }
@@ -392,7 +392,7 @@ export async function presentPaywallIfNeeded() {
         return false;
     }
   } catch (err) {
-    console.warn('[RevenueCat] Paywall failed:', err && err.message);
+    if (__DEV__) console.warn('[RevenueCat] Paywall failed:', err && err.message);
     throw err;
   }
 }
@@ -411,12 +411,12 @@ export async function presentCustomerCenter() {
     await RevenueCatUI.presentCustomerCenter({
       callbacks: {
         onRestoreFailed: function(param) {
-          console.warn('[RevenueCat] Restore failed:', param && param.error);
+          if (__DEV__) console.warn('[RevenueCat] Restore failed:', param && param.error);
         },
       },
     });
   } catch (err) {
-    console.warn('[RevenueCat] Customer Center failed:', err && err.message);
+    if (__DEV__) console.warn('[RevenueCat] Customer Center failed:', err && err.message);
     throw err;
   }
 }
@@ -435,7 +435,7 @@ export async function restorePurchases() {
     var isActive = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
     return { customerInfo: customerInfo, isProActive: isActive };
   } catch (err) {
-    console.warn('[RevenueCat] Restore failed:', err && err.message);
+    if (__DEV__) console.warn('[RevenueCat] Restore failed:', err && err.message);
     throw err;
   }
 }

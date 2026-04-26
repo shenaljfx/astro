@@ -1,13 +1,13 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  StyleSheet, Platform, ActivityIndicator, Share, Alert,
+  StyleSheet, Platform, Share, Alert,
   LayoutAnimation, UIManager, Dimensions, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
-  FadeInDown, FadeIn, FadeOut, SlideInLeft, SlideInRight,
+  FadeInDown, FadeIn, FadeOut,
   ZoomIn, FadeInUp,
   useSharedValue, useAnimatedStyle, withTiming, withSpring,
   withSequence, withRepeat, withDelay, Easing, interpolate,
@@ -26,10 +26,9 @@ import useScreenInsets from '../../hooks/useScreenInsets';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
-import { Colors, Typography, screenColors } from '../../constants/theme';
+import { screenColors } from '../../constants/theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { boxShadow, textShadow } from '../../utils/shadow';
-import PremiumBackground from '../../components/PremiumBackground';
 import { generatePorondamHTML, loadLogoBase64 } from '../../utils/pdfReportGenerator';
 import RadarChart from '../../components/RadarChart';
 
@@ -145,18 +144,18 @@ var MAX_SAVED_PORONDAM = 10;
 // ═══════════════════════════════════════════════════════════════
 var PORONDAM_LOADING_STAGES = {
   en: [
-    { text: '🌌 Mapping the celestial connection...', sub: 'Tracing the invisible thread between two souls' },
-    { text: '💫 Aligning your birth charts...', sub: 'The stars are revealing patterns of destiny' },
-    { text: '🔮 Calculating the 7 sacred factors...', sub: 'Dina, Gana, Yoni, Rashi, Vasya, Nadi, Mahendra' },
-    { text: '💎 Analyzing deep compatibility...', sub: 'Navamsha charts, Dashas, and planetary bonds' },
-    { text: '💍 Your cosmic love story is ready...', sub: 'The universe has spoken about this union' },
+    { text: '🌌 Mapping the connection...', sub: 'Analyzing the bond between two people' },
+    { text: '💫 Aligning your birth charts...', sub: 'The stars are revealing compatibility patterns' },
+    { text: '🔮 Calculating the 7 key factors...', sub: 'Temperament, Nature, Compatibility, Sign, Harmony, Energy, Strength' },
+    { text: '💎 Analyzing deep compatibility...', sub: 'Relationship charts, life phases, and planetary bonds' },
+    { text: '💍 Your compatibility story is ready...', sub: 'A thorough analysis of this partnership' },
   ],
   si: [
-    { text: '🌌 දිව්‍ය සම්බන්ධය සිතියම් ගත කරමින්...', sub: 'ආත්ම දෙකක් අතර නොපෙනෙන නූල සොයමින්' },
-    { text: '💫 උපන් කේන්දර ගැළපෙමින්...', sub: 'තරු ඉරණම ගැන රටා හෙළි කරයි' },
-    { text: '🔮 පවිත්‍ර සාධක 7 ගණනය කරමින්...', sub: 'දින, ගණ, යෝනි, රාශි, වශ්‍ය, නාඩි, මහේන්ද්‍ර' },
-    { text: '💎 ගැඹුරු ගැළපීම විශ්ලේෂණය කරමින්...', sub: 'නවාංශ, දශා, සහ ග්‍රහ බන්ධන' },
-    { text: '💍 ඔබේ මහා ප්‍රේම කතාව සූදානමයි...', sub: 'විශ්වය මේ මිලනය ගැන කතා කළේය' },
+    { text: '🌌 සම්බන්ධතාවය විශ්ලේෂණය කරමින්...', sub: 'පුද්ගලයින් දෙදෙනා අතර බැඳීම සොයමින්' },
+    { text: '💫 උපන් කේන්දර ගැළපෙමින්...', sub: 'තරු ගැලපීම් රටා හෙළි කරයි' },
+    { text: '🔮 ප්‍රධාන සාධක 7 ගණනය කරමින්...', sub: 'ස්වභාවය, ගුණාංග, ගැලපීම, රාශි, සමගිය, ශක්තිය, බලය' },
+    { text: '💎 ගැඹුරු ගැළපීම විශ්ලේෂණය කරමින්...', sub: 'සබඳතා කේන්දර, ජීවිත අදියර, සහ ග්‍රහ බන්ධන' },
+    { text: '💍 ඔබේ ගැලපීම් කතාව සූදානමයි...', sub: 'මෙම සම්බන්ධතාවයේ සම්පූර්ණ විශ්ලේෂණය' },
   ],
 };
 
@@ -599,7 +598,7 @@ export default function PorondamScreen() {
           setSavedChecks(JSON.parse(stored));
         }
       } catch (e) {
-        console.warn('Failed to load saved porondam:', e);
+        if (__DEV__) console.warn('Failed to load saved porondam:', e);
       }
     })();
   }, []);
@@ -627,7 +626,7 @@ export default function PorondamScreen() {
       await AsyncStorage.setItem(PORONDAM_CACHE_KEY, JSON.stringify(updated));
       setSavedChecks(updated);
     } catch (e) {
-      console.warn('Failed to save porondam:', e);
+      if (__DEV__) console.warn('Failed to save porondam:', e);
     }
   }, [savedChecks]);
 
@@ -638,7 +637,7 @@ export default function PorondamScreen() {
       await AsyncStorage.setItem(PORONDAM_CACHE_KEY, JSON.stringify(updated));
       setSavedChecks(updated);
     } catch (e) {
-      console.warn('Failed to delete porondam:', e);
+      if (__DEV__) console.warn('Failed to delete porondam:', e);
     }
   }, [savedChecks]);
 
@@ -685,11 +684,11 @@ export default function PorondamScreen() {
       });
       if (entCheck && entCheck.hasPending) {
         isRetry = true;
-        console.log('[Porondam] ♻️ Resuming failed generation — no payment needed (' + entCheck.entitlement.retriesLeft + ' retries left)');
+        if (__DEV__) console.log('[Porondam] ♻️ Resuming failed generation — no payment needed (' + entCheck.entitlement.retriesLeft + ' retries left)');
       }
     } catch (entErr) {
       // Non-critical — proceed with normal payment flow
-      console.warn('[Porondam] Entitlement check failed (non-critical):', entErr.message);
+      if (__DEV__) console.warn('[Porondam] Entitlement check failed (non-critical):', entErr.message);
     }
 
     // Show paywall only if NOT a retry (pending entitlement = free retry)
@@ -713,14 +712,24 @@ export default function PorondamScreen() {
       setData(checkRes.data);
       if (checkRes.porondamId) setPorondamId(checkRes.porondamId);
 
-      // Fire AI report generation
+      // Fire AI report generation (with 1 automatic retry on failure)
       setReportLoading(true);
+      var reportRes = null;
       try {
-        var reportRes = await api.getPorondamReport(checkRes.data, reportLang, bName || undefined, gName || undefined, checkRes.porondamId || undefined);
+        reportRes = await api.getPorondamReport(checkRes.data, reportLang, bName || undefined, gName || undefined, checkRes.porondamId || undefined);
         setReport(reportRes.report);
         if (reportRes.porondamId) setPorondamId(reportRes.porondamId);
       } catch (rErr) {
-        setReport(reportLang === 'si' ? '\u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0 \u0DC4\u0DAF\u0DB1\u0DCA\u0DB1 \u0DB6\u0DD0\u0DBB\u0DD2 \u0DC0\u0DD4\u0DB1\u0DCF.' : 'Failed to generate report.');
+        // Retry once after a short delay — porondam report has no entitlement system
+        if (__DEV__) console.warn('[Porondam] AI report failed, retrying in 3s:', rErr.message);
+        try {
+          await new Promise(function(r) { setTimeout(r, 3000); });
+          reportRes = await api.getPorondamReport(checkRes.data, reportLang, bName || undefined, gName || undefined, checkRes.porondamId || undefined);
+          setReport(reportRes.report);
+          if (reportRes.porondamId) setPorondamId(reportRes.porondamId);
+        } catch (rErr2) {
+          setReport(reportLang === 'si' ? '\u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0 \u0DC4\u0DAF\u0DB1\u0DCA\u0DB1 \u0DB6\u0DD0\u0DBB\u0DD2 \u0DC0\u0DD4\u0DB1\u0DCF. \u0DB1\u0DD0\u0DC0\u0DAD\u0DAD\u0DCA try \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1.' : 'Failed to generate report. Please try again.');
+        }
       } finally {
         setReportLoading(false);
       }
@@ -828,7 +837,6 @@ export default function PorondamScreen() {
     return (
       <DesktopScreenWrapper routeName="porondam">
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg }}>
-          <PremiumBackground />
           <PorondamCosmicLoader brideName={bName} groomName={gName} language={language} />
         </View>
       </DesktopScreenWrapper>
@@ -838,7 +846,6 @@ export default function PorondamScreen() {
   return (
     <DesktopScreenWrapper routeName="porondam">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <PremiumBackground />
       <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
         <View style={[sty.scrollInner, isDesktop && sty.scrollInnerDesktop]}>
 

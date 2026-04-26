@@ -83,10 +83,10 @@ var CONTENT = {
       title: 'Your Complete\nLife Blueprint 📖',
       subtitle: 'Get a highly accurate, 15+ page deep dive into your entire life. Don\'t leave your future to chance!',
       features: [
-        '📜 Detailed breakdown of all 12 houses (Bhavas)',
-        '💍 Marriage, wealth & exact career secrets',
-        '⏳ Timelines for success, property & travel',
-        '💎 Your lucky colors, numbers & gemstones',
+        '📜 Detailed breakdown of all 12 life areas',
+        '💍 Marriage, wealth & exact career insights',
+        '⌛ Timelines for success, property & travel',
+        '💎 Your associated colors, numbers & strengths',
         '⚠️ Hidden obstacles and how to beat them',
         '📥 Beautiful 15+ page PDF report to keep!',
       ],
@@ -188,12 +188,12 @@ for (var _pi = 0; _pi < 12; _pi++) {
 // ─── Paywall Testimonials ─────────────────────────────────────
 var PW_TESTIMONIALS = {
   en: [
-    { name: 'Amaya K.', text: '"The danger period warning literally saved my career!"', stars: 5 },
+    { name: 'Amaya K.', text: '"The sensitive period alerts helped me plan my career moves perfectly!"', stars: 5 },
     { name: 'Dinesh R.', text: '"Marriage chart accuracy was unreal. Mind blown."', stars: 5 },
     { name: 'Priya M.', text: '"Worth every rupee. AI caught what no astrologer did."', stars: 5 },
   ],
   si: [
-    { name: 'අමායා කේ.', text: '"අවදානම් කාල ඇඟවීම නිසා රස්සාව බේරුණා!"', stars: 5 },
+    { name: 'අමායා කේ.', text: '"සංවේදී කාල ඇඟවීම නිසා රස්සාව හොදට සැලසුම් කරගත්තා!"', stars: 5 },
     { name: 'දිනේෂ් ආර්.', text: '"විවාහ කේන්දරේ 100% හරි ගියා. ඇදහිය නොහැකියි."', stars: 5 },
     { name: 'ප්‍රියා එම්.', text: '"AI එකෙන් ජ්‍යෝතිෂවේදියෙක්වත් නොකියපු දේ කිව්වා."', stars: 5 },
   ],

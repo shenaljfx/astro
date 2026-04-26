@@ -77,8 +77,8 @@ function detectDoshas(date, lat, lng) {
     else if (count >= 2) severity = 'Moderate';
 
     doshas.push({
-      name: 'Mangala Dosha (Kuja Dosha)',
-      sinhala: 'මංගල දෝෂය (කුජ දෝෂය)',
+      name: 'Mars Influence',
+      sinhala: 'අංගහරු ප්‍රභාවය',
       icon: '♂️🔴',
       present: true,
       severity: mangalCancelled ? 'Cancelled' : severity,
@@ -91,18 +91,18 @@ function detectDoshas(date, lat, lng) {
         cancellationReason: mangalCancelled ? 'Mars is in own sign, exalted, or aspected by Jupiter' : null,
       },
       description: mangalCancelled
-        ? 'Mangala Dosha is present but cancelled by mitigating factors. Marriage is not obstructed.'
-        : `Mangala Dosha is present (${severity}). Mars in house ${marsHouse} from Lagna creates intensity in marriage. Partner matching with another Manglik or performing remedies is recommended.`,
+        ? 'Mars influence is present but neutralized by mitigating factors. Relationship compatibility is not affected.'
+        : `Mars influence is present (${severity}). Mars in position ${marsHouse} creates intensity in relationships. Matching with a similarly energetic partner or conscious awareness is recommended.`,
       descriptionSi: mangalCancelled
-        ? 'මංගල දෝෂය පවතින නමුත් සමනය කරන සාධක මගින් වලංගු නොවේ. විවාහයට බාධාවක් නැත.'
-        : `මංගල දෝෂය (${severity === 'Severe' ? 'බරපතල' : severity === 'Moderate' ? 'මධ්‍යම' : 'සුළු'}) පවතී. ලග්නයෙන් ${marsHouse} වන භාවයේ කුජ හේතුවෙන් විවාහයේ තීව්‍රතාවයක් ඇතිවේ. මංගලික සහකරු/සහකාරියක් සමඟ ගැළපීම හෝ පිළියම් නිර්දේශ කෙරේ.`,
+        ? 'අංගහරු ප්‍රභාවය පවතින නමුත් සමනය කරන සාධක මගින් වලංගු නොවේ. සබඳතාවට බාධාවක් නැත.'
+        : `අංගහරු ප්‍රභාවය (${severity === 'Severe' ? 'බරපතල' : severity === 'Moderate' ? 'මධ්‍යම' : 'සුළු'}) පවතී. ස්ථානයෙන් ${marsHouse} වන කුජ හේතුවෙන් සබඳතාවේ තීව්‍රතාවයක් ඇතිවේ. සමාන ශක්තියක් ඇති සහකරුවක් සමඟ ගැලපීම නිර්දේශ කෙරේ.`,
       remedies: [
-        'Perform Kuja Shanti pooja',
-        'Visit Navagraha temple on Tuesdays',
-        'Donate red lentils (masoor dal) on Tuesdays',
-        'Recite Hanuman Chalisa or Mangala Stotram',
-        'Wear Red Coral (Pavizham) on right ring finger (consult astrologer first)',
-        'Marry after age 28 for natural mitigation',
+        'Channel physical energy into exercise, sports, or creative work',
+        'Practice patience in relationships — awareness is the key',
+        'Volunteer or engage in community service regularly',
+        'Wear warm, grounding colors like earth tones',
+        'Focus on open communication with your partner',
+        'Consider marrying after age 28 when Mars energy naturally mellows',
       ],
       remediesSi: [
         'කුජ ශාන්ති පූජාවක් කරන්න',
@@ -215,13 +215,13 @@ function detectDoshas(date, lat, lng) {
     let sadeSatiPhase = null;
 
     if (satFromMoon === 12) sadeSatiPhase = { phase: 'Rising (ආරෝහණ)', severity: 'Beginning', description: 'Saturn entering 12th from natal Moon — Sade Sati is beginning. Emotional and financial caution needed.', descriptionSi: 'සෙනසුරු චන්ද්‍රයෙන් 12 වන ස්ථානයට පිවිසීම — සාඩේ සාති ආරම්භ වේ. හැඟීම් හා මූල්‍ය සැලකිලිමත් බව අවශ්‍යයි.' };
-    if (satFromMoon === 1) sadeSatiPhase = { phase: 'Peak (උච්ච)', severity: 'Maximum', description: 'Saturn directly over natal Moon — Peak Sade Sati. Maximum karmic pressure. This is the hardest but most transformative period.', descriptionSi: 'සෙනසුරු කෙලින්ම චන්ද්‍රයා මත — උච්ච සාඩේ සාති. උපරිම කර්ම පීඩනය. මෙය වඩාත් දුෂ්කර නමුත් පරිවර්තනශීලී කාලයයි.' };
+    if (satFromMoon === 1) sadeSatiPhase = { phase: 'Peak (උච්ච)', severity: 'Maximum', description: 'Saturn directly over natal Moon — Peak phase. Maximum life pressure. This is the most challenging but also the most growth-oriented period.', descriptionSi: 'සෙනසුරු කෙලින්ම චන්ද්‍රයා මත — උච්ච අවධිය. උපරිම ජීවිත පීඩනය. මෙය වඩාත් දුෂ්කර නමුත් පරිවර්තනශීලී කාලයයි.' };
     if (satFromMoon === 2) sadeSatiPhase = { phase: 'Setting (අවරෝහණ)', severity: 'Ending', description: 'Saturn in 2nd from natal Moon — Final phase of Sade Sati. Financial adjustments and family matters dominate.', descriptionSi: 'සෙනසුරු චන්ද්‍රයෙන් 2 වන ස්ථානයේ — සාඩේ සාතිහි අවසාන අවධිය. මූල්‍ය සකස්කිරීම් සහ පවුල් කටයුතු ප්‍රමුඛ වේ.' };
 
     if (sadeSatiPhase) {
       doshas.push({
-        name: 'Sade Sati (7.5 Year Saturn Transit)',
-        sinhala: 'සාඩේ සාති (එරාෂ්ටකය)',
+        name: 'Saturn\'s 7.5-Year Transit',
+        sinhala: 'ශනි පැමිණීම (අවුරුදු 7½)',
         icon: '🪐',
         present: true,
         severity: sadeSatiPhase.severity,
@@ -233,12 +233,12 @@ function detectDoshas(date, lat, lng) {
         description: sadeSatiPhase.description,
         descriptionSi: sadeSatiPhase.descriptionSi,
         remedies: [
-          'Worship Shani Bhagavan on Saturdays',
-          'Light sesame oil lamp at a Shani temple',
-          'Donate black items (sesame, black cloth, iron) on Saturdays',
-          'Recite Shani Stotram or Dasharatha Shani Stotram',
-          'Wear Blue Sapphire (Neelam) only if Saturn is yogakaraka for your lagna',
-          'Practice patience and accept karmic lessons during this period',
+          'Practice patience and consistency — this phase is temporary',
+          'Focus on building discipline and resilience',
+          'Engage in regular physical exercise to manage stress',
+          'Help those less fortunate — acts of service ease Saturn\'s pressure',
+          'Maintain a structured daily routine',
+          'Avoid impulsive major decisions — take time to think things through',
         ],
       });
     }
@@ -258,12 +258,12 @@ function detectDoshas(date, lat, lng) {
   let pitruDetails = [];
 
   // Sun with Rahu/Ketu
-  if (sunHouse === rahuHouse) { pitruDosha = true; pitruDetails.push('Sun conjunct Rahu — ancestral curse blocking paternal blessings'); }
-  if (sunHouse === ketuHouse) { pitruDosha = true; pitruDetails.push('Sun conjunct Ketu — past-life debt from father\'s lineage'); }
+  if (sunHouse === rahuHouse) { pitruDosha = true; pitruDetails.push('Sun conjunct Rahu — challenges related to father figure or authority'); }
+  if (sunHouse === ketuHouse) { pitruDosha = true; pitruDetails.push('Sun conjunct Ketu — deep patterns from paternal lineage'); }
   // Sun in 9th afflicted
-  if (sunHouse === 9 && (rahuHouse === 9 || saturnHouse === 9)) { pitruDosha = true; pitruDetails.push('Sun in 9th with malefic — direct affliction to father/fortune house'); }
+  if (sunHouse === 9 && (rahuHouse === 9 || saturnHouse === 9)) { pitruDosha = true; pitruDetails.push('Sun in 9th with challenging planet — direct influence on father/fortune area'); }
   // 9th lord in 6, 8, 12
-  if (lord9House && [6, 8, 12].includes(lord9House)) { pitruDosha = true; pitruDetails.push(`9th lord ${lord9Name} in dusthana (house ${lord9House}) — fortune weakened by ancestral karma`); }
+  if (lord9House && [6, 8, 12].includes(lord9House)) { pitruDosha = true; pitruDetails.push(`9th lord ${lord9Name} in dusthana (house ${lord9House}) — fortune influenced by inherited family patterns`); }
   // Saturn aspects 9th house
   if (saturnHouse) {
     const satTo9 = ((9 - saturnHouse + 12) % 12) + 1;
@@ -272,21 +272,21 @@ function detectDoshas(date, lat, lng) {
 
   if (pitruDosha) {
     doshas.push({
-      name: 'Pitru Dosha (Ancestral Karma)',
-      sinhala: 'පිතෘ දෝෂය (පූර්ව පාප)',
+      name: 'Family Heritage Influence',
+      sinhala: 'පිතෘ පරම්පරා ප්‍රභාවය',
       icon: '👤⚡',
       present: true,
       severity: pitruDetails.length >= 3 ? 'Severe' : pitruDetails.length >= 2 ? 'Moderate' : 'Mild',
       details: pitruDetails,
-      description: 'Pitru Dosha indicates unresolved karma from the paternal ancestral lineage. This can manifest as delays in fortune, father-related struggles, or obstacles in dharmic pursuits.',
+      description: 'This pattern indicates inherited family dynamics that may affect fortune, father-related matters, or life direction. Awareness and positive action can transform these patterns.',
       descriptionSi: 'පිතෘ දෝෂය පියා පැත්තේ පරම්පරාවෙන් එන නොවිසඳුණු කර්මය පෙන්වයි. වාසනාව ප්‍රමාදවීම, පියා සම්බන්ධ අරගල, හෝ ධාර්මික කටයුතුවල බාධා ලෙස මෙය ප්‍රකාශ විය හැකිය.',
       remedies: [
-        'Perform Pitru Tarpana on Amavasya (new moon) days',
-        'Offer water to the Sun during sunrise facing east',
-        'Perform Shraddha ceremony for departed ancestors',
-        'Donate food to Brahmins on father\'s death anniversary',
-        'Visit Gaya, Varanasi, or Rameswaram for Pinda Daan',
-        'Recite Gayatri Mantra 108 times daily at dawn',
+        'Honor and respect family elders and their wisdom',
+        'Practice gratitude toward your parents and ancestors',
+        'Engage in charitable activities, especially feeding the hungry',
+        'Spend quality time outdoors, especially at sunrise',
+        'Build a positive relationship with father figures or mentors',
+        'Journaling about family patterns helps build awareness',
       ],
     });
   }
@@ -295,27 +295,27 @@ function detectDoshas(date, lat, lng) {
   // Sun/Moon conjunct Rahu/Ketu
   if (sunHouse === rahuHouse || sunHouse === ketuHouse) {
     doshas.push({
-      name: 'Surya Grahan Dosha (Solar Eclipse)',
-      sinhala: 'සූර්ය ග්‍රහණ දෝෂය',
+      name: 'Solar Sensitivity',
+      sinhala: 'සූර්ය සංවේදිතාව',
       icon: '🌑',
       present: true,
       severity: sunHouse === rahuHouse ? 'Strong' : 'Moderate',
       description: 'Sun conjunct shadow planet — father\'s health, government matters, and ego face challenges. Authority may be undermined.',
       descriptionSi: 'සූර්යයා සෙවනැලි ග්‍රහයා සමඟ — පියාගේ සෞඛ්‍යය, රාජ්‍ය කටයුතු, සහ ආත්ම ගෞරවයට අභියෝග. බලය අඩපණ විය හැක.',
-      remedies: ['Recite Aditya Hridayam', 'Offer water to Sun at sunrise', 'Donate wheat and jaggery on Sundays'],
+      remedies: ['Spend time in sunlight daily', 'Build self-confidence through positive affirmations', 'Engage in leadership activities'],
     });
   }
 
   if (moonHouse === rahuHouse || moonHouse === ketuHouse) {
     doshas.push({
-      name: 'Chandra Grahan Dosha (Lunar Eclipse)',
-      sinhala: 'චන්ද්‍ර ග්‍රහණ දෝෂය',
+      name: 'Lunar Sensitivity',
+      sinhala: 'චන්ද්‍ර සංවේදිතාව',
       icon: '🌘',
       present: true,
       severity: moonHouse === rahuHouse ? 'Strong' : 'Moderate',
       description: 'Moon conjunct shadow planet — mother\'s health, mental peace, and emotional stability face challenges. Anxiety and overthinking are common.',
       descriptionSi: 'චන්ද්‍ර සෙවනැලි ග්‍රහයා සමඟ — මවගේ සෞඛ්‍යය, මානසික සාමය, සහ හැඟීම් ස්ථාවරත්වයට අභියෝග. කනස්සල්ල හා අධික සිතීම සුලබයි.',
-      remedies: ['Worship Chandra Bhagavan on Mondays', 'Wear Pearl (Muthu) on little finger', 'Donate white rice and milk on Mondays', 'Recite Chandra Kavach'],
+      remedies: ['Practice mindfulness and meditation', 'Nurture your relationship with your mother', 'Prioritize quality sleep and emotional self-care', 'Journaling helps process complex emotions'],
     });
   }
 
@@ -329,27 +329,27 @@ function detectDoshas(date, lat, lng) {
       if ([1, 5, 7, 9].includes(jupToMoon)) vishCancelled = true; // Jupiter's aspect or conjunction
     }
     doshas.push({
-      name: 'Vish Yoga (Poison Combination)',
-      sinhala: 'විෂ යෝගය (විෂ සංයෝගය)',
+      name: 'Moon-Saturn Tension',
+      sinhala: 'චන්ද්‍ර-ශනි ගැටුම',
       icon: '☠️',
       present: true,
       severity: vishCancelled ? 'Mild (Mitigated)' : 'Strong',
       cancelled: vishCancelled,
       details: { moonHouse, saturnHouse, conjunctHouse: moonHouse },
       description: vishCancelled
-        ? `Moon-Saturn conjunction in house ${moonHouse} — Vish Yoga is present but mitigated by Jupiter's benefic aspect. Emotional challenges exist but are manageable with awareness.`
-        : `Moon-Saturn conjunction in house ${moonHouse} — this is Vish Yoga (Poison Combination). It indicates deep emotional suffering, childhood trauma, difficult relationship with mother, depression, and emotional suppression. The native often carries unexpressed grief from early life. Mother may have been emotionally unavailable, strict, or the native experienced separation/coldness in the maternal bond.`,
+        ? `Moon-Saturn conjunction in house ${moonHouse} — emotional tension is present but eased by Jupiter's supportive influence. Emotional challenges exist but are manageable with awareness.`
+        : `Moon-Saturn conjunction in house ${moonHouse} — this indicates deep emotional complexity. It can manifest as emotional restraint, a need for structure in feelings, or a complex relationship with nurturing figures. The native often carries unexpressed emotions from early life. Understanding this pattern is the first step to growth.`,
       descriptionSi: vishCancelled
         ? `${moonHouse} වන භාවයේ චන්ද්‍ර-ශනි සංයෝගය — විෂ යෝගය පවතින නමුත් ගුරුගේ ශුභ දෘෂ්ටිය මඟින් සමනය වී ඇත. හැඟීම් අභියෝග ඇති නමුත් නිවැරදි අවබෝධයෙන් පාලනය කළ හැකිය.`
         : `${moonHouse} වන භාවයේ චන්ද්‍ර-ශනි සංයෝගය — මෙය විෂ යෝගයයි. ගැඹුරු හැඟීම් වේදනාව, ළමා කාලයේ කම්පා, මව සමඟ දුෂ්කර සබඳතාවය, මානසික අවපීඩනය සහ හැඟීම් මර්දනය පෙන්වයි.`,
       remedies: [
-        'Worship Lord Shiva on Mondays — Shiva neutralizes Saturn\'s harshness on Moon',
-        'Recite Chandra Kavach or Shiv Panchakshari mantra daily',
-        'Wear a Pearl (Muthu) on the little finger on a Monday',
-        'Donate white items (milk, rice, white cloth) on Mondays',
-        'Practice meditation and emotional release techniques regularly',
-        'Offer milk to a Shiva Lingam on Monday evenings',
-        'Maintain a journal — writing helps process suppressed emotions',
+        'Practice regular meditation and mindfulness',
+        'Seek professional counseling for emotional processing if needed',
+        'Build a consistent daily routine — structure helps Moon-Saturn energy',
+        'Journaling helps process suppressed emotions',
+        'Nurture your relationship with maternal figures',
+        'Practice emotional release techniques regularly',
+        'Maintain a gratitude journal — writing helps reframe challenges',
       ],
     });
   }
@@ -358,20 +358,20 @@ function detectDoshas(date, lat, lng) {
   // Saturn + Rahu in same house
   if (saturnHouse && rahuHouse && saturnHouse === rahuHouse) {
     doshas.push({
-      name: 'Shrapit Dosha (शापित)',
-      sinhala: 'ශ්‍රාපිත දෝෂය',
+      name: 'Saturn-Rahu Challenge',
+      sinhala: 'ශනි-රාහු අභියෝගය',
       icon: '⛓️',
       present: true,
       severity: 'Severe',
       details: { house: saturnHouse },
-      description: `Saturn and Rahu conjunct in house ${saturnHouse} — indicates a curse from a past life. This combination brings sudden obstacles, chronic delays, and karmic debts that feel inexplicable.`,
-      descriptionSi: `${saturnHouse} වන භාවයේ ශනි-රාහු සංයෝගය — පූර්ව ජන්මයක ශාපයක් පෙන්නුම් කරයි. හදිසි බාධා, නිරන්තර ප්‍රමාදයන් සහ පැහැදිලි කළ නොහැකි කර්ම ණය ගෙන එයි.`,
+      description: `Saturn and Rahu conjunct in house ${saturnHouse} — this combination can bring unexpected obstacles, delays, and challenges that feel difficult to explain. Patience and consistent effort are the keys to overcoming this pattern.`,
+      descriptionSi: `${saturnHouse} වන භාවයේ ශනි-රාහු සංයෝගය — මෙම සංයෝගය හදිසි බාධා, ප්‍රමාදයන් සහ පැහැදිලි කිරීමට අපහසු අභියෝග ගෙන ඒමට හැකියි. ඉවසීම සහ අඛණ්ඩ උත්සාහය මෙම රටාව ජය ගැනීමේ යතුරයි.`,
       remedies: [
-        'Perform Shrapit Dosha Nivaran Pooja',
-        'Recite Maha Mrityunjaya Mantra 108 times daily',
-        'Donate black sesame and iron on Saturdays',
-        'Feed crows and stray dogs regularly',
-        'Visit a Shani temple and pour oil on Shani idol',
+        'Practice extreme patience — delays are temporary',
+        'Engage in regular acts of service and charity',
+        'Feed stray animals regularly — builds positive energy',
+        'Maintain strict honesty in all dealings',
+        'Build resilience through consistent daily discipline',
       ],
     });
   }
@@ -381,20 +381,20 @@ function detectDoshas(date, lat, lng) {
   if (jupiterHouse && (jupiterHouse === rahuHouse || jupiterHouse === ketuHouse)) {
     const withNode = jupiterHouse === rahuHouse ? 'Rahu' : 'Ketu';
     doshas.push({
-      name: 'Guru Chandal Dosha',
-      sinhala: 'ගුරු චණ්ඩාල දෝෂය',
+      name: 'Jupiter-Shadow Node Tension',
+      sinhala: 'ගුරු-සෙවනැල්ල අභියෝගය',
       icon: '🔱',
       present: true,
       severity: withNode === 'Rahu' ? 'Strong' : 'Moderate',
       details: { jupiterHouse, withNode },
-      description: `Jupiter conjunct ${withNode} in house ${jupiterHouse} — the guru (wisdom planet) is corrupted by the shadow. This can create confusion in dharma, wrong teachers/advisors, and misguided beliefs. However, it also grants unconventional wisdom and research ability.`,
+      description: `Jupiter conjunct ${withNode} in house ${jupiterHouse} — the wisdom planet is influenced by the shadow node. This can create confusion in values, encounters with misleading advisors, and unconventional beliefs. However, it also grants unique insight and strong research ability.`,
       descriptionSi: `${jupiterHouse} වන භාවයේ ගුරු ${withNode === 'Rahu' ? 'රාහු' : 'කේතු'} සමඟ — ප්‍රඥා ග්‍රහයා සෙවනැල්ලෙන් කිලිටි වේ. ධර්මයේ ව්‍යාකූලත්වය, වැරදි ගුරුවරුන්/උපදේශකයින් ඇතිවිය හැක. නමුත් අසාමාන්‍ය ප්‍රඥාව හා පර්යේෂණ හැකියාවද ලබා දේ.`,
       remedies: [
-        'Worship Lord Vishnu on Thursdays',
-        'Donate yellow items (turmeric, yellow cloth, gold) on Thursdays',
-        'Recite Vishnu Sahasranama weekly',
+        'Seek wisdom from verified, trustworthy mentors',
+        'Practice generosity and share knowledge freely',
+        'Read broadly and form your own informed opinions',
         'Respect teachers and elderly people always',
-        'Wear Yellow Sapphire (Pushparaga) if Jupiter is benefic for lagna',
+        'Engage in lifelong learning — education strengthens Jupiter',
       ],
     });
   }
@@ -411,19 +411,19 @@ function detectDoshas(date, lat, lng) {
 
   if (lord2House && lord11House && [6, 8, 12].includes(lord2House) && [6, 8, 12].includes(lord11House)) {
     doshas.push({
-      name: 'Daridra Dosha (Poverty Combination)',
-      sinhala: 'දරිද්‍ර දෝෂය',
+      name: 'Financial Challenge Pattern',
+      sinhala: 'මූල්‍ය අභියෝග රටාව',
       icon: '💸',
       present: true,
       severity: 'Moderate',
       description: `Both wealth lords (2nd: ${lord2Name}, 11th: ${lord11Name}) are in difficult houses. Financial growth requires extra effort and karmic remedies.`,
       descriptionSi: `ධන භාවාධිපතීන් දෙදෙනාම (2 වන: ${lord2Name}, 11 වන: ${lord11Name}) දුෂ්කර භාවවල සිටී. මූල්‍ය වර්ධනය සඳහා අමතර උත්සාහය හා කර්ම පිළියම් අවශ්‍යයි.`,
       remedies: [
-        'Worship Goddess Lakshmi on Fridays',
-        'Recite Shri Suktam daily',
+        'Build a consistent saving habit — even small amounts matter',
+        'Practice generosity by sharing with those in need',
         'Keep finances transparent — never hide money',
-        'Donate food to the needy on Fridays',
-        'Keep the northeast corner of home clean and lit',
+        'Develop financial literacy — learn about budgeting and investing',
+        'Keep your living space clean and organized, especially the northeast corner',
       ],
     });
   }
@@ -786,7 +786,7 @@ function detectAdvancedYogas(date, lat, lng) {
       name: 'Parvata Yoga',
       sinhala: 'පර්වත යෝගය',
       icon: '🏔️',
-      description: 'Benefic planets dominate the angular houses with no malefic obstruction — grants a life of fortune, comfort, fame, and authority like a mountain king.',
+      description: 'Supportive planets dominate the key positions with no challenging obstruction — grants a life of fortune, comfort, recognition, and natural authority.',
       descriptionSi: 'ශුභ ග්‍රහයන් පාප ග්‍රහ බාධාවකින් තොරව කේන්ද්‍ර භාවවල ආධිපත්‍යය දරයි — කඳුකර රජෙකු මෙන් වාසනාවන්ත, සුවපහසු, ප්‍රසිද්ධ සහ බලවත් ජීවිතයක් ලබා දේ.',
       strength: 'Very Strong',
       category: 'Raja Yoga',
@@ -834,7 +834,7 @@ function detectAdvancedYogas(date, lat, lng) {
       name: 'Shubha Kartari Yoga',
       sinhala: 'ශුභ කර්තරි යෝගය',
       icon: '🛡️',
-      description: 'Benefic planets on both sides of the Ascendant — a divine protection shield. Life is blessed, obstacles are deflected, and fortune surrounds you.',
+      description: 'Supportive planets on both sides of the Ascendant — a natural protection shield. Life is blessed, obstacles are deflected, and good fortune surrounds you.',
       descriptionSi: 'ලග්නයේ දෙපසින්ම ශුභ ග්‍රහයන් — දෛවික ආරක්ෂණ පළිහකි. ජීවිතය ආශීර්වාදමය, බාධා මග හැරෙන අතර වාසනාව ඔබ වටා කරකැවේ.',
       strength: 'Strong',
       category: 'Protection Yoga',
@@ -851,7 +851,7 @@ function detectAdvancedYogas(date, lat, lng) {
       name: 'Papa Kartari Yoga',
       sinhala: 'පාප කර්තරි යෝගය',
       icon: '⚠️',
-      description: 'Malefic planets hemming the Ascendant from both sides — creates pressure, restrictions, and feeling "boxed in" by circumstances. Requires spiritual remedies.',
+      description: 'Challenging planets on both sides of the Ascendant — creates pressure, restrictions, and feeling "boxed in" by circumstances. Awareness and proactive effort help overcome this.',
       descriptionSi: 'පාප ග්‍රහයන් ලග්නය දෙපසින් වටකර ඇත — පීඩනය, සීමාවන් සහ තත්ත්වයන් මගින් "සීමා වී ඇති" හැඟීමක් ඇති කරයි. ආධ්‍යාත්මික පිළියම් අවශ්‍ය වේ.',
       strength: 'Strong',
       category: 'Dosha Yoga',
@@ -1321,7 +1321,7 @@ function calculateIshtaKashta(date, lat, lng) {
       ishtaPhala: Math.round(ishtaPhala * 100) / 100,
       kashtaPhala: Math.round(kashtaPhala * 100) / 100,
       netBenefic: Math.round(netBenefic * 100) / 100,
-      tendency: netBenefic > 10 ? 'Strongly Benefic' : netBenefic > 0 ? 'Mildly Benefic' : netBenefic > -10 ? 'Mildly Malefic' : 'Strongly Malefic',
+      tendency: netBenefic > 10 ? 'Strongly Supportive' : netBenefic > 0 ? 'Mildly Supportive' : netBenefic > -10 ? 'Mildly Challenging' : 'Strongly Challenging',
       shadbalaRupas: sb.totalRupas,
       shadbalaStrength: sb.strength,
     };
@@ -1638,12 +1638,12 @@ function buildExtendedVargas(date, lat, lng) {
     { key: 'D10', name: 'Dasamsha',          sinhala: 'දශාංශ',         governs: 'Career, profession, public status', rules: d10Rules },
     { key: 'D12', name: 'Dwadasamsha',       sinhala: 'ද්වාදශාංශ',     governs: 'Parents, lineage, ancestry', rules: d12Rules },
     { key: 'D16', name: 'Shodasamsha',       sinhala: 'ෂෝඩශාංශ',      governs: 'Vehicles, conveyances, happiness', rules: d16Rules },
-    { key: 'D20', name: 'Vimsamsha',         sinhala: 'විංශාංශ',       governs: 'Spiritual life, upasana, worship', rules: d20Rules },
+    { key: 'D20', name: 'Vimsamsha',         sinhala: 'විංශාංශ',       governs: 'Inner growth, personal development, mindfulness', rules: d20Rules },
     { key: 'D24', name: 'Chaturvimshamsha',  sinhala: 'චතුර්විංශාංශ',  governs: 'Education, academic success', rules: d24Rules },
     { key: 'D27', name: 'Saptavimsamsha',    sinhala: 'සප්තවිංශාංශ',   governs: 'Strength, stamina, physical ability', rules: d27Rules },
     { key: 'D40', name: 'Khavedamsha',       sinhala: 'ඛවේදාංශ',      governs: 'Auspicious and inauspicious effects', rules: d40Rules },
     { key: 'D45', name: 'Akshavedamsha',     sinhala: 'අක්ෂවේදාංශ',    governs: 'General well-being, paternal legacy', rules: d45Rules },
-    { key: 'D60', name: 'Shashtiamsha',      sinhala: 'ෂෂ්ඨිඅංශ',     governs: 'Past life karma, deepest karmic patterns', rules: d60Rules },
+    { key: 'D60', name: 'Shashtiamsha',      sinhala: 'ෂෂ්ඨිඅංශ',     governs: 'Deepest personality patterns, inherited tendencies', rules: d60Rules },
   ];
 
   for (const div of divisions) {

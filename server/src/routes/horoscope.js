@@ -12,7 +12,7 @@ const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getS
 const { generateAdvancedAnalysis } = require('../engine/advanced');
 const { chat, generateAINarrativeReport, translateAdvancedForDisplay, explainChartSimple } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
-const { phoneAuth } = require('../middleware/subscription');
+const { phoneAuth, requireSubscription } = require('../middleware/subscription');
 const { reportLimiter, validateBirthData } = require('../middleware/security');
 
 // Enhanced engine (graceful — null if unavailable)
@@ -34,9 +34,9 @@ const { parseBirthDateTime } = require('../services/timezone');
  */
 const LAGNA_PALAPALA = {
   'Mesha': {
-    english: 'Aries Lagna',
+    english: 'Aries Rising',
     sinhala: 'මේෂ ලග්නය',
-    description: 'Born under Mesha Lagna, you are a natural leader with fiery courage and pioneering spirit. Mars (Kuja) as your Lagna lord blesses you with energy, determination, and a warrior\'s heart.',
+    description: 'Born under Aries Rising, you are a natural leader with fiery courage and pioneering spirit. Mars as your ruling planet blesses you with energy, determination, and a warrior\'s heart.',
     descriptionSi: 'මේෂ ලග්නයෙන් උපන් ඔබ ස්වභාවික නායකයෙකි. කුජ ග්‍රහයා ලග්නාධිපති වන බැවින් ධෛර්යය, අධිෂ්ඨානය සහ සටන්කාමී ස්වභාවය ඔබේ ලක්ෂණයකි.',
     traits: ['Leadership & courage', 'Quick decision-maker', 'Athletic build', 'Short temper but forgiving'],
     traitsSi: ['නායකත්ව හැකියාව සහ ධෛර්යවත් බව', 'ඉක්මන් තීරණ ගන්නා', 'මනා සෞඛ්‍ය සම්පන්න සිරුරක් හිමි', 'ඉක්මන් කේන්තිය සහ ඉක්මනින් සමාව දීම'],
@@ -48,9 +48,9 @@ const LAGNA_PALAPALA = {
     luckyDay: 'Tuesday (අඟහරුවාදා)',
   },
   'Vrishabha': {
-    english: 'Taurus Lagna',
+    english: 'Taurus Rising',
     sinhala: 'වෘෂභ ලග්නය',
-    description: 'Vrishabha Lagna natives are blessed by Venus (Shukra), the planet of beauty and luxury. You possess remarkable patience, artistic talent, and a deep love of comfort and stability.',
+    description: 'Taurus Rising natives are blessed by Venus, the planet of beauty and luxury. You possess remarkable patience, artistic talent, and a deep love of comfort and stability.',
     descriptionSi: 'වෘෂභ ලග්නයෙන් උපන් ඔබට සිකුරු ග්‍රහයාගේ ආශීර්වාදය ලැබේ. ඉවසීම, කලාත්මක හැකියාව, සහ සුඛෝපභෝගී ජීවිතයට ඇල්මක් ඔබේ විශේෂ ලක්ෂණයි.',
     traits: ['Patient & reliable', 'Artistic & musical talent', 'Love of luxury & comfort', 'Strong willpower'],
     traitsSi: ['ඉවසිලිවන්ත සහ විශ්වාසදායක', 'කලාත්මක හා සංගීත හැකියාව', 'සුඛෝපභෝගී ජීවිතයට ඇති කැමැත්ත', 'දැඩි අධිෂ්ඨාන ශක්තිය'],
@@ -62,9 +62,9 @@ const LAGNA_PALAPALA = {
     luckyDay: 'Friday (සිකුරාදා)',
   },
   'Mithuna': {
-    english: 'Gemini Lagna',
+    english: 'Gemini Rising',
     sinhala: 'මිථුන ලග්නය',
-    description: 'Mercury (Budha) as your Lagna lord makes you highly intellectual, communicative, and versatile. Mithuna Lagna people are natural storytellers and quick learners.',
+    description: 'Mercury as your ruling planet makes you highly intellectual, communicative, and versatile. Gemini Rising people are natural storytellers and quick learners.',
     descriptionSi: 'බුධ ග්‍රහයා ලග්නාධිපති වන බැවින් ඔබ බුද්ධිමත්, සන්නිවේදනයට දක්ෂ සහ බහුමුඛ පුද්ගලයෙකි. මිථුන ලග්නයේ අය ස්වභාවික කතාකරුවන් ය.',
     traits: ['Intellectual & curious', 'Excellent communicator', 'Adaptable & versatile', 'Restless mind'],
     traitsSi: ['බුද්ධිමත් හා කුතුහලකාරී', 'විශිෂ්ට සන්නිවේදක', 'ඕනෑම තත්වයකට හැඩගැසීමේ හැකියාව', 'නොසන්සුන් මනස'],
@@ -76,9 +76,9 @@ const LAGNA_PALAPALA = {
     luckyDay: 'Wednesday (බදාදා)',
   },
   'Kataka': {
-    english: 'Cancer Lagna',
+    english: 'Cancer Rising',
     sinhala: 'කටක ලග්නය',
-    description: 'The Moon (Chandra) rules your Lagna, making you deeply emotional, intuitive, and nurturing. Kataka natives have a powerful connection to home, family, and their motherland.',
+    description: 'The Moon rules your Rising Sign, making you deeply emotional, intuitive, and nurturing. Cancer Rising natives have a powerful connection to home, family, and their roots.',
     descriptionSi: 'චන්ද්‍ර ග්‍රහයා ඔබේ ලග්නාධිපති වන බැවින් ඔබ ගැඹුරු හැඟීම්කාරී, අවබෝධශීලී සහ සත්කාරශීලී පුද්ගලයෙකි. නිවස, පවුල සහ මව්බිම ඔබට ඉතා වැදගත්.',
     traits: ['Deeply emotional & caring', 'Strong intuition', 'Home & family oriented', 'Protective nature'],
     traitsSi: ['ගැඹුරු හැඟීම් සහිත සහ ආදරණීය', 'ඉහළ අවබෝධ ශක්තිය', 'පවුලට ලැඳි සහ නිවසට ආදරය කරන', 'අන් අයව ආරක්ෂා කිරීමේ ස්වභාවය'],
@@ -90,9 +90,9 @@ const LAGNA_PALAPALA = {
     luckyDay: 'Monday (සඳුදා)',
   },
   'Simha': {
-    english: 'Leo Lagna',
+    english: 'Leo Rising',
     sinhala: 'සිංහ ලග්නය',
-    description: 'The Sun (Surya) as your Lagna lord bestows royal dignity, confidence, and natural authority. Simha Lagna natives command respect and have a magnetic personality.',
+    description: 'The Sun as your ruling planet bestows royal dignity, confidence, and natural authority. Leo Rising natives command respect and have a magnetic personality.',
     descriptionSi: 'සූර්ය ග්‍රහයා ලග්නාධිපති වන බැවින් රාජ ගෞරවය, ආත්ම විශ්වාසය සහ ස්වභාවික බලය ඔබට හිමි වේ. සිංහ ලග්නයේ අය ගෞරවය දිනාගෙන ආකර්ෂණීය පෞරුෂයක් ඇත.',
     traits: ['Natural leader & authority', 'Generous & warm-hearted', 'Strong self-confidence', 'Proud & dignified'],
     traitsSi: ['ස්වභාවික නායකත්වය සහ බලපෑම', 'ත්‍යාගශීලී සහ කරුණාවන්ත හදවත', 'ශක්තිමත් ආත්ම විශ්වාසය', 'අභිමානවත් සහ ගෞරවනීය'],
@@ -104,9 +104,9 @@ const LAGNA_PALAPALA = {
     luckyDay: 'Sunday (ඉරිදා)',
   },
   'Kanya': {
-    english: 'Virgo Lagna',
+    english: 'Virgo Rising',
     sinhala: 'කන්‍යා ලග්නය',
-    description: 'Mercury (Budha) governs your Lagna, giving you exceptional analytical ability, attention to detail, and a service-oriented nature. Kanya natives excel in precision work.',
+    description: 'Mercury governs your Rising Sign, giving you exceptional analytical ability, attention to detail, and a service-oriented nature. Virgo Rising natives excel in precision work.',
     descriptionSi: 'බුධ ග්‍රහයා ඔබේ ලග්නය පාලනය කරන බැවින් විශ්ලේෂණ හැකියාව, විස්තර කෙරෙහි අවධානය සහ සේවා නැඹුරු ස්වභාවය ඔබේ ලක්ෂණයි.',
     traits: ['Analytical & detail-oriented', 'Practical & organized', 'Health-conscious', 'Perfectionist tendencies'],
     traitsSi: ['විශ්ලේෂණාත්මක සහ සියුම් දේ ගැන සැලකිලිමත්', 'ප්‍රායෝගික හා සංවිධානාත්මක', 'සෞඛ්‍ය ගැන සැලකිලිමත් වන', 'සියලු දේ නිවැරදිව කිරීමට ඇති කැමැත්ත'],
@@ -118,9 +118,9 @@ const LAGNA_PALAPALA = {
     luckyDay: 'Wednesday (බදාදා)',
   },
   'Tula': {
-    english: 'Libra Lagna',
+    english: 'Libra Rising',
     sinhala: 'තුලා ලග්නය',
-    description: 'Venus (Shukra) rules your Lagna, blessing you with charm, diplomacy, and a deep sense of justice. Tula natives naturally seek balance and harmony in all things.',
+    description: 'Venus rules your Rising Sign, blessing you with charm, diplomacy, and a deep sense of justice. Libra Rising natives naturally seek balance and harmony in all things.',
     descriptionSi: 'සිකුරු ග්‍රහයා ඔබේ ලග්නය පාලනය කරන බැවින් ආකර්ෂණීයත්වය, රාජ්‍ය තාන්ත්‍රිකත්වය සහ යුක්තිය පිළිබඳ ගැඹුරු හැඟීමක් ඔබට ලැබේ.',
     traits: ['Diplomatic & fair-minded', 'Charming & sociable', 'Artistic sensibility', 'Seeks balance in all things'],
     traitsSi: ['සාමකාමී සහ සාධාරණ අදහස් ඇති', 'ආකර්ෂණීය හා සමාජශීලී', 'කලාත්මක සංවේදීතාව', 'සෑම දෙයකම සමබරතාවය ප්‍රිය කරන'],
@@ -132,9 +132,9 @@ const LAGNA_PALAPALA = {
     luckyDay: 'Friday (සිකුරාදා)',
   },
   'Vrischika': {
-    english: 'Scorpio Lagna',
+    english: 'Scorpio Rising',
     sinhala: 'වෘශ්චික ලග්නය',
-    description: 'Mars (Kuja) as your Lagna lord gives you intense willpower, magnetic charisma, and deep transformative energy. Vrischika natives are fearless investigators who see beneath the surface.',
+    description: 'Mars as your ruling planet gives you intense willpower, magnetic charisma, and deep transformative energy. Scorpio Rising natives are fearless investigators who see beneath the surface.',
     descriptionSi: 'කුජ ග්‍රහයා ලග්නාධිපති වන බැවින් ප්‍රබල කැපවීම සහ උනන්දුව, ආකර්ෂණීය පෞරුෂය සහ ගැඹුරු පරිවර්තන ශක්තිය ඔබට ලැබේ. වෘශ්චික ලග්නයේ අය නිර්භීත පර්යේෂකයන් වන අතර පෘෂ්ඨය යට බලති.',
     traits: ['Intense willpower', 'Magnetic personality', 'Deep & mysterious', 'Resilient & transformative'],
     traitsSi: ['ප්‍රබල කැපවීම සහ උනන්දුව', 'ආකර්ෂණීය පෞරුෂය', 'ගැඹුරු සහ ගුප්ත ස්වභාවයක් ඇති', 'දුෂ්කරතා මැඬගෙන නැගීසිටීමේ හැකියාව'],
@@ -146,9 +146,9 @@ const LAGNA_PALAPALA = {
     luckyDay: 'Tuesday (අඟහරුවාදා)',
   },
   'Dhanus': {
-    english: 'Sagittarius Lagna',
+    english: 'Sagittarius Rising',
     sinhala: 'ධනු ලග්නය',
-    description: 'Jupiter (Guru) as your Lagna lord bestows wisdom, optimism, and spiritual inclination. Dhanus natives are philosophical seekers and natural teachers.',
+    description: 'Jupiter as your ruling planet bestows wisdom, optimism, and a philosophical nature. Sagittarius Rising natives are natural seekers and inspiring teachers.',
     descriptionSi: 'ගුරු ග්‍රහයා ලග්නාධිපති වන බැවින් ප්‍රඥාව, ශුභවාදය සහ ආධ්‍යාත්මික දේට නැඹුරුව ඔබට ලැබේ. ධනු ලග්නයේ අය දාර්ශනික ගවේෂකයන් සහ ස්වභාවික ගුරුවරුන් වේ.',
     traits: ['Wise & philosophical', 'Optimistic & adventurous', 'Love of learning & travel', 'Honest & straightforward'],
     traitsSi: ['ඥානවන්ත සහ දාර්ශනික අදහස් ඇති', 'ශුභවාදී සහ උද්යෝගිමත්', 'ඉගෙනීමට සහ සංචාරයට ඇති දැඩි ඇල්ම', 'අවංක සහ සෘජු ප්‍රකාශ කරන'],
@@ -160,9 +160,9 @@ const LAGNA_PALAPALA = {
     luckyDay: 'Thursday (බ්‍රහස්පතින්දා)',
   },
   'Makara': {
-    english: 'Capricorn Lagna',
+    english: 'Capricorn Rising',
     sinhala: 'මකර ලග්නය',
-    description: 'Saturn (Shani) governs your Lagna, granting you tremendous discipline, patience, and ambition. Makara natives build empires slowly but surely through persistent effort.',
+    description: 'Saturn governs your Rising Sign, granting you tremendous discipline, patience, and ambition. Capricorn Rising natives build empires slowly but surely through persistent effort.',
     descriptionSi: 'සෙනසුරු ග්‍රහයා ඔබේ ලග්නය පාලනය කරන බැවින් අති විශාල විනය, ඉවසීම සහ අභිලාෂය ඔබට ලැබේ. මකර ලග්නයේ අය සෙමින් නමුත් තහවුරුව අධිරාජ්‍යයන් ගොඩනඟති.',
     traits: ['Disciplined & ambitious', 'Extremely patient', 'Practical & responsible', 'Traditional values'],
     traitsSi: ['විනයගරුක හා අභිලාෂකාමී', 'අතිශයින් ඉවසිලිවන්ත සහ බුද්ධිමත්', 'ප්‍රායෝගික හා වගකීම්සහගත', 'සාම්ප්‍රදායික වටිනාකම්'],
@@ -174,9 +174,9 @@ const LAGNA_PALAPALA = {
     luckyDay: 'Saturday (සෙනසුරාදා)',
   },
   'Kumbha': {
-    english: 'Aquarius Lagna',
+    english: 'Aquarius Rising',
     sinhala: 'කුම්භ ලග්නය',
-    description: 'Saturn (Shani) rules your Lagna, combined with Rahu\'s influence giving you an unconventional, progressive, and humanitarian outlook. Kumbha natives think ahead of their time.',
+    description: 'Saturn rules your Rising Sign, combined with an unconventional, progressive, and humanitarian outlook. Aquarius Rising natives think ahead of their time.',
     descriptionSi: 'සෙනසුරු ග්‍රහයා ඔබේ ලග්නය පාලනය කරන අතර රාහුගේ බලපෑම සමඟ ඔබට සාම්ප්‍රදායික නොවන, ප්‍රගතිශීලී සහ මානවවාදී දැක්මක් ලැබේ.',
     traits: ['Progressive & innovative', 'Humanitarian spirit', 'Independent thinker', 'Detached yet friendly'],
     traitsSi: ['ප්‍රගතිශීලී සහ නව නිර්මාණාත්මක', 'මානවවාදී ආත්මය', 'ස්වාධීන චින්තකයා', 'ස්වාධීන වුවත් මිත්‍රශීලී'],
@@ -188,9 +188,9 @@ const LAGNA_PALAPALA = {
     luckyDay: 'Saturday (සෙනසුරාදා)',
   },
   'Meena': {
-    english: 'Pisces Lagna',
+    english: 'Pisces Rising',
     sinhala: 'මීන ලග්නය',
-    description: 'Jupiter (Guru) as your Lagna lord grants you deep spirituality, compassion, and artistic genius. Meena natives are empathic dreamers with a strong connection to the divine.',
+    description: 'Jupiter as your ruling planet grants you deep intuition, compassion, and artistic genius. Pisces Rising natives are empathic dreamers with a strong connection to their inner world.',
     descriptionSi: 'ගුරු ග්‍රහයා ලග්නාධිපති වන බැවින් ගැඹුරු ආධ්‍යාත්මිකත්වය, කරුණාව සහ කලාත්මක ප්‍රතිභාව ඔබට ලැබේ. මීන ලග්නයේ අය දිව්‍ය සම්බන්ධතාවයක් ඇති සහානුභූතික සිහින දකින්නන් වේ.',
     traits: ['Spiritually inclined', 'Deeply compassionate', 'Artistic & creative', 'Dreamy & imaginative'],
     traitsSi: ['ආධ්‍යාත්මික දේට නැඹුරු', 'ගැඹුරු සහනුකම්පාව සහ කරුණාව', 'කලාත්මක හා නිර්මාණශීලී', 'ප්‍රබල පරිකල්පන ශක්තිය සහ හැඟීම්බර'],
@@ -295,7 +295,7 @@ router.get('/daily/:sign', (req, res) => {
     });
   } catch (error) {
     console.error('Error generating horoscope:', error);
-    res.status(500).json({ error: 'Failed to generate horoscope', details: error.message });
+    res.status(500).json({ error: 'Failed to generate horoscope', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -569,7 +569,7 @@ router.post('/birth-chart', optionalAuth, async (req, res) => {
     const elapsed = Date.now() - reqStart;
     console.error('[birth-chart] ✖ ERROR after ' + elapsed + 'ms:', error.message);
     console.error('[birth-chart]   stack:', error.stack?.split('\n').slice(0, 3).join(' | '));
-    res.status(500).json({ error: 'Failed to generate birth chart', details: error.message });
+    res.status(500).json({ error: 'Failed to generate birth chart', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -578,7 +578,7 @@ router.post('/birth-chart', optionalAuth, async (req, res) => {
  * Uses Gemini AI to generate a deeply personal, addictive analysis
  * based on ALL chart data (Lagna, Rashi, Navamsha, Yogas, Planet Strengths)
  */
-router.post('/ai-analysis', async (req, res) => {
+router.post('/ai-analysis', phoneAuth, requireSubscription, async (req, res) => {
   try {
     const { birthDate, lat, lng, language = 'en' } = req.body;
 
@@ -727,7 +727,7 @@ CRITICAL RULES:
     });
   } catch (error) {
     console.error('Error generating AI analysis:', error);
-    res.status(500).json({ error: 'Failed to generate analysis', details: error.message });
+    res.status(500).json({ error: 'Failed to generate analysis', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -955,7 +955,7 @@ router.get('/birth-chart/data', optionalAuth, async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to generate chart data', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -1013,7 +1013,7 @@ router.post('/full-report', reportLimiter, async (req, res) => {
 // Optional auth: if logged in, caches report & returns cached if available
 // ═══════════════════════════════════════════════════════════════════
 
-router.post('/full-report-ai', reportLimiter, phoneAuth, async (req, res) => {
+router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, async (req, res) => {
   let entitlementId = null;
   try {
     const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null } = req.body;

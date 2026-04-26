@@ -33,16 +33,30 @@ export function setDetectedCountry(code) {
   _detectedCountry = code;
 }
 
+var MAX_RETRIES = 3;
+var BACKOFF_DELAYS = [2000, 4000, 8000]; // Exponential backoff
+
+function isRetryableError(err, statusCode) {
+  if (statusCode && (statusCode === 502 || statusCode === 503 || statusCode === 504)) return true;
+  if (err && err.message) {
+    var m = err.message;
+    if (m.indexOf('Network') !== -1 || m.indexOf('network') !== -1 || m.indexOf('Failed to fetch') !== -1) return true;
+  }
+  return false;
+}
+
 async function request(path, opts) {
   if (!opts) opts = {};
   var timeout = opts._timeout || 20000;
   var retries = opts._retries || 0;
+  var maxRetries = opts._maxRetries || MAX_RETRIES;
   delete opts._timeout;
   delete opts._retries;
+  delete opts._maxRetries;
   var url = BASE + path;
   var method = opts.method || 'GET';
   var startMs = Date.now();
-  if (__DEV__) console.log('[API] ▶ ' + method + ' ' + url + (retries > 0 ? ' (retry ' + retries + ')' : '') + ' timeout=' + timeout + 'ms');
+  if (__DEV__) console.log('[API] ▶ ' + method + ' ' + url + (retries > 0 ? ' (retry ' + retries + '/' + maxRetries + ')' : '') + ' timeout=' + timeout + 'ms');
   var controller = new AbortController();
   var timer = setTimeout(function() {
     if (__DEV__) console.log('[API] ⏰ TIMEOUT after ' + timeout + 'ms: ' + url);
@@ -81,6 +95,15 @@ async function request(path, opts) {
     clearTimeout(timer);
     var elapsed = Date.now() - startMs;
     if (__DEV__) console.log('[API] ◀ ' + res.status + ' ' + url + ' (' + elapsed + 'ms)');
+
+    // Retry on 502/503/504 before parsing body
+    if (retries < maxRetries && (res.status === 502 || res.status === 503 || res.status === 504)) {
+      var delay = BACKOFF_DELAYS[retries] || 8000;
+      if (__DEV__) console.log('[API] ✖ SERVER ' + res.status + ' ' + url + ' — retrying in ' + delay + 'ms...');
+      await new Promise(function(r) { setTimeout(r, delay); });
+      return request(path, { ...opts, _timeout: timeout, _retries: retries + 1, _maxRetries: maxRetries });
+    }
+
     var text = await res.text();
     var json;
     try {
@@ -91,7 +114,9 @@ async function request(path, opts) {
     }
     if (!res.ok) {
       if (__DEV__) console.error('[API] ✖ HTTP ' + res.status + ' ' + url + ':', json.error || text.substring(0, 200));
-      throw new Error(json.error || 'HTTP ' + res.status);
+      var httpErr = new Error(json.error || 'HTTP ' + res.status);
+      httpErr.statusCode = res.status;
+      throw httpErr;
     }
     if (__DEV__) console.log('[API] ✔ success=' + json.success + ' hasData=' + !!(json.data));
     return json;
@@ -105,14 +130,28 @@ async function request(path, opts) {
       abortErr.name = 'AbortError';
       throw abortErr;
     }
-    // Network errors (e.g. "Network request failed") — retry once
-    if (retries < 1 && err && err.message && (err.message.indexOf('Network') !== -1 || err.message.indexOf('network') !== -1 || err.message.indexOf('Failed to fetch') !== -1)) {
-      if (__DEV__) console.log('[API] ✖ NETWORK ERROR ' + url + ' after ' + elapsed2 + 'ms: ' + err.message + ' — retrying in 2s...');
-      await new Promise(function(r) { setTimeout(r, 2000); });
-      return request(path, { ...opts, _timeout: timeout, _retries: retries + 1 });
+    // Network errors — retry with exponential backoff
+    if (retries < maxRetries && isRetryableError(err, err.statusCode)) {
+      var delay = BACKOFF_DELAYS[retries] || 8000;
+      if (__DEV__) console.log('[API] ✖ RETRYABLE ERROR ' + url + ' after ' + elapsed2 + 'ms: ' + err.message + ' — retrying in ' + delay + 'ms (' + (retries + 1) + '/' + maxRetries + ')...');
+      await new Promise(function(r) { setTimeout(r, delay); });
+      return request(path, { ...opts, _timeout: timeout, _retries: retries + 1, _maxRetries: maxRetries });
     }
     if (__DEV__) console.error('[API] ✖ ERROR ' + url + ' after ' + elapsed2 + 'ms:', err.name, err.message);
     throw err;
+  }
+}
+
+// Quick connectivity check — pings server health endpoint
+export async function checkServerReachable() {
+  try {
+    var controller = new AbortController();
+    var timer = setTimeout(function() { controller.abort(); }, 5000);
+    var res = await fetch(BASE + '/api/health', { signal: controller.signal });
+    clearTimeout(timer);
+    return res.ok;
+  } catch (e) {
+    return false;
   }
 }
 

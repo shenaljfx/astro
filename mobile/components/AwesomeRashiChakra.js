@@ -10,13 +10,15 @@ import React, { useEffect, useMemo } from 'react';
 import { View } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle, withRepeat, withTiming,
-  Easing, interpolate,
+  Easing, interpolate, cancelAnimation,
 } from 'react-native-reanimated';
 import Svg, {
   Circle, Text as SvgText, G, Line, Defs, RadialGradient, LinearGradient,
   Stop, Path, Polygon, Ellipse, Image as SvgImage,
 } from 'react-native-svg';
 import { ZODIAC_IMAGES } from './ZodiacIcons';
+import useReducedMotion from '../hooks/useReducedMotion';
+import useLowEndDevice from '../hooks/useLowEndDevice';
 
 // ═══════════════════════════════════════════════════════
 // ZODIAC SVG MINI-PATHS  (drawn at origin, scale to ~1em)
@@ -135,6 +137,9 @@ function makeStarDots(n, rMin, rMax, cx, cy) {
 function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
   var cx = size / 2;
   var cy = size / 2;
+  var reduced = useReducedMotion();
+  var lowEnd = useLowEndDevice();
+  var skipAnimations = reduced || lowEnd;
 
   // ── Radii ──
   var Redge    = cx - 2;
@@ -160,6 +165,16 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
   var glow      = useSharedValue(0);
 
   useEffect(function () {
+    if (skipAnimations) {
+      // Cancel all running animations and set static midpoints
+      cancelAnimation(rotSlow); cancelAnimation(rotMed);
+      cancelAnimation(rotStars1); cancelAnimation(rotStars2); cancelAnimation(rotStars3);
+      cancelAnimation(rotAura); cancelAnimation(pulse); cancelAnimation(pulse2); cancelAnimation(glow);
+      rotSlow.value = 0; rotMed.value = 0;
+      rotStars1.value = 0; rotStars2.value = 0; rotStars3.value = 0;
+      rotAura.value = 0; pulse.value = 0.5; pulse2.value = 0.5; glow.value = 0.5;
+      return;
+    }
     rotSlow.value   = withRepeat(withTiming(360,  { duration: 140000, easing: Easing.linear }), -1, false);
     rotMed.value    = withRepeat(withTiming(-360, { duration: 85000,  easing: Easing.linear }), -1, false);
     rotStars1.value = withRepeat(withTiming(360,  { duration: 200000, easing: Easing.linear }), -1, false);
@@ -169,7 +184,12 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
     pulse.value     = withRepeat(withTiming(1, { duration: 3200, easing: Easing.inOut(Easing.ease) }), -1, true);
     pulse2.value    = withRepeat(withTiming(1, { duration: 5000, easing: Easing.inOut(Easing.ease) }), -1, true);
     glow.value      = withRepeat(withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.ease) }), -1, true);
-  }, []);
+    return function () {
+      cancelAnimation(rotSlow); cancelAnimation(rotMed);
+      cancelAnimation(rotStars1); cancelAnimation(rotStars2); cancelAnimation(rotStars3);
+      cancelAnimation(rotAura); cancelAnimation(pulse); cancelAnimation(pulse2); cancelAnimation(glow);
+    };
+  }, [skipAnimations]);
 
   var slowStyle   = useAnimatedStyle(function () { return { transform: [{ rotate: rotSlow.value + 'deg' }] }; });
   var medStyle    = useAnimatedStyle(function () { return { transform: [{ rotate: rotMed.value + 'deg' }] }; });
@@ -200,10 +220,13 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
     return { opacity: interpolate(pulse2.value, [0, 1], [0.5, 0.85]) };
   });
 
-  // ── Star dot data — 3 concentric rings ──
-  var starsOuter = useMemo(function () { return makeStarDots(90, Rband + 6, Redge + 35, cx, cy); }, [size]);
-  var starsMid   = useMemo(function () { return makeStarDots(55, RsegOut + 6, Rband - 2, cx, cy); }, [size]);
-  var starsInner = useMemo(function () { return makeStarDots(35, Rorbit - 8, RsegIn - 4, cx, cy); }, [size]);
+  // ── Star dot data — 3 concentric rings (reduced on low-end devices) ──
+  var starCountOuter = skipAnimations ? 30 : 90;
+  var starCountMid   = skipAnimations ? 20 : 55;
+  var starCountInner = skipAnimations ? 10 : 35;
+  var starsOuter = useMemo(function () { return makeStarDots(starCountOuter, Rband + 6, Redge + 35, cx, cy); }, [size, starCountOuter]);
+  var starsMid   = useMemo(function () { return makeStarDots(starCountMid, RsegOut + 6, Rband - 2, cx, cy); }, [size, starCountMid]);
+  var starsInner = useMemo(function () { return makeStarDots(starCountInner, Rorbit - 8, RsegIn - 4, cx, cy); }, [size, starCountInner]);
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center', position: 'absolute' }}>

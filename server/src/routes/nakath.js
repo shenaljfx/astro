@@ -81,7 +81,7 @@ router.get('/daily', (req, res) => {
     });
   } catch (error) {
     console.error('Error calculating daily Nakath:', error);
-    res.status(500).json({ error: 'Failed to calculate daily Nakath', details: error.message });
+    res.status(500).json({ error: 'Failed to calculate daily Nakath', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -126,7 +126,7 @@ router.get('/rahu-kalaya', (req, res) => {
     });
   } catch (error) {
     console.error('Error calculating Rahu Kalaya:', error);
-    res.status(500).json({ error: 'Failed to calculate Rahu Kalaya', details: error.message });
+    res.status(500).json({ error: 'Failed to calculate Rahu Kalaya', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -159,7 +159,7 @@ router.get('/panchanga', (req, res) => {
     });
   } catch (error) {
     console.error('Error calculating Panchanga:', error);
-    res.status(500).json({ error: 'Failed to calculate Panchanga', details: error.message });
+    res.status(500).json({ error: 'Failed to calculate Panchanga', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 

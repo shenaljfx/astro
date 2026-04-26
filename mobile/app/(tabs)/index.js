@@ -1,16 +1,16 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
-  StyleSheet, Platform, Dimensions, Image,
+  StyleSheet, Platform, Dimensions, Image, InteractionManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, Line, G, Text as SvgText, Defs, RadialGradient, Stop, Ellipse, Path, Image as SvgImage } from 'react-native-svg';
+import Svg, { Circle, Line, G, Defs, RadialGradient, Stop, Ellipse, Path, Image as SvgImage } from 'react-native-svg';
 import Animated, {
   FadeIn, FadeInDown, FadeInUp,
   useSharedValue, useAnimatedStyle, useAnimatedScrollHandler,
-  withRepeat, withSequence, withTiming, withSpring,
+  withRepeat, withSequence, withTiming,
   interpolate, Easing,
 } from 'react-native-reanimated';
 import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
@@ -24,13 +24,23 @@ import useScreenInsets from '../../hooks/useScreenInsets';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
-import { Colors, Typography, Gradients, Spacing } from '../../constants/theme';
+import { Colors } from '../../constants/theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import SriLankanChart from '../../components/SriLankanChart';
-import RealisticMoon from '../../components/RealisticMoon';
-import PremiumBackground from '../../components/PremiumBackground';
+import useReducedMotion from '../../hooks/useReducedMotion';
+import useLowEndDevice from '../../hooks/useLowEndDevice';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
+
+// Lazy-load heavy THREE.js moon component — saves ~600KB parse on startup
+var RealisticMoonLazy = lazy(function () { return import('../../components/RealisticMoon'); });
+function RealisticMoon(props) {
+  return (
+    <Suspense fallback={<View style={{ width: props.size, height: props.size, borderRadius: props.size / 2, backgroundColor: '#12101E' }} />}>
+      <RealisticMoonLazy {...props} />
+    </Suspense>
+  );
+}
 
 var { width: SCREEN_WIDTH } = Dimensions.get('window');
 var CHAKRA_HERO_SIZE = Math.min(SCREEN_WIDTH * 0.95, 400);
@@ -123,7 +133,7 @@ var ZODIAC_COLORS = [
   '#F9A8D4','#D4A5FF','#FF9F43','#94A3B8','#67E8F9','#C4B5FD',
 ];
 
-function CosmicOrrery({ size, activeIndex, tithiNum }) {
+function CosmicOrrery({ size, activeIndex, tithiNum, skipDecorations }) {
   var pad = size * 0.10;
   var vb = size + pad * 2;
   var cx = vb / 2, cy = vb / 2;
@@ -374,8 +384,8 @@ function CosmicOrrery({ size, activeIndex, tithiNum }) {
         );
       })}
 
-      {/* Dust particles */}
-      {Array.from({ length: 24 }).map(function (_, i) {
+      {/* Dust particles — skip on low-end devices */}
+      {!skipDecorations && Array.from({ length: 24 }).map(function (_, i) {
         var band = i < 8 ? orbit1 : i < 16 ? orbit2 : zodiacR;
         var jitter = (i % 5 - 2) * 2 * u;
         var angle = (i * 15 + i * 7) * Math.PI / 180;
@@ -423,6 +433,9 @@ export default function HomeScreen() {
   var isDesktop = useDesktopCtx();
   var insets = useScreenInsets();
   var router = useRouter();
+  var reduced = useReducedMotion();
+  var lowEnd = useLowEndDevice();
+  var skipHeavy = reduced || lowEnd;
   var [data, setData] = useState(null);
   var [chartData, setChartData] = useState(null);
   var [weeklyLagna, setWeeklyLagna] = useState(null);
@@ -453,13 +466,18 @@ export default function HomeScreen() {
   var wheelSpin = useSharedValue(0);
   var coronaPulse = useSharedValue(0);
   useEffect(function () {
+    if (skipHeavy) {
+      wheelSpin.value = 0;
+      coronaPulse.value = 0.5;
+      return;
+    }
     wheelSpin.value = withRepeat(
       withTiming(360, { duration: 150000, easing: Easing.linear }),
     -1);
     coronaPulse.value = withRepeat(
       withTiming(1, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
     -1, true);
-  }, []);
+  }, [skipHeavy]);
   var wheelStyle = useAnimatedStyle(function () {
     return { transform: [{ rotate: wheelSpin.value + 'deg' }] };
   });
@@ -528,36 +546,45 @@ export default function HomeScreen() {
 
   useEffect(function () { fetchData(); }, [fetchData]);
   useEffect(function () {
+    // Defer secondary API calls until after first paint + interactions settle
     var cancelled = { current: false };
-    fetchBirthChart(cancelled);
-    return function () { cancelled.current = true; };
+    var handle = InteractionManager.runAfterInteractions(function () {
+      fetchBirthChart(cancelled);
+    });
+    return function () { cancelled.current = true; handle.cancel(); };
   }, [fetchBirthChart]);
 
-  // Fetch weekly lagna palapala
+  // Fetch weekly lagna palapala — deferred
   useEffect(function () {
-    api.getWeeklyLagna()
-      .then(function (res) {
-        if (res && res.success && res.reports && res.reports.length > 0) {
-          setWeeklyLagna(res);
-        }
-      })
-      .catch(function () { /* silent */ });
+    var handle = InteractionManager.runAfterInteractions(function () {
+      api.getWeeklyLagna()
+        .then(function (res) {
+          if (res && res.success && res.reports && res.reports.length > 0) {
+            setWeeklyLagna(res);
+          }
+        })
+        .catch(function () { /* silent */ });
+    });
+    return function () { handle.cancel(); };
   }, []);
 
-  // Fetch personalized jyotish data (Disha Shoola, Chandrashtama, Tara Balam, Special Yogas)
+  // Fetch personalized jyotish data — deferred
   useEffect(function () {
     if (!hasBirthData || !birthDateTime) return;
-    api.getJyotishPersonalized({
-      birthDate: birthDateTime,
-      lat: birthLat,
-      lng: birthLng,
-    })
-      .then(function (res) {
-        if (res && res.success && res.data) {
-          setJyotishToday(res.data);
-        }
+    var handle = InteractionManager.runAfterInteractions(function () {
+      api.getJyotishPersonalized({
+        birthDate: birthDateTime,
+        lat: birthLat,
+        lng: birthLng,
       })
-      .catch(function () { /* silent */ });
+        .then(function (res) {
+          if (res && res.success && res.data) {
+            setJyotishToday(res.data);
+          }
+        })
+        .catch(function () { /* silent */ });
+    });
+    return function () { handle.cancel(); };
   }, [hasBirthData, birthDateTime, birthLat, birthLng]);
 
   var getGreeting = function () {
@@ -954,7 +981,7 @@ export default function HomeScreen() {
                 backgroundColor: selIllumPct > 60 ? 'rgba(184,146,74,0.12)' : 'rgba(139,126,200,0.12)',
                 shadowColor: selIllumPct > 60 ? HT.gold : HT.purple,
               }]} />
-              <RealisticMoon size={moonDisplaySize} tithiNum={selectedTithi} animate={true} showStars={true} />
+              <RealisticMoon size={moonDisplaySize} tithiNum={selectedTithi} animate={!skipHeavy} showStars={!skipHeavy} />
             </View>
 
             {/* Phase name */}
@@ -978,7 +1005,7 @@ export default function HomeScreen() {
             <Text style={mp.phaseDesc}>
               {language === 'si'
                 ? (selPhaseIdx <= 3 ? 'මෙම චන්ද්‍ර අවධිය නව බලාපොරොත්තු සහ වර්ධනය සංකේතවත් කරයි. අලුත් වැඩක් ආරම්භ කිරීමට සහ අනාගතය සැලසුම් කිරීමට මෙය ඉතා සුබ කාලයකි.' : selPhaseIdx === 4 ? 'චන්ද්‍රයාගේ උපරිම ශක්තිය විහිදෙන කාලයයි. ඔබගේ අරමුණු ජයගැනීමට මෙම ප්‍රබල ශක්තිය යොදාගන්න.' : 'මෙය සිත නිදහස් කරගැනීමට සහ විවේක ගැනීමට කාලයයි. ඔබට අනවශ්‍ය දේ අත්හැර අලුත් ආරම්භයකට සූදානම් වන්න.')
-                : 'This ' + selPhaseName + ' moon phase signifies ' + (selPhaseIdx <= 3 ? 'new beginnings and cosmic growth. An ideal time to plant seeds for your future and set golden intentions.' : selPhaseIdx === 4 ? 'peak universal energy and radiant manifestation. Harness this powerful lunar glow to achieve your dreams.' : 'a time for deep reflection and cosmic healing. Release what no longer serves your soul and prepare for renewal.')}
+                : 'This ' + selPhaseName + ' moon phase signifies ' + (selPhaseIdx <= 3 ? 'new beginnings and natural growth. An ideal time to start fresh projects and set meaningful intentions.' : selPhaseIdx === 4 ? 'peak lunar energy and clarity. Harness this powerful phase to take action on your goals.' : 'a time for deep reflection and rest. Release what no longer serves you and prepare for renewal.')}
             </Text>
           </View>
         </View>
@@ -1062,41 +1089,41 @@ export default function HomeScreen() {
     );
   }
 
-  /* ── Daily Mantra ── */
+  /* ── Daily Intention ── */
   function renderDailyMantra() {
     var mantrasEn = [
-      'My potential is limitless, and my path is written in the stars.',
-      'The universe is aligning in my favor today; I am ready to receive its gifts.',
-      'I attract unstoppable abundance, unbreakable peace, and endless joy.',
+      'My potential is limitless, and today I take one step closer to my goals.',
+      'I am open to opportunities and ready to make the most of this day.',
+      'I attract growth, peace, and meaningful progress into my life.',
       'My intuition is a powerful compass guiding me toward my highest purpose.',
-      'I boldly release fear and doubt, making space for cosmic miracles.',
-      'I am perfectly in sync with the divine rhythm of the universe.',
-      'Today, I choose unwavering peace over chaos and trust my journey completely.',
-      'I surrender to the perfect timing of my destiny, knowing great things are coming.',
-      'I am a magnet for extraordinary blessings and life-changing opportunities.',
-      'My energy is a radiant light that inspires everyone I meet.',
-      'I embrace every cosmic shift with grace, courage, and an open heart.',
-      'Every challenge I face is simply the universe preparing me for greatness.',
-      'I radiate unshakeable confidence, deep self-respect, and unbreakable inner harmony.',
-      'The stars illuminate my path, and I step forward with absolute certainty.',
-      'I am deeply connected to the infinite wisdom and boundless power of all creation.',
+      'I release fear and doubt, making space for clarity and confidence.',
+      'I am in tune with my natural rhythm and ready for what today brings.',
+      'Today, I choose calm over chaos and trust my journey completely.',
+      'I trust the timing of my life, knowing great things are building.',
+      'I am open to meaningful connections and life-changing opportunities.',
+      'My energy is a positive force that inspires everyone I meet.',
+      'I embrace every change with grace, courage, and an open heart.',
+      'Every challenge I face is preparing me for something greater.',
+      'I radiate confidence, self-respect, and inner balance.',
+      'My path is clear, and I step forward with purpose and certainty.',
+      'I am connected to my inner wisdom and the boundless possibilities ahead.',
     ];
     var mantrasSi = [
-      'මගේ හැකියාවන්ට සීමාවක් නැත. මගේ සාර්ථකත්වය ග්‍රහ තාරකාවල ලියවී ඇත.',
-      'අද මුළු විශ්වයම මා වෙනුවෙන් පෙළගැසී ඇත; මම ඉමහත් ආශිර්වාදයන් ලබාගැනීමට සූදානම්.',
-      'මම නිමක් නැති සමෘද්ධිය, කඩ කළ නොහැකි සාමය සහ අපරිමිත සතුට මා වෙත ආකර්ෂණය කරමි.',
+      'මගේ හැකියාවන්ට සීමාවක් නැත. අද මම මගේ ඉලක්ක වෙත තවත් පියවරක් තබමි.',
+      'අද දවස මා වෙනුවෙන් අවස්ථා රැසක් ගෙන එයි; මම ඒවා ලබාගැනීමට සූදානම්.',
+      'මම වර්ධනය, සාමය සහ අර්ථවත් ප්‍රගතිය මගේ ජීවිතයට ආකර්ෂණය කරමි.',
       'මගේ බුද්ධිය මාව මගේ ඉහළම අරමුණ වෙත ගෙනයන ප්‍රබල මාලිමාවකි.',
-      'බිය සහ සැකය අත්හැර, විශ්වයේ ආශ්චර්යයන් මා වෙත පැමිණීමට මම ඉඩ හරිමි.',
-      'මම විශ්වයේ දිව්‍යමය රිද්මය සමඟ මනාව බැඳී සිටිමි.',
-      'අද දින, මම අනවශ්‍ය කරදර පසෙකලා නොසැලෙන සාමය සහ මාගේ ගමන පිළිබඳව පුර්ණ විශ්වාසය තබමි.',
-      'ශ්‍රේෂ්ඨ දේවල් මා වෙත පැමිණෙන බව දැන, මම මගේ දෛවයේ නිවැරදි කාලයට ඉඩදෙමි.',
-      'මම අසාමාන්‍ය ආශිර්වාද සහ ජීවිතය වෙනස් කරන අවස්ථාවන් සඳහා ප්‍රබල චුම්බකයකි.',
-      'මගේ ජීව ශක්තිය, මට හමුවන සැමට ආශ්වාදයක් ගෙන දෙන දීප්තිමත් ආලෝකයකි.',
+      'බිය සහ සැකය අත්හැර, පැහැදිලි බව සහ විශ්වාසය සඳහා මම ඉඩ හරිමි.',
+      'මම මගේ ස්වභාවික රිද්මය සමඟ බැඳී අද දවස පිළිගැනීමට සූදානම්.',
+      'අද දින, මම අනවශ්‍ය කරදර පසෙකලා නොසැලෙන සාමය සහ මාගේ ගමන පිළිබඳව විශ්වාසය තබමි.',
+      'ශ්‍රේෂ්ඨ දේවල් ගොඩනැගෙමින් පවතින බව දැන, මම මගේ ජීවිතයේ කාලයට විශ්වාස කරමි.',
+      'මම අර්ථවත් සම්බන්ධතා සහ ජීවිතය වෙනස් කරන අවස්ථාවන් සඳහා විවෘතව සිටිමි.',
+      'මගේ ජීව ශක්තිය, මට හමුවන සැමට ආශ්වාදයක් ගෙන දෙන ධනාත්මක බලවේගයකි.',
       'සෑම වෙනසක්ම මම කරුණාවෙන්, ධෛර්යයෙන් සහ විවෘත හදවතකින් පිළිගනිමි.',
-      'මා මුහුණ දෙන සෑම අභියෝගයක්ම, විශ්වය මාව ශ්‍රේෂ්ඨත්වය සඳහා සූදානම් කිරීමකි.',
-      'මම නොසැලෙන විශ්වාසය, ගැඹුරු ආත්ම ගෞරවය සහ අභ්‍යන්තර සාමය විහිදුවමි.',
-      'තාරකා මගේ මාර්ගය ආලෝකමත් කරයි, මම ඉතා නිවැරදි ඉලක්කයක් කරා පියවර තබමි.',
-      'මම මුළු විශ්වයේම අනන්ත ප්‍රඥාවට සහ අසීමිත බලයට මනාව සම්බන්ධ වී සිටිමි.',
+      'මා මුහුණ දෙන සෑම අභියෝගයක්ම, මාව වඩා විශිෂ්ට දෙයක් සඳහා සූදානම් කිරීමකි.',
+      'මම විශ්වාසය, ආත්ම ගෞරවය සහ අභ්‍යන්තර සමබරතාව විහිදුවමි.',
+      'මගේ මාර්ගය පැහැදිලිය, මම අරමුණක් සහ නිශ්චිත බවක් සමඟ ඉදිරියට යමි.',
+      'මම මගේ අභ්‍යන්තර ප්‍රඥාවට සහ ඉදිරියේ ඇති අසීමිත හැකියාවන්ට සම්බන්ධ වී සිටිමි.',
     ];
     var dayIdx = Math.floor(Date.now() / (24 * 60 * 60 * 1000)) % mantrasEn.length;
 
@@ -1107,7 +1134,7 @@ export default function HomeScreen() {
           <LinearGradient colors={['rgba(183,166,240,0.10)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 18, borderTopRightRadius: 18 }} />
           <View style={mn.starRow}>
             <Text style={{ fontSize: 18 }}>✦</Text>
-            <Text style={[mn.headerLabel, { color: HT.purple }]}>{language === 'si' ? 'දිනයේ මන්ත්‍රය' : 'MANTRA OF THE DAY'}</Text>
+            <Text style={[mn.headerLabel, { color: HT.purple }]}>{language === 'si' ? 'අද දිනයේ අදහස' : 'INTENTION OF THE DAY'}</Text>
           </View>
           <Text style={mn.mantraText}>{language === 'si' ? mantrasSi[dayIdx] : mantrasEn[dayIdx]}</Text>
         </View>
@@ -1495,7 +1522,7 @@ export default function HomeScreen() {
 
     return (
       <CosmicCard variant="surface" delay={500}>
-        <SectionHeader title={t('sacredPanchanga')} subtitle={t('sacredPanchangaHint')} icon="🕉" delay={500} />
+        <SectionHeader title={t('sacredPanchanga')} subtitle={t('sacredPanchangaHint')} icon="✨" delay={500} />
         {/* Tap hint */}
         <View style={s.pTapHintRow}>
           <Ionicons name="hand-left-outline" size={12} color={HT.textMuted} />

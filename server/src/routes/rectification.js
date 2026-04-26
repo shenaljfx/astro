@@ -79,7 +79,7 @@ router.post('/rectify', optionalAuth, async (req, res) => {
     console.error('Rectification error:', error);
     res.status(500).json({
       error: 'Failed to rectify birth time',
-      details: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 });

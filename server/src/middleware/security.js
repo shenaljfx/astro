@@ -92,12 +92,11 @@ function rateLimitHandler(req, res) {
 }
 
 /**
- * Global limiter — 500 requests per 15 minutes per IP
- * Generous enough for normal use, blocks abuse
+ * Global limiter — 200 requests per 15 minutes per IP
  */
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500,
+  max: 200,
   handler: rateLimitHandler,
   standardHeaders: true,
   legacyHeaders: false,
@@ -126,12 +125,12 @@ const authLimiter = rateLimit({
 });
 
 /**
- * AI limiter — 15 requests per minute per IP
+ * AI limiter — 5 requests per minute per IP
  * AI endpoints are expensive (~$0.01–$0.69 each)
  */
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 15,
+  max: 5,
   handler: (req, res) => {
     res.status(429).json({
       error: 'AI rate limit exceeded',
@@ -144,12 +143,12 @@ const aiLimiter = rateLimit({
 });
 
 /**
- * Report limiter — 10 requests per minute per IP
+ * Report limiter — 3 requests per minute per IP
  * Full reports are the most expensive operation ($0.69 each)
  */
 const reportLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: 3,
   handler: (req, res) => {
     res.status(429).json({
       error: 'Report generation rate limit exceeded',
@@ -198,13 +197,18 @@ const ALLOWED_ORIGINS = [
   'https://www.grahachara.com',
   'https://api.grahachara.com',
   'https://app.grahachara.com',
-  // Dev & Expo
-  /^http:\/\/localhost(:\d+)?$/,
-  /^http:\/\/127\.0\.0\.1(:\d+)?$/,
-  /^http:\/\/10\.0\.2\.2(:\d+)?$/,        // Android emulator
-  /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/, // Local network (Expo Go)
-  /^https?:\/\/.*\.exp\.direct$/,          // Expo tunnel
 ];
+
+// Dev-only origins — never included in production
+if (process.env.NODE_ENV !== 'production') {
+  ALLOWED_ORIGINS.push(
+    /^http:\/\/localhost(:\d+)?$/,
+    /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+    /^http:\/\/10\.0\.2\.2(:\d+)?$/,        // Android emulator
+    /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/, // Local network (Expo Go)
+    /^https?:\/\/.*\.exp\.direct$/,          // Expo tunnel
+  );
+}
 
 const corsOptions = {
   origin: function (origin, callback) {

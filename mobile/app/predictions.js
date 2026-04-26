@@ -10,7 +10,6 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import api from '../services/api';
-import { Colors } from '../constants/theme';
 
 var { width: SW } = Dimensions.get('window');
 
@@ -172,7 +171,7 @@ export default function PredictionsScreen() {
         </View>
         {annualData.tajakaYogas && annualData.tajakaYogas.length > 0 && (
           <View style={s.munthaBox}>
-            <Text style={s.sectionTitle}>{si ? 'තාජක යෝග' : 'Tajaka Yogas'}</Text>
+            <Text style={s.sectionTitle}>{si ? 'වාර්ෂික විශේෂ ශක්ති' : 'Annual Patterns'}</Text>
             {annualData.tajakaYogas.map(function (y, i) {
               return <Text key={i} style={s.reason}>{y.name}: {y.effect}</Text>;
             })}
@@ -180,7 +179,7 @@ export default function PredictionsScreen() {
         )}
         {annualData.muddaDasha && annualData.muddaDasha.length > 0 && (
           <View style={s.munthaBox}>
-            <Text style={s.sectionTitle}>{si ? 'මුද්දා දශා' : 'Annual Periods'}</Text>
+            <Text style={s.sectionTitle}>{si ? 'වාර්ෂික අදියර්' : 'Annual Phases'}</Text>
             {annualData.muddaDasha.slice(0, 5).map(function (d, i) {
               return (
                 <View key={i} style={s.dashRow}>

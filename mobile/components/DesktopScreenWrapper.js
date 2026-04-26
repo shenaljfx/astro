@@ -21,7 +21,7 @@
  *
  *   return (
  *     <DesktopScreenWrapper routeName="index">
- *       <PremiumBackground>...</PremiumBackground>
+ *       <View style={{ flex: 1, backgroundColor: colors.bg }}>...</View>
  *     </DesktopScreenWrapper>
  *   );
  */

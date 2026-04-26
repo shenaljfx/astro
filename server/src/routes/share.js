@@ -83,7 +83,7 @@ router.post('/weekly-card', (req, res) => {
     });
   } catch (error) {
     console.error('Error generating weekly card:', error);
-    res.status(500).json({ error: 'Failed to generate weekly card', details: error.message });
+    res.status(500).json({ error: 'Failed to generate weekly card', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -240,7 +240,7 @@ router.post('/personality', (req, res) => {
     });
   } catch (error) {
     console.error('Error generating personality:', error);
-    res.status(500).json({ error: 'Failed to generate personality data', details: error.message });
+    res.status(500).json({ error: 'Failed to generate personality data', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 

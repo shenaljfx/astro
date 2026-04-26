@@ -39,7 +39,7 @@ const firebaseConfig = {
 };
 
 if (!firebaseConfig.apiKey) {
-  console.warn('⚠️ EXPO_PUBLIC_FIREBASE_API_KEY is not set — check your .env file');
+  if (__DEV__) console.warn('⚠️ EXPO_PUBLIC_FIREBASE_API_KEY is not set — check your .env file');
 }
 
 // Initialize Firebase (only once, gracefully)
@@ -66,11 +66,11 @@ try {
     });
   } catch (initAuthErr) {
     // If auth was already initialized (e.g. hot reload), fall back to getAuth
-    console.log('initializeAuth fallback:', initAuthErr.code || initAuthErr.message);
+    if (__DEV__) console.log('initializeAuth fallback:', initAuthErr.code || initAuthErr.message);
     auth = _getAuth(app);
   }
 } catch (err) {
-  console.warn('⚠️ Firebase init failed:', err.message);
+  if (__DEV__) console.warn('⚠️ Firebase init failed:', err.message);
 }
 
 // Configure native Google Sign-In (Android/iOS)
@@ -85,7 +85,7 @@ try {
   });
 } catch (e) {
   // Google Sign-In native module not available (web platform or not installed)
-  console.log('ℹ️ Native Google Sign-In not available (web mode or SDK not installed)');
+  if (__DEV__) console.log('ℹ️ Native Google Sign-In not available (web mode or SDK not installed)');
 }
 
 export { app, firestore, auth, GoogleAuthProvider, signInWithPopup, signInWithCredential };

@@ -23,6 +23,7 @@ import { Colors } from '../../constants/theme';
 import DesktopSidebar from '../../components/DesktopLayout';
 import useIsDesktop from '../../hooks/useIsDesktop';
 import { TAB_ICON_MAP } from '../../components/TabIcons';
+import useNetworkStatus from '../../hooks/useNetworkStatus';
 var { width: SW } = Dimensions.get('window');
 var LOGO = require('../../assets/logo.png');
 
@@ -346,6 +347,26 @@ function TabCrossfade() {
   );
 }
 
+// ── Offline Banner — shown when device has no internet ──
+function OfflineBanner() {
+  var { isConnected } = useNetworkStatus();
+  if (isConnected) return null;
+  return (
+    <View style={offBan.wrap}>
+      <Ionicons name="cloud-offline-outline" size={14} color="#FFF" />
+      <Text style={offBan.text}>No internet connection</Text>
+    </View>
+  );
+}
+var offBan = StyleSheet.create({
+  wrap: {
+    backgroundColor: '#DC2626', flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 12,
+    zIndex: 10000,
+  },
+  text: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+});
+
 export default function TabLayout() {
   var { t, language, toggleLanguage } = useLanguage();
   var { user } = useAuth();
@@ -388,6 +409,7 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <OfflineBanner />
       <Tabs
         tabBar={function (props) { return <OrbitalNavBar {...props} />; }}
         sceneContainerStyle={{ backgroundColor: colors.bg }}

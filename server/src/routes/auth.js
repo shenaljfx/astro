@@ -16,8 +16,11 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const { getDb, getAuth, COLLECTIONS } = require('../config/firebase');
 
-// Google OAuth web client ID — used to verify raw Google ID tokens from Android
-const GOOGLE_WEB_CLIENT_ID = '279712940419-rohbq14otfq57sjmn7vm775co13cjipa.apps.googleusercontent.com';
+// Google OAuth web client ID — MUST be set via env var; no fallback in production (boot guard enforces this)
+const GOOGLE_WEB_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
+if (!GOOGLE_WEB_CLIENT_ID) {
+  console.warn('⚠️  GOOGLE_OAUTH_CLIENT_ID not set — Google token verification will fail');
+}
 const googleClient = new OAuth2Client(GOOGLE_WEB_CLIENT_ID);
 
 // JWT secret — MUST be set via environment variable in production
@@ -150,6 +153,11 @@ router.post('/google', async (req, res) => {
             audience: GOOGLE_WEB_CLIENT_ID,
           });
           const payload = ticket.getPayload();
+
+          // Require verified email — do not auto-create users from unverified Google accounts
+          if (!payload.email_verified) {
+            return res.status(401).json({ error: 'Google account email not verified' });
+          }
 
           // Look up or create a Firebase Auth user for this Google account
           let firebaseUser;

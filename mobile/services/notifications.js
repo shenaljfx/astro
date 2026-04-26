@@ -101,7 +101,7 @@ export async function registerForPushNotifications() {
     // Cache token locally
     await AsyncStorage.setItem('pushToken', token);
   } catch (err) {
-    console.warn('[Notifications] Token error:', err && err.message);
+    if (__DEV__) console.warn('[Notifications] Token error:', err && err.message);
   }
 
   // Setup Android channels
@@ -178,7 +178,7 @@ export async function scheduleLocalNotification(title, body, data, triggerDate) 
     });
     return id;
   } catch (err) {
-    console.error('[Notifications] Schedule error:', err);
+    if (__DEV__) console.error('[Notifications] Schedule error:', err);
     return null;
   }
 }

@@ -13,15 +13,16 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  StyleSheet, Platform, Alert, ActivityIndicator, Dimensions,
+  StyleSheet, Platform, Alert, Dimensions, AppState,
 } from 'react-native';
+import { useKeepAwake, activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
-  FadeInDown, FadeIn, FadeInUp, FadeInRight, ZoomIn, SlideInRight,
-  useSharedValue, useAnimatedStyle, useAnimatedScrollHandler,
+  FadeInDown, FadeIn, FadeInUp, FadeInRight, ZoomIn,
+  useSharedValue, useAnimatedStyle,
   withRepeat, withTiming, withSequence, withDelay, withSpring,
-  interpolate, Easing, runOnJS,
+  interpolate, Easing,
 } from 'react-native-reanimated';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -37,10 +38,11 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
-import PremiumBackground from '../../components/PremiumBackground';
 import useScreenInsets from '../../hooks/useScreenInsets';
 import { useTheme } from '../../contexts/ThemeContext';
 import { screenColors } from '../../constants/theme';
+import useNetworkStatus from '../../hooks/useNetworkStatus';
+import { checkServerReachable } from '../../services/api';
 var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var MAX_SAVED_REPORTS = 20;
 
@@ -933,6 +935,31 @@ export default function ReportScreen() {
   var [savedReports, setSavedReports] = useState([]);
   var scrollProgress = useSharedValue(0);
   var [currentChapter, setCurrentChapter] = useState(1);
+  var { isConnected } = useNetworkStatus();
+
+  // Keep screen awake during report generation (prevents OS from killing the fetch)
+  useEffect(function() {
+    if (screenState === 'loading') {
+      activateKeepAwakeAsync('report-generation').catch(function() {});
+    } else {
+      deactivateKeepAwake('report-generation');
+    }
+    return function() { deactivateKeepAwake('report-generation'); };
+  }, [screenState]);
+
+  // Track AppState to detect if app was backgrounded during generation
+  var appStateRef = useRef(AppState.currentState);
+  var wasBackgroundedDuringGen = useRef(false);
+  useEffect(function() {
+    var sub = AppState.addEventListener('change', function(nextState) {
+      if (screenState === 'loading' && appStateRef.current === 'active' && nextState.match(/inactive|background/)) {
+        wasBackgroundedDuringGen.current = true;
+        if (__DEV__) console.log('[Report] App went to background during generation');
+      }
+      appStateRef.current = nextState;
+    });
+    return function() { sub.remove(); };
+  }, [screenState]);
 
   // ── Load saved reports from AsyncStorage on mount ──
   useEffect(function() {
@@ -943,7 +970,7 @@ export default function ReportScreen() {
           setSavedReports(JSON.parse(stored));
         }
       } catch (e) {
-        console.warn('Failed to load saved reports:', e);
+        if (__DEV__) console.warn('Failed to load saved reports:', e);
       }
     })();
   }, []);
@@ -971,7 +998,7 @@ export default function ReportScreen() {
       await AsyncStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(updated));
       setSavedReports(updated);
     } catch (e) {
-      console.warn('Failed to save report:', e);
+      if (__DEV__) console.warn('Failed to save report:', e);
     }
   }, [savedReports]);
 
@@ -982,7 +1009,7 @@ export default function ReportScreen() {
       await AsyncStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(updated));
       setSavedReports(updated);
     } catch (e) {
-      console.warn('Failed to delete report:', e);
+      if (__DEV__) console.warn('Failed to delete report:', e);
     }
   }, [savedReports]);
 
@@ -1033,13 +1060,37 @@ export default function ReportScreen() {
     try {
       setScreenState('loading');
       setLoading(true);
+      wasBackgroundedDuringGen.current = false;
 
-      // Fire raw report + AI in parallel (chart already fetched)
-      var [rawRes, aiRes] = await Promise.all([
+      // Fire raw report + AI in parallel using allSettled so partial results survive
+      var results = await Promise.allSettled([
         api.getFullReport(dateStr, birthLat, birthLng, reportLang),
         api.getAIReport(dateStr, birthLat, birthLng, reportLang, birthLocation, userName || null, gender, userReligion || null),
       ]);
 
+      var rawResult = results[0];
+      var aiResult = results[1];
+
+      // Check if app was backgrounded — warn user the result may be incomplete
+      if (wasBackgroundedDuringGen.current && rawResult.status === 'rejected') {
+        setError(reportLang === 'si'
+          ? 'ඔබගේ දුරකථනය sleep වුණා. කරුණාකර නැවත උත්සාහ කරන්න.'
+          : 'Your phone went to sleep during generation. Please try again.');
+        setScreenState('form');
+        setLoading(false);
+        return;
+      }
+
+      // Raw report is essential — if it failed, show error
+      if (rawResult.status === 'rejected') {
+        var rawErr = rawResult.reason;
+        setError((rawErr && rawErr.message) || 'Failed to generate report');
+        setScreenState('form');
+        setLoading(false);
+        return;
+      }
+
+      var rawRes = rawResult.value;
       if (!rawRes.data) {
         setError('No report data returned');
         setScreenState('form');
@@ -1048,8 +1099,15 @@ export default function ReportScreen() {
       }
 
       setReport(rawRes.data);
-      if (aiRes.data) {
-        setAiReport(aiRes.data);
+
+      // AI report is optional — show raw report even if AI failed
+      var aiData = null;
+      if (aiResult.status === 'fulfilled' && aiResult.value && aiResult.value.data) {
+        aiData = aiResult.value.data;
+        setAiReport(aiData);
+      } else {
+        if (__DEV__) console.warn('[Report] AI report failed, showing raw report only:', aiResult.reason?.message);
+        setAiReport(null);
       }
       setScreenState('report');
 
@@ -1065,7 +1123,7 @@ export default function ReportScreen() {
         userGender: gender,
         userReligion: userReligion,
         report: rawRes.data,
-        aiReport: aiRes.data || null,
+        aiReport: aiData,
         chartData: chartData,
       });
     } catch (err) {
@@ -1099,15 +1157,30 @@ export default function ReportScreen() {
       });
       if (entCheck && entCheck.hasPending) {
         isRetry = true;
-        console.log('[Report] ♻️ Resuming failed generation — no payment needed (' + entCheck.entitlement.retriesLeft + ' retries left)');
+        if (__DEV__) console.log('[Report] ♻️ Resuming failed generation — no payment needed (' + entCheck.entitlement.retriesLeft + ' retries left)');
       }
     } catch (entErr) {
       // Non-critical — proceed with normal payment flow
-      console.warn('[Report] Entitlement check failed (non-critical):', entErr.message);
+      if (__DEV__) console.warn('[Report] Entitlement check failed (non-critical):', entErr.message);
     }
 
     // Show paywall only if NOT a retry (pending entitlement = free retry)
     if (!isRetry) {
+      // ── Check network connectivity BEFORE showing paywall ──
+      if (!isConnected) {
+        setError(reportLang === 'si'
+          ? 'ඉන්ටනෙට් එක නැහැ. කරුණාකර WiFi හෝ Data එක check කරන්න.'
+          : 'No internet connection. Please check your WiFi or mobile data.');
+        return;
+      }
+      var serverOk = await checkServerReachable();
+      if (!serverOk) {
+        setError(reportLang === 'si'
+          ? 'Server එකට connect වෙන්න බැහැ. ටිකක් පස්සේ try කරන්න.'
+          : 'Cannot reach the server. Please try again in a moment.');
+        return;
+      }
+
       try {
         await showPaywall('report');
       } catch (e) {
@@ -1240,7 +1313,6 @@ export default function ReportScreen() {
   if (screenState === 'loading') {
     return (
       <View style={{ flex: 1 }}>
-        <PremiumBackground />
         <View style={s.loadingFull}>
           <CosmicLoader userName={userName} language={reportLang} />
         </View>
@@ -1266,7 +1338,6 @@ export default function ReportScreen() {
     return (
       <DesktopScreenWrapper routeName="report">
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
-        <PremiumBackground />
         <ReadingProgressBar scrollProgress={scrollProgress} sectionCount={SECTION_KEYS.length} currentChapter={currentChapter} reportLang={reportLang} />
         <Animated.ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}
           onScroll={function(e) {
@@ -1526,7 +1597,6 @@ export default function ReportScreen() {
   return (
     <DesktopScreenWrapper routeName="report">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <PremiumBackground />
       <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
         <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
         {/* Header */}

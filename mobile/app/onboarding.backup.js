@@ -19,11 +19,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
-  FadeInDown, FadeInUp, FadeIn, FadeOut,
+  FadeInDown, FadeInUp, FadeIn,
   useSharedValue, useAnimatedStyle, withRepeat, withTiming,
   withSpring, withSequence, withDelay, interpolate, Easing,
 } from 'react-native-reanimated';
-import useReducedMotion from '../hooks/useReducedMotion';
 import SpringPressable from '../components/effects/SpringPressable';
 import CosmicLoader from '../components/effects/CosmicLoader';
 import CitySearchPicker from '../components/CitySearchPicker';
@@ -92,10 +91,9 @@ var STAR_LAYERS = [];
   STAR_LAYERS.push(layer1, layer2, layer3);
 })();
 
-function TwinklingStar({ star, layerSpeed, reduced }) {
+function TwinklingStar({ star, layerSpeed }) {
   var twinkle = useSharedValue(0);
   useEffect(function () {
-    if (reduced) return;
     twinkle.value = withDelay(star.twinkleDelay,
       withRepeat(
         withSequence(
@@ -104,7 +102,7 @@ function TwinklingStar({ star, layerSpeed, reduced }) {
         ), -1, false
       )
     );
-  }, [reduced]);
+  }, []);
   var style = useAnimatedStyle(function () {
     return {
       opacity: interpolate(twinkle.value, [0, 1], [star.opacity * 0.3, star.opacity]),
@@ -125,15 +123,13 @@ function TwinklingStar({ star, layerSpeed, reduced }) {
 }
 
 function CinematicStarfield() {
-  var reduced = useReducedMotion();
   var nebulaShift = useSharedValue(0);
   useEffect(function () {
-    if (reduced) return;
     nebulaShift.value = withRepeat(
       withTiming(1, { duration: 20000, easing: Easing.inOut(Easing.sin) }),
       -1, true
     );
-  }, [reduced]);
+  }, []);
   var nebula1 = useAnimatedStyle(function () {
     return {
       opacity: interpolate(nebulaShift.value, [0, 1], [0.03, 0.08]),
@@ -158,9 +154,10 @@ function CinematicStarfield() {
       <Animated.View style={[{ position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(147,51,234,0.12)', top: -50, right: -80 }, nebula1]} />
       <Animated.View style={[{ position: 'absolute', width: 250, height: 250, borderRadius: 125, backgroundColor: 'rgba(255,140,0,0.08)', bottom: SH * 0.2, left: -60 }, nebula2]} />
       <Animated.View style={[{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(59,130,246,0.06)', top: SH * 0.4, right: -40 }, nebula1]} />
-      {/* Star layers — skip dim layer for performance, keep mid + bright */}
-      {STAR_LAYERS[1].map(function (s, i) { return <TwinklingStar key={'s2_' + i} star={s} layerSpeed={0.6} reduced={reduced} />; })}
-      {STAR_LAYERS[2].map(function (s, i) { return <TwinklingStar key={'s3_' + i} star={s} layerSpeed={1} reduced={reduced} />; })}
+      {/* Star layers */}
+      {STAR_LAYERS[0].map(function (s, i) { return <TwinklingStar key={'s1_' + i} star={s} layerSpeed={0.3} />; })}
+      {STAR_LAYERS[1].map(function (s, i) { return <TwinklingStar key={'s2_' + i} star={s} layerSpeed={0.6} />; })}
+      {STAR_LAYERS[2].map(function (s, i) { return <TwinklingStar key={'s3_' + i} star={s} layerSpeed={1} />; })}
     </View>
   );
 }
@@ -239,21 +236,16 @@ var OB = {
     dayLabel: "DAY",
     dayPlaceholder: "15",
     dateError: "Please enter a valid birth date",
-    yearError: "Enter a valid year (1900\u20132026)",
-    monthError: "Please select a month",
-    dayError: "Enter a valid day for this month",
     dateHint: "This unlocks your ruling planet and zodiac lord",
     timeTitle: "The Exact Moment That Defines You",
     timeSubtitle: "One minute difference = completely different destiny",
     hourLabel: "HOUR",
     minuteLabel: "MINUTE",
-    timeError: "Enter a valid time (hour 1\u201312, minute 0\u201359)",
     timeHint: "Exact time = precise birth chart.\nIf unknown, skip \u2014 we'll use 12:00 PM.",
     placeTitle: "Where Your Destiny Was Written",
     placeSubtitle: "The sky above your birthplace holds the answer",
     placeSearch: "Search any city...",
     placeHint: "Different location = different planetary angles.\nThis makes your chart uniquely yours.",
-    cityError: "Please select your birth city",
     subProgressName: "Name",
     subProgressDate: "Date",
     subProgressTime: "Time",
@@ -321,21 +313,16 @@ var OB = {
     dayLabel: "\u0daf\u0dd2\u0db1\u0dba",
     dayPlaceholder: "15",
     dateError: "උපදින දිනය හරියට දාන්න",
-    yearError: "වලංගු අවුරුද්දක් ඇතුළත් කරන්න (1900\u20132026)",
-    monthError: "කරුණාකර මාසයක් තෝරන්න",
-    dayError: "මේ මාසයට වලංගු දිනයක් ඇතුළත් කරන්න",
     dateHint: "මෙය ඔබේ ලග්නාධිපති ග්‍රහයා සහ රාශි පාලකයා හෙළි කරයි",
     timeTitle: "ඔබව නිර්වචනය කරන නිශ්චිත මොහොත",
     timeSubtitle: "එක මිනිත්තුවක වෙනසක් = සම්පූර්ණයෙන්ම වෙනස් ඉරණමක්",
     hourLabel: "\u0db4\u0dd0\u0dba",
     minuteLabel: "\u0db8\u0dd2\u0db1\u0dd2\u0dad\u0dca\u0dad\u0dd4",
-    timeError: "වලංගු වේලාවක් ඇතුළත් කරන්න (පැය 1\u201312, මිනි. 0\u201359)",
     timeHint: "හරියටම වේලාව = නිරවද්‍ය කේන්දරය.\nදන්නේ නැත්නම් මඟ හරින්න.",
     placeTitle: "ඔබේ ඉරණම ලියැවුණු ස්ථානය",
     placeSubtitle: "ඔබ උපන් ස්ථානයේ අහස පිළිතුර රඳවා ඇත",
     placeSearch: "නගරය සොයන්න...",
     placeHint: "වෙනස් ස්ථානයක් = වෙනස් ග්‍රහ කෝණ.\nමෙය ඔබේ කේන්දරය අද්විතීය කරයි.",
-    cityError: "කරුණාකර ඔබේ උපන් නගරය තෝරන්න",
     subProgressName: "නම",
     subProgressDate: "දිනය",
     subProgressTime: "වේලාව",
@@ -377,9 +364,22 @@ var OB = {
 /* Primary action button — hot gradient with bounce */
 function PrimaryButton({ label, onPress, loading, disabled, icon }) {
   var isOff = disabled || loading;
+  var glow = useSharedValue(0);
+
+  useEffect(function () {
+    glow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+
+  var glowStyle = useAnimatedStyle(function () {
+    if (Platform.OS === 'web') return {};
+    return {
+      shadowOpacity: isOff ? 0 : interpolate(glow.value, [0, 1], [0.4, 0.9]),
+      shadowRadius: interpolate(glow.value, [0, 1], [10, 28]),
+    };
+  });
 
   return (
-    <Animated.View style={g.primaryBtn}>
+    <Animated.View style={[g.primaryBtn, glowStyle]}>
       <SpringPressable
         onPress={onPress} disabled={isOff} haptic="heavy" scalePressed={0.96}
         style={{ borderRadius: 16, overflow: 'hidden', opacity: isOff ? 0.4 : 1 }}
@@ -396,14 +396,12 @@ function PrimaryButton({ label, onPress, loading, disabled, icon }) {
             start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
           />
           {loading ? (
-            <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(150)} key="loader">
-              <CosmicLoader size={26} color="#FFF" />
-            </Animated.View>
+            <CosmicLoader size={26} color="#FFF" />
           ) : (
-            <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(150)} key="content" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {icon ? <Ionicons name={icon} size={18} color="#FFF" /> : null}
               <Text style={g.primaryText}>{label}</Text>
-            </Animated.View>
+            </View>
           )}
         </LinearGradient>
       </SpringPressable>
@@ -427,20 +425,17 @@ function GhostButton({ label, onPress, icon }) {
 }
 
 function StepHeader({ icon, iconColor, title, subtitle }) {
-  var reduced = useReducedMotion();
   var iconBounce = useSharedValue(0);
   var iconGlow = useSharedValue(0);
   useEffect(function () {
     iconBounce.value = withSequence(
       withDelay(300, withSpring(1, { damping: 8, stiffness: 200 }))
     );
-    if (!reduced) {
-      iconGlow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    }
-  }, [reduced]);
+    iconGlow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
   var iconAnim = useAnimatedStyle(function () {
     return {
-      transform: [{ scale: interpolate(iconBounce.value, [0, 1], [0.85, 1]) }],
+      transform: [{ scale: interpolate(iconBounce.value, [0, 1], [0.3, 1]) }],
       opacity: iconBounce.value,
     };
   });
@@ -455,8 +450,8 @@ function StepHeader({ icon, iconColor, title, subtitle }) {
   return (
     <Animated.View entering={FadeInDown.duration(500)} style={g.headerWrap}>
       {icon ? (
-        <Animated.View style={[g.headerIconBg, { borderColor: (iconColor || '#FFB800') + '50', ...(Platform.OS !== 'web' ? { shadowColor: iconColor || '#FFB800' } : {}) }, iconAnim, glowAnim]}>
-          <Ionicons name={icon} size={24} color={iconColor || '#FFB800'} />
+        <Animated.View style={[g.headerIconBg, { borderColor: '#FFB80050', ...(Platform.OS !== 'web' ? { shadowColor: '#FFB800' } : {}) }, iconAnim, glowAnim]}>
+          <Ionicons name={icon} size={24} color="#FFB800" />
         </Animated.View>
       ) : null}
       <Text style={g.headerTitle}>{title}</Text>
@@ -506,7 +501,6 @@ function StepProgressBar({ current, total, lang }) {
 // ═══════════════════════════════════════════════════════════════════════
 
 function LanguageStep({ onSelect }) {
-  var reduced = useReducedMotion();
   var titleScale = useSharedValue(0);
   var ringRotate = useSharedValue(0);
   var orbPulse = useSharedValue(0);
@@ -516,12 +510,11 @@ function LanguageStep({ onSelect }) {
 
   useEffect(function () {
     titleScale.value = withDelay(300, withSpring(1, { damping: 14, stiffness: 100 }));
-    if (reduced) return;
     ringRotate.value = withRepeat(withTiming(360, { duration: 25000, easing: Easing.linear }), -1, false);
     orbPulse.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
     logoGlow.value = withRepeat(withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }), -1, true);
     btnShimmer.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
-  }, [reduced]);
+  }, []);
 
   var titleAnim = useAnimatedStyle(function () {
     return { transform: [{ scale: titleScale.value }], opacity: titleScale.value };
@@ -549,8 +542,7 @@ function LanguageStep({ onSelect }) {
 
   var handleSelect = function (lang) {
     setSelectedLang(lang);
-    // Brief delay lets the selected-state style render before transition
-    setTimeout(function () { onSelect(lang); }, 200);
+    setTimeout(function () { onSelect(lang); }, 300);
   };
 
   // Hero — big chakra with prominent logo
@@ -676,17 +668,17 @@ function LanguageStep({ onSelect }) {
           </View>
           <View style={ls.trustRow}>
             <View style={ls.trustItem}>
-              <Ionicons name="star" size={12} color="rgba(255,184,0,0.7)" />
+              <Ionicons name="star" size={12} color="rgba(255,184,0,0.5)" />
               <Text style={ls.trustText}>50K+ Users</Text>
             </View>
             <Text style={ls.trustDot}>{'\u2022'}</Text>
             <View style={ls.trustItem}>
-              <Ionicons name="shield-checkmark" size={12} color="rgba(16,185,129,0.7)" />
+              <Ionicons name="shield-checkmark" size={12} color="rgba(16,185,129,0.5)" />
               <Text style={ls.trustText}>Vedic Accuracy</Text>
             </View>
             <Text style={ls.trustDot}>{'\u2022'}</Text>
             <View style={ls.trustItem}>
-              <Ionicons name="earth" size={12} color="rgba(99,102,241,0.7)" />
+              <Ionicons name="earth" size={12} color="rgba(99,102,241,0.5)" />
               <Text style={ls.trustText}>Worldwide</Text>
             </View>
           </View>
@@ -750,8 +742,8 @@ var ls = StyleSheet.create({
   footerDivider: { width: 140, height: 1, borderRadius: 1, overflow: 'hidden', marginBottom: 12 },
   trustRow:      { flexDirection: 'row', alignItems: 'center', gap: 6 },
   trustItem:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  trustText:     { fontSize: 11, color: 'rgba(255,255,255,0.40)', fontWeight: '500' },
-  trustDot:      { fontSize: 8, color: 'rgba(255,255,255,0.25)' },
+  trustText:     { fontSize: 11, color: 'rgba(255,255,255,0.25)', fontWeight: '500' },
+  trustDot:      { fontSize: 8, color: 'rgba(255,255,255,0.15)' },
 });
 
 
@@ -762,7 +754,6 @@ var ls = StyleSheet.create({
 
 function WelcomeStep({ onContinue, onBack, lang }) {
   var T = OB[lang] || OB.en;
-  var reduced = useReducedMotion();
   var pulse = useSharedValue(0);
   var haloRotate = useSharedValue(0);
   var ctaGlow = useSharedValue(0);
@@ -772,11 +763,10 @@ function WelcomeStep({ onContinue, onBack, lang }) {
   var logoSize = Math.min(chakraSize * 0.3, 72);
 
   useEffect(function () {
-    if (reduced) return;
     pulse.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
     haloRotate.value = withRepeat(withTiming(360, { duration: 15000, easing: Easing.linear }), -1, false);
     ctaGlow.value = withRepeat(withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }), -1, true);
-  }, [reduced]);
+  }, []);
 
   var pulseStyle = useAnimatedStyle(function () {
     return {
@@ -849,7 +839,7 @@ function WelcomeStep({ onContinue, onBack, lang }) {
         {FEATURES.map(function (f, i) {
           return (
             <Animated.View key={i} entering={FadeInUp.delay(250 + i * 80).duration(400)} style={ws.featureRow}>
-              <View style={[ws.featureIcon, { backgroundColor: f.color + '1A', borderColor: f.color + '40' }]}>
+              <View style={[ws.featureIcon, { backgroundColor: f.color + '12', borderColor: f.color + '25' }]}>
                 <Ionicons name={f.icon} size={18} color={f.color} />
               </View>
               <Text style={ws.featureText}>{f.text}</Text>
@@ -951,7 +941,7 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
 
   var iconAnim = useAnimatedStyle(function () {
     return {
-      transform: [{ scale: interpolate(iconBounce.value, [0, 1], [0.85, 1]) }],
+      transform: [{ scale: interpolate(iconBounce.value, [0, 1], [0.3, 1]) }],
       opacity: iconBounce.value,
     };
   });
@@ -1047,8 +1037,8 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
               { icon: 'cloud-done-outline', color: '#34D399', text: lang === 'si' ? 'ඔබේ දත්ත 100% සුරක්ෂිතයි' : 'Secure backup in the cloud' },
             ]).map(function (b, i) {
               return (
-                <Animated.View key={i} entering={FadeInDown.delay(400 + i * 100).duration(250)} style={gs.benefitRow}>
-                  <View style={[gs.benefitIconWrap, { backgroundColor: b.color + '1A', borderColor: b.color + '40' }]}>
+                <Animated.View key={i} entering={FadeInDown.delay(400 + i * 60).duration(250)} style={gs.benefitRow}>
+                  <View style={[gs.benefitIconWrap, { backgroundColor: b.color + '15', borderColor: b.color + '30' }]}>
                     <Ionicons name={b.icon} size={14} color={b.color} />
                   </View>
                   <Text style={gs.benefitText}>{b.text}</Text>
@@ -1080,7 +1070,7 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
       <View style={{ alignItems: 'center' }}>
 
         {error ? (
-          <Animated.View entering={FadeInDown.duration(300)} exiting={FadeOut.duration(200)} style={gs.errorWrap}>
+          <Animated.View entering={FadeInDown.duration(300)} style={gs.errorWrap}>
             <Ionicons name="alert-circle" size={15} color="#FF6B6B" />
             <Text style={gs.errorText}>{error}</Text>
           </Animated.View>
@@ -1208,19 +1198,17 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
   var { priceLabel, priceAmount, currency, currencySymbol, isInternational } = usePricingForBirth(birthData);
 
   // ── Animations (kept: only what's used in the rebuilt paywall) ──
-  var reduced = useReducedMotion();
   var priceGlow = useSharedValue(0);
   var ctaScale = useSharedValue(0);
 
   useEffect(function () {
-    if (reduced) return;
     priceGlow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
     ctaScale.value = withRepeat(withSequence(
       withTiming(1, { duration: 1200, easing: Easing.out(Easing.quad) }),
       withTiming(0, { duration: 1200, easing: Easing.in(Easing.quad) }),
       withTiming(0, { duration: 800 })
     ), -1, false);
-  }, [reduced]);
+  }, []);
 
   var priceStyle = useAnimatedStyle(function () {
     return { transform: [{ scale: interpolate(priceGlow.value, [0, 1], [1, 1.06]) }] };
@@ -1349,9 +1337,7 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
                 }}
               >
                 <Ionicons name="checkmark-circle" size={16} color="#34D399" />
-                <View style={{ width: 26, height: 26, borderRadius: 7, backgroundColor: f.color + '18', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name={f.icon} size={14} color={f.color} />
-                </View>
+                <Ionicons name={f.icon} size={14} color={f.color} />
                 <Text
                   style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12.5, flex: 1, lineHeight: 17 }}
                   numberOfLines={2}
@@ -1368,7 +1354,7 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', paddingHorizontal: 8 }}>
         <TouchableOpacity onPress={function () { setAgreed(!agreed); }} activeOpacity={0.7} hitSlop={8}>
           <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: agreed ? '#FF8C00' : 'rgba(255,255,255,0.3)', backgroundColor: agreed ? '#FF8C00' : 'rgba(0,0,0,0.2)', alignItems: 'center', justifyContent: 'center' }}>
-            {agreed ? <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(100)}><Ionicons name="checkmark" size={16} color="#FFF" /></Animated.View> : null}
+            {agreed ? <Ionicons name="checkmark" size={16} color="#FFF" /> : null}
           </View>
         </TouchableOpacity>
         <Text
@@ -1388,7 +1374,7 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
 
       {/* ═══ ERROR ═══ */}
       {payError ? (
-        <Animated.View entering={FadeInDown.duration(300)} exiting={FadeOut.duration(200)} style={ss.payErrorWrap}>
+        <Animated.View entering={FadeInDown.duration(300)} style={ss.payErrorWrap}>
           <Ionicons name="alert-circle" size={14} color="#FF6B6B" />
           <Text style={ss.payErrorText}>{payError}</Text>
         </Animated.View>
@@ -1450,8 +1436,6 @@ var ss = StyleSheet.create({
 //  STEP 4: BIRTH DATA — 4-page wizard
 // ═══════════════════════════════════════════════════════════════════════
 
-var BIRTH_STEP_COLORS = ['#A78BFA', '#FFB800', '#06B6D4', '#34D399'];
-
 function BirthDataStep({ onComplete, lang }) {
   var T = OB[lang] || OB.en;
   var [page, setPage] = useState(0);
@@ -1468,57 +1452,32 @@ function BirthDataStep({ onComplete, lang }) {
 
   var progressLabels = [T.subProgressName, T.subProgressDate, T.subProgressTime, T.subProgressPlace];
 
-  var daysInMonth = function (m, y) {
-    if (m === null || !y) return 31;
-    return new Date(parseInt(y), m + 1, 0).getDate();
-  };
-
-  var validateDate = function () {
-    var y = parseInt(year);
-    if (!year || isNaN(y) || y < 1900 || y > 2026) return T.yearError;
-    if (month === null) return T.monthError;
-    var d = parseInt(day);
-    if (!day || isNaN(d) || d < 1 || d > daysInMonth(month, year)) return T.dayError;
-    return '';
-  };
-
-  var validateTime = function () {
-    var h = parseInt(hour);
-    var m = parseInt(minute);
-    if (hour !== '' && (isNaN(h) || h < 1 || h > 12)) return T.timeError;
-    if (minute !== '' && (isNaN(m) || m < 0 || m > 59)) return T.timeError;
-    return '';
-  };
-
   var handleSubmit = async function () {
     if (displayName.trim().length < 2) { setError(T.nameError); setPage(0); return; }
-    var dateErr = validateDate();
-    if (dateErr) { setError(dateErr); setPage(1); return; }
-    var timeErr = validateTime();
-    if (timeErr) { setError(timeErr); setPage(2); return; }
-    if (!selectedCity) { setError(T.cityError); setPage(3); return; }
     setLoading(true); setError('');
     try {
-      var h = parseInt(hour) || 12;
-      if (ampm === 'PM' && h < 12) h += 12;
-      if (ampm === 'AM' && h === 12) h = 0;
-      var m = parseInt(minute) || 0;
-      var pad = function (n) { return n.toString().padStart(2, '0'); };
-      var dateTime = parseInt(year) + '-' + pad(month + 1) + '-' + pad(parseInt(day)) + 'T' + pad(h) + ':' + pad(m) + ':00';
-      var birthInfo = {
-        dateTime: dateTime,
-        lat: selectedCity.lat,
-        lng: selectedCity.lng,
-        locationName: selectedCity.name + (selectedCity.country ? ', ' + selectedCity.country : ''),
-        countryCode: selectedCity.countryCode || 'LK',
-        timezone: 'Asia/Colombo',
-      };
-      onComplete(displayName.trim(), birthInfo);
+      var birthInfo = {};
+      if (year && month !== null && day) {
+        var h = parseInt(hour) || 12;
+        if (ampm === 'PM' && h < 12) h += 12;
+        if (ampm === 'AM' && h === 12) h = 0;
+        var m = parseInt(minute) || 0;
+        var pad = function (n) { return n.toString().padStart(2, '0'); };
+        var dateTime = parseInt(year) + '-' + pad(month + 1) + '-' + pad(parseInt(day)) + 'T' + pad(h) + ':' + pad(m) + ':00';
+        birthInfo = {
+          dateTime: dateTime,
+          lat: selectedCity ? selectedCity.lat : 6.9271,
+          lng: selectedCity ? selectedCity.lng : 79.8612,
+          locationName: selectedCity ? (selectedCity.name + (selectedCity.country ? ', ' + selectedCity.country : '')) : 'Colombo',
+          countryCode: selectedCity ? (selectedCity.countryCode || 'LK') : 'LK',
+          timezone: 'Asia/Colombo',
+        };
+      }
+      var hasBirthData = Object.keys(birthInfo).length > 0;
+      onComplete(displayName.trim(), hasBirthData ? birthInfo : null);
     } catch (e) { setError(T.saveFailed); }
     finally { setLoading(false); }
   };
-
-  var handleSkip = null;
 
   /* Progress bar */
   var renderProgress = function () {
@@ -1527,15 +1486,14 @@ function BirthDataStep({ onComplete, lang }) {
         {progressLabels.map(function (label, i) {
           var active = i <= page;
           var current = i === page;
-          var stepColor = BIRTH_STEP_COLORS[i];
           return (
             <TouchableOpacity
               key={i} style={bd.progressItem}
               onPress={function () { if (i < page) setPage(i); }}
               disabled={i >= page} activeOpacity={0.7}
             >
-              <View style={[bd.progressLine, active && { backgroundColor: stepColor + '80' }, current && { backgroundColor: stepColor }]} />
-              <Text style={[bd.progressLabel, active && { color: stepColor }]}>{label}</Text>
+              <View style={[bd.progressLine, active && bd.progressLineActive, current && bd.progressLineCurrent]} />
+              <Text style={[bd.progressLabel, active && bd.progressLabelActive]}>{label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -1550,9 +1508,9 @@ function BirthDataStep({ onComplete, lang }) {
   var renderNamePage = function () {
     var nameTeaser = lang === 'si' ? '🔮 ඔබේ නම ඇතුළත් කළ පසු, තරු ඔබ ගැන කුමක් සැඟවූවාද යන්න හෙළි වේ' : '🔮 The moment you type your name, the stars begin revealing what they\'ve been hiding about you';
     return (
-      <Animated.View key="name" entering={FadeIn.duration(300)} exiting={FadeOut.duration(150)} style={{ flex: 1, justifyContent: 'center' }}>
+      <Animated.View key="name" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
-          <StepHeader icon="person-outline" iconColor="#A78BFA" title={T.nameTitle} subtitle={T.nameSubtitle} />
+          <StepHeader title={T.nameTitle} subtitle={T.nameSubtitle} />
           <GlowCard style={{ marginTop: 12 }}>
             <Text style={g.inputLabel}>{T.nameLabel}</Text>
             <TextInput
@@ -1562,11 +1520,11 @@ function BirthDataStep({ onComplete, lang }) {
               value={displayName}
               onChangeText={function (t) { setDisplayName(t); setError(''); }}
               autoFocus
-              selectionColor="#A78BFA"
+              selectionColor="#FFB800"
             />
-            {error && page === 0 ? <Animated.Text entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={g.error}>{error}</Animated.Text> : null}
+            {error && page === 0 ? <Text style={g.error}>{error}</Text> : null}
           </GlowCard>
-          <Text style={[g.hint, { marginTop: 14, color: '#C4B5FD', fontSize: 12, lineHeight: 18 }]}>{nameTeaser}</Text>
+          <Text style={[g.hint, { marginTop: 14, color: '#FFD666', fontSize: 12, lineHeight: 18 }]}>{nameTeaser}</Text>
           <View style={{ marginTop: 24 }}>
             <PrimaryButton
               label={T.continueBtn}
@@ -1584,19 +1542,19 @@ function BirthDataStep({ onComplete, lang }) {
   var renderDatePage = function () {
     var dateTeaser = lang === 'si' ? '⭐ ඔබ උපන් මොහොතේ ග්‍රහ 9 හරියටම කොතනද තිබුණේ? ඊළඟ පියවරේදී ඔබම බලන්න' : '⭐ Where exactly were the 9 planets the second you were born? You\'re about to find out';
     return (
-      <Animated.View key="date" entering={FadeIn.duration(300)} exiting={FadeOut.duration(150)} style={{ flex: 1, justifyContent: 'center' }}>
+      <Animated.View key="date" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
-          <StepHeader icon="calendar-outline" iconColor="#FFB800" title={T.dateTitle} subtitle={T.dateSubtitle} />
+          <StepHeader title={T.dateTitle} subtitle={T.dateSubtitle} />
 
           <GlowCard style={{ marginTop: 12, paddingVertical: 12, paddingHorizontal: 14 }}>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <View style={{ flex: 1 }}>
                 <Text style={g.inputLabel}>{T.yearLabel}</Text>
-                <TextInput style={g.textInput} placeholder={T.yearPlaceholder} placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={year} onChangeText={function (t) { setYear(t); setError(''); }} maxLength={4} selectionColor="#FFB800" />
+                <TextInput style={g.textInput} placeholder={T.yearPlaceholder} placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={year} onChangeText={setYear} maxLength={4} selectionColor="#FFB800" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={g.inputLabel}>{T.dayLabel}</Text>
-                <TextInput style={g.textInput} placeholder={T.dayPlaceholder} placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={day} onChangeText={function (t) { setDay(t); setError(''); }} maxLength={2} selectionColor="#FFB800" />
+                <TextInput style={g.textInput} placeholder={T.dayPlaceholder} placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={day} onChangeText={setDay} maxLength={2} selectionColor="#FFB800" />
               </View>
             </View>
 
@@ -1605,23 +1563,22 @@ function BirthDataStep({ onComplete, lang }) {
               {T.months.map(function (m, i) {
                 var sel = month === i;
                 return (
-                  <TouchableOpacity key={i} style={[bd.monthChip, sel && bd.monthChipSel]} onPress={function () { setMonth(i); setError(''); }} activeOpacity={0.7}>
+                  <TouchableOpacity key={i} style={[bd.monthChip, sel && bd.monthChipSel]} onPress={function () { setMonth(i); }} activeOpacity={0.7}>
                     <Text style={[bd.monthText, sel && bd.monthTextSel]}>{m}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
           </GlowCard>
-          {error && page === 1 ? <Animated.Text entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={g.error}>{error}</Animated.Text> : null}
           <Text style={[g.hint, { marginTop: 10, color: '#FFD666', fontSize: 12, lineHeight: 18 }]}>{dateTeaser}</Text>
 
           <View style={bd.navRow}>
-            <TouchableOpacity onPress={function () { setPage(0); setError(''); }} style={bd.backBtn}>
+            <TouchableOpacity onPress={function () { setPage(0); }} style={bd.backBtn}>
               <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.5)" />
               <Text style={bd.backText}>{T.back}</Text>
             </TouchableOpacity>
             <View style={{ flex: 1 }}>
-              <PrimaryButton label={T.continueBtn} onPress={function () { var err = validateDate(); if (err) { setError(err); } else { setError(''); setPage(2); } }} icon="arrow-forward" />
+              <PrimaryButton label={T.continueBtn} onPress={function () { setPage(2); }} icon="arrow-forward" />
             </View>
           </View>
         </View>
@@ -1633,20 +1590,20 @@ function BirthDataStep({ onComplete, lang }) {
   var renderTimePage = function () {
     var timeTeaser = lang === 'si' ? '🌙 උපන් වේලාව ඔබේ ලග්නය තීරණය කරයි — ඔබේ මුළු ජීවිතයේම සැඟවුණු සැලැස්ම එයයි' : '🌙 This is the single most important detail — it determines your entire rising sign and life path';
     return (
-      <Animated.View key="time" entering={FadeIn.duration(300)} exiting={FadeOut.duration(150)} style={{ flex: 1, justifyContent: 'center' }}>
+      <Animated.View key="time" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
-          <StepHeader icon="time-outline" iconColor="#06B6D4" title={T.timeTitle} subtitle={T.timeSubtitle} />
+          <StepHeader title={T.timeTitle} subtitle={T.timeSubtitle} />
 
           <GlowCard style={{ marginTop: 14 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={{ flex: 1 }}>
                 <Text style={g.inputLabel}>{T.hourLabel}</Text>
-                <TextInput style={[g.textInput, { textAlign: 'center', fontSize: 24, fontWeight: '700' }]} placeholder="12" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={hour} onChangeText={function (t) { setHour(t); setError(''); }} maxLength={2} selectionColor="#06B6D4" />
+                <TextInput style={[g.textInput, { textAlign: 'center', fontSize: 24, fontWeight: '700' }]} placeholder="12" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={hour} onChangeText={setHour} maxLength={2} selectionColor="#06B6D4" />
               </View>
-              <Text style={{ color: '#06B6D4', fontSize: 32, fontWeight: '800', marginTop: 16 }}>:</Text>
+              <Text style={{ color: '#FFB800', fontSize: 32, fontWeight: '800', marginTop: 16 }}>:</Text>
               <View style={{ flex: 1 }}>
                 <Text style={g.inputLabel}>{T.minuteLabel}</Text>
-                <TextInput style={[g.textInput, { textAlign: 'center', fontSize: 24, fontWeight: '700' }]} placeholder="00" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={minute} onChangeText={function (t) { setMinute(t); setError(''); }} maxLength={2} selectionColor="#06B6D4" />
+                <TextInput style={[g.textInput, { textAlign: 'center', fontSize: 24, fontWeight: '700' }]} placeholder="00" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" value={minute} onChangeText={setMinute} maxLength={2} selectionColor="#06B6D4" />
               </View>
             </View>
 
@@ -1662,17 +1619,16 @@ function BirthDataStep({ onComplete, lang }) {
             </View>
           </GlowCard>
 
-          {error && page === 2 ? <Animated.Text entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={g.error}>{error}</Animated.Text> : null}
           <Text style={[g.hint, { marginTop: 8 }]}>{'\uD83D\uDCA1'} {T.timeHint}</Text>
-          <Text style={[g.hint, { marginTop: 6, color: '#67E8F9', fontSize: 12, lineHeight: 18 }]}>{timeTeaser}</Text>
+          <Text style={[g.hint, { marginTop: 6, color: '#FFD666', fontSize: 12, lineHeight: 18 }]}>{timeTeaser}</Text>
 
           <View style={bd.navRow}>
-            <TouchableOpacity onPress={function () { setPage(1); setError(''); }} style={bd.backBtn}>
+            <TouchableOpacity onPress={function () { setPage(1); }} style={bd.backBtn}>
               <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.5)" />
               <Text style={bd.backText}>{T.back}</Text>
             </TouchableOpacity>
             <View style={{ flex: 1 }}>
-              <PrimaryButton label={T.continueBtn} onPress={function () { var err = validateTime(); if (err) { setError(err); } else { setError(''); setPage(3); } }} icon="arrow-forward" />
+              <PrimaryButton label={T.continueBtn} onPress={function () { setPage(3); }} icon="arrow-forward" />
             </View>
           </View>
         </View>
@@ -1684,14 +1640,14 @@ function BirthDataStep({ onComplete, lang }) {
   var renderPlacePage = function () {
     var placeTeaser = lang === 'si' ? '✨ අවසාන පියවර! තත්පර කිහිපයකින් ඔබේ සම්පූර්ණ ඉරණම සහ සැඟවුණු කේන්දරය හෙළි වේ' : '✨ Final step! In seconds you\'ll see your complete birth chart and hidden destiny revealed';
     return (
-      <Animated.View key="place" entering={FadeIn.duration(300)} exiting={FadeOut.duration(150)} style={{ flex: 1, justifyContent: 'center' }}>
+      <Animated.View key="place" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
-          <StepHeader icon="earth-outline" iconColor="#34D399" title={T.placeTitle} subtitle={T.placeSubtitle} />
+          <StepHeader title={T.placeTitle} subtitle={T.placeSubtitle} />
 
           <View style={{ marginTop: 12 }}>
             <CitySearchPicker
               selectedCity={selectedCity}
-              onSelect={function (city) { setSelectedCity(city); setError(''); }}
+              onSelect={function (city) { setSelectedCity(city); }}
               lang={lang}
               accentColor="#FFB800"
               maxHeight={180}
@@ -1700,8 +1656,8 @@ function BirthDataStep({ onComplete, lang }) {
           </View>
 
           {selectedCity ? (
-            <Animated.View entering={FadeInDown.duration(300)} exiting={FadeOut.duration(200)} style={bd.selectedCityBadge}>
-              <Ionicons name="location" size={16} color="#34D399" />
+            <Animated.View entering={FadeInDown.duration(300)} style={bd.selectedCityBadge}>
+              <Ionicons name="location" size={16} color="#FFB800" />
               <Text style={bd.selectedCityText}>
                 {selectedCity.name}{selectedCity.country ? ', ' + selectedCity.country : ''}
               </Text>
@@ -1711,12 +1667,11 @@ function BirthDataStep({ onComplete, lang }) {
             </Animated.View>
           ) : null}
 
-          {error && page === 3 ? <Animated.Text entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={g.error}>{error}</Animated.Text> : null}
           <Text style={[g.hint, { marginTop: 6 }]}>{'\uD83C\uDF0D'} {T.placeHint}</Text>
-          <Text style={[g.hint, { marginTop: 6, color: '#6EE7B7', fontSize: 12, lineHeight: 18 }]}>{placeTeaser}</Text>
+          <Text style={[g.hint, { marginTop: 6, color: '#FFD666', fontSize: 12, lineHeight: 18 }]}>{placeTeaser}</Text>
 
           <View style={bd.navRow}>
-            <TouchableOpacity onPress={function () { setPage(2); setError(''); }} style={bd.backBtn}>
+            <TouchableOpacity onPress={function () { setPage(2); }} style={bd.backBtn}>
               <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.5)" />
               <Text style={bd.backText}>{T.back}</Text>
             </TouchableOpacity>
@@ -1724,6 +1679,7 @@ function BirthDataStep({ onComplete, lang }) {
               <PrimaryButton label={T.completeSetup} onPress={handleSubmit} loading={loading} icon="checkmark-done" />
             </View>
           </View>
+          <GhostButton label={T.skipBirth} onPress={handleSubmit} />
         </View>
       </Animated.View>
     );
@@ -1755,11 +1711,11 @@ var bd = StyleSheet.create({
   monthTextSel: { color: '#FFD666', fontWeight: '700' },
   ampmRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 18, gap: 14 },
   ampmBtn: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  ampmSel: { backgroundColor: 'rgba(6,182,212,0.15)', borderColor: '#06B6D4' },
+  ampmSel: { backgroundColor: 'rgba(255,184,0,0.15)', borderColor: '#FFB800' },
   ampmText: { color: 'rgba(255,255,255,0.5)', fontSize: 17, fontWeight: '700' },
-  ampmTextSel: { color: '#67E8F9' },
-  selectedCityBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, marginTop: 12, backgroundColor: 'rgba(52,211,153,0.08)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.2)' },
-  selectedCityText: { color: '#6EE7B7', fontSize: 14, fontWeight: '600', flex: 1 },
+  ampmTextSel: { color: '#FFD666' },
+  selectedCityBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, marginTop: 12, backgroundColor: 'rgba(255,184,0,0.08)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.2)' },
+  selectedCityText: { color: '#FFD666', fontSize: 14, fontWeight: '600', flex: 1 },
   selectedCityCoords: { color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: '500' },
   chartPreview: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 14, marginTop: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)' },
   chartPreviewIcon: { fontSize: 24 },
@@ -1795,10 +1751,10 @@ var ZODIAC_ELEMENTS = {
 };
 
 var ELEMENT_COLORS = {
-  fire: ['#FF6B35', '#FF4500', 'rgba(255,107,53,0.12)'],
-  earth: ['#4CAF50', '#2E7D32', 'rgba(76,175,80,0.12)'],
-  air: ['#42A5F5', '#1565C0', 'rgba(66,165,245,0.12)'],
-  water: ['#26C6DA', '#00838F', 'rgba(38,198,218,0.12)'],
+  fire: ['#FF6B00', '#FFB800', '#FF4500'],
+  earth: ['#2D8B4E', '#7BC67E', '#1B5E20'],
+  air: ['#4A90D9', '#87CEEB', '#1565C0'],
+  water: ['#6A5ACD', '#A78BFA', '#4527A0'],
 };
 
 
@@ -1830,7 +1786,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
 
   // Animations
   var orbGlow = useSharedValue(0);
-  var orbScale = useSharedValue(0.4);
+  var orbScale = useSharedValue(0.01);
   var orbRotate = useSharedValue(0);
   var ringScale1 = useSharedValue(0);
   var ringScale2 = useSharedValue(0);
@@ -1885,16 +1841,14 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
   }, []);
 
   // Loading phase animations
-  var reduced = useReducedMotion();
   useEffect(function () {
     orbScale.value = withSequence(
-      withTiming(0.6, { duration: 800, easing: Easing.out(Easing.cubic) }),
+      withTiming(0.3, { duration: 800, easing: Easing.out(Easing.cubic) }),
       withRepeat(withSequence(
         withTiming(1.08, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
         withTiming(0.88, { duration: 1800, easing: Easing.inOut(Easing.sin) })
       ), -1, true)
     );
-    if (reduced) return;
     orbGlow.value = withRepeat(withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }), -1, true);
     orbRotate.value = withRepeat(withTiming(360, { duration: 30000, easing: Easing.linear }), -1, false);
     ringScale1.value = withRepeat(withSequence(
@@ -1912,7 +1866,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     particleAngle.value = withRepeat(withTiming(360, { duration: 6000, easing: Easing.linear }), -1, false);
     loadTextGlow.value = withRepeat(withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.sin) }), -1, true);
     bgPulse.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
-  }, [reduced]);
+  }, []);
 
   // Reveal phase — dramatic staged entrance
   useEffect(function () {
@@ -2165,7 +2119,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     var HERO_SIZE = isSmallScreen ? 150 : 180;
 
     return (
-      <View style={{ flex: 1, paddingHorizontal: 20, paddingBottom: 20 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 20 }} bounces={false} showsVerticalScrollIndicator={false}>
 
         {/* Big Bang flash overlay */}
         <Animated.View style={[{
@@ -2340,7 +2294,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
         ) : null}
 
         {/* ── Spacer ── */}
-        <View style={{ height: 16 }} />
+        <View style={{ flex: 1, minHeight: 8, maxHeight: 28 }} />
 
         {/* ── PREMIUM NUDGE ── */}
         <Animated.View entering={FadeInUp.delay(2400).duration(600)}>
@@ -2401,8 +2355,9 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
           </View>
 
           <PrimaryButton label={lang === 'si' ? '🔓 මගේ සම්පූර්ණ ඉරණම අගුළු අරින්න' : '🔓 Unlock My Complete Destiny Now'} onPress={onContinue} icon="sparkles" />
+          <GhostButton label={T.revealSkip} onPress={onContinue} />
         </Animated.View>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -2424,8 +2379,7 @@ var lr = StyleSheet.create({
 
 function CompleteStep({ lang, onDone }) {
   var T = OB[lang] || OB.en;
-  var reduced = useReducedMotion();
-  var scale = useSharedValue(0.7);
+  var scale = useSharedValue(0.3);
   var rotate = useSharedValue(0);
   var ringPulse = useSharedValue(0);
   var confetti1 = useSharedValue(0);
@@ -2434,16 +2388,14 @@ function CompleteStep({ lang, onDone }) {
 
   useEffect(function () {
     scale.value = withSequence(
-      withSpring(1.15, { damping: 8, stiffness: 180 }),
+      withSpring(1.3, { damping: 8, stiffness: 180 }),
       withSpring(1, { damping: 12, stiffness: 120 })
     );
-    if (!reduced) {
-      rotate.value = withRepeat(withTiming(360, { duration: 12000, easing: Easing.linear }), -1, false);
-      ringPulse.value = withRepeat(withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sin) }), -1, true);
-      confetti1.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.linear }), -1, false);
-      confetti2.value = withDelay(500, withRepeat(withTiming(1, { duration: 3500, easing: Easing.linear }), -1, false));
-      confetti3.value = withDelay(1000, withRepeat(withTiming(1, { duration: 2800, easing: Easing.linear }), -1, false));
-    }
+    rotate.value = withRepeat(withTiming(360, { duration: 12000, easing: Easing.linear }), -1, false);
+    ringPulse.value = withRepeat(withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sin) }), -1, true);
+    confetti1.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.linear }), -1, false);
+    confetti2.value = withDelay(500, withRepeat(withTiming(1, { duration: 3500, easing: Easing.linear }), -1, false));
+    confetti3.value = withDelay(1000, withRepeat(withTiming(1, { duration: 2800, easing: Easing.linear }), -1, false));
 
     // Auto-navigate to today page after a short celebration
     var timer = setTimeout(function () {
@@ -2599,9 +2551,9 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
       >
         <View style={{ flex: 1, paddingTop: insets.top + 8, paddingBottom: Math.max(insets.bottom, 12) }}>
           {step >= 0 && !isReturningUser ? (
-            <Animated.View entering={FadeIn.duration(300)} style={{ paddingHorizontal: 24, paddingTop: 4 }}>
+            <View style={{ paddingHorizontal: 24, paddingTop: 4 }}>
               <StepProgressBar current={step} total={TOTAL_MAIN_STEPS} lang={lang} />
-            </Animated.View>
+            </View>
           ) : null}
           <SceneTransition sceneKey={step}>
             {renderStep()}

@@ -9,7 +9,7 @@
 const express = require('express');
 const router = express.Router();
 const { chat } = require('../engine/chat');
-const { phoneAuth } = require('../middleware/subscription');
+const { phoneAuth, requireSubscription } = require('../middleware/subscription');
 const { getDb, COLLECTIONS } = require('../config/firebase');
 const { trackCost } = require('../services/costTracker');
 
@@ -104,7 +104,7 @@ router.get('/quota', phoneAuth, async (req, res) => {
  *   chatHistory: []                       // optional previous messages
  * }
  */
-router.post('/ask', phoneAuth, async (req, res) => {
+router.post('/ask', phoneAuth, requireSubscription, async (req, res) => {
   try {
     const { message, birthDate, birthLat, birthLng, language, chatHistory } = req.body;
     const uid = req.user?.uid || null;
