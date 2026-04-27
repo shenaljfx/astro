@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform, StyleSheet, Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -348,10 +349,26 @@ export default function ChatScreen() {
   // When closed, we must reserve the full tab-bar overlay height so the
   // input row isn't hidden behind the floating nav bar.
   var kb = useKeyboard();
+
+  // Bulletproof Android keyboard compensation:
+  // On Android, adjustResize MAY shrink the window when keyboard opens,
+  // but on newer Android (15+) with edge-to-edge or new arch it often doesn't.
+  // We detect how much adjustResize handled and add only the remaining gap.
+  var { height: windowHeight } = useWindowDimensions();
+  var fullHeightRef = useRef(windowHeight);
+  if (!kb.isOpen) fullHeightRef.current = windowHeight;
+
+  var adjustResizeAmount = (kb.isOpen && Platform.OS === 'android')
+    ? Math.max(0, fullHeightRef.current - windowHeight)
+    : 0;
+  var androidExtraPad = (Platform.OS === 'android' && kb.isOpen)
+    ? Math.max(0, kb.height - adjustResizeAmount)
+    : 0;
+
   var bottomPad = isDesktop
     ? 0
     : (kb.isOpen
-        ? Math.max(insets.bottom, 6) + 8
+        ? Math.max(insets.bottom, 6) + 8 + androidExtraPad
         : TAB_BAR_VISUAL_HEIGHT + Math.max(insets.bottom, 4));
 
   // ── DESKTOP LAYOUT ────────────────────────────────────────────────

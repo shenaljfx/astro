@@ -42,6 +42,7 @@ import useScreenInsets from '../../hooks/useScreenInsets';
 import { useTheme } from '../../contexts/ThemeContext';
 import { screenColors } from '../../constants/theme';
 import useNetworkStatus from '../../hooks/useNetworkStatus';
+import useLowEndDevice from '../../hooks/useLowEndDevice';
 import { checkServerReachable } from '../../services/api';
 var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var MAX_SAVED_REPORTS = 20;
@@ -389,8 +390,10 @@ var sbr = StyleSheet.create({
 // ══════════════════════════════════════════
 // COLLAPSIBLE SECTION CARD — Dopamine Edition
 // ══════════════════════════════════════════
-function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang, rawData }) {
-  var [expanded, setExpanded] = useState(false);
+function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang, rawData, isLowEnd, expandedKey, setExpandedKey }) {
+  var isControlled = isLowEnd && expandedKey !== undefined;
+  var [localExpanded, setLocalExpanded] = useState(false);
+  var expanded = isControlled ? (expandedKey === sectionKey) : localExpanded;
   var [revealed, setRevealed] = useState(false);
   var meta = SECTION_META[sectionKey] || {};
   var isSi = reportLang === 'si';
@@ -410,23 +413,35 @@ function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang, rawD
 
   var handleExpand = function() {
     if (!expanded) {
-      setExpanded(true);
-      // Delay the "revealed" state for dramatic effect
+      if (isControlled) {
+        setExpandedKey(sectionKey);
+      } else {
+        setLocalExpanded(true);
+      }
       setTimeout(function() { setRevealed(true); }, 100);
     } else {
-      setExpanded(!expanded);
+      if (isControlled) {
+        setExpandedKey(null);
+      } else {
+        setLocalExpanded(!localExpanded);
+      }
     }
   };
 
   var sectionNumber = String(index + 1).padStart(2, '0');
 
+  var WrapView = isLowEnd ? View : Animated.View;
+  var wrapProps = isLowEnd ? {} : { entering: FadeInDown.delay(100 + index * 80).duration(600).springify() };
+  var BadgeView = isLowEnd ? View : Animated.View;
+  var badgeProps = isLowEnd ? {} : { entering: ZoomIn.delay(200 + index * 80).duration(400) };
+
   return (
-    <Animated.View entering={FadeInDown.delay(100 + index * 80).duration(600).springify()}>
+    <WrapView {...wrapProps}>
       <View style={sc.outerWrap}>
         {/* Section number badge — floating left */}
-        <Animated.View entering={ZoomIn.delay(200 + index * 80).duration(400)} style={sc.sectionNumBadge}>
+        <BadgeView {...badgeProps} style={sc.sectionNumBadge}>
           <Text style={sc.sectionNumText}>{sectionNumber}</Text>
-        </Animated.View>
+        </BadgeView>
 
         <AuraBox style={[sc.cardBox, expanded && sc.cardBoxExpanded]}>
           {/* Accent top border glow */}
@@ -524,7 +539,7 @@ function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang, rawD
               </View>
 
               {/* Collapse button at bottom */}
-              <SpringPressable haptic="light" onPress={function() { setExpanded(false); }} style={sc.collapseBtn}>
+              <SpringPressable haptic="light" onPress={function() { if (isControlled) { setExpandedKey(null); } else { setLocalExpanded(false); } }} style={sc.collapseBtn}>
                 <Ionicons name="chevron-up" size={14} color="rgba(255,140,0,0.6)" />
                 <Text style={sc.collapseText}>{isSi ? 'හකුලන්න' : 'Collapse'}</Text>
               </SpringPressable>
@@ -532,7 +547,7 @@ function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang, rawD
           )}
         </AuraBox>
       </View>
-    </Animated.View>
+    </WrapView>
   );
 }
 
@@ -743,56 +758,72 @@ var cdv = StyleSheet.create({
 // COSMIC LOADING ANIMATION
 // ══════════════════════════════════════════
 var LOADING_STAGES = {
-  en: [
-    { text: '🌌 Looking into your birth moment...', sub: 'The sky tells a story about the second you arrived' },
-    { text: '🪐 Discovering your hidden patterns...', sub: 'Finding the invisible threads that shape your life' },
-    { text: '✨ Your life story is taking shape...', sub: 'Weaving together your past, present, and future' },
-    { text: '🔮 Uncovering what the future holds...', sub: 'Reading the chapters of your life not yet written' },
-    { text: '📜 Writing your personal story...', sub: 'Almost there — every word is written just for you' },
-  ],
-  si: [
-    { text: '🌌 ඔයා ඉපදුන මොහොත බලමින්...', sub: 'ඔයා ලෝකෙට ආපු තත්පරයේ අහස මොකද කියන්නේ' },
-    { text: '🪐 ඔයාගේ සැඟවුණු රටා සොයමින්...', sub: 'ඔයාගේ ජීවිතය හැඩගස්වන නොපෙනෙන නූල් සොයමින්' },
-    { text: '✨ ඔයාගේ ජීවිත කතාව හැදෙමින්...', sub: 'ඔයාගේ අතීතය, වර්තමානය, අනාගතය එක් කරමින්' },
-    { text: '🔮 අනාගතයේ මොකද තියෙන්නේ කියා සොයමින්...', sub: 'තවම ලියැවෙන්නට ඇති පරිච්ඡේද කියවමින්' },
-    { text: '📜 ඔයාගේ කතාව ලියමින්...', sub: 'ඉවරවෙන්න ආසන්නයි — හැම වචනයක්ම ඔයාට විතරක්' },
-  ],
+  en: {
+    starting: { text: '🌌 Connecting to the stars...', sub: 'Preparing your birth chart analysis' },
+    engine: { text: '🪐 Calculating planetary positions...', sub: 'Mapping the sky at your exact birth moment' },
+    charts: { text: '✨ Building your celestial charts...', sub: 'Rashi, Navamsha, and house systems coming together' },
+    coherence: { text: '🔮 Creating your personal narrative...', sub: 'Understanding the story behind the numbers' },
+    sections: { text: '📜 Writing your life story...', sub: 'Each chapter crafted just for you' },
+    complete: { text: '🎉 Your report is ready!', sub: 'Opening your personalized life reading' },
+    failed: { text: '⚠️ Generation hit a snag', sub: 'Don\'t worry — you can try again for free' },
+  },
+  si: {
+    starting: { text: '🌌 තරු වලට සම්බන්ධ වෙමින්...', sub: 'ඔබේ ජන්ම පත්‍රය විශ්ලේෂණයට සූදානම් වෙමින්' },
+    engine: { text: '🪐 ග්‍රහ පිහිටීම් ගණනය කරමින්...', sub: 'ඔබ ඉපදුන මොහොතේ අහස සිතියම්ගත කරමින්' },
+    charts: { text: '✨ දිව්‍ය සටහන් ගොඩනගමින්...', sub: 'රාශි, නවාංශ, භාව පද්ධති එකට එමින්' },
+    coherence: { text: '🔮 ඔබේ පෞද්ගලික කථාව නිර්මාණය කරමින්...', sub: 'සංඛ්‍යා පිටුපස ඇති කතාව තේරුම් ගනිමින්' },
+    sections: { text: '📜 ඔබේ ජීවිත කතාව ලියමින්...', sub: 'සෑම පරිච්ඡේදයක්ම ඔබට පමණක් ලියැවේ' },
+    complete: { text: '🎉 ඔබේ වාර්තාව සූදානම්!', sub: 'ඔබේ පෞද්ගලික ජීවිත කියවීම විවෘත කරමින්' },
+    failed: { text: '⚠️ ජනනයේ ගැටලුවක්', sub: 'කරදර වෙන්න එපා — නොමිලේ නැවත උත්සාහ කරන්න' },
+  },
 };
 
-function CosmicLoader({ progress, userName, language }) {
+var SECTION_LABELS = {
+  en: {
+    personality: 'Personality', yogaAnalysis: 'Yoga Analysis', lifePredictions: 'Life Predictions',
+    career: 'Career', marriage: 'Marriage', marriedLife: 'Married Life', financial: 'Financial',
+    children: 'Children', familyPortrait: 'Family', health: 'Health', physicalProfile: 'Physical Profile',
+    attractionProfile: 'Attraction', mentalHealth: 'Mental Health', foreignTravel: 'Foreign Travel',
+    education: 'Education', luck: 'Luck & Fortune', legal: 'Legal Matters', spiritual: 'Spiritual Path',
+    realEstate: 'Real Estate', transits: 'Current Transits', surpriseInsights: 'Surprise Insights',
+    timeline25: 'Year Timeline', remedies: 'Remedies',
+  },
+  si: {
+    personality: 'පෞද්ගලිකත්වය', yogaAnalysis: 'යෝග විශ්ලේෂණය', lifePredictions: 'ජීවිත අනාවැකි',
+    career: 'වෘත්තිය', marriage: 'විවාහය', marriedLife: 'විවාහ ජීවිතය', financial: 'මූල්‍ය',
+    children: 'දරුවන්', familyPortrait: 'පවුල', health: 'සෞඛ්‍ය', physicalProfile: 'ශාරීරික',
+    attractionProfile: 'ආකර්ෂණය', mentalHealth: 'මානසික සෞඛ්‍ය', foreignTravel: 'විදේශ ගමන්',
+    education: 'අධ්‍යාපනය', luck: 'වාසනාව', legal: 'නීතිමය', spiritual: 'අධ්‍යාත්මික',
+    realEstate: 'ඉඩම් දේපළ', transits: 'වත්මන් ගෝචර', surpriseInsights: 'විස්මිත අවබෝධ',
+    timeline25: 'වාර්ෂික කාලරේඛාව', remedies: 'පිළියම්',
+  },
+};
+
+function CosmicLoader({ progress, userName, language, colors: themeColors }) {
   var lang = language || 'en';
-  var stages = LOADING_STAGES[lang] || LOADING_STAGES.en;
+  var stageMap = LOADING_STAGES[lang] || LOADING_STAGES.en;
+  var sectionLabels = SECTION_LABELS[lang] || SECTION_LABELS.en;
+  var tc = themeColors || {};
   var rotation = useSharedValue(0);
   var pulse = useSharedValue(1);
   var orbit1 = useSharedValue(0);
   var orbit2 = useSharedValue(0);
   var orbit3 = useSharedValue(0);
   var glow = useSharedValue(0.3);
-  var [stageIndex, setStageIndex] = useState(0);
 
   useEffect(function() {
-    // Main rotation
     rotation.value = withRepeat(withTiming(360, { duration: 8000 }), -1, false);
-    // Pulse
     pulse.value = withRepeat(withSequence(
       withTiming(1.15, { duration: 1200 }),
       withTiming(0.95, { duration: 1200 })
     ), -1, true);
-    // Orbits at different speeds
     orbit1.value = withRepeat(withTiming(360, { duration: 3000 }), -1, false);
     orbit2.value = withRepeat(withTiming(360, { duration: 5000 }), -1, false);
     orbit3.value = withRepeat(withTiming(360, { duration: 7000 }), -1, false);
-    // Glow pulse
     glow.value = withRepeat(withSequence(
       withTiming(0.8, { duration: 2000 }),
       withTiming(0.3, { duration: 2000 })
     ), -1, true);
-
-    // Cycle through stages
-    var interval = setInterval(function() {
-      setStageIndex(function(prev) { return (prev + 1) % stages.length; });
-    }, 5000);
-    return function() { clearInterval(interval); };
   }, []);
 
   var spinStyle = useAnimatedStyle(function() {
@@ -811,36 +842,48 @@ function CosmicLoader({ progress, userName, language }) {
     return { transform: [{ rotate: orbit3.value + 'deg' }, { translateX: 90 }, { rotate: -orbit3.value + 'deg' }] };
   });
 
-  var stage = stages[stageIndex];
+  // Real progress data
+  var stage = progress?.stage || 'starting';
+  var stageInfo = stageMap[stage] || stageMap.starting;
+  var sectionsDone = progress?.sectionsDone || 0;
+  var sectionsTotal = progress?.sectionsTotal || 19;
+  var currentSection = progress?.currentSection;
+  var elapsedMs = progress?.elapsedMs || 0;
+
+  // Calculate real progress percentage
+  var progressPct = 0;
+  if (stage === 'engine') progressPct = 5;
+  else if (stage === 'charts') progressPct = 10;
+  else if (stage === 'coherence') progressPct = 15;
+  else if (stage === 'sections') progressPct = 15 + (sectionsDone / Math.max(sectionsTotal, 1)) * 80;
+  else if (stage === 'complete') progressPct = 100;
+  else if (stage === 'failed') progressPct = progressPct; // keep last value
+
+  var elapsedSec = Math.floor(elapsedMs / 1000);
+  var elapsedMin = Math.floor(elapsedSec / 60);
+  var elapsedStr = elapsedMin > 0 ? (elapsedMin + 'm ' + (elapsedSec % 60) + 's') : (elapsedSec + 's');
 
   var personalMsg = lang === 'si'
-    ? (userName ? 'පොඩ්ඩක් ඉන්න ' + userName + '! ඔයාගේ ජීවිත කතාව ලියමින්... ✨' : 'ඔයාගේ ජීවිත කතාව ලියමින්... ✨')
-    : (userName ? 'Hold tight, ' + userName + '! Your life story is being written... ✨' : 'Your life story is being written... ✨');
+    ? (userName ? 'පොඩ්ඩක් ඉන්න ' + userName + '! ✨' : 'ඔයාගේ ජීවිත කතාව ලියමින්... ✨')
+    : (userName ? 'Hold tight, ' + userName + '! ✨' : 'Your life story is being written... ✨');
 
-  var timeMsg = lang === 'si' ? ' 1-2 min ගතවේ' : 'This takes 1-3 min';
+  var currentSectionLabel = currentSection ? (sectionLabels[currentSection] || currentSection) : null;
 
   return (
-    <View style={cl.container}>
+    <View style={[cl.container, { backgroundColor: tc.bg || tc.background || '#04030C' }]}>
       {/* Orbiting system */}
       <View style={cl.orbitContainer}>
-        {/* Glow behind */}
         <Animated.View style={[cl.glowCircle, pulseStyle]} />
-        
-        {/* Center sun */}
         <Animated.View style={[cl.centerOrb, spinStyle]}>
           <LinearGradient
-            colors={['#FFB800', '#F59E0B', '#D97706']}
+            colors={[tc.accent || '#FFB800', tc.accentLight || '#F59E0B', tc.accentDark || '#D97706']}
             style={cl.centerGrad}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
         </Animated.View>
-
-        {/* Orbit rings (decorative) */}
         <View style={[cl.orbitRing, { width: 100, height: 100 }]} />
         <View style={[cl.orbitRing, { width: 140, height: 140 }]} />
         <View style={[cl.orbitRing, { width: 180, height: 180 }]} />
-
-        {/* Orbiting planets */}
         <Animated.View style={[cl.planet, cl.planet1, orbit1Style]}>
           <Text style={{ fontSize: 16 }}>🪐</Text>
         </Animated.View>
@@ -853,26 +896,40 @@ function CosmicLoader({ progress, userName, language }) {
       </View>
 
       {/* Stage text */}
-      <Animated.View entering={FadeIn.duration(600)} key={stageIndex} style={cl.textWrap}>
-        <Text style={cl.stageText}>{stage.text}</Text>
-        <Text style={cl.stageSub}>{stage.sub}</Text>
+      <Animated.View entering={FadeIn.duration(600)} key={stage} style={cl.textWrap}>
+        <Text style={[cl.stageText, { color: tc.textPrimary || '#FFE8B0' }]}>{stageInfo.text}</Text>
+        <Text style={[cl.stageSub, { color: tc.textMuted || 'rgba(255,214,102,0.50)' }]}>{stageInfo.sub}</Text>
       </Animated.View>
 
-      {/* Personal touch */}
-      <Text style={cl.personalText}>
-        {personalMsg}
-      </Text>
+      {/* Current section being written */}
+      {stage === 'sections' && currentSectionLabel ? (
+        <Animated.View entering={FadeIn.duration(400)} key={currentSection} style={{ marginBottom: 12 }}>
+          <Text style={[cl.sectionNow, { color: tc.accentLight || '#FBBF24' }]}>
+            {lang === 'si' ? '✍️ ' + currentSectionLabel + ' ලියමින්...' : '✍️ Writing ' + currentSectionLabel + '...'}
+          </Text>
+        </Animated.View>
+      ) : null}
 
-      {/* Progress hint */}
+      {/* Personal touch */}
+      <Text style={[cl.personalText, { color: tc.solarAmber || '#FF8C00' }]}>{personalMsg}</Text>
+
+      {/* Real progress bar */}
       <View style={cl.progressRow}>
-        <View style={cl.progressBar}>
+        <View style={[cl.progressBar, { backgroundColor: tc.glassBorder || 'rgba(255,255,255,0.08)' }]}>
           <LinearGradient
-            colors={['#FF8C00', '#FFB800']}
-            style={[cl.progressFill, { width: ((stageIndex + 1) / stages.length * 100) + '%' }]}
+            colors={[tc.solarAmber || '#FF8C00', tc.accent || '#FFB800']}
+            style={[cl.progressFill, { width: Math.min(progressPct, 100) + '%' }]}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
           />
         </View>
-        <Text style={cl.progressText}>{timeMsg}</Text>
+        <View style={cl.progressMeta}>
+          {stage === 'sections' ? (
+            <Text style={[cl.progressText, { color: tc.textMuted || '#475569' }]}>{sectionsDone}/{sectionsTotal} {lang === 'si' ? 'කොටස්' : 'sections'}</Text>
+          ) : (
+            <Text style={[cl.progressText, { color: tc.textMuted || '#475569' }]}>{Math.round(progressPct)}%</Text>
+          )}
+          {elapsedSec > 5 ? <Text style={[cl.progressText, { color: tc.textMuted || '#475569' }]}>{elapsedStr}</Text> : null}
+        </View>
       </View>
     </View>
   );
@@ -892,10 +949,12 @@ var cl = StyleSheet.create({
   textWrap: { alignItems: 'center', marginBottom: 20 },
   stageText: { color: '#FFE8B0', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
   stageSub: { color: 'rgba(255,214,102,0.50)', fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  sectionNow: { color: '#FBBF24', fontSize: 13, fontWeight: '600', textAlign: 'center', fontStyle: 'italic' },
   personalText: { color: '#FF8C00', fontSize: 14, fontWeight: '600', textAlign: 'center', marginBottom: 24, fontStyle: 'italic' },
   progressRow: { width: '100%', alignItems: 'center' },
-  progressBar: { width: '80%', height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: 8 },
-  progressFill: { height: '100%', borderRadius: 2 },
+  progressBar: { width: '80%', height: 6, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 },
+  progressFill: { height: '100%', borderRadius: 3 },
+  progressMeta: { flexDirection: 'row', justifyContent: 'space-between', width: '80%' },
   progressText: { color: '#475569', fontSize: 11, fontWeight: '600' },
 });
 
@@ -908,6 +967,7 @@ export default function ReportScreen() {
   var { colors, gradients, resolved } = useTheme();
   var sc = screenColors(colors);
   var isDesktop = useDesktopCtx();
+  var isLowEnd = useLowEndDevice();
   var insets = useScreenInsets();
   var [birthDate, setBirthDate] = useState('1998-10-09');
   var [birthTime, setBirthTime] = useState('09:16');
@@ -936,15 +996,26 @@ export default function ReportScreen() {
   var scrollProgress = useSharedValue(0);
   var [currentChapter, setCurrentChapter] = useState(1);
   var { isConnected } = useNetworkStatus();
+  var [visibleSections, setVisibleSections] = useState(isLowEnd ? 8 : 999);
+  var [expandedKey, setExpandedKey] = useState(null);
 
   // Keep screen awake during report generation (prevents OS from killing the fetch)
+  var keepAwakeActiveRef = useRef(false);
   useEffect(function() {
     if (screenState === 'loading') {
-      activateKeepAwakeAsync('report-generation').catch(function() {});
-    } else {
-      deactivateKeepAwake('report-generation');
+      activateKeepAwakeAsync('report-generation').then(function() {
+        keepAwakeActiveRef.current = true;
+      }).catch(function() {});
+    } else if (keepAwakeActiveRef.current) {
+      try { deactivateKeepAwake('report-generation'); } catch (e) {}
+      keepAwakeActiveRef.current = false;
     }
-    return function() { deactivateKeepAwake('report-generation'); };
+    return function() {
+      if (keepAwakeActiveRef.current) {
+        try { deactivateKeepAwake('report-generation'); } catch (e) {}
+        keepAwakeActiveRef.current = false;
+      }
+    };
   }, [screenState]);
 
   // Track AppState to detect if app was backgrounded during generation
@@ -1056,17 +1127,39 @@ export default function ReportScreen() {
   }, [language, screenState]);
 
   // ── Core generation function (defined first to avoid stale closures) ──
+  var [genProgress, setGenProgress] = useState({ stage: 'starting', sectionsDone: 0, sectionsTotal: 19, currentSection: null, completedSections: [] });
+  var progressPollRef = useRef(null);
+
   var startFullGeneration = async function(dateStr, gender) {
     try {
       setScreenState('loading');
       setLoading(true);
+      setGenProgress({ stage: 'starting', sectionsDone: 0, sectionsTotal: 19, currentSection: null, completedSections: [] });
       wasBackgroundedDuringGen.current = false;
+
+      // Generate a reportId for progress tracking
+      var reportId = 'rpt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+      // Start polling progress every 2 seconds
+      progressPollRef.current = setInterval(async function() {
+        try {
+          var prog = await api.getReportProgress(reportId);
+          if (prog && prog.stage) {
+            setGenProgress(prog);
+          }
+        } catch (e) {
+          // Polling failure is non-critical — just skip
+        }
+      }, 2000);
 
       // Fire raw report + AI in parallel using allSettled so partial results survive
       var results = await Promise.allSettled([
         api.getFullReport(dateStr, birthLat, birthLng, reportLang),
-        api.getAIReport(dateStr, birthLat, birthLng, reportLang, birthLocation, userName || null, gender, userReligion || null),
+        api.getAIReport(dateStr, birthLat, birthLng, reportLang, birthLocation, userName || null, gender, userReligion || null, reportId),
       ]);
+
+      // Stop polling
+      if (progressPollRef.current) { clearInterval(progressPollRef.current); progressPollRef.current = null; }
 
       var rawResult = results[0];
       var aiResult = results[1];
@@ -1100,14 +1193,50 @@ export default function ReportScreen() {
 
       setReport(rawRes.data);
 
-      // AI report is optional — show raw report even if AI failed
+      // AI report — this is the actual content users pay for
       var aiData = null;
       if (aiResult.status === 'fulfilled' && aiResult.value && aiResult.value.data) {
         aiData = aiResult.value.data;
+
+        // ── FAIL-SAFE: Validate AI report has actual readable content ──
+        // Users pay for this — never show an empty report
+        var narrativeSections = aiData.narrativeSections || {};
+        var sectionKeys = Object.keys(narrativeSections);
+        var sectionsWithContent = sectionKeys.filter(function(k) {
+          var nar = narrativeSections[k]?.narrative;
+          if (!nar || typeof nar !== 'string') return false;
+          // Detect sentinel/placeholder text
+          var lower = nar.toLowerCase().trim();
+          if (lower === 'unable to generate response' || lower === 'unable to generate' || lower.startsWith('unable to generate')) return false;
+          // Must have at least 50 words to be a real section
+          return nar.split(/\s+/).length >= 50;
+        });
+
+        if (sectionsWithContent.length < 5) {
+          // Report is effectively empty — show error so user can retry
+          if (__DEV__) console.warn('[Report] AI report has insufficient content: ' + sectionsWithContent.length + ' valid sections out of ' + sectionKeys.length);
+          setError(reportLang === 'si'
+            ? 'AI වාර්තාව නිසි ලෙස සෑදුනේ නැහැ. කරුණාකර නැවත උත්සාහ කරන්න — ඔබට නැවත ගෙවීමක් අවශ්‍ය නැත.'
+            : 'The report did not generate properly. Please try again — you will not be charged again.');
+          setAiReport(null);
+          setScreenState('form');
+          setLoading(false);
+          return;
+        }
+
         setAiReport(aiData);
       } else {
-        if (__DEV__) console.warn('[Report] AI report failed, showing raw report only:', aiResult.reason?.message);
+        // AI report failed entirely — this is a critical failure for a paid feature
+        var aiErrorMsg = aiResult.reason?.message || 'AI generation failed';
+        var canRetry = aiResult.reason?.response?.canRetry || false;
+        if (__DEV__) console.warn('[Report] AI report failed:', aiErrorMsg);
+        setError(reportLang === 'si'
+          ? 'AI වාර්තාව සෑදීමට අසමත් විය. කරුණාකර නැවත උත්සාහ කරන්න — ඔබට නැවත ගෙවීමක් අවශ්‍ය නැත.'
+          : 'Failed to generate your report. Please try again — you will not be charged again.');
         setAiReport(null);
+        setScreenState('form');
+        setLoading(false);
+        return;
       }
       setScreenState('report');
 
@@ -1127,10 +1256,12 @@ export default function ReportScreen() {
         chartData: chartData,
       });
     } catch (err) {
+      if (progressPollRef.current) { clearInterval(progressPollRef.current); progressPollRef.current = null; }
       var msg = err.message || '';
       setError(msg || 'Failed to generate report');
       setScreenState('form');
     } finally {
+      if (progressPollRef.current) { clearInterval(progressPollRef.current); progressPollRef.current = null; }
       setLoading(false);
     }
   };
@@ -1272,9 +1403,9 @@ export default function ReportScreen() {
           try {
             SECTION_KEYS.forEach(function(k, i) {
               var n = aiReport && aiReport.narrativeSections && aiReport.narrativeSections[k];
-              if (!n) return;
+              if (!n || !n.narrative) return;
               var title = (resolvedTitles && resolvedTitles[i]) || k;
-              var content = String(n.content || n.text || '').replace(/[<>]/g, '');
+              var content = String(n.narrative || '').replace(/[<>]/g, '');
               sectionsHtml += '<h2>' + title + '</h2><p>' + content + '</p>';
             });
           } catch (e) { /* ignore — best effort */ }
@@ -1306,15 +1437,17 @@ export default function ReportScreen() {
     setLoading(false);
     setUserGender(null);
     setUserReligion(null);
+    setVisibleSections(isLowEnd ? 8 : 999);
+    setExpandedKey(null);
     setScreenState('form');
   };
 
   // ── FULL SCREEN LOADING ──────────────────────────────────
   if (screenState === 'loading') {
     return (
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg || '#04030C' }}>
         <View style={s.loadingFull}>
-          <CosmicLoader userName={userName} language={reportLang} />
+          <CosmicLoader progress={genProgress} userName={userName} language={reportLang} colors={colors} />
         </View>
       </View>
     );
@@ -1340,6 +1473,7 @@ export default function ReportScreen() {
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <ReadingProgressBar scrollProgress={scrollProgress} sectionCount={SECTION_KEYS.length} currentChapter={currentChapter} reportLang={reportLang} />
         <Animated.ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}
+          removeClippedSubviews={isLowEnd}
           onScroll={function(e) {
             var y = e.nativeEvent.contentOffset.y;
             var h = e.nativeEvent.contentSize.height - e.nativeEvent.layoutMeasurement.height;
@@ -1347,7 +1481,7 @@ export default function ReportScreen() {
             var sectionIdx = Math.floor((y / (h || 1)) * SECTION_KEYS.length) + 1;
             setCurrentChapter(Math.min(SECTION_KEYS.length, Math.max(1, sectionIdx)));
           }}
-          scrollEventThrottle={16}
+          scrollEventThrottle={isLowEnd ? 32 : 16}
         >
           <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
 
@@ -1556,16 +1690,54 @@ export default function ReportScreen() {
 
           {/* ═══ AI NARRATIVE SECTIONS — Dopamine Edition ═══ */}
           {aiReport && aiReport.narrativeSections && (
-            SECTION_KEYS.map(function(key, index) {
+            SECTION_KEYS.slice(0, visibleSections).map(function(key, index) {
               var aiNarrative = aiReport.narrativeSections[key] || null;
               if (!aiNarrative || !aiNarrative.narrative) return null;
               var rawDataKey = key === 'marriedLife' ? 'marriage' : key;
               var rawData = (report.sections || {})[rawDataKey] || (aiReport.rawSections || {})[rawDataKey] || null;
+              var EntryAnim = isLowEnd ? View : Animated.View;
+              var entryProps = isLowEnd ? {} : { entering: FadeInDown.delay(100 + index * 80).duration(600).springify() };
               return <React.Fragment key={key}>
                 {index > 0 && <ConstellationDivider index={index} />}
-                <SectionCard sectionKey={key} data={null} index={index} t={t} aiNarrative={aiNarrative} reportLang={reportLang} rawData={rawData} />
+                <SectionCard sectionKey={key} data={null} index={index} t={t} aiNarrative={aiNarrative} reportLang={reportLang} rawData={rawData} isLowEnd={isLowEnd} expandedKey={expandedKey} setExpandedKey={setExpandedKey} />
               </React.Fragment>;
             })
+          )}
+
+          {/* ═══ LOAD MORE SECTIONS (low-end lazy load) ═══ */}
+          {isLowEnd && aiReport && aiReport.narrativeSections && visibleSections < SECTION_KEYS.length && (
+            <SpringPressable
+              style={{ marginTop: 16, marginBottom: 8, paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.3)', backgroundColor: 'rgba(255,140,0,0.06)', alignItems: 'center' }}
+              onPress={function() { setVisibleSections(function(prev) { return Math.min(prev + 6, SECTION_KEYS.length); }); }}
+              haptic="light"
+            >
+              <Text style={{ color: '#FF8C00', fontSize: 14, fontWeight: '700' }}>
+                {reportLang === 'si' ? 'තවත් කොටස් පූරණය කරන්න (' + (SECTION_KEYS.length - visibleSections) + ')' : 'Load More Sections (' + (SECTION_KEYS.length - visibleSections) + ')'}
+              </Text>
+            </SpringPressable>
+          )}
+
+          {/* ═══ FALLBACK: No AI content rendered — defensive check ═══ */}
+          {(!aiReport || !aiReport.narrativeSections || sectionCount === 0) && (
+            <Animated.View entering={FadeInDown.delay(300).duration(600)}>
+              <AuraBox style={{ borderColor: 'rgba(239,68,68,0.3)', alignItems: 'center', paddingVertical: 24 }}>
+                <Text style={{ fontSize: 32 }}>⚠️</Text>
+                <Text style={{ color: '#FCA5A5', fontSize: 16, fontWeight: '700', marginTop: 8, textAlign: 'center' }}>
+                  {reportLang === 'si' ? 'වාර්තා අන්තර්ගතය නිසි ලෙස පූරණය වුණේ නැහැ' : 'Report content did not load properly'}
+                </Text>
+                <Text style={{ color: 'rgba(252,165,165,0.6)', fontSize: 13, marginTop: 6, textAlign: 'center', paddingHorizontal: 16 }}>
+                  {reportLang === 'si'
+                    ? 'කරුණාකර නැවත උත්සාහ කරන්න. ඔබට නැවත ගෙවීමක් අවශ්‍ය නැත.'
+                    : 'Please try again. You will not be charged again.'}
+                </Text>
+                <SpringPressable style={[s.newReportBtn, { marginTop: 16, borderColor: 'rgba(239,68,68,0.4)' }]} onPress={handleNewReport} haptic="medium">
+                  <Ionicons name="refresh" size={16} color="#FCA5A5" style={{ marginRight: 6 }} />
+                  <Text style={[s.newReportText, { color: '#FCA5A5' }]}>
+                    {reportLang === 'si' ? 'නැවත උත්සාහ කරන්න' : 'Try Again'}
+                  </Text>
+                </SpringPressable>
+              </AuraBox>
+            </Animated.View>
           )}
 
           {/* ═══ END CARD ═══ */}

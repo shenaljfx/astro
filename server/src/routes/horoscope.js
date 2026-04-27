@@ -10,7 +10,7 @@ const express = require('express');
 const router = express.Router();
 const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getSunLongitude, getLagna, getAllPlanetPositions, buildHouseChart, buildNavamshaChart, buildShadvarga, calculateDrishtis, analyzePushkara, calculateAshtakavarga, buildBhavaChalit, detectYogas, getPlanetStrengths, calculateVimshottari, generateDetailedReport, generateFullReport, RASHIS } = require('../engine/astrology');
 const { generateAdvancedAnalysis } = require('../engine/advanced');
-const { chat, generateAINarrativeReport, translateAdvancedForDisplay, explainChartSimple } = require('../engine/chat');
+const { chat, generateAINarrativeReport, translateAdvancedForDisplay, explainChartSimple, createReportProgress, getReportProgress, deleteReportProgress } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth, requireSubscription } = require('../middleware/subscription');
 const { reportLimiter, validateBirthData } = require('../middleware/security');
@@ -1007,6 +1007,26 @@ router.post('/full-report', reportLimiter, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// GET /api/horoscope/report-progress/:reportId
+// Poll generation progress for the loading screen
+// ═══════════════════════════════════════════════════════════════════
+router.get('/report-progress/:reportId', (req, res) => {
+  const prog = getReportProgress(req.params.reportId);
+  if (!prog) {
+    return res.json({ stage: 'unknown', sectionsDone: 0, sectionsTotal: 0 });
+  }
+  res.json({
+    stage: prog.stage,
+    sectionsDone: prog.sectionsDone,
+    sectionsTotal: prog.sectionsTotal,
+    currentSection: prog.currentSection,
+    completedSections: prog.completedSections || [],
+    elapsedMs: Date.now() - prog.startedAt,
+    error: prog.error || null,
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // POST /api/horoscope/full-report-ai
 // AI-powered narrative report — addictive, personal, no jargon
 // Body: { birthDate, lat?, lng?, language? }
@@ -1016,7 +1036,7 @@ router.post('/full-report', reportLimiter, async (req, res) => {
 router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, async (req, res) => {
   let entitlementId = null;
   try {
-    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null } = req.body;
+    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null, reportId: clientReportId = null } = req.body;
 
     if (!birthDate) {
       return res.status(400).json({ error: 'birthDate is required (ISO format or parseable date string)' });
@@ -1091,11 +1111,23 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
     console.log(`[AI Report] Generating narrative report for ${date.toISOString()} at (${reportLat}, ${reportLng}) in ${language}`);
     const startTime = Date.now();
 
-    const report = await generateAINarrativeReport(date, reportLat, reportLng, language, birthLocation, userName, userGender, userReligion, { maritalStatus, marriageYear });
+    // Generate a reportId for progress tracking (use client-provided if available)
+    const reportId = clientReportId || `rpt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    createReportProgress(reportId, 19); // 19 sections in sectionOrder
+
+    const report = await generateAINarrativeReport(date, reportLat, reportLng, language, birthLocation, userName, userGender, userReligion, { maritalStatus, marriageYear }, reportId);
 
     const elapsed = Date.now() - startTime;
     const sectionCount = Object.keys(report.narrativeSections).length;
     console.log(`[AI Report] Complete in ${elapsed}ms — ${sectionCount} narrative sections`);
+
+    // ── FAIL-SAFE: Validate report has actual content before returning ──
+    // This is a PAID feature — never return an empty/degraded report as success
+    if (sectionCount === 0) {
+      const error = new Error('Report generation produced zero narrative sections');
+      error.code = 'EMPTY_REPORT';
+      throw error;
+    }
 
     // Track real AI cost
     trackCost('fullReport', req.user?.uid || null, report.tokenUsage);
@@ -1132,6 +1164,11 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
       data: report,
       tokenUsage: report.tokenUsage || null,
       entitlementId: entitlementId || null,
+      quality: {
+        sectionsGenerated: report.successCount || sectionCount,
+        sectionsTotal: report.totalSections || sectionCount,
+        failedSections: report.failedSections ? report.failedSections.map(f => f.key) : [],
+      },
     });
 
     // ── Entitlement: mark as fulfilled (generation succeeded) ──
@@ -1139,6 +1176,9 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
       try { await fulfillEntitlement(entitlementId); }
       catch (e) { console.warn('[AI Report] Entitlement fulfill failed (non-critical):', e.message); }
     }
+
+    // Clean up progress tracker after a short delay (let mobile poll one final time)
+    setTimeout(() => deleteReportProgress(reportId), 30000);
   } catch (error) {
     console.error('[AI Report] Error:', error);
 
@@ -1148,8 +1188,13 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
       catch (e) { console.warn('[AI Report] Entitlement error record failed:', e.message); }
     }
 
-    res.status(500).json({
+    // Determine appropriate status code and message
+    const isInsufficientSections = error.code === 'INSUFFICIENT_SECTIONS' || error.code === 'EMPTY_REPORT';
+    const statusCode = isInsufficientSections ? 502 : 500;
+
+    res.status(statusCode).json({
       error: 'Failed to generate AI report',
+      code: error.code || 'GENERATION_FAILED',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       entitlementId: entitlementId || null,
       canRetry: !!entitlementId,

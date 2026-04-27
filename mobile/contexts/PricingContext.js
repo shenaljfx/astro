@@ -29,6 +29,17 @@ var DEFAULT_PRICING = {
   topUpPackages: [100, 280, 380, 500],
 };
 
+// Default USD pricing (international fallback — mirrors server/src/config/pricing.js)
+var DEFAULT_USD_PRICING = {
+  currency: 'USD',
+  currencySymbol: '$',
+  country: 'International',
+  subscription: { amount: 4.99, amountFormatted: '4.99', label: '$4.99/month', period: 'month' },
+  porondam: { amount: 1.99, amountFormatted: '1.99', label: '$1.99' },
+  report: { amount: 3.99, amountFormatted: '3.99', label: '$3.99' },
+  topUpPackages: [2, 5, 6, 10],
+};
+
 /**
  * Detect user's country code from device locale.
  * Returns 'LK' for Sri Lanka, or the actual country code for international.
@@ -102,6 +113,32 @@ export function PricingProvider({ children }) {
   };
 
   /**
+   * Sync pricing currency based on the user's actual Google Play / App Store
+   * account country (reported by RevenueCat). This is the source of truth for
+   * what currency the user will actually be charged in — much more reliable
+   * than device locale, which can be misconfigured.
+   *
+   * @param {string} rcCurrencyCode — e.g. 'LKR', 'USD', 'INR', 'GBP'
+   */
+  var syncFromStoreCurrency = function(rcCurrencyCode) {
+    if (!rcCurrencyCode) return;
+    var code = String(rcCurrencyCode).toUpperCase();
+    var nextCountry = code === 'LKR' ? 'LK' : 'INTL';
+    if (nextCountry === countryCode) return;
+    setCountryCode(nextCountry);
+    setDetectedCountry(nextCountry === 'LK' ? 'LK' : 'US');
+    if (code === 'LKR') {
+      setPricing(DEFAULT_PRICING);
+    } else {
+      // International — use USD defaults immediately, then refresh from server
+      setPricing(DEFAULT_USD_PRICING);
+      api.getPricing('US')
+        .then(function(res) { if (res && res.success) setPricing(res); })
+        .catch(function() { /* keep USD defaults */ });
+    }
+  };
+
+  /**
    * Get a formatted price label for a feature.
    * @param {'porondam'|'report'|'subscription'} feature
    * @returns {string} e.g. "LKR 100" or "$2"
@@ -143,6 +180,7 @@ export function PricingProvider({ children }) {
     priceAmount: priceAmount,
     subscriptionLabel: subscriptionLabel,
     updateCountry: updateCountry,
+    syncFromStoreCurrency: syncFromStoreCurrency,
   };
 
   return (
@@ -167,6 +205,7 @@ export function usePricing() {
       priceAmount: function(f) { return DEFAULT_PRICING[f] ? DEFAULT_PRICING[f].amount : 0; },
       subscriptionLabel: function() { return DEFAULT_PRICING.subscription ? DEFAULT_PRICING.subscription.label : ''; },
       updateCountry: function() {},
+      syncFromStoreCurrency: function() {},
     };
   }
   return ctx;

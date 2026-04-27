@@ -9,6 +9,39 @@ const { getPanchanga, getDailyNakath, getNakshatra, getRashi, getLagna, toSidere
 const { generateAdvancedAnalysis } = require('./advanced');
 const { extractGeminiUsage, createTokenTracker, recordUsage, finalizeTracker, formatCostLog } = require('../utils/tokenCalculator');
 
+// ══════════════════════════════════════════════════════════════
+// REPORT PROGRESS TRACKER — allows mobile to poll generation status
+// ══════════════════════════════════════════════════════════════
+const _reportProgress = new Map(); // reportId → { stage, sectionsDone, sectionsTotal, currentSection, startedAt, completedSections }
+const PROGRESS_TTL = 10 * 60 * 1000; // 10 minutes
+
+function createReportProgress(reportId, totalSections) {
+  _reportProgress.set(reportId, {
+    stage: 'engine',      // engine → coherence → sections → complete / failed
+    sectionsDone: 0,
+    sectionsTotal: totalSections,
+    currentSection: null,
+    completedSections: [],
+    startedAt: Date.now(),
+    error: null,
+  });
+  // Auto-cleanup after TTL
+  setTimeout(() => _reportProgress.delete(reportId), PROGRESS_TTL);
+}
+
+function updateReportProgress(reportId, update) {
+  const prog = _reportProgress.get(reportId);
+  if (prog) Object.assign(prog, update);
+}
+
+function getReportProgress(reportId) {
+  return _reportProgress.get(reportId) || null;
+}
+
+function deleteReportProgress(reportId) {
+  _reportProgress.delete(reportId);
+}
+
 // New prediction engines
 let transitEngine, timingEngine, muhurthaEngine, healthEngine, enhancedEngine, jyotishEngine;
 try { transitEngine = require('./transit'); } catch (e) { console.warn('[chat] transit engine not available:', e.message); }
@@ -664,7 +697,12 @@ async function callGemini(messages, maxTokens = 4096, temperature = 0.55) {
       // Extract text from thinking model response — may have multiple parts
       const parts = data.candidates?.[0]?.content?.parts || [];
       const textParts = parts.filter(p => p.text && !p.thought);
-      const text = textParts.map(p => p.text).join('') || 'Unable to generate response.';
+      const text = textParts.map(p => p.text).join('');
+
+      // Fail-safe: if Gemini returned no actual text content, throw instead of returning sentinel
+      if (!text || text.trim().length === 0) {
+        throw new Error('Gemini returned empty response (no text parts)');
+      }
 
       return {
         text,
@@ -3454,11 +3492,16 @@ async function callGeminiLong(messages, sectionTemperature = 0.55) {
       // Extract text from thinking model response — may have multiple parts
       const parts = data.candidates?.[0]?.content?.parts || [];
       const textParts = parts.filter(p => p.text && !p.thought);
-      const text = textParts.map(p => p.text).join('') || 'Unable to generate response.';
+      const text = textParts.map(p => p.text).join('');
       const thoughtParts = parts.filter(p => p.thought);
       if (thoughtParts.length > 0) {
         const thinkingChars = thoughtParts.reduce((sum, p) => sum + (p.text?.length || 0), 0);
         console.log(`[GeminiLong] 🧠 Model used thinking (${thinkingChars} chars of reasoning)`);
+      }
+
+      // Fail-safe: if Gemini returned no actual text content, throw instead of returning sentinel
+      if (!text || text.trim().length === 0) {
+        throw new Error('Gemini returned empty response (no text parts)');
       }
 
       return {
@@ -3552,11 +3595,16 @@ async function callGeminiHero(messages, sectionTemperature = 0.55) {
       // Extract text from thinking model response — may have multiple parts
       const parts = data.candidates?.[0]?.content?.parts || [];
       const textParts = parts.filter(p => p.text && !p.thought);
-      const text = textParts.map(p => p.text).join('') || 'Unable to generate response.';
+      const text = textParts.map(p => p.text).join('');
       const thoughtParts = parts.filter(p => p.thought);
       if (thoughtParts.length > 0) {
         const thinkingTokens = thoughtParts.reduce((sum, p) => sum + (p.text?.length || 0), 0);
         console.log(`[GeminiHero] 🧠 Model used thinking (${thinkingTokens} chars of reasoning)`);
+      }
+
+      // Fail-safe: if Gemini returned no actual text content, throw instead of returning sentinel
+      if (!text || text.trim().length === 0) {
+        throw new Error('Gemini Hero returned empty response (no text parts)');
       }
 
       return {
@@ -3672,12 +3720,20 @@ function resolveLocationName(lat, lng) {
  * @param {string} language - 'en', 'si', 'ta', 'singlish'
  * @returns {Object} Full narrative report
  */
-async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, marriageOpts = {}) {
+async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, marriageOpts = {}, reportId = null) {
   const tokenTracker = createTokenTracker();
   const { ...cleanMarriageOpts } = marriageOpts;
+
+  // ── Progress tracking ──────────────────────────────────────────
+  const progress = (stage, extra = {}) => {
+    if (reportId) updateReportProgress(reportId, { stage, ...extra });
+  };
+
+  progress('engine');
   const rawReport = generateFullReport(birthDate, lat, lng, cleanMarriageOpts);
   const birthData = rawReport.birthData;
   const sections = rawReport.sections;
+  progress('charts');
 
   // ── Resolve birth location name ────────────────────────────────
   const resolvedLocation = birthLocation || resolveLocationName(lat, lng);
@@ -4266,6 +4322,7 @@ REFERENCE: Use this calendar when writing about "key upcoming events" or "life t
   // This ensures all 16 sections tell a consistent story.
   // ══════════════════════════════════════════════════════════════
   console.log('[AI Report] Pass 1: Generating core themes for coherence...');
+  progress('coherence');
   const coherenceStart = Date.now();
   
   let coreThemes = '';
@@ -4428,13 +4485,28 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
   // PASS 2: Generate all sections in parallel with coherence context
   // ══════════════════════════════════════════════════════════════
   console.log(`[AI Report] Pass 2: Generating ${sectionOrder.length} narrative sections in parallel...`);
+  progress('sections', { sectionsDone: 0, sectionsTotal: sectionOrder.length });
   const startTime = Date.now();
 
+  let _sectionsDone = 0;
   const narrativePromises = sectionOrder.map(key => {
     const dataKey = key === 'marriedLife' ? 'marriage' : key;
     const sectionData = sections[dataKey];
-    if (!sectionData) return Promise.resolve({ title: key, narrative: null });
-    return generateSectionNarrative(key, sectionData, birthData, sections, language, rashiContext, ageContext, userName, userGender, userReligion, {});
+    if (!sectionData) {
+      _sectionsDone++;
+      progress('sections', { sectionsDone: _sectionsDone, currentSection: key });
+      return Promise.resolve({ title: key, narrative: null });
+    }
+    return generateSectionNarrative(key, sectionData, birthData, sections, language, rashiContext, ageContext, userName, userGender, userReligion, {})
+      .then(result => {
+        _sectionsDone++;
+        progress('sections', {
+          sectionsDone: _sectionsDone,
+          currentSection: key,
+          completedSections: [...(_reportProgress.get(reportId)?.completedSections || []), key],
+        });
+        return result;
+      });
   });
 
   const narrativeResults = await Promise.all(narrativePromises);
@@ -4444,26 +4516,65 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
 
   const narrativeSections = {};
   const failedSections = [];
+  const SENTINEL_TEXTS = ['unable to generate response', 'unable to generate', 'i cannot generate'];
+  const MIN_NARRATIVE_WORDS = 50; // A real narrative section should have at least 50 words
+
   sectionOrder.forEach((key, i) => {
     const result = narrativeResults[i];
     if (result && result.narrative) {
-      // Record token usage for this section
-      if (result.usage) {
-        recordUsage(tokenTracker, result.model || 'unknown', key, result.usage);
+      // Detect sentinel/placeholder text that isn't a real narrative
+      const narrativeLower = result.narrative.toLowerCase().trim();
+      const isSentinel = SENTINEL_TEXTS.some(s => narrativeLower === s || narrativeLower.startsWith(s));
+      const wordCount = result.narrative.split(/\s+/).length;
+      const isTooShort = wordCount < MIN_NARRATIVE_WORDS;
+
+      if (isSentinel) {
+        console.warn(`[AI Report] Section '${key}' returned sentinel text — treating as failure`);
+        failedSections.push({ key, error: 'Gemini returned placeholder/sentinel text' });
+      } else if (isTooShort) {
+        console.warn(`[AI Report] Section '${key}' too short (${wordCount} words) — treating as failure`);
+        failedSections.push({ key, error: `Narrative too short (${wordCount} words)` });
+      } else {
+        // Record token usage for this section
+        if (result.usage) {
+          recordUsage(tokenTracker, result.model || 'unknown', key, result.usage);
+        }
+        narrativeSections[key] = {
+          title: result.title,
+          narrative: result.narrative,
+          rawData: sections[key],
+        };
       }
-      narrativeSections[key] = {
-        title: result.title,
-        narrative: result.narrative,
-        rawData: sections[key],
-      };
     } else {
       failedSections.push({ key, error: result?.error || 'No narrative generated' });
     }
   });
 
+  const successCount = Object.keys(narrativeSections).length;
+  const totalSections = sectionOrder.length;
+  const MIN_REQUIRED_SECTIONS = Math.max(10, Math.floor(totalSections * 0.5));
+
   if (failedSections.length > 0) {
-    console.warn(`[AI Report] ${failedSections.length} sections failed: ${failedSections.map(f => f.key).join(', ')}`);
+    console.warn(`[AI Report] ${failedSections.length}/${totalSections} sections failed: ${failedSections.map(f => f.key).join(', ')}`);
   }
+  console.log(`[AI Report] ${successCount}/${totalSections} sections succeeded (minimum required: ${MIN_REQUIRED_SECTIONS})`);
+
+  // ── FAIL-SAFE: Throw if too few sections succeeded ──
+  // This is a PAID feature — returning an empty/nearly-empty report is unacceptable
+  if (successCount < MIN_REQUIRED_SECTIONS) {
+    progress('failed', { error: `Only ${successCount}/${totalSections} sections generated` });
+    const error = new Error(
+      `Report generation failed: only ${successCount}/${totalSections} sections generated successfully (minimum ${MIN_REQUIRED_SECTIONS} required). ` +
+      `Failed: ${failedSections.map(f => `${f.key}(${f.error})`).join(', ')}`
+    );
+    error.code = 'INSUFFICIENT_SECTIONS';
+    error.failedSections = failedSections;
+    error.successCount = successCount;
+    error.totalSections = totalSections;
+    throw error;
+  }
+
+  progress('complete', { sectionsDone: successCount, sectionsTotal: totalSections });
 
   // Finalize token tracking
   const tokenUsage = finalizeTracker(tokenTracker);
@@ -4482,6 +4593,8 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
     rawSections: sections,
     coreThemes: coreThemes || null,
     tokenUsage,
+    successCount,
+    totalSections,
     failedSections: failedSections.length > 0 ? failedSections : undefined,
   };
 }
@@ -4762,4 +4875,8 @@ module.exports = {
   generateAINarrativeReport,
   translateAdvancedForDisplay,
   explainChartSimple,
+  // Progress tracking for report generation
+  createReportProgress,
+  getReportProgress,
+  deleteReportProgress,
 };

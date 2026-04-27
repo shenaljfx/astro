@@ -225,11 +225,18 @@ export var getFullReport = function(birthDate, lat, lng, language) {
   });
 };
 
-export var getAIReport = function(birthDate, lat, lng, language, birthLocation, userName, userGender, userReligion) {
+export var getAIReport = function(birthDate, lat, lng, language, birthLocation, userName, userGender, userReligion, reportId) {
   return request('/api/horoscope/full-report-ai', {
     method: 'POST',
-    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en', birthLocation: birthLocation || null, userName: userName || null, userGender: userGender || null, userReligion: userReligion || null }),
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en', birthLocation: birthLocation || null, userName: userName || null, userGender: userGender || null, userReligion: userReligion || null, reportId: reportId || null }),
     _timeout: 300000,
+  });
+};
+
+export var getReportProgress = function(reportId) {
+  return request('/api/horoscope/report-progress/' + reportId, {
+    method: 'GET',
+    _timeout: 10000,
   });
 };
 
@@ -722,6 +729,7 @@ export default {
   createVibeLink: createVibeLink,
   getFullReport: getFullReport,
   getAIReport: getAIReport,
+  getReportProgress: getReportProgress,
   getFullReading: getFullReading,
   setAuthTokenGetter: setAuthTokenGetter,
   setDetectedCountry: setDetectedCountry,

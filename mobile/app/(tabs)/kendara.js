@@ -572,7 +572,7 @@ export default function KendaraScreen() {
 
         <View style={[styles.detailsCard, { marginTop: 12 }]}>
           <Text style={styles.cardTitle}>
-            {t('kpPlanetPositions') || 'Where Your Planets Are'}
+            {t('kpPlanetPositions') || 'Your planetary placements'}
           </Text>
           {chartData.rashiChart && chartData.rashiChart.map(function(entry) {
             if (!entry.planets || entry.planets.length === 0) return null;
@@ -606,7 +606,7 @@ export default function KendaraScreen() {
             <View style={styles.headerRow}>
               <Ionicons name="apps-outline" size={20} color="#FFB800" />
               <Text style={styles.sectionTitle}>
-                {t('kpNavamsaChart') || 'Relationship & Inner Self Chart'}
+                {t('kpNavamsaChart') || 'Navamsha Chart (Marriage & Inner Self)'}
               </Text>
             </View>
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -635,7 +635,7 @@ export default function KendaraScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
                     <Ionicons name="sparkles" size={20} color="#FF8C00" />
                     <Text style={{ color: '#FF8C00', fontSize: 14, fontWeight: '700', letterSpacing: 0.5 }}>
-                      {'✨ ' + (t('kpChartAtGlance') || 'Your Chart at a Glance')}
+                      {'✨ ' + (t('kpChartAtGlance') || 'Your Chart Summary')}
                     </Text>
                   </View>
                   <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 22, fontStyle: 'italic' }}>
@@ -651,7 +651,7 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="alert-circle-outline" size={20} color="#f87171" />
                   <Text style={styles.sectionTitle}>
-                    {t('kpDoshaTitle') || 'Areas to Be Mindful Of'}
+                    {t('kpDoshaTitle') || 'Karmic Obstacles (Doshas)'}
                   </Text>
                 </View>
                 <View style={styles.advCard}>
@@ -805,6 +805,9 @@ export default function KendaraScreen() {
                     {t('kpShadbalaTitle') || 'Your Planet Power Levels'}
                   </Text>
                 </View>
+                <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
+                  {language === 'si' ? 'ග්‍රහයින්ගේ සැබෑ බලය ගණනය කරන විශේෂම ක්‍රමය මෙයයි. ග්‍රහයෙකුට සාර්ථකත්වයක් ලබා දිය හැකි අවම බලයක් ඇත.' : 'Calculates the true mathematical strength and effectiveness of a planet to give positive results in your life.'}
+                </Text>
                 <View style={styles.advCard}>
                   {Object.values(chartData.advancedAnalysis.tier2.shadbala).map(function(sb, i) {
                     var pInfo = PLANET_INFO[sb.name] || {};
@@ -851,6 +854,9 @@ export default function KendaraScreen() {
                     {t('kpBhriguTitle') || 'Your Destiny Point'}
                   </Text>
                 </View>
+                <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
+                  {language === 'si' ? 'කර්මය හා අනාගත ඉරණම සම්බන්ධ තීරණාත්මක රහස් ලක්ෂ්‍යය. මෙය ඔබේ වාසනාව සහ ජීවිතයේ අරමුණ ක්‍රියාත්මක වන තැනයි.' : 'A sensitive mathematical point in your chart where destiny and karmic rewards manifest the strongly.'}
+                </Text>
                 <View style={[styles.advCard, { borderColor: 'rgba(255,184,0,0.15)' }]}>
                   <LinearGradient colors={['rgba(255,184,0,0.08)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
@@ -886,6 +892,9 @@ export default function KendaraScreen() {
                     {t('kpPastLifeTitle') || 'Your Deeper Patterns'}
                   </Text>
                 </View>
+                <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
+                  {language === 'si' ? 'රාහු සහ කේතු ග්‍රහයින්ගේ බලපෑම මත පෙර ආත්මයේ පුරුදු සහ මේ ආත්මයේ යා යුතු නිවැරදි මාවත මෙයින් කියවේ.' : 'Uncovers karmic carry-overs from past lives (Ketu) and where your soul meant to travel in this lifetime (Rahu).'}
+                </Text>
                 <View style={[styles.advCard, { borderColor: 'rgba(167,139,250,0.15)' }]}>
                   <LinearGradient colors={['rgba(167,139,250,0.08)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} />
                   {chartData.advancedAnalysis.tier3.pastLife.pastLife?.ketuThemes && (
@@ -942,9 +951,12 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="git-branch-outline" size={20} color="#A78BFA" />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'ඔබේ ජීවන කාලරේඛාව' : 'Your Life Timeline'}
+                    {language === 'si' ? 'ඔබේ ජීවන කාලරේඛාව (මහ දසා - Mahadashas)' : 'Your Life Timeline (Dashas)'}
                   </Text>
                 </View>
+                <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
+                  {language === 'si' ? 'මහ දසා සහ අතුරු දසා මගින් ඔබේ ජීවිතයේ විවිධ කාල වකවානුවලට බලපාන ප්‍රධාන ග්‍රහයින් පෙන්වයි.' : 'Dashas show which planets are strongly influencing different chapters of your life.'}
+                </Text>
                 <View style={[styles.advCard, { borderColor: 'rgba(167,139,250,0.18)' }]}>
                   <LinearGradient colors={['rgba(167,139,250,0.08)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
 
@@ -954,7 +966,7 @@ export default function KendaraScreen() {
                       <LinearGradient colors={['rgba(255,140,0,0.12)', 'rgba(255,184,0,0.04)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                       <View style={kj.currentDashaHeader}>
                         <View style={kj.currentDashaDot} />
-                        <Text style={kj.currentDashaLabel}>{language === 'si' ? 'වත්මන් කාලය' : 'Current Period'}</Text>
+                        <Text style={kj.currentDashaLabel}>{language === 'si' ? 'වර්තමානයේ පවතින මහ දසාව' : 'Current Period'}</Text>
                       </View>
                       <Text style={kj.currentDashaPlanet}>
                         {language === 'si' ? (PLANET_INFO[jyotishData.dasha.currentMahadasha.planet]?.si || jyotishData.dasha.currentMahadasha.planet || '--') : (jyotishData.dasha.currentMahadasha.planet || '--')}
@@ -962,7 +974,7 @@ export default function KendaraScreen() {
                       </Text>
                       {jyotishData.dasha.currentPratyantar && (
                         <Text style={kj.currentDashaSub}>
-                          {language === 'si' ? 'උප කාලය: ' : 'Sub: '}{language === 'si' ? (PLANET_INFO[jyotishData.dasha.currentPratyantar.planet]?.si || jyotishData.dasha.currentPratyantar.planet) : jyotishData.dasha.currentPratyantar.planet}
+                          {language === 'si' ? 'අතුරු දසා කාලය: ' : 'Sub: '}{language === 'si' ? (PLANET_INFO[jyotishData.dasha.currentPratyantar.planet]?.si || jyotishData.dasha.currentPratyantar.planet) : jyotishData.dasha.currentPratyantar.planet}
                         </Text>
                       )}
                     </View>
@@ -1009,9 +1021,12 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="flame-outline" size={20} color={jyotishData.mangalDosha.hasDosha ? '#F87171' : '#34D399'} />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'අංගහරු ප්‍රභාව විශ්ලේෂණය' : 'Mars Influence Analysis'}
+                    {language === 'si' ? 'මංගල දෝෂ (කුජ දෝෂ) බලපෑම - Mangal Dosha' : 'Mars Influence (Mangal Dosha)'}
                   </Text>
                 </View>
+                <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
+                  {language === 'si' ? 'අඟහරු (කුජ) ග්‍රහයාගෙන් විවාහයට සහ පවුල් ජීවිතයට ඇති විය හැකි බලපෑම් මෙයින් පෙන්වයි.' : 'Indicates if Mars creates challenges specifically related to marriage and long-term relationships.'}
+                </Text>
                 <View style={[styles.advCard, {
                   borderColor: jyotishData.mangalDosha.hasDosha
                     ? (jyotishData.mangalDosha.isHigh ? 'rgba(239,68,68,0.30)' : 'rgba(245,158,11,0.25)')
@@ -1041,9 +1056,9 @@ export default function KendaraScreen() {
                       }]}>
                         {jyotishData.mangalDosha.hasDosha
                           ? (jyotishData.mangalDosha.isHigh
-                            ? (language === 'si' ? '🔴 ප්‍රබල අංගහරු ප්‍රභාවය' : '🔴 Strong Mars Influence')
-                            : (language === 'si' ? '🟡 මධ්‍යම අංගහරු ප්‍රභාවය' : '🟡 Moderate Mars Influence'))
-                          : (language === 'si' ? '🟢 විශේෂ අංගහරු ප්‍රභාවයක් නැත' : '🟢 No Significant Mars Influence')}
+                            ? (language === 'si' ? '🔴 ප්‍රබල මංගල දෝෂයක් පවතී' : '🔴 Strong Mars Influence')
+                            : (language === 'si' ? '🟡 සාමාන්‍ය මංගල දෝෂයක් ඇත' : '🟡 Moderate Mars Influence'))
+                          : (language === 'si' ? '🟢 මංගල දෝෂ (කුජ දෝෂ) නොමැත' : '🟢 No Significant Mars Influence')}
                       </Text>
                       {jyotishData.mangalDosha.description && (
                         <Text style={kj.doshaDesc}>{language === 'si' ? (jyotishData.mangalDosha.descriptionSi || jyotishData.mangalDosha.description) : jyotishData.mangalDosha.description}</Text>
@@ -1060,9 +1075,12 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="planet-outline" size={20} color={jyotishData.sadeSati.status ? '#F59E0B' : '#34D399'} />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'ශනි පැමිණීම තත්ත්වය' : 'Saturn Transit Status'}
+                    {language === 'si' ? 'ඒරාෂ්ඨක අපල තත්ත්වය (Sade Sati / Saturn Transit)' : 'Saturn Transit Status (Sade Sati)'}
                   </Text>
                 </View>
+                <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
+                  {language === 'si' ? 'සෙනසුරු ග්‍රහයාගේ වර්තමාන ගමන අනුව විවිධ කර්ම හා අභියෝගයන් ගෙන එන විශේෂ ඒරාෂ්ඨක කාලයක්දැයි පෙන්වයි.' : 'Saturn\'s major 7.5 year transit known for bringing deep karmic lessons, responsibilities, and life shifts.'}
+                </Text>
                 <View style={[styles.advCard, {
                   borderColor: jyotishData.sadeSati.status ? 'rgba(245,158,11,0.25)' : 'rgba(52,211,153,0.20)',
                   overflow: 'hidden',
@@ -1085,12 +1103,12 @@ export default function KendaraScreen() {
                         color: jyotishData.sadeSati.status ? '#F59E0B' : '#34D399',
                       }]}>
                         {jyotishData.sadeSati.status
-                          ? (language === 'si' ? '⚠ ශනි පැමිණීම ක්‍රියාත්මකයි' : '⚠ Saturn Transit is Active')
-                          : (language === 'si' ? '✓ ශනි පැමිණීම ක්‍රියාත්මක නැත' : '✓ Saturn Transit Not Active')}
+                          ? (language === 'si' ? '⚠ මේ කාලයේ ඒරාෂ්ඨක අපලයක් පවතී' : '⚠ Saturn Transit is Active')
+                          : (language === 'si' ? '✓ මේ කාලයේ ඒරාෂ්ඨක අපලයක් නොමැත' : '✓ Saturn Transit Not Active')}
                       </Text>
                       {jyotishData.sadeSati.phase && (
                         <Text style={kj.doshaDesc}>
-                          {language === 'si' ? 'අදියර: ' : 'Phase: '}{language === 'si' ? ({ 'Rising': 'නැගීම', 'Peak': 'උච්ච', 'Setting': 'බැසීම' }[jyotishData.sadeSati.phase] || jyotishData.sadeSati.phase) : jyotishData.sadeSati.phase}
+                          {language === 'si' ? 'අවස්ථාව: ' : 'Phase: '}{language === 'si' ? ({ 'Rising': 'ආරම්භක අදියර', 'Peak': 'උච්චතම අවස්ථාව', 'Setting': 'අවසන් අදියර' }[jyotishData.sadeSati.phase] || jyotishData.sadeSati.phase) : jyotishData.sadeSati.phase}
                         </Text>
                       )}
                     </View>
@@ -1105,16 +1123,14 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="swap-horizontal-outline" size={20} color="#818CF8" />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'ග්‍රහ භාව වෙනස්වීම්' : 'Planet Behavioral Shifts'}
+                    {language === 'si' ? 'ග්‍රහ භාව වෙනස්වීම් (Chalit Chart / Planet Shifts)' : 'Planet Behavioral Shifts (Chalit)'}
                   </Text>
                 </View>
+                <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
+                  {language === 'si' ? 'උපන් වේලාවට අදාළ සැබෑ ග්‍රහ පිහිටීම අනුව සමහර ග්‍රහයින් ප්‍රධාන කේන්දරයේ පෙන්වන ස්ථානයට වඩා වෙනස් භාවයක ප්‍රතිඵල දෙයි. එය මෙයින් පෙන්වයි.' : 'Sometimes planets give results for a different house than where they initially appear due to the Earth\'s real-time rotation (Bhava Chalit).'}
+                </Text>
                 <View style={[styles.advCard, { borderColor: 'rgba(129,140,248,0.15)' }]}>
                   <LinearGradient colors={['rgba(129,140,248,0.06)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-                  <Text style={kj.chalitDesc}>
-                    {language === 'si'
-                      ? 'මෙම සටහනේ ග්‍රහයින් අපේක්ෂිත ස්ථානයට වඩා වෙනස් ප්‍රදේශවල ක්‍රියා කරයි:'
-                      : 'Some planets express their energy differently than their base position suggests:'}
-                  </Text>
                   {(Array.isArray(jyotishData.chalit.planets) ? jyotishData.chalit.planets : []).map(function (p, i) {
                     var shifted = p.d1House !== p.house && p.d1House && p.house;
                     if (!shifted) return null;
@@ -1153,19 +1169,22 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="layers-outline" size={20} color="#06B6D4" />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'විශේෂ සටහන්' : 'Detailed Charts'}
+                    {language === 'si' ? 'විශේෂ වර්ග කේන්දර සටහන් (Varga Charts)' : 'Detailed Varga Charts'}
                   </Text>
                 </View>
+                <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
+                  {language === 'si' ? 'ජීවිතයේ විවාහය, රැකියාව, දරුඵල වැනි සුවිශේෂී අංශ ගැන ගැඹුරින් බැලීමට ප්‍රධාන කේන්දරය කුඩා කොටස්වලට බෙදා මෙම සටහන් භාවිතා කරයි.' : 'Focuses intensely on specific life areas (like career, marriage, or wealth) by dividing the main chart.'}
+                </Text>
                 <View style={[styles.advCard, { borderColor: 'rgba(6,182,212,0.15)' }]}>
                   <LinearGradient colors={['rgba(6,182,212,0.06)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={kj.vargaPickerRow}>
                     {[
-                      { key: 'd9', label: 'D9', name: language === 'si' ? 'නවාංශ' : 'Relationships', sub: language === 'si' ? 'සම්බන්ධ' : 'Relationships' },
-                      { key: 'd10', label: 'D10', name: language === 'si' ? 'දශාංශ' : 'Career', sub: language === 'si' ? 'රැකියාව' : 'Career' },
-                      { key: 'd7', label: 'D7', name: language === 'si' ? 'සප්තාංශ' : 'Children', sub: language === 'si' ? 'දරුවෝ' : 'Children' },
-                      { key: 'd4', label: 'D4', name: language === 'si' ? 'චතුර්ථාංශ' : 'Property & Assets', sub: language === 'si' ? 'වත්කම්' : 'Assets' },
-                      { key: 'd24', label: 'D24', name: language === 'si' ? 'චතුර්විංශාංශ' : 'Education & Learning', sub: language === 'si' ? 'අධ්‍යාපනය' : 'Learning' },
-                      { key: 'd20', label: 'D20', name: language === 'si' ? 'විංශාංශ' : 'Inner Growth', sub: language === 'si' ? 'ආල්මික' : 'Growth' },
+                      { key: 'd9', label: 'D9', name: language === 'si' ? 'නවාංශ' : 'Relationships', sub: language === 'si' ? 'විවාහය ගැන' : 'Relationships' },
+                      { key: 'd10', label: 'D10', name: language === 'si' ? 'දශාංශ' : 'Career', sub: language === 'si' ? 'රැකියාව ගැන' : 'Career' },
+                      { key: 'd7', label: 'D7', name: language === 'si' ? 'සප්තාංශ' : 'Children', sub: language === 'si' ? 'දරුඵල ගැන' : 'Children' },
+                      { key: 'd4', label: 'D4', name: language === 'si' ? 'චතුර්ථාංශ' : 'Property & Assets', sub: language === 'si' ? 'දේපළ ගැන' : 'Assets' },
+                      { key: 'd24', label: 'D24', name: language === 'si' ? 'චතුර්විංශාංශ' : 'Education & Learning', sub: language === 'si' ? 'අධ්‍යාපනය ගැන' : 'Learning' },
+                      { key: 'd20', label: 'D20', name: language === 'si' ? 'විංශාංශ' : 'Inner Growth', sub: language === 'si' ? 'ආගමික කටයුතු' : 'Growth' },
                     ].map(function (v) {
                       var isActive = selectedVarga === v.key;
                       return (
@@ -1190,9 +1209,12 @@ export default function KendaraScreen() {
                 <View style={styles.headerRow}>
                   <Ionicons name="shield-outline" size={20} color="#f87171" />
                   <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'සංවේදී කාල' : 'Sensitive Periods'}
+                    {language === 'si' ? 'මාරක සහ අපල කාල (Sensitive Periods)' : 'Sensitive Periods'}
                   </Text>
                 </View>
+                <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
+                  {language === 'si' ? 'ග්‍රහ ගෝචර අනුව සෞඛ්‍යය, ආරක්ෂාව සහ ජීවිතයේ වැදගත් කරුණු ගැන විශේෂයෙන් සැලකිලිමත් විය යුතු කාල සීමාවන් මෙයින් පෙන්වයි.' : 'High-friction periods based on your current astrological cycle where taking caution with health and decisions is advised. Avoid starting big new things.'}
+                </Text>
 
                 {marakaLoading && !marakaData ? (
                   <View style={[styles.advCard, { alignItems: 'center', paddingVertical: 24 }]}>

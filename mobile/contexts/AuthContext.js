@@ -37,7 +37,7 @@ import {
 } from '../services/revenuecat';
 import { registerForPushNotifications } from '../services/notifications';
 import { auth as firebaseAuth, GoogleAuthProvider, signInWithPopup, signInWithCredential } from '../services/firebase';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import PaywallScreen from '../components/PaywallScreen';
 
 var AuthContext = createContext(null);
@@ -522,15 +522,18 @@ export function AuthProvider({ children }) {
 
   // Activate subscription — show custom Paywall
   var activateSubscription = useCallback(async function() {
+    console.log('[Auth] activateSubscription called — showing paywall');
     return new Promise(function(resolve, reject) {
       paywallResolverRef.current = { resolve: resolve, reject: reject };
       setPaywallSource('onboarding');
       setPaywallVisible(true);
+      console.log('[Auth] paywallVisible set to true, source: onboarding');
     });
   }, []);
 
   // Called when purchase succeeds in PaywallScreen
   var handlePaywallPurchased = useCallback(async function(result) {
+    console.log('[Auth] handlePaywallPurchased — result:', JSON.stringify(result).slice(0, 200));
     setPaywallVisible(false);
     var resolver = paywallResolverRef.current;
     paywallResolverRef.current = null;
@@ -557,6 +560,7 @@ export function AuthProvider({ children }) {
 
   // Called when paywall is closed without purchase
   var handlePaywallClose = useCallback(function() {
+    console.log('[Auth] handlePaywallClose — dismissing paywall');
     setPaywallVisible(false);
     var resolver = paywallResolverRef.current;
     paywallResolverRef.current = null;
@@ -719,10 +723,12 @@ export function AuthProvider({ children }) {
     restorePurchases: restorePurchases,
     presentCustomerCenter: presentCustomerCenter,
     showPaywall: function(source) {
+      console.log('[Auth] showPaywall called — source:', source);
       return new Promise(function(resolve, reject) {
         setPaywallSource(source || 'onboarding');
         paywallResolverRef.current = { resolve: resolve, reject: reject };
         setPaywallVisible(true);
+        console.log('[Auth] paywallVisible set to true, source:', source || 'onboarding');
       });
     },
     saveBirthData: saveBirthData,
@@ -732,13 +738,15 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
-      <PaywallScreen
-        visible={paywallVisible}
-        source={paywallSource}
-        onClose={handlePaywallClose}
-        onPurchased={handlePaywallPurchased}
-      />
+      <View style={{ flex: 1 }}>
+        {children}
+        <PaywallScreen
+          visible={paywallVisible}
+          source={paywallSource}
+          onClose={handlePaywallClose}
+          onPurchased={handlePaywallPurchased}
+        />
+      </View>
     </AuthContext.Provider>
   );
 }
