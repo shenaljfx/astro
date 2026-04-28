@@ -301,6 +301,14 @@ export var getUserPorondamHistory = function(limit) {
   return request('/api/user/porondam?limit=' + (limit || 10));
 };
 
+export var getMyPorondamHistory = function(limit) {
+  return request('/api/porondam/my-history?limit=' + (limit || 10));
+};
+
+export var getSavedPorondam = function(porondamId) {
+  return request('/api/porondam/saved/' + porondamId);
+};
+
 export var deletePorondamRecord = function(recordId) {
   return request('/api/porondam/history/' + recordId, { method: 'DELETE' });
 };
@@ -743,6 +751,8 @@ export default {
   deleteSavedReport: deleteSavedReport,
   getUserChats: getUserChats,
   getUserPorondamHistory: getUserPorondamHistory,
+  getMyPorondamHistory: getMyPorondamHistory,
+  getSavedPorondam: getSavedPorondam,
   deletePorondamRecord: deletePorondamRecord,
   googleAuth: googleAuth,
   completeOnboarding: completeOnboarding,

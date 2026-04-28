@@ -1032,9 +1032,42 @@ export default function ReportScreen() {
     return function() { sub.remove(); };
   }, [screenState]);
 
-  // ── Load saved reports from AsyncStorage on mount ──
+  // ── Load saved reports: server-first, AsyncStorage fallback ──
+  var [serverReportsLoaded, setServerReportsLoaded] = useState(false);
   useEffect(function() {
     (async function() {
+      // Try server first (source of truth)
+      if (user && !user.isAnonymous) {
+        try {
+          var serverRes = await api.getMyHoroscopeReports();
+          if (serverRes && serverRes.data && serverRes.data.reports && serverRes.data.reports.length > 0) {
+            var serverList = serverRes.data.reports.map(function(r) {
+              return {
+                id: r.id,
+                userName: r.userName || '',
+                birthDate: r.birthDate || '',
+                birthTime: '',
+                birthLocation: r.birthLocation || '',
+                birthLat: r.lat || null,
+                birthLng: r.lng || null,
+                reportLang: r.language || 'en',
+                userGender: null,
+                userReligion: null,
+                sectionCount: r.sectionCount || 0,
+                savedAt: r.createdAt || '',
+                isServerReport: true,
+              };
+            });
+            setSavedReports(serverList);
+            setServerReportsLoaded(true);
+            if (__DEV__) console.log('[Report] Loaded ' + serverList.length + ' reports from server');
+            return;
+          }
+        } catch (e) {
+          if (__DEV__) console.warn('[Report] Server reports failed, falling back to local:', e.message);
+        }
+      }
+      // Fallback to AsyncStorage
       try {
         var stored = await AsyncStorage.getItem(REPORTS_CACHE_KEY);
         if (stored) {
@@ -1044,7 +1077,7 @@ export default function ReportScreen() {
         if (__DEV__) console.warn('Failed to load saved reports:', e);
       }
     })();
-  }, []);
+  }, [user]);
 
   // Save a report to cache
   var saveReportToCache = useCallback(async function(reportData) {
@@ -1073,9 +1106,16 @@ export default function ReportScreen() {
     }
   }, [savedReports]);
 
-  // Delete a saved report
+  // Delete a saved report (server + local)
   var deleteSavedReport = useCallback(async function(reportId) {
     try {
+      // Find entry to check if it's server-side
+      var entry = savedReports.find(function(r) { return r.id === reportId; });
+      if (entry && entry.isServerReport) {
+        try { await api.deleteSavedReport(reportId); } catch (e) {
+          if (__DEV__) console.warn('Server delete failed:', e.message);
+        }
+      }
       var updated = savedReports.filter(function(r) { return r.id !== reportId; });
       await AsyncStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(updated));
       setSavedReports(updated);
@@ -1084,23 +1124,61 @@ export default function ReportScreen() {
     }
   }, [savedReports]);
 
-  // Load a saved report
-  var loadSavedReport = useCallback(function(entry) {
-    setUserName(entry.userName || '');
-    setBirthDate(entry.birthDate || '1998-10-09');
-    setBirthTime(entry.birthTime || '09:16');
-    setBirthLocation(entry.birthLocation || 'Colombo');
-    setBirthLat(entry.birthLat || 6.9271);
-    setBirthLng(entry.birthLng || 79.8612);
-    setReportLang(entry.reportLang || 'en');
-    setUserGender(entry.userGender || null);
-    setUserReligion(entry.userReligion || null);
-    setReport(entry.report);
-    setAiReport(entry.aiReport);
-    setChartData(entry.chartData);
-    setError(null);
-    setScreenState('report');
-  }, []);
+  // Load a saved report (fetch full content from server if needed)
+  var [loadingReport, setLoadingReport] = useState(false);
+  var loadSavedReport = useCallback(async function(entry) {
+    if (entry.isServerReport) {
+      // Fetch full report from server
+      setLoadingReport(true);
+      setError(null);
+      try {
+        var res = await api.getSavedReport(entry.id);
+        if (res && res.data) {
+          var d = res.data;
+          setUserName(d.userName || entry.userName || '');
+          setBirthDate(d.birthDate || entry.birthDate || '1998-10-09');
+          setBirthTime(entry.birthTime || '09:16');
+          setBirthLocation(d.birthLocation || entry.birthLocation || 'Colombo');
+          setBirthLat(d.lat || entry.birthLat || 6.9271);
+          setBirthLng(d.lng || entry.birthLng || 79.8612);
+          setReportLang(d.language || entry.reportLang || 'en');
+          setUserGender(d.userGender || null);
+          setUserReligion(null);
+          setReport(null);
+          setAiReport({
+            narrativeSections: d.narrativeSections || {},
+            rashiChart: d.rashiChart || null,
+            birthData: d.birthData || null,
+          });
+          setChartData(null);
+          setScreenState('report');
+        } else {
+          setError(t('failedLoadReport') || 'Failed to load report from server');
+        }
+      } catch (e) {
+        if (__DEV__) console.warn('Failed to load server report:', e.message);
+        setError(t('failedLoadReport') || 'Failed to load report');
+      } finally {
+        setLoadingReport(false);
+      }
+    } else {
+      // Local cached report — load directly
+      setUserName(entry.userName || '');
+      setBirthDate(entry.birthDate || '1998-10-09');
+      setBirthTime(entry.birthTime || '09:16');
+      setBirthLocation(entry.birthLocation || 'Colombo');
+      setBirthLat(entry.birthLat || 6.9271);
+      setBirthLng(entry.birthLng || 79.8612);
+      setReportLang(entry.reportLang || 'en');
+      setUserGender(entry.userGender || null);
+      setUserReligion(entry.userReligion || null);
+      setReport(entry.report);
+      setAiReport(entry.aiReport);
+      setChartData(entry.chartData);
+      setError(null);
+      setScreenState('report');
+    }
+  }, [t]);
 
   // Calculate overview scores for Hero Card (must be at top level, not conditional)
   var overviewScores = useMemo(function() {

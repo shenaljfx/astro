@@ -131,8 +131,7 @@ router.post('/check', optionalAuth, async (req, res) => {
       jyotishMatching,
     };
 
-    // Save to Firestore — DISABLED
-    /*
+    // Save to Firestore
     let porondamId = null;
     if (req.user?.uid) {
       try {
@@ -146,10 +145,9 @@ router.post('/check', optionalAuth, async (req, res) => {
           groomAdvanced,
           advancedPorondam,
         });
+        console.log(`[Porondam] Saved to Firestore: ${porondamId}`);
       } catch (e) { console.error('Save porondam error:', e.message); }
     }
-    */
-    let porondamId = null;
 
     res.json({
       success: true,
@@ -407,13 +405,13 @@ WRITE THE REPORT:
       maxTokens: 165288,
     });
 
-    // Save report to Firestore — DISABLED
-    /*
+    // Save report to Firestore
     let savedPorondamId = porondamId || null;
     if (req.user?.uid && result.message) {
       try {
         if (porondamId) {
           await updatePorondamReport(porondamId, result.message, language);
+          console.log(`[Porondam Report] Updated report on ${porondamId}`);
         } else {
           savedPorondamId = await savePorondamResult(req.user.uid, {
             ...porondamData,
@@ -422,11 +420,10 @@ WRITE THE REPORT:
             report: result.message,
             reportLanguage: language,
           });
+          console.log(`[Porondam Report] Saved new to Firestore: ${savedPorondamId}`);
         }
       } catch (e) { console.error('Save porondam report error:', e.message); }
     }
-    */
-    let savedPorondamId = porondamId || null;
 
     // Track AI cost
     trackCost('porondam', req.user?.uid || null, {
@@ -586,6 +583,64 @@ router.post('/vibe-check/:linkId', (req, res) => {
   } catch (error) {
     console.error('Error processing vibe check:', error);
     res.status(500).json({ error: 'Failed to process vibe check', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// GET /api/porondam/my-history
+// List saved porondam results for the current user
+// ═══════════════════════════════════════════════════════════════════
+router.get('/my-history', optionalAuth, async (req, res) => {
+  try {
+    if (!req.user || req.user.anonymous) {
+      return res.status(401).json({ error: 'Login required to view saved results' });
+    }
+    const { getUserPorondamHistory } = require('../models/firestore');
+    const results = await getUserPorondamHistory(req.user.uid, parseInt(req.query.limit) || 10);
+    const list = (results || []).map(r => ({
+      id: r.id,
+      bride: r.bride || null,
+      groom: r.groom || null,
+      score: r.score || 0,
+      maxScore: r.maxScore || 20,
+      percentage: r.percentage || 0,
+      rating: r.rating || null,
+      ratingEmoji: r.ratingEmoji || null,
+      hasReport: !!r.report,
+      reportLanguage: r.reportLanguage || null,
+      createdAt: r.createdAt,
+    }));
+    res.json({ success: true, data: { results: list } });
+  } catch (error) {
+    console.error('[porondam my-history] Error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch porondam history' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// GET /api/porondam/saved/:id
+// Load a single saved porondam result by ID
+// ═══════════════════════════════════════════════════════════════════
+router.get('/saved/:id', optionalAuth, async (req, res) => {
+  try {
+    if (!req.user || req.user.anonymous) {
+      return res.status(401).json({ error: 'Login required to view saved results' });
+    }
+    const db = getDb();
+    if (!db) return res.status(503).json({ error: 'Database unavailable' });
+
+    const doc = await db.collection(COLLECTIONS.PORONDAM).doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Porondam result not found' });
+
+    const data = doc.data();
+    if (data.uid !== req.user.uid) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    res.json({ success: true, data: { id: doc.id, ...data } });
+  } catch (error) {
+    console.error('[porondam saved] Error:', error.message);
+    res.status(500).json({ error: 'Failed to load porondam result' });
   }
 });
 

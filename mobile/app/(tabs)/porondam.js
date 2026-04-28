@@ -560,7 +560,7 @@ function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTim
 // ======= MAIN SCREEN =======
 export default function PorondamScreen() {
   var { language } = useLanguage();
-  var { isLoggedIn, showPaywall } = useAuth();
+  var { isLoggedIn, showPaywall, user } = useAuth();
   var { colors, gradients, resolved } = useTheme();
   var sc = screenColors(colors);
   var T = L[language] || L.en;
@@ -589,9 +589,44 @@ export default function PorondamScreen() {
   var [savedChecks, setSavedChecks] = useState([]);
   var [showHistory, setShowHistory] = useState(false);
 
-  // ── Load saved porondam checks from AsyncStorage on mount ──
+  // ── Load saved porondam: server-first, AsyncStorage fallback ──
   useEffect(function() {
     (async function() {
+      // Try server first
+      if (user && !user.isAnonymous) {
+        try {
+          var serverRes = await api.getMyPorondamHistory(10);
+          if (serverRes && serverRes.data && serverRes.data.results && serverRes.data.results.length > 0) {
+            var serverList = serverRes.data.results.map(function(r) {
+              return {
+                id: r.id,
+                brideName: r.bride?.name || '',
+                groomName: r.groom?.name || '',
+                brideDate: r.bride?.birthDate || '',
+                brideTime: '',
+                brideCity: DEFAULT_CITY,
+                groomDate: r.groom?.birthDate || '',
+                groomTime: '',
+                groomCity: DEFAULT_CITY,
+                reportLang: r.reportLanguage || 'en',
+                percentage: r.percentage || 0,
+                score: r.score || 0,
+                maxScore: r.maxScore || 20,
+                ratingEmoji: r.ratingEmoji || null,
+                hasReport: r.hasReport || false,
+                savedAt: r.createdAt || '',
+                isServerRecord: true,
+              };
+            });
+            setSavedChecks(serverList);
+            if (__DEV__) console.log('[Porondam] Loaded ' + serverList.length + ' results from server');
+            return;
+          }
+        } catch (e) {
+          if (__DEV__) console.warn('[Porondam] Server history failed, falling back to local:', e.message);
+        }
+      }
+      // Fallback to AsyncStorage
       try {
         var stored = await AsyncStorage.getItem(PORONDAM_CACHE_KEY);
         if (stored) {
@@ -601,7 +636,7 @@ export default function PorondamScreen() {
         if (__DEV__) console.warn('Failed to load saved porondam:', e);
       }
     })();
-  }, []);
+  }, [user]);
 
   // Save a porondam result to cache
   var savePorondamToCache = useCallback(async function(porondamData) {
@@ -630,9 +665,15 @@ export default function PorondamScreen() {
     }
   }, [savedChecks]);
 
-  // Delete a saved check
+  // Delete a saved check (server + local)
   var deleteSavedCheck = useCallback(async function(checkId) {
     try {
+      var entry = savedChecks.find(function(c) { return c.id === checkId; });
+      if (entry && entry.isServerRecord) {
+        try { await api.deletePorondamRecord(checkId); } catch (e) {
+          if (__DEV__) console.warn('Server delete failed:', e.message);
+        }
+      }
       var updated = savedChecks.filter(function(c) { return c.id !== checkId; });
       await AsyncStorage.setItem(PORONDAM_CACHE_KEY, JSON.stringify(updated));
       setSavedChecks(updated);
@@ -641,23 +682,57 @@ export default function PorondamScreen() {
     }
   }, [savedChecks]);
 
-  // Load a saved check
-  var loadSavedCheck = useCallback(function(entry) {
-    setBName(entry.brideName || '');
-    setGName(entry.groomName || '');
-    setBDate(entry.brideDate || '1998-01-15');
-    setBTime(entry.brideTime || '08:30');
-    setBCity(entry.brideCity || DEFAULT_CITY);
-    setGDate(entry.groomDate || '1998-06-20');
-    setGTime(entry.groomTime || '10:00');
-    setGCity(entry.groomCity || DEFAULT_CITY);
-    setReportLang(entry.reportLang || 'en');
-    setData(entry.data);
-    setReport(entry.report || null);
-    setPorondamId(entry.porondamId || null);
-    setCollapsed(true);
-    setShowHistory(false);
-    setError(null);
+  // Load a saved check (fetch full content from server if needed)
+  var [loadingCheck, setLoadingCheck] = useState(false);
+  var loadSavedCheck = useCallback(async function(entry) {
+    if (entry.isServerRecord) {
+      setLoadingCheck(true);
+      setError(null);
+      try {
+        var res = await api.getSavedPorondam(entry.id);
+        if (res && res.data) {
+          var d = res.data;
+          setBName(d.bride?.name || entry.brideName || '');
+          setGName(d.groom?.name || entry.groomName || '');
+          setBDate(d.bride?.birthDate || entry.brideDate || '1998-01-15');
+          setBTime(entry.brideTime || '08:30');
+          setBCity(entry.brideCity || DEFAULT_CITY);
+          setGDate(d.groom?.birthDate || entry.groomDate || '1998-06-20');
+          setGTime(entry.groomTime || '10:00');
+          setGCity(entry.groomCity || DEFAULT_CITY);
+          setReportLang(d.reportLanguage || entry.reportLang || 'en');
+          setData(d);
+          setReport(d.report || null);
+          setPorondamId(d.id || entry.id);
+          setCollapsed(true);
+          setShowHistory(false);
+        } else {
+          setError('Failed to load saved result');
+        }
+      } catch (e) {
+        if (__DEV__) console.warn('Failed to load server porondam:', e.message);
+        setError('Failed to load saved result');
+      } finally {
+        setLoadingCheck(false);
+      }
+    } else {
+      // Local cached — load directly
+      setBName(entry.brideName || '');
+      setGName(entry.groomName || '');
+      setBDate(entry.brideDate || '1998-01-15');
+      setBTime(entry.brideTime || '08:30');
+      setBCity(entry.brideCity || DEFAULT_CITY);
+      setGDate(entry.groomDate || '1998-06-20');
+      setGTime(entry.groomTime || '10:00');
+      setGCity(entry.groomCity || DEFAULT_CITY);
+      setReportLang(entry.reportLang || 'en');
+      setData(entry.data);
+      setReport(entry.report || null);
+      setPorondamId(entry.porondamId || null);
+      setCollapsed(true);
+      setShowHistory(false);
+      setError(null);
+    }
   }, []);
 
   // Sync report language when app language changes (only when no data yet)

@@ -4475,6 +4475,15 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
       coreThemes = `\n═══ CORE THEMES ═══\n${cleanedThemes}\n════════════════════\n`;
     }
   } catch (themeErr) {
+    // If first Gemini call fails with rate-limit or server error, API may be down
+    const isApiDown = /429|5\d\d|ECONNRESET|fetch failed|AbortError/i.test(themeErr.message || '');
+    if (isApiDown) {
+      console.error('[AI Report] Coherence pass failed with API error — aborting to avoid 19 more failed calls:', themeErr.message);
+      progress('failed', { error: 'Gemini API unavailable' });
+      const err = new Error(`Report generation aborted: Gemini API unavailable (${themeErr.message})`);
+      err.code = 'API_UNAVAILABLE';
+      throw err;
+    }
     console.warn('[AI Report] Core themes generation failed (continuing without):', themeErr.message);
   }
 
@@ -4482,14 +4491,33 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
   rashiContext.coreThemes = coreThemes;
 
   // ══════════════════════════════════════════════════════════════
-  // PASS 2: Generate all sections in parallel with coherence context
+  // PASS 2: Generate sections with concurrency limit to avoid rate-limit cascade
   // ══════════════════════════════════════════════════════════════
-  console.log(`[AI Report] Pass 2: Generating ${sectionOrder.length} narrative sections in parallel...`);
+  const MAX_CONCURRENT = 4; // Prevent 19 simultaneous Gemini calls → 429 thundering herd
+  console.log(`[AI Report] Pass 2: Generating ${sectionOrder.length} narrative sections (concurrency: ${MAX_CONCURRENT})...`);
   progress('sections', { sectionsDone: 0, sectionsTotal: sectionOrder.length });
   const startTime = Date.now();
 
   let _sectionsDone = 0;
-  const narrativePromises = sectionOrder.map(key => {
+
+  // Simple concurrency limiter — no external dependency needed
+  const _limiterQueue = [];
+  let _limiterActive = 0;
+  function limitConcurrency(fn) {
+    return new Promise((resolve, reject) => {
+      const run = () => {
+        _limiterActive++;
+        fn().then(resolve, reject).finally(() => {
+          _limiterActive--;
+          if (_limiterQueue.length > 0) _limiterQueue.shift()();
+        });
+      };
+      if (_limiterActive < MAX_CONCURRENT) run();
+      else _limiterQueue.push(run);
+    });
+  }
+
+  const narrativePromises = sectionOrder.map((key, idx) => {
     const dataKey = key === 'marriedLife' ? 'marriage' : key;
     const sectionData = sections[dataKey];
     if (!sectionData) {
@@ -4497,16 +4525,18 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
       progress('sections', { sectionsDone: _sectionsDone, currentSection: key });
       return Promise.resolve({ title: key, narrative: null });
     }
-    return generateSectionNarrative(key, sectionData, birthData, sections, language, rashiContext, ageContext, userName, userGender, userReligion, {})
-      .then(result => {
-        _sectionsDone++;
-        progress('sections', {
-          sectionsDone: _sectionsDone,
-          currentSection: key,
-          completedSections: [...(_reportProgress.get(reportId)?.completedSections || []), key],
-        });
-        return result;
+    // Stagger start by 300ms per section to further reduce burst
+    return limitConcurrency(async () => {
+      if (idx > 0) await new Promise(r => setTimeout(r, Math.min(idx * 300, 2000)));
+      const result = await generateSectionNarrative(key, sectionData, birthData, sections, language, rashiContext, ageContext, userName, userGender, userReligion, {});
+      _sectionsDone++;
+      progress('sections', {
+        sectionsDone: _sectionsDone,
+        currentSection: key,
+        completedSections: [...(_reportProgress.get(reportId)?.completedSections || []), key],
       });
+      return result;
+    });
   });
 
   const narrativeResults = await Promise.all(narrativePromises);
@@ -4554,27 +4584,78 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
   const totalSections = sectionOrder.length;
   const MIN_REQUIRED_SECTIONS = Math.max(10, Math.floor(totalSections * 0.5));
 
-  if (failedSections.length > 0) {
-    console.warn(`[AI Report] ${failedSections.length}/${totalSections} sections failed: ${failedSections.map(f => f.key).join(', ')}`);
+  // ── RETRY: Attempt failed sections sequentially (1 at a time) ──
+  if (failedSections.length > 0 && successCount < totalSections) {
+    const retryList = [...failedSections];
+    console.log(`[AI Report] Retrying ${retryList.length} failed sections sequentially: ${retryList.map(f => f.key).join(', ')}`);
+    progress('retrying', { sectionsDone: successCount, sectionsTotal: totalSections, retrying: retryList.map(f => f.key) });
+
+    for (const failed of retryList) {
+      const dataKey = failed.key === 'marriedLife' ? 'marriage' : failed.key;
+      const sectionData = sections[dataKey];
+      if (!sectionData) continue;
+
+      try {
+        // Small delay between retries to be gentle on the API
+        await new Promise(r => setTimeout(r, 2000));
+        console.log(`[AI Report] Retrying section '${failed.key}'...`);
+        const retryResult = await generateSectionNarrative(failed.key, sectionData, birthData, sections, language, rashiContext, ageContext, userName, userGender, userReligion, {});
+
+        if (retryResult && retryResult.narrative) {
+          const narrativeLower = retryResult.narrative.toLowerCase().trim();
+          const isSentinel = SENTINEL_TEXTS.some(s => narrativeLower === s || narrativeLower.startsWith(s));
+          const wordCount = retryResult.narrative.split(/\s+/).length;
+          if (!isSentinel && wordCount >= MIN_NARRATIVE_WORDS) {
+            if (retryResult.usage) {
+              recordUsage(tokenTracker, retryResult.model || 'unknown', failed.key + '-retry', retryResult.usage);
+            }
+            narrativeSections[failed.key] = {
+              title: retryResult.title,
+              narrative: retryResult.narrative,
+              rawData: sections[failed.key],
+            };
+            // Remove from failedSections
+            const idx = failedSections.findIndex(f => f.key === failed.key);
+            if (idx !== -1) failedSections.splice(idx, 1);
+            console.log(`[AI Report] ✅ Retry succeeded for '${failed.key}' (${wordCount} words)`);
+            _sectionsDone++;
+            progress('sections', { sectionsDone: Object.keys(narrativeSections).length, currentSection: failed.key });
+          } else {
+            console.warn(`[AI Report] Retry for '${failed.key}' returned sentinel/short text`);
+          }
+        }
+      } catch (retryErr) {
+        console.warn(`[AI Report] Retry failed for '${failed.key}': ${retryErr.message}`);
+      }
+    }
+
+    const retrySuccessCount = Object.keys(narrativeSections).length;
+    console.log(`[AI Report] After retries: ${retrySuccessCount}/${totalSections} sections (was ${successCount})`);
   }
-  console.log(`[AI Report] ${successCount}/${totalSections} sections succeeded (minimum required: ${MIN_REQUIRED_SECTIONS})`);
+
+  const finalSuccessCount = Object.keys(narrativeSections).length;
+
+  if (failedSections.length > 0) {
+    console.warn(`[AI Report] ${failedSections.length}/${totalSections} sections still failed after retries: ${failedSections.map(f => f.key).join(', ')}`);
+  }
+  console.log(`[AI Report] ${finalSuccessCount}/${totalSections} sections succeeded (minimum required: ${MIN_REQUIRED_SECTIONS})`);
 
   // ── FAIL-SAFE: Throw if too few sections succeeded ──
   // This is a PAID feature — returning an empty/nearly-empty report is unacceptable
-  if (successCount < MIN_REQUIRED_SECTIONS) {
-    progress('failed', { error: `Only ${successCount}/${totalSections} sections generated` });
+  if (finalSuccessCount < MIN_REQUIRED_SECTIONS) {
+    progress('failed', { error: `Only ${finalSuccessCount}/${totalSections} sections generated` });
     const error = new Error(
-      `Report generation failed: only ${successCount}/${totalSections} sections generated successfully (minimum ${MIN_REQUIRED_SECTIONS} required). ` +
+      `Report generation failed: only ${finalSuccessCount}/${totalSections} sections generated successfully (minimum ${MIN_REQUIRED_SECTIONS} required). ` +
       `Failed: ${failedSections.map(f => `${f.key}(${f.error})`).join(', ')}`
     );
     error.code = 'INSUFFICIENT_SECTIONS';
     error.failedSections = failedSections;
-    error.successCount = successCount;
+    error.successCount = finalSuccessCount;
     error.totalSections = totalSections;
     throw error;
   }
 
-  progress('complete', { sectionsDone: successCount, sectionsTotal: totalSections });
+  progress('complete', { sectionsDone: finalSuccessCount, sectionsTotal: totalSections });
 
   // Finalize token tracking
   const tokenUsage = finalizeTracker(tokenTracker);

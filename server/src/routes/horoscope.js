@@ -1132,11 +1132,11 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
     // Track real AI cost
     trackCost('fullReport', req.user?.uid || null, report.tokenUsage);
 
-    // Save report to Firestore — DISABLED: caching disabled during development
-    /*
-    if (req.user && !req.user.anonymous) {
+    // Save report to Firestore (fire-and-forget — don't block the response)
+    let savedReportId = null;
+    if (req.user && !req.user.anonymous && req.user.uid) {
       try {
-        const reportId = await saveReport(req.user.uid, {
+        savedReportId = await saveReport(req.user.uid, {
           birthDate,
           lat: reportLat,
           lng: reportLng,
@@ -1150,12 +1150,11 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
           userGender: userGender || null,
           birthLocation: birthLocation || null,
         });
-        console.log(`[AI Report] Saved to Firestore: ${reportId}`);
+        console.log(`[AI Report] Saved to Firestore: ${savedReportId}`);
       } catch (e) {
-        console.warn('[AI Report] Failed to cache report:', e.message);
+        console.warn('[AI Report] Failed to save report to Firestore:', e.message);
       }
     }
-    */
 
     res.json({
       success: true,
@@ -1164,6 +1163,7 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
       data: report,
       tokenUsage: report.tokenUsage || null,
       entitlementId: entitlementId || null,
+      savedReportId: savedReportId || null,
       quality: {
         sectionsGenerated: report.successCount || sectionCount,
         sectionsTotal: report.totalSections || sectionCount,
