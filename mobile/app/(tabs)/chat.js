@@ -183,38 +183,38 @@ function ModeToggle({ mode, setMode, t }) {
 function QuickChips({ onSelect, language, mode }) {
   var chatChips = language === 'si'
     ? [
-        { icon: 'sunny-outline', label: 'අද දවස කොහොමද?' },
-        { icon: 'heart-outline', label: 'මට ආදරේ හරි යයිද?' },
-        { icon: 'time-outline', label: 'රාහු කාලෙ කීයද?' },
-        { icon: 'color-palette-outline', label: 'මට හරියන පාට?' },
-        { icon: 'briefcase-outline', label: 'රස්සාවක් සෙට් වෙයිද?' },
-        { icon: 'airplane-outline', label: 'රට යන්න පුළුවන්ද?' },
+        { icon: 'sunny-outline', label: 'අද දවසේ ග්‍රහ බලපෑම?' },
+        { icon: 'heart-outline', label: 'මගේ ආදර සබඳතා?' },
+        { icon: 'time-outline', label: 'සුබ මුහුර්ත මොනවාද?' },
+        { icon: 'color-palette-outline', label: 'මට ගැළපෙන වර්ණ?' },
+        { icon: 'briefcase-outline', label: 'මගේ වෘත්තීය ගමන?' },
+        { icon: 'airplane-outline', label: 'විදෙස් ගමන් සඳහා?' },
       ]
     : [
-        { icon: 'sunny-outline', label: "Today's Auspicious Times?" },
-        { icon: 'heart-outline', label: 'Love Forecast?' },
-        { icon: 'time-outline', label: 'Rahu Period?' },
-        { icon: 'color-palette-outline', label: 'Lucky Color?' },
-        { icon: 'briefcase-outline', label: 'Career Luck?' },
-        { icon: 'airplane-outline', label: 'Travel Stars?' },
+        { icon: 'sunny-outline', label: "Today's Cosmic Energy?" },
+        { icon: 'heart-outline', label: 'Relationship Deep Dive' },
+        { icon: 'time-outline', label: 'Auspicious Windows' },
+        { icon: 'color-palette-outline', label: 'My Power Colors' },
+        { icon: 'briefcase-outline', label: 'Career Trajectory' },
+        { icon: 'airplane-outline', label: 'Favorable Travel' },
       ];
 
   var dreamChips = language === 'si'
     ? [
-        { icon: 'water-outline', label: 'වතුරට වැටෙනවා' },
-        { icon: 'flash-outline', label: 'සතෙක් පස්සෙන් එනවා' },
-        { icon: 'skull-outline', label: 'දතක් ගැලවෙනවා' },
-        { icon: 'home-outline', label: 'පරණ ගෙදර දැක්කා' },
-        { icon: 'paw-outline', label: 'මියගිය අය දැක්කා' },
-        { icon: 'cloudy-night-outline', label: 'පියාඹනවා දැක්කා' },
+        { icon: 'water-outline', label: 'ජලය සිහිනෙන් දැකීම' },
+        { icon: 'flash-outline', label: 'පසුපස හඹා එනවා දැකීම' },
+        { icon: 'skull-outline', label: 'මරණය සම්බන්ධ සිහින' },
+        { icon: 'home-outline', label: 'පැරණි නිවසක් දැකීම' },
+        { icon: 'paw-outline', label: 'සතුන් සිහිනෙන් දැකීම' },
+        { icon: 'cloudy-night-outline', label: 'අහසේ පියාසර කිරීම' },
       ]
     : [
-        { icon: 'water-outline', label: 'Falling into water' },
-        { icon: 'flash-outline', label: 'Being chased' },
-        { icon: 'skull-outline', label: 'Dreaming of death' },
-        { icon: 'home-outline', label: 'Old house dream' },
-        { icon: 'paw-outline', label: 'Animals in dream' },
-        { icon: 'cloudy-night-outline', label: 'Recurring dream' },
+        { icon: 'water-outline', label: 'Deep water dreams' },
+        { icon: 'flash-outline', label: 'Being pursued' },
+        { icon: 'skull-outline', label: 'Visions of endings' },
+        { icon: 'home-outline', label: 'Ancestral homes' },
+        { icon: 'paw-outline', label: 'Animal messengers' },
+        { icon: 'cloudy-night-outline', label: 'Flight and falling' },
       ];
 
   var chips = mode === 'dream' ? dreamChips : chatChips;
