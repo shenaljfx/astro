@@ -416,7 +416,7 @@ async function saveChartExplanation(uid, birthDate, language, explanations) {
 
   const docId = `expl_${uid}_${language}`;
 
-  await db.collection(COLLECTIONS.REPORTS).doc(docId).set({
+  await db.collection(COLLECTIONS.CHARTS).doc(docId).set({
     uid,
     birthDate,
     language: language || 'en',
@@ -436,7 +436,7 @@ async function getCachedChartExplanation(uid, birthDate, language) {
 
   try {
     const docId = `expl_${uid}_${language}`;
-    const docRef = await db.collection(COLLECTIONS.REPORTS).doc(docId).get();
+    const docRef = await db.collection(COLLECTIONS.CHARTS).doc(docId).get();
     if (!docRef.exists) return null;
     const d = docRef.data();
     if (d.birthDate !== birthDate) return null;
@@ -458,7 +458,7 @@ async function saveTranslationCache(uid, birthDate, translatedAnalysis) {
   if (!db) return null;
 
   const docId = `tr_${uid}`;
-  await db.collection(COLLECTIONS.REPORTS).doc(docId).set({
+  await db.collection(COLLECTIONS.CHARTS).doc(docId).set({
     uid,
     birthDate,
     type: 'si-translation',
@@ -477,7 +477,7 @@ async function getCachedTranslation(uid, birthDate) {
 
   try {
     const docId = `tr_${uid}`;
-    const docRef = await db.collection(COLLECTIONS.REPORTS).doc(docId).get();
+    const docRef = await db.collection(COLLECTIONS.CHARTS).doc(docId).get();
     if (!docRef.exists) return null;
     const d = docRef.data();
     if (d.birthDate !== birthDate) return null;
@@ -501,7 +501,7 @@ async function saveBirthChartCache(uid, birthDate, chartData) {
   if (!db) return null;
 
   const docId = `chart_${uid}`;
-  await db.collection(COLLECTIONS.REPORTS).doc(docId).set({
+  await db.collection(COLLECTIONS.CHARTS).doc(docId).set({
     uid,
     birthDate,
     type: 'birth-chart-cache',
@@ -521,7 +521,7 @@ async function getCachedBirthChart(uid) {
 
   try {
     const docId = `chart_${uid}`;
-    const docRef = await db.collection(COLLECTIONS.REPORTS).doc(docId).get();
+    const docRef = await db.collection(COLLECTIONS.CHARTS).doc(docId).get();
     if (!docRef.exists) return null;
     const d = docRef.data();
     if (d.type !== 'birth-chart-cache') return null;

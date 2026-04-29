@@ -45,6 +45,7 @@ import useNetworkStatus from '../../hooks/useNetworkStatus';
 import useLowEndDevice from '../../hooks/useLowEndDevice';
 import useReducedMotion from '../../hooks/useReducedMotion';
 import { CosmicBackground } from '../../components/CosmicBackground';
+import ReportLoadingScreen from '../../components/ReportLoadingScreen';
 import { checkServerReachable } from '../../services/api';
 var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var MAX_SAVED_REPORTS = 20;
@@ -111,6 +112,39 @@ var SECTION_TITLES = {
   timeline25: 'reportTimeline',
   remedies: 'reportRemedies',
 };
+
+// ──────────────────────────────────────────
+// Date/time formatting helpers
+// ──────────────────────────────────────────
+var MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var MONTH_NAMES_SI = ['ජන','පෙබ','මාර්','අප්‍රේ','මැයි','ජූනි','ජූලි','අගෝ','සැප්','ඔක්','නොවැ','දෙසැ'];
+
+// Format a birthDate string (ISO or YYYY-MM-DD) to human-friendly "09 Oct 1998"
+function formatBirthDateDisplay(dateStr, lang) {
+  if (!dateStr) return '';
+  var str = String(dateStr);
+  var m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return str;
+  var year = m[1];
+  var month = parseInt(m[2], 10);
+  var day = m[3];
+  var monthName = lang === 'si' ? (MONTH_NAMES_SI[month - 1] || m[2]) : (MONTH_NAMES[month - 1] || m[2]);
+  return day + ' ' + monthName + ' ' + year;
+}
+
+// Format a birthTime string (HH:MM or from ISO) to "9:16 AM"
+function formatBirthTimeDisplay(timeStr) {
+  if (!timeStr) return '';
+  var str = String(timeStr);
+  // Extract HH:MM from ISO like "1998-10-09T09:16:00" or plain "09:16"
+  var tm = str.match(/T?(\d{2}):(\d{2})/);
+  if (!tm) return str;
+  var h = parseInt(tm[1], 10);
+  var mm = tm[2];
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  var h12 = h % 12 || 12;
+  return h12 + ':' + mm + ' ' + ampm;
+}
 
 // ──────────────────────────────────────────
 // Glass box wrapper
@@ -1091,6 +1125,8 @@ export default function ReportScreen() {
             });
             setSavedReports(serverList);
             setServerReportsLoaded(true);
+            // Clear local cache to prevent duplicates when falling back later
+            try { await AsyncStorage.removeItem(REPORTS_CACHE_KEY); } catch (_) {}
             if (__DEV__) console.log('[Report] Loaded ' + serverList.length + ' reports from server');
             return;
           }
@@ -1246,6 +1282,7 @@ export default function ReportScreen() {
   // ── Core generation function (defined first to avoid stale closures) ──
   var [genProgress, setGenProgress] = useState({ stage: 'starting', sectionsDone: 0, sectionsTotal: 19, currentSection: null, completedSections: [] });
   var progressPollRef = useRef(null);
+  var lastReportIdRef = useRef(null);
   var highWaterMarkRef = useRef({ sectionsDone: 0, stage: 'starting' });
 
   useEffect(function () {
@@ -1272,154 +1309,218 @@ export default function ReportScreen() {
 
       // Generate a reportId for progress tracking
       var reportId = 'rpt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      lastReportIdRef.current = reportId;
 
       // Stage ordering for monotonic progress (never go backwards)
       var STAGE_ORDER = { starting: 0, engine: 1, charts: 2, coherence: 3, sections: 4, retrying: 5, complete: 6, failed: 7 };
 
-      // Start polling progress with backpressure (wait for response before next poll)
-      var pollActive = true;
-      var pollLoop = async function() {
-        while (pollActive) {
-          try {
-            var prog = await api.getReportProgress(reportId);
-            if (prog && prog.stage && prog.stage !== 'unknown') {
-              var stageRank = STAGE_ORDER[prog.stage] != null ? STAGE_ORDER[prog.stage] : -1;
-              var hwStageRank = STAGE_ORDER[highWaterMarkRef.current.stage] != null ? STAGE_ORDER[highWaterMarkRef.current.stage] : -1;
+      // ── FIRE-AND-FORGET: launch API calls but DON'T await them ──
+      // The progress polling loop below is the primary completion mechanism.
+      // This way the UI never "times out" — it keeps polling as long as the server is working.
+      var rawReportPromise = api.getFullReport(dateStr, birthLat, birthLng, reportLang).catch(function(e) {
+        if (__DEV__) console.warn('[Report] Raw report request failed (non-blocking):', e.message);
+        return null;
+      });
+      var aiReportPromise = api.getAIReport(dateStr, birthLat, birthLng, reportLang, birthLocation, userName || null, gender, userReligion || null, reportId).catch(function(e) {
+        if (__DEV__) console.warn('[Report] AI report request failed (non-blocking):', e.message);
+        return null;
+      });
 
-              // Only update if progress moved forward (never backwards)
-              var isForward = stageRank > hwStageRank ||
-                (stageRank === hwStageRank && (prog.sectionsDone || 0) >= highWaterMarkRef.current.sectionsDone);
+      // Track whether the HTTP responses arrived (they may or may not before polling completes)
+      var httpRawResult = null;
+      var httpAiResult = null;
+      var httpDone = false;
+      Promise.allSettled([rawReportPromise, aiReportPromise]).then(function(results) {
+        httpRawResult = results[0];
+        httpAiResult = results[1];
+        httpDone = true;
+      });
 
-              if (isForward) {
-                highWaterMarkRef.current = { sectionsDone: prog.sectionsDone || 0, stage: prog.stage };
-                setGenProgress(prog);
+      // ── POLLING LOOP: primary mechanism to track completion ──
+      // Polls every 3s. Finishes when: server reports complete/failed, OR HTTP responses arrive, OR 15min hard cap.
+      var MAX_POLL_MS = 15 * 60 * 1000; // 15 min absolute max
+      var pollStart = Date.now();
+      var consecutiveUnknowns = 0;
+      var MAX_UNKNOWNS = 20; // ~60s of no progress data = server lost the reportId
+
+      while (Date.now() - pollStart < MAX_POLL_MS) {
+        // ── Check 1: Did progress polling find completion? ──
+        try {
+          var prog = await api.getReportProgress(reportId);
+          if (prog && prog.stage && prog.stage !== 'unknown') {
+            consecutiveUnknowns = 0;
+            var stageRank = STAGE_ORDER[prog.stage] != null ? STAGE_ORDER[prog.stage] : -1;
+            var hwStageRank = STAGE_ORDER[highWaterMarkRef.current.stage] != null ? STAGE_ORDER[highWaterMarkRef.current.stage] : -1;
+            var isForward = stageRank > hwStageRank ||
+              (stageRank === hwStageRank && (prog.sectionsDone || 0) >= highWaterMarkRef.current.sectionsDone);
+            if (isForward) {
+              highWaterMarkRef.current = { sectionsDone: prog.sectionsDone || 0, stage: prog.stage };
+              setGenProgress(prog);
+            }
+
+            // Server reports COMPLETE with a saved report — fetch and display it
+            if (prog.stage === 'complete' && prog.savedReportId) {
+              if (__DEV__) console.log('[Report] ✅ Server completed! Fetching saved report: ' + prog.savedReportId);
+              try {
+                var savedRes = await api.getSavedReport(prog.savedReportId);
+                if (savedRes && savedRes.data) {
+                  var d = savedRes.data;
+                  setAiReport({
+                    narrativeSections: d.narrativeSections || {},
+                    rashiChart: d.rashiChart || null,
+                    birthData: d.birthData || null,
+                  });
+                  setChartData(d.rashiChart ? { rashiChart: d.rashiChart, lagna: d.birthData?.lagna || null } : chartSnapshot);
+                  // Also try to get raw report for extra data
+                  if (httpRawResult && httpRawResult.status === 'fulfilled' && httpRawResult.value && httpRawResult.value.data) {
+                    setReport(httpRawResult.value.data);
+                  }
+                  setScreenState('report');
+                  // Refresh saved reports list
+                  try {
+                    var srvRes = await api.getMyHoroscopeReports();
+                    if (srvRes && srvRes.data && srvRes.data.reports) {
+                      setSavedReports(srvRes.data.reports.map(function(r) {
+                        return {
+                          id: r.id, userName: r.userName || '', birthDate: r.birthDate || '',
+                          birthTime: '', birthLocation: r.birthLocation || '',
+                          birthLat: r.lat || null, birthLng: r.lng || null,
+                          reportLang: r.language || 'en', userGender: null, userReligion: null,
+                          sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
+                          isServerReport: true,
+                        };
+                      }));
+                    }
+                  } catch (_) {}
+                  return; // Done!
+                }
+              } catch (fetchErr) {
+                if (__DEV__) console.warn('[Report] Failed to fetch completed report:', fetchErr.message);
               }
             }
-            // If server returns unknown/null, keep showing last known progress (don't reset)
-          } catch (e) {
-            // Polling failure is non-critical — just skip
+
+            // Server confirmed FAILED
+            if (prog.stage === 'failed') {
+              if (__DEV__) console.log('[Report] Server confirmed generation failed');
+              setFailedGenData({ dateStr: dateStr, gender: gender, reportId: reportId });
+              setError(prog.error || (reportLang === 'si'
+                ? 'වාර්තාව සෑදීමට අසමත් විය. කරුණාකර නැවත උත්සාහ කරන්න.'
+                : 'Report generation failed. Please try again.'));
+              setScreenState('failed');
+              return;
+            }
+          } else {
+            consecutiveUnknowns++;
           }
-          // Wait 3 seconds between polls (backpressure: only starts AFTER previous completes)
-          if (pollActive) {
-            await new Promise(function(r) { setTimeout(r, 3000); });
+        } catch (pollErr) {
+          consecutiveUnknowns++;
+        }
+
+        // ── Check 2: Did the HTTP response arrive with a successful result? ──
+        // This is the fast path — if the HTTP didn't time out, we use the response directly.
+        if (httpDone && httpAiResult && httpAiResult.status === 'fulfilled' && httpAiResult.value && httpAiResult.value.data) {
+          var aiData = httpAiResult.value.data;
+          // Validate it has real content
+          var narrativeSections = aiData.narrativeSections || {};
+          var nsKeys = Object.keys(narrativeSections);
+          var validCount = nsKeys.filter(function(k) {
+            var nar = narrativeSections[k]?.narrative;
+            if (!nar || typeof nar !== 'string') return false;
+            var lower = nar.toLowerCase().trim();
+            if (lower.startsWith('unable to generate')) return false;
+            return nar.split(/\s+/).length >= 50;
+          }).length;
+
+          if (validCount >= 5) {
+            if (__DEV__) console.log('[Report] ✅ HTTP response arrived with valid report (' + validCount + ' sections)');
+            setAiReport(aiData);
+            if (httpRawResult && httpRawResult.status === 'fulfilled' && httpRawResult.value && httpRawResult.value.data) {
+              setReport(httpRawResult.value.data);
+            }
+            setChartData(chartSnapshot);
+            setScreenState('report');
+            // Refresh saved reports
+            var serverSavedId = httpAiResult.value?.savedReportId || aiData?.savedReportId || null;
+            if (serverSavedId && user && !user.isAnonymous) {
+              try {
+                var srvRes2 = await api.getMyHoroscopeReports();
+                if (srvRes2 && srvRes2.data && srvRes2.data.reports) {
+                  setSavedReports(srvRes2.data.reports.map(function(r) {
+                    return {
+                      id: r.id, userName: r.userName || '', birthDate: r.birthDate || '',
+                      birthTime: '', birthLocation: r.birthLocation || '',
+                      birthLat: r.lat || null, birthLng: r.lng || null,
+                      reportLang: r.language || 'en', userGender: null, userReligion: null,
+                      sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
+                      isServerReport: true,
+                    };
+                  }));
+                }
+              } catch (_) {}
+            }
+            return; // Done!
           }
         }
-      };
-      var pollPromise = pollLoop();
-      progressPollRef.current = { stop: function() { pollActive = false; } };
 
-      // Fire raw report + AI in parallel using allSettled so partial results survive
-      var results = await Promise.allSettled([
-        api.getFullReport(dateStr, birthLat, birthLng, reportLang),
-        api.getAIReport(dateStr, birthLat, birthLng, reportLang, birthLocation, userName || null, gender, userReligion || null, reportId),
-      ]);
-
-      // Stop polling
-      if (progressPollRef.current) { progressPollRef.current.stop(); progressPollRef.current = null; }
-
-      var rawResult = results[0];
-      var aiResult = results[1];
-
-      if (__DEV__) {
-        console.log('[DBG-8fb141] startFullGeneration:results', JSON.stringify({ rawStatus: rawResult.status, rawErr: rawResult.reason ? rawResult.reason.message : null, aiStatus: aiResult.status, aiErr: aiResult.reason ? aiResult.reason.message : null, aiHasData: !!(aiResult.value && aiResult.value.data), aiSectionCount: aiResult.value && aiResult.value.data && aiResult.value.data.narrativeSections ? Object.keys(aiResult.value.data.narrativeSections).length : 0, wasBackgrounded: wasBackgroundedDuringGen.current, hyp: 'B' }));
-      }
-
-      // Helper: save failed gen data so we can retry directly without payment
-      var saveFailedState = function(errorMsg) {
-        setFailedGenData({ dateStr: dateStr, gender: gender });
-        setError(errorMsg);
-        setScreenState('failed');
-        setLoading(false);
-      };
-
-      // Check if app was backgrounded — warn user the result may be incomplete
-      if (wasBackgroundedDuringGen.current && rawResult.status === 'rejected') {
-        saveFailedState(reportLang === 'si'
-          ? 'ඔබගේ දුරකථනය sleep වුණා. කරුණාකර නැවත උත්සාහ කරන්න.'
-          : 'Your phone went to sleep during generation. Please try again.');
-        return;
-      }
-
-      // Raw report is essential — if it failed, show error
-      if (rawResult.status === 'rejected') {
-        var rawErr = rawResult.reason;
-        saveFailedState((rawErr && rawErr.message) || 'Failed to generate report');
-        return;
-      }
-
-      var rawRes = rawResult.value;
-      if (!rawRes.data) {
-        saveFailedState('No report data returned');
-        return;
-      }
-
-      setReport(rawRes.data);
-
-      // AI report — this is the actual content users pay for
-      var aiData = null;
-      if (aiResult.status === 'fulfilled' && aiResult.value && aiResult.value.data) {
-        aiData = aiResult.value.data;
-
-        // ── FAIL-SAFE: Validate AI report has actual readable content ──
-        // Users pay for this — never show an empty report
-        var narrativeSections = aiData.narrativeSections || {};
-        var sectionKeys = Object.keys(narrativeSections);
-        var sectionsWithContent = sectionKeys.filter(function(k) {
-          var nar = narrativeSections[k]?.narrative;
-          if (!nar || typeof nar !== 'string') return false;
-          // Detect sentinel/placeholder text
-          var lower = nar.toLowerCase().trim();
-          if (lower === 'unable to generate response' || lower === 'unable to generate' || lower.startsWith('unable to generate')) return false;
-          // Must have at least 50 words to be a real section
-          return nar.split(/\s+/).length >= 50;
-        });
-
-        if (sectionsWithContent.length < 5) {
-          // Report is effectively empty — show error so user can retry
-          if (__DEV__) console.warn('[Report] AI report has insufficient content: ' + sectionsWithContent.length + ' valid sections out of ' + sectionKeys.length);
-          setAiReport(null);
-          saveFailedState(reportLang === 'si'
-            ? 'AI වාර්තාව නිසි ලෙස සෑදුනේ නැහැ. කරුණාකර නැවත උත්සාහ කරන්න — ඔබට නැවත ගෙවීමක් අවශ්‍ය නැත.'
-            : 'The report did not generate properly. Please try again — you will not be charged again.');
+        // ── Check 3: Server lost track of our reportId for too long ──
+        if (consecutiveUnknowns >= MAX_UNKNOWNS) {
+          // Server doesn't know about our report anymore — check my-reports as last resort
+          if (__DEV__) console.log('[Report] Server lost reportId, checking my-reports...');
+          if (user && !user.isAnonymous) {
+            try {
+              var reportsRes = await api.getMyHoroscopeReports();
+              if (reportsRes && reportsRes.data && reportsRes.data.reports) {
+                var recent = reportsRes.data.reports.find(function(r) {
+                  return r.birthDate === dateStr && (Date.now() - new Date(r.createdAt).getTime()) < 900000;
+                });
+                if (recent) {
+                  var recentRes = await api.getSavedReport(recent.id);
+                  if (recentRes && recentRes.data) {
+                    var rd = recentRes.data;
+                    setAiReport({ narrativeSections: rd.narrativeSections || {}, rashiChart: rd.rashiChart || null, birthData: rd.birthData || null });
+                    setChartData(rd.rashiChart ? { rashiChart: rd.rashiChart, lagna: rd.birthData?.lagna || null } : chartSnapshot);
+                    setScreenState('report');
+                    setSavedReports(reportsRes.data.reports.map(function(r) {
+                      return {
+                        id: r.id, userName: r.userName || '', birthDate: r.birthDate || '',
+                        birthTime: '', birthLocation: r.birthLocation || '',
+                        birthLat: r.lat || null, birthLng: r.lng || null,
+                        reportLang: r.language || 'en', userGender: null, userReligion: null,
+                        sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
+                        isServerReport: true,
+                      };
+                    }));
+                    return; // Recovered from my-reports!
+                  }
+                }
+              }
+            } catch (_) {}
+          }
+          // Truly lost — fail
+          setFailedGenData({ dateStr: dateStr, gender: gender, reportId: reportId });
+          setError(reportLang === 'si'
+            ? 'Server එකෙන් ප්‍රතිචාරයක් නැහැ. කරුණාකර නැවත උත්සාහ කරන්න.'
+            : 'Lost connection to server. Please try again.');
+          setScreenState('failed');
           return;
         }
 
-        setAiReport(aiData);
-      } else {
-        // AI report failed entirely — this is a critical failure for a paid feature
-        var aiErrorMsg = aiResult.reason?.message || 'AI generation failed';
-        if (__DEV__) console.warn('[Report] AI report failed:', aiErrorMsg);
-        setAiReport(null);
-        saveFailedState(reportLang === 'si'
-          ? 'AI වාර්තාව සෑදීමට අසමත් විය. කරුණාකර නැවත උත්සාහ කරන්න — ඔබට නැවත ගෙවීමක් අවශ්‍ය නැත.'
-          : 'Failed to generate your report. Please try again — you will not be charged again.');
-        return;
+        // Wait before next poll
+        await new Promise(function(r) { setTimeout(r, 3000); });
       }
-      setScreenState('report');
 
-      // Save to cache
-      saveReportToCache({
-        userName: userName,
-        birthDate: dateStr,
-        birthTime: birthTime,
-        birthLocation: birthLocation,
-        birthLat: birthLat,
-        birthLng: birthLng,
-        reportLang: reportLang,
-        userGender: gender,
-        userReligion: userReligion,
-        report: rawRes.data,
-        aiReport: aiData,
-        chartData: chartSnapshot != null ? chartSnapshot : chartData,
-      });
+      // ── Hard timeout (15 min) — should never happen but just in case ──
+      setFailedGenData({ dateStr: dateStr, gender: gender, reportId: reportId });
+      setError(reportLang === 'si'
+        ? 'වාර්තාව සෑදීමට බොහෝ කාලයක් ගත විය. කරුණාකර නැවත උත්සාහ කරන්න.'
+        : 'Report generation took too long. Please try again.');
+      setScreenState('failed');
     } catch (err) {
-      if (progressPollRef.current) { progressPollRef.current.stop(); progressPollRef.current = null; }
-      var msg = err.message || '';
-      setFailedGenData({ dateStr: dateStr, gender: gender });
-      setError(msg || 'Failed to generate report');
+      if (__DEV__) console.error('[Report] startFullGeneration error:', err);
+      setFailedGenData({ dateStr: dateStr, gender: gender, reportId: lastReportIdRef.current });
+      setError(err.message || 'Failed to generate report');
       setScreenState('failed');
     } finally {
-      if (progressPollRef.current) { progressPollRef.current.stop(); progressPollRef.current = null; }
       setLoading(false);
       isGeneratingRef.current = false;
     }
@@ -1636,6 +1737,94 @@ export default function ReportScreen() {
       setScreenState('form');
       return;
     }
+
+    // ── BEFORE retrying: check if the previous attempt actually completed server-side ──
+    // This prevents double-charges when the HTTP request timed out but server succeeded
+    if (failedGenData.reportId) {
+      try {
+        setScreenState('loading');
+        setLoading(true);
+        setGenProgress({ stage: 'recovering', sectionsDone: 0, sectionsTotal: 19, currentSection: null, completedSections: [] });
+        var prog = await api.getReportProgress(failedGenData.reportId);
+        if (prog && prog.stage === 'complete' && prog.savedReportId) {
+          if (__DEV__) console.log('[Report] ✅ Previous generation completed! Fetching saved report: ' + prog.savedReportId);
+          var savedRes = await api.getSavedReport(prog.savedReportId);
+          if (savedRes && savedRes.data) {
+            var d = savedRes.data;
+            var recoveredAiReport = {
+              narrativeSections: d.narrativeSections || {},
+              rashiChart: d.rashiChart || null,
+              birthData: d.birthData || null,
+            };
+            setAiReport(recoveredAiReport);
+            setChartData(d.rashiChart ? { rashiChart: d.rashiChart, lagna: d.birthData?.lagna || null } : chartData);
+            setFailedGenData(null);
+            setError(null);
+            setScreenState('report');
+            setLoading(false);
+            // Refresh saved reports list
+            try {
+              var srvRes = await api.getMyHoroscopeReports();
+              if (srvRes && srvRes.data && srvRes.data.reports) {
+                setSavedReports(srvRes.data.reports.map(function(r) {
+                  return {
+                    id: r.id, userName: r.userName || '', birthDate: r.birthDate || '',
+                    birthTime: '', birthLocation: r.birthLocation || '',
+                    birthLat: r.lat || null, birthLng: r.lng || null,
+                    reportLang: r.language || 'en', userGender: null, userReligion: null,
+                    sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
+                    isServerReport: true,
+                  };
+                }));
+              }
+            } catch (_) {}
+            return; // No need to regenerate — we recovered the previous attempt
+          }
+        }
+        // Also check my-reports for a recently saved report matching these birth details
+        if (user && !user.isAnonymous) {
+          try {
+            var reportsRes = await api.getMyHoroscopeReports();
+            if (reportsRes && reportsRes.data && reportsRes.data.reports) {
+              var recent = reportsRes.data.reports.find(function(r) {
+                return r.birthDate === failedGenData.dateStr && (Date.now() - new Date(r.createdAt).getTime()) < 600000;
+              });
+              if (recent) {
+                if (__DEV__) console.log('[Report] ✅ Found recently saved report matching birth data: ' + recent.id);
+                var recentRes = await api.getSavedReport(recent.id);
+                if (recentRes && recentRes.data) {
+                  var rd = recentRes.data;
+                  setAiReport({ narrativeSections: rd.narrativeSections || {}, rashiChart: rd.rashiChart || null, birthData: rd.birthData || null });
+                  setChartData(rd.rashiChart ? { rashiChart: rd.rashiChart, lagna: rd.birthData?.lagna || null } : chartData);
+                  setFailedGenData(null);
+                  setError(null);
+                  setScreenState('report');
+                  setLoading(false);
+                  setSavedReports(reportsRes.data.reports.map(function(r) {
+                    return {
+                      id: r.id, userName: r.userName || '', birthDate: r.birthDate || '',
+                      birthTime: '', birthLocation: r.birthLocation || '',
+                      birthLat: r.lat || null, birthLng: r.lng || null,
+                      reportLang: r.language || 'en', userGender: null, userReligion: null,
+                      sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
+                      isServerReport: true,
+                    };
+                  }));
+                  return;
+                }
+              }
+            }
+          } catch (_) {}
+        }
+        setScreenState('failed');
+        setLoading(false);
+      } catch (checkErr) {
+        if (__DEV__) console.warn('[Report] Recovery check failed:', checkErr.message);
+        setScreenState('failed');
+        setLoading(false);
+      }
+    }
+
     var retryDateStr = failedGenData.dateStr;
     var retryGender = failedGenData.gender;
     isGeneratingRef.current = true;
@@ -1718,9 +1907,13 @@ export default function ReportScreen() {
       <DesktopScreenWrapper routeName="report">
       <View style={{ flex: 1, backgroundColor: colors.bg || '#04030C' }}>
         <CosmicBackground reduced={reduced} lowEnd={isLowEnd} />
-        <View style={s.loadingFull}>
-          <CosmicLoader progress={genProgress} userName={userName} language={reportLang} colors={colors} />
-        </View>
+        <ReportLoadingScreen
+          progress={genProgress}
+          userName={userName}
+          language={reportLang}
+          reduced={reduced}
+          isLowEnd={isLowEnd}
+        />
       </View>
       </DesktopScreenWrapper>
     );

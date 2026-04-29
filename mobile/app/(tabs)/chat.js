@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform, StyleSheet, Dimensions,
-  useWindowDimensions, Image,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -537,24 +537,10 @@ export default function ChatScreen() {
   }, [kb.isOpen]);
 
   // Bulletproof Android keyboard compensation:
-  // On Android, adjustResize MAY shrink the window when keyboard opens,
-  // but on newer Android (15+) with edge-to-edge or new arch it often doesn't.
-  // We detect how much adjustResize handled and add only the remaining gap.
-  var { height: windowHeight } = useWindowDimensions();
-  var fullHeightRef = useRef(windowHeight);
-  if (!kb.isOpen) fullHeightRef.current = windowHeight;
-
-  var adjustResizeAmount = (kb.isOpen && Platform.OS === 'android')
-    ? Math.max(0, fullHeightRef.current - windowHeight)
-    : 0;
-  var androidExtraPad = (Platform.OS === 'android' && kb.isOpen)
-    ? Math.max(0, kb.height - adjustResizeAmount)
-    : 0;
-
   var bottomPad = isDesktop
     ? 0
     : (kb.isOpen
-        ? Math.max(insets.bottom, 6) + 8 + androidExtraPad
+        ? Math.max(insets.bottom, 4) + 4
         : TAB_BAR_VISUAL_HEIGHT + Math.max(insets.bottom, 4));
 
   // ── DESKTOP LAYOUT ────────────────────────────────────────────────
@@ -757,7 +743,7 @@ export default function ChatScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 60 : 0}
       >
         <ScrollView
@@ -788,21 +774,28 @@ export default function ChatScreen() {
         )}
 
         <View style={[s.inputBar, { paddingBottom: bottomPad }]}>
+          <LinearGradient
+            colors={['rgba(255,107,0,0.06)', 'rgba(147,51,234,0.04)', 'transparent']}
+            start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }}
+            style={s.inputBarGlow}
+          />
           <View style={s.inputRow}>
-            <TextInput
-              style={s.input}
-              value={msg}
-              onChangeText={setMsg}
-              placeholder={remaining > 0 ? (mode === 'dream' ? t('chatDreamPlaceholder') : t('chatPlaceholder')) : t('chatNoQuestions')}
-              placeholderTextColor="rgba(255,255,255,0.25)"
-              multiline
-              maxLength={250}
-              editable={remaining > 0}
-              selectionColor="#FF6B00"
-              textAlignVertical="top"
-              underlineColorAndroid="transparent"
-              blurOnSubmit={false}
-            />
+            <View style={s.inputFieldWrap}>
+              <TextInput
+                style={s.input}
+                value={msg}
+                onChangeText={setMsg}
+                placeholder={remaining > 0 ? (mode === 'dream' ? t('chatDreamPlaceholder') : t('chatPlaceholder')) : t('chatNoQuestions')}
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                multiline
+                maxLength={250}
+                editable={remaining > 0}
+                selectionColor="#FF6B00"
+                textAlignVertical="top"
+                underlineColorAndroid="transparent"
+                blurOnSubmit={false}
+              />
+            </View>
             <SpringPressable
               onPress={function () { send(); }}
               disabled={loading || !msg.trim() || remaining <= 0}
@@ -810,8 +803,8 @@ export default function ChatScreen() {
               scalePressed={0.88}
               style={[s.sendBtn, (!msg.trim() || loading || remaining <= 0) && { opacity: 0.3 }]}
             >
-              <LinearGradient colors={loading ? ['#333', '#444'] : ['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-              <Ionicons name={loading ? 'hourglass' : 'send'} size={16} color="#FFF" />
+              <LinearGradient colors={loading ? ['#333', '#444'] : ['#FF8C00', '#FF6D00', '#E65100']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+              <Ionicons name={loading ? 'hourglass' : 'arrow-up'} size={18} color="#FFF" />
             </SpringPressable>
           </View>
         </View>
@@ -860,10 +853,12 @@ var s = StyleSheet.create({
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1 },
   chipLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '600' },
 
-  inputBar: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)', backgroundColor: 'rgba(8,5,22,0.85)' },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(255,107,0,0.12)' },
-  input: { flex: 1, minHeight: 36, maxHeight: 90, color: '#FFF1D0', fontSize: 14, paddingTop: 8, paddingBottom: 8, includeFontPadding: false },
-  sendBtn: { width: 34, height: 34, borderRadius: 17, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 1 },
+  inputBar: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,140,0,0.08)', backgroundColor: 'rgba(8,5,22,0.92)', overflow: 'hidden' },
+  inputBarGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 1.5 },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  inputFieldWrap: { flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 24, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 4 : 2, borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.15)', ...boxShadow('rgba(255,107,0,0.15)', { width: 0, height: 0 }, 0.5, 8) },
+  input: { flex: 1, minHeight: 38, maxHeight: 100, color: '#FFF1D0', fontSize: 15, paddingTop: 9, paddingBottom: 9, includeFontPadding: false, lineHeight: 21 },
+  sendBtn: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 1, ...boxShadow('#FF6B00', { width: 0, height: 2 }, 0.35, 8) },
 });
 
 // ── DESKTOP CHAT STYLES ──────────────────────────────────────────────

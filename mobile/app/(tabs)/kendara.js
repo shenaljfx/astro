@@ -79,17 +79,24 @@ function formatDegree(deg) {
 function formatBirthTime(isoOrObj) {
   if (!isoOrObj) return '--:--';
   if (typeof isoOrObj === 'object' && isoOrObj.display) return isoOrObj.display;
-  const d = new Date(isoOrObj);
-  if (isNaN(d.getTime())) return '--:--';
-  try {
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-  } catch (e) {
-    const h = d.getHours();
-    const m = d.getMinutes();
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const h12 = h % 12 || 12;
-    return String(h12).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+  // Extract time directly from ISO string to avoid timezone conversion issues
+  var str = String(isoOrObj);
+  var tMatch = str.match(/T(\d{2}):(\d{2})/);
+  if (tMatch) {
+    var h = parseInt(tMatch[1], 10);
+    var m = tMatch[2];
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    var h12 = h % 12 || 12;
+    return String(h12).padStart(2, '0') + ':' + m + ' ' + ampm;
   }
+  // Fallback: try parsing as Date but extract UTC values (birth times are stored without TZ offset)
+  var d = new Date(isoOrObj);
+  if (isNaN(d.getTime())) return '--:--';
+  var hh = d.getUTCHours();
+  var mm = d.getUTCMinutes();
+  var ap = hh >= 12 ? 'PM' : 'AM';
+  var h12f = hh % 12 || 12;
+  return String(h12f).padStart(2, '0') + ':' + String(mm).padStart(2, '0') + ' ' + ap;
 }
 
 // ── Chart Glow Aura wrapper ──────────────────────────────────────────
@@ -1503,7 +1510,12 @@ export default function KendaraScreen() {
               </Text>
               <Text style={[styles.pageSubtitle, { color: sc.labelColor }]}>
                 {user && user.birthData && user.birthData.dateTime
-                  ? new Date(user.birthData.dateTime).toLocaleDateString() + '  ' + formatBirthTime(user.birthData.dateTime)
+                  ? (function() {
+                      var dt = String(user.birthData.dateTime);
+                      var dateMatch = dt.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                      var dateStr = dateMatch ? dateMatch[3] + '/' + dateMatch[2] + '/' + dateMatch[1] : new Date(dt).toLocaleDateString();
+                      return dateStr + '  ' + formatBirthTime(dt);
+                    })()
                   : ''}
               </Text>
             </View>

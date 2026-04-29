@@ -13,7 +13,7 @@ const { extractGeminiUsage, createTokenTracker, recordUsage, finalizeTracker, fo
 // REPORT PROGRESS TRACKER — allows mobile to poll generation status
 // ══════════════════════════════════════════════════════════════
 const _reportProgress = new Map(); // reportId → { stage, sectionsDone, sectionsTotal, currentSection, startedAt, completedSections }
-const PROGRESS_TTL = 10 * 60 * 1000; // 10 minutes
+const PROGRESS_TTL = 15 * 60 * 1000; // 15 minutes — must outlive longest generation + client recovery window
 
 function createReportProgress(reportId, totalSections) {
   _reportProgress.set(reportId, {
@@ -4958,6 +4958,7 @@ module.exports = {
   explainChartSimple,
   // Progress tracking for report generation
   createReportProgress,
+  updateReportProgress,
   getReportProgress,
   deleteReportProgress,
 };

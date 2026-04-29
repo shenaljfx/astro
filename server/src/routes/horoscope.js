@@ -10,7 +10,7 @@ const express = require('express');
 const router = express.Router();
 const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getSunLongitude, getLagna, getAllPlanetPositions, buildHouseChart, buildNavamshaChart, buildShadvarga, calculateDrishtis, analyzePushkara, calculateAshtakavarga, buildBhavaChalit, detectYogas, getPlanetStrengths, calculateVimshottari, generateDetailedReport, generateFullReport, RASHIS } = require('../engine/astrology');
 const { generateAdvancedAnalysis } = require('../engine/advanced');
-const { chat, generateAINarrativeReport, translateAdvancedForDisplay, explainChartSimple, createReportProgress, getReportProgress, deleteReportProgress } = require('../engine/chat');
+const { chat, generateAINarrativeReport, translateAdvancedForDisplay, explainChartSimple, createReportProgress, updateReportProgress, getReportProgress, deleteReportProgress } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth, requireSubscription } = require('../middleware/subscription');
 const { reportLimiter, validateBirthData } = require('../middleware/security');
@@ -1023,6 +1023,7 @@ router.get('/report-progress/:reportId', (req, res) => {
     completedSections: prog.completedSections || [],
     elapsedMs: Date.now() - prog.startedAt,
     error: prog.error || null,
+    savedReportId: prog.savedReportId || null,
   });
 });
 
@@ -1050,9 +1051,9 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
     if (uid) {
       const existingGen = _activeGenerations.get(uid);
       // #region agent log
-      const _fs=require('fs');try{_fs.appendFileSync('C:\\research\\New folder (2)\\astro\\debug-8fb141.log',JSON.stringify({sessionId:'8fb141',location:'horoscope.js:full-report-ai:dedup',message:'Dedup check',data:{uid:uid,hasExisting:!!existingGen,existingAge:existingGen?(Date.now()-existingGen.startedAt):null,willReject:!!(existingGen&&(Date.now()-existingGen.startedAt)<600000),activeGenCount:_activeGenerations.size},timestamp:Date.now(),hypothesisId:'B'})+'\n');}catch(_e){}
+      const _fs=require('fs');try{_fs.appendFileSync('C:\\research\\New folder (2)\\astro\\debug-8fb141.log',JSON.stringify({sessionId:'8fb141',location:'horoscope.js:full-report-ai:dedup',message:'Dedup check',data:{uid:uid,hasExisting:!!existingGen,existingAge:existingGen?(Date.now()-existingGen.startedAt):null,willReject:!!(existingGen&&(Date.now()-existingGen.startedAt)<180000),activeGenCount:_activeGenerations.size},timestamp:Date.now(),hypothesisId:'B'})+'\n');}catch(_e){}
       // #endregion
-      if (existingGen && (Date.now() - existingGen.startedAt) < 600000) {
+      if (existingGen && (Date.now() - existingGen.startedAt) < 180000) {
         console.log(`[AI Report] Rejecting duplicate request for uid=${uid} (in-flight since ${Date.now() - existingGen.startedAt}ms ago)`);
         return res.status(429).json({ error: 'Report generation already in progress. Please wait for it to complete.', code: 'DUPLICATE_GENERATION' });
       }
@@ -1168,6 +1169,9 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
           birthLocation: birthLocation || null,
         });
         console.log(`[AI Report] Saved to Firestore: ${savedReportId}`);
+        // Store savedReportId in progress so clients that timed out on the HTTP request
+        // can discover the completed report via progress polling
+        updateReportProgress(reportId, { stage: 'complete', savedReportId });
       } catch (e) {
         console.warn('[AI Report] Failed to save report to Firestore:', e.message);
       }
@@ -1194,8 +1198,8 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
       catch (e) { console.warn('[AI Report] Entitlement fulfill failed (non-critical):', e.message); }
     }
 
-    // Clean up progress tracker after a delay (let mobile poll final status)
-    setTimeout(() => deleteReportProgress(reportId), 60000);
+    // Clean up progress tracker after a generous delay — clients may need to recover from timeout
+    setTimeout(() => deleteReportProgress(reportId), 300000); // 5 min after completion
 
     // Clear in-flight guard
     if (uid) _activeGenerations.delete(uid);
