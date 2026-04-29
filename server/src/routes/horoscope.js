@@ -1033,6 +1033,9 @@ router.get('/report-progress/:reportId', (req, res) => {
 // Optional auth: if logged in, caches report & returns cached if available
 // ═══════════════════════════════════════════════════════════════════
 
+// In-flight generation guard: prevent duplicate concurrent generations per user
+const _activeGenerations = new Map();
+
 router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, async (req, res) => {
   let entitlementId = null;
   try {
@@ -1040,6 +1043,20 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
 
     if (!birthDate) {
       return res.status(400).json({ error: 'birthDate is required (ISO format or parseable date string)' });
+    }
+
+    // Deduplicate: reject if the same user already has a generation in flight
+    const uid = req.user?.uid;
+    if (uid) {
+      const existingGen = _activeGenerations.get(uid);
+      // #region agent log
+      const _fs=require('fs');try{_fs.appendFileSync('C:\\research\\New folder (2)\\astro\\debug-8fb141.log',JSON.stringify({sessionId:'8fb141',location:'horoscope.js:full-report-ai:dedup',message:'Dedup check',data:{uid:uid,hasExisting:!!existingGen,existingAge:existingGen?(Date.now()-existingGen.startedAt):null,willReject:!!(existingGen&&(Date.now()-existingGen.startedAt)<600000),activeGenCount:_activeGenerations.size},timestamp:Date.now(),hypothesisId:'B'})+'\n');}catch(_e){}
+      // #endregion
+      if (existingGen && (Date.now() - existingGen.startedAt) < 600000) {
+        console.log(`[AI Report] Rejecting duplicate request for uid=${uid} (in-flight since ${Date.now() - existingGen.startedAt}ms ago)`);
+        return res.status(429).json({ error: 'Report generation already in progress. Please wait for it to complete.', code: 'DUPLICATE_GENERATION' });
+      }
+      _activeGenerations.set(uid, { startedAt: Date.now() });
     }
 
     // Input validation
@@ -1177,9 +1194,16 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
       catch (e) { console.warn('[AI Report] Entitlement fulfill failed (non-critical):', e.message); }
     }
 
-    // Clean up progress tracker after a short delay (let mobile poll one final time)
-    setTimeout(() => deleteReportProgress(reportId), 30000);
+    // Clean up progress tracker after a delay (let mobile poll final status)
+    setTimeout(() => deleteReportProgress(reportId), 60000);
+
+    // Clear in-flight guard
+    if (uid) _activeGenerations.delete(uid);
   } catch (error) {
+    // Clear in-flight guard
+    const uid = req.user?.uid;
+    if (uid) _activeGenerations.delete(uid);
+
     console.error('[AI Report] Error:', error);
 
     // ── Entitlement: record error (keeps status 'pending' for retry) ──
@@ -1252,6 +1276,10 @@ router.get('/saved-report/:id', optionalAuth, async (req, res) => {
     if (data.uid !== req.user.uid) {
       return res.status(403).json({ error: 'Access denied' });
     }
+
+    // #region agent log
+    const _fs2=require('fs');try{_fs2.appendFileSync('C:\\research\\New folder (2)\\astro\\debug-8fb141.log',JSON.stringify({sessionId:'8fb141',location:'horoscope.js:saved-report',message:'Returning saved report',data:{docId:doc.id,sectionsType:typeof data.sections,sectionsIsArray:Array.isArray(data.sections),sectionsKeys:data.sections&&typeof data.sections==='object'&&!Array.isArray(data.sections)?Object.keys(data.sections).slice(0,5):'N/A',hasRashiChart:!!data.rashiChart,rashiChartType:typeof data.rashiChart,rashiChartIsArray:Array.isArray(data.rashiChart),hasBirthInfo:!!data.birthInfo},timestamp:Date.now(),hypothesisId:'C'})+'\n');}catch(_e){}
+    // #endregion
 
     res.json({
       success: true,

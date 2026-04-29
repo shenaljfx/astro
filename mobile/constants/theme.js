@@ -198,7 +198,8 @@ export const Layout = {
   // Fixed visual height of floating headers in tab screens.
   headerHeight: 64,
   // Tab bar visual height (excluding bottom safe-area inset).
-  tabBarHeight: 88,
+  // Must match TAB_BAR_VISUAL_HEIGHT in app/(tabs)/_layout.js (BAR_H + ARC_HEIGHT + 20).
+  tabBarHeight: 122,
   // Maximum content width on tablets / desktop. Tab screens centre
   // their ScrollView at this width to avoid 100ch-wide text columns.
   maxContent: 680,

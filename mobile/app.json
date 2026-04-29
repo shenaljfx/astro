@@ -1,8 +1,8 @@
 ﻿{
   "expo": {
-    "name": "ග්‍රහචාර",
+    "name": "Grahachara",
     "slug": "grahachara",
-    "version": "1.4.3",
+    "version": "1.4.9",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "grahachara",
@@ -26,8 +26,9 @@
         "backgroundColor": "#0D0B2E"
       },
       "package": "com.grahachara.app",
-      "versionCode": 47,
+      "versionCode": 55,
       "googleServicesFile": "./google-services.json",
+      "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -63,7 +64,8 @@
           "android": {
             "targetSdkVersion": 35,
             "compileSdkVersion": 35,
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": true,
+            "edgeToEdgeEnabled": false
           }
         }
       ]

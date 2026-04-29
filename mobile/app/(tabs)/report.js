@@ -13,7 +13,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  StyleSheet, Platform, Alert, Dimensions, AppState,
+  StyleSheet, Platform, Alert, Dimensions, AppState, KeyboardAvoidingView,
 } from 'react-native';
 import { useKeepAwake, activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,6 +43,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { screenColors } from '../../constants/theme';
 import useNetworkStatus from '../../hooks/useNetworkStatus';
 import useLowEndDevice from '../../hooks/useLowEndDevice';
+import useReducedMotion from '../../hooks/useReducedMotion';
+import { CosmicBackground } from '../../components/CosmicBackground';
 import { checkServerReachable } from '../../services/api';
 var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var MAX_SAVED_REPORTS = 20;
@@ -764,6 +766,7 @@ var LOADING_STAGES = {
     charts: { text: '✨ Building your celestial charts...', sub: 'Rashi, Navamsha, and house systems coming together' },
     coherence: { text: '🔮 Creating your personal narrative...', sub: 'Understanding the story behind the numbers' },
     sections: { text: '📜 Writing your life story...', sub: 'Each chapter crafted just for you' },
+    retrying: { text: '🔄 Perfecting your report...', sub: 'Retrying a few sections for the best quality' },
     complete: { text: '🎉 Your report is ready!', sub: 'Opening your personalized life reading' },
     failed: { text: '⚠️ Generation hit a snag', sub: 'Don\'t worry — you can try again for free' },
   },
@@ -773,6 +776,7 @@ var LOADING_STAGES = {
     charts: { text: '✨ දිව්‍ය සටහන් ගොඩනගමින්...', sub: 'රාශි, නවාංශ, භාව පද්ධති එකට එමින්' },
     coherence: { text: '🔮 ඔබේ පෞද්ගලික කථාව නිර්මාණය කරමින්...', sub: 'සංඛ්‍යා පිටුපස ඇති කතාව තේරුම් ගනිමින්' },
     sections: { text: '📜 ඔබේ ජීවිත කතාව ලියමින්...', sub: 'සෑම පරිච්ඡේදයක්ම ඔබට පමණක් ලියැවේ' },
+    retrying: { text: '🔄 වාර්තාව වැඩි දියුණු කරමින්...', sub: 'හොඳම ගුණත්වය සඳහා කොටස් කිහිපයක් නැවත උත්සාහ කරමින්' },
     complete: { text: '🎉 ඔබේ වාර්තාව සූදානම්!', sub: 'ඔබේ පෞද්ගලික ජීවිත කියවීම විවෘත කරමින්' },
     failed: { text: '⚠️ ජනනයේ ගැටලුවක්', sub: 'කරදර වෙන්න එපා — නොමිලේ නැවත උත්සාහ කරන්න' },
   },
@@ -850,18 +854,43 @@ function CosmicLoader({ progress, userName, language, colors: themeColors }) {
   var currentSection = progress?.currentSection;
   var elapsedMs = progress?.elapsedMs || 0;
 
-  // Calculate real progress percentage
-  var progressPct = 0;
-  if (stage === 'engine') progressPct = 5;
-  else if (stage === 'charts') progressPct = 10;
-  else if (stage === 'coherence') progressPct = 15;
-  else if (stage === 'sections') progressPct = 15 + (sectionsDone / Math.max(sectionsTotal, 1)) * 80;
-  else if (stage === 'complete') progressPct = 100;
-  else if (stage === 'failed') progressPct = progressPct; // keep last value
+  // Calculate real progress percentage (monotonic — never decreases)
+  var rawPct = 0;
+  if (stage === 'engine') rawPct = 5;
+  else if (stage === 'charts') rawPct = 10;
+  else if (stage === 'coherence') rawPct = 15;
+  else if (stage === 'sections') rawPct = 15 + (sectionsDone / Math.max(sectionsTotal, 1)) * 75;
+  else if (stage === 'retrying') rawPct = 90 + (sectionsDone / Math.max(sectionsTotal, 1)) * 8;
+  else if (stage === 'complete') rawPct = 100;
+
+  // Use a ref to track the highest progress seen — never go backwards
+  var progressHighRef = useRef(0);
+  if (rawPct > progressHighRef.current) progressHighRef.current = rawPct;
+  if (stage === 'starting' && sectionsDone === 0) progressHighRef.current = 0; // Reset only on fresh generation
+  var progressPct = progressHighRef.current;
 
   var elapsedSec = Math.floor(elapsedMs / 1000);
   var elapsedMin = Math.floor(elapsedSec / 60);
   var elapsedStr = elapsedMin > 0 ? (elapsedMin + 'm ' + (elapsedSec % 60) + 's') : (elapsedSec + 's');
+
+  // Estimate remaining time based on section throughput
+  var etaStr = '';
+  if ((stage === 'sections' || stage === 'retrying') && sectionsDone > 0 && sectionsDone < sectionsTotal && elapsedSec > 5) {
+    // Calculate from when sections stage started (~15% of total time for engine/charts/coherence)
+    var sectionElapsed = elapsedMs * 0.85; // approximate time spent in sections phase
+    var avgPerSection = sectionElapsed / sectionsDone;
+    var remaining = Math.max(0, sectionsTotal - sectionsDone);
+    var etaSec = Math.ceil((avgPerSection * remaining) / 1000);
+    if (etaSec > 60) {
+      etaStr = '~' + Math.ceil(etaSec / 60) + 'm ' + (lang === 'si' ? 'ඉතිරි' : 'left');
+    } else if (etaSec > 10) {
+      etaStr = '~' + etaSec + 's ' + (lang === 'si' ? 'ඉතිරි' : 'left');
+    } else {
+      etaStr = lang === 'si' ? 'පාහේ සූදානම්!' : 'Almost done!';
+    }
+  } else if (stage === 'coherence' || stage === 'engine' || stage === 'charts') {
+    etaStr = lang === 'si' ? '~3-5 මිනි.' : '~3-5 min';
+  }
 
   var personalMsg = lang === 'si'
     ? (userName ? 'පොඩ්ඩක් ඉන්න ' + userName + '! ✨' : 'ඔයාගේ ජීවිත කතාව ලියමින්... ✨')
@@ -902,7 +931,7 @@ function CosmicLoader({ progress, userName, language, colors: themeColors }) {
       </Animated.View>
 
       {/* Current section being written */}
-      {stage === 'sections' && currentSectionLabel ? (
+      {(stage === 'sections' || stage === 'retrying') && currentSectionLabel ? (
         <Animated.View entering={FadeIn.duration(400)} key={currentSection} style={{ marginBottom: 12 }}>
           <Text style={[cl.sectionNow, { color: tc.accentLight || '#FBBF24' }]}>
             {lang === 'si' ? '✍️ ' + currentSectionLabel + ' ලියමින්...' : '✍️ Writing ' + currentSectionLabel + '...'}
@@ -923,12 +952,13 @@ function CosmicLoader({ progress, userName, language, colors: themeColors }) {
           />
         </View>
         <View style={cl.progressMeta}>
-          {stage === 'sections' ? (
+          {stage === 'sections' || stage === 'retrying' ? (
             <Text style={[cl.progressText, { color: tc.textMuted || '#475569' }]}>{sectionsDone}/{sectionsTotal} {lang === 'si' ? 'කොටස්' : 'sections'}</Text>
           ) : (
             <Text style={[cl.progressText, { color: tc.textMuted || '#475569' }]}>{Math.round(progressPct)}%</Text>
           )}
-          {elapsedSec > 5 ? <Text style={[cl.progressText, { color: tc.textMuted || '#475569' }]}>{elapsedStr}</Text> : null}
+          {etaStr ? <Text style={[cl.progressText, { color: tc.textMuted || '#475569' }]}>{etaStr}</Text>
+           : elapsedSec > 5 ? <Text style={[cl.progressText, { color: tc.textMuted || '#475569' }]}>{elapsedStr}</Text> : null}
         </View>
       </View>
     </View>
@@ -968,6 +998,7 @@ export default function ReportScreen() {
   var sc = screenColors(colors);
   var isDesktop = useDesktopCtx();
   var isLowEnd = useLowEndDevice();
+  var reduced = useReducedMotion();
   var insets = useScreenInsets();
   var [birthDate, setBirthDate] = useState('1998-10-09');
   var [birthTime, setBirthTime] = useState('09:16');
@@ -1133,6 +1164,9 @@ export default function ReportScreen() {
       setError(null);
       try {
         var res = await api.getSavedReport(entry.id);
+        if (__DEV__) {
+          console.log('[DBG-8fb141] loadSavedReport', JSON.stringify({ hasRes: !!res, hasData: !!(res && res.data), hyp: 'C,D' }));
+        }
         if (res && res.data) {
           var d = res.data;
           setUserName(d.userName || entry.userName || '');
@@ -1145,12 +1179,14 @@ export default function ReportScreen() {
           setUserGender(d.userGender || null);
           setUserReligion(null);
           setReport(null);
-          setAiReport({
+          var aiReportData = {
             narrativeSections: d.narrativeSections || {},
             rashiChart: d.rashiChart || null,
             birthData: d.birthData || null,
-          });
-          setChartData(null);
+          };
+          setAiReport(aiReportData);
+          // Use rashiChart from server-saved report so the chart renders
+          setChartData(d.rashiChart ? { rashiChart: d.rashiChart, lagna: d.birthData?.lagna || null } : null);
           setScreenState('report');
         } else {
           setError(t('failedLoadReport') || 'Failed to load report from server');
@@ -1204,31 +1240,73 @@ export default function ReportScreen() {
     }
   }, [language, screenState]);
 
+  // ── Failed generation state — allows direct retry without re-payment ──
+  var [failedGenData, setFailedGenData] = useState(null);
+
   // ── Core generation function (defined first to avoid stale closures) ──
   var [genProgress, setGenProgress] = useState({ stage: 'starting', sectionsDone: 0, sectionsTotal: 19, currentSection: null, completedSections: [] });
   var progressPollRef = useRef(null);
+  var highWaterMarkRef = useRef({ sectionsDone: 0, stage: 'starting' });
 
-  var startFullGeneration = async function(dateStr, gender) {
+  useEffect(function () {
+    return function () {
+      if (progressPollRef.current && progressPollRef.current.stop) {
+        progressPollRef.current.stop();
+        progressPollRef.current = null;
+      }
+    };
+  }, []);
+
+  // chartSnapshot: birth chart object from API — passed explicitly because React state
+  // from setChartData is still stale in the same tick (fixes empty chartData in local cache on Android).
+  var startFullGeneration = async function(dateStr, gender, chartSnapshot) {
+    if (__DEV__) {
+      console.log('[DBG-8fb141] startFullGeneration:entry', JSON.stringify({ dateStr: dateStr, gender: gender, hasChartSnap: !!chartSnapshot, hyp: 'A' }));
+    }
     try {
       setScreenState('loading');
       setLoading(true);
       setGenProgress({ stage: 'starting', sectionsDone: 0, sectionsTotal: 19, currentSection: null, completedSections: [] });
+      highWaterMarkRef.current = { sectionsDone: 0, stage: 'starting' };
       wasBackgroundedDuringGen.current = false;
 
       // Generate a reportId for progress tracking
       var reportId = 'rpt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
 
-      // Start polling progress every 2 seconds
-      progressPollRef.current = setInterval(async function() {
-        try {
-          var prog = await api.getReportProgress(reportId);
-          if (prog && prog.stage) {
-            setGenProgress(prog);
+      // Stage ordering for monotonic progress (never go backwards)
+      var STAGE_ORDER = { starting: 0, engine: 1, charts: 2, coherence: 3, sections: 4, retrying: 5, complete: 6, failed: 7 };
+
+      // Start polling progress with backpressure (wait for response before next poll)
+      var pollActive = true;
+      var pollLoop = async function() {
+        while (pollActive) {
+          try {
+            var prog = await api.getReportProgress(reportId);
+            if (prog && prog.stage && prog.stage !== 'unknown') {
+              var stageRank = STAGE_ORDER[prog.stage] != null ? STAGE_ORDER[prog.stage] : -1;
+              var hwStageRank = STAGE_ORDER[highWaterMarkRef.current.stage] != null ? STAGE_ORDER[highWaterMarkRef.current.stage] : -1;
+
+              // Only update if progress moved forward (never backwards)
+              var isForward = stageRank > hwStageRank ||
+                (stageRank === hwStageRank && (prog.sectionsDone || 0) >= highWaterMarkRef.current.sectionsDone);
+
+              if (isForward) {
+                highWaterMarkRef.current = { sectionsDone: prog.sectionsDone || 0, stage: prog.stage };
+                setGenProgress(prog);
+              }
+            }
+            // If server returns unknown/null, keep showing last known progress (don't reset)
+          } catch (e) {
+            // Polling failure is non-critical — just skip
           }
-        } catch (e) {
-          // Polling failure is non-critical — just skip
+          // Wait 3 seconds between polls (backpressure: only starts AFTER previous completes)
+          if (pollActive) {
+            await new Promise(function(r) { setTimeout(r, 3000); });
+          }
         }
-      }, 2000);
+      };
+      var pollPromise = pollLoop();
+      progressPollRef.current = { stop: function() { pollActive = false; } };
 
       // Fire raw report + AI in parallel using allSettled so partial results survive
       var results = await Promise.allSettled([
@@ -1237,35 +1315,41 @@ export default function ReportScreen() {
       ]);
 
       // Stop polling
-      if (progressPollRef.current) { clearInterval(progressPollRef.current); progressPollRef.current = null; }
+      if (progressPollRef.current) { progressPollRef.current.stop(); progressPollRef.current = null; }
 
       var rawResult = results[0];
       var aiResult = results[1];
 
+      if (__DEV__) {
+        console.log('[DBG-8fb141] startFullGeneration:results', JSON.stringify({ rawStatus: rawResult.status, rawErr: rawResult.reason ? rawResult.reason.message : null, aiStatus: aiResult.status, aiErr: aiResult.reason ? aiResult.reason.message : null, aiHasData: !!(aiResult.value && aiResult.value.data), aiSectionCount: aiResult.value && aiResult.value.data && aiResult.value.data.narrativeSections ? Object.keys(aiResult.value.data.narrativeSections).length : 0, wasBackgrounded: wasBackgroundedDuringGen.current, hyp: 'B' }));
+      }
+
+      // Helper: save failed gen data so we can retry directly without payment
+      var saveFailedState = function(errorMsg) {
+        setFailedGenData({ dateStr: dateStr, gender: gender });
+        setError(errorMsg);
+        setScreenState('failed');
+        setLoading(false);
+      };
+
       // Check if app was backgrounded — warn user the result may be incomplete
       if (wasBackgroundedDuringGen.current && rawResult.status === 'rejected') {
-        setError(reportLang === 'si'
+        saveFailedState(reportLang === 'si'
           ? 'ඔබගේ දුරකථනය sleep වුණා. කරුණාකර නැවත උත්සාහ කරන්න.'
           : 'Your phone went to sleep during generation. Please try again.');
-        setScreenState('form');
-        setLoading(false);
         return;
       }
 
       // Raw report is essential — if it failed, show error
       if (rawResult.status === 'rejected') {
         var rawErr = rawResult.reason;
-        setError((rawErr && rawErr.message) || 'Failed to generate report');
-        setScreenState('form');
-        setLoading(false);
+        saveFailedState((rawErr && rawErr.message) || 'Failed to generate report');
         return;
       }
 
       var rawRes = rawResult.value;
       if (!rawRes.data) {
-        setError('No report data returned');
-        setScreenState('form');
-        setLoading(false);
+        saveFailedState('No report data returned');
         return;
       }
 
@@ -1293,12 +1377,10 @@ export default function ReportScreen() {
         if (sectionsWithContent.length < 5) {
           // Report is effectively empty — show error so user can retry
           if (__DEV__) console.warn('[Report] AI report has insufficient content: ' + sectionsWithContent.length + ' valid sections out of ' + sectionKeys.length);
-          setError(reportLang === 'si'
+          setAiReport(null);
+          saveFailedState(reportLang === 'si'
             ? 'AI වාර්තාව නිසි ලෙස සෑදුනේ නැහැ. කරුණාකර නැවත උත්සාහ කරන්න — ඔබට නැවත ගෙවීමක් අවශ්‍ය නැත.'
             : 'The report did not generate properly. Please try again — you will not be charged again.');
-          setAiReport(null);
-          setScreenState('form');
-          setLoading(false);
           return;
         }
 
@@ -1306,14 +1388,11 @@ export default function ReportScreen() {
       } else {
         // AI report failed entirely — this is a critical failure for a paid feature
         var aiErrorMsg = aiResult.reason?.message || 'AI generation failed';
-        var canRetry = aiResult.reason?.response?.canRetry || false;
         if (__DEV__) console.warn('[Report] AI report failed:', aiErrorMsg);
-        setError(reportLang === 'si'
+        setAiReport(null);
+        saveFailedState(reportLang === 'si'
           ? 'AI වාර්තාව සෑදීමට අසමත් විය. කරුණාකර නැවත උත්සාහ කරන්න — ඔබට නැවත ගෙවීමක් අවශ්‍ය නැත.'
           : 'Failed to generate your report. Please try again — you will not be charged again.');
-        setAiReport(null);
-        setScreenState('form');
-        setLoading(false);
         return;
       }
       setScreenState('report');
@@ -1331,21 +1410,27 @@ export default function ReportScreen() {
         userReligion: userReligion,
         report: rawRes.data,
         aiReport: aiData,
-        chartData: chartData,
+        chartData: chartSnapshot != null ? chartSnapshot : chartData,
       });
     } catch (err) {
-      if (progressPollRef.current) { clearInterval(progressPollRef.current); progressPollRef.current = null; }
+      if (progressPollRef.current) { progressPollRef.current.stop(); progressPollRef.current = null; }
       var msg = err.message || '';
+      setFailedGenData({ dateStr: dateStr, gender: gender });
       setError(msg || 'Failed to generate report');
-      setScreenState('form');
+      setScreenState('failed');
     } finally {
-      if (progressPollRef.current) { clearInterval(progressPollRef.current); progressPollRef.current = null; }
+      if (progressPollRef.current) { progressPollRef.current.stop(); progressPollRef.current = null; }
       setLoading(false);
+      isGeneratingRef.current = false;
     }
   };
 
+  // Guard: prevent multiple simultaneous generations (double-tap, etc.)
+  var isGeneratingRef = useRef(false);
+
   // User taps Generate → validate → show paywall → pay → generate
   var handleGenerate = async function() {
+    if (isGeneratingRef.current || loading) return;
     if (!userName || !userName.trim()) {
       setError(reportLang === 'si' ? '\u0D9A\u0DBB\u0DD4\u0DAB\u0DCF\u0D9A\u0DBB \u0D94\u0DBA\u0DCF\u0D9C\u0DDA \u0DB1\u0DB8 \u0D87\u0DAD\u0DD4\u0DBD\u0DAD\u0DCA \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1' : 'Please enter your name');
       return;
@@ -1399,6 +1484,7 @@ export default function ReportScreen() {
     }
 
     // Payment succeeded — now generate the report
+    isGeneratingRef.current = true;
     try {
       setError(null);
       setReport(null);
@@ -1412,13 +1498,18 @@ export default function ReportScreen() {
         setChartData(chartRes.data);
       } else {
         setError('Failed to read birth chart');
+        isGeneratingRef.current = false;
         return;
       }
 
-      startFullGeneration(dateStr, userGender);
+      await startFullGeneration(dateStr, userGender, chartRes.data);
     } catch (err) {
+      if (__DEV__) {
+        console.log('[DBG-8fb141] handleGenerate:catch', JSON.stringify({ error: err.message, hyp: 'E' }));
+      }
       var msg = err.message || 'Error';
       setError(msg);
+      isGeneratingRef.current = false;
     }
   };
 
@@ -1427,7 +1518,7 @@ export default function ReportScreen() {
     if (!aiReport || !aiReport.narrativeSections) return;
     try {
       var isSi = reportLang === 'si';
-      var bd = (report && report.birthData) || {};
+      var bd = (report && report.birthData) || (aiReport && aiReport.birthData) || {};
 
       var lagnaLabel = isSi ? (bd.lagna?.sinhala || bd.lagna?.english || '') : (bd.lagna?.english || bd.lagna?.name || '');
       var nakLabel = isSi ? (bd.nakshatra?.sinhala || bd.nakshatra?.name || '') : (bd.nakshatra?.name || '');
@@ -1497,7 +1588,21 @@ export default function ReportScreen() {
             + '</body></html>';
           result = await Print.printToFileAsync({ html: fallback, base64: false, width: 595, height: 842 });
         }
-        await Sharing.shareAsync(result.uri, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: fileName });
+        var shareOk = await Sharing.isAvailableAsync();
+        if (shareOk) {
+          await Sharing.shareAsync(result.uri, {
+            mimeType: 'application/pdf',
+            dialogTitle: fileName,
+            ...(Platform.OS === 'ios' ? { UTI: 'com.adobe.pdf' } : {}),
+          });
+        } else {
+          Alert.alert(
+            isSi ? 'PDF සුරැකිණි' : 'PDF ready',
+            isSi
+              ? 'PDF ගොනුව සෑදුනා. මෙම උපාංගයේ Share මෙනුව නොමැත — ගොනු යෙදුමෙන් PDF සොයාගන්න.'
+              : 'Your PDF was created, but the system share sheet is not available on this device. You can find the file in your app storage or Downloads.'
+          );
+        }
       }
     } catch (err) {
       Alert.alert(
@@ -1515,29 +1620,126 @@ export default function ReportScreen() {
     setLoading(false);
     setUserGender(null);
     setUserReligion(null);
+    setFailedGenData(null);
     setVisibleSections(isLowEnd ? 8 : 999);
     setExpandedKey(null);
     setScreenState('form');
   };
 
+  // Retry failed generation directly — skips paywall, reuses same birth data
+  var handleRetryGeneration = async function() {
+    if (__DEV__) {
+      console.log('[DBG-8fb141] handleRetryGeneration called', JSON.stringify({ hasFailedGenData: !!failedGenData, hyp: 'A' }));
+    }
+    if (isGeneratingRef.current || loading) return;
+    if (!failedGenData) {
+      setScreenState('form');
+      return;
+    }
+    var retryDateStr = failedGenData.dateStr;
+    var retryGender = failedGenData.gender;
+    isGeneratingRef.current = true;
+    setError(null);
+    setReport(null);
+    setAiReport(null);
+    setFailedGenData(null);
+
+    try {
+      var chartSnap = chartData;
+      if (!chartSnap) {
+        var chartRes = await api.getBirthChart(retryDateStr, birthLat, birthLng, reportLang);
+        if (chartRes.data) {
+          chartSnap = chartRes.data;
+          setChartData(chartRes.data);
+        }
+      }
+      await startFullGeneration(retryDateStr, retryGender, chartSnap || null);
+    } catch (err) {
+      setFailedGenData({ dateStr: retryDateStr, gender: retryGender });
+      setError(err.message || 'Retry failed');
+      setScreenState('failed');
+      isGeneratingRef.current = false;
+    }
+  };
+
+  // ── FAILED GENERATION — retry without re-payment ────────
+  if (screenState === 'failed') {
+    return (
+      <DesktopScreenWrapper routeName="report">
+      <View style={{ flex: 1, backgroundColor: colors.bg || '#04030C' }}>
+        <CosmicBackground reduced={reduced} lowEnd={isLowEnd} />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
+          <AuraBox style={{ borderColor: 'rgba(239,68,68,0.3)', alignItems: 'center', paddingVertical: 28, paddingHorizontal: 20, width: '100%', maxWidth: 400 }}>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>😔</Text>
+            <Text style={{ color: '#FCA5A5', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 8 }}>
+              {reportLang === 'si' ? 'වාර්තාව සෑදීම අසාර්ථක විය' : 'Report Generation Failed'}
+            </Text>
+            <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 20 }}>
+              {error || (reportLang === 'si' ? 'කරුණාකර නැවත උත්සාහ කරන්න' : 'Please try again')}
+            </Text>
+            <Text style={{ color: 'rgba(255,214,102,0.35)', fontSize: 11, textAlign: 'center', marginBottom: 20 }}>
+              {reportLang === 'si'
+                ? '🔒 ඔබට නැවත ගෙවීමක් අවශ්‍ය නැත'
+                : '🔒 You will not be charged again'}
+            </Text>
+
+            <SpringPressable
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, paddingHorizontal: 28, borderRadius: 14, backgroundColor: 'rgba(255,140,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,140,0,0.4)', marginBottom: 12, width: '100%' }}
+              onPress={handleRetryGeneration}
+              haptic="heavy"
+              scalePressed={0.95}
+              disabled={loading}
+            >
+              <Ionicons name="refresh" size={18} color="#FF8C00" style={{ marginRight: 8 }} />
+              <Text style={{ color: '#FF8C00', fontSize: 15, fontWeight: '800' }}>
+                {reportLang === 'si' ? 'නොමිලේ නැවත උත්සාහ කරන්න' : 'Retry Free'}
+              </Text>
+            </SpringPressable>
+
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 20 }}
+              onPress={handleNewReport}
+              activeOpacity={0.7}
+            >
+              <Text style={{ color: 'rgba(255,214,102,0.4)', fontSize: 12 }}>
+                {reportLang === 'si' ? 'ආපසු යන්න' : 'Back to form'}
+              </Text>
+            </TouchableOpacity>
+          </AuraBox>
+        </View>
+      </View>
+      </DesktopScreenWrapper>
+    );
+  }
+
   // ── FULL SCREEN LOADING ──────────────────────────────────
   if (screenState === 'loading') {
     return (
+      <DesktopScreenWrapper routeName="report">
       <View style={{ flex: 1, backgroundColor: colors.bg || '#04030C' }}>
+        <CosmicBackground reduced={reduced} lowEnd={isLowEnd} />
         <View style={s.loadingFull}>
           <CosmicLoader progress={genProgress} userName={userName} language={reportLang} colors={colors} />
         </View>
       </View>
+      </DesktopScreenWrapper>
     );
   }
 
   // ── REPORT VIEW (only after AI is done) ──────────────────
-  if (screenState === 'report' && report) {
+  if (screenState === 'report' && (report || aiReport)) {
+
+    // Resolve birthData from raw report or aiReport fallback (server-saved reports lack raw report)
+    var birthDataResolved = (report && report.birthData) || (aiReport && aiReport.birthData) || {};
 
     // Count total sections with content
     var sectionCount = SECTION_KEYS.filter(function(k) {
       return aiReport?.narrativeSections?.[k]?.narrative;
     }).length;
+
+    if (__DEV__) {
+      console.log('[DBG-8fb141] reportView:render', JSON.stringify({ hasReport: !!report, hasAiReport: !!aiReport, sectionCount: sectionCount, hyp: 'C,D' }));
+    }
 
     // Total word count
     var totalWords = SECTION_KEYS.reduce(function(total, k) {
@@ -1549,8 +1751,11 @@ export default function ReportScreen() {
     return (
       <DesktopScreenWrapper routeName="report">
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <CosmicBackground reduced={reduced} lowEnd={isLowEnd} />
         <ReadingProgressBar scrollProgress={scrollProgress} sectionCount={SECTION_KEYS.length} currentChapter={currentChapter} reportLang={reportLang} />
         <Animated.ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           removeClippedSubviews={isLowEnd}
           onScroll={function(e) {
             var y = e.nativeEvent.contentOffset.y;
@@ -1667,7 +1872,7 @@ export default function ReportScreen() {
           )}
 
           {/* ═══ BIRTH SUMMARY ═══ */}
-          {report.birthData && (
+          {birthDataResolved && Object.keys(birthDataResolved).length > 0 && (
             <Animated.View entering={FadeInDown.delay(200).duration(600)}>
               <AuraBox style={{ borderColor: 'rgba(255,184,0,0.15)' }}>
                 <LinearGradient
@@ -1683,16 +1888,16 @@ export default function ReportScreen() {
                     <Text style={s.birthLagna}>{userName || '✨'}</Text>
                     <Text style={s.birthSinhala}>{
                       reportLang === 'si'
-                        ? (report.birthData.lagna?.sinhala ? report.birthData.lagna.sinhala + ' බලය යටතේ උපන්නා' : '')
-                        : (report.birthData.lagna?.english ? 'Born under the power of ' + report.birthData.lagna.english : '')
+                        ? (birthDataResolved.lagna?.sinhala ? birthDataResolved.lagna.sinhala + ' බලය යටතේ උපන්නා' : '')
+                        : (birthDataResolved.lagna?.english ? 'Born under the power of ' + birthDataResolved.lagna.english : '')
                     }</Text>
                     <Text style={s.birthSub}>
                       {reportLang === 'si' ? 'උපන් ස්ථානය: ' : 'Born: '}{birthLocation} • {birthDate} • {birthTime}
                     </Text>
-                    {report.birthData.currentAge != null && (
+                    {birthDataResolved.currentAge != null && (
                       <Text style={s.birthSub}>
-                        {reportLang === 'si' ? '🎂 වයස: ' + report.birthData.currentAge + ' වසර' : '🎂 Age: ' + report.birthData.currentAge + ' years'}
-                        {report.birthData.birthDayOfWeek ? (reportLang === 'si' ? ' • ' + report.birthData.birthDayOfWeek + ' දිනයේ උපන්නා' : ' • Born on a ' + report.birthData.birthDayOfWeek) : ''}
+                        {reportLang === 'si' ? '🎂 වයස: ' + birthDataResolved.currentAge + ' වසර' : '🎂 Age: ' + birthDataResolved.currentAge + ' years'}
+                        {birthDataResolved.birthDayOfWeek ? (reportLang === 'si' ? ' • ' + birthDataResolved.birthDayOfWeek + ' දිනයේ උපන්නා' : ' • Born on a ' + birthDataResolved.birthDayOfWeek) : ''}
                       </Text>
                     )}
                   </View>
@@ -1700,35 +1905,35 @@ export default function ReportScreen() {
                 <View style={s.panchangaRow}>
                   <View style={s.panchangaItem}>
                     <Text style={s.panchangaLabel}>{reportLang === 'si' ? '🌙 චන්ද්‍ර ශක්තිය' : '🌙 Moon Energy'}</Text>
-                    <Text style={s.panchangaValue}>{reportLang === 'si' ? (report.birthData.moonSign?.sinhala || report.birthData.moonSign?.english || '') : (report.birthData.moonSign?.english || '')}</Text>
+                    <Text style={s.panchangaValue}>{reportLang === 'si' ? (birthDataResolved.moonSign?.sinhala || birthDataResolved.moonSign?.english || '') : (birthDataResolved.moonSign?.english || '')}</Text>
                   </View>
                   <View style={s.panchangaItem}>
                     <Text style={s.panchangaLabel}>{reportLang === 'si' ? '☀️ සූර්ය ශක්තිය' : '☀️ Sun Energy'}</Text>
-                    <Text style={s.panchangaValue}>{reportLang === 'si' ? (report.birthData.sunSign?.sinhala || report.birthData.sunSign?.english || '') : (report.birthData.sunSign?.english || '')}</Text>
+                    <Text style={s.panchangaValue}>{reportLang === 'si' ? (birthDataResolved.sunSign?.sinhala || birthDataResolved.sunSign?.english || '') : (birthDataResolved.sunSign?.english || '')}</Text>
                   </View>
                   <View style={s.panchangaItem}>
                     <Text style={s.panchangaLabel}>{reportLang === 'si' ? '⭐ උපන් තරුව' : '⭐ Birth Star'}</Text>
-                    <Text style={s.panchangaValue}>{reportLang === 'si' ? (report.birthData.nakshatra?.sinhala || report.birthData.nakshatra?.name || '') : (report.birthData.nakshatra?.name || '')}</Text>
+                    <Text style={s.panchangaValue}>{reportLang === 'si' ? (birthDataResolved.nakshatra?.sinhala || birthDataResolved.nakshatra?.name || '') : (birthDataResolved.nakshatra?.name || '')}</Text>
                   </View>
                 </View>
                 <View style={[s.panchangaRow, { marginTop: 4 }]}>
-                  {report.birthData.gana && (
+                  {birthDataResolved.gana && (
                     <View style={s.panchangaItem}>
                       <Text style={s.panchangaLabel}>{reportLang === 'si' ? '🔥 ගුණාංගය' : '🔥 Temperament'}</Text>
-                      <Text style={s.panchangaValue}>{report.birthData.gana.type}</Text>
+                      <Text style={s.panchangaValue}>{birthDataResolved.gana.type}</Text>
                     </View>
                   )}
-                  {report.birthData.nadi && (
+                  {birthDataResolved.nadi && (
                     <View style={s.panchangaItem}>
                       <Text style={s.panchangaLabel}>{reportLang === 'si' ? '💨 ශක්ති ප්‍රවාහය' : '💨 Energy Type'}</Text>
-                      <Text style={s.panchangaValue}>{report.birthData.nadi.type}</Text>
+                      <Text style={s.panchangaValue}>{birthDataResolved.nadi.type}</Text>
                     </View>
                   )}
-                  {report.birthData.panchanga?.panchangaQuality && (
+                  {birthDataResolved.panchanga?.panchangaQuality && (
                     <View style={s.panchangaItem}>
                       <Text style={s.panchangaLabel}>{reportLang === 'si' ? '✨ උපන් ගුණය' : '✨ Birth Quality'}</Text>
-                      <Text style={[s.panchangaValue, { color: report.birthData.panchanga.panchangaQuality.score >= 2 ? '#4ADE80' : report.birthData.panchanga.panchangaQuality.score >= 0 ? '#FBBF24' : '#F87171' }]}>
-                        {report.birthData.panchanga.panchangaQuality.quality} ({report.birthData.panchanga.panchangaQuality.score}/5)
+                      <Text style={[s.panchangaValue, { color: birthDataResolved.panchanga.panchangaQuality.score >= 2 ? '#4ADE80' : birthDataResolved.panchanga.panchangaQuality.score >= 0 ? '#FBBF24' : '#F87171' }]}>
+                        {birthDataResolved.panchanga.panchangaQuality.quality} ({birthDataResolved.panchanga.panchangaQuality.score}/5)
                       </Text>
                     </View>
                   )}
@@ -1748,7 +1953,7 @@ export default function ReportScreen() {
                 <SriLankanChart
                   rashiChart={chartData.rashiChart}
                   lagnaRashiId={chartData.lagna?.rashiId || chartData.rashiChart?.[0]?.rashiId || 1}
-                  language={language}
+                  language={reportLang === 'si' ? 'si' : 'en'}
                 />
               </AuraBox>
             </Animated.View>
@@ -1772,7 +1977,7 @@ export default function ReportScreen() {
               var aiNarrative = aiReport.narrativeSections[key] || null;
               if (!aiNarrative || !aiNarrative.narrative) return null;
               var rawDataKey = key === 'marriedLife' ? 'marriage' : key;
-              var rawData = (report.sections || {})[rawDataKey] || (aiReport.rawSections || {})[rawDataKey] || null;
+              var rawData = (report && report.sections ? report.sections : {})[rawDataKey] || (aiReport.rawSections || {})[rawDataKey] || null;
               var EntryAnim = isLowEnd ? View : Animated.View;
               var entryProps = isLowEnd ? {} : { entering: FadeInDown.delay(100 + index * 80).duration(600).springify() };
               return <React.Fragment key={key}>
@@ -1846,8 +2051,34 @@ export default function ReportScreen() {
   // ── INPUT FORM (default view) ────────────────────────────
   return (
     <DesktopScreenWrapper routeName="report">
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
+      <CosmicBackground reduced={reduced} lowEnd={isLowEnd} />
+      {loadingReport ? (
+        <View
+          style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 2000, elevation: 50,
+            justifyContent: 'center', alignItems: 'center',
+            backgroundColor: 'rgba(4,3,12,0.75)',
+          }}
+          pointerEvents="auto"
+        >
+          <CosmicLoader
+            progress={{ stage: 'starting', sectionsDone: 0, sectionsTotal: 19 }}
+            userName={userName}
+            language={reportLang}
+            colors={colors}
+          />
+        </View>
+      ) : null}
+      <ScrollView
+        style={s.flex}
+        contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      >
         <View style={[s.contentInner, isDesktop && s.contentInnerDesktop]}>
         {/* Header */}
         <Animated.View entering={FadeInDown.delay(100).duration(800)}>
@@ -1967,7 +2198,7 @@ export default function ReportScreen() {
               </TouchableOpacity>
             </View>
 
-            <SpringPressable style={s.generateBtn} onPress={handleGenerate} haptic="heavy" scalePressed={0.93}>
+            <SpringPressable style={[s.generateBtn, loading && { opacity: 0.5 }]} onPress={handleGenerate} haptic="heavy" scalePressed={0.93} disabled={loading}>
               <LinearGradient
                 colors={['#FF8C00', '#FF6D00', '#E65100']}
                 style={s.generateGrad}
@@ -2094,6 +2325,7 @@ export default function ReportScreen() {
         </View>
       </ScrollView>
     </View>
+    </KeyboardAvoidingView>
     </DesktopScreenWrapper>
   );
 }
@@ -2145,7 +2377,7 @@ var s = StyleSheet.create({
     color: '#FFE8B0', fontSize: 15, fontWeight: '600', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   inputError: { borderColor: 'rgba(239,68,68,0.5)' },
-  generateBtn: { borderRadius: 14, overflow: 'hidden', marginTop: 4, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 18), elevation: 0 },
+  generateBtn: { borderRadius: 14, overflow: 'hidden', marginTop: 4, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 18) },
   generateGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 15 },
   generateText: { color: '#FFF1D0', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
   errorText: { color: '#F87171', fontSize: 13, flex: 1 },

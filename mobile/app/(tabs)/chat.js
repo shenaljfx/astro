@@ -1,16 +1,16 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform, StyleSheet, Dimensions,
-  useWindowDimensions,
+  useWindowDimensions, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
-  FadeInUp, FadeIn,
+  FadeInUp, FadeIn, FadeInDown,
   useSharedValue, useAnimatedStyle, withRepeat,
-  withSequence, withTiming, interpolate,
+  withSequence, withTiming, withDelay, withSpring, interpolate, Easing,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
@@ -18,16 +18,22 @@ import SpringPressable from '../../components/effects/SpringPressable';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
-import { boxShadow } from '../../utils/shadow';
+import { boxShadow, textShadow } from '../../utils/shadow';
 import useKeyboard from '../../hooks/useKeyboard';
 import { useTheme } from '../../contexts/ThemeContext';
 import { screenColors } from '../../constants/theme';
+import useReducedMotion from '../../hooks/useReducedMotion';
+import useLowEndDevice from '../../hooks/useLowEndDevice';
+import { CosmicBackground } from '../../components/CosmicBackground';
 
 import { TAB_BAR_VISUAL_HEIGHT } from './_layout';
 
-var { width: SW } = Dimensions.get('window');
+var { width: SW, height: SH } = Dimensions.get('window');
 var DAILY_LIMIT = 5;
 var STORAGE_KEY_PREFIX = '@grahachara_chat_usage_';
+
+var ORACLE_COSMIC = require('../../assets/oracle/cosmic-guide.png');
+var ORACLE_DREAM = require('../../assets/oracle/dream-oracle.png');
 
 // Returns per-user storage key (falls back to 'guest' when not logged in)
 function usageKey(uid) {
@@ -58,36 +64,44 @@ async function incrementUsage(uid) {
 }
 
 // Thinking Dots — cosmic orbiting particles indicator
-function ThinkingDots() {
-  var COLORS = ['#FF8C00', '#FF6D00', '#FFB800', '#E65100', '#34D399'];
-  var dots = [];
-  for (var _i = 0; _i < 5; _i++) { dots.push(useSharedValue(0)); }
-  var orbit = useSharedValue(0);
+// Each dot is its own component so hooks aren't called inside a loop (Rules of Hooks)
+var THINK_COLORS = ['#FF8C00', '#FF6D00', '#FFB800', '#E65100', '#34D399'];
+
+function ThinkDot({ color, index }) {
+  var v = useSharedValue(0);
   useEffect(function () {
-    for (var di = 0; di < 5; di++) {
-      (function (idx) {
-        setTimeout(function () {
-          dots[idx].value = withRepeat(withSequence(withTiming(1, { duration: 600 }), withTiming(0, { duration: 600 })), -1);
-        }, idx * 120);
-      })(di);
-    }
-    orbit.value = withRepeat(withTiming(1, { duration: 2000 }), -1);
+    var to = setTimeout(function () {
+      v.value = withRepeat(
+        withSequence(withTiming(1, { duration: 600 }), withTiming(0, { duration: 600 })),
+        -1
+      );
+    }, index * 120);
+    return function () { clearTimeout(to); };
   }, []);
-  var anims = dots.map(function (d, i) {
-    return useAnimatedStyle(function () {
-      return {
-        opacity: interpolate(d.value, [0, 1], [0.2, 1]),
-        transform: [
-          { translateY: interpolate(d.value, [0, 1], [0, -3]) },
-          { scale: interpolate(d.value, [0, 1], [0.7, 1.2]) },
-        ],
-      };
-    });
+  var anim = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(v.value, [0, 1], [0.2, 1]),
+      transform: [
+        { translateY: interpolate(v.value, [0, 1], [0, -3]) },
+        { scale: interpolate(v.value, [0, 1], [0.7, 1.2]) },
+      ],
+    };
   });
   return (
+    <Animated.View
+      style={[
+        { width: 6, height: 6, borderRadius: 3, backgroundColor: color, ...boxShadow(color, { width: 0, height: 0 }, 0.8, 4) },
+        anim,
+      ]}
+    />
+  );
+}
+
+function ThinkingDots() {
+  return (
     <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 14 }}>
-      {COLORS.map(function (c, i) {
-        return <Animated.View key={i} style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: c, ...boxShadow(c, { width: 0, height: 0 }, 0.8, 4) }, anims[i]]} />;
+      {THINK_COLORS.map(function (c, i) {
+        return <ThinkDot key={i} color={c} index={i} />;
       })}
     </View>
   );
@@ -240,6 +254,166 @@ function QuickChips({ onSelect, language, mode }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// Oracle Selection — Mystical Tarot Card Gateway
+// ═══════════════════════════════════════════════════════════════════════
+
+function OracleSelection({ onSelect, t }) {
+  var reduced = useReducedMotion();
+  var lowEnd = useLowEndDevice();
+  var oraInsets = useSafeAreaInsets();
+
+  var cards = [
+    {
+      key: 'chat', image: ORACLE_COSMIC,
+      title: t('chatModeChat'), desc: t('chatCosmicDesc'),
+      gradient: ['#6D28D9', '#4C1D95', '#2E1065'],
+      glow: '#A78BFA', icon: 'sparkles',
+    },
+    {
+      key: 'dream', image: ORACLE_DREAM,
+      title: t('chatModeDream'), desc: t('chatDreamDesc'),
+      gradient: ['#92400E', '#78350F', '#451A03'],
+      glow: '#FFB800', icon: 'moon',
+    },
+  ];
+
+  return (
+    <View style={os.container}>
+      {/* Cosmic Background */}
+      <CosmicBackground reduced={reduced} lowEnd={lowEnd} />
+
+      <ScrollView
+        contentContainerStyle={[
+          os.scrollContent,
+          {
+            paddingTop: Math.max(oraInsets.top, 12) + 24,
+            paddingBottom: TAB_BAR_VISUAL_HEIGHT + Math.max(oraInsets.bottom, 8) + 24,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
+      >
+      {/* Title */}
+      <View style={os.titleWrap}>
+        <Text style={os.eyebrow}>{'✦ ' + (t('chatOracleTitle') || 'Choose Your Oracle') + ' ✦'}</Text>
+        <Text style={os.subtitle}>{t('chatOracleSub')}</Text>
+      </View>
+
+      {/* Card pair — equal sizing, no animation */}
+      <View style={os.cardsRow}>
+        {cards.map(function (card) {
+          return (
+            <View key={card.key} style={os.cardOuter}>
+              <SpringPressable onPress={function () { onSelect(card.key); }} haptic="medium" scalePressed={0.93}>
+                <View style={os.card}>
+                  {/* Card image — aspect ratio locked */}
+                  <View style={os.imageWrap}>
+                    <Image
+                      source={card.image}
+                      resizeMode="cover"
+                      style={{ width: '100%', aspectRatio: 2 / 3 }}
+                      fadeDuration={0}
+                    />
+                    <LinearGradient
+                      colors={['rgba(255,255,255,0.15)', 'transparent']}
+                      style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '20%' }}
+                    />
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.85)']}
+                      locations={[0.35, 0.65, 1]}
+                      style={os.vignette}
+                    />
+                  </View>
+
+                  {/* Label area — fixed minHeight for equal cards */}
+                  <LinearGradient colors={card.gradient} style={os.labelArea}>
+                    <View style={os.iconRow}>
+                      <View style={[os.iconCircle, { backgroundColor: card.glow + '18' }]}>
+                        <Ionicons name={card.icon} size={14} color={card.glow} />
+                      </View>
+                    </View>
+                    <Text style={[os.cardTitle, { ...textShadow(card.glow + '60', { width: 0, height: 0 }, 12) }]}>{card.title}</Text>
+                    <Text style={os.cardDesc} numberOfLines={2}>{card.desc}</Text>
+                    <View style={os.tapRow}>
+                      <View style={[os.tapPill, { backgroundColor: card.glow + '15', borderColor: card.glow + '25' }]}>
+                        <Ionicons name="arrow-forward" size={11} color={card.glow} />
+                      </View>
+                    </View>
+                  </LinearGradient>
+
+                  {/* Border */}
+                  <View style={[os.cardBorder, { borderColor: card.glow + '30' }]} />
+                </View>
+              </SpringPressable>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Bottom hint */}
+      <View style={os.hintWrap}>
+        <Text style={os.hintText}>
+          {t('chatQuestionsLeft') ? '✧ ' + DAILY_LIMIT + ' ' + t('chatQuestionsLeft') + ' ✧' : '✧ Tap a card to begin ✧'}
+        </Text>
+      </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+var os = StyleSheet.create({
+  container: { flex: 1 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
+  titleWrap: { alignItems: 'center', marginBottom: 32, paddingHorizontal: 24 },
+  eyebrow: {
+    fontSize: 18, fontWeight: '900', color: '#E8D5B5',
+    letterSpacing: 2, textAlign: 'center', textTransform: 'uppercase',
+  },
+  subtitle: {
+    fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.35)',
+    marginTop: 10, textAlign: 'center', letterSpacing: 0.5, lineHeight: 18,
+  },
+  cardsRow: { flexDirection: 'row', gap: 14, justifyContent: 'center', alignItems: 'stretch', paddingHorizontal: 16, maxWidth: 400, alignSelf: 'center', width: '100%' },
+  cardOuter: { flex: 1 },
+  card: { flex: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: '#0A0618' },
+  imageWrap: { overflow: 'hidden', borderTopLeftRadius: 18, borderTopRightRadius: 18 },
+  vignette: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '55%' },
+  labelArea: {
+    flex: 1, paddingHorizontal: 10, paddingTop: 10, paddingBottom: 14,
+    alignItems: 'center', justifyContent: 'space-between',
+  },
+  iconRow: { marginBottom: 6 },
+  iconCircle: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cardTitle: {
+    fontSize: 14, fontWeight: '900', color: '#FFF1D0',
+    letterSpacing: 0.8, textAlign: 'center',
+  },
+  cardDesc: {
+    fontSize: 10, fontWeight: '500', color: 'rgba(255,255,255,0.45)',
+    marginTop: 5, textAlign: 'center', lineHeight: 14, paddingHorizontal: 2,
+  },
+  tapRow: { marginTop: 10 },
+  tapPill: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
+  },
+  cardBorder: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    borderRadius: 18, borderWidth: 1.5,
+  },
+  hintWrap: { marginTop: 28, alignItems: 'center' },
+  hintText: {
+    fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.22)',
+    letterSpacing: 2, textTransform: 'uppercase',
+  },
+});
+
 // MAIN CHAT SCREEN
 export default function ChatScreen() {
   var { t, language } = useLanguage();
@@ -253,6 +427,7 @@ export default function ChatScreen() {
   var [loading, setLoading] = useState(false);
   var [remaining, setRemaining] = useState(DAILY_LIMIT);
   var [mode, setMode] = useState('chat');
+  var [selectedMode, setSelectedMode] = useState(null);
   var scroll = useRef(null);
 
   // Derive birth data from user profile
@@ -341,7 +516,8 @@ export default function ChatScreen() {
   }, [msg, language, t, loading, remaining, mode, msgs, birthDate, birthLat, birthLng]);
 
   useEffect(function () {
-    setTimeout(function () { if (scroll.current) scroll.current.scrollToEnd({ animated: true }); }, 120);
+    var to = setTimeout(function () { if (scroll.current) scroll.current.scrollToEnd({ animated: true }); }, 120);
+    return function () { clearTimeout(to); };
   }, [msgs, loading]);
 
   var topPad = isDesktop ? 0 : Math.max(insets.top, 10) + 6;
@@ -349,6 +525,16 @@ export default function ChatScreen() {
   // When closed, we must reserve the full tab-bar overlay height so the
   // input row isn't hidden behind the floating nav bar.
   var kb = useKeyboard();
+
+  // When keyboard opens, the visible chat area shrinks — make sure the
+  // newest message stays visible instead of getting hidden behind the input.
+  useEffect(function () {
+    if (!kb.isOpen) return;
+    var to = setTimeout(function () {
+      if (scroll.current) scroll.current.scrollToEnd({ animated: true });
+    }, 180);
+    return function () { clearTimeout(to); };
+  }, [kb.isOpen]);
 
   // Bulletproof Android keyboard compensation:
   // On Android, adjustResize MAY shrink the window when keyboard opens,
@@ -444,9 +630,20 @@ export default function ChatScreen() {
               </View>
 
               {/* ── Messages + chips + input ── */}
-              <KeyboardAvoidingView style={{ flex: 1, minHeight: 0 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={sd.msgList}
-                  showsVerticalScrollIndicator={false} overScrollMode="never" bounces={false}>
+              <KeyboardAvoidingView
+                style={{ flex: 1, minHeight: 0 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              >
+                <ScrollView
+                  ref={scroll}
+                  style={{ flex: 1 }}
+                  contentContainerStyle={sd.msgList}
+                  showsVerticalScrollIndicator={false}
+                  overScrollMode="never"
+                  bounces={false}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+                >
                   {msgs.map(function (m, i) { return <ChatBubble key={i} msg={m} isDesktop />; })}
                   {loading && (
                     <Animated.View entering={FadeInUp.duration(200)} style={sd.thinkRow}>
@@ -476,6 +673,9 @@ export default function ChatScreen() {
                       maxLength={250}
                       editable={remaining > 0}
                       selectionColor="#FF6B00"
+                      textAlignVertical="top"
+                      underlineColorAndroid="transparent"
+                      blurOnSubmit={false}
                       onSubmitEditing={function () { send(); }}
                     />
                     <TouchableOpacity
@@ -501,10 +701,39 @@ export default function ChatScreen() {
   }
 
   // ── MOBILE LAYOUT ──────────────────────────────────────────────────
+
+  // Oracle selection gateway — show when no mode chosen yet
+  if (!selectedMode) {
+    return (
+      <DesktopScreenWrapper routeName="chat">
+        <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+          <OracleSelection
+            onSelect={function (m) {
+              setMode(m);
+              setSelectedMode(m);
+              setMsgs([{ role: 'assistant', content: t('initialChat') }]);
+            }}
+            t={t}
+          />
+        </View>
+      </DesktopScreenWrapper>
+    );
+  }
+
   return (
     <DesktopScreenWrapper routeName="chat">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={[s.header, { paddingTop: topPad }]}>
+        <TouchableOpacity
+          onPress={function () { setSelectedMode(null); setMsgs([]); }}
+          activeOpacity={0.7}
+          style={s.backBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Back to oracle selection"
+        >
+          <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.6)" />
+        </TouchableOpacity>
         <View style={s.avatar}>
           <LinearGradient colors={gradients.orangeButton} style={StyleSheet.absoluteFill} />
           <Ionicons name={mode === 'dream' ? 'moon' : 'sparkles'} size={18} color="#FFF" />
@@ -524,15 +753,23 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      <ModeToggle mode={mode} setMode={setMode} t={t} />
-      <LimitCard remaining={remaining} t={t} />
+      {!kb.isOpen && <LimitCard remaining={remaining} t={t} />}
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 60 : 0}
       >
-        <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={s.msgList} showsVerticalScrollIndicator={false} overScrollMode="never" bounces={false}>
+        <ScrollView
+          ref={scroll}
+          style={{ flex: 1 }}
+          contentContainerStyle={s.msgList}
+          showsVerticalScrollIndicator={false}
+          overScrollMode="never"
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
           {msgs.map(function (m, i) { return <ChatBubble key={i} msg={m} />; })}
           {loading && (
             <Animated.View entering={FadeInUp.duration(200)} style={s.thinkRow}>
@@ -546,7 +783,9 @@ export default function ChatScreen() {
           <View style={{ height: 20 }} />
         </ScrollView>
 
-        {msgs.length <= 2 && !loading && remaining > 0 && <QuickChips onSelect={send} language={language} mode={mode} />}
+        {msgs.length <= 2 && !loading && remaining > 0 && !kb.isOpen && (
+          <QuickChips onSelect={send} language={language} mode={mode} />
+        )}
 
         <View style={[s.inputBar, { paddingBottom: bottomPad }]}>
           <View style={s.inputRow}>
@@ -560,6 +799,9 @@ export default function ChatScreen() {
               maxLength={250}
               editable={remaining > 0}
               selectionColor="#FF6B00"
+              textAlignVertical="top"
+              underlineColorAndroid="transparent"
+              blurOnSubmit={false}
             />
             <SpringPressable
               onPress={function () { send(); }}
@@ -582,6 +824,7 @@ export default function ChatScreen() {
 // STYLES
 var s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingBottom: 8 },
+  backBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
   avatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,107,0,0.4)' },
   title: { fontSize: 18, fontWeight: '800', color: '#FFF1D0', letterSpacing: 0.3 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
@@ -617,9 +860,9 @@ var s = StyleSheet.create({
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1 },
   chipLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '600' },
 
-  inputBar: { paddingHorizontal: 14, paddingTop: 6, paddingBottom: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)' },
+  inputBar: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)', backgroundColor: 'rgba(8,5,22,0.85)' },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(255,107,0,0.12)' },
-  input: { flex: 1, minHeight: 36, maxHeight: 90, color: '#FFF1D0', fontSize: 14, paddingTop: 8, paddingBottom: 8 },
+  input: { flex: 1, minHeight: 36, maxHeight: 90, color: '#FFF1D0', fontSize: 14, paddingTop: 8, paddingBottom: 8, includeFontPadding: false },
   sendBtn: { width: 34, height: 34, borderRadius: 17, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 1 },
 });
 

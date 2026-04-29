@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, Platform, Share, Alert,
-  LayoutAnimation, UIManager, Dimensions, Image,
+  LayoutAnimation, UIManager, Dimensions, Image, KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,6 +29,9 @@ import api from '../../services/api';
 import { screenColors } from '../../constants/theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { boxShadow, textShadow } from '../../utils/shadow';
+import useReducedMotion from '../../hooks/useReducedMotion';
+import useLowEndDevice from '../../hooks/useLowEndDevice';
+import { CosmicBackground } from '../../components/CosmicBackground';
 import { generatePorondamHTML, loadLogoBase64 } from '../../utils/pdfReportGenerator';
 import RadarChart from '../../components/RadarChart';
 
@@ -566,6 +569,8 @@ export default function PorondamScreen() {
   var T = L[language] || L.en;
   var isDesktop = useDesktopCtx();
   var insets = useScreenInsets();
+  var reduced = useReducedMotion();
+  var lowEnd = useLowEndDevice();
 
   var [bDate, setBDate] = useState('1998-01-15');
   var [bTime, setBTime] = useState('08:30');
@@ -920,8 +925,10 @@ export default function PorondamScreen() {
 
   return (
     <DesktopScreenWrapper routeName="porondam">
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
+      <CosmicBackground reduced={reduced} lowEnd={lowEnd} />
+      <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={[sty.scrollInner, isDesktop && sty.scrollInnerDesktop]}>
 
         <Animated.View entering={FadeInDown.duration(600)}>
@@ -1608,6 +1615,7 @@ export default function PorondamScreen() {
 
 
     </View>
+    </KeyboardAvoidingView>
     </DesktopScreenWrapper>
   );
 }
@@ -1656,7 +1664,7 @@ var sty = StyleSheet.create({
   timeSep: { color: 'rgba(255,140,0,0.6)', fontSize: 20, fontWeight: '700' },
   timeHint: { fontSize: 11, color: 'rgba(255,255,255,0.28)', marginBottom: 16, fontStyle: 'italic', textAlign: 'center' },
 
-  cta: { borderRadius: 16, paddingVertical: 17, alignItems: 'center', overflow: 'hidden', marginBottom: 8, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 18), elevation: 0 },
+  cta: { borderRadius: 16, paddingVertical: 17, alignItems: 'center', overflow: 'hidden', marginBottom: 8, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 18) },
   ctaText: { color: '#FFF1D0', fontWeight: '800', fontSize: 16, letterSpacing: 0.8 },
 
   editBtn: {

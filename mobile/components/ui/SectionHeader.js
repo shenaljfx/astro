@@ -31,10 +31,12 @@ export default function SectionHeader({
 const styles = StyleSheet.create({
   container: {
     marginBottom: Spacing.md,
+    alignItems: 'center',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
   },
   icon: {

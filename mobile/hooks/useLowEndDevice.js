@@ -27,8 +27,8 @@ function detect() {
   try {
     var Device = require('expo-device');
     if (Device && Device.totalMemory) {
-      // totalMemory is in bytes; < 3GB = low-end
-      lowRam = Device.totalMemory < 3 * 1024 * 1024 * 1024;
+      // totalMemory is in bytes; < 4GB = low-end
+      lowRam = Device.totalMemory < 4 * 1024 * 1024 * 1024;
     }
   } catch (e) {
     // expo-device not available — rely on screen heuristics

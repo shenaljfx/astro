@@ -2,7 +2,7 @@
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import {
   View, StyleSheet, Platform, Text, Dimensions,
-  TouchableOpacity, Image,
+  TouchableOpacity, Image, Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -161,6 +161,19 @@ function OrbitalNavBar({ state, navigation }) {
   var { colors } = useTheme();
   var insets = useSafeAreaInsets();
   var bottomPad = Math.max(insets.bottom, 6);
+
+  // Hide tab bar when keyboard is open (custom bar ignores tabBarHideOnKeyboard)
+  var [keyboardVisible, setKeyboardVisible] = useState(false);
+  useEffect(function() {
+    if (Platform.OS === 'web') return;
+    var showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    var hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    var showSub = Keyboard.addListener(showEvent, function() { setKeyboardVisible(true); });
+    var hideSub = Keyboard.addListener(hideEvent, function() { setKeyboardVisible(false); });
+    return function() { showSub.remove(); hideSub.remove(); };
+  }, []);
+
+  if (keyboardVisible) return null;
 
   return (
     <View style={[orb.outerWrap, { paddingBottom: bottomPad }]}>
@@ -419,7 +432,7 @@ export default function TabLayout() {
             tabBarStyle: { height: TAB_BAR_HEIGHT },
             tabBarHideOnKeyboard: true,
             animation: 'none',
-            lazy: false,
+            lazy: true,
           headerTitle: function () {
             var tabKey = 'tabHome';
             if (route.name === 'porondam') tabKey = 'tabPorondam';

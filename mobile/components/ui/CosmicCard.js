@@ -29,20 +29,20 @@ const LIGHT_VARIANTS = {
 
 const DUSK_VARIANTS = {
   hero: {
-    gradient: ['rgba(20,12,8,0.48)', 'rgba(12,6,4,0.55)'],
-    borderColor: 'rgba(255,184,0,0.22)',
-    borderWidth: 1,
+    gradient: ['rgba(26,21,10,0.85)', 'rgba(15,11,6,0.90)'],
+    borderColor: 'rgba(218,165,32,0.35)',
+    borderWidth: 1.5,
     shadow: Shadows.softGlow,
   },
   content: {
-    gradient: ['rgba(16,10,6,0.42)', 'rgba(8,5,3,0.50)'],
-    borderColor: 'rgba(255,184,0,0.12)',
+    gradient: ['rgba(26,21,10,0.75)', 'rgba(18,16,11,0.80)', 'rgba(14,10,5,0.75)'],
+    borderColor: 'rgba(218,165,32,0.20)',
     borderWidth: 1,
     shadow: Shadows.sm,
   },
   surface: {
-    gradient: ['rgba(12,8,4,0.40)', 'rgba(6,4,2,0.48)'],
-    borderColor: 'rgba(255,184,0,0.10)',
+    gradient: ['rgba(20,16,8,0.70)', 'rgba(12,10,6,0.75)'],
+    borderColor: 'rgba(218,165,32,0.12)',
     borderWidth: 0.5,
     shadow: null,
   },

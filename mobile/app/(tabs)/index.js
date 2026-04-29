@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Line, G, Defs, RadialGradient, Stop, Ellipse, Path, Image as SvgImage } from 'react-native-svg';
 import Animated, {
   FadeIn, FadeInDown, FadeInUp,
-  useSharedValue, useAnimatedStyle, useAnimatedScrollHandler,
+  useSharedValue, useAnimatedStyle,
   withRepeat, withSequence, withTiming,
   interpolate, Easing,
 } from 'react-native-reanimated';
@@ -29,6 +29,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import SriLankanChart from '../../components/SriLankanChart';
 import useReducedMotion from '../../hooks/useReducedMotion';
 import useLowEndDevice from '../../hooks/useLowEndDevice';
+import { CosmicBackground } from '../../components/CosmicBackground';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
 
@@ -43,7 +44,7 @@ function RealisticMoon(props) {
 }
 
 var { width: SCREEN_WIDTH } = Dimensions.get('window');
-var CHAKRA_HERO_SIZE = Math.min(SCREEN_WIDTH * 0.95, 400);
+var CHAKRA_HERO_SIZE = Math.min(SCREEN_WIDTH * 0.88, 400);
 
 /* ── Ivory & Gold Luxe — Home Page Theme (derived from active palette) ── */
 function getHT(colors) {
@@ -449,19 +450,7 @@ export default function HomeScreen() {
   var scrollRef = useRef(null);
   var weeklyLagnaY = useRef(0);
 
-  var scrollY = useSharedValue(0);
-  var scrollHandler = useAnimatedScrollHandler({
-    onScroll: function (event) { scrollY.value = event.contentOffset.y; },
-  });
-  var heroParallax = useAnimatedStyle(function () {
-    return {
-      transform: [
-        { translateY: interpolate(scrollY.value, [0, 300], [0, -50], 'clamp') },
-        { scale: interpolate(scrollY.value, [0, 300], [1, 0.90], 'clamp') },
-      ],
-      opacity: interpolate(scrollY.value, [0, 400], [1, 0.5], 'clamp'),
-    };
-  });
+
 
   var wheelSpin = useSharedValue(0);
   var coronaPulse = useSharedValue(0);
@@ -507,8 +496,9 @@ export default function HomeScreen() {
         var scrollTo = MOON_DAYS_RANGE * MOON_ITEM_W - (SCREEN_WIDTH / 2) + MOON_ITEM_W / 2;
         moonScrollRef.current.scrollTo({ x: Math.max(0, scrollTo), animated: false });
       }
-    }, 100);
-  }, []);
+    }, 300);
+    setSelectedDayOffset(0);
+  }, [data]);
 
   var birthDateTime = user?.birthData?.dateTime || null;
   var birthLat = user?.birthData?.lat || 6.9271;
@@ -688,31 +678,44 @@ export default function HomeScreen() {
     var chakraSize = CHAKRA_HERO_SIZE;
 
     return (
-      <Animated.View entering={FadeInDown.delay(120).springify()}>
-        <View style={[s.dashHero, { borderColor: HT.goldBorder, shadowColor: HT.shadow }]}>
-          {/* ── Elegant white-gold card background ── */}
+      <View>
+        <View style={s.dashHero}>
+          {/* ── Ancient parchment base ── */}
           <LinearGradient
-            colors={[HT.bgCard, HT.bgSurface, HT.bgCard]}
+            colors={['#1A150A', '#15100A', '#0F0B06', '#12100B', '#1A150C', '#0E0A05']}
+            locations={[0, 0.2, 0.4, 0.6, 0.8, 1]}
             style={s.dashHeroBg}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
+          {/* ── Warm golden veil ── */}
           <LinearGradient
-            colors={[HT.goldSubtle, 'transparent', HT.goldSubtle]}
+            colors={['rgba(180,140,60,0.08)', 'transparent', 'rgba(160,120,40,0.06)', 'transparent', 'rgba(180,140,60,0.08)']}
+            locations={[0, 0.25, 0.5, 0.75, 1]}
             style={s.dashHeroBg}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
-          {/* Gold shine line at top */}
+          {/* ── Top ornamental gold line ── */}
           <LinearGradient
-            colors={['transparent', HT.goldMuted, 'transparent']}
+            colors={['transparent', 'rgba(218,165,32,0.50)', 'rgba(255,184,0,0.70)', 'rgba(218,165,32,0.50)', 'transparent']}
+            locations={[0, 0.2, 0.5, 0.8, 1]}
             style={s.dashGlassShine}
             start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
           />
-          <Animated.View style={[s.dashNebulaBlob, coronaPulseStyle]} />
+          {/* ── Bottom ornamental gold line ── */}
           <LinearGradient
-            colors={[HT.goldMuted, 'transparent']}
-            style={s.dashEdgeTop}
-            start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+            colors={['transparent', 'rgba(218,165,32,0.35)', 'rgba(255,184,0,0.50)', 'rgba(218,165,32,0.35)', 'transparent']}
+            locations={[0, 0.2, 0.5, 0.8, 1]}
+            style={s.dashBottomShine}
+            start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
           />
+          {/* ── Mystic corner glow — top-right ── */}
+          <View style={s.dashMysticGlowTR} />
+          {/* ── Mystic corner glow — bottom-left ── */}
+          <View style={s.dashMysticGlowBL} />
+          {/* ── Breathing nebula accent ── */}
+          <Animated.View style={[s.dashNebulaBlob, coronaPulseStyle]} />
+          {/* ── Inner border frame ── */}
+          <View style={s.dashInnerFrame} />
 
           {/* ═══ RASHI CHAKRA — Center piece ═══ */}
           <View style={s.chakraHeroWrap}>
@@ -723,11 +726,11 @@ export default function HomeScreen() {
             <View style={s.chakraOverlayInfo}>
               <View style={s.chakraSignTextRow}>
                 <View style={s.chakraSignTextWrap}>
-                  <Text style={[s.dashHeroLabel, { color: HT.textMuted }]}>{language === 'si' ? 'අද රාශිය' : "TODAY'S SIGN"}</Text>
-                  <Text style={[s.dashSignNameLarge, { color: HT.text }]}>{language === 'si' ? (ZODIAC_NAMES_SI[activeNakIndex] || ZODIAC_NAMES_EN[activeNakIndex]) : ZODIAC_NAMES_EN[activeNakIndex]}</Text>
+                  <Text style={s.dashHeroLabel}>{language === 'si' ? 'අද රාශිය' : "TODAY'S SIGN"}</Text>
+                  <Text style={s.dashSignNameLarge}>{language === 'si' ? (ZODIAC_NAMES_SI[activeNakIndex] || ZODIAC_NAMES_EN[activeNakIndex]) : ZODIAC_NAMES_EN[activeNakIndex]}</Text>
                 </View>
-                <View style={[s.chakraSignSubBadge, { backgroundColor: HT.goldMuted, borderColor: HT.goldBorder }]}>
-                  <Text style={[s.dashSignNameSub, { color: HT.textGold }]}>{language === 'si' ? ZODIAC_NAMES_EN[activeNakIndex] : (ZODIAC_NAMES_SI[activeNakIndex] || '')}</Text>
+                <View style={s.chakraSignSubBadge}>
+                  <Text style={s.dashSignNameSub}>{language === 'si' ? ZODIAC_NAMES_EN[activeNakIndex] : (ZODIAC_NAMES_SI[activeNakIndex] || '')}</Text>
                 </View>
               </View>
             </View>
@@ -735,84 +738,129 @@ export default function HomeScreen() {
 
           {/* ═══ NAKSHATRA PILL ═══ */}
           {todayNakshatra ? (
-            <View style={[s.nakPill, { borderColor: HT.goldBorder }]}>
-              <LinearGradient colors={[HT.goldSubtle, HT.goldSubtle]} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-              <Ionicons name="star" size={12} color={HT.gold} />
-              <Text style={[s.nakPillLabel, { color: HT.textMuted }]}>{language === 'si' ? 'නක්ෂත්‍රය' : 'Lunar Mansion'}</Text>
-              <View style={[s.nakPillDot, { backgroundColor: HT.goldBorder }]} />
-              <Text style={[s.nakPillValue, { color: HT.gold }]}>{todayNakshatra}</Text>
+            <View style={s.nakPill}>
+              <Ionicons name="star" size={12} color="#DAA520" />
+              <Text style={s.nakPillLabel}>{language === 'si' ? 'නක්ෂත්‍රය' : 'Lunar Mansion'}</Text>
+              <View style={s.nakPillDot} />
+              <Text style={s.nakPillValue}>{todayNakshatra}</Text>
             </View>
           ) : null}
 
           {/* ═══ DIVIDER ═══ */}
           <View style={s.dashDivider}>
-            <LinearGradient colors={['transparent', HT.goldBorder, HT.goldBorder, 'transparent']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} />
+            <LinearGradient colors={['transparent', 'rgba(218,165,32,0.30)', 'rgba(218,165,32,0.30)', 'transparent']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} />
           </View>
 
           {/* ═══ PANCHANGA GRID ═══ */}
-          <Text style={[s.dashGridTitle, { color: HT.textMuted }]}>{language === 'si' ? 'අද දිනයේ පංචාංගය' : "Today's Panchanga"}</Text>
+          <Text style={s.dashGridTitle}>{language === 'si' ? 'අද දිනයේ පංචාංගය' : "Today's Panchanga"}</Text>
           <View style={s.dashGrid}>
             <View style={s.dashCell}>
-              <View style={[s.dashCellIcon, { backgroundColor: HT.goldMuted }]}>
-                <Ionicons name="sunny-outline" size={18} color={HT.gold} />
+              <View style={[s.dashCellIcon, { backgroundColor: 'rgba(218,165,32,0.12)' }]}>
+                <Ionicons name="sunny-outline" size={18} color="#DAA520" />
               </View>
-              <Text style={[s.dashCellValue, { color: HT.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{sunriseVal}</Text>
-              <Text style={[s.dashCellLabel, { color: HT.textMuted }]}>{language === 'si' ? 'උදාව' : t('sunrise')}</Text>
+              <Text style={s.dashCellValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{sunriseVal}</Text>
+              <Text style={s.dashCellLabel}>{language === 'si' ? 'උදාව' : t('sunrise')}</Text>
             </View>
             <View style={s.dashCell}>
-              <View style={[s.dashCellIcon, { backgroundColor: HT.blueBg }]}>
-                <Ionicons name="moon-outline" size={18} color={HT.blue} />
+              <View style={[s.dashCellIcon, { backgroundColor: 'rgba(100,120,180,0.12)' }]}>
+                <Ionicons name="moon-outline" size={18} color="#8B9DC3" />
               </View>
-              <Text style={[s.dashCellValue, { color: HT.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{sunsetVal}</Text>
-              <Text style={[s.dashCellLabel, { color: HT.textMuted }]}>{language === 'si' ? 'බැසීම' : t('sunset')}</Text>
+              <Text style={s.dashCellValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{sunsetVal}</Text>
+              <Text style={s.dashCellLabel}>{language === 'si' ? 'බැසීම' : t('sunset')}</Text>
             </View>
             <View style={s.dashCell}>
-              <View style={[s.dashCellIcon, { backgroundColor: HT.successBg }]}>
-                <Ionicons name="sparkles-outline" size={18} color={HT.success} />
+              <View style={[s.dashCellIcon, { backgroundColor: 'rgba(160,140,60,0.12)' }]}>
+                <Ionicons name="sparkles-outline" size={18} color="#C8A960" />
               </View>
-              <Text style={[s.dashCellValue, { color: HT.text }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.65}>{tithiVal}</Text>
-              <Text style={[s.dashCellLabel, { color: HT.textMuted }]}>{language === 'si' ? 'තිථි' : 'Lunar Day'}</Text>
+              <Text style={s.dashCellValue} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.65}>{tithiVal}</Text>
+              <Text style={s.dashCellLabel}>{language === 'si' ? 'තිථි' : 'Lunar Day'}</Text>
             </View>
             <View style={s.dashCell}>
-              <View style={[s.dashCellIcon, { backgroundColor: HT.purpleBg }]}>
-                <Ionicons name="infinite-outline" size={18} color={HT.purple} />
+              <View style={[s.dashCellIcon, { backgroundColor: 'rgba(140,100,60,0.12)' }]}>
+                <Ionicons name="infinite-outline" size={18} color="#B8860B" />
               </View>
-              <Text style={[s.dashCellValue, { color: HT.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{yogaVal}</Text>
-              <Text style={[s.dashCellLabel, { color: HT.textMuted }]}>{language === 'si' ? 'යෝගය' : 'Yoga'}</Text>
+              <Text style={s.dashCellValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{yogaVal}</Text>
+              <Text style={s.dashCellLabel}>{language === 'si' ? 'යෝගය' : 'Yoga'}</Text>
             </View>
           </View>
         </View>
 
-        {/* Rahu Kalaya — full-width alert strip */}
+        {/* ═══ RAHU KALAYA — Separate card, no scroll animation ═══ */}
         {data && data.rahuKalaya && (
-          <Animated.View entering={FadeInDown.delay(350).duration(400)}>
-            <View style={[s.rahuStrip, { backgroundColor: HT.successBg, borderColor: resolved === 'light' ? 'rgba(61,139,110,0.12)' : 'rgba(52,211,153,0.15)' }, rahuActive && s.rahuStripActive]}>
-              {rahuActive && <LinearGradient colors={[HT.dangerBg, 'transparent', HT.dangerBg]} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} />}
-              <View style={[s.rahuIconWrap, { backgroundColor: HT.successBg, borderColor: resolved === 'light' ? 'rgba(61,139,110,0.15)' : 'rgba(52,211,153,0.20)' }, rahuActive && s.rahuIconWrapActive]}>
-                <Ionicons name={rahuActive ? 'alert-circle' : 'shield-checkmark'} size={18} color={rahuActive ? HT.danger : HT.success} />
-              </View>
-              <View style={s.rahuContent}>
-                <Text style={[s.rahuTitle, { color: HT.textMuted }, rahuActive && s.rahuTitleActive]}>
+          <View style={[s.rahuCard, rahuActive && s.rahuCardActive]}>
+            <LinearGradient
+              colors={rahuActive
+                ? ['rgba(26,21,10,0.90)', 'rgba(80,20,20,0.25)', 'rgba(26,21,10,0.90)']
+                : ['rgba(26,21,10,0.90)', 'rgba(10,40,25,0.20)', 'rgba(26,21,10,0.90)']
+              }
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            {rahuActive && (
+              <Animated.View style={[s.rahuEdgeGlow, coronaPulseStyle]} />
+            )}
+
+            <View style={s.rahuCardTop}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <View style={[s.rahuIconCircle, rahuActive ? s.rahuIconCircleActive : s.rahuIconCircleSafe]}>
+                  <Animated.View style={rahuActive ? coronaPulseStyle : undefined}>
+                    <Ionicons
+                      name={rahuActive ? 'warning' : 'shield-checkmark'}
+                      size={20}
+                      color={rahuActive ? '#FCA5A5' : '#6EE7B7'}
+                    />
+                  </Animated.View>
+                </View>
+                <Text style={[s.rahuCardTitle, rahuActive && s.rahuCardTitleActive]}>
                   {rahuActive
-                    ? (language === 'si' ? '⚠ රාහු කාලය සක්‍රීයයි' : '⚠ Inauspicious Period Active')
-                    : (language === 'si' ? 'රාහු කාල' : 'Inauspicious Window')
+                    ? (language === 'si' ? '⚠ රාහු කාලය' : '⚠ Rahu Kala')
+                    : (language === 'si' ? 'රාහු කාලය' : 'Rahu Kala')
                   }
                 </Text>
-                <Text style={[s.rahuTime, { color: HT.textSec }, rahuActive && s.rahuTimeActive]}>
+              </View>
+              <View style={s.rahuStatusBadge}>
+                <Animated.View style={[s.rahuStatusDot, { backgroundColor: rahuActive ? '#EF4444' : '#34D399' }, rahuActive && coronaPulseStyle]} />
+                <Text style={[s.rahuStatusText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }]}>
                   {rahuActive
-                    ? (getRahuCountdown()
-                        ? (language === 'si' ? 'අවසන් වීමට ' + getRahuCountdown() : 'Ends in ' + getRahuCountdown())
-                        : (language === 'si' ? 'දැන් සක්‍රීයයි' : t('activeNow'))
-                      )
-                    : (data.rahuKalaya.startFormatted ? data.rahuKalaya.startFormatted.display : toSLT(data.rahuKalaya.start, t)) + ' – ' + (data.rahuKalaya.endFormatted ? data.rahuKalaya.endFormatted.display : toSLT(data.rahuKalaya.end, t))
+                    ? (language === 'si' ? 'සක්‍රීයයි' : 'ACTIVE')
+                    : (language === 'si' ? 'ආරක්ෂිතයි' : 'SAFE')
                   }
                 </Text>
               </View>
-              <Animated.View style={[s.rahuDotPulse, { backgroundColor: rahuActive ? '#EF4444' : '#34D399' }, rahuActive && coronaPulseStyle]} />
             </View>
-          </Animated.View>
+
+            <View style={[s.rahuTimeRow, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.06)' : 'rgba(0,0,0,0.15)' }]}>
+              <View style={s.rahuTimeBlock}>
+                <Text style={s.rahuTimeLabel}>{language === 'si' ? 'ආරම්භය' : 'Starts'}</Text>
+                <Text style={[s.rahuTimeValue, rahuActive && s.rahuTimeValueActive]}>
+                  {data.rahuKalaya.startFormatted ? data.rahuKalaya.startFormatted.display : toSLT(data.rahuKalaya.start, t)}
+                </Text>
+              </View>
+              <View style={[s.rahuTimeDivider, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.3)' : 'rgba(52,211,153,0.2)' }]} />
+              <View style={s.rahuTimeBlock}>
+                <Text style={s.rahuTimeLabel}>{language === 'si' ? 'අවසානය' : 'Ends'}</Text>
+                <Text style={[s.rahuTimeValue, rahuActive && s.rahuTimeValueActive]}>
+                  {data.rahuKalaya.endFormatted ? data.rahuKalaya.endFormatted.display : toSLT(data.rahuKalaya.end, t)}
+                </Text>
+              </View>
+            </View>
+
+            {getRahuCountdown() ? (
+              <View style={[s.rahuCountdownBar, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.12)' : 'rgba(52,211,153,0.08)' }]}>
+                <Ionicons name="time-outline" size={13} color={rahuActive ? '#FCA5A5' : '#6EE7B7'} />
+                <Text style={[s.rahuCountdownText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }]}>
+                  {rahuActive
+                    ? (language === 'si' ? 'අවසන් වීමට ' + getRahuCountdown() : 'Ends in ' + getRahuCountdown())
+                    : (language === 'si' ? 'ආරම්භයට ' + getRahuCountdown() : 'Starts in ' + getRahuCountdown())
+                  }
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={[s.rahuCardBorder, { borderColor: rahuActive ? 'rgba(239,68,68,0.25)' : 'rgba(52,211,153,0.15)' }]} />
+          </View>
         )}
-      </Animated.View>
+      </View>
     );
   }
 
@@ -909,13 +957,14 @@ export default function HomeScreen() {
     return (
       <Animated.View entering={FadeInDown.delay(550).springify()}>
         <View style={mp.card}>
-          {/* Elegant white card background */}
+          {/* Ancient parchment card background */}
           <LinearGradient
-            colors={[HT.bgCard, HT.bgSurface]}
+            colors={['#1A150A', '#15100A', '#0F0B06', '#12100B']}
+            locations={[0, 0.35, 0.7, 1]}
             style={[StyleSheet.absoluteFill, { borderRadius: 22 }]}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
-          {/* Subtle border glow */}
+          {/* Inner frame */}
           <View style={mp.cardBorder} />
 
           {/* Section title */}
@@ -1032,7 +1081,7 @@ export default function HomeScreen() {
     return (
       <Animated.View entering={FadeInDown.delay(680).springify()}>
         <View style={dr.card}>
-          <LinearGradient colors={[HT.bgCard, HT.bgSurface]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+          <LinearGradient colors={['#1A150A', '#15100A', '#0F0B06']} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
           <Text style={dr.title}>{language === 'si' ? 'දෛනික කේන්දර ශ්‍රේණිගත කිරීම්' : 'Daily horoscope ratings'}</Text>
           <View style={dr.grid}>
             {ratings.map(function (r, i) {
@@ -1072,7 +1121,7 @@ export default function HomeScreen() {
     return (
       <Animated.View entering={FadeInDown.delay(780).springify()}>
         <View style={ln.card}>
-          <LinearGradient colors={[HT.bgCard, HT.bgSurface]} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={['#1A150A', '#15100A', '#0F0B06']} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} />
           <SectionHeader title={language === 'si' ? 'අද වාසනාවන්ත අංක' : "Today's lucky numbers"} icon="🎯" delay={320} />
           <View style={ln.row}>
             {nums.map(function (n, i) {
@@ -1130,11 +1179,11 @@ export default function HomeScreen() {
     return (
       <Animated.View entering={FadeInDown.delay(850).springify()}>
         <View style={mn.card}>
-          <LinearGradient colors={[HT.purpleBg, 'transparent', HT.goldSubtle]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-          <LinearGradient colors={['rgba(183,166,240,0.10)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 18, borderTopRightRadius: 18 }} />
+          <LinearGradient colors={['#1A150A', '#12100B', 'rgba(218,165,32,0.04)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+          <LinearGradient colors={['rgba(218,165,32,0.06)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 18, borderTopRightRadius: 18 }} />
           <View style={mn.starRow}>
             <Text style={{ fontSize: 18 }}>✦</Text>
-            <Text style={[mn.headerLabel, { color: HT.purple }]}>{language === 'si' ? 'අද දිනයේ අදහස' : 'INTENTION OF THE DAY'}</Text>
+            <Text style={mn.headerLabel}>{language === 'si' ? 'අද දිනයේ අදහස' : 'INTENTION OF THE DAY'}</Text>
           </View>
           <Text style={mn.mantraText}>{language === 'si' ? mantrasSi[dayIdx] : mantrasEn[dayIdx]}</Text>
         </View>
@@ -1161,25 +1210,26 @@ export default function HomeScreen() {
         <TouchableOpacity activeOpacity={0.7} onPress={scrollToWeeklyLagna}>
           <View style={s.wbCard}>
             <LinearGradient
-              colors={[HT.purpleBg, 'rgba(139,126,200,0.04)', HT.purpleBg]}
+              colors={['#1A150A', '#15100A', '#0F0B06']}
+              locations={[0, 0.5, 1]}
               style={StyleSheet.absoluteFill}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             />
             {/* Subtle top shimmer */}
             <LinearGradient
-              colors={[HT.goldSubtle, 'transparent']}
+              colors={['rgba(218,165,32,0.06)', 'transparent']}
               style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}
             />
             {/* Decorative star dots */}
             {[[8, 15], [85, 20], [92, 70], [15, 75]].map(function (pos, i) {
-              return <View key={i} style={{ position: 'absolute', left: pos[0] + '%', top: pos[1] + '%', width: 2, height: 2, borderRadius: 1, backgroundColor: 'rgba(184,146,74,' + (0.12 + i * 0.04) + ')' }} />;
+              return <View key={i} style={{ position: 'absolute', left: pos[0] + '%', top: pos[1] + '%', width: 2, height: 2, borderRadius: 1, backgroundColor: 'rgba(218,165,32,' + (0.10 + i * 0.04) + ')' }} />;
             })}
 
             <View style={s.wbContent}>
               {/* Left: Icon + Text */}
               <View style={s.wbLeft}>
                 <View style={s.wbIconWrap}>
-                  <LinearGradient colors={[HT.purpleBg, 'rgba(139,126,200,0.05)']} style={StyleSheet.absoluteFill} />
+                  <LinearGradient colors={['rgba(218,165,32,0.08)', 'rgba(218,165,32,0.03)']} style={StyleSheet.absoluteFill} />
                   <Text style={{ fontSize: 22 }}>🔮</Text>
                 </View>
                 <View style={s.wbTextCol}>
@@ -1205,7 +1255,7 @@ export default function HomeScreen() {
 
               {/* Right: Arrow */}
               <View style={s.wbArrow}>
-                <Ionicons name="chevron-down" size={16} color={HT.purple} />
+                <Ionicons name="chevron-down" size={16} color="#DAA520" />
               </View>
             </View>
           </View>
@@ -1231,23 +1281,25 @@ export default function HomeScreen() {
 
     return (
       <Animated.View entering={FadeInDown.delay(300).springify()}>
-        <View style={[s.glassIdentity, { borderColor: HT.goldBorder, shadowColor: HT.shadow }]}>
-          <LinearGradient colors={[HT.bgCard, HT.bgSurface, HT.bgCard]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-          <LinearGradient colors={[HT.goldSubtle, 'transparent', HT.goldSubtle]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-          <LinearGradient colors={[HT.goldMuted, 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
+        <View style={s.glassIdentity}>
+          <LinearGradient colors={['#1A150A', '#15100A', '#0F0B06', '#12100B']} locations={[0, 0.3, 0.65, 1]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+          <LinearGradient colors={['rgba(218,165,32,0.06)', 'transparent', 'rgba(218,165,32,0.04)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+          <LinearGradient colors={['rgba(218,165,32,0.08)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
+          {/* Inner frame */}
+          <View style={{ position: 'absolute', top: 5, left: 5, right: 5, bottom: 5, borderRadius: 18, borderWidth: 0.5, borderColor: 'rgba(218,165,32,0.12)' }} />
 
           {/* Title */}
           <View style={s.glassIdHeader}>
             <Text style={s.glassIdIcon}>🌟</Text>
-            <Text style={[s.glassIdTitle, { color: HT.textGold }]}>{language === 'si' ? 'ඔබේ ග්‍රහ තත්ත්වය' : 'Your Cosmic Identity'}</Text>
+            <Text style={s.glassIdTitle}>{language === 'si' ? 'ඔබේ ග්‍රහ තත්ත්වය' : 'Your Cosmic Identity'}</Text>
           </View>
 
           {/* ═══ LAGNA HERO — Big featured card ═══ */}
-          <View style={[s.lagnaHero, { borderColor: HT.goldBorder }]}>
-            <LinearGradient colors={[HT.goldSubtle, HT.goldMuted]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+          <View style={s.lagnaHero}>
+            <LinearGradient colors={['rgba(218,165,32,0.06)', 'rgba(218,165,32,0.03)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
             <View style={s.lagnaHeroLeft}>
-              <View style={[s.lagnaSignBig, { borderColor: HT.goldBorder, backgroundColor: HT.bgCard }]}>
-                <LinearGradient colors={[HT.goldMuted, HT.goldSubtle]} style={StyleSheet.absoluteFillObject} />
+              <View style={s.lagnaSignBig}>
+                <LinearGradient colors={['rgba(218,165,32,0.08)', 'rgba(218,165,32,0.04)']} style={StyleSheet.absoluteFillObject} />
                 <Image source={ZODIAC_IMAGES[lagnaIdx]} style={s.lagnaSignImage} />
               </View>
             </View>
@@ -1915,14 +1967,14 @@ export default function HomeScreen() {
   return (
     <DesktopScreenWrapper routeName="index">
       <View style={{ flex: 1, backgroundColor: HT.bg }}>
+        <CosmicBackground reduced={reduced} lowEnd={lowEnd} variant="golden" />
         <Animated.ScrollView
           ref={scrollRef}
-          style={[s.flex, { backgroundColor: HT.bg }]}
+          style={[s.flex, { backgroundColor: 'transparent' }]}
           contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]}
           showsVerticalScrollIndicator={false}
           overScrollMode="never"
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
+
           refreshControl={
             <RefreshControl
               refreshing={loading}
@@ -1956,9 +2008,9 @@ export default function HomeScreen() {
               {renderGreeting()}
 
               {/* Zodiac Wheel Hero */}
-              <Animated.View style={heroParallax}>
+              <View>
                 {renderZodiacHero()}
-              </Animated.View>
+              </View>
 
               {/* Today's Sky is now in the hero dashboard */}
 
@@ -2052,23 +2104,39 @@ var s = StyleSheet.create({
   },
   dateText: { color: '#FFD666', fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
 
-  // Dashboard Hero
+  // Dashboard Hero — Ancient Mystery
   dashHero: {
-    borderRadius: 28, overflow: 'hidden', marginBottom: 12,
-    borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)',
-    ...boxShadow('#FF8C00', { width: 0, height: 8 }, 0.25, 28), elevation: 12,
+    borderRadius: 24, overflow: 'hidden', marginBottom: 12,
+    borderWidth: 1.5, borderColor: 'rgba(218,165,32,0.35)',
+    ...boxShadow('rgba(180,140,40,0.40)', { width: 0, height: 6 }, 0.35, 24), elevation: 14,
   },
-  dashHeroBg: { ...StyleSheet.absoluteFillObject, borderRadius: 28 },
+  dashHeroBg: { ...StyleSheet.absoluteFillObject, borderRadius: 24 },
   dashGlassShine: {
     position: 'absolute', top: 0, left: 0, right: 0, height: 1.5,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+  },
+  dashBottomShine: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 1,
+    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
+  },
+  dashMysticGlowTR: {
+    position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: 60,
+    backgroundColor: 'rgba(218,165,32,0.06)',
+  },
+  dashMysticGlowBL: {
+    position: 'absolute', bottom: -20, left: -20, width: 100, height: 100, borderRadius: 50,
+    backgroundColor: 'rgba(180,140,40,0.05)',
   },
   dashNebulaBlob: {
     position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: 90,
-    backgroundColor: 'rgba(255,140,0,0.10)',
+    backgroundColor: 'rgba(180,140,40,0.08)',
+  },
+  dashInnerFrame: {
+    position: 'absolute', top: 6, left: 6, right: 6, bottom: 6,
+    borderRadius: 18, borderWidth: 0.5, borderColor: 'rgba(218,165,32,0.15)',
   },
   dashEdgeTop: {
-    position: 'absolute', top: 0, left: 0, right: 0, height: 1.5, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    position: 'absolute', top: 0, left: 0, right: 0, height: 1.5, borderTopLeftRadius: 24, borderTopRightRadius: 24,
   },
 
   // Rashi Chakra Hero
@@ -2118,66 +2186,101 @@ var s = StyleSheet.create({
   chakraSignSubBadge: {
     paddingHorizontal: 8, paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,184,0,0.08)',
-    borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)',
+    backgroundColor: 'rgba(218,165,32,0.08)',
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.18)',
   },
 
-  dashHeroLabel: { color: 'rgba(196,181,253,0.55)', fontSize: 10, fontWeight: '800', letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 },
-  dashSignNameLarge: { color: '#FFF1D0', fontSize: 32, fontWeight: '900', letterSpacing: -0.3, lineHeight: 38, ...textShadow('rgba(255,184,0,0.35)', { width: 0, height: 1 }, 12) },
-  dashSignNameSub: { color: 'rgba(255,214,102,0.65)', fontSize: 12, fontWeight: '700' },
+  dashHeroLabel: { color: 'rgba(218,165,32,0.50)', fontSize: 10, fontWeight: '800', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 4 },
+  dashSignNameLarge: { color: '#F4E4BC', fontSize: 32, fontWeight: '900', letterSpacing: -0.3, lineHeight: 38, ...textShadow('rgba(218,165,32,0.45)', { width: 0, height: 1 }, 14) },
+  dashSignNameSub: { color: 'rgba(218,165,32,0.60)', fontSize: 12, fontWeight: '700' },
   nakPill: {
     flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center',
     marginBottom: 12, paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1, borderColor: 'rgba(183,166,240,0.18)',
-    overflow: 'hidden',
+    borderRadius: 20, borderWidth: 1, borderColor: 'rgba(218,165,32,0.22)',
+    overflow: 'hidden', backgroundColor: 'rgba(218,165,32,0.04)',
   },
-  nakPillLabel: { color: 'rgba(196,181,253,0.65)', fontSize: 11, fontWeight: '700' },
-  nakPillDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(183,166,240,0.40)' },
-  nakPillValue: { color: '#D4C7FF', fontSize: 14, fontWeight: '800' },
+  nakPillLabel: { color: 'rgba(218,165,32,0.55)', fontSize: 11, fontWeight: '700' },
+  nakPillDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(218,165,32,0.45)' },
+  nakPillValue: { color: '#DAA520', fontSize: 14, fontWeight: '800' },
   dashDivider: { height: 1, marginHorizontal: 16, overflow: 'hidden' },
-  dashGridTitle: { color: 'rgba(196,181,253,0.50)', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', textAlign: 'center', marginTop: 12, marginBottom: -4 },
+  dashGridTitle: { color: 'rgba(218,165,32,0.45)', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center', marginTop: 12, marginBottom: -4 },
   dashGrid: {
     flexDirection: 'row', paddingHorizontal: 8, paddingTop: 16, paddingBottom: 16, gap: 4,
   },
   dashCell: {
     flex: 1, alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 4,
-    borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.025)',
+    borderRadius: 14, backgroundColor: 'rgba(218,165,32,0.03)',
+    borderWidth: 0.5, borderColor: 'rgba(218,165,32,0.08)',
     overflow: 'hidden',
   },
   dashCellIcon: {
     width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
   },
-  dashCellValue: { color: '#FFF1D0', fontSize: 11, fontWeight: '800', textAlign: 'center', paddingHorizontal: 2 },
-  dashCellLabel: { color: 'rgba(196,181,253,0.40)', fontSize: 10, fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 },
+  dashCellValue: { color: '#F4E4BC', fontSize: 11, fontWeight: '800', textAlign: 'center', paddingHorizontal: 2 },
+  dashCellLabel: { color: 'rgba(218,165,32,0.40)', fontSize: 10, fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  rahuStrip: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    marginTop: 8, borderRadius: 16, overflow: 'hidden',
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: 'rgba(52,211,153,0.06)',
-    borderWidth: 1, borderColor: 'rgba(52,211,153,0.15)',
+  // ═══ Rahu Kalaya Card ═══
+  rahuCard: {
+    marginTop: 12, borderRadius: 20, overflow: 'hidden',
+    paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16,
+    borderWidth: 1.5, borderColor: 'rgba(218,165,32,0.18)',
   },
-  rahuStripActive: {
-    backgroundColor: 'rgba(239,68,68,0.08)',
-    borderColor: 'rgba(239,68,68,0.30)',
-    ...boxShadow('#EF4444', { width: 0, height: 2 }, 0.30, 12), elevation: 6,
+  rahuCardActive: {
+    ...boxShadow('#EF4444', { width: 0, height: 4 }, 0.35, 20), elevation: 8,
   },
-  rahuIconWrap: {
-    width: 36, height: 36, borderRadius: 12,
+  rahuEdgeGlow: {
+    position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
+    borderRadius: 22, borderWidth: 2, borderColor: 'rgba(239,68,68,0.30)',
+  },
+  rahuCardBorder: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    borderRadius: 20, borderWidth: 1,
+  },
+  rahuCardTop: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  rahuIconCircle: {
+    width: 38, height: 38, borderRadius: 19,
     alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5,
+  },
+  rahuIconCircleSafe: {
     backgroundColor: 'rgba(52,211,153,0.10)',
-    borderWidth: 1, borderColor: 'rgba(52,211,153,0.20)',
+    borderColor: 'rgba(52,211,153,0.25)',
   },
-  rahuIconWrapActive: {
+  rahuIconCircleActive: {
     backgroundColor: 'rgba(239,68,68,0.12)',
-    borderColor: 'rgba(239,68,68,0.30)',
+    borderColor: 'rgba(239,68,68,0.35)',
   },
-  rahuContent: { flex: 1 },
-  rahuTitle: { color: 'rgba(138,168,224,0.65)', fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
-  rahuTitleActive: { color: '#FCA5A5', fontWeight: '800', fontSize: 14 },
-  rahuTime: { color: 'rgba(138,168,224,0.55)', fontSize: 14, fontWeight: '600', marginTop: 2 },
-  rahuTimeActive: { color: '#FF8A8A', fontWeight: '700', fontSize: 14 },
-  rahuDotPulse: { width: 10, height: 10, borderRadius: 5 },
+  rahuStatusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
+    backgroundColor: 'rgba(218,165,32,0.06)',
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.15)',
+  },
+  rahuStatusDot: { width: 7, height: 7, borderRadius: 4 },
+  rahuStatusText: { fontSize: 11, fontWeight: '900', letterSpacing: 1.5 },
+  rahuCardTitle: {
+    fontSize: 15, fontWeight: '900', color: '#A7F3D0',
+    letterSpacing: 0.3,
+  },
+  rahuCardTitleActive: { color: '#FCA5A5' },
+  rahuTimeRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: 12, overflow: 'hidden',
+    marginTop: 10, marginBottom: 8,
+  },
+  rahuTimeBlock: { flex: 1, alignItems: 'center', paddingVertical: 10 },
+  rahuTimeLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 3, color: 'rgba(218,165,32,0.45)' },
+  rahuTimeValue: { fontSize: 16, fontWeight: '900', letterSpacing: 0.5, color: '#F4E4BC' },
+  rahuTimeValueActive: { color: '#FCA5A5' },
+  rahuTimeDivider: { width: 1, height: 32, borderRadius: 1 },
+  rahuCountdownBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 8, borderRadius: 10,
+  },
+  rahuCountdownText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5, color: '#F4E4BC' },
 
   // Sky Grid
   skyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -2186,9 +2289,9 @@ var s = StyleSheet.create({
     width: 36, height: 36, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, marginBottom: 8,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: 'rgba(218,165,32,0.03)',
   },
-  statMiniValue: { fontSize: 16, fontWeight: '800', color: '#FFF1D0' },
+  statMiniValue: { fontSize: 16, fontWeight: '800', color: '#F4E4BC' },
   statMiniLabel: { fontSize: 11, color: Colors.textMuted, fontWeight: '600', marginTop: 2 },
 
   // Quick Actions
@@ -2196,37 +2299,38 @@ var s = StyleSheet.create({
   quickPill: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.15)',
     overflow: 'hidden',
   },
   quickPillBg: { ...StyleSheet.absoluteFillObject, borderRadius: 999 },
-  quickPillLabel: { color: '#FFF1D0', fontSize: 14, fontWeight: '800', letterSpacing: 0.3 },
+  quickPillLabel: { color: '#F4E4BC', fontSize: 14, fontWeight: '800', letterSpacing: 0.3 },
 
   // Glass Cosmic Identity
   glassIdentity: {
-    borderRadius: 28, overflow: 'hidden', marginBottom: 16,
-    borderWidth: 1, borderColor: 'rgba(255,184,0,0.14)',
-    ...boxShadow('#FF8C00', { width: 0, height: 6 }, 0.18, 20), elevation: 10,
+    borderRadius: 24, overflow: 'hidden', marginBottom: 16,
+    borderWidth: 1.5, borderColor: 'rgba(218,165,32,0.25)',
+    ...boxShadow('rgba(180,140,40,0.25)', { width: 0, height: 6 }, 0.18, 20), elevation: 10,
   },
   glassIdHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
   },
   glassIdIcon: { fontSize: 18 },
-  glassIdTitle: { color: '#FFE8B0', fontSize: 16, fontWeight: '800', letterSpacing: 0.5, ...textShadow('rgba(255,184,0,0.20)', { width: 0, height: 1 }, 6) },
+  glassIdTitle: { color: '#F4E4BC', fontSize: 16, fontWeight: '800', letterSpacing: 0.5, ...textShadow('rgba(218,165,32,0.25)', { width: 0, height: 1 }, 6) },
 
   // Lagna Hero
   lagnaHero: {
     flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 16,
-    borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,140,0,0.22)',
+    borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(218,165,32,0.20)',
     padding: 16, gap: 16,
   },
   lagnaHeroLeft: { alignItems: 'center' },
   lagnaSignBig: {
     width: 110, height: 110, borderRadius: 32, overflow: 'hidden',
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2.5, borderColor: 'rgba(255,184,0,0.60)',
-    ...boxShadow('rgba(255,184,0,0.25)', { width: 0, height: 0 }, 0.9, 24),
+    borderWidth: 2, borderColor: 'rgba(218,165,32,0.45)',
+    backgroundColor: 'rgba(26,21,10,0.60)',
+    ...boxShadow('rgba(218,165,32,0.20)', { width: 0, height: 0 }, 0.9, 24),
   },
   lagnaSignEmoji: {
     fontSize: 48, ...textShadow('rgba(255,214,102,0.9)', { width: 0, height: 0 }, 24),
@@ -2236,54 +2340,54 @@ var s = StyleSheet.create({
   },
   lagnaHeroRight: { flex: 1 },
   lagnaHeroLabel: {
-    color: 'rgba(196,181,253,0.55)', fontSize: 11, fontWeight: '700',
+    color: 'rgba(218,165,32,0.50)', fontSize: 11, fontWeight: '700',
     letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 4,
   },
-  lagnaHeroName: { color: '#FFB800', fontSize: 32, fontWeight: '900', letterSpacing: -0.3, ...textShadow('rgba(255,184,0,0.40)', { width: 0, height: 1 }, 12) },
-  lagnaHeroSub: { color: 'rgba(196,181,253,0.60)', fontSize: 14, fontWeight: '600', marginTop: 2 },
+  lagnaHeroName: { color: '#DAA520', fontSize: 32, fontWeight: '900', letterSpacing: -0.3, ...textShadow('rgba(218,165,32,0.40)', { width: 0, height: 1 }, 12) },
+  lagnaHeroSub: { color: 'rgba(218,165,32,0.55)', fontSize: 14, fontWeight: '600', marginTop: 2 },
   lagnaLordPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8,
-    alignSelf: 'flex-start', backgroundColor: 'rgba(255,184,0,0.08)',
+    alignSelf: 'flex-start', backgroundColor: 'rgba(218,165,32,0.06)',
     borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4,
-    borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)',
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.15)',
   },
-  lagnaLordText: { color: '#FFB800', fontSize: 11, fontWeight: '700' },
+  lagnaLordText: { color: '#DAA520', fontSize: 11, fontWeight: '700' },
 
   // Glass Trio Row
   glassTrioRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 16 },
   glassTrioCard: {
     flex: 1, borderRadius: 16, overflow: 'hidden', padding: 12,
     alignItems: 'center', borderWidth: 1, gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: 'rgba(218,165,32,0.03)', borderColor: 'rgba(218,165,32,0.10)',
   },
   glassTrioEmoji: { fontSize: 18, marginBottom: 2 },
   glassTrioLabel: {
-    color: 'rgba(196,181,253,0.50)', fontSize: 10, fontWeight: '700',
+    color: 'rgba(218,165,32,0.50)', fontSize: 10, fontWeight: '700',
     letterSpacing: 1, textTransform: 'uppercase',
   },
   glassTrioValue: { fontSize: 14, fontWeight: '800', textAlign: 'center' },
 
   // Palapala
-  palapalaText: { color: 'rgba(232,224,255,0.65)', fontSize: 14, lineHeight: 24, marginBottom: 16 },
+  palapalaText: { color: 'rgba(244,228,188,0.65)', fontSize: 14, lineHeight: 24, marginBottom: 16 },
   traitsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   traitChip: {
-    backgroundColor: 'rgba(124,58,237,0.10)', paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 999, borderWidth: 1, borderColor: 'rgba(124,58,237,0.20)',
+    backgroundColor: 'rgba(218,165,32,0.08)', paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 999, borderWidth: 1, borderColor: 'rgba(218,165,32,0.18)',
   },
-  traitText: { color: '#B7A6F0', fontSize: 12, fontWeight: '600' },
+  traitText: { color: '#DAA520', fontSize: 12, fontWeight: '600' },
   luckyRow: { flexDirection: 'row', gap: 8 },
   luckyItem: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: 'rgba(255,184,0,0.06)', borderRadius: 12, padding: 8,
-    borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)',
+    backgroundColor: 'rgba(218,165,32,0.05)', borderRadius: 12, padding: 8,
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.12)',
   },
-  luckyLabel: { color: '#FFD666', fontSize: 12, fontWeight: '600', flex: 1 },
+  luckyLabel: { color: '#F4E4BC', fontSize: 12, fontWeight: '600', flex: 1 },
 
   // Personality
   personalityWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   personalityPill: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)', paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: 'rgba(218,165,32,0.04)', paddingHorizontal: 14, paddingVertical: 8,
     borderRadius: 999, borderWidth: 1,
   },
   personalityText: { fontSize: 12, fontWeight: '700' },
@@ -2293,7 +2397,7 @@ var s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     marginBottom: 6, paddingHorizontal: 2,
   },
-  pTapHint: { color: 'rgba(183,166,240,0.30)', fontSize: 11, fontWeight: '500', fontStyle: 'italic' },
+  pTapHint: { color: 'rgba(218,165,32,0.30)', fontSize: 11, fontWeight: '500', fontStyle: 'italic' },
   pRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border, gap: 10,
@@ -2305,43 +2409,43 @@ var s = StyleSheet.create({
   pLabelWrap: { width: 85 },
   pDot: { width: 6, height: 6, borderRadius: 3 },
   pLabel: { fontSize: 14, fontWeight: '700' },
-  pHintText: { fontSize: 10, color: 'rgba(183,166,240,0.30)', fontWeight: '500', marginTop: 1 },
-  pValue: { fontSize: 14, color: '#E8E0FF', fontWeight: '700' },
+  pHintText: { fontSize: 10, color: 'rgba(218,165,32,0.30)', fontWeight: '500', marginTop: 1 },
+  pValue: { fontSize: 14, color: '#F4E4BC', fontWeight: '700' },
   pSinhala: { fontSize: 14, color: Colors.textMuted, marginTop: 2 },
   pExplainBox: {
     borderRadius: 12, padding: 16, marginBottom: 8,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(218,165,32,0.03)',
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.08)',
     overflow: 'hidden', position: 'relative',
   },
   pExplainAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, borderRadius: 2 },
   pExplainText: {
-    color: 'rgba(232,224,255,0.60)', fontSize: 14, lineHeight: 22, fontWeight: '500',
+    color: 'rgba(244,228,188,0.55)', fontSize: 14, lineHeight: 22, fontWeight: '500',
     paddingLeft: 8,
   },
 
   // Auspicious
   auspRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
   auspBar: { width: 3, height: 24, borderRadius: 2 },
-  auspName: { fontSize: 14, color: '#E8E0FF', fontWeight: '700' },
+  auspName: { fontSize: 14, color: '#F4E4BC', fontWeight: '700' },
   auspSinhala: { fontSize: 14, color: Colors.textMuted, marginTop: 2 },
   auspTime: { flexDirection: 'row' },
   auspTimeText: { fontSize: 14, color: '#34D399', fontWeight: '700', letterSpacing: 0.3 },
 
   // No Birth Data
-  noBirthTitle: { color: '#FFE8B0', fontSize: 24, fontWeight: '900', textAlign: 'center', marginBottom: 10, ...textShadow('rgba(255,184,0,0.30)', { width: 0, height: 1 }, 10) },
+  noBirthTitle: { color: '#F4E4BC', fontSize: 24, fontWeight: '900', textAlign: 'center', marginBottom: 10, ...textShadow('rgba(218,165,32,0.30)', { width: 0, height: 1 }, 10) },
   noBirthBody: { color: Colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 16, paddingHorizontal: 8 },
   noBirthCta: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 24, paddingVertical: 16, borderRadius: 999, overflow: 'hidden',
-    ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 16), elevation: 0,
+    ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 16),
   },
   noBirthCtaText: { color: '#FFF1D0', fontSize: 14, fontWeight: '800', letterSpacing: 0.5 },
 
   // Weekly Palapala Banner
   wbCard: {
     borderRadius: 20, overflow: 'hidden', marginBottom: 16,
-    borderWidth: 1, borderColor: 'rgba(168,85,247,0.25)',
+    borderWidth: 1.5, borderColor: 'rgba(218,165,32,0.22)',
     paddingVertical: 16, paddingHorizontal: 16,
   },
   wbContent: {
@@ -2351,19 +2455,19 @@ var s = StyleSheet.create({
   wbIconWrap: {
     width: 48, height: 48, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-    borderWidth: 1, borderColor: 'rgba(168,85,247,0.30)',
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.25)',
   },
   wbTextCol: { flex: 1 },
-  wbTitle: { color: '#E0CFFF', fontSize: 14, fontWeight: '800', letterSpacing: 0.2 },
-  wbWeek: { color: 'rgba(168,85,247,0.55)', fontSize: 10, fontWeight: '600', marginTop: 2 },
-  wbSub: { color: 'rgba(168,85,247,0.45)', fontSize: 11, fontWeight: '500', marginTop: 3 },
+  wbTitle: { color: '#F4E4BC', fontSize: 14, fontWeight: '800', letterSpacing: 0.2 },
+  wbWeek: { color: 'rgba(218,165,32,0.50)', fontSize: 10, fontWeight: '600', marginTop: 2 },
+  wbSub: { color: 'rgba(218,165,32,0.40)', fontSize: 11, fontWeight: '500', marginTop: 3 },
   wbTeaser: { marginTop: 3 },
-  wbTeaserText: { color: 'rgba(196,181,253,0.60)', fontSize: 11, fontWeight: '600' },
+  wbTeaserText: { color: 'rgba(218,165,32,0.55)', fontSize: 11, fontWeight: '600' },
   wbArrow: {
     width: 32, height: 32, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(168,85,247,0.10)',
-    borderWidth: 1, borderColor: 'rgba(168,85,247,0.18)',
+    backgroundColor: 'rgba(218,165,32,0.08)',
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.18)',
   },
 
   // Weekly Lagna Palapala
@@ -2372,21 +2476,21 @@ var s = StyleSheet.create({
     marginBottom: 16,
   },
   wlHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  wlTitle: { color: '#FFE8B0', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
-  wlWeekLabel: { color: 'rgba(255,214,102,0.45)', fontSize: 11, fontWeight: '600', marginTop: 1 },
+  wlTitle: { color: '#F4E4BC', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
+  wlWeekLabel: { color: 'rgba(218,165,32,0.45)', fontSize: 11, fontWeight: '600', marginTop: 1 },
   wlGrid: { gap: 8 },
   wlCard: {
     borderRadius: 16, overflow: 'hidden',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.08)',
+    backgroundColor: 'rgba(218,165,32,0.02)',
     paddingHorizontal: 12, paddingVertical: 8,
   },
   wlCardUser: {
-    borderColor: 'rgba(255,184,0,0.30)',
-    ...boxShadow('#FFB800', { width: 0, height: 2 }, 0.15, 8), elevation: 4,
+    borderColor: 'rgba(218,165,32,0.30)',
+    ...boxShadow('#DAA520', { width: 0, height: 2 }, 0.15, 8), elevation: 4,
   },
   wlCardExpanded: {
-    borderColor: 'rgba(255,214,102,0.20)',
+    borderColor: 'rgba(218,165,32,0.20)',
     borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
   },
   wlCardRow: {
@@ -2401,14 +2505,14 @@ var s = StyleSheet.create({
   wlSignImage: { width: 42, height: 42, resizeMode: 'contain' },
   wlCardInfo: { flex: 1 },
   wlNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  wlSignName: { color: '#FFF1D0', fontSize: 16, fontWeight: '800' },
-  wlSignNameSub: { color: 'rgba(255,214,102,0.40)', fontSize: 12, fontWeight: '600', marginTop: 1 },
+  wlSignName: { color: '#F4E4BC', fontSize: 16, fontWeight: '800' },
+  wlSignNameSub: { color: 'rgba(218,165,32,0.40)', fontSize: 12, fontWeight: '600', marginTop: 1 },
   wlYouBadge: {
-    backgroundColor: 'rgba(255,184,0,0.20)', borderRadius: 6,
+    backgroundColor: 'rgba(218,165,32,0.15)', borderRadius: 6,
     paddingHorizontal: 6, paddingVertical: 2,
-    borderWidth: 1, borderColor: 'rgba(255,184,0,0.35)',
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.30)',
   },
-  wlYouText: { color: '#FFB800', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
+  wlYouText: { color: '#DAA520', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
   wlOutlookPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 8, paddingVertical: 4,
@@ -2419,7 +2523,7 @@ var s = StyleSheet.create({
     overflow: 'hidden', borderRadius: 16,
     borderTopLeftRadius: 0, borderTopRightRadius: 0,
     borderWidth: 1, borderTopWidth: 0,
-    borderColor: 'rgba(255,214,102,0.12)',
+    borderColor: 'rgba(218,165,32,0.12)',
     padding: 16, gap: 12,
     marginBottom: 4,
   },
@@ -2428,32 +2532,32 @@ var s = StyleSheet.create({
   },
   wlLordChip: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12,
+    backgroundColor: 'rgba(218,165,32,0.03)', borderRadius: 12,
     paddingVertical: 8, paddingHorizontal: 8, minHeight: 48,
-    borderWidth: 1, borderColor: 'rgba(255,214,102,0.10)',
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.10)',
   },
-  wlLordLabel: { color: 'rgba(196,181,253,0.40)', fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
-  wlLordValue: { color: '#E8E0FF', fontSize: 11, fontWeight: '800', marginTop: 2, textAlign: 'center', numberOfLines: 1 },
+  wlLordLabel: { color: 'rgba(218,165,32,0.40)', fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
+  wlLordValue: { color: '#F4E4BC', fontSize: 11, fontWeight: '800', marginTop: 2, textAlign: 'center', numberOfLines: 1 },
   wlOverallBox: {
-    backgroundColor: 'rgba(167,139,250,0.06)', borderRadius: 12,
+    backgroundColor: 'rgba(218,165,32,0.04)', borderRadius: 12,
     padding: 12, gap: 6,
-    borderWidth: 1, borderColor: 'rgba(167,139,250,0.12)',
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.10)',
   },
   wlTransitBox: {
-    backgroundColor: 'rgba(129,140,248,0.06)', borderRadius: 12,
+    backgroundColor: 'rgba(160,120,40,0.05)', borderRadius: 12,
     padding: 12, gap: 6,
-    borderWidth: 1, borderColor: 'rgba(129,140,248,0.10)',
+    borderWidth: 1, borderColor: 'rgba(160,120,40,0.10)',
   },
   wlRemedyBox: {
-    backgroundColor: 'rgba(45,212,191,0.06)', borderRadius: 12,
+    backgroundColor: 'rgba(140,160,80,0.05)', borderRadius: 12,
     padding: 12, gap: 6,
-    borderWidth: 1, borderColor: 'rgba(45,212,191,0.10)',
+    borderWidth: 1, borderColor: 'rgba(140,160,80,0.10)',
   },
-  wlDetailText: { color: 'rgba(232,224,255,0.70)', fontSize: 14, lineHeight: 22 },
+  wlDetailText: { color: 'rgba(244,228,188,0.65)', fontSize: 14, lineHeight: 22 },
   wlSection: { gap: 4 },
   wlSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  wlSectionTitle: { color: 'rgba(196,181,253,0.60)', fontSize: 11, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
-  wlSectionBody: { color: 'rgba(232,224,255,0.60)', fontSize: 14, lineHeight: 22 },
+  wlSectionTitle: { color: 'rgba(218,165,32,0.55)', fontSize: 11, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
+  wlSectionBody: { color: 'rgba(244,228,188,0.55)', fontSize: 14, lineHeight: 22 },
   wlAdvice: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
     backgroundColor: 'rgba(255,184,0,0.06)', borderRadius: 12,
@@ -2476,25 +2580,26 @@ var s = StyleSheet.create({
 // ── Moon Phase Styles ──
 var mp = StyleSheet.create({
   card: {
-    borderRadius: 28, overflow: 'hidden', marginBottom: 16,
+    borderRadius: 24, overflow: 'hidden', marginBottom: 16,
     paddingBottom: 24, position: 'relative',
+    borderWidth: 1.5, borderColor: 'rgba(218,165,32,0.25)',
   },
   cardBorder: {
-    ...StyleSheet.absoluteFillObject, borderRadius: 28,
-    borderWidth: 1, borderColor: 'rgba(167,139,250,0.15)',
+    position: 'absolute', top: 5, left: 5, right: 5, bottom: 5, borderRadius: 18,
+    borderWidth: 0.5, borderColor: 'rgba(218,165,32,0.12)',
   },
   headerRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4,
   },
   sectionTitle: {
-    color: '#E8E0FF', fontSize: 20, fontWeight: '900', letterSpacing: 0.3,
+    color: '#F4E4BC', fontSize: 20, fontWeight: '900', letterSpacing: 0.3,
   },
   timelineBadge: {
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12,
-    backgroundColor: 'rgba(167,139,250,0.10)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.18)',
+    backgroundColor: 'rgba(218,165,32,0.08)', borderWidth: 1, borderColor: 'rgba(218,165,32,0.18)',
   },
-  timelineBadgeText: { color: 'rgba(196,181,253,0.60)', fontSize: 10, fontWeight: '700' },
+  timelineBadgeText: { color: 'rgba(218,165,32,0.55)', fontSize: 10, fontWeight: '700' },
 
   // ── Timeline scroll ──
   timelineScroll: { paddingHorizontal: 12, paddingVertical: 12, gap: 0 },
@@ -2502,12 +2607,12 @@ var mp = StyleSheet.create({
     width: 58, alignItems: 'center', paddingVertical: 8, borderRadius: 16,
   },
   tlItemSelected: {
-    backgroundColor: 'rgba(167,139,250,0.10)',
-    borderWidth: 1, borderColor: 'rgba(167,139,250,0.25)',
+    backgroundColor: 'rgba(218,165,32,0.08)',
+    borderWidth: 1, borderColor: 'rgba(218,165,32,0.22)',
   },
-  tlDayName: { color: 'rgba(196,181,253,0.30)', fontSize: 10, fontWeight: '600', marginBottom: 8 },
-  tlDayNameActive: { color: 'rgba(196,181,253,0.80)', fontWeight: '800' },
-  tlDayNameToday: { color: '#A78BFA' },
+  tlDayName: { color: 'rgba(218,165,32,0.30)', fontSize: 10, fontWeight: '600', marginBottom: 8 },
+  tlDayNameActive: { color: 'rgba(218,165,32,0.80)', fontWeight: '800' },
+  tlDayNameToday: { color: '#DAA520' },
   tlMoonWrap: {
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center', position: 'relative',
@@ -2517,33 +2622,33 @@ var mp = StyleSheet.create({
   },
   tlMoonGlow: {
     ...StyleSheet.absoluteFillObject, borderRadius: 22,
-    backgroundColor: 'rgba(167,139,250,0.15)',
-    shadowColor: '#A78BFA', shadowOffset: { width: 0, height: 0 },
+    backgroundColor: 'rgba(218,165,32,0.12)',
+    shadowColor: '#DAA520', shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6, shadowRadius: 12, elevation: 0,
   },
-  tlDateNum: { color: 'rgba(196,181,253,0.35)', fontSize: 11, fontWeight: '700', marginTop: 4 },
-  tlDateNumActive: { color: '#C4B5FD', fontWeight: '900', fontSize: 14 },
+  tlDateNum: { color: 'rgba(218,165,32,0.35)', fontSize: 11, fontWeight: '700', marginTop: 4 },
+  tlDateNumActive: { color: '#F4E4BC', fontWeight: '900', fontSize: 14 },
   tlTodayDot: {
-    width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#A78BFA',
+    width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#DAA520',
     marginTop: 3,
-    shadowColor: '#A78BFA', shadowOffset: { width: 0, height: 0 },
+    shadowColor: '#DAA520', shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1, shadowRadius: 4, elevation: 0,
   },
   tlKeyPhaseDot: {
-    width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(251,191,36,0.6)',
+    width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(218,165,32,0.5)',
     marginTop: 3,
   },
 
   // ── Divider ──
   divider: {
-    height: 1, backgroundColor: 'rgba(167,139,250,0.08)',
+    height: 1, backgroundColor: 'rgba(218,165,32,0.10)',
     marginHorizontal: 20, marginVertical: 4,
   },
 
   // ── Central section ──
   centralSection: { alignItems: 'center', paddingTop: 8 },
   selectedDateLabel: {
-    color: 'rgba(196,181,253,0.50)', fontSize: 11, fontWeight: '700',
+    color: 'rgba(218,165,32,0.50)', fontSize: 11, fontWeight: '700',
     letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4,
   },
   moonWrap: { alignItems: 'center', marginVertical: 8 },
@@ -2553,12 +2658,12 @@ var mp = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 30, elevation: 10,
   },
   phaseName: {
-    color: '#E8E0FF', fontSize: 24, fontWeight: '900', textAlign: 'center',
+    color: '#F4E4BC', fontSize: 24, fontWeight: '900', textAlign: 'center',
     letterSpacing: 0.5, marginTop: 4,
-    ...textShadow('rgba(167,139,250,0.40)', { width: 0, height: 2 }, 12),
+    ...textShadow('rgba(218,165,32,0.40)', { width: 0, height: 2 }, 12),
   },
   phaseDesc: {
-    color: 'rgba(196,181,253,0.55)', fontSize: 12, fontWeight: '500', textAlign: 'center',
+    color: 'rgba(218,165,32,0.50)', fontSize: 12, fontWeight: '500', textAlign: 'center',
     lineHeight: 20, marginTop: 8, marginHorizontal: 28,
   },
 
@@ -2568,30 +2673,30 @@ var mp = StyleSheet.create({
     alignSelf: 'center', marginTop: 14, width: '70%',
   },
   illumBarTrack: {
-    flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(167,139,250,0.08)',
+    flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(218,165,32,0.10)',
     overflow: 'hidden',
   },
   illumBarFill: { height: '100%', borderRadius: 2, overflow: 'hidden' },
-  illumBarLabel: { color: 'rgba(196,181,253,0.70)', fontSize: 12, fontWeight: '800', minWidth: 36, textAlign: 'right' },
+  illumBarLabel: { color: 'rgba(218,165,32,0.65)', fontSize: 12, fontWeight: '800', minWidth: 36, textAlign: 'right' },
 });
 
 // ── Daily Ratings Styles ──
 var dr = StyleSheet.create({
   card: {
-    borderRadius: 28, overflow: 'hidden', marginBottom: 16,
-    borderWidth: 1, borderColor: 'rgba(183,166,240,0.12)',
+    borderRadius: 24, overflow: 'hidden', marginBottom: 16,
+    borderWidth: 1.5, borderColor: 'rgba(218,165,32,0.22)',
     padding: 24,
-    ...boxShadow('#7C5BD6', { width: 0, height: 6 }, 0.12, 20), elevation: 8,
+    ...boxShadow('rgba(180,140,40,0.20)', { width: 0, height: 6 }, 0.12, 20), elevation: 8,
   },
   title: {
-    color: '#E8E0FF', fontSize: 20, fontWeight: '900', textAlign: 'center',
+    color: '#F4E4BC', fontSize: 20, fontWeight: '900', textAlign: 'center',
     marginBottom: 20, letterSpacing: 0.3,
-    ...textShadow('rgba(183,166,240,0.20)', { width: 0, height: 1 }, 6),
+    ...textShadow('rgba(218,165,32,0.25)', { width: 0, height: 1 }, 6),
   },
   grid: { gap: 14 },
   item: { gap: 6 },
   labelRow: { flexDirection: 'row', alignItems: 'center' },
-  label: { color: 'rgba(232,224,255,0.70)', fontSize: 14, fontWeight: '700' },
+  label: { color: 'rgba(244,228,188,0.70)', fontSize: 14, fontWeight: '700' },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   scoreBadge: {
     width: 34, height: 22, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
@@ -2599,7 +2704,7 @@ var dr = StyleSheet.create({
   },
   scoreNum: { fontSize: 11, fontWeight: '900' },
   barTrack: {
-    flex: 1, height: 6, backgroundColor: 'rgba(255,255,255,0.06)',
+    flex: 1, height: 6, backgroundColor: 'rgba(218,165,32,0.06)',
     borderRadius: 3, overflow: 'visible', position: 'relative',
   },
   barFill: { height: 6, borderRadius: 3 },
@@ -2612,8 +2717,8 @@ var dr = StyleSheet.create({
 // ── Lucky Numbers Styles ──
 var ln = StyleSheet.create({
   card: {
-    borderRadius: 28, overflow: 'hidden', marginBottom: 16,
-    borderWidth: 1, borderColor: 'rgba(111,191,160,0.12)',
+    borderRadius: 24, overflow: 'hidden', marginBottom: 16,
+    borderWidth: 1.5, borderColor: 'rgba(218,165,32,0.18)',
     padding: 24,
   },
   row: {
@@ -2624,7 +2729,7 @@ var ln = StyleSheet.create({
     width: 68, height: 68, borderRadius: 34,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: 'rgba(218,165,32,0.03)',
   },
   num: { fontSize: 24, fontWeight: '900', letterSpacing: -0.5 },
 });
@@ -2633,18 +2738,18 @@ var ln = StyleSheet.create({
 var mn = StyleSheet.create({
   card: {
     borderRadius: 20, overflow: 'hidden', marginBottom: 16,
-    borderWidth: 1, borderColor: 'rgba(183,166,240,0.15)',
+    borderWidth: 1.5, borderColor: 'rgba(218,165,32,0.20)',
     padding: 24,
   },
   starRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10,
   },
   headerLabel: {
-    color: 'rgba(183,166,240,0.65)', fontSize: 11, fontWeight: '800',
+    color: 'rgba(218,165,32,0.60)', fontSize: 11, fontWeight: '800',
     letterSpacing: 1.5, textTransform: 'uppercase',
   },
   mantraText: {
-    color: '#E8E0FF', fontSize: 16, fontWeight: '600', lineHeight: 26,
+    color: '#F4E4BC', fontSize: 16, fontWeight: '600', lineHeight: 26,
     fontStyle: 'italic', letterSpacing: 0.2,
   },
 });
@@ -2676,12 +2781,12 @@ var cs = StyleSheet.create({
   shieldCard: {
     flex: 1, borderRadius: 16, overflow: 'hidden', padding: 16,
     alignItems: 'center', borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.02)', gap: 8,
+    backgroundColor: 'rgba(218,165,32,0.03)', gap: 8,
   },
   shieldEmoji: { fontSize: 22, marginBottom: 2 },
-  shieldLabel: { color: 'rgba(196,181,253,0.50)', fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
+  shieldLabel: { color: 'rgba(218,165,32,0.50)', fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
   shieldValue: { fontSize: 16, fontWeight: '900', textAlign: 'center' },
-  shieldBarTrack: { width: '100%', height: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, marginTop: 4, overflow: 'hidden' },
+  shieldBarTrack: { width: '100%', height: 4, backgroundColor: 'rgba(218,165,32,0.06)', borderRadius: 2, marginTop: 4, overflow: 'hidden' },
   shieldBarFill: { height: 4, borderRadius: 2 },
 
   compassGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, justifyContent: 'center', marginTop: 4 },
@@ -2705,9 +2810,9 @@ var cs = StyleSheet.create({
   yogaPill: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderRadius: 12, overflow: 'hidden', padding: 12,
-    borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1, backgroundColor: 'rgba(218,165,32,0.03)',
   },
   yogaDot: { width: 8, height: 8, borderRadius: 4 },
   yogaName: { fontSize: 14, fontWeight: '800' },
-  yogaDesc: { color: 'rgba(255,214,102,0.40)', fontSize: 11, lineHeight: 16, marginTop: 2 },
+  yogaDesc: { color: 'rgba(218,165,32,0.40)', fontSize: 11, lineHeight: 16, marginTop: 2 },
 });

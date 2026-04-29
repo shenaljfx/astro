@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet,
   Platform, TextInput, Alert, ActivityIndicator, Image,
-  Dimensions, StatusBar,
+  Dimensions, StatusBar, KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +23,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePricing } from '../../contexts/PricingContext';
 import CitySearchPicker from '../../components/CitySearchPicker';
 import { boxShadow, textShadow } from '../../utils/shadow';
+import useReducedMotion from '../../hooks/useReducedMotion';
+import useLowEndDevice from '../../hooks/useLowEndDevice';
+import { CosmicBackground } from '../../components/CosmicBackground';
 import useScreenInsets from '../../hooks/useScreenInsets';
 import { registerForPushNotifications } from '../../services/notifications';
 import { updateNotificationPreferences } from '../../services/api';
@@ -433,7 +436,7 @@ var bf = StyleSheet.create({
   inputHint:          { fontSize: 9, color: 'rgba(255,255,255,0.28)', fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
   segInput:           { width: '100%', backgroundColor: 'rgba(255,255,255,0.09)', borderRadius: 14, paddingVertical: 13, color: '#FFF1D0', fontSize: 20, fontWeight: '900', textAlign: 'center', borderWidth: 1, borderColor: 'rgba(52,211,153,0.25)' },
   sep:                { color: 'rgba(255,255,255,0.25)', fontSize: 20, fontWeight: '200', paddingBottom: 12 },
-  saveBtn:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 15, overflow: 'hidden', marginTop: 2, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.6, 14), elevation: 0 },
+  saveBtn:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 15, overflow: 'hidden', marginTop: 2, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.6, 14) },
   saveBtnText:        { color: '#FFF1D0', fontSize: 15, fontWeight: '800' },
 });
 
@@ -446,6 +449,8 @@ function ProfileScreen() {
   var sc = screenColors(colors);
   var isDesktop = useDesktopCtx();
   var insets = useScreenInsets();
+  var reduced = useReducedMotion();
+  var lowEnd = useLowEndDevice();
   var { priceLabel } = usePricing();
   var {
     user, loading, isLoggedIn, subscription, isSubscribed,
@@ -553,9 +558,11 @@ function ProfileScreen() {
 
   return (
     <DesktopScreenWrapper routeName="profile">
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <CosmicBackground reduced={reduced} lowEnd={lowEnd} />
       <StatusBar barStyle={colors.statusBarStyle} />
-      <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         {/* ═══ HERO CARD ══════════════════════════════════════════════ */}
         <Animated.View entering={FadeIn.duration(900)} style={s.heroCard}>
@@ -838,6 +845,7 @@ function ProfileScreen() {
         <View style={{ height: isDesktop ? 32 : 120 }} />
       </ScrollView>
     </View>
+    </KeyboardAvoidingView>
     </DesktopScreenWrapper>
   );
 }
@@ -899,7 +907,7 @@ var s = StyleSheet.create({
   // ── Subscription ───────────────────────────────────────────────────
   subActiveRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   subActiveText: { color: '#34D399', fontWeight: '700', fontSize: 14 },
-  subBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 16, overflow: 'hidden', ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 16), elevation: 0 },
+  subBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 16, overflow: 'hidden', ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 16) },
   subBtnText:    { color: '#FFF1D0', fontSize: 14, fontWeight: '800', flexShrink: 1, textAlign: 'center' },
   cancelBtn:     { paddingVertical: 11, alignItems: 'center', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)' },
   cancelBtnText: { color: '#F87171', fontWeight: '600', fontSize: 13 },

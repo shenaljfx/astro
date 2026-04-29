@@ -221,7 +221,7 @@ export var getFullReport = function(birthDate, lat, lng, language) {
   return request('/api/horoscope/full-report', {
     method: 'POST',
     body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en' }),
-    _timeout: 300000,
+    _timeout: 600000,
   });
 };
 
@@ -229,7 +229,7 @@ export var getAIReport = function(birthDate, lat, lng, language, birthLocation, 
   return request('/api/horoscope/full-report-ai', {
     method: 'POST',
     body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en', birthLocation: birthLocation || null, userName: userName || null, userGender: userGender || null, userReligion: userReligion || null, reportId: reportId || null }),
-    _timeout: 300000,
+    _timeout: 600000,
   });
 };
 
@@ -246,7 +246,7 @@ export var getFullReading = function(dateTime, lat, lng, language) {
   return request('/api/reading/full', {
     method: 'POST',
     body: JSON.stringify({ dateTime: dateTime, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'si' }),
-    _timeout: 300000,
+    _timeout: 600000,
   });
 };
 

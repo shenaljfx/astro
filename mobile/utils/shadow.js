@@ -37,12 +37,17 @@ export function boxShadow(color, offset = { width: 0, height: 4 }, opacity = 0.5
       boxShadow: offset.width + 'px ' + offset.height + 'px ' + radius + 'px ' + c,
     };
   }
-  return {
+  // iOS uses shadow* props; Android requires elevation
+  var result = {
     shadowColor: color,
     shadowOffset: offset,
     shadowOpacity: opacity,
     shadowRadius: radius,
   };
+  if (Platform.OS === 'android') {
+    result.elevation = Math.max(1, Math.round(radius / 3));
+  }
+  return result;
 }
 
 /**

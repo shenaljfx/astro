@@ -588,7 +588,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
           <ActivityIndicator size="large" color={accent.primary} />
           <Text style={s.loadingText}>Loading...</Text>
           {onClose ? (
-            <TouchableOpacity style={s.loadingClose} onPress={onClose}>
+            <TouchableOpacity style={[s.loadingClose, { top: insets.top + 10 }]} onPress={onClose}>
               <Ionicons name="close" size={20} color="rgba(255,255,255,0.4)" />
             </TouchableOpacity>
           ) : null}
@@ -832,7 +832,7 @@ var s = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 99999,
-    elevation: 99999,
+    elevation: 100,
   },
 
   accentGlow: {
@@ -1195,11 +1195,12 @@ var s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    flexWrap: 'wrap',
     gap: 10,
     marginTop: 4,
   },
   footerDot: { color: 'rgba(255,255,255,0.15)', fontSize: 10 },
-  footerLink: { fontSize: 11, fontWeight: '600' },
+  footerLink: { fontSize: 11, fontWeight: '600', paddingVertical: 8, paddingHorizontal: 4 },
 
   // Loading splash (shown while offerings load for subscription)
   loadingSplash: {

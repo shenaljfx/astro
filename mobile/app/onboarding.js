@@ -1149,7 +1149,7 @@ var gs = StyleSheet.create({
   headerSub: { fontSize: 13, color: 'rgba(255,200,80,0.6)', textAlign: 'center', marginTop: 4, lineHeight: 18 },
 
   /* Platform Logo */
-  platformLogoOuter: { borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 10, ...boxShadow('#FF8C00', { width: 0, height: 0 }, 0.25, 16), elevation: 0 },
+  platformLogoOuter: { borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 10, ...boxShadow('#FF8C00', { width: 0, height: 0 }, 0.25, 16) },
   platformLogoInner: { backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
 
   /* Secure badge */
@@ -1173,9 +1173,9 @@ var gs = StyleSheet.create({
   errorText: { color: '#FCA5A5', fontSize: 12, fontWeight: '600', flex: 1 },
 
   /* Google button */
-  googleBtnShadow: { borderRadius: 16, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 16), elevation: 0 },
+  googleBtnShadow: { borderRadius: 16, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 16) },
   googleBtnGrad: { paddingVertical: 15, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
-  googleBtnIcon: { width: 34, height: 34, borderRadius: 10, backgroundcolor: '#FFF1D0', alignItems: 'center', justifyContent: 'center', ...boxShadow('#000', { width: 0, height: 1 }, 0.15, 4), elevation: 0 },
+  googleBtnIcon: { width: 34, height: 34, borderRadius: 10, backgroundcolor: '#FFF1D0', alignItems: 'center', justifyContent: 'center', ...boxShadow('#000', { width: 0, height: 1 }, 0.15, 4) },
   googleBtnGWrap: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   gBtnSeg: { position: 'absolute', width: 24, height: 24, borderRadius: 12 },
   gBtnBlue: { borderWidth: 2.5, borderColor: 'transparent', borderTopColor: '#4285F4', borderRightColor: '#4285F4' },
@@ -1366,7 +1366,7 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
 
       {/* ═══ TERMS ═══ */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', paddingHorizontal: 8 }}>
-        <TouchableOpacity onPress={function () { setAgreed(!agreed); }} activeOpacity={0.7} hitSlop={8}>
+        <TouchableOpacity onPress={function () { setAgreed(!agreed); }} activeOpacity={0.7} hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}>
           <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: agreed ? '#FF8C00' : 'rgba(255,255,255,0.3)', backgroundColor: agreed ? '#FF8C00' : 'rgba(0,0,0,0.2)', alignItems: 'center', justifyContent: 'center' }}>
             {agreed ? <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(100)}><Ionicons name="checkmark" size={16} color="#FFF" /></Animated.View> : null}
           </View>
@@ -1421,7 +1421,7 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
             </Text>
           </View>
         </View>
-        <TouchableOpacity onPress={handleRestore} disabled={restoring} activeOpacity={0.7} hitSlop={8}>
+        <TouchableOpacity onPress={handleRestore} disabled={restoring} activeOpacity={0.7} hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}>
           <Text style={{ color: 'rgba(255,184,0,0.6)', fontSize: 11, textDecorationLine: 'underline' }}>
             {restoring
               ? (lang === 'si' ? 'ප්‍රතිස්ථාපනය වෙමින්...' : 'Restoring...')
@@ -1732,10 +1732,12 @@ function BirthDataStep({ onComplete, lang }) {
   return (
     <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 0, paddingBottom: 8 }}>
       {renderProgress()}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" bounces={false}>
       {page === 0 ? renderNamePage()
         : page === 1 ? renderDatePage()
         : page === 2 ? renderTimePage()
         : renderPlacePage()}
+      </ScrollView>
     </View>
   );
 }
@@ -2165,7 +2167,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     var HERO_SIZE = isSmallScreen ? 150 : 180;
 
     return (
-      <View style={{ flex: 1, paddingHorizontal: 20, paddingBottom: 20 }}>
+      <View style={{ flex: 1 }}>
 
         {/* Big Bang flash overlay */}
         <Animated.View style={[{
@@ -2181,6 +2183,13 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
         }}>
           <AwesomeRashiChakra size={Math.min(SW * 0.85, 320)} />
         </View>
+
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 20 }}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
 
         {/* ── HERO: Cosmic Portal + Zodiac Image ── */}
         <View style={{ alignItems: 'center', marginTop: isSmallScreen ? 6 : 14 }}>
@@ -2402,6 +2411,8 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
 
           <PrimaryButton label={lang === 'si' ? '🔓 මගේ සම්පූර්ණ ඉරණම අගුළු අරින්න' : '🔓 Unlock My Complete Destiny Now'} onPress={onContinue} icon="sparkles" />
         </Animated.View>
+
+        </ScrollView>
       </View>
     );
   }
@@ -2637,7 +2648,7 @@ var g = StyleSheet.create({
   card: { backgroundColor: 'rgba(15,10,30,0.55)', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   inputLabel: { color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '700', marginBottom: 8, letterSpacing: 1.2, textTransform: 'uppercase' },
   textInput: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 15 : 13, color: '#FFF1D0', fontSize: 16, fontWeight: '500', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  primaryBtn: { borderRadius: 16, overflow: 'hidden', ...boxShadow('#FF8C00', { width: 0, height: 4 }, 1, 20), elevation: 0 },
+  primaryBtn: { borderRadius: 16, overflow: 'hidden', ...boxShadow('#FF8C00', { width: 0, height: 4 }, 1, 20) },
   primaryGrad: { paddingVertical: 14, minHeight: 56, alignItems: 'center', justifyContent: 'center', borderRadius: 16, paddingHorizontal: 16 },
   primaryText: { fontSize: 16, fontWeight: '800', color: '#FFF1D0', letterSpacing: 0.8, textAlign: 'center', flexShrink: 1, ...textShadow('rgba(0,0,0,0.3)', { width: 0, height: 1 }, 4) },
   ghostBtn: { alignItems: 'center', paddingVertical: 14, marginTop: 8 },

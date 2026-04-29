@@ -20,6 +20,9 @@ import { screenColors } from '../../constants/theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import useScreenInsets from '../../hooks/useScreenInsets';
+import useReducedMotion from '../../hooks/useReducedMotion';
+import useLowEndDevice from '../../hooks/useLowEndDevice';
+import { CosmicBackground } from '../../components/CosmicBackground';
 
 const CHART_CACHE_KEY = '@grahachara_chart_cache';
 
@@ -103,7 +106,7 @@ function ChartGlowAura({ lagnaColor, children }) {
         <View style={{
           width: SCREEN_WIDTH * 0.82, height: SCREEN_WIDTH * 0.82, borderRadius: SCREEN_WIDTH * 0.41,
           backgroundColor: color + '18',
-          ...boxShadow(color, { width: 0, height: 0 }, 0.6, 40), elevation: 0,
+          ...boxShadow(color, { width: 0, height: 0 }, 0.6, 40),
         }} />
       </Animated.View>
       <View style={{
@@ -223,6 +226,8 @@ export default function KendaraScreen() {
   const router = useRouter();
   var isDesktop = useDesktopCtx();
   var insets = useScreenInsets();
+  var reduced = useReducedMotion();
+  var lowEnd = useLowEndDevice();
 
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -1488,6 +1493,7 @@ export default function KendaraScreen() {
   return (
     <DesktopScreenWrapper routeName="kendara">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <CosmicBackground reduced={reduced} lowEnd={lowEnd} />
       <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={sc.iconAccent} />}>
         <View style={[styles.content, isDesktop && styles.contentDesktop, !isDesktop && { paddingTop: insets.contentTop }]}>
           <Animated.View entering={FadeIn.duration(700)} style={styles.pageTitleRow}>
@@ -1523,7 +1529,7 @@ const styles = StyleSheet.create({
   pageTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   pageTitle: { fontSize: 30, fontWeight: '800', color: '#FFB800', marginBottom: 3, ...textShadow('rgba(255,184,0,0.3)', { width: 0, height: 2 }, 8) },
   pageSubtitle: { fontSize: 13, color: 'rgba(255,214,102,0.50)', fontWeight: '500' },
-  lagnaOrb: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.35)', ...boxShadow('#FF8C00', { width: 0, height: 0 }, 0.5, 10), elevation: 0 },
+  lagnaOrb: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.35)', ...boxShadow('#FF8C00', { width: 0, height: 0 }, 0.5, 10) },
   center: { alignItems: 'center', justifyContent: 'center', height: 300 },
   emptyState: { alignItems: 'center', padding: 40, backgroundColor: 'rgba(255,140,0,0.07)', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)' },
   emptyTitle: { color: '#FFB800', fontSize: 18, marginVertical: 16, fontWeight: '700' },
@@ -1537,7 +1543,7 @@ const styles = StyleSheet.create({
   detailsCard: {
     backgroundColor: 'rgba(255,255,255,0.04)', padding: 16, borderRadius: 18, marginTop: 10,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
-    ...boxShadow('#FF8C00', { width: 0, height: 2 }, 0.1, 8), elevation: 0,
+    ...boxShadow('#FF8C00', { width: 0, height: 2 }, 0.1, 8),
   },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   infoLabel: { color: 'rgba(255,214,102,0.50)', fontSize: 13 },

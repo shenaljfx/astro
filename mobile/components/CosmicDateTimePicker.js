@@ -18,12 +18,11 @@
  */
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
-  View, Text, TouchableOpacity, Modal, FlatList, StyleSheet,
+  View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet,
   Dimensions, Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
 const { width: W } = Dimensions.get('window');
 const ITEM_H = 52;
@@ -57,48 +56,73 @@ function getDayOfWeek(year, month, day, lang) {
 // ─── Scroll Wheel Column ────────────────────────────────────────
 
 function WheelColumn({ data, selected, onSelect, formatItem, width }) {
-  var listRef = useRef(null);
-  var idx = data.indexOf(selected);
-  if (idx < 0) idx = 0;
-  var scrolledRef = useRef(false);
+  var scrollRef = useRef(null);
+  var initialisedRef = useRef(false);
+  var lastReportedRef = useRef(selected);
 
-  useEffect(function () {
-    if (listRef.current && !scrolledRef.current) {
-      scrolledRef.current = true;
-      try {
-        listRef.current.scrollToOffset({ offset: Math.max(0, idx - 2) * ITEM_H, animated: false });
-      } catch (_) {}
+  // Pad top/bottom so first/last items can reach the selection band (3rd row)
+  var PAD = ITEM_H * 2;
+
+  // Set initial scroll position after layout is measured
+  function handleContentSizeChange() {
+    if (initialisedRef.current) return;
+    initialisedRef.current = true;
+    var idx = data.indexOf(selected);
+    if (idx < 0) idx = 0;
+    var node = scrollRef.current;
+    if (node) {
+      try { node.scrollTo({ y: idx * ITEM_H, animated: false }); } catch (e) {}
     }
-  }, []);
+  }
 
-  // Re-scroll when selected value changes from outside (e.g. decade chips)
+  // Sync scroll position when `selected` is changed by external code
+  // (decade chips, AM/PM toggle, day clamp). Skip if the change came from
+  // our own onSelect (lastReportedRef matches).
   useEffect(function () {
-    if (listRef.current && scrolledRef.current) {
-      var newIdx = data.indexOf(selected);
-      if (newIdx >= 0) {
-        try {
-          listRef.current.scrollToOffset({ offset: Math.max(0, newIdx - 2) * ITEM_H, animated: true });
-        } catch (_) {}
-      }
+    if (!initialisedRef.current) return;
+    if (selected === lastReportedRef.current) return;
+    var idx = data.indexOf(selected);
+    if (idx < 0) return;
+    var node = scrollRef.current;
+    if (node) {
+      try { node.scrollTo({ y: idx * ITEM_H, animated: true }); } catch (e) {}
     }
   }, [selected]);
 
-  var renderItem = useCallback(function ({ item }) {
-    var isActive = item === selected;
-    return (
-      <TouchableOpacity
-        style={[ws.item, isActive && ws.itemActive]}
-        onPress={function () { onSelect(item); }}
-        activeOpacity={0.7}
-      >
-        <Text style={[ws.itemText, isActive && ws.itemTextActive]}>
-          {formatItem ? formatItem(item) : item}
-        </Text>
-      </TouchableOpacity>
-    );
-  }, [selected, onSelect, formatItem]);
+  function snapAndReport(offsetY) {
+    var snappedIdx = Math.round(offsetY / ITEM_H);
+    if (snappedIdx < 0) snappedIdx = 0;
+    if (snappedIdx > data.length - 1) snappedIdx = data.length - 1;
+    var picked = data[snappedIdx];
+    if (picked !== lastReportedRef.current) {
+      lastReportedRef.current = picked;
+      onSelect(picked);
+    }
+  }
 
-  var keyExtractor = useCallback(function (item) { return '' + item; }, []);
+  function handleMomentumEnd(e) {
+    snapAndReport(e.nativeEvent.contentOffset.y);
+  }
+
+  function handleScrollEndDrag(e) {
+    // On Android a slow finger lift produces no momentum event, so snap here
+    // when velocity is effectively zero.
+    var v = e.nativeEvent.velocity && e.nativeEvent.velocity.y;
+    if (v == null || Math.abs(v) < 0.05) {
+      snapAndReport(e.nativeEvent.contentOffset.y);
+    }
+  }
+
+  function handleItemPress(item) {
+    var idx = data.indexOf(item);
+    if (idx < 0) return;
+    lastReportedRef.current = item;
+    var node = scrollRef.current;
+    if (node) {
+      try { node.scrollTo({ y: idx * ITEM_H, animated: true }); } catch (e) {}
+    }
+    onSelect(item);
+  }
 
   return (
     <View style={[ws.col, width && { width }]}>
@@ -110,25 +134,35 @@ function WheelColumn({ data, selected, onSelect, formatItem, width }) {
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
         />
       </View>
-      <FlatList
-        ref={listRef}
-        data={data}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        showsVerticalScrollIndicator={false}
+      <ScrollView
+        ref={scrollRef}
         style={{ height: LIST_H }}
-        getItemLayout={function (_, i) { return { length: ITEM_H, offset: ITEM_H * i, index: i }; }}
-        initialScrollIndex={Math.max(0, idx - 2)}
+        contentContainerStyle={{ paddingTop: PAD, paddingBottom: PAD }}
+        showsVerticalScrollIndicator={false}
         snapToInterval={ITEM_H}
         decelerationRate="fast"
-        onMomentumScrollEnd={function (e) {
-          var offsetY = e.nativeEvent.contentOffset.y;
-          var snappedIdx = Math.round(offsetY / ITEM_H) + 2;
-          if (snappedIdx >= 0 && snappedIdx < data.length) {
-            onSelect(data[snappedIdx]);
-          }
-        }}
-      />
+        overScrollMode="never"
+        bounces={false}
+        onContentSizeChange={handleContentSizeChange}
+        onMomentumScrollEnd={handleMomentumEnd}
+        onScrollEndDrag={handleScrollEndDrag}
+      >
+        {data.map(function (item, i) {
+          var isActive = item === selected;
+          return (
+            <TouchableOpacity
+              key={'wi-' + i + '-' + item}
+              style={[ws.item, isActive && ws.itemActive]}
+              onPress={function () { handleItemPress(item); }}
+              activeOpacity={0.7}
+            >
+              <Text style={[ws.itemText, isActive && ws.itemTextActive]}>
+                {formatItem ? formatItem(item) : item}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
       {/* Top/bottom fade overlays */}
       <View style={ws.fadeTop} pointerEvents="none">
         <LinearGradient colors={['rgba(20,10,45,0.95)', 'transparent']} style={StyleSheet.absoluteFill} />
@@ -280,10 +314,10 @@ function DatePickerModal({ visible, onClose, value, onChange, lang }) {
   }
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Animated.View entering={FadeIn.duration(200)} style={ms.overlay}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent hardwareAccelerated>
+      <View style={ms.overlay}>
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
-        <Animated.View entering={SlideInDown.duration(350).springify()} style={ms.sheet}>
+        <View style={ms.sheet}>
           <LinearGradient colors={['rgba(30,15,60,0.98)', 'rgba(10,5,30,0.98)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
 
           {/* Handle bar */}
@@ -332,8 +366,8 @@ function DatePickerModal({ visible, onClose, value, onChange, lang }) {
               <Text style={ms.confirmText}>{lang === 'si' ? 'තහවුරු කරන්න' : 'Confirm Date'}</Text>
             </LinearGradient>
           </TouchableOpacity>
-        </Animated.View>
-      </Animated.View>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -389,10 +423,10 @@ function TimePickerModal({ visible, onClose, value, onChange, lang }) {
     : (lang === 'si' ? 'සවස / රාත්‍රි' : 'Afternoon / Night');
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Animated.View entering={FadeIn.duration(200)} style={ms.overlay}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent hardwareAccelerated>
+      <View style={ms.overlay}>
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
-        <Animated.View entering={SlideInDown.duration(350).springify()} style={ms.sheet}>
+        <View style={ms.sheet}>
           <LinearGradient colors={['rgba(30,15,60,0.98)', 'rgba(10,5,30,0.98)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
 
           {/* Handle bar */}
@@ -462,8 +496,8 @@ function TimePickerModal({ visible, onClose, value, onChange, lang }) {
               <Text style={ms.confirmText}>{lang === 'si' ? 'තහවුරු කරන්න' : 'Confirm Time'}</Text>
             </LinearGradient>
           </TouchableOpacity>
-        </Animated.View>
-      </Animated.View>
+        </View>
+      </View>
     </Modal>
   );
 }
