@@ -162,15 +162,25 @@ function OrbitalNavBar({ state, navigation }) {
   var insets = useSafeAreaInsets();
   var bottomPad = Math.max(insets.bottom, 6);
 
-  // Hide tab bar when keyboard is open (custom bar ignores tabBarHideOnKeyboard)
-  var [keyboardVisible, setKeyboardVisible] = useState(false);
+  // Hide tab bar when keyboard is open (custom bar ignores tabBarHideOnKeyboard).
+  // We listen to BOTH will/did show events on both platforms so the bar
+  // disappears the instant any focus lands on a TextInput — otherwise the
+  // bar can render briefly above the keyboard on Android (e.g. on the chat
+  // screen) before keyboardDidShow fires.
+  var [keyboardVisible, setKeyboardVisible] = useState(
+    Platform.OS !== 'web' && typeof Keyboard.isVisible === 'function' ? Keyboard.isVisible() : false
+  );
   useEffect(function() {
     if (Platform.OS === 'web') return;
-    var showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    var hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    var showSub = Keyboard.addListener(showEvent, function() { setKeyboardVisible(true); });
-    var hideSub = Keyboard.addListener(hideEvent, function() { setKeyboardVisible(false); });
-    return function() { showSub.remove(); hideSub.remove(); };
+    var show = function() { setKeyboardVisible(true); };
+    var hide = function() { setKeyboardVisible(false); };
+    var subs = [
+      Keyboard.addListener('keyboardWillShow', show),
+      Keyboard.addListener('keyboardDidShow', show),
+      Keyboard.addListener('keyboardWillHide', hide),
+      Keyboard.addListener('keyboardDidHide', hide),
+    ];
+    return function() { subs.forEach(function(s) { s.remove(); }); };
   }, []);
 
   if (keyboardVisible) return null;

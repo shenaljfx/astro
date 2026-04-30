@@ -15,7 +15,7 @@
  */
 
 const { calculateShadbala, getShadbalaWeightsForDasha, buildExtendedVargas } = require('./advanced');
-const { getAllPlanetPositions, calculateAshtakavarga } = require('./astrology');
+const { getAllPlanetPositions, calculateAshtakavarga, buildJaiminiRashiDrishti } = require('./astrology');
 const { predictEvent } = require('./kp');
 const { crossValidateDashas } = require('./dasha');
 
@@ -143,7 +143,30 @@ function calculateConfidence(params) {
   }
 
   // ── FINAL SCORE ────────────────────────────────────────────────
-  const finalScore = totalWeight > 0 ? Math.round(totalScore / totalWeight) : 50;
+  let finalScore = totalWeight > 0 ? Math.round(totalScore / totalWeight) : 50;
+
+  // ── Ensemble agreement bonus ───────────────────────────────────
+  // When multiple independent prediction systems converge on the same
+  // direction (KP YES, Multi-Dasha agreement, AV high), the prediction
+  // earns a confidence boost. This rewards true ensemble convergence
+  // beyond the linear weighted sum.
+  // Each "agreeing" system: contributes a flag if its score ≥ 65.
+  const agreeingSystems = factors.filter(f =>
+    /KP|Multi-Dasha|Ashtakavarga|Shadbala|Divisional/.test(f.name) && f.score >= 65
+  ).length;
+  let ensembleBonus = 0;
+  if (agreeingSystems >= 4) ensembleBonus = 10;
+  else if (agreeingSystems === 3) ensembleBonus = 6;
+  else if (agreeingSystems === 2) ensembleBonus = 3;
+  if (ensembleBonus > 0) {
+    factors.push({
+      name: 'Ensemble Agreement Bonus',
+      weight: 0,
+      score: ensembleBonus,
+      detail: `${agreeingSystems} systems converge`,
+    });
+    finalScore = Math.min(100, finalScore + ensembleBonus);
+  }
 
   let label;
   if (finalScore >= 80) label = 'Very High Confidence';

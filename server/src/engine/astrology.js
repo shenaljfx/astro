@@ -31,6 +31,11 @@ const debugLog = DEBUG_ASTRO ? console.log.bind(console) : function(){};
 // libraries as fallback.
 // ---------------------------------------------------------------------------
 const swe = require('@swisseph/node');
+const { filterSelfPeriods, filterParentPeriods } = require('./lifespan');
+const { rankParentProfessions } = require('./parentProfession');
+const { detectRegion, regionLabel } = require('./regionDetector');
+const { getDevelopmentalStage, buildSectionGuidance } = require('./infantChartGuard');
+const { computeAccuracyEnhancements } = require('./accuracyEngine');
 const {
   Planet: SwePlanet,
   LunarPoint: SweLunarPoint,
@@ -207,15 +212,78 @@ function dateToJD(date) {
 }
 
 /**
- * Calculate approximate sunrise time for a given location and date
- * Uses simplified solar position calculation
- * 
- * @param {Date} date - The date
+ * Calculate accurate sunrise/sunset using Swiss Ephemeris with Hindu rising flags.
+ *
+ * Hindu (BPHS) sunrise convention:
+ *   - Disk centre crosses true horizon (NOT upper limb)
+ *   - No atmospheric refraction
+ *   - Geocentric, no ecliptic latitude correction
+ * Encoded as bit-flags on the rsmi argument of swe_rise_trans:
+ *   SE_BIT_DISC_CENTER (256) | SE_BIT_NO_REFRACTION (512) | SE_BIT_GEOCTR_NO_ECL_LAT (128)
+ * = 896 (= SE_BIT_HINDU_RISING). Combined with SE_CALC_RISE (1) = 897.
+ *
+ * Falls back to the simplified Wikipedia equation if Swiss Ephemeris is unavailable.
+ *
+ * @param {Date} date - The date (anchor; we search starting at 00:00 UT of this day)
  * @param {number} lat - Latitude in degrees
  * @param {number} lng - Longitude in degrees
  * @returns {{ sunrise: Date, sunset: Date }}
  */
 function calculateSunriseSunset(date, lat, lng) {
+  // ── Primary path: Swiss Ephemeris with Hindu rising convention ──
+  try {
+    // Anchor at 00:00 UT of given date, then search forward up to 36h
+    const anchor = new Date(Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      0, 0, 0
+    ));
+    const startJD = swe.dateToJulianDay(anchor);
+
+    // SE_BIT_HINDU_RISING = 256 | 512 | 128 = 896
+    const HINDU_RISE = 1 | 256 | 512 | 128;   // 897
+    const HINDU_SET  = 2 | 256 | 512 | 128;   // 898
+
+    const riseRes = swe.calculateRiseTransitSet(
+      startJD, SwePlanet.Sun, HINDU_RISE, lng, lat, 0,
+      SweFlag.SwissEphemeris
+    );
+    const setRes = swe.calculateRiseTransitSet(
+      startJD, SwePlanet.Sun, HINDU_SET, lng, lat, 0,
+      SweFlag.SwissEphemeris
+    );
+
+    if (riseRes && typeof riseRes.time === 'number' && setRes && typeof setRes.time === 'number') {
+      // JD → Date (UTC)
+      const jdToDate = (jdv) => {
+        const z = Math.floor(jdv + 0.5);
+        const f = jdv + 0.5 - z;
+        let A;
+        if (z < 2299161) A = z;
+        else {
+          const alpha = Math.floor((z - 1867216.25) / 36524.25);
+          A = z + 1 + alpha - Math.floor(alpha / 4);
+        }
+        const B = A + 1524;
+        const C = Math.floor((B - 122.1) / 365.25);
+        const D = Math.floor(365.25 * C);
+        const E = Math.floor((B - D) / 30.6001);
+        const day = B - D - Math.floor(30.6001 * E);
+        const month = E < 14 ? E - 1 : E - 13;
+        const year = month > 2 ? C - 4716 : C - 4715;
+        const totalSec = Math.round(f * 86400);
+        const hh = Math.floor(totalSec / 3600);
+        const mm = Math.floor((totalSec % 3600) / 60);
+        const ss = totalSec % 60;
+        return new Date(Date.UTC(year, month - 1, day, hh, mm, ss));
+      };
+      return { sunrise: jdToDate(riseRes.time), sunset: jdToDate(setRes.time) };
+    }
+    // fall through to legacy path
+  } catch (_sweErr) { /* fallthrough */ }
+
+  // ── Fallback: simplified Wikipedia sunrise equation (~1-2 min accuracy) ──
   const jd = dateToJD(date);
   // n must be an INTEGER day number (Wikipedia sunrise equation)
   // Using fractional n shifts transit by ~12 hours, swapping sunrise/sunset
@@ -1263,9 +1331,111 @@ function calculateAshtakavarga(date, lat, lng) {
   // Total bindus for verification (should be 337)
   const totalBindus = sarva.reduce((a, b) => a + b, 0);
 
+  // ── Shodhana (reductions) per BPHS Ch.66 ─────────────────────
+  // Applied to each planet's bhinnashtakavarga to derive a refined
+  // SHODHITA SAV used for transit/dasha-event timing precision.
+  //
+  // Trikona Shodhana: in each set of trinal signs (1-5-9, 2-6-10, 3-7-11,
+  // 4-8-12), find the minimum bindu count across the trine. Subtract
+  // the minimum from each cell of the trine. If any cell of the trine has 0,
+  // all three are zeroed.
+  //
+  // Ekadhipatya Shodhana: for the two signs ruled by the same planet
+  // (e.g. Mars rules Mesha & Vrischika), apply BPHS rules:
+  //   - If both signs have planets: do nothing.
+  //   - If one is empty and one occupied: the empty sign is zeroed.
+  //   - If both empty: the sign with FEWER bindus is zeroed; the larger keeps.
+  //   - If equal bindus and both empty: both are zeroed.
+  // Sun rules only Simha, Moon rules only Kataka \u2192 not subjected to ekadhipatya.
+  const SIGN_LORDS = ['Mars','Venus','Mercury','Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Saturn','Jupiter'];
+  const PLANET_DUAL_RULERSHIPS = {
+    Mars:    [0, 7],     // Mesha & Vrischika
+    Venus:   [1, 6],     // Vrishabha & Tula
+    Mercury: [2, 5],     // Mithuna & Kanya
+    Jupiter: [8, 11],    // Dhanus & Meena
+    Saturn:  [9, 10],    // Makara & Kumbha
+  };
+
+  // Build lookup: which sign indices have at least one of the 7 contributors
+  const signOccupied = new Array(12).fill(false);
+  for (const key of planetKeys) {
+    const r = positions[key];
+    if (typeof r === 'number') signOccupied[r - 1] = true;
+  }
+
+  const shodhitaPrastara = {};
+  const shodhitaSarva = new Array(12).fill(0);
+
+  for (const planet of planetKeys) {
+    const original = prastara[planet];
+    if (!original) continue;
+    const bindus = original.slice();
+
+    // Trikona Shodhana: 4 sets of trines
+    for (let t = 0; t < 4; t++) {
+      const signs = [t, t + 4, t + 8];
+      const vals = signs.map((s) => bindus[s]);
+      const minVal = Math.min(...vals);
+      if (minVal === 0) {
+        for (const s of signs) bindus[s] = 0;
+      } else {
+        for (const s of signs) bindus[s] = bindus[s] - minVal;
+      }
+    }
+
+    // Ekadhipatya Shodhana
+    for (const [, [s1, s2]] of Object.entries(PLANET_DUAL_RULERSHIPS)) {
+      const occ1 = signOccupied[s1];
+      const occ2 = signOccupied[s2];
+      const b1 = bindus[s1], b2 = bindus[s2];
+      if (occ1 && occ2) continue;
+      if (!occ1 && !occ2) {
+        if (b1 === b2) { bindus[s1] = 0; bindus[s2] = 0; }
+        else if (b1 < b2) bindus[s1] = 0;
+        else bindus[s2] = 0;
+      } else if (occ1 && !occ2) {
+        bindus[s2] = 0;
+      } else {
+        bindus[s1] = 0;
+      }
+    }
+
+    shodhitaPrastara[planet] = bindus;
+    for (let i = 0; i < 12; i++) shodhitaSarva[i] += bindus[i];
+  }
+
+  // Build labelled Shodhita SAV (used by transit timing engines)
+  const shodhitaSarvashtakavarga = {};
+  for (let i = 0; i < 12; i++) {
+    shodhitaSarvashtakavarga[RASHIS[i].name] = shodhitaSarva[i];
+  }
+
+  // ── Kaksha Vibhaga (8 zones \u00D7 7 planets) per sign ───────────
+  // Each sign of 30\u00B0 is divided into 8 kakshas of 3\u00B045\u2032; each kaksha is
+  // \"owned\" by one of the 7 planets in the sequence Sat,Jup,Mars,Sun,Ven,Mer,Moon,Lagna
+  // (BPHS standard order). Used for daily transit-strength of an individual planet
+  // moving through a sign. We expose the per-sign bindu owners for downstream use.
+  const KAKSHA_OWNERS = ['Saturn','Jupiter','Mars','Sun','Venus','Mercury','Moon','Lagna'];
+  const kakshaVibhaga = {};
+  for (let i = 0; i < 12; i++) {
+    const signName = RASHIS[i].name;
+    kakshaVibhaga[signName] = KAKSHA_OWNERS.map((owner, k) => ({
+      kaksha: k + 1,
+      owner,
+      startDeg: i * 30 + k * 3.75,
+      endDeg: i * 30 + (k + 1) * 3.75,
+      // bindu = 1 if the owner contributes a bindu to this sign in any planet's prastara
+      // (rough proxy \u2014 in classical practice each planet's transit is judged in its own row)
+      hasBindu: planetKeys.some(p => prastara[p] && prastara[p][i] > 0 && (KAKSHA_OWNERS[k] === p)),
+    }));
+  }
+
   return {
-    prastarashtakavarga: prastara,     // Individual planet bindu tables
-    sarvashtakavarga: sarvashtakavarga, // Combined bindus per sign
+    prastarashtakavarga: prastara,     // Individual planet bindu tables (raw)
+    sarvashtakavarga: sarvashtakavarga, // Combined bindus per sign (raw, sum 337)
+    shodhitaPrastara,                   // After Trikona + Ekadhipatya reductions
+    shodhitaSarvashtakavarga,           // Refined SAV (used for precise timing)
+    kakshaVibhaga,                      // 8-zone kaksha breakdown per sign
     signStrengths,                      // With interpretation
     totalBindus,
     summary: {
@@ -3008,59 +3178,44 @@ function getRahuLongitude(date) {
 function calculateVimshottari(moonLongitude, birthDate) {
   const DASA_LORDS = ['Ketu', 'Venus', 'Sun', 'Moon', 'Mars', 'Rahu', 'Jupiter', 'Saturn', 'Mercury'];
   const DASA_YEARS = { 'Ketu': 7, 'Venus': 20, 'Sun': 6, 'Moon': 10, 'Mars': 7, 'Rahu': 18, 'Jupiter': 16, 'Saturn': 19, 'Mercury': 17 };
-  
+
   // Find Nakshatra and position within it
   const nakshatraSpan = 13.333333; // 13 degrees 20 minutes
   const nakshatraIndex = Math.floor(moonLongitude / nakshatraSpan);
   const degreesInNakshatra = moonLongitude % nakshatraSpan;
   const percentagePassed = degreesInNakshatra / nakshatraSpan;
   const percentageRemaining = 1 - percentagePassed;
-  
-  // Nakshatra Lords sequence maps to DASA_LORDS based on index % 9
-  // Ashwini (0) -> Ketu (0)
-  // Bharani (1) -> Venus (1)
-  // ...
+
   const startDasaIndex = nakshatraIndex % 9;
   const startLord = DASA_LORDS[startDasaIndex];
-  const startTotalYears = DASA_YEARS[startLord];
-  const balanceYears = startTotalYears * percentageRemaining;
-  
+  const balanceYears = DASA_YEARS[startLord] * percentageRemaining;
+
+  // Use tropical year (365.2422 days) per BPHS Ch.46 modern interpretation
+  // (matches Parashara's Light, JHora, Kala). 365.25 introduces ~3-day drift over 100 years.
+  const TROPICAL_YEAR = 365.2422;
+  const MS_PER_YEAR = TROPICAL_YEAR * 86400 * 1000;
+
   const periods = [];
-  let currentDate = new Date(birthDate);
-  
-  // First period (balance)
-  currentDate.setFullYear(currentDate.getFullYear() + Math.floor(balanceYears));
-  // Add remaining months/days purely by proportion for simplicity or just use float years
-  const remainingDays = (balanceYears % 1) * 365.25;
-  currentDate.setDate(currentDate.getDate() + remainingDays);
-  
-  periods.push({
-    type: 'Mahadasha',
-    lord: startLord,
-    start: birthDate.toISOString().split('T')[0],
-    endDate: currentDate.toISOString().split('T')[0],
-    years: balanceYears
-  });
-  
-  // Next periods
-  for (let i = 1; i < 9; i++) {
+  const birthMs = birthDate.getTime();
+  let cursorMs = birthMs;
+
+  for (let i = 0; i < 9; i++) {
     const idx = (startDasaIndex + i) % 9;
     const lord = DASA_LORDS[idx];
-    const duration = DASA_YEARS[lord];
-    
-    // Add duration to current date
-    const startDate = new Date(currentDate);
-    currentDate.setFullYear(currentDate.getFullYear() + duration);
-    
+    const yearsThis = i === 0 ? balanceYears : DASA_YEARS[lord];
+    const startMs = cursorMs;
+    const endMs = cursorMs + yearsThis * MS_PER_YEAR;
+
     periods.push({
       type: 'Mahadasha',
-      lord: lord,
-      start: startDate.toISOString().split('T')[0],
-      endDate: currentDate.toISOString().split('T')[0],
-      years: duration
+      lord,
+      start: new Date(startMs).toISOString().split('T')[0],
+      endDate: new Date(endMs).toISOString().split('T')[0],
+      years: yearsThis,
     });
+    cursorMs = endMs;
   }
-  
+
   return periods;
 }
 
@@ -3225,6 +3380,10 @@ function calculateVimshottariDetailed(moonLongitude, birthDate) {
   const DASA_YEARS = { 'Ketu': 7, 'Venus': 20, 'Sun': 6, 'Moon': 10, 'Mars': 7, 'Rahu': 18, 'Jupiter': 16, 'Saturn': 19, 'Mercury': 17 };
   const TOTAL_YEARS = 120;
 
+  // Tropical year (BPHS Ch.46 modern reading; matches JHora/Parashara's Light)
+  const TROPICAL_YEAR = 365.2422;
+  const MS_PER_YEAR = TROPICAL_YEAR * 86400 * 1000;
+
   const nakshatraSpan = 13.333333;
   const nakshatraIndex = Math.floor(moonLongitude / nakshatraSpan);
   const degreesInNakshatra = moonLongitude % nakshatraSpan;
@@ -3232,16 +3391,8 @@ function calculateVimshottariDetailed(moonLongitude, birthDate) {
 
   const startDasaIndex = nakshatraIndex % 9;
 
-  // Helper to add fractional years to a date precisely
-  const addYears = (date, years) => {
-    const d = new Date(date);
-    const days = years * 365.25;
-    d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
-    return d;
-  };
-
   const periods = [];
-  let currentDate = new Date(birthDate);
+  let cursorMs = birthDate.getTime();
 
   for (let i = 0; i < 9; i++) {
     const idx = (startDasaIndex + i) % 9;
@@ -3249,41 +3400,60 @@ function calculateVimshottariDetailed(moonLongitude, birthDate) {
     const totalYears = DASA_YEARS[lord];
     const duration = i === 0 ? totalYears * percentageRemaining : totalYears;
 
-    const startDate = new Date(currentDate);
-    const endDate = addYears(currentDate, duration);
+    const mdStartMs = cursorMs;
+    const mdEndMs = cursorMs + duration * MS_PER_YEAR;
 
-    // Calculate Antardashas within this Mahadasha
+    // ── Antardashas (sub-periods) ──
     const antardashas = [];
-    let adDate = new Date(startDate);
+    let adMs = mdStartMs;
     for (let j = 0; j < 9; j++) {
       const adIdx = (idx + j) % 9;
       const adLord = DASA_LORDS[adIdx];
-      const adYears = (DASA_YEARS[lord] * DASA_YEARS[adLord]) / TOTAL_YEARS;
-      const adDuration = i === 0 ? adYears * percentageRemaining : adYears;
-      // For the first mahadasha, only include antardashas that haven't passed
-      // Actually, all antardashas proportionally shrink for the first period
-      const adStart = new Date(adDate);
-      const adEnd = addYears(adDate, i === 0 ? adDuration : adYears);
+      const adFullYears = (DASA_YEARS[lord] * DASA_YEARS[adLord]) / TOTAL_YEARS;
+      // First mahadasha is fractional → shrink antardashas proportionally
+      const adYears = i === 0 ? adFullYears * percentageRemaining : adFullYears;
+      const adStartMs = adMs;
+      const adEndMs = adMs + adYears * MS_PER_YEAR;
+
+      // ── Pratyantar dashas (sub-sub) — each antardasha divided by Vimshottari ratios
+      // Pratyantar = (AD_years * PD_lord_years) / 120, starting from antardasha lord
+      const pratyantars = [];
+      let pdMs = adStartMs;
+      for (let k = 0; k < 9; k++) {
+        const pdIdx = (adIdx + k) % 9;
+        const pdLord = DASA_LORDS[pdIdx];
+        const pdYears = (adYears * DASA_YEARS[pdLord]) / TOTAL_YEARS;
+        const pdStartMs = pdMs;
+        const pdEndMs = pdMs + pdYears * MS_PER_YEAR;
+        pratyantars.push({
+          lord: pdLord,
+          start: new Date(pdStartMs).toISOString().split('T')[0],
+          endDate: new Date(pdEndMs).toISOString().split('T')[0],
+          years: pdYears,
+        });
+        pdMs = pdEndMs;
+      }
 
       antardashas.push({
         lord: adLord,
-        start: adStart.toISOString().split('T')[0],
-        endDate: adEnd.toISOString().split('T')[0],
-        years: i === 0 ? adDuration : adYears,
+        start: new Date(adStartMs).toISOString().split('T')[0],
+        endDate: new Date(adEndMs).toISOString().split('T')[0],
+        years: adYears,
+        pratyantars,
       });
-      adDate = adEnd;
+      adMs = adEndMs;
     }
 
     periods.push({
       type: 'Mahadasha',
       lord,
-      start: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      start: new Date(mdStartMs).toISOString().split('T')[0],
+      endDate: new Date(mdEndMs).toISOString().split('T')[0],
       years: duration,
       antardashas,
     });
 
-    currentDate = endDate;
+    cursorMs = mdEndMs;
   }
 
   return periods;
@@ -3423,7 +3593,42 @@ function analyzeHouse(houseNum, houses, planets, drishtis, lagnaName, ashtakavar
  */
 function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   // ── Gather all chart data ──────────────────────────────────────
-  const date = new Date(birthDate);
+  let date = new Date(birthDate);
+
+  // ── T1 #1: Birth-time rectification feedback loop ────────────
+  // If caller passes 2+ life events, run rectification first and use the
+  // corrected birth time for every downstream computation.
+  let rectificationApplied = null;
+  if (opts.rectificationEvents && Array.isArray(opts.rectificationEvents) && opts.rectificationEvents.length >= 2) {
+    try {
+      const { rectifyBirthTime } = require('./rectification');
+      const rect = rectifyBirthTime(date, lat, lng, opts.rectificationEvents,
+        opts.rectificationRangeMinutes || 30,
+        opts.rectificationStepMinutes || 2);
+      if (rect && rect.confidence !== 'low' && rect.rectified) {
+        rectificationApplied = {
+          originalTime: date.toISOString(),
+          rectifiedTime: rect.rectified.time,
+          offsetMinutes: rect.rectified.offsetMinutes,
+          confidence: rect.confidence,
+          eventsUsed: rect.eventsUsed,
+          lagnaChanged: rect.lagnaChanged,
+        };
+        date = new Date(rect.rectified.time);
+      } else if (rect) {
+        rectificationApplied = {
+          originalTime: date.toISOString(),
+          confidence: rect.confidence,
+          eventsUsed: rect.eventsUsed,
+          applied: false,
+          reason: 'low confidence — keeping reported time',
+        };
+      }
+    } catch (e) {
+      console.warn('[generateFullReport] Rectification failed:', e.message);
+    }
+  }
+
   const lagna = getLagna(date, lat, lng);
   const lagnaName = lagna.rashi.name;
   const moonSidereal = toSidereal(getMoonLongitude(date), date);
@@ -6571,7 +6776,11 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       const ageStart = startYr - birthYrForWindows;
       const ageEnd   = endYr ? endYr - birthYrForWindows : ageStart + 10;
       if (ageEnd < 0) continue;  // fully pre-birth
-      if (ageStart > 80) continue; // implausibly far
+      // Mother is typically 25-35 years older than the native, so when the
+      // native is age 50 the mother is already 75-85. Skip mother-related
+      // crisis windows that fall after that — they are biologically
+      // implausible and damage user trust.
+      if (ageStart > 50) continue;
 
       windows.push({
         period: `${dp.start} – ${dp.endDate}`,
@@ -6728,6 +6937,36 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     matrukaraka: matrukaraka ? { planet: matrukaraka.planet, rashi: matrukaraka.rashi } : null,
     d12ParentChart: d12Lagna ? { d12Lagna } : null,
     motherCareer: motherCareerAnalysis,
+    // ── PROFESSION RANKING — deterministic top-N candidates ─────
+    // Converts raw planetary evidence into a ranked occupation list
+    // so the AI is constrained to a verified shortlist instead of
+    // free-styling. This dramatically reduces "your mother was a
+    // teacher" hallucinations when the chart actually points to
+    // healthcare, finance, etc.
+    motherProfessionRanking: rankParentProfessions({
+      parent: 'mother',
+      careerLord: motherCareerAnalysis.motherCareerLord,
+      careerLordHouse: motherCareerAnalysis.motherCareerLordHouse,
+      careerLordDignity: motherCareerAnalysis.motherCareerLordDignity,
+      careerLordShadbala: motherCareerAnalysis.motherCareerLordShadbala,
+      careerHousePlanets: motherCareerAnalysis.motherCareerHousePlanets,
+      careerHouseSign: houses[0]?.rashiEnglish || null,           // 10th-from-4th = native H1
+      parentKaraka: 'Moon',
+      parentKarakaHouse: motherCareerAnalysis.moonHouse,
+      parentKarakaDignity: motherCareerAnalysis.moonDignity,
+      parentKarakaSign: motherCareerAnalysis.moonRashiEnglish,
+      d10Lagna: extendedVargas?.D10?.lagnaRashi || null,
+      // ── Whole-body parent chart context ── (see father block for rationale)
+      parentBodyPlanets: (houses[3]?.planets || []).filter(p => p.name !== 'Lagna').map(p => p.name),    // mother's 1st = native H4
+      parentWealthPlanets: (houses[4]?.planets || []).filter(p => p.name !== 'Lagna').map(p => p.name),  // mother's 2nd = native H5
+      parentEffortPlanets: (houses[5]?.planets || []).filter(p => p.name !== 'Lagna').map(p => p.name),  // mother's 3rd = native H6
+      parentBusinessPlanets: (houses[9]?.planets || []).filter(p => p.name !== 'Lagna').map(p => p.name),// mother's 7th = native H10
+    }, {
+      topN: 5,
+      nativeBirthYear: (date instanceof Date ? date : new Date(date)).getUTCFullYear(),
+      region: detectRegion(lat, lng),
+      regionLabel: regionLabel(detectRegion(lat, lng)),
+    }),
     // ── DERIVED HOUSE CHART — Mother's full chart (4th as lagna) ──
     // Enables AI to read ALL 12 houses from mother's perspective, not just cherry-picked ones
     derivedChart: (() => {
@@ -6750,15 +6989,20 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     hasAbandonmentRisk,
     healthRisks: motherHealthRisks,
     kidneyRisk: { high: highKidneyRisk, indicatorCount: kidneyIndicators },
-    healthCrisisWindows: motherAgeCrisisWindows,
+    healthCrisisWindows: filterParentPeriods(motherAgeCrisisWindows, date),
     lifestrug: motherStruggles,
     bond: nativeMotherbond,
-    motherHealthPeriods: dasaPeriods
-      .filter(dp => dp.lord === lord4Family || dp.lord === 'Moon' || dp.lord === 'Saturn')
-      .map(dp => ({
-        lord: dp.lord,
-        period: `${dp.start} to ${dp.endDate}`,
-      })),
+    motherHealthPeriods: filterParentPeriods(
+      dasaPeriods
+        .filter(dp => dp.lord === lord4Family || dp.lord === 'Moon' || dp.lord === 'Saturn')
+        .map(dp => ({
+          lord: dp.lord,
+          period: `${dp.start} to ${dp.endDate}`,
+          start: dp.start,
+          endDate: dp.endDate,
+        })),
+      date
+    ),
     maleficsIn4th: maleficsIn4,
     lord4InDusthanFamily,
   };
@@ -6908,14 +7152,51 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     lifestrug: fatherStruggles,
     bond: nativeFatherBond,
     fatherCareer: fatherCareerAnalysis,
+    // ── PROFESSION RANKING — deterministic top-N candidates ─────
+    // Same approach as mother: pre-compute the most likely
+    // occupations from raw chart evidence so the AI is constrained
+    // to an auditable shortlist.
+    fatherProfessionRanking: rankParentProfessions({
+      parent: 'father',
+      careerLord: fatherCareerAnalysis.fatherCareerLord,
+      careerLordHouse: fatherCareerAnalysis.fatherCareerLordHouse,
+      careerLordDignity: fatherCareerAnalysis.fatherCareerLordDignity,
+      careerLordShadbala: fatherCareerAnalysis.fatherCareerLordShadbala,
+      careerHousePlanets: fatherCareerAnalysis.fatherCareerHousePlanets,
+      careerHouseSign: houses[5]?.rashiEnglish || null,           // 10th-from-9th = native H6
+      parentKaraka: 'Sun',
+      parentKarakaHouse: fatherCareerAnalysis.sunHouse,
+      parentKarakaDignity: fatherCareerAnalysis.sunDignity,
+      parentKarakaSign: fatherCareerAnalysis.sunRashiEnglish,
+      d10Lagna: extendedVargas?.D10?.lagnaRashi || null,
+      // ── Whole-body parent chart context ──
+      // Plant pair-amplifier signatures (Saturn+Venus = furniture, Mercury+Venus
+      // = textiles, Mars+Saturn = hardware, etc.) often sit in the parent's
+      // 1st/2nd/3rd/7th houses, NOT in the career-axis. Pass them so the
+      // ranker can fire those amplifiers.
+      parentBodyPlanets: (houses[8]?.planets || []).filter(p => p.name !== 'Lagna').map(p => p.name),    // father's 1st = native H9
+      parentWealthPlanets: (houses[9]?.planets || []).filter(p => p.name !== 'Lagna').map(p => p.name),  // father's 2nd = native H10
+      parentEffortPlanets: (houses[10]?.planets || []).filter(p => p.name !== 'Lagna').map(p => p.name), // father's 3rd = native H11
+      parentBusinessPlanets: (houses[2]?.planets || []).filter(p => p.name !== 'Lagna').map(p => p.name),// father's 7th = native H3
+    }, {
+      topN: 5,
+      nativeBirthYear: (date instanceof Date ? date : new Date(date)).getUTCFullYear(),
+      region: detectRegion(lat, lng),
+      regionLabel: regionLabel(detectRegion(lat, lng)),
+    }),
     lord9InDusthan,
     maleficsIn9th: maleficsIn9,
-    fatherEventPeriods: dasaPeriods
-      .filter(dp => dp.lord === lord9Family || dp.lord === 'Sun')
-      .map(dp => ({
-        lord: dp.lord,
-        period: `${dp.start} to ${dp.endDate}`,
-      })),
+    fatherEventPeriods: filterParentPeriods(
+      dasaPeriods
+        .filter(dp => dp.lord === lord9Family || dp.lord === 'Sun')
+        .map(dp => ({
+          lord: dp.lord,
+          period: `${dp.start} to ${dp.endDate}`,
+          start: dp.start,
+          endDate: dp.endDate,
+        })),
+      date
+    ),
   };
 
   // ── SIBLINGS ───────────────────────────────────────────────────
@@ -7322,6 +7603,39 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     const youngerThreshold = h3SiblingPlanets.length > 0 ? 0.3 : 0.5;
     const elderThreshold = h11SiblingPlanets.length > 0 ? 0.3 : 0.5;
 
+    // ── Era-aware family-size prior ──────────────────────────────
+    // Family size has dropped dramatically in Sri Lanka / India over the
+    // last 50 years (TFR: 5.0 in 1960 → 1.9 in 2020 for Sri Lanka).
+    // A chart that "weakly indicates 1 elder sibling" was statistically
+    // realistic for someone born in 1970, but is much less so for someone
+    // born in 2020+ when the modal family is 1-2 children total.
+    //
+    // We apply a SOFT penalty (only nudges borderline scores) so that
+    // strong sibling signatures still produce siblings, but weak/borderline
+    // signatures are pulled toward "0 / only child" for modern births.
+    //
+    // We also apply a small REWARD for pre-1970 births so that genuinely
+    // strong charts of that era can climb toward "3+" more easily.
+    const birthYear = (date instanceof Date ? date : new Date(date)).getUTCFullYear();
+    let eraPrior = 0;       // additive score adjustment (negative = pull toward 0)
+    let eraMaxCap = null;   // hard cap on TOTAL sibling count regardless of score
+    if (birthYear >= 2015) {
+      eraPrior = -0.5;      // strong bias toward small family
+      eraMaxCap = 2;        // very rare for 2015+ births to have 3+
+    } else if (birthYear >= 2000) {
+      eraPrior = -0.3;
+      eraMaxCap = 3;
+    } else if (birthYear >= 1985) {
+      eraPrior = -0.1;
+    } else if (birthYear < 1970) {
+      eraPrior = 0.2;       // large-family era — reward genuine signals
+    }
+    // Apply the prior to BOTH score buckets. The penalty is small enough
+    // that it cannot suppress strong sibling indicators (≥1.5), but is
+    // decisive on borderline scores near the threshold.
+    youngerScore += eraPrior;
+    elderScore += eraPrior;
+
     // Set flags based on whether any sibling group leans female/male
     // IMPORTANT: Use the actual count thresholds, not a lower value.
     // Gender flags should only be set when the count is ≥ 1.
@@ -7416,17 +7730,39 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       return parseInt(c) || 0;
     }
     const actualCount = parseCount(elderCount) + parseCount(youngerCount);
-    const countLabel = actualCount >= 3 ? '3 or more' : actualCount >= 1 ? String(actualCount) : '0 or 1';
+    // Apply era-aware hard cap on TOTAL siblings — modern births rarely have 3+
+    let cappedElder = elderCount;
+    let cappedYounger = youngerCount;
+    let cappedTotal = actualCount;
+    if (eraMaxCap !== null && actualCount > eraMaxCap) {
+      // Trim from whichever bucket has the larger count first
+      let overflow = actualCount - eraMaxCap;
+      const trim = (label) => {
+        const n = parseCount(label);
+        if (n <= 0 || overflow <= 0) return label;
+        const newN = Math.max(0, n - overflow);
+        overflow -= (n - newN);
+        return String(newN);
+      };
+      // Trim younger first (modern births tend to be later children)
+      cappedYounger = trim(cappedYounger);
+      cappedElder = trim(cappedElder);
+      cappedTotal = parseCount(cappedElder) + parseCount(cappedYounger);
+    }
+    const countLabel = cappedTotal >= 3 ? '3 or more' : cappedTotal >= 1 ? String(cappedTotal) : '0 or 1';
 
     return {
       count: countLabel,
-      estimatedElderSiblings: elderCount,
-      estimatedYoungerSiblings: youngerCount,
+      estimatedElderSiblings: cappedElder,
+      estimatedYoungerSiblings: cappedYounger,
       hasSisters: hasSis,
       hasBrothers: hasBros,
       score: +totalScore.toFixed(1),
+      eraPrior: { birthYear, scoreAdjustment: eraPrior, maxCap: eraMaxCap },
     };
   })();
+
+  const siblingEstimateAdjusted = siblingEstimate;
 
   // Sibling character — AI interprets from planet placements
   const SIBLING_CHARACTER_BY_PLANET = {};
@@ -7486,7 +7822,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
         marsBAVin11th: marsBAV11,
       };
     })() : null,
-    estimatedCount: siblingEstimate,
+    estimatedCount: siblingEstimateAdjusted,
     planetsIn3rd: siblingCharacters,
     lord3InDusthan,
     lord11InDusthan,
@@ -8948,8 +9284,46 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     };
   })();
   // ══════════════════════════════════════════════════════════════
+
+  // Developmental stage guard — informs prompt how to frame each section
+  // when the native is too young for adult-life claims to apply.
+  const developmentalStage = (() => {
+    try {
+      const dev = getDevelopmentalStage(date, new Date());
+      return {
+        ...dev,
+        sectionGuidance: buildSectionGuidance(dev.stage),
+      };
+    } catch (e) {
+      return null;
+    }
+  })();
+
+  // ── ACCURACY ENHANCEMENTS (Tier 1 / 2 / 3) ─────────────────
+  // Multi-ayanamsha, D9 verification, Yogi/Avayogi, Argala, Returns,
+  // Bhava Bala, Sade Sati phase, Eclipse triggers, KP fine timing,
+  // Nadi chains, Locality dasha, Varshaphal cross-validation,
+  // Per-section confidence tiering.
+  const accuracyEnhancements = (() => {
+    try {
+      return computeAccuracyEnhancements({
+        birthDate: date,
+        lat, lng,
+        planets, navamsha, lagna,
+        planetStrengths, vimshottari: dasaPeriods, houses,
+        asOfDate: opts.asOfDate ? new Date(opts.asOfDate) : new Date(),
+      });
+    } catch (e) {
+      console.warn('[generateFullReport] Accuracy enhancements failed:', e.message);
+      return null;
+    }
+  })();
+
   return {
     generatedAt: new Date().toISOString(),
+    rectificationApplied,
+    accuracyEnhancements,
+    developmentalStage,
     birthData: {
       date: date.toISOString(),
       lat, lng,
@@ -10070,6 +10444,84 @@ function detectYogas(date, lat, lng) {
   return yogas;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// JAIMINI RASHI DRISHTI (sign aspects)
+// ═══════════════════════════════════════════════════════════════════════════
+// Unlike Parashari Graha Drishti (planet aspects which depend on the planet),
+// Jaimini Rashi Drishti is a property of the SIGN. Used as an independent
+// confirmation system for predictions. Rules (Jaimini Sutras 1.1.7-12):
+//   - Movable signs (Aries, Cancer, Libra, Capricorn) aspect ALL fixed signs
+//     EXCEPT the one immediately adjacent.
+//   - Fixed signs (Taurus, Leo, Scorpio, Aquarius) aspect ALL movable signs
+//     EXCEPT the one immediately adjacent.
+//   - Dual signs (Gemini, Virgo, Sagittarius, Pisces) aspect each other (all 4).
+//
+// Use: a planet/house casts Jaimini drishti onto another rashi if the rule applies.
+// Cross-check: when both Parashari graha drishti AND Jaimini rashi drishti
+// confirm a yoga or transit ingress, weight goes ×1.5 in confidence engine.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// 0=movable, 1=fixed, 2=dual (Aries..Pisces)
+const RASHI_MODALITY = [0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2];
+
+/**
+ * Get all rashis aspected (in Jaimini Rashi Drishti) by the given rashi.
+ *
+ * @param {number} rashiIndex - 0..11 (0=Mesha/Aries)
+ * @returns {number[]} Array of 0-indexed rashis aspected
+ */
+function getRashiDrishti(rashiIndex) {
+  const r = ((rashiIndex % 12) + 12) % 12;
+  const mode = RASHI_MODALITY[r];
+  const aspected = [];
+  if (mode === 0) {
+    // Movable → all 4 fixed except adjacent (immediately next or prev fixed?)
+    // Jaimini convention: exclude the fixed sign 2nd from movable (the next one)
+    for (let i = 0; i < 12; i++) {
+      if (RASHI_MODALITY[i] !== 1) continue;
+      const dist = ((i - r + 12) % 12);
+      if (dist === 1) continue; // adjacent next sign
+      aspected.push(i);
+    }
+  } else if (mode === 1) {
+    // Fixed → all 4 movable except the one immediately previous (12th from fixed)
+    for (let i = 0; i < 12; i++) {
+      if (RASHI_MODALITY[i] !== 0) continue;
+      const dist = ((i - r + 12) % 12);
+      if (dist === 11) continue; // 12th house — adjacent prev sign
+      aspected.push(i);
+    }
+  } else {
+    // Dual → all 4 dual signs (including itself? classical: excluding self)
+    for (let i = 0; i < 12; i++) {
+      if (RASHI_MODALITY[i] === 2 && i !== r) aspected.push(i);
+    }
+  }
+  return aspected;
+}
+
+/**
+ * Build the full Jaimini Rashi Drishti matrix for a chart.
+ * Returns { rashiAspects: { [signName]: [signNames…] }, planetRashiAspects: { [planetKey]: [signNames…] } }
+ *
+ * @param {object} planets - Output of getAllPlanetPositions
+ */
+function buildJaiminiRashiDrishti(planets) {
+  const rashiAspects = {};
+  for (let i = 0; i < 12; i++) {
+    const aspected = getRashiDrishti(i).map((j) => RASHIS[j].name);
+    rashiAspects[RASHIS[i].name] = aspected;
+  }
+  // Planet-level: each planet "aspects" the rashis aspected by its own rashi
+  const planetRashiAspects = {};
+  for (const [key, p] of Object.entries(planets || {})) {
+    if (!p || typeof p.rashiId !== 'number') continue;
+    const aspected = getRashiDrishti(p.rashiId - 1).map((j) => RASHIS[j].name);
+    planetRashiAspects[key] = aspected;
+  }
+  return { rashiAspects, planetRashiAspects };
+}
+
 module.exports = {
   NAKSHATRAS,
   RASHIS,
@@ -10117,4 +10569,6 @@ module.exports = {
   getFunctionalNature,
   analyzeHouse,
   getRahuLongitude,
+  getRashiDrishti,
+  buildJaiminiRashiDrishti,
 };

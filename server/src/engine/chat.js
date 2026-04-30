@@ -5,7 +5,7 @@
  * Vedic astrology context → personalized, culturally-aware guidance.
  */
 
-const { getPanchanga, getDailyNakath, getNakshatra, getRashi, getLagna, toSidereal, getMoonLongitude, getSunLongitude, generateFullReport, buildHouseChart, buildNavamshaChart, getAllPlanetPositions, calculateDrishtis, detectYogas, getPlanetStrengths, calculateAshtakavarga, calculateVimshottariDetailed } = require('./astrology');
+const { getPanchanga, getDailyNakath, getNakshatra, getRashi, getLagna, toSidereal, getMoonLongitude, getSunLongitude, generateFullReport, buildHouseChart, buildNavamshaChart, getAllPlanetPositions, calculateDrishtis, detectYogas, getPlanetStrengths, calculateAshtakavarga, calculateVimshottariDetailed, buildJaiminiRashiDrishti, RASHIS } = require('./astrology');
 const { generateAdvancedAnalysis } = require('./advanced');
 const { extractGeminiUsage, createTokenTracker, recordUsage, finalizeTracker, formatCostLog } = require('../utils/tokenCalculator');
 
@@ -230,6 +230,13 @@ Use these techniques naturally throughout ALL report sections — but EVERY tech
 - EXAMPLE OF WHAT NOT TO DO: "You will become wealthy in 2099" — NO! The person will be 100+ years old.
 - INSTEAD: "Your chart shows a wealth-building period approaching in [next 5-15 years]. The strongest financial growth potential is from [year] to [year]."
 - If multiple timing windows exist and one is 50 years away, PRIORITISE the closer one that falls within a reasonable working lifespan.
+
+🎯 10b. PARENT-LIFESPAN PLAUSIBILITY — CRITICAL FOR FAMILY/HEALTH SECTIONS:
+- Parents are typically 25-35 years OLDER than the native. So when the native is age 50, the parent is already ~75-85.
+- NEVER predict mother or father health/career events after the native turns 50. Doing so makes claims like "your mother's health declines in 2092" for a 2026-born baby — biologically absurd and instantly destroys user trust.
+- Concrete rule: if a timing window for a PARENT event starts after (birth_year + 50), DO NOT mention it. Period.
+- For parents of users currently in their 30s/40s/50s, explicitly acknowledge "your mother / father is likely older now" and frame health observations as PRESENT-day patterns to watch — not far-future predictions.
+- ALWAYS perform this mental check before writing a parent-related sentence: "If I claim this happens in [year], how old would the parent be? If 80+, omit it."
 
 🎯 11. CONFIDENCE LEVELS FOR PREDICTIONS — Be transparent about certainty:
 - 🔴 HIGH CONFIDENCE (90%+): When 3+ independent chart factors converge on the same conclusion. State boldly: "This is one of the clearest patterns in your chart..."
@@ -546,6 +553,122 @@ USER'S BIRTH CHART DATA:
     } catch (e) { /* skip if jyotish fails */ }
   }
 
+  // ── PRECISION ENRICHMENT ──────────────────────────────────
+  // High-precision fields added in 2026 accuracy upgrade:
+  //   1. Current Pratyantar dasha lord (sub-sub period, ~14-90 day window)
+  //   2. Shodhita SAV bindus per house (BPHS Ch.66 refined transit-strength)
+  //   3. Jaimini Rashi Drishti — independent sign-aspect cross-check
+  // The model should treat these as ground-truth alongside earlier fields.
+  try {
+    const planets = getAllPlanetPositions(date, birthLat, birthLng);
+    const moonSid = planets.moon.sidereal;
+    const dasha = calculateVimshottariDetailed(moonSid, date);
+    const now = new Date();
+    let activeMD = null, activeAD = null, activePD = null;
+    for (const md of dasha) {
+      if (now >= new Date(md.start) && now < new Date(md.endDate)) {
+        activeMD = md;
+        for (const ad of md.antardashas || []) {
+          if (now >= new Date(ad.start) && now < new Date(ad.endDate)) {
+            activeAD = ad;
+            for (const pd of ad.pratyantars || []) {
+              if (now >= new Date(pd.start) && now < new Date(pd.endDate)) {
+                activePD = pd;
+                break;
+              }
+            }
+            break;
+          }
+        }
+        break;
+      }
+    }
+    if (activeMD || activePD) {
+      context += `\nPRECISION DASHA STACK (5-level Vimshottari, tropical-year accurate):\n`;
+      if (activeMD) context += `- Mahadasha: ${activeMD.lord} (${activeMD.start} → ${activeMD.endDate})\n`;
+      if (activeAD) context += `- Antardasha: ${activeAD.lord} (${activeAD.start} → ${activeAD.endDate})\n`;
+      if (activePD) context += `- Pratyantar (sub-sub, ±1-day timing): ${activePD.lord} (${activePD.start} → ${activePD.endDate})\n`;
+    }
+  } catch (_) { /* skip */ }
+
+  try {
+    const av = calculateAshtakavarga(date, birthLat, birthLng);
+    if (av && av.shodhitaSarvashtakavarga) {
+      // Only highlight extreme sign strengths (refined SAV) to keep prompt small
+      const entries = Object.entries(av.shodhitaSarvashtakavarga);
+      const strong = entries.filter(([, v]) => v >= 25).map(([k, v]) => `${k}=${v}`);
+      const weak = entries.filter(([, v]) => v <= 8).map(([k, v]) => `${k}=${v}`);
+      context += `\nSHODHITA SAV (BPHS-refined transit strength — use for timing precision):\n`;
+      if (strong.length) context += `- Strongest signs (transit-favourable): ${strong.join(', ')}\n`;
+      if (weak.length) context += `- Weakest signs (transit-cautioned): ${weak.join(', ')}\n`;
+    }
+  } catch (_) { /* skip */ }
+
+  try {
+    const planets2 = getAllPlanetPositions(date, birthLat, birthLng);
+    const j = buildJaiminiRashiDrishti(planets2);
+    const lagnaSign = lagna?.rashi?.name;
+    if (j && lagnaSign && j.rashiAspects?.[lagnaSign]) {
+      context += `\nJAIMINI RASHI DRISHTI (independent sign-aspect cross-check):\n`;
+      context += `- Signs aspecting your Lagna (${lagnaSign}) by Jaimini drishti: ${j.rashiAspects[lagnaSign].join(', ')}\n`;
+      // For each planet, show the rashis it aspects via Jaimini (not Parashari)
+      const planetLines = Object.entries(j.planetRashiAspects || {})
+        .filter(([k]) => ['sun','moon','mars','mercury','jupiter','venus','saturn'].includes(k))
+        .map(([k, signs]) => `${k}→{${signs.slice(0,3).join(',')}}`);
+      if (planetLines.length) {
+        context += `- Planet→signs (Jaimini): ${planetLines.join(' | ')}\n`;
+      }
+    }
+  } catch (_) { /* skip */ }
+
+  // Enrich with ACCURACY ENGINE — multi-ayanamsha, D9, Yogi/Avayogi,
+  // Argala, Bhava Bala, Sade Sati, Returns, Eclipses, Locality dasha,
+  // Varshaphal. This gives the chat AI the same precision context the
+  // report engine uses, so interactive answers carry the same accuracy.
+  try {
+    const { computeAccuracyEnhancements } = require('./accuracyEngine');
+    const houseChart = buildHouseChart(date, birthLat, birthLng);
+    const navamsha = buildNavamshaChart(date, birthLat, birthLng);
+    const planets = houseChart.planets;
+    const planetStrengths = getPlanetStrengths(date, birthLat, birthLng);
+    const dasaPeriods = calculateVimshottariDetailed(moonSidereal, date);
+    const acc = computeAccuracyEnhancements({
+      birthDate: date, lat: birthLat, lng: birthLng,
+      planets, navamsha, lagna,
+      planetStrengths, vimshottari: dasaPeriods, houses: houseChart.houses,
+      asOfDate: new Date(),
+    });
+    if (acc) {
+      context += `\nACCURACY ENGINE SNAPSHOT:\n`;
+      if (acc.multiAyanamsha) context += `- Lagna stability: ${acc.multiAyanamsha.sensitivityFlag} — ${acc.multiAyanamsha.advisory}\n`;
+      if (acc.yogiAvayogi) context += `- Yogi planet: ${acc.yogiAvayogi.yogiPlanet} (fortune dasha) | Avayogi: ${acc.yogiAvayogi.avayogiPlanet} (fragile dasha) | Dagdha rashi: ${acc.yogiAvayogi.dagdhaRashi}\n`;
+      if (acc.d9Verification?.summary?.length) context += `- D9 verdicts: ${acc.d9Verification.summary.slice(0, 3).join('; ')}\n`;
+      if (acc.argala) {
+        const sup = acc.argala.mostSupported?.map(x => `H${x.house}`).join(',');
+        const obs = acc.argala.mostObstructed?.map(x => `H${x.house}`).join(',');
+        context += `- Argala: supported {${sup}} | obstructed {${obs}}\n`;
+      }
+      if (acc.bhavaBala) {
+        const s = acc.bhavaBala.strongest?.map(h => `H${h.house}=${h.bala}`).join(',');
+        const w = acc.bhavaBala.weakest?.map(h => `H${h.house}=${h.bala}`).join(',');
+        context += `- Bhava Bala: strongest {${s}}, weakest {${w}}\n`;
+      }
+      if (acc.sadeSatiPhase?.active) context += `- ⚠ ${acc.sadeSatiPhase.active}: ${acc.sadeSatiPhase.phase} — ${acc.sadeSatiPhase.interpretation}\n`;
+      if (acc.localityDasha) context += `- Dasha activation: ${acc.localityDasha.advisory}\n`;
+      if (acc.varshaphal) context += `- ${acc.varshaphal.year} verdict: ${acc.varshaphal.yearVerdict} (Muntha H${acc.varshaphal.muntha?.house} ${acc.varshaphal.muntha?.effect})\n`;
+      const upSat = acc.returns?.saturn?.find(x => x.isUpcoming);
+      const upJup = acc.returns?.jupiter?.find(x => x.isUpcoming);
+      if (upSat) context += `- Next Saturn return: ${upSat.date.slice(0, 10)} (age ${upSat.ageAtReturn})\n`;
+      if (upJup) context += `- Next Jupiter return: ${upJup.date.slice(0, 10)} (age ${upJup.ageAtReturn})\n`;
+      if (acc.eclipseTriggers?.naturalTriggers?.length) {
+        context += `- Eclipse triggers next 6 months:\n`;
+        acc.eclipseTriggers.naturalTriggers.slice(0, 3).forEach(t => {
+          context += `  • ${t.eclipse} ${t.eclipseDate.slice(0,10)} hits natal ${t.natalPlanet} (orb ${t.orb}°, ${t.intensity})\n`;
+        });
+      }
+    }
+  } catch (e) { /* skip if accuracy fails */ }
+
   return context;
 }
 
@@ -613,7 +736,26 @@ CURRENT PLANETARY TRANSITS (${now.toISOString()}):
  * Build the full messages array for the AI API call
  */
 function buildChatMessages(userMessage, birthDate, birthLat, birthLng, language = 'en', chatHistory = []) {
-  const systemPrompt = buildSystemPrompt(language);
+  // ── Skill-based prompt routing (anti-hallucination, 2026 upgrade) ──
+  // Instead of sending the full 4000-line monolith, we send only:
+  //   CORE (anti-hallucination contract + language) + skills relevant to
+  //   the user's actual question. This drastically reduces context bloat
+  //   on simple questions and reduces hallucination from oversaturation.
+  let systemPrompt;
+  let routedIntents = [];
+  try {
+    const { composeChatPrompt } = require('./prompts/router');
+    const composed = composeChatPrompt(userMessage, language);
+    systemPrompt = composed.prompt;
+    routedIntents = composed.intents;
+    if (process.env.DEBUG_PROMPT_ROUTER === 'true') {
+      console.log(`[prompt-router] intents=${JSON.stringify(routedIntents)} tokens≈${composed.tokenEstimate}`);
+    }
+  } catch (e) {
+    // Fallback to legacy monolithic prompt if router fails
+    console.warn('[prompt-router] failed, falling back to monolithic prompt:', e.message);
+    systemPrompt = buildSystemPrompt(language);
+  }
   const birthContext = birthDate ? buildBirthChartContext(birthDate, birthLat, birthLng) : '';
   const transitContext = buildTransitContext(birthLat || 6.9271, birthLng || 79.8612);
 
@@ -2666,6 +2808,12 @@ ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). No
 
 SECTION IDENTITY: Living family members. HIGHEST verification risk — reader knows their family.
 
+⛔ HARD LIFESPAN CAP FOR PARENT EVENTS ⛔
+Birth year: ${(() => { try { return new Date(birthData?.birthDate || birthData?.date || Date.now()).getUTCFullYear(); } catch (_) { return new Date().getUTCFullYear(); } })()}
+Maximum allowed year for ANY parent-related prediction: ${(() => { try { return new Date(birthData?.birthDate || birthData?.date || Date.now()).getUTCFullYear() + 50; } catch (_) { return new Date().getUTCFullYear() + 50; } })()}
+Reason: parents are 25-35 years older than the native. Beyond native_age 50 the parent is already 75-85+. Mentioning a parent event in a year past this cap is BIOLOGICALLY ABSURD and will be auto-rejected by the validator.
+DO NOT cite ANY year past the cap above for the mother or father. If the engine data still contains such a window, IGNORE IT and pick a closer window or omit timing entirely.
+
 CONVERGENCE RULES FOR THIS SECTION:
 • Mother → 4th house + Moon position + Moon Shadbala + Matrukaraka + D12 = MULTI-LAYER portrait. Childhood trauma data OVERRIDES generic "happy family" narrative.
 • Father → 9th house + Sun position + Sun Shadbala + Pitrakaraka + D12 = MULTI-LAYER portrait. If lord in dusthana = struggles.
@@ -2696,6 +2844,48 @@ Translate the following family data into an honest, vivid family portrait. Descr
 - Mother significator (Matrukaraka): ${sectionData?.mother?.matrukaraka ? `${sectionData.mother.matrukaraka.planet} in ${sectionData.mother.matrukaraka.rashi}` : 'N/A'}
 - D12 parent chart: ${sectionData?.mother?.d12ParentChart ? JSON.stringify(sectionData.mother.d12ParentChart) : 'N/A'}
 - Mother career analysis (chart-predicted): ${JSON.stringify(sectionData?.mother?.motherCareer || {})}
+- 🎯 MOTHER PROFESSION — RAW CHART EVIDENCE (synthesise freely; NOT a closed list):
+${(() => {
+  const m = sectionData?.mother;
+  const dc = m?.derivedChart || {};
+  const lines = [];
+  // Parent's own life-axis houses with planets, sign, lord
+  const axes = [
+    ['H1 (her body / outward expression)', dc[1]],
+    ['H2 (her wealth / accumulated goods / family-business inventory)', dc[2]],
+    ['H3 (her hands-on effort / siblings / trade)', dc[3]],
+    ['H7 (her partnerships / public dealing / business)', dc[7]],
+    ['H10 (her career / public role)', dc[10]],
+    ['H11 (her gains / network / elder siblings)', dc[11]],
+  ];
+  for (const [label, h] of axes) {
+    if (!h) continue;
+    lines.push(`  • Mother-${label}: sign=${h.rashi}, lord=${h.rashiLord}${h.planets?.length ? ', planets=[' + h.planets.join(',') + ']' : ', empty'}`);
+  }
+  lines.push(`  • Moon (matrukaraka): H${m?.moonPosition?.house || '?'} ${m?.moonPosition?.rashiEnglish || ''} — dignity=${m?.matrukaraka?.planet ? '' : ''}`);
+  lines.push(`  • Mother career-axis lord: ${m?.motherCareer?.motherCareerLord || '?'} in H${m?.motherCareer?.motherCareerLordHouse || '?'} (dignity ${m?.motherCareer?.motherCareerLordDignity || '?'}, shadbala ${m?.motherCareer?.motherCareerLordShadbala || '?'}%)`);
+  // Engine's ranked candidates as a HINT only
+  const r = m?.motherProfessionRanking;
+  if (r?.top?.length) {
+    lines.push('  • Engine\'s tentative ranked domains (HINT ONLY, NOT a closed list — feel free to name a more specific profession that fits the raw evidence above): ' +
+      r.top.slice(0, 6).map(c => `${c.occupation} (${Math.round(c.score)})`).join(' · '));
+    if (r.blended) lines.push('    ↳ engine flags BLENDED — top 2 domains nearly tied, real role likely combines or transcends both');
+  }
+  return lines.join('\n');
+})()}
+  SYMBOL DICTIONARY (use to translate raw planet/sign/house data into a concrete profession — combine multiple symbols):
+   • Sun → authority, government, gold, leadership, medicine, civil-service          • Moon → public, food, hospitality, caregiving, water, dairy, retail-public-facing
+   • Mars → engineering, surgery, military, metal/iron, sports, mechanical, fire     • Mercury → trade, accounts, writing, IT, sales, brokerage, shop-keeping, communication
+   • Jupiter → law, teaching, finance, religion, advisory, wisdom, paediatric medicine • Venus → comfort goods, textiles, jewellery, vehicles, design, FURNITURE, beauty, music, hospitality
+   • Saturn → labour, durable/heavy goods, TIMBER & WOOD, oil/coal, civil-service-clerical, long-tenure technical, hardware, sanitation, agriculture
+   • Rahu → foreign work, technology, aviation, pharma, unconventional       • Ketu → spiritual/occult, research, forensics, mathematics, abstract
+   PAIR PATTERNS (when two planets occupy parent's body/wealth/effort/business/career axes together): Saturn+Venus → FURNITURE / WOOD-TRADE / HOME-FURNISHINGS RETAIL · Mercury+Venus → TEXTILE / SAREE / GARMENT RETAIL · Mars+Saturn → HARDWARE / BUILDING-MATERIALS / TOOLS · Mercury+Saturn → SHOPKEEPER / SME PROPRIETOR · Sun+Venus → JEWELLERY / GOLD-TRADE · Moon+Venus → RESTAURANT / CATERING · Jupiter+Mercury → TUTOR / EDUCATIONAL-PUBLISHER
+  RULE — write the mother's profession this way:
+   1. SYNTHESISE from the raw evidence above. Combine planet symbols + parent-house placements + sign keywords + pair patterns into ONE specific profession description.
+   2. You are NOT restricted to the engine's tentative ranked list — that list misses small-business / trade / family-business signatures that often live in H1/H2/H3/H7. If the raw evidence points to FURNITURE / TEXTILES / HARDWARE / RESTAURANT / etc. and that fits better than the engine's #1 domain, name it.
+   3. State the profession with confidence ("the chart points strongly to [profession]"), then give 2-3 era-appropriate alternative titles in case the exact one differs.
+   4. NEVER claim mystical specificity ("she was definitely a nurse"). NEVER invent details (employer name, exact title) you can't derive.
+   5. End with a soft confirmation: "if that doesn't ring true, the next-most-likely from this chart pattern is [alternative]".
 - Mother DERIVED CHART (4th house = mother's lagna — read ALL 12 houses from her perspective):
 ${sectionData?.mother?.derivedChart ? Object.entries(sectionData.mother.derivedChart).map(([h, d]) => `  Mother-H${h} = Native-H${d.nativeHouse} ${d.rashi} lord=${d.rashiLord}${d.planets?.length ? ' [' + d.planets.join(',') + ']' : ''}`).join('\n') : 'N/A'}
   KEY: Mother-H10 = her career, Mother-H2 = her wealth, Mother-H7 = her marriage, Mother-H6 = her enemies/service
@@ -2717,6 +2907,46 @@ ${sectionData?.mother?.derivedChart ? Object.entries(sectionData.mother.derivedC
 - Father significator (Pitrakaraka): ${sectionData?.father?.pitrakaraka ? `${sectionData.father.pitrakaraka.planet} in ${sectionData.father.pitrakaraka.rashi}` : 'N/A'}
 - D12 parent chart: ${sectionData?.father?.d12ParentChart ? JSON.stringify(sectionData.father.d12ParentChart) : 'N/A'}
 - Father career analysis (chart-predicted): ${JSON.stringify(sectionData?.father?.fatherCareer || {})}
+- 🎯 FATHER PROFESSION — RAW CHART EVIDENCE (synthesise freely; NOT a closed list):
+${(() => {
+  const f = sectionData?.father;
+  const dc = f?.derivedChart || {};
+  const lines = [];
+  const axes = [
+    ['H1 (his body / outward expression)', dc[1]],
+    ['H2 (his wealth / accumulated goods / family-business inventory)', dc[2]],
+    ['H3 (his hands-on effort / siblings / trade)', dc[3]],
+    ['H7 (his partnerships / public dealing / business)', dc[7]],
+    ['H10 (his career / public role)', dc[10]],
+    ['H11 (his gains / network / elder siblings)', dc[11]],
+  ];
+  for (const [label, h] of axes) {
+    if (!h) continue;
+    lines.push(`  • Father-${label}: sign=${h.rashi}, lord=${h.rashiLord}${h.planets?.length ? ', planets=[' + h.planets.join(',') + ']' : ', empty'}`);
+  }
+  lines.push(`  • Sun (pitrakaraka): H${f?.sunPosition?.house || '?'} ${f?.sunPosition?.rashiEnglish || ''} — strength ${f?.sunShadbala?.percentage || '?'}%`);
+  lines.push(`  • Father career-axis lord: ${f?.fatherCareer?.fatherCareerLord || '?'} in H${f?.fatherCareer?.fatherCareerLordHouse || '?'} (dignity ${f?.fatherCareer?.fatherCareerLordDignity || '?'}, shadbala ${f?.fatherCareer?.fatherCareerLordShadbala || '?'}%)`);
+  const r = f?.fatherProfessionRanking;
+  if (r?.top?.length) {
+    lines.push('  • Engine\'s tentative ranked domains (HINT ONLY, NOT a closed list — feel free to name a more specific profession that fits the raw evidence above): ' +
+      r.top.slice(0, 6).map(c => `${c.occupation} (${Math.round(c.score)})`).join(' · '));
+    if (r.blended) lines.push('    ↳ engine flags BLENDED — top 2 domains nearly tied, real role likely combines or transcends both');
+  }
+  return lines.join('\n');
+})()}
+  SYMBOL DICTIONARY (use to translate raw planet/sign/house data into a concrete profession — combine multiple symbols):
+   • Sun → authority, government, gold, leadership, medicine, civil-service          • Moon → public, food, hospitality, caregiving, water, dairy, retail-public-facing
+   • Mars → engineering, surgery, military, metal/iron, sports, mechanical, fire     • Mercury → trade, accounts, writing, IT, sales, brokerage, shop-keeping, communication
+   • Jupiter → law, teaching, finance, religion, advisory, wisdom, paediatric medicine • Venus → comfort goods, textiles, jewellery, vehicles, design, FURNITURE, beauty, music, hospitality
+   • Saturn → labour, durable/heavy goods, TIMBER & WOOD, oil/coal, civil-service-clerical, long-tenure technical, hardware, sanitation, agriculture
+   • Rahu → foreign work, technology, aviation, pharma, unconventional       • Ketu → spiritual/occult, research, forensics, mathematics, abstract
+   PAIR PATTERNS (when two planets occupy parent's body/wealth/effort/business/career axes together): Saturn+Venus → FURNITURE / WOOD-TRADE / HOME-FURNISHINGS RETAIL · Mercury+Venus → TEXTILE / SAREE / GARMENT RETAIL · Mars+Saturn → HARDWARE / BUILDING-MATERIALS / TOOLS · Mercury+Saturn → SHOPKEEPER / SME PROPRIETOR · Sun+Venus → JEWELLERY / GOLD-TRADE · Moon+Venus → RESTAURANT / CATERING · Jupiter+Mercury → TUTOR / EDUCATIONAL-PUBLISHER
+  RULE — write the father's profession this way:
+   1. SYNTHESISE from the raw evidence above. Combine planet symbols + parent-house placements + sign keywords + pair patterns into ONE specific profession description.
+   2. You are NOT restricted to the engine's tentative ranked list — that list misses small-business / trade / family-business signatures that often live in H1/H2/H3/H7. If the raw evidence points to FURNITURE / TEXTILES / HARDWARE / RESTAURANT / etc. and that fits better than the engine's #1 domain, name it.
+   3. State the profession with confidence ("the chart points strongly to [profession]"), then give 2-3 era-appropriate alternative titles in case the exact one differs.
+   4. NEVER claim mystical specificity ("he was definitely a soldier"). NEVER invent details (employer name, exact title) you can't derive.
+   5. End with a soft confirmation: "if that doesn't ring true, the next-most-likely from this chart pattern is [alternative]".
 - Father DERIVED CHART (9th house = father's lagna — read ALL 12 houses from his perspective):
 ${sectionData?.father?.derivedChart ? Object.entries(sectionData.father.derivedChart).map(([h, d]) => `  Father-H${h} = Native-H${d.nativeHouse} ${d.rashi} lord=${d.rashiLord}${d.planets?.length ? ' [' + d.planets.join(',') + ']' : ''}`).join('\n') : 'N/A'}
   KEY: Father-H10 = his career, Father-H2 = his wealth, Father-H7 = his marriage, Father-H6 = his enemies/service
@@ -2965,6 +3195,22 @@ ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). No
  * Generate AI narrative for a single section
  */
 async function generateSectionNarrative(sectionKey, sectionData, birthData, allSections, language = 'en', rashiContext = null, ageContext = null, userName = null, userGender = null, userReligion = null, familyInfo = {}) {
+  // ── PRE-CLASSIFICATION VALIDATION ──────────────────────────────
+  // Sanitize engine data BEFORE the AI sees it. Lifespan caps,
+  // numeric clamps, required-field flags. Cheap, deterministic.
+  let preValidationMeta = null;
+  try {
+    const { preValidateSectionData } = require('./preValidator');
+    const pre = preValidateSectionData(sectionKey, sectionData, birthData?.birthDate || birthData?.date);
+    sectionData = pre.data;
+    preValidationMeta = { warnings: pre.warnings, summary: pre.summary };
+    if (pre.warnings.length) {
+      console.log(`[pre-validator] ${sectionKey}: ${pre.warnings.length} sanitization(s) — ${pre.warnings.map(w => w.type).join(', ')}`);
+    }
+  } catch (preErr) {
+    console.warn(`[pre-validator] ${sectionKey} failed (using raw data):`, preErr.message);
+  }
+
   const sectionPromptData = buildSectionPrompt(sectionKey, sectionData, birthData, allSections, language, { rashiContext: rashiContext || { userReligion: userReligion }, userGender, userName, userReligion });
   if (!sectionPromptData) return null;
 
@@ -3163,6 +3409,54 @@ Tag each major claim in your output with an internal confidence tier:
 - ★☆☆ INDICATED (1 source, moderate strength): State clearly. "There's a notable pattern suggesting..."
 - ☆☆☆ HINTED (1 weak source): State as possibility. "One pattern in your chart hints at..."
 Never mix confidence levels — if something is ★★★, COMMIT to it. If it's ☆☆☆, don't oversell it.
+
+═══════════════════════════════════════════════════════════════
+  PHASE 2E — ACCURACY ENGINE INPUTS (NEW — must be honoured)
+═══════════════════════════════════════════════════════════════
+
+Near the end of every section's data block you will find an "ACCURACY ENHANCEMENTS" panel produced by an external precision engine. It contains:
+
+1. **"Confidence for this section"** — ★ / ★★ / ★★★ tier with reasons.
+   - ★★★ = engine ALREADY confirmed via D9, dasha-transit, varshaphal, eclipse-trigger convergence → write declaratively, no hedging.
+   - ★★   = moderate convergence → write with authority but note "indications".
+   - ★    = lagna-sensitive or under-supported → MUST hedge ("may", "indications suggest", "patterns hint at"). Never state as fact.
+   This OVERRIDES your internal Phase 2D tier when the two disagree — the engine has stricter cross-system validation than you do.
+
+2. **"Lagna stability"** (multi-ayanamsha) — if HIGH sensitivity, downgrade ALL personality / appearance / spouse-physique / health-organ claims to hedged language, since rising sign may be wrong.
+
+3. **"Yogi planet" / "Avayogi planet"** — Yogi's dasha periods carry the year's best outcomes; Avayogi's periods are fragile.
+   - When discussing TIMING in this section, if the active period is run by the Yogi planet, frame as "rare luck-window" / "one of the most favourable phases of life".
+   - If active period is run by Avayogi, frame as "consolidation phase" / "avoid finalising major decisions".
+   - "Dagdha rashi" = the sign to avoid for muhurtha — surface this naturally if remedies/timing context applies.
+
+4. **"D9 promise verification"** — for each planet a "promise multiplier".
+   - >= 1.2 (Vargottama-style or D9 elevation): write the planet's promised result CONFIDENTLY — "this is among the strongest gifts in your chart".
+   - <= 0.6 (D1 promise broken in D9): write with strong hedging — "this looks promising on paper but tends to under-deliver in lived experience".
+   - Around 1.0: neutral, no calibration needed.
+
+5. **"Argala (Jaimini intervention)"** — supported / obstructed houses.
+   - If THIS section's life area maps to a "supported" house, results manifest more cleanly — write with conviction.
+   - If it maps to an "obstructed" house, predictions need a ~2-3 year delay buffer and a remedy hint.
+
+6. **"Bhava Bala"** — house strength /100. If the house most relevant to THIS section scores < 40, the section's promises tend to underperform regardless of lord strength — hedge.
+
+7. **"Current Saturn-Moon phase"** (Sade Sati / Ashtama / Kantaka).
+   - If active and section is health/career/family/marriage → MUST surface the phase-appropriate guidance.
+   - Translate "Sade Sati" / "Ashtama Shani" / "Kantaka Shani" into plain language (banned terms list still applies). E.g. "a 7.5-year identity-restructuring phase is currently active".
+
+8. **"Dasha activation (locality-aware)"** — when the engine flags transit-amplified houses, predictions for those life areas get +1 confidence tier. Write with extra conviction about TIMING in those areas.
+
+9. **"Varshaphal"** — current year's annual verdict.
+   - Strong year → boost any current-year prediction confidence.
+   - Difficult year → hedge any optimistic current-year claim, suggest patience.
+
+10. **"Next Saturn / Jupiter return"** — surface the EXACT date and age in any section that touches life-stage transitions (career, marriage, health, lifePredictions, currentPhase). These are the most validated event timers in Vedic astrology — name them specifically.
+
+11. **"Upcoming eclipses triggering natal planets"** — if an eclipse hits a planet relevant to this section (Venus → marriage, Sun → career, Moon → mind/family, etc.), warn about the ±6 month window with the specific date. This is the single most accurate short-term timing signal — use it.
+
+12. **"Birth time was rectified"** — if present, mention naturally ONCE that times were cross-validated against life events. Do not over-explain.
+
+ABSOLUTE RULE: If the engine confidence tier for this section is ★ (Speculative), every major claim in your output MUST use hedging language. If ★★★, you may state findings as facts. Do not contradict the engine's verdict — it represents convergence across 6+ independent astrological systems.
 
 ═══════════════════════════════════════════════════════════════
   PHASE 3 — THE MASTER NARRATOR (the actual output)
@@ -3382,7 +3676,131 @@ FORMAT: Markdown for readability:
     return '\n' + lines.join('\n');
   })();
 
-  const userPrompt = sectionPromptData.prompt + rashiBlock + coherenceBlock + jyotishEnrichBlock + chalitBlock + vargaBlock;
+  // ── DEVELOPMENTAL STAGE GUARD ───────────────────────────────
+  // Prevents the AI from claiming adult-life facts ("you are a successful
+  // CEO") about charts of infants/toddlers/children, while telling it to
+  // raise confidence on PARENT/SIBLING facts that ARE deterministically
+  // readable from a newborn's chart.
+  const devGuardBlock = (() => {
+    try {
+      const { getDevelopmentalStage, buildSectionGuidance, buildGlobalGuardHeader } = require('./infantChartGuard');
+      const birthDateRaw = birthData?.date || birthData?.birthDate;
+      if (!birthDateRaw) return '';
+      const dev = getDevelopmentalStage(birthDateRaw, new Date());
+      if (dev.isAdult) return '';
+      const guidance = buildSectionGuidance(dev.stage);
+      const sectionGuide = guidance[sectionKey];
+      const globalHeader = buildGlobalGuardHeader(dev);
+      const sectionLine = sectionGuide
+        ? `\n\n══ DEVELOPMENTAL FRAMING FOR THIS SECTION (${sectionKey}) ══\nApplicability: ${sectionGuide.applicability}\nFraming voice: ${sectionGuide.framing}\nInstructions:\n${sectionGuide.instructions.map(i => '  • ' + i).join('\n')}\n══════════════════════════════════════════════════════`
+        : '';
+      return '\n\n' + globalHeader + sectionLine;
+    } catch (e) {
+      return '';
+    }
+  })();
+
+  // ── ACCURACY-ENHANCEMENT BLOCK ──────────────────────
+  // Surfaces Tier 1/2/3 accuracy modules to the AI: per-section confidence
+  // tier (★/★★/★★★), Yogi/Avayogi planet, Argala signals, D9 promise
+  // verification, Sade Sati phase, eclipse triggers, Saturn/Jupiter returns,
+  // Bhrigu Bindu activations, locality-aware dasha, varshaphal cross-validation,
+  // multi-ayanamsha lagna stability, Bhava Bala. The AI is instructed to
+  // weight predictions by confidence tier and downgrade lagna-driven claims
+  // when sensitivity is HIGH.
+  const accuracyBlock = (() => {
+    try {
+      const acc = birthData?._accuracyEnhancements;
+      if (!acc) return '';
+      const lines = ['', '', '══ ACCURACY ENHANCEMENTS (Tier 1/2/3 systems) ══'];
+
+      // Confidence tier for THIS section
+      const tier = acc.confidenceTiers?.[sectionKey];
+      if (tier) {
+        lines.push(`Confidence for this section: ${tier.stars} (${tier.label})`);
+        if (tier.reasons?.length) lines.push(`  Why: ${tier.reasons.join('; ')}`);
+        lines.push(`  RULE: If confidence is ★ (Speculative), hedge claims with "signs suggest" / "likely". If ★★★, write declaratively. NEVER state low-confidence content as fact.`);
+      }
+
+      // Multi-ayanamsha lagna stability
+      if (acc.multiAyanamsha) {
+        const m = acc.multiAyanamsha;
+        lines.push(`\nLagna stability: ${m.sensitivityFlag} — ${m.advisory}`);
+      }
+
+      // Yogi / Avayogi
+      if (acc.yogiAvayogi) {
+        const y = acc.yogiAvayogi;
+        lines.push(`\nYogi planet: ${y.yogiPlanet} (fortune in its dasha). Avayogi: ${y.avayogiPlanet} (fragile periods).`);
+        lines.push(`Dagdha rashi: ${y.dagdhaRashi} — avoid major launches when transit luminaries pass through this sign.`);
+      }
+
+      // D9 verification — surface only the most decisive verdicts
+      if (acc.d9Verification?.summary?.length) {
+        lines.push(`\nD9 (Navamsha) promise verification:`);
+        acc.d9Verification.summary.forEach(s => lines.push(`  • ${s}`));
+      }
+
+      // Argala
+      if (acc.argala) {
+        const sup = acc.argala.mostSupported?.map(x => `H${x.house} (${x.score})`).join(', ') || '—';
+        const obs = acc.argala.mostObstructed?.map(x => `H${x.house} (${x.score})`).join(', ') || '—';
+        lines.push(`\nArgala (Jaimini intervention): supported → ${sup}; obstructed → ${obs}`);
+      }
+
+      // Bhava Bala
+      if (acc.bhavaBala) {
+        const s = acc.bhavaBala.strongest?.map(h => `H${h.house}=${h.bala}`).join(', ');
+        const w = acc.bhavaBala.weakest?.map(h => `H${h.house}=${h.bala}`).join(', ');
+        lines.push(`\nBhava Bala (house strength /100): strongest ${s}; weakest ${w}`);
+      }
+
+      // Sade Sati phase
+      if (acc.sadeSatiPhase?.active) {
+        const s = acc.sadeSatiPhase;
+        lines.push(`\nCurrent Saturn-Moon phase: ${s.active} — ${s.phase}. ${s.interpretation}`);
+      }
+
+      // Locality dasha — critical for current-phase / career / wealth
+      if (acc.localityDasha) {
+        const l = acc.localityDasha;
+        lines.push(`\nDasha activation (locality-aware): ${l.advisory}`);
+      }
+
+      // Varshaphal
+      if (acc.varshaphal) {
+        const v = acc.varshaphal;
+        lines.push(`\nVarshaphal ${v.year}: ${v.yearVerdict}. Muntha in H${v.muntha?.house} (${v.muntha?.effect}). ${v.crossValidationRule}`);
+      }
+
+      // Saturn / Jupiter returns
+      if (acc.returns?.saturn?.length || acc.returns?.jupiter?.length) {
+        const upcomingSat = acc.returns.saturn?.find(x => x.isUpcoming);
+        const upcomingJup = acc.returns.jupiter?.find(x => x.isUpcoming);
+        if (upcomingSat) lines.push(`\nNext Saturn return: ${upcomingSat.date.slice(0, 10)} (age ~${upcomingSat.ageAtReturn}) — structural life reset window.`);
+        if (upcomingJup) lines.push(`Next Jupiter return: ${upcomingJup.date.slice(0, 10)} (age ~${upcomingJup.ageAtReturn}) — expansion / opportunity window.`);
+      }
+
+      // Eclipse triggers
+      if (acc.eclipseTriggers?.naturalTriggers?.length) {
+        lines.push(`\nUpcoming eclipses triggering natal planets:`);
+        acc.eclipseTriggers.naturalTriggers.slice(0, 3).forEach(t => {
+          lines.push(`  • ${t.eclipse} eclipse ${t.eclipseDate.slice(0, 10)} hits natal ${t.natalPlanet} (orb ${t.orb}°, ${t.intensity}) — ${t.window}`);
+        });
+      }
+
+      // Rectification feedback
+      if (birthData?._rectificationApplied?.applied !== false && birthData?._rectificationApplied?.rectifiedTime) {
+        const r = birthData._rectificationApplied;
+        lines.push(`\n⚠ Birth time was rectified by ${r.offsetMinutes} min (confidence: ${r.confidence}, ${r.eventsUsed} events). Treat lagna-driven claims as ${r.confidence === 'high' ? '★★★' : '★★'}.`);
+      }
+
+      lines.push('══════════════════════════════════════════════════════');
+      return '\n' + lines.join('\n');
+    } catch (e) { return ''; }
+  })();
+
+  const userPrompt = sectionPromptData.prompt + rashiBlock + coherenceBlock + jyotishEnrichBlock + chalitBlock + vargaBlock + devGuardBlock + accuracyBlock;
 
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -3411,11 +3829,61 @@ FORMAT: Markdown for readability:
       ? await callGeminiHero(messages, sectionTemperature)
       : await callGeminiLong(messages, sectionTemperature);
 
+    // ── POST-CLASSIFICATION REASONING / CROSS-CHECK LAYER ──────────
+    // Validates the generated narrative for:
+    //   • Year mentions beyond native lifespan (age >80)
+    //   • Parent-event mentions beyond native_age 50
+    //   • Absolute death / divorce claims
+    //   • AI self-disclosures ("As an AI…")
+    //   • Astrology jargon leaks (Navamsha, Drishti, etc.)
+    //   • Vague filler phrases
+    //   • Hallucinated scores (numbers not in engine data)
+    //   • Language impurity (English in Sinhala/Tamil narratives)
+    // Stage 1 deterministic fixes ALWAYS run.
+    // Stage 2 (LLM self-critique) runs only when severity >= 3 AND
+    // section is in SELF_CRITIQUE_SECTIONS. Cost-bounded.
+    let finalText = result.text;
+    let validationMeta = null;
+    try {
+      const { validateAndFixNarrative } = require('./reportValidator');
+      const SELF_CRITIQUE_SECTIONS = new Set(['familyPortrait', 'health', 'lifePredictions', 'children', 'marriage', 'career', 'physicalProfile', 'attractionProfile']);
+      const validation = await validateAndFixNarrative(result.text, birthData?.birthDate || birthData?.date, {
+        selfCritique: SELF_CRITIQUE_SECTIONS.has(sectionKey),
+        callGemini: callGeminiLong,
+        language,
+        sectionData,
+      });
+      finalText = validation.text;
+      validationMeta = {
+        issues: validation.issues,
+        redFlags: validation.redFlags,
+        hallucinations: validation.hallucinations,
+        language: validation.language,
+        aiDisclosuresRemoved: validation.aiDisclosuresRemoved,
+        severity: validation.severity,
+        selfCritiqued: validation.selfCritiqued,
+        preValidation: preValidationMeta,
+      };
+      if (validation.severity > 0) {
+        console.log(
+          `[validator] ${sectionKey}: severity=${validation.severity} ` +
+          `years=${validation.issues.length} flags=${validation.redFlags.length} ` +
+          `halluc=${validation.hallucinations.suspect.length} ` +
+          `aiTells=${validation.aiDisclosuresRemoved} ` +
+          `langOK=${validation.language.ok}` +
+          `${validation.selfCritiqued ? ' [self-critiqued]' : ''}`
+        );
+      }
+    } catch (vErr) {
+      console.warn(`[validator] ${sectionKey} validation failed (using raw output):`, vErr.message);
+    }
+
     return {
       title: sectionPromptData.title,
-      narrative: result.text,
+      narrative: finalText,
       usage: result.usage,
       model: result.model,
+      validation: validationMeta,
     };
   } catch (error) {
     console.error(`[AI Report] Error generating ${sectionKey}:`, error.message);
@@ -3732,6 +4200,11 @@ async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612,
   progress('engine');
   const rawReport = generateFullReport(birthDate, lat, lng, cleanMarriageOpts);
   const birthData = rawReport.birthData;
+  // Attach accuracy enhancements + rectification + dev stage onto birthData
+  // so they flow through into every section prompt without signature changes.
+  if (rawReport.accuracyEnhancements) birthData._accuracyEnhancements = rawReport.accuracyEnhancements;
+  if (rawReport.rectificationApplied) birthData._rectificationApplied = rawReport.rectificationApplied;
+  if (rawReport.developmentalStage) birthData._developmentalStage = rawReport.developmentalStage;
   const sections = rawReport.sections;
   progress('charts');
 
@@ -4639,6 +5112,30 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
     console.warn(`[AI Report] ${failedSections.length}/${totalSections} sections still failed after retries: ${failedSections.map(f => f.key).join(', ')}`);
   }
   console.log(`[AI Report] ${finalSuccessCount}/${totalSections} sections succeeded (minimum required: ${MIN_REQUIRED_SECTIONS})`);
+
+  // ── CROSS-SECTION CONSISTENCY VALIDATION ──────────────────────
+  // After every section is written + post-validated, run one final
+  // pass that compares claims across sections. The classic failure
+  // we catch here: marriage section says "age 28-32" while
+  // lifePredictions says "age 45". One of them is wrong.
+  // Cap: max 5 LLM calls per report to keep cost bounded.
+  try {
+    const { findCrossSectionDiscrepancies, reconcileDiscrepancies } = require('./crossSectionValidator');
+    const cross = findCrossSectionDiscrepancies(narrativeSections);
+    if (cross.discrepancies.length > 0) {
+      console.log(`[cross-validator] ${cross.summary}`);
+      progress('cross-check', { discrepancies: cross.discrepancies.length });
+      const recon = await reconcileDiscrepancies({
+        narrativeSections,
+        discrepancies: cross.discrepancies,
+        callGemini: callGeminiLong,
+        language,
+      });
+      console.log(`[cross-validator] reconciled ${recon.reconciled} section(s) via ${recon.llmCalls} LLM call(s): ${recon.sectionsUpdated.join(', ')}`);
+    }
+  } catch (xErr) {
+    console.warn('[cross-validator] failed (skipping reconciliation):', xErr.message);
+  }
 
   // ── FAIL-SAFE: Throw if too few sections succeeded ──
   // This is a PAID feature — returning an empty/nearly-empty report is unacceptable

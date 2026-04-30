@@ -795,24 +795,24 @@ var cdv = StyleSheet.create({
 // ══════════════════════════════════════════
 var LOADING_STAGES = {
   en: {
-    starting: { text: '🌌 Connecting to the stars...', sub: 'Preparing your birth chart analysis' },
-    engine: { text: '🪐 Calculating planetary positions...', sub: 'Mapping the sky at your exact birth moment' },
-    charts: { text: '✨ Building your celestial charts...', sub: 'Rashi, Navamsha, and house systems coming together' },
-    coherence: { text: '🔮 Creating your personal narrative...', sub: 'Understanding the story behind the numbers' },
-    sections: { text: '📜 Writing your life story...', sub: 'Each chapter crafted just for you' },
-    retrying: { text: '🔄 Perfecting your report...', sub: 'Retrying a few sections for the best quality' },
-    complete: { text: '🎉 Your report is ready!', sub: 'Opening your personalized life reading' },
-    failed: { text: '⚠️ Generation hit a snag', sub: 'Don\'t worry — you can try again for free' },
+    starting: { text: '🌌 Aligning with the Cosmos...', sub: 'Did you know? Your exact birth minute determines your Rising Sign (Lagna), the lens of your soul.' },
+    engine: { text: '🪐 Tracking Planetary Transits...', sub: 'Fun fact: Rahu & Ketu are shadow planets that carry the destiny of your past life karma.' },
+    charts: { text: '✨ Drawing the Celestial Map...', sub: 'Constructing your D-1 (Rashi) and D-9 (Navamsha) charts for deep destiny analysis.' },
+    coherence: { text: '🔮 Decoding Planetary Yogas...', sub: 'Searching for rare planetary combinations (Yogas) that shape your wealth and fame.' },
+    sections: { text: '📜 Penning Your Cosmic Destiny...', sub: 'Analyzing the 12 houses to uncover secrets about your love, career, and hidden strengths.' },
+    retrying: { text: '🔄 Refining Astrological Nuances...', sub: 'Vedic astrology requires deep precision. Taking an extra moment to polish your secrets!' },
+    complete: { text: '🎉 Your Cosmic Blueprint is Ready!', sub: 'Unveiling your personalized path to success and true happiness.' },
+    failed: { text: '⚠️ A Ripple in the Continuum...', sub: 'The stars paused. Please try again (You won\'t be charged again for this).' },
   },
   si: {
-    starting: { text: '🌌 තරු වලට සම්බන්ධ වෙමින්...', sub: 'ඔබේ ජන්ම පත්‍රය විශ්ලේෂණයට සූදානම් වෙමින්' },
-    engine: { text: '🪐 ග්‍රහ පිහිටීම් ගණනය කරමින්...', sub: 'ඔබ ඉපදුන මොහොතේ අහස සිතියම්ගත කරමින්' },
-    charts: { text: '✨ දිව්‍ය සටහන් ගොඩනගමින්...', sub: 'රාශි, නවාංශ, භාව පද්ධති එකට එමින්' },
-    coherence: { text: '🔮 ඔබේ පෞද්ගලික කථාව නිර්මාණය කරමින්...', sub: 'සංඛ්‍යා පිටුපස ඇති කතාව තේරුම් ගනිමින්' },
-    sections: { text: '📜 ඔබේ ජීවිත කතාව ලියමින්...', sub: 'සෑම පරිච්ඡේදයක්ම ඔබට පමණක් ලියැවේ' },
-    retrying: { text: '🔄 වාර්තාව වැඩි දියුණු කරමින්...', sub: 'හොඳම ගුණත්වය සඳහා කොටස් කිහිපයක් නැවත උත්සාහ කරමින්' },
-    complete: { text: '🎉 ඔබේ වාර්තාව සූදානම්!', sub: 'ඔබේ පෞද්ගලික ජීවිත කියවීම විවෘත කරමින්' },
-    failed: { text: '⚠️ ජනනයේ ගැටලුවක්', sub: 'කරදර වෙන්න එපා — නොමිලේ නැවත උත්සාහ කරන්න' },
+    starting: { text: '🌌 විශ්වය හා සම්බන්ධ වෙමින්...', sub: 'ඔබ දන්නවාද? ඔබේ ලග්නය තීරණය වන්නේ ඔබ උපන් හරියටම එම විනාඩියෙන් බව!' },
+    engine: { text: '🪐 ග්‍රහ චලිතය ගණනය කරමින්...', sub: 'රාහු සහ කේතු යනු ඔබේ පෙර භවයේ කර්මය රැගෙන එන චායා ග්‍රහයින් බව ඔබ දන්නවාද?' },
+    charts: { text: '✨ ජන්ම පත්‍ර සිතියම් ගත කරමින්...', sub: 'රාශි චක්‍රය සහ නවාංශකය විශ්ලේෂණය කර ඔබගේ දෛවයේ රහස් කේතයන් සොයමින්.' },
+    coherence: { text: '🔮 ග්‍රහ යෝග හා බලපෑම් විමසමින්...', sub: 'ඔබට ධනය සහ ජනප්‍රියත්වය ගෙනෙන සුවිශේෂී ග්‍රහ යෝග සඳහා සිතියම සියුම්ව පරීක්ෂා කරමින්.' },
+    sections: { text: '📜 ඔබේ ජීවිත කතාව ලියමින්...', sub: 'භාව 12න් ආදරය, දේපළ, රැකියාව හා ඔබගේ සැඟවුණු දක්ෂතා පිළිබඳ රහස් හෙළි කරමින්.' },
+    retrying: { text: '🔄 තවත් සියුම්ව පරික්ෂා කරමින්...', sub: 'වෛදික ජ්‍යෝතිෂය ඉතාමත් සියුම් විශ්ලේෂණයක් ඉල්ලයි. එය උපරිම නිවැරදිව ලබා දීමට තව සුළු මොහොතක්.' },
+    complete: { text: '🎉 ඔබේ කේන්දර වාර්තාව සූදානම්!', sub: 'සාර්ථකත්වය හා සතුට කරා යන ඔබේ ගමන පෙන්වන විශ්ව රහස් දැන් විවෘතයි.' },
+    failed: { text: '⚠️ ග්‍රහ ශක්තීන්ගේ බාධාවක්', sub: 'තරු නැවතුණාක් මෙනි. කරුණාකර නැවත උත්සාහ කරන්න (ඔබට නැවත මුදල් ගෙවීමට අවශ්‍ය නැත).' },
   },
 };
 
@@ -1132,6 +1132,32 @@ export default function ReportScreen() {
   // Flow states: 'form' -> 'loading' -> 'report'
   var [screenState, setScreenState] = useState('form');
   var [savedReports, setSavedReports] = useState([]);
+
+  // De-duplicate saved reports by (userName + birthDate + birthLocation).
+  // Server + AsyncStorage can both retain entries for the same person
+  // (e.g. user regenerated the report or fell back during a network blip),
+  // so we collapse to the most recent entry per identity for display.
+  var displayReports = useMemo(function() {
+    if (!Array.isArray(savedReports) || savedReports.length === 0) return [];
+    var seen = new Map();
+    for (var i = 0; i < savedReports.length; i++) {
+      var r = savedReports[i];
+      var key = (r.userName || '') + '|' + (r.birthDate || '') + '|' + (r.birthLocation || '') + '|' + (r.birthLat || '') + '|' + (r.birthLng || '');
+      var existing = seen.get(key);
+      if (!existing) {
+        seen.set(key, r);
+        continue;
+      }
+      var existingTs = existing.savedAt ? new Date(existing.savedAt).getTime() : 0;
+      var rTs = r.savedAt ? new Date(r.savedAt).getTime() : 0;
+      if (rTs > existingTs) seen.set(key, r);
+    }
+    return Array.from(seen.values()).sort(function(a, b) {
+      var ta = a.savedAt ? new Date(a.savedAt).getTime() : 0;
+      var tb = b.savedAt ? new Date(b.savedAt).getTime() : 0;
+      return tb - ta;
+    });
+  }, [savedReports]);
   var scrollProgress = useSharedValue(0);
   var [currentChapter, setCurrentChapter] = useState(1);
   var { isConnected } = useNetworkStatus();
@@ -2484,7 +2510,7 @@ export default function ReportScreen() {
         </Animated.View>
 
         {/* Saved Reports */}
-        {savedReports.length > 0 && (
+        {displayReports.length > 0 && (
           <Animated.View entering={FadeInDown.delay(250).duration(800)}>
             <AuraBox style={{ marginBottom: 4 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
@@ -2493,10 +2519,10 @@ export default function ReportScreen() {
                   {reportLang === 'si' ? 'සුරකින ලද වාර්තා' : 'Saved Reports'}
                 </Text>
                 <Text style={{ color: 'rgba(255,214,102,0.35)', fontSize: 11 }}>
-                  {savedReports.length + '/' + MAX_SAVED_REPORTS}
+                  {displayReports.length + '/' + MAX_SAVED_REPORTS}
                 </Text>
               </View>
-              {savedReports.map(function(entry, idx) {
+              {displayReports.map(function(entry, idx) {
                 var savedDate = entry.savedAt ? new Date(entry.savedAt) : null;
                 var timeAgo = '';
                 if (savedDate) {

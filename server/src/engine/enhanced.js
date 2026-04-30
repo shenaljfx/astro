@@ -332,7 +332,7 @@ function calculateEnhancedAspects(date, lat, lng) {
     const { planets } = _toAIPlanetArray(date, lat, lng);
     const aspectInput = planets
       .filter(p => !['Rahu', 'Ketu'].includes(p.name))
-      .map(p => ({ name: p.name, house: p.house }));
+      .map(p => ({ name: p.name, houseNumber: p.house }));
     return aiAspects.calculateAspects(aspectInput);
   } catch (e) {
     console.warn('[Enhanced] Aspect calculation failed:', e.message);
