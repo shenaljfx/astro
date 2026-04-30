@@ -233,12 +233,12 @@ function detectDoshas(date, lat, lng) {
         description: sadeSatiPhase.description,
         descriptionSi: sadeSatiPhase.descriptionSi,
         remedies: [
-          'Practice patience and consistency — this phase is temporary',
-          'Focus on building discipline and resilience',
-          'Engage in regular physical exercise to manage stress',
-          'Help those less fortunate — acts of service ease Saturn\'s pressure',
-          'Maintain a structured daily routine',
-          'Avoid impulsive major decisions — take time to think things through',
+          'Build long-term plans with realistic milestones — progress through patience',
+          'Exercise 30min daily + maintain 7-8 hours sleep — protect your energy',
+          'Keep a 6-month emergency fund — avoid taking on new debt',
+          'Delay major life changes (job switch, relocation) if possible — timing matters',
+          'Schedule a comprehensive health checkup — don\'t ignore symptoms',
+          'Seek advice from a mentor before big decisions — don\'t act alone',
         ],
       });
     }

@@ -1023,6 +1023,80 @@ var cl = StyleSheet.create({
 });
 
 // ══════════════════════════════════════════
+// Normalize chart data for SriLankanChart component
+// Handles both the direct /birth-chart response format (array)
+// and the AI report saved format (object with houses/lagna)
+// ══════════════════════════════════════════
+var RASHI_NAME_TO_ID = {
+  'Mesha': 1, 'Aries': 1,
+  'Vrishabha': 2, 'Taurus': 2,
+  'Mithuna': 3, 'Gemini': 3,
+  'Kataka': 4, 'Cancer': 4,
+  'Simha': 5, 'Leo': 5,
+  'Kanya': 6, 'Virgo': 6,
+  'Tula': 7, 'Libra': 7,
+  'Vrischika': 8, 'Scorpio': 8,
+  'Dhanus': 9, 'Sagittarius': 9,
+  'Makara': 10, 'Capricorn': 10,
+  'Kumbha': 11, 'Aquarius': 11,
+  'Meena': 12, 'Pisces': 12,
+};
+
+function normalizeChartForDisplay(chartData) {
+  if (!chartData) return null;
+
+  var rashiChart = null;
+  var lagnaRashiId = 1;
+
+  // Extract rashiChart array
+  var rawChart = chartData.rashiChart;
+  if (Array.isArray(rawChart)) {
+    // Direct /birth-chart response — already an array of {rashiId, planets}
+    rashiChart = rawChart;
+  } else if (rawChart && typeof rawChart === 'object' && Array.isArray(rawChart.houses)) {
+    // AI report format — object with houses array
+    rashiChart = rawChart.houses;
+  }
+
+  // Extract lagnaRashiId
+  // 1. From chartData.lagna.rashiId (direct API)
+  if (chartData.lagna && chartData.lagna.rashiId) {
+    lagnaRashiId = chartData.lagna.rashiId;
+  }
+  // 2. From chartData.lagna.id (getRashi returns this)
+  else if (chartData.lagna && chartData.lagna.id) {
+    lagnaRashiId = chartData.lagna.id;
+  }
+  // 3. From rashiChart object's nested lagna (AI report format)
+  else if (rawChart && typeof rawChart === 'object' && rawChart.lagna) {
+    var nestedLagna = rawChart.lagna;
+    if (nestedLagna.rashi && nestedLagna.rashi.id) {
+      lagnaRashiId = nestedLagna.rashi.id;
+    } else if (nestedLagna.rashiId) {
+      lagnaRashiId = nestedLagna.rashiId;
+    } else if (nestedLagna.id) {
+      lagnaRashiId = nestedLagna.id;
+    }
+  }
+  // 4. From chartData.lagna.name (saved report birthData.lagna)
+  else if (chartData.lagna && chartData.lagna.name) {
+    lagnaRashiId = RASHI_NAME_TO_ID[chartData.lagna.name] || 1;
+  }
+  // 5. From chartData.lagna.english
+  else if (chartData.lagna && chartData.lagna.english) {
+    lagnaRashiId = RASHI_NAME_TO_ID[chartData.lagna.english] || 1;
+  }
+  // 6. Fallback: infer from houses[0] (house 1 = lagna sign)
+  else if (rashiChart && rashiChart[0] && rashiChart[0].houseNumber === 1 && rashiChart[0].rashiId) {
+    lagnaRashiId = rashiChart[0].rashiId;
+  }
+
+  if (!rashiChart) return null;
+
+  return { rashiChart: rashiChart, lagnaRashiId: lagnaRashiId };
+}
+
+// ══════════════════════════════════════════
 // MAIN REPORT SCREEN
 // ══════════════════════════════════════════
 export default function ReportScreen() {
@@ -2136,21 +2210,25 @@ export default function ReportScreen() {
           )}
 
           {/* ═══ BIRTH CHART ═══ */}
-          {chartData && chartData.rashiChart && (
-            <Animated.View entering={FadeInDown.delay(250).duration(700)}>
-              <AuraBox style={{ borderColor: 'rgba(255,140,0,0.2)' }}>
-                <View style={s.chartHeader}>
-                  <Text style={s.chartTitle}>{reportLang === 'si' ? '🏛️ ඔයාගේ උපන් සිතියම' : '🏛️ Your Birth Map'}</Text>
-                  <Text style={s.chartSub}>{reportLang === 'si' ? 'ඔයා ඉපදුන මොහොතේ අහස පෙනුන හැටි' : 'How the sky looked the moment you were born'}</Text>
-                </View>
-                <SriLankanChart
-                  rashiChart={chartData.rashiChart}
-                  lagnaRashiId={chartData.lagna?.rashiId || chartData.rashiChart?.[0]?.rashiId || 1}
-                  language={reportLang === 'si' ? 'si' : 'en'}
-                />
-              </AuraBox>
-            </Animated.View>
-          )}
+          {chartData && (function() {
+            var normalized = normalizeChartForDisplay(chartData);
+            if (!normalized) return null;
+            return (
+              <Animated.View entering={FadeInDown.delay(250).duration(700)}>
+                <AuraBox style={{ borderColor: 'rgba(255,140,0,0.2)' }}>
+                  <View style={s.chartHeader}>
+                    <Text style={s.chartTitle}>{reportLang === 'si' ? '🏛️ ඔයාගේ උපන් සිතියම' : '🏛️ Your Birth Map'}</Text>
+                    <Text style={s.chartSub}>{reportLang === 'si' ? 'ඔයා ඉපදුන මොහොතේ අහස පෙනුන හැටි' : 'How the sky looked the moment you were born'}</Text>
+                  </View>
+                  <SriLankanChart
+                    rashiChart={normalized.rashiChart}
+                    lagnaRashiId={normalized.lagnaRashiId}
+                    language={reportLang === 'si' ? 'si' : 'en'}
+                  />
+                </AuraBox>
+              </Animated.View>
+            );
+          })()}
 
           {/* ═══ COSMIC DNA STRIP ═══ */}
           <CosmicDnaStrip scoreMap={overviewScores.map} isSi={reportLang === 'si'} onOrbPress={function() {}} />

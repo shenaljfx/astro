@@ -544,7 +544,17 @@ function generateReportHTML(opts) {
   // Charts - D1 (Rashi) and D9 (Navamsha) side by side
   var chartHTML = '';
   if (opts.chartData && opts.chartData.rashiChart) {
-    var chartLagnaId = opts.chartData.lagnaRashiId || (opts.chartData.lagna && opts.chartData.lagna.rashiId) || (opts.chartData.rashiChart[0] && opts.chartData.rashiChart[0].rashiId) || 1;
+    // Normalize rashiChart: can be an array (from /birth-chart) or object { houses, lagna } (from AI report)
+    var rawRC = opts.chartData.rashiChart;
+    var normalizedRC = Array.isArray(rawRC) ? rawRC : (rawRC && rawRC.houses && Array.isArray(rawRC.houses) ? rawRC.houses : null);
+    // Resolve lagnaRashiId from multiple possible sources
+    var chartLagnaId = opts.chartData.lagnaRashiId
+      || (opts.chartData.lagna && opts.chartData.lagna.rashiId)
+      || (opts.chartData.lagna && opts.chartData.lagna.id)
+      || (rawRC && rawRC.lagna && rawRC.lagna.rashi && rawRC.lagna.rashi.id)
+      || (normalizedRC && normalizedRC[0] && normalizedRC[0].houseNumber === 1 && normalizedRC[0].rashiId)
+      || (normalizedRC && normalizedRC[0] && normalizedRC[0].rashiId)
+      || 1;
     
     // Start the dual-chart container
     chartHTML = '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin:24px 0;page-break-inside:avoid;">';
@@ -553,7 +563,7 @@ function generateReportHTML(opts) {
     chartHTML += '<div class="chart-wrap" style="flex:1;min-width:280px;max-width:360px;">'
       +'<div class="chart-title">🏛️ '+(isSi?'ජන්ම කේන්ද්‍රය (D1)':'Birth Chart (D1)')+'</div>'
       +'<div style="font-size:10px;color:#888;margin-bottom:8px;text-align:center;">'+(isSi?'උපන් මොහොතේ ග්‍රහ පිහිටීම':'Planetary positions at birth')+'</div>'
-      +svgSriLankanChart(opts.chartData.rashiChart, chartLagnaId, opts.lang, 300)+'</div>';
+      +svgSriLankanChart(normalizedRC || opts.chartData.rashiChart, chartLagnaId, opts.lang, 300)+'</div>';
     
     // D9 Navamsha Chart (Soul Chart)
     if (opts.chartData.navamshaChart) {

@@ -194,6 +194,88 @@ function VargaChartDisplay({ division, birthDateTime, lat, lng, language }) {
   var planets = vargaData.planets || {};
   var ascRashiId = vargaData.ascendant?.rashi;
   var ascRashi = language === 'si' && ascRashiId ? RASHI_SI[ascRashiId] : (vargaData.ascendant?.rashiName || '--');
+
+  // Planet meaning in each divisional chart context
+  var PLANET_MEANING = {
+    d9: {
+      Sun:     { si: 'විවාහයේ අධිකාරිය/තත්ත්වය', en: 'Authority & status in marriage' },
+      Moon:    { si: 'විවාහයේ හැඟීම්/සහායකත්වය', en: 'Emotional bond in marriage' },
+      Mars:    { si: 'විවාහයේ ශක්තිය/ගැටුම්', en: 'Passion & conflicts in marriage' },
+      Mercury: { si: 'සන්නිවේදනය/බුද්ධිමත් සම්බන්ධතා', en: 'Communication in relationships' },
+      Jupiter: { si: 'විවාහයේ ආශීර්වාදය/සෞභාග්‍යය', en: 'Blessings & fortune in marriage' },
+      Venus:   { si: 'ආදරය/ලිංගික සම්බන්ධතා', en: 'Love, romance & attraction' },
+      Saturn:  { si: 'විවාහයේ පරීක්ෂණ/කැපවීම', en: 'Tests & commitment in marriage' },
+      Rahu:    { si: 'අසාමාන්‍ය සම්බන්ධතා/විදේශීය', en: 'Unconventional or foreign partner' },
+      Ketu:    { si: 'අධ්‍යාත්මික බැඳීම්/පසුගිය ජීවිත', en: 'Spiritual bond, past-life karma' },
+      Uranus:  { si: 'අනපේක්ෂිත වෙනස්කම්', en: 'Sudden changes in relationships' },
+      Neptune: { si: 'පරමාදර්ශී ආදරය', en: 'Idealistic or spiritual love' },
+      Pluto:   { si: 'ගැඹුරු පරිවර්තනය', en: 'Deep transformation in bonds' },
+    },
+    d10: {
+      Sun:     { si: 'වෘත්තීය නායකත්වය/අධිකාරිය', en: 'Career leadership & authority' },
+      Moon:    { si: 'රැකියාවේ ජනප්‍රියත්වය/මහජනතාව', en: 'Public image & popularity at work' },
+      Mars:    { si: 'වෘත්තීය තරඟකාරිත්වය/ශක්තිය', en: 'Career drive & competitiveness' },
+      Mercury: { si: 'ව්‍යාපාර/සන්නිවේදන කුසලතා', en: 'Business skills & communication' },
+      Jupiter: { si: 'වෘත්තීය සෞභාග්‍යය/උසස්වීම්', en: 'Career growth & promotions' },
+      Venus:   { si: 'නිර්මාණාත්මක වෘත්තිය/සුඛෝපභෝගී', en: 'Creative career & luxury fields' },
+      Saturn:  { si: 'දිගු කාලීන වෘත්තීය/වෙහෙස', en: 'Long-term career & hard work pays' },
+      Rahu:    { si: 'තාක්ෂණය/විදේශ රැකියා', en: 'Technology or foreign career' },
+      Ketu:    { si: 'අධ්‍යාත්මික/පර්යේෂණ වෘත්තිය', en: 'Research, spiritual or healing career' },
+      Uranus:  { si: 'නවෝත්පාදන/නිදහස් වෘත්තිය', en: 'Innovation & freelance career' },
+      Neptune: { si: 'කලා/සිනමා/සේවා වෘත්තිය', en: 'Arts, film or service career' },
+      Pluto:   { si: 'බලාධිකාරී/පරිවර්තන වෘත්තිය', en: 'Powerful or transformative career' },
+    },
+    d7: {
+      Sun:     { si: 'දරුවන්ගේ නායක ගුණය', en: 'Children\'s leadership qualities' },
+      Moon:    { si: 'දරුවන් සමඟ හැඟීම් බැඳීම', en: 'Emotional bond with children' },
+      Mars:    { si: 'දරුවන්ගේ ශක්තිය/ක්‍රීඩා', en: 'Children\'s energy & sports talent' },
+      Mercury: { si: 'දරුවන්ගේ බුද්ධිය/ඉගෙනීම', en: 'Children\'s intelligence & learning' },
+      Jupiter: { si: 'දරුවන්ගේ ආශීර්වාදය/සංඛ්‍යාව', en: 'Blessings of children & fertility' },
+      Venus:   { si: 'දරුවන්ගේ නිර්මාණාත්මකත්වය', en: 'Children\'s creative talents' },
+      Saturn:  { si: 'දරු ප්‍රමාදය/වගකීම්', en: 'Delayed children or responsibility' },
+      Rahu:    { si: 'අසාමාන්‍ය දරුපලය', en: 'Unusual path to parenthood' },
+      Ketu:    { si: 'අධ්‍යාත්මික දරු සම්බන්ධය', en: 'Spiritual bond or fewer children' },
+      Uranus:  { si: 'දරුවන්ගේ නිදහස්කාමී ගුණ', en: 'Children\'s independent spirit' },
+      Neptune: { si: 'දරුවන්ගේ නිර්මාණ හැකියා', en: 'Children\'s artistic abilities' },
+      Pluto:   { si: 'දරුවන් හරහා පරිවර්තනය', en: 'Transformation through children' },
+    },
+    d4: {
+      Sun:     { si: 'දේපළ හරහා තත්ත්වය', en: 'Status through property' },
+      Moon:    { si: 'නිවසේ සැනසීම/සුවය', en: 'Comfort & happiness at home' },
+      Mars:    { si: 'ඉඩම්/ගොඩනැගිලි', en: 'Land, buildings & real estate' },
+      Mercury: { si: 'බහු දේපළ/ව්‍යාපාර', en: 'Multiple properties & business assets' },
+      Jupiter: { si: 'දේපළ වාසනාව/උරුමය', en: 'Property fortune & inheritance' },
+      Venus:   { si: 'සුඛෝපභෝගී නිවස/වාහන', en: 'Luxury home & vehicles' },
+      Saturn:  { si: 'පැරණි දේපළ/ප්‍රමාද ලැබීම', en: 'Old property or delayed acquisition' },
+      Rahu:    { si: 'විදේශ දේපළ/අසාමාන්‍ය ආයෝජන', en: 'Foreign property or unusual investments' },
+      Ketu:    { si: 'දේපළ අලාභය/විරාගය', en: 'Property detachment or loss' },
+    },
+    d24: {
+      Sun:     { si: 'අධ්‍යාපනයේ නායකත්වය', en: 'Academic leadership & recognition' },
+      Moon:    { si: 'ඉගෙනීමේ ආශාව/මතකය', en: 'Learning desire & memory power' },
+      Mars:    { si: 'තාක්ෂණික/ඉංජිනේරු අධ්‍යාපනය', en: 'Technical or engineering education' },
+      Mercury: { si: 'බහු විෂය දැනුම/භාෂා', en: 'Multi-subject knowledge & languages' },
+      Jupiter: { si: 'උසස් අධ්‍යාපනය/ශාස්ත්‍රීය', en: 'Higher education & academic success' },
+      Venus:   { si: 'කලා/සංගීත අධ්‍යාපනය', en: 'Arts, music & creative education' },
+      Saturn:  { si: 'ප්‍රමාද නමුත් ගැඹුරු ඉගෙනීම', en: 'Delayed but deep, thorough learning' },
+      Rahu:    { si: 'විදේශ/නවීන අධ්‍යාපනය', en: 'Foreign or modern/tech education' },
+      Ketu:    { si: 'ආධ්‍යාත්මික/පාරම්පරික දැනුම', en: 'Spiritual or traditional knowledge' },
+    },
+    d20: {
+      Sun:     { si: 'ආධ්‍යාත්මික නායකත්වය', en: 'Spiritual leadership' },
+      Moon:    { si: 'භක්තිය/භාවනා ශක්තිය', en: 'Devotion & meditation ability' },
+      Mars:    { si: 'ක්‍රියාශීලී ආධ්‍යාත්මික පුහුණුව', en: 'Active spiritual practice (yoga, etc.)' },
+      Mercury: { si: 'ආගමික ග්‍රන්ථ අධ්‍යයනය', en: 'Study of spiritual texts & philosophy' },
+      Jupiter: { si: 'ගුරු ආශීර්වාදය/ප්‍රඥාව', en: 'Guru blessings & wisdom' },
+      Venus:   { si: 'භක්ති සංගීතය/ආගමික කලාව', en: 'Devotional music & sacred arts' },
+      Saturn:  { si: 'වෙහෙසකර ආධ්‍යාත්මික ගමන', en: 'Difficult but rewarding spiritual path' },
+      Rahu:    { si: 'අසාමාන්‍ය ආධ්‍යාත්මික මාර්ග', en: 'Unconventional spiritual paths' },
+      Ketu:    { si: 'ස්වාභාවික මෝක්ෂ සම්බන්ධය', en: 'Natural inclination to liberation' },
+    },
+  };
+
+  var meanings = PLANET_MEANING[division] || {};
+
   return (
     <View style={{ marginTop: 12 }}>
       <View style={kj.vargaAscRow}>
@@ -207,12 +289,21 @@ function VargaChartDisplay({ division, birthDateTime, lat, lng, language }) {
         var pInfo = PLANET_INFO[name] || {};
         var pColor = pInfo.color || '#818CF8';
         var rashiStr = language === 'si' && p.rashi ? RASHI_SI[p.rashi] : (p.rashiName || p.rashi || '--');
+        var hint = meanings[name];
+        var hintText = hint ? (language === 'si' ? hint.si : hint.en) : null;
         return (
           <View key={i} style={kj.vargaPlanetRow}>
-            <View style={[kj.chalitDot, { backgroundColor: pColor }]} />
-            <Text style={[kj.vargaPlanetName, { color: pColor }]}>
-              {language === 'si' ? (pInfo.si || name) : name}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <View style={[kj.chalitDot, { backgroundColor: pColor }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={[kj.vargaPlanetName, { color: pColor }]}>
+                  {language === 'si' ? (pInfo.si || name) : name}
+                </Text>
+                {hintText ? (
+                  <Text style={kj.vargaPlanetHint} numberOfLines={1}>{hintText}</Text>
+                ) : null}
+              </View>
+            </View>
             <Text style={kj.vargaPlanetRashi}>{rashiStr}</Text>
           </View>
         );
@@ -582,7 +673,7 @@ export default function KendaraScreen() {
           </View>
         </View>
 
-        <View style={[styles.detailsCard, { marginTop: 12 }]}>
+        <View style={[styles.detailsCard, { marginTop: 14 }]}>
           <Text style={styles.cardTitle}>
             {t('kpPlanetPositions') || 'Your planetary placements'}
           </Text>
@@ -602,7 +693,7 @@ export default function KendaraScreen() {
                     <View style={[styles.planetDot, { backgroundColor: pColor }]} />
                     <Text style={[styles.planetName, { color: pColor }]}>{pLabel}</Text>
                     <View style={styles.planetBarTrack}>
-                      <View style={[styles.planetBarFill, { backgroundColor: pColor, width: (30 + Math.random() * 60) + '%' }]} />
+                      <View style={[styles.planetBarFill, { backgroundColor: pColor, width: (30 + ((p.degree != null ? p.degree : 15) / 30) * 60) + '%' }]} />
                     </View>
                     <Text style={styles.planetRashi}>
                       {rashiLabel} {p.degree != null ? formatDegree(p.degree) : ''}
@@ -1378,7 +1469,7 @@ export default function KendaraScreen() {
                                     )}
                                     {!isExpanded && apala.remedies && apala.remedies.length > 0 && (
                                       <Text style={styles.marakaTapHint}>
-                                        {language === 'si' ? '↓ මඟ පෙන්වීම් බැලීමට ඔබන්න' : '↓ Tap for guidance'}
+                                        {language === 'si' ? '↓ ප්‍රායෝගික උපදෙස් බැලීමට ඔබන්න' : '↓ Tap for practical guidance'}
                                       </Text>
                                     )}
                                   </View>
@@ -1560,15 +1651,15 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   infoLabel: { color: 'rgba(255,214,102,0.50)', fontSize: 13 },
   infoValue: { color: '#FFE8B0', fontWeight: '600', fontSize: 13 },
-  cardTitle: { color: '#FFB800', marginBottom: 14, fontWeight: '700', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 },
+  cardTitle: { color: '#FFB800', marginBottom: 14, fontWeight: '700', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 },
 
   // Planet Positions — bar style
   planetRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)', gap: 8 },
   planetDot: { width: 8, height: 8, borderRadius: 4 },
-  planetName: { fontSize: 13, fontWeight: '700', width: 52 },
+  planetName: { fontSize: 13, fontWeight: '700', width: 62 },
   planetBarTrack: { flex: 1, height: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' },
   planetBarFill: { height: 4, borderRadius: 2, opacity: 0.7 },
-  planetRashi: { color: 'rgba(255,214,102,0.50)', fontSize: 11, fontWeight: '500', width: 90, textAlign: 'right' },
+  planetRashi: { color: 'rgba(255,214,102,0.50)', fontSize: 11, fontWeight: '500', width: 100, textAlign: 'right' },
 
   // Advanced Analysis styles
   advCard: {
@@ -1778,7 +1869,8 @@ var kj = StyleSheet.create({
   },
   vargaAscLabel: { color: 'rgba(6,182,212,0.60)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   vargaAscValue: { color: '#06B6D4', fontSize: 16, fontWeight: '800' },
-  vargaPlanetRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' },
-  vargaPlanetName: { fontSize: 13, fontWeight: '700', width: 70 },
-  vargaPlanetRashi: { color: 'rgba(255,214,102,0.55)', fontSize: 13, fontWeight: '600', flex: 1, textAlign: 'right' },
+  vargaPlanetRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' },
+  vargaPlanetName: { fontSize: 13, fontWeight: '700' },
+  vargaPlanetHint: { color: 'rgba(255,255,255,0.30)', fontSize: 10, marginTop: 1 },
+  vargaPlanetRashi: { color: 'rgba(255,214,102,0.55)', fontSize: 13, fontWeight: '600', textAlign: 'right', marginLeft: 8 },
 });

@@ -521,27 +521,17 @@ export default function ChatScreen() {
   }, [msgs, loading]);
 
   var topPad = isDesktop ? 0 : Math.max(insets.top, 10) + 6;
-  // When keyboard is open the tab bar auto-hides (tabBarHideOnKeyboard:true).
-  // When closed, we must reserve the full tab-bar overlay height so the
-  // input row isn't hidden behind the floating nav bar.
+  // Keyboard state for responsive layout adjustments
   var kb = useKeyboard();
 
-  // When keyboard opens, the visible chat area shrinks — make sure the
-  // newest message stays visible instead of getting hidden behind the input.
+  // When keyboard opens, scroll to the latest message (WhatsApp behavior)
   useEffect(function () {
     if (!kb.isOpen) return;
     var to = setTimeout(function () {
       if (scroll.current) scroll.current.scrollToEnd({ animated: true });
-    }, 180);
+    }, 150);
     return function () { clearTimeout(to); };
   }, [kb.isOpen]);
-
-  // Bulletproof Android keyboard compensation:
-  var bottomPad = isDesktop
-    ? 0
-    : (kb.isOpen
-        ? Math.max(insets.bottom, 4) + 4
-        : TAB_BAR_VISUAL_HEIGHT + Math.max(insets.bottom, 4));
 
   // ── DESKTOP LAYOUT ────────────────────────────────────────────────
   if (isDesktop) {
@@ -706,9 +696,15 @@ export default function ChatScreen() {
     );
   }
 
+  // WhatsApp-style keyboard offset: account for header + status bar
+  // Header = topPad + ~48px content + 8px paddingBottom
+  var headerTotalHeight = topPad + 56;
+  var kavOffset = Platform.OS === 'ios' ? headerTotalHeight : 0;
+
   return (
     <DesktopScreenWrapper routeName="chat">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* Fixed header — outside KAV so offset calculation is simpler */}
       <View style={[s.header, { paddingTop: topPad }]}>
         <TouchableOpacity
           onPress={function () { setSelectedMode(null); setMsgs([]); }}
@@ -739,22 +735,27 @@ export default function ChatScreen() {
         </View>
       </View>
 
+      {/* Limit card — always rendered but collapsed when keyboard open to avoid layout jump */}
       {!kb.isOpen && <LimitCard remaining={remaining} t={t} />}
 
+      {/* KeyboardAvoidingView wraps messages + input */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 60 : 0}
+        keyboardVerticalOffset={kavOffset}
+        enabled={Platform.OS === 'ios'}
       >
         <ScrollView
           ref={scroll}
           style={{ flex: 1 }}
-          contentContainerStyle={s.msgList}
+          contentContainerStyle={[s.msgList, { paddingBottom: 4 }]}
           showsVerticalScrollIndicator={false}
           overScrollMode="never"
-          bounces={false}
+          bounces={Platform.OS === 'ios'}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          automaticallyAdjustKeyboardInsets={false}
+          maintainVisibleContentPosition={Platform.OS === 'ios' ? { minIndexForVisible: 0 } : undefined}
         >
           {msgs.map(function (m, i) { return <ChatBubble key={i} msg={m} />; })}
           {loading && (
@@ -766,14 +767,15 @@ export default function ChatScreen() {
               <View style={s.thinkBubble}><ThinkingDots /></View>
             </Animated.View>
           )}
-          <View style={{ height: 20 }} />
+          <View style={{ height: 8 }} />
         </ScrollView>
 
         {msgs.length <= 2 && !loading && remaining > 0 && !kb.isOpen && (
           <QuickChips onSelect={send} language={language} mode={mode} />
         )}
 
-        <View style={[s.inputBar, { paddingBottom: bottomPad }]}>
+        {/* Input bar — sits directly above keyboard (WhatsApp style) */}
+        <View style={[s.inputBar, { paddingBottom: kb.isOpen ? Math.max(insets.bottom, 6) : (TAB_BAR_VISUAL_HEIGHT + Math.max(insets.bottom, 4)) }]}>
           <LinearGradient
             colors={['rgba(255,107,0,0.06)', 'rgba(147,51,234,0.04)', 'transparent']}
             start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }}
@@ -794,6 +796,11 @@ export default function ChatScreen() {
                 textAlignVertical="top"
                 underlineColorAndroid="transparent"
                 blurOnSubmit={false}
+                onFocus={function () {
+                  setTimeout(function () {
+                    if (scroll.current) scroll.current.scrollToEnd({ animated: true });
+                  }, 300);
+                }}
               />
             </View>
             <SpringPressable

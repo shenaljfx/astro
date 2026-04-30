@@ -218,10 +218,10 @@ function calculateMarakaApala(birthDate, lat, lng, options = {}) {
       end: period.end,
       isActive: now >= new Date(period.start) && now <= new Date(period.end),
       remedies: [
-        { si: 'සෙනසුරාදා හනුමාන් ඇදිරිය කියවන්න', en: 'Recite Hanuman Chalisa on Saturdays' },
-        { si: 'කළු තල් දන් දෙන්න', en: 'Donate black sesame seeds' },
-        { si: 'නිල මැණික් පැළඳීම', en: 'Wear blue sapphire (after consultation)' },
-        { si: 'රෝහල්/ගිලන්රථ සේවාවට දායක වන්න', en: 'Contribute to hospital/ambulance services' },
+        { si: '⚕️ සම්පූර්ණ සෞඛ්‍ය පරීක්ෂාවක් කරන්න — ප්‍රමාද නොකරන්න', en: '⚕️ Get a full health checkup — don\'t delay or ignore symptoms' },
+        { si: '🛡️ රක්ෂණ coverage (සෞඛ්‍ය + ජීවිත) review කරන්න', en: '🛡️ Review your insurance coverage (health + life) — update if needed' },
+        { si: '🚫 මේ කාලය තුළ ලොකු financial risks ගන්න එපා', en: '🚫 Avoid major financial risks during this period — protect what you have' },
+        { si: '🧘 Stress management routine එකක් පටන් ගන්න (yoga/meditation)', en: '🧘 Start a stress management routine (yoga, meditation, or therapy)' },
       ],
     });
   });
@@ -242,9 +242,10 @@ function calculateMarakaApala(birthDate, lat, lng, options = {}) {
       end: period.end,
       isActive: now >= new Date(period.start) && now <= new Date(period.end),
       remedies: [
-        { si: 'රාහු මන්ත්‍ර ජපනය කරන්න', en: 'Chant Rahu mantra (Om Rahave Namaha)' },
-        { si: 'සඳුදා උපවාසය', en: 'Fast on Mondays for Moon strength' },
-        { si: 'සුදු ආහාර දන් දෙන්න (කිරි, බත්)', en: 'Donate white foods (milk, rice)' },
+        { si: '😴 නින්දේ quality වැඩි කරන්න — screen time අඩු කරන්න, නිතිපතා schedule එකකට', en: '😴 Prioritize sleep quality — reduce screen time before bed, keep a consistent schedule' },
+        { si: '⚠️ ඉක්මන් තීරණ ගන්න එපා — 48 පැය rule එක use කරන්න', en: '⚠️ Don\'t make impulsive decisions — use the 48-hour rule before committing' },
+        { si: '📵 Misinformation/scams වලින් පරෙස්සම් — verify කරන්න', en: '📵 Be cautious of misinformation/scams — verify everything before acting' },
+        { si: '🧘 Anxiety management: breathing exercises/journaling පුරුදු කරන්න', en: '🧘 Manage anxiety: practice breathing exercises or daily journaling' },
       ],
     });
   });
@@ -262,9 +263,10 @@ function calculateMarakaApala(birthDate, lat, lng, options = {}) {
       end: period.end,
       isActive: now >= new Date(period.start) && now <= new Date(period.end),
       remedies: [
-        { si: 'කේතු මන්ත්‍ර ජපනය', en: 'Chant Ketu mantra (Om Ketave Namaha)' },
-        { si: 'ගණපති පූජාව', en: 'Perform Ganapati Puja' },
-        { si: 'වැඩිහිටි භික්ෂුවකට වස්ත්‍ර දන් දෙන්න', en: 'Donate clothes to elderly monks' },
+        { si: '🧭 වෙනස්කම් වලට සූදානම් වෙන්න — flexible plan එකක් තබන්න', en: '🧭 Prepare for unexpected changes — keep a flexible backup plan' },
+        { si: '📝 ජීවිත priorities list එකක් ලියන්න — අවශ්‍ය නැති දේ release කරන්න', en: '📝 Write a life priorities list — consciously release what no longer serves you' },
+        { si: '🧘 Mindfulness/spiritual practice එකක් පටන් ගන්න — self-reflection time', en: '🧘 Start a mindfulness practice — dedicate time for self-reflection' },
+        { si: '🤝 Community/volunteering එකකට සම්බන්ධ වෙන්න — purpose feeling එක ලබන්න', en: '🤝 Join a community or volunteer — find purpose through service to others' },
       ],
     });
   });
@@ -440,31 +442,32 @@ function getDangerRoleEn(lord, lord6, lord8) {
 function getMarakaRemedies(mdLord, adLord, severity) {
   const remedies = [];
 
-  // Planet-specific remedies
+  // Planet-specific practical remedies (globally actionable)
   const planetRemedies = {
-    'Sun': { si: 'ඉරිදා උපවාසය + රතු මල් බුද්ධ පූජාව', en: 'Fast on Sundays + offer red flowers at temple' },
-    'Moon': { si: 'සඳුදා සුදු ආහාර දන්', en: 'Donate white foods on Mondays' },
-    'Mars': { si: 'අඟහරුවාදා හනුමාන් පූජාව', en: 'Hanuman Puja on Tuesdays' },
-    'Mercury': { si: 'බදාදා හරිත ආහාර දන්', en: 'Donate green foods on Wednesdays' },
-    'Jupiter': { si: 'බ්‍රහස්පතින්දා පිරිත් සවන් දීම', en: 'Listen to Pirith on Thursdays' },
-    'Venus': { si: 'සිකුරාදා සුදු වස්ත්‍ර දන්', en: 'Donate white clothes on Fridays' },
-    'Saturn': { si: 'සෙනසුරාදා කළු තල් + යකඩ දන්', en: 'Donate black sesame + iron on Saturdays' },
-    'Ketu': { si: 'ගණපති පූජාව + රතු වස්ත්‍ර', en: 'Ganapati Puja + donate red/maroon clothes' },
-    'Rahu': { si: 'රාහු මන්ත්‍ර ජපනය + නිල් වස්ත්‍ර', en: 'Chant Rahu mantra + donate dark blue clothes' },
+    'Sun': { si: '☀️ උදේ 15min හිරු එළිය ගන්න + විටමින් D පරීක්ෂාව', en: '☀️ Get 15min morning sunlight + check Vitamin D levels' },
+    'Moon': { si: '🧘 නිතිපතා meditation කරන්න + නින්ද schedule එකකට අනුගත වෙන්න', en: '🧘 Practice daily meditation + maintain a consistent sleep schedule' },
+    'Mars': { si: '🏋️ නිතිපතා ව්‍යායාම කරන්න + අධික ආවේගශීලී තීරණ වලින් වළකින්න', en: '🏋️ Exercise regularly + avoid impulsive decisions, pause before reacting' },
+    'Mercury': { si: '📝 වැදගත් ගිවිසුම් ප්‍රවේශමෙන් කියවන්න + backup තබන්න', en: '📝 Read contracts carefully + keep backups of important documents & data' },
+    'Jupiter': { si: '📚 අලුත් දෙයක් ඉගෙන ගන්න + mentor කෙනෙක් සොයන්න', en: '📚 Invest in learning/upskilling + seek a mentor for guidance' },
+    'Venus': { si: '💰 අනවශ්‍ය luxury වියදම් අඩු කරන්න + relationships වලට කාලය දෙන්න', en: '💰 Reduce unnecessary luxury spending + prioritize quality time in relationships' },
+    'Saturn': { si: '📋 දිගු කාලීන plan එකක් හදන්න + ඉවසීම පුහුණු කරන්න', en: '📋 Create a long-term plan with milestones + practice patience and discipline' },
+    'Ketu': { si: '🧭 Spiritual practice එකක් පටන් ගන්න + attachment අඩු කරන්න', en: '🧭 Start a spiritual/mindfulness practice + learn to detach from outcomes' },
+    'Rahu': { si: '⚠️ ඉක්මන් ධනවත් වීමේ schemes වලින් පරෙස්සම් + realistic goals තබන්න', en: '⚠️ Avoid get-rich-quick schemes + set realistic goals, verify before trusting' },
   };
 
   if (planetRemedies[mdLord]) remedies.push(planetRemedies[mdLord]);
   if (planetRemedies[adLord] && adLord !== mdLord) remedies.push(planetRemedies[adLord]);
 
-  // Universal critical remedies
+  // Universal critical remedies — practical and actionable
   if (severity === 'CRITICAL') {
-    remedies.push({ si: '🙏 බෝධි පූජාව (හැමදාම)', en: '🙏 Bodhi Puja (daily)' });
-    remedies.push({ si: '⚕️ නිතිපතා සෞඛ්‍ය පරීක්ෂාව', en: '⚕️ Regular health checkups' });
-    remedies.push({ si: '📿 ජීවන රක්ෂණය + දානය', en: '📿 Life insurance + charitable donations' });
+    remedies.push({ si: '⚕️ සෞඛ්‍ය පරීක්ෂාවක් (full body checkup) කරන්න', en: '⚕️ Schedule a comprehensive health checkup' });
+    remedies.push({ si: '📋 ජීවිත රක්ෂණය + හදිසි අරමුදලක් පවත්වාගෙන යන්න', en: '📋 Maintain life insurance + keep 6-month emergency fund' });
+    remedies.push({ si: '🚗 අනවශ්‍ය risk-taking (රිය පැදවීම, ආයෝජන) අඩු කරන්න', en: '🚗 Minimize risk-taking — drive carefully, avoid speculative investments' });
   }
 
   if (severity === 'HIGH') {
-    remedies.push({ si: '🛕 නවග්‍රහ ශාන්තිය', en: '🛕 Navagraha Shanthi Puja' });
+    remedies.push({ si: '🛡️ ප්‍රධාන ජීවිත තීරණ (job change, relocation) 3 මාසයක් ප්‍රමාද කරන්න', en: '🛡️ Delay major life decisions (job change, relocation) by 3 months if possible' });
+    remedies.push({ si: '🤝 විශ්වාසනීය මිතුරන්/පවුලේ අය ලඟ තබාගන්න', en: '🤝 Keep trusted friends/family close — lean on your support network' });
   }
 
   return remedies;
@@ -472,16 +475,16 @@ function getMarakaRemedies(mdLord, adLord, severity) {
 
 function getSadeSatiRemedies(phase) {
   const base = [
-    { si: 'සෙනසුරාදා උපවාසය', en: 'Fast on Saturdays' },
-    { si: 'කළු තල් දන් දෙන්න', en: 'Donate black sesame seeds' },
-    { si: 'යකඩ දන් දෙන්න (ශනිට)', en: 'Donate iron items (for Saturn)' },
-    { si: 'ශනි මන්ත්‍ර ජපනය', en: 'Chant Saturn mantra (Om Shanaischaraya Namaha)' },
+    { si: '📋 දිගු කාලීන සැලසුම් හදන්න — ඉවසීමෙන් ක්‍රමානුකූලව ගමන් කරන්න', en: '📋 Build long-term plans — progress through patience and consistency' },
+    { si: '🏋️ නිතිපතා ව්‍යායාම + නින්ද 7-8 පැය ගන්න', en: '🏋️ Exercise regularly + maintain 7-8 hours of quality sleep' },
+    { si: '💰 හදිසි අරමුදලක් (මාස 6ක වියදම්) පවත්වාගෙන යන්න', en: '💰 Maintain a 6-month emergency fund — avoid unnecessary debt' },
+    { si: '🧘 දිනපතා 10min meditation/breathing — stress කළමනාකරණය', en: '🧘 10min daily meditation/breathing — active stress management' },
   ];
 
   if (phase === 'peak') {
-    base.push({ si: '🛕 ශනි ග්‍රහ ශාන්තිය (ක්ෂණිකව)', en: '🛕 Saturn Graha Shanthi (urgently recommended)' });
-    base.push({ si: '⚕️ මාසිකව සෞඛ්‍ය පරීක්ෂාව', en: '⚕️ Monthly health checkups' });
-    base.push({ si: 'බලු සතුන්ට ආහාර දෙන්න', en: 'Feed stray dogs (Saturn\'s animal)' });
+    base.push({ si: '⚕️ මාසිකව/කාර්තුවකට වරක් සෞඛ්‍ය පරීක්ෂාව', en: '⚕️ Schedule quarterly health checkups — don\'t ignore symptoms' });
+    base.push({ si: '🚫 අනවශ්‍ය ලොකු risk (job quit, big loan) වළකින්න — timing බලන්න', en: '🚫 Avoid major risks (quitting job, big loans) — timing matters, wait if possible' });
+    base.push({ si: '🤝 mentor/advisor කෙනෙක් ලඟ තබාගන්න — තනිව තීරණ ගන්න එපා', en: '🤝 Keep a mentor/advisor close — don\'t make big decisions alone' });
   }
 
   return base;
