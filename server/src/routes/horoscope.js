@@ -13,7 +13,7 @@ const { generateAdvancedAnalysis } = require('../engine/advanced');
 const { chat, generateAINarrativeReport, translateAdvancedForDisplay, explainChartSimple, createReportProgress, updateReportProgress, getReportProgress, deleteReportProgress } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth, requireSubscription } = require('../middleware/subscription');
-const { reportLimiter, validateBirthData } = require('../middleware/security');
+const { reportLimiter, aiUserLimiter, reportUserLimiter, validateBirthData } = require('../middleware/security');
 
 // Enhanced engine (graceful — null if unavailable)
 let enhancedEngine = null;
@@ -578,7 +578,7 @@ router.post('/birth-chart', optionalAuth, async (req, res) => {
  * Uses Gemini AI to generate a deeply personal, addictive analysis
  * based on ALL chart data (Lagna, Rashi, Navamsha, Yogas, Planet Strengths)
  */
-router.post('/ai-analysis', phoneAuth, requireSubscription, async (req, res) => {
+router.post('/ai-analysis', phoneAuth, requireSubscription, aiUserLimiter, async (req, res) => {
   try {
     const { birthDate, lat, lng, language = 'en' } = req.body;
 
@@ -1037,7 +1037,7 @@ router.get('/report-progress/:reportId', (req, res) => {
 // In-flight generation guard: prevent duplicate concurrent generations per user
 const _activeGenerations = new Map();
 
-router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, async (req, res) => {
+router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, reportUserLimiter, async (req, res) => {
   let entitlementId = null;
   try {
     const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null, reportId: clientReportId = null } = req.body;
@@ -1050,9 +1050,6 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, as
     const uid = req.user?.uid;
     if (uid) {
       const existingGen = _activeGenerations.get(uid);
-      // #region agent log
-      const _fs=require('fs');try{_fs.appendFileSync('C:\\research\\New folder (2)\\astro\\debug-8fb141.log',JSON.stringify({sessionId:'8fb141',location:'horoscope.js:full-report-ai:dedup',message:'Dedup check',data:{uid:uid,hasExisting:!!existingGen,existingAge:existingGen?(Date.now()-existingGen.startedAt):null,willReject:!!(existingGen&&(Date.now()-existingGen.startedAt)<180000),activeGenCount:_activeGenerations.size},timestamp:Date.now(),hypothesisId:'B'})+'\n');}catch(_e){}
-      // #endregion
       if (existingGen && (Date.now() - existingGen.startedAt) < 180000) {
         console.log(`[AI Report] Rejecting duplicate request for uid=${uid} (in-flight since ${Date.now() - existingGen.startedAt}ms ago)`);
         return res.status(429).json({ error: 'Report generation already in progress. Please wait for it to complete.', code: 'DUPLICATE_GENERATION' });
@@ -1280,10 +1277,6 @@ router.get('/saved-report/:id', optionalAuth, async (req, res) => {
     if (data.uid !== req.user.uid) {
       return res.status(403).json({ error: 'Access denied' });
     }
-
-    // #region agent log
-    const _fs2=require('fs');try{_fs2.appendFileSync('C:\\research\\New folder (2)\\astro\\debug-8fb141.log',JSON.stringify({sessionId:'8fb141',location:'horoscope.js:saved-report',message:'Returning saved report',data:{docId:doc.id,sectionsType:typeof data.sections,sectionsIsArray:Array.isArray(data.sections),sectionsKeys:data.sections&&typeof data.sections==='object'&&!Array.isArray(data.sections)?Object.keys(data.sections).slice(0,5):'N/A',hasRashiChart:!!data.rashiChart,rashiChartType:typeof data.rashiChart,rashiChartIsArray:Array.isArray(data.rashiChart),hasBirthInfo:!!data.birthInfo},timestamp:Date.now(),hypothesisId:'C'})+'\n');}catch(_e){}
-    // #endregion
 
     res.json({
       success: true,

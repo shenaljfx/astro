@@ -35,6 +35,9 @@ const {
   aiLimiter,
   reportLimiter,
   chatLimiter,
+  aiUserLimiter,
+  userDataLimiter,
+  requireAdmin,
   sanitizeInputs,
   corsOptions,
   hppProtection,
@@ -113,20 +116,20 @@ app.get('/api/health', (req, res) => {
 app.use('/api/nakath', nakathRoutes);
 app.use('/api/porondam', aiLimiter, porondamRoutes);
 app.use('/api/chat', chatLimiter, chatRoutes);
-app.use('/api/horoscope', horoscopeRoutes);         // individual route limiters applied inside
-app.use('/api/share', shareRoutes);
-app.use('/api/user', userRoutes);
+app.use('/api/horoscope', aiLimiter, horoscopeRoutes);
+app.use('/api/share', userDataLimiter, shareRoutes);
+app.use('/api/user', userDataLimiter, userRoutes);
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/rectification', aiLimiter, rectificationRoutes);
 app.use('/api/predictions', aiLimiter, predictionRoutes);
-app.use('/api/tokens', tokensRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/tokens', userDataLimiter, tokensRoutes);
+app.use('/api/notifications', userDataLimiter, notificationRoutes);
 app.use('/api/revenuecat', revenuecatRoutes);
-app.use('/api/pricing', pricingRoutes);
+app.use('/api/pricing', userDataLimiter, pricingRoutes);
 app.use('/api/weekly-lagna', weeklyLagnaRoutes);
 app.use('/api/reading', aiLimiter, readingRoutes);
-app.use('/api/enhanced', enhancedRoutes);
-app.use('/api/jyotish', jyotishRoutes);
+app.use('/api/enhanced', userDataLimiter, enhancedRoutes);
+app.use('/api/jyotish', userDataLimiter, jyotishRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

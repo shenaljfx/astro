@@ -13,6 +13,7 @@ const express = require('express');
 const router = express.Router();
 const { buildFullBirthContext, formatContextForAI } = require('../engine/aiContext');
 const { phoneAuth, requireSubscription } = require('../middleware/subscription');
+const { aiUserLimiter, reportUserLimiter } = require('../middleware/security');
 const { trackCost } = require('../services/costTracker');
 
 /**
@@ -106,7 +107,7 @@ async function callGeminiForReading(systemPrompt, userPrompt, options = {}) {
  *   language: "si"  // optional, defaults to "si"
  * }
  */
-router.post('/full', phoneAuth, requireSubscription, async (req, res) => {
+router.post('/full', phoneAuth, requireSubscription, reportUserLimiter, async (req, res) => {
   try {
     var { dateTime, lat, lng, language } = req.body;
 

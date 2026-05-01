@@ -287,6 +287,82 @@ function validateBirthData(body) {
 
 const hppProtection = hpp();
 
+// ─── Per-user rate limiters (keyed by uid, not IP) ──────────────
+
+/**
+ * AI limiter per user — 10 AI requests per 5 minutes per authenticated user.
+ * Prevents a single user from exhausting AI budget even across IPs.
+ */
+const aiUserLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => req.user?.uid || 'anon',
+  validate: { xForwardedForHeader: false, ip: false },
+  handler: (req, res) => {
+    res.status(429).json({
+      error: 'Personal AI rate limit exceeded',
+      message: 'You have used too many AI requests. Please wait a few minutes.',
+      retryAfter: res.getHeader('Retry-After'),
+    });
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * Report limiter per user — 5 reports per hour per authenticated user.
+ * Reports are the most expensive operation.
+ */
+const reportUserLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  keyGenerator: (req) => req.user?.uid || 'anon',
+  validate: { xForwardedForHeader: false, ip: false },
+  handler: (req, res) => {
+    res.status(429).json({
+      error: 'Report generation limit exceeded',
+      message: 'You can generate up to 5 reports per hour. Please wait.',
+      retryAfter: res.getHeader('Retry-After'),
+    });
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * General user data limiter — 60 req/min per IP for user data routes
+ * (profile, tokens, notifications, etc.)
+ */
+const userDataLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  handler: rateLimitHandler,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * Admin-only middleware — checks ADMIN_SECRET header for internal/scheduler endpoints
+ */
+function requireAdmin(req, res, next) {
+  const secret = process.env.ADMIN_SECRET;
+  const provided = req.headers['x-admin-secret'];
+
+  if (!secret) {
+    // In dev without ADMIN_SECRET, allow through with warning
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[admin] ADMIN_SECRET not set — allowing in dev');
+      return next();
+    }
+    return res.status(503).json({ error: 'Admin endpoint not configured' });
+  }
+
+  if (!provided || provided !== secret) {
+    return res.status(403).json({ error: 'Forbidden — admin access required' });
+  }
+  next();
+}
+
 // ─── Export ─────────────────────────────────────────────────────
 
 module.exports = {
@@ -296,6 +372,10 @@ module.exports = {
   reportLimiter,
   chatLimiter,
   webhookLimiter,
+  aiUserLimiter,
+  reportUserLimiter,
+  userDataLimiter,
+  requireAdmin,
   sanitizeInputs,
   corsOptions,
   validateBirthData,

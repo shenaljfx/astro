@@ -14,6 +14,7 @@ const router = express.Router();
 const { getDb } = require('../config/firebase');
 const { generateWeeklyLagnaReports } = require('../engine/weeklyLagna');
 const { trackCost } = require('../services/costTracker');
+const { requireAdmin } = require('../middleware/security');
 
 const COLLECTION = 'weeklyLagnaReports';
 
@@ -160,7 +161,7 @@ router.get('/:lagnaId', async (req, res) => {
  * POST /api/weekly-lagna/generate
  * Force-generate reports (called by scheduler or admin)
  */
-router.post('/generate', async (req, res) => {
+router.post('/generate', requireAdmin, async (req, res) => {
   try {
     console.log('[WeeklyLagna] Force-generating weekly reports...');
     const result = await generateWeeklyLagnaReports();
