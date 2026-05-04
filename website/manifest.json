@@ -1,7 +1,7 @@
 {
     "name":  "Grahachara - Sri Lanka\u0027s #1 Vedic Astrology App",
     "short_name":  "Grahachara",
-    "description":  "AI-powered Vedic astrology. Rahu Kalaya alerts, birth charts, Porondam matching, weekly horoscopes and personal astrologer chat - in Sinhala and English.",
+    "description":  "AI-powered Vedic astrology. Rahu Kalaya alerts, birth charts, Porondam matching and personal astrologer chat - in Sinhala and English.",
     "start_url":  "/",
     "display":  "standalone",
     "background_color":  "#04030C",
