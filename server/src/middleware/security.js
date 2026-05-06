@@ -295,7 +295,7 @@ const hppProtection = hpp();
  */
 const aiUserLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
-  max: 10,
+  max: 50,
   keyGenerator: (req) => req.user?.uid || 'anon',
   validate: { xForwardedForHeader: false, ip: false },
   handler: (req, res) => {

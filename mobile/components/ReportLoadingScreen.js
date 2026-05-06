@@ -20,23 +20,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, RadialGradient, Stop, Path, G } from 'react-native-svg';
 import { boxShadow } from '../utils/shadow';
+import { ZODIAC_IMAGES } from './ZodiacIcons';
+import { APP_LOGO_IMAGE } from '../assets/logo-inline';
 
 var { width: SW } = Dimensions.get('window');
-
-var ZODIAC_IMAGES = [
-  require('../assets/zodiac/aries.png'),
-  require('../assets/zodiac/taurus.png'),
-  require('../assets/zodiac/gemini.png'),
-  require('../assets/zodiac/cancer.png'),
-  require('../assets/zodiac/leo.png'),
-  require('../assets/zodiac/virgo.png'),
-  require('../assets/zodiac/libra.png'),
-  require('../assets/zodiac/scorpio.png'),
-  require('../assets/zodiac/sagittarius.png'),
-  require('../assets/zodiac/capricorn.png'),
-  require('../assets/zodiac/aquarius.png'),
-  require('../assets/zodiac/pisces.png'),
-];
 
 // Zodiac symbols for the rotating wheel
 var ZODIAC_GLYPHS = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
@@ -92,7 +79,7 @@ function getStageMessage(stage, language) {
     engine: { en: 'Computing planetary positions…', si: 'ග්‍රහ ස්ථාන ගණනය කරමින්…' },
     charts: { en: 'Drawing your birth charts…', si: 'උපත් සිතියම් අඳිමින්…' },
     coherence: { en: 'Weaving cosmic narratives…', si: 'කොස්මික් කතා බැඳෙමින්…' },
-    sections: { en: 'Writing your destiny chapters…', si: 'ඔබේ ඉරණම ලියමින්…' },
+    sections: { en: 'Writing your destiny chapters…', si: 'ඔයාගේ ඉරණම ලියමින්…' },
     retrying: { en: 'Refining predictions…', si: 'අනාවැකි පිරිපහදු කරමින්…' },
     recovering: { en: 'Reconnecting to the cosmos…', si: 'විශ්වයට නැවත සම්බන්ධ වෙමින්…' },
   };
@@ -113,15 +100,15 @@ var QUOTES_EN = [
   "Each Nakshatra (birth star) is ruled by a deity. Decoding your star's unique cosmic power!"
 ];
 var QUOTES_SI = [
-  "ඔබ දන්නවාද? ඔබේ 10 වැනි භාවයෙන් ඔබේ වෘත්තිය සහ සමාජ තත්ත්වය තීරණය වේ.",
-  "7 වැනි භාවය ඔබේ අනාගත සහකරු හෝ සහකාරිය පිළිබඳ රහස් හෙළි කරයි.",
-  "පෙර භවයේ කර්ම සහ මේ භවයේ නිම කළ යුතු දෑ රාහු සහ කේතු පෙන්වා දෙයි.",
-  "බ්‍රහස්පති ග්‍රහයා ධනය, වාසනාව සහ ප්‍රඥාව නියෝජනය කරයි. ඔබට හිමි වාසනාව සොයමින්...",
-  "සෙනසුරු ග්‍රහයා අභියෝග හරහා ජීවිතය ජයගන්නා ආකාරය පෙන්වයි.",
-  "වයස 30න් පසු ඔබේ සැබෑම දෛවය පෙන්වන නවාංශක සටහන විශ්ලේෂණය කරමින්...",
-  "ඔබේ චන්ද්‍ර රාශිය ඔබේ හැඟීම් සහ අභ්‍යන්තර ආශාවන් හැඩගස්වයි.",
+  "ඔයා දන්නවාද? ඔයාගේ 10 වැනි භාවයෙන් ඔයාගේ වෘත්තිය සහ සමාජ තත්ත්වය තීරණය වේ.",
+  "7 වැනි භාවයෙන් ඔයාගේ අනාගත සහකරු හරි සහකාරිය ගැන රහස් හෙළි කරනවා.",
+  "පෙර භවයේ කර්ම සහ මේ ජීවිතේ ඉවර කරන්න ඕනේ දේවල් රාහු සහ කේතු පෙන්වලා දෙනවා.",
+  "බ්‍රහස්පති ග්‍රහයා ධනය, වාසනාව සහ ප්‍රඥාව නියෝජනය කරයි. ඔයාට හිමි වාසනාව හොයමින්...",
+  "සෙනසුරු ග්‍රහයා අභියෝග හරහා ජීවිතය ජයගන්න විදිහ පෙන්වනවා.",
+  "වයස 30න් පසු ඔයාගේ ඇත්තම දෛවය පෙන්වන නවාංශක සටහන විශ්ලේෂණය කරමින්...",
+  "ඔයාගේ චන්ද්‍ර රාශිය ඔයාගේ හැඟීම් සහ ආශාවන් හැඩගස්වනවා.",
   "හදිසි ධනය සහ ජනප්‍රියත්වය ගෙන දෙන බලවත් ග්‍රහ ‘යෝග’ පිළිබඳව සොයමින්...",
-  "සෑම නැකතකටම අධිපතියෙක් සිටී. ඔබේ නැකතේ සැඟවුණු බලය තේරුම් ගනිමින්!"
+  "සෑම නැකතකටම අධිපතියෙක් ඉන්නවා. ඔයාගේ නැකතේ හැංගිලා තියෙන බලය තේරුම් ගනිමින්!"
 ];
 
 // ── Animated Zodiac Image on the wheel ──
@@ -517,7 +504,7 @@ export default function ReportLoadingScreen({ progress, userName, language, redu
           />
           <View style={st.coreInnerRing} />
           <Image
-            source={require('../assets/logo.png')}
+            source={APP_LOGO_IMAGE}
             style={{ width: 58, height: 58, borderRadius: 29 }}
             resizeMode="cover"
           />
@@ -542,7 +529,7 @@ export default function ReportLoadingScreen({ progress, userName, language, redu
           <Text style={st.counterSlash}>/</Text>
           <Text style={st.counterTotal}>{sectionsTotal}</Text>
           <Text style={st.counterLabel}>
-            {language === 'si' ? ' පරිච්ඡේද සූදානම්' : ' chapters written'}
+            {language === 'si' ? ' කොටස් සූදානම්' : ' chapters written'}
           </Text>
         </Animated.View>
       )}

@@ -37,7 +37,7 @@ var MAX_RETRIES = 3;
 var BACKOFF_DELAYS = [2000, 4000, 8000]; // Exponential backoff
 
 function isRetryableError(err, statusCode) {
-  if (statusCode && (statusCode === 502 || statusCode === 503 || statusCode === 504)) return true;
+  if (statusCode && (statusCode === 429 || statusCode === 502 || statusCode === 503 || statusCode === 504)) return true;
   if (err && err.message) {
     var m = err.message;
     if (m.indexOf('Network') !== -1 || m.indexOf('network') !== -1 || m.indexOf('Failed to fetch') !== -1) return true;
@@ -49,7 +49,7 @@ async function request(path, opts) {
   if (!opts) opts = {};
   var timeout = opts._timeout || 20000;
   var retries = opts._retries || 0;
-  var maxRetries = opts._maxRetries || MAX_RETRIES;
+  var maxRetries = opts._maxRetries !== undefined ? opts._maxRetries : MAX_RETRIES;
   delete opts._timeout;
   delete opts._retries;
   delete opts._maxRetries;
@@ -96,9 +96,11 @@ async function request(path, opts) {
     var elapsed = Date.now() - startMs;
     if (__DEV__) console.log('[API] ◀ ' + res.status + ' ' + url + ' (' + elapsed + 'ms)');
 
-    // Retry on 502/503/504 before parsing body
-    if (retries < maxRetries && (res.status === 502 || res.status === 503 || res.status === 504)) {
-      var delay = BACKOFF_DELAYS[retries] || 8000;
+    // Retry on 429/502/503/504 before parsing body
+    if (retries < maxRetries && (res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504)) {
+      var retryAfter = res.headers.get('Retry-After');
+      var delay = retryAfter ? Math.min(parseInt(retryAfter, 10) * 1000, 30000) : (BACKOFF_DELAYS[retries] || 8000);
+      if (isNaN(delay) || delay < 1000) delay = BACKOFF_DELAYS[retries] || 8000;
       if (__DEV__) console.log('[API] ✖ SERVER ' + res.status + ' ' + url + ' — retrying in ' + delay + 'ms...');
       await new Promise(function(r) { setTimeout(r, delay); });
       return request(path, { ...opts, _timeout: timeout, _retries: retries + 1, _maxRetries: maxRetries });
@@ -114,8 +116,13 @@ async function request(path, opts) {
     }
     if (!res.ok) {
       if (__DEV__) console.error('[API] ✖ HTTP ' + res.status + ' ' + url + ':', json.error || text.substring(0, 200));
-      var httpErr = new Error(json.error || 'HTTP ' + res.status);
+      var httpErr = new Error(json.message || json.error || 'HTTP ' + res.status);
       httpErr.statusCode = res.status;
+      httpErr.code = json.code || null;
+      httpErr.details = json.details || null;
+      httpErr.retryAfter = json.retryAfter || res.headers.get('Retry-After') || null;
+      httpErr.entitlementId = json.entitlementId || null;
+      httpErr.canRetry = !!json.canRetry;
       throw httpErr;
     }
     if (__DEV__) console.log('[API] ✔ success=' + json.success + ' hasData=' + !!(json.data));
@@ -186,11 +193,12 @@ export var checkPorondam = function(bride, groom) {
   });
 };
 
-export var getPorondamReport = function(porondamData, language, brideName, groomName, porondamId) {
+export var getPorondamReport = function(porondamData, language, brideName, groomName, porondamId, entitlementInput) {
   return request('/api/porondam/report', {
     method: 'POST',
-    body: JSON.stringify({ porondamData: porondamData, language: language || 'en', brideName: brideName, groomName: groomName, porondamId: porondamId || null }),
+    body: JSON.stringify({ porondamData: porondamData, language: language || 'en', brideName: brideName, groomName: groomName, porondamId: porondamId || null, entitlementInput: entitlementInput || null }),
     _timeout: 180000,
+    _maxRetries: 0,
   });
 };
 
@@ -230,6 +238,7 @@ export var getAIReport = function(birthDate, lat, lng, language, birthLocation, 
     method: 'POST',
     body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en', birthLocation: birthLocation || null, userName: userName || null, userGender: userGender || null, userReligion: userReligion || null, reportId: reportId || null }),
     _timeout: 600000,
+    _maxRetries: 0,
   });
 };
 
@@ -554,6 +563,10 @@ export var sendTestNotification = function() {
   return request('/api/notifications/test', { method: 'POST' });
 };
 
+export var sendTestDailyNotification = function() {
+  return request('/api/notifications/test-daily', { method: 'POST' });
+};
+
 // ─── Enhanced Prediction APIs (Tier 3-5) ──────────────────────────────────
 
 export var getEnhancedTransits = function(data) {
@@ -811,6 +824,7 @@ export default {
   getMarakaApalaFull: getMarakaApalaFull,
   getTodayDashboard: getTodayDashboard,
   sendTestNotification: sendTestNotification,
+  sendTestDailyNotification: sendTestDailyNotification,
   // Weekly Lagna Palapala
   getWeeklyLagna: getWeeklyLagna,
   getWeeklyLagnaById: getWeeklyLagnaById,

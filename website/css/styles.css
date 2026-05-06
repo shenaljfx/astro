@@ -128,6 +128,19 @@ body.lang-si .hero__badge,
 body.lang-si .section-label {
   font-family: 'Noto Sans Sinhala', 'Inter', sans-serif;
 }
+/* Sinhala text is taller — reduce hero sizes to fit viewport */
+body.lang-si .hero__title-line {
+  font-size: clamp(26px, 3.5vw, 40px);
+  line-height: 1.2;
+}
+body.lang-si .hero__title-accent {
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.15;
+}
+body.lang-si .hero__subtitle {
+  font-size: 14px; line-height: 1.65;
+  max-width: 460px;
+}
 
 /* ── Starfield + Milky Way — base sky layer (behind aurora) ─── */
 .starfield {
@@ -319,15 +332,15 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
 .nav__link--mobile-cta { display: none; }
 
 /* ── Hero ──────────────────────────────────────────────────────────── */
+/* ═══ HERO ═══════════════════════════════════════════════════════════ */
 .hero {
   position: relative; z-index: 1;
-  min-height: 85vh;
+  height: 100vh; height: 100dvh;
   display: grid; grid-template-columns: 1fr 1fr;
-  gap: var(--s-3xl);
+  gap: var(--s-xl);
   max-width: var(--container); margin: 0 auto;
   align-items: center;
-  padding: 100px var(--s-lg) 40px;
-  overflow: visible;
+  padding: 80px var(--s-lg) 24px;
 }
 /* Northern Lights — Three.js aurora — INTENSE, bleeds through 3 sections */
 .hero__aurora {
@@ -340,11 +353,9 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   max-height: 2400px;
   z-index: 0;
   pointer-events: none;
-  opacity: 1;
+  opacity: 0.7;
   mix-blend-mode: screen;
-  /* Maximum vibrancy */
-  filter: saturate(1.55) contrast(1.2) brightness(1.3) blur(0.1px);
-  /* Very gradual fade over 3 sections */
+  filter: saturate(1.0) contrast(0.95) brightness(0.85) blur(0.4px);
   -webkit-mask-image: linear-gradient(to bottom,
     rgba(0,0,0,0.0)   0%,
     rgba(0,0,0,1.0)   3%,
@@ -369,72 +380,245 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
 @media (prefers-reduced-motion: reduce) {
   .hero__aurora { opacity: 0.2; }
 }
-.hero::after {
-  display: none;
-}
+.hero::after { display: none; }
 
+/* ── Sacred Geometry Mandala ─────────────────────────────────────── */
+.hero__mandala-wrap {
+  position: absolute;
+  top: 50%; right: -80px;
+  transform: translateY(-50%);
+  width: 680px; height: 680px;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.65;
+}
+.hero__mandala {
+  width: 100%; height: 100%;
+  animation: mandalaRotate 120s linear infinite;
+}
+@keyframes mandalaRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ── Hero Content ─────────────────────────────────────────────────── */
 .hero__content { position: relative; z-index: 3; }
-.hero__badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 16px; border-radius: var(--r-full);
-  background: rgba(255,184,0,0.08);
-  border: 1px solid rgba(255,184,0,0.18);
-  font-size: 12px; font-weight: 600; color: var(--accent-light);
-  margin-bottom: var(--s-lg);
-  animation: badgePulse 3s ease-in-out infinite;
-}
-.hero__badge-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--green);
-  animation: dotPulse 2s ease-in-out infinite;
-}
-@keyframes dotPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-@keyframes badgePulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,184,0,0.1); } 50% { box-shadow: 0 0 0 8px rgba(255,184,0,0); } }
 
-.hero__title { margin-bottom: var(--s-lg); }
+/* ── Badge ────────────────────────────────────────────────────────── */
+.hero__badge {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 8px 20px; border-radius: var(--r-full);
+  background: linear-gradient(135deg, rgba(255,184,0,0.07), rgba(147,51,234,0.07));
+  border: 1px solid rgba(255,184,0,0.22);
+  font-size: 11.5px; font-weight: 700;
+  color: var(--accent-light);
+  letter-spacing: 0.04em; text-transform: uppercase;
+  margin-bottom: var(--s-xl);
+  animation: badgePulse 3s ease-in-out infinite;
+  backdrop-filter: blur(8px);
+}
+.hero__badge-star {
+  color: var(--accent);
+  font-size: 9px;
+  animation: starSpin 6s linear infinite;
+}
+@keyframes starSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes badgePulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,184,0,0.1), 0 4px 20px rgba(255,184,0,0.05); }
+  50% { box-shadow: 0 0 0 6px rgba(255,184,0,0), 0 4px 30px rgba(255,184,0,0.14); }
+}
+
+/* ── Title ────────────────────────────────────────────────────────── */
+.hero__title { margin-bottom: var(--s-md); }
 .hero__title-line {
   display: block;
   font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(36px, 5.5vw, 60px);
-  font-weight: 800; line-height: 1.1;
-  letter-spacing: -1.5px;
+  font-size: clamp(32px, 4.5vw, 52px);
+  font-weight: 800; line-height: 1.08;
+  letter-spacing: -2px;
   color: var(--text);
+  animation: titleReveal 0.9s var(--ease) both;
 }
 .hero__title-accent {
   display: block;
   font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(40px, 6vw, 68px);
-  font-weight: 900; line-height: 1.1;
-  letter-spacing: -2px;
-  background: linear-gradient(135deg, var(--accent) 0%, #FF8C00 40%, var(--primary-light) 80%, var(--plasma) 100%);
+  font-size: clamp(36px, 5vw, 58px);
+  font-weight: 900; line-height: 1.05;
+  letter-spacing: -2.5px;
+  background: linear-gradient(135deg, var(--accent) 0%, #FF8C00 25%, var(--primary-light) 65%, var(--plasma) 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 0 30px rgba(255,184,0,0.15));
+  background-size: 200% 200%;
+  filter: drop-shadow(0 0 40px rgba(255,184,0,0.2));
+  animation: titleReveal 0.9s var(--ease) 0.1s both, shimmerText 6s ease-in-out infinite 1s;
 }
+@keyframes titleReveal { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes shimmerText { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
 
+/* ── Subtitle ─────────────────────────────────────────────────────── */
 .hero__subtitle {
-  font-size: 17px; line-height: 1.75;
+  font-size: 15px; line-height: 1.7;
   color: var(--text-secondary);
-  max-width: 520px; margin-bottom: var(--s-xl);
+  max-width: 480px; margin-bottom: var(--s-md);
+  animation: titleReveal 0.9s var(--ease) 0.2s both;
 }
 .hero__subtitle strong { color: var(--accent-light); font-weight: 600; }
 
-.hero__actions { display: flex; gap: var(--s-md); flex-wrap: wrap; margin-bottom: var(--s-2xl); }
-
-/* Hero Phone Mockup */
-.hero__visual { position: relative; z-index: 3; display: flex; justify-content: center; }
-.hero__phone { position: relative; }
-
-/* ── Rashi Chakra — Canvas-rendered Sacred Zodiac Mandala ────────── */
-.rashi-chakra {
-  position: fixed;
-  width: 750px; height: 750px;
-  top: 50%; right: -280px;
-  transform: translateY(-50%);
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0.55;
+/* ── Stats Row ───────────────────────────────────────────────────── */
+.hero__stats {
+  display: flex; align-items: center; gap: var(--s-xl);
+  margin-bottom: var(--s-md);
+  animation: titleReveal 0.9s var(--ease) 0.3s both;
 }
+.hero__stat { display: flex; flex-direction: column; }
+.hero__stat-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 26px; font-weight: 800;
+  color: var(--accent-light); line-height: 1;
+}
+.hero__stat-value sup {
+  font-size: 14px; font-weight: 700;
+  vertical-align: super; color: var(--accent);
+}
+.hero__stat-label {
+  font-size: 10.5px; font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.05em; text-transform: uppercase;
+  margin-top: 4px;
+}
+.hero__stat-sep {
+  width: 1px; height: 40px;
+  background: linear-gradient(to bottom, transparent, rgba(255,184,0,0.2), transparent);
+}
+
+/* ── Actions ─────────────────────────────────────────────────────── */
+.hero__actions {
+  display: flex; gap: var(--s-md); flex-wrap: wrap;
+  margin-bottom: var(--s-sm);
+  animation: titleReveal 0.9s var(--ease) 0.4s both;
+}
+
+/* ── Platform Badges ─────────────────────────────────────────────── */
+.hero__platforms {
+  display: flex; align-items: center; gap: 12px;
+  animation: titleReveal 0.9s var(--ease) 0.5s both;
+}
+.hero__platform-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase;
+}
+.hero__platform-badges { display: flex; gap: 8px; }
+.hero__platform-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: var(--r-full);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 12px; font-weight: 600; color: var(--text-secondary);
+  transition: all var(--dur) var(--ease);
+  cursor: default;
+}
+.hero__platform-badge:hover {
+  background: rgba(255,184,0,0.07); border-color: rgba(255,184,0,0.18);
+  color: var(--accent-light);
+}
+
+/* ── Hero Visual ─────────────────────────────────────────────────── */
+.hero__visual {
+  position: relative; z-index: 3;
+  display: flex; justify-content: center; align-items: center;
+}
+
+/* ── Orbital Rings ───────────────────────────────────────────────── */
+.hero__orbit {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  top: 50%; left: 50%;
+  animation: orbitSpin linear infinite;
+}
+.hero__orbit--1 {
+  width: 360px; height: 360px;
+  margin: -180px 0 0 -180px;
+  border: 1px solid rgba(255,184,0,0.13);
+  animation-duration: 22s;
+}
+.hero__orbit--2 {
+  width: 470px; height: 470px;
+  margin: -235px 0 0 -235px;
+  border: 1px dashed rgba(147,51,234,0.11);
+  animation-duration: 38s;
+  animation-direction: reverse;
+}
+.hero__orbit--3 {
+  width: 570px; height: 570px;
+  margin: -285px 0 0 -285px;
+  border: 1px solid rgba(76,201,240,0.07);
+  animation-duration: 55s;
+}
+@keyframes orbitSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.hero__orbit-planet {
+  position: absolute; top: -6px; left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+}
+.hero__orbit-planet--gold {
+  width: 12px; height: 12px;
+  background: radial-gradient(circle, var(--accent), #E07000);
+  box-shadow: 0 0 16px rgba(255,184,0,0.9), 0 0 32px rgba(255,184,0,0.4);
+}
+.hero__orbit-planet--purple {
+  width: 9px; height: 9px; top: -4.5px;
+  background: radial-gradient(circle, var(--primary-light), var(--primary));
+  box-shadow: 0 0 12px rgba(147,51,234,0.9), 0 0 28px rgba(147,51,234,0.4);
+}
+.hero__orbit-planet--teal {
+  width: 7px; height: 7px; top: -3.5px;
+  background: radial-gradient(circle, var(--teal), #0891b2);
+  box-shadow: 0 0 10px rgba(6,182,212,0.9), 0 0 22px rgba(6,182,212,0.4);
+}
+
+/* ── Hero Phone ──────────────────────────────────────────────────── */
+.hero__phone {
+  position: relative; z-index: 4;
+  animation: phoneLevitate 7s ease-in-out infinite;
+}
+@keyframes phoneLevitate {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-18px) rotate(0.5deg); }
+}
+
+/* ── Floating Feature Cards ──────────────────────────────────────── */
+.hero__float-card {
+  position: absolute;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; border-radius: 14px;
+  background: rgba(10, 5, 32, 0.80);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+  white-space: nowrap;
+  animation: floatCard 7s ease-in-out infinite;
+  z-index: 5;
+}
+.hero__float-card--1 { top: 8%; left: -155px; animation-delay: 0s; border-color: rgba(255,184,0,0.18); }
+.hero__float-card--2 { top: 32%; right: -155px; animation-delay: 1.8s; border-color: rgba(147,51,234,0.18); }
+.hero__float-card--3 { bottom: 30%; left: -155px; animation-delay: 3.5s; border-color: rgba(76,201,240,0.18); }
+.hero__float-card--4 { bottom: 9%; right: -155px; animation-delay: 5s; border-color: rgba(0,255,179,0.18); }
+@keyframes floatCard {
+  0%,100% { transform: translateY(0) translateX(0); }
+  33% { transform: translateY(-7px) translateX(3px); }
+  66% { transform: translateY(5px) translateX(-2px); }
+}
+.hero__float-icon { 
+  font-size: 22px; 
+  line-height: 1; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero__float-icon svg {
+  width: 24px;
+  height: 24px;
+}
+.hero__float-title { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.2; }
+.hero__float-sub { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-top: 1px; }
 
 /* ═══ Beautiful Phone Mockup Component ════════════════════════════════
    Reusable across hero + screenshot cards.
@@ -564,29 +748,6 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
 .phone-mockup--sm .phone-mockup__bezel::after {
   top: 90px; width: 2.5px; height: 32px;
 }
-
-/* Floating orbs around phone */
-.hero__orb {
-  position: absolute; border-radius: 50%;
-  animation: orbFloat 8s ease-in-out infinite;
-  pointer-events: none;
-}
-.hero__orb--1 {
-  width: 100px; height: 100px;
-  background: radial-gradient(circle, rgba(147,51,234,0.15), transparent 70%);
-  top: -30px; right: -40px; animation-delay: 0s;
-}
-.hero__orb--2 {
-  width: 70px; height: 70px;
-  background: radial-gradient(circle, rgba(255,184,0,0.12), transparent 70%);
-  bottom: 60px; left: -50px; animation-delay: 2s;
-}
-.hero__orb--3 {
-  width: 50px; height: 50px;
-  background: radial-gradient(circle, rgba(76,201,240,0.12), transparent 70%);
-  top: 40%; right: -60px; animation-delay: 4s;
-}
-@keyframes orbFloat { 0%,100% { transform: translate(0,0); } 33% { transform: translate(10px,-15px); } 66% { transform: translate(-8px,12px); } }
 
 /* Scroll hint */
 .hero__scroll-hint {
@@ -1956,8 +2117,6 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
   .testimonials__grid { grid-template-columns: repeat(2, 1fr); }
   .testimonial-card:last-child:nth-child(odd) { grid-column: span 2; max-width: 500px; justify-self: center; }
   .footer__top { grid-template-columns: 1fr 1fr; }
-  /* Scale chakra on tablets */
-  .rashi-chakra { width: 550px; height: 550px; right: -240px; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -2188,9 +2347,11 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
     text-align: center;
     align-items: center;
     justify-items: center;
-    padding: 80px var(--s-md) 40px;
-    min-height: auto;
-    gap: var(--s-lg);
+    padding: 64px var(--s-md) 16px;
+    min-height: 0;
+    height: auto;
+    max-height: none;
+    gap: var(--s-xs);
     width: 100%;
     max-width: 100%;
     margin: 0 auto;
@@ -2234,6 +2395,9 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-shrink: 0;
+    min-height: 280px;
+    padding: 8px 0 4px;
     animation: heroPhoneEntrance 1s var(--ease) both;
   }
   @keyframes heroPhoneEntrance {
@@ -2252,7 +2416,7 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
     content: '';
     position: absolute;
     top: 50%; left: 50%;
-    width: 180px; height: 180px;
+    width: 140px; height: 140px;
     transform: translate(-50%, -50%);
     background: radial-gradient(circle, rgba(147,51,234,0.1) 0%, rgba(255,184,0,0.04) 50%, transparent 70%);
     border-radius: 50%;
@@ -2264,39 +2428,34 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
     50% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
   }
 
-  /* Rashi Chakra — behind phone mockup on mobile */
-  .rashi-chakra {
-    width: 320px; height: 320px;
-    right: auto;
-    top: 28vh;
-    left: 50%;
-    bottom: auto;
-    transform: translateX(-50%);
-    opacity: 0.4;
-    z-index: 1;
-  }
-
   .phone-mockup { animation: phoneFloat 6s ease-in-out infinite; margin: 0 auto; }
   .phone-mockup__bezel {
-    width: 150px;
-    border-radius: 26px;
-    padding: 4px;
+    width: 120px;
+    border-radius: 22px;
+    padding: 3px;
     box-shadow:
       0 0 0 1.5px rgba(80,80,100,0.3),
-      0 16px 48px -8px rgba(0,0,0,0.7),
-      0 0 40px rgba(147,51,234,0.08);
+      0 12px 36px -8px rgba(0,0,0,0.7),
+      0 0 30px rgba(147,51,234,0.08);
   }
-  .phone-mockup__notch { width: 48px; height: 14px; border-radius: 10px; margin: 2px auto 3px; }
-  .phone-mockup__screen { border-radius: 21px; }
-  .phone-mockup__screen img { border-radius: 21px; }
-  .phone-mockup__screen::after { border-radius: 21px; }
-  .phone-mockup__chin { height: 3px; }
+  .phone-mockup__notch { width: 40px; height: 12px; border-radius: 8px; margin: 2px auto 2px; }
+  .phone-mockup__screen { border-radius: 18px; }
+  .phone-mockup__screen img { border-radius: 18px; }
+  .phone-mockup__screen::after { border-radius: 18px; }
+  .phone-mockup__chin { height: 2px; }
   .phone-mockup__bezel::before {
-    top: 60px; width: 2px; height: 16px;
-    box-shadow: 0 20px 0 0 rgba(80,80,100,0.3), 0 40px 0 0 rgba(80,80,100,0.3);
+    top: 48px; width: 2px; height: 12px;
+    box-shadow: 0 16px 0 0 rgba(80,80,100,0.3), 0 32px 0 0 rgba(80,80,100,0.3);
   }
-  .phone-mockup__bezel::after { top: 76px; width: 2px; height: 24px; }
+  .phone-mockup__bezel::after { top: 60px; width: 2px; height: 20px; }
   .hero__orb { display: none; }
+  .hero__mandala-wrap { display: none; }
+  .hero__orbit { display: none; }
+  .hero__float-card { display: none; }
+
+  /* Stats & platforms — hidden on mobile to save space */
+  .hero__stats { display: none; }
+  .hero__platforms { display: none; }
 
   /* Content compact & centered — with staggered entrance */
   .hero__content {
@@ -2308,27 +2467,28 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
     justify-content: center;
   }
   .hero__badge {
-    font-size: 10px; padding: 5px 12px; margin-bottom: var(--s-md);
+    font-size: 10px; padding: 6px 14px; margin-bottom: var(--s-sm);
     animation: heroFadeUp 0.8s var(--ease) 0.3s both;
   }
   .hero__title {
-    margin-bottom: var(--s-md); text-align: center; width: 100%;
+    margin-bottom: var(--s-sm); text-align: center; width: 100%;
     animation: heroFadeUp 0.8s var(--ease) 0.45s both;
   }
   .hero__title-line { font-size: 28px; letter-spacing: -1px; }
   .hero__title-accent { font-size: 32px; letter-spacing: -1.5px; }
   .hero__subtitle {
-    font-size: 14px; line-height: 1.65;
-    margin: 0 auto var(--s-lg);
-    max-width: 340px;
+    font-size: 12px; line-height: 1.5;
+    margin: 0 auto var(--s-sm);
+    max-width: 300px;
     text-align: center;
     animation: heroFadeUp 0.8s var(--ease) 0.6s both;
   }
   .hero__actions {
     justify-content: center; gap: 10px; width: 100%;
+    margin-bottom: 0;
     animation: heroFadeUp 0.8s var(--ease) 0.75s both;
   }
-  .hero__actions .btn { padding: 12px 22px; font-size: 13px; }
+  .hero__actions .btn { padding: 10px 18px; font-size: 12px; }
   .hero__scroll-hint { display: none; }
 
   @keyframes heroFadeUp {

@@ -14,6 +14,9 @@ const { extractGeminiUsage, createTokenTracker, recordUsage, finalizeTracker, fo
 // ══════════════════════════════════════════════════════════════
 const _reportProgress = new Map(); // reportId → { stage, sectionsDone, sectionsTotal, currentSection, startedAt, completedSections }
 const PROGRESS_TTL = 15 * 60 * 1000; // 15 minutes — must outlive longest generation + client recovery window
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+const DEFAULT_GEMINI_HERO_MODEL = 'gemini-3.1-pro-preview';
+const geminiCooldownUntilByModel = new Map();
 
 function createReportProgress(reportId, totalSections) {
   _reportProgress.set(reportId, {
@@ -40,6 +43,152 @@ function getReportProgress(reportId) {
 
 function deleteReportProgress(reportId) {
   _reportProgress.delete(reportId);
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function parseRetryAfterSeconds(value) {
+  if (!value) return null;
+  const valueText = String(value).trim();
+  const durationMatch = valueText.match(/^(\d+(?:\.\d+)?)s$/i);
+  if (durationMatch) return Math.max(1, Math.ceil(parseFloat(durationMatch[1])));
+
+  const seconds = parseInt(valueText, 10);
+  if (!isNaN(seconds) && seconds > 0) return seconds;
+
+  const dateMs = Date.parse(valueText);
+  if (!isNaN(dateMs)) {
+    return Math.max(1, Math.ceil((dateMs - Date.now()) / 1000));
+  }
+
+  return null;
+}
+
+function parseGeminiPayloadRetryAfterSeconds(payload) {
+  const details = payload?.error?.details;
+  if (Array.isArray(details)) {
+    for (const detail of details) {
+      const retryDelay = detail?.retryDelay || detail?.retry_delay;
+      const retryAfter = parseRetryAfterSeconds(retryDelay);
+      if (retryAfter) return retryAfter;
+    }
+  }
+
+  const message = payload?.error?.message || '';
+  const retryMatch = message.match(/retry in\s+(\d+(?:\.\d+)?)s/i);
+  if (retryMatch) return Math.max(1, Math.ceil(parseFloat(retryMatch[1])));
+
+  return null;
+}
+
+function getGeminiRetryAfterSeconds(response, payload, fallbackSeconds) {
+  return parseRetryAfterSeconds(response?.headers?.get('Retry-After')) ||
+    parseRetryAfterSeconds(response?.headers?.get('retry-after')) ||
+    parseGeminiPayloadRetryAfterSeconds(payload) ||
+    fallbackSeconds;
+}
+
+function isGeminiQuotaExhausted(payload) {
+  const status = payload?.error?.status || '';
+  const message = payload?.error?.message || '';
+  return status === 'RESOURCE_EXHAUSTED' ||
+    /quota exceeded|exceeded your current quota|free_tier_requests|rate limits?/i.test(message);
+}
+
+function rememberGeminiCooldown(model, retryAfter) {
+  const seconds = parseInt(retryAfter, 10);
+  if (!model || isNaN(seconds) || seconds <= 0) return;
+  const until = Date.now() + seconds * 1000;
+  const currentUntil = geminiCooldownUntilByModel.get(model) || 0;
+  if (until > currentUntil) geminiCooldownUntilByModel.set(model, until);
+}
+
+function getGeminiCooldownRetryAfter(model) {
+  const until = geminiCooldownUntilByModel.get(model) || 0;
+  if (!until) return null;
+
+  const remaining = Math.ceil((until - Date.now()) / 1000);
+  if (remaining <= 0) {
+    geminiCooldownUntilByModel.delete(model);
+    return null;
+  }
+
+  return remaining;
+}
+
+function createGeminiCooldownError(label, model, retryAfter) {
+  const err = new Error(`${label} is temporarily rate-limited. Please retry in ${retryAfter}s.`);
+  err.code = 'AI_PROVIDER_RATE_LIMIT';
+  err.statusCode = 429;
+  err.upstreamStatus = 429;
+  err.retryAfter = retryAfter;
+  err.retryable = true;
+  err.provider = 'gemini';
+  err.model = model;
+  return err;
+}
+
+function throwIfGeminiCoolingDown(label, model) {
+  const retryAfter = getGeminiCooldownRetryAfter(model);
+  if (retryAfter) throw createGeminiCooldownError(label, model, retryAfter);
+}
+
+function withGeminiCooldown(error, model) {
+  if (model && !error.model) error.model = model;
+  if (error?.code === 'AI_PROVIDER_RATE_LIMIT') rememberGeminiCooldown(model, error.retryAfter);
+  return error;
+}
+
+async function readResponseJsonSafe(response) {
+  try { return await response.json(); }
+  catch (_) { return null; }
+}
+
+function createGeminiHttpError(label, response, payload, attempts, model) {
+  const upstreamMessage = payload?.error?.message || `HTTP ${response.status}`;
+  const retryAfter = getGeminiRetryAfterSeconds(response, payload, response.status === 429 ? 60 : 30);
+  const err = new Error(`${label} error: HTTP ${response.status}${upstreamMessage.startsWith('HTTP ') ? '' : ': ' + upstreamMessage} after ${attempts} attempts`);
+  err.code = response.status === 429 ? 'AI_PROVIDER_RATE_LIMIT' : 'AI_PROVIDER_UNAVAILABLE';
+  err.statusCode = response.status;
+  err.upstreamStatus = response.status;
+  err.retryAfter = retryAfter;
+  err.retryable = true;
+  err.provider = 'gemini';
+  err.model = model || null;
+  err.quotaExhausted = response.status === 429 && isGeminiQuotaExhausted(payload);
+  return err;
+}
+
+function createGeminiPayloadError(label, payload, model) {
+  const status = payload?.error?.status || '';
+  const message = payload?.error?.message || 'Unknown Gemini error';
+  const err = new Error(`${label} error: ${message}`);
+  err.code = status === 'RESOURCE_EXHAUSTED' ? 'AI_PROVIDER_RATE_LIMIT' : 'AI_PROVIDER_ERROR';
+  err.retryable = err.code === 'AI_PROVIDER_RATE_LIMIT';
+  err.statusCode = err.retryable ? 429 : null;
+  err.upstreamStatus = err.retryable ? 429 : null;
+  err.retryAfter = err.retryable ? (parseGeminiPayloadRetryAfterSeconds(payload) || 60) : null;
+  err.provider = 'gemini';
+  err.model = model || null;
+  err.quotaExhausted = err.retryable;
+  return err;
+}
+
+function getGeminiRetryDelay(response, payload, baseDelay, attempt) {
+  if (response.status === 429 && isGeminiQuotaExhausted(payload)) return null;
+
+  const backoff = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 500;
+  const retryAfterSeconds = getGeminiRetryAfterSeconds(response, payload, null);
+
+  if (!retryAfterSeconds) return backoff;
+  if (retryAfterSeconds > 90) return null;
+  return Math.max(backoff, retryAfterSeconds * 1000);
+}
+
+function isRetryableNetworkError(err) {
+  return /fetch failed|AbortError|ECONNRESET|UND_ERR_CONNECT_TIMEOUT/i.test(err.message || '');
 }
 
 // New prediction engines
@@ -782,7 +931,7 @@ function buildChatMessages(userMessage, birthDate, birthLat, birthLng, language 
  */
 async function callGemini(messages, maxTokens = 4096, temperature = 0.55) {
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = 'gemini-2.5-flash';
+  const model = process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const systemInstruction = messages.find(m => m.role === 'system')?.content || '';
@@ -793,9 +942,11 @@ async function callGemini(messages, maxTokens = 4096, temperature = 0.55) {
       parts: [{ text: m.content }],
     }));
 
-  const MAX_RETRIES = 3;
-  const BASE_DELAY = 1500;
+  const MAX_RETRIES = 5;
+  const BASE_DELAY = 2000;
   const TIMEOUT_MS = 90000;
+
+  throwIfGeminiCoolingDown('Gemini API', model);
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -821,19 +972,20 @@ async function callGemini(messages, maxTokens = 4096, temperature = 0.55) {
       clearTimeout(timer);
 
       if (response.status === 429 || response.status >= 500) {
-        const msg = `HTTP ${response.status}`;
+        const payload = await readResponseJsonSafe(response);
         if (attempt < MAX_RETRIES) {
-          const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 500;
-          console.warn(`[Gemini] ${msg} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
-          await new Promise(r => setTimeout(r, delay));
+          const delay = getGeminiRetryDelay(response, payload, BASE_DELAY, attempt);
+          if (delay == null) throw withGeminiCooldown(createGeminiHttpError('Gemini API', response, payload, attempt, model), model);
+          console.warn(`[Gemini] HTTP ${response.status} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
+          await sleep(delay);
           continue;
         }
-        throw new Error(`Gemini API error: ${msg} after ${MAX_RETRIES} attempts`);
+        throw withGeminiCooldown(createGeminiHttpError('Gemini API', response, payload, MAX_RETRIES, model), model);
       }
 
       const data = await response.json();
       if (data.error) {
-        throw new Error(`Gemini API error: ${data.error.message}`);
+        throw withGeminiCooldown(createGeminiPayloadError('Gemini API', data, model), model);
       }
 
       // Extract text from thinking model response — may have multiple parts
@@ -852,11 +1004,10 @@ async function callGemini(messages, maxTokens = 4096, temperature = 0.55) {
         model,
       };
     } catch (err) {
-      const retryable = /fetch failed|AbortError|ECONNRESET|UND_ERR_CONNECT_TIMEOUT/i.test(err.message || '');
-      if (retryable && attempt < MAX_RETRIES) {
+      if (isRetryableNetworkError(err) && attempt < MAX_RETRIES) {
         const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 500;
         console.warn(`[Gemini] ${err.message} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
-        await new Promise(r => setTimeout(r, delay));
+        await sleep(delay);
         continue;
       }
       throw err;
@@ -3902,7 +4053,7 @@ FORMAT: Markdown for readability:
  */
 async function callGeminiLong(messages, sectionTemperature = 0.55) {
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = 'gemini-2.5-flash';
+  const model = process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const systemInstruction = messages.find(m => m.role === 'system')?.content || '';
@@ -3913,9 +4064,11 @@ async function callGeminiLong(messages, sectionTemperature = 0.55) {
       parts: [{ text: m.content }],
     }));
 
-  const MAX_RETRIES = 3;
-  const BASE_DELAY = 2000;
+  const MAX_RETRIES = 5;
+  const BASE_DELAY = 2500;
   const TIMEOUT_MS = 120000;
+
+  throwIfGeminiCoolingDown('Gemini API', model);
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -3942,19 +4095,20 @@ async function callGeminiLong(messages, sectionTemperature = 0.55) {
       clearTimeout(timer);
 
       if (response.status === 429 || response.status >= 500) {
-        const msg = `HTTP ${response.status}`;
+        const payload = await readResponseJsonSafe(response);
         if (attempt < MAX_RETRIES) {
-          const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 500;
-          console.warn(`[GeminiLong] ${msg} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
-          await new Promise(r => setTimeout(r, delay));
+          const delay = getGeminiRetryDelay(response, payload, BASE_DELAY, attempt);
+          if (delay == null) throw withGeminiCooldown(createGeminiHttpError('Gemini API', response, payload, attempt, model), model);
+          console.warn(`[GeminiLong] HTTP ${response.status} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
+          await sleep(delay);
           continue;
         }
-        throw new Error(`Gemini API error: ${msg} after ${MAX_RETRIES} attempts`);
+        throw withGeminiCooldown(createGeminiHttpError('Gemini API', response, payload, MAX_RETRIES, model), model);
       }
 
       const data = await response.json();
       if (data.error) {
-        throw new Error(`Gemini API error: ${data.error.message}`);
+        throw withGeminiCooldown(createGeminiPayloadError('Gemini API', data, model), model);
       }
 
       // Extract text from thinking model response — may have multiple parts
@@ -3978,11 +4132,10 @@ async function callGeminiLong(messages, sectionTemperature = 0.55) {
         model,
       };
     } catch (err) {
-      const retryable = /fetch failed|AbortError|ECONNRESET|UND_ERR_CONNECT_TIMEOUT/i.test(err.message || '');
-      if (retryable && attempt < MAX_RETRIES) {
+      if (isRetryableNetworkError(err) && attempt < MAX_RETRIES) {
         const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 500;
         console.warn(`[GeminiLong] ${err.message} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
-        await new Promise(r => setTimeout(r, delay));
+        await sleep(delay);
         continue;
       }
       throw err;
@@ -3995,7 +4148,7 @@ async function callGeminiLong(messages, sectionTemperature = 0.55) {
  */
 async function callGeminiHero(messages, sectionTemperature = 0.55) {
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = 'gemini-3.1-pro-preview';
+  const model = process.env.GEMINI_3_PRO_MODEL || process.env.GEMINI_PRO_MODEL || process.env.GEMINI_MODEL || DEFAULT_GEMINI_HERO_MODEL;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const systemInstruction = messages.find(m => m.role === 'system')?.content || '';
@@ -4006,9 +4159,11 @@ async function callGeminiHero(messages, sectionTemperature = 0.55) {
       parts: [{ text: m.content }],
     }));
 
-  const MAX_RETRIES = 3;
-  const BASE_DELAY = 2000;
+  const MAX_RETRIES = 5;
+  const BASE_DELAY = 3000;
   const TIMEOUT_MS = 180000;
+
+  throwIfGeminiCoolingDown('Gemini Hero', model);
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -4037,19 +4192,20 @@ async function callGeminiHero(messages, sectionTemperature = 0.55) {
       clearTimeout(timer);
 
       if (response.status === 429 || response.status >= 500) {
-        const msg = `HTTP ${response.status}`;
+        const payload = await readResponseJsonSafe(response);
         if (attempt < MAX_RETRIES) {
-          const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 500;
-          console.warn(`[GeminiHero] ${msg} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
-          await new Promise(r => setTimeout(r, delay));
+          const delay = getGeminiRetryDelay(response, payload, BASE_DELAY, attempt);
+          if (delay == null) throw withGeminiCooldown(createGeminiHttpError('Gemini Hero', response, payload, attempt, model), model);
+          console.warn(`[GeminiHero] HTTP ${response.status} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
+          await sleep(delay);
           continue;
         }
-        throw new Error(`Gemini Hero error: ${msg} after ${MAX_RETRIES} attempts`);
+        throw withGeminiCooldown(createGeminiHttpError('Gemini Hero', response, payload, MAX_RETRIES, model), model);
       }
 
       const data = await response.json();
       if (data.error) {
-        throw new Error(`Gemini Hero error: ${data.error.message}`);
+        throw withGeminiCooldown(createGeminiPayloadError('Gemini Hero', data, model), model);
       }
 
       const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
@@ -4081,11 +4237,10 @@ async function callGeminiHero(messages, sectionTemperature = 0.55) {
         model,
       };
     } catch (err) {
-      const retryable = /fetch failed|AbortError|ECONNRESET|UND_ERR_CONNECT_TIMEOUT/i.test(err.message || '');
-      if (retryable && attempt < MAX_RETRIES) {
+      if (isRetryableNetworkError(err) && attempt < MAX_RETRIES) {
         const delay = BASE_DELAY * Math.pow(2, attempt - 1) + Math.random() * 500;
         console.warn(`[GeminiHero] ${err.message} on attempt ${attempt}, retrying in ${Math.round(delay)}ms...`);
-        await new Promise(r => setTimeout(r, delay));
+        await sleep(delay);
         continue;
       }
       throw err;

@@ -37,6 +37,14 @@
       "hero.btnDownload":   "Download Now",
       "hero.btnExplore":    "Discover Features",
       "hero.scroll":        "Explore the Cosmos",
+      "hero.card1.title":   "Rahu Kalaya",
+      "hero.card1.desc":    "GPS-synced alerts",
+      "hero.card2.title":   "Weekly Forecasts",
+      "hero.card2.desc":    "All 12 signs",
+      "hero.card3.title":   "Birth Chart",
+      "hero.card3.desc":    "Precision AI",
+      "hero.card4.title":   "AI Chat",
+      "hero.card4.desc":    "Always on",
 
       /* Trust strip */
       "trust.madeIn":       "🌍 Trusted by seekers globally",
@@ -303,6 +311,14 @@
       "hero.btnDownload":   "Download කරගන්න",
       "hero.btnExplore":    "විශේෂාංග බලන්න",
       "hero.scroll":        "තව විස්තර බලන්න",
+      "hero.card1.title":   "රාහු කාලය",
+      "hero.card1.desc":    "GPS හරහා දැනුම්දීම්",
+      "hero.card2.title":   "සතියේ පලාපල",
+      "hero.card2.desc":    "ලග්න 12ටම",
+      "hero.card3.title":   "උපත් පත්‍රය (කේන්දරය)",
+      "hero.card3.desc":    "AI තාක්ෂණයෙන්",
+      "hero.card4.title":   "AI ජ්‍යෝතිෂවේදියා",
+      "hero.card4.desc":    "ඕනෑම වෙලාවක",
 
       /* Trust strip */
       "trust.madeIn":       "🇱🇰 ශ්‍රී ලාංකික අපේම නිපැයුමක්",

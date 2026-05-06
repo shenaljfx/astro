@@ -27,8 +27,12 @@ import useReducedMotion from '../../hooks/useReducedMotion';
 import useLowEndDevice from '../../hooks/useLowEndDevice';
 import { CosmicBackground } from '../../components/CosmicBackground';
 import useScreenInsets from '../../hooks/useScreenInsets';
-import { registerForPushNotifications } from '../../services/notifications';
-import { updateNotificationPreferences } from '../../services/api';
+import {
+  registerForPushNotifications,
+  ensureDailyGuidanceSchedule,
+  cancelDailyGuidanceNotifications,
+} from '../../services/notifications';
+import { registerPushToken, updateNotificationPreferences } from '../../services/api';
 import * as Notifications from 'expo-notifications';
 import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -357,7 +361,12 @@ function BirthDataForm({ currentData, onSave }) {
       var dt = year + '-' + pad(month) + '-' + pad(day) + 'T' + pad(hour || 0) + ':' + pad(minute || 0) + ':00';
       await onSave({ dateTime: dt, lat, lng, locationName: location || 'Colombo', timezone: 'Asia/Colombo' });
       Alert.alert(t('saved'), t('savedMsg'));
-    } catch (e) { Alert.alert('Error', t('errorSaving')); }
+    } catch (e) {
+      var message = e && e.code === 'BIRTH_TIME_EDIT_LIMIT'
+        ? t('birthTimeEditLimitError')
+        : ((e && e.message) || t('errorSaving'));
+      Alert.alert(t('error'), message);
+    }
     finally { setSaving(false); }
   }
 
@@ -491,7 +500,8 @@ function ProfileScreen() {
       var { status } = await Notifications.getPermissionsAsync();
       if (status === 'granted') {
         setNotifPermission('granted');
-        await registerForPushNotifications();
+        var existingPushToken = await registerForPushNotifications(language);
+        if (existingPushToken) await registerPushToken(existingPushToken, Platform.OS);
         return;
       }
       // First-time request
@@ -499,7 +509,8 @@ function ProfileScreen() {
         var result = await Notifications.requestPermissionsAsync();
         setNotifPermission(result.status);
         if (result.status === 'granted') {
-          await registerForPushNotifications();
+          var pushToken = await registerForPushNotifications(language);
+          if (pushToken) await registerPushToken(pushToken, Platform.OS);
         }
         return;
       }
@@ -523,6 +534,15 @@ function ProfileScreen() {
     }
   };
 
+  var handleLanguageSwitch = function (nextLanguage) {
+    switchLanguage(nextLanguage);
+    if (notifPermission === 'granted' && notifPrefs.dailyPalapa) {
+      ensureDailyGuidanceSchedule(nextLanguage).catch(function (e) {
+        if (__DEV__) console.warn('[Profile] Failed to refresh daily guidance language:', e && e.message);
+      });
+    }
+  };
+
   var toggleNotifPref = function (key) {
     return async function (newValue) {
       var updated = Object.assign({}, notifPrefs);
@@ -530,6 +550,17 @@ function ProfileScreen() {
       setNotifPrefs(updated);
       // Persist locally
       try { await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(updated)); } catch (e) { /* ignore */ }
+      if (key === 'dailyPalapa') {
+        if (newValue && notifPermission === 'granted') {
+          ensureDailyGuidanceSchedule(language).catch(function (e) {
+            if (__DEV__) console.warn('[Profile] Failed to schedule daily guidance:', e && e.message);
+          });
+        } else {
+          cancelDailyGuidanceNotifications().catch(function (e) {
+            if (__DEV__) console.warn('[Profile] Failed to cancel daily guidance:', e && e.message);
+          });
+        }
+      }
       // Sync with server (fire-and-forget; don't block UI)
       updateNotificationPreferences(updated).catch(function (e) {
         if (__DEV__) console.warn('[Profile] Failed to sync notif prefs:', e);
@@ -769,7 +800,7 @@ function ProfileScreen() {
             <Animated.View entering={FadeInDown.delay(300).duration(700)}>
               <GCard accent="#FF8C00">
                 <SectionHeader icon="language-outline" title={t('language')} color="#A78BFA" />
-                <LangPicker language={language} onSwitch={switchLanguage} />
+                <LangPicker language={language} onSwitch={handleLanguageSwitch} />
               </GCard>
             </Animated.View>
 

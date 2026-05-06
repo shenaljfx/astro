@@ -85,6 +85,10 @@ async function createGoogleUser(uid, profile) {
     preferences: {
       language: 'si',
       notifications: true,
+      dailyPalapa: true,
+      rahuKalayaAlerts: true,
+      marakaApalaAlerts: true,
+      transitAlerts: false,
       theme: 'cosmic',
     },
     subscription: {

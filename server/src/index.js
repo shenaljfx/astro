@@ -114,9 +114,9 @@ app.get('/api/health', (req, res) => {
 
 // Routes — with per-route rate limits
 app.use('/api/nakath', nakathRoutes);
-app.use('/api/porondam', aiLimiter, porondamRoutes);
+app.use('/api/porondam', porondamRoutes);
 app.use('/api/chat', chatLimiter, chatRoutes);
-app.use('/api/horoscope', aiLimiter, horoscopeRoutes);
+app.use('/api/horoscope', horoscopeRoutes);
 app.use('/api/share', userDataLimiter, shareRoutes);
 app.use('/api/user', userDataLimiter, userRoutes);
 app.use('/api/auth', authLimiter, authRoutes);

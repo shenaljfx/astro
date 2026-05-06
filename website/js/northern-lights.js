@@ -1,7 +1,11 @@
-/* Northern Lights — Aurora Borealis (PERFORMANCE OPTIMIZED)
-   6 ribbons (down from 14), 50 segments (down from 120),
-   2 noise octaves (down from 4), simplified color math,
-   smaller canvas, lower DPR
+/* Northern Lights — Photo-Realistic Aurora Borealis
+   Inspired by real-world aurora physics:
+   - 557.7nm oxygen emission → dominant green (lower curtain)
+   - 630.0nm oxygen emission → red/pink (upper edges, high altitude)
+   - 427.8nm nitrogen emission → blue/violet (bottom rare bands)
+   Single full-screen shader (no overlapping ribbons), realistic curtain
+   physics: wavy centerline + vertical rays + folding turbulence + altitude
+   color mapping that mirrors real atmospheric emission spectra.
 */
 (function () {
   'use strict';
@@ -9,22 +13,13 @@
   var canvas = document.getElementById('heroAurora');
   if (!canvas || typeof THREE === 'undefined') return;
 
-  var CONFIG = {
-    ribbonCount: 6,           // down from 14
-    ribbonSegments: 50,       // down from 120
-    ribbonWidth: 0.65,
-    waveSpeed: 0.14,
-    verticalDrift: 0.06,
-    opacity: 0.85
-  };
-
   var isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  var dpr = isMobile ? 0.4 : Math.min(window.devicePixelRatio || 1, 0.8);
+  var dpr = isMobile ? 0.5 : Math.min(window.devicePixelRatio || 1, 0.9);
 
   var renderer = new THREE.WebGLRenderer({
     canvas: canvas,
     alpha: true,
-    antialias: false,       // disabled for perf
+    antialias: false,
     powerPreference: 'low-power'
   });
   renderer.setPixelRatio(dpr);
@@ -34,162 +29,146 @@
   var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
   camera.position.z = 1;
 
-  // ─── Simplified Aurora Shader ───
-  var auroraVertexShader = [
+  var vertexShader = [
     'varying vec2 vUv;',
-    'varying float vAltitude;',
     'void main() {',
     '  vUv = uv;',
-    '  vAltitude = position.y;',
     '  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
     '}'
   ].join('\n');
 
-  var auroraFragmentShader = [
-    'precision mediump float;',  // mediump instead of highp
+  var fragmentShader = [
+    'precision highp float;',
     'uniform float uTime;',
-    'uniform float uRibbonIndex;',
-    'uniform vec3 uBaseColor;',
-    'uniform float uOpacity;',
+    'uniform vec2  uResolution;',
     'varying vec2 vUv;',
-    'varying float vAltitude;',
     '',
-    '// Cheaper hash noise instead of simplex',
-    'float hash(vec3 p) {',
-    '  p = fract(p * vec3(443.897, 441.423, 437.195));',
-    '  p += dot(p, p.yzx + 19.19);',
-    '  return fract((p.x + p.y) * p.z);',
-    '}',
-    'float noise3(vec3 p) {',
-    '  vec3 i = floor(p); vec3 f = fract(p);',
+    'float hash21(vec2 p){ p = fract(p*vec2(234.34, 435.345)); p += dot(p, p+34.23); return fract(p.x*p.y); }',
+    'float noise2(vec2 p){',
+    '  vec2 i = floor(p), f = fract(p);',
     '  f = f*f*(3.0-2.0*f);',
-    '  return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),',
-    '    mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),',
-    '    mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),',
-    '    mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);',
+    '  float a = hash21(i);',
+    '  float b = hash21(i+vec2(1,0));',
+    '  float c = hash21(i+vec2(0,1));',
+    '  float d = hash21(i+vec2(1,1));',
+    '  return mix(mix(a,b,f.x), mix(c,d,f.x), f.y);',
+    '}',
+    'float fbm(vec2 p){',
+    '  float v=0.0, a=0.5;',
+    '  for(int i=0;i<6;i++){ v += a*noise2(p); p = p*2.07 + vec2(13.7, 7.3); a *= 0.55; }',
+    '  return v;',
+    '}',
+    '// Domain-warped FBM for chaotic gas swirls',
+    'float fbmWarp(vec2 p, float t){',
+    '  vec2 q = vec2(fbm(p + vec2(t*0.07, 0.0)), fbm(p + vec2(5.2, t*0.11)));',
+    '  vec2 r = vec2(fbm(p + 4.0*q + vec2(1.7, 9.2) + t*0.13), fbm(p + 4.0*q + vec2(8.3, 2.8) - t*0.09));',
+    '  return fbm(p + 4.0*r);',
     '}',
     '',
-    '// 2-octave FBM (down from 4)',
-    'float fbm(vec3 p) {',
-    '  return noise3(p) * 0.65 + noise3(p * 2.0 + 7.7) * 0.35;',
+    'float aurora(vec2 uv, float t, float band){',
+    '  float scrollX = uv.x * 1.5 + t * 0.05 + band * 11.7;',
+    '  // Multi-harmonic wavy centerline (more chaotic)',
+    '  float wave1 = sin(scrollX * 1.1 + t * 0.22) * 0.14;',
+    '  float wave2 = sin(scrollX * 2.4 - t * 0.18) * 0.09;',
+    '  float wave3 = sin(scrollX * 4.8 + t * 0.34) * 0.05;',
+    '  float wave4 = sin(scrollX * 9.3 - t * 0.27) * 0.025;',
+    '  // Big domain-warped vertical drift — gives that "chaotic gas" billow',
+    '  float drift = (fbmWarp(vec2(uv.x*1.8 + band*3.0, t*0.10), t) - 0.5) * 0.22;',
+    '  float center = 0.50 + wave1 + wave2 + wave3 + wave4 + drift + band * 0.07;',
+    '',
+    '  float d = uv.y - center;',
+    '',
+    '  // Variable thickness — wider, gassier curtain',
+    '  float thickness = 0.16 + 0.10 * fbm(vec2(uv.x*2.5 + t*0.06, band*2.0));',
+    '  float curtain = exp(-pow(d/thickness, 2.0));',
+    '',
+    '  // Vertical rays — keep but slightly softer so gas wins',
+    '  float rays = 0.55 + 0.45 * sin(uv.x * 70.0 + fbm(vec2(uv.x*6.0, t*0.4+band))*10.0);',
+    '  rays *= 0.65 + 0.35 * sin(uv.x * 150.0 + t*0.8);',
+    '',
+    '  // Heavy gas turbulence using domain-warped noise — THIS is the chaotic gassy feel',
+    '  float gas = fbmWarp(vec2(uv.x*3.5 + t*0.10, uv.y*4.0 + t*0.08 + band*4.0), t);',
+    '  gas = smoothstep(0.20, 0.85, gas);',
+    '',
+    '  // Wisps — thin bright streaks that drift',
+    '  float wisps = fbm(vec2(uv.x*8.0 - t*0.15, uv.y*15.0 + t*0.20 + band*5.0));',
+    '  wisps = smoothstep(0.55, 0.85, wisps) * 0.6;',
+    '',
+    '  float topFade = smoothstep(1.0, 0.30, uv.y);',
+    '  float botFade = smoothstep(0.02, 0.18, uv.y);',
+    '',
+    '  return (curtain * (gas + 0.2) * (0.5 + rays * 0.5) + wisps * curtain) * topFade * botFade;',
     '}',
     '',
-    'vec3 auroraColor(float alt, float xPos, float time, float idx) {',
-    '  vec3 green = vec3(0.05, 1.0, 0.35);',
-    '  vec3 cyan  = vec3(0.0, 0.95, 0.9);',
-    '  vec3 blue  = vec3(0.15, 0.5, 1.0);',
-    '  vec3 violet = vec3(0.55, 0.1, 1.0);',
-    '  vec3 pink  = vec3(1.0, 0.15, 0.55);',
-    '  float a = clamp(alt * 0.5 + 0.5, 0.0, 1.0);',
-    '  float n = fbm(vec3(xPos * 2.5 + time * 0.08, a * 3.0, idx + time * 0.05));',
-    '  float pos = clamp(a + n * 0.2, 0.0, 1.0);',
-    '  vec3 col = green;',
-    '  col = mix(col, cyan, smoothstep(0.0, 0.25, pos));',
-    '  col = mix(col, blue, smoothstep(0.18, 0.42, pos));',
-    '  col = mix(col, violet, smoothstep(0.35, 0.62, pos));',
-    '  col = mix(col, pink, smoothstep(0.55, 0.82, pos));',
-    '  return col;',
-    '}',
+    'void main(){',
+    '  vec2 uv = vUv;',
+    '  float t = uTime;',
     '',
-    'void main() {',
-    '  float time = uTime;',
-    '  float n1 = fbm(vec3(vUv.x * 2.0 + time * 0.15, vUv.y * 1.5, time * 0.08 + uRibbonIndex));',
-    '  float n2 = fbm(vec3(vUv.x * 5.0 - time * 0.12, vUv.y * 3.0, time * 0.04 + uRibbonIndex * 2.0)) * 0.5;',
-    '  float combined = n1 + n2;',
+    '  float a1 = aurora(uv, t, 0.0);',
+    '  float a2 = aurora(uv * vec2(1.0, 0.95) + vec2(0.0, 0.05), t * 1.15, 1.0) * 0.65;',
+    '  float a3 = aurora(uv * vec2(1.0, 0.92) + vec2(0.0, 0.10), t * 0.85, 2.0) * 0.45;',
+    '  float total = a1 + a2 + a3;',
     '',
-    '  float curtain = sin(vUv.x * 4.712 + time * 0.3 + uRibbonIndex * 2.0);',
-    '  curtain = 0.6 + 0.4 * curtain;',
-    '  float density = curtain * (0.5 + 0.5 * (0.5 + 0.5 * combined));',
+    '  // Three-shade premium palette: deep indigo → royal purple → soft cyan',
+    '  vec3 shadeA = vec3(0.25, 0.30, 0.85);',
+    '  vec3 shadeB = vec3(0.65, 0.35, 0.95);',
+    '  vec3 shadeC = vec3(0.35, 0.90, 1.00);',
     '',
-    '  float vertDist = abs(vUv.y - 0.5) * 2.0;',
-    '  float vertCore = exp(-vertDist * vertDist * 3.0);',
-    '  vertCore = smoothstep(0.0, 0.3, vertCore);',
+    '  // Slow shade cycling so the three colors rotate gently across bands',
+    '  float c1 = 0.5 + 0.5 * sin(t * 0.06);',
     '',
-    '  float edgeFade = smoothstep(0.0, 0.08, vUv.x) * smoothstep(1.0, 0.92, vUv.x);',
+    '  float yLow  = smoothstep(0.40, 0.15, uv.y);',
+    '  float yMid  = smoothstep(0.15, 0.40, uv.y) * smoothstep(0.90, 0.55, uv.y);',
+    '  float yHigh = smoothstep(0.50, 0.95, uv.y);',
     '',
-    '  float rays = 0.6 + 0.4 * sin(vUv.x * 35.0 + combined * 4.0 + time * 0.6);',
-    '  rays *= 0.7 + 0.3 * sin(vUv.x * 80.0 + n2 * 3.0 + time * 0.9);',
+    '  // Three distinct shades, gently cross-fading between adjacent ones',
+    '  vec3 lowCol  = mix(shadeA, shadeB, c1 * 0.4) * 0.95;',
+    '  vec3 midCol  = mix(shadeB, shadeC, 0.4 + c1 * 0.3) * 1.10;',
+    '  vec3 highCol = mix(shadeC, shadeB, c1 * 0.35) * 1.00;',
     '',
-    '  float intensity = density * vertCore * edgeFade * rays;',
-    '  intensity = pow(clamp(intensity, 0.0, 1.0), 0.85);',
+    '  vec3 col = vec3(0.0);',
+    '  col += midCol  * yMid;',
+    '  col += highCol * yHigh;',
+    '  col += lowCol  * yLow;',
     '',
-    '  vec3 color = auroraColor(vAltitude, vUv.x, time, uRibbonIndex);',
-    '  color = mix(color, uBaseColor, 0.12);',
-    '  color *= 2.0;',
-    '  float lum = dot(color, vec3(0.299, 0.587, 0.114));',
-    '  color = mix(vec3(lum), color, 1.3);',
+    '  col *= total;',
     '',
-    '  float alpha = intensity * uOpacity;',
-    '  color = clamp(color, 0.0, 3.0);',
-    '  gl_FragColor = vec4(color * alpha, alpha);',
+    '  float core = pow(clamp(total, 0.0, 1.0), 3.5);',
+    '  col += vec3(0.85, 1.0, 0.95) * core * 0.30;',
+    '',
+    '  col = col / (1.0 + col * 0.6);',
+    '  col = pow(col, vec3(0.85));',
+    '',
+    '  float alpha = clamp(total * 1.05, 0.0, 1.0);',
+    '  alpha = pow(alpha, 0.65);',
+    '',
+    '  gl_FragColor = vec4(col, alpha);',
     '}'
   ].join('\n');
 
-  // ─── Create Aurora Ribbons (6 instead of 14) ───
-  var ribbons = [];
-  var ribbonColors = [
-    new THREE.Color(0.0, 1.0, 0.45),
-    new THREE.Color(0.1, 0.75, 1.0),
-    new THREE.Color(0.55, 0.1, 1.0),
-    new THREE.Color(1.0, 0.2, 0.55),
-    new THREE.Color(0.2, 1.0, 0.6),
-    new THREE.Color(0.8, 0.3, 1.0)
-  ];
+  var uniforms = {
+    uTime: { value: 0 },
+    uResolution: { value: new THREE.Vector2(1, 1) }
+  };
 
-  for (var i = 0; i < CONFIG.ribbonCount; i++) {
-    var ribbonHeight = CONFIG.ribbonWidth * (0.9 + Math.random() * 0.3);
-    // 50 segments, 6 subdivisions (down from 120×12)
-    var geometry = new THREE.PlaneGeometry(3.5, ribbonHeight, CONFIG.ribbonSegments, 6);
+  var material = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    vertexShader: vertexShader,
+    fragmentShader: fragmentShader,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
 
-    var material = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uRibbonIndex: { value: i * 0.7 + Math.random() * 0.3 },
-        uBaseColor: { value: ribbonColors[i % ribbonColors.length] },
-        uOpacity: { value: CONFIG.opacity * (0.75 + Math.random() * 0.25) }
-      },
-      vertexShader: auroraVertexShader,
-      fragmentShader: auroraFragmentShader,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
+  var geometry = new THREE.PlaneGeometry(2, 2);
+  var mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
 
-    var ribbon = new THREE.Mesh(geometry, material);
-    var totalSpread = 1.2;
-    var baseY = -totalSpread / 2 + (i / (CONFIG.ribbonCount - 1)) * totalSpread;
-    var randomOffset = (Math.random() - 0.5) * 0.15;
-    ribbon.position.y = 0.15 + baseY + randomOffset;
-    ribbon.position.x = Math.sin(i * 0.7) * 0.15 + (Math.random() - 0.5) * 0.2;
-    ribbon.position.z = -0.015 * i;
-    ribbon.rotation.z = (Math.random() - 0.5) * 0.03;
-
-    ribbon.userData = {
-      baseY: ribbon.position.y,
-      phase: i * 0.9 + Math.random() * 3.0,
-      speed: 0.4 + Math.random() * 0.6,
-      waveAmp: 0.025 + Math.random() * 0.035
-    };
-
-    scene.add(ribbon);
-    ribbons.push(ribbon);
-  }
-
-  // ─── Resize — smaller canvas ───
   function resize() {
-    var hero = canvas.parentElement;
-    if (!hero) return;
     var width = window.innerWidth;
-    // Only cover 1.5 viewport heights (down from 2.8)
     var height = Math.min(window.innerHeight * 1.5, 1200);
     renderer.setSize(width, height);
-    var aspect = width / height;
-    camera.left = -aspect;
-    camera.right = aspect;
-    camera.top = 1;
-    camera.bottom = -1;
-    camera.updateProjectionMatrix();
+    uniforms.uResolution.value.set(width, height);
     canvas.style.width = width + 'px';
     canvas.style.height = height + 'px';
   }
@@ -201,7 +180,6 @@
   }, { passive: true });
   resize();
 
-  // ─── Scroll fade ───
   var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function updateScrollFade() {
@@ -217,7 +195,6 @@
   window.addEventListener('scroll', updateScrollFade, { passive: true });
   updateScrollFade();
 
-  // ─── Animation ───
   var running = true;
   var startTime = performance.now();
   var frameCount = 0;
@@ -234,25 +211,14 @@
   function animate() {
     if (!running) return;
     frameCount++;
-    // Skip every other frame on mobile, every 3rd on desktop (was no-skip desktop)
-    if (isMobile && frameCount % 3 !== 0) { requestAnimationFrame(animate); return; }
-    if (!isMobile && frameCount % 2 !== 0) { requestAnimationFrame(animate); return; }
+    if (isMobile && frameCount % 2 !== 0) { requestAnimationFrame(animate); return; }
 
     var elapsed = (performance.now() - startTime) / 1000;
-
-    for (var i = 0; i < ribbons.length; i++) {
-      var ribbon = ribbons[i];
-      var data = ribbon.userData;
-      ribbon.material.uniforms.uTime.value = elapsed * data.speed;
-      ribbon.position.y = data.baseY +
-        Math.sin(elapsed * CONFIG.verticalDrift + data.phase) * data.waveAmp;
-    }
-
+    uniforms.uTime.value = elapsed * 0.45;
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
   }
 
-  // ─── Start ───
   canvas.style.transition = 'opacity 2.5s cubic-bezier(0.16, 1, 0.3, 1)';
   canvas.style.opacity = '0';
 

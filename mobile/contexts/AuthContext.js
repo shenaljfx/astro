@@ -35,7 +35,7 @@ import {
   restorePurchases,
   addCustomerInfoListener,
 } from '../services/revenuecat';
-import { registerForPushNotifications } from '../services/notifications';
+import { registerForPushNotifications, cancelDailyGuidanceNotifications } from '../services/notifications';
 import { auth as firebaseAuth, GoogleAuthProvider, signInWithPopup, signInWithCredential } from '../services/firebase';
 import { Platform, View } from 'react-native';
 import PaywallScreen from '../components/PaywallScreen';
@@ -46,17 +46,25 @@ var STORAGE_TOKEN = 'grahachara_auth_token';
 var STORAGE_USER = 'grahachara_user_profile';
 var STORAGE_ONBOARDING = 'grahachara_onboarding_done';
 var STORAGE_PUSH_REGISTERED = 'grahachara_push_registered_for';
+var PUSH_REGISTER_REFRESH_MS = 24 * 60 * 60 * 1000;
 
 // Register push token with server after auth. Idempotent — only POSTs once
 // per (uid, token) pair via AsyncStorage marker so we don't spam the API.
-async function registerPushTokenWithServer(authToken, uid) {
+async function registerPushTokenWithServer(authToken, uid, language) {
   try {
     if (!authToken || !uid) return;
-    var pushToken = await registerForPushNotifications();
+    var pushToken = await registerForPushNotifications(language);
     if (!pushToken) return;
-    var marker = await AsyncStorage.getItem(STORAGE_PUSH_REGISTERED);
+    var markerRaw = await AsyncStorage.getItem(STORAGE_PUSH_REGISTERED);
     var key = uid + ':' + pushToken;
-    if (marker === key) return; // already registered this pair
+
+    try {
+      var marker = markerRaw ? JSON.parse(markerRaw) : null;
+      if (marker && marker.key === key && marker.updatedAt && Date.now() - marker.updatedAt < PUSH_REGISTER_REFRESH_MS) {
+        return;
+      }
+    } catch (e) { /* legacy marker format: refresh it once */ }
+
     var res = await fetch(getBaseUrl() + '/api/notifications/register', {
       method: 'POST',
       headers: {
@@ -66,7 +74,10 @@ async function registerPushTokenWithServer(authToken, uid) {
       body: JSON.stringify({ pushToken: pushToken, platform: Platform.OS }),
     });
     if (res && res.ok) {
-      await AsyncStorage.setItem(STORAGE_PUSH_REGISTERED, key);
+      await AsyncStorage.setItem(STORAGE_PUSH_REGISTERED, JSON.stringify({
+        key: key,
+        updatedAt: Date.now(),
+      }));
     }
   } catch (err) {
     if (__DEV__) console.warn('[Auth] Push register failed (non-fatal):', err && err.message);
@@ -222,7 +233,7 @@ export function AuthProvider({ children }) {
         refreshProfile(savedToken);
 
         // Register for push notifications (idempotent, fires once per token)
-        registerPushTokenWithServer(savedToken, userData.uid);
+        registerPushTokenWithServer(savedToken, userData.uid, userData?.preferences?.language);
       }
     } catch (err) {
       if (__DEV__) console.warn('Failed to load saved auth:', err.message);
@@ -405,7 +416,7 @@ export function AuthProvider({ children }) {
           }
 
           // Register for push notifications (idempotent)
-          registerPushTokenWithServer(authToken, userData.uid);
+          registerPushTokenWithServer(authToken, userData.uid, userData?.preferences?.language);
 
           return {
             success: true,
@@ -614,7 +625,7 @@ export function AuthProvider({ children }) {
     }
   }, [activateSubscription]);
 
-  // Save birth data (once per day limit enforced server-side)
+  // Save birth data (birth-time edit limit enforced server-side)
   var saveBirthData = useCallback(async function(birthData) {
     if (!token) return;
     try {
@@ -628,13 +639,18 @@ export function AuthProvider({ children }) {
       });
       var json = await res.json();
       if (res.status === 429) {
-        throw new Error(json.errorSi || json.error || 'Birth time can only be updated once per day.');
+        var limitError = new Error(json.error || 'Birth time can only be changed 2 times per month.');
+        limitError.code = json.code;
+        limitError.limit = json.limit;
+        limitError.remaining = json.remaining;
+        limitError.resetsAt = json.resetsAt;
+        throw limitError;
       }
       if (!res.ok) {
         throw new Error(json.error || 'Failed to update birth data');
       }
       setUser(function(prev) {
-        var updated = { ...prev, birthData: birthData, onboardingComplete: true };
+        var updated = { ...prev, birthData: birthData, birthTimeEditLimit: json.birthTimeEditLimit || prev?.birthTimeEditLimit, onboardingComplete: true };
         AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
         return updated;
       });
@@ -676,6 +692,27 @@ export function AuthProvider({ children }) {
   // Sign out
   var signOut = useCallback(async function() {
     try {
+      try {
+        var storedToken = await AsyncStorage.getItem(STORAGE_TOKEN);
+        if (storedToken) {
+          await fetch(getBaseUrl() + '/api/notifications/unregister', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + storedToken,
+            },
+          });
+        }
+      } catch (notifErr) {
+        if (__DEV__) console.warn('[Auth] Push unregister failed (non-fatal):', notifErr && notifErr.message);
+      }
+
+      try {
+        await cancelDailyGuidanceNotifications();
+      } catch (localNotifErr) {
+        if (__DEV__) console.warn('[Auth] Local notification cleanup failed (non-fatal):', localNotifErr && localNotifErr.message);
+      }
+
       // Logout from RevenueCat (resets to anonymous)
       try {
         await rcLogoutUser();
@@ -684,7 +721,7 @@ export function AuthProvider({ children }) {
       }
 
       // Clear all stored auth data
-      await AsyncStorage.multiRemove([STORAGE_TOKEN, STORAGE_USER, STORAGE_ONBOARDING]);
+      await AsyncStorage.multiRemove([STORAGE_TOKEN, STORAGE_USER, STORAGE_ONBOARDING, STORAGE_PUSH_REGISTERED, 'pushToken']);
       
       // Clear the API auth token getter
       setAuthTokenGetter(null);
@@ -695,6 +732,9 @@ export function AuthProvider({ children }) {
       setToken(null);
     } catch (err) {
       if (__DEV__) console.error('Sign out error:', err);
+      try {
+        await AsyncStorage.multiRemove([STORAGE_TOKEN, STORAGE_USER, STORAGE_ONBOARDING, STORAGE_PUSH_REGISTERED, 'pushToken']);
+      } catch (e) { /* ignore */ }
       // Force clear state even if AsyncStorage fails
       setAuthTokenGetter(null);
       setSubscription(null);

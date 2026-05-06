@@ -3,14 +3,15 @@
  * 
  * Runs scheduled notification jobs:
  *   1. Rahu Kalaya Warning — 15 minutes before Rahu Kalaya starts
- *   2. Maraka Apala Alerts — daily check for users in dangerous periods
- *   3. Weekly Lagna Palapala — Sunday AI-generated weekly predictions
+ *   2. Daily Guidance — motivation, do and do not advice every morning
+ *   3. Maraka Apala Alerts — daily check for users in dangerous periods
+ *   4. Weekly Lagna Palapala — Sunday AI-generated weekly predictions
  * 
  * Uses setInterval for self-hosted servers.
  * For production: use Cloud Functions / Cloud Scheduler / cron job.
  */
 
-const { calculateRahuKalaya } = require('../engine/astrology');
+const { calculateRahuKalaya, getPanchanga, getDailyNakath } = require('../engine/astrology');
 const { calculateMarakaApala } = require('../engine/maraka');
 const { sendPush, getTokensWithPreference, logNotification } = require('./notifications');
 const { getDb, COLLECTIONS } = require('../config/firebase');
@@ -19,9 +20,206 @@ const { trackCost } = require('./costTracker');
 
 // SLT offset in ms (UTC+5:30)
 const SLT_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+const DAILY_GUIDANCE_HOUR_SLT = 6;
+const DAILY_GUIDANCE_MINUTE_SLT = 30;
+const DAILY_GUIDANCE_WINDOW_MINUTES = 5;
 
 function toSLTDate(date) {
   return new Date(date.getTime() + SLT_OFFSET_MS);
+}
+
+function getSLTDateKey(date) {
+  return toSLTDate(date).toISOString().split('T')[0];
+}
+
+function formatSLTTime(date) {
+  const slt = toSLTDate(date);
+  const h = slt.getUTCHours();
+  const m = slt.getUTCMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${(h % 12 || 12)}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function isInSLTWindow(date, hour, minute, windowMinutes) {
+  const slt = toSLTDate(date);
+  const currentMinutes = slt.getUTCHours() * 60 + slt.getUTCMinutes();
+  const targetMinutes = hour * 60 + minute;
+  return currentMinutes >= targetMinutes - windowMinutes && currentMinutes <= targetMinutes + windowMinutes;
+}
+
+function getSLTDayOfYear(date) {
+  const slt = toSLTDate(date);
+  const year = slt.getUTCFullYear();
+  const start = Date.UTC(year, 0, 1);
+  const current = Date.UTC(year, slt.getUTCMonth(), slt.getUTCDate());
+  return Math.floor((current - start) / 86400000) + 1;
+}
+
+async function hasNotificationForDate(uid, type, dateKey) {
+  const db = getDb();
+  if (!db) return false;
+
+  const existing = await db.collection(COLLECTIONS.NOTIFICATIONS)
+    .where('uid', '==', uid)
+    .where('type', '==', type)
+    .where('data.date', '==', dateKey)
+    .limit(1)
+    .get();
+
+  return !existing.empty;
+}
+
+const DAILY_GUIDANCE_COPY = {
+  en: {
+    title: 'Daily guidance',
+    motivations: [
+      'Begin with one clear intention.',
+      'Steady effort brings quiet progress.',
+      'Choose patience before pressure.',
+      'Your calm is your strength today.',
+      'Small discipline can change the whole day.',
+      'Move with grace, not haste.',
+      'Rest is part of alignment.',
+    ],
+    dos: [
+      'handle important work before distractions grow',
+      'protect your focus and complete one pending task',
+      'speak clearly and keep promises simple',
+      'review plans before acting on them',
+      'make room for prayer, meditation, or reflection',
+      'listen carefully before giving an answer',
+      'reconnect with family, faith, or your inner steadiness',
+    ],
+    donts: [
+      'rush new commitments during tense moments',
+      'carry yesterday\'s frustration into today',
+      'start conflict over small delays',
+      'overpromise your time or energy',
+      'ignore your intuition when something feels off',
+      'make emotional purchases or impulsive promises',
+      'let worry make the decision for you',
+    ],
+  },
+  si: {
+    title: 'දෛනික මඟපෙන්වීම',
+    motivations: [
+      'පැහැදිලි අරමුණකින් දවස අරඹන්න.',
+      'ස්ථිර උත්සාහය නිහඬ ප්‍රගතියක් ගෙන එයි.',
+      'පීඩනයට පෙර ඉවසීම තෝරන්න.',
+      'අද ඔබේ සන්සුන්කම ඔබේ ශක්තියයි.',
+      'කුඩා විනයක් දවසම වෙනස් කළ හැක.',
+      'ඉක්මන් නොවී සුරුවමෙන් ඉදිරියට යන්න.',
+      'විවේකයත් සන්ධානයේ කොටසකි.',
+    ],
+    dos: [
+      'අවධානය බිඳීමට පෙර වැදගත් වැඩ කරන්න',
+      'අවධානය රැකගෙන එක ඉතිරි වැඩක් අවසන් කරන්න',
+      'පැහැදිලිව කතා කර පොරොන්දු සරලව තබාගන්න',
+      'ක්‍රියාවට පෙර සැලසුම් නැවත බලන්න',
+      'ප්‍රාර්ථනා, භාවනා හෝ සිතීමකට වේලාවක් දෙන්න',
+      'පිළිතුරක් දීමට පෙර හොඳින් ඇහුම්කන් දෙන්න',
+      'පවුල, ආගමික සිතුවිලි හෝ අභ්‍යන්තර සන්සුන්කම සමඟ සම්බන්ධ වෙන්න',
+    ],
+    donts: [
+      'ආතතික මොහොතක නව පොරොන්දු හදිසි කරගන්න එපා',
+      'ඊයේ කෝපය අදට ගෙන එන්න එපා',
+      'කුඩා ප්‍රමාදයකින් ගැටුම් අරඹන්න එපා',
+      'ඔබේ කාලය හෝ ශක්තිය අධිකව පොරොන්දු වෙන්න එපා',
+      'යමක් වැරදි බව දැනුණොත් අභ්‍යන්තර හැඟීම නොසලකා හරින්න එපා',
+      'හැඟීම් මත වියදම් හෝ පොරොන්දු කරන්න එපා',
+      'කනස්සල්ලට ඔබ වෙනුවෙන් තීරණ දෙන්න එපා',
+    ],
+  },
+};
+
+function buildDailyGuidanceMessage(date, lang, panchanga, rahuKalaya, nakath) {
+  const language = lang === 'en' ? 'en' : 'si';
+  const copy = DAILY_GUIDANCE_COPY[language];
+  const dayIndex = getSLTDayOfYear(date);
+  const idx = dayIndex % copy.motivations.length;
+  const nakshatra = panchanga?.nakshatra?.name || null;
+  const nakshatraSi = panchanga?.nakshatra?.sinhala || null;
+  const tithi = panchanga?.tithi?.name || null;
+  const firstAuspicious = nakath?.auspiciousPeriods?.[0] || null;
+  const rahuText = rahuKalaya?.start && rahuKalaya?.end
+    ? `${formatSLTTime(rahuKalaya.start)}-${formatSLTTime(rahuKalaya.end)}`
+    : null;
+
+  if (language === 'en') {
+    const sky = nakshatra ? ` Moon: ${nakshatra}${tithi ? `, ${tithi}` : ''}.` : '';
+    const goodTime = firstAuspicious ? ` Good time: ${firstAuspicious.name} ${formatSLTTime(firstAuspicious.start)}.` : '';
+    const rahu = rahuText ? ` Avoid new starts during Rahu Kalaya ${rahuText}.` : '';
+    return {
+      title: copy.title,
+      body: `${copy.motivations[idx]} Do: ${copy.dos[idx]}. Do not: ${copy.donts[idx]}.${sky}${goodTime}${rahu}`,
+    };
+  }
+
+  const sky = nakshatraSi || nakshatra ? ` නැකත: ${nakshatraSi || nakshatra}${tithi ? `, ${tithi}` : ''}.` : '';
+  const goodTime = firstAuspicious ? ` සුබ වේලාව: ${firstAuspicious.sinhala || firstAuspicious.name} ${formatSLTTime(firstAuspicious.start)}.` : '';
+  const rahu = rahuText ? ` රාහු කාලයේ (${rahuText}) නව වැඩ අරඹන්න එපා.` : '';
+  return {
+    title: copy.title,
+    body: `${copy.motivations[idx]} කරන්න: ${copy.dos[idx]}. නොකරන්න: ${copy.donts[idx]}.${sky}${goodTime}${rahu}`,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 2. DAILY GUIDANCE — Motivation + Do + Do Not every morning
+// ═══════════════════════════════════════════════════════════════
+async function sendDailyGuidanceNotification() {
+  console.log('[Scheduler] Sending daily guidance notifications...');
+
+  try {
+    const now = new Date();
+    const todayKey = getSLTDateKey(now);
+    const tokens = await getTokensWithPreference('dailyPalapa');
+    console.log(`[Scheduler] Daily guidance: ${tokens.length} users`);
+
+    let sent = 0;
+    let skipped = 0;
+
+    for (const token of tokens) {
+      try {
+        if (await hasNotificationForDate(token.uid, 'DAILY_GUIDANCE', todayKey)) {
+          skipped++;
+          continue;
+        }
+
+        const birthData = token.birthData || {};
+        const lat = parseFloat(birthData.lat) || 6.9271;
+        const lng = parseFloat(birthData.lng) || 79.8612;
+        const panchanga = getPanchanga(now, lat, lng);
+        const nakath = getDailyNakath(now, lat, lng);
+        const rahuKalaya = calculateRahuKalaya(now, lat, lng);
+        const guidance = buildDailyGuidanceMessage(now, token.language || 'si', panchanga, rahuKalaya, nakath);
+        const data = {
+          type: 'DAILY_GUIDANCE',
+          date: todayKey,
+          nakshatra: panchanga?.nakshatra?.name || null,
+          tithi: panchanga?.tithi?.name || null,
+          rahuStart: rahuKalaya?.start?.toISOString() || null,
+          rahuEnd: rahuKalaya?.end?.toISOString() || null,
+        };
+
+        const result = await sendPush(token.pushToken, guidance.title, guidance.body, data, {
+          channelId: 'daily-guidance',
+          priority: 'normal',
+        });
+
+        if (result.sent > 0) {
+          await logNotification(token.uid, 'DAILY_GUIDANCE', guidance.title, guidance.body, data);
+          sent++;
+        }
+      } catch (err) {
+        console.error(`[Scheduler] Daily guidance failed for ${token.uid}:`, err.message);
+      }
+    }
+
+    console.log(`[Scheduler] Daily guidance sent to ${sent} users, skipped ${skipped} already-sent users`);
+  } catch (err) {
+    console.error('[Scheduler] Daily guidance error:', err.message);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -124,17 +322,8 @@ async function checkMarakaApalaForAllUsers() {
         if (urgent.length === 0) continue;
 
         // Don't spam — check if we already notified about this today
-        const db = getDb();
-        if (db) {
-          const todayStr = now.toISOString().split('T')[0];
-          const existing = await db.collection(COLLECTIONS.NOTIFICATIONS)
-            .where('uid', '==', token.uid)
-            .where('type', '==', 'MARAKA_APALA')
-            .where('data.date', '==', todayStr)
-            .limit(1)
-            .get();
-          if (!existing.empty) continue; // Already notified today
-        }
+        const todayStr = getSLTDateKey(now);
+        if (await hasNotificationForDate(token.uid, 'MARAKA_APALA', todayStr)) continue;
 
         // Pick the most severe one to notify about
         const worst = urgent.sort((a, b) => {
@@ -159,13 +348,13 @@ async function checkMarakaApalaForAllUsers() {
 
         await sendPush(token.pushToken, title, body, {
           type: 'MARAKA_APALA',
-          date: now.toISOString().split('T')[0],
+          date: todayStr,
           severity: worst.severity,
           apalaType: worst.type,
         }, { channelId: 'maraka-apala', priority: 'high' });
 
         await logNotification(token.uid, 'MARAKA_APALA', title, body, {
-          date: now.toISOString().split('T')[0],
+          date: todayStr,
           severity: worst.severity,
         });
 
@@ -200,6 +389,25 @@ function startScheduler() {
       console.error('[Scheduler] Rahu Kalaya interval error:', err.message);
     });
   }, 5 * 60 * 1000); // 5 minutes
+
+  // ── Daily Guidance — every day at 6:30 AM SLT ──
+  let dailyGuidanceSent = false;
+  setInterval(() => {
+    const now = new Date();
+
+    if (!isInSLTWindow(now, DAILY_GUIDANCE_HOUR_SLT, DAILY_GUIDANCE_MINUTE_SLT, DAILY_GUIDANCE_WINDOW_MINUTES)) {
+      dailyGuidanceSent = false;
+      return;
+    }
+
+    if (!dailyGuidanceSent) {
+      dailyGuidanceSent = true;
+      sendDailyGuidanceNotification().catch(err => {
+        console.error('[Scheduler] Daily guidance interval error:', err.message);
+        dailyGuidanceSent = false;
+      });
+    }
+  }, 60 * 1000); // 1 minute
 
   // ── Maraka Apala — check once daily at 6:00 AM SLT ──
   let marakaChecked = false;
@@ -271,6 +479,7 @@ function startScheduler() {
 
   console.log('[Scheduler] ✅ Notification scheduler started');
   console.log('[Scheduler]    📊 Rahu Kalaya checks every 5 min');
+  console.log('[Scheduler]    🌅 Daily guidance at 6:30 AM SLT');
   console.log('[Scheduler]    ⛔ Maraka Apala at 6:00 AM SLT');
   console.log('[Scheduler]    🔮 Weekly Lagna Palapala — Sunday 6:00 AM SLT');
 }
@@ -317,6 +526,8 @@ function stopScheduler() {
 module.exports = {
   startScheduler,
   stopScheduler,
+  sendDailyGuidanceNotification,
+  buildDailyGuidanceMessage,
   sendRahuKalayaWarning,
   checkMarakaApalaForAllUsers,
   sendWeeklyLagnaPushNotification,

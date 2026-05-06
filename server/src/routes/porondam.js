@@ -16,10 +16,11 @@ const { chat } = require('../engine/chat');
 const { parseSLT } = require('../utils/dateUtils');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth } = require('../middleware/subscription');
+const { aiLimiter } = require('../middleware/security');
 const { trackCost } = require('../services/costTracker');
 const { savePorondamResult, updatePorondamReport } = require('../models/firestore');
 const { getDb, COLLECTIONS } = require('../config/firebase');
-const { createOrResumeEntitlement, fulfillEntitlement, recordEntitlementError } = require('../middleware/entitlements');
+const { createOrResumeEntitlement, fulfillEntitlement, recordEntitlementError, restoreEntitlementRetry } = require('../middleware/entitlements');
 
 // Enhanced engine (graceful — null if unavailable)
 let enhancedEngine = null;
@@ -32,6 +33,49 @@ try { jyotishEngine = require('../engine/jyotish'); } catch (e) { console.warn('
 // In-memory store for vibe-check links (use Redis/DB in production)
 const vibeLinks = new Map();
 
+function normalizeEntitlementCoord(value, fallback) {
+  const num = parseFloat(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Number(num.toFixed(4));
+}
+
+function buildPorondamEntitlementInput(entitlementInput, porondamData, language) {
+  const source = entitlementInput || porondamData?.entitlementInput || {};
+  if (source.brideBirthDate && source.groomBirthDate) {
+    return {
+      brideBirthDate: String(source.brideBirthDate),
+      brideLat: normalizeEntitlementCoord(source.brideLat, 6.9271),
+      brideLng: normalizeEntitlementCoord(source.brideLng, 79.8612),
+      groomBirthDate: String(source.groomBirthDate),
+      groomLat: normalizeEntitlementCoord(source.groomLat, 6.9271),
+      groomLng: normalizeEntitlementCoord(source.groomLng, 79.8612),
+      language: language || source.language || 'en',
+    };
+  }
+
+  return {
+    brideBirth: porondamData.bride?.nakshatra?.name || '',
+    groomBirth: porondamData.groom?.nakshatra?.name || '',
+    totalScore: porondamData.totalScore,
+    language,
+  };
+}
+
+function isTemporaryAIProviderError(error) {
+  const statusCode = error?.statusCode || error?.upstreamStatus || 0;
+  return error?.code === 'AI_PROVIDER_RATE_LIMIT' ||
+    error?.code === 'AI_PROVIDER_UNAVAILABLE' ||
+    statusCode === 429 || statusCode >= 500 ||
+    /Gemini .*HTTP (429|5\d\d)|RESOURCE_EXHAUSTED/i.test(error?.message || '');
+}
+
+function getProviderRetryAfter(error) {
+  const value = parseInt(error?.retryAfter, 10);
+  if (!isNaN(value) && value > 0) return value;
+  const statusCode = error?.statusCode || error?.upstreamStatus || 0;
+  return statusCode === 429 || error?.code === 'AI_PROVIDER_RATE_LIMIT' ? 60 : 30;
+}
+
 /**
  * POST /api/porondam/check
  * 
@@ -41,7 +85,7 @@ const vibeLinks = new Map();
  *   groom: { birthDate: "1993-07-22T14:00:00Z", lat: 7.2906, lng: 80.6337 }
  * }
  */
-router.post('/check', optionalAuth, async (req, res) => {
+router.post('/check', aiLimiter, optionalAuth, async (req, res) => {
   try {
     const { bride, groom, entitlementId } = req.body;
 
@@ -172,10 +216,11 @@ router.post('/check', optionalAuth, async (req, res) => {
  *   groomName: "optional"
  * }
  */
-router.post('/report', phoneAuth, async (req, res) => {
+router.post('/report', aiLimiter, phoneAuth, async (req, res) => {
   let entitlementId = null;
+  let entitlementWasRetry = false;
   try {
-    const { porondamData, language = 'en', brideName, groomName, porondamId } = req.body;
+    const { porondamData, language = 'en', brideName, groomName, porondamId, entitlementInput } = req.body;
 
     if (!porondamData) {
       return res.status(400).json({ error: 'porondamData is required' });
@@ -184,14 +229,10 @@ router.post('/report', phoneAuth, async (req, res) => {
     // ── Entitlement: create or resume (allows free retry on failure) ──
     if (req.user && req.user.uid && req.user.authType !== 'anonymous') {
       try {
-        const inputData = {
-          brideBirth: porondamData.bride?.nakshatra?.name || '',
-          groomBirth: porondamData.groom?.nakshatra?.name || '',
-          totalScore: porondamData.totalScore,
-          language,
-        };
+        const inputData = buildPorondamEntitlementInput(entitlementInput, porondamData, language);
         const ent = await createOrResumeEntitlement(req.user.uid, 'porondam', inputData);
         entitlementId = ent.id;
+        entitlementWasRetry = !!ent.isRetry;
         if (ent.isRetry) {
           console.log(`[Porondam Report] ♻️ Retry — entitlement ${ent.id} (${ent.retriesLeft} retries left)`);
         }
@@ -210,19 +251,12 @@ router.post('/report', phoneAuth, async (req, res) => {
       ? `ඔබ ශ්‍රී ලංකාවේ ප්‍රසිද්ධ විවාහ ගැළපුම් උපදේශකයෙක්. මේ යුවලයාගේ ගැළපීම ගැන සිංහලෙන් ලියන්න.
 
 100% සිංහල වචන පමණක් — ඉංග්‍රීසි වචන සිංහල අකුරින් ලියන්න එපා ("use", "score", "remedy", "factor" වගේ ඉංග්‍රීසි words එපා).
-"දින පොරොන්දම", "ගණ", "යෝනි", "නාඩි", "වශ්‍ය", "රාශි", "මහේන්ද්‍ර", "ලග්නය", "නක්ෂත්‍ර", "දෝෂ", "යෝග" වගේ ජ්‍යෝතිෂ වචන ලියන්න එපා.
-ඒ වෙනුවට සරල සිංහලෙන් කියන්න:
-- "දින පොරොන්දම" → "දෛනික ගැළපීම" හෝ "එදිනෙදා ජීවිතයේ ගැළපීම"
-- "ගණ පොරොන්දම" → "ස්වභාවයේ ගැළපීම"
-- "යෝනි පොරොන්දම" → "ශාරීරික හා හැඟීම්වල ගැළපීම"
-- "නාඩි පොරොන්දම" → "සෞඛ්‍ය ගැළපීම"
-- "වශ්‍ය පොරොන්දම" → "ආකර්ශනය හා බැඳීම"
-- "රාශි පොරොන්දම" → "මනස හා චින්තනයේ ගැළපීම"
-- "මහේන්ද්‍ර පොරොන්දම" → "දිගු කාලීන සමෘද්ධිය"
-- "දෝෂ" → "අභියෝග" හෝ "බාධක"
-- "ග්‍රහ" → "අහස්හි බලපෑම්"
+පොරොන්දම් ගැන කතා කරන විට එහි නම (උදා: දින පොරොන්දම, ගණ පොරොන්දම) සහ එහි ප්‍රායෝගික අදහස එකට පාවිච්චි කරන්න.
+උදාහරණ: 
+- "දින පොරොන්දම (දෛනික සමගිය)"
+- "නාඩි පොරොන්දම (සෞඛ්‍ය හා පවුල් පැවැත්ම)"
+- "මහේන්ද්‍ර පොරොන්දම (දිගුකාලීන සමෘද්ධිය)"
 sugar-coat කරන්න එපා. අවුල් තියෙනවා නම් කෙළින්ම කියන්න, ඒත් එදිනෙදා ජීවිතයේ ප්‍රායෝගික උපදෙස් දෙන්න.
-ආගමික වතාවත් (පූජා, ශාන්තිකර්ම, පිරිත්, මාල, යන්ත්‍ර) නිර්දේශ කරන්න එපා — බුද්ධිමත් මිනිස් සබඳතා උපදෙස් පමණක් දෙන්න.
 හිතවත් යාලුවෙක් කතා කරනවා වගේ ලියන්න.
 "AI" කියන වචනය කිසිම තැනක ලියන්න එපා. ඔබ AI බව කිසි විටෙක හෙළි නොකරන්න. ඔබ පළපුරුදු මිනිස් ජ්‍යෝතිෂවේදියෙකු ලෙස ලියන්න.
 ඉංග්‍රීසි වචන එකක්වත් භාවිතා නොකරන්න — Singlish ද එපා. 100% පිරිසිදු සිංහල පමණක්.`
@@ -231,21 +265,11 @@ sugar-coat කරන්න එපා. අවුල් තියෙනවා න�
 IDENTITY RULE: You are a professional human astrologer, NOT an AI. NEVER mention AI, machine learning, algorithms, language models, or that you are artificial in any way.
 
 ABSOLUTE LANGUAGE RULES:
-- NEVER use these words: Porondam, Nakshatra, Rashi, Lagna, Dasha, Dosha, Yoga, Graha, Bhukti, Pada, Ayanamsha, Bhava, Karakamsha, Atmakaraka, Upapada, Dina, Gana, Yoni, Nadi, Vasya, Mahendra, Tithi, Karana, Panchanga
+- When discussing the 7 factors, use both the traditional name and practical meaning (e.g., "Dina Porondam (Daily Harmony)").
 - NEVER mention AI, artificial intelligence, machine learning, or algorithms
-- Write EVERYTHING in English — no Sinhala, Sanskrit, or Pali words
-- Instead use: "birth star", "moon sign", "rising sign", "life phases", "challenges", "special strengths", "planets", "compatibility factor"
-- For the 7 factors, translate them to human concepts:
-  * Dina → "Daily Life Harmony" (how well they sync day-to-day)
-  * Gana → "Temperament Match" (are they both calm/fierce/gentle?)  
-  * Yoni → "Physical & Emotional Chemistry" (intimacy and attraction)
-  * Nadi → "Health & Genetic Compatibility" (biological harmony)
-  * Vasya → "Mutual Attraction & Bonding" (natural pull toward each other)
-  * Rashi → "Mental & Emotional Wavelength" (do they think alike?)
-  * Mahendra → "Long-term Prosperity" (wealth and growth together)
+- Write EVERYTHING in English — no Sinhala words
 - Be HONEST and DIRECT — do not sugarcoat. If there are problems, say so clearly, but always provide remedies and practical advice.
-- Write like a wise friend giving advice — not a textbook.
-- The reader knows NOTHING about astrology. Explain everything in simple everyday words.`;
+- Write like a wise friend giving advice — not a textbook.`;
 
     const brideLabel = brideName || (language === 'si' ? 'මනාලිය' : 'Bride');
     const groomLabel = groomName || (language === 'si' ? 'මනාලයා' : 'Groom');
@@ -367,11 +391,9 @@ ${(porondamData.advancedPorondam.advanced.weddingWindows?.favorableWindows || []
 ` : ''}
 CRITICAL RULE: Use ONLY the data provided above for your analysis. Do NOT invent or guess any details. Every insight you share MUST come from the data above.
 
-ABSOLUTE OUTPUT RULE: All the data labels above (Nakshatra, Rashi, Lagna, House, Lord, Atmakaraka, Upapada, etc.) are FOR YOUR REFERENCE ONLY. NEVER write these technical terms in your output. Translate everything to simple human language.
-
 IDENTITY RULE: You are a professional human astrologer. NEVER mention AI, machine learning, algorithms, or that you are artificial in any way. Write as a wise, experienced human astrologer.
 
-LANGUAGE RULE: If writing in Sinhala, use ZERO English words — pure Sinhala only. If writing in English, use ZERO Sinhala/Sanskrit/Pali words — pure English only.
+LANGUAGE RULE: If writing in Sinhala, use ZERO English words — pure Sinhala only. If writing in English, use ZERO Sinhala/Sanskrit/Pali words (except the core Astrological terms like Porondam/Yoga names) — pure English only.
 
 FORMAT RULES: Use Markdown formatting throughout:
 - Use ## for main section headings (e.g. ## 💍 The Big Picture)
@@ -385,9 +407,9 @@ FORMAT RULES: Use Markdown formatting throughout:
 
 WRITE THE REPORT:
 1. Start with a warm, personal intro about this couple — describe each person's core personality based on their birth stars and chart data. Make them feel seen and understood.
-2. Go through EACH of the 7 compatibility factors one by one — but use HUMAN names (Daily Life Harmony, Temperament Match, Physical & Emotional Chemistry, Health Compatibility, Mutual Attraction, Mental Wavelength, Long-term Prosperity). For each factor: explain what it means in real married life, what score they got, and give specific real-life examples of how this will show up in their relationship.
+2. Go through EACH of the 7 compatibility factors one by one, using BOTH the technical name and human names (e.g. "Dina Porondam - Daily Life Harmony"). For each factor: explain what it means in real married life, what score they got, and give specific real-life examples of how this will show up in their relationship.
 3. Highlight any challenges HONESTLY — if there are problems, say them clearly in plain language. But always immediately follow with practical relationship advice (communication tips, compromise strategies, things to be mindful of etc.). Do NOT recommend any religious remedies, temple visits, prayers, rituals, gemstones, mantras, or religious ceremonies — keep advice purely practical and relationship-focused.
-4. Discuss how their individual charts complement or clash — using everyday language (e.g., "Her chart shows she's naturally independent and career-driven, while his chart shows deep family attachment — this could cause friction about priorities")
+4. Discuss how their individual charts complement or clash — using everyday language (e.g., "Her chart shows she's naturally independent and career-driven, while his chart shows deep family attachment — this could cause friction about priorities"). Make sure to use Jyotish terms smoothly.
 5. If PORONDAM+ ADVANCED data is available, include a DEEP DIVE section covering:
    a. Current life phase compatibility — are both partners in harmonious or conflicting life phases right now?
    b. Marriage chart (D9) comparison — what the soul-level connection looks like
@@ -396,13 +418,12 @@ WRITE THE REPORT:
    e. Best wedding timing — when the stars align for both of them to tie the knot
 6. Give an overall verdict using the COMBINED score (traditional + advanced) — be brutally honest but compassionate. Tell them their percentage and what it realistically means.
 7. End with PRACTICAL relationship advice — specific things they can do together to strengthen their bond (e.g., communication habits, shared activities, ways to handle disagreements). NO religious remedies or rituals.
-8. Write at least 800-1200 words. Be thorough and detailed. This is a full professional report that should feel like a wise elder sat with this couple for an hour.
-9. NEVER use any technical astrology terms in your output — everything should be in simple everyday language that someone with ZERO astrology knowledge can understand and find valuable.`;
+8. Write at least 800-1200 words. Be thorough and detailed. This is a full professional report that should feel like a wise elder sat with this couple for an hour.`;
 
     const result = await chat(prompt, {
       language,
       provider: process.env.AI_PROVIDER || 'gemini',
-      maxTokens: 165288,
+      maxTokens: 16384,
     });
 
     // Save report to Firestore
@@ -455,16 +476,30 @@ WRITE THE REPORT:
     }
   } catch (error) {
     console.error('Error generating porondam report:', error);
+    const isProviderTemporary = isTemporaryAIProviderError(error);
+    const isProviderRateLimited = error?.code === 'AI_PROVIDER_RATE_LIMIT' || error?.statusCode === 429;
+    const retryAfter = isProviderTemporary ? getProviderRetryAfter(error) : null;
 
     // ── Entitlement: record error (keeps status 'pending' for retry) ──
     if (entitlementId) {
       try { await recordEntitlementError(entitlementId, error.message || 'Generation failed'); }
       catch (e) { console.warn('[Porondam Report] Entitlement error record failed:', e.message); }
+
+      if (isProviderTemporary && entitlementWasRetry) {
+        try { await restoreEntitlementRetry(entitlementId, error.message || 'Provider temporarily unavailable'); }
+        catch (e) { console.warn('[Porondam Report] Entitlement retry restore failed:', e.message); }
+      }
     }
 
-    res.status(500).json({
-      error: 'Failed to generate report',
+    if (retryAfter) res.set('Retry-After', String(retryAfter));
+
+    res.status(isProviderTemporary ? (isProviderRateLimited ? 429 : 503) : 500).json({
+      error: isProviderTemporary
+        ? 'AI report service is temporarily busy. Please retry in a little while.'
+        : 'Failed to generate report',
+      code: isProviderTemporary ? (isProviderRateLimited ? 'AI_PROVIDER_RATE_LIMIT' : 'AI_PROVIDER_UNAVAILABLE') : (error.code || 'GENERATION_FAILED'),
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      retryAfter,
       entitlementId: entitlementId || null,
       canRetry: !!entitlementId,
     });

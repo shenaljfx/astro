@@ -246,6 +246,47 @@ function extractSectionScore(sectionKey, rawData) {
   return null;
 }
 
+function getBirthFocusValue(nakshatra, reportLang) {
+  var name = '';
+  if (typeof nakshatra === 'string') name = nakshatra;
+  else if (nakshatra) name = nakshatra.english || nakshatra.name || '';
+  var focusMap = {
+    Ashwini: ['Quick Recovery', 'ඉක්මන් යථා තත්ත්වය'], Bharani: ['Patient Responsibility', 'ඉවසීමෙන් වගකීම'],
+    Krittika: ['Clear Decisions', 'පැහැදිලි තීරණ'], Rohini: ['Comfort & Growth', 'සැනසීම හා වර්ධනය'],
+    Mrigashira: ['Curious Search', 'සොයාබැලීමේ අවධානය'], Ardra: ['Emotional Reset', 'හැඟීම් නැවත සැකසුම'],
+    Punarvasu: ['Renewed Hope', 'නව බලාපොරොත්තුව'], Pushya: ['Nurture & Support', 'පෝෂණය හා සහාය'],
+    Ashlesha: ['Careful Boundaries', 'සැලකිලිමත් සීමා'], Magha: ['Dignified Leadership', 'ගෞරවවත් නායකත්වය'],
+    'Purva Phalguni': ['Warm Connection', 'උණුසුම් සබඳතා'], 'Uttara Phalguni': ['Keep Commitments', 'කැපවීම් රකින්න'],
+    Hasta: ['Hands-On Progress', 'ප්‍රායෝගික ප්‍රගතිය'], Chitra: ['Refine & Create', 'ඔපදමා නිර්මාණය'],
+    Swati: ['Flexible Movement', 'නම්‍යශීලී ගමන'], Vishakha: ['Focused Ambition', 'අරමුණු සහිත උත්සාහය'],
+    Anuradha: ['Loyal Teamwork', 'විශ්වාසවන්ත සහයෝගය'], Jyeshtha: ['Mature Responsibility', 'පරිණත වගකීම'],
+    Mula: ['Root-Cause Clarity', 'මූල හේතු පැහැදිලි කිරීම'], 'Purva Ashadha': ['Confident Push', 'විශ්වාසයෙන් ඉදිරියට'],
+    'Uttara Ashadha': ['Long-Term Strength', 'දිගුකාලීන ශක්තිය'], Shravana: ['Listen & Learn', 'අසා ඉගෙනගන්න'],
+    Dhanishtha: ['Shared Rhythm', 'එකට රටාව'], Shatabhisha: ['Healing Space', 'සුවය ලබන ඉඩ'],
+    'Purva Bhadrapada': ['Serious Reflection', 'ගැඹුරු සිතා බැලීම'], 'Uttara Bhadrapada': ['Calm Endurance', 'සන්සුන් ඉවසීම'],
+    Revati: ['Complete With Care', 'සැලකිල්ලෙන් අවසන් කිරීම'],
+  };
+  var fallback = reportLang === 'si' ? 'පුද්ගලික අවධානය' : 'Personal Focus';
+  var selected = focusMap[name];
+  return selected ? (reportLang === 'si' ? selected[1] : selected[0]) : fallback;
+}
+
+function getFriendlyTemperamentValue(type, reportLang) {
+  var key = String(type || '').toLowerCase();
+  if (key.indexOf('deva') !== -1) return reportLang === 'si' ? 'මෘදු සහ සහායක' : 'Gentle & Supportive';
+  if (key.indexOf('manush') !== -1 || key.indexOf('human') !== -1) return reportLang === 'si' ? 'ප්‍රායෝගික සහ සමාජීය' : 'Practical & Social';
+  if (key.indexOf('rak') !== -1) return reportLang === 'si' ? 'තීව්‍ර සහ ස්වාධීන' : 'Intense & Independent';
+  return reportLang === 'si' ? 'පුද්ගලික ස්වභාවය' : 'Personal Style';
+}
+
+function getFriendlyEnergyValue(type, reportLang) {
+  var key = String(type || '').toLowerCase();
+  if (key.indexOf('adi') !== -1 || key.indexOf('aadi') !== -1 || key.indexOf('vata') !== -1) return reportLang === 'si' ? 'වේගවත් ජීව රටාව' : 'Active Life Rhythm';
+  if (key.indexOf('madh') !== -1 || key.indexOf('pitta') !== -1) return reportLang === 'si' ? 'සමතුලිත ජීව රටාව' : 'Balanced Life Rhythm';
+  if (key.indexOf('ant') !== -1 || key.indexOf('kapha') !== -1) return reportLang === 'si' ? 'ස්ථිර ජීව රටාව' : 'Steady Life Rhythm';
+  return reportLang === 'si' ? 'පුද්ගලික ජීව රටාව' : 'Personal Life Rhythm';
+}
+
 // ══════════════════════════════════════════
 // EXTRACT KEY STATS from section data
 // ══════════════════════════════════════════
@@ -285,7 +326,7 @@ function extractKeyStats(sectionKey, rawData, reportLang) {
       break;
     case 'children':
       if (rawData.estimatedChildren?.count != null) stats.push({ label: isSi ? 'දරු සංඛ්‍යාව' : 'Children', value: String(rawData.estimatedChildren.count), icon: '👶' });
-      if (rawData.nadiChildren?.strength) stats.push({ label: isSi ? 'නාඩි' : 'Nadi', value: rawData.nadiChildren.strength, icon: '🔮' });
+      if (rawData.nadiChildren?.strength) stats.push({ label: isSi ? 'පවුල් ගලායෑම' : 'Family Flow', value: rawData.nadiChildren.strength, icon: '🔮' });
       break;
     case 'education':
       if (rawData.nadiEducation?.overallGrade) stats.push({ label: isSi ? 'ශ්‍රේණිය' : 'Grade', value: rawData.nadiEducation.overallGrade, icon: '📚' });
@@ -795,30 +836,30 @@ var cdv = StyleSheet.create({
 // ══════════════════════════════════════════
 var LOADING_STAGES = {
   en: {
-    starting: { text: '🌌 Aligning with the Cosmos...', sub: 'Did you know? Your exact birth minute determines your Rising Sign (Lagna), the lens of your soul.' },
-    engine: { text: '🪐 Tracking Planetary Transits...', sub: 'Fun fact: Rahu & Ketu are shadow planets that carry the destiny of your past life karma.' },
-    charts: { text: '✨ Drawing the Celestial Map...', sub: 'Constructing your D-1 (Rashi) and D-9 (Navamsha) charts for deep destiny analysis.' },
-    coherence: { text: '🔮 Decoding Planetary Yogas...', sub: 'Searching for rare planetary combinations (Yogas) that shape your wealth and fame.' },
-    sections: { text: '📜 Penning Your Cosmic Destiny...', sub: 'Analyzing the 12 houses to uncover secrets about your love, career, and hidden strengths.' },
-    retrying: { text: '🔄 Refining Astrological Nuances...', sub: 'Vedic astrology requires deep precision. Taking an extra moment to polish your secrets!' },
+    starting: { text: '🌌 Reading Your Birth Moment...', sub: 'Your exact birth minute helps reveal your natural personality, timing, and life direction.' },
+    engine: { text: '🪐 Checking Current Sky Movement...', sub: 'We are turning the technical calculations into practical guidance for your life.' },
+    charts: { text: '✨ Building Your Life Map...', sub: 'Connecting your birth details to love, work, family, money, health, and growth patterns.' },
+    coherence: { text: '🔮 Finding Your Strength Patterns...', sub: 'Looking for hidden talents, support areas, and places where extra care is useful.' },
+    sections: { text: '📜 Writing Your Personal Story...', sub: 'Preparing clear explanations for love, career, timing, family, and choices.' },
+    retrying: { text: '🔄 Refining the Reading...', sub: 'Taking an extra moment to make the guidance clearer and more useful.' },
     complete: { text: '🎉 Your Cosmic Blueprint is Ready!', sub: 'Unveiling your personalized path to success and true happiness.' },
     failed: { text: '⚠️ A Ripple in the Continuum...', sub: 'The stars paused. Please try again (You won\'t be charged again for this).' },
   },
   si: {
-    starting: { text: '🌌 විශ්වය හා සම්බන්ධ වෙමින්...', sub: 'ඔබ දන්නවාද? ඔබේ ලග්නය තීරණය වන්නේ ඔබ උපන් හරියටම එම විනාඩියෙන් බව!' },
-    engine: { text: '🪐 ග්‍රහ චලිතය ගණනය කරමින්...', sub: 'රාහු සහ කේතු යනු ඔබේ පෙර භවයේ කර්මය රැගෙන එන චායා ග්‍රහයින් බව ඔබ දන්නවාද?' },
-    charts: { text: '✨ ජන්ම පත්‍ර සිතියම් ගත කරමින්...', sub: 'රාශි චක්‍රය සහ නවාංශකය විශ්ලේෂණය කර ඔබගේ දෛවයේ රහස් කේතයන් සොයමින්.' },
-    coherence: { text: '🔮 ග්‍රහ යෝග හා බලපෑම් විමසමින්...', sub: 'ඔබට ධනය සහ ජනප්‍රියත්වය ගෙනෙන සුවිශේෂී ග්‍රහ යෝග සඳහා සිතියම සියුම්ව පරීක්ෂා කරමින්.' },
-    sections: { text: '📜 ඔබේ ජීවිත කතාව ලියමින්...', sub: 'භාව 12න් ආදරය, දේපළ, රැකියාව හා ඔබගේ සැඟවුණු දක්ෂතා පිළිබඳ රහස් හෙළි කරමින්.' },
-    retrying: { text: '🔄 තවත් සියුම්ව පරික්ෂා කරමින්...', sub: 'වෛදික ජ්‍යෝතිෂය ඉතාමත් සියුම් විශ්ලේෂණයක් ඉල්ලයි. එය උපරිම නිවැරදිව ලබා දීමට තව සුළු මොහොතක්.' },
-    complete: { text: '🎉 ඔබේ කේන්දර වාර්තාව සූදානම්!', sub: 'සාර්ථකත්වය හා සතුට කරා යන ඔබේ ගමන පෙන්වන විශ්ව රහස් දැන් විවෘතයි.' },
-    failed: { text: '⚠️ ග්‍රහ ශක්තීන්ගේ බාධාවක්', sub: 'තරු නැවතුණාක් මෙනි. කරුණාකර නැවත උත්සාහ කරන්න (ඔබට නැවත මුදල් ගෙවීමට අවශ්‍ය නැත).' },
+    starting: { text: '🌌 උපන් මොහොත කියවමින්...', sub: 'ඔයා උපන් නිවැරදි මොහොතෙන් ඔයාගේ ස්වභාවය, කාලය, සහ ජීවිත දිශාව පැහැදිලි වෙනවා.' },
+    engine: { text: '🪐 අද අහසේ ගමන පරීක්ෂා කරමින්...', sub: 'තාක්ෂණික ගණනය කිරීම් ඔයාට තේරෙන ප්‍රායෝගික මගපෙන්වීමක් බවට පත් කරමින්.' },
+    charts: { text: '✨ ඔයාගේ ජීවිත සිතියම සකසමින්...', sub: 'ආදරය, රැකියාව, පවුල, මුදල්, සෞඛ්‍යය, සහ වර්ධනය ගැන රටා සම්බන්ධ කරමින්.' },
+    coherence: { text: '🔮 ඔයාගේ ශක්ති රටා සොයමින්...', sub: 'සැඟවුණු හැකියාවන්, සහාය ලැබෙන ප්‍රදේශ, සහ පරිස්සම් වෙන්න ඕනේ තැන් සොයමින්.' },
+    sections: { text: '📜 ඔයාගේ පුද්ගලික කතාව ලියමින්...', sub: 'ආදරය, රැකියාව, කාලය, පවුල, සහ තේරීම් ගැන පැහැදිලි විස්තර සකසමින්.' },
+    retrying: { text: '🔄 කියවීම තවත් පැහැදිලි කරමින්...', sub: 'උපදෙස් වඩාත් තේරුම් ගත හැකි සහ ප්‍රයෝජනවත් කිරීමට තව සුළු මොහොතක්.' },
+    complete: { text: '🎉 ඔයාගේ කේන්දර වාර්තාව සූදානම්!', sub: 'සාර්ථකත්වය හා සතුට කරා යන ඔයාගේ ගමන පෙන්වන විශ්ව රහස් දැන් විවෘතයි.' },
+    failed: { text: '⚠️ ග්‍රහ ශක්තීන්ගේ බාධාවක්', sub: 'තරු නැවතුණාක් වගේ. කරුණාකර නැවත උත්සාහ කරන්න (ඔයාට නැවත මුදල් ගෙවන්න ඕනේ නැහැ).' },
   },
 };
 
 var SECTION_LABELS = {
   en: {
-    personality: 'Personality', yogaAnalysis: 'Yoga Analysis', lifePredictions: 'Life Predictions',
+    personality: 'Personality', yogaAnalysis: 'Strength Analysis', lifePredictions: 'Life Predictions',
     career: 'Career', marriage: 'Marriage', marriedLife: 'Married Life', financial: 'Financial',
     children: 'Children', familyPortrait: 'Family', health: 'Health', physicalProfile: 'Physical Profile',
     attractionProfile: 'Attraction', mentalHealth: 'Mental Health', foreignTravel: 'Foreign Travel',
@@ -827,7 +868,7 @@ var SECTION_LABELS = {
     timeline25: 'Year Timeline', remedies: 'Remedies',
   },
   si: {
-    personality: 'පෞද්ගලිකත්වය', yogaAnalysis: 'යෝග විශ්ලේෂණය', lifePredictions: 'ජීවිත අනාවැකි',
+    personality: 'පෞද්ගලිකත්වය', yogaAnalysis: 'ශක්ති විශ්ලේෂණය', lifePredictions: 'ජීවිත අනාවැකි',
     career: 'වෘත්තිය', marriage: 'විවාහය', marriedLife: 'විවාහ ජීවිතය', financial: 'මූල්‍ය',
     children: 'දරුවන්', familyPortrait: 'පවුල', health: 'සෞඛ්‍ය', physicalProfile: 'ශාරීරික',
     attractionProfile: 'ආකර්ෂණය', mentalHealth: 'මානසික සෞඛ්‍ය', foreignTravel: 'විදේශ ගමන්',
@@ -1722,7 +1763,7 @@ export default function ReportScreen() {
       var bd = (report && report.birthData) || (aiReport && aiReport.birthData) || {};
 
       var lagnaLabel = isSi ? (bd.lagna?.sinhala || bd.lagna?.english || '') : (bd.lagna?.english || bd.lagna?.name || '');
-      var nakLabel = isSi ? (bd.nakshatra?.sinhala || bd.nakshatra?.name || '') : (bd.nakshatra?.name || '');
+      var nakLabel = getBirthFocusValue(bd.nakshatra, reportLang);
 
       var resolvedTitles = SECTION_KEYS.map(function(key) {
         var titleKey = SECTION_TITLES[key];
@@ -1968,7 +2009,7 @@ export default function ReportScreen() {
             </Text>
             <Text style={{ color: 'rgba(255,214,102,0.35)', fontSize: 11, textAlign: 'center', marginBottom: 20 }}>
               {reportLang === 'si'
-                ? '🔒 ඔබට නැවත ගෙවීමක් අවශ්‍ය නැත'
+                ? '🔒 ඔයාට නැවත මුදල් ගෙවන්න ඕනේ නැහැ'
                 : '🔒 You will not be charged again'}
             </Text>
 
@@ -2205,21 +2246,21 @@ export default function ReportScreen() {
                     <Text style={s.panchangaValue}>{reportLang === 'si' ? (birthDataResolved.sunSign?.sinhala || birthDataResolved.sunSign?.english || '') : (birthDataResolved.sunSign?.english || '')}</Text>
                   </View>
                   <View style={s.panchangaItem}>
-                    <Text style={s.panchangaLabel}>{reportLang === 'si' ? '⭐ උපන් තරුව' : '⭐ Birth Star'}</Text>
-                    <Text style={s.panchangaValue}>{reportLang === 'si' ? (birthDataResolved.nakshatra?.sinhala || birthDataResolved.nakshatra?.name || '') : (birthDataResolved.nakshatra?.name || '')}</Text>
+                    <Text style={s.panchangaLabel}>{reportLang === 'si' ? '⭐ උපන් අවධානය' : '⭐ Birth Focus'}</Text>
+                    <Text style={s.panchangaValue}>{getBirthFocusValue(birthDataResolved.nakshatra, reportLang)}</Text>
                   </View>
                 </View>
                 <View style={[s.panchangaRow, { marginTop: 4 }]}>
                   {birthDataResolved.gana && (
                     <View style={s.panchangaItem}>
-                      <Text style={s.panchangaLabel}>{reportLang === 'si' ? '🔥 ගුණාංගය' : '🔥 Temperament'}</Text>
-                      <Text style={s.panchangaValue}>{birthDataResolved.gana.type}</Text>
+                      <Text style={s.panchangaLabel}>{reportLang === 'si' ? '🔥 ස්වභාව රටාව' : '🔥 Nature Style'}</Text>
+                      <Text style={s.panchangaValue}>{getFriendlyTemperamentValue(birthDataResolved.gana.type, reportLang)}</Text>
                     </View>
                   )}
                   {birthDataResolved.nadi && (
                     <View style={s.panchangaItem}>
-                      <Text style={s.panchangaLabel}>{reportLang === 'si' ? '💨 ශක්ති ප්‍රවාහය' : '💨 Energy Type'}</Text>
-                      <Text style={s.panchangaValue}>{birthDataResolved.nadi.type}</Text>
+                      <Text style={s.panchangaLabel}>{reportLang === 'si' ? '💨 ජීව රටාව' : '💨 Life Rhythm'}</Text>
+                      <Text style={s.panchangaValue}>{getFriendlyEnergyValue(birthDataResolved.nadi.type, reportLang)}</Text>
                     </View>
                   )}
                   {birthDataResolved.panchanga?.panchangaQuality && (
@@ -2307,7 +2348,7 @@ export default function ReportScreen() {
                 </Text>
                 <Text style={{ color: 'rgba(252,165,165,0.6)', fontSize: 13, marginTop: 6, textAlign: 'center', paddingHorizontal: 16 }}>
                   {reportLang === 'si'
-                    ? 'කරුණාකර නැවත උත්සාහ කරන්න. ඔබට නැවත ගෙවීමක් අවශ්‍ය නැත.'
+                    ? 'කරුණාකර නැවත උත්සාහ කරන්න. ඔයාට නැවත මුදල් ගෙවන්න ඕනේ නැහැ.'
                     : 'Please try again. You will not be charged again.'}
                 </Text>
                 <SpringPressable style={[s.newReportBtn, { marginTop: 16, borderColor: 'rgba(239,68,68,0.4)' }]} onPress={handleNewReport} haptic="medium">

@@ -129,6 +129,183 @@ var ZODIAC_SIGNS = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑',
 var ZODIAC_NAMES_EN = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
 var ZODIAC_NAMES_SI = ['මේෂ','වෘෂභ','මිථුන','කටක','සිංහ','කන්‍යා','තුලා','වෘශ්චික','ධනු','මකර','කුම්භ','මීන'];
 var PLANET_NAMES_SI = { Sun: 'සූර්යා', Moon: 'චන්ද්‍රා', Mars: 'කුජ', Mercury: 'බුධ', Jupiter: 'ගුරු', Venus: 'සිකුරු', Saturn: 'ශනි', Rahu: 'රාහු', Ketu: 'කේතු' };
+var RASHI_LOOKUP = {
+  Mesha: 'Mesha', mesha: 'Mesha', Aries: 'Mesha', aries: 'Mesha', 'මේෂ': 'Mesha',
+  Vrishabha: 'Vrishabha', vrishabha: 'Vrishabha', Taurus: 'Vrishabha', taurus: 'Vrishabha', 'වෘෂභ': 'Vrishabha',
+  Mithuna: 'Mithuna', mithuna: 'Mithuna', Gemini: 'Mithuna', gemini: 'Mithuna', 'මිථුන': 'Mithuna',
+  Kataka: 'Kataka', kataka: 'Kataka', Cancer: 'Kataka', cancer: 'Kataka', 'කටක': 'Kataka',
+  Simha: 'Simha', simha: 'Simha', Leo: 'Simha', leo: 'Simha', 'සිංහ': 'Simha',
+  Kanya: 'Kanya', kanya: 'Kanya', Virgo: 'Kanya', virgo: 'Kanya', 'කන්‍යා': 'Kanya',
+  Tula: 'Tula', tula: 'Tula', Libra: 'Tula', libra: 'Tula', 'තුලා': 'Tula',
+  Vrischika: 'Vrischika', vrischika: 'Vrischika', Scorpio: 'Vrischika', scorpio: 'Vrischika', 'වෘශ්චික': 'Vrischika',
+  Dhanus: 'Dhanus', dhanus: 'Dhanus', Sagittarius: 'Dhanus', sagittarius: 'Dhanus', 'ධනු': 'Dhanus',
+  Makara: 'Makara', makara: 'Makara', Capricorn: 'Makara', capricorn: 'Makara', 'මකර': 'Makara',
+  Kumbha: 'Kumbha', kumbha: 'Kumbha', Aquarius: 'Kumbha', aquarius: 'Kumbha', 'කුම්භ': 'Kumbha',
+  Meena: 'Meena', meena: 'Meena', Pisces: 'Meena', pisces: 'Meena', 'මීන': 'Meena',
+};
+var LAGNA_UI_COPY = {
+  Mesha: {
+    readingEn: 'Aries Rising gives you a direct, brave, action-first nature. You usually move before others are ready, and your chart shows strength when you take the lead with discipline instead of impatience.',
+    readingSi: 'මේෂ ලග්නයෙන් ඉපදුණු ඔයාට තියෙන්නේ නිර්භීත, ක්‍රියාශීලී, නායකත්ව ලක්ෂණ පිරුණු ස්වභාවයක්. අනිත් අයට කලින් ඉස්සරහට යන්න ඔයාට පුළුවන්. හැබැයි ඉක්මන් වෙන එක පොඩ්ඩක් පාලනය කරලා වැඩ කළොත්, ජීවිතේ ලොකු ජයග්‍රහණ ගන්න එක ඔයාට ගේමක් නැහැ.',
+    personalityEn: 'Your strongest pattern is courage in motion, you learn by doing and win when your energy has a clear direction.',
+    personalitySi: 'ඔයාගේ ලොකුම ප්ලස් පොයින්ට් එක තමයි වැඩක් කරන්න බය නැතුව ඉස්සරහට යන එක. ඔයාගේ සහජ හැකියාවෙන් පැහැදිලි අරමුණක් තියාගෙන වැඩ කළොත්, ඉක්මනින් සාර්ථක ප්‍රතිඵල ගන්න ඔයාට පුළුවන්.',
+    traitsEn: ['Brave', 'Fast starter', 'Independent', 'Protective'],
+    traitsSi: ['නිර්භීතයි', 'ඉක්මන් ආරම්භය', 'ස්වාධීනයි', 'ආරක්ෂාකාරීයි'],
+    gem: { en: 'Red Coral', si: 'රතු පබළු' },
+    color: { en: 'Red, Orange', si: 'රතු, තැඹිලි' },
+  },
+  Vrishabha: {
+    readingEn: 'Taurus Rising gives you a steady, tasteful, and dependable personality. You build life patiently, value comfort and loyalty, and do best when your plans are practical and financially grounded.',
+    readingSi: 'වෘෂභ ලග්නයෙන් ඉපදුණු ඔයා කැමති ස්ථාවර, කලබල නැති, නිදහස් ජීවිතේකට. වැඩක් පටන් ගත්තොත් බොහොම ඉවසීමෙන් ඒක ගොඩනගනවා. සල්ලි ගැනත්, ජීවිතේ ගැනත් ප්‍රායෝගිකව හිතලා වැඩ කරන නිසා ඔයාට ලොකු සාර්ථකත්වයකට යන්න පුළුවන්.',
+    personalityEn: 'Your strength is consistency, you move slowly when needed but rarely give up on something that truly matters.',
+    personalitySi: 'ඔයාගේ ලොකුම ශක්තිය තමයි මේ නොසැලෙන ස්ථාවරත්වය. වෙලාවකට වැඩ ටිකක් හිමින් කළත්, අත්‍යවශ්‍ය දේවල් කොහොම හරි අත්නාරින එක තමයි ඔයාගේ විශේෂත්වය.',
+    traitsEn: ['Steady', 'Loyal', 'Tasteful', 'Determined'],
+    traitsSi: ['ස්ථාවරයි', 'විශ්වාසවන්තයි', 'රසකාමීයි', 'අධිෂ්ඨානශීලීයි'],
+    gem: { en: 'Diamond', si: 'දියමන්ති' },
+    color: { en: 'White, Cream, Pink', si: 'සුදු, ක්‍රීම්, රෝස' },
+  },
+  Mithuna: {
+    readingEn: 'Gemini Rising gives you a quick mind, flexible thinking, and a natural gift for words. You understand people through conversation and often succeed where ideas, learning, trade, or communication are important.',
+    readingSi: 'මිථුන ලග්නයෙන් ඉපදුණු ඔයාට තියෙන්නේ මාර තියුණු මොළයක්. ඕනෙම තත්ත්වෙකට හැඩගැහෙන්න ඔයාට පුළුවන්. අලුත් අදහස් හොයන්න, කතාබහ කරන්න ඔයාට තියෙන්නේ උපන් දක්ෂතාවයක්. මේ නිසා ඔයාට ඉක්මනින් ඉස්සරහට යන්න පුළුවන්.',
+    personalityEn: 'Your chart shows a mind that connects patterns quickly, but your best results come when you finish one clear path before chasing the next idea.',
+    personalitySi: 'ඔයාගේ මනස මාර ස්පීඩ් එකට දේවල් ග්‍රහණය කරගන්නවා. හැබැයි අලුත් දෙයක් පස්සේ යන්න කලින්, පටන් ගත්ත දේ ඉවරයක් කරනවා නම් ඔයාට මාරම රිසල්ට් එකක් ගන්න පුළුවන්.',
+    traitsEn: ['Quick-minded', 'Communicative', 'Adaptable', 'Curious'],
+    traitsSi: ['බුද්ධිමත්', 'කතාබහට දක්ෂයි', 'හැඩගැසෙනසුළුයි', 'කුතුහලයෙන් පිරිලා'],
+    gem: { en: 'Emerald', si: 'මරකත' },
+    color: { en: 'Green, Light Yellow', si: 'කොළ, ලා කහ' },
+  },
+  Kataka: {
+    readingEn: 'Cancer Rising gives you emotional depth, intuition, and a protective heart. Home, family, memory, and belonging shape many of your choices, and you often sensitive to what others feel before they say it.',
+    readingSi: 'කටක ලග්නයෙන් ඉපදුණු ඔයා හරිම සංවේදී, හැඟීම්බර කෙනෙක්. අනිත් අයව ආදරෙන් බලාගන්න ඔයාට තියෙන්නේ මාර හදවතක්. පවුලේ අය, නිවස ගැන ඔයා හුඟක් හිතනවා. අනිත් අයගේ හැඟීම් කල්තියා තේරුම් ගන්න එක ඔයාට සහජයෙන්ම පිහිටලා තියෙනවා.',
+    personalityEn: 'Your sensitivity is not weakness, it is your way of reading the room and protecting what matters.',
+    personalitySi: 'ඔයාගේ සංවේදීකම තියෙන්නේ දුර්වලකමකට නෙවෙයි, අනිත් අයව තේරුම් අරන් ඔයාට වටින දේවල් ආරක්ෂා කරගන්න තමයි ඒක පිහිටලා තියෙන්නේ.',
+    traitsEn: ['Intuitive', 'Caring', 'Protective', 'Family-minded'],
+    traitsSi: ['සංවේදී', 'කරුණාවන්තයි', 'පවුලට ලැදියි', 'ආරක්ෂාකාරීයි'],
+    gem: { en: 'Pearl', si: 'මුතු' },
+    color: { en: 'White, Silver', si: 'සුදු, රිදී' },
+  },
+  Simha: {
+    readingEn: 'Leo Rising gives you presence, pride, and a natural wish to create something meaningful. You are noticed easily, and your life opens when confidence is guided by generosity and responsibility.',
+    readingSi: 'සිංහ ලග්නයෙන් ඉපදුණු ඔයා පෙනුමෙන් වගේම වැඩෙනුත් කැපී පේන කෙනෙක්. සහජ නායකයෙක් විදිහට ඉස්සරහට යන්න ඔයාට පුළුවන්. ආත්ම විශ්වාසය, කරුණාව එකතු කරලා වගකීමෙන් වැඩ කළොත්, හැමෝම ආදරය කරන ජනප්‍රිය චරිතයක් වෙන්න ඔයාට අමාරු නැහැ.',
+    personalityEn: 'Your personality carries warmth and authority, people respond when you lead with heart rather than ego.',
+    personalitySi: 'ඔයා ළඟ තියෙන උණුසුම් හදවත සහ අන් අයට උදව් කරන්න තියෙන උනන්දුව නිසා ඔයාට ලොකු පිළිගැනීමක් ලැබෙනවා. හැබැයි පොඩියට තියෙන ආඩම්බරකම පාලනය කරගන්න එක වැදගත්.',
+    traitsEn: ['Confident', 'Warm-hearted', 'Commanding', 'Creative'],
+    traitsSi: ['නායකත්වය', 'කැපී පෙනෙනවා', 'ආකර්ෂණීයයි', 'නිර්භීතයි'],
+    gem: { en: 'Ruby', si: 'මාණික්‍ය' },
+    color: { en: 'Gold, Orange, Red', si: 'රන්, තැඹිලි, රතු' },
+  },
+  Kanya: {
+    readingEn: 'Virgo Rising gives you a careful mind, practical judgement, and a strong eye for detail. You improve whatever you touch, but your peace grows when perfection becomes a guide rather than pressure.',
+    readingSi: 'කන්‍යා ලග්නයෙන් ඉපදුණු ඔයා හරිම ප්‍රායෝගිකව, පිළිවෙළට වැඩ කරන කෙනෙක්. පුංචි පුංචි දේවල් ගැන පවා ඔයා ගොඩක් හිතනවා. සේවය කිරීම, සෞඛ්‍යය වගේ දේවල් ගැන ඔයා දක්වන උනන්දුව නිසා අනිත් අයට ඔයාව ලොකු සහනයක් වෙනවා.',
+    personalityEn: 'Your chart shows a refined problem-solver, someone who notices what others miss and turns small corrections into real progress.',
+    personalitySi: 'ඕනෙම ප්‍රශ්නයක් ලේසියෙන් විසඳගන්න හැකියාව ඔයාට තියෙනවා. හැමදේම පර්ෆෙක්ට් වෙන්න ඕනේ කියලා හිතලා ඔයා නිකන් ස්ට්‍රෙස් වෙන්න එපා.',
+    traitsEn: ['Analytical', 'Practical', 'Organized', 'Helpful'],
+    traitsSi: ['විශ්ලේෂණාත්මකයි', 'පිළිවෙළයි', 'සේවාකාමීයී', 'ප්‍රායෝගිකයි'],
+    gem: { en: 'Emerald', si: 'මරකත' },
+    color: { en: 'Green, Earth tones', si: 'කොළ, පස් වර්ණ' },
+  },
+  Tula: {
+    readingEn: 'Libra Rising gives you charm, balance, and a strong sense of fairness. Relationships, beauty, negotiation, and social harmony become important life themes, and you succeed by choosing peace without losing your own voice.',
+    readingSi: 'තුලා ලග්නයෙන් ඉපදුණු ඔයා සාමයට, සමානාත්මතාවයට මාරම ලැදියි. ප්‍රශ්නයක් වුණාම පැති දෙකම බලලා සාධාරණව තීරණ ගන්න ඔයාට පුළුවන්. ලස්සන, කලාව වගේ දේවල් වලටත් ඔයා සහජයෙන් කැමතියි.',
+    personalityEn: 'Your gift is reading both sides of a situation, but your growth comes from making clear choices when balance becomes delay.',
+    personalitySi: 'වෙන අයත් එක්ක එකතුවෙලා වැඩ කරන්න තියෙන හැකියාව (Partnerships) තමයි ඔයාගේ ලොකුම ශක්තිය. තීරණ ගන්න ටිකක් පමා වුණත්, ගන්න තීරණය ගොඩක් වෙලාවට හරිම එක වෙනවා.',
+    traitsEn: ['Diplomatic', 'Charming', 'Fair-minded', 'Artistic'],
+    traitsSi: ['සාමකාමීයි', 'සාධාරණයි', 'කලාකාමීයි', 'සමබරයි'],
+    gem: { en: 'Diamond', si: 'දියමන්ති' },
+    color: { en: 'White, Pastel shades', si: 'සුදු, ලා වර්ණ' },
+  },
+  Vrischika: {
+    readingEn: 'Scorpio Rising gives you an intense, private, and deeply observant nature. Mars adds courage under pressure, so you often transform through difficult moments and notice hidden motives before others do.',
+    readingSi: 'වෘශ්චික ලග්නයෙන් ඉපදුණු ඔයාට තියෙන්නේ ගැඹුරුම හැඟීම් දාමයක්. යමක් කරන්න හිතුවොත් ඒකෙ අගමුල හොයනකම්ම අතාරින්නේ නැහැ. ඔයාගේ මානසික ශක්තිය මාරම ප්‍රබලයි.',
+    personalityEn: 'Your power is emotional depth with control, you are strongest when you use intensity for healing, research, and focused action.',
+    personalitySi: 'අභියෝග වලට මුහුණ දීලා, අළු ගසලා නැගිටින එක ඔයාට සහජයෙන්ම පිහිටලා තියෙනවා. අනිත් අයගේ හිතේ තියෙන දේ ඉක්මනින්ම තේරුම් ගන්න පුළුවන් එකත් ඔයාගේ විශේෂත්වයක්.',
+    traitsEn: ['Intense willpower', 'Magnetic', 'Deep thinker', 'Resilient'],
+    traitsSi: ['රහස්‍යයි', 'අධිෂ්ඨානශීලීයි', 'ගැඹුරුයි', 'මානසික ශක්තිය'],
+    gem: { en: 'Red Coral', si: 'රතු පබළු' },
+    color: { en: 'Deep Red, Maroon', si: 'තද රතු, මෙරූන්' },
+  },
+  Dhanus: {
+    readingEn: 'Sagittarius Rising gives you optimism, faith, and a love of truth. You grow through learning, travel, teaching, and big ideas, especially when freedom is balanced with responsibility.',
+    readingSi: 'ධනු ලග්නයෙන් ඉපදුණු ඔයා පට්ට නිදහස් කාමියෙක්. හැමදෙයක් දිහාම සුබවාදීව බලන ඔයා, සංචාරය කරන්න, අලුත් දේවල් ඉගෙනගන්න හරිම කැමතියි. ජීවිතේ යථාර්තය හොයන එක ඔයාගේ හැඩයක්.',
+    personalityEn: 'Your chart points to a seeker, someone who needs meaning, movement, and a horizon to aim toward.',
+    personalitySi: 'ඔයාගේ අවංකකම, කෙළින් කතා කරන ගතිය සමහර වෙලාවට අනිත් අයට රිදෙන්නත් පුළුවන්. හැබැයි ඔයා අනාගතය ගැන ගොඩක් දුර හිතලා තීරණ ගන්න කෙනෙක්.',
+    traitsEn: ['Optimistic', 'Wise', 'Adventurous', 'Straightforward'],
+    traitsSi: ['නිදහස්කාමීයි', 'සුබවාදීයි', 'අවංකයි', 'දර්ශනිකයි'],
+    gem: { en: 'Yellow Sapphire', si: 'පුෂ්පරාග' },
+    color: { en: 'Yellow, Gold', si: 'කහ, රන්' },
+  },
+  Makara: {
+    readingEn: 'Capricorn Rising gives you patience, discipline, and a serious approach to achievement. Your success usually comes step by step, through structure, endurance, and practical decisions.',
+    readingSi: 'මකර ලග්නයෙන් ඉපදුණු ඔයා කියන්නේ මාරම විනයක්, කැපවීමක් තියෙන කෙනෙක්. ජීවිතේ ලොකු ඉලක්ක තියාගෙන, ඒවාට හිමින් සැරේ, ස්ථාවරව ගමන් කරන එක තමයි ඔයාගේ ක්‍රමය. මහන්සි වෙලා වැඩ කරන්න ඔයාට තියෙන්නේ ලොකු ශක්තියක්.',
+    personalityEn: 'Your strength is long-term focus, you may start quietly but you can outlast people who move faster at the beginning.',
+    personalitySi: 'වගකීම් අරගන්න බය නැති ඔයා, අමාරු කාලවලදීත් වැටෙන්නේ නැතුව ඉස්සරහට යනවා. පවුලේ අය වෙනුවෙනුත් ඔයා ලොකු වගකීමක් දරන කෙනෙක්.',
+    traitsEn: ['Disciplined', 'Responsible', 'Patient', 'Strategic'],
+    traitsSi: ['විනයගරුකයි', 'අරමුණු සහගතයි', 'වගකීම් දරනවා', 'කැපවෙනවා'],
+    gem: { en: 'Blue Sapphire', si: 'නිල් මැණික්' },
+    color: { en: 'Dark Blue, Black', si: 'තද නිල්, කළු' },
+  },
+  Kumbha: {
+    readingEn: 'Aquarius Rising gives you originality, independence, and a mind that looks beyond the usual path. You are drawn to systems, communities, technology, and ideas that can improve life for many people.',
+    readingSi: 'කුම්භ ලග්නයෙන් ඉපදුණු ඔයා හැමතිස්සෙම අලුත් විදිහට හිතන, අනාගතය දකින කෙනෙක්. සමාජයට, යහළුවන්ට ගොඩක් ළැදියි. සම්ප්‍රදායික රාමු වලින් පිටතට ගිහින් අලුත් දේවල් හොයන්න ඔයා හරිම දක්ෂයි.',
+    personalityEn: 'Your personality carries distance and vision, you often understand where things are going before others are ready to accept it.',
+    personalitySi: 'ඔයා අනිත් හැමෝටම සමානව සලකනවා. හැඟීම් වලට වඩා බුද්ධියට තැන දීලා වැඩ කරන නිසා, සමහර වෙලාවට ඔයා ටිකක් හුදෙකලා වෙලා ඉන්න හැදුවත්, ඇතුළින් ඔයා ගොඩක් මානුෂීයයි.',
+    traitsEn: ['Original', 'Independent', 'Humanitarian', 'Forward-looking'],
+    traitsSi: ['අලුත් විදිහට හිතනවා', 'මිත්‍රශීලීයි', 'මානුෂීයයි', 'ස්වාධීනයි'],
+    gem: { en: 'Blue Sapphire', si: 'නිල් මැණික්' },
+    color: { en: 'Electric Blue, Violet', si: 'දීප්තිමත් නිල්, දම්' },
+  },
+  Meena: {
+    readingEn: 'Pisces Rising gives you compassion, imagination, and a deeply receptive heart. You absorb moods easily and do best when creativity, faith, and service have healthy boundaries.',
+    readingSi: 'මීන ලග්නයෙන් ඉපදුණු ඔයා මාරම සංවේදී, අනිත් අය ගැන ගොඩක් දුක් වෙන කෙනෙක්. කලාත්මක හැකියාවන් සහ ගැඹුරු ආධ්‍යාත්මික ගතිගුණ ඔයාට ජන්මයෙන්ම පිහිටලා තියෙනවා.',
+    personalityEn: 'Your gift is emotional imagination, you can comfort, create, and understand what cannot always be explained in words.',
+    personalitySi: 'අනිත් අයගේ ප්‍රශ්න වලදිත් ඔයාට ගොඩක් දුක හිතෙනවා. හිතින් ලෝක මවන්න ඔයා දක්ෂයි වගේම, හැම වෙලේම අනිත් අයට උදව් කරන්න තමයි ඔයාගේ හිත කියන්නේ.',
+    traitsEn: ['Compassionate', 'Imaginative', 'Intuitive', 'Gentle'],
+    traitsSi: ['සංවේදීයි', 'පරිකල්පනය', 'ආධ්‍යාත්මිකයි', 'ත්‍යාගශීලීයි'],
+    gem: { en: 'Yellow Sapphire', si: 'පුෂ්පරාග' },
+    color: { en: 'Yellow, Sea Green', si: 'කහ, මුහුදු කොළ' },
+  },
+};
+
+function getRashiKey(value) {
+  if (!value) return null;
+  var text = String(value).replace(/\s+Rising$/i, '').trim();
+  return RASHI_LOOKUP[text] || RASHI_LOOKUP[text.toLowerCase()] || null;
+}
+
+function getLagnaUiCopy(chartData) {
+  var lagna = chartData && chartData.lagna;
+  var details = chartData && chartData.lagnaDetails;
+  var candidates = [
+    lagna && lagna.name,
+    lagna && lagna.rashi,
+    lagna && lagna.english,
+    lagna && lagna.sinhala,
+    details && details.english,
+    details && details.sinhala,
+  ];
+  for (var i = 0; i < candidates.length; i += 1) {
+    var key = getRashiKey(candidates[i]);
+    if (key && LAGNA_UI_COPY[key]) return LAGNA_UI_COPY[key];
+  }
+  return null;
+}
+
+function stripSinhalaParenthetical(value) {
+  if (!value) return '';
+  return String(value).replace(/\s*\([^)]*[\u0D80-\u0DFF][^)]*\)/g, '').trim();
+}
+
+function extractSinhalaParenthetical(value) {
+  if (!value) return '';
+  var match = String(value).match(/\(([^)]*[\u0D80-\u0DFF][^)]*)\)/);
+  return match ? match[1].trim() : '';
+}
+
+function localizedLagnaValue(copy, field, rawValue, language) {
+  var local = copy && copy[field];
+  if (language === 'si') return (local && local.si) || extractSinhalaParenthetical(rawValue) || rawValue || '';
+  return (local && local.en) || stripSinhalaParenthetical(rawValue);
+}
 var ZODIAC_COLORS = [
   '#FF6B6B','#34D399','#FFD666','#7DD3FC','#FFB800','#6EE7B7',
   '#F9A8D4','#D4A5FF','#FF9F43','#94A3B8','#67E8F9','#C4B5FD',
@@ -398,20 +575,6 @@ function CosmicOrrery({ size, activeIndex, tithiNum, skipDecorations }) {
   );
 }
 
-/* ── Quick Action Pill ── */
-function QuickActionPill({ icon, label, onPress, gradient, dotColor }) {
-  var { colors: _c } = useTheme();
-  return (
-    <SpringPressable onPress={onPress} haptic="light" scalePressed={0.95}>
-      <View style={[s.quickPill, { borderColor: dotColor ? dotColor + '25' : _c.borderLight }]}>
-        <LinearGradient colors={gradient} style={s.quickPillBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-        <Text style={{ fontSize: 20 }}>{icon}</Text>
-        <Text style={[s.quickPillLabel, { color: _c.text }]}>{label}</Text>
-      </View>
-    </SpringPressable>
-  );
-}
-
 /* ── Stat Mini ── */
 function StatMini({ icon, label, value, color }) {
   var { colors: _c } = useTheme();
@@ -424,6 +587,241 @@ function StatMini({ icon, label, value, color }) {
       <Text style={[s.statMiniLabel, { color: _c.textMuted }]}>{label}</Text>
     </View>
   );
+}
+
+function chooseText(language, en, si) {
+  return language === 'si' ? si : en;
+}
+
+function getAstroEntryName(entry) {
+  if (!entry) return '';
+  if (typeof entry === 'string') return entry;
+  return entry.english || entry.name || entry.day || String(entry);
+}
+
+var PRACTICAL_TONES = {
+  start: {
+    effectEn: 'The universe is handing you a fresh spark today. Even the smallest first step will magically click into place.',
+    effectSi: 'විශ්වයෙන් අද ඔයාට අලුත් ආරම්භයක රහස් ගිනිපුපුරක් දෙනවා. පුංචිම පියවරක් තිබ්බත් ඒක හරි ලස්සනට ගැලපෙයි.',
+    dosEn: ['Start that one tiny thing', 'Trust your morning instinct'], dosSi: ['ඔයාගේ හිතේ තිබ්බ ඒ පුංචි දේ අද පටන්ගන්න', 'උදේම හිතට දැනෙන අදහස විශ්වාස කරන්න'],
+    dontsEn: ['Overpromise everything', 'Scatter this precious energy'], dontsSi: ['ඔක්කොම කරන්නම් කියලා පොරොන්දු වෙන්න එපා', 'අද ලැබෙන විශේෂ ශක්තිය නිකරුණේ නාස්ති කරන්න එපා'],
+  },
+  build: {
+    effectEn: 'Today holds a steady, grounding energy. Whatever you build or continue today is getting a secret protective blessing.',
+    effectSi: 'හරිම ස්ථාවර, ආරක්ෂිත ශක්තියක් අද දවසේ හැංගිලා තියෙනවා. අද ඔයා එකතු කරන හෝ ගොඩනගන හැමදේකටම රහස් ආශිර්වාදයක් ලැබෙනවා.',
+    dosEn: ['Continue what you love', 'Add a simple brick to your goals'], dosSi: ['ඔයා ආදරය කරන වැඩේ දිගටම කරගෙන යන්න', 'ඔයාගේ අරමුණ වෙනුවෙන් පුංචි හරි දෙයක් අදත් එකතු කරන්න'],
+    dontsEn: ['Rush for magic results', 'Skip the little loving details'], dontsSi: ['ඉක්මනින් මැජික් ප්‍රතිඵල බලාපොරොත්තු වෙන්න එපා', 'ඔයාගේ ආදරණීය පුංචි විස්තර මඟහරින්න එපා'],
+  },
+  relationship: {
+    effectEn: 'People matter more today. Kind words and cooperation can open doors.',
+    effectSi: 'අද දවසේ සබඳතා වලට ලොකු බලයක් තියෙනවා. ආදරණීය වචන වලින් ගොඩක් දේවල් දිනාගන්න පුළුවන් දවසක්.',
+    dosEn: ['Repair a conversation', 'Ask for support'], dosSi: ['තරහ වෙච්ච අය එක්ක කතා කරන්න', 'අවශ්‍ය වෙලාවට උදව් ඉල්ලන්න'],
+    dontsEn: ['Win arguments', 'Take silence personally'], dontsSi: ['වාද කරලා දිනන එකට වැඩිය අනිත් අයව තේරුම් ගන්න', 'අනිත් අයගෙ නිශ්ශබ්දතාවය වරදවා වටහාගන්න එපා'],
+  },
+  learn: {
+    effectEn: 'Curiosity is stronger. This is useful for study, planning, messages, and decisions that need facts.',
+    effectSi: 'අලුත් දේවල් හොයන්න, ඉගෙනගන්න හිතෙන තියුණු ශක්තියක් අද තියෙනවා. වැදගත් තීරණ ගන්න කලින් කරුණු හොයලා බලන්න හොඳම දවසක්.',
+    dosEn: ['Research before acting', 'Write things down'], dosSi: ['වැඩක් පටන් ගන්න කලින් ටිකක් හොයලා බලන්න', 'මතක තියාගන්න ඕන දේවල් ලියාගන්න'],
+    dontsEn: ['Assume too quickly', 'Skip verification'], dontsSi: ['නොදැන උපකල්පනය කරන්න යන්න එපා', 'හරිද කියලා බලන එක මඟහරින්න එපා'],
+  },
+  clear: {
+    effectEn: 'Small blockers may show up so you can remove them. Patience turns friction into progress.',
+    effectSi: 'පොඩි පොඩි බාධා මතු වෙන්න පුළුවන්, හැබැයි ඒ ඉස්සරහට යන්න පාර හදාගන්නයි. ඉවසීමෙන් හිටියොත් ඒ බාධාම ජයග්‍රහණයක් වෙයි.',
+    dosEn: ['Fix one problem first', 'Double-check plans'], dosSi: ['කලබල වෙන්නේ නැතුව එක ප්‍රශ්නයක් ඉස්සෙල්ලා විසඳගන්න', 'ඔයාගේ සැලසුම් දෙපාරක් චෙක් කරන්න'],
+    dontsEn: ['Rush launches', 'React emotionally'], dontsSi: ['අලුත් දේවල් කලබලෙන් පටන්ගන්න එපා', 'ප්‍රශ්න ආවම හැඟීම් වලට වහල් වෙන්න එපා'],
+  },
+  heal: {
+    effectEn: 'Recovery and care are highlighted. Choose actions that restore your body, home, or peace of mind.',
+    effectSi: 'අද දවස වෙන් වෙලා තියෙන්නේ සැනසීම හා සුවය වෙනුවෙන්. හිත් වේදනා, ඇඟේ අමාරුකම් මඟඇරගන්න හිතට සැනසිල්ලක් දෙන දේවල් කරන්න.',
+    dosEn: ['Rest without guilt', 'Handle health basics'], dosSi: ['කිසිම පසුතැවීමක් නැතුව හොඳින් විවේක ගන්න', 'සෞඛ්‍යය ගැන විශේෂයෙන් හිතන්න'],
+    dontsEn: ['Push through exhaustion', 'Ignore discomfort'], dontsSi: ['අමාරුයි කියලා දැනෙනකොටත් බලෙන් වැඩ කරන්න යන්න එපා', 'ඇඟෙන් දෙන සංඥා නොසලකා හරින්න එපා'],
+  },
+  discipline: {
+    effectEn: 'Responsibility is the winning path. Slow, clean work is stronger than dramatic moves.',
+    effectSi: 'අද ජයග්‍රහණය තියෙන්නේ වගකීම සහ විනය ඇතුලේ. කලබලෙන් ලොකු දේවල් කරනවට වඩා හිමින්, පිළිවෙලට කරන වැඩ වලින් සාර්ථක වෙන්න පුළුවන්.',
+    dosEn: ['Keep promises', 'Finish a duty'], dosSi: ['දුන්නු පොරොන්දු අනිවාර්යයෙන්ම ඉටු කරන්න', 'බාරගත්ත වැඩක් අනිවාර්යයෙන්ම ඉවර කරන්න'],
+    dontsEn: ['Cut corners', 'Delay important chores'], dontsSi: ['ලේසි ක්‍රම හොයන්න ගිහින් වැඩේ අවුල් කරගන්න එපා', 'අත්‍යවශ්‍ය වැඩ කල්දාන්න එපා'],
+  },
+  action: {
+    effectEn: 'Courage and movement are supported. Use the energy for useful action, not conflict.',
+    effectSi: 'ඔයාගේ නිර්භීතකමට විශ්වයෙන් අද ලොකු ශක්තියක් ලැබෙනවා. ඒ ගැම්ම රණ්ඩු ඇතිකරගන්න නෙවෙයි, ජීවිතේ ඉස්සරහට යන්න පාවිච්චි කරන්න.',
+    dosEn: ['Take a measured step', 'Use physical energy well'], dosSi: ['හොඳින් හිතලා ධෛර්යවන්ත පියවරක් ගන්න', 'මහන්සි වෙලා කරන වැඩක් අදම ඉවර කරන්න'],
+    dontsEn: ['Pick fights', 'Make impulsive promises'], dontsSi: ['නොවැදගත් දේවලට ගැටුම් ඇතිකරගන්න එපා', 'ගැම්මට අවාසිදායක පොරොන්දු දෙන්න යන්න එපා'],
+  },
+  focus: {
+    effectEn: 'Deep work is favored. You may feel intense, so give that intensity a useful target.',
+    effectSi: 'එක අරමුණකට හිත එකලස් කරගන්න අද මාරම ලේසියි. ඒ හින්දා හිතේ තියෙන ඒ තදබල ශක්තිය එක වැදගත් අරමුණක් වෙනුවෙන් විතරක් පාවිච්චි කරන්න.',
+    dosEn: ['Protect quiet time', 'Work on one priority'], dosSi: ['පාඩුවේ ඉන්න පුළුවන් වෙලාවක් වෙන්කරගන්න', 'වැදගත්ම එක වැඩක් තෝරගෙන ඒක විතරක් කරන්න'],
+    dontsEn: ['Multitask heavily', 'Overthink every signal'], dontsSi: ['එකපාර වැඩ ගොඩක් කරන්න ගිහින් හිත අවුල් කරගන්න එපා', 'හැම පොඩි දේම ගැන ඕනාවට වඩා හිතන්න එපා'],
+  },
+  social: {
+    effectEn: 'Teamwork and shared plans are easier. A helpful person may make the day lighter.',
+    effectSi: 'අනිත් අයත් එක්ක එකතු වෙලා වැඩ කරන්න අද හරිම ලේසි දවසක්. ඔයාට උදව් කරන කෙනෙක් නිසා අද දවස ගොඩක් සැහැල්ලු වෙයි.',
+    dosEn: ['Coordinate early', 'Share credit'], dosSi: ['කලින්ම කතා කරගෙන වැඩ ටික ප්ලෑන් කරගන්න', 'ලැබෙන ගෞරවය අනිත් අයත් එක්ක බෙදාගන්න'],
+    dontsEn: ['Carry everything alone', 'Create mixed messages'], dontsSi: ['ඔක්කොම බර තනියම කරගහගන්න යන්න එපා', 'අනිත් අයට තේරුම්ගන්න අමාරු විදිහට කතා කරන්න එපා'],
+  },
+  creative: {
+    effectEn: 'Design, beauty, and problem-solving get a lift. Make something cleaner or more useful.',
+    effectSi: 'නිර්මාණශීලී අදහස් ගලාගෙන එන දවසක්. ප්‍රශ්නයක් ලස්සනට විසඳගන්න හරි, අඩාල වෙලා තිබ්බ වැඩක් ලස්සනට ඉවර කරන්න හරි අද පුළුවන්.',
+    dosEn: ['Polish your work', 'Try a tasteful idea'], dosSi: ['කරන වැඩේට ලස්සන සහ නිර්මාණශීලී බවක් එකතු කරන්න', 'හිතට එන අලුත් අදහසක් අත්හදා බලන්න'],
+    dontsEn: ['Chase perfection', 'Spend for show'], dontsSi: ['සියයට සීයක්ම සම්පූර්ණ වෙන්න ඕන කියලා හිරවෙන්න එපා', 'අනිත් අයට පේන්න අනවශ්‍ය විදිහට වියදම් කරන්න එපා'],
+  },
+  review: {
+    effectEn: 'Hidden issues can become clearer. This is good for honest review and fixing root causes.',
+    effectSi: 'මෙච්චර කල් හැංගිලා තිබුණ ප්‍රශ්න සහ ඇත්ත තත්ත්වයන් අද එළියට ඒවි. වැරදි හදාගෙන අලුත් තීරණ වලට යන්න මේක හොඳම වෙලාවක්.',
+    dosEn: ['Look beneath the surface', 'Clean up old mistakes'], dosSi: ['මතුපිටින් පේන දේට වඩා ගැඹුරට හිතලා බලන්න', 'පරණ වැරදි පිළිගන්න, ඒවා හදාගන්න'],
+    dontsEn: ['Blame quickly', 'Start sensitive talks late'], dontsSi: ['විස්තර දැනගන්න කලින් අනිත් අයට බනින්න එපා', 'සංවේදී දේවල් කතාකරන එක කල්දාන්න එපා'],
+  },
+  rest: {
+    effectEn: 'The day supports softer pacing. Reflection can be more valuable than pressure.',
+    effectSi: 'අද දවස ඉල්ලන්නේම සැහැල්ලුව. බලෙන් වැඩක් ඉවර කරනවට වඩා, නිදහසේ හිතන්න දෙන කාලය අද ඔයාට ගොඩක් වටිනවා.',
+    dosEn: ['Pause before choosing', 'Make space for quiet'], dosSi: ['ඕනම දෙයක් තෝරගන්න කලින් පොඩ්ඩක් ඉන්න', 'නිදහසේ හුස්මගන්න පුළුවන් නිහඬ වෙලාවක් හදාගන්න'],
+    dontsEn: ['Overload the schedule', 'Ignore emotional tiredness'], dontsSi: ['කරන්න බැරි තරම් වැඩ ගොඩක් දාගෙන හිරවෙන්න එපා', 'හිතේ තියෙන මහන්සිය ගණන් ගන්නේ නැතුව ඉන්න එපා'],
+  },
+  complete: {
+    effectEn: 'Finishing energy is strong. Close loops, confirm details, and make the next step clean.',
+    effectSi: 'අවසන් කිරීමේ ශක්තිය අද හරිම ප්‍රබලයි. බාගෙට කරපු දේවල් ඉවර කරලා, ඊළඟ පියවරට ලෑස්ති වෙන්න අද පාවිච්චි කරන්න.',
+    dosEn: ['Complete pending work', 'Confirm agreements'], dosSi: ['ගොඩගැහිලා තියෙන වැඩ ටික හිමීට ඉවරයක් කරන්න', 'අනිත් අයත් එක්ක කරගත්ත එකඟවීම් ස්ථිර කරගන්න'],
+    dontsEn: ['Leave loose ends', 'Celebrate before checking'], dontsSi: ['කිසිම වැඩක් බාගෙට කරලා දාලා යන්න එපා', 'ඇත්තටම වැඩේ ඉවරද කියලා බලන්නේ නැතුව සතුටු වෙන්න එපා'],
+  },
+  caution: {
+    effectEn: 'Timing may feel uneven. Treat it as a signal to slow down and protect important choices.',
+    effectSi: 'කාලය ටිකක් අමුතු විදිහට, හිරවෙලා වගේ දැනෙන්න පුළුවන්. ඒක විශ්වයෙන් දෙන සිග්නල් එකක්, ටිකක් හිමින් ගිහින් වැදගත් තීරණ දිහා ආයේ බලන්න කියලා.',
+    dosEn: ['Delay risky starts', 'Check messages twice'], dosSi: ['අවදානම් වැඩ අලුතෙන් පටන් ගන්න එපා කල් දාන්න', 'ඕනම පණිවිඩයක් යවන්න කලින් දෙපාරක් කියවලා බලන්න'],
+    dontsEn: ['Sign under pressure', 'Travel without planning'], dontsSi: ['කවුරුහරි බල කරනවා කියලා ගිවිසුම් වලට අත්සන් කරන්න එපා', 'හරි සැලසුමක් නැතුව හදිසි ගමන් යන්න එපා'],
+  },
+  money: {
+    effectEn: 'Trade, budgets, and practical exchanges need attention. Clear value matters.',
+    effectSi: 'සල්ලි ගණුදෙනු, වියදම් සහ අයවැය ගැන අද ටිකක් කල්පනාවෙන් ඉන්න ඕන දවසක්. හුවමාරු වෙන දේ වටිනාකම පැහැදිලිද කියලා බලන්න.',
+    dosEn: ['Review costs', 'Make fair deals'], dosSi: ['වියදම් වෙන විදිහ පොඩ්ඩක් කල්පනාවෙන් බලන්න', 'දෙපැත්තටම සාධාරණ වෙන ගණුදෙනු විතරක් කරන්න'],
+    dontsEn: ['Buy from pressure', 'Hide money details'], dontsSi: ['ආසාවට යටවෙලා අනවශ්‍ය විදිහට සල්ලි විසි කරන්න එපා', 'මුදල් සම්බන්ධ විස්තර අනිත් අයගෙන් හංගන්න එපා'],
+  },
+  travel: {
+    effectEn: 'Movement and flexibility are supported. Keep plans light enough to adjust.',
+    effectSi: 'ගමන් බිමන් වලට සහ වෙනස්වීම් වලට අද විශ්වයෙන් ලොකු සහායක් ලැබෙනවා. වෙනස් කරන්න පුළුවන් වෙන විදිහට සැලසුම් හදාගන්න එක තමයි වටින්නේ.',
+    dosEn: ['Leave extra time', 'Keep options open'], dosSi: ['ගමන් යද්දි අමතර කාලයක් අරගෙනම යන්න', 'හැමදේකටම වෙනත් විකල්පයක් හිතේ තියාගන්න'],
+    dontsEn: ['Depend on one plan', 'Ignore weather or traffic'], dontsSi: ['එකම සැලසුමකට විතරක් හිරවෙලා ඉන්න එපා', 'කාලගුණය ගැන හිතන්නේ නැතුව එළියට බහින්න එපා'],
+  },
+  confidence: {
+    effectEn: 'Visibility is supported. Lead with warmth and confidence, not pride.',
+    effectSi: 'අද ඔයාව අනිත් අයට හොඳට කැපිලා පේනවා. අහංකාරකමෙන් නැතුව, ආදරෙන් සහ විශ්වාසයෙන් යුතුව නායකත්වය ගන්න හොඳම දවසක්.',
+    dosEn: ['Present your idea', 'Act generously'], dosSi: ['ඔයාගේ හිතේ තියෙන අදහස බය නැතුව ඉදිරිපත් කරන්න', 'අනිත් අය වෙනුවෙන් හොඳ හිතින් මැදිහත් වෙන්න'],
+    dontsEn: ['Dominate others', 'Make it all about you'], dontsSi: ['බලෙන් අනිත් අයව පාලනය කරන්න යන්න එපා', 'හැමදේටම ඔයාම විතරයි කියන තැන ඉඳලා කතා කරන්න එපා'],
+  },
+  listen: {
+    effectEn: 'Listening brings better answers than speaking first. Details arrive through patience.',
+    effectSi: 'අද කතා කරනවට වඩා අහගෙන ඉන්න එකෙන් ඔයාට ලොකු රහස් පිළිතුරු ටිකක් හොයාගන්න පුළුවන්. ඉවසීමෙන් හිටියොත් ඔක්කොම විස්තර ඔයා ගාවටම එයි.',
+    dosEn: ['Listen fully', 'Ask one good question'], dosSi: ['අනිත් අය කියන දේ සම්පූර්ණයෙන්ම අහගන්න', 'වැදගත්ම එක හොඳ ප්‍රශ්නයක් අහන්න'],
+    dontsEn: ['Interrupt too soon', 'Miss quiet signals'], dontsSi: ['අනිත් අයට කතා කරන්න නොදී පනින්න එපා', 'වචන නැතුව දෙන සිග්නල් මඟහැරගන්න එපා'],
+  },
+  patience: {
+    effectEn: 'Results may be slow but stable. The day rewards maturity and restraint.',
+    effectSi: 'ප්‍රතිඵල ලැබෙන්න ටිකක් පරක්කු වෙයි, හැබැයි ලැබෙන දේ ස්ථිරයි. අද දවසේ ජයග්‍රහණය තියෙන්නේ ඉවසීම සහ පරිණතකම ඇතුළේ.',
+    dosEn: ['Choose the long view', 'Stay consistent'], dosSi: ['කෙටි වාසි වලට වඩා දිගුකාලීන වාසි ගැන හිතන්න', 'කරන දේ අතරමඟ නවත්තන්නේ නැතුව දිගටම කරන්න'],
+    dontsEn: ['Force answers', 'Give up too early'], dontsSi: ['උත්තර දෙන්න කියලා කාටවත් බල කරන්න යන්න එපා', 'ප්‍රතිඵල නෑ කියලා ඉක්මනින් අතහැරලා දාන්න එපා'],
+  },
+  steady: {
+    effectEn: 'This is a grounded day for normal duties. Simple, reliable action works best.',
+    effectSi: 'දෛනික වැඩ ටික කරගෙන යන්න නියම, නිදහස් දවසක්. හරිම සරල විදිහට, විශ්වාසයෙන් වැඩ කරන එක අදට ගොඩක් හොඳයි.',
+    dosEn: ['Keep the basics strong', 'Work steadily'], dosSi: ['ඔයාගේ මූලික දේවල් හරියටම තියාගන්න', 'කලබලයක් නැතුව පාඩුවේ වැඩ ටික කරන්න'],
+    dontsEn: ['Create drama', 'Change plans without reason'], dontsSi: ['නැති ප්‍රශ්න මවලා ලොකු කරගන්න යන්න එපා', 'හේතුවක් නැතුව එකපාරට සැලසුම් වෙනස් කරන්න එපා'],
+  },
+  release: {
+    effectEn: 'Letting go is supported. Remove clutter, old tension, or a habit that drains you.',
+    effectSi: 'අත්හැරීම තමයි අද දවසේ තේමාව. ඔයාගේ හිතට වද දෙන, ඔයාව වෙහෙස කරන දේවල් හරි පුද්ගලයින්ව හරි අතහැරලා දාන්න.',
+    dosEn: ['Clear a space', 'End a stale loop'], dosSi: ['ඔයාගේ වටපිටාවයි හිතයි පිරිසිදු කරගන්න', 'කිසිම තේරුමක් නැති පුරුද්දකට තිත තියන්න'],
+    dontsEn: ['Hold grudges', 'Restart old conflict'], dontsSi: ['තරහවල් හිතේ තියාගෙන තැවෙන්න එපා', 'ඉවර වෙච්ච පරණ ප්‍රශ්න ආයේ අදින්න යන්න එපා'],
+  },
+};
+
+var PRACTICAL_GUIDES = {
+  tithi: {
+    'Pratipada': ['Fresh Cosmic Spark', 'අලුත් ආරම්භයකට සූදානම් වීම', 'start'], 'Dwitiya': ['Magnetic Bonding', 'බැඳීම් දුරදිග යන දිනයක්', 'relationship'],
+    'Tritiya': ['Absorb the Mystery', 'අලුත් දේවල් ඉගෙනගැනීමට සුබයි', 'learn'], 'Chaturthi': ['Shatter the Block', 'බාධක ඉවත් කරගැනීමට හොඳම දවසක්', 'clear'],
+    'Panchami': ['Soulful Recovery', 'සැනසිලිදායක සහ සහනශීලී දවසක්', 'heal'], 'Shashthi': ['Silent Discipline', 'විනයගරුකව වැඩකටයුතු කිරීම', 'discipline'],
+    'Saptami': ['Courageous Leap', 'නිර්භීත තීරණ ගැනීමට සුබයි', 'action'], 'Ashtami': ['Hypnotic Focus', 'දැඩි අවධානයකින් වැඩ කිරීම', 'focus'],
+    'Navami': ['Warrior Energy', 'අභියෝග ජයගැනීමේ ශක්තිය', 'action'], 'Dashami': ['The Final Click', 'සාර්ථකත්වයේ නිමාව සනිටුහන් වීම', 'complete'],
+    'Ekadashi': ['Total Detox', 'ශරීරය සහ මනස පිරිසිදු කරගැනීම', 'review'], 'Dwadashi': ['Deep Recharge', 'ගැඹුරු සැනසීම හා විවේකය', 'heal'],
+    'Trayodashi': ['Mending Threads', 'සම්බන්ධතා වර්ධනය කරගැනීම', 'relationship'], 'Chaturdashi': ['Let It Burn Out', 'පවතින රාමුවෙන් නිදහස් වීම', 'release'],
+    'Purnima/Amavasya': ['The Greatest Threshold', 'ජීවිතයේ විශේෂ හැරවුම් ලක්ෂයක්', 'complete'],
+  },
+  nakshatra: {
+    Ashwini: ['Lightning Start', 'වේගවත් සහ සාර්ථක ආරම්භයක්', 'start'], Bharani: ['Heavy Endurance', 'ඉවසීම සහ විඳදරාගැනීම', 'patience'],
+    Krittika: ['Laser Cutting', 'තියුණු හා පැහැදිලි තීරණ', 'clear'], Rohini: ['Sensual Growth', 'ආකර්ෂණීය සහ සෞභාග්‍යමත් දිනයක්', 'build'],
+    Mrigashira: ['Seek the Clue', 'නොපෙනෙන කරුණු ගවේෂණය කිරීම', 'learn'], Ardra: ['Stormy Release', 'හැඟීම් නිදහස් කිරීම සහ අලුත් වීම', 'release'],
+    Punarvasu: ['Return of Light', 'යළි පිබිදීම සහ සැනසීම', 'heal'], Pushya: ['Divine Nourishment', 'අධ්‍යාත්මික පෝෂණය සහ වර්ධනය', 'build'],
+    Ashlesha: ['Mystic Boundaries', 'ගැඹුරු අවබෝධය සහ ආරක්ෂාව', 'review'], Magha: ['Royal Presence', 'රාජකීය අභිමානය සහ ගෞරවය', 'confidence'],
+    'Purva Phalguni': ['Intoxicating Charm', 'ආදරය සහ විවේකය විඳීම', 'relationship'], 'Uttara Phalguni': ['Unshakeable Vow', 'ස්ථීර සහ වගකීම් සහගත බව', 'discipline'],
+    Hasta: ['Magic in the Hands', 'නිර්මාණශීලී කුසලතා වර්ධනය', 'creative'], Chitra: ['The Shiny Illusion', 'අලංකාරය සහ කලාත්මක බව', 'creative'],
+    Swati: ['Bending with the Wind', 'නම්‍යශීලී බව සහ වෙනස්වීම්', 'travel'], Vishakha: ['Relentless Drive', 'අරමුණක් වෙනුවෙන් කැපවීම', 'action'],
+    Anuradha: ['Silent Fellowship', 'මිත්‍රත්වය සහ සහයෝගීතාවය', 'social'], Jyeshtha: ['The Elder Wisdom', 'පරිණත දැනුම සහ නායකත්වය', 'discipline'],
+    Mula: ['Pulling at the Roots', 'ගැඹුරු සත්‍යය සෙවීම', 'review'], 'Purva Ashadha': ['Fearless Surge', 'බාධා මැඩගෙන ඉදිරියට යෑම', 'confidence'],
+    'Uttara Ashadha': ['The Unbreakable', 'නොසැලෙන අධිෂ්ඨානය', 'discipline'], Shravana: ['Listening to the Void', 'අවධානයෙන් යුතුව සවන් දීම', 'listen'],
+    Dhanishtha: ['Drumbeat of Destiny', 'සාර්ථකත්වයේ රිද්මය', 'social'], Shatabhisha: ['100 Healing Veils', 'සුවය සහ සහනය ළඟා වීම', 'heal'],
+    'Purva Bhadrapada': ['Walking Through Fire', 'ආධ්‍යාත්මික පිබිදීමක්', 'focus'], 'Uttara Bhadrapada': ['Still Waters', 'නිහඬ සහ සාමකාමී බව', 'patience'],
+    Revati: ['The Final Release', 'වැඩ නිම කිරීම සහ විවේකය', 'complete'],
+  },
+  yoga: {
+    Vishkambha: ['Clear the Fog', 'අපැහැදිලි තත්ත්වයන් පැහැදිලි වීම', 'clear'], Priti: ['The Velvet Vibe', 'ආදරය සහ කරුණාව වර්ධනය වීම', 'relationship'],
+    Ayushman: ['Deep Life-Force', 'කායික හා මානසික නීරෝගීභාවය', 'heal'], Saubhagya: ['A Touch of Magic', 'වාසනාව සහ සෞභාග්‍යය උදාවීම', 'confidence'],
+    Shobhana: ['Artistic Spark', 'කලාත්මක හැකියාවන් කැපී පෙනීම', 'creative'], Atiganda: ['Walk extremely softly', 'කල්පනාකාරීව සහ ප්‍රවේශමෙන් සිටීම', 'caution'],
+    Sukarma: ['Golden Flow', 'යහපත් ක්‍රියාවන් සාර්ථක වීම', 'build'], Dhriti: ['Iron Will', 'දැඩි අධිෂ්ඨානයෙන් ජයගැනීම', 'discipline'],
+    Shula: ['Hold Your Fire', 'ඉවසීමෙන් කටයුතු කළ යුතු දවසක්', 'caution'], Ganda: ['Untangling the Web', 'ගැටලු සහගත තත්ත්වයන් නිරාකරණය', 'clear'],
+    Vriddhi: ['Invisible Expansion', 'දියුණුව සහ ප්‍රගතිය ළඟාවීම', 'build'], Dhruva: ['The Anchor', 'ස්ථාවර සහ නොසැලෙන ප්‍රතිඵල', 'discipline'],
+    Vyaghata: ['Guard the Vault', 'බාධක මඟහැර ප්‍රවේශම් වීම', 'caution'], Harshana: ['Euphoric Lift', 'සිතට දැනෙන විශේෂ සතුටක්', 'confidence'],
+    Vajra: ['Laser Focus', 'තියුණු හා ශක්තිමත් තීරණ ගැනීම', 'focus'], Siddhi: ['The Manifestation', 'බලාපොරොත්තු ඉටු වී සාර්ථක වීම', 'complete'],
+    Vyatipata: ['A Sudden Shift', 'අනපේක්ෂිත වෙනස්කම් වලට සූදානම් වීම', 'caution'], Variyan: ['Silken Pace', 'සැහැල්ලු සහ විවේකී කාලයක්', 'rest'],
+    Parigha: ['Bashing the Wall', 'අභියෝග මැඩගෙන ඉදිරියට යෑම', 'clear'], Shiva: ['Whisper of Peace', 'සැනසිලිදායක සහ සාමකාමී බව', 'heal'],
+    Siddha: ['Fated Success', 'දෛවෝපගත ජයග්‍රහණ අත්විඳීම', 'complete'], Sadhya: ['The Secret Recipe', 'අරමුණු සාර්ථක කරගැනීමේ හැකියාව', 'build'],
+    Shubha: ['The Open Door', 'යහපත් ප්‍රතිඵල සඳහා විවෘත වීම', 'confidence'], Shukla: ['Blank Canvas', 'අලුතින් යමක් ඇරඹීමට සුබයි', 'clear'],
+    Brahma: ['The Architect', 'නව දැනුම හා සැලසුම් නිර්මාණය', 'learn'], Indra: ['The Crown Jewel', 'ප්‍රබල නායකත්වය සහ අභිමානය', 'confidence'],
+    Vaidhriti: ['Suspended Animation', 'කල්පනාකාරී වියයුතු කාර්යබහුල දිනයක්', 'caution'],
+  },
+  karana: {
+    Bava: ['The Seed Sprouts', 'අලුත් දේවල් ගොඩනැගීම', 'build'], Balava: ['A Hidden Current', 'ස්ථාවරව කටයුතු කරගෙන යාම', 'steady'],
+    Kaulava: ['The Crowd’s Secret', 'සමාජශීලීව කාලය ගතකිරීම', 'social'], Taitila: ['The Master Craftsman', 'නිර්මාණශීලීව සහ අලංකාරව වැඩකිරීම', 'creative'],
+    Garaja: ['The Quiet Worker', 'නිහඬව වගකීම් ඉටුකිරීම', 'discipline'], Vanija: ['The Golden Trade', 'ගණුදෙනු වලට සුබදායක වීම', 'money'],
+    Vishti: ['The Suspended Step', 'තීරණ ගැනීමේදී ප්‍රවේශම් වීම', 'caution'], Shakuni: ['The Chess Player', 'උපායශීලීව සොයාබැලීම', 'review'],
+    Chatushpada: ['The Familiar Rhythm', 'හුරුපුරුදු සුපුරුදු ක්‍රියාවල නිරතවීම', 'steady'], Naga: ['The Sleeping Snake', 'ඉවසීමෙන් සහ කල්පනාවෙන් සිටීම', 'patience'],
+    Kimstughna: ['Clean Slate', 'අලුත් ආරම්භයක් ලබාගැනීම', 'release'], Kinstughna: ['Clean Slate', 'අලුත් ආරම්භයක් ලබාගැනීම', 'release'],
+  },
+  vaara: {
+    Sunday: ['The Warm Spotlight', 'නායකත්වය සහ ආත්ම විශ්වාසය', 'confidence'], Monday: ['The Empath’s Day', 'හැඟීම්බර සහ සංවේදී බව', 'rest'],
+    Tuesday: ['The Bold Warrior', 'ධෛර්යය සහ උද්‍යෝගය', 'action'], Wednesday: ['The Trickster’s Wit', 'බුද්ධිමත්බව සහ නිවැරදි සන්නිවේදනය', 'learn'],
+    Thursday: ['The Wise Guide', 'යහපත් මඟපෙන්වීම සහ ප්‍රඥාව', 'learn'], Friday: ['The Beautiful Dance', 'කලාත්මක බව සහ සෞන්දර්යය', 'relationship'],
+    Saturday: ['The Old Master', 'විනය, ඉවසීම සහ වගකීම', 'discipline'],
+  },
+};
+
+var PRACTICAL_LABELS = {
+  tithi: ['Today\'s Tithi', 'අද දවසේ තිථිය', 'Your mood and flow today'],
+  nakshatra: ['Today\'s Nakshatra', 'අද දවසේ නැකත', 'Your emotional focus'],
+  yoga: ['Today\'s Yoga', 'අද දවසේ යෝගය', 'The underlying vibe'],
+  karana: ['Today\'s Karana', 'අද දවසේ කරණය', 'How to act today'],
+  vaara: ['Today\'s Vaara', 'අද දවසේ බලපෑම', 'The main theme'],
+};
+
+function getPanchangaGuidance(kind, entry, language) {
+  var name = getAstroEntryName(entry);
+  var guide = PRACTICAL_GUIDES[kind] && PRACTICAL_GUIDES[kind][name];
+  if (!guide) guide = ['Move With Awareness', 'සැලකිල්ලෙන් ක්‍රියා කරන්න', 'steady'];
+  var tone = PRACTICAL_TONES[guide[2]] || PRACTICAL_TONES.steady;
+  var labels = PRACTICAL_LABELS[kind] || ['Today Guide', 'අද මාර්ගෝපදේශය', 'Practical advice'];
+  var title = chooseText(language, guide[0], guide[1]);
+  var label = chooseText(language, labels[0], labels[1]);
+  var hint = chooseText(language, labels[2], labels[1]);
+  var meaning = language === 'si'
+    ? label + ': ' + title + '. මේ දේවල් අද දවස සාර්ථක කරගන්න ඔයාට ගොඩක් උදව් වෙයි.'
+    : label + ': ' + String(title).toLowerCase() + '. This is the practical signal for how to use today well.';
+  return {
+    label: label,
+    hint: hint,
+    title: title,
+    meaning: meaning,
+    effect: chooseText(language, tone.effectEn, tone.effectSi),
+    dos: language === 'si' ? tone.dosSi : tone.dosEn,
+    donts: language === 'si' ? tone.dontsSi : tone.dontsEn,
+  };
 }
 
 export default function HomeScreen() {
@@ -616,7 +1014,7 @@ export default function HomeScreen() {
   function renderLagnaChart() {
     if (!chartData || !chartData.rashiChart) return null;
     var lagnaRashiId = chartData.lagna ? (chartData.lagna.rashiId || chartData.lagna.id || 1) : 1;
-    var miniSize = Math.min(SCREEN_WIDTH - 80, 260);
+    var miniSize = Math.min(SCREEN_WIDTH - 32, isDesktop ? 380 : 340);
     return (
       <View style={{ alignItems: 'center' }}>
         <PinchableView minScale={1} maxScale={2}>
@@ -657,17 +1055,9 @@ export default function HomeScreen() {
       if (nakshatraToZodiac[nakshatraName] !== undefined) activeNakIndex = nakshatraToZodiac[nakshatraName];
     }
 
-    var todayNakshatra = data && data.panchanga && data.panchanga.nakshatra
-      ? (language === 'si' && data.panchanga.nakshatra.sinhala ? data.panchanga.nakshatra.sinhala : (data.panchanga.nakshatra.english || data.panchanga.nakshatra.name || ''))
-      : '';
-
-    var activeSignName = language === 'si' ? todayNakshatra : ZODIAC_NAMES_EN[activeNakIndex];
-    var tithiVal = data && data.panchanga && data.panchanga.tithi
-      ? (language === 'si' && data.panchanga.tithi.sinhala ? data.panchanga.tithi.sinhala : (data.panchanga.tithi.english || data.panchanga.tithi.name || '--'))
-      : '--';
-    var yogaVal = data && data.panchanga && data.panchanga.yoga
-      ? (language === 'si' && data.panchanga.yoga.sinhala ? data.panchanga.yoga.sinhala : (data.panchanga.yoga.english || data.panchanga.yoga.name || '--'))
-      : '--';
+    var nakGuide = data && data.panchanga && data.panchanga.nakshatra ? getPanchangaGuidance('nakshatra', data.panchanga.nakshatra, language) : null;
+    var tithiGuide = data && data.panchanga && data.panchanga.tithi ? getPanchangaGuidance('tithi', data.panchanga.tithi, language) : null;
+    var yogaGuide = data && data.panchanga && data.panchanga.yoga ? getPanchangaGuidance('yoga', data.panchanga.yoga, language) : null;
 
     // Get tithi number for moon phase (1-30)
     var currentTithiNum = data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number
@@ -726,7 +1116,7 @@ export default function HomeScreen() {
             <View style={s.chakraOverlayInfo}>
               <View style={s.chakraSignTextRow}>
                 <View style={s.chakraSignTextWrap}>
-                  <Text style={s.dashHeroLabel}>{language === 'si' ? 'අද රාශිය' : "TODAY'S SIGN"}</Text>
+                  <Text style={s.dashHeroLabel}>{language === 'si' ? 'අද සූර්ය රාශිය' : "TODAY'S SIGN"}</Text>
                   <Text style={s.dashSignNameLarge}>{language === 'si' ? (ZODIAC_NAMES_SI[activeNakIndex] || ZODIAC_NAMES_EN[activeNakIndex]) : ZODIAC_NAMES_EN[activeNakIndex]}</Text>
                 </View>
                 <View style={s.chakraSignSubBadge}>
@@ -737,12 +1127,12 @@ export default function HomeScreen() {
           </View>
 
           {/* ═══ NAKSHATRA PILL ═══ */}
-          {todayNakshatra ? (
+          {nakGuide ? (
             <View style={s.nakPill}>
               <Ionicons name="star" size={12} color="#DAA520" />
-              <Text style={s.nakPillLabel}>{language === 'si' ? 'නක්ෂත්‍රය' : 'Lunar Mansion'}</Text>
+              <Text style={s.nakPillLabel}>{language === 'si' ? 'අද දවසේ නැකත' : 'Today Nakshatra'}</Text>
               <View style={s.nakPillDot} />
-              <Text style={s.nakPillValue}>{todayNakshatra}</Text>
+              <Text style={s.nakPillValue}>{nakGuide.title}</Text>
             </View>
           ) : null}
 
@@ -752,35 +1142,35 @@ export default function HomeScreen() {
           </View>
 
           {/* ═══ PANCHANGA GRID ═══ */}
-          <Text style={s.dashGridTitle}>{language === 'si' ? 'අද දිනයේ පංචාංගය' : "Today's Panchanga"}</Text>
+          <Text style={s.dashGridTitle}>{language === 'si' ? 'අද දවසේ ග්‍රහ චාරය' : "Today's Timing Guide"}</Text>
           <View style={s.dashGrid}>
             <View style={s.dashCell}>
               <View style={[s.dashCellIcon, { backgroundColor: 'rgba(218,165,32,0.12)' }]}>
                 <Ionicons name="sunny-outline" size={18} color="#DAA520" />
               </View>
               <Text style={s.dashCellValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{sunriseVal}</Text>
-              <Text style={s.dashCellLabel}>{language === 'si' ? 'උදාව' : t('sunrise')}</Text>
+              <Text style={s.dashCellLabel}>{language === 'si' ? 'සූර්යෝදාව' : t('sunrise')}</Text>
             </View>
             <View style={s.dashCell}>
               <View style={[s.dashCellIcon, { backgroundColor: 'rgba(100,120,180,0.12)' }]}>
                 <Ionicons name="moon-outline" size={18} color="#8B9DC3" />
               </View>
               <Text style={s.dashCellValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{sunsetVal}</Text>
-              <Text style={s.dashCellLabel}>{language === 'si' ? 'බැසීම' : t('sunset')}</Text>
+              <Text style={s.dashCellLabel}>{language === 'si' ? 'සූර්ය අස්තමය' : t('sunset')}</Text>
             </View>
             <View style={s.dashCell}>
               <View style={[s.dashCellIcon, { backgroundColor: 'rgba(160,140,60,0.12)' }]}>
                 <Ionicons name="sparkles-outline" size={18} color="#C8A960" />
               </View>
-              <Text style={s.dashCellValue} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.65}>{tithiVal}</Text>
-              <Text style={s.dashCellLabel}>{language === 'si' ? 'තිථි' : 'Lunar Day'}</Text>
+              <Text style={s.dashCellValue} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.7}>{tithiGuide ? tithiGuide.title : '--'}</Text>
+              <Text style={s.dashCellLabel}>{tithiGuide ? tithiGuide.label : (language === 'si' ? 'තිථිය' : 'Tithi')}</Text>
             </View>
             <View style={s.dashCell}>
               <View style={[s.dashCellIcon, { backgroundColor: 'rgba(140,100,60,0.12)' }]}>
                 <Ionicons name="infinite-outline" size={18} color="#B8860B" />
               </View>
-              <Text style={s.dashCellValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{yogaVal}</Text>
-              <Text style={s.dashCellLabel}>{language === 'si' ? 'යෝගය' : 'Yoga'}</Text>
+              <Text style={s.dashCellValue} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.7}>{yogaGuide ? yogaGuide.title : '--'}</Text>
+              <Text style={s.dashCellLabel}>{yogaGuide ? yogaGuide.label : (language === 'si' ? 'යෝගය' : 'Yoga')}</Text>
             </View>
           </View>
         </View>
@@ -813,8 +1203,8 @@ export default function HomeScreen() {
                 </View>
                 <Text style={[s.rahuCardTitle, rahuActive && s.rahuCardTitleActive]}>
                   {rahuActive
-                    ? (language === 'si' ? '⚠ රාහු කාලය' : '⚠ Rahu Kala')
-                    : (language === 'si' ? 'රාහු කාලය' : 'Rahu Kala')
+                    ? (language === 'si' ? '⚠️ දැඩි රාහු කාලය උදාවෙලා' : '⚠ Caution Window')
+                    : (language === 'si' ? 'අද දවසේ රාහු කාලය' : 'Caution Window')
                   }
                 </Text>
               </View>
@@ -822,8 +1212,8 @@ export default function HomeScreen() {
                 <Animated.View style={[s.rahuStatusDot, { backgroundColor: rahuActive ? '#EF4444' : '#34D399' }, rahuActive && coronaPulseStyle]} />
                 <Text style={[s.rahuStatusText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }]}>
                   {rahuActive
-                    ? (language === 'si' ? 'සක්‍රීයයි' : 'ACTIVE')
-                    : (language === 'si' ? 'ආරක්ෂිතයි' : 'SAFE')
+                    ? (language === 'si' ? 'මේ වෙලාවේ බලපවත්වයි' : 'ACTIVE')
+                    : (language === 'si' ? 'රාහු කාලයෙන් නිදහස්' : 'SAFE')
                   }
                 </Text>
               </View>
@@ -831,14 +1221,14 @@ export default function HomeScreen() {
 
             <View style={[s.rahuTimeRow, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.06)' : 'rgba(0,0,0,0.15)' }]}>
               <View style={s.rahuTimeBlock}>
-                <Text style={s.rahuTimeLabel}>{language === 'si' ? 'ආරම්භය' : 'Starts'}</Text>
+                <Text style={s.rahuTimeLabel}>{language === 'si' ? 'ඇරඹෙන වෙලාව' : 'Starts'}</Text>
                 <Text style={[s.rahuTimeValue, rahuActive && s.rahuTimeValueActive]}>
                   {data.rahuKalaya.startFormatted ? data.rahuKalaya.startFormatted.display : toSLT(data.rahuKalaya.start, t)}
                 </Text>
               </View>
               <View style={[s.rahuTimeDivider, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.3)' : 'rgba(52,211,153,0.2)' }]} />
               <View style={s.rahuTimeBlock}>
-                <Text style={s.rahuTimeLabel}>{language === 'si' ? 'අවසානය' : 'Ends'}</Text>
+                <Text style={s.rahuTimeLabel}>{language === 'si' ? 'අවසන් වන වෙලාව' : 'Ends'}</Text>
                 <Text style={[s.rahuTimeValue, rahuActive && s.rahuTimeValueActive]}>
                   {data.rahuKalaya.endFormatted ? data.rahuKalaya.endFormatted.display : toSLT(data.rahuKalaya.end, t)}
                 </Text>
@@ -850,12 +1240,20 @@ export default function HomeScreen() {
                 <Ionicons name="time-outline" size={13} color={rahuActive ? '#FCA5A5' : '#6EE7B7'} />
                 <Text style={[s.rahuCountdownText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }]}>
                   {rahuActive
-                    ? (language === 'si' ? 'අවසන් වීමට ' + getRahuCountdown() : 'Ends in ' + getRahuCountdown())
-                    : (language === 'si' ? 'ආරම්භයට ' + getRahuCountdown() : 'Starts in ' + getRahuCountdown())
+                    ? (language === 'si' ? 'තව ' + getRahuCountdown() + ' කින් අවසන් වේ' : 'Ends in ' + getRahuCountdown())
+                    : (language === 'si' ? 'තව ' + getRahuCountdown() + ' කින් ඇරඹේ' : 'Starts in ' + getRahuCountdown())
                   }
                 </Text>
               </View>
             ) : null}
+
+            <View style={s.rahuExplanationContainer}>
+              <Text style={s.rahuExplanationText}>
+                {language === 'si' 
+                  ? 'රාහු කාලය යනු සුබ වැඩ පටන් ගැනීමට නුසුදුසු බව පිළිගැනෙන කෙටි කාල සීමාවකි.' 
+                  : 'Rahu Kalaya is an inauspicious time window during which starting important new work is generally avoided.'}
+              </Text>
+            </View>
 
             <View style={[s.rahuCardBorder, { borderColor: rahuActive ? 'rgba(239,68,68,0.25)' : 'rgba(52,211,153,0.15)' }]} />
           </View>
@@ -866,7 +1264,6 @@ export default function HomeScreen() {
 
   /* Today's Sky info is now integrated into the dashboard hero */
 
-  /* ── Quick Actions ── */
   function scrollToWeeklyLagna() {
     try {
       if (scrollRef.current && weeklyLagnaY.current > 0) {
@@ -880,31 +1277,6 @@ export default function HomeScreen() {
     }
   }
 
-  function renderQuickActions() {
-    var actions = language === 'si'
-      ? [
-          { icon: '🔮', label: 'ජ්‍යොතිෂ', gradient: [HT.purpleBg, 'rgba(183,166,240,0.06)'], route: '/chat', dotColor: HT.purple },
-          { icon: '📅', label: 'කේන්දරය', gradient: [HT.blueBg, 'rgba(138,168,224,0.06)'], route: '/kendara', dotColor: HT.blue },
-          { icon: '💑', label: 'ගැලපීම', gradient: [HT.roseBg, 'rgba(224,122,154,0.06)'], route: '/porondam', dotColor: HT.rose },
-          { icon: '📊', label: 'වාර්තාව', gradient: [HT.successBg, 'rgba(111,191,160,0.06)'], route: '/report', dotColor: HT.success },
-        ]
-      : [
-          { icon: '🔮', label: 'Ask Jyotishi', gradient: [HT.purpleBg, 'rgba(183,166,240,0.06)'], route: '/chat', dotColor: HT.purple },
-          { icon: '📅', label: 'Birth Chart', gradient: [HT.blueBg, 'rgba(138,168,224,0.06)'], route: '/kendara', dotColor: HT.blue },
-          { icon: '💑', label: 'Match', gradient: [HT.roseBg, 'rgba(224,122,154,0.06)'], route: '/porondam', dotColor: HT.rose },
-          { icon: '📊', label: 'Report', gradient: [HT.successBg, 'rgba(111,191,160,0.06)'], route: '/report', dotColor: HT.success },
-        ];
-    return (
-      <Animated.View entering={FadeInDown.delay(450).springify()}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.quickRow}>
-          {actions.map(function (a, i) {
-            return <QuickActionPill key={i} icon={a.icon} label={a.label} gradient={a.gradient} dotColor={a.dotColor} onPress={function () { router.push(a.route); }} />;
-          })}
-        </ScrollView>
-      </Animated.View>
-    );
-  }
-
   /* ── Moon Phase Showcase — 15-day Lunar Timeline ── */
   function renderMoonPhaseCard() {
     var tithiNum = data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number
@@ -914,7 +1286,7 @@ export default function HomeScreen() {
     var illumPct = Math.round(illum * 100);
 
     var phaseNamesEn = ['New Moon','Waxing Crescent','First Quarter','Waxing Gibbous','Full Moon','Waning Gibbous','Last Quarter','Waning Crescent'];
-    var phaseNamesSi = ['අමාවක','පිරවෙන හඳපෑ','පළමු කාර්තුව','පිරවෙන ගිබස්','පුර පෝය','හැකිලෙන ගිබස්','අන්තිම කාර්තුව','හැකිලෙන හඳපෑ'];
+    var phaseNamesSi = ['අමාවක','පුර පක්ෂයේ සිහින් සඳ','පුර අටවක','පිරීගෙන එන සඳ','පසළොස්වක පෝය','අඩුවීගෙන යන සඳ','අව අටවක','අව පක්ෂයේ සිහින් සඳ'];
     var phaseIdx = tithiNum <= 1 ? 0 : tithiNum <= 4 ? 1 : tithiNum <= 8 ? 2 : tithiNum <= 14 ? 3 : tithiNum === 15 ? 4 : tithiNum <= 19 ? 5 : tithiNum <= 23 ? 6 : 7;
     var phaseName = language === 'si' ? phaseNamesSi[phaseIdx] : phaseNamesEn[phaseIdx];
 
@@ -969,9 +1341,9 @@ export default function HomeScreen() {
 
           {/* Section title */}
           <View style={mp.headerRow}>
-            <Text style={mp.sectionTitle}>{language === 'si' ? '🌙 චන්ද්‍ර චක්‍රය' : '🌙 Lunar Cycle'}</Text>
+            <Text style={mp.sectionTitle}>{language === 'si' ? '🌙 අද දවසේ සඳේ ගමන්මග' : '🌙 Lunar Cycle'}</Text>
             <View style={mp.timelineBadge}>
-              <Text style={mp.timelineBadgeText}>{language === 'si' ? '15 දින' : '15 Days'}</Text>
+              <Text style={mp.timelineBadgeText}>{language === 'si' ? 'දින 15ක පෙරැක්ම' : '15 Days'}</Text>
             </View>
           </View>
 
@@ -1053,7 +1425,7 @@ export default function HomeScreen() {
             {/* Description */}
             <Text style={mp.phaseDesc}>
               {language === 'si'
-                ? (selPhaseIdx <= 3 ? 'මෙම චන්ද්‍ර අවධිය නව බලාපොරොත්තු සහ වර්ධනය සංකේතවත් කරයි. අලුත් වැඩක් ආරම්භ කිරීමට සහ අනාගතය සැලසුම් කිරීමට මෙය ඉතා සුබ කාලයකි.' : selPhaseIdx === 4 ? 'චන්ද්‍රයාගේ උපරිම ශක්තිය විහිදෙන කාලයයි. ඔබගේ අරමුණු ජයගැනීමට මෙම ප්‍රබල ශක්තිය යොදාගන්න.' : 'මෙය සිත නිදහස් කරගැනීමට සහ විවේක ගැනීමට කාලයයි. ඔබට අනවශ්‍ය දේ අත්හැර අලුත් ආරම්භයකට සූදානම් වන්න.')
+                ? (selPhaseIdx <= 3 ? 'මෙම චන්ද්‍ර අවධියෙන් අලුත් බලාපොරොත්තු සහ දියුණුව තමයි පෙන්නුම් කරන්නේ. අලුත් වැඩක් පටන්ගන්න, ඉස්සරහට වෙන දේවල් සැලසුම් කරන්න මේක ගොඩක්ම හොඳ කාලයක්.' : selPhaseIdx === 4 ? 'අද දවසේ චන්ද්‍රයාගේ ලොකුම ශක්තියක් විශ්වයට මුදාහරිනවා. ඔයාගේ තරහවල් පැත්තකින් තියලා හිතේ තියෙන අරමුණු ජයගන්න මේ තියුණු ශක්තිය පාවිච්චි කරන්න.' : 'මේක සිත නිදහස් කරගෙන පාඩුවේ විවේක ගන්න ඕන කාලයක්. හිතට වද දෙන අනවශ්‍ය දේවල් අතහැරලා, අලුත් ආරම්භයකට ලෑස්ති වෙන්න.')
                 : 'This ' + selPhaseName + ' moon phase signifies ' + (selPhaseIdx <= 3 ? 'new beginnings and natural growth. An ideal time to start fresh projects and set meaningful intentions.' : selPhaseIdx === 4 ? 'peak lunar energy and clarity. Harness this powerful phase to take action on your goals.' : 'a time for deep reflection and rest. Release what no longer serves you and prepare for renewal.')}
             </Text>
           </View>
@@ -1070,19 +1442,19 @@ export default function HomeScreen() {
     function genScore(off) { return Math.min(98, Math.max(30, ((seed + off * 17 + tNum * 3 + nNum * 5) % 65) + 30)); }
 
     var ratings = [
-      { label: language === 'si' ? 'සෞඛ්‍ය' : 'Health',  emoji: '💪', score: genScore(1), color: '#E07A7A' },
-      { label: language === 'si' ? 'ගමන්' : 'Travel',    emoji: '✈️', score: genScore(2), color: '#8AA8E0' },
-      { label: language === 'si' ? 'මුදල්' : 'Money',    emoji: '💰', score: genScore(3), color: '#E8C07A' },
-      { label: language === 'si' ? 'රැකියාව' : 'Work',   emoji: '💼', score: genScore(4), color: '#B7A6F0' },
-      { label: language === 'si' ? 'පවුල' : 'Family',    emoji: '👪', score: genScore(5), color: '#E07A9A' },
-      { label: language === 'si' ? 'සෞන්දර්' : 'Beauty', emoji: '🎵', score: genScore(6), color: '#6FBFA0' },
+      { label: language === 'si' ? 'සෞඛ්‍යය හා කය' : 'Health',  emoji: '💪', score: genScore(1), color: '#E07A7A' },
+      { label: language === 'si' ? 'ගමන් බිමන් හා වෙනස්වීම්' : 'Travel',    emoji: '✈️', score: genScore(2), color: '#8AA8E0' },
+      { label: language === 'si' ? 'මුදල් හා වාසි' : 'Money',    emoji: '💰', score: genScore(3), color: '#E8C07A' },
+      { label: language === 'si' ? 'රැකියාව හා ඉලක්ක' : 'Work',   emoji: '💼', score: genScore(4), color: '#B7A6F0' },
+      { label: language === 'si' ? 'පවුල හා බැඳීම්' : 'Family',    emoji: '👪', score: genScore(5), color: '#E07A9A' },
+      { label: language === 'si' ? 'සතුට හා සුවය' : 'Beauty', emoji: '🎵', score: genScore(6), color: '#6FBFA0' },
     ];
 
     return (
       <Animated.View entering={FadeInDown.delay(680).springify()}>
         <View style={dr.card}>
           <LinearGradient colors={['#1A150A', '#15100A', '#0F0B06']} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-          <Text style={dr.title}>{language === 'si' ? 'දෛනික කේන්දර ශ්‍රේණිගත කිරීම්' : 'Daily horoscope ratings'}</Text>
+          <Text style={dr.title}>{language === 'si' ? 'ඔයාගෙ කේන්දරේට අනුව අද දවස හැඩගැසෙන හැටි' : 'Daily horoscope ratings'}</Text>
           <View style={dr.grid}>
             {ratings.map(function (r, i) {
               return (
@@ -1122,7 +1494,7 @@ export default function HomeScreen() {
       <Animated.View entering={FadeInDown.delay(780).springify()}>
         <View style={ln.card}>
           <LinearGradient colors={['#1A150A', '#15100A', '#0F0B06']} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} />
-          <SectionHeader title={language === 'si' ? 'අද වාසනාවන්ත අංක' : "Today's lucky numbers"} icon="🎯" delay={320} />
+          <SectionHeader title={language === 'si' ? 'අද දවසේ ඔයාගේ ජය අංක' : "Today's lucky numbers"} icon="🎯" delay={320} />
           <View style={ln.row}>
             {nums.map(function (n, i) {
               return (
@@ -1158,21 +1530,21 @@ export default function HomeScreen() {
       'I am connected to my inner wisdom and the boundless possibilities ahead.',
     ];
     var mantrasSi = [
-      'මගේ හැකියාවන්ට සීමාවක් නැත. අද මම මගේ ඉලක්ක වෙත තවත් පියවරක් තබමි.',
-      'අද දවස මා වෙනුවෙන් අවස්ථා රැසක් ගෙන එයි; මම ඒවා ලබාගැනීමට සූදානම්.',
-      'මම වර්ධනය, සාමය සහ අර්ථවත් ප්‍රගතිය මගේ ජීවිතයට ආකර්ෂණය කරමි.',
-      'මගේ බුද්ධිය මාව මගේ ඉහළම අරමුණ වෙත ගෙනයන ප්‍රබල මාලිමාවකි.',
-      'බිය සහ සැකය අත්හැර, පැහැදිලි බව සහ විශ්වාසය සඳහා මම ඉඩ හරිමි.',
-      'මම මගේ ස්වභාවික රිද්මය සමඟ බැඳී අද දවස පිළිගැනීමට සූදානම්.',
-      'අද දින, මම අනවශ්‍ය කරදර පසෙකලා නොසැලෙන සාමය සහ මාගේ ගමන පිළිබඳව විශ්වාසය තබමි.',
-      'ශ්‍රේෂ්ඨ දේවල් ගොඩනැගෙමින් පවතින බව දැන, මම මගේ ජීවිතයේ කාලයට විශ්වාස කරමි.',
-      'මම අර්ථවත් සම්බන්ධතා සහ ජීවිතය වෙනස් කරන අවස්ථාවන් සඳහා විවෘතව සිටිමි.',
-      'මගේ ජීව ශක්තිය, මට හමුවන සැමට ආශ්වාදයක් ගෙන දෙන ධනාත්මක බලවේගයකි.',
-      'සෑම වෙනසක්ම මම කරුණාවෙන්, ධෛර්යයෙන් සහ විවෘත හදවතකින් පිළිගනිමි.',
-      'මා මුහුණ දෙන සෑම අභියෝගයක්ම, මාව වඩා විශිෂ්ට දෙයක් සඳහා සූදානම් කිරීමකි.',
-      'මම විශ්වාසය, ආත්ම ගෞරවය සහ අභ්‍යන්තර සමබරතාව විහිදුවමි.',
-      'මගේ මාර්ගය පැහැදිලිය, මම අරමුණක් සහ නිශ්චිත බවක් සමඟ ඉදිරියට යමි.',
-      'මම මගේ අභ්‍යන්තර ප්‍රඥාවට සහ ඉදිරියේ ඇති අසීමිත හැකියාවන්ට සම්බන්ධ වී සිටිමි.',
+      'මගේ හැකියාවන්ට කිසිම සීමාවක් නෑ. අදත් මම මගේ අරමුණු වෙනුවෙන් එක පියවරක් හරි ඉස්සරහට තියනවා.',
+      'අද දවස මා වෙනුවෙන් අලුත් අවස්ථා ගොඩක් අරගෙන එනවා; මම ඒකට ලෑස්තියි.',
+      'මගේ ජීවිතේට වර්ධනය, සාමය සහ අර්ථවත් ජයග්‍රහණ විතරක් මම ළං කරගන්නවා.',
+      'මගේ හිත කියන දේ මාව හරි පාරේ අරගෙන යන ලොකුම මාලිමාව කියලා මම දන්නවා.',
+      'බය, සැක ඔක්කොම අත්හැරලා, හිතේ පැහැදිලි බව සහ විශ්වාසය එක්ක මම ඉස්සරහට යනවා.',
+      'විශ්වයේ රිද්මයයි මගේ රිද්මයයි දැන් එකයි. අද දවසේ මොනවා ආවත් මම ඒකට ලෑස්තියි.',
+      'කලබලකාරී දේවල් අයින් කරලා මම අද දවස නිදහසේම පදවගෙන යනවා.',
+      'මගේ ජීවිතේ හොඳම දේවල් හැදීගෙන එනවා කියලා දන්න නිසා, මම හරිම විශ්වාසෙන් ඉන්නවා.',
+      'ජීවිතේ වෙනස් කරන අවස්ථා සහ අලුත්, වැදගත් සම්බන්ධකම් වලට මම ගොඩක් විවෘතයි.',
+      'මගේ හිනාවයි ධනාත්මක බවයි මට හමුවෙන හැමෝටම ලොකු හයියක් වෙනවා.',
+      'ජීවිතේට එන වෙනස්වීම්, කරුණාවෙන් සහ ධෛර්යයෙන් පිළිගන්න මට පුළුවන්.',
+      'මම මුහුණදෙන හැම අභියෝගයක්ම මාව ඊට වඩා ලොකු ජයග්‍රහණයකට ලෑස්ති කරනවා.',
+      'ආත්ම විශ්වාසය, ගෞරවය සහ හිතේ නිදහස අද මගෙන් ලෝකෙටම විහිදෙනවා.',
+      'මම යන්න ඕන පාර මට පැහැදිලියි, කිසිම බයක් නැතුව මම ඒ පාරේ අඩිය තියනවා.',
+      'මගේ ඇතුළෙම තියෙන ශක්තියයි දැනුමයි එක්ක ඉදිරියට හැදෙන අවස්ථා ඔක්කොම මගේ කරගන්නවා.',
     ];
     var dayIdx = Math.floor(Date.now() / (24 * 60 * 60 * 1000)) % mantrasEn.length;
 
@@ -1183,7 +1555,7 @@ export default function HomeScreen() {
           <LinearGradient colors={['rgba(218,165,32,0.06)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 18, borderTopRightRadius: 18 }} />
           <View style={mn.starRow}>
             <Text style={{ fontSize: 18 }}>✦</Text>
-            <Text style={mn.headerLabel}>{language === 'si' ? 'අද දිනයේ අදහස' : 'INTENTION OF THE DAY'}</Text>
+            <Text style={mn.headerLabel}>{language === 'si' ? 'අද දවසට සාර්ථක සිතිවිල්ලක්' : 'INTENTION OF THE DAY'}</Text>
           </View>
           <Text style={mn.mantraText}>{language === 'si' ? mantrasSi[dayIdx] : mantrasEn[dayIdx]}</Text>
         </View>
@@ -1233,21 +1605,21 @@ export default function HomeScreen() {
                   <Text style={{ fontSize: 22 }}>🔮</Text>
                 </View>
                 <View style={s.wbTextCol}>
-                  <Text style={s.wbTitle}>{language === 'si' ? 'සතිපතා ලග්න පලාපල' : 'Weekly Forecast'}</Text>
+                  <Text style={s.wbTitle}>{language === 'si' ? 'මේ සතියේ ඔයාගේ ලග්න පලාපල' : 'Weekly Forecast'}</Text>
                   {weekLabel ? <Text style={s.wbWeek}>{weekLabel}</Text> : null}
                   {userReport ? (
                     <View style={s.wbTeaser}>
                       <Text style={s.wbTeaserText}>
                         {OUTLOOK_EMOJI[userReport.outlook] || '🟡'}{' '}
                         {language === 'si'
-                          ? 'ඔබේ ' + userReport.nameSi + ' ලග්නය — ' + (userReport.outlook === 'favorable' ? 'හිතකර' : userReport.outlook === 'challenging' ? 'අභියෝගාත්මක' : 'මිශ්‍ර')
+                          ? 'ඔයාගේ ' + userReport.nameSi + ' ලග්නය — ' + (userReport.outlook === 'favorable' ? 'මේ සතිය ගොඩක් හොඳයි' : userReport.outlook === 'challenging' ? 'මේ සතියේ පරිස්සම් වෙන්න' : 'මේ සතිය මිශ්‍රයි')
                           : 'Your ' + userReport.nameEn + ' — ' + (userReport.outlook || 'mixed')
                         }
                       </Text>
                     </View>
                   ) : (
                     <Text style={s.wbSub}>
-                      {language === 'si' ? 'ලග්න 12ම සඳහා සතිපතා අනාවැකි' : 'Weekly forecasts for all 12 lagnas'}
+                      {language === 'si' ? 'අලුත් සතියට ග්‍රහ කිරණ බලපාන හැටි' : 'Weekly forecasts for all 12 lagnas'}
                     </Text>
                   )}
                 </View>
@@ -1276,7 +1648,8 @@ export default function HomeScreen() {
     var lagnaEn = lagna?.english || '';
     var moonName = language === 'si' && moonSign?.sinhala ? moonSign.sinhala : moonSign?.english || '--';
     var sunName = language === 'si' && sunSign?.sinhala ? sunSign.sinhala : sunSign?.english || '--';
-    var nakName = language === 'si' && nakshatra?.sinhala ? nakshatra.sinhala : nakshatra?.name || '--';
+    var birthFocusGuide = nakshatra ? getPanchangaGuidance('nakshatra', nakshatra, language) : null;
+    var nakName = birthFocusGuide ? birthFocusGuide.title : '--';
     var lagnaIdx = lagna?.rashiId ? lagna.rashiId - 1 : 0;
 
     return (
@@ -1291,7 +1664,7 @@ export default function HomeScreen() {
           {/* Title */}
           <View style={s.glassIdHeader}>
             <Text style={s.glassIdIcon}>🌟</Text>
-            <Text style={s.glassIdTitle}>{language === 'si' ? 'ඔබේ ග්‍රහ තත්ත්වය' : 'Your Cosmic Identity'}</Text>
+            <Text style={s.glassIdTitle}>{language === 'si' ? 'ඔයාගේ කේන්දරයේ ග්‍රහ පිහිටීම්' : 'Your Cosmic Identity'}</Text>
           </View>
 
           {/* ═══ LAGNA HERO — Big featured card ═══ */}
@@ -1310,7 +1683,7 @@ export default function HomeScreen() {
               {lagna?.lord ? (
                 <View style={s.lagnaLordPill}>
                   <Ionicons name="planet" size={11} color={HT.gold} />
-                  <Text style={s.lagnaLordText}>{language === 'si' ? 'අධිපති: ' : 'Lord: '}{language === 'si' && PLANET_NAMES_SI[lagna.lord] ? PLANET_NAMES_SI[lagna.lord] : lagna.lord}</Text>
+                  <Text style={s.lagnaLordText}>{language === 'si' ? 'පාලක ග්‍රහයා: ' : 'Ruling Energy: '}{language === 'si' && PLANET_NAMES_SI[lagna.lord] ? PLANET_NAMES_SI[lagna.lord] : lagna.lord}</Text>
                 </View>
               ) : null}
             </View>
@@ -1321,21 +1694,21 @@ export default function HomeScreen() {
             <Animated.View entering={FadeInDown.delay(400).springify()} style={[s.glassTrioCard, { borderColor: HT.blueBg }]}>
               <LinearGradient colors={[HT.blueBg, 'transparent']} style={StyleSheet.absoluteFill} />
               <Text style={s.glassTrioEmoji}>🌙</Text>
-              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'චන්ද්‍ර' : 'Moon'}</Text>
+              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'චන්ද්‍ර රාශිය' : 'Moon'}</Text>
               <Text style={[s.glassTrioValue, { color: HT.blue }]}>{moonName}</Text>
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(460).springify()} style={[s.glassTrioCard, { borderColor: HT.goldBorder }]}>
               <LinearGradient colors={[HT.goldSubtle, 'transparent']} style={StyleSheet.absoluteFill} />
               <Text style={s.glassTrioEmoji}>☀️</Text>
-              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'සූර්ය' : 'Sun'}</Text>
+              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'සූර්ය රාශිය' : 'Sun'}</Text>
               <Text style={[s.glassTrioValue, { color: HT.gold }]}>{sunName}</Text>
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(520).springify()} style={[s.glassTrioCard, { borderColor: HT.tealBg }]}>
               <LinearGradient colors={[HT.tealBg, 'transparent']} style={StyleSheet.absoluteFill} />
               <Text style={s.glassTrioEmoji}>✦</Text>
-              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'නක්ෂත්‍ර' : 'Birth Star'}</Text>
+              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'උපන් නැකත' : 'Birth Focus'}</Text>
               <Text style={[s.glassTrioValue, { color: HT.teal }]}>{nakName}</Text>
             </Animated.View>
           </View>
@@ -1349,7 +1722,7 @@ export default function HomeScreen() {
     if (!chartData) return null;
     return (
       <CosmicCard variant="content" delay={350}>
-        <SectionHeader title={language === 'si' ? 'ලග්න සටහන' : 'Your Birth Chart'} icon="🪐" delay={350} />
+        <SectionHeader title={language === 'si' ? 'ඔයාගේ කේන්දර සටහන' : 'Your Birth Chart'} icon="🪐" delay={350} />
         <View style={{ alignItems: 'center' }}>
           {renderLagnaChart()}
         </View>
@@ -1362,15 +1735,25 @@ export default function HomeScreen() {
     if (!chartData || !chartData.lagnaDetails) return null;
     var ld = chartData.lagnaDetails;
     if (!ld.description) return null;
+    var lagnaCopy = getLagnaUiCopy(chartData);
+    var palapalaTitle = language === 'si' ? (ld.sinhala || 'ලග්න පලාපල') : stripSinhalaParenthetical(ld.english || 'Your Rising Sign Reading');
+    var palapalaDescription = language === 'si'
+      ? ((lagnaCopy && lagnaCopy.readingSi) || ld.descriptionSi || ld.description)
+      : ((lagnaCopy && lagnaCopy.readingEn) || stripSinhalaParenthetical(ld.description));
+    var palapalaTraits = language === 'si'
+      ? ((lagnaCopy && lagnaCopy.traitsSi) || ld.traitsSi || [])
+      : ((lagnaCopy && lagnaCopy.traitsEn) || ld.traits || []);
+    var gemValue = localizedLagnaValue(lagnaCopy, 'gem', ld.gem, language);
+    var colorValue = localizedLagnaValue(lagnaCopy, 'color', ld.luckyColor, language);
     return (
       <CosmicCard variant="content" delay={400}>
-        <SectionHeader title={language === 'si' ? (ld.sinhala || 'ලග්න පලාපල') : (ld.english || 'Your Rising Sign Reading')} icon="🔮" delay={400} />
+        <SectionHeader title={palapalaTitle} icon="🔮" delay={400} />
         <Text style={s.palapalaText}>
-          {language === 'si' && ld.descriptionSi ? ld.descriptionSi : ld.description}
+          {palapalaDescription}
         </Text>
-        {ld.traits && ld.traits.length > 0 && (
+        {palapalaTraits && palapalaTraits.length > 0 && (
           <View style={s.traitsRow}>
-            {(language === 'si' && ld.traitsSi ? ld.traitsSi : ld.traits).map(function (trait, i) {
+            {palapalaTraits.map(function (trait, i) {
               return (
                 <View key={i} style={s.traitChip}>
                   <Text style={s.traitText}>{trait}</Text>
@@ -1380,18 +1763,18 @@ export default function HomeScreen() {
           </View>
         )}
         <View style={s.luckyRow}>
-          {ld.gem && (
+          {gemValue ? (
             <View style={s.luckyItem}>
               <Text style={{ fontSize: 15 }}>💎</Text>
-              <Text style={s.luckyLabel}>{ld.gem}</Text>
+              <Text style={s.luckyLabel}>{gemValue}</Text>
             </View>
-          )}
-          {ld.luckyColor && (
+          ) : null}
+          {colorValue ? (
             <View style={s.luckyItem}>
               <Text style={{ fontSize: 15 }}>🎨</Text>
-              <Text style={s.luckyLabel}>{ld.luckyColor}</Text>
+              <Text style={s.luckyLabel}>{colorValue}</Text>
             </View>
-          )}
+          ) : null}
         </View>
       </CosmicCard>
     );
@@ -1401,26 +1784,33 @@ export default function HomeScreen() {
   function renderPersonality() {
     if (!chartData || !chartData.personality) return null;
     var p = chartData.personality;
-    var traitsSource = (language === 'si' && p.mainTraitsSi) ? p.mainTraitsSi : (p.lagnaTraits || p.sunTraits || []);
-    if (!traitsSource || traitsSource.length === 0) {
+    var lagnaCopy = getLagnaUiCopy(chartData);
+    var personalitySummary = lagnaCopy ? (language === 'si' ? lagnaCopy.personalitySi : lagnaCopy.personalityEn) : null;
+    var traitsSource = language === 'si'
+      ? ((lagnaCopy && lagnaCopy.traitsSi) || p.mainTraitsSi || [])
+      : ((lagnaCopy && lagnaCopy.traitsEn) || p.lagnaTraits || p.sunTraits || []);
+    if ((!traitsSource || traitsSource.length === 0) && language !== 'si') {
       traitsSource = [].concat(p.lagnaTraits || [], p.moonTraits || [], p.sunTraits || []);
     }
     var uniqueTraits = traitsSource.filter(function (tr, i) { return traitsSource.indexOf(tr) === i; }).slice(0, 8);
-    if (uniqueTraits.length === 0) return null;
+    if (uniqueTraits.length === 0 && !personalitySummary) return null;
     var traitColors = ['#FF8C00', '#93C5FD', '#FFB800', '#F87171', '#34D399', '#6EE7B7', '#FFD666', '#A78BFA'];
 
     return (
       <CosmicCard variant="content" delay={450}>
-        <SectionHeader title={language === 'si' ? 'ඔබේ පෞරුෂය' : 'Your Personality'} icon="✨" delay={450} />
-        <View style={s.personalityWrap}>
-          {uniqueTraits.map(function (trait, i) {
-            return (
-              <Animated.View key={i} entering={FadeInUp.delay(500 + i * 40).springify()} style={[s.personalityPill, { borderColor: traitColors[i % traitColors.length] + '28' }]}>
-                <Text style={[s.personalityText, { color: traitColors[i % traitColors.length] }]}>{trait}</Text>
-              </Animated.View>
-            );
-          })}
-        </View>
+        <SectionHeader title={language === 'si' ? 'ලග්නයෙන් පෙනෙන ඔයාගේ ගති ලක්ෂණ' : 'Your Personality Pattern'} icon="✨" delay={450} />
+        {personalitySummary ? <Text style={s.personalityIntro}>{personalitySummary}</Text> : null}
+        {uniqueTraits.length > 0 ? (
+          <View style={s.personalityWrap}>
+            {uniqueTraits.map(function (trait, i) {
+              return (
+                <Animated.View key={i} entering={FadeInUp.delay(500 + i * 40).springify()} style={[s.personalityPill, { borderColor: traitColors[i % traitColors.length] + '28' }]}>
+                  <Text style={[s.personalityText, { color: traitColors[i % traitColors.length] }]}>{trait}</Text>
+                </Animated.View>
+              );
+            })}
+          </View>
+        ) : null}
       </CosmicCard>
     );
   }
@@ -1436,19 +1826,25 @@ export default function HomeScreen() {
     var DIR_LABELS = {
       North: language === 'si' ? 'උතුර' : 'North',
       South: language === 'si' ? 'දකුණ' : 'South',
-      East: language === 'si' ? 'නැ‍ග' : 'East',
-      West: language === 'si' ? 'බට' : 'West',
+      East: language === 'si' ? 'නැගෙනහිර' : 'East',
+      West: language === 'si' ? 'බටහිර' : 'West',
+      NE: language === 'si' ? 'ඊසාන' : 'North-East',
+      NW: language === 'si' ? 'වයඹ' : 'North-West',
+      SE: language === 'si' ? 'ගිනිකොන' : 'South-East',
+      SW: language === 'si' ? 'නිරිත' : 'South-West',
     };
 
     var chActive = ch && ch.isActive;
-    var taraLabel = tb ? (tb.tara || tb.bpiCategory || '--') : '--';
     var taraScore = tb && typeof tb.score === 'number' ? tb.score : null;
     var taraColor = taraScore != null ? (taraScore >= 70 ? HT.success : taraScore >= 40 ? HT.gold : HT.danger) : HT.gold;
+    var taraLabel = taraScore != null
+      ? (taraScore >= 70 ? (language === 'si' ? 'ඉතාමත් සුබයි' : 'Strong Support') : taraScore >= 40 ? (language === 'si' ? 'සාමාන්‍යයි' : 'Mixed Support') : (language === 'si' ? 'සැලකිලිමත් වන්න' : 'Extra Care'))
+      : (language === 'si' ? 'සාමාන්‍යයි' : 'Use Care');
 
     return (
       <Animated.View entering={FadeInDown.delay(320).springify()}>
         <CosmicCard variant="content" delay={320}>
-          <SectionHeader title={language === 'si' ? '🛡️ තාරකා ආරක්ෂාව' : '🛡️ Cosmic Shield'} icon="" delay={320} />
+          <SectionHeader title={language === 'si' ? '🛡️ අද දවසට ග්‍රහ බලපෑම' : '🛡️ Cosmic Shield'} icon="" delay={320} />
 
           {/* ── Chandrashtama Alert Strip ── */}
           <View style={[cs.alertStrip, chActive ? cs.alertDanger : cs.alertSafe]}>
@@ -1460,13 +1856,13 @@ export default function HomeScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[cs.alertTitle, chActive && cs.alertTitleDanger]}>
                 {chActive
-                  ? (language === 'si' ? '⚠ චන්ද්‍රාෂ්ටම' : '⚠ Unfavorable Moon Transit')
-                  : (language === 'si' ? '✓ සඳු ආරක්ෂිතයි' : '✓ Moon Transit Safe')}
+                  ? (language === 'si' ? '⚠ තීරණ ගැනීමේදී දෙවරක් සිතන්න' : '⚠ Extra Care Today')
+                  : (language === 'si' ? '✓ අද දවස ඔයාට සාමකාමීයි' : '✓ Support Looks Good')}
               </Text>
               <Text style={[cs.alertDesc, chActive && cs.alertDescDanger]}>
                 {chActive
-                  ? (language === 'si' ? 'ප්‍රධාන තීරණ ගැනීමෙන් වළකින්න' : 'Avoid major decisions today')
-                  : (language === 'si' ? 'අද සඳු ගමන හිතකරයි' : 'Moon transit is favorable today')}
+                  ? (language === 'si' ? 'චන්ද්‍රාෂ්ඨම දිනයක් බැවින් අද දවසේ අලුත් වැඩ ආරම්භයට සහ වැදගත් තීරණ වලට එතරම් සුබ නැත.' : 'Avoid major decisions today')
+                  : (language === 'si' ? 'ග්‍රහලෝක වල ගමන්මග ඔයාට හිතකර නිසා අද දවස කරදර නැතුව ගෙවිලා යයි.' : 'Moon transit is favorable today')}
               </Text>
             </View>
             <View style={[cs.alertDot, { backgroundColor: chActive ? '#EF4444' : '#34D399' }]} />
@@ -1479,7 +1875,7 @@ export default function HomeScreen() {
               <View style={[cs.shieldCard, { borderColor: taraColor + '25' }]}>
                 <LinearGradient colors={[taraColor + '10', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                 <Text style={cs.shieldEmoji}>⭐</Text>
-                <Text style={cs.shieldLabel}>{language === 'si' ? 'තාරා බලය' : 'Star Strength'}</Text>
+                <Text style={cs.shieldLabel}>{language === 'si' ? 'අද දවසේ තාරකා බලය' : 'Personal Support'}</Text>
                 <Text style={[cs.shieldValue, { color: taraColor }]}>{taraLabel}</Text>
                 {taraScore != null && (
                   <View style={cs.shieldBarTrack}>
@@ -1494,7 +1890,7 @@ export default function HomeScreen() {
               <View style={[cs.shieldCard, { borderColor: 'rgba(139,126,200,0.15)' }]}>
                 <LinearGradient colors={[HT.purpleBg, 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                 <Text style={cs.shieldEmoji}>🧭</Text>
-                <Text style={cs.shieldLabel}>{language === 'si' ? 'ගමන් දිශාව' : 'Travel Compass'}</Text>
+                <Text style={cs.shieldLabel}>{language === 'si' ? 'ගමන් බිමන් වලට අසුබ දිශාවන්' : 'Travel Compass'}</Text>
                 {/* Compass mini display */}
                 <View style={cs.compassGrid}>
                   {['North', 'South', 'East', 'West'].map(function (dir) {
@@ -1510,7 +1906,7 @@ export default function HomeScreen() {
                 {ds.avoidDirection && (
                   <View style={cs.avoidPill}>
                     <Ionicons name="close-circle" size={10} color={HT.danger} />
-                    <Text style={cs.avoidPillText}>{language === 'si' ? 'වළක්වන්න: ' : 'Avoid: '}{ds.avoidDirection}</Text>
+                    <Text style={cs.avoidPillText}>{language === 'si' ? 'අද අවාසිදායකයි: ' : 'Avoid: '}{DIR_LABELS[ds.avoidDirection] || ds.avoidDirection}</Text>
                   </View>
                 )}
               </View>
@@ -1528,12 +1924,19 @@ export default function HomeScreen() {
     return (
       <Animated.View entering={FadeInDown.delay(340).springify()}>
         <CosmicCard variant="surface" delay={340}>
-          <SectionHeader title={language === 'si' ? '✨ අද දිනයේ විශේෂ තත්ත්ව' : "✨ Today's Cosmic Patterns"} icon="" delay={340} />
+          <SectionHeader title={language === 'si' ? '✨ අද දවසේ විශේෂ ග්‍රහ බලපෑම්' : "✨ Today's Cosmic Patterns"} icon="" delay={340} />
           <View style={cs.yogaWrap}>
             {jyotishToday.specialYogas.slice(0, 6).map(function (yoga, i) {
               var yColor = yogaColors[i % yogaColors.length];
-              var yName = typeof yoga === 'string' ? yoga : (yoga.name || yoga.yoga || '--');
-              var yDesc = typeof yoga === 'object' ? (yoga.description || yoga.result || null) : null;
+              var rawName = typeof yoga === 'string' ? yoga : (yoga.name || yoga.yoga || '');
+              var rawDesc = typeof yoga === 'object' ? (yoga.description || yoga.result || '') : '';
+              var isCautionPattern = (typeof yoga === 'object' && yoga.isAuspicious === false) || /avoid|challenging|inauspicious|difficult|bad|obstacle/i.test(rawName + ' ' + rawDesc);
+              var yName = isCautionPattern
+                ? (language === 'si' ? 'කල්පනාකාරී වියයුතු කාලයක්' : 'Careful Timing Pattern')
+                : (language === 'si' ? 'ඉතාම හොඳ කාලයක්' : 'Supportive Timing Pattern');
+              var yDesc = isCautionPattern
+                ? (language === 'si' ? 'හදිසි තීරණ ගැනීමේදී ටිකක් පරිස්සම් වෙන්න. මොනදේ කලත් දෙවරක් හිතලා බලන්න.' : 'Double-check important work and avoid rushed decisions.')
+                : (language === 'si' ? 'දිගුකාලීන සැලසුම් වලට, අලුත් තීරණ වලට මේ වෙලාව ගොඩක් හොඳයි.' : 'Use it for steady progress, planning, and well-considered choices.');
               return (
                 <Animated.View key={i} entering={FadeInUp.delay(380 + i * 50).springify()}>
                   <View style={[cs.yogaPill, { borderColor: yColor + '30' }]}>
@@ -1557,36 +1960,26 @@ export default function HomeScreen() {
   function renderPanchanga() {
     if (!data || !data.panchanga) return null;
 
-    var TITHI_SI = { 'Pratipada': 'ප්‍රතිපදා', 'Dwitiya': 'ද්විතීයා', 'Tritiya': 'තෘතීයා', 'Chaturthi': 'චතුර්ථී', 'Panchami': 'පංචමී', 'Shashthi': 'ෂෂ්ඨී', 'Saptami': 'සප්තමී', 'Ashtami': 'අෂ්ටමී', 'Navami': 'නවමී', 'Dashami': 'දශමී', 'Ekadashi': 'ඒකාදශී', 'Dwadashi': 'ද්වාදශී', 'Trayodashi': 'ත්‍රයෝදශී', 'Chaturdashi': 'චතුර්දශී', 'Purnima/Amavasya': 'පුර්ණිමා/අමාවාසි' };
-    var YOGA_SI = { 'Vishkambha': 'විෂ්කම්භ', 'Priti': 'ප්‍රීති', 'Ayushman': 'ආයුෂ්මාන්', 'Saubhagya': 'සෞභාග්‍ය', 'Shobhana': 'ශෝභන', 'Atiganda': 'අතිගණ්ඩ', 'Sukarma': 'සුකර්ම', 'Dhriti': 'ධෘතී', 'Shula': 'ශූල', 'Ganda': 'ගණ්ඩ', 'Vriddhi': 'වෘද්ධී', 'Dhruva': 'ධ්‍රැව', 'Vyaghata': 'ව්‍යාඝාත', 'Harshana': 'හර්ෂණ', 'Vajra': 'වජ්‍ර', 'Siddhi': 'සිද්ධී', 'Vyatipata': 'ව්‍යතීපාත', 'Variyan': 'වරියන්', 'Parigha': 'පරිඝ', 'Shiva': 'ශිව', 'Siddha': 'සිද්ධ', 'Sadhya': 'සාධ්‍ය', 'Shubha': 'ශුභ', 'Shukla': 'ශුක්ල', 'Brahma': 'බ්‍රහ්ම', 'Indra': 'ඉන්ද්‍ර', 'Vaidhriti': 'වෛධෘතී' };
-    var KARANA_SI = { 'Bava': 'බව', 'Balava': 'බාලව', 'Kaulava': 'කෞලව', 'Taitila': 'තෛතිල', 'Garaja': 'ගරජ', 'Vanija': 'වණිජ', 'Vishti': 'විෂ්ටි', 'Kinstughna': 'කිංස්තුඝ්න', 'Shakuni': 'ශකුණි', 'Chatushpada': 'චතුෂ්පාද', 'Naga': 'නාග' };
-    var VAARA_SI = { 'Sunday': 'ඉරිදා', 'Monday': 'සඳුදා', 'Tuesday': 'අඟහරුවාදා', 'Wednesday': 'බදාදා', 'Thursday': 'බ්‍රහස්පතින්දා', 'Friday': 'සිකුරාදා', 'Saturday': 'සෙනසුරාදා' };
-    var ALL_SI = Object.assign({}, TITHI_SI, YOGA_SI, KARANA_SI, VAARA_SI);
-
-    // Each row: [label, data, color, explanationKey, icon, hintKey]
     var rows = [
-      [t('tithi'), data.panchanga.tithi, HT.gold, 'tithiExplain', 'sparkles-outline', t('tithiHint')],
-      [t('nakshatra'), data.panchanga.nakshatra, HT.blue, 'nakshatraExplain', 'star-outline', t('nakshatraHint')],
-      [t('yoga'), data.panchanga.yoga, HT.success, 'yogaExplain', 'infinite-outline', t('yogaHint')],
-      [t('karana'), data.panchanga.karana, HT.goldDark, 'karanaExplain', 'time-outline', t('karanaHint')],
-      [t('vaara'), data.panchanga.vaara, HT.rose, 'vaaraExplain', 'planet-outline', t('vaaraHint')],
+      { kind: 'tithi', entry: data.panchanga.tithi, color: HT.gold, icon: 'sparkles-outline' },
+      { kind: 'nakshatra', entry: data.panchanga.nakshatra, color: HT.blue, icon: 'star-outline' },
+      { kind: 'yoga', entry: data.panchanga.yoga, color: HT.success, icon: 'infinite-outline' },
+      { kind: 'karana', entry: data.panchanga.karana, color: HT.goldDark, icon: 'time-outline' },
+      { kind: 'vaara', entry: data.panchanga.vaara, color: HT.rose, icon: 'planet-outline' },
     ];
 
     return (
       <CosmicCard variant="surface" delay={500}>
-        <SectionHeader title={t('sacredPanchanga')} subtitle={t('sacredPanchangaHint')} icon="✨" delay={500} />
+        <SectionHeader title={language === 'si' ? 'අද දවසේ පංචාංගය' : t('sacredPanchanga')} subtitle={language === 'si' ? 'අද දවසට අදාළ නැකැත්, තිථි සහ යෝග විස්තර' : t('sacredPanchangaHint')} icon="✨" delay={500} />
         {/* Tap hint */}
         <View style={s.pTapHintRow}>
           <Ionicons name="hand-left-outline" size={12} color={HT.textMuted} />
           <Text style={s.pTapHint}>{t('tapToLearn')}</Text>
         </View>
         {rows.map(function (row, i) {
-          var label = row[0], entry = row[1], color = row[2], explainKey = row[3], icon = row[4], hint = row[5];
+          var entry = row.entry, color = row.color, icon = row.icon;
           if (!entry) return null;
-          var englishName = typeof entry === 'string' ? entry : (entry.english || entry.name || String(entry));
-          var sinhalaName = typeof entry === 'object' ? entry.sinhala : ALL_SI[englishName];
-          var dispName = (language === 'si' && sinhalaName) ? sinhalaName : englishName;
-          var subName = language === 'si' ? null : sinhalaName;
+          var guide = getPanchangaGuidance(row.kind, entry, language);
           var isOpen = expandedPanchanga === i;
           return (
             <View key={i}>
@@ -1599,12 +1992,11 @@ export default function HomeScreen() {
                     <Ionicons name={icon} size={14} color={color} />
                   </View>
                   <View style={s.pLabelWrap}>
-                    <Text style={[s.pLabel, { color }]}>{label}</Text>
-                    <Text style={s.pHintText}>{hint}</Text>
+                    <Text style={[s.pLabel, { color }]}>{guide.label}</Text>
+                    <Text style={s.pHintText}>{guide.hint}</Text>
                   </View>
                   <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                    <Text style={s.pValue}>{dispName}</Text>
-                    {subName ? <Text style={s.pSinhala}>{subName}</Text> : null}
+                    <Text style={s.pValue}>{guide.title}</Text>
                   </View>
                   <Ionicons
                     name={isOpen ? 'chevron-up' : 'chevron-down'}
@@ -1623,7 +2015,25 @@ export default function HomeScreen() {
                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                     />
                     <View style={[s.pExplainAccent, { backgroundColor: color }]} />
-                    <Text style={s.pExplainText}>{t(explainKey)}</Text>
+                    <Text style={s.pGuideTitle}>{guide.meaning}</Text>
+                    <View style={s.pGuideBlock}>
+                      <Text style={s.pGuideKicker}>{language === 'si' ? 'ඔයාට බලපාන විදිහ' : 'How it affects you'}</Text>
+                      <Text style={s.pExplainText}>{guide.effect}</Text>
+                    </View>
+                    <View style={s.pGuideColumns}>
+                      <View style={s.pGuideColumn}>
+                        <Text style={[s.pGuideKicker, { color: HT.success }]}>{language === 'si' ? 'කරන්න' : 'Do'}</Text>
+                        {guide.dos.map(function (item, gi) {
+                          return <Text key={'d' + gi} style={s.pGuideItem}>• {item}</Text>;
+                        })}
+                      </View>
+                      <View style={s.pGuideColumn}>
+                        <Text style={[s.pGuideKicker, { color: HT.danger }]}>{language === 'si' ? 'නොකරන්න' : "Don't"}</Text>
+                        {guide.donts.map(function (item, gi) {
+                          return <Text key={'x' + gi} style={s.pGuideItem}>• {item}</Text>;
+                        })}
+                      </View>
+                    </View>
                   </View>
                 </Animated.View>
               )}
@@ -1635,20 +2045,82 @@ export default function HomeScreen() {
   }
 
   /* ── Auspicious Periods ── */
+  function getAuspiciousAdvice(period) {
+    var name = (period && period.name) || '';
+    var ruler = (period && period.ruler) || '';
+    var type = (period && period.type) || '';
+    var key = ruler || name;
+
+    if (type === 'spiritual' || /Brahma/i.test(name)) {
+      return language === 'si'
+        ? { title: 'භාවනාව සහ අධ්‍යාපනයට', detail: 'දවසේ වැඩ සැලසුම් කරන්න, අලුත් දේවල් ඉගෙනගන්න සහ මතක තබාගන්න ඉතාමත් සුබ වෙලාවක්.' }
+        : { title: 'Prayer, meditation, study', detail: 'Set intentions, read, reflect, and plan the day calmly.' };
+    }
+    if (/Abhijit/i.test(name)) {
+      return language === 'si'
+        ? { title: 'මූලික හා වැදගත් වැඩ අරඹන්න', detail: 'ඔප්පු අත්සන් කිරීම්, රැකියා ඉල්ලීම්, සම්මුඛ පරීක්ෂණ සහ අලුත් තීරණ ගැනීමට ඉතා සුබ වෙලාවක්.' }
+        : { title: 'Start important work', detail: 'Good for signatures, applications, meetings, and key decisions.' };
+    }
+
+    var advice = {
+      Mercury: {
+        en: ['Learning and communication', 'Good for writing, calls, messages, calculations, and business tasks.'],
+        si: ['අධ්‍යාපනයට සහ ගනුදෙනු වලට', 'ඉගෙනීම් වැඩ, ලියකියවිලි, සාකච්ඡා සහ ව්‍යාපාරික ගනුදෙනු වලින් සාර්ථක ප්‍රතිඵල ලැබෙන වෙලාවක්.'],
+      },
+      Moon: {
+        en: ['Home and family tasks', 'Good for family talks, calm tasks, food, and household work.'],
+        si: ['ගෘහස්ථ හා පවුලේ කටයුතු වලට', 'පවුලේ අය සමඟ සාකච්ඡා, නිවසේ වැඩකටයුතු සහ ආහාර වලට සම්බන්ධ දේවල් ආරම්භයට හොඳයි.'],
+      },
+      Jupiter: {
+        en: ['Advice, money, education', 'Good for guidance, learning, money planning, and religious work.'],
+        si: ['මුදල්, උපදෙස් සහ අධ්‍යාපනයට', 'වැදගත් උපදෙස් ලබාගැනීම, මුදල් ආයෝජන, මූල්‍ය සැලසුම් සහ ආගමික කටයුතු වලට වඩාත් සුබයි.'],
+      },
+      Venus: {
+        en: ['Love and beauty work', 'Good for shopping, clothing, art, and relationship conversations.'],
+        si: ['අලංකරණ හා කලා කටයුතු වලට', 'අලුත් ඇඳුම් පැළඳුම් මිලදීගන්න, රූපලාවන්‍ය වැඩ, කලා නිර්මාණ සහ විවාහ කතාබහ වලට සුබ වෙලාවක්.'],
+      },
+      Sun: {
+        en: ['Leadership and official work', 'Good for presentations, authority meetings, and clarifying decisions.'],
+        si: ['රජයේ හා පරිපාලන කටයුතු වලට', 'රජයේ ආයතන, ප්‍රධානීන් හමුවීම්, සම්මුඛ පරීක්ෂණ සහ වගකීම් භාරගැනීමට සුබ වෙලාවක්.'],
+      },
+      Mars: {
+        en: ['High-energy tasks', 'Good for quick action, physical effort, sport, and challenges.'],
+        si: ['ක්‍රියාශීලී හා දැඩි කටයුතු වලට', 'ඉක්මනින් කළ යුතු වැඩ, ක්‍රීඩා කටයුතු, තරඟකාරී වැඩ සහ අභියෝගාත්මක තීරණ වලට හොඳයි.'],
+      },
+      Saturn: {
+        en: ['Responsibility and order', 'Good for finishing old work, cleaning, and organizing files.'],
+        si: ['පැරණි හා ව්‍යූහාත්මක වැඩ වලට', 'අධික වෙහෙසක් අවශ්‍ය වැඩ, කල්ගිය වැඩ නිම කිරීම, පිරිසිදු කිරීම සහ ගොවිපළ කටයුතු වලට සුබයි.'],
+      },
+    };
+
+    if (advice[key]) {
+      var selected = language === 'si' ? advice[key].si : advice[key].en;
+      return { title: selected[0], detail: selected[1] };
+    }
+
+    return language === 'si'
+      ? { title: 'වැදගත් ලිපිපිලේ වැඩ වලට', detail: 'සියලුම සාමාන්‍ය වැදගත් කටයුතු සැලසුම් සහගතව වගකීමෙන් යුතුව ආරම්භ කරන්න සුබ වෙලාවක්.' }
+      : { title: 'General important work', detail: 'A good time to begin with calm planning and focus.' };
+  }
+
   function renderAuspicious() {
     if (!data || !data.auspiciousPeriods || data.auspiciousPeriods.length === 0) return null;
     return (
       <CosmicCard variant="surface" delay={550}>
-        <SectionHeader title={t('auspiciousAlignments')} subtitle={t('auspiciousAlignmentsHint')} icon="🌿" delay={550} />
+        <SectionHeader
+          title={language === 'si' ? 'අද දවසේ සුබ මුහුර්ත' : t('auspiciousAlignments')}
+          subtitle={language === 'si' ? 'ඔයාගේ එදිනෙදා වැඩකටයුතු සාර්ථක කරගන්න කියාපු වෙලාවන්' : t('auspiciousAlignmentsHint')}
+          icon="🌿"
+          delay={550}
+        />
         {data.auspiciousPeriods.map(function (p, i) {
-          var periodName = p.name || p.activity || t('blessedTime');
-          if (language === 'si' && p.sinhala) periodName = p.sinhala;
+          var advice = getAuspiciousAdvice(p);
           return (
             <View key={i} style={s.auspRow}>
               <LinearGradient colors={['#34D399', '#059669']} style={s.auspBar} />
               <View style={{ flex: 1 }}>
-                <Text style={s.auspName}>{periodName}</Text>
-                {language !== 'si' && p.sinhala ? <Text style={s.auspSinhala}>{p.sinhala}</Text> : null}
+                <Text style={s.auspName}>{advice.title}</Text>
+                <Text style={s.auspSinhala}>{advice.detail}</Text>
               </View>
               <View style={s.auspTime}>
                 <Text style={s.auspTimeText}>
@@ -1675,9 +2147,9 @@ export default function HomeScreen() {
     var userLagnaId = chartData && chartData.lagna ? (chartData.lagna.rashiId || chartData.lagna.id || null) : null;
 
     var OUTLOOK_CONFIG = {
-      favorable: { bg: 'rgba(52,211,153,0.10)', border: 'rgba(52,211,153,0.25)', color: '#34D399', icon: 'trending-up', label: language === 'si' ? 'හිතකර' : 'Favorable' },
-      mixed: { bg: 'rgba(255,184,0,0.10)', border: 'rgba(255,184,0,0.25)', color: '#FFB800', icon: 'swap-horizontal', label: language === 'si' ? 'මිශ්‍ර' : 'Mixed' },
-      challenging: { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.25)', color: '#EF4444', icon: 'alert-circle', label: language === 'si' ? 'අභියෝගාත්මක' : 'Challenging' },
+      favorable: { bg: 'rgba(52,211,153,0.10)', border: 'rgba(52,211,153,0.25)', color: '#34D399', icon: 'trending-up', label: language === 'si' ? 'ගොඩක් හොඳයි' : 'Favorable' },
+      mixed: { bg: 'rgba(255,184,0,0.10)', border: 'rgba(255,184,0,0.25)', color: '#FFB800', icon: 'swap-horizontal', label: language === 'si' ? 'මිශ්‍රයි' : 'Mixed' },
+      challenging: { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.25)', color: '#EF4444', icon: 'alert-circle', label: language === 'si' ? 'පරිස්සම් වෙන්න' : 'Challenging' },
     };
 
     return (
@@ -1688,7 +2160,7 @@ export default function HomeScreen() {
             <View style={s.wlHeaderLeft}>
               <Text style={{ fontSize: 22 }}>🔮</Text>
               <View>
-                <Text style={s.wlTitle}>{language === 'si' ? 'සතිපතා ලග්න පලාපල' : 'Weekly Forecast'}</Text>
+                <Text style={s.wlTitle}>{language === 'si' ? 'මේ සතියේ ඔයාගේ ලග්න පලාපල' : 'Weekly Forecast'}</Text>
                 {weekLabel ? <Text style={s.wlWeekLabel}>{weekLabel}</Text> : null}
               </View>
             </View>
@@ -1730,7 +2202,7 @@ export default function HomeScreen() {
                             </Text>
                             {isUserLagna && (
                               <View style={s.wlYouBadge}>
-                                <Text style={s.wlYouText}>{language === 'si' ? 'ඔබ' : 'YOU'}</Text>
+                                <Text style={s.wlYouText}>{language === 'si' ? 'ඔයා' : 'YOU'}</Text>
                               </View>
                             )}
                           </View>
@@ -1758,12 +2230,12 @@ export default function HomeScreen() {
                       {/* Lagna Lord & Ruling Planet */}
                       <View style={s.wlLordRow}>
                         <View style={s.wlLordChip}>
-                          <Text numberOfLines={1} style={s.wlLordLabel}>{language === 'si' ? 'අධිපති' : 'Lord'}</Text>
+                          <Text numberOfLines={1} style={s.wlLordLabel}>{language === 'si' ? 'පාලක ශක්තිය' : 'Ruling Energy'}</Text>
                           <Text numberOfLines={1} style={s.wlLordValue}>{language === 'si' ? report.lordSi : report.lord}</Text>
                         </View>
                         <View style={s.wlLordChip}>
-                          <Text numberOfLines={1} style={s.wlLordLabel}>{language === 'si' ? 'සංස්කෘත' : 'Sanskrit'}</Text>
-                          <Text numberOfLines={1} style={s.wlLordValue}>{report.sanskrit}</Text>
+                          <Text numberOfLines={1} style={s.wlLordLabel}>{language === 'si' ? 'සතියේ අවධානය' : 'Week Focus'}</Text>
+                          <Text numberOfLines={1} style={s.wlLordValue}>{(OUTLOOK_CONFIG[report.outlook] || OUTLOOK_CONFIG.mixed).label}</Text>
                         </View>
                         <View style={[s.wlLordChip, { borderColor: (OUTLOOK_CONFIG[report.outlook] || OUTLOOK_CONFIG.mixed).border }]}>
                           <Text numberOfLines={1} style={s.wlLordLabel}>{language === 'si' ? 'තත්ත්වය' : 'Status'}</Text>
@@ -1946,18 +2418,18 @@ export default function HomeScreen() {
         <View style={{ alignItems: 'center', paddingVertical: 16 }}>
           <Animated.Text style={[{ fontSize: 48, marginBottom: 12 }, noBirthGlowStyle]}>🌌</Animated.Text>
           <Text style={s.noBirthTitle}>
-            {language === 'si' ? 'ඔබේ කේන්දරය සකසා ගන්න' : 'Unlock Your Cosmic Blueprint'}
+            {language === 'si' ? 'ඔයාගෙම කේන්දරේ පැටිකිරිය' : 'Unlock Your Cosmic Blueprint'}
           </Text>
           <Text style={s.noBirthBody}>
             {language === 'si'
-              ? 'ඔබගේ උපන් විස්තර ඇතුලත් කර ඔබගේ ලග්න පලාපල, නක්ෂත්‍ර සහ සතිපතා පලාපල බලාගන්න.'
-              : 'Add your birth details in Profile to unlock your personalised Lagna chart, Nakshatra & weekly readings.'}
+              ? 'ඔයාගේ උපන් විස්තර ටික දීලා කේන්දරේ, අද දවසට ගැලපෙන උපදෙස් සහ සතිපතා පලාපල ටික බලාගන්න.'
+              : 'Add your birth details in Profile to unlock your personalised chart, daily guidance, and weekly readings.'}
           </Text>
           <TouchableOpacity onPress={function () { router.push('/profile'); }} style={s.noBirthCta}>
             <LinearGradient colors={['#FF8C00', '#FF6D00', '#E65100']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
             <LinearGradient colors={['rgba(255,255,255,0.20)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 999, borderTopRightRadius: 999 }} />
             <Ionicons name="sparkles" size={14} color="#fff" />
-            <Text style={s.noBirthCtaText}>{language === 'si' ? 'Profile → Birth Data' : 'Go to Profile → Birth Data'}</Text>
+            <Text style={s.noBirthCtaText}>{language === 'si' ? 'Profile එකෙන් ලබාදෙන්න  →' : 'Go to Profile → Birth Data'}</Text>
           </TouchableOpacity>
         </View>
       </CosmicCard>
@@ -2013,9 +2485,6 @@ export default function HomeScreen() {
               </View>
 
               {/* Today's Sky is now in the hero dashboard */}
-
-              {/* Quick Actions */}
-              {renderQuickActions()}
 
               {/* Moon Phase Showcase */}
               {renderMoonPhaseCard()}
@@ -2205,19 +2674,18 @@ var s = StyleSheet.create({
   dashDivider: { height: 1, marginHorizontal: 16, overflow: 'hidden' },
   dashGridTitle: { color: 'rgba(218,165,32,0.45)', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center', marginTop: 12, marginBottom: -4 },
   dashGrid: {
-    flexDirection: 'row', paddingHorizontal: 8, paddingTop: 16, paddingBottom: 16, gap: 4,
+    flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10, paddingTop: 16, paddingBottom: 18, gap: 8,
   },
   dashCell: {
-    flex: 1, alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 4,
+    width: '48%', minHeight: 122, alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 10, paddingHorizontal: 8,
     borderRadius: 14, backgroundColor: 'rgba(218,165,32,0.03)',
     borderWidth: 0.5, borderColor: 'rgba(218,165,32,0.08)',
-    overflow: 'hidden',
   },
   dashCellIcon: {
     width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
   },
-  dashCellValue: { color: '#F4E4BC', fontSize: 11, fontWeight: '800', textAlign: 'center', paddingHorizontal: 2 },
-  dashCellLabel: { color: 'rgba(218,165,32,0.40)', fontSize: 10, fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 },
+  dashCellValue: { color: '#F4E4BC', fontSize: 11, lineHeight: 16, fontWeight: '800', textAlign: 'center', paddingHorizontal: 2 },
+  dashCellLabel: { color: 'rgba(218,165,32,0.40)', fontSize: 10, lineHeight: 14, fontWeight: '700', textAlign: 'center' },
 
   // ═══ Rahu Kalaya Card ═══
   rahuCard: {
@@ -2280,6 +2748,20 @@ var s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 6, paddingVertical: 8, borderRadius: 10,
   },
+  rahuExplanationContainer: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rahuExplanationText: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.5)',
+    textAlign: 'center',
+    letterSpacing: 0.2,
+  },
   rahuCountdownText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5, color: '#F4E4BC' },
 
   // Sky Grid
@@ -2293,17 +2775,6 @@ var s = StyleSheet.create({
   },
   statMiniValue: { fontSize: 16, fontWeight: '800', color: '#F4E4BC' },
   statMiniLabel: { fontSize: 11, color: Colors.textMuted, fontWeight: '600', marginTop: 2 },
-
-  // Quick Actions
-  quickRow: { flexDirection: 'row', gap: 12, paddingVertical: 8, marginBottom: 32 },
-  quickPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999,
-    borderWidth: 1, borderColor: 'rgba(218,165,32,0.15)',
-    overflow: 'hidden',
-  },
-  quickPillBg: { ...StyleSheet.absoluteFillObject, borderRadius: 999 },
-  quickPillLabel: { color: '#F4E4BC', fontSize: 14, fontWeight: '800', letterSpacing: 0.3 },
 
   // Glass Cosmic Identity
   glassIdentity: {
@@ -2384,6 +2855,7 @@ var s = StyleSheet.create({
   luckyLabel: { color: '#F4E4BC', fontSize: 12, fontWeight: '600', flex: 1 },
 
   // Personality
+  personalityIntro: { color: 'rgba(244,228,188,0.66)', fontSize: 14, lineHeight: 23, marginBottom: 14 },
   personalityWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   personalityPill: {
     flexDirection: 'row', alignItems: 'center',
@@ -2419,18 +2891,40 @@ var s = StyleSheet.create({
     overflow: 'hidden', position: 'relative',
   },
   pExplainAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, borderRadius: 2 },
+  pGuideTitle: {
+    color: '#F4E4BC', fontSize: 14, lineHeight: 21, fontWeight: '800',
+    paddingLeft: 8, marginBottom: 12,
+  },
+  pGuideBlock: {
+    paddingLeft: 8, marginBottom: 12,
+  },
+  pGuideKicker: {
+    color: 'rgba(218,165,32,0.62)', fontSize: 10, fontWeight: '900',
+    letterSpacing: 1, textTransform: 'uppercase', marginBottom: 5,
+  },
+  pGuideColumns: {
+    flexDirection: 'row', gap: 10, paddingLeft: 8,
+  },
+  pGuideColumn: {
+    flex: 1, borderRadius: 10, padding: 10,
+    backgroundColor: 'rgba(0,0,0,0.16)', borderWidth: 1,
+    borderColor: 'rgba(218,165,32,0.08)',
+  },
+  pGuideItem: {
+    color: 'rgba(244,228,188,0.64)', fontSize: 12, lineHeight: 18, fontWeight: '600',
+  },
   pExplainText: {
     color: 'rgba(244,228,188,0.55)', fontSize: 14, lineHeight: 22, fontWeight: '500',
     paddingLeft: 8,
   },
 
   // Auspicious
-  auspRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
-  auspBar: { width: 3, height: 24, borderRadius: 2 },
-  auspName: { fontSize: 14, color: '#F4E4BC', fontWeight: '700' },
-  auspSinhala: { fontSize: 14, color: Colors.textMuted, marginTop: 2 },
-  auspTime: { flexDirection: 'row' },
-  auspTimeText: { fontSize: 14, color: '#34D399', fontWeight: '700', letterSpacing: 0.3 },
+  auspRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 13, gap: 12 },
+  auspBar: { width: 3, alignSelf: 'stretch', minHeight: 42, borderRadius: 2 },
+  auspName: { fontSize: 14, lineHeight: 19, color: '#F4E4BC', fontWeight: '800' },
+  auspSinhala: { fontSize: 12, lineHeight: 18, color: 'rgba(244,228,188,0.58)', marginTop: 3, paddingRight: 4 },
+  auspTime: { flexDirection: 'row', minWidth: 108, justifyContent: 'flex-end', paddingTop: 2 },
+  auspTimeText: { fontSize: 12, color: '#34D399', fontWeight: '800', letterSpacing: 0.2, textAlign: 'right' },
 
   // No Birth Data
   noBirthTitle: { color: '#F4E4BC', fontSize: 24, fontWeight: '900', textAlign: 'center', marginBottom: 10, ...textShadow('rgba(218,165,32,0.30)', { width: 0, height: 1 }, 10) },

@@ -10,6 +10,7 @@
  *   PUT  /api/notifications/preferences     — Update notification preferences
  *   GET  /api/notifications/maraka-apala    — Get Maraka Apala for authenticated user
  *   POST /api/notifications/test            — Send a test notification (dev only)
+ *   POST /api/notifications/test-daily      — Send daily guidance test (dev only)
  */
 
 const express = require('express');
@@ -26,6 +27,7 @@ const {
 } = require('../services/notifications');
 const { calculateMarakaApala, getActiveMarakaApala } = require('../engine/maraka');
 const { calculateRahuKalaya, getDailyNakath, getPanchanga } = require('../engine/astrology');
+const { buildDailyGuidanceMessage } = require('../services/scheduler');
 const { getUser, updatePreferences } = require('../models/firestore');
 
 // ─── Register Push Token ─────────────────────────────────────
@@ -282,6 +284,43 @@ router.post('/test', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Test notification error:', err);
     res.status(500).json({ error: 'Test notification failed', details: err.message });
+  }
+});
+
+// ─── Test Daily Guidance Notification (dev only) ──────────────
+router.post('/test-daily', requireAuth, async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Test notifications disabled in production' });
+  }
+
+  try {
+    const user = await getUser(req.user.uid);
+    const db = require('../config/firebase').getDb();
+    if (!db) return res.status(500).json({ error: 'Firebase not initialized' });
+
+    const tokenDoc = await db.collection('pushTokens').doc(req.user.uid).get();
+    if (!tokenDoc.exists || !tokenDoc.data().pushToken) {
+      return res.status(400).json({ error: 'No push token registered' });
+    }
+
+    const now = new Date();
+    const birthData = user?.birthData || {};
+    const lat = parseFloat(birthData.lat) || 6.9271;
+    const lng = parseFloat(birthData.lng) || 79.8612;
+    const panchanga = getPanchanga(now, lat, lng);
+    const nakath = getDailyNakath(now, lat, lng);
+    const rahuKalaya = calculateRahuKalaya(now, lat, lng);
+    const guidance = buildDailyGuidanceMessage(now, user?.preferences?.language || 'si', panchanga, rahuKalaya, nakath);
+    const result = await sendPush(tokenDoc.data().pushToken, guidance.title, guidance.body, {
+      type: 'DAILY_GUIDANCE',
+      date: now.toISOString().split('T')[0],
+      test: true,
+    }, { channelId: 'daily-guidance' });
+
+    res.json({ success: true, result, preview: guidance });
+  } catch (err) {
+    console.error('Test daily notification error:', err);
+    res.status(500).json({ error: 'Test daily notification failed', details: err.message });
   }
 });
 

@@ -40,6 +40,10 @@ async function upsertUser(uid, data) {
       preferences: {
         language: data.language || 'si',
         notifications: true,
+        dailyPalapa: true,
+        rahuKalayaAlerts: true,
+        marakaApalaAlerts: true,
+        transitAlerts: false,
         theme: 'cosmic',
         ...(data.preferences || {}),
       },
@@ -67,11 +71,12 @@ async function getUser(uid) {
 /**
  * Update user birth data
  */
-async function updateBirthData(uid, birthData) {
+async function updateBirthData(uid, birthData, extraUpdates = {}) {
   const db = getDb();
   if (!db) return null;
 
   await db.collection(COLLECTIONS.USERS).doc(uid).update({
+    ...extraUpdates,
     birthData: {
       dateTime: birthData.dateTime,
       lat: birthData.lat,
@@ -336,6 +341,9 @@ async function savePorondamResult(uid, result) {
     doshas: result.doshas || [],
     brideChart: result.brideChart || null,
     groomChart: result.groomChart || null,
+    brideAdvanced: result.brideAdvanced || null,
+    groomAdvanced: result.groomAdvanced || null,
+    advancedPorondam: result.advancedPorondam || null,
     report: result.report || null,
     reportLanguage: result.reportLanguage || null,
     createdAt: new Date().toISOString(),

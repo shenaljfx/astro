@@ -11,24 +11,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { boxShadow } from '../../utils/shadow';
 import useReducedMotion from '../../hooks/useReducedMotion';
+import { ZODIAC_IMAGES } from '../ZodiacIcons';
+import { APP_LOGO_IMAGE } from '../../assets/logo-inline';
 
-const LOGO = require('../../assets/logo.png');
-
-// 12 zodiac images, ordered Aries → Pisces (clockwise from 12 o'clock).
-const ZODIAC_IMAGES = [
-  require('../../assets/zodiac/aries.png'),
-  require('../../assets/zodiac/taurus.png'),
-  require('../../assets/zodiac/gemini.png'),
-  require('../../assets/zodiac/cancer.png'),
-  require('../../assets/zodiac/leo.png'),
-  require('../../assets/zodiac/virgo.png'),
-  require('../../assets/zodiac/libra.png'),
-  require('../../assets/zodiac/scorpio.png'),
-  require('../../assets/zodiac/sagittarius.png'),
-  require('../../assets/zodiac/capricorn.png'),
-  require('../../assets/zodiac/aquarius.png'),
-  require('../../assets/zodiac/pisces.png'),
-];
+const LOGO = APP_LOGO_IMAGE;
 
 const ORBIT_GLOWS = ['#FBBF24', '#C084FC', '#34D399', '#60A5FA', '#F472B6', '#FCD34D'];
 

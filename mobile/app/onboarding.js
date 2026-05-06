@@ -37,9 +37,10 @@ import AwesomeRashiChakra from '../components/AwesomeRashiChakra';
 import Svg, { Path, Circle, G } from 'react-native-svg';
 import { boxShadow, textShadow } from '../utils/shadow';
 import { ZODIAC_IMAGES, ZODIAC_IMAGE_MAP as ZODIAC_IMG_MAP } from '../components/ZodiacIcons';
+import { APP_LOGO_IMAGE } from '../assets/logo-inline';
 
 var { width: SW, height: SH } = Dimensions.get('window');
-var LOGO = require('../assets/logo.png');
+var LOGO = APP_LOGO_IMAGE;
 
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -285,57 +286,57 @@ var OB = {
     months: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
   },
   si: {
-    welcomeSubtitle: "විශ්වය ඔබට පණිවිඩයක් එවා ඇත",
-    welcomeDesc: "ඔබේ ලග්නයේ ඔබ කවදාවත් නොඇසූ රහස් තිබේ\nග්‍රහයන් ඔබ ගැන මොනවද කියන්නේ?\nඔබේ ඉරණම විකේතනය වීමට බලා සිටී",
+    welcomeSubtitle: "විශ්වය ඔයාට පණිවිඩයක් එවලා තියෙනවා",
+    welcomeDesc: "ඔයාගේ ලග්නය ගැන ඔයා කවදාවත් අහපු නැති රහස් තියෙනවා\nග්‍රහයන් ඔයා ගැන මොනවද කියන්නේ?\nඔයාගේ ඉරණම ගැන දැනගන්න ලෑස්ති වෙන්න",
     welcomeBtn: "මගේ ඉරණම දැන් හෙළි කරන්න",
     welcomeHint: "දහස් ගණනක් තම තරු රහස් සොයාගනිමින් සිටී",
     nasaBadge: "🛰️ NASA JPL ග්‍රහ දත්ත භාවිතයෙන් — සාම්ප්‍රදායික පංචාංගයට වඩා 100 ගුණයක් නිවැරදියි",
     googleTitle: "ග්‍රහචාර වෙත සාදරයෙන් පිළිගනිමු ✨",
-    googleSubtitle: "ඔබේ ග්‍රහ සටහන සහ දිනපතා අකුරටම පලාපල දැනගන්න ගිණුමක් සාදන්න",
+    googleSubtitle: "ඔයාගේ ග්‍රහ සටහන සහ දිනපතා පලාපල දැනගන්න ගිණුමක් හදන්න",
     googleBtn: "Google හරහා පිවිසෙන්න",
     googleFail: "\u0db4\u0dd2\u0dc0\u0dd2\u0dc3\u0dd3\u0db8 \u0d85\u0dc3\u0dcf\u0dbb\u0dca\u0dae\u0d9a\u0dba\u0dd2. \u0d9a\u0dbb\u0dd4\u0dab\u0dcf\u0d9a\u0dbb \u0db1\u0dd0\u0dc0\u0dad \u0d8b\u0dad\u0dca\u0dc3\u0dcf\u0dc4 \u0d9a\u0dbb\u0db1\u0dca\u0db1.",
-    subTitle: "ඔබේ ඉරණමෙන් 90%ක්ම සැඟවිලා! 🌟",
-    subSubtitle: "ඔබේ සැබෑ ධනය, දියුණුව සහ අනාගත රහස් අගුළු වැටී ඇත \u2014 දැන්ම අරින්න",
-    subFeature1: "ඔබේ ලග්නයට පමණක් සතිපතා ඉරණම් අනාවැකි",
-    subFeature2: "ඔබේ සම්පූර්ණ උපන් කේන්දරය — සියල්ල විකේතනය",
-    subFeature3: "ඔබේ සැබෑ ආත්ම සහකරු ගැළපීම් ලකුණු",
-    subFeature4: "AI ඔබේ අතීතය, වර්තමානය සහ අනාගතය කියවයි",
+    subTitle: "ඔයාගේ ඉරණමෙන් 90%ක්ම සැඟවිලා! 🌟",
+    subSubtitle: "ඔයාගේ සැබෑ ධනය, දියුණුව සහ අනාගත රහස් අගුළු වැටී තියෙනවා \u2014 දැන්ම අරින්න",
+    subFeature1: "ඔයාගේ ලග්නයට විතරක් සතිපතා අනාවැකි",
+    subFeature2: "ඔයාගේ සම්පූර්ණ උපන් කේන්දරය — සියල්ල විකේතනය",
+    subFeature3: "ඔයාගේ සැබෑ ආත්ම සහකරු ගැළපීම් ලකුණු",
+    subFeature4: "AI ඔයාගේ අතීතය, වර්තමානය සහ අනාගතය කියවයි",
     subFeature5: "නරක ග්‍රහ කාල පැමිණෙන්නට පෙර අනතුරු ඇඟවීම්",
-    subFeature6: "ඔබට පමණක් පෙනෙන රහස් අනාවැකි",
+    subFeature6: "ඔයාට විතරක් පෙනෙන රහස් අනාවැකි",
     subPerDay: "/\u0daf\u0dc0\u0dc3\u0da7",
     subNote: "Google Play / App Store \u0d94\u0dc3\u0dca\u0dc3\u0dda \u0d9c\u0dd9\u0dc0\u0db1\u0dca\u0db1 \u26A1",
     subNetworks: "Google Play \u2022 App Store \u2022 \u0dc3\u0dd2\u0dba\u0dbd\u0dd4\u0db8 \u0d9a\u0dcf\u0da9\u0dca\u0db4\u0dad\u0dca",
     subBtn: "සියල්ල මට පෙන්වන්න",
     subPayFail: "\u0d9c\u0dd9\u0dc0\u0dd3\u0db8 \u0d85\u0dc3\u0dcf\u0dbb\u0dca\u0dae\u0d9a\u0dba\u0dd2. \u0d86\u0dba\u0dd2 \u0db6\u0dbd\u0db1\u0dca\u0db1.",
     subFailed: "\u0d87\u0d9a\u0dca\u0da7\u0dd2\u0dc0\u0dca \u0dc0\u0dd4\u0db1\u0dda \u0db1\u0dd1",
-    nameTitle: "තරු ඔබව කැඳවනවා",
-    nameSubtitle: "ඔබේ නම ලියන්න — විශ්වය දැනටමත් එය කියවමින් සිටී",
+    nameTitle: "තරු ඔයාට කතා කරනවා",
+    nameSubtitle: "ඔයාගේ නම ලියන්න — විශ්වය දැනටමත් ඒක කියවමින් ඉන්නේ",
     nameLabel: "නම",
-    namePlaceholder: "ඔබේ නම ලියන්න",
+    namePlaceholder: "ඔයාගේ නම ලියන්න",
     nameError: "නම දාලා ඉන්නකෝ",
     dateTitle: "මේ දිනය සියල්ල වෙනස් කළා",
-    dateSubtitle: "විශ්වය ඔබේ ඉරණම ලියූ නිශ්චිත දිනය",
+    dateSubtitle: "විශ්වය ඔයාගේ ඉරණම ලියපු නිශ්චිත දිනය",
     yearLabel: "\u0d85\u0dc0\u0dd4\u0dbb\u0dd4\u0daf\u0dca\u0daf",
     yearPlaceholder: "1995",
     monthLabel: "\u0db8\u0dcf\u0dc3\u0dba",
     dayLabel: "\u0daf\u0dd2\u0db1\u0dba",
     dayPlaceholder: "15",
     dateError: "උපදින දිනය හරියට දාන්න",
-    yearError: "වලංගු අවුරුද්දක් ඇතුළත් කරන්න (1900\u20132026)",
+    yearError: "වලංගු අවුරුද්දක් තියෙනවාුළත් කරන්න (1900\u20132026)",
     monthError: "කරුණාකර මාසයක් තෝරන්න",
-    dayError: "මේ මාසයට වලංගු දිනයක් ඇතුළත් කරන්න",
-    dateHint: "මෙය ඔබේ ලග්නාධිපති ග්‍රහයා සහ රාශි පාලකයා හෙළි කරයි",
-    timeTitle: "ඔබව නිර්වචනය කරන නිශ්චිත මොහොත",
+    dayError: "මේ මාසයට වලංගු දිනයක් තියෙනවාුළත් කරන්න",
+    dateHint: "මේකෙන් ඔයාගේ ලග්නාධිපති සහ රාශි අදිපතියා හොයාගන්නවා",
+    timeTitle: "ඔයාව නිර්වචනය කරන නිශ්චිත මොහොත",
     timeSubtitle: "එක මිනිත්තුවක වෙනසක් = සම්පූර්ණයෙන්ම වෙනස් ඉරණමක්",
     hourLabel: "\u0db4\u0dd0\u0dba",
     minuteLabel: "\u0db8\u0dd2\u0db1\u0dd2\u0dad\u0dca\u0dad\u0dd4",
-    timeError: "වලංගු වේලාවක් ඇතුළත් කරන්න (පැය 1\u201312, මිනි. 0\u201359)",
-    timeHint: "හරියටම වේලාව = නිරවද්‍ය කේන්දරය.\nදන්නේ නැත්නම් මඟ හරින්න.",
-    placeTitle: "ඔබේ ඉරණම ලියැවුණු ස්ථානය",
-    placeSubtitle: "ඔබ උපන් ස්ථානයේ අහස පිළිතුර රඳවා ඇත",
+    timeError: "වලංගු වෙනවාලාවක් තියෙනවාුළත් කරන්න (පැය 1\u201312, මිනි. 0\u201359)",
+    timeHint: "හරියටම වෙනවාලාව = නිරවද්‍ය කේන්දරය.\nදන්නේ නැත්නම් මඟ හරින්න.",
+    placeTitle: "ඔයාගේ ඉරණම ලියැවුණු තැන",
+    placeSubtitle: "ඔයා උපන් තැන අහස අද්දර පිළිතුර තියෙනවා",
     placeSearch: "නගරය සොයන්න...",
-    placeHint: "වෙනස් ස්ථානයක් = වෙනස් ග්‍රහ කෝණ.\nමෙය ඔබේ කේන්දරය අද්විතීය කරයි.",
-    cityError: "කරුණාකර ඔබේ උපන් නගරය තෝරන්න",
+    placeHint: "වෙනස් ස්ථානයක් = වෙනස් ග්‍රහ කෝණ.\nමෙය ඔයාගේ කේන්දරය අද්විතීය කරයි.",
+    cityError: "කරුණාකර ඔයාගේ උපන් නගරය තෝරන්න",
     subProgressName: "නම",
     subProgressDate: "දිනය",
     subProgressTime: "වේලාව",
@@ -346,22 +347,22 @@ var OB = {
     skipBirth: "පසුව Profile එකෙන් දාන්නම්",
     saveFailed: "සේව් වුනේ නැත. ආයි බලන්න.",
     completeTitle: "තරු කතා කළා!",
-    completeSubtitle: "ඔබේම පෞද්ගලික තාරකා විශ්වය සූදානම්",
-    completeLoading: "ඔබේ තරු සිතියම සක්‍රීය කරමින්...",
+    completeSubtitle: "ඔයාගේම පෞද්ගලික තාරකා විශ්වය සූදානම්",
+    completeLoading: "ඔයාගේ තරු සිතියම සක්‍රීය කරමින්...",
     // Lagna Reveal
-    revealLoading: "ඔබේ තාරකා DNA විකේතනය කරමින්...",
-    revealLoadingSub: "ඔබ උපන් නිශ්චිත තත්පරයට ග්‍රහ 9 සිතියම්ගත කරමින්",
-    revealYourLagna: "ඔබේ ලග්නය",
+    revealLoading: "ඔයාගේ තාරකා DNA විකේතනය කරමින්...",
+    revealLoadingSub: "ඔයා උපන් නිශ්චිත තත්පරයට ග්‍රහ 9 සිතියම්ගත කරමින්",
+    revealYourLagna: "ඔයාගේ ලග්නය",
     revealMoonSign: "චන්ද්‍ර රාශිය",
     revealSunSign: "සූර්ය රාශිය",
     revealNakshatra: "උපන් නැකත",
-    revealTraits: "ඔබේ සැඟවුණු විශ්ව ශක්තීන්",
+    revealTraits: "ඔයාගේ සැඟවුණු විශ්ව ශක්තීන්",
     revealLagnaTraits: "ලග්න ලක්ෂණ",
     revealMoonTraits: "චන්ද්‍ර ලක්ෂණ",
-    revealGem: "ඔබේ ශක්ති මැණික",
-    revealColor: "ඔබේ ශක්ති වර්ණය",
-    revealDay: "ඔබේ වාසනාවන්තම දිනය",
-    revealCareer: "ඔබේ නියමිත මාවත",
+    revealGem: "ඔයාගේ ශක්ති මැණික",
+    revealColor: "ඔයාගේ ශක්ති වර්ණය",
+    revealDay: "ඔයාගේ වාසනාවන්තම දවස",
+    revealCareer: "ඔයාගේ නියමිත මාවත",
     revealContinue: "මගේ සම්පූර්ණ අනාගත රහස් අගුළු අරින්න 🔓",
     revealSkip: "මගහැර ඉදිරියට යන්න",
     months: ["\u0da2\u0db1","\u0db4\u0dd9\u0db6","\u0db8\u0dcf\u0dbb\u0dca","\u0d85\u0db4\u0dca\u200d","\u0db8\u0dd0","\u0da2\u0dd6","\u0da2\u0dd6\u0dbd\u0dd2","\u0d85\u0d9c\u0ddd","\u0dc3\u0dd0\u0db4\u0dca","\u0d94\u0d9a\u0dca","\u0db1\u0ddc","\u0daf\u0dd9"],
@@ -470,7 +471,7 @@ function GlowCard({ children, style }) {
 }
 
 var STEP_LABELS_EN = ['Welcome', 'Birth Info', 'Your Stars', 'Save', 'Premium', 'Done'];
-var STEP_LABELS_SI = ['සාදරයෙන්', 'උපන් දත්ත', 'ඔබේ තරු', 'සුරකින්න', 'ප්‍රිමියම්', 'සම්පූර්ණ'];
+var STEP_LABELS_SI = ['සාදරයෙන්', 'උපන් දත්ත', 'ඔයාගේ තරු', 'සුරකින්න', 'ප්‍රිමියම්', 'සම්පූර්ණ'];
 
 function StepProgressBar({ current, total, lang }) {
   var labels = lang === 'si' ? STEP_LABELS_SI : STEP_LABELS_EN;
@@ -799,10 +800,10 @@ function WelcomeStep({ onContinue, onBack, lang }) {
 
   // Feature items — compact horizontal rows
   var FEATURES = lang === 'si' ? [
-    { icon: 'compass-outline', color: '#A78BFA', text: 'ඔබ ගැන ඔබම නොදන්නා ලග්න රහස්' },
-    { icon: 'planet-outline', color: '#FFB800', text: 'ග්‍රහයන් ඔබේ ජීවිතය පාලනය කරන හැටි' },
-    { icon: 'heart-outline', color: '#FF6B9D', text: 'ඔබේ ආත්ම සහකරු කවුද? පොරොන්දම බලන්න' },
-    { icon: 'sparkles-outline', color: '#4CC9F0', text: 'AI ඔබේ අනාගතය කියවයි — ඔබට පමණයි' },
+    { icon: 'compass-outline', color: '#A78BFA', text: 'ඔයා ගැන ඔයාම නොදන්න ලග්න රහස්' },
+    { icon: 'planet-outline', color: '#FFB800', text: 'ග්‍රහයන් ඔයාගේ ජීවිතය පාලනය කරන හැටි' },
+    { icon: 'heart-outline', color: '#FF6B9D', text: 'ඔයාගේ ආත්ම සහකරු කවුද? පොරොන්දම බලන්න' },
+    { icon: 'sparkles-outline', color: '#4CC9F0', text: 'AI ඔයාගේ අනාගතය කියවයි — ඔයාට පමණයි' },
   ] : [
     { icon: 'compass-outline', color: '#A78BFA', text: 'Rising sign secrets you don\'t know about yourself' },
     { icon: 'planet-outline', color: '#FFB800', text: 'See how planets are shaping your life' },
@@ -871,7 +872,7 @@ function WelcomeStep({ onContinue, onBack, lang }) {
         <View style={ws.teaserRow}>
           <Ionicons name="time-outline" size={15} color="#FFB800" />
           <Text style={ws.teaserText}>
-            {lang === 'si' ? 'ඔබේ ඉරණම තීරණය කරන ග්‍රහ රහස දැන්ම සොයාගන්න' : 'The planets already know your future — do you?'}
+            {lang === 'si' ? 'ඔයාගේ ඉරණම තීරණය කරන ග්‍රහ රහස දැන්ම හොයාගන්න' : 'The planets already know your future — do you?'}
           </Text>
         </View>
 
@@ -1036,15 +1037,15 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
           />
           <View style={gs.benefitList}>
             {(isReturningUser ? [
-              { icon: 'reload-outline', color: '#4CC9F0', text: lang === 'si' ? 'ඔබගේ කේන්දරය යළි ලබාගන්න' : 'Restore your saved Birth Chart' },
-              { icon: 'calendar-outline', color: '#FFB800', text: lang === 'si' ? 'ඔබගේ දිනපතා ග්‍රහ පලාපල' : 'Continue your daily predictions' },
-              { icon: 'people-outline', color: '#FF8C00', text: lang === 'si' ? 'ඔබේ පවුලේ අයගේ කේන්දර' : 'Access your saved profiles' },
+              { icon: 'reload-outline', color: '#4CC9F0', text: lang === 'si' ? 'ඔයාගේ කේන්දරය ආයෙත් ගන්න' : 'Restore your saved Birth Chart' },
+              { icon: 'calendar-outline', color: '#FFB800', text: lang === 'si' ? 'ඔයාගේ දිනපතා ග්‍රහ පලාපල' : 'Continue your daily predictions' },
+              { icon: 'people-outline', color: '#FF8C00', text: lang === 'si' ? 'ඔයාගේ පවුලේ අයගේ කේන්දර' : 'Access your saved profiles' },
               { icon: 'sync-outline', color: '#34D399', text: lang === 'si' ? 'ඕනෑම උපාංගයකින් පිවිසෙන්න' : 'Securely sync your data' },
             ] : [
-              { icon: 'star-outline', color: '#FFB800', text: lang === 'si' ? 'ඔබේ උපන් ග්‍රහ සටහන සුරකින්න' : 'Save your unique Birth Chart' },
+              { icon: 'star-outline', color: '#FFB800', text: lang === 'si' ? 'ඔයාගේ උපන් ග්‍රහ සටහන සුරකින්න' : 'Save your unique Birth Chart' },
               { icon: 'calendar-outline', color: '#4CC9F0', text: lang === 'si' ? 'දිනපතා පෞද්ගලික පලාපල' : 'Get daily personalized predictions' },
               { icon: 'heart-outline', color: '#FF8C00', text: lang === 'si' ? 'පොරොන්දම් ගැලපීම පරීක්ෂා කරන්න' : 'Check compatibility with anyone' },
-              { icon: 'cloud-done-outline', color: '#34D399', text: lang === 'si' ? 'ඔබේ දත්ත 100% සුරක්ෂිතයි' : 'Secure backup in the cloud' },
+              { icon: 'cloud-done-outline', color: '#34D399', text: lang === 'si' ? 'ඔයාගේ දත්ත 100% ක් සුරක්ෂිතයි' : 'Secure backup in the cloud' },
             ]).map(function (b, i) {
               return (
                 <Animated.View key={i} entering={FadeInDown.delay(400 + i * 100).duration(250)} style={gs.benefitRow}>
@@ -1131,7 +1132,7 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
         <Animated.View entering={FadeInUp.delay(900).duration(400)} style={gs.trustRow}>
           <Ionicons name="lock-closed-outline" size={10} color="rgba(255,255,255,0.25)" />
           <Text style={gs.trustText}>
-            {lang === 'si' ? '256-bit SSL මගින් ආරක්ෂිතයි · Google හරහා තහවුරු කර ඇත' : '256-bit SSL · Verified by Google'}
+            {lang === 'si' ? '256-bit SSL මගින් ආරක්ෂිතයි · Google හරහා තහවුරු කර තියෙනවා' : '256-bit SSL · Verified by Google'}
           </Text>
         </Animated.View>
 
@@ -1280,8 +1281,8 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
   //  • Rotating testimonial
   // Kept: headline → price → 4 features → terms → CTA → footer.
   var headline = displayName
-    ? (lang === 'si' ? displayName + ', ඔබේ සම්පූර්ණ ග්‍රහ සටහන අගුළු අරින්න' : displayName + ', unlock your full chart')
-    : (lang === 'si' ? 'ඔබේ සම්පූර්ණ ග්‍රහ සටහන අගුළු අරින්න' : 'Unlock your full chart');
+    ? (lang === 'si' ? displayName + ', ඔයාගේ සම්පූර්ණ ග්‍රහ සටහන අගුළු අරින්න' : displayName + ', unlock your full chart')
+    : (lang === 'si' ? 'ඔයාගේ සම්පූර්ණ ග්‍රහ සටහන අගුළු අරින්න' : 'Unlock your full chart');
 
   return (
     <ScrollView
@@ -1548,7 +1549,7 @@ function BirthDataStep({ onComplete, lang }) {
 
   /* PAGE 0: Name */
   var renderNamePage = function () {
-    var nameTeaser = lang === 'si' ? '🔮 ඔබේ නම ඇතුළත් කළ පසු, තරු ඔබ ගැන කුමක් සැඟවූවාද යන්න හෙළි වේ' : '🔮 The moment you type your name, the stars begin revealing what they\'ve been hiding about you';
+    var nameTeaser = lang === 'si' ? '🔮 ඔයාගේ නම තියෙනවාුළත් කළාම, තරු ඔයා ගැන මොනවද හැංගුවේ කියලා පෙන්වාවි' : '🔮 The moment you type your name, the stars begin revealing what they\'ve been hiding about you';
     return (
       <Animated.View key="name" entering={FadeIn.duration(300)} exiting={FadeOut.duration(150)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
@@ -1582,7 +1583,7 @@ function BirthDataStep({ onComplete, lang }) {
 
   /* PAGE 1: Date */
   var renderDatePage = function () {
-    var dateTeaser = lang === 'si' ? '⭐ ඔබ උපන් මොහොතේ ග්‍රහ 9 හරියටම කොතනද තිබුණේ? ඊළඟ පියවරේදී ඔබම බලන්න' : '⭐ Where exactly were the 9 planets the second you were born? You\'re about to find out';
+    var dateTeaser = lang === 'si' ? '⭐ ඔයා උපන් මොහොතේ ග්‍රහ 9 හරියටම කොතනද තිබුණේ? ඊළඟ පියවරේදී ඔයාම බලන්න' : '⭐ Where exactly were the 9 planets the second you were born? You\'re about to find out';
     return (
       <Animated.View key="date" entering={FadeIn.duration(300)} exiting={FadeOut.duration(150)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
@@ -1631,7 +1632,7 @@ function BirthDataStep({ onComplete, lang }) {
 
   /* PAGE 2: Time */
   var renderTimePage = function () {
-    var timeTeaser = lang === 'si' ? '🌙 උපන් වේලාව ඔබේ ලග්නය තීරණය කරයි — ඔබේ මුළු ජීවිතයේම සැඟවුණු සැලැස්ම එයයි' : '🌙 This is the single most important detail — it determines your entire rising sign and life path';
+    var timeTeaser = lang === 'si' ? '🌙 උපන් වෙනවාලාව ඔයාගේ ලග්නය තීරණය කරයි — ඔයාගේ මුළු ජීවිතයේම සැඟවුණු සැලැස්ම එයයි' : '🌙 This is the single most important detail — it determines your entire rising sign and life path';
     return (
       <Animated.View key="time" entering={FadeIn.duration(300)} exiting={FadeOut.duration(150)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
@@ -1682,7 +1683,7 @@ function BirthDataStep({ onComplete, lang }) {
 
   /* PAGE 3: Place */
   var renderPlacePage = function () {
-    var placeTeaser = lang === 'si' ? '✨ අවසාන පියවර! තත්පර කිහිපයකින් ඔබේ සම්පූර්ණ ඉරණම සහ සැඟවුණු කේන්දරය හෙළි වේ' : '✨ Final step! In seconds you\'ll see your complete birth chart and hidden destiny revealed';
+    var placeTeaser = lang === 'si' ? '✨ අවසාන පියවර! තත්පර කිහිපයකින් ඔයාගේ සම්පූර්ණ ඉරණම සහ කේන්දරය පෙනේවි' : '✨ Final step! In seconds you\'ll see your complete birth chart and hidden destiny revealed';
     return (
       <Animated.View key="place" entering={FadeIn.duration(300)} exiting={FadeOut.duration(150)} style={{ flex: 1, justifyContent: 'center' }}>
         <View>
@@ -2376,7 +2377,7 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
                     {lang === 'si' ? '⚠️ මෙම කියවීම මකා දැමෙයි!' : '⚠️ THIS READING WILL BE DELETED!'}
                   </Text>
                   <Text style={{ fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.30)', marginTop: 2 }}>
-                    {lang === 'si' ? 'ඔබේ ග්‍රහ විශ්ලේෂණයෙන් 90%ක් සැඟවිලා' : '90% of your destiny is still hidden'}
+                    {lang === 'si' ? 'ඔයාගේ ග්‍රහ විශ්ලේෂණයෙන් 90%ක් සැඟවිලා' : '90% of your destiny is still hidden'}
                   </Text>
                 </View>
               </View>

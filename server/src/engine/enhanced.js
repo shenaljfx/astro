@@ -158,8 +158,8 @@ function analyzeGandanta(date, lat, lng) {
       result.sinhala = 'ගණ්ඩාන්ත දෝෂය හඳුනාගැනිණ';
       result.description = 'Planets at the junction of water and fire signs experience deep karmic turbulence. ' +
         'This is especially significant when Moon or Lagna is in Gandanta.';
-      result.descriptionSi = 'ජල සහ ගිනි රාශි සන්ධිස්ථානයේ ග්‍රහයින් ගැඹුරු කර්ම කම්පනයකට ලක් වේ. ' +
-        'චන්ද්‍රයා හෝ ලග්නය ගණ්ඩාන්තයේ පිහිටන විට මෙය විශේෂයෙන් වැදගත් වේ.';
+      result.descriptionSi = 'ජල සහ ගිනි රාශි සන්ධිස්ථානයේ ග්‍රහයින් ගැඹුරු කර්ම කම්පනයකට ලක් වෙනවා. ' +
+        'චන්ද්‍රයා හෝ ලග්නය ගණ්ඩාන්තයේ පිහිටන විට මෙය විශේෂයෙන් වැදගත් වෙනවා.';
       result.remedies = [
         'Perform Gandanta Shanti Puja within 27 days of birth',
         'Donate sesame seeds (තල) on Saturday',
@@ -253,25 +253,25 @@ function _getTattvaAyurvedaAdvice(dominant, weak) {
   const advice = {
     Fire: {
       dominant: 'Pitta predominant — prone to inflammation, acidity, anger. Favor cooling foods and calming activities.',
-      dominantSi: 'පිත්ත ප්‍රමුඛ — ප්‍රදාහ, ආම්ලිකතාව, කෝපය ඇතිවීමේ ප්‍රවණතාව. සිසිල් ආහාර සහ සන්සුන් ක්‍රියාකාරකම් නිර්දේශ කෙරේ.',
+      dominantSi: 'පිත්ත ප්‍රමුඛ — ප්‍රදාහ, ආම්ලිකතාව, කෝපය තියෙනවාිවීමේ ප්‍රවණතාව. සිසිල් ආහාර සහ සන්සුන් ක්‍රියාකාරකම් නිර්දේශ කෙරේ.',
       weak: 'Low Agni — weak digestion, lack of motivation. Increase spices, exercise, and Sun salutations.',
       weakSi: 'දුර්වල අග්නි — දුබල ජීර්ණය, අභිප්‍රේරණ අඩුවීම. කුළුබඩු, ව්‍යායාම සහ සූර්ය නමස්කාරය වැඩි කරන්න.',
     },
     Earth: {
       dominant: 'Kapha predominant — prone to weight gain, lethargy. Stay active, reduce dairy and sweets.',
-      dominantSi: 'කඵ ප්‍රමුඛ — බර වැඩිවීම, අලසකම ඇතිවීමේ ප්‍රවණතාව. ක්‍රියාශීලීව සිටින්න, කිරි නිෂ්පාදන සහ මිහිරි අඩු කරන්න.',
+      dominantSi: 'කඵ ප්‍රමුඛ — බර වැඩිවීම, අලසකම තියෙනවාිවීමේ ප්‍රවණතාව. ක්‍රියාශීලීව සිටින්න, කිරි නිෂ්පාදන සහ මිහිරි අඩු කරන්න.',
       weak: 'Low Earth — instability, poor grounding. Practice walking meditation, eat root vegetables.',
       weakSi: 'පෘථිවි අඩුයි — අස්ථාවරත්වය, දුබල පදනම. ඇවිදීමේ භාවනාව, මූලික එළවළු ආහාරයට එක් කරන්න.',
     },
     Air: {
       dominant: 'Vata predominant — prone to anxiety, restlessness. Maintain routine, warm oils, grounding foods.',
-      dominantSi: 'වාත ප්‍රමුඛ — කාංසාව, නොසන්සුන්කම ඇතිවීමේ ප්‍රවණතාව. දිනචරියාව පවත්වන්න, උණුසුම් තෙල් සහ බර ආහාර ගන්න.',
+      dominantSi: 'වාත ප්‍රමුඛ — කාංසාව, නොසන්සුන්කම තියෙනවාිවීමේ ප්‍රවණතාව. දිනචරියාව පවත්වන්න, උණුසුම් තෙල් සහ බර ආහාර ගන්න.',
       weak: 'Low Air — poor communication, inflexibility. Practice pranayama and social engagement.',
-      weakSi: 'වායු අඩුයි — දුබල සන්නිවේදනය, නම්‍යශීලී නොවීම. ප්‍රාණායාම සහ සමාජ ක්‍රියාකාරකම් අනුගමනය කරන්න.',
+      weakSi: 'වායු අඩුයි — දුබල සන්නිවෙනවාදනය, නම්‍යශීලී නොවීම. ප්‍රාණායාම සහ සමාජ ක්‍රියාකාරකම් අනුගමනය කරන්න.',
     },
     Water: {
       dominant: 'Emotional sensitivity high — prone to attachment, moodiness. Practice detachment meditation.',
-      dominantSi: 'හැඟීම් සංවේදීතාව ඉහළයි — ඇලීම, මනෝභාව වෙනස්වීම් ඇතිවීමේ ප්‍රවණතාව. නිර්ලිප්ත භාවනාව අනුගමනය කරන්න.',
+      dominantSi: 'හැඟීම් සංවෙනවාදීතාව ඉහළයි — ඇලීම, මනෝභාව වෙනස්වීම් තියෙනවාිවීමේ ප්‍රවණතාව. නිර්ලිප්ත භාවනාව අනුගමනය කරන්න.',
       weak: 'Low Water — emotional dryness, poor intuition. Spend time near water, practice heart-opening.',
       weakSi: 'ජල අඩුයි — හැඟීම් වියළි බව, දුබල ප්‍රඥාව. ජලය අසල කාලය ගත කරන්න, හෘදය විවෘත කිරීමේ භාවනා අනුගමනය කරන්න.',
     },
@@ -770,7 +770,7 @@ function detectAspectPatterns(date, lat, lng) {
     const patternSignificance = {
       TSquare: {
         vedic: 'Tension Triangle — creates drive but also stress. The focal planet shows where pressure manifests.',
-        sinhala: 'ආතතිය ත්‍රිකෝණය — තෙදින් එහෙත් ආතතිය ද ඇතිකරයි',
+        sinhala: 'ආතතිය ත්‍රිකෝණය — තෙදින් එහෙත් ආතතිය ද තියෙනවාිකරනවා',
       },
       GrandTrine: {
         vedic: 'Maha Trikona Yoga — natural talents and flow. Can indicate complacency if not channeled.',

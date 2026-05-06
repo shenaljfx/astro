@@ -212,9 +212,9 @@ async function getTokensWithPreference(preferenceKey) {
         const userData = doc.data();
         const prefs = userData.preferences || {};
         // Check if this notification type is enabled (default true)
-        const enabled = prefs[preferenceKey] !== false;
+        const enabled = prefs.notifications !== false && prefs[preferenceKey] !== false;
         if (enabled) {
-          const token = tokens.find(t => t.uid === doc.id);
+          const token = tokens.find(t => t.uid === (userData.uid || doc.id));
           if (token) {
             results.push({
               ...token,

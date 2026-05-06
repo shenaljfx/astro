@@ -21,6 +21,7 @@ import Animated, {
   interpolate, Easing,
 } from 'react-native-reanimated';
 import { boxShadow, textShadow } from '../utils/shadow';
+import { APP_LOGO_IMAGE } from '../assets/logo-inline';
 
 // ── Nav items (mirror TABS in _layout.js) ─────────────────────────
 export var NAV_ITEMS = [
@@ -78,7 +79,7 @@ function ChromaticLine() {
 }
 
 // ── Logo ───────────────────────────────────────────────────────────
-var LOGO = require('../assets/logo.png');
+var LOGO = APP_LOGO_IMAGE;
 
 function SidebarLogo({ collapsed }) {
   var glow = useSharedValue(0.55);

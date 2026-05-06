@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, Image, StyleSheet, Platform, Dimensions, LogBox } from 'react-native';
@@ -16,6 +16,15 @@ import { PricingProvider } from '../contexts/PricingContext';
 import OnboardingScreen from './onboarding';
 import { useTheme } from '../contexts/ThemeContext';
 import { boxShadow } from '../utils/shadow';
+import {
+  setupNotificationChannels,
+  ensureDailyGuidanceSchedule,
+  addNotificationResponseListener,
+  getLastNotificationResponse,
+  getNotificationNavigationTarget,
+  clearBadge,
+} from '../services/notifications';
+import { APP_LOGO_IMAGE } from '../assets/logo-inline';
 
 // Suppress known harmless warnings from third-party libs on web
 // - "Unexpected text node" comes from react-native-gesture-handler's GestureDetector on web
@@ -162,7 +171,7 @@ function SplashLoadingScreen({ resolved }) {
           {/* Logo */}
           <Animated.View entering={FadeIn.duration(800)} style={gs.logoWrap}>
             <Image
-              source={require('../assets/logo.png')}
+              source={APP_LOGO_IMAGE}
               style={gs.logo}
               resizeMode="contain"
             />
@@ -230,6 +239,7 @@ function AppGate() {
   // Track if user was previously logged in (for re-login skip flow)
   var wasLoggedIn = useRef(false);
   var [isReturningUser, setIsReturningUser] = useState(false);
+  var lastNotificationId = useRef(null);
 
   // Derive whether onboarding is complete from user profile
   var onboardingDone = user?.onboardingComplete === true;
@@ -255,6 +265,48 @@ function AppGate() {
       setShowOnboarding(false);
     }
   }, [isLoggedIn, authReady, onboardingDone]);
+
+  useEffect(function() {
+    if (Platform.OS === 'web') return;
+
+    var openFromNotification = function(notification) {
+      if (!notification) return;
+      var notificationId = notification?.request?.identifier;
+      if (notificationId && lastNotificationId.current === notificationId) return;
+      lastNotificationId.current = notificationId || String(Date.now());
+
+      var target = getNotificationNavigationTarget(notification);
+      var pathname = target.screen || '(tabs)/index';
+      if (pathname.charAt(0) !== '/') pathname = '/' + pathname;
+
+      try {
+        router.push({ pathname: pathname, params: target.params || {} });
+      } catch (e) {
+        if (__DEV__) console.warn('[Notifications] Navigation failed:', e && e.message);
+      }
+    };
+
+    setupNotificationChannels().catch(function(e) {
+      if (__DEV__) console.warn('[Notifications] Channel setup failed:', e && e.message);
+    });
+    ensureDailyGuidanceSchedule().catch(function(e) {
+      if (__DEV__) console.warn('[Notifications] Daily schedule check failed:', e && e.message);
+    });
+    clearBadge().catch(function() {});
+
+    var responseSub = addNotificationResponseListener(function(response) {
+      openFromNotification(response?.notification);
+      clearBadge().catch(function() {});
+    });
+
+    getLastNotificationResponse().then(function(response) {
+      openFromNotification(response?.notification);
+    });
+
+    return function() {
+      if (responseSub && typeof responseSub.remove === 'function') responseSub.remove();
+    };
+  }, []);
 
   // Still loading
   if (loading || showOnboarding === null) {

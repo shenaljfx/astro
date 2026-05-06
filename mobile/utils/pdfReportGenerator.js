@@ -20,11 +20,7 @@
  *   SECTION_COLORS
  */
 
-import { Platform } from 'react-native';
-import { Asset } from 'expo-asset';
-import * as FileSystem from 'expo-file-system';
-
-var LOGO_ASSET = require('../assets/logo.png');
+import { APP_LOGO_BASE64 } from '../assets/logo-base64';
 
 // In-memory cache so loadLogoBase64() runs at most once per app session.
 // The logo is ~50-100 KB; reading + base64-encoding it is slow enough to
@@ -36,38 +32,8 @@ var _logoBase64Cache = null;
 // ════════════════════════════════════════════════
 async function loadLogoBase64() {
   if (_logoBase64Cache) return _logoBase64Cache;
-  try {
-    if (Platform.OS === 'web') {
-      // On web, resolve the asset URI and fetch it
-      var asset = Asset.fromModule(LOGO_ASSET);
-      if (!asset.downloaded) await asset.downloadAsync();
-      var uri = asset.localUri || asset.uri;
-      if (!uri) return null;
-      var response = await fetch(uri);
-      var blob = await response.blob();
-      var b64 = await new Promise(function(resolve) {
-        var reader = new FileReader();
-        reader.onloadend = function() {
-          var dataUrl = reader.result;
-          resolve(dataUrl ? dataUrl.split(',')[1] : null);
-        };
-        reader.onerror = function() { resolve(null); };
-        reader.readAsDataURL(blob);
-      });
-      if (b64) _logoBase64Cache = b64;
-      return b64;
-    } else {
-      var asset = Asset.fromModule(LOGO_ASSET);
-      await asset.downloadAsync();
-      if (!asset.localUri) return null;
-      var base64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
-      if (base64) _logoBase64Cache = base64;
-      return base64;
-    }
-  } catch (e) {
-    if (__DEV__) console.warn('Failed to load logo for PDF:', e && e.message);
-    return null;
-  }
+  _logoBase64Cache = APP_LOGO_BASE64;
+  return _logoBase64Cache;
 }
 
 // ════════════════════════════════════════════════
@@ -116,10 +82,96 @@ var PLANET_SI = {
   Surya:'රවි',Chandra:'චන්ද්‍ර',Mangala:'කුජ',Budha:'බුධ',Guru:'ගුරු',Shukra:'සිකුරු',Shani:'ශනි',
 };
 
+function pdfFactorCopy(name, isSi) {
+  var map = {
+    Dina: ['Daily Harmony', 'දෛනික සමගිය'], Gana: ['Temperament Fit', 'ස්වභාව ගැළපීම'],
+    Yoni: ['Intimacy Comfort', 'සමීප පහසුව'], Rashi: ['Mind & Home Fit', 'මනස සහ ගෘහ ගැළපීම'],
+    Vasya: ['Mutual Attraction', 'ආකර්ෂණ ගැළපීම'], Nadi: ['Family Line Fit', 'පවුල් ගලායෑම් ගැළපීම'],
+    Mahendra: ['Growth Support', 'වර්ධන සහාය'],
+  };
+  var selected = map[name];
+  return selected ? (isSi ? selected[1] : selected[0]) : (isSi ? 'සබඳතා ගැළපීම' : 'Relationship Fit');
+}
+
+function pdfChallengeCopy(item, isSi) {
+  var severity = item && item.severity ? String(item.severity).toLowerCase() : '';
+  if (isSi) {
+    return {
+      label: item && item.cancelled ? 'සැලකිල්ල අඩු වූ කරුණ' : (severity.indexOf('severe') !== -1 ? 'වැඩි සැලකිල්ලක් අවශ්‍ය කරුණ' : 'සබඳතාවේ සැලකිලිමත් කරුණ'),
+      desc: item && item.cancelled ? 'දැඩි අවදානමක් ලෙස ගන්න ඕන නෑ. එත් විවෘත කතාව සහ හොඳ පුරුදු තබාගන්න.' : 'ඉවසීම, විශ්වාසය, සහ තීරණ ගැනීමේදී වැඩි සැලකිල්ලක් ඕනේ කියලා පෙන්වනවා.',
+    };
+  }
+  return {
+    label: item && item.cancelled ? 'Reduced Care Point' : (severity.indexOf('severe') !== -1 ? 'High-Care Relationship Point' : 'Relationship Care Point'),
+    desc: item && item.cancelled ? 'This is not a strong warning now, but open communication and steady habits still matter.' : 'This suggests an area where patience, trust, and careful decisions are important.',
+  };
+}
+
+function pdfSupportLevel(score, maxScore, isSi) {
+  var ratio = (score || 0) / (maxScore || 1);
+  if (isSi) return ratio >= 0.7 ? 'ශක්තිමත් සහාය' : (ratio >= 0.45 ? 'මිශ්‍ර සහාය' : 'වැඩි සැලකිල්ලක් අවශ්‍යයි');
+  return ratio >= 0.7 ? 'Strong Support' : (ratio >= 0.45 ? 'Mixed Support' : 'Needs Extra Care');
+}
+
+function pdfLifePeriodCopy(period, isSi) {
+  return period && period.isBeneficPeriod
+    ? (isSi ? 'සහාය දෙන ජීවිත අදියර' : 'Supportive Life Period')
+    : (isSi ? 'වැඩි සැලකිල්ලක් අවශ්‍ය අදියර' : 'Careful Life Period');
+}
+
+function pdfAdvancedDesc(kind, data, isSi) {
+  if (kind === 'lifePhase') {
+    var harmony = String(data && data.harmony || '').toLowerCase();
+    if (harmony === 'harmonious') return isSi ? 'දෙදෙනාගේ වර්තමාන ජීවිත අදියර එකිනෙකාට සහාය දෙන බව පෙන්වනවා.' : 'Both current life periods look supportive together.';
+    if (harmony === 'conflicting') return isSi ? 'වර්තමාන ජීවිත රටා වෙනස් විය හැක. ඉක්මන් තීරණ වලට පෙර කතාබහ සහ ඉවසීම වැදගත්.' : 'The current life rhythms may feel different. Use patience and clear conversations before major decisions.';
+    return isSi ? 'මේ අදියර මිශ්‍ර සහායක් පෙන්වනවා. කාලය සහ පවුල් තීරණ පැහැදිලිව සකසන්න.' : 'This period shows mixed support. Keep timing and family decisions clear.';
+  }
+  if (kind === 'deepBond') return isSi ? 'දිගුකාලීන බැඳීම, තියෙනවාුළත පහසුව, සහ එකට ජීවත් වීමේ රටාව ගැන ප්‍රායෝගික කියවීමකි.' : 'This reads long-term bond, inner comfort, and shared-life rhythm.';
+  if (kind === 'carePoint') return isSi ? 'මේ කොටස ගැටුම්, කෝපය, සහ ඉක්මන් තීරණ ගැන වැඩි සැලකිල්ලක් ඕනෙද කියලා පෙන්වනවා.' : 'This shows whether conflict, impatience, and rushed decisions need extra care.';
+  return isSi ? 'මේ කොටස දිගුකාලීන සබඳතා සහාය පෙන්වනවා.' : 'This section shows long-term relationship support.';
+}
+
 // ════════════════════════════════════════════════
 // SHARED CSS
 // ════════════════════════════════════════════════
 function sharedCSS(accentHue) {
+  var isPink = accentHue === 'pink';
+  var theme = isPink
+    ? {
+      primary: '#BE185D', accent: '#EC4899', accent2: '#0F766E', soft: '#FFF1F7', soft2: '#F0FDFA',
+      night: '#240815', night2: '#4A102B', gold: '#D6A83A', goldSoft: '#FAE8B7', wash: '#FFFBF6', seal: '#831843',
+    }
+    : {
+      primary: '#5B21B6', accent: '#7C3AED', accent2: '#0F766E', soft: '#F3EEFF', soft2: '#ECFDF5',
+      night: '#15102C', night2: '#2B155E', gold: '#D6A83A', goldSoft: '#FAE8B7', wash: '#FFFBF3', seal: '#312E81',
+    };
+
+  return ''
+    +':root{--ink:#201A2E;--ink-2:#3B334B;--muted:#756D84;--hair:#E8DDCA;--paper:#FFFBF3;--paper-2:#F8F0E3;--cream:#FFF7E8;--ac:'+theme.primary+';--ac2:'+theme.accent+';--teal:'+theme.accent2+';--soft:'+theme.soft+';--soft2:'+theme.soft2+';--night:'+theme.night+';--night2:'+theme.night2+';--gold:'+theme.gold+';--gold-soft:'+theme.goldSoft+';--wash:'+theme.wash+';--seal:'+theme.seal+';}'
+    +'@page{margin:0;size:A4;}*{box-sizing:border-box;margin:0;padding:0;}html,body{min-height:100%;}'
+    +'body{font-family:-apple-system,"Roboto","Noto Sans Sinhala","Iskoola Pota",sans-serif;color:var(--ink);line-height:1.66;font-size:12.5px;background:var(--paper);-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
+    +'body::before{content:"";position:fixed;inset:0;background:linear-gradient(90deg,rgba(214,168,58,0.035),transparent 20%,transparent 80%,rgba(91,33,182,0.025)),radial-gradient(circle at 12% 16%,rgba(214,168,58,0.08),transparent 22%),radial-gradient(circle at 88% 82%,rgba(15,118,110,0.07),transparent 24%);z-index:-2;}'
+    +'.wm{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:92px;font-weight:900;color:rgba(32,26,46,0.022);letter-spacing:15px;white-space:nowrap;z-index:-1;pointer-events:none;user-select:none;}'
+    +'.oc{position:fixed;width:44px;height:44px;z-index:5;opacity:.45;}.oc-tl{top:12px;left:12px;border-top:1px solid rgba(214,168,58,.48);border-left:1px solid rgba(214,168,58,.48);}.oc-tr{top:12px;right:12px;border-top:1px solid rgba(214,168,58,.48);border-right:1px solid rgba(214,168,58,.48);}.oc-bl{bottom:12px;left:12px;border-bottom:1px solid rgba(214,168,58,.48);border-left:1px solid rgba(214,168,58,.48);}.oc-br{bottom:12px;right:12px;border-bottom:1px solid rgba(214,168,58,.48);border-right:1px solid rgba(214,168,58,.48);}'
+    +'.ph{position:fixed;top:0;left:0;right:0;height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 44px;background:rgba(255,251,243,.92);border-bottom:1px solid rgba(214,168,58,.22);font-size:8px;color:rgba(32,26,46,.52);letter-spacing:1.8px;text-transform:uppercase;z-index:10;}.ph .lm{display:flex;align-items:center;font-weight:900;color:var(--ac);font-size:9px;letter-spacing:2.4px;}.pf{position:fixed;bottom:0;left:0;right:0;height:32px;display:flex;align-items:center;justify-content:center;background:rgba(255,251,243,.92);border-top:1px solid rgba(214,168,58,.18);font-size:7px;color:rgba(32,26,46,.4);letter-spacing:1.4px;text-transform:uppercase;z-index:10;}'
+    +'.cover{width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;page-break-after:always;background:linear-gradient(135deg,var(--night),var(--night2) 54%,#0C251F);color:#FFF9EA;padding:72px 58px;}.cover::before{content:"";position:absolute;inset:28px;border:1px solid rgba(214,168,58,.22);border-radius:28px;background:radial-gradient(circle at 50% 40%,rgba(214,168,58,.13),transparent 32%),linear-gradient(135deg,rgba(255,255,255,.05),transparent 36%,rgba(255,255,255,.03));}.cover::after{content:"";position:absolute;width:760px;height:760px;border-radius:50%;border:1px solid rgba(214,168,58,.12);top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 58px rgba(214,168,58,.025),0 0 0 116px rgba(255,255,255,.018),0 0 0 174px rgba(15,118,110,.018);}'
+    +'.zr,.zri{position:absolute;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);}.zr{width:470px;height:470px;border:1px solid rgba(214,168,58,.22);}.zri{width:336px;height:336px;border:1px dashed rgba(255,249,234,.17);}.zs{position:absolute;width:560px;height:560px;top:50%;left:50%;transform:translate(-50%,-50%);}.zs span{position:absolute;font-size:18px;color:rgba(250,232,183,.34);font-weight:700;}'
+    +'.cc{position:relative;z-index:2;width:100%;max-width:560px;text-align:center;padding:28px 24px;}.cl{width:88px;height:88px;border-radius:24px;overflow:hidden;margin:0 auto 24px;border:1px solid rgba(250,232,183,.62);box-shadow:0 22px 70px rgba(0,0,0,.35),0 0 0 10px rgba(214,168,58,.07);display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.22);}.cl img{width:100%;height:100%;object-fit:cover;}.cb{font-size:10px;font-weight:900;color:var(--gold-soft);letter-spacing:7px;text-transform:uppercase;margin-bottom:18px;}.ct{font-size:42px;font-weight:900;line-height:1.05;letter-spacing:-.7px;margin-bottom:14px;text-shadow:0 18px 46px rgba(0,0,0,.34);}.ctg{color:#FFF2C8;}.cs{font-size:13px;color:rgba(255,249,234,.72);margin-bottom:28px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;}.cd{width:126px;height:1px;background:linear-gradient(90deg,transparent,var(--gold-soft),transparent);margin:0 auto 26px;}.cn{font-size:30px;font-weight:900;color:#FFF8D6;margin-bottom:16px;}.cdt{display:inline-block;text-align:left;font-size:12px;color:rgba(255,249,234,.68);line-height:1.85;padding:14px 18px;border:1px solid rgba(250,232,183,.18);border-radius:18px;background:rgba(8,7,18,.22);}.cdt strong{color:#FFF8D6;}.cfb{position:absolute;bottom:38px;left:0;right:0;text-align:center;font-size:8px;color:rgba(255,249,234,.36);letter-spacing:3px;text-transform:uppercase;z-index:2;}'
+    +'.cp{padding:58px 48px 48px;position:relative;}.toc{page-break-after:always;}.toc-hdr{text-align:left;margin-bottom:28px;display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--hair);padding-bottom:16px;}.toc-hdr h2{font-size:28px;font-weight:900;color:var(--ink);letter-spacing:-.4px;text-transform:none;}.toc-line{width:92px;height:6px;background:var(--gold);border-radius:99px;}.toc-list{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;padding:0;}.toc-item{display:grid;grid-template-columns:34px 24px 1fr;align-items:center;gap:10px;padding:10px 8px;border:1px solid rgba(32,26,46,.06);border-radius:14px;background:rgba(255,255,255,.52);}.toc-num{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;}.toc-emoji{font-size:15px;text-align:center;}.toc-label{font-size:12px;font-weight:800;color:var(--ink-2);}'
+    +'.bc{background:linear-gradient(135deg,rgba(255,255,255,.88),rgba(255,248,232,.92));border:1px solid rgba(214,168,58,.3);border-radius:26px;padding:28px;margin-bottom:30px;position:relative;overflow:hidden;box-shadow:0 18px 50px rgba(72,52,24,.08);}.bc::after{content:"☸";position:absolute;top:-36px;right:-14px;font-size:132px;color:rgba(214,168,58,.08);pointer-events:none;}.bc h3{font-size:13px;font-weight:900;color:var(--ac);margin-bottom:16px;letter-spacing:1.5px;text-transform:uppercase;}.bt{width:100%;border-collapse:separate;border-spacing:0 7px;}.bt td{padding:8px 12px;font-size:12px;vertical-align:top;background:rgba(255,255,255,.58);}.bt .bl{color:var(--muted);font-weight:800;width:148px;white-space:nowrap;border-radius:12px 0 0 12px;}.bt .bv{color:var(--ink);font-weight:700;border-radius:0 12px 12px 0;}'
+    +'.chart-wrap{text-align:center;margin:24px auto;padding:20px;background:linear-gradient(135deg,#FFF9E9,#FFFFFF);border:1px solid rgba(214,168,58,.28);border-radius:24px;page-break-inside:avoid;max-width:460px;overflow:visible;box-shadow:0 16px 44px rgba(32,26,46,.07);}.chart-title{font-size:11px;font-weight:900;color:var(--ac);letter-spacing:1.7px;text-transform:uppercase;margin-bottom:10px;}'
+    +'.sg{display:inline-flex;align-items:center;justify-content:center;position:relative;vertical-align:middle;}.sg-txt{position:absolute;text-align:center;}.sg-val{font-weight:900;line-height:1;}.sg-lbl{font-size:9px;color:var(--muted);margin-top:2px;font-weight:800;}'
+    +'.hero-scores{page-break-after:always;padding:58px 48px;background:linear-gradient(180deg,var(--paper),#FFF);}.hero-title{text-align:left;font-size:28px;font-weight:900;color:var(--ink);letter-spacing:-.5px;margin-bottom:6px;}.hero-sub{text-align:left;font-size:12px;color:var(--muted);margin-bottom:24px;}.hero-overall{text-align:center;padding:30px;background:linear-gradient(135deg,#FFFFFF,var(--soft));border-radius:30px;border:1px solid rgba(32,26,46,.07);box-shadow:0 18px 50px rgba(32,26,46,.07);}.hero-overall .ho-label{font-size:17px;font-weight:900;color:var(--ink);margin-top:6px;}.hero-overall .ho-sub{font-size:11px;color:var(--muted);margin-top:3px;font-weight:700;}.hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}.hero-cell{text-align:left;padding:14px;border-radius:18px;border:1px solid rgba(32,26,46,.06);background:#fff!important;box-shadow:0 10px 26px rgba(32,26,46,.04);}.hero-cell .hc-emoji{font-size:20px;margin-bottom:8px;}.hero-cell .hc-name{font-size:9px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;min-height:24px;}.hero-cell .hc-score{font-size:29px;font-weight:900;line-height:1;}.hero-cell .hc-bar{height:6px;background:rgba(32,26,46,.06);border-radius:99px;margin-top:9px;overflow:hidden;}.hero-cell .hc-fill{height:6px;border-radius:99px;}'
+    +'.rs{page-break-inside:avoid;margin-bottom:24px;border-radius:24px;overflow:hidden;border:1px solid rgba(32,26,46,.08);background:#fff;box-shadow:0 16px 44px rgba(32,26,46,.055);}.rs-hdr{padding:18px 22px!important;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--ink),var(--seal))!important;}.rs-hdr .sn{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#FFF7E8;border:1px solid rgba(255,255,255,.18);}.rs-hdr .se{font-size:18px;}.rs-hdr h2{flex:1;font-size:16px;font-weight:900;color:#FFF7E8;margin:0;letter-spacing:-.1px;}.rs-hdr .ss{font-size:12px;font-weight:900;color:#2B1B0C;background:var(--gold-soft);padding:4px 10px;border-radius:99px;}.rs-body{padding:22px 24px!important;font-size:12.5px;line-height:1.82;color:var(--ink-2);background:#FFFEFA!important;}.rs-body strong{color:var(--ink);font-weight:900;}.rs-body em{color:var(--ac);font-style:normal;font-weight:800;}.rs-body blockquote{margin:12px 0;padding:12px 16px;border:1px solid rgba(214,168,58,.32);background:rgba(255,248,232,.8);border-radius:16px;font-style:italic;color:#51465F;}'
+    +'.prose{max-width:100%;}.body-p{margin-bottom:10px;}.md-h2{font-size:16px;font-weight:900;color:var(--ink);margin:18px 0 8px;}.md-h3{font-size:14px;font-weight:900;color:var(--ac);margin:14px 0 6px;}.md-bullet{display:flex;gap:8px;margin:6px 0;padding:8px 10px;background:rgba(32,26,46,.035);border-radius:12px;}.md-bullet span{color:var(--gold);font-weight:900;}'
+    +'.verdict{border-radius:20px;padding:16px 18px;margin-bottom:16px;position:relative;overflow:hidden;background:linear-gradient(135deg,var(--soft),#fff)!important;border:1px solid rgba(32,26,46,.07);}.verdict-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px;}.verdict-emoji{font-size:24px;}.verdict-title{font-size:12px;font-weight:900;color:var(--ink)!important;flex:1;text-transform:uppercase;letter-spacing:1px;}.verdict-score{font-size:24px;font-weight:900;color:var(--ac)!important;}.verdict-bar-wrap{height:8px;background:rgba(32,26,46,.07);border-radius:99px;overflow:hidden;}.verdict-bar{height:8px;border-radius:99px;background:var(--ac)!important;}.verdict-rating{display:inline-block;margin-top:10px;padding:4px 11px;border-radius:99px;background:#fff;color:var(--ink)!important;font-size:9px;font-weight:900;letter-spacing:.8px;border:1px solid rgba(32,26,46,.08);}'
+    +'.factor-row{margin-bottom:12px;padding:16px 18px;background:#fff;border-radius:18px;border:1px solid rgba(32,26,46,.08);page-break-inside:avoid;box-shadow:0 8px 24px rgba(32,26,46,.035);}.factor-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;gap:12px;}.factor-title{font-size:13px;color:var(--ink);font-weight:900;}.factor-score{display:flex;align-items:center;gap:7px;}.factor-score strong{font-size:17px;font-weight:900;color:var(--factor-color,var(--ac));}.factor-track{height:7px;background:rgba(32,26,46,.06);border-radius:99px;overflow:hidden;margin-bottom:8px;}.factor-fill{height:7px;border-radius:99px;background:var(--factor-color,var(--ac));}.factor-desc{color:var(--muted);font-size:11px;line-height:1.58;margin:0;}'
+    +'.care-card{margin-bottom:10px;padding:14px 16px;background:#FFF7F5;border-radius:18px;border:1px solid rgba(220,38,38,.15);}.care-card strong{display:block;color:#8A1F1F;font-size:13px;margin-bottom:4px;}.care-card p{color:#614747;font-size:11px;line-height:1.58;margin:0;}.insight-strip{padding:10px 12px;border:1px solid rgba(236,72,153,.14);border-radius:14px;background:#fff;margin-bottom:8px;font-size:11px;color:var(--ink-2);}'
+    +'.ep{width:100%;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--night),var(--night2),#0C251F);color:#FFF9EA;text-align:center;page-break-before:always;position:relative;overflow:hidden;padding:64px;}.ep::before{content:"";position:absolute;inset:34px;border:1px solid rgba(214,168,58,.24);border-radius:30px;}.ep img{position:relative;z-index:1;box-shadow:0 18px 54px rgba(0,0,0,.35);}.ep .ep-icon{font-size:48px;margin-bottom:8px;}.ep .ep-brand{position:relative;z-index:1;font-size:10px;letter-spacing:7px;color:var(--gold-soft);text-transform:uppercase;font-weight:900;}.ep .ep-line{position:relative;z-index:1;width:96px;height:1px;background:linear-gradient(90deg,transparent,var(--gold-soft),transparent);margin:22px auto;}.ep .ep-tag{position:relative;z-index:1;font-size:18px;color:rgba(255,249,234,.72);font-weight:800;}.ep .ep-url{position:relative;z-index:1;font-size:10px;color:rgba(255,249,234,.45);letter-spacing:2px;margin-top:20px;}.ep .ep-disc{position:relative;z-index:1;max-width:420px;font-size:8px;color:rgba(255,249,234,.32);line-height:1.7;margin-top:30px;}.ep .ep-cta{position:relative;z-index:1;margin-top:28px;padding:11px 26px;border:1px solid rgba(250,232,183,.42);border-radius:999px;color:var(--gold-soft);font-weight:900;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;background:rgba(0,0,0,.12);}.ep .ep-features{position:relative;z-index:1;display:flex;gap:18px;margin-top:16px;}.ep .ep-feat{font-size:9px;color:rgba(255,249,234,.48);font-weight:700;}'
+    +'@media print{.cover{page-break-after:always;}.toc{page-break-after:always;}.rs,.factor-row,.care-card,.chart-wrap{page-break-inside:avoid;}.ep{page-break-before:always;}}';
+}
+
+function legacySharedCSS(accentHue) {
   var ac = accentHue === 'pink'
     ? { h:'#EC4899',bg1:'#831843',bg2:'#BE185D',bg3:'#EC4899',bg4:'#F9A8D4',wa:'rgba(236,72,153,0.03)',co:'rgba(236,72,153,0.12)',hc:'rgba(236,72,153,0.5)',fc:'rgba(236,72,153,0.3)',fb:'rgba(236,72,153,0.06)' }
     : { h:'#7C3AED',bg1:'#1E1B4B',bg2:'#312E81',bg3:'#4C1D95',bg4:'#7C3AED',wa:'rgba(124,58,237,0.03)',co:'rgba(124,58,237,0.12)',hc:'rgba(124,58,237,0.5)',fc:'rgba(124,58,237,0.4)',fb:'rgba(124,58,237,0.06)' };
@@ -476,17 +528,70 @@ function scoreVerdict(score, isSi) {
   return isSi ? '⚡ දුර්වල' : '⚡ Needs Attention';
 }
 
+function escapeHTML(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function inlineMarkdown(value) {
+  return value
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+}
+
 function markdownToHTML(text) {
   if (!text) return '';
-  return text
-    .replace(/### (.+)/g, '<h3 style="font-size:14px;font-weight:800;color:#4C1D95;margin:14px 0 6px;">$1</h3>')
-    .replace(/## (.+)/g, '<h2 style="font-size:16px;font-weight:800;color:#4C1D95;margin:16px 0 8px;">$1</h2>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-    .replace(/^[-•] (.+)$/gm, '<div style="padding-left:16px;margin:4px 0;">• $1</div>')
-    .replace(/\n\n/g, '</p><p style="margin-bottom:6px;">')
-    .replace(/\n/g, '<br/>');
+  var safe = escapeHTML(text).replace(/\r\n/g, '\n');
+  var lines = safe.split('\n');
+  var html = [];
+  var paragraph = [];
+
+  function flushParagraph() {
+    if (paragraph.length === 0) return;
+    html.push('<p class="body-p">' + paragraph.join('<br/>') + '</p>');
+    paragraph = [];
+  }
+
+  lines.forEach(function(line) {
+    var trimmed = line.trim();
+    if (!trimmed) {
+      flushParagraph();
+      return;
+    }
+
+    if (trimmed.indexOf('### ') === 0) {
+      flushParagraph();
+      html.push('<h3 class="md-h3">' + inlineMarkdown(trimmed.slice(4)) + '</h3>');
+      return;
+    }
+
+    if (trimmed.indexOf('## ') === 0) {
+      flushParagraph();
+      html.push('<h2 class="md-h2">' + inlineMarkdown(trimmed.slice(3)) + '</h2>');
+      return;
+    }
+
+    if (trimmed.indexOf('> ') === 0) {
+      flushParagraph();
+      html.push('<blockquote>' + inlineMarkdown(trimmed.slice(2)) + '</blockquote>');
+      return;
+    }
+
+    if (trimmed.indexOf('- ') === 0 || trimmed.indexOf('• ') === 0) {
+      flushParagraph();
+      html.push('<div class="md-bullet"><span>•</span><div>' + inlineMarkdown(trimmed.slice(2)) + '</div></div>');
+      return;
+    }
+
+    paragraph.push(inlineMarkdown(trimmed));
+  });
+
+  flushParagraph();
+  return html.join('');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -504,21 +609,21 @@ function generateReportHTML(opts) {
   var logoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'"/>' : '<div style="font-size:44px;">🔮</div>';
 
   // Cover
-  var coverHTML = '<div class="cover">'
+  var coverHTML = '<div class="cover cover-report">'
     +'<div class="zr"></div><div class="zri"></div><div class="zs">'+zodiacRingHTML()+'</div>'
     +'<div class="cc"><div class="cl">'+logoTag+'</div>'
     +'<div class="cb">ග්‍රහචාර</div>'
     +'<div class="ct"><span class="ctg">'+(isSi?'සම්පූර්ණ ජීවිත වාර්තාව':'Complete Life Report')+'</span></div>'
-    +'<div class="cs">'+(isSi?'වෛදික ජ්‍යෝතිෂ විශ්ලේෂණය':'Vedic Astrology Analysis')+'</div>'
+    +'<div class="cs">'+(isSi?'ප්‍රායෝගික ජීවිත මගපෙන්වීම':'Practical Life Guidance')+'</div>'
     +'<div class="cd"></div>'
-    +'<div class="cn">'+(opts.userName||(isSi?'ඔබ':'You'))+'</div>'
+    +'<div class="cn">'+(opts.userName||(isSi?'ඔයා':'You'))+'</div>'
     +'<div class="cdt">'
     +(opts.birthLocation?'<strong>'+(isSi?'ස්ථානය':'Location')+':</strong> '+opts.birthLocation+'<br/>':'')
     +(opts.birthDate?'<strong>'+(isSi?'උපන් දිනය':'Born')+':</strong> '+opts.birthDate+(opts.birthTime?' &bull; '+opts.birthTime:'')+'<br/>':'')
-    +(opts.lagnaLabel?'<strong>'+(isSi?'ලග්නය':'Lagna')+':</strong> '+opts.lagnaLabel+'<br/>':'')
-    +(opts.nakshatraLabel?'<strong>'+(isSi?'උපන් තරුව':'Nakshatra')+':</strong> '+opts.nakshatraLabel:'')
+    +(opts.lagnaLabel?'<strong>'+(isSi?'ජීවිත දිශාව':'Life Direction')+':</strong> '+opts.lagnaLabel+'<br/>':'')
+    +(opts.nakshatraLabel?'<strong>'+(isSi?'උපන් අවධානය':'Birth Focus')+':</strong> '+opts.nakshatraLabel:'')
     +'</div></div>'
-    +'<div class="cfb">'+(isSi?'වෛදික ජ්‍යෝතිෂ ශාස්ත්‍රය':'Vedic Astrology')+' &bull; '+new Date().toLocaleDateString()+'</div></div>';
+    +'<div class="cfb">'+(isSi?'පුද්ගලික ජීවිත කියවීම':'Personal Life Reading')+' &bull; '+new Date().toLocaleDateString()+'</div></div>';
 
   // TOC
   var tocItems = '';
@@ -534,11 +639,11 @@ function generateReportHTML(opts) {
   function addR(l,v){if(v)bRows+='<tr><td class="bl">'+l+'</td><td class="bv">'+v+'</td></tr>';}
   addR(isSi?'නම':'Name',opts.userName);
   addR(isSi?'උපන් ස්ථානය':'Birthplace',opts.birthLocation);
-  addR(isSi?'උපන් දිනය සහ වේලාව':'Date & Time',(opts.birthDate||'')+' '+(opts.birthTime||''));
-  addR(isSi?'ලග්නය':'Ascendant (Lagna)',opts.lagnaLabel);
-  addR(isSi?'උපන් තරුව':'Birth Star',opts.nakshatraLabel);
-  addR(isSi?'චන්ද්‍ර රාශිය':'Moon Sign',isSi?(bd.moonSign?.sinhala||bd.moonSign?.english):(bd.moonSign?.english));
-  addR(isSi?'සූර්ය රාශිය':'Sun Sign',isSi?(bd.sunSign?.sinhala||bd.sunSign?.english):(bd.sunSign?.english));
+  addR(isSi?'උපන් දිනය සහ වෙනවාලාව':'Date & Time',(opts.birthDate||'')+' '+(opts.birthTime||''));
+  addR(isSi?'ජීවිත දිශාව':'Life Direction',opts.lagnaLabel);
+  addR(isSi?'උපන් අවධානය':'Birth Focus',opts.nakshatraLabel);
+  addR(isSi?'චන්ද්‍ර ශක්තිය':'Moon Energy',isSi?(bd.moonSign?.sinhala||bd.moonSign?.english):(bd.moonSign?.english));
+  addR(isSi?'සූර්ය ශක්තිය':'Sun Energy',isSi?(bd.sunSign?.sinhala||bd.sunSign?.english):(bd.sunSign?.english));
   var bcHTML = '<div class="bc"><h3>🪐 '+(isSi?'උපන් විස්තර':'Birth Details')+'</h3><table class="bt">'+bRows+'</table></div>';
 
   // Charts - D1 (Rashi) and D9 (Navamsha) side by side
@@ -559,18 +664,18 @@ function generateReportHTML(opts) {
     // Start the dual-chart container
     chartHTML = '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin:24px 0;page-break-inside:avoid;">';
     
-    // D1 Rashi Chart (Birth Chart)
+    // Main birth map
     chartHTML += '<div class="chart-wrap" style="flex:1;min-width:280px;max-width:360px;">'
-      +'<div class="chart-title">🏛️ '+(isSi?'ජන්ම කේන්ද්‍රය (D1)':'Birth Chart (D1)')+'</div>'
-      +'<div style="font-size:10px;color:#888;margin-bottom:8px;text-align:center;">'+(isSi?'උපන් මොහොතේ ග්‍රහ පිහිටීම':'Planetary positions at birth')+'</div>'
+      +'<div class="chart-title">🏛️ '+(isSi?'උපන් ජීවිත සිතියම':'Birth Life Map')+'</div>'
+      +'<div style="font-size:10px;color:#888;margin-bottom:8px;text-align:center;">'+(isSi?'උපන් මොහොතේ ජීවිත රටා':'Life patterns from your birth moment')+'</div>'
       +svgSriLankanChart(normalizedRC || opts.chartData.rashiChart, chartLagnaId, opts.lang, 300)+'</div>';
     
     // D9 Navamsha Chart (Soul Chart)
     if (opts.chartData.navamshaChart) {
       var navLagna = opts.chartData.navamshaLagna;
       chartHTML += '<div class="chart-wrap" style="flex:1;min-width:280px;max-width:360px;background:linear-gradient(135deg,#FDF2F8,#FCE7F3,#FDF2F8);border-color:rgba(236,72,153,0.15);">'
-        +'<div class="chart-title" style="color:#EC4899;">💍 '+(isSi?'නවාංශ කේන්ද්‍රය (D9)':'Navamsha Chart (D9)')+'</div>'
-        +'<div style="font-size:10px;color:#888;margin-bottom:8px;text-align:center;">'+(isSi?'ආත්ම සිතියම — විවාහය සහ ගැඹුරු භාග්‍යය':'Soul map — marriage & deeper fortune')+'</div>'
+        +'<div class="chart-title" style="color:#EC4899;">💍 '+(isSi?'ගැඹුරු සබඳතා දැක්ම':'Deep Relationship View')+'</div>'
+        +'<div style="font-size:10px;color:#888;margin-bottom:8px;text-align:center;">'+(isSi?'ඇතුළත සබඳතාව සහ දිගුකාලීන පහසුව':'Inner relationship and long-term comfort')+'</div>'
         +svgNavamshaChart(opts.chartData.navamshaChart, navLagna, opts.lang, 300)+'</div>';
     }
     
@@ -578,13 +683,13 @@ function generateReportHTML(opts) {
     
     // Chart legend
     chartHTML += '<div style="text-align:center;font-size:9px;color:#888;margin-top:8px;">'
-      +'<span style="color:#7C3AED;font-weight:600;">D1</span> = '+(isSi?'ජන්ම කේන්ද්‍රය (භෞතික ජීවිතය)':'Birth Chart (physical life)')
-      +' | <span style="color:#EC4899;font-weight:600;">D9</span> = '+(isSi?'නවාංශ (ආත්මික / විවාහ ජීවිතය)':'Navamsha (soul / married life)')
+      +'<span style="color:#7C3AED;font-weight:600;">'+(isSi?'මූලික දැක්ම':'Main View')+'</span> = '+(isSi?'දිනපතා ජීවිත රටා':'daily life patterns')
+      +' | <span style="color:#EC4899;font-weight:600;">'+(isSi?'ගැඹුරු දැක්ම':'Deep View')+'</span> = '+(isSi?'සබඳතා සහ අභ්‍යන්තර රටා':'relationship and inner patterns')
       +'</div>';
     
     // Planet abbreviation legend
     chartHTML += '<div style="text-align:center;font-size:8px;color:#999;margin-top:12px;padding:8px;background:rgba(124,58,237,0.03);border-radius:8px;">'
-      +'<div style="margin-bottom:4px;font-weight:600;color:#666;">'+(isSi?'ග්‍රහ කෙටි නාම':'Planet Key')+':</div>'
+      +'<div style="margin-bottom:4px;font-weight:600;color:#666;">'+(isSi?'ශක්ති කෙටි නාම':'Energy Key')+':</div>'
       +'<span style="color:#F59E0B;">Su</span>=Sun '
       +'<span style="color:#A5B4FC;">Mo</span>=Moon '
       +'<span style="color:#EF4444;">Ma</span>=Mars '
@@ -594,7 +699,7 @@ function generateReportHTML(opts) {
       +'<span style="color:#818CF8;">Sa</span>=Saturn '
       +'<span style="color:#94A3B8;">Ra</span>=Rahu '
       +'<span style="color:#C4B5FD;">Ke</span>=Ketu '
-      +'<span style="color:#EAB308;font-weight:700;">ල/ல</span>=Lagna'
+      +'<span style="color:#EAB308;font-weight:700;">ල/ல</span>='+(isSi?'ජීවිත දිශාව':'Life Direction')
       +'</div>';
   }
 
@@ -611,7 +716,7 @@ function generateReportHTML(opts) {
   if (heroScores.length > 0) {
     var avg = Math.round(heroScores.reduce(function(a,b){return a+b.score;},0)/heroScores.length);
     heroHTML = '<div class="hero-scores"><div class="hero-title">'+(isSi?'ජීවිත ලකුණු දළ දැක්ම':'Life Score Overview')+'</div>'
-      +'<div class="hero-sub">'+(isSi?'ඔබේ ග්‍රහ ස්ථාන වලින් ලැබෙන ජීවිත ක්ෂේත්‍ර ලකුණු':'Scores derived from your planetary positions')+'</div>'
+      +'<div class="hero-sub">'+(isSi?'ඔයාගේ උපන් රටාවෙන් ලැබෙන ජීවිත ක්ෂේත්‍ර ලකුණු':'Scores derived from your birth pattern')+'</div>'
       +'<div class="hero-overall">'+svgScoreGauge(avg,120,null,isSi?'සමස්ත':'Overall')
       +'<div class="ho-label">'+scoreVerdict(avg,isSi)+'</div>'
       +'<div class="ho-sub">'+heroScores.length+(isSi?' ක්ෂේත්‍ර විශ්ලේෂණය':' areas analyzed')+'</div></div>'
@@ -657,22 +762,22 @@ function generateReportHTML(opts) {
       +'</div>'
       +'<div class="rs-body" style="background:'+sc4.bg+';">'
       +verdictHTML
-      +'<p style="margin-bottom:6px;">'+bodyText+'</p>'
+        +'<div class="prose">'+bodyText+'</div>'
       +'</div></div>';
   });
 
   // End page
   var endLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'" style="width:64px;height:64px;border-radius:16px;object-fit:cover;"/>' : '<div class="ep-icon">☸</div>';
   var endHTML = '<div class="ep">'+endLogoTag+'<div class="ep-brand" style="margin-top:12px;">ග්‍රහචාර</div><div class="ep-line"></div>'
-    +'<div class="ep-tag">'+(isSi?'ඔබේ ජීවිතයේ තරු බලන්න':'Read the Stars of Your Life')+'</div>'
+    +'<div class="ep-tag">'+(isSi?'ඔයාගේ ජීවිතයේ තරු බලන්න':'Read the Stars of Your Life')+'</div>'
     +'<div class="ep-cta">'+(isSi?'📱 යෙදුම බාගන්න':'📱 Download the App')+'</div>'
     +'<div class="ep-features"><span class="ep-feat">🔮 '+(isSi?'සතිපතා නැකැත්':'Weekly Nakath')+'</span>'
     +'<span class="ep-feat">💬 '+(isSi?'AI ජ්‍යෝතිෂ chat':'AI Astro Chat')+'</span>'
-    +'<span class="ep-feat">💍 '+(isSi?'පොරොන්දම්':'Porondam')+'</span></div>'
+    +'<span class="ep-feat">💍 '+(isSi?'සබඳතා ගැලපීම':'Compatibility')+'</span></div>'
     +'<div class="ep-url">www.grahachara.com</div>'
     +'<div class="ep-disc">'+(isSi
-      ?'මෙම වාර්තාව සාම්ප්‍රදායික වෛදික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වේ. මෙය අත්දැකීම් හා දැනගැනීම් සඳහා පමණි.'
-      :'This report is based on traditional Vedic astrology. For informational and entertainment purposes only.')
+      ?'මේ වාර්තාව සාම්ප්‍රදායික වෛදික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වෙනවා. මේක අත්දැකීම් හා දැනගැනීම් සඳහා පමණි.'
+      :'This report is for informational and reflective guidance only.')
     +'</div></div>';
 
   var headerLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'" style="width:18px;height:18px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;"/>' : '';
@@ -706,12 +811,12 @@ function generatePorondamHTML(opts) {
   var logoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'"/>' : '<div style="font-size:44px;">💍</div>';
 
   // Cover
-  var coverHTML = '<div class="cover" style="background:linear-gradient(135deg,#831843 0%,#BE185D 30%,#EC4899 60%,#F9A8D4 100%);">'
+  var coverHTML = '<div class="cover cover-porondam">'
     +'<div class="zr" style="border-color:rgba(249,168,212,0.15);"></div><div class="zri" style="border-color:rgba(255,255,255,0.05);"></div>'
     +'<div class="cc"><div class="cl" style="border-color:rgba(249,168,212,0.5);">'+logoTag+'</div>'
     +'<div class="cb">ග්‍රහචාර</div>'
-    +'<div class="ct"><span class="ctg">'+(isSi?'සම්පූර්ණ පොරොන්දම් වාර්තාව':'Complete Compatibility Report')+'</span></div>'
-    +'<div class="cs">'+(isSi?'වෛදික ජ්‍යෝතිෂ ගැලපීම් විශ්ලේෂණය':'Vedic Astrology Compatibility Analysis')+'</div>'
+    +'<div class="ct"><span class="ctg">'+(isSi?'සම්පූර්ණ සබඳතා ගැලපීම් වාර්තාව':'Complete Compatibility Report')+'</span></div>'
+    +'<div class="cs">'+(isSi?'ප්‍රායෝගික සබඳතා විශ්ලේෂණය':'Practical Relationship Compatibility')+'</div>'
     +'<div class="cd"></div>'
     +'<div class="cn">'+brideName+'<span style="display:block;font-size:14px;color:rgba(255,255,255,0.5);margin:6px 0;font-weight:400;">'+(isSi?'සහ':'&')+'</span>'+groomName+'</div>'
     +'</div><div class="cfb">'+new Date().toLocaleDateString()+'</div></div>';
@@ -719,7 +824,7 @@ function generatePorondamHTML(opts) {
   // Grand score page
   var scoreHTML = '<div class="hero-scores" style="text-align:center;">'
     +'<div class="hero-title" style="color:#BE185D;">'+(isSi?'ගැලපීම් ප්‍රතිඵලය':'Compatibility Result')+'</div>'
-    +'<div class="hero-sub">'+(isSi?'සාධක 7 · ලකුණු 20':'7 Factors · 20 Points')+'</div>'
+    +'<div class="hero-sub">'+(isSi?'සබඳතා රටා 7 · ලකුණු 20':'7 Signals · 20 Points')+'</div>'
     +'<div class="hero-overall" style="background:linear-gradient(135deg,#FDF2F8,#FEF3C7,#F5F3FF);border-color:rgba(236,72,153,0.12);">'
     +svgScoreGauge(pct,140,scoreColor,null)
     +'<div class="ho-label" style="margin-top:8px;">'+(data.ratingEmoji||'💍')+' '+(isSi&&data.ratingSinhala?data.ratingSinhala:data.rating||'')+'</div>'
@@ -745,8 +850,8 @@ function generatePorondamHTML(opts) {
   var chartsHTML = '';
   if (data.brideChart || data.groomChart) {
     chartsHTML = '<div class="cp" style="page-break-inside:avoid;"><div style="display:flex;gap:20px;justify-content:center;align-items:flex-start;">';
-    if (data.brideChart) chartsHTML += '<div class="chart-wrap" style="flex:1;max-width:48%;"><div class="chart-title" style="color:#EC4899;">💐 '+(isSi?'මනාලියගේ කේන්ද්‍රය':"Bride's Kendara")+'</div>'+svgSriLankanChart(data.brideChart.rashiChart,data.brideChart.lagnaRashiId,opts.lang,240)+'</div>';
-    if (data.groomChart) chartsHTML += '<div class="chart-wrap" style="flex:1;max-width:48%;"><div class="chart-title" style="color:#3B82F6;">🤵 '+(isSi?'මනාලයාගේ කේන්ද්‍රය':"Groom's Kendara")+'</div>'+svgSriLankanChart(data.groomChart.rashiChart,data.groomChart.lagnaRashiId,opts.lang,240)+'</div>';
+    if (data.brideChart) chartsHTML += '<div class="chart-wrap" style="flex:1;max-width:48%;"><div class="chart-title" style="color:#EC4899;">💐 '+(isSi?'මනාලියගේ උපන් විස්තර':"Bride's Birth Details")+'</div>'+svgSriLankanChart(data.brideChart.rashiChart,data.brideChart.lagnaRashiId,opts.lang,240)+'</div>';
+    if (data.groomChart) chartsHTML += '<div class="chart-wrap" style="flex:1;max-width:48%;"><div class="chart-title" style="color:#3B82F6;">🤵 '+(isSi?'මනාලයාගේ උපන් විස්තර':"Groom's Birth Details")+'</div>'+svgSriLankanChart(data.groomChart.rashiChart,data.groomChart.lagnaRashiId,opts.lang,240)+'</div>';
     chartsHTML += '</div></div>';
   }
 
@@ -754,20 +859,20 @@ function generatePorondamHTML(opts) {
   var factorsHTML = '';
   if (data.factors?.length > 0) {
     factorsHTML = '<div class="cp" style="page-break-inside:avoid;">'
-      +'<div style="text-align:center;margin-bottom:18px;"><h2 style="font-size:18px;font-weight:800;color:#BE185D;letter-spacing:1px;">📊 '+(isSi?'ගැලපීම් සාධක':'Compatibility Factors')+'</h2>'
-      +'<p style="font-size:12px;color:#888;">'+(isSi?'සාධක 7 · ලකුණු 20':'7 Factors · 20 Points')+'</p></div>';
+      +'<div style="text-align:center;margin-bottom:18px;"><h2 style="font-size:18px;font-weight:800;color:#BE185D;letter-spacing:1px;">📊 '+(isSi?'සබඳතා රටා':'Relationship Signals')+'</h2>'
+      +'<p style="font-size:12px;color:#888;">'+(isSi?'රටා 7 · ලකුණු 20':'7 Signals · 20 Points')+'</p></div>';
     data.factors.forEach(function(f) {
       var fPct = f.maxScore>0 ? Math.round((f.score/f.maxScore)*100) : 0;
       var fColor = fPct>=75?'#10B981':fPct>=50?'#F59E0B':'#EF4444';
-      var desc = isSi && f.descriptionSinhala ? f.descriptionSinhala : (f.description||'');
-      var fName = f.name + (f.sinhala?' ('+f.sinhala+')':'');
-      factorsHTML += '<div style="margin-bottom:14px;padding:14px 18px;background:linear-gradient(135deg,#fdf2f8,#fff);border-radius:12px;border:1px solid rgba(236,72,153,0.1);border-left:4px solid '+fColor+';page-break-inside:avoid;">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
-        +'<strong style="font-size:13px;color:#333;">'+fName+'</strong>'
-        +'<div style="display:flex;align-items:center;gap:6px;">'+svgScoreGauge(fPct,36,fColor,null)
-        +'<span style="font-size:18px;font-weight:900;color:'+fColor+';">'+f.score+'/'+f.maxScore+'</span></div></div>'
-        +'<div style="height:6px;background:rgba(0,0,0,0.04);border-radius:3px;overflow:hidden;margin-bottom:6px;"><div style="height:6px;border-radius:3px;background:'+fColor+';width:'+fPct+'%;"></div></div>'
-        +(desc?'<p style="color:#666;font-size:11px;line-height:1.6;margin:0;">'+desc+'</p>':'')
+      var desc = isSi ? 'මේ කොටස දිනපතා සැනසීම, විශ්වාසය, සහ දිගුකාලීන ගෘහ ජීවිතයට බලපාන විදිහ පෙන්වනවා.' : 'This shows how this area affects daily comfort, trust, and long-term home life.';
+      var fName = pdfFactorCopy(f.name, isSi);
+      factorsHTML += '<div class="factor-row" style="--factor-color:'+fColor+';">'
+        +'<div class="factor-head">'
+        +'<strong class="factor-title">'+fName+'</strong>'
+        +'<div class="factor-score">'+svgScoreGauge(fPct,36,fColor,null)
+        +'<strong>'+f.score+'/'+f.maxScore+'</strong></div></div>'
+        +'<div class="factor-track"><div class="factor-fill" style="width:'+fPct+'%;"></div></div>'
+        +(desc?'<p class="factor-desc">'+desc+'</p>':'')
         +'</div>';
     });
     factorsHTML += '</div>';
@@ -777,12 +882,12 @@ function generatePorondamHTML(opts) {
   var doshasHTML = '';
   if (data.doshas?.length > 0) {
     doshasHTML = '<div class="cp" style="page-break-inside:avoid;">'
-      +'<h2 style="font-size:18px;font-weight:800;color:#DC2626;margin-bottom:14px;border-bottom:2px solid #FEE2E2;padding-bottom:8px;">⚠️ '+(isSi?'දෝෂ':'Doshas')+'</h2>';
+      +'<h2 style="font-size:18px;font-weight:800;color:#DC2626;margin-bottom:14px;border-bottom:2px solid #FEE2E2;padding-bottom:8px;">⚠️ '+(isSi?'සැලකිලිමත් කරුණු':'Challenges')+'</h2>';
     data.doshas.forEach(function(d) {
-      var desc = isSi&&d.descriptionSinhala?d.descriptionSinhala:(d.description||'');
-      doshasHTML += '<div style="margin-bottom:10px;padding:12px 16px;background:#FEF2F2;border-radius:10px;border-left:4px solid #DC2626;">'
-        +'<strong style="color:#333;font-size:13px;">'+d.name+(d.sinhala?' ('+d.sinhala+')':'')+'</strong>'
-        +(desc?'<p style="color:#666;font-size:11px;margin:5px 0 0;line-height:1.6;">'+desc+'</p>':'')+'</div>';
+      var challenge = pdfChallengeCopy(d, isSi);
+      doshasHTML += '<div class="care-card">'
+        +'<strong>'+challenge.label+'</strong>'
+        +'<p>'+challenge.desc+'</p></div>';
     });
     doshasHTML += '</div>';
   }
@@ -800,31 +905,31 @@ function generatePorondamHTML(opts) {
       if(!p.d)return;
       advHTML+='<div style="flex:1;padding:12px;background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);">'
         +'<div style="font-size:11px;font-weight:700;color:'+p.color+';margin-bottom:6px;">'+p.emoji+' '+p.label+'</div>'
-        +'<div style="font-size:10px;color:#888;">'+(isSi?'දැන් ඉන්න අදියර':'Current Phase')+'</div>'
-        +'<div style="font-size:16px;font-weight:800;color:#333;">'+(p.d.currentDasha||'?')+'</div>'
+        +'<div style="font-size:10px;color:#888;">'+(isSi?'දැන් ඉන්න ජීවිත අදියර':'Current Life Period')+'</div>'
+        +'<div style="font-size:16px;font-weight:800;color:#333;">'+pdfLifePeriodCopy(p.d, isSi)+'</div>'
         +'<div style="margin-top:4px;display:inline-block;padding:2px 8px;border-radius:8px;font-size:9px;font-weight:700;background:'+(p.d.isBeneficPeriod?'rgba(16,185,129,0.1);color:#10B981':'rgba(245,158,11,0.1);color:#F59E0B')+';">'
-        +(p.d.isBeneficPeriod?(isSi?'සුභයි':'Favorable'):(isSi?'අභියෝගාත්මක':'Challenging'))+'</div></div>';
+        +(p.d.isBeneficPeriod?(isSi?'සහාය දෙයි':'Supportive'):(isSi?'වැඩි සැලකිල්ලක් ඕන':'Needs Care'))+'</div></div>';
     });
-    advHTML+='</div><p style="color:#555;font-size:12px;line-height:1.7;">'+(da.description||'')+'</p></div></div>';
+      advHTML+='</div><p style="color:#555;font-size:12px;line-height:1.7;">'+pdfAdvancedDesc('lifePhase', da, isSi)+'</p></div></div>';
   }
 
   // Navamsha D9
   if (data.advancedPorondam?.advanced?.navamshaCompatibility) {
     var nav = data.advancedPorondam.advanced.navamshaCompatibility;
     advHTML += '<div class="rs" style="page-break-inside:avoid;">'
-      +'<div class="rs-hdr" style="background:linear-gradient(135deg,#EC4899,#F9A8D4);"><span class="se">💞</span><h2>'+(isSi?'විවාහ කේන්දරය (D9)':'Marriage Chart (D9)')+'</h2><span class="ss">'+nav.score+'/'+nav.maxScore+'</span></div>'
+      +'<div class="rs-hdr" style="background:linear-gradient(135deg,#EC4899,#F9A8D4);"><span class="se">💞</span><h2>'+(isSi?'ගැඹුරු සබඳතා ගැලපීම':'Deep Relationship Match')+'</h2><span class="ss">'+nav.score+'/'+nav.maxScore+'</span></div>'
       +'<div class="rs-body" style="background:#FDF2F8;"><div style="display:flex;gap:14px;margin-bottom:12px;">'
-      +'<div style="flex:1;text-align:center;padding:12px;background:#fff;border-radius:10px;border:1px solid rgba(236,72,153,0.1);"><div style="font-size:10px;color:#EC4899;font-weight:700;">👰 D9 '+(isSi?'ලග්නය':'Rising')+'</div><div style="font-size:18px;font-weight:800;color:#333;margin-top:4px;">'+(nav.brideD9Lagna||'?')+'</div></div>'
-      +'<div style="flex:1;text-align:center;padding:12px;background:#fff;border-radius:10px;border:1px solid rgba(59,130,246,0.1);"><div style="font-size:10px;color:#3B82F6;font-weight:700;">🤵 D9 '+(isSi?'ලග්නය':'Rising')+'</div><div style="font-size:18px;font-weight:800;color:#333;margin-top:4px;">'+(nav.groomD9Lagna||'?')+'</div></div></div>';
-    (nav.insights||[]).forEach(function(ins){advHTML+='<div style="padding:6px 0 6px 14px;border-left:2px solid rgba(236,72,153,0.2);margin-bottom:4px;font-size:11px;color:#555;">✨ '+ins+'</div>';});
-    advHTML+='<p style="color:#888;font-size:11px;font-style:italic;margin-top:8px;">'+(nav.description||'')+'</p></div></div>';
+      +'<div style="flex:1;text-align:center;padding:12px;background:#fff;border-radius:10px;border:1px solid rgba(236,72,153,0.1);"><div style="font-size:10px;color:#EC4899;font-weight:700;">👰 '+(isSi?'ඇතුළත රටාව':'Inner Pattern')+'</div><div style="font-size:18px;font-weight:800;color:#333;margin-top:4px;">'+pdfSupportLevel(nav.score, nav.maxScore, isSi)+'</div></div>'
+      +'<div style="flex:1;text-align:center;padding:12px;background:#fff;border-radius:10px;border:1px solid rgba(59,130,246,0.1);"><div style="font-size:10px;color:#3B82F6;font-weight:700;">🤵 '+(isSi?'ඇතුළත රටාව':'Inner Pattern')+'</div><div style="font-size:18px;font-weight:800;color:#333;margin-top:4px;">'+pdfSupportLevel(nav.score, nav.maxScore, isSi)+'</div></div></div>';
+    advHTML+='<div class="insight-strip">✨ '+pdfAdvancedDesc('deepBond', nav, isSi)+'</div>';
+    advHTML+='<p style="color:#888;font-size:11px;font-style:italic;margin-top:8px;">'+pdfAdvancedDesc('deepBond', nav, isSi)+'</p></div></div>';
   }
 
   // Mangala Dosha
   if (data.advancedPorondam?.advanced?.mangalaDosha && data.advancedPorondam.advanced.mangalaDosha.severity !== 'unknown') {
     var mars = data.advancedPorondam.advanced.mangalaDosha;
     advHTML += '<div class="rs" style="page-break-inside:avoid;">'
-      +'<div class="rs-hdr" style="background:linear-gradient(135deg,#EF4444,#FCA5A5);"><span class="se">⚔️</span><h2>'+(isSi?'කුජ ශක්ති පරීක්ෂාව':'Mars Energy Check')+'</h2><span class="ss">'+mars.score+'/'+mars.maxScore+'</span></div>'
+      +'<div class="rs-hdr" style="background:linear-gradient(135deg,#EF4444,#FCA5A5);"><span class="se">⚔️</span><h2>'+(isSi?'ගැටුම් සැලකිල්ල පරීක්ෂාව':'Conflict Care Check')+'</h2><span class="ss">'+mars.score+'/'+mars.maxScore+'</span></div>'
       +'<div class="rs-body" style="background:#FEF2F2;"><div style="display:flex;gap:14px;margin-bottom:12px;">';
     [{label:brideName,emoji:'👰',d:mars.bride},{label:groomName,emoji:'🤵',d:mars.groom}].forEach(function(p){
       if(!p.d)return;
@@ -832,17 +937,17 @@ function generatePorondamHTML(opts) {
       advHTML+='<div style="flex:1;padding:12px;background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);">'
         +'<div style="font-size:11px;font-weight:700;color:#555;margin-bottom:6px;">'+p.emoji+' '+p.label+'</div>'
         +'<div style="font-size:12px;">'+(hasD?(p.d.cancelled?'✅':'🔥'):'✅')+' '
-        +(hasD?(isSi?'කුජ දෝෂය — භාවය '+p.d.marsHouse:'Mars Dosha — House '+p.d.marsHouse):(isSi?'කුජ දෝෂ නැත':'No Mars Dosha'))+'</div>'
-        +(hasD&&p.d.cancelled?'<div style="font-size:10px;color:#10B981;font-weight:700;margin-top:4px;">✅ '+(isSi?'නිවාරණය වී ඇත':'Cancelled')+'</div>':'')+'</div>';
+        +(hasD?(p.d.cancelled?(isSi?'අඩු වූ සැලකිලිමත් කරුණ':'Reduced Care Point'):(isSi?'වැඩි සැලකිලිමත් කරුණ':'High-Care Point')):(isSi?'මේ කොටස හොඳින් සහාය දෙනවා':'This area looks supportive'))+'</div>'
+        +(hasD&&p.d.cancelled?'<div style="font-size:10px;color:#10B981;font-weight:700;margin-top:4px;">✅ '+(isSi?'බලය අඩුයි':'Reduced')+'</div>':'')+'</div>';
     });
-    advHTML+='</div><p style="color:#555;font-size:12px;line-height:1.7;">'+(mars.description||'')+'</p></div></div>';
+    advHTML+='</div><p style="color:#555;font-size:12px;line-height:1.7;">'+pdfAdvancedDesc('carePoint', mars, isSi)+'</p></div></div>';
   }
 
-  // Marriage Planet Strength
+  // Relationship support strength
   if (data.advancedPorondam?.advanced?.marriagePlanetStrength) {
     var mps = data.advancedPorondam.advanced.marriagePlanetStrength;
     advHTML += '<div class="rs" style="page-break-inside:avoid;">'
-      +'<div class="rs-hdr" style="background:linear-gradient(135deg,#A855F7,#D8B4FE);"><span class="se">💎</span><h2>'+(isSi?'විවාහ ග්‍රහ ශක්තිය':'Marriage Planet Strength')+'</h2><span class="ss">'+mps.score+'/'+mps.maxScore+'</span></div>'
+      +'<div class="rs-hdr" style="background:linear-gradient(135deg,#A855F7,#D8B4FE);"><span class="se">💎</span><h2>'+(isSi?'සබඳතා සහාය ශක්තිය':'Relationship Support Strength')+'</h2><span class="ss">'+mps.score+'/'+mps.maxScore+'</span></div>'
       +'<div class="rs-body" style="background:#FAF5FF;"><div style="display:flex;gap:14px;margin-bottom:12px;">';
     [{label:brideName,emoji:'👰',color:'#EC4899',d:mps.bride},{label:groomName,emoji:'🤵',color:'#3B82F6',d:mps.groom}].forEach(function(p){
       if(!p.d)return;
@@ -850,12 +955,12 @@ function generatePorondamHTML(opts) {
       var lc=p.d.seventhLordAssessment==='Strong'?'#10B981':p.d.seventhLordAssessment==='Moderate'?'#F59E0B':'#EF4444';
       advHTML+='<div style="flex:1;padding:12px;background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);">'
         +'<div style="font-size:11px;font-weight:700;color:'+p.color+';margin-bottom:8px;">'+p.emoji+' '+p.label+'</div>'
-        +'<div style="font-size:9px;color:#888;font-weight:700;">'+(isSi?'සිකුරු':'Venus')+'</div>'
+        +'<div style="font-size:9px;color:#888;font-weight:700;">'+(isSi?'ආදර සහාය':'Affection Support')+'</div>'
         +'<div style="height:4px;background:rgba(0,0,0,0.04);border-radius:2px;margin:3px 0 8px;overflow:hidden;"><div style="height:4px;background:'+vc+';width:'+(p.d.venusStrength||0)+'%;border-radius:2px;"></div></div>'
-        +'<div style="font-size:9px;color:#888;font-weight:700;">7'+(isSi?' වන අධිපති':'th Lord')+' ('+(p.d.seventhLord||'?')+')</div>'
+        +'<div style="font-size:9px;color:#888;font-weight:700;">'+(isSi?'කැපවීම් සහාය':'Commitment Support')+'</div>'
         +'<div style="height:4px;background:rgba(0,0,0,0.04);border-radius:2px;margin:3px 0;overflow:hidden;"><div style="height:4px;background:'+lc+';width:'+(p.d.seventhLordStrength||0)+'%;border-radius:2px;"></div></div></div>';
     });
-    advHTML+='</div><p style="color:#555;font-size:12px;line-height:1.7;">'+(mps.assessment||'')+'</p></div></div>';
+    advHTML+='</div><p style="color:#555;font-size:12px;line-height:1.7;">'+(isSi?'ආදරය පෙන්වීම, කැපවීම, සහ දිගුකාලීන සම්බන්ධතාව පවත්වා ගැනීමට ලැබෙන සහාය මෙතනින් පෙන්වනවා.':'This shows support for affection, commitment, and maintaining the relationship over time.')+'</p></div></div>';
   }
 
   // Wedding Windows
@@ -878,29 +983,29 @@ function generatePorondamHTML(opts) {
   if (opts.report) {
     reportHTML = '<div class="cp" style="page-break-inside:avoid;">'
       +'<h2 style="font-size:18px;font-weight:800;color:#BE185D;margin-bottom:14px;border-bottom:2px solid #FCE7F3;padding-bottom:8px;">🔮 '+(isSi?'විස්තරාත්මක ජ්‍යෝතිෂ වාර්තාව':'Detailed Astrology Report')+'</h2>'
-      +'<div style="padding:20px;background:#fdf2f8;border-radius:12px;border:1px solid #FCE7F3;font-size:12.5px;line-height:1.85;color:#374151;">'
-      +'<p style="margin-bottom:6px;">'+markdownToHTML(opts.report)+'</p></div></div>';
+      +'<div class="rs-body" style="background:#fdf2f8;">'
+      +'<div class="prose">'+markdownToHTML(opts.report)+'</div></div></div>';
   }
 
   // End page
   var pEndLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'" style="width:64px;height:64px;border-radius:16px;object-fit:cover;"/>' : '<div class="ep-icon">💍</div>';
-  var endHTML = '<div class="ep" style="background:linear-gradient(135deg,#831843,#BE185D,#EC4899);">'
+  var endHTML = '<div class="ep ep-porondam">'
     +pEndLogoTag+'<div class="ep-brand" style="margin-top:12px;">ග්‍රහචාර</div><div class="ep-line"></div>'
-    +'<div class="ep-tag">'+(isSi?'ඔබේ ජීවිතයේ තරු බලන්න':'Read the Stars of Your Life')+'</div>'
+    +'<div class="ep-tag">'+(isSi?'ඔයාගේ ජීවිතයේ තරු බලන්න':'Read the Stars of Your Life')+'</div>'
     +'<div class="ep-cta">'+(isSi?'📱 යෙදුම බාගන්න':'📱 Download the App')+'</div>'
     +'<div class="ep-features"><span class="ep-feat">🔮 '+(isSi?'සතිපතා නැකැත්':'Weekly Nakath')+'</span>'
     +'<span class="ep-feat">📊 '+(isSi?'සම්පූර්ණ වාර්තා':'Full Reports')+'</span>'
     +'<span class="ep-feat">💬 '+(isSi?'AI ජ්‍යෝතිෂ chat':'AI Astro Chat')+'</span></div>'
     +'<div class="ep-url">www.grahachara.com</div>'
     +'<div class="ep-disc">'+(isSi
-      ?'මෙම වාර්තාව සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වේ. මෙය දැනගැනීම් සඳහා පමණි.'
-      :'This report is based on traditional Vedic astrology. For informational purposes only.')+'</div></div>';
+      ?'මේ වාර්තාව සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වෙනවා. මේක දැනගැනීම් සඳහා පමණි.'
+      :'This report is for informational and reflective guidance only.')+'</div></div>';
 
   var pHeaderLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'" style="width:18px;height:18px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;"/>' : '';
 
   return '<!DOCTYPE html><html lang="'+(isSi?'si':'en')+'"><head>'
     +'<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>'
-    +'<title>'+(isSi?'ග්‍රහචාර පොරොන්දම්':'Grahachara Porondam')+'</title>'
+    +'<title>'+(isSi?'ග්‍රහචාර සබඳතා ගැලපීම':'Grahachara Compatibility')+'</title>'
     +'<style>'+sharedCSS('pink')+'</style></head><body>'
     +'<div class="wm">ග්‍රහචාර</div>'
     +'<div class="oc oc-tl"></div><div class="oc oc-tr"></div><div class="oc oc-bl"></div><div class="oc oc-br"></div>'

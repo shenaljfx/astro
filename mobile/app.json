@@ -1,4 +1,4 @@
-﻿{
+{
   "expo": {
     "name": "Grahachara",
     "slug": "grahachara",
@@ -32,6 +32,7 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
+        "POST_NOTIFICATIONS",
         "com.android.vending.BILLING"
       ],
       "blockedPermissions": [
@@ -47,13 +48,13 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font",
       "expo-location",
       [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#7C3AED"
+          "color": "#7C3AED",
+          "defaultChannel": "default"
         }
       ],
       "expo-asset",

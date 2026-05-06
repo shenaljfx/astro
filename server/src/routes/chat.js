@@ -172,10 +172,11 @@ router.post('/ask', phoneAuth, requireSubscription, aiUserLimiter, async (req, r
   } catch (error) {
     console.error('AI Chat error:', error);
 
-    if (error.message?.includes('API key') || error.message?.includes('auth')) {
+    if (error.message?.includes('API key') || error.message?.includes('auth') || error.message?.includes('denied access') || error.message?.includes('permission')) {
       return res.status(503).json({
         error: 'AI service temporarily unavailable.',
-        message: 'Please configure your AI API key in the server .env file.',
+        message: 'AI provider access issue. Please check your API key and project status.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
 

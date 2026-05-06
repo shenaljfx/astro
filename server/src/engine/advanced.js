@@ -94,8 +94,8 @@ function detectDoshas(date, lat, lng) {
         ? 'Mars influence is present but neutralized by mitigating factors. Relationship compatibility is not affected.'
         : `Mars influence is present (${severity}). Mars in position ${marsHouse} creates intensity in relationships. Matching with a similarly energetic partner or conscious awareness is recommended.`,
       descriptionSi: mangalCancelled
-        ? 'අංගහරු ප්‍රභාවය පවතින නමුත් සමනය කරන සාධක මගින් වලංගු නොවේ. සබඳතාවට බාධාවක් නැත.'
-        : `අංගහරු ප්‍රභාවය (${severity === 'Severe' ? 'බරපතල' : severity === 'Moderate' ? 'මධ්‍යම' : 'සුළු'}) පවතී. ස්ථානයෙන් ${marsHouse} වන කුජ හේතුවෙන් සබඳතාවේ තීව්‍රතාවයක් ඇතිවේ. සමාන ශක්තියක් ඇති සහකරුවක් සමඟ ගැලපීම නිර්දේශ කෙරේ.`,
+        ? 'අංගහරු ප්‍රභාවය පවතින නමුත් සමනය කරන සාධක මගින් වලංගු නොවෙනවා. සබඳතාවට බාධාවක් නැත.'
+        : `අංගහරු ප්‍රභාවය (${severity === 'Severe' ? 'බරපතල' : severity === 'Moderate' ? 'මධ්‍යම' : 'සුළු'}) පවතී. ස්ථානයෙන් ${marsHouse} වන කුජ හේතුවෙන් සබඳතාවෙනවා තීව්‍රතාවයක් තියෙනවාිවෙනවා. සමාන ශක්තියක් තියෙනවාි සහකරුවක් සමඟ ගැලපීම නිර්දේශ කෙරේ.`,
       remedies: [
         'Channel physical energy into exercise, sports, or creative work',
         'Practice patience in relationships — awareness is the key',
@@ -109,8 +109,8 @@ function detectDoshas(date, lat, lng) {
         'අඟහරුවාදා නවග්‍රහ කෝවිලට යන්න',
         'අඟහරුවාදා රතු පරිප්පු දන් දෙන්න',
         'මංගල ස්තෝත්‍රය හෝ හනුමාන් චාලීසා කියවන්න',
-        'රතු පබළු මුද්ද දකුණු අත ඇඟිල්ලේ පලඳින්න (ජ්‍යෝතිෂවේදියාගෙන් අසන්න)',
-        'වයස 28ට පසු විවාහය ස්වාභාවික සමනයට හේතුවේ',
+        'රතු පබළු මුද්ද දකුණු අත ඇඟිල්ලේ පලඳින්න (ජ්‍යෝතිෂවෙනවාදියාගෙන් අසන්න)',
+        'වයස 28ට පසු විවාහය ස්වාභාවික සමනයට හේතුවෙනවා',
       ],
     });
   }
@@ -190,7 +190,7 @@ function detectDoshas(date, lat, lng) {
           effect: kaalSarpType.effect,
         },
         description: `All planets are hemmed between Rahu (house ${rahuHouse}) and Ketu (house ${ketuHouse}). This creates ${kaalSarpType.name} Kaal Sarp Dosha: ${kaalSarpType.effect}. Life experiences sudden ups and downs like a serpent's coil.`,
-        descriptionSi: `සියලුම ග්‍රහයන් රාහු (${rahuHouse} වන භාවය) සහ කේතු (${ketuHouse} වන භාවය) අතර සීමා වී ඇත. මෙය ${kaalSarpType.sinhala} කාල සර්ප දෝෂය ඇති කරයි. ජීවිතයේ හදිසි උච්චාවචන අත්විඳිය හැක.`,
+        descriptionSi: `සියලුම ග්‍රහයන් රාහු (${rahuHouse} වන භාවය) සහ කේතු (${ketuHouse} වන භාවය) අතර සීමා වී තියෙනවා. මෙය ${kaalSarpType.sinhala} කාල සර්ප දෝෂය තියෙනවාි කරනවා. ජීවිතයේ හදිසි උච්චාවචන අත්විඳිය පුළුවන්.`,
         remedies: [
           'Perform Kaal Sarp Dosha Shanti Pooja at Trimbakeshwar or Navagraha temple',
           'Recite Rahu Kavach stotra daily',
@@ -214,9 +214,9 @@ function detectDoshas(date, lat, lng) {
     const satFromMoon = ((transitSaturnRashiId - natalMoonRashiId + 12) % 12) + 1;
     let sadeSatiPhase = null;
 
-    if (satFromMoon === 12) sadeSatiPhase = { phase: 'Rising (ආරෝහණ)', severity: 'Beginning', description: 'Saturn entering 12th from natal Moon — Sade Sati is beginning. Emotional and financial caution needed.', descriptionSi: 'සෙනසුරු චන්ද්‍රයෙන් 12 වන ස්ථානයට පිවිසීම — සාඩේ සාති ආරම්භ වේ. හැඟීම් හා මූල්‍ය සැලකිලිමත් බව අවශ්‍යයි.' };
+    if (satFromMoon === 12) sadeSatiPhase = { phase: 'Rising (ආරෝහණ)', severity: 'Beginning', description: 'Saturn entering 12th from natal Moon — Sade Sati is beginning. Emotional and financial caution needed.', descriptionSi: 'සෙනසුරු චන්ද්‍රයෙන් 12 වන ස්ථානයට පිවිසීම — සාඩේ සාති ආරම්භ වෙනවා. හැඟීම් හා මූල්‍ය සැලකිලිමත් බව ඕනේ.' };
     if (satFromMoon === 1) sadeSatiPhase = { phase: 'Peak (උච්ච)', severity: 'Maximum', description: 'Saturn directly over natal Moon — Peak phase. Maximum life pressure. This is the most challenging but also the most growth-oriented period.', descriptionSi: 'සෙනසුරු කෙලින්ම චන්ද්‍රයා මත — උච්ච අවධිය. උපරිම ජීවිත පීඩනය. මෙය වඩාත් දුෂ්කර නමුත් පරිවර්තනශීලී කාලයයි.' };
-    if (satFromMoon === 2) sadeSatiPhase = { phase: 'Setting (අවරෝහණ)', severity: 'Ending', description: 'Saturn in 2nd from natal Moon — Final phase of Sade Sati. Financial adjustments and family matters dominate.', descriptionSi: 'සෙනසුරු චන්ද්‍රයෙන් 2 වන ස්ථානයේ — සාඩේ සාතිහි අවසාන අවධිය. මූල්‍ය සකස්කිරීම් සහ පවුල් කටයුතු ප්‍රමුඛ වේ.' };
+    if (satFromMoon === 2) sadeSatiPhase = { phase: 'Setting (අවරෝහණ)', severity: 'Ending', description: 'Saturn in 2nd from natal Moon — Final phase of Sade Sati. Financial adjustments and family matters dominate.', descriptionSi: 'සෙනසුරු චන්ද්‍රයෙන් 2 වන ස්ථානයේ — සාඩේ සාතිහි අවසාන අවධිය. මූල්‍ය සකස්කිරීම් සහ පවුල් කටයුතු ප්‍රමුඛ වෙනවා.' };
 
     if (sadeSatiPhase) {
       doshas.push({
@@ -279,7 +279,7 @@ function detectDoshas(date, lat, lng) {
       severity: pitruDetails.length >= 3 ? 'Severe' : pitruDetails.length >= 2 ? 'Moderate' : 'Mild',
       details: pitruDetails,
       description: 'This pattern indicates inherited family dynamics that may affect fortune, father-related matters, or life direction. Awareness and positive action can transform these patterns.',
-      descriptionSi: 'පිතෘ දෝෂය පියා පැත්තේ පරම්පරාවෙන් එන නොවිසඳුණු කර්මය පෙන්වයි. වාසනාව ප්‍රමාදවීම, පියා සම්බන්ධ අරගල, හෝ ධාර්මික කටයුතුවල බාධා ලෙස මෙය ප්‍රකාශ විය හැකිය.',
+      descriptionSi: 'පිතෘ දෝෂය පියා පැත්තේ පරම්පරාවෙන් එන නොවිසඳුණු කර්මය පෙන්වනවා. වාසනාව ප්‍රමාදවීම, පියා සම්බන්ධ අරගල, හෝ ධාර්මික කටයුතුවල බාධා ලෙස මෙය ප්‍රකාශ විය පුළුවන්ිය.',
       remedies: [
         'Honor and respect family elders and their wisdom',
         'Practice gratitude toward your parents and ancestors',
@@ -296,12 +296,12 @@ function detectDoshas(date, lat, lng) {
   if (sunHouse === rahuHouse || sunHouse === ketuHouse) {
     doshas.push({
       name: 'Solar Sensitivity',
-      sinhala: 'සූර්ය සංවේදිතාව',
+      sinhala: 'සූර්ය සංවෙනවාදිතාව',
       icon: '🌑',
       present: true,
       severity: sunHouse === rahuHouse ? 'Strong' : 'Moderate',
       description: 'Sun conjunct shadow planet — father\'s health, government matters, and ego face challenges. Authority may be undermined.',
-      descriptionSi: 'සූර්යයා සෙවනැලි ග්‍රහයා සමඟ — පියාගේ සෞඛ්‍යය, රාජ්‍ය කටයුතු, සහ ආත්ම ගෞරවයට අභියෝග. බලය අඩපණ විය හැක.',
+      descriptionSi: 'සූර්යයා සෙවනැලි ග්‍රහයා සමඟ — පියාගේ සෞඛ්‍යය, රාජ්‍ය කටයුතු, සහ ආත්ම ගෞරවයට අභියෝග. බලය අඩපණ විය පුළුවන්.',
       remedies: ['Spend time in sunlight daily', 'Build self-confidence through positive affirmations', 'Engage in leadership activities'],
     });
   }
@@ -309,7 +309,7 @@ function detectDoshas(date, lat, lng) {
   if (moonHouse === rahuHouse || moonHouse === ketuHouse) {
     doshas.push({
       name: 'Lunar Sensitivity',
-      sinhala: 'චන්ද්‍ර සංවේදිතාව',
+      sinhala: 'චන්ද්‍ර සංවෙනවාදිතාව',
       icon: '🌘',
       present: true,
       severity: moonHouse === rahuHouse ? 'Strong' : 'Moderate',
@@ -340,8 +340,8 @@ function detectDoshas(date, lat, lng) {
         ? `Moon-Saturn conjunction in house ${moonHouse} — emotional tension is present but eased by Jupiter's supportive influence. Emotional challenges exist but are manageable with awareness.`
         : `Moon-Saturn conjunction in house ${moonHouse} — this indicates deep emotional complexity. It can manifest as emotional restraint, a need for structure in feelings, or a complex relationship with nurturing figures. The native often carries unexpressed emotions from early life. Understanding this pattern is the first step to growth.`,
       descriptionSi: vishCancelled
-        ? `${moonHouse} වන භාවයේ චන්ද්‍ර-ශනි සංයෝගය — විෂ යෝගය පවතින නමුත් ගුරුගේ ශුභ දෘෂ්ටිය මඟින් සමනය වී ඇත. හැඟීම් අභියෝග ඇති නමුත් නිවැරදි අවබෝධයෙන් පාලනය කළ හැකිය.`
-        : `${moonHouse} වන භාවයේ චන්ද්‍ර-ශනි සංයෝගය — මෙය විෂ යෝගයයි. ගැඹුරු හැඟීම් වේදනාව, ළමා කාලයේ කම්පා, මව සමඟ දුෂ්කර සබඳතාවය, මානසික අවපීඩනය සහ හැඟීම් මර්දනය පෙන්වයි.`,
+        ? `${moonHouse} වන භාවයේ චන්ද්‍ර-ශනි සංයෝගය — විෂ යෝගය පවතින නමුත් ගුරුගේ ශුභ දෘෂ්ටිය මඟින් සමනය වී තියෙනවා. හැඟීම් අභියෝග තියෙනවාි නමුත් නිවැරදි අවබෝධයෙන් පාලනය කළ පුළුවන්ිය.`
+        : `${moonHouse} වන භාවයේ චන්ද්‍ර-ශනි සංයෝගය — මෙය විෂ යෝගයයි. ගැඹුරු හැඟීම් වෙනවාදනාව, ළමා කාලයේ කම්පා, මව සමඟ දුෂ්කර සබඳතාවය, මානසික අවපීඩනය සහ හැඟීම් මර්දනය පෙන්වනවා.`,
       remedies: [
         'Practice regular meditation and mindfulness',
         'Seek professional counseling for emotional processing if needed',
@@ -365,7 +365,7 @@ function detectDoshas(date, lat, lng) {
       severity: 'Severe',
       details: { house: saturnHouse },
       description: `Saturn and Rahu conjunct in house ${saturnHouse} — this combination can bring unexpected obstacles, delays, and challenges that feel difficult to explain. Patience and consistent effort are the keys to overcoming this pattern.`,
-      descriptionSi: `${saturnHouse} වන භාවයේ ශනි-රාහු සංයෝගය — මෙම සංයෝගය හදිසි බාධා, ප්‍රමාදයන් සහ පැහැදිලි කිරීමට අපහසු අභියෝග ගෙන ඒමට හැකියි. ඉවසීම සහ අඛණ්ඩ උත්සාහය මෙම රටාව ජය ගැනීමේ යතුරයි.`,
+      descriptionSi: `${saturnHouse} වන භාවයේ ශනි-රාහු සංයෝගය — මෙම සංයෝගය හදිසි බාධා, ප්‍රමාදයන් සහ පැහැදිලි කිරීමට අපහසු අභියෝග ගෙන ඒමට පුළුවන්ියි. ඉවසීම සහ අඛණ්ඩ උත්සාහය මෙම රටාව ජය ගැනීමේ යතුරයි.`,
       remedies: [
         'Practice extreme patience — delays are temporary',
         'Engage in regular acts of service and charity',
@@ -388,7 +388,7 @@ function detectDoshas(date, lat, lng) {
       severity: withNode === 'Rahu' ? 'Strong' : 'Moderate',
       details: { jupiterHouse, withNode },
       description: `Jupiter conjunct ${withNode} in house ${jupiterHouse} — the wisdom planet is influenced by the shadow node. This can create confusion in values, encounters with misleading advisors, and unconventional beliefs. However, it also grants unique insight and strong research ability.`,
-      descriptionSi: `${jupiterHouse} වන භාවයේ ගුරු ${withNode === 'Rahu' ? 'රාහු' : 'කේතු'} සමඟ — ප්‍රඥා ග්‍රහයා සෙවනැල්ලෙන් කිලිටි වේ. ධර්මයේ ව්‍යාකූලත්වය, වැරදි ගුරුවරුන්/උපදේශකයින් ඇතිවිය හැක. නමුත් අසාමාන්‍ය ප්‍රඥාව හා පර්යේෂණ හැකියාවද ලබා දේ.`,
+      descriptionSi: `${jupiterHouse} වන භාවයේ ගුරු ${withNode === 'Rahu' ? 'රාහු' : 'කේතු'} සමඟ — ප්‍රඥා ග්‍රහයා සෙවනැල්ලෙන් කිලිටි වෙනවා. ධර්මයේ ව්‍යාකූලත්වය, වැරදි ගුරුවරුන්/උපදේශකයින් තියෙනවාිවිය පුළුවන්. නමුත් අසාමාන්‍ය ප්‍රඥාව හා පර්යේෂණ පුළුවන්ියාවද ලබා දෙනවා.`,
       remedies: [
         'Seek wisdom from verified, trustworthy mentors',
         'Practice generosity and share knowledge freely',
@@ -417,7 +417,7 @@ function detectDoshas(date, lat, lng) {
       present: true,
       severity: 'Moderate',
       description: `Both wealth lords (2nd: ${lord2Name}, 11th: ${lord11Name}) are in difficult houses. Financial growth requires extra effort and karmic remedies.`,
-      descriptionSi: `ධන භාවාධිපතීන් දෙදෙනාම (2 වන: ${lord2Name}, 11 වන: ${lord11Name}) දුෂ්කර භාවවල සිටී. මූල්‍ය වර්ධනය සඳහා අමතර උත්සාහය හා කර්ම පිළියම් අවශ්‍යයි.`,
+      descriptionSi: `ධන භාවාධිපතීන් දෙන්නම (2 වන: ${lord2Name}, 11 වන: ${lord11Name}) දුෂ්කර භාවවල ඉන්නවා. මූල්‍ය වර්ධනය සඳහා අමතර උත්සාහය හා කර්ම පිළියම් ඕනේ.`,
       remedies: [
         'Build a consistent saving habit — even small amounts matter',
         'Practice generosity by sharing with those in need',
@@ -489,7 +489,7 @@ function detectAdvancedYogas(date, lat, lng) {
           sinhala: 'රාජ යෝගය',
           icon: '👑',
           description: `Lord of ${k}th house (${kendraLord}) and ${t}th house (${trikonaLord}) conjunct in house ${kendraLordHouse}. Grants power, authority, and high social status.`,
-          descriptionSi: `${k} වැනි භාවයේ අධිපති (${kendraLord}) සහ ${t} වැනි භාවයේ අධිපති (${trikonaLord}) ${kendraLordHouse} වැනි භාවයේ එක්ව සිටී. බලය, අධිකාරය සහ ඉහළ සමාජ තත්ත්වය ලබා දේ.`,
+          descriptionSi: `${k} වැනි භාවයේ අධිපති (${kendraLord}) සහ ${t} වැනි භාවයේ අධිපති (${trikonaLord}) ${kendraLordHouse} වැනි භාවයේ එක්ව ඉන්නවා. බලය, අධිකාරය සහ ඉහළ සමාජ තත්ත්වය ලබා දෙනවා.`,
           strength: (isInKendra(kendraLordHouse) || isInTrikona(kendraLordHouse)) ? 'Very Strong' : 'Strong',
           category: 'Raja Yoga',
         });
@@ -511,7 +511,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'ධර්ම-කර්මාධිපති යෝගය',
         icon: '⭐',
         description: `9th lord (${lord9}) and 10th lord (${lord10}) conjunct in house ${lord9House}. This is one of the most powerful Raja Yogas — fortune through career, high status.`,
-        descriptionSi: `9 වැනි අධිපති (${lord9}) සහ 10 වැනි අධිපති (${lord10}) ${lord9House} වැනි භාවයේ එක්ව සිටී. ධර්ම-කර්මාධිපති යෝගය — වෘත්තීය ජයග්‍රහණ සහ ඉහළ තත්ත්වය ලබා දෙන ඉතා බලවත් රාජ යෝගයකි.`,
+        descriptionSi: `9 වැනි අධිපති (${lord9}) සහ 10 වැනි අධිපති (${lord10}) ${lord9House} වැනි භාවයේ එක්ව ඉන්නවා. ධර්ම-කර්මාධිපති යෝගය — වෘත්තීය ජයග්‍රහණ සහ ඉහළ තත්ත්වය ලබා දෙන ඉතා බලවත් රාජ යෝගයකි.`,
         strength: 'Very Strong',
         category: 'Raja Yoga',
       });
@@ -551,7 +551,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'විපරීත රාජ යෝගය',
         icon: '🔄👑',
         description: `${dl.from}th lord (${dl.lord}) in house ${dl.house}. Enemies destroy each other — creating success from adversity. Problems of others become your gain.`,
-        descriptionSi: `${dl.from} වැනි අධිපති (${dl.lord}) ${dl.house} වැනි භාවයේ සිටී. සතුරන් එකිනෙකා විනාශ කරගනී — අසීරුතාවලින් සාර්ථකත්වය උපදී. අන් අයගේ ගැටළු ඔබට වාසිදායක වේ.`,
+        descriptionSi: `${dl.from} වැනි අධිපති (${dl.lord}) ${dl.house} වැනි භාවයේ ඉන්නවා. සතුරන් එකිනෙකා විනාශ කරගනී — අසීරුතාවලින් සාර්ථකත්වය උපදී. අන් අයගේ ගැටළු ඔබට වාසිදායක වෙනවා.`,
         strength: 'Strong',
         category: 'Viparita Raja Yoga',
       });
@@ -572,7 +572,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'ධන යෝගය',
       icon: '💰',
       description: `2nd lord (${lord2}) and 11th lord (${lord11}) conjunct in house ${lord2House}. Strong wealth accumulation through steady income and savings.`,
-      descriptionSi: `2 වැනි අධිපති (${lord2}) සහ 11 වැනි අධිපති (${lord11}) ${lord2House} වැනි භාවයේ එක්ව සිටී. ස්ථාවර ආදායම සහ ඉතිරිකිරීම් හරහා ශක්තිමත් ධන සමුච්චයක් ලබා දේ.`,
+      descriptionSi: `2 වැනි අධිපති (${lord2}) සහ 11 වැනි අධිපති (${lord11}) ${lord2House} වැනි භාවයේ එක්ව ඉන්නවා. ස්ථාවර ආදායම සහ ඉතිරිකිරීම් හරහා ශක්තිමත් ධන සමුච්චයක් ලබා දෙනවා.`,
       strength: 'Strong',
       category: 'Dhana Yoga',
     });
@@ -585,7 +585,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'ලක්ෂ්මී-නාරායණ යෝගය',
       icon: '💎✨',
       description: 'Both Venus and Jupiter in angular houses. Grants exceptional wealth, marital happiness, and divine protection.',
-      descriptionSi: 'සිකුරු සහ ගුරු යන දෙදෙනාම කේන්ද්‍ර භාවවල සිටී. සුවිශේෂ ධනය, විවාහ සතුට සහ දෛවික ආරක්ෂාව ලබා දේ.',
+      descriptionSi: 'සිකුරු සහ ගුරු යන දෙන්නම කේන්ද්‍ර භාවවල ඉන්නවා. සුවිශේෂ ධනය, විවාහ සතුට සහ දෛවික ආරක්ෂාව ලබා දෙනවා.',
       strength: 'Very Strong',
       category: 'Dhana Yoga',
     });
@@ -632,7 +632,7 @@ function detectAdvancedYogas(date, lat, lng) {
           sinhala: 'නීචභංග රාජ යෝගය',
           icon: '🦅',
           description: `${planetName} is debilitated but cancellation occurs: ${reason}. This transforms weakness into extraordinary strength. From rock bottom to the top — the phoenix yoga.`,
-          descriptionSi: `${planetName} නීච වුවත් නීචභංගය සිදු වී ඇත: ${reason}. මෙය දුර්වලකම අසාමාන්‍ය ශක්තියක් බවට පරිවර්තනය කරයි. පිරිහීමේ සිට උත්කර්ෂය දක්වා — මෙය ෆීනික්ස් යෝගයයි.`,
+          descriptionSi: `${planetName} නීච වුවත් නීචභංගය සිද්ධ වෙලා තියෙනවා: ${reason}. මෙය දුර්වලකම අසාමාන්‍ය ශක්තියක් බවට පරිවර්තනය කරනවා. පිරිහීමේ සිට උත්කර්ෂය දක්වා — මෙය ෆීනික්ස් යෝගයයි.`,
           strength: 'Very Strong',
           category: 'Neechabhanga',
         });
@@ -649,7 +649,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'චන්ද්‍ර-මංගල යෝගය',
       icon: '🌙🔥',
       description: 'Moon and Mars conjunct — grants wealth through bold action, real estate, and the courage to take risks. Emotionally intense but financially rewarding.',
-      descriptionSi: 'චන්ද්‍ර සහ කුජ එක්ව සිටී — නිර්භීත ක්‍රියාමාර්ග, ඉඩම් සහ අවදානම් ගැනීමේ ධෛර්යය තුළින් ධනය ලබා දේ. හැඟීම්බර නමුත් මූල්‍යමය වශයෙන් ප්‍රතිලාභදායක වේ.',
+      descriptionSi: 'චන්ද්‍ර සහ කුජ එක්ව ඉන්නවා — නිර්භීත ක්‍රියාමාර්ග, ඉඩම් සහ අවදානම් ගැනීමේ ධෛර්යය තුළින් ධනය ලබා දෙනවා. හැඟීම්බර නමුත් මූල්‍යමය වශයෙන් ප්‍රතිලාභදායක වෙනවා.',
       strength: 'Strong',
       category: 'Dhana Yoga',
     });
@@ -665,7 +665,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'සුනාපා යෝගය',
         icon: '🌙✨',
         description: 'Planet(s) in 2nd from Moon — grants self-made wealth, good reputation, and the ability to acquire resources through personal effort.',
-        descriptionSi: 'චන්ද්‍රයාගෙන් 2 වැනි භාවයේ ග්‍රහයන් — ස්වයං උත්සාහයෙන් ධනය, යහපත් කීර්තිනාමය සහ පෞද්ගලික වෑයමෙන් සම්පත් ලබා ගැනීමේ හැකියාව ලබා දේ.',
+        descriptionSi: 'චන්ද්‍රයාගෙන් 2 වැනි භාවයේ ග්‍රහයන් — ස්වයං උත්සාහයෙන් ධනය, යහපත් කීර්තිනාමය සහ පෞද්ගලික වෑයමෙන් සම්පත් ලබා ගැනීමේ පුළුවන්ියාව ලබා දෙනවා.',
         strength: 'Strong',
         category: 'Moon Yoga',
       });
@@ -680,7 +680,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'අනපා යෝගය',
         icon: '🌙💫',
         description: 'Planet(s) in 12th from Moon — grants charismatic personality, fame, and the power to influence others. Natural leadership quality.',
-        descriptionSi: 'චන්ද්‍රයාගෙන් 12 වැනි භාවයේ ග්‍රහයන් — ආකර්ෂණීය පෞරුෂය, ප්‍රසිද්ධිය සහ අන් අය කෙරෙහි බලපෑම් කිරීමේ ශක්තිය ලබා දේ. ස්වභාවික නායකත්ව ගුණාංගයකි.',
+        descriptionSi: 'චන්ද්‍රයාගෙන් 12 වැනි භාවයේ ග්‍රහයන් — ආකර්ෂණීය පෞරුෂය, ප්‍රසිද්ධිය සහ අන් අය කෙරෙහි බලපෑම් කරන්න පුළුවන් ශක්තිය ලබා දෙනවා. ස්වභාවික නායකත්ව ගුණාංගයකි.',
         strength: 'Strong',
         category: 'Moon Yoga',
       });
@@ -693,7 +693,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'දුරුධුරා යෝගය',
         icon: '🌙👑',
         description: 'Moon flanked by planets on both sides — the most powerful Moon yoga. Grants wealth, fame, generosity, and high position. Life is blessed from all directions.',
-        descriptionSi: 'චන්ද්‍රයාගේ දෙපසින්ම ග්‍රහයන් පිහිටා ඇත — ඉතා බලවත් චන්ද්‍ර යෝගයයි. ධනය, කීර්තිය, ත්‍යාගශීලිත්වය සහ ඉහළ තත්ත්වය ලබා දේ. ජීවිතය සෑම දිශාවකින්ම ආශීර්වාද ලැබී ඇත.',
+        descriptionSi: 'චන්ද්‍රයාගේ දෙපසින්ම ග්‍රහයන් පිහිටා තියෙනවා — ඉතා බලවත් චන්ද්‍ර යෝගයයි. ධනය, කීර්තිය, ත්‍යාගශීලිත්වය සහ ඉහළ තත්ත්වය ලබා දෙනවා. ජීවිතය සෑම දිශාවකින්ම ආශීර්වාද ලැබී තියෙනවා.',
         strength: 'Very Strong',
         category: 'Moon Yoga',
       });
@@ -717,7 +717,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'අධි යෝගය',
         icon: '🏛️',
         description: 'Multiple benefic planets in 6th, 7th, and 8th from Moon. Grants commanding authority, political power, and the ability to defeat all opposition.',
-        descriptionSi: 'චන්ද්‍රයාගෙන් 6, 7 සහ 8 වැනි භාවවල බහු ශුභ ග්‍රහයන් සිටී. විධාන බලය, දේශපාලන බලය සහ සියලු විරුද්ධත්වය පරාජය කිරීමේ හැකියාව ලබා දේ.',
+        descriptionSi: 'චන්ද්‍රයාගෙන් 6, 7 සහ 8 වැනි භාවවල බහු ශුභ ග්‍රහයන් ඉන්නවා. විධාන බලය, දේශපාලන බලය සහ සියලු විරුද්ධත්වය පරාජය කිරීමේ පුළුවන්ියාව ලබා දෙනවා.',
         strength: inH6 + inH7 + inH8 >= 3 ? 'Very Strong' : 'Strong',
         category: 'Raja Yoga',
       });
@@ -735,7 +735,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'සරස්වතී යෝගය',
       icon: '📚',
       description: 'Mercury, Venus, and Jupiter are well placed — grants exceptional intelligence, artistic talent, eloquence in speech, and mastery of knowledge. A scholar\'s combination.',
-      descriptionSi: 'බුධ, සිකුරු සහ ගුරු යහපත් ස්ථානවල පිහිටා ඇත — සුවිශේෂ බුද්ධිය, කලාත්මක හැකියාව, වාග් චාතුර්යය සහ දැනුමේ ප්‍රවීණත්වය ලබා දේ. විද්වතෙකුගේ සංයෝජනයකි.',
+      descriptionSi: 'බුධ, සිකුරු සහ ගුරු යහපත් ස්ථානවල පිහිටා තියෙනවා — සුවිශේෂ බුද්ධිය, කලාත්මක පුළුවන්ියාව, වාග් චාතුර්යය සහ දැනුමේ ප්‍රවීණත්වය ලබා දෙනවා. විද්වතෙකුගේ සංයෝජනයකි.',
       strength: saraswatiInGood.length === 3 ? 'Very Strong' : 'Strong',
       category: 'Education Yoga',
     });
@@ -753,7 +753,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'අමල යෝගය',
         icon: '🕊️',
         description: 'Benefic planet in 10th from Moon — grants an unblemished reputation, ethical conduct, and lasting fame. People naturally trust and respect you.',
-        descriptionSi: 'චන්ද්‍රයාගෙන් 10 වැනි භාවයේ ශුභ ග්‍රහයෙක් — නිර්දෝෂ කීර්තිනාමය, ආචාරශීලී හැසිරීම සහ කල්පවත්නා ප්‍රසිද්ධිය ලබා දේ. මිනිසුන් ස්වභාවිකවම ඔබට විශ්වාස කොට ගෞරව කරති.',
+        descriptionSi: 'චන්ද්‍රයාගෙන් 10 වැනි භාවයේ ශුභ ග්‍රහයෙක් — නිර්දෝෂ කීර්තිනාමය, ආචාරශීලී හැසිරීම සහ කල්පවත්නා ප්‍රසිද්ධිය ලබා දෙනවා. මිනිසුන් ස්වභාවිකවම ඔබට විශ්වාස කොට ගෞරව කරති.',
         strength: 'Strong',
         category: 'Character Yoga',
       });
@@ -771,7 +771,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'චාමර යෝගය',
       icon: '🏅',
       description: `Lagna lord ${lagnaLord} is exalted — the soul is born with exceptional strength. Grants royal honors, high position, and a magnetic personality.`,
-      descriptionSi: `ලග්නාධිපති ${lagnaLord} උච්ච වී ඇත — ආත්මය සුවිශේෂ ශක්තියකින් උපත ලබා ඇත. රාජකීය ගෞරව, ඉහළ තත්ත්වය සහ ආකර්ෂණීය පෞරුෂයක් ලබා දේ.`,
+      descriptionSi: `ලග්නාධිපති ${lagnaLord} උච්ච වී තියෙනවා — ආත්මය සුවිශේෂ ශක්තියකින් උපත ලබා තියෙනවා. රාජකීය ගෞරව, ඉහළ තත්ත්වය සහ ආකර්ෂණීය පෞරුෂයක් ලබා දෙනවා.`,
       strength: 'Very Strong',
       category: 'Personality Yoga',
     });
@@ -787,7 +787,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'පර්වත යෝගය',
       icon: '🏔️',
       description: 'Supportive planets dominate the key positions with no challenging obstruction — grants a life of fortune, comfort, recognition, and natural authority.',
-      descriptionSi: 'ශුභ ග්‍රහයන් පාප ග්‍රහ බාධාවකින් තොරව කේන්ද්‍ර භාවවල ආධිපත්‍යය දරයි — කඳුකර රජෙකු මෙන් වාසනාවන්ත, සුවපහසු, ප්‍රසිද්ධ සහ බලවත් ජීවිතයක් ලබා දේ.',
+      descriptionSi: 'ශුභ ග්‍රහයන් පාප ග්‍රහ බාධාවකින් තොරව කේන්ද්‍ර භාවවල ආධිපත්‍යය දරයි — කඳුකර රජෙකු මෙන් වාසනාවන්ත, සුවපහසු, ප්‍රසිද්ධ සහ බලවත් ජීවිතයක් ලබා දෙනවා.',
       strength: 'Very Strong',
       category: 'Raja Yoga',
     });
@@ -802,7 +802,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'කහල යෝගය',
       icon: '🥁',
       description: `4th lord (${lord4}) and 9th lord (${lord9}) conjunct in house ${lord4House} — grants boldness, property, fortune through homeland, and a courageous spirit.`,
-      descriptionSi: `4 වැනි අධිපති (${lord4}) සහ 9 වැනි අධිපති (${lord9}) ${lord4House} වැනි භාවයේ එක්ව සිටී — නිර්භීතකම, දේපළ, මව්බිම හරහා වාසනාව සහ ධෛර්යවන්ත ආත්මයක් ලබා දේ.`,
+      descriptionSi: `4 වැනි අධිපති (${lord4}) සහ 9 වැනි අධිපති (${lord9}) ${lord4House} වැනි භාවයේ එක්ව ඉන්නවා — නිර්භීතකම, දේපළ, මව්බිම හරහා වාසනාව සහ ධෛර්යවන්ත ආත්මයක් ලබා දෙනවා.`,
       strength: 'Strong',
       category: 'Dhana Yoga',
     });
@@ -815,7 +815,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'මාලව්‍ය යෝගය',
       icon: '💐',
       description: 'Venus strong in Kendra in own/exalted sign — grants exceptional beauty, artistic talent, luxurious life, and a loving spouse. One of the Panch Mahapurusha Yogas.',
-      descriptionSi: 'සිකුරු කේන්ද්‍රයක ස්වකීය/උච්ච රාශියේ බලවත්ව සිටී — සුවිශේෂ සෞන්දර්යය, කලාත්මක හැකියාව, සුඛෝපභෝගී ජීවිතයක් සහ ආදරණීය සහකරුවෙකු ලබා දේ. පංච මහාපුරුෂ යෝගවලින් එකකි.',
+      descriptionSi: 'සිකුරු කේන්ද්‍රයක ස්වකීය/උච්ච රාශියේ බලවත්ව ඉන්නවා — සුවිශේෂ සෞන්දර්යය, කලාත්මක පුළුවන්ියාව, සුඛෝපභෝගී ජීවිතයක් සහ ආදරණීය සහකරුවෙකු ලබා දෙනවා. පංච මහාපුරුෂ යෝගවලින් එකකි.',
       strength: 'Very Strong',
       category: 'Panch Mahapurusha',
     });
@@ -835,7 +835,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'ශුභ කර්තරි යෝගය',
       icon: '🛡️',
       description: 'Supportive planets on both sides of the Ascendant — a natural protection shield. Life is blessed, obstacles are deflected, and good fortune surrounds you.',
-      descriptionSi: 'ලග්නයේ දෙපසින්ම ශුභ ග්‍රහයන් — දෛවික ආරක්ෂණ පළිහකි. ජීවිතය ආශීර්වාදමය, බාධා මග හැරෙන අතර වාසනාව ඔබ වටා කරකැවේ.',
+      descriptionSi: 'ලග්නයේ දෙපසින්ම ශුභ ග්‍රහයන් — දෛවික ආරක්ෂණ පළිහකි. ජීවිතය ආශීර්වාදමය, බාධා මග හැරෙන අතර වාසනාව ඔබ වටා කරකැවෙනවා.',
       strength: 'Strong',
       category: 'Protection Yoga',
     });
@@ -852,7 +852,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'පාප කර්තරි යෝගය',
       icon: '⚠️',
       description: 'Challenging planets on both sides of the Ascendant — creates pressure, restrictions, and feeling "boxed in" by circumstances. Awareness and proactive effort help overcome this.',
-      descriptionSi: 'පාප ග්‍රහයන් ලග්නය දෙපසින් වටකර ඇත — පීඩනය, සීමාවන් සහ තත්ත්වයන් මගින් "සීමා වී ඇති" හැඟීමක් ඇති කරයි. ආධ්‍යාත්මික පිළියම් අවශ්‍ය වේ.',
+      descriptionSi: 'පාප ග්‍රහයන් ලග්නය දෙපසින් වටකර තියෙනවා — පීඩනය, සීමාවන් සහ තත්ත්වයන් මගින් "සීමා වී තියෙනවාි" හැඟීමක් තියෙනවාි කරනවා. ආධ්‍යාත්මික පිළියම් අවශ්‍ය වෙනවා.',
       strength: 'Strong',
       category: 'Dosha Yoga',
     });
@@ -867,7 +867,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'ශකට යෝගය',
         icon: '🎡',
         description: 'Jupiter in 6th, 8th, or 12th from Moon — life goes up and down like a cart wheel. Wealth comes and goes. Need to build resilience and consistent effort.',
-        descriptionSi: 'ගුරු චන්ද්‍රයාගෙන් 6, 8 හෝ 12 වැනි භාවයේ සිටී — ජීවිතය ගැල් රෝදයක් මෙන් ඉහළ පහළ යයි. ධනය පැමිණී යළිත් යන්නේය. ඔරොත්තු දීමේ ශක්තිය හා අඛණ්ඩ උත්සාහය ගොඩනගා ගත යුතුය.',
+        descriptionSi: 'ගුරු චන්ද්‍රයාගෙන් 6, 8 හෝ 12 වැනි භාවයේ ඉන්නවා — ජීවිතය ගැල් රෝදයක් මෙන් ඉහළ පහළ යයි. ධනය පැමිණී යළිත් යනවා. ඔරොත්තු දීමේ ශක්තිය හා අඛණ්ඩ උත්සාහය හදාගන්න ඕනේ.',
         strength: 'Moderate',
         category: 'Challenge Yoga',
       });
@@ -884,7 +884,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'වෝෂී යෝගය',
         icon: '☀️✨',
         description: 'Planet in 2nd from Sun — grants eloquent speech, good memory, and the ability to influence through words and presence.',
-        descriptionSi: 'සූර්යයාගෙන් 2 වැනි භාවයේ ග්‍රහයෙක් — වාග් චාතුර්යය, හොඳ මතක ශක්තිය සහ වචනවලින් සහ පැවැත්මෙන් බලපෑම් කිරීමේ හැකියාව ලබා දේ.',
+        descriptionSi: 'සූර්යයාගෙන් 2 වැනි භාවයේ ග්‍රහයෙක් — වාග් චාතුර්යය, හොඳ මතක ශක්තිය සහ වචනවලින් සහ පැවැත්මෙන් බලපෑම් කිරීමේ පුළුවන්ියාව ලබා දෙනවා.',
         strength: 'Medium',
         category: 'Sun Yoga',
       });
@@ -904,7 +904,7 @@ function detectAdvancedYogas(date, lat, lng) {
         sinhala: 'උභයචාරී යෝගය',
         icon: '☀️👑',
         description: 'Planets flanking the Sun on both sides — grants royal bearing, kingly generosity, and the ability to be the center of any room. Natural-born leader.',
-        descriptionSi: 'සූර්යයාගේ දෙපසින්ම ග්‍රහයන් සිටී — රාජකීය ගතිගුණ, රජුන්ගේ ත්‍යාගශීලිත්වය සහ ඕනෑම අවස්ථාවක මධ්‍යස්ථානය වීමේ හැකියාව ලබා දේ. ස්වභාවික නායකයෙකි.',
+        descriptionSi: 'සූර්යයාගේ දෙපසින්ම ග්‍රහයන් ඉන්නවා — රාජකීය ගතිගුණ, රජුන්ගේ ත්‍යාගශීලිත්වය සහ ඕනෑම අවස්ථාවක මධ්‍යස්ථානය වීමේ පුළුවන්ියාව ලබා දෙනවා. ස්වභාවික නායකයෙකි.',
         strength: 'Strong',
         category: 'Sun Yoga',
       });
@@ -918,7 +918,7 @@ function detectAdvancedYogas(date, lat, lng) {
       sinhala: 'ගුරු බල',
       icon: '🙏',
       description: 'Jupiter in an angular house from Lagna — divine protection, wisdom in decision-making, and blessings from teachers and elder mentors.',
-      descriptionSi: 'ගුරු ලග්නයෙන් කේන්ද්‍ර භාවයක සිටී — දෛවික ආරක්ෂාව, තීරණ ගැනීමේ ප්‍රඥාව සහ ගුරුවරුන් හා වැඩිහිටි උපදේශකයන්ගේ ආශීර්වාදය ලැබේ.',
+      descriptionSi: 'ගුරු ලග්නයෙන් කේන්ද්‍ර භාවයක ඉන්නවා — දෛවික ආරක්ෂාව, තීරණ ගැනීමේ ප්‍රඥාව සහ ගුරුවරුන් හා වැඩිහිටි උපදේශකයන්ගේ ආශීර්වාදය ලැබෙනවා.',
       strength: 'Strong',
       category: 'Benefic Yoga',
     });
@@ -996,7 +996,7 @@ function calculateJaiminiKarakas(date, lat, lng) {
   const KARAKAMSHA_THEMES = {
     1: { desire: 'leadership', archetype: 'pioneer', domain: 'independence', desireSi: 'නායකත්වය', archetypeSi: 'පුරෝගාමියා', domainSi: 'ස්වාධීනත්වය' },
     2: { desire: 'material_security', archetype: 'artist', domain: 'wealth_beauty', desireSi: 'භෞතික ආරක්ෂාව', archetypeSi: 'කලාකරු', domainSi: 'ධනය_සෞන්දර්ය' },
-    3: { desire: 'knowledge', archetype: 'communicator', domain: 'intellect', desireSi: 'දැනුම', archetypeSi: 'සන්නිවේදක', domainSi: 'බුද්ධිය' },
+    3: { desire: 'knowledge', archetype: 'communicator', domain: 'intellect', desireSi: 'දැනුම', archetypeSi: 'සන්නිවෙනවාදක', domainSi: 'බුද්ධිය' },
     4: { desire: 'emotional_security', archetype: 'nurturer', domain: 'home_family', desireSi: 'හැඟීම් ආරක්ෂාව', archetypeSi: 'පෝෂකයා', domainSi: 'නිවස_පවුල' },
     5: { desire: 'creative_expression', archetype: 'performer', domain: 'fame_authority', desireSi: 'නිර්මාණශීලී ප්‍රකාශනය', archetypeSi: 'රංගන ශිල්පියා', domainSi: 'කීර්තිය_අධිකාරය' },
     6: { desire: 'service', archetype: 'healer', domain: 'problem_solving', desireSi: 'සේවය', archetypeSi: 'වෛද්‍ය', domainSi: 'ගැටලු විසඳීම' },
@@ -1641,8 +1641,8 @@ function buildExtendedVargas(date, lat, lng) {
     { key: 'D20', name: 'Vimsamsha',         sinhala: 'විංශාංශ',       governs: 'Inner growth, personal development, mindfulness', rules: d20Rules },
     { key: 'D24', name: 'Chaturvimshamsha',  sinhala: 'චතුර්විංශාංශ',  governs: 'Education, academic success', rules: d24Rules },
     { key: 'D27', name: 'Saptavimsamsha',    sinhala: 'සප්තවිංශාංශ',   governs: 'Strength, stamina, physical ability', rules: d27Rules },
-    { key: 'D40', name: 'Khavedamsha',       sinhala: 'ඛවේදාංශ',      governs: 'Auspicious and inauspicious effects', rules: d40Rules },
-    { key: 'D45', name: 'Akshavedamsha',     sinhala: 'අක්ෂවේදාංශ',    governs: 'General well-being, paternal legacy', rules: d45Rules },
+    { key: 'D40', name: 'Khavedamsha',       sinhala: 'ඛවෙනවාදාංශ',      governs: 'Auspicious and inauspicious effects', rules: d40Rules },
+    { key: 'D45', name: 'Akshavedamsha',     sinhala: 'අක්ෂවෙනවාදාංශ',    governs: 'General well-being, paternal legacy', rules: d45Rules },
     { key: 'D60', name: 'Shashtiamsha',      sinhala: 'ෂෂ්ඨිඅංශ',     governs: 'Deepest personality patterns, inherited tendencies', rules: d60Rules },
   ];
 
@@ -1982,7 +1982,7 @@ function analyzePastLife(date, lat, lng) {
   const KETU_HOUSE_THEMES = {
     1: { domain: 'self-identity', archetype: 'leader/warrior/pioneer', axis: 'independence', domainSi: 'ස්වයං අනන්‍යතාව', archetypeSi: 'නායක/යෝධ/පුරෝගාමී' },
     2: { domain: 'wealth/speech/family', archetype: 'merchant/trader/banker', axis: 'resources', domainSi: 'ධනය/වචනය/පවුල', archetypeSi: 'වෙළෙන්දා/බැංකුකරු' },
-    3: { domain: 'communication/siblings', archetype: 'writer/messenger/soldier', axis: 'courage', domainSi: 'සන්නිවේදනය/සහෝදර', archetypeSi: 'ලේඛක/පණිවිඩකරු/සෙබළා' },
+    3: { domain: 'communication/siblings', archetype: 'writer/messenger/soldier', axis: 'courage', domainSi: 'සන්නිවෙනවාදනය/සහෝදර', archetypeSi: 'ලේඛක/පණිවිඩකරු/සෙබළා' },
     4: { domain: 'home/mother/land', archetype: 'landowner/farmer/elder', axis: 'roots', domainSi: 'නිවස/මව/ඉඩම්', archetypeSi: 'ඉඩම් හිමි/ගොවියා/වැඩිහිටියා' },
     5: { domain: 'creativity/education/children', archetype: 'scholar/priest/performer', axis: 'expression', domainSi: 'නිර්මාණශීලිත්වය/අධ්‍යාපනය/දරුවන්', archetypeSi: 'ශිෂ්‍ය/පූජක/රංගන ශිල්පියා' },
     6: { domain: 'service/health/enemies', archetype: 'healer/servant/soldier', axis: 'service', domainSi: 'සේවය/සෞඛ්‍ය/සතුරන්', archetypeSi: 'වෛද්‍ය/සේවක/යෝධ' },

@@ -220,6 +220,35 @@ async function recordEntitlementError(entitlementId, errorMessage) {
 }
 
 /**
+ * Restore one retry slot when the retry failed because the upstream AI
+ * provider was temporarily unavailable or rate-limited.
+ *
+ * @param {string} entitlementId - The entitlement document ID
+ * @param {string} reason        - Short reason for audit logs
+ */
+async function restoreEntitlementRetry(entitlementId, reason) {
+  const db = getDb();
+  if (!db || entitlementId.startsWith('dev-')) return;
+
+  const ref = db.collection(COLLECTION).doc(entitlementId);
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (!doc.exists) return;
+
+    const data = doc.data();
+    const retryCount = Math.max(0, (data.retryCount || 0) - 1);
+    tx.update(ref, {
+      retryCount,
+      lastRetryRestoredAt: new Date().toISOString(),
+      lastRetryRestoreReason: (reason || '').slice(0, 300),
+      updatedAt: new Date().toISOString(),
+    });
+  });
+
+  console.log(`[Entitlements] ↩️ Restored one retry on entitlement ${entitlementId}: ${reason}`);
+}
+
+/**
  * Check if a user has a pending (retryable) entitlement for given input.
  * Called from mobile to show "Retry" button instead of "Pay again".
  *
@@ -368,6 +397,7 @@ module.exports = {
   createOrResumeEntitlement,
   fulfillEntitlement,
   recordEntitlementError,
+  restoreEntitlementRetry,
   checkPendingEntitlement,
   getUserEntitlements,
   cleanupExpiredEntitlements,

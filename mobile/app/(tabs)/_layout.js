@@ -24,8 +24,9 @@ import DesktopSidebar from '../../components/DesktopLayout';
 import useIsDesktop from '../../hooks/useIsDesktop';
 import { TAB_ICON_MAP } from '../../components/TabIcons';
 import useNetworkStatus from '../../hooks/useNetworkStatus';
+import { APP_LOGO_IMAGE } from '../../assets/logo-inline';
 var { width: SW } = Dimensions.get('window');
-var LOGO = require('../../assets/logo.png');
+var LOGO = APP_LOGO_IMAGE;
 
 // 5 visible tabs in orbital nav bar
 var TABS = [
