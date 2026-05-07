@@ -1,0 +1,19 @@
+{
+  "id": "infant-health",
+  "tags": ["infant_health"],
+  "sectionKey": "health",
+  "sectionData": {
+    "organRisks": [],
+    "earlyLifeHealth": { "severity": "HIGH", "riskCount": 3, "indicators": [{ "type": "weakMoon" }] }
+  },
+  "narrative": "The early-life vitality pattern looks sensitive, so the report can describe extra protection, rest, nourishment, and resilience. It should stay broad and avoid claiming specific infant medical events.",
+  "expectations": {
+    "expectedAllowedClaimCategories": ["early_life_vitality_pattern"],
+    "promptAbsentTerms": ["nicu", "premature", "incubator"],
+    "narrativeAbsentTerms": ["nicu", "premature", "incubator", "low birth weight", "hospitalized"],
+    "maxHealthIssues": 0,
+    "maxTimingIssues": 0,
+    "maxRedFlags": 0,
+    "maxHallucinationSuspects": 0
+  }
+}

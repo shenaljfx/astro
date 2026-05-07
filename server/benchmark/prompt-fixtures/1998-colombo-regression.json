@@ -1,0 +1,29 @@
+{
+  "id": "1998-colombo-regression",
+  "tags": ["1998_colombo_regression", "male_user", "single_user"],
+  "sectionKey": "health",
+  "profile": {
+    "birthDate": "1998-10-09T09:16:00",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "location": "Colombo, Sri Lanka"
+  },
+  "sectionData": {
+    "organRisks": [
+      { "organ": "Heart & Cardiovascular System", "risk": "HIGH", "indicators": 5 },
+      { "organ": "Kidneys & Urinary Tract", "risk": "LOW", "indicators": 1 }
+    ],
+    "earlyLifeHealth": { "severity": "LOW", "riskCount": 0, "indicators": [] }
+  },
+  "narrative": "The supported wellness pattern focuses on heart and circulation, with stress recovery and daily rhythm as the main care themes. No low-evidence organ system should be named.",
+  "expectations": {
+    "expectedAllowedOrganKeys": ["heart"],
+    "expectedOmittedOrganKeys": ["kidneys"],
+    "promptAbsentTerms": ["kidney", "urinary"],
+    "narrativeAbsentTerms": ["kidney", "urinary", "creatinine", "stones"],
+    "maxHealthIssues": 0,
+    "maxTimingIssues": 0,
+    "maxRedFlags": 0,
+    "maxHallucinationSuspects": 0
+  }
+}

@@ -22,6 +22,7 @@
  */
 
 const axios = require('axios');
+const { formatUtcOffset, formatLocalDateTime } = require('../engine/calculationSettings');
 
 // In-memory cache: key = "lat:lng:unixTimestamp" → offsetSeconds
 const _cache = new Map();
@@ -37,11 +38,22 @@ const MAX_CACHE = 2000;
  * @returns {Promise<number>}  - UTC offset in seconds (e.g. 19800 for UTC+5:30)
  */
 async function resolveUtcOffset(lat, lng, date) {
+  const info = await resolveTimezoneInfo(lat, lng, date);
+  return info.offsetSeconds;
+}
+
+async function resolveTimezoneInfo(lat, lng, date) {
   const unixTs = Math.floor(date.getTime() / 1000);
   const cacheKey = `${lat.toFixed(4)}:${lng.toFixed(4)}:${unixTs}`;
 
   if (_cache.has(cacheKey)) {
-    return _cache.get(cacheKey);
+    const cachedOffset = _cache.get(cacheKey);
+    return {
+      offsetSeconds: cachedOffset,
+      zoneName: _ianaFromCoords(lat, lng) || null,
+      source: 'cache',
+      assumedOffset: false,
+    };
   }
 
   // ── Sri Lanka / India fixed offset ─────────────────────────────────
@@ -54,7 +66,12 @@ async function resolveUtcOffset(lat, lng, date) {
   if (_isSriLankaOrIndia(lat, lng)) {
     const sltOffset = 19800; // UTC+5:30
     _setCache(cacheKey, sltOffset);
-    return sltOffset;
+    return {
+      offsetSeconds: sltOffset,
+      zoneName: _ianaFromCoords(lat, lng) || 'Asia/Colombo',
+      source: 'traditional_slt',
+      assumedOffset: false,
+    };
   }
 
   const apiKey = process.env.TIMEZONEDB_API_KEY;
@@ -81,7 +98,12 @@ async function resolveUtcOffset(lat, lng, date) {
           `[timezone] TimeZoneDB resolved ${lat},${lng} @ ${date.toISOString()} → ` +
           `${resp.data.zoneName} UTC${offsetSec >= 0 ? '+' : ''}${(offsetSec / 3600).toFixed(2)}`
         );
-        return offsetSec;
+        return {
+          offsetSeconds: offsetSec,
+          zoneName: resp.data.zoneName || _ianaFromCoords(lat, lng) || null,
+          source: 'timezonedb',
+          assumedOffset: false,
+        };
       }
     } catch (err) {
       console.warn('[timezone] TimeZoneDB API call failed (non-fatal):', err.message);
@@ -111,7 +133,12 @@ async function resolveUtcOffset(lat, lng, date) {
         const offsetSec = _parseOffsetString(offsetPart.value);
         _setCache(cacheKey, offsetSec);
         console.log(`[timezone] Intl fallback: ${tzName} → offset ${offsetSec}s`);
-        return offsetSec;
+        return {
+          offsetSeconds: offsetSec,
+          zoneName: tzName,
+          source: 'iana_intl_fallback',
+          assumedOffset: true,
+        };
       }
     }
   } catch (e) {
@@ -122,7 +149,12 @@ async function resolveUtcOffset(lat, lng, date) {
   const sltOffset = 19800;
   _setCache(cacheKey, sltOffset);
   console.warn('[timezone] Using hard-coded SLT fallback (UTC+5:30)');
-  return sltOffset;
+  return {
+    offsetSeconds: sltOffset,
+    zoneName: 'Asia/Colombo',
+    source: 'hardcoded_slt_fallback',
+    assumedOffset: true,
+  };
 }
 
 /**
@@ -138,12 +170,22 @@ async function resolveUtcOffset(lat, lng, date) {
  * @returns {Promise<Date>} - UTC Date object
  */
 async function parseBirthDateTime(dateStr, lat, lng) {
+  const parsed = await parseBirthDateTimeWithContext(dateStr, lat, lng);
+  return parsed ? parsed.date : null;
+}
+
+async function parseBirthDateTimeWithContext(dateStr, lat, lng) {
   if (!dateStr) return null;
 
   // Already has explicit timezone — parse and return as-is
   if (/Z$|[+-]\d{2}:\d{2}$/.test(dateStr)) {
     const d = new Date(dateStr);
-    return isNaN(d.getTime()) ? null : d;
+    if (isNaN(d.getTime())) return null;
+    const offsetSeconds = _explicitOffsetSeconds(dateStr);
+    return {
+      date: d,
+      timeContext: _buildTimeContext(d, offsetSeconds, offsetSeconds === 0 ? 'UTC' : null, 'explicit_offset', false),
+    };
   }
 
   // Naive string — first, parse it as UTC to get a rough Date for the API call.
@@ -152,7 +194,8 @@ async function parseBirthDateTime(dateStr, lat, lng) {
   if (isNaN(roughUtc.getTime())) return null;
 
   try {
-    const offsetSec = await resolveUtcOffset(lat, lng, roughUtc);
+    const tzInfo = await resolveTimezoneInfo(lat, lng, roughUtc);
+    const offsetSec = tzInfo.offsetSeconds;
     // Local time = UTC + offset  →  UTC = Local − offset
     const utcMs = roughUtc.getTime() - offsetSec * 1000;
     const utcDate = new Date(utcMs);
@@ -160,13 +203,43 @@ async function parseBirthDateTime(dateStr, lat, lng) {
       `[timezone] Birth time "${dateStr}" @ (${lat},${lng}) → ` +
       `UTC ${utcDate.toISOString()} (offset ${offsetSec}s)`
     );
-    return utcDate;
+    return {
+      date: utcDate,
+      timeContext: _buildTimeContext(utcDate, offsetSec, tzInfo.zoneName, tzInfo.source, tzInfo.assumedOffset),
+    };
   } catch (err) {
     console.warn('[timezone] parseBirthDateTime resolution failed, falling back to +05:30:', err.message);
     // Hard fallback: assume SLT (UTC+5:30)
     const d = new Date(dateStr + '+05:30');
-    return isNaN(d.getTime()) ? null : d;
+    if (isNaN(d.getTime())) return null;
+    return {
+      date: d,
+      timeContext: _buildTimeContext(d, 19800, 'Asia/Colombo', 'hardcoded_slt_fallback', true),
+    };
   }
+}
+
+function _buildTimeContext(date, offsetSeconds, zoneName, source, assumedOffset) {
+  const local = formatLocalDateTime(date, { offsetSeconds, zoneName, source });
+  return {
+    utcDate: date.toISOString(),
+    zoneName,
+    offsetSeconds,
+    offsetLabel: formatUtcOffset(offsetSeconds),
+    source,
+    assumedOffset,
+    displayLocalDate: local.date,
+    displayLocalTime: local.time,
+    displayLocalDateTime: local.display,
+  };
+}
+
+function _explicitOffsetSeconds(dateStr) {
+  if (/Z$/.test(dateStr)) return 0;
+  const match = dateStr.match(/([+-])(\d{2}):(\d{2})$/);
+  if (!match) return 0;
+  const sign = match[1] === '+' ? 1 : -1;
+  return sign * (parseInt(match[2], 10) * 3600 + parseInt(match[3], 10) * 60);
 }
 
 // ── Private helpers ─────────────────────────────────────────────────────────
@@ -239,4 +312,4 @@ function _parseOffsetString(str) {
   return sign * (parseInt(m[2], 10) * 3600 + parseInt(m[3], 10) * 60);
 }
 
-module.exports = { resolveUtcOffset, parseBirthDateTime };
+module.exports = { resolveUtcOffset, resolveTimezoneInfo, parseBirthDateTime, parseBirthDateTimeWithContext };

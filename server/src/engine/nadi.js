@@ -188,6 +188,11 @@ const HOUSE_GROUPS = {
   },
 };
 
+function getInclusiveAspectDistance(fromRashiId, toRashiId) {
+  if (!fromRashiId || !toRashiId) return null;
+  return ((toRashiId - fromRashiId + 12) % 12) + 1;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  CORE: BUILD NADI PLANET SIGNIFICATOR TABLE
 //  This is the heart of the Nadi system.
@@ -302,7 +307,7 @@ function buildNadiSignificatorTable(bhavaChalit, houseChart, planets, lagnaRashi
 
     const aspSignIndex = asp.rashiId;
     const tgtSignIndex = tgt.rashiId;
-    const diff = ((tgtSignIndex - aspSignIndex + 12) % 12);
+    const diff = getInclusiveAspectDistance(aspSignIndex, tgtSignIndex);
     const aspects = NADI_ASPECTS[aspectingPlanetName] || [7];
     return aspects.includes(diff);
   }
@@ -1203,6 +1208,7 @@ module.exports = {
   determineEducationField,
   determineCareerType,
   getCareerSectorByPlanet,
+  getInclusiveAspectDistance,
   HOUSE_GROUPS,
   SEPARATIVE_PLANETS,
   NATURAL_MALEFICS,

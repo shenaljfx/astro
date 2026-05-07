@@ -42,6 +42,7 @@ const {
   toSidereal, getMoonLongitude, getNakshatra, getRashi,
   getTithi, getYoga, getKarana, dateToJD,
 } = require('./astrology');
+const { formatLocalDateTime } = require('./calculationSettings');
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -802,12 +803,10 @@ function isGoodTimeNow(birthDate, lat = 6.9271, lng = 79.8612) {
 //  HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function formatTime(date) {
+function formatTime(date, timeContext = null) {
   if (!date) return '';
-  // Convert to SLT (UTC+5:30)
-  const slt = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
-  const h = slt.getUTCHours();
-  const m = slt.getUTCMinutes();
+  const local = formatLocalDateTime(date, timeContext);
+  const [h, m] = local.time.split(':').map(Number);
   const ampm = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 || 12;
   return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;

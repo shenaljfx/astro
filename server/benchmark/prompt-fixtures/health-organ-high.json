@@ -1,0 +1,23 @@
+{
+  "id": "health-organ-high",
+  "tags": ["health_organ_high", "older_user"],
+  "sectionKey": "health",
+  "sectionData": {
+    "organRisks": [
+      { "organ": "Heart & Cardiovascular System", "risk": "HIGH", "indicators": 5 },
+      { "organ": "Kidneys & Urinary Tract", "risk": "LOW", "indicators": 1 }
+    ],
+    "earlyLifeHealth": { "severity": "LOW", "riskCount": 0, "indicators": [] }
+  },
+  "narrative": "Your heart and circulation show a stronger vulnerability pattern, so the chart suggests steady routines, lighter stress load, and consistent recovery habits. Treat health timing as symbolic caution rather than diagnosis.",
+  "expectations": {
+    "expectedAllowedOrganKeys": ["heart"],
+    "expectedOmittedOrganKeys": ["kidneys"],
+    "promptAbsentTerms": ["kidney", "urinary", "nicu", "premature"],
+    "narrativeAbsentTerms": ["kidney", "urinary", "creatinine", "surgery", "screening"],
+    "maxHealthIssues": 0,
+    "maxTimingIssues": 0,
+    "maxRedFlags": 0,
+    "maxHallucinationSuspects": 0
+  }
+}

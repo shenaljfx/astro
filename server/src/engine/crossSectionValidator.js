@@ -69,6 +69,12 @@ function _overlaps(a, b, tol = 2) {
   return a.end + tol >= b.start && b.end + tol >= a.start;
 }
 
+function _eventSeverity(eventLabel) {
+  return ['marriage_age', 'first_child', 'mother_health', 'father_health', 'legal_outcome'].includes(eventLabel)
+    ? 'high'
+    : 'medium';
+}
+
 /**
  * Find contradictions between two sections that talk about the same
  * event family.
@@ -82,8 +88,11 @@ function _compareEventClaim(eventLabel, primaryNarrative, otherNarrative, primar
   const A = pick(a);
   const B = pick(b);
   if (_overlaps(A, B)) return null;
+  const severity = _eventSeverity(eventLabel);
   return {
     type: 'cross_section_age_mismatch',
+    severity,
+    highStakes: severity === 'high',
     event: eventLabel,
     authoritativeSection: primarySection,
     conflictingSection: otherSection,
@@ -209,6 +218,7 @@ ${issueList}
 
 REWRITE rules:
 - Update ONLY the contradicting age windows to match the authoritative section. Do NOT change anything else.
+- Keep timing language symbolic and confidence-calibrated. Do not turn the corrected window into a promise or guaranteed event.
 - Keep the same paragraph structure, tone, length, and voice.
 - Do NOT mention the contradiction or the editing process.
 - ${langLine}

@@ -1150,10 +1150,11 @@ export default function HomeScreen() {
           {/* ═══ NAKSHATRA PILL ═══ */}
           {nakGuide ? (
             <View style={s.nakPill}>
-              <Ionicons name="star" size={12} color="#DAA520" />
-              <Text style={s.nakPillLabel}>{language === 'si' ? 'අද දවසේ නැකත' : 'Today Nakshatra'}</Text>
-              <View style={s.nakPillDot} />
-              <Text style={s.nakPillValue}>{nakGuide.title}</Text>
+              <View style={s.nakPillRow}>
+                <Ionicons name="star" size={12} color="#DAA520" />
+                <Text style={s.nakPillLabel}>{language === 'si' ? 'අද දවසේ නැකත' : 'Today Nakshatra'}</Text>
+              </View>
+              <Text style={s.nakPillValue} numberOfLines={2}>{nakGuide.title}</Text>
             </View>
           ) : null}
 
@@ -2677,14 +2678,15 @@ var s = StyleSheet.create({
   dashSignNameLarge: { color: '#F4E4BC', fontSize: 32, fontWeight: '900', letterSpacing: -0.3, lineHeight: 38, ...textShadow('rgba(218,165,32,0.45)', { width: 0, height: 1 }, 14) },
   dashSignNameSub: { color: 'rgba(218,165,32,0.60)', fontSize: 12, fontWeight: '700' },
   nakPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center',
-    marginBottom: 12, paddingHorizontal: 14, paddingVertical: 7,
+    alignItems: 'center', alignSelf: 'center',
+    marginBottom: 12, paddingHorizontal: 16, paddingVertical: 8,
     borderRadius: 20, borderWidth: 1, borderColor: 'rgba(218,165,32,0.22)',
-    overflow: 'hidden', backgroundColor: 'rgba(218,165,32,0.04)',
+    backgroundColor: 'rgba(218,165,32,0.04)', gap: 4,
   },
+  nakPillRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   nakPillLabel: { color: 'rgba(218,165,32,0.55)', fontSize: 11, fontWeight: '700' },
   nakPillDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(218,165,32,0.45)' },
-  nakPillValue: { color: '#DAA520', fontSize: 14, fontWeight: '800' },
+  nakPillValue: { color: '#DAA520', fontSize: 14, fontWeight: '800', textAlign: 'center' },
   dashDivider: { height: 1, marginHorizontal: 16, overflow: 'hidden' },
   dashGridTitle: { color: 'rgba(218,165,32,0.45)', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center', marginTop: 12, marginBottom: -4 },
   dashGrid: {

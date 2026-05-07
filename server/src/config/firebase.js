@@ -75,6 +75,8 @@ function getAuth() {
 const COLLECTIONS = {
   USERS: 'users',
   REPORTS: 'reports',
+  REPORT_FEEDBACK: 'reportFeedback',
+  PROMPT_ANALYTICS: 'promptAnalytics',
   CHARTS: 'charts',
   CHAT_SESSIONS: 'chatSessions',
   PORONDAM: 'porondamResults',

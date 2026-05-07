@@ -30,6 +30,7 @@ const {
   toSidereal,
   RASHIS,
 } = require('./astrology');
+const { resolveCalculationSettings } = require('./calculationSettings');
 
 // ═══════════════════════════════════════════════════════════════
 // RASHI LORDS (1-indexed by rashiId)
@@ -43,16 +44,16 @@ const RASHI_LORDS = {
 // SATURN TRANSIT DATA — pre-computed Sidereal ingress dates
 // Saturn takes ~2.5 years per sign. These are approximate sidereal ingress dates.
 // ═══════════════════════════════════════════════════════════════
-function getSaturnRashiAtDate(date) {
+function getSaturnRashiAtDate(date, lat = 6.9271, lng = 79.8612, settings = {}) {
   try {
-    const positions = getAllPlanetPositions(date);
+    const positions = getAllPlanetPositions(date, lat, lng, settings);
     return positions.saturn?.rashiId || null;
   } catch (e) { return null; }
 }
 
-function getRahuRashiAtDate(date) {
+function getRahuRashiAtDate(date, lat = 6.9271, lng = 79.8612, settings = {}) {
   try {
-    const positions = getAllPlanetPositions(date);
+    const positions = getAllPlanetPositions(date, lat, lng, settings);
     return positions.rahu?.rashiId || null;
   } catch (e) { return null; }
 }
@@ -71,11 +72,12 @@ function getRahuRashiAtDate(date) {
 function calculateMarakaApala(birthDate, lat, lng, options = {}) {
   const yearsAhead = options.yearsAhead || 5;
   const now = options.referenceDate || new Date();
+  const settings = resolveCalculationSettings(options);
   const endDate = new Date(now);
   endDate.setFullYear(endDate.getFullYear() + yearsAhead);
 
   // ── Build natal chart ──
-  const planets = getAllPlanetPositions(birthDate);
+  const planets = getAllPlanetPositions(birthDate, lat, lng, settings);
   const lagna = getLagna(birthDate, lat, lng);
   const lagnaRashiId = lagna?.rashi?.id || 1;
   const houses = buildHouseChart(birthDate, lat, lng);
@@ -181,7 +183,7 @@ function calculateMarakaApala(birthDate, lat, lng, options = {}) {
   // 2. SADE SATI (ශනි එරස්ටක / 7.5 Year Saturn Transit)
   // Saturn transiting 12th, 1st, 2nd from natal Moon sign
   // ═══════════════════════════════════════════════════════════
-  const sadeSatiPeriods = calculateSadeSati(moonRashiId, now, endDate);
+  const sadeSatiPeriods = calculateSadeSati(moonRashiId, now, endDate, lat, lng, settings);
   sadeSatiPeriods.forEach(period => {
     apalaList.push({
       type: 'sade_sati',
@@ -205,7 +207,7 @@ function calculateMarakaApala(birthDate, lat, lng, options = {}) {
   // 3. ASHTAMA SHANI (Saturn in 8th from Moon)
   // ═══════════════════════════════════════════════════════════
   const ashtamaRashiId = ((moonRashiId - 1 + 7) % 12) + 1; // 8th from Moon
-  const ashtamaPeriods = findTransitPeriods('Saturn', ashtamaRashiId, now, endDate);
+  const ashtamaPeriods = findTransitPeriods('Saturn', ashtamaRashiId, now, endDate, lat, lng, settings);
   ashtamaPeriods.forEach(period => {
     apalaList.push({
       type: 'ashtama_shani',
@@ -229,7 +231,7 @@ function calculateMarakaApala(birthDate, lat, lng, options = {}) {
   // ═══════════════════════════════════════════════════════════
   // 4. RAHU/KETU TRANSIT OVER NATAL MOON
   // ═══════════════════════════════════════════════════════════
-  const rahuOnMoon = findTransitPeriods('Rahu', moonRashiId, now, endDate);
+  const rahuOnMoon = findTransitPeriods('Rahu', moonRashiId, now, endDate, lat, lng, settings);
   rahuOnMoon.forEach(period => {
     apalaList.push({
       type: 'rahu_transit_moon',
@@ -250,7 +252,7 @@ function calculateMarakaApala(birthDate, lat, lng, options = {}) {
     });
   });
 
-  const ketuOnMoon = findTransitPeriods('Ketu', moonRashiId, now, endDate);
+  const ketuOnMoon = findTransitPeriods('Ketu', moonRashiId, now, endDate, lat, lng, settings);
   ketuOnMoon.forEach(period => {
     apalaList.push({
       type: 'ketu_transit_moon',
@@ -322,7 +324,7 @@ function calculateMarakaApala(birthDate, lat, lng, options = {}) {
 // SADE SATI Calculator
 // Checks Saturn's position relative to Moon sign for each month
 // ═══════════════════════════════════════════════════════════════
-function calculateSadeSati(moonRashiId, startDate, endDate) {
+function calculateSadeSati(moonRashiId, startDate, endDate, lat = 6.9271, lng = 79.8612, settings = {}) {
   const phases = [];
   const rashi12th = ((moonRashiId - 2 + 12) % 12) + 1; // 12th from Moon
   const rashi1st = moonRashiId;                          // Moon sign itself
@@ -340,7 +342,7 @@ function calculateSadeSati(moonRashiId, startDate, endDate) {
   // Check monthly
   const checkDate = new Date(startDate);
   while (checkDate <= endDate) {
-    const satRashi = getSaturnRashiAtDate(checkDate);
+    const satRashi = getSaturnRashiAtDate(checkDate, lat, lng, settings);
     const phase = phaseMap[satRashi] || null;
 
     if (phase && !currentPhase) {
@@ -377,7 +379,7 @@ function calculateSadeSati(moonRashiId, startDate, endDate) {
 // Transit Period Finder
 // Scans month-by-month for when a planet enters a specific rashi
 // ═══════════════════════════════════════════════════════════════
-function findTransitPeriods(planetName, targetRashiId, startDate, endDate) {
+function findTransitPeriods(planetName, targetRashiId, startDate, endDate, lat = 6.9271, lng = 79.8612, settings = {}) {
   const periods = [];
   let inTransit = false;
   let transitStart = null;
@@ -386,7 +388,7 @@ function findTransitPeriods(planetName, targetRashiId, startDate, endDate) {
   while (checkDate <= endDate) {
     let currentRashiId = null;
     try {
-      const positions = getAllPlanetPositions(checkDate);
+      const positions = getAllPlanetPositions(checkDate, lat, lng, settings);
       const pKey = planetName.toLowerCase();
       currentRashiId = positions[pKey]?.rashiId || null;
     } catch (e) { /* skip */ }

@@ -43,13 +43,13 @@ var SECTION_LABELS_EN = {
   timeline25: 'Timeline', remedies: 'Remedies',
 };
 var SECTION_LABELS_SI = {
-  personality: 'පෞද්ගලිකත්වය', yogaAnalysis: 'යෝග විශ්ලේෂණය', lifePredictions: 'ජීවිත අනාවැකි',
-  career: 'වෘත්තිය', marriage: 'විවාහය', marriedLife: 'විවාහක ජීවිතය', financial: 'මුදල්',
-  children: 'දරුවන්', familyPortrait: 'පවුල', health: 'සෞඛ්‍යය', physicalProfile: 'ශාරීරික',
-  attractionProfile: 'ආකර්ෂණය', mentalHealth: 'මානසික', foreignTravel: 'විදේශ',
-  education: 'අධ්‍යාපනය', luck: 'වාසනාව', legal: 'නීතිමය', spiritual: 'ආධ්‍යාත්මික',
-  realEstate: 'නිවාස', transits: 'ග්‍රහ ගමන්', surpriseInsights: 'අනාවරණ',
-  timeline25: 'කාල රේඛාව', remedies: 'පිළියම්',
+  personality: 'පෞරුෂත්වය', yogaAnalysis: 'ග්‍රහ යෝග', lifePredictions: 'ජීවන අනාවැකි',
+  career: 'රැකියාව හා වෘත්තිය', marriage: 'විවාහය', marriedLife: 'යුග ජීවිතය', financial: 'ධනය හා ඉපැයීම්',
+  children: 'දරු සම්පත්', familyPortrait: 'පවුල් පසුබිම', health: 'සෞඛ්‍ය තත්ත්වය', physicalProfile: 'බාහිර ස්වරූපය',
+  attractionProfile: 'ආකර්ෂණය', mentalHealth: 'මානසික ඒකාග්‍රතාවය', foreignTravel: 'විදේශ ගමන්',
+  education: 'අධ්‍යාපනය', luck: 'වාසනාව හා පින', legal: 'නඩුහබ හා සතුරන්', spiritual: 'ආගමික නැඹුරුව',
+  realEstate: 'ඉඩකඩම් හා දේපළ', transits: 'ගෝචර ඵලාඵල', surpriseInsights: 'විශේෂ කරුණු',
+  timeline25: 'ජීවන කාලසටහන', remedies: 'ග්‍රහ අපල හා ශාන්තිකර්ම',
 };
 
 var SECTION_ICONS = {
@@ -75,13 +75,13 @@ var SECTION_COLORS = {
 // Stage messages
 function getStageMessage(stage, language) {
   var msgs = {
-    starting: { en: 'Aligning the celestial spheres…', si: 'අහස් ගෝලයන් පෙළගස්වමින්…' },
-    engine: { en: 'Computing planetary positions…', si: 'ග්‍රහ ස්ථාන ගණනය කරමින්…' },
-    charts: { en: 'Drawing your birth charts…', si: 'උපත් සිතියම් අඳිමින්…' },
-    coherence: { en: 'Weaving cosmic narratives…', si: 'කොස්මික් කතා බැඳෙමින්…' },
-    sections: { en: 'Writing your destiny chapters…', si: 'ඔයාගේ ඉරණම ලියමින්…' },
-    retrying: { en: 'Refining predictions…', si: 'අනාවැකි පිරිපහදු කරමින්…' },
-    recovering: { en: 'Reconnecting to the cosmos…', si: 'විශ්වයට නැවත සම්බන්ධ වෙමින්…' },
+    starting: { en: 'Aligning the celestial spheres…', si: 'ග්‍රහ තාරකාවන්ගේ පිහිටීම ගණනය කරමින්…' },
+    engine: { en: 'Mapping planetary constellations…', si: 'උපත් මොහොතේ ග්‍රහ චාරය සිතියම්ගත කරමින්…' },
+    charts: { en: 'Drawing your sacred cosmic blueprint…', si: 'ඔබේ ජන්ම පත්‍රයේ සටහන නිර්මාණය කරමින්…' },
+    coherence: { en: 'Weaving the threads of your destiny…', si: 'ඔබේ දෛවයේ සැඟවුණු රහස් ගලපා බලමින්…' },
+    sections: { en: 'Transcribing your cosmic life chapters…', si: 'ඔබේ ජීවිතයේ විවිධ පැතිකඩයන් විශ්ලේෂණය කරමින්…' },
+    retrying: { en: 'Refining the astrological alignments…', si: 'ජ්‍යෝතිෂ්‍යමය කරුණු තවදුරටත් තහවුරු කරමින්…' },
+    recovering: { en: 'Re-establishing cosmic connection…', si: 'ග්‍රහ තාරකා සමඟ බැඳීම යළි තහවුරු කරමින්…' },
   };
   var m = msgs[stage] || msgs.starting;
   return language === 'si' ? m.si : m.en;
@@ -89,26 +89,28 @@ function getStageMessage(stage, language) {
 
 // Inspirational quotes that rotate
 var QUOTES_EN = [
-  "Did you know? Your 10th House reveals your destined career and ultimate success.",
-  "The 7th House holds deep secrets about your future life partner and marriage.",
-  "Rahu and Ketu point to your karmic past and what you must master in this life.",
-  "Jupiter represents sudden wealth, immense luck, and inner wisdom.",
-  "Saturn's placement shows where you'll face life's greatest lessons and earn mastery.",
-  "Analyzing your Navamsha (D-9) chart—the hidden blueprint of your destiny after age 30.",
-  "Your Moon sign (Rashi) shapes your emotional world, instincts, and deep desires.",
-  "Searching for powerful planetary 'Yogas' that manifest sudden wealth and fame.",
-  "Each Nakshatra (birth star) is ruled by a deity. Decoding your star's unique cosmic power!"
+  "The positions of the stars at your exact moment of birth form a unique fingerprint of your destiny.",
+  "Unlocking the secrets of your 10th House—the realm of empire, career, and legacy.",
+  "The cosmic dance of Venus and Mars reveals the hidden dynamics of your soulmate connection.",
+  "Calculating powerful planetary 'Yogas' that can spontaneously manifest wealth, authority, and fame.",
+  "Rahu and Ketu act as karmic compass points, directing you towards your current life's true purpose.",
+  "Beyond your birth chart lies the Navamsha (D-9)—the profound blueprint of your life's second act.",
+  "Extracting insights from your Nakshatra (birth star) to decode the cosmic frequencies you were born to broadcast.",
+  "Every challenge Saturn brings is secretly forging you into an unstoppable force of nature.",
+  "Jupiter's gaze upon your chart acts as a cosmic multiplier, expanding luck and serendipitous opportunities.",
+  "Your inner world, intuition, and untamed emotional depths are mapped by the mysterious cycles of the Moon."
 ];
 var QUOTES_SI = [
-  "ඔයා දන්නවාද? ඔයාගේ 10 වැනි භාවයෙන් ඔයාගේ වෘත්තිය සහ සමාජ තත්ත්වය තීරණය වේ.",
-  "7 වැනි භාවයෙන් ඔයාගේ අනාගත සහකරු හරි සහකාරිය ගැන රහස් හෙළි කරනවා.",
-  "පෙර භවයේ කර්ම සහ මේ ජීවිතේ ඉවර කරන්න ඕනේ දේවල් රාහු සහ කේතු පෙන්වලා දෙනවා.",
-  "බ්‍රහස්පති ග්‍රහයා ධනය, වාසනාව සහ ප්‍රඥාව නියෝජනය කරයි. ඔයාට හිමි වාසනාව හොයමින්...",
-  "සෙනසුරු ග්‍රහයා අභියෝග හරහා ජීවිතය ජයගන්න විදිහ පෙන්වනවා.",
-  "වයස 30න් පසු ඔයාගේ ඇත්තම දෛවය පෙන්වන නවාංශක සටහන විශ්ලේෂණය කරමින්...",
-  "ඔයාගේ චන්ද්‍ර රාශිය ඔයාගේ හැඟීම් සහ ආශාවන් හැඩගස්වනවා.",
-  "හදිසි ධනය සහ ජනප්‍රියත්වය ගෙන දෙන බලවත් ග්‍රහ ‘යෝග’ පිළිබඳව සොයමින්...",
-  "සෑම නැකතකටම අධිපතියෙක් ඉන්නවා. ඔයාගේ නැකතේ හැංගිලා තියෙන බලය තේරුම් ගනිමින්!"
+  "ඔබ උපන් මොහොතේ ග්‍රහ තාරකාවන්ගේ පිහිටීම, ඔබගේ දෛවයේ සුවිශේෂී සලකුණක් නිර්මාණය කරයි.",
+  "කර්මස්ථානය හෙවත් 10 වන භාවය තුළින් ඔබගේ රැකියාව, වෘත්තීය දියුණුව සහ සමාජ තත්ත්වය පිළිබඳව මූලික රහස් හෙළිදරව් කෙරේ.",
+  "සිකුරු සහ කුජ ග්‍රහයන්ගේ සංයෝගය හරහා ඔබගේ ප්‍රේම සබඳතා සහ සහකරු පිළිබඳ ගැඹුරු සත්‍යයන් අනාවරණය වේ.",
+  "කේන්දරයක පිහිටන බලවත් ‘යෝග’ මගින් හදිසි ධනය, බලය සහ කීර්තිය අත්කර දීමට ඇති හැකියාව පිළිබඳව ගැඹුරින් විශ්ලේෂණය කෙරේ.",
+  "රාහු සහ කේතු යනු පෙර සංසාරයේ සිට පැවත එන කර්ම ශක්තීන් සහ මේ ජීවිතයේ ඔබේ සැබෑ අරමුණ පෙන්වා දෙන ප්‍රබල දර්ශකයන්ය.",
+  "ඔබගේ සම්පූර්ණ ජීවන ගමනේ දෙවන අදියර සහ විවාහ ජීවිතයේ සැඟවුණු සැලැස්ම දෙස බැලීමට නවාංශක (D-9) සටහන උපකාරී වේ.",
+  "ඔබ උපන් නැකත තුළින්, විශ්වය හා බැඳුණු ඔබේ සුවිශේෂී මානසික සංඛ්‍යාතයන් සහ ජීවන රටාව පිළිබඳව නිවැරදි අවබෝධයක් ලබා ගත හැක.",
+  "සෙනසුරු හෙවත් ශනි ග්‍රහයා ඔබ වෙත ගෙන එන සෑම අභියෝගයක්ම, අනාගතයේ ඔබව නොසැලෙන ශක්තිමත් පුද්ගලයෙකු බවට පත් කිරීමේ පදනමයි.",
+  "ඔබේ ජන්ම කේන්දරයේ බ්‍රහස්පතිගේ දෘෂ්ටිය වැටෙන ස්ථානය, ඔබේ වාසනාව සහ අනපේක්ෂිත අවස්ථාවන් පුළුල් කරන ප්‍රබල කේන්ද්‍රස්ථානයක් වේ.",
+  "ඔබගේ ඇතුළාන්තය, සහජ බුද්ධිය සහ හැඟීම්බර ස්වභාවය, සඳුගේ අද්භූත චක්‍රය මගින් පාලනය වන ආකාරය මෙහිදී සිතියම්ගත කෙරේ."
 ];
 
 // ── Animated Zodiac Image on the wheel ──

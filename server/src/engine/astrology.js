@@ -36,6 +36,7 @@ const { rankParentProfessions } = require('./parentProfession');
 const { detectRegion, regionLabel } = require('./regionDetector');
 const { getDevelopmentalStage, buildSectionGuidance } = require('./infantChartGuard');
 const { computeAccuracyEnhancements } = require('./accuracyEngine');
+const { resolveCalculationSettings, buildCalculationMetadata, formatLocalDateTime, getOffsetSecondsFromTimeContext } = require('./calculationSettings');
 const {
   Planet: SwePlanet,
   LunarPoint: SweLunarPoint,
@@ -68,6 +69,87 @@ function setAyanamshaMode(mode) {
 
 function getCurrentAyanamshaMode() {
   return _currentAyanamshaMode;
+}
+
+const SWISS_FLAG_LABELS = [
+  ['SwissEphemeris', SweFlag.SwissEphemeris],
+  ['MoshierEphemeris', SweFlag.MoshierEphemeris],
+  ['JPLEphemeris', SweFlag.JPLEphemeris],
+  ['Speed', SweFlag.Speed],
+  ['Sidereal', SweFlag.Sidereal],
+  ['Topocentric', SweFlag.Topocentric],
+];
+
+function normDeg(deg) {
+  return ((deg % 360) + 360) % 360;
+}
+
+function getSwissFlagNames(flags) {
+  if (typeof flags !== 'number') return [];
+  return SWISS_FLAG_LABELS
+    .filter(([, value]) => typeof value === 'number' && (flags & value) === value)
+    .map(([name]) => name);
+}
+
+function buildSwissEphemerisMetadata(requestedFlags, returnedPositions) {
+  const returnedFlags = (returnedPositions || [])
+    .map(pos => pos && typeof pos.flags === 'number' ? pos.flags : null)
+    .filter(flags => flags !== null);
+  const criticalFlags = [SweFlag.SwissEphemeris];
+  if ((requestedFlags & SweFlag.Sidereal) === SweFlag.Sidereal) criticalFlags.push(SweFlag.Sidereal);
+  if ((requestedFlags & SweFlag.Topocentric) === SweFlag.Topocentric) criticalFlags.push(SweFlag.Topocentric);
+
+  return {
+    provider: 'swiss_bundled',
+    requestedFlags: getSwissFlagNames(requestedFlags),
+    returnedFlags: returnedFlags.map(getSwissFlagNames),
+    returnedFlagsOk: returnedFlags.length > 0 && returnedFlags.every(flags =>
+      criticalFlags.every(flag => (flags & flag) === flag)
+    ),
+  };
+}
+
+function withAyanamshaMode(settings, fn) {
+  const previousMode = getCurrentAyanamshaMode();
+  const nextMode = settings?.ayanamsha || previousMode;
+  if (nextMode !== previousMode && AYANAMSHA_MODES[nextMode] !== undefined) {
+    setAyanamshaMode(nextMode);
+  }
+  try {
+    return fn();
+  } finally {
+    if (getCurrentAyanamshaMode() !== previousMode) {
+      setAyanamshaMode(previousMode);
+    }
+  }
+}
+
+function calculateSiderealPosition(date, body, opts = {}) {
+  const settings = resolveCalculationSettings(opts);
+  return withAyanamshaMode(settings, () => {
+    try {
+      const observerLng = typeof opts.lng === 'number' ? opts.lng : 79.8612;
+      const observerLat = typeof opts.lat === 'number' ? opts.lat : 6.9271;
+      const altitude = typeof opts.altitude === 'number' ? opts.altitude : 0;
+      const jd = swe.dateToJulianDay(date);
+      let flags = SweFlag.SwissEphemeris | SweFlag.Speed | SweFlag.Sidereal;
+      if (settings.observerMode === 'topocentric' || opts.topocentric) {
+        swe.setTopocentric(observerLng, observerLat, altitude);
+        flags |= SweFlag.Topocentric;
+      }
+      const pos = swe.calculatePosition(jd, body, flags);
+      return {
+        longitude: normDeg(pos.longitude),
+        latitude: pos.latitude,
+        distance: pos.distance,
+        longitudeSpeed: pos.longitudeSpeed,
+        flags: pos.flags,
+        source: 'swiss_sidereal',
+      };
+    } catch (_) {
+      return null;
+    }
+  });
 }
 
 // Legacy constants kept for any downstream code that references them
@@ -188,6 +270,28 @@ const RAHU_KALA_SEGMENTS = {
   6: 3, // Saturday: 3rd segment (approx 9:00 AM - 10:30 AM)
 };
 
+const GULIKA_KALA_SEGMENTS = {
+  0: 7,
+  1: 6,
+  2: 5,
+  3: 4,
+  4: 3,
+  5: 2,
+  6: 1,
+};
+
+const YAMAGANDA_KALA_SEGMENTS = {
+  0: 5,
+  1: 4,
+  2: 3,
+  3: 2,
+  4: 1,
+  5: 7,
+  6: 6,
+};
+
+const HORA_SEQUENCE = ['Saturn', 'Jupiter', 'Mars', 'Sun', 'Venus', 'Mercury', 'Moon'];
+
 /**
  * Calculate Julian Day Number from a Date
  */
@@ -209,6 +313,134 @@ function dateToJD(date) {
   const A = Math.floor(jy / 100);
   const B = 2 - A + Math.floor(A / 4);
   return Math.floor(365.25 * (jy + 4716)) + Math.floor(30.6001 * (jm + 1)) + d + B - 1524.5;
+}
+
+function julianDayToDate(jdv) {
+  const z = Math.floor(jdv + 0.5);
+  const f = jdv + 0.5 - z;
+  let A;
+  if (z < 2299161) A = z;
+  else {
+    const alpha = Math.floor((z - 1867216.25) / 36524.25);
+    A = z + 1 + alpha - Math.floor(alpha / 4);
+  }
+  const B = A + 1524;
+  const C = Math.floor((B - 122.1) / 365.25);
+  const D = Math.floor(365.25 * C);
+  const E = Math.floor((B - D) / 30.6001);
+  const day = B - D - Math.floor(30.6001 * E);
+  const month = E < 14 ? E - 1 : E - 13;
+  const year = month > 2 ? C - 4716 : C - 4715;
+  const totalSec = Math.round(f * 86400);
+  const hh = Math.floor(totalSec / 3600);
+  const mm = Math.floor((totalSec % 3600) / 60);
+  const ss = totalSec % 60;
+  return new Date(Date.UTC(year, month - 1, day, hh, mm, ss));
+}
+
+function getCivilDayInfo(date, timeContext = null) {
+  const offsetSeconds = getOffsetSecondsFromTimeContext(timeContext, 19800);
+  const local = new Date(date.getTime() + offsetSeconds * 1000);
+  const localMidnightUtcMs = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - offsetSeconds * 1000;
+  return {
+    offsetSeconds,
+    dayOfWeek: local.getUTCDay(),
+    localDate: `${local.getUTCFullYear()}-${String(local.getUTCMonth() + 1).padStart(2, '0')}-${String(local.getUTCDate()).padStart(2, '0')}`,
+    localMidnightUtc: new Date(localMidnightUtcMs),
+  };
+}
+
+function calculateRiseSetForBody(date, lat, lng, body, opts = {}) {
+  try {
+    const civil = getCivilDayInfo(date, opts.timeContext || null);
+    const startJD = swe.dateToJulianDay(civil.localMidnightUtc);
+    const HINDU_RISE = 1 | 256 | 512 | 128;
+    const HINDU_SET = 2 | 256 | 512 | 128;
+    const riseRes = swe.calculateRiseTransitSet(startJD, body, HINDU_RISE, lng, lat, 0, SweFlag.SwissEphemeris);
+    const setRes = swe.calculateRiseTransitSet(startJD, body, HINDU_SET, lng, lat, 0, SweFlag.SwissEphemeris);
+    return {
+      rise: riseRes && typeof riseRes.time === 'number' ? julianDayToDate(riseRes.time) : null,
+      set: setRes && typeof setRes.time === 'number' ? julianDayToDate(setRes.time) : null,
+      civilDate: civil.localDate,
+      offsetSeconds: civil.offsetSeconds,
+    };
+  } catch (_) {
+    return { rise: null, set: null, civilDate: null, offsetSeconds: null };
+  }
+}
+
+function calculateSunriseSunsetForCivilDay(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const result = calculateRiseSetForBody(date, lat, lng, SwePlanet.Sun, opts);
+  if (result.rise && result.set) {
+    return { sunrise: result.rise, sunset: result.set, civilDate: result.civilDate };
+  }
+  const fallback = calculateSunriseSunset(date, lat, lng);
+  return { ...fallback, civilDate: getCivilDayInfo(date, opts.timeContext || null).localDate };
+}
+
+function calculateMoonriseMoonset(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const result = calculateRiseSetForBody(date, lat, lng, SwePlanet.Moon, opts);
+  return {
+    moonrise: result.rise,
+    moonset: result.set,
+    civilDate: result.civilDate,
+  };
+}
+
+function calculateDaySegmentPeriod(date, lat, lng, segmentMap, opts = {}) {
+  const { sunrise, sunset } = calculateSunriseSunsetForCivilDay(date, lat, lng, opts);
+  const civil = getCivilDayInfo(date, opts.timeContext || null);
+  const daylightMs = sunset.getTime() - sunrise.getTime();
+  const segmentMs = daylightMs / 8;
+  const segmentNumber = segmentMap[civil.dayOfWeek];
+  const start = new Date(sunrise.getTime() + (segmentNumber - 1) * segmentMs);
+  const end = new Date(start.getTime() + segmentMs);
+  return {
+    start,
+    end,
+    sunrise,
+    sunset,
+    dayOfWeek: WEEKDAYS[civil.dayOfWeek],
+    segmentNumber,
+    daylightHours: daylightMs / 3600000,
+    civilDate: civil.localDate,
+  };
+}
+
+function calculatePlanetaryHoras(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const civil = getCivilDayInfo(date, opts.timeContext || null);
+  const { sunrise, sunset } = calculateSunriseSunsetForCivilDay(date, lat, lng, opts);
+  const nextCivilProbe = new Date(civil.localMidnightUtc.getTime() + 36 * 3600000);
+  const nextSun = calculateSunriseSunsetForCivilDay(nextCivilProbe, lat, lng, opts);
+  const nextSunrise = nextSun.sunrise && nextSun.sunrise > sunset
+    ? nextSun.sunrise
+    : new Date(sunrise.getTime() + 24 * 3600000);
+
+  const dayHoraMs = (sunset.getTime() - sunrise.getTime()) / 12;
+  const nightHoraMs = (nextSunrise.getTime() - sunset.getTime()) / 12;
+  const dayRuler = WEEKDAYS[civil.dayOfWeek]?.ruler || 'Sun';
+  const startIndex = Math.max(0, HORA_SEQUENCE.indexOf(dayRuler));
+  const horas = [];
+
+  for (let i = 0; i < 24; i++) {
+    const isDayHora = i < 12;
+    const start = isDayHora
+      ? new Date(sunrise.getTime() + i * dayHoraMs)
+      : new Date(sunset.getTime() + (i - 12) * nightHoraMs);
+    const end = isDayHora
+      ? new Date(start.getTime() + dayHoraMs)
+      : new Date(start.getTime() + nightHoraMs);
+    const ruler = HORA_SEQUENCE[(startIndex + i) % HORA_SEQUENCE.length];
+    horas.push({
+      index: i + 1,
+      ruler,
+      period: isDayHora ? 'day' : 'night',
+      start,
+      end,
+    });
+  }
+
+  return horas;
 }
 
 /**
@@ -369,32 +601,16 @@ function calculateSunriseSunset(date, lat, lng) {
  * @param {number} lng - Longitude (default: Colombo 79.8612)
  * @returns {{ start: Date, end: Date, dayOfWeek: object }}
  */
-function calculateRahuKalaya(date, lat = 6.9271, lng = 79.8612) {
-  const { sunrise, sunset } = calculateSunriseSunset(date, lat, lng);
+function calculateRahuKalaya(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  return calculateDaySegmentPeriod(date, lat, lng, RAHU_KALA_SEGMENTS, opts);
+}
 
-  // Total daylight duration in milliseconds
-  const daylightMs = sunset.getTime() - sunrise.getTime();
+function calculateGulikaKalaya(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  return calculateDaySegmentPeriod(date, lat, lng, GULIKA_KALA_SEGMENTS, opts);
+}
 
-  // Each segment is 1/8 of daylight
-  const segmentMs = daylightMs / 8;
-
-  // Get the day of week (0=Sunday, 1=Monday, etc.)
-  const dayOfWeek = date.getDay();
-  const segmentNumber = RAHU_KALA_SEGMENTS[dayOfWeek];
-
-  // Rahu Kala starts at (segment - 1) segments after sunrise
-  const rahuStart = new Date(sunrise.getTime() + (segmentNumber - 1) * segmentMs);
-  const rahuEnd = new Date(rahuStart.getTime() + segmentMs);
-
-  return {
-    start: rahuStart,
-    end: rahuEnd,
-    sunrise,
-    sunset,
-    dayOfWeek: WEEKDAYS[dayOfWeek],
-    segmentNumber,
-    daylightHours: daylightMs / 3600000,
-  };
+function calculateYamagandaKalaya(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  return calculateDaySegmentPeriod(date, lat, lng, YAMAGANDA_KALA_SEGMENTS, opts);
 }
 
 /**
@@ -469,7 +685,7 @@ function getAyanamsha(date) {
 function toSidereal(tropicalLong, date) {
   const ayanamsha = getAyanamsha(date);
   let sidereal = tropicalLong - ayanamsha;
-  return ((sidereal % 360) + 360) % 360;
+  return normDeg(sidereal);
 }
 
 /**
@@ -484,18 +700,21 @@ function toSidereal(tropicalLong, date) {
  * @param {object} [opts]  - Options: { topocentric: bool, ayanamshaMode: string }
  */
 function getAllPlanetPositions(date, lat = 6.9271, lng = 79.8612, opts = {}) {
-  const ayanamsha = getAyanamsha(date);
-  const norm = (deg) => ((deg % 360) + 360) % 360;
+  const settings = resolveCalculationSettings(opts);
+  return withAyanamshaMode(settings, () => {
+    const ayanamsha = getAyanamsha(date);
+    const norm = normDeg;
 
   try {
     // -------- Swiss Ephemeris path (high precision) --------
     const jd = swe.dateToJulianDay(date);
     let flags = SweFlag.SwissEphemeris | SweFlag.Speed;
 
-    if (opts.topocentric) {
+    if (opts.topocentric || settings.observerMode === 'topocentric') {
       swe.setTopocentric(lng, lat, 0);
       flags |= SweFlag.Topocentric;
     }
+    const siderealFlags = flags | SweFlag.Sidereal;
 
     const sunPos  = swe.calculatePosition(jd, SwePlanet.Sun, flags);
     const moonPos = swe.calculatePosition(jd, SwePlanet.Moon, flags);
@@ -506,6 +725,15 @@ function getAllPlanetPositions(date, lat = 6.9271, lng = 79.8612, opts = {}) {
     const satPos  = swe.calculatePosition(jd, SwePlanet.Saturn, flags);
     // True Node provides the osculating (actual) lunar node position
     const rahuPos = swe.calculatePosition(jd, SweLunarPoint.TrueNode, flags);
+
+    const sunSid  = swe.calculatePosition(jd, SwePlanet.Sun, siderealFlags);
+    const moonSid = swe.calculatePosition(jd, SwePlanet.Moon, siderealFlags);
+    const marsSid = swe.calculatePosition(jd, SwePlanet.Mars, siderealFlags);
+    const mercSid = swe.calculatePosition(jd, SwePlanet.Mercury, siderealFlags);
+    const jupSid  = swe.calculatePosition(jd, SwePlanet.Jupiter, siderealFlags);
+    const venSid  = swe.calculatePosition(jd, SwePlanet.Venus, siderealFlags);
+    const satSid  = swe.calculatePosition(jd, SwePlanet.Saturn, siderealFlags);
+    const rahuSid = swe.calculatePosition(jd, SweLunarPoint.TrueNode, siderealFlags);
 
     const sunTrop  = norm(sunPos.longitude);
     const moonTrop = norm(moonPos.longitude);
@@ -518,15 +746,15 @@ function getAllPlanetPositions(date, lat = 6.9271, lng = 79.8612, opts = {}) {
     const ketuTrop = norm(rahuTrop + 180);
 
     const planets = {
-      sun:     { name: 'Sun',     sinhala: 'ඉර',     tamil: 'சூரியன்',   tropical: sunTrop,   sidereal: norm(sunTrop - ayanamsha) },
-      moon:    { name: 'Moon',    sinhala: 'හඳ',     tamil: 'சந்திரன்',  tropical: moonTrop,  sidereal: norm(moonTrop - ayanamsha) },
-      mars:    { name: 'Mars',    sinhala: 'කුජ',    tamil: 'செவ்வாய்',  tropical: marsTrop,  sidereal: norm(marsTrop - ayanamsha) },
-      mercury: { name: 'Mercury', sinhala: 'බුධ',    tamil: 'புதன்',     tropical: mercTrop,  sidereal: norm(mercTrop - ayanamsha) },
-      jupiter: { name: 'Jupiter', sinhala: 'ගුරු',   tamil: 'குரு',      tropical: jupTrop,   sidereal: norm(jupTrop - ayanamsha) },
-      venus:   { name: 'Venus',   sinhala: 'සිකුරු', tamil: 'சுக்கிரன்', tropical: venTrop,   sidereal: norm(venTrop - ayanamsha) },
-      saturn:  { name: 'Saturn',  sinhala: 'සෙනසුරු', tamil: 'சனி',      tropical: satTrop,   sidereal: norm(satTrop - ayanamsha) },
-      rahu:    { name: 'Rahu',    sinhala: 'රාහු',   tamil: 'ராகு',      tropical: rahuTrop,  sidereal: norm(rahuTrop - ayanamsha) },
-      ketu:    { name: 'Ketu',    sinhala: 'කේතු',   tamil: 'கேது',      tropical: ketuTrop,  sidereal: norm(ketuTrop - ayanamsha) },
+      sun:     { name: 'Sun',     sinhala: 'ඉර',     tamil: 'சூரியன்',   tropical: sunTrop,   sidereal: norm(sunSid.longitude) },
+      moon:    { name: 'Moon',    sinhala: 'හඳ',     tamil: 'சந்திரன்',  tropical: moonTrop,  sidereal: norm(moonSid.longitude) },
+      mars:    { name: 'Mars',    sinhala: 'කුජ',    tamil: 'செவ்வாய்',  tropical: marsTrop,  sidereal: norm(marsSid.longitude) },
+      mercury: { name: 'Mercury', sinhala: 'බුධ',    tamil: 'புதன்',     tropical: mercTrop,  sidereal: norm(mercSid.longitude) },
+      jupiter: { name: 'Jupiter', sinhala: 'ගුරු',   tamil: 'குரு',      tropical: jupTrop,   sidereal: norm(jupSid.longitude) },
+      venus:   { name: 'Venus',   sinhala: 'සිකුරු', tamil: 'சுக்கிரன்', tropical: venTrop,   sidereal: norm(venSid.longitude) },
+      saturn:  { name: 'Saturn',  sinhala: 'සෙනසුරු', tamil: 'சனி',      tropical: satTrop,   sidereal: norm(satSid.longitude) },
+      rahu:    { name: 'Rahu',    sinhala: 'රාහු',   tamil: 'ராகு',      tropical: rahuTrop,  sidereal: norm(rahuSid.longitude) },
+      ketu:    { name: 'Ketu',    sinhala: 'කේතු',   tamil: 'கேது',      tropical: ketuTrop,  sidereal: norm(rahuSid.longitude + 180) },
     };
 
     const speedMap = {
@@ -551,6 +779,13 @@ function getAllPlanetPositions(date, lat = 6.9271, lng = 79.8612, opts = {}) {
     }
     planets.rahu.isRetrograde = true;
     planets.ketu.isRetrograde = true;
+    Object.defineProperty(planets, '_calculationMetadata', {
+      value: {
+        settings,
+        ephemeris: buildSwissEphemerisMetadata(siderealFlags, [sunSid, moonSid, marsSid, mercSid, jupSid, venSid, satSid, rahuSid]),
+      },
+      enumerable: false,
+    });
     return planets;
 
   } catch (_sweErr) {
@@ -599,8 +834,21 @@ function getAllPlanetPositions(date, lat = 6.9271, lng = 79.8612, opts = {}) {
     }
     planets.rahu.isRetrograde = true;
     planets.ketu.isRetrograde = true;
+    Object.defineProperty(planets, '_calculationMetadata', {
+      value: {
+        settings,
+        ephemeris: {
+          provider: 'fallback_astronomia_ephemeris',
+          requestedFlags: ['SwissEphemeris', 'Sidereal', 'Speed'],
+          returnedFlags: [],
+          returnedFlagsOk: false,
+        },
+      },
+      enumerable: false,
+    });
     return planets;
   }
+  });
 }
 
 /**
@@ -1569,13 +1817,58 @@ function getRashi(siderealLong) {
   };
 }
 
+function getSiderealLuminaries(date, opts = {}) {
+  const moonTropical = getMoonLongitude(date);
+  const sunTropical = getSunLongitude(date);
+  const moonSidCalc = calculateSiderealPosition(date, SwePlanet.Moon, opts);
+  const sunSidCalc = calculateSiderealPosition(date, SwePlanet.Sun, opts);
+  return {
+    moon: moonSidCalc ? moonSidCalc.longitude : toSidereal(moonTropical, date),
+    sun: sunSidCalc ? sunSidCalc.longitude : toSidereal(sunTropical, date),
+  };
+}
+
+function getPanchangaScalar(date, kind, opts = {}) {
+  const luminaries = getSiderealLuminaries(date, opts);
+  if (kind === 'nakshatra') return luminaries.moon;
+  if (kind === 'yoga') return normDeg(luminaries.moon + luminaries.sun);
+  return normDeg(luminaries.moon - luminaries.sun);
+}
+
+function findNextPanchangaBoundary(date, kind, stepDeg, opts = {}) {
+  const startValue = getPanchangaScalar(date, kind, opts);
+  const startIndex = Math.floor(startValue / stepDeg);
+  let low = new Date(date);
+  let high = null;
+
+  for (let hours = 1; hours <= 96; hours++) {
+    const probe = new Date(date.getTime() + hours * 60 * 60 * 1000);
+    const probeIndex = Math.floor(getPanchangaScalar(probe, kind, opts) / stepDeg);
+    if (probeIndex !== startIndex) {
+      high = probe;
+      break;
+    }
+    low = probe;
+  }
+
+  if (!high) return null;
+
+  for (let i = 0; i < 32; i++) {
+    const mid = new Date((low.getTime() + high.getTime()) / 2);
+    const midIndex = Math.floor(getPanchangaScalar(mid, kind, opts) / stepDeg);
+    if (midIndex === startIndex) low = mid;
+    else high = mid;
+  }
+
+  return high;
+}
+
 /**
  * Calculate Tithi (lunar day)
  * There are 30 Tithis in a lunar month
  */
-function getTithi(date) {
-  const moonLong = toSidereal(getMoonLongitude(date), date);
-  const sunLong = toSidereal(getSunLongitude(date), date);
+function getTithi(date, opts = {}) {
+  const { moon: moonLong, sun: sunLong } = getSiderealLuminaries(date, opts);
 
   let diff = moonLong - sunLong;
   if (diff < 0) diff += 360;
@@ -1602,9 +1895,8 @@ function getTithi(date) {
 /**
  * Calculate Yoga (one of 27 yogas)
  */
-function getYoga(date) {
-  const moonLong = toSidereal(getMoonLongitude(date), date);
-  const sunLong = toSidereal(getSunLongitude(date), date);
+function getYoga(date, opts = {}) {
+  const { moon: moonLong, sun: sunLong } = getSiderealLuminaries(date, opts);
 
   let sum = (moonLong + sunLong) % 360;
   const yogaIndex = Math.floor(sum / (360 / 27));
@@ -1627,8 +1919,8 @@ function getYoga(date) {
 /**
  * Calculate Karana (half of a Tithi)
  */
-function getKarana(date) {
-  const tithi = getTithi(date);
+function getKarana(date, opts = {}) {
+  const tithi = getTithi(date, opts);
   const KARANA_NAMES = [
     'Bava', 'Balava', 'Kaulava', 'Taitila', 'Garaja', 'Vanija', 'Vishti',
     'Shakuni', 'Chatushpada', 'Naga', 'Kimstughna',
@@ -1698,20 +1990,60 @@ function getLagna(date, lat = 6.9271, lng = 79.8612) {
 /**
  * Get complete Panchanga for a date and location
  */
-function getPanchanga(date, lat = 6.9271, lng = 79.8612) {
-  const moonTropical = getMoonLongitude(date);
-  const sunTropical = getSunLongitude(date);
-  const moonSidereal = toSidereal(moonTropical, date);
-  const sunSidereal = toSidereal(sunTropical, date);
+function getPanchanga(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const siderealOpts = { ...opts, lat, lng };
+  const { moon: moonSidereal, sun: sunSidereal } = getSiderealLuminaries(date, siderealOpts);
+  const tithi = getTithi(date, siderealOpts);
+  const nakshatra = getNakshatra(moonSidereal);
+  const yoga = getYoga(date, siderealOpts);
+  const karana = getKarana(date, siderealOpts);
+  const tithiEndsAt = findNextPanchangaBoundary(date, 'tithi', 12, siderealOpts);
+  const nakshatraEndsAt = findNextPanchangaBoundary(date, 'nakshatra', 360 / 27, siderealOpts);
+  const yogaEndsAt = findNextPanchangaBoundary(date, 'yoga', 360 / 27, siderealOpts);
+  const karanaEndsAt = findNextPanchangaBoundary(date, 'karana', 6, siderealOpts);
+  const solar = calculateSunriseSunsetForCivilDay(date, lat, lng, siderealOpts);
+  const lunar = calculateMoonriseMoonset(date, lat, lng, siderealOpts);
+  const rahuKalaya = calculateRahuKalaya(date, lat, lng, siderealOpts);
+  const gulikaKalaya = calculateGulikaKalaya(date, lat, lng, siderealOpts);
+  const yamagandaKalaya = calculateYamagandaKalaya(date, lat, lng, siderealOpts);
+  const horas = calculatePlanetaryHoras(date, lat, lng, siderealOpts);
+  const civil = getCivilDayInfo(date, siderealOpts.timeContext || null);
+  const periodToIso = (period) => ({
+    start: period.start ? period.start.toISOString() : null,
+    end: period.end ? period.end.toISOString() : null,
+    segmentNumber: period.segmentNumber || null,
+    dayOfWeek: period.dayOfWeek || null,
+  });
 
   return {
     date: date.toISOString(),
+    civilDate: civil.localDate,
     location: { lat, lng },
-    tithi: getTithi(date),
-    nakshatra: getNakshatra(moonSidereal),
-    yoga: getYoga(date),
-    karana: getKarana(date),
-    vaara: WEEKDAYS[date.getDay()],
+    tithi: { ...tithi, endsAt: tithiEndsAt ? tithiEndsAt.toISOString() : null },
+    nakshatra: { ...nakshatra, endsAt: nakshatraEndsAt ? nakshatraEndsAt.toISOString() : null },
+    yoga: { ...yoga, endsAt: yogaEndsAt ? yogaEndsAt.toISOString() : null },
+    karana: { ...karana, endsAt: karanaEndsAt ? karanaEndsAt.toISOString() : null },
+    transitions: {
+      tithiEndsAt: tithiEndsAt ? tithiEndsAt.toISOString() : null,
+      nakshatraEndsAt: nakshatraEndsAt ? nakshatraEndsAt.toISOString() : null,
+      yogaEndsAt: yogaEndsAt ? yogaEndsAt.toISOString() : null,
+      karanaEndsAt: karanaEndsAt ? karanaEndsAt.toISOString() : null,
+    },
+    sunrise: solar.sunrise ? solar.sunrise.toISOString() : null,
+    sunset: solar.sunset ? solar.sunset.toISOString() : null,
+    moonrise: lunar.moonrise ? lunar.moonrise.toISOString() : null,
+    moonset: lunar.moonset ? lunar.moonset.toISOString() : null,
+    rahuKalam: periodToIso(rahuKalaya),
+    gulikaKalam: periodToIso(gulikaKalaya),
+    yamaganda: periodToIso(yamagandaKalaya),
+    horas: horas.map(hora => ({
+      index: hora.index,
+      ruler: hora.ruler,
+      period: hora.period,
+      start: hora.start.toISOString(),
+      end: hora.end.toISOString(),
+    })),
+    vaara: WEEKDAYS[civil.dayOfWeek],
     moonSign: getRashi(moonSidereal),
     sunSign: getRashi(sunSidereal),
     lagna: getLagna(date, lat, lng),
@@ -1723,9 +2055,12 @@ function getPanchanga(date, lat = 6.9271, lng = 79.8612) {
  * Calculate daily auspicious times (Shubha Muhurtha)
  * Based on the Panchanga and planetary hours
  */
-function getDailyNakath(date, lat = 6.9271, lng = 79.8612) {
-  const panchanga = getPanchanga(date, lat, lng);
-  const rahuKalaya = calculateRahuKalaya(date, lat, lng);
+function getDailyNakath(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const panchanga = getPanchanga(date, lat, lng, opts);
+  const rahuKalaya = calculateRahuKalaya(date, lat, lng, opts);
+  const gulikaKalaya = calculateGulikaKalaya(date, lat, lng, opts);
+  const yamagandaKalaya = calculateYamagandaKalaya(date, lat, lng, opts);
+  const horas = calculatePlanetaryHoras(date, lat, lng, opts);
   const { sunrise, sunset } = rahuKalaya;
 
   const daylightMs = sunset.getTime() - sunrise.getTime();
@@ -1799,6 +2134,15 @@ function getDailyNakath(date, lat = 6.9271, lng = 79.8612) {
       start: rahuKalaya.start,
       end: rahuKalaya.end,
     },
+    gulikaKalaya: {
+      start: gulikaKalaya.start,
+      end: gulikaKalaya.end,
+    },
+    yamaganda: {
+      start: yamagandaKalaya.start,
+      end: yamagandaKalaya.end,
+    },
+    planetaryHoras: horas,
     sunrise: sunrise,
     sunset: sunset,
     auspiciousPeriods,
@@ -2196,6 +2540,7 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
   } else {
     date = new Date(birthInfo);
   }
+  const marriageSettings = resolveCalculationSettings(opts);
   const houseChart = buildHouseChart(date, lat, lng);
   const houses = houseChart.houses;
   const planets = houseChart.planets;
@@ -2884,7 +3229,7 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
       const checkDate = new Date(Date.UTC(yr, 5, 15)); // June 15
       if (checkDate < wStart || checkDate > wEnd) continue;
       try {
-        const tp = getAllPlanetPositions(checkDate);
+        const tp = getAllPlanetPositions(checkDate, lat, lng, marriageSettings);
         const jH = ((tp.jupiter.rashiId - (houses[0]?.rashiId || 1) + 12) % 12) + 1;
         const sH = ((tp.saturn.rashiId - (houses[0]?.rashiId || 1) + 12) % 12) + 1;
         let yrScore = 0;
@@ -3109,7 +3454,7 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
 }
 
 // ── Helper: get Jupiter's tropical longitude ──
-function getJupiterLongitude(date) {
+function getJupiterLongitude(date, opts = {}) {
   try {
     const { Body } = require('astronomia/planetary');
     const { base, julian, solar } = require('astronomia');
@@ -3123,9 +3468,8 @@ function getJupiterLongitude(date) {
   } catch (e) {
     // Fallback: use ephemeris package
     try {
-      const allPositions = getAllPlanetPositions(date);
-      const jup = allPositions.find(p => p.name === 'Jupiter');
-      return jup ? jup.longitude : 0;
+      const allPositions = getAllPlanetPositions(date, opts.lat, opts.lng, opts);
+      return allPositions.jupiter?.tropical ?? allPositions.jupiter?.sidereal ?? 0;
     } catch (e2) {
       return 0;
     }
@@ -3133,7 +3477,7 @@ function getJupiterLongitude(date) {
 }
 
 // ── Helper: get Saturn's tropical longitude ──
-function getSaturnLongitude(date) {
+function getSaturnLongitude(date, opts = {}) {
   try {
     const { julian } = require('astronomia');
     const jd = julian.CalendarGregorianToJD(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate() + date.getUTCHours() / 24);
@@ -3145,9 +3489,8 @@ function getSaturnLongitude(date) {
     return L;
   } catch (e) {
     try {
-      const allPositions = getAllPlanetPositions(date);
-      const sat = allPositions.find(p => p.name === 'Saturn');
-      return sat ? sat.longitude : 0;
+      const allPositions = getAllPlanetPositions(date, opts.lat, opts.lng, opts);
+      return allPositions.saturn?.tropical ?? allPositions.saturn?.sidereal ?? 0;
     } catch (e2) {
       return 0;
     }
@@ -3155,9 +3498,9 @@ function getSaturnLongitude(date) {
 }
 
 // ── Helper: get Rahu's tropical longitude ──
-function getRahuLongitude(date) {
+function getRahuLongitude(date, opts = {}) {
   try {
-    const allPositions = getAllPlanetPositions(date);
+    const allPositions = getAllPlanetPositions(date, opts.lat, opts.lng, opts);
     return allPositions.rahu.sidereal;
   } catch (e) {
     const jd = dateToJD(date);
@@ -3592,6 +3935,7 @@ function analyzeHouse(houseNum, houses, planets, drishtis, lagnaName, ashtakavar
  * @returns {Object} Complete structured report with all 12 sections
  */
 function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const calculationSettings = resolveCalculationSettings(opts);
   // ── Gather all chart data ──────────────────────────────────────
   let date = new Date(birthDate);
 
@@ -3631,8 +3975,10 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
 
   const lagna = getLagna(date, lat, lng);
   const lagnaName = lagna.rashi.name;
-  const moonSidereal = toSidereal(getMoonLongitude(date), date);
-  const sunSidereal = toSidereal(getSunLongitude(date), date);
+  const moonSidCalc = calculateSiderealPosition(date, SwePlanet.Moon, { ...calculationSettings, lat, lng });
+  const sunSidCalc = calculateSiderealPosition(date, SwePlanet.Sun, { ...calculationSettings, lat, lng });
+  const moonSidereal = moonSidCalc ? moonSidCalc.longitude : toSidereal(getMoonLongitude(date), date);
+  const sunSidereal = sunSidCalc ? sunSidCalc.longitude : toSidereal(getSunLongitude(date), date);
   const moonRashi = getRashi(moonSidereal);
   const sunRashi = getRashi(sunSidereal);
   const moonNakshatra = getNakshatra(moonSidereal);
@@ -3644,8 +3990,8 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const ashtakavarga = calculateAshtakavarga(date, lat, lng);
   const bhavaChalit = buildBhavaChalit(date, lat, lng);
   const yogas = detectYogas(date, lat, lng);
-  const planetStrengths = getPlanetStrengths(date, lat, lng);
-  const panchanga = getPanchanga(date, lat, lng);
+  const planetStrengths = getPlanetStrengths(date, lat, lng, opts);
+  const panchanga = getPanchanga(date, lat, lng, { ...calculationSettings, timeContext: opts.timeContext || null });
   const dasaPeriods = calculateVimshottariDetailed(moonSidereal, date);
   const functionalStatus = FUNCTIONAL_STATUS[lagnaName] || {};
 
@@ -6117,15 +6463,8 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
 
   // Body areas at risk from malefics
   // ── Native's own kidney / urinary risk detection ─────────────────────────
-  // Independent from mother's kidney analysis — assesses the NATIVE's own risk
-  // Key indicators (BPHS + clinical correlation):
-  //   Venus weak or in dusthana     → kidney/urinary karaka afflicted
-  //   Saturn in H6/H7/H8            → chronic disease house, renal pressure
-  //   Moon weak or in H6/H8/H12     → fluid system compromised
-  //   Lord of 7th in dusthana        → 7th = maraka + kidney area
-  //   Mars in H6 or H8              → surgical/inflammatory kidney events
-  //   Ketu in H6 or H8              → sudden/mysterious illness
-  //   Saturn aspects Moon or Venus   → slow chronic kidney degeneration
+  // Conservative evidence gate: kidney/urinary is mentioned only when a direct
+  // Venus/7th-house urinary anchor is backed by several supporting stressors.
   const nativeVenusHouse   = getPlanetHouse('Venus');
   const nativeSaturnHouse  = getPlanetHouse('Saturn');
   const nativeMoonHouse    = getPlanetHouse('Moon');
@@ -6145,28 +6484,28 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const satAspectsMoonNative = nativeSaturnHouse && nativeMoonHouse &&
     [3, 7, 10].includes(((nativeMoonHouse - nativeSaturnHouse + 12) % 12) + 1);
 
-  const nativeKidneyIndicators = [
-    nativeVenusHouse && [6, 8, 12].includes(nativeVenusHouse),         // Venus in dusthana
-    venusScore < 45,                                                    // Venus weak (Shadbala)
-    nativeSaturnHouse && [6, 7, 8].includes(nativeSaturnHouse),        // Saturn in disease/maraka/transformation houses
-    nativeMoonHouse && [6, 8, 12].includes(nativeMoonHouse),           // Moon in dusthana
-    moonHealthScore < 45,                                               // Moon weak
-    lord7KidneyHouse && [6, 8, 12].includes(lord7KidneyHouse),        // 7th lord in dusthana (kidney area + maraka)
-    nativeMarsHouse && [6, 8].includes(nativeMarsHouse),               // Mars in H6/H8 = surgical/inflammatory risk
-    nativeKetuHouse && [6, 8].includes(nativeKetuHouse),               // Ketu in H6/H8 = sudden illness
-    satAspectsVenus,                                                    // Saturn squeezes Venus (kidney karaka)
-    satAspectsMoonNative,                                               // Saturn on Moon = chronic fluid issues
+  const nativeKidneySpecificIndicators = [
+    nativeVenusHouse && [6, 8, 12].includes(nativeVenusHouse),
+    venusScore < 40,
+    lord7KidneyHouse && [6, 8, 12].includes(lord7KidneyHouse),
+    satAspectsVenus,
   ].filter(Boolean).length;
 
+  const nativeKidneySupportIndicators = [
+    nativeSaturnHouse && [6, 7, 8].includes(nativeSaturnHouse),
+    nativeMoonHouse && [6, 8, 12].includes(nativeMoonHouse),
+    moonHealthScore < 40,
+    nativeMarsHouse && [6, 8].includes(nativeMarsHouse),
+    nativeKetuHouse && [6, 8].includes(nativeKetuHouse),
+    satAspectsMoonNative,
+  ].filter(Boolean).length;
+
+  const nativeKidneyIndicators = nativeKidneySpecificIndicators + nativeKidneySupportIndicators;
+
   const nativeKidneyRisk = (() => {
-    // Special override: Saturn + Ketu both in H8 = confirmed surgical/crisis health pattern
-    // This is "chidra" (gap/wound) pattern — strong enough alone to classify as HIGH
-    const satKetuBothInH8 = nativeSaturnHouse === 8 && nativeKetuHouse === 8;
-    // Mars in H6 (6th = disease) with malefics in H8 = surgical + chronic double pattern
-    const marsH6SatH8 = nativeMarsHouse === 6 && nativeSaturnHouse === 8;
-    if (satKetuBothInH8 || (marsH6SatH8 && nativeKidneyIndicators >= 3)) return 'HIGH';
-    if (nativeKidneyIndicators >= 4) return 'HIGH';
-    if (nativeKidneyIndicators >= 2) return 'MODERATE';
+    if (nativeKidneySpecificIndicators < 2) return 'LOW';
+    if (nativeKidneyIndicators >= 6) return 'HIGH';
+    if (nativeKidneyIndicators >= 4) return 'MODERATE';
     return 'LOW';
   })();
 
@@ -6183,7 +6522,13 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     if (venusScore < 45) indicators.push({ type: 'weakVenus', score: venusScore });
     if (satAspectsVenus) indicators.push({ type: 'saturnAspectsVenus' });
     if (lord7KidneyHouse && [6,8,12].includes(lord7KidneyHouse)) indicators.push({ type: 'lord7InDusthana', house: lord7KidneyHouse });
-    return { risk: nativeKidneyRisk, indicatorCount: nativeKidneyIndicators, indicators };
+    return {
+      risk: nativeKidneyRisk,
+      indicatorCount: nativeKidneyIndicators,
+      specificIndicatorCount: nativeKidneySpecificIndicators,
+      supportIndicatorCount: nativeKidneySupportIndicators,
+      indicators,
+    };
   })();
 
   const bodyRisks = [];
@@ -9309,6 +9654,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       return computeAccuracyEnhancements({
         birthDate: date,
         lat, lng,
+        calculationSettings,
         planets, navamsha, lagna,
         planetStrengths, vimshottari: dasaPeriods, houses,
         asOfDate: opts.asOfDate ? new Date(opts.asOfDate) : new Date(),
@@ -9319,8 +9665,20 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     }
   })();
 
+  const localBirthTime = formatLocalDateTime(date, opts.timeContext || null);
+
+  const calculationMetadata = buildCalculationMetadata({
+    settings: calculationSettings,
+    date,
+    lat,
+    lng,
+    timeContext: opts.timeContext || null,
+    ephemeris: planets?._calculationMetadata?.ephemeris || null,
+  });
+
   return {
     generatedAt: new Date().toISOString(),
+    calculationMetadata,
     rectificationApplied,
     accuracyEnhancements,
     developmentalStage,
@@ -9364,23 +9722,32 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
         return dayPlanet[panchanga.vaara?.name] || null;
       })(),
       birthTimeSLT: (() => {
-        const h = date.getUTCHours();
-        const m = date.getUTCMinutes();
-        const sltMin = h * 60 + m + 330; // +5:30
-        const sltH = Math.floor((sltMin / 60) % 24);
-        const sltM = Math.floor(sltMin % 60);
-        return `${String(sltH).padStart(2, '0')}:${String(sltM).padStart(2, '0')}`;
+        return localBirthTime.time;
       })(),
+      birthTimeLabel: localBirthTime.label,
+      birthLocalDate: localBirthTime.date,
       birthTimeQuality: (() => {
-        const h = date.getUTCHours() + date.getUTCMinutes() / 60;
-        const sltH = (h + 5.5) % 24;
-        if (sltH >= 4.5 && sltH < 6.5) return 'Brahma Muhurta';
-        if (sltH >= 6 && sltH < 12) return 'Morning';
-        if (sltH >= 12 && sltH < 18) return 'Afternoon';
-        if (sltH >= 18 && sltH < 22) return 'Evening';
+        const localHour = Number(localBirthTime.time.split(':')[0]) + Number(localBirthTime.time.split(':')[1]) / 60;
+        if (localHour >= 4.5 && localHour < 6.5) return 'Brahma Muhurta';
+        if (localHour >= 6 && localHour < 12) return 'Morning';
+        if (localHour >= 12 && localHour < 18) return 'Afternoon';
+        if (localHour >= 18 && localHour < 22) return 'Evening';
         return 'Night';
       })(),
       panchanga: { tithi: panchanga.tithi?.name, yoga: panchanga.yoga?.name, karana: panchanga.karana?.name, vaara: panchanga.vaara?.name,
+        tithiEndsAt: panchanga.tithi?.endsAt || null,
+        nakshatraEndsAt: panchanga.nakshatra?.endsAt || null,
+        yogaEndsAt: panchanga.yoga?.endsAt || null,
+        karanaEndsAt: panchanga.karana?.endsAt || null,
+        sunrise: panchanga.sunrise || null,
+        sunset: panchanga.sunset || null,
+        moonrise: panchanga.moonrise || null,
+        moonset: panchanga.moonset || null,
+        rahuKalam: panchanga.rahuKalam || null,
+        gulikaKalam: panchanga.gulikaKalam || null,
+        yamaganda: panchanga.yamaganda || null,
+        horas: panchanga.horas || [],
+        transitions: panchanga.transitions || null,
         // ── Panchanga Quality Assessment ──
         panchangaQuality: (() => {
           let score = 0;
@@ -9958,9 +10325,9 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
  *          Vargottama, Pushkara, Dig Bala, Hora strength
  * Returns a score 0-100 for each planet
  */
-function getPlanetStrengths(date, lat, lng) {
+function getPlanetStrengths(date, lat, lng, opts = {}) {
   const { houses, lagna } = buildHouseChart(date, lat, lng);
-  const planets = getAllPlanetPositions(date, lat, lng);
+  const planets = getAllPlanetPositions(date, lat, lng, opts);
   const lagnaName = lagna?.rashi?.name || 'Mesha';
   const drishtis = calculateDrishtis(houses);
   
@@ -10257,10 +10624,9 @@ function getPlanetStrengths(date, lat, lng) {
       }
 
       // ── 10. Hora Strength (day/night birth) ──
-      const birthHour = date.getUTCHours() + date.getUTCMinutes() / 60;
-      // Approximate — SLT daytime 6-18
-      const sltHour = (birthHour + 5.5) % 24;
-      const isDaytime = sltHour >= 6 && sltHour < 18;
+      const localTime = formatLocalDateTime(date, opts.timeContext || null);
+      const localHour = Number(localTime.time.split(':')[0]) + Number(localTime.time.split(':')[1]) / 60;
+      const isDaytime = localHour >= 6 && localHour < 18;
       if (isDaytime && ['Sun', 'Jupiter', 'Venus'].includes(p.name)) score += 3;
       if (!isDaytime && ['Moon', 'Mars', 'Saturn'].includes(p.name)) score += 3;
 
@@ -10532,10 +10898,16 @@ module.exports = {
   FUNCTIONAL_STATUS,
   AYANAMSHA_MODES,
   calculateRahuKalaya,
+  calculateGulikaKalaya,
+  calculateYamagandaKalaya,
   calculateSunriseSunset,
+  calculateSunriseSunsetForCivilDay,
+  calculateMoonriseMoonset,
+  calculatePlanetaryHoras,
   getMoonLongitude,
   getSunLongitude,
   getAyanamsha,
+  calculateSiderealPosition,
   setAyanamshaMode,
   getCurrentAyanamshaMode,
   toSidereal,
@@ -10564,6 +10936,8 @@ module.exports = {
   calculateVimshottariDetailed,
   generateDetailedReport,
   generateFullReport,
+  resolveCalculationSettings,
+  buildCalculationMetadata,
   predictMarriageTiming,
   assessMarriageDenial,
   getFunctionalNature,

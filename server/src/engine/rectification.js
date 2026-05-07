@@ -15,6 +15,7 @@ const {
   getMoonLongitude, calculateVimshottariDetailed, getNakshatra,
   getRashi, getAyanamsha, dateToJD, RASHIS
 } = require('./astrology');
+const { formatLocalDateTime } = require('./calculationSettings');
 
 /**
  * Event types with their astrological signatures
@@ -238,7 +239,7 @@ function scoreEvent(event, houseChart, dasaPeriods, lagnaRashiId) {
  * @param {number} stepMinutes - Step size in minutes (default 1)
  * @returns {Object} Rectification result
  */
-function rectifyBirthTime(reportedBirthDate, lat, lng, lifeEvents, searchRangeMinutes = 30, stepMinutes = 1) {
+function rectifyBirthTime(reportedBirthDate, lat, lng, lifeEvents, searchRangeMinutes = 30, stepMinutes = 1, opts = {}) {
   if (!lifeEvents || lifeEvents.length === 0) {
     throw new Error('At least one life event is required for rectification');
   }
@@ -349,23 +350,18 @@ function rectifyBirthTime(reportedBirthDate, lat, lng, lifeEvents, searchRangeMi
   else if (validEvents.length >= 3 && scoreDiff > 0.08) confidence = 'medium';
   else confidence = 'low';
   
-  // Compute SLT (Sri Lanka Time) for display
   const bestDate = new Date(best.time);
-  const sltOffset = 5.5 * 60; // minutes
-  const sltMin = bestDate.getUTCHours() * 60 + bestDate.getUTCMinutes() + sltOffset;
-  const sltH = Math.floor((sltMin / 60) % 24);
-  const sltM = Math.floor(sltMin % 60);
-  const rectifiedTimeSLT = `${String(sltH).padStart(2, '0')}:${String(sltM).padStart(2, '0')}`;
-  
-  const reportedSltMin = reportedDate.getUTCHours() * 60 + reportedDate.getUTCMinutes() + sltOffset;
-  const rSltH = Math.floor((reportedSltMin / 60) % 24);
-  const rSltM = Math.floor(reportedSltMin % 60);
-  const reportedTimeSLT = `${String(rSltH).padStart(2, '0')}:${String(rSltM).padStart(2, '0')}`;
+  const rectifiedLocal = formatLocalDateTime(bestDate, opts.timeContext || null);
+  const reportedLocal = formatLocalDateTime(reportedDate, opts.timeContext || null);
+  const rectifiedTimeSLT = rectifiedLocal.time;
+  const reportedTimeSLT = reportedLocal.time;
   
   return {
     reported: {
       time: reportedBirthDate,
       timeSLT: reportedTimeSLT,
+      timeLocal: reportedLocal.time,
+      timeLabel: reportedLocal.label,
       lagnaSign: reported?.lagnaSign || 'Unknown',
       lagnaDegree: reported?.lagnaDegree || 0,
       score: reported?.totalScore || 0,
@@ -373,6 +369,8 @@ function rectifyBirthTime(reportedBirthDate, lat, lng, lifeEvents, searchRangeMi
     rectified: {
       time: best.time,
       timeSLT: rectifiedTimeSLT,
+      timeLocal: rectifiedLocal.time,
+      timeLabel: rectifiedLocal.label,
       offsetMinutes: best.offsetMinutes,
       lagnaSign: best.lagnaSign,
       lagnaDegree: best.lagnaDegree,
@@ -387,9 +385,9 @@ function rectifyBirthTime(reportedBirthDate, lat, lng, lifeEvents, searchRangeMi
     topCandidates,
     eventBreakdown: best.eventScores,
     recommendation: confidence === 'high'
-      ? `Strong confidence in rectified time ${rectifiedTimeSLT} SLT. The ${best.lagnaSign} rising sign at ${best.lagnaDegree}° produces the best correlation with your life events.`
+      ? `Strong confidence in rectified time ${rectifiedTimeSLT} ${rectifiedLocal.label}. The ${best.lagnaSign} rising sign at ${best.lagnaDegree}° produces the best correlation with your life events.`
       : confidence === 'medium'
-        ? `Moderate confidence in rectified time ${rectifiedTimeSLT} SLT. Adding more life events would improve accuracy.`
+        ? `Moderate confidence in rectified time ${rectifiedTimeSLT} ${rectifiedLocal.label}. Adding more life events would improve accuracy.`
         : `Low confidence — only ${validEvents.length} event(s) provided. Please add at least 3-5 major life events for reliable rectification.`,
   };
 }

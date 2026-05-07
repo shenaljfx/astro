@@ -27,8 +27,11 @@ const {
 } = require('../services/notifications');
 const { calculateMarakaApala, getActiveMarakaApala } = require('../engine/maraka');
 const { calculateRahuKalaya, getDailyNakath, getPanchanga } = require('../engine/astrology');
+const { formatLocalDateTime } = require('../engine/calculationSettings');
 const { buildDailyGuidanceMessage } = require('../services/scheduler');
 const { getUser, updatePreferences } = require('../models/firestore');
+
+const SRI_LANKA_TIME_CONTEXT = { zoneName: 'Asia/Colombo', offsetSeconds: 19800, source: 'traditional_slt' };
 
 // ─── Register Push Token ─────────────────────────────────────
 router.post('/register', requireAuth, async (req, res) => {
@@ -197,15 +200,13 @@ router.get('/today', requireAuth, async (req, res) => {
     const lng = parseFloat(req.query.lng) || user?.birthData?.lng || 79.8612;
 
     // Panchanga & Nakath
-    const panchanga = getPanchanga(today, lat, lng);
-    const nakath = getDailyNakath(today, lat, lng);
-    const rahuKalaya = calculateRahuKalaya(today, lat, lng);
+    const panchanga = getPanchanga(today, lat, lng, { timeContext: SRI_LANKA_TIME_CONTEXT });
+    const nakath = getDailyNakath(today, lat, lng, { timeContext: SRI_LANKA_TIME_CONTEXT });
+    const rahuKalaya = calculateRahuKalaya(today, lat, lng, { timeContext: SRI_LANKA_TIME_CONTEXT });
 
-    // Format Rahu Kalaya times (SLT)
     const formatSLT = (d) => {
-      const slt = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-      const h = slt.getUTCHours();
-      const m = slt.getUTCMinutes();
+      const local = formatLocalDateTime(d, SRI_LANKA_TIME_CONTEXT);
+      const [h, m] = local.time.split(':').map(Number);
       return `${(h % 12 || 12)}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
     };
 
@@ -307,9 +308,9 @@ router.post('/test-daily', requireAuth, async (req, res) => {
     const birthData = user?.birthData || {};
     const lat = parseFloat(birthData.lat) || 6.9271;
     const lng = parseFloat(birthData.lng) || 79.8612;
-    const panchanga = getPanchanga(now, lat, lng);
-    const nakath = getDailyNakath(now, lat, lng);
-    const rahuKalaya = calculateRahuKalaya(now, lat, lng);
+    const panchanga = getPanchanga(now, lat, lng, { timeContext: SRI_LANKA_TIME_CONTEXT });
+    const nakath = getDailyNakath(now, lat, lng, { timeContext: SRI_LANKA_TIME_CONTEXT });
+    const rahuKalaya = calculateRahuKalaya(now, lat, lng, { timeContext: SRI_LANKA_TIME_CONTEXT });
     const guidance = buildDailyGuidanceMessage(now, user?.preferences?.language || 'si', panchanga, rahuKalaya, nakath);
     const result = await sendPush(tokenDoc.data().pushToken, guidance.title, guidance.body, {
       type: 'DAILY_GUIDANCE',

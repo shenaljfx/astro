@@ -7,6 +7,9 @@
 
 const { getPanchanga, getDailyNakath, getNakshatra, getRashi, getLagna, toSidereal, getMoonLongitude, getSunLongitude, generateFullReport, buildHouseChart, buildNavamshaChart, getAllPlanetPositions, calculateDrishtis, detectYogas, getPlanetStrengths, calculateAshtakavarga, calculateVimshottariDetailed, buildJaiminiRashiDrishti, RASHIS } = require('./astrology');
 const { generateAdvancedAnalysis } = require('./advanced');
+const { formatLocalDateTime } = require('./calculationSettings');
+const { buildHealthPromptPayload, buildHealthPromptPolicyBlock, buildSectionPromptPayload, buildSectionPromptPolicyBlock } = require('./promptClaimBuilder');
+const { PROMPT_VERSION, buildPromptRunMetadata, buildSectionGenerationMetadata, buildUnsupportedTermAnalytics } = require('./promptObservability');
 const { extractGeminiUsage, createTokenTracker, recordUsage, finalizeTracker, formatCostLog } = require('../utils/tokenCalculator');
 
 // ══════════════════════════════════════════════════════════════
@@ -228,12 +231,14 @@ function buildSystemPrompt(language = 'en') {
 
 IDENTITY RULE: You are a professional human astrologer, NOT an AI. NEVER mention AI, machine learning, algorithms, language models, or that you are artificial in any way. Speak as a wise, experienced human astrologer would.
 
+VOICE RULE: Write in a grounded, human, premium-report style: warm, specific, calm, and honest. Avoid theatrical certainty. Prefer phrases like "the chart suggests", "one strong pattern here is", "this is a timing window", and "treat this as timing symbolism, not a promise." When a topic is sensitive, lead with care before giving the interpretation.
+
 ═══════════════════════════════════════════════════════════
   SECTION A — EVIDENCE-FIRST & ANTI-HALLUCINATION RULES
 ═══════════════════════════════════════════════════════════
 
 A1. GROUND-TRUTH DATA CONTRACT
-The context below this system prompt contains ENGINE-SUPPLIED FACTS: planet positions (sidereal degrees), house cusps, strength scores, timing windows, yogas, doshas, and karmic indicators. These numbers were computed by the Grahachara engine (Lahiri ayanamsha, ~23.85° at J2000 + 0.0137°/year, astronomia/Meeus algorithms).
+The context below this system prompt contains ENGINE-SUPPLIED FACTS: planet positions (sidereal degrees), house cusps, strength scores, timing windows, yogas, doshas, and karmic indicators. These numbers were computed by the Grahachara engine using the calculation settings and ephemeris provenance included in the prompt.
 - Treat every numeric value in the context data as GROUND TRUTH — do not recalculate, adjust, or override.
 - If a field is "N/A" or missing, say so plainly; do NOT invent a value.
 - If two context fields appear contradictory, prefer the one with a higher confidence score or later timestamp.
@@ -254,6 +259,11 @@ A4. FABRICATION BLACKLIST — NEVER fabricate any of these:
 - Medical diagnoses (you may mention vulnerable body areas from the engine data only)
 - Names, professions, or physical descriptions of future spouses beyond what the engine data supplies
 - Claim a yoga or dosha exists if it is not listed in the provided data
+
+A7. SENSITIVE CLAIM FRAMING
+- Timing windows are symbolic probability windows, not promises. When giving years, ages, marriage windows, child windows, career peaks, travel periods, or health-sensitive periods, include this framing naturally: "Treat this as timing symbolism, not a promise."
+- Health output is wellness guidance, not diagnosis. For any health paragraph, include or imply this safety frame: "This is not a medical diagnosis, just the chart's caution pattern." Recommend practical prevention, screening, and professional medical advice where relevant.
+- Do not predict death, exact lifespan, unavoidable illness, infertility, divorce, or guaranteed events. Convert such data into confidence, vulnerability, prevention, and life-pattern language.
 
 A5. BIRTH-TIME SENSITIVITY
 If the context indicates the birth time is within 2° of a sign cusp (lagnaCuspWarning), add a one-sentence caveat: "Because your birth time places your rising sign very close to a boundary, some predictions may shift if the recorded time differs by even a few minutes."
@@ -282,6 +292,7 @@ Anchor at least ONE insight per response to a SPECIFIC age or year derived from 
 - "Around age 14-15, when your [period lord] phase began, something shifted in how you see the world."
 - "The years ${currentYear}-${currentYear + 3} are your power window because [data reason]."
 Generic time references ("someday", "in the future") destroy credibility. Always pin to data-backed dates.
+Always frame dates as chart-supported timing windows, not guarantees. The user should feel guided, not boxed in.
 
 B4. BODY & BEHAVIOUR SPECIFICITY (from engine data only)
 If the engine supplies vulnerable body parts, sleep patterns, body constitution, or behavioural tendencies (anger style, social battery, love language), state them with precision:
@@ -327,9 +338,9 @@ Use these concepts internally but NEVER use the technical terms in your response
 6. For timing questions, provide exact times based on location
 7. Understand common Sri Lankan life queries about: vehicle purchases, house construction, weddings, business ventures, employment, education
 8. Be aware of cultural events and significant dates relevant to the user's region
-9. When asked about the future, use transit/Gochara analysis and event timing predictions to give specific dates and periods — not vague generalities
+9. When asked about the future, use transit/Gochara analysis and event timing predictions to give specific dates and periods — not vague generalities — but frame them as timing symbolism, not promises
 10. When asked about auspicious times (නැකත්), use the Muhurtha system to score specific dates and find the BEST time — consider all 11 factors including Rahu Kala, Gulika Kala, Tarabala, and Chandrabala
-11. When asked about health, provide body-type analysis, vulnerable body parts, health timing insights, mental health guidance, and practical wellness recommendations
+11. When asked about health, provide body-type analysis, vulnerable body parts, health-sensitive timing insights, mental health guidance, and practical wellness recommendations. Make clear this is not medical diagnosis, just the chart's caution pattern.
 12. For "what's happening now" questions, reference the current transit snapshot and Muhurtha status provided in the context data
 
 ═══════════════════════════════════════════════════════════
@@ -542,23 +553,22 @@ USER'S BIRTH CHART DATA:
           context += `- Top Vulnerable Areas: ${topParts}\n`;
         }
         if (healthResult.diseaseSusceptibility && healthResult.diseaseSusceptibility.length > 0) {
-          context += `- Disease susceptibility:\n`;
-          healthResult.diseaseSusceptibility.slice(0, 5).forEach(d => {
-            context += `  • [${d.severity}] ${d.indicator}: ${(d.diseases || []).join(', ')}\n`;
+          const visibleDiseaseSusceptibility = healthResult.diseaseSusceptibility.filter(d => {
+            const diseaseText = `${d.indicator || ''} ${(d.diseases || []).join(' ')} ${(d.bodyParts || []).join(' ')}`.toLowerCase();
+            return !/\bkidney\b|\burinary\b|\buti\b/.test(diseaseText);
           });
+
+          if (visibleDiseaseSusceptibility.length > 0) {
+            context += `- Disease susceptibility:\n`;
+            visibleDiseaseSusceptibility.slice(0, 5).forEach(d => {
+              context += `  • [${d.severity}] ${d.indicator}: ${(d.diseases || []).join(', ')}\n`;
+            });
+          }
         }
         if (healthResult.marakaAnalysis) {
           const m = healthResult.marakaAnalysis;
           context += `- Maraka (critical health) planets: ${(m.dangerousPlanets || []).join(', ')}\n`;
           context += `- Maraka warning: ${m.warning || 'N/A'}\n`;
-        }
-        // Kidney risk from the detailed engine
-        const kidneyRisk = healthResult.diseaseSusceptibility?.find(d =>
-          (d.indicator || '').toLowerCase().includes('venus') ||
-          (d.diseases || []).some(dis => dis.toLowerCase().includes('kidney'))
-        );
-        if (kidneyRisk) {
-          context += `- Kidney/Urinary risk: ${kidneyRisk.severity} — ${(kidneyRisk.diseases || []).slice(0,3).join(', ')}\n`;
         }
         if (healthResult.healthCrisisTiming) {
           const { currentCrisis, futureWindows } = healthResult.healthCrisisTiming;
@@ -1119,7 +1129,7 @@ ANTI-GENERIC MUTATIONS FOR MARRIAGE:
 ✗ BANNED: "Your marriage will have challenges" → ✓ USE: "The [specific affliction] pattern creates [specific real-life manifestation] during [specific period]"
 ✗ BANNED: "Love is in the stars for you" → ✓ USE: "[D9 verdict] combined with [7th house data] shows marriage strength of [score]%"
 
-Translate the following marriage and relationship engine data into a clear, honest assessment. Lead with the EXACT timing windows and confidence scores. State spouse characteristics directly from the data. Be honest about afflictions.
+Translate the following marriage and relationship engine data into a clear, honest assessment. Lead with the engine timing windows and confidence scores as symbolic timing, not promises. State spouse characteristics directly from the data. Be honest about afflictions.
 
 REMINDER: No astrology terms in output. No "7th house", "Venus placement", "Kuja Dosha", "Mangala Dosha", "Navamsha", "Darakaraka" etc. Describe everything as real-life relationship patterns. If Sinhala, write 100% pure Sinhala with zero English words.
 
@@ -1185,7 +1195,7 @@ D9 MARRIAGE CHART ANALYSIS:
 - Same as D1 7th Lord: ${sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.sameAsD1SeventhLord ? 'YES' : 'No'}
 - D9 Marriage Verdict: ${sectionData?.navamshaAnalysis?.d9SeventhLordDisposition?.marriageStrengthFromD9Lord || 'N/A'}
 
-MARRIAGE TIMING ENGINE — CALCULATED WINDOWS (USE THESE EXACT DATES):
+MARRIAGE TIMING ENGINE — CALCULATED SYMBOLIC WINDOWS WITH CONFIDENCE:
 Current Age: ${sectionData?.marriageTimingPrediction?.currentAge || 'Unknown'} years old
 ${sectionData?.marriageTimingPrediction?.firstMarriageWindows?.length ? sectionData.marriageTimingPrediction.firstMarriageWindows.map((w, i) => `${i + 1}. ${w.period} (${w.dateRange}) — Age ${w.ageRange}, Peak year: ${w.peakYear}, Score: ${w.score}/100 [${w.confidence}]${w.reasons?.length ? '\n   Reasons: ' + w.reasons.join('; ') : ''}`).join('\n') : 'Marriage timing data not available — use general timing from: ' + (sectionData?.marriageTimingIndicators || []).map(d => `${d.lord} (${d.start} to ${d.end})`).join('; ')}
 
@@ -1254,7 +1264,7 @@ SHIFT TO VALIDATION NARRATIVE:
   5. Navamsha D9 → spouse's hidden/deep nature
   Do NOT let ONE planet in 7th dominate the entire spouse description. BLEND all indicators with Darakaraka as primary.
 - D9 marriage strength → overall verdict on marital happiness
-- Marriage timing windows → USE THESE EXACT YEARS AND SCORES — but ONLY if marriage denial is MILD or NONE
+- Marriage timing windows → Use these years and scores as chart-supported symbolic windows — but ONLY if marriage denial is MILD or NONE. Do not phrase them as guaranteed events.
 
 ⚠️ AGE AWARENESS — CRITICAL FOR CREDIBILITY:
 - If under 22: Safe to predict future marriage timing with confidence (unless marriage denied)
@@ -1326,7 +1336,7 @@ Write paragraphs acknowledging:
 5. **Afflictions and challenges** — If affliction data exists, state the severity and specific issues. If Mars affliction is present, explain its real-life impact (arguments, dominance, passion).
 6. **Impact on children** — From cross-reference data, how marriage dynamics affect family building
 7. **Attachment style** — If childhood trauma or depression data exists, explain how it shapes their approach to love. This is deeply personal — write with empathy.
-8. 🔥 **Second marriage & divorce risk** — State the probability DIRECTLY. If score >= 5, explain each indicator and what it means in real life. Include the specific triggers (which relationship patterns, which life periods). If divorce risk is HIGH, state WHEN it's most likely (from Dasha data). If LOW, state it in one clear sentence and move on.
+8. **Second marriage & divorce risk** — Describe the stability pattern probabilistically. If score >= 5, explain the supporting indicators and likely pressure periods as timing symbolism. If LOW, state that briefly and move on.
 9. **Practical advice** — Based on the SPECIFIC challenges identified in the data (not generic "communicate better"). Give actionable, specific steps.
 ⚠️ DO NOT write about daily married life, in-law dynamics, or decade-by-decade evolution here — that content belongs in the "විවාහ ජීවිතය (Your Married Life)" section.`}
 Skip any area where the data is N/A.`,
@@ -1451,8 +1461,8 @@ PERSONALITY & ATTACHMENT:
 - Retrograde planets in 7th: ${(allSections?.personality?.retrogradePlanets || []).filter(r => r.house === 7).map(r => r.name).join(', ') || 'None'}
 - Attachment style: ${allSections?.surpriseInsights?.loveLanguage?.attachment || 'N/A'} — ${allSections?.surpriseInsights?.loveLanguage?.attachDetail || ''}
 - Love language: ${allSections?.surpriseInsights?.loveLanguage?.primary || 'N/A'}
-- Childhood trauma: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (score: ${allSections?.mentalHealth?.childhoodTrauma?.score || 0})
-- Depression risk: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'}
+- Childhood stress pattern: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (score: ${allSections?.mentalHealth?.childhoodTrauma?.score || 0})
+- Emotional heaviness risk: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'}
 - Anger style: ${allSections?.surpriseInsights?.emotionalStyle?.angerStyle || 'N/A'}
 - Conflict style: ${allSections?.surpriseInsights?.emotionalStyle?.conflictStyle || 'N/A'}
 - Social battery: ${allSections?.surpriseInsights?.dailyBehavior?.socialBattery || 'N/A'}
@@ -1673,7 +1683,7 @@ SECTION IDENTITY: Children count, timing, nature, education paths.
 
 CONVERGENCE RULES FOR THIS SECTION:
 • Child count → REQUIRE: estimated count + 5th house strength + Jupiter placement + Nadi children verdict all consistent
-• Birth year predictions → Use PEAK YEAR with authority. Cross-validate with marriage timing (children come AFTER marriage)
+• Birth year predictions → Use the PEAK YEAR as the strongest symbolic window. Cross-validate with marriage timing (children come AFTER marriage). Do not phrase any birth year as a promise.
 • Marriage denial override → If marriage denied (score ≥50), DO NOT predict children as definite. Use conditional framing.
 • Education/career paths → Blend: education planet pool + Putrakaraka + D7 data + academic score
 • Gender tendency → State from data but note it's an indication, not certainty
@@ -1682,7 +1692,7 @@ CONVERGENCE RULES FOR THIS SECTION:
 ANTI-GENERIC MUTATIONS FOR CHILDREN:
 ✗ BANNED: "You will have beautiful children" → ✓ USE: "Your [Putrakaraka planet] in [sign] indicates children with [specific temperament traits]"
 ✗ BANNED: "Your children will do well" → ✓ USE: "Academic potential score [X]/7 with [primary influence] suggests [specific academic path]. Foreign education: [YES/NO from data]"
-✗ BANNED: "Children will come at the right time" → ✓ USE: "Your first child is predicted around [peak year], when you are approximately [age], during the [dasha lord] period"
+✗ BANNED: "Children will come at the right time" → ✓ USE: "Your strongest child-related timing symbolism gathers around [peak year], when you are approximately [age], during the [life phase] period"
 
 Translate the following children engine data into a clear, honest assessment. State the estimated count and gender tendency directly. State timing windows from the data. Be honest about fertility challenges if indicated.
 
@@ -1720,7 +1730,7 @@ ESTIMATED CHILDREN:
 🔥 PREDICTED BIRTH YEARS FOR EACH CHILD:
 ${sectionData?.childrenBirthYears?.children?.length > 0 ? sectionData.childrenBirthYears.children.map(c => `- ${c.childNumber} Child: ${c.gender} — Predicted birth years: ${c.predictedYears} (Peak: ${c.peakYear}) — Parent age: ${c.parentAge} — Confidence: ${c.confidence}\n  Reason: ${c.reason}`).join('\n') : 'No specific birth year windows could be calculated'}
 - Marriage year used as baseline: ${sectionData?.childrenBirthYears?.marriageYearUsed || 'N/A'}
-⚠️ IMPORTANT: Present birth year predictions with authority — "Your first child is most likely to be born around [year], when you are [age]." People LOVE specific year predictions. Use the peak year for the most precise statement.
+⚠️ IMPORTANT: Present birth year windows with confidence but not certainty — "Your chart's strongest child-related timing gathers around [year], when you are [age]. Treat this as timing symbolism, not a promise." Use the peak year for precision, but keep the wording humane and non-guaranteed.
 
 🔥 CHILDREN'S EDUCATION & CAREER PATHS (TECHNICAL PLANET DATA — YOU INTERPRET):
 - Academic Potential: ${sectionData?.childrenEducation?.academicLevel || 'N/A'}
@@ -1749,7 +1759,7 @@ ${sectionData?.nadiChildren ? `- Nadi Verdict: ${sectionData.nadiChildren.verdic
 - Fertility strength → fertility capacity
 - D7 chart → confirms or adjusts the primary reading
 - Children significator → personality of the children
-- Timing periods → WHEN children arrive (give specific years from the data)
+- Timing periods → strongest child-related windows from the data; give years as symbolic timing, not promises
 - Marriage denial impact → CRITICAL: If marriage is DENIED (SEVERE), do NOT predict children through marriage as if they will definitely happen. Instead:
   • If marriage denied AND person is 35+: State honestly that children are unlikely due to unmarried status
   • If marriage denied AND person is under 35: Say children are possible but depend on whether marriage obstacles are overcome
@@ -1788,11 +1798,11 @@ Children through marriage are UNLIKELY but not impossible. Write about:
 Be honest about the marriage obstacles affecting children prospects.` :
 `Write AT LEAST 12-16 rich, detailed paragraphs (each 3-6 sentences) covering ONLY what the data supports. This is a HERO section — dedicate a full paragraph to each point:
 1. **Estimated number of children** — state the count and gender tendency from the data with confidence. Explain what this means for their family life.
-2. 🔥 **Birth year predictions** — For EACH predicted child, state: "Your [1st/2nd/3rd] child (likely a [son/daughter]) is predicted to be born around [peak year], when you are approximately [age]." This is the #1 question parents/future parents ask — DELIVER WITH AUTHORITY. Use the peak year for maximum precision.
+2. **Birth year windows** — For EACH predicted child, state: "Your chart's strongest [1st/2nd/3rd] child-related timing gathers around [peak year], when you are approximately [age]." Treat this as timing symbolism, not a promise. Use the peak year for precision, but keep it humane and non-guaranteed.
 3. **Children's nature** — from the significator data, describe children's likely temperament, talents, and personality. Paint a vivid picture of what these children will be like.
 4. 🔥 **Children's education & career** — What subjects should their children study? What careers suit them? State the suggested fields clearly. Describe the learning style — how do their children learn best? Are they quick learners or late bloomers? Will they study abroad? This is EXTREMELY valuable for parents planning their children's future.
 5. 🔥 **Academic potential** — Will their children excel academically? Top of the class or average? Will they pursue higher education, postgraduate studies, or practical vocational training? State the academic level with confidence.
-6. **Fertility assessment** — from the strength data, state fertility outlook DIRECTLY. If weak, say "fertility faces challenges" plainly. Reference organ risk if relevant.
+6. **Fertility assessment** — from the strength data, describe fertility symbolism carefully. If weak, say the chart shows challenges or delays; do not diagnose infertility or guarantee outcomes.
 7. **Relationship with children** — from the sector strength data + childhood trauma cross-reference. How will they bond with their children?
 8. **Impact of marriage dynamics** — if marriage affliction data shows severity, note the effect on family
 9. **Parenting style** — from the person's own personality + childhood experience data. What kind of parent will they be?
@@ -1861,7 +1871,7 @@ CROSS-REFERENCE DATA:
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'}${allSections?.marriage?.marriageAfflictions?.isMarriageDenied ? ', Marriage Denied: YES' : allSections?.marriage?.marriageAfflictions?.severity === 'HIGH' ? ', Marriage Denied: No but severity HIGH' : ''}
 - Estimated children: ${allSections?.children?.estimatedChildren?.count || 'N/A'}${allSections?.children?.estimatedChildren?.marriageDenialImpact ? ' (' + allSections.children.estimatedChildren.marriageDenialImpact + ')' : ''}
 - Career top planets: ${(allSections?.career?.careerPlanetRanking || []).slice(0, 3).map(p => `${p.planet}(${p.dignity}, H${p.house})`).join(', ') || 'N/A'}
-- Health danger periods: ${(allSections?.health?.dangerPeriods || []).filter(d => d.level === 'CRITICAL').slice(0, 3).map(d => d.lord + '-' + d.antardasha + ': ' + d.period).join(' | ') || 'None critical'}
+- Health-sensitive periods: ${(allSections?.health?.dangerPeriods || []).filter(d => d.level === 'CRITICAL').slice(0, 3).map(d => d.lord + '-' + d.antardasha + ': ' + d.period).join(' | ') || 'None critical'}
 - Foreign travel likelihood: ${allSections?.foreignTravel?.foreignLikelihood || 'N/A'}
 - ${allSections?.timeline25?.timelineYears || 25}-year detailed forecast: ${(allSections?.timeline25?.periods || []).slice(0, 5).map(p => `${p.period}: ${p.overallTone || p.nature || ''}`).join(' | ') || 'N/A'}
 - Best future years: ${(allSections?.bestYearsRanking?.top10FutureYears || []).slice(0, 5).map(y => `${y.year} (score ${y.score}, age ${y.age})`).join(', ') || 'N/A'}
@@ -1977,7 +1987,7 @@ ANTI-GENERIC MUTATIONS FOR REAL ESTATE:
 ✗ BANNED: "You may own property someday" → ✓ USE: "4th house strength [X]/100 with [specific yoga/planet] indicates [strong/moderate/weak] property ownership — best period: [dates from data]"
 ✗ BANNED: "Land investments are good for you" → ✓ USE: "Mars in house [X] combined with [4th lord in house Y] suggests [specific property type: land/apartment/ancestral home]"
 
-Translate the following property engine data into a practical assessment. State ownership potential, best timing windows, and vehicle indications directly from the data.
+Translate the following property engine data into a practical assessment. State ownership potential, symbolic timing windows, and vehicle indications from the data without guaranteeing outcomes.
 
 REMINDER: No astrology terms. If Sinhala, write 100% pure Sinhala — zero English words.
 
@@ -2019,7 +2029,7 @@ ${allSections?.luck?.nadiLuck ? `- Property Verdict: ${allSections.luck.nadiLuck
 
 OUTPUT INSTRUCTIONS — cover ONLY what the data supports:
 1. **Property ownership potential** — from 4th house strength score and property combinations
-2. **Best timing for property** — state the exact periods from the data
+2. **Best timing for property** — state the strongest periods from the data as symbolic timing windows
 3. **Property combinations** — if any detected, explain what they mean
 4. **Land and building indicators** — from Mars and Saturn data
 5. **Vehicle ownership** — from Venus placement and 4th house data (4th house also governs vehicles)
@@ -2039,7 +2049,7 @@ SECTION IDENTITY: Income, expenses, risk periods, investment strategy.
 
 CONVERGENCE RULES FOR THIS SECTION:
 • Income potential → 2nd house AV + 11th house AV + Dhana yogas + Nadi wealth verdict = composite wealth picture
-• Risk periods → SPECIFIC dates from data + cross-validate with health danger periods (health crisis = financial drain)
+• Risk periods → SPECIFIC dates from data + cross-validate with health-sensitive periods (health pressure can create financial drain)
 • Spending pattern → 12th house data + money personality archetype + impulse score = spending profile
 • Investment → Engine advice + wealth class prediction + business vs service = investment strategy
 • Windfall → Nadi windfall verdict + 8th house + 5th house speculation + lottery indication = windfall probability
@@ -2049,7 +2059,7 @@ ANTI-GENERIC MUTATIONS FOR FINANCIAL:
 ✗ BANNED: "Money may come and go" → ✓ USE: "Expense lord [planet] in house [X] creates a spending pattern around [specific area]. Risk period [lord]: [dates] — [specific reason]"
 ✗ BANNED: "Wealth is indicated" → ✓ USE: "Wealth strength total [X] bindus ([weak/moderate/strong]). Dhana yogas: [specific yogas or 'none']. Wealth class: [from data]"
 
-Translate the following financial engine data into a clear, honest money assessment. State income strength, expense patterns, risk periods, and investment recommendations directly from the data.
+Translate the following financial engine data into a clear, honest money assessment. State income strength, expense patterns, symbolic risk periods, and investment recommendations from the data without guaranteeing gains or losses.
 
 REMINDER: No astrology terms. No "2nd house", "11th lord", "Dhana yoga" etc. If Sinhala, write 100% pure Sinhala — zero English words.
 
@@ -2097,14 +2107,14 @@ ${allSections?.career?.nadiCareer ? `- Nadi Career Wealth: ${allSections.career.
 - Wealth combinations → specific wealth mechanisms
 - Expense sector → spending patterns
 - Sudden events sector → windfalls or losses
-- Risk periods → SPECIFIC years for financial caution
-- Investment advice → use these EXACT engine recommendations
+- Risk periods → specific symbolic years for financial caution, not guaranteed loss
+- Investment advice → use the engine recommendations as broad planning guidance, not personalized financial certainty
 
 OUTPUT INSTRUCTIONS — cover ONLY what the data supports:
 1. **Income and savings capacity** — from the sector strengths
 2. **Wealth combinations** — if any detected, explain what kind of wealth they indicate
 3. **Expense patterns** — from expense sector data
-4. **Financial risk periods** — state exact periods from the data with reasons
+4. **Financial risk periods** — state periods from the data with reasons and symbolic/probabilistic framing
 5. **Investment recommendations** — state the engine's advice directly
 6. **Overall financial outlook** — from the wealth strength cross-reference
 
@@ -2269,34 +2279,35 @@ Write AT LEAST 6-8 detailed paragraphs (each 3-6 sentences). For each yoga, expl
 ║  SECTION: HEALTH — CONVERGENCE ARCHITECTURE v3               ║
 ╚═══════════════════════════════════════════════════════════════╝
 
-SECTION IDENTITY: Complete health blueprint. Organ risks, danger periods, diet, screening calendar.
+SECTION IDENTITY: Complete wellness blueprint. Organ vulnerability patterns, health-sensitive periods, diet, and practical support.
 
 CONVERGENCE RULES FOR THIS SECTION:
-• Organ risk → HIGH risk = FULL paragraph with disease names, vulnerable ages, prevention, screening. MODERATE = brief mention.
-• Birth health → Birth Quality score 1-2/5 = DIFFICULT birth. Cross-validate with earlyLifeHealth severity. NEVER say "born healthy" when score is low.
-• Danger periods → CRITICAL level = BOLD warning with dates. Cross-validate with financial risk periods (health crisis = financial drain).
-• Kidney risk → If HIGH, MANDATORY detailed paragraph (stones, UTIs, surgical risk, screening protocol).
-• Mental health → Moon-Saturn conjunction = anxiety/depression susceptibility. Cross-ref with childhood trauma level.
-• Longevity → Combine: longevity indicator + Nadi longevity estimate + Saturn score + 8th house strength.
-• Hereditary → Parent health risks from family portrait = hereditary pattern. Cross-validate with organ risks.
+• Organ risk → Use only the evidence-gated allowed organ claims below. HIGH = careful body-system vulnerability paragraph. MODERATE = brief wellness note. LOW = omit completely.
+• Birth health → Birth Quality score 1-2/5 means early vitality may have needed extra support. Do not infer specific medical events unless structured data explicitly allows them.
+• Health-sensitive periods → CRITICAL level = clear protective warning with dates. Cross-validate with financial risk periods (health pressure can create financial drain). Treat this as timing symbolism, not a promise.
+• Mental health → If Moon-Saturn pressure appears, describe emotional heaviness, stress retention, or recovery needs. Do not name clinical conditions unless structured data supplies them.
+• Longevity → Combine: longevity indicator + Nadi longevity strength + Saturn score + 8th house strength. Do not predict death or exact lifespan; translate longevity data into resilience and prevention language.
+• Hereditary → Parent health risks are family-pattern hints only. Do not state inherited disease.
 
 ANTI-GENERIC MUTATIONS FOR HEALTH:
-✗ BANNED: "Take care of your health" → ✓ USE: "Your [specific organ] is at [HIGH/MODERATE] risk with [X] indicators. Start [specific test] screening at age [Y]. Prevention: [specific dietary/lifestyle changes]"
-✗ BANNED: "Stress can affect you" → ✓ USE: "Moon score [X]% with [specific mental health indicator] creates vulnerability to [specific condition]. Your [sleep pattern] further [helps/hinders] recovery."
+✗ BANNED: "Take care of your health" → ✓ USE: "The allowed claim for [body system] shows [HIGH/MODERATE] chart sensitivity with [X] indicators, so your support plan should focus on [specific lifestyle pattern]."
+✗ BANNED: "Stress can affect you" → ✓ USE: "Moon score [X]% with [specific emotional pattern] suggests stress recovery needs extra structure. Your [sleep pattern] further [helps/hinders] recovery."
 ✗ BANNED: "Eat well and exercise" → ✓ USE: "Your [weakest planet at X%] governs [specific body system]. Recommended: [specific foods], [specific exercises], avoid [specific items]. Given your [food preference], prioritize [specific adjustments]."
-✗ BANNED: "You were born healthy" (when Birth Quality ≤2) → ✓ USE: "Your birth quality score [X]/5 suggests [specific birth difficulties]. Early life health severity: [level]."
+✗ BANNED: "You were born healthy" (when Birth Quality ≤2) → ✓ USE: "Your birth quality score [X]/5 suggests the early vitality pattern needed extra protection. Early life health severity: [level]."
 
-Translate the following health engine data into an honest health assessment. State organ risks, danger periods, and diet recommendations directly from the data.
+Translate the following health engine data into an honest wellness assessment. State organ vulnerability patterns, health-sensitive periods, and diet recommendations directly from the data. This is not medical diagnosis, just the chart's caution pattern.
 
 REMINDER: Clear and honest. If Sinhala (si), use 100% pure Sinhala with no English or Tamil (දෙමළ) words mixed in.
 
 Birth details: Born under ${lagnaEn} rising, Moon in ${moonEn}, Nakshatra: ${nakshatraName}
 Current life period: ${currentDasha} main period, ${currentAD} sub-period
 
+${buildHealthPromptPolicyBlock(sectionData)}
+
 ━━━ HEALTH DATA FROM CHART ━━━
 - Overall vitality: ${sectionData?.overallVitality || 'N/A'}
 - Mental health indicator: ${sectionData?.mentalHealthIndicator ? `Moon-Saturn conjunction: ${sectionData.mentalHealthIndicator.moonSaturnConjunction}, Moon H${sectionData.mentalHealthIndicator.moonHouse}, Moon score: ${sectionData.mentalHealthIndicator.moonScore}, Moon in dusthana: ${sectionData.mentalHealthIndicator.moonInDusthana}` : 'N/A'}
-${sectionData?.mentalHealthIndicator?.moonSaturnConjunction ? '⚠️ CRITICAL: Moon-Saturn conjunction detected — this person is highly susceptible to anxiety, depression, and emotional trauma. The MENTAL HEALTH DEEP DIVE section (#9) must address childhood emotional patterns, suppressed feelings, and provide serious healing recommendations. Do NOT skip or minimize this.' : ''}
+${sectionData?.mentalHealthIndicator?.moonSaturnConjunction ? 'Moon-Saturn pressure detected: describe emotional heaviness, suppressed feelings, recovery structure, and support needs without naming clinical diagnoses.' : ''}
 - Longevity indicator: ${sectionData?.longevityIndicator ? `Saturn score: ${sectionData.longevityIndicator.saturnScore}, H8 strength: ${sectionData.longevityIndicator.h8Strength}` : 'N/A'}
 - Body areas at risk: ${JSON.stringify(sectionData?.bodyRisks || [])}
 - Health vulnerabilities (weak planets): ${(sectionData?.healthVulnerabilities || []).map(v => `${v.planet || v.name || 'Unknown'}: ${v.score || v.percentage || '?'}% (${v.dignity || ''}${v.weakestComponent?.name ? ', weakest: ' + v.weakestComponent.name + '=' + v.weakestComponent.value : ''})`).join('; ') || 'N/A'}
@@ -2306,69 +2317,59 @@ ${sectionData?.mentalHealthIndicator?.moonSaturnConjunction ? '⚠️ CRITICAL: 
 BIRTH QUALITY & HEALTH FOUNDATION:
 ${bd?.panchanga?.panchangaQuality ? `Birth Quality: ${bd.panchanga.panchangaQuality.score}/5 (${bd.panchanga.panchangaQuality.quality})` : 'Birth quality data not available'}
 
-⚠️ CRITICAL — BIRTH HEALTH ACCURACY RULES:
-- If Birth Quality score is 1 or 2 out of 5, the birth was DIFFICULT. The person may have been premature, spent time in an incubator or NICU, or had birth complications. State this clearly. Do NOT say "born strong" or "healthy birth" when the score is low.
-- If earlyLifeHealth severity is HIGH or CRITICAL (see below), the infant period was dangerous — describe the struggles honestly.
+BIRTH HEALTH ACCURACY RULES:
+- If Birth Quality score is 1 or 2 out of 5, describe early vitality as needing extra support. Do not invent specific infant medical events or named complications.
+- If earlyLifeHealth severity is HIGH or CRITICAL, write only the allowed early-life claim from the evidence-gated policy above.
 - Only describe the birth as "strong" or "healthy" if BOTH Birth Quality >= 4 AND earlyLifeHealth severity is LOW.
 
-━━━ ORGAN-BY-ORGAN RISK MAP ━━━
-${sectionData?.highRiskOrgans?.length > 0 ? `🔴 HIGH RISK organs: ${sectionData.highRiskOrgans.join(', ')}` : '✅ No HIGH RISK organs detected'}
-${sectionData?.moderateRiskOrgans?.length > 0 ? `🟡 MODERATE RISK organs: ${sectionData.moderateRiskOrgans.join(', ')}` : ''}
+━━━ ORGAN CLAIM MAP ━━━
+Use only the evidence-gated organ claims above. Raw organ-risk arrays are intentionally withheld here so low-evidence organs cannot be seeded into the narrative.
 
 🎯 PRIMARY HEALTH CONCERN (HIGHEST RISK ORGAN):
-${sectionData?.primaryHealthConcern ? `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️ ${sectionData.primaryHealthConcern.organ} — ${sectionData.primaryHealthConcern.risk} RISK (${sectionData.primaryHealthConcern.indicators} indicators)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-AI: Interpret this organ risk using your medical knowledge. Determine likely diseases, vulnerable age ranges, and practical prevention strategies based on the organ name and risk level.
-` : 'No primary health concern identified — all organs are at LOW or MODERATE risk.'}
+Use the 'primaryHealthConcern' field in the structured allowed-claims payload above. If it is null, do not invent a primary organ concern.
 
-RANKED ORGANS BY RISK (sorted from highest to lowest risk):
-${(sectionData?.rankedOrganRisks || []).map((o, i) => `${i + 1}. [${o.risk}] ${o.organ} (${o.indicators} indicators)`).join('\n')}
+EVIDENCE-GATED ORGANS TO DISCUSS:
+${buildHealthPromptPayload(sectionData).allowedClaims.filter(claim => claim.category === 'wellness_pattern').map((claim, i) => `${i + 1}. [${claim.risk}] ${claim.publicLabel} (${claim.indicatorCount} indicators, ${claim.detailLevel})`).join('\n') || 'None'}
 
-━━━ ALL ORGAN DETAILS ━━━
-${(sectionData?.organRisks || []).map(o => `• [${o.risk}] ${o.organ} (${o.indicators} indicators)`).join('\n')}
+LOW-RISK ORGAN HANDLING:
+Low-risk organ names are intentionally not repeated here. If an organ appears only in omitTopics, do not mention it in the public report.
 
 ━━━ 🍼 INFANT & EARLY CHILDHOOD HEALTH ━━━
 ${sectionData?.earlyLifeHealth?.severity !== 'LOW' ? `
-⚠️ EARLY-LIFE HEALTH VULNERABILITY: ${sectionData?.earlyLifeHealth?.severity}
-Risk indicators (${sectionData?.earlyLifeHealth?.riskCount || 0}):
-${(sectionData?.earlyLifeHealth?.indicators || []).map((r, i) => `${i+1}. ${r.type}${r.planets ? ' — planets: ' + r.planets.join(', ') : ''}${r.house ? ' — house ' + r.house : ''}${r.lord ? ' — ' + r.lord : ''}${r.score ? ' — score ' + r.score : ''}`).join('\n')}
+Early-life vitality sensitivity: ${sectionData?.earlyLifeHealth?.severity}
+Evidence count: ${sectionData?.earlyLifeHealth?.riskCount || 0}
+Raw early-life indicators are intentionally withheld from this prompt. Use only the allowed early-life claim in the evidence-gated policy block.
 
-IMPORTANT: If this person's early-life health severity is HIGH or CRITICAL, you MUST dedicate a FULL PARAGRAPH to their infant/childhood health struggles. Describe:
-- What likely happened in the first days/weeks/months of life (based on the risk indicators above)
-- Possible premature birth, time in incubator/NICU, low birth weight, breathing difficulties
-- The specific illness patterns (respiratory if Ketu/Mars in 4th, gut/immune if Saturn in 6th, etc.)
-- How they survived and what this means for their resilience
-- Long-term health effects of childhood illness
-- This is NOT speculative — the chart clearly shows early-life health crisis indicators.
+If the evidence-gated early-life claim is allowed, include one careful paragraph about:
+- Broad early sensitivity and resilience themes only.
+- What kind of protection, rest, nourishment, or recovery rhythm the chart symbolically points to.
+- Do not state specific infant medical events, named illnesses, or long-term medical effects.
+- This is not a medical diagnosis, just the chart's caution pattern; frame it as prevention and resilience.
 - NEVER contradict this by saying "born strong" elsewhere in the report.
 ` : 'No significant early-life health vulnerability detected.'}
 
-━━━ KIDNEY / URINARY SYSTEM (SPECIFIC) ━━━
-- Kidney risk level: ${sectionData?.kidneyRisk || 'N/A'}
-- Kidney chart analysis: ${sectionData?.kidneyNarrative ? `Risk: ${sectionData.kidneyNarrative.risk}, Indicators: ${sectionData.kidneyNarrative.indicatorCount}, Types: ${(sectionData.kidneyNarrative.indicators || []).map(i => i.type).join(', ') || 'none'}` : 'N/A'}
-${sectionData?.kidneyRisk === 'HIGH' ? `⚠️ MANDATORY: You MUST include a detailed, specific kidney/urinary health section. This person has HIGH kidney risk written into their chart. Describe: (1) early stone/UTI episodes likely in their late 20s, (2) a more serious kidney health crisis around age 50, (3) the strong possibility of surgical intervention, (4) specific kidney protection protocol — diet (avoid oxalate-rich foods, drink 3L water daily, coconut water, barley water/iridhu), herbal remedies (polpala tea, punarnava, gokshura), annual kidney function tests (creatinine, eGFR, urine microalbumin) from age 30 onwards.` : ''}
+━━━ ORGAN CLAIM RULE ━━━
+All organ systems, including kidney/urinary, follow the same allowed-claims policy above. If an organ is absent from allowed claims, omit it completely. Do not add one-off organ sections.
 
-━━━ HEALTH DANGER PERIODS (ANTARDASHA-LEVEL) ━━━
-CRITICAL periods (both main + sub period are danger indicators):
+━━━ HEALTH-SENSITIVE PERIODS (ANTARDASHA-LEVEL) ━━━
+CRITICAL periods (both main + sub period are caution indicators):
 ${(sectionData?.dangerPeriods || []).filter(d => d.level === 'CRITICAL').slice(0, 12).map(d => `• ${d.lord}-${d.antardasha}: ${d.period} — ${d.reason}`).join('\n') || 'None'}
 
 ELEVATED periods (main period is a health significator):
 ${(sectionData?.dangerPeriods || []).filter(d => d.level === 'ELEVATED').slice(0, 8).map(d => `• ${d.lord}-${d.antardasha}: ${d.period}`).join('\n') || 'None'}
 
-═══ NADI ASTROLOGY HEALTH ANALYSIS (Sub-Lord Methodology) ═══
-${sectionData?.nadiHealth ? `- Disease Verdict: ${sectionData.nadiHealth.diseaseVerdict} (${sectionData.nadiHealth.diseaseStrength})
-- Disease-activating planets: ${(sectionData.nadiHealth.diseasePlanets || []).join(', ') || 'N/A'}
+═══ NADI ASTROLOGY HEALTH RESILIENCE ANALYSIS (Sub-Lord Methodology) ═══
+${sectionData?.nadiHealth ? `- Health-challenge verdict: ${sectionData.nadiHealth.diseaseVerdict} (${sectionData.nadiHealth.diseaseStrength})
+- Caution-indicator planets: ${(sectionData.nadiHealth.diseasePlanets || []).join(', ') || 'N/A'}
 - Longevity Verdict: ${sectionData.nadiHealth.longevityVerdict || 'N/A'} (${sectionData.nadiHealth.longevityStrength || 'N/A'})
 - Longevity-supporting planets: ${(sectionData.nadiHealth.longevityPlanets || []).join(', ') || 'N/A'}
 - Longevity Estimate: ${sectionData.nadiHealth.longevityEstimate ? `${sectionData.nadiHealth.longevityEstimate.estimatedYears} years — ${sectionData.nadiHealth.longevityEstimate.category}` : 'N/A'}` : 'Nadi health analysis not available'}
 
-⚠️ PRECISION NOTE: Health vulnerability scores are based on 6-component Shadbala analysis. The organ risk map above is computed from house positions, planetary strengths, and aspect patterns — use it to give HIGHLY SPECIFIC health advice for each organ system.
+⚠️ PRECISION NOTE: Health vulnerability scores are based on 6-component strength analysis. The organ risk map above is computed from chart patterns — use it to give specific prevention advice for each organ system. This is not medical diagnosis, just the chart's caution pattern.
 
 CROSS-REFERENCE DATA (for richer health narrative):
-- Depression risk: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'} (mental health affects physical health)
-- Childhood trauma: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (stored trauma manifests as physical symptoms)
+- Emotional heaviness risk: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'} (emotional strain can affect recovery habits)
+- Childhood stress pattern: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (stored stress may correlate with physical tension patterns)
 - Sleep pattern: ${allSections?.surpriseInsights?.sleepPattern || 'N/A'}
 - Food preference: ${allSections?.surpriseInsights?.foodPreference || 'N/A'}
 - Career top planet: ${(allSections?.career?.careerPlanetRanking || []).slice(0, 1).map(p => `${p.planet}(H${p.house})`).join('') || 'N/A'} (desk job vs physical work — interpret from planet nature)
@@ -2377,19 +2378,18 @@ CROSS-REFERENCE DATA (for richer health narrative):
 - Mother health risks: ${JSON.stringify(allSections?.familyPortrait?.mother?.healthRisks || []).substring(0, 100)} (hereditary patterns)
 - Father health risks: ${JSON.stringify(allSections?.familyPortrait?.father?.healthRisks || []).substring(0, 100)} (hereditary patterns)
 
-OUTPUT: Write detailed paragraphs (8-12) covering ONLY what the data supports:
+OUTPUT: Write 7-10 detailed paragraphs covering ONLY what the data supports:
 1. **Overall vitality assessment** — from the vitality data, what's their baseline health?
-2. **HIGH-RISK organs** — for EACH organ in the risk map, dedicate a full paragraph: name the organ, vulnerable age, specific diseases, prevention strategy, and screening schedule
-3. **MODERATE-RISK organs** — brief mention with prevention tips
-4. **Hereditary patterns** — from parent health risk cross-reference, what conditions run in the family
-5. **Health danger periods** — EXACT dates from the danger period data with severity levels. Which years need extra vigilance?
+2. **Allowed HIGH-risk organ systems** — use only allowed claims; describe vulnerability themes and practical support, not diseases or tests
+3. **Allowed MODERATE-risk organ systems** — brief mention with prevention tips
+4. **Family pattern hints** — only if cross-reference supports it; do not claim inherited disease
+5. **Health-sensitive periods** — dates from the caution-period data with severity levels. Which years need extra vigilance? Treat this as timing symbolism, not a promise.
 6. **Diet and lifestyle** — from the engine diet recommendations PLUS food preference data. Be specific: what to eat, what to avoid, and WHY for this person's specific risks
 7. **Sleep and stress** — from sleep pattern + mental health cross-reference
-8. **Age-specific health plan** — based on current age, what should they prioritize NOW vs in 10 years
-9. **Medical screening calendar** — specific tests based on organ risk data, at what age to start each
-10. **Longevity assessment** — from the longevity indicator data
+8. **Age-aware wellness support** — based on current age, what should they prioritize now vs later, without specific medical tests or screening ages
+9. **Longevity/resilience assessment** — from the longevity indicator data, without predicting death or exact lifespan
 
-Write AT LEAST 10-14 rich, detailed paragraphs (each 3-6 sentences). This is a HERO section — health is CRITICAL. Every organ risk needs its own full paragraph. Every danger period needs specific dates and what to watch for. Do NOT rush through this section.
+Write 7-10 rich, detailed paragraphs (each 3-5 sentences). Health is sensitive, so be useful and calm rather than dramatic. Omit unsupported organs completely.
 
 REMINDER: Plain language — avoid technical chart jargon. Be honest about risks; stay actionable and supportive.
 ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word. දෙමළ (Tamil) අකුරු හෝ වචන කිසිසේත් භාවිතා නොකරන්න.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish (Sinhala words in English letters).' : 'Write in warm, caring English.'}`,
@@ -2415,7 +2415,7 @@ ANTI-GENERIC MUTATIONS FOR FOREIGN TRAVEL:
 ✗ BANNED: "You may travel abroad" → ✓ USE: "Foreign likelihood: [rating]. [X] travel indicators detected. Best window: [period] during [dasha lord] period."
 ✗ BANNED: "International opportunities exist" → ✓ USE: "9th house [X]/100 + 12th house [Y]/100 + Nadi verdict [Z] = [strong/moderate/weak] overseas energy. Direction: [specific direction], ideal countries: [list]"
 
-Translate the following foreign travel data. State likelihood, timing windows, suggested countries, and settlement indication directly from the data.
+Translate the following foreign travel data. State likelihood, symbolic timing windows, suggested countries, and settlement indication from the data without promising migration outcomes.
 
 REMINDER: Clear and honest. If Sinhala (si), use 100% pure Sinhala with no English or Tamil (දෙමළ) words mixed in.
 
@@ -2643,7 +2643,7 @@ ANTI-GENERIC MUTATIONS FOR LUCK:
 ✗ BANNED: "Try your luck occasionally" → ✓ USE: "Lottery indication: [exact rating from data]. 5th house speculation strength [X]/100. Nadi windfall verdict: [verdict]. Honest assessment: [specific probability]."
 ✗ BANNED: "Good fortune awaits" → ✓ USE: "Lucky periods: [specific dates + lords]. During [lord] period, [specific luck mechanism from indicators]. Lucky numbers: [exact numbers], Lucky day: [day]."
 
-Translate the following luck engine data. State the overall luck score, lucky periods, lucky numbers/days, lottery indication, and inheritance indication directly from the data.
+Translate the following luck engine data. State the overall luck score, symbolic lucky periods, lucky numbers/days, lottery indication, and inheritance indication from the data without promising windfalls.
 
 REMINDER: Clear and honest. If Sinhala (si), use 100% pure Sinhala with no English or Tamil (දෙමළ) words mixed in.
 
@@ -2768,9 +2768,9 @@ CROSS-REFERENCE DATA:
 - Estimated children: ${allSections?.children?.estimatedChildren?.count || 'N/A'} (${allSections?.children?.estimatedChildren?.genderTendency || 'N/A'})
 - Siblings from familyPortrait: count ${allSections?.familyPortrait?.siblings?.estimatedCount?.count || 'N/A'}, elder ${allSections?.familyPortrait?.siblings?.estimatedCount?.estimatedElderSiblings || 'N/A'}, younger ${allSections?.familyPortrait?.siblings?.estimatedCount?.estimatedYoungerSiblings || 'N/A'}
 - Mental stability: ${allSections?.mentalHealth?.mentalStability ? `Moon score ${allSections.mentalHealth.mentalStability.moonScore}, Moon H${allSections.mentalHealth.mentalStability.moonHouse}${allSections.mentalHealth.mentalStability.vishYoga ? ', Vish Yoga present' : ''}${allSections.mentalHealth.mentalStability.moonInDusthana ? ', Moon in dusthana' : ''}` : 'N/A'}
-- Childhood trauma level: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (${allSections?.mentalHealth?.childhoodTrauma?.score || 0}/${allSections?.mentalHealth?.childhoodTrauma?.maxScore || 17})
-${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? '- Trauma indicators: ' + allSections.mentalHealth.childhoodTrauma.indicators.map(ind => ind.type || JSON.stringify(ind)).join(' | ') : ''}
-- Depression risk: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'}
+- Childhood stress pattern: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (${allSections?.mentalHealth?.childhoodTrauma?.score || 0}/${allSections?.mentalHealth?.childhoodTrauma?.maxScore || 17})
+${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? '- Childhood stress indicators: ' + allSections.mentalHealth.childhoodTrauma.indicators.map(ind => ind.type || JSON.stringify(ind)).join(' | ') : ''}
+- Emotional heaviness risk: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'}
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'}${allSections?.marriage?.marriageAfflictions?.isMarriageDenied ? ', Marriage Denied: YES' : ''}
 
 ━━━ HOW TO USE THIS DATA (NO GUESSING ALLOWED) ━━━
@@ -2796,11 +2796,11 @@ MOTHER PROFILE: ${sectionData?.motherProfile ? `Moon H${sectionData.motherProfil
 
 EMOTIONAL PATTERN: ${allSections?.mentalHealth?.mentalStability ? `Moon score ${allSections.mentalHealth.mentalStability.moonScore}, Moon H${allSections.mentalHealth.mentalStability.moonHouse}${allSections.mentalHealth.mentalStability.vishYoga ? ', Vish Yoga present' : ''}${allSections.mentalHealth.mentalStability.moonInDusthana ? ', Moon in dusthana' : ''}` : 'N/A'} — this reveals whether the person had childhood emotional struggles, trauma, or a difficult home environment. If Vish Yoga or Moon in dusthana, WEAVE IT into the family section — mention that the home environment may have been emotionally cold or difficult.
 
-CHILDHOOD TRAUMA LEVEL: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (Score: ${allSections?.mentalHealth?.childhoodTrauma?.score || 0}/${allSections?.mentalHealth?.childhoodTrauma?.maxScore || 17})
-${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? 'TRAUMA INDICATORS:\n' + allSections.mentalHealth.childhoodTrauma.indicators.map(i => `  🔴 ${i.type || 'unknown'}${i.lord ? ` (${i.lord} in H${i.house})` : i.house ? ` (H${i.house})` : i.yoga ? ` — ${i.yoga}` : ''}`).join('\n') : 'No childhood trauma indicators'}
-${allSections?.mentalHealth?.childhoodTrauma?.level === 'SEVERE' || allSections?.mentalHealth?.childhoodTrauma?.level === 'HIGH' ? '\n🚨 THIS PERSON HAD A DIFFICULT CHILDHOOD. The engine detected multiple layers of early-life suffering. When writing about the MOTHER and FATHER, you MUST acknowledge this pain. Describe the ACTUAL family dynamics — cold/absent/struggling parents, emotional neglect, disrupted home — based on the indicators above. Do NOT write a generic happy family narrative when the data shows trauma.' : ''}
+CHILDHOOD STRESS PATTERN: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (Score: ${allSections?.mentalHealth?.childhoodTrauma?.score || 0}/${allSections?.mentalHealth?.childhoodTrauma?.maxScore || 17})
+${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? 'CHILDHOOD STRESS INDICATORS:\n' + allSections.mentalHealth.childhoodTrauma.indicators.map(i => `  - ${i.type || 'unknown'}${i.lord ? ` (${i.lord} in H${i.house})` : i.house ? ` (H${i.house})` : i.yoga ? ` — ${i.yoga}` : ''}`).join('\n') : 'No childhood stress indicators'}
+${allSections?.mentalHealth?.childhoodTrauma?.level === 'SEVERE' || allSections?.mentalHealth?.childhoodTrauma?.level === 'HIGH' ? '\nIf this pattern is HIGH, acknowledge possible emotional pressure in the home without diagnosing parents or inventing specific events. Describe family dynamics only from the indicators above.' : ''}
 
-DEPRESSION RISK: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'} — if HIGH, the family environment contributed. Acknowledge this in the family narrative.
+EMOTIONAL HEAVINESS RISK: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'} — if HIGH, mention that family dynamics may have shaped emotional patterns, without diagnosing the person.
 
 SOUL PURPOSE: "${sectionData?.soulPurpose ? (typeof sectionData.soulPurpose === 'object' ? `${sectionData.soulPurpose.planet} in ${sectionData.soulPurpose.rashi}` : sectionData.soulPurpose) : 'N/A'}"
 KARAKAMSHA (Soul's deepest craving): ${sectionData?.soulPurpose?.karakamsha || 'N/A'} — THIS is the most specific soul description. Use it to paint a vivid picture of what this person's soul truly wants in this lifetime.
@@ -2907,7 +2907,7 @@ ${(sectionData?.dangerPeriods || []).map((d, i) => `${i+1}. ${d.type} — ${d.pe
 - Peak Age: ${sectionData?.goldenPeriod?.peakAge || 'N/A'}
 - Ruling Planet: ${sectionData?.goldenPeriod?.lord || 'N/A'}
 
-OUTPUT: Write AT LEAST 25-30 rich, detailed paragraphs covering ALL the data below. This is the MOST PERSONAL and VIRAL section — people screenshot this and share it on social media. Make it feel like a psychic reading, not a report.
+OUTPUT: Write 20-25 rich, detailed paragraphs covering the supported data below. Make it feel personal, vivid, and evidence-grounded.
 
 SECTION STRUCTURE (dedicate a FULL paragraph to each):
 1. **Physical appearance** — paint a vivid picture from the data
@@ -2918,24 +2918,24 @@ SECTION STRUCTURE (dedicate a FULL paragraph to each):
 6. **Partner's first letter** — top 3 weighted letters with explanation
 7. **Hidden talent** — from the data
 8. **Soul purpose** — from the soul purpose and karakamsha data
-9. **Love language & attachment** — how they love, their attachment style, jealousy level, first love age. This is INCREDIBLY personal — people will feel called out.
-10. **Daily behavior** — morning/night owl, social battery, decision style, phone habits. People LOVE seeing their daily habits predicted.
-11. **Anger & crying** — how they express anger and what makes them cry. This is the "HOW DID YOU KNOW" moment. Be specific.
-12. **Public mask vs private self** — who they show the world vs who they really are. The contrast is what makes people share this. Include what they hide from everyone.
-13. **Money personality** — spender vs saver archetype, impulse buying. People identify strongly with their money habits.
-14. **Life shift moments** — list 3-5 specific ages where major shifts happened. Use "Around age X..." phrasing. People will check these against their real life and be amazed.
+9. **Love language & attachment** — how they love, their attachment style, jealousy level, first love age. Keep it compassionate and bounded by the data.
+10. **Daily behavior** — morning/night owl, social battery, decision style, phone habits.
+11. **Anger & crying** — how they express anger and what makes them cry. Be specific when the data is specific.
+12. **Public mask vs private self** — who they show the world vs who they really are. Include what they tend to hide only when supported.
+13. **Money personality** — spender vs saver archetype, impulse buying.
+14. **Life shift moments** — list 3-5 specific ages where major shifts happened. Use "Around age X..." phrasing and treat timing as symbolism, not a promise.
 15. **Addiction vulnerabilities** — what they're most susceptible to. Frame compassionately but honestly.
 16. **Lucky profile** — numbers, colors, day, gemstone, direction. People use these in daily life.
 17. **Compatibility cards** — best friend sign, enemy sign, boss sign, romance sign. Highly shareable.
-18. 🔥 **Second Marriage & Divorce** — Will they have a second marriage? What's the divorce risk? State the probability DIRECTLY without softening. If LOW, say "low" in one sentence. If HIGH, explain exactly WHY and WHEN divorce/second marriage is most likely. Do NOT sugarcoat — this is the #1 question people ask astrologers and they want the TRUTH.
-19. 🔥 **Monk or Renunciation** — Do they have the chart of a monk/nun? Will they ever "leave everything behind"? Even if LOW, discuss their relationship with spirituality vs material life. If HIGH, this becomes the most dramatic paragraph in the report.
-20. 🔥 **Fame Potential** — Will they be famous? How and where? Celebrity level or local recognition? People LOVE hearing about their fame potential.
-21. 🔥 **Wealth Class Prediction** — What economic class does their chart indicate? Be direct. People want to know if they'll be rich.
+18. **Second Marriage & Divorce** — Describe relationship stability symbolism from the data. If risk is LOW, keep it brief. If HIGH, explain the supporting patterns and use probabilistic language.
+19. **Monk or Renunciation** — Discuss the spirituality/material-life balance. If HIGH, make it meaningful without turning it into a guaranteed life outcome.
+20. **Fame Potential** — Describe recognition potential and likely channels from the data.
+21. **Wealth Class Prediction** — Describe financial growth potential and constraints without guaranteeing a fixed class outcome.
 22. 🔥 **Past Life Story** — Who were they in their past life? What karmic lesson are they learning? What talent did they bring? This is DEEPLY engaging — write it like a short story.
-23. 🔥 **Danger Periods** — When should they be extra careful? Accident-prone years, health crisis windows. Frame as protective advice, not doom.
+23. **Caution Periods** — When should they be extra careful? Frame as protective timing symbolism, not doom or a guaranteed event.
 24. 🔥 **Spirit Animal** — What animal represents their cosmic energy? Fun, shareable, and memorable.
-25. 🔥 **Celebrity Chart Twin** — Which famous person shares their chart energy? People LOVE this and will share it instantly.
-26. 🔥 **Golden Period** — The BEST years of their life. When everything clicks. People mark these dates and tell their friends.
+25. **Celebrity Chart Twin** — Which famous person shares a similar chart energy?
+26. **Golden Period** — The strongest growth years indicated by the chart.
 27. **🔥 The Cosmic Roast** — END with a funny, affectionate roasting paragraph using the planetary roasts below. Like a best friend exposing you lovingly.
 
 Skip any area where data is N/A. Do NOT add generic predictions not supported by the data.
@@ -2978,7 +2978,7 @@ CONVERGENCE RULES FOR THIS SECTION:
 • Siblings → 3rd house (younger) + 11th house (elder) + Mars strength + estimatedCount (elder + younger SEPARATELY) + D3 + Bhratrkaraka = sibling portrait.
 • Health claims about parents → ALWAYS use probabilistic language. "Watch for" not "will have."
 • Bond claims → ALWAYS hedge negative claims. "There may be phases of complexity" not "difficult relationship."
-• Family karma → Cross-validate: childhood trauma indicators + depression risk + marriage patterns = intergenerational karma story.
+• Family karma → Cross-validate: childhood stress indicators + emotional heaviness pattern + marriage patterns = intergenerational karma story.
 
 ANTI-GENERIC MUTATIONS FOR FAMILY:
 ✗ BANNED: "You have a good relationship with your mother" → ✓ USE: "Moon in H[X] with [strength]% and [bond data] suggests [specific dynamic]. [If trauma detected: 'There may have been phases where emotional expression was challenging.']"
@@ -3043,8 +3043,8 @@ ${sectionData?.mother?.derivedChart ? Object.entries(sectionData.mother.derivedC
 - Abandonment risk: ${sectionData?.mother?.hasStrongAbandonmentRisk ? 'STRONG' : sectionData?.mother?.hasAbandonmentRisk ? 'Moderate' : 'Low'}
 - Health risks: ${JSON.stringify(sectionData?.mother?.healthRisks || [])}
 - Kidney risk: high=${sectionData?.mother?.kidneyRisk?.high || false}, indicators=${sectionData?.mother?.kidneyRisk?.indicatorCount || 0}
-- Health crisis windows (by native's age): ${JSON.stringify(sectionData?.mother?.healthCrisisWindows || [])}
-- Health event periods: ${JSON.stringify(sectionData?.mother?.motherHealthPeriods || [])}
+- Parent wellness caution windows (by native's age): ${JSON.stringify(sectionData?.mother?.healthCrisisWindows || [])}
+- Wellness-sensitive periods: ${JSON.stringify(sectionData?.mother?.motherHealthPeriods || [])}
 - Life struggles: ${JSON.stringify(sectionData?.mother?.lifestrug || [])}
 - Bond with mother: ${JSON.stringify(sectionData?.mother?.bond || {})}
 - Malefics in 4th: ${(sectionData?.mother?.maleficsIn4th || []).join(', ') || 'None'}
@@ -3137,16 +3137,16 @@ ${sectionData?.father?.derivedChart ? Object.entries(sectionData.father.derivedC
 
 ━━━ PARENT HEALTH PREDICTIONS ━━━
 ${sectionData?.parentHealthPredictions ? `Mother Health Score: ${sectionData.parentHealthPredictions.mother?.overallHealthScore || 'N/A'}%, Moon: ${sectionData.parentHealthPredictions.mother?.moonScore || 'N/A'}% (${sectionData.parentHealthPredictions.mother?.moonDignity || 'N/A'})
-Mother Critical Periods: ${JSON.stringify(sectionData.parentHealthPredictions.mother?.criticalPeriods || [])}
+Mother Caution Periods: ${JSON.stringify(sectionData.parentHealthPredictions.mother?.criticalPeriods || [])}
 Father Health Score: ${sectionData.parentHealthPredictions.father?.overallHealthScore || 'N/A'}%, Sun: ${sectionData.parentHealthPredictions.father?.sunScore || 'N/A'}% (${sectionData.parentHealthPredictions.father?.sunDignity || 'N/A'})
-Father Critical Periods: ${JSON.stringify(sectionData.parentHealthPredictions.father?.criticalPeriods || [])}
+Father Caution Periods: ${JSON.stringify(sectionData.parentHealthPredictions.father?.criticalPeriods || [])}
 Protective Factors: ${JSON.stringify(sectionData.parentHealthPredictions.protectiveFactors || {})}` : 'N/A'}
 
 ━━━ CROSS-REFERENCE ━━━
 - Children: ${allSections?.children?.estimatedChildren?.count || 'N/A'} (${allSections?.children?.estimatedChildren?.genderTendency || 'N/A'})
-- Childhood trauma: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (${allSections?.mentalHealth?.childhoodTrauma?.score || 0}/${allSections?.mentalHealth?.childhoodTrauma?.maxScore || 17})
-${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? allSections.mentalHealth.childhoodTrauma.indicators.map(i => `  🔴 ${i.type || 'unknown'}${i.lord ? ` (${i.lord} in H${i.house})` : i.house ? ` (H${i.house})` : i.yoga ? ` — ${i.yoga}` : ''}`).join('\n') : ''}
-- Depression risk: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'}
+- Childhood stress pattern: ${allSections?.mentalHealth?.childhoodTrauma?.level || 'N/A'} (${allSections?.mentalHealth?.childhoodTrauma?.score || 0}/${allSections?.mentalHealth?.childhoodTrauma?.maxScore || 17})
+${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? allSections.mentalHealth.childhoodTrauma.indicators.map(i => `  - ${i.type || 'unknown'}${i.lord ? ` (${i.lord} in H${i.house})` : i.house ? ` (H${i.house})` : i.yoga ? ` — ${i.yoga}` : ''}`).join('\n') : ''}
+- Emotional heaviness risk: ${allSections?.mentalHealth?.depressionRisk?.level || 'N/A'}
 - Mental stability: ${allSections?.mentalHealth?.mentalStability ? `Moon score ${allSections.mentalHealth.mentalStability.moonScore}, Moon H${allSections.mentalHealth.mentalStability.moonHouse}${allSections.mentalHealth.mentalStability.vishYoga ? ', Vish Yoga' : ''}` : 'N/A'}
 - Marriage afflictions: ${allSections?.marriage?.marriageAfflictions?.severity || 'N/A'} (family dynamics often echo in marriage patterns)
 - Retrograde planets: ${(allSections?.personality?.retrogradePlanets || []).filter(r => [4, 9, 3].includes(r.house)).map(r => r.name + ' in house ' + r.house + ' — past-life family karma').join(', ') || 'None in family houses'}
@@ -3155,27 +3155,27 @@ ${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? allSections.m
 - Nadi Marriage strength: ${allSections?.marriage?.nadiMarriage?.strength || 'N/A'} (strong = stable family foundation, weak = family stress)
 - Nadi Health longevity: ${allSections?.health?.nadiHealth?.longevityEstimate?.estimatedYears || 'N/A'}yr (context for parent health predictions)
 - Nadi Children verdict: ${allSections?.children?.nadiChildren?.verdict || 'N/A'} (strong = family grows, weak = limited family expansion)
-USE: Nadi verdicts add confidence to family predictions — if Nadi marriage is weak AND family trauma is high, the family dysfunction pattern is CONFIRMED at multiple levels.
+USE: Nadi verdicts add context to family predictions — if Nadi marriage is weak AND childhood stress is high, describe a repeated pressure pattern without presenting it as confirmed biography.
 
-${allSections?.mentalHealth?.childhoodTrauma?.level === 'SEVERE' || allSections?.mentalHealth?.childhoodTrauma?.level === 'HIGH' ? '🚨 CHILDHOOD TRAUMA DETECTED — Multiple indicators of early-life suffering. Do NOT write a generic happy family narrative. Acknowledge emotional disruption in mother section (familySeparation), distance/conflict in father section (bond field), and weave pain into descriptions with compassion.' : ''}
+${allSections?.mentalHealth?.childhoodTrauma?.level === 'SEVERE' || allSections?.mentalHealth?.childhoodTrauma?.level === 'HIGH' ? 'CHILDHOOD STRESS PATTERN HIGH — Do not write a generic happy family narrative. Acknowledge possible emotional pressure in mother/father sections only from the provided bond and family-separation fields.' : ''}
 
-⚠️ CRITICAL: PROBABILISTIC LANGUAGE FOR FAMILY RELATIONSHIPS
-The user can IMMEDIATELY verify claims about their living parents. Wrong claims = lost trust = bad reviews.
+PROBABILISTIC LANGUAGE FOR FAMILY RELATIONSHIPS
+The user can often verify claims about living parents. Wrong claims break trust.
 - For mother bond: If the data suggests "difficult" or "distant", ALWAYS use probabilistic language:
   • Say "there may be phases of emotional complexity" NOT "you have a difficult relationship"
   • Say "communication styles may sometimes differ" NOT "you don't understand each other"
   • Say "your chart suggests some testing phases in this bond — though many with this pattern maintain very close relationships" NOT definitive negative statements
 - For father bond: Same rule — hedge all negative claims
-- For health risks: Say "watch for" or "be mindful of" NOT "your mother WILL have kidney problems"
+- For health risks: Say "watch for" or "be mindful of" NOT definitive organ-problem predictions
 - For life struggles: Say "your mother may have faced challenges with..." NOT definitive past-tense claims about events you can't verify
 
 REASON: A user whose mother is perfectly healthy and loving will immediately reject the entire report if you claim the relationship is "difficult." But if you say "there may be phases of emotional adjustment" — that's true for EVERYONE and doesn't trigger rejection.
 
-OUTPUT: Write AT LEAST 10-14 paragraphs (each 3-6 sentences). This is a HERO section.
-- AT LEAST 3 paragraphs for MOTHER: personality as a real person, her occupation/daily life based on the career analysis scores provided, health risks — identify the TOP 3 most vulnerable organs from the health risks data, HIGHLIGHT the single most dangerous one prominently, explain health crisis windows, your bond
-- AT LEAST 3 paragraphs for FATHER: personality, career type based on the career analysis scores provided, health risks, life struggles, your bond
-- AT LEAST 2 paragraphs for SIBLINGS: state the EXACT elder and younger count from the engine data — if estimatedElderSiblings > 0 say "you likely have [N] older sibling(s)", if estimatedYoungerSiblings > 0 say "you likely have [N] younger sibling(s)". Use the gender breakdown to specify brothers vs sisters. Describe each sibling's character, health, relationship dynamics. NEVER say "no older siblings" if the estimatedElderSiblings field is > 0.
-- AT LEAST 2 paragraphs for FAMILY KARMA: inherited patterns, karmic summary, how family patterns echo in your own life
+OUTPUT: Write 10-12 paragraphs (each 3-6 sentences).
+- About 3 paragraphs for MOTHER: personality, occupation/daily life based on the career analysis scores, broad wellness themes from provided risk data, caution windows in probabilistic language, and your bond
+- About 3 paragraphs for FATHER: personality, career type based on the career analysis scores, broad wellness themes from provided risk data, life struggles, and your bond
+- About 2 paragraphs for SIBLINGS: state the elder and younger count from the engine data — if estimatedElderSiblings > 0 say "you likely have [N] older sibling(s)", if estimatedYoungerSiblings > 0 say "you likely have [N] younger sibling(s)". Use the gender breakdown to specify brothers vs sisters. Describe sibling character, wellness tendencies, and relationship dynamics. NEVER say "no older siblings" if the estimatedElderSiblings field is > 0.
+- About 2 paragraphs for FAMILY KARMA: inherited patterns, karmic summary, how family patterns echo in your own life
 
 State sibling count and parent details from the engine fields directly — do not invent drama beyond the data.
 ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish.' : 'Write in profound, touching English.'}`,
@@ -3203,7 +3203,7 @@ ANTI-GENERIC MUTATIONS FOR PHYSICAL PROFILE:
 ✗ BANNED: "You have nice eyes" → ✓ USE: "[Specific eye shape from lagna] with [Moon sign element] emotional expression — [detailed description]"
 ✗ BANNED: "You are intelligent" → ✓ USE: "Mercury at [X]%, Moon at [Y]%, Jupiter at [Z]% — your mind is [specific characterization based on relative strengths]"
 
-You are creating the most PERSONAL and SPECIFIC physical profile possible for this person. Use ALL the multi-layer data below — do NOT rely only on Lagna. The engine has cross-referenced 10+ data layers for high accuracy. This is the section where people say "HOW DID THEY KNOW WHAT I LOOK LIKE?!"
+Create a personal and specific physical profile for this person. Use all the multi-layer data below and do not rely only on Lagna. The engine has cross-referenced 10+ data layers, so keep each description traceable to the evidence.
 
 CRITICAL ACCURACY RULES:
 1. Use ALL layers — Lagna base, planet modifications, Lagna lord dignity, Moon influence, Navamsha, decan, Venus analysis, aspects, and body constitution. Each layer REFINES the prediction.
@@ -3342,6 +3342,51 @@ ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). No
   return result;
 }
 
+function buildCalculationProvenanceBlock(sectionKey, birthData) {
+  const metadata = birthData?._calculationMetadata;
+  if (!metadata) return '';
+
+  const settings = metadata.settings || {};
+  const ephemeris = metadata.ephemeris || {};
+  const time = metadata.timeContext || {};
+  const sourceMap = {
+    yogaAnalysis: 'core.yogas, advanced.tier1.advancedYogas, accuracy.confidenceTiers.yogaAnalysis',
+    lifePredictions: 'core.vimshottari, rawReport.keyEventsCalendar, accuracy.returns, accuracy.varshaphal',
+    career: 'core.sections.career, advanced.tier2.shadbala, nadi.events.career, kp.subLords',
+    marriage: 'core.sections.marriage, navamsha, nadi.events.marriage, kp.subLords, accuracy.confidenceTiers.marriage',
+    marriedLife: 'core.sections.marriedLife, marriage quality indicators, navamsha, cross-section coherence',
+    financial: 'core.sections.financial, 2nd/11th indicators, nadi.events.wealth, career cap validator',
+    children: 'core.sections.children, D7, nadi.events.children, marriage coherence validator',
+    familyPortrait: 'core.sections.familyPortrait, parent indicators, sibling indicators, developmental guard',
+    health: 'core.sections.health, medical house indicators, accuracy.sadeSatiPhase, validator.healthSafety',
+    physicalProfile: 'lagna, planetary strength, developmental guard, lagna stability metadata',
+    attractionProfile: 'venus/mars/relationship indicators, darakaraka, marriage coherence',
+    foreignTravel: '9th/12th indicators, Rahu/Ketu, nadi.events.foreignTravel, transit timing',
+    education: '4th/5th indicators, D24, Mercury/Jupiter strength, nadi.events.education',
+    luck: '9th indicators, dharma axis, nadi.events.wealth, varshaphal',
+    legal: '6th/8th/12th indicators, nadi.events.litigation, confidence tier',
+    realEstate: '4th indicators, property Nadi event, financial cap validator',
+    transits: 'accuracy.localityDasha, current transits, varshaphal, returns, eclipse triggers',
+    surpriseInsights: 'rawReport.surpriseInsights only, cross-section coherence, validator',
+    remedies: 'weak planets, doshas, accuracy.avayogi/yogi, practical non-religious guidance',
+  };
+
+  const lines = ['', '', '══ CALCULATION PROVENANCE AND SOURCE MAP ══'];
+  lines.push(`Engine version: ${metadata.engineVersion || 'Grahachara-Core'}`);
+  lines.push(`Calculation UTC date: ${metadata.calculationDate || birthData?.date || 'unknown'}`);
+  lines.push(`Observer: lat ${metadata.observer?.lat ?? 'unknown'}, lng ${metadata.observer?.lng ?? 'unknown'}`);
+  lines.push(`Ayanamsha: ${settings.ayanamsha || 'lahiri'}; house system: ${settings.houseSystem || 'whole_sign'}; node type: ${settings.nodeType || 'true'}; observer mode: ${settings.observerMode || 'geocentric'}`);
+  lines.push(`Ephemeris: ${ephemeris.provider || settings.ephemeris || 'unknown'}; requested flags: ${(ephemeris.requestedFlags || []).join(', ') || 'not recorded'}; returned flags OK: ${ephemeris.returnedFlagsOk === true ? 'yes' : ephemeris.returnedFlagsOk === false ? 'no' : 'unknown'}`);
+  if (time.offsetLabel || time.zoneName || time.source) {
+    lines.push(`Timezone: ${time.zoneName || 'unknown zone'} ${time.offsetLabel || ''}; source: ${time.source || 'unknown'}; assumed: ${time.assumedOffset ? 'yes' : 'no'}`);
+    if (time.displayLocalDateTime) lines.push(`Resolved local birth time: ${time.displayLocalDateTime}`);
+  }
+  lines.push(`Primary source map for ${sectionKey}: ${sourceMap[sectionKey] || 'core section data, accuracy tier, validators'}`);
+  lines.push('Rules: do not recalculate astronomy; do not invent dates/scores/events; when returned flags are not OK, downgrade confidence; use timezone/local-time claims only from this block. Do not print this technical block to the user.');
+  lines.push('══════════════════════════════════════════════════════');
+  return lines.join('\n');
+}
+
 /**
  * Generate AI narrative for a single section
  */
@@ -3377,7 +3422,7 @@ async function generateSectionNarrative(sectionKey, sectionData, birthData, allS
 
 ═══ BIRTH DETAILS ═══
 Date of Birth: ${rashiContext.birthDateFormatted}
-Exact Birth Time: ${rashiContext.birthTimeSLT} (Sri Lanka Time, UTC+5:30)
+Exact Birth Time: ${rashiContext.birthTimeSLT} (${rashiContext.birthTimeLabel || 'resolved local time'})
 Birth Location: ${rashiContext.birthLocation}
 Moon Sign: ${rashiContext.moonSign}
 Sun Sign: ${rashiContext.sunSign}
@@ -3429,7 +3474,7 @@ INSTRUCTIONS FOR USING THIS DATA:
 - Use LAGNA CUSP WARNINGS when present — if the rising sign is near a boundary, present BOTH sign possibilities for maximum accuracy
 - Reference actual planet placements (without using technical astrology terms) to give precise, personal insights
 - Every prediction should be traceable to a specific placement, aspect, dasha period, or yoga from this data
-- Use the PAST LIFE section to weave in karmic narratives — people LOVE hearing about their soul's journey
+- Use the PAST LIFE section to weave in karmic narratives when supported by the data
 
 ⚠️ CRITICAL OUTPUT RULE: All the data labels above (Shadbala, Dasha, Yoga, Rashi, Dosha, Navamsha, Karakamsha, etc.) are FOR YOUR REFERENCE ONLY. 
 NEVER write these terms in your output. Translate EVERY concept into plain human language.
@@ -3555,11 +3600,11 @@ Before finalizing, verify:
 
 STEP 2D: CONFIDENCE CALIBRATION
 Tag each major claim in your output with an internal confidence tier:
-- ★★★ CONVERGENT (3+ sources agree): State as FACT. "This is one of the clearest signals..."
+- ★★★ CONVERGENT (3+ sources agree): State as a high-confidence chart pattern. "This is one of the clearest signals..."
 - ★★☆ SUPPORTED (2 sources agree): State with authority. "Your chart strongly indicates..."
 - ★☆☆ INDICATED (1 source, moderate strength): State clearly. "There's a notable pattern suggesting..."
 - ☆☆☆ HINTED (1 weak source): State as possibility. "One pattern in your chart hints at..."
-Never mix confidence levels — if something is ★★★, COMMIT to it. If it's ☆☆☆, don't oversell it.
+Never mix confidence levels — if something is ★★★, write it clearly while avoiding guaranteed-event language. If it's ☆☆☆, don't oversell it.
 
 ═══════════════════════════════════════════════════════════════
   PHASE 2E — ACCURACY ENGINE INPUTS (NEW — must be honoured)
@@ -3568,7 +3613,7 @@ Never mix confidence levels — if something is ★★★, COMMIT to it. If it's
 Near the end of every section's data block you will find an "ACCURACY ENHANCEMENTS" panel produced by an external precision engine. It contains:
 
 1. **"Confidence for this section"** — ★ / ★★ / ★★★ tier with reasons.
-   - ★★★ = engine ALREADY confirmed via D9, dasha-transit, varshaphal, eclipse-trigger convergence → write declaratively, no hedging.
+  - ★★★ = engine has strong convergence via D9, dasha-transit, varshaphal, eclipse-trigger support → write with high confidence, while still avoiding guaranteed-event language.
    - ★★   = moderate convergence → write with authority but note "indications".
    - ★    = lagna-sensitive or under-supported → MUST hedge ("may", "indications suggest", "patterns hint at"). Never state as fact.
    This OVERRIDES your internal Phase 2D tier when the two disagree — the engine has stricter cross-system validation than you do.
@@ -3580,16 +3625,16 @@ Near the end of every section's data block you will find an "ACCURACY ENHANCEMEN
    - If active period is run by Avayogi, frame as "consolidation phase" / "avoid finalising major decisions".
    - "Dagdha rashi" = the sign to avoid for muhurtha — surface this naturally if remedies/timing context applies.
 
-4. **"D9 promise verification"** — for each planet a "promise multiplier".
-   - >= 1.2 (Vargottama-style or D9 elevation): write the planet's promised result CONFIDENTLY — "this is among the strongest gifts in your chart".
-   - <= 0.6 (D1 promise broken in D9): write with strong hedging — "this looks promising on paper but tends to under-deliver in lived experience".
+4. **"D9 result verification"** — for each planet a result-strength multiplier.
+  - >= 1.2 (Vargottama-style or D9 elevation): write the planet's result pattern with confidence — "this is among the strongest gifts in your chart".
+  - <= 0.6 (D1 pattern weakened in D9): write with strong hedging — "this looks promising on paper but tends to under-deliver in lived experience".
    - Around 1.0: neutral, no calibration needed.
 
 5. **"Argala (Jaimini intervention)"** — supported / obstructed houses.
    - If THIS section's life area maps to a "supported" house, results manifest more cleanly — write with conviction.
    - If it maps to an "obstructed" house, predictions need a ~2-3 year delay buffer and a remedy hint.
 
-6. **"Bhava Bala"** — house strength /100. If the house most relevant to THIS section scores < 40, the section's promises tend to underperform regardless of lord strength — hedge.
+6. **"Bhava Bala"** — house strength /100. If the house most relevant to THIS section scores < 40, the section's results tend to underperform regardless of lord strength — hedge.
 
 7. **"Current Saturn-Moon phase"** (Sade Sati / Ashtama / Kantaka).
    - If active and section is health/career/family/marriage → MUST surface the phase-appropriate guidance.
@@ -3870,7 +3915,7 @@ FORMAT: Markdown for readability:
       if (tier) {
         lines.push(`Confidence for this section: ${tier.stars} (${tier.label})`);
         if (tier.reasons?.length) lines.push(`  Why: ${tier.reasons.join('; ')}`);
-        lines.push(`  RULE: If confidence is ★ (Speculative), hedge claims with "signs suggest" / "likely". If ★★★, write declaratively. NEVER state low-confidence content as fact.`);
+        lines.push(`  RULE: If confidence is ★ (Speculative), hedge claims with "signs suggest" / "likely". If ★★★, write with high confidence while avoiding guaranteed outcomes. NEVER state low-confidence content as fact.`);
       }
 
       // Multi-ayanamsha lagna stability
@@ -3888,7 +3933,7 @@ FORMAT: Markdown for readability:
 
       // D9 verification — surface only the most decisive verdicts
       if (acc.d9Verification?.summary?.length) {
-        lines.push(`\nD9 (Navamsha) promise verification:`);
+        lines.push(`\nD9 (Navamsha) result verification:`);
         acc.d9Verification.summary.forEach(s => lines.push(`  • ${s}`));
       }
 
@@ -3951,7 +3996,11 @@ FORMAT: Markdown for readability:
     } catch (e) { return ''; }
   })();
 
-  const userPrompt = sectionPromptData.prompt + rashiBlock + coherenceBlock + jyotishEnrichBlock + chalitBlock + vargaBlock + devGuardBlock + accuracyBlock;
+  const promptClaimsPayload = buildSectionPromptPayload(sectionKey, sectionData, allSections, birthData);
+  const provenanceBlock = buildCalculationProvenanceBlock(sectionKey, birthData);
+  const sectionClaimPolicyBlock = buildSectionPromptPolicyBlock(sectionKey, sectionData, allSections);
+
+  const userPrompt = sectionPromptData.prompt + sectionClaimPolicyBlock + rashiBlock + provenanceBlock + coherenceBlock + jyotishEnrichBlock + chalitBlock + vargaBlock + devGuardBlock + accuracyBlock;
 
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -3967,12 +4016,12 @@ FORMAT: Markdown for readability:
   // Hero sections → Gemini 3.1 Pro (temp 0.72 — structured thinking + vivid output)
   // Data-heavy sections → Gemini 2.5 Flash (temp 0.45 — precision-first, minimal drift)
   // Standard sections → Gemini 2.5 Flash (temp 0.58 — balanced)
-  const HERO_SECTIONS = ['lifePredictions', 'surpriseInsights', 'marriage', 'career', 'marriedLife', 'familyPortrait', 'health', 'children', 'education', 'physicalProfile', 'attractionProfile'];
-  const DATA_HEAVY_SECTIONS = ['yogaAnalysis', 'financial', 'transits', 'realEstate', 'legal'];
+  const HERO_SECTIONS = ['lifePredictions', 'surpriseInsights', 'marriage', 'career', 'marriedLife', 'familyPortrait', 'children', 'education', 'physicalProfile', 'attractionProfile'];
+  const DATA_HEAVY_SECTIONS = ['yogaAnalysis', 'financial', 'transits', 'realEstate', 'legal', 'health'];
   
   const isHero = HERO_SECTIONS.includes(sectionKey);
   const isDataHeavy = DATA_HEAVY_SECTIONS.includes(sectionKey);
-  const sectionTemperature = isHero ? 0.72 : isDataHeavy ? 0.45 : 0.58;
+  const sectionTemperature = sectionKey === 'health' ? 0.35 : isHero ? 0.72 : isDataHeavy ? 0.45 : 0.58;
   // ─────────────────────────────────────────────────────────────
 
   try {
@@ -4003,12 +4052,16 @@ FORMAT: Markdown for readability:
         callGemini: callGeminiLong,
         language,
         sectionData,
+        sectionKey,
+        promptClaims: promptClaimsPayload,
       });
       finalText = validation.text;
       validationMeta = {
         issues: validation.issues,
         redFlags: validation.redFlags,
         hallucinations: validation.hallucinations,
+        healthSafety: validation.healthSafety,
+        timingSafety: validation.timingSafety,
         language: validation.language,
         aiDisclosuresRemoved: validation.aiDisclosuresRemoved,
         severity: validation.severity,
@@ -4035,6 +4088,14 @@ FORMAT: Markdown for readability:
       usage: result.usage,
       model: result.model,
       validation: validationMeta,
+      promptMetadata: buildSectionGenerationMetadata({
+        sectionKey,
+        model: result.model,
+        temperature: sectionTemperature,
+        promptClaims: promptClaimsPayload,
+        validation: validationMeta,
+        generationMode: isHero ? 'hero' : isDataHeavy ? 'data-heavy' : 'standard',
+      }),
     };
   } catch (error) {
     console.error(`[AI Report] Error generating ${sectionKey}:`, error.message);
@@ -4360,6 +4421,7 @@ async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612,
   if (rawReport.accuracyEnhancements) birthData._accuracyEnhancements = rawReport.accuracyEnhancements;
   if (rawReport.rectificationApplied) birthData._rectificationApplied = rawReport.rectificationApplied;
   if (rawReport.developmentalStage) birthData._developmentalStage = rawReport.developmentalStage;
+  if (rawReport.calculationMetadata) birthData._calculationMetadata = rawReport.calculationMetadata;
   const sections = rawReport.sections;
   progress('charts');
 
@@ -4372,27 +4434,25 @@ async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612,
   const navamshaChart = buildNavamshaChart(date, lat, lng);
   const drishtis = calculateDrishtis(houseChart.houses);
   const yogas = detectYogas(date, lat, lng);
-  const planetStrengths = getPlanetStrengths(date, lat, lng);
+  const planetStrengths = getPlanetStrengths(date, lat, lng, cleanMarriageOpts);
   const moonSidereal = toSidereal(getMoonLongitude(date), date);
   const dasaPeriods = calculateVimshottariDetailed(moonSidereal, date);
-  const panchanga = getPanchanga(date, lat, lng);
+  const panchanga = getPanchanga(date, lat, lng, cleanMarriageOpts);
 
   // ── Advanced Engine (Tiers 1-2-3) ─────────────────────────────
   let advancedData = null;
   try {
-    advancedData = generateAdvancedAnalysis(date, lat, lng);
+    advancedData = generateAdvancedAnalysis(date, lat, lng, cleanMarriageOpts);
     console.log(`[AI Report] Advanced analysis: ${advancedData.tier1.doshas.found} doshas, ${advancedData.tier1.advancedYogas.found} yogas, Jaimini AK=${advancedData.tier1.jaimini.atmakaraka?.planet}`);
   } catch (err) {
     console.error('[AI Report] Advanced analysis failed (continuing without):', err.message);
   }
 
-  // ── Human-readable birth time (SLT = UTC + 5:30) ──────────────
-  // Create a proper SLT date to handle day rollover correctly
-  const sltDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
-  const sltH = sltDate.getUTCHours();
-  const sltM = sltDate.getUTCMinutes();
-  const birthTimeSLT = `${String(sltH).padStart(2, '0')}:${String(sltM).padStart(2, '0')}`;
-  const birthDateFormatted = `${sltDate.getUTCFullYear()}-${String(sltDate.getUTCMonth() + 1).padStart(2, '0')}-${String(sltDate.getUTCDate()).padStart(2, '0')}`;
+  // ── Human-readable birth time from resolved timezone metadata ──
+  const localBirth = formatLocalDateTime(date, rawReport.calculationMetadata?.timeContext || null);
+  const birthTimeSLT = localBirth.time;
+  const birthDateFormatted = localBirth.date;
+  const birthTimeLabel = localBirth.label;
 
   // Build a human-readable Rashi chart summary
   const rashiChartSummary = houseChart.houses.map(h => {
@@ -4445,7 +4505,7 @@ async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612,
     : 'No major classical yogas detected.';
 
   // ── Panchanga at Birth ─────────────────────────────────────────
-  const panchangaSummary = `Tithi: ${panchanga.tithi?.name || 'N/A'}, Yoga: ${panchanga.yoga?.name || 'N/A'}, Karana: ${panchanga.karana?.name || 'N/A'}, Vaara: ${panchanga.vaara?.name || 'N/A'}`;
+  const panchangaSummary = `Tithi: ${panchanga.tithi?.name || 'N/A'}${panchanga.tithi?.endsAt ? ` (ends ${panchanga.tithi.endsAt})` : ''}, Nakshatra: ${panchanga.nakshatra?.name || 'N/A'}${panchanga.nakshatra?.endsAt ? ` (ends ${panchanga.nakshatra.endsAt})` : ''}, Yoga: ${panchanga.yoga?.name || 'N/A'}${panchanga.yoga?.endsAt ? ` (ends ${panchanga.yoga.endsAt})` : ''}, Karana: ${panchanga.karana?.name || 'N/A'}${panchanga.karana?.endsAt ? ` (ends ${panchanga.karana.endsAt})` : ''}, Vaara: ${panchanga.vaara?.name || 'N/A'}, Sunrise: ${panchanga.sunrise || 'N/A'}, Sunset: ${panchanga.sunset || 'N/A'}, Moonrise: ${panchanga.moonrise || 'N/A'}, Moonset: ${panchanga.moonset || 'N/A'}, Rahu Kalam: ${panchanga.rahuKalam?.start || 'N/A'} to ${panchanga.rahuKalam?.end || 'N/A'}, Gulika Kalam: ${panchanga.gulikaKalam?.start || 'N/A'} to ${panchanga.gulikaKalam?.end || 'N/A'}, Yamaganda: ${panchanga.yamaganda?.start || 'N/A'} to ${panchanga.yamaganda?.end || 'N/A'}`;
 
   // ── Advanced Engine Data Block ─────────────────────────────────
   let advancedBlock = '';
@@ -4842,6 +4902,7 @@ ${verses.slice(0, 3).map(v => `[${v.source}] ${v.topic}: "${v.text}"`).join('\n'
     yogas: yogasSummary,
     panchanga: panchangaSummary,
     birthTimeSLT: birthTimeSLT,
+    birthTimeLabel: birthTimeLabel,
     birthDateFormatted: birthDateFormatted,
     birthLocation: resolvedLocation,
     moonSign: birthData.moonSign?.english || '',
@@ -4952,6 +5013,7 @@ REFERENCE: Use this calendar when writing about "key upcoming events" or "life t
   console.log('[AI Report] Pass 1: Generating core themes for coherence...');
   progress('coherence');
   const coherenceStart = Date.now();
+  const promptStartedAt = new Date().toISOString();
   
   let coreThemes = '';
   try {
@@ -5001,8 +5063,8 @@ SECTION DATA HIGHLIGHTS:
 - Career planet ranking: ${(sections.career?.careerPlanetRanking || []).map(p => typeof p === 'string' ? p : `${p.planet}(${p.dignity}, H${p.house})`).join('; ') || 'N/A'}
 - 10th house sign: ${sections.career?.tenthHouseSign ? `${sections.career.tenthHouseSign.rashi} (${sections.career.tenthHouseSign.element}, ${sections.career.tenthHouseSign.modality})` : 'N/A'}
 - Children estimate: ${sections.children?.estimatedChildren?.count || 'N/A'} (${sections.children?.estimatedChildren?.genderTendency || ''})
-- Depression risk: ${sections.mentalHealth?.depressionRisk?.level || 'N/A'}
-- Childhood trauma: ${sections.mentalHealth?.childhoodTrauma?.level || 'N/A'}
+- Emotional heaviness risk: ${sections.mentalHealth?.depressionRisk?.level || 'N/A'}
+- Childhood stress pattern: ${sections.mentalHealth?.childhoodTrauma?.level || 'N/A'}
 - Foreign travel: ${sections.foreignTravel?.foreignLikelihood || 'N/A'}
 - Overall vitality: ${sections.health?.overallVitality || 'N/A'}
 - High risk organs: ${(sections.health?.highRiskOrgans || []).join(', ') || 'None'}
@@ -5173,6 +5235,16 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
   console.log(`[AI Report] All narratives generated in ${elapsed}ms (total with coherence: ${Date.now() - coherenceStart}ms)`);
 
   const narrativeSections = {};
+  const validationMetadata = {
+    promptRun: buildPromptRunMetadata({
+      language,
+      sectionOrder,
+      startedAt: promptStartedAt,
+      totalSections: sectionOrder.length,
+    }),
+    sections: {},
+    crossSection: null,
+  };
   const failedSections = [];
   const SENTINEL_TEXTS = ['unable to generate response', 'unable to generate', 'i cannot generate'];
   const MIN_NARRATIVE_WORDS = 50; // A real narrative section should have at least 50 words
@@ -5201,6 +5273,15 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
           title: result.title,
           narrative: result.narrative,
           rawData: sections[key],
+          validation: result.validation || null,
+          model: result.model || null,
+          promptMetadata: result.promptMetadata || null,
+        };
+        validationMetadata.sections[key] = {
+          validation: result.validation || null,
+          model: result.model || null,
+          usage: result.usage || null,
+          promptMetadata: result.promptMetadata || null,
         };
       }
     } else {
@@ -5241,6 +5322,19 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
               title: retryResult.title,
               narrative: retryResult.narrative,
               rawData: sections[failed.key],
+              validation: retryResult.validation || null,
+              model: retryResult.model || null,
+              promptMetadata: retryResult.promptMetadata || null,
+              retry: true,
+            };
+            validationMetadata.sections[failed.key] = {
+              validation: retryResult.validation || null,
+              model: retryResult.model || null,
+              usage: retryResult.usage || null,
+              promptMetadata: retryResult.promptMetadata
+                ? { ...retryResult.promptMetadata, retry: true }
+                : null,
+              retry: true,
             };
             // Remove from failedSections
             const idx = failedSections.findIndex(f => f.key === failed.key);
@@ -5277,6 +5371,13 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
   try {
     const { findCrossSectionDiscrepancies, reconcileDiscrepancies } = require('./crossSectionValidator');
     const cross = findCrossSectionDiscrepancies(narrativeSections);
+    validationMetadata.crossSection = {
+      summary: cross.summary,
+      discrepancies: cross.discrepancies,
+      reconciled: 0,
+      llmCalls: 0,
+      sectionsUpdated: [],
+    };
     if (cross.discrepancies.length > 0) {
       console.log(`[cross-validator] ${cross.summary}`);
       progress('cross-check', { discrepancies: cross.discrepancies.length });
@@ -5286,6 +5387,9 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
         callGemini: callGeminiLong,
         language,
       });
+      validationMetadata.crossSection.reconciled = recon.reconciled;
+      validationMetadata.crossSection.llmCalls = recon.llmCalls;
+      validationMetadata.crossSection.sectionsUpdated = recon.sectionsUpdated;
       console.log(`[cross-validator] reconciled ${recon.reconciled} section(s) via ${recon.llmCalls} LLM call(s): ${recon.sectionsUpdated.join(', ')}`);
     }
   } catch (xErr) {
@@ -5312,10 +5416,27 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
   // Finalize token tracking
   const tokenUsage = finalizeTracker(tokenTracker);
   console.log(formatCostLog(tokenTracker));
+  validationMetadata.promptRun = buildPromptRunMetadata({
+    language,
+    sectionOrder,
+    startedAt: promptStartedAt,
+    completedAt: new Date().toISOString(),
+    successCount: finalSuccessCount,
+    totalSections,
+    failedSectionCount: failedSections.length,
+    validationMetadata,
+    tokenUsageSummary: tokenUsage?.summary || null,
+  });
+  const promptMetadata = validationMetadata.promptRun;
+  const promptAnalytics = buildUnsupportedTermAnalytics(validationMetadata, promptMetadata);
 
   return {
     generatedAt: new Date().toISOString(),
     language,
+    promptVersion: PROMPT_VERSION,
+    promptMetadata,
+    promptAnalytics,
+    calculationMetadata: rawReport.calculationMetadata || null,
     birthData,
     rashiChart: {
       houses: houseChart.houses,
@@ -5325,6 +5446,7 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
     narrativeSections,
     rawSections: sections,
     coreThemes: coreThemes || null,
+    validationMetadata,
     tokenUsage,
     successCount,
     totalSections,

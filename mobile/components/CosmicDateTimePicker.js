@@ -616,7 +616,7 @@ export function TimePickerField({ value, onChange, label, lang, style, error }) 
           <Text style={[fs.fieldText, { fontSize: 18 }]}>{display}</Text>
           {periodLabel ? <Text style={[fs.fieldSub, { marginTop: 0 }]}>{periodLabel}</Text> : null}
         </View>
-        <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.3)" />
+        <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.3)" style={{ marginLeft: 6 }} />
       </TouchableOpacity>
       <TimePickerModal visible={open} onClose={function () { setOpen(false); }} value={value} onChange={onChange} lang={lang} />
     </>

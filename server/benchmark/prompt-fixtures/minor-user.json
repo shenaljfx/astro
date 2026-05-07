@@ -1,0 +1,21 @@
+{
+  "id": "minor-user",
+  "tags": ["minor_user", "female_user", "single_user"],
+  "sectionKey": "education",
+  "profile": {
+    "birthDate": "2012-07-19T10:20:00",
+    "age": 13
+  },
+  "sectionData": {
+    "educationWindows": [{ "period": "2028-2030", "confidence": "moderate" }],
+    "academicScore": 7
+  },
+  "narrative": "For a young user, the section should focus on study habits, confidence, and support. The strongest education-growth window appears around 2028-2030 as a symbolic timing period, not a promise.",
+  "expectations": {
+    "minTimingClaims": 1,
+    "maxTimingIssues": 0,
+    "maxHealthIssues": 0,
+    "maxRedFlags": 0,
+    "maxHallucinationSuspects": 0
+  }
+}

@@ -57,6 +57,7 @@ const buildNavamshaChart = (...a) => astro().buildNavamshaChart(...a);
 // Resolve constant arrays at call-time (avoids capturing undefined during circular load).
 const RASHIS = () => astro().RASHIS;
 const NAKSHATRAS = () => astro().NAKSHATRAS;
+const { resolveCalculationSettings } = require('./calculationSettings');
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // Shared helpers
@@ -65,6 +66,10 @@ const NAKSHATRAS = () => astro().NAKSHATRAS;
 const PLANET_LIST = ['sun', 'moon', 'mars', 'mercury', 'jupiter', 'venus', 'saturn'];
 const norm360 = (d) => ((d % 360) + 360) % 360;
 const angDist = (a, b) => { const d = Math.abs(a - b); return d > 180 ? 360 - d : d; };
+
+function accuracyPlanets(date, lat, lng, settings) {
+  return getAllPlanetPositions(date, lat || 6.9271, lng || 79.8612, settings || {});
+}
 
 const RASHI_LORDS_BY_ID = {
   1: 'Mars', 2: 'Venus', 3: 'Mercury', 4: 'Moon',
@@ -381,7 +386,7 @@ function computeArgala(planets, lagnaRashiId) {
  * around the expected return age, looking for the moment the planet's
  * sidereal longitude matches its natal value within 0.1Â°.
  */
-function findReturnDate(natalSidereal, planetSweId, approxYearsFromBirth, birthDate) {
+function findReturnDate(natalSidereal, planetSweId, approxYearsFromBirth, birthDate, lat, lng, settings) {
   // Coarse: sample Â±60 days around expected, find min |delta|
   const expected = new Date(birthDate.getTime() + approxYearsFromBirth * 365.2425 * 86400000);
   let best = expected;
@@ -392,7 +397,7 @@ function findReturnDate(natalSidereal, planetSweId, approxYearsFromBirth, birthD
     for (let h = 0; h < 24; h += 12) {
       const d = new Date(expected.getTime() + dayOff * 86400000 + h * 3600000);
       try {
-        const planets = getAllPlanetPositions(d);
+        const planets = accuracyPlanets(d, lat, lng, settings);
         const idMap = { saturn: 'saturn', jupiter: 'jupiter' };
         const sid = planets[planetSweId]?.sidereal;
         if (sid === undefined) continue;
@@ -405,7 +410,7 @@ function findReturnDate(natalSidereal, planetSweId, approxYearsFromBirth, birthD
   for (let m = -720; m <= 720; m += 30) {
     const d = new Date(best.getTime() + m * 60000);
     try {
-      const planets = getAllPlanetPositions(d);
+      const planets = accuracyPlanets(d, lat, lng, settings);
       const sid = planets[planetSweId]?.sidereal;
       if (sid === undefined) continue;
       const diff = angDist(sid, natalSidereal);
@@ -415,7 +420,7 @@ function findReturnDate(natalSidereal, planetSweId, approxYearsFromBirth, birthD
   return { date: best, error: +bestDiff.toFixed(3) };
 }
 
-function computeReturns(birthDate, planets, asOfDate) {
+function computeReturns(birthDate, planets, asOfDate, lat, lng, settings) {
   const date = new Date(birthDate);
   const now = asOfDate ? new Date(asOfDate) : new Date();
   const ageYears = (now - date) / (365.2425 * 86400000);
@@ -430,7 +435,7 @@ function computeReturns(birthDate, planets, asOfDate) {
     for (const c of targets) {
       if (c < 1) continue;
       try {
-        const r = findReturnDate(natalSat, 'saturn', c * 29.46, date);
+        const r = findReturnDate(natalSat, 'saturn', c * 29.46, date, lat, lng, settings);
         const ageAt = (r.date - date) / (365.2425 * 86400000);
         result.saturn.push({
           cycle: c,
@@ -451,7 +456,7 @@ function computeReturns(birthDate, planets, asOfDate) {
     for (const c of targets) {
       if (c < 1) continue;
       try {
-        const r = findReturnDate(natalJup, 'jupiter', c * 11.86, date);
+        const r = findReturnDate(natalJup, 'jupiter', c * 11.86, date, lat, lng, settings);
         const ageAt = (r.date - date) / (365.2425 * 86400000);
         result.jupiter.push({
           cycle: c,
@@ -596,14 +601,15 @@ function computeBhavaBala(houses, planets, lagnaRashiId, planetStrengths) {
  *
  * Plus Ashtama Shani (8th from Moon) and Kantaka Shani (4th from Moon).
  */
-function computeSadeSatiPhase(birthDate, asOfDate, lat, lng) {
+function computeSadeSatiPhase(birthDate, asOfDate, lat, lng, settings) {
   const date = new Date(birthDate);
   const now = asOfDate ? new Date(asOfDate) : new Date();
-  const moonSid = toSidereal(getMoonLongitude(date), date);
+  const natalPlanets = accuracyPlanets(date, lat, lng, settings);
+  const moonSid = natalPlanets.moon?.sidereal ?? toSidereal(getMoonLongitude(date), date);
   const moonRashi = getRashi(moonSid);
   const moonRashiId = moonRashi.id;
 
-  const transitPlanets = getAllPlanetPositions(now);
+  const transitPlanets = accuracyPlanets(now, lat, lng, settings);
   const satSid = transitPlanets.saturn?.sidereal;
   if (satSid === undefined || satSid === null) return null;
   const satRashi = getRashi(satSid);
@@ -652,7 +658,7 @@ function computeSadeSatiPhase(birthDate, asOfDate, lat, lng) {
  * sidereal degree falls within Â±3Â° of any natal planet â€” those planets'
  * significations are likely to "trigger" within 6 months of the eclipse.
  */
-function findNextEclipses(asOfDate, monthsAhead = 6) {
+function findNextEclipses(asOfDate, monthsAhead = 6, lat = 6.9271, lng = 79.8612, settings = {}) {
   const eclipses = [];
   try {
     const startMs = asOfDate.getTime();
@@ -661,7 +667,7 @@ function findNextEclipses(asOfDate, monthsAhead = 6) {
 
     function deltaAt(ms, target) {
       try {
-        const p = getAllPlanetPositions(new Date(ms));
+        const p = accuracyPlanets(new Date(ms), lat, lng, settings);
         return angSigned(p.moon.sidereal - p.sun.sidereal - target);
       } catch (e) { return undefined; }
     }
@@ -679,7 +685,7 @@ function findNextEclipses(asOfDate, monthsAhead = 6) {
       return new Date((lo + hi) / 2);
     }
     function classify(date, target) {
-      const p = getAllPlanetPositions(date);
+      const p = accuracyPlanets(date, lat, lng, settings);
       const sunSid = p.sun.sidereal;
       const moonSid = p.moon.sidereal;
       const rahuSid = p.rahu.sidereal;
@@ -719,9 +725,9 @@ function findNextEclipses(asOfDate, monthsAhead = 6) {
   return eclipses;
 }
 
-function computeEclipseTriggers(birthDate, planets, asOfDate) {
+function computeEclipseTriggers(birthDate, planets, asOfDate, lat, lng, settings) {
   const now = asOfDate ? new Date(asOfDate) : new Date();
-  const eclipses = findNextEclipses(now, 6);
+  const eclipses = findNextEclipses(now, 6, lat, lng, settings);
   const triggered = [];
 
   for (const e of eclipses) {
@@ -762,7 +768,7 @@ function computeEclipseTriggers(birthDate, planets, asOfDate) {
  * transiting through (Phaladeepika rule). This bridges the natal dasha
  * with current transit context.
  */
-function computeLocalityDashaActivation(birthDate, planets, lagnaRashiId, vimshottariResult, asOfDate) {
+function computeLocalityDashaActivation(birthDate, planets, lagnaRashiId, vimshottariResult, asOfDate, lat, lng, settings) {
   if (!vimshottariResult || !lagnaRashiId) return null;
   const now = asOfDate ? new Date(asOfDate) : new Date();
 
@@ -804,7 +810,7 @@ function computeLocalityDashaActivation(birthDate, planets, lagnaRashiId, vimsho
   // Current transit positions of Jupiter and Saturn
   let jupTransitHouse = null, satTransitHouse = null;
   try {
-    const transit = getAllPlanetPositions(now);
+    const transit = accuracyPlanets(now, lat, lng, settings);
     const jR = transit.jupiter.rashiId || (RASHIS().findIndex(r => r.name === transit.jupiter.rashi) + 1);
     const sR = transit.saturn.rashiId || (RASHIS().findIndex(r => r.name === transit.saturn.rashi) + 1);
     jupTransitHouse = houseFromLagna(jR, lagnaRashiId);
@@ -1078,6 +1084,7 @@ function computeAccuracyEnhancements(ctx) {
     planetStrengths, vimshottari, houses, asOfDate,
   } = ctx;
   const date = new Date(birthDate);
+  const settings = resolveCalculationSettings(ctx.calculationSettings || ctx.settings || {});
   const lagnaRashiId = lagna?.rashi?.id;
 
   const out = {};
@@ -1088,17 +1095,17 @@ function computeAccuracyEnhancements(ctx) {
   out.d9Verification = safe('d9Verification', () => computeD9Verification(planets, navamsha));
   out.yogiAvayogi = safe('yogiAvayogi', () => computeYogiAvayogi(planets));
   out.argala = safe('argala', () => computeArgala(planets, lagnaRashiId));
-  out.returns = safe('returns', () => computeReturns(date, planets, asOfDate));
+  out.returns = safe('returns', () => computeReturns(date, planets, asOfDate, lat, lng, settings));
 
   // Tier 3
   out.bhavaBala = safe('bhavaBala', () => computeBhavaBala(houses, planets, lagnaRashiId, planetStrengths));
-  out.sadeSatiPhase = safe('sadeSatiPhase', () => computeSadeSatiPhase(date, asOfDate, lat, lng));
-  out.eclipseTriggers = safe('eclipseTriggers', () => computeEclipseTriggers(date, planets, asOfDate));
+  out.sadeSatiPhase = safe('sadeSatiPhase', () => computeSadeSatiPhase(date, asOfDate, lat, lng, settings));
+  out.eclipseTriggers = safe('eclipseTriggers', () => computeEclipseTriggers(date, planets, asOfDate, lat, lng, settings));
   out.kpFineTiming = safe('kpFineTiming', () => computeKPFineTiming(date, lat, lng, asOfDate));
   out.nadiChains = safe('nadiChains', () => computeNadiDispositorChains(planets, lagnaRashiId));
 
   // Tier 1
-  out.localityDasha = safe('localityDasha', () => computeLocalityDashaActivation(date, planets, lagnaRashiId, vimshottari, asOfDate));
+  out.localityDasha = safe('localityDasha', () => computeLocalityDashaActivation(date, planets, lagnaRashiId, vimshottari, asOfDate, lat, lng, settings));
   out.varshaphal = safe('varshaphal', () => computeVarshaphalCrossValidation(date, lat, lng, asOfDate));
   out.confidenceTiers = safe('confidenceTiers', () => buildSectionConfidenceTiers({
     multiAyanamsha: out.multiAyanamsha,

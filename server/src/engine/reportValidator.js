@@ -31,6 +31,8 @@
  */
 
 const { isYearWithinSelfLifespan, isYearWithinParentLifespan } = require('./lifespan');
+const { HEALTH_BLOCKED_PATTERNS, TIMING_PROMPT_POLICY } = require('./promptPolicies');
+const { buildHealthPromptPayload } = require('./promptClaimBuilder');
 
 // ── Patterns ─────────────────────────────────────────────────────
 // Captures an optional preposition + year so we can rewrite cleanly.
@@ -39,6 +41,33 @@ const PARENT_CONTEXT_RX = /\b(mother|mom|amma|මව|අම්ම|father|dad|tha
 // Absolute-claim red flags (no hedging present in nearby clause)
 const ABSOLUTE_DEATH_RX = /\b(will die|dies in|death in|expires in|පරවීම|මිය යනු)\b/i;
 const ABSOLUTE_DIVORCE_RX = /\b(will divorce|divorces in|definite divorce)\b/i;
+
+const HIGH_STAKES_TIMING_SECTIONS = new Set([
+  'marriage',
+  'marriedLife',
+  'children',
+  'familyPortrait',
+  'health',
+  'career',
+  'financial',
+  'foreignTravel',
+  'realEstate',
+  'legal',
+  'lifePredictions',
+  'surpriseInsights',
+  'transits',
+  'luck',
+]);
+const FUTURE_YEAR_RX = /\b((?:20|21)\d{2})\b/g;
+const TIMING_EVENT_RX = /\b(marriage|marry|wedding|spouse|child|children|baby|son|daughter|pregnancy|birth|born|career|job|promotion|business|property|home|vehicle|foreign|visa|settlement|travel|money|wealth|loss|investment|legal|court|health|illness|disease|risk|caution|period|window)\b/i;
+const TIMING_FRAME_RX = /\b(may|might|likely|suggests?|indicates?|points? to|around|approximately|roughly|window|period|phase|symbolic|symbolism|not a promise|probability|possible|potential|tends? to|can|could|chart-supported|chart shows|strongest|energy|caution)\b/i;
+const TIMING_PROMISE_PATTERNS = [
+  { type: 'guaranteed_timing_language', rx: /\b(guaranteed|definitely|certainly|inevitably|unavoidably|fixed fate|will happen for sure)\b/i },
+  { type: 'guaranteed_marriage_timing', rx: /\bwill\s+(?:definitely\s+)?marry\b/i },
+  { type: 'guaranteed_child_timing', rx: /\b(?:child|children|baby|son|daughter).{0,60}\bwill\s+be\s+born\b|\bwill\s+have\s+(?:a\s+)?(?:child|children|baby|son|daughter)\b/i },
+  { type: 'guaranteed_event_timing', rx: /\b(?:will|must)\s+(?:happen|occur|arrive|manifest|come true)\b/i },
+  { type: 'guaranteed_life_outcome', rx: /\bwill\s+(?:settle abroad|go abroad|get a visa|win|lose|become rich|get rich|buy property|fall ill)\b/i },
+];
 
 // AI self-references / disclaimers — reader should never see these
 const AI_DISCLOSURE_RX = /\b(as an? (AI|language model|assistant)|I (am|'m) (an?|just an?) AI|I cannot|I (do not|don't) have (access|the ability)|my training data|I was (trained|created|built)|I (apologize|am sorry)[, ]|please consult (an? (real|actual)|a) (astrologer|professional)|disclaimer|this is (just|only) (a|an) (interpretation|prediction))\b/i;
@@ -268,6 +297,130 @@ function checkClaimsAgainstEngine(narrative, sectionData) {
   return { suspect, verified };
 }
 
+function validateHealthNarrativeSafety(narrative, sectionData, promptClaims = null) {
+  if (!narrative || !sectionData) return { issues: [], allowedOrgans: [], omittedOrgans: [] };
+  const payload = promptClaims || buildHealthPromptPayload(sectionData);
+  const sample = narrative.slice(0, 20000);
+  const issues = [];
+
+  const allowedOrganAliases = new Set();
+  const omittedOrgans = [];
+  for (const claim of payload.allowedClaims || []) {
+    if (claim.category !== 'wellness_pattern') continue;
+    allowedOrganAliases.add(claim.organKey);
+    String(claim.publicLabel || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).forEach(word => {
+      if (word.length >= 4) allowedOrganAliases.add(word);
+    });
+  }
+  for (const topic of payload.omitTopics || []) {
+    if (!topic.organKey || !topic.publicLabel) continue;
+    omittedOrgans.push(topic);
+    const words = String(topic.publicLabel).toLowerCase().split(/[^a-z0-9]+/).filter(word => word.length >= 4);
+    const aliases = [topic.organKey, ...words].filter(Boolean);
+    const matched = aliases.some(alias => {
+      if (allowedOrganAliases.has(alias)) return false;
+      return new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(sample);
+    });
+    if (matched) {
+      issues.push({
+        type: 'unsupported_organ_mention',
+        snippet: topic.publicLabel,
+        claimId: topic.id,
+      });
+    }
+  }
+
+  const addPatternIssues = (group, patterns) => {
+    for (const rx of patterns) {
+      const match = sample.match(rx);
+      if (match) issues.push({ type: `health_${group}`, snippet: match[0] });
+    }
+  };
+
+  addPatternIssues('named_condition', HEALTH_BLOCKED_PATTERNS.namedConditions);
+  addPatternIssues('medical_test_without_data', HEALTH_BLOCKED_PATTERNS.medicalTests);
+  addPatternIssues('procedure_without_data', HEALTH_BLOCKED_PATTERNS.procedures);
+
+  const earlyLifeClaim = (payload.allowedClaims || []).find(claim => claim.id === 'health.earlyLife.vulnerability');
+  const infantAllowsSpecificEvents = earlyLifeClaim && Object.entries(earlyLifeClaim.allowedDetails || {})
+    .some(([key, allowed]) => key !== 'resilienceTheme' && allowed === true);
+  if (!infantAllowsSpecificEvents) {
+    addPatternIssues('unsupported_infant_event', HEALTH_BLOCKED_PATTERNS.infantEvents);
+  }
+
+  return {
+    issues,
+    allowedOrgans: [...allowedOrganAliases],
+    omittedOrgans,
+  };
+}
+
+function hasTimingClaims(promptClaims) {
+  return Boolean(
+    promptClaims?.timingPolicy ||
+    (promptClaims?.allowedClaims || []).some(claim => claim.category === TIMING_PROMPT_POLICY.category)
+  );
+}
+
+function splitSentences(narrative) {
+  return String(narrative || '')
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map(sentence => sentence.trim())
+    .filter(Boolean);
+}
+
+function validateTimingNarrativeSafety(narrative, sectionKey, promptClaims = null) {
+  if (!narrative || typeof narrative !== 'string') {
+    return { issues: [], checked: false, timingClaimCount: 0 };
+  }
+
+  const timingClaimCount = (promptClaims?.allowedClaims || [])
+    .filter(claim => claim.category === TIMING_PROMPT_POLICY.category)
+    .length;
+  const shouldCheck = hasTimingClaims(promptClaims) || HIGH_STAKES_TIMING_SECTIONS.has(sectionKey);
+  if (!shouldCheck) {
+    return { issues: [], checked: false, timingClaimCount };
+  }
+
+  const issues = [];
+  const currentYear = new Date().getUTCFullYear();
+
+  for (const sentence of splitSentences(narrative.slice(0, 20000))) {
+    for (const pattern of TIMING_PROMISE_PATTERNS) {
+      const match = sentence.match(pattern.rx);
+      if (match) {
+        issues.push({
+          type: pattern.type,
+          snippet: match[0],
+          sentence: sentence.slice(0, 240),
+          framing: TIMING_PROMPT_POLICY.framing,
+        });
+      }
+    }
+
+    if (!TIMING_EVENT_RX.test(sentence)) continue;
+    FUTURE_YEAR_RX.lastIndex = 0;
+    let match;
+    while ((match = FUTURE_YEAR_RX.exec(sentence)) !== null) {
+      const year = parseInt(match[1], 10);
+      if (year <= currentYear) continue;
+      if (TIMING_FRAME_RX.test(sentence)) continue;
+      issues.push({
+        type: 'unframed_future_timing_window',
+        snippet: match[1],
+        sentence: sentence.slice(0, 240),
+        framing: TIMING_PROMPT_POLICY.framing,
+      });
+    }
+  }
+
+  return {
+    issues,
+    checked: true,
+    timingClaimCount,
+  };
+}
+
 /**
  * Stage 2 — self-critique pass via an LLM call.
  * Reuses the project's Gemini Flash model with a tight, cheap fix-prompt.
@@ -310,6 +463,7 @@ ${issueList}
 REWRITE rules — strict:
 - Remove or hedge biologically-implausible predictions (parent events past native_age 50; native events past age 80).
 - Soften absolute death/divorce claims into hedged "may face challenges around …" form.
+- Convert guaranteed timing claims into chart-supported symbolic windows. Never write "will marry in", "will be born in", "will happen in", "guaranteed", or "definitely" for future events. Use phrasing like "strongest window", "around", "may", "likely", and "${TIMING_PROMPT_POLICY.framing}"
 - Remove ALL AI self-disclosures ("As an AI", "I am a language model", "please consult a real astrologer", etc.). The reader is paying for a confident reading — never break the fourth wall.
 - Translate any astrology jargon (Navamsha, Drishti, Shadbala, Lagna, Rashi, Nakshatra, Dasha, Antardasha, Kuja Dosha, Sade Sati, etc.) into plain everyday language. The reader is not an astrologer.
 - Remove or rewrite vague filler ("only time will tell", "trust the universe", "you are unique"). Replace with a concrete, specific statement.
@@ -366,6 +520,8 @@ async function validateAndFixNarrative(narrative, birthDate, options = {}) {
     callGemini = null,
     language = 'en',
     sectionData = null,
+    sectionKey = null,
+    promptClaims = null,
   } = options;
 
   // 1. Year-cap auto-redact
@@ -382,6 +538,12 @@ async function validateAndFixNarrative(narrative, birthDate, options = {}) {
     ? checkClaimsAgainstEngine(stripped.text, sectionData)
     : { suspect: [], verified: [] };
 
+  const healthSafety = sectionKey === 'health'
+    ? validateHealthNarrativeSafety(stripped.text, sectionData, promptClaims)
+    : { issues: [], allowedOrgans: [], omittedOrgans: [] };
+
+  const timingSafety = validateTimingNarrativeSafety(stripped.text, sectionKey, promptClaims);
+
   // 5. Language purity
   const langCheck = detectLanguageImpurity(stripped.text, language);
 
@@ -390,6 +552,8 @@ async function validateAndFixNarrative(narrative, birthDate, options = {}) {
     stage1.issues.length * 1 +
     redFlags.length * 2 +
     hallucination.suspect.length * 3 +
+    healthSafety.issues.length * 5 +
+    timingSafety.issues.length * 4 +
     (langCheck.ok ? 0 : 5) +
     stripped.removed * 2;
 
@@ -401,6 +565,8 @@ async function validateAndFixNarrative(narrative, birthDate, options = {}) {
       ...stage1.issues,
       ...redFlags,
       ...hallucination.suspect,
+      ...healthSafety.issues,
+      ...timingSafety.issues,
       ...(langCheck.ok ? [] : [{ type: 'language_impurity', snippet: `English leaks: ${langCheck.leaks.slice(0, 5).join(', ')}` }]),
     ];
     const fix = await selfCritiqueAndFix({
@@ -420,6 +586,8 @@ async function validateAndFixNarrative(narrative, birthDate, options = {}) {
     issues: stage1.issues,
     redFlags,
     hallucinations: hallucination,
+    healthSafety,
+    timingSafety,
     language: langCheck,
     aiDisclosuresRemoved: stripped.removed,
     severity,
@@ -434,4 +602,6 @@ module.exports = {
   stripAIDisclosures,
   detectLanguageImpurity,
   checkClaimsAgainstEngine,
+  validateHealthNarrativeSafety,
+  validateTimingNarrativeSafety,
 };

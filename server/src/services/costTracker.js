@@ -57,9 +57,7 @@ function createEmptyStats() {
 }
 
 function todaySLT() {
-  const now = new Date();
-  const slt = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
-  return slt.toISOString().slice(0, 10);
+  return new Date(Date.now() + 19800 * 1000).toISOString().slice(0, 10);
 }
 
 /**

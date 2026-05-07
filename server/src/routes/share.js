@@ -10,6 +10,8 @@ const express = require('express');
 const router = express.Router();
 const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getDailyNakath, RASHIS } = require('../engine/astrology');
 
+const SRI_LANKA_TIME_CONTEXT = { zoneName: 'Asia/Colombo', offsetSeconds: 19800, source: 'traditional_slt' };
+
 /**
  * POST /api/share/weekly-card
  * Generate data for a shareable weekly forecast card
@@ -41,7 +43,7 @@ router.post('/weekly-card', (req, res) => {
       const forecastDate = new Date(today);
       forecastDate.setDate(today.getDate() + i);
 
-      const panchanga = getPanchanga(forecastDate);
+      const panchanga = getPanchanga(forecastDate, 6.9271, 79.8612, { timeContext: SRI_LANKA_TIME_CONTEXT });
       const moonDistance = ((panchanga.moonSign.id - rashi.id + 12) % 12) + 1;
 
       const favorableHouses = [1, 3, 5, 7, 9, 10, 11];

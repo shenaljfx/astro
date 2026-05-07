@@ -6,8 +6,9 @@
  * 
  * Pricing (per 1,000,000 tokens) — as of March 2026:
  * 
- * Gemini 2.5 Flash:     Input $0.30, Output $2.50 (incl. thinking tokens)
- * Gemini 2.5 Pro:       Input $1.25, Output $10.00 (incl. thinking tokens)
+ * Gemini 3.1 Pro Preview: Input $2.00, Output $12.00 (incl. thinking tokens)
+ * Gemini 2.5 Flash:       Input $0.30, Output $2.50 (incl. thinking tokens)
+ * Gemini 2.5 Pro:         Input $1.25, Output $10.00 (incl. thinking tokens)
  * GPT-4o-mini:          Input $0.15, Output $0.60
  * 
  * USD → LKR exchange rate: configurable via env var USD_TO_LKR (default ~305)
@@ -107,6 +108,7 @@ function createTokenTracker() {
     calls: [],        // individual API call records
     totalInput: 0,
     totalOutput: 0,
+    totalBillableOutput: 0,
     totalThinking: 0,
     totalTokens: 0,
     totalCostUSD: 0,
@@ -134,25 +136,30 @@ function recordUsage(tracker, model, label, usage) {
   // Normalize token counts (Gemini vs OpenAI formats)
   let inputTokens = 0;
   let outputTokens = 0;
+  let billableOutputTokens = 0;
   let thinkingTokens = 0;
+  let totalTokens = 0;
 
   if (usage.promptTokenCount !== undefined) {
     // Gemini format
     inputTokens = usage.promptTokenCount || 0;
     outputTokens = usage.candidatesTokenCount || 0;
     thinkingTokens = usage.thoughtsTokenCount || 0;
-    // Note: Gemini's candidatesTokenCount already INCLUDES thinking tokens
-    // So we don't add them separately — thinking is a subset of output
+    totalTokens = usage.totalTokenCount || (inputTokens + outputTokens + thinkingTokens);
+    // Gemini bills text output as response + reasoning/thinking tokens.
+    billableOutputTokens = Math.max(outputTokens, totalTokens - inputTokens);
   } else if (usage.prompt_tokens !== undefined) {
     // OpenAI format
     inputTokens = usage.prompt_tokens || 0;
     outputTokens = usage.completion_tokens || 0;
     thinkingTokens = 0;
+    billableOutputTokens = outputTokens;
+    totalTokens = usage.total_tokens || (inputTokens + outputTokens);
   }
 
   // Calculate cost
   const inputCostUSD = (inputTokens / 1_000_000) * pricing.inputPer1M;
-  const outputCostUSD = (outputTokens / 1_000_000) * pricing.outputPer1M;
+  const outputCostUSD = (billableOutputTokens / 1_000_000) * pricing.outputPer1M;
   const totalCostUSD = inputCostUSD + outputCostUSD;
   const totalCostLKR = totalCostUSD * usdToLkr;
 
@@ -161,8 +168,9 @@ function recordUsage(tracker, model, label, usage) {
     model: pricing.label || model,
     inputTokens,
     outputTokens,
+    billableOutputTokens,
     thinkingTokens,
-    totalTokens: inputTokens + outputTokens,
+    totalTokens,
     inputCostUSD: round6(inputCostUSD),
     outputCostUSD: round6(outputCostUSD),
     totalCostUSD: round6(totalCostUSD),
@@ -172,8 +180,9 @@ function recordUsage(tracker, model, label, usage) {
   tracker.calls.push(callRecord);
   tracker.totalInput += inputTokens;
   tracker.totalOutput += outputTokens;
+  tracker.totalBillableOutput += billableOutputTokens;
   tracker.totalThinking += thinkingTokens;
-  tracker.totalTokens += inputTokens + outputTokens;
+  tracker.totalTokens += totalTokens;
   tracker.totalCostUSD += totalCostUSD;
   tracker.totalCostLKR += totalCostLKR;
 
@@ -193,6 +202,7 @@ function finalizeTracker(tracker) {
       totalCalls: tracker.calls.length,
       totalInputTokens: tracker.totalInput,
       totalOutputTokens: tracker.totalOutput,
+      totalBillableOutputTokens: tracker.totalBillableOutput,
       totalThinkingTokens: tracker.totalThinking,
       totalTokens: tracker.totalTokens,
       costUSD: round6(tracker.totalCostUSD),
@@ -206,6 +216,7 @@ function finalizeTracker(tracker) {
       model: c.model,
       input: c.inputTokens,
       output: c.outputTokens,
+      billableOutput: c.billableOutputTokens,
       thinking: c.thinkingTokens,
       costLKR: c.totalCostLKR,
     })),

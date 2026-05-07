@@ -1,0 +1,26 @@
+{
+  "id": "older-user",
+  "tags": ["older_user", "male_user", "married_user"],
+  "sectionKey": "marriage",
+  "profile": {
+    "birthDate": "1971-02-03T05:45:00",
+    "age": 55,
+    "maritalStatus": "married"
+  },
+  "sectionData": {
+    "marriageAfflictions": { "isMarriageDenied": false, "severity": "MODERATE", "severityScore": 24 },
+    "marriageTimingPrediction": {
+      "bestWindow": { "dateRange": "1998-2001", "confidence": "moderate", "status": "PAST_PRIME_WINDOW" },
+      "confirmedMarriageYear": 1999
+    }
+  },
+  "narrative": "For an older married user, the section should validate lived relationship patterns instead of predicting a future wedding. The 1998-2001 window can be described as a past symbolic peak that may align with known relationship history.",
+  "expectations": {
+    "expectedAllowedClaimCategories": ["relationship_stability", "relationship_timing", "timing_window"],
+    "minTimingClaims": 1,
+    "maxTimingIssues": 0,
+    "maxHealthIssues": 0,
+    "maxRedFlags": 0,
+    "maxHallucinationSuspects": 0
+  }
+}

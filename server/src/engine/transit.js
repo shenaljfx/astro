@@ -29,6 +29,7 @@ const {
   calculateAshtakavarga, calculateVimshottariDetailed,
   getFunctionalNature, calculateSunriseSunset, dateToJD,
 } = require('./astrology');
+const { resolveCalculationSettings } = require('./calculationSettings');
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -211,20 +212,21 @@ const COMBUSTION_DEGREES = {
  * @param {number} lng - birth longitude
  * @returns {Object} full transit analysis
  */
-function getCurrentTransits(transitDate, birthDate, lat = 6.9271, lng = 79.8612) {
+function getCurrentTransits(transitDate, birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const settings = resolveCalculationSettings(opts);
   const tDate = transitDate ? new Date(transitDate) : new Date();
   const bDate = new Date(birthDate);
 
   // Natal data
   const natalChart = buildHouseChart(bDate, lat, lng);
-  const natalPlanets = getAllPlanetPositions(bDate);
+  const natalPlanets = getAllPlanetPositions(bDate, lat, lng, settings);
   const natalMoonSid = toSidereal(getMoonLongitude(bDate), bDate);
   const natalMoonRashiId = Math.floor(natalMoonSid / 30) + 1;
   const natalLagnaRashiId = natalChart.lagna?.rashi?.id || natalChart.houses[0]?.rashiId || 1;
   const lagnaName = natalChart.lagna?.rashi?.name || RASHIS[natalLagnaRashiId - 1]?.name || 'Mesha';
 
   // Transit data
-  const transitPlanets = getAllPlanetPositions(tDate);
+  const transitPlanets = getAllPlanetPositions(tDate, lat, lng, settings);
 
   // Ashtakavarga (pre-computed from natal)
   let ashtakavarga = null;
@@ -448,14 +450,14 @@ function getCurrentTransits(transitDate, birthDate, lat = 6.9271, lng = 79.8612)
 /**
  * Generate a daily forecast combining Panchanga + Moon transit + dasha
  */
-function getDailyForecast(date, birthDate, lat = 6.9271, lng = 79.8612) {
+function getDailyForecast(date, birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const tDate = date ? new Date(date) : new Date();
   const bDate = new Date(birthDate);
 
-  const transits = getCurrentTransits(tDate, bDate, lat, lng);
-  const panchanga = getPanchanga(tDate, lat, lng);
+  const transits = getCurrentTransits(tDate, bDate, lat, lng, opts);
+  const panchanga = getPanchanga(tDate, lat, lng, opts);
   let dailyNakath = null;
-  try { dailyNakath = getDailyNakath(tDate, lat, lng); } catch (e) { /* ok */ }
+  try { dailyNakath = getDailyNakath(tDate, lat, lng, opts); } catch (e) { /* ok */ }
 
   // Moon transit is the primary daily influence
   const moonTransit = transits.planets.moon;
@@ -554,7 +556,7 @@ function generateDailyAdvice(quality, moonTransit, tarabala, tarabalaQuality) {
 //  WEEKLY FORECAST
 // ═══════════════════════════════════════════════════════════════════════════
 
-function getWeeklyForecast(startDate, birthDate, lat = 6.9271, lng = 79.8612) {
+function getWeeklyForecast(startDate, birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const start = startDate ? new Date(startDate) : new Date();
   const days = [];
   let bestDay = null;
@@ -564,7 +566,7 @@ function getWeeklyForecast(startDate, birthDate, lat = 6.9271, lng = 79.8612) {
   for (let i = 0; i < 7; i++) {
     const d = new Date(start);
     d.setDate(d.getDate() + i);
-    const forecast = getDailyForecast(d, birthDate, lat, lng);
+    const forecast = getDailyForecast(d, birthDate, lat, lng, opts);
     days.push(forecast);
     totalScore += forecast.dailyScore;
     if (!bestDay || forecast.dailyScore > bestDay.dailyScore) bestDay = forecast;
@@ -597,14 +599,14 @@ function getWeeklyTheme(days) {
 //  MONTHLY FORECAST
 // ═══════════════════════════════════════════════════════════════════════════
 
-function getMonthlyForecast(month, year, birthDate, lat = 6.9271, lng = 79.8612) {
+function getMonthlyForecast(month, year, birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const bDate = new Date(birthDate);
   const m = month || new Date().getMonth() + 1;
   const y = year || new Date().getFullYear();
 
   // Get transit snapshot for mid-month
   const midMonth = new Date(Date.UTC(y, m - 1, 15));
-  const transits = getCurrentTransits(midMonth, bDate, lat, lng);
+  const transits = getCurrentTransits(midMonth, bDate, lat, lng, opts);
 
   // Slow planet analysis (Jupiter, Saturn, Rahu/Ketu — define the month's theme)
   const jupiter = transits.planets.jupiter;
@@ -651,7 +653,7 @@ function getMonthlyForecast(month, year, birthDate, lat = 6.9271, lng = 79.8612)
       day.setDate(day.getDate() + d);
       if (day.getMonth() !== m - 1) break;
       try {
-        const df = getDailyForecast(day, birthDate, lat, lng);
+        const df = getDailyForecast(day, birthDate, lat, lng, opts);
         weekScore += df.dailyScore;
       } catch (e) { weekScore += 50; }
     }
@@ -714,14 +716,14 @@ function generateAreaOutlook(transits, houses) {
 //  YEARLY FORECAST
 // ═══════════════════════════════════════════════════════════════════════════
 
-function getYearlyForecast(year, birthDate, lat = 6.9271, lng = 79.8612) {
+function getYearlyForecast(year, birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const y = year || new Date().getFullYear();
   const bDate = new Date(birthDate);
 
   const monthlySnapshots = [];
   for (let m = 1; m <= 12; m++) {
     try {
-      const monthly = getMonthlyForecast(m, y, birthDate, lat, lng);
+      const monthly = getMonthlyForecast(m, y, birthDate, lat, lng, opts);
       monthlySnapshots.push({
         month: m,
         monthName: monthly.monthName,
@@ -744,11 +746,11 @@ function getYearlyForecast(year, birthDate, lat = 6.9271, lng = 79.8612) {
   const avgScore = Math.round(monthlySnapshots.reduce((s, m) => s + m.score, 0) / 12);
 
   // Jupiter and Saturn sign changes during the year (major events)
-  const signChanges = detectSignChanges(y, bDate, lat, lng);
+  const signChanges = detectSignChanges(y, bDate, lat, lng, opts);
 
   // Saturn Return check
-  const saturnReturn = checkPlanetaryReturn('saturn', bDate, y);
-  const jupiterReturn = checkPlanetaryReturn('jupiter', bDate, y);
+  const saturnReturn = checkPlanetaryReturn('saturn', bDate, y, lat, lng, opts);
+  const jupiterReturn = checkPlanetaryReturn('jupiter', bDate, y, lat, lng, opts);
 
   return {
     year: y,
@@ -764,7 +766,8 @@ function getYearlyForecast(year, birthDate, lat = 6.9271, lng = 79.8612) {
   };
 }
 
-function detectSignChanges(year, birthDate, lat, lng) {
+function detectSignChanges(year, birthDate, lat, lng, opts = {}) {
+  const settings = resolveCalculationSettings(opts);
   const changes = [];
   const bDate = new Date(birthDate);
   const natalLagnaRashiId = (() => {
@@ -780,7 +783,7 @@ function detectSignChanges(year, birthDate, lat, lng) {
     for (let m = 1; m <= 12; m++) {
       const d = new Date(Date.UTC(year, m - 1, 15));
       try {
-        const planets = getAllPlanetPositions(d);
+        const planets = getAllPlanetPositions(d, lat, lng, settings);
         const curSign = planets[pKey].rashiId;
         if (prevSign && curSign !== prevSign) {
           const houseFromLagna = ((curSign - natalLagnaRashiId + 12) % 12) + 1;
@@ -800,16 +803,17 @@ function detectSignChanges(year, birthDate, lat, lng) {
   return changes;
 }
 
-function checkPlanetaryReturn(planetKey, birthDate, year) {
+function checkPlanetaryReturn(planetKey, birthDate, year, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const settings = resolveCalculationSettings(opts);
   const bDate = new Date(birthDate);
-  const natalPlanets = getAllPlanetPositions(bDate);
+  const natalPlanets = getAllPlanetPositions(bDate, lat, lng, settings);
   const natalRashiId = natalPlanets[planetKey]?.rashiId;
   if (!natalRashiId) return null;
 
   for (let m = 1; m <= 12; m++) {
     const d = new Date(Date.UTC(year, m - 1, 15));
     try {
-      const tp = getAllPlanetPositions(d);
+      const tp = getAllPlanetPositions(d, lat, lng, settings);
       if (tp[planetKey]?.rashiId === natalRashiId) {
         const age = year - bDate.getUTCFullYear();
         const pName = tp[planetKey].name;
@@ -847,7 +851,8 @@ function generateYearlyThemes(months, signChanges) {
 //  RETROGRADE PERIODS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function getRetrogradePeriods(year) {
+function getRetrogradePeriods(year, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const settings = resolveCalculationSettings(opts);
   const y = year || new Date().getFullYear();
   const retrogrades = [];
   const planets = ['mars', 'mercury', 'jupiter', 'venus', 'saturn'];
@@ -860,7 +865,7 @@ function getRetrogradePeriods(year) {
       const date = new Date(Date.UTC(y, 0, 1 + d));
       if (date.getUTCFullYear() !== y) break;
       try {
-        const positions = getAllPlanetPositions(date);
+        const positions = getAllPlanetPositions(date, lat, lng, settings);
         const isRetro = positions[pKey]?.isRetrograde || false;
         if (isRetro && !wasRetro) {
           retroStart = date.toISOString().split('T')[0];
@@ -1028,14 +1033,15 @@ function computeAshtakavargaTransitScore(transitResult, kakshya) {
  * Enhanced transit analysis: combines standard Gochara with
  * Ashtakavarga-weighted scores, Kakshya analysis, and double transit.
  */
-function getEnhancedTransits(transitDate, birthDate, lat, lng) {
-  const base = getCurrentTransits(transitDate, birthDate, lat, lng);
+function getEnhancedTransits(transitDate, birthDate, lat, lng, opts = {}) {
+  const settings = resolveCalculationSettings(opts);
+  const base = getCurrentTransits(transitDate, birthDate, lat, lng, settings);
   if (!base) return null;
 
   let ashtakavarga = null;
   try { ashtakavarga = calculateAshtakavarga(new Date(birthDate), lat, lng); } catch (_) {}
 
-  const transitPlanets = getAllPlanetPositions(transitDate ? new Date(transitDate) : new Date());
+  const transitPlanets = getAllPlanetPositions(transitDate ? new Date(transitDate) : new Date(), lat, lng, settings);
   const enhancedPlanets = {};
 
   for (const [key, result] of Object.entries(base.planets)) {

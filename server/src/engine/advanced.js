@@ -15,11 +15,33 @@
  */
 
 const { NAKSHATRAS, RASHIS, PLANETS, getAllPlanetPositions, getLagna, buildHouseChart, buildNavamshaChart, getRashi, getNakshatra, toSidereal, getMoonLongitude, getSunLongitude, getAyanamsha, dateToJD, calculateVimshottariDetailed } = require('./astrology');
+const { resolveCalculationSettings, formatLocalDateTime } = require('./calculationSettings');
 
 // ── Shared Helper Functions ─────────────────────────────────────
 const isInKendra = (h) => [1, 4, 7, 10].includes(h);
 const isInTrikona = (h) => [1, 5, 9].includes(h);
 const isInDusthana = (h) => [6, 8, 12].includes(h);
+
+function resolveAdvancedOptions(opts = {}) {
+  const asOf = opts.asOfDate ? new Date(opts.asOfDate) : new Date();
+  return {
+    ...opts,
+    settings: resolveCalculationSettings(opts),
+    asOfDate: isNaN(asOf.getTime()) ? new Date() : asOf,
+    timeContext: opts.timeContext || null,
+  };
+}
+
+function getAdvancedPlanets(date, lat, lng, opts = {}) {
+  const options = resolveAdvancedOptions(opts);
+  return getAllPlanetPositions(date, lat, lng, options.settings);
+}
+
+function getLocalHour(date, opts = {}) {
+  const local = formatLocalDateTime(date, opts.timeContext || null);
+  const [hour, minute] = local.time.split(':').map(Number);
+  return hour + minute / 60;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  TIER 1-A: COMPREHENSIVE DOSHA DETECTION
@@ -30,7 +52,8 @@ const isInDusthana = (h) => [6, 8, 12].includes(h);
  * Returns: Mangala Dosha, Kaal Sarp Dosha, Sade Sati, Pitru Dosha,
  *          Grahan Dosha, Shrapit Dosha, Guru Chandal Dosha, Kemdrum Dosha (enhanced)
  */
-function detectDoshas(date, lat, lng) {
+function detectDoshas(date, lat, lng, opts = {}) {
+  const options = resolveAdvancedOptions(opts);
   const { houses, lagna, planets } = buildHouseChart(date, lat, lng);
   const doshas = [];
 
@@ -205,8 +228,7 @@ function detectDoshas(date, lat, lng) {
 
   // ── 3. SADE SATI (Saturn's 7.5 Year Transit Over Moon) ────────
   // Check current Saturn position relative to natal Moon
-  const now = new Date();
-  const transitPlanets = getAllPlanetPositions(now);
+  const transitPlanets = getAllPlanetPositions(options.asOfDate, lat, lng, options.settings);
   const natalMoonRashiId = planets.moon?.rashiId;
   const transitSaturnRashiId = transitPlanets.saturn?.rashiId;
 
@@ -939,8 +961,8 @@ function detectAdvancedYogas(date, lat, lng) {
  * 7 Karakas: Atmakaraka → Amatyakaraka → Bhratrikaraka → Matrikaraka →
  *            Putrakaraka → Gnatikaraka → Darakaraka
  */
-function calculateJaiminiKarakas(date, lat, lng) {
-  const planets = getAllPlanetPositions(date);
+function calculateJaiminiKarakas(date, lat, lng, opts = {}) {
+  const planets = getAdvancedPlanets(date, lat, lng, opts);
   const lagna = getLagna(date, lat, lng);
   const navamsha = buildNavamshaChart(date, lat, lng);
 
@@ -1073,8 +1095,8 @@ function calculateJaiminiKarakas(date, lat, lng) {
  * Calculate proper Shadbala with all 6 components
  * Returns strength in Rupas (traditional unit) and percentage
  */
-function calculateShadbala(date, lat, lng) {
-  const planets = getAllPlanetPositions(date);
+function calculateShadbala(date, lat, lng, opts = {}) {
+  const planets = getAdvancedPlanets(date, lat, lng, opts);
   const lagna = getLagna(date, lat, lng);
   const { houses } = buildHouseChart(date, lat, lng);
 
@@ -1176,7 +1198,7 @@ function calculateShadbala(date, lat, lng) {
     // ── 3. KALA BALA (Temporal Strength) ─────────────────────────
     let kalaBala = 0;
     const birthDate = new Date(date);
-    const birthHour = birthDate.getUTCHours() + 5.5; // Approximate SLT
+    const birthHour = getLocalHour(birthDate, opts);
     const isDaytime = birthHour >= 6 && birthHour < 18;
 
     // Diurnal planets (Sun, Jupiter, Venus) are stronger during day
@@ -1286,9 +1308,9 @@ function calculateShadbala(date, lat, lng) {
  *   Kashta Phala = complement based on total minus Ishta
  * These indicate how well a planet can deliver its promised results.
  */
-function calculateIshtaKashta(date, lat, lng) {
-  const shadbala = calculateShadbala(date, lat, lng);
-  const planets = getAllPlanetPositions(date);
+function calculateIshtaKashta(date, lat, lng, opts = {}) {
+  const shadbala = calculateShadbala(date, lat, lng, opts);
+  const planets = getAdvancedPlanets(date, lat, lng, opts);
   const EXALT_DEGREES = { Sun: 10, Moon: 33, Mars: 298, Mercury: 165, Jupiter: 95, Venus: 357, Saturn: 200 };
 
   const results = {};
@@ -1335,9 +1357,9 @@ function calculateIshtaKashta(date, lat, lng) {
  *
  * Returns a multiplier (0.5 - 1.5) for each Dasha lord's prediction weight.
  */
-function getShadbalaWeightsForDasha(date, lat, lng) {
-  const shadbala = calculateShadbala(date, lat, lng);
-  const ishtaKashta = calculateIshtaKashta(date, lat, lng);
+function getShadbalaWeightsForDasha(date, lat, lng, opts = {}) {
+  const shadbala = calculateShadbala(date, lat, lng, opts);
+  const ishtaKashta = calculateIshtaKashta(date, lat, lng, opts);
 
   const weights = {};
   const PLANET_NAMES = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
@@ -1374,8 +1396,9 @@ function getShadbalaWeightsForDasha(date, lat, lng) {
  * Calculate Bhrigu Bindu (Destiny Point)
  * (Rahu longitude + Moon longitude) / 2 = the most sensitive point in the chart
  */
-function calculateBhriguBindu(date) {
-  const planets = getAllPlanetPositions(date);
+function calculateBhriguBindu(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const options = resolveAdvancedOptions(opts);
+  const planets = getAdvancedPlanets(date, lat, lng, options);
   const rahuSidereal = planets.rahu.sidereal;
   const moonSidereal = planets.moon.sidereal;
 
@@ -1391,8 +1414,7 @@ function calculateBhriguBindu(date) {
   const bbNakshatra = getNakshatra(bhriguBindu);
 
   // Check which planets transit this point currently
-  const now = new Date();
-  const transitPlanets = getAllPlanetPositions(now);
+  const transitPlanets = getAllPlanetPositions(options.asOfDate, lat, lng, options.settings);
   const activations = [];
 
   for (const [key, tp] of Object.entries(transitPlanets)) {
@@ -1429,8 +1451,8 @@ function calculateBhriguBindu(date) {
  * 
  * Plus Jaagrat/Swapna/Sushupti states
  */
-function calculateAvasthas(date) {
-  const planets = getAllPlanetPositions(date);
+function calculateAvasthas(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const planets = getAdvancedPlanets(date, lat, lng, opts);
   const results = {};
 
   const BALAADI = [
@@ -1512,8 +1534,8 @@ function calculateAvasthas(date) {
 /**
  * Build additional Divisional Charts — D7, D10, D24, D60
  */
-function buildExtendedVargas(date, lat, lng) {
-  const planets = getAllPlanetPositions(date);
+function buildExtendedVargas(date, lat, lng, opts = {}) {
+  const planets = getAdvancedPlanets(date, lat, lng, opts);
   const lagna = getLagna(date, lat, lng);
 
   const getVargaPosition = (siderealDeg, division, rules) => {
@@ -1721,7 +1743,7 @@ function buildExtendedVargas(date, lat, lng) {
  * Calculate Pratyantardasha (sub-sub periods within each Antardasha)
  * Gives day-level timing accuracy
  */
-function calculatePratyantardasha(moonLongitude, birthDate) {
+function calculatePratyantardasha(moonLongitude, birthDate, opts = {}) {
   const DASA_LORDS = ['Ketu', 'Venus', 'Sun', 'Moon', 'Mars', 'Rahu', 'Jupiter', 'Saturn', 'Mercury'];
   const DASA_YEARS = { 'Ketu': 7, 'Venus': 20, 'Sun': 6, 'Moon': 10, 'Mars': 7, 'Rahu': 18, 'Jupiter': 16, 'Saturn': 19, 'Mercury': 17 };
   const TOTAL_YEARS = 120;
@@ -1730,7 +1752,7 @@ function calculatePratyantardasha(moonLongitude, birthDate) {
   const dashas = calculateVimshottariDetailed(moonLongitude, birthDate);
 
   // For the CURRENT running dasha/antardasha, calculate pratyantardashas
-  const now = new Date();
+  const now = resolveAdvancedOptions(opts).asOfDate;
   const currentDasha = dashas.find(d => new Date(d.start) <= now && new Date(d.endDate) >= now);
   if (!currentDasha) return { dashas, pratyantardashas: null };
 
@@ -1797,8 +1819,8 @@ function calculatePratyantardasha(moonLongitude, birthDate) {
  * Each sign divided into 150 equal parts (0.2° each)
  * Chara/Sthira/Dvisvabhava signs have different naming sequences
  */
-function calculateNadiAmsha(date) {
-  const planets = getAllPlanetPositions(date);
+function calculateNadiAmsha(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const planets = getAdvancedPlanets(date, lat, lng, opts);
 
   // Sign types
   const CHARA_SIGNS = [1, 4, 7, 10];   // Moveable
@@ -1876,8 +1898,8 @@ function calculateNadiAmsha(date) {
  * Each Nakshatra is divided into 9 sub-divisions proportional to Vimshottari Dasha
  * Sign Lord → Star Lord → Sub Lord chain gives precise prediction
  */
-function calculateKPSubLords(date) {
-  const planets = getAllPlanetPositions(date);
+function calculateKPSubLords(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const planets = getAdvancedPlanets(date, lat, lng, opts);
 
   const DASA_LORDS = ['Ketu', 'Venus', 'Sun', 'Moon', 'Mars', 'Rahu', 'Jupiter', 'Saturn', 'Mercury'];
   const DASA_YEARS = [7, 20, 6, 10, 7, 18, 16, 19, 17]; // Total = 120
@@ -1959,9 +1981,9 @@ function calculateKPSubLords(date) {
  * Comprehensive Past Life Analysis
  * Combines multiple Vedic indicators to reveal past-life karma
  */
-function analyzePastLife(date, lat, lng) {
+function analyzePastLife(date, lat, lng, opts = {}) {
   const { houses, planets } = buildHouseChart(date, lat, lng);
-  const extendedVargas = buildExtendedVargas(date, lat, lng);
+  const extendedVargas = buildExtendedVargas(date, lat, lng, opts);
   const lagna = getLagna(date, lat, lng);
 
   const getPlanetHouse = (planetName) => {
@@ -2082,9 +2104,10 @@ function analyzePastLife(date, lat, lng) {
  * Calculate Sarvatobhadra Chakra activations
  * Shows which Nakshatras, Tithis, and Varas are activated by current transits
  */
-function calculateSarvatobhadraActivations(date, lat, lng) {
-  const planets = getAllPlanetPositions(date);
-  const transitPlanets = getAllPlanetPositions(new Date());
+function calculateSarvatobhadraActivations(date, lat, lng, opts = {}) {
+  const options = resolveAdvancedOptions(opts);
+  const planets = getAdvancedPlanets(date, lat, lng, options);
+  const transitPlanets = getAllPlanetPositions(options.asOfDate, lat, lng, options.settings);
 
   // Map each transit planet to its Nakshatra
   const activatedNakshatras = {};
@@ -2138,30 +2161,31 @@ function calculateSarvatobhadraActivations(date, lat, lng) {
  * Generate the complete advanced analysis for a birth chart
  * This is the most comprehensive Vedic analysis possible
  */
-function generateAdvancedAnalysis(birthDate, lat = 6.9271, lng = 79.8612) {
+function generateAdvancedAnalysis(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const date = new Date(birthDate);
+  const options = resolveAdvancedOptions(opts);
 
   console.log('[Advanced Engine] Starting comprehensive Tier 1-2-3 analysis...');
   const startTime = Date.now();
 
   // TIER 1: Core
-  const doshas = detectDoshas(date, lat, lng);
+  const doshas = detectDoshas(date, lat, lng, options);
   const advancedYogas = detectAdvancedYogas(date, lat, lng);
-  const jaiminiKarakas = calculateJaiminiKarakas(date, lat, lng);
+  const jaiminiKarakas = calculateJaiminiKarakas(date, lat, lng, options);
 
   // TIER 2: Precision
-  const shadbala = calculateShadbala(date, lat, lng);
-  const bhriguBindu = calculateBhriguBindu(date);
-  const avasthas = calculateAvasthas(date);
-  const extendedVargas = buildExtendedVargas(date, lat, lng);
+  const shadbala = calculateShadbala(date, lat, lng, options);
+  const bhriguBindu = calculateBhriguBindu(date, lat, lng, options);
+  const avasthas = calculateAvasthas(date, lat, lng, options);
+  const extendedVargas = buildExtendedVargas(date, lat, lng, options);
   const moonSidereal = toSidereal(getMoonLongitude(date), date);
-  const pratyantardasha = calculatePratyantardasha(moonSidereal, date);
+  const pratyantardasha = calculatePratyantardasha(moonSidereal, date, options);
 
   // TIER 3: Expert
-  const nadiAmsha = calculateNadiAmsha(date);
-  const kpSubLords = calculateKPSubLords(date);
-  const pastLife = analyzePastLife(date, lat, lng);
-  const sarvatobhadra = calculateSarvatobhadraActivations(date, lat, lng);
+  const nadiAmsha = calculateNadiAmsha(date, lat, lng, options);
+  const kpSubLords = calculateKPSubLords(date, lat, lng, options);
+  const pastLife = analyzePastLife(date, lat, lng, options);
+  const sarvatobhadra = calculateSarvatobhadraActivations(date, lat, lng, options);
 
   const elapsed = Date.now() - startTime;
   console.log(`[Advanced Engine] Complete analysis done in ${elapsed}ms — ${doshas.length} doshas, ${advancedYogas.length} yogas detected`);
@@ -2170,6 +2194,9 @@ function generateAdvancedAnalysis(birthDate, lat = 6.9271, lng = 79.8612) {
     generatedAt: new Date().toISOString(),
     engineVersion: 'Grahachara-Advanced-v3.0',
     computeTimeMs: elapsed,
+    calculationSettings: options.settings,
+    asOfDate: options.asOfDate.toISOString(),
+    timeContext: options.timeContext,
 
     tier1: {
       doshas: {

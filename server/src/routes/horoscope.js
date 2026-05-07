@@ -13,7 +13,7 @@ const { generateAdvancedAnalysis } = require('../engine/advanced');
 const { chat, generateAINarrativeReport, translateAdvancedForDisplay, explainChartSimple, createReportProgress, updateReportProgress, getReportProgress, deleteReportProgress } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth, requireSubscription } = require('../middleware/subscription');
-const { reportLimiter, aiUserLimiter, reportUserLimiter, validateBirthData } = require('../middleware/security');
+const { reportLimiter, aiUserLimiter, reportUserLimiter, validateBirthData, requireAdmin } = require('../middleware/security');
 
 // Enhanced engine (graceful — null if unavailable)
 let enhancedEngine = null;
@@ -24,9 +24,11 @@ let jyotishEngine = null;
 try { jyotishEngine = require('../engine/jyotish'); } catch (e) { console.warn('[horoscope] jyotish engine not available:', e.message); }
 const { trackCost } = require('../services/costTracker');
 const { createOrResumeEntitlement, fulfillEntitlement, recordEntitlementError } = require('../middleware/entitlements');
-const { saveReport, getCachedReport, saveChartExplanation, getCachedChartExplanation, saveTranslationCache, getCachedTranslation, getUserReports, saveBirthChartCache, getCachedBirthChart } = require('../models/firestore');
+const { saveReport, getCachedReport, saveChartExplanation, getCachedChartExplanation, saveTranslationCache, getCachedTranslation, getUserReports, saveBirthChartCache, getCachedBirthChart, saveReportFeedback, getPromptAnalyticsSummary } = require('../models/firestore');
 const { parseSLT } = require('../utils/dateUtils');
-const { parseBirthDateTime } = require('../services/timezone');
+const { parseBirthDateTime, parseBirthDateTimeWithContext } = require('../services/timezone');
+
+const SRI_LANKA_TIME_CONTEXT = { zoneName: 'Asia/Colombo', offsetSeconds: 19800, source: 'traditional_slt' };
 
 /**
  * Detailed Lagna Palapala (ලග්න පලාපල) - traditional Sri Lankan interpretations
@@ -227,7 +229,7 @@ router.get('/daily/:sign', (req, res) => {
     }
 
     const today = new Date();
-    const panchanga = getPanchanga(today);
+    const panchanga = getPanchanga(today, 6.9271, 79.8612, { timeContext: SRI_LANKA_TIME_CONTEXT });
 
     // Generate daily insights based on current transits
     const moonTransit = panchanga.moonSign;
@@ -363,8 +365,11 @@ router.post('/birth-chart', optionalAuth, async (req, res) => {
 
     // ── No cache hit — full computation ──────────────────────────
     let date;
+    let timeContext = null;
     try {
-      date = await parseBirthDateTime(birthDate, birthLat, birthLng);
+      const parsed = await parseBirthDateTimeWithContext(birthDate, birthLat, birthLng);
+      date = parsed?.date;
+      timeContext = parsed?.timeContext || null;
     } catch (tzErr) {
       console.warn('[birth-chart] timezone resolution error, falling back to parseSLT:', tzErr.message);
       date = parseSLT(birthDate);
@@ -376,14 +381,14 @@ router.post('/birth-chart', optionalAuth, async (req, res) => {
     }
     console.log('[birth-chart]   resolved UTC birth time:', date.toISOString());
 
-    const panchanga = getPanchanga(date, birthLat, birthLng);
+    const panchanga = getPanchanga(date, birthLat, birthLng, { timeContext });
     const moonSidereal = toSidereal(getMoonLongitude(date), date);
     const sunSidereal = toSidereal(getSunLongitude(date), date);
     const lagna = getLagna(date, birthLat, birthLng);
     const houseChart = buildHouseChart(date, birthLat, birthLng);
     const navamshaChart = buildNavamshaChart(date, birthLat, birthLng);
     const yogas = detectYogas(date, birthLat, birthLng);
-    const planetStrengths = getPlanetStrengths(date, birthLat, birthLng);
+    const planetStrengths = getPlanetStrengths(date, birthLat, birthLng, { timeContext });
     const drishtis = calculateDrishtis(houseChart.houses);
     const pushkara = analyzePushkara(houseChart.planets);
     const ashtakavarga = calculateAshtakavarga(date, birthLat, birthLng);
@@ -392,7 +397,7 @@ router.post('/birth-chart', optionalAuth, async (req, res) => {
 
     let advancedAnalysis = null;
     try {
-      advancedAnalysis = generateAdvancedAnalysis(date, birthLat, birthLng);
+      advancedAnalysis = generateAdvancedAnalysis(date, birthLat, birthLng, { timeContext });
       console.log('[birth-chart]   advanced engine done in ' + (Date.now() - reqStart) + 'ms');
     } catch (err) {
       console.error('Advanced analysis failed (non-fatal):', err.message);
@@ -590,8 +595,11 @@ router.post('/ai-analysis', phoneAuth, requireSubscription, aiUserLimiter, async
     const birthLng = parseFloat(lng) || 79.8612;
 
     let date;
+    let timeContext = null;
     try {
-      date = await parseBirthDateTime(birthDate, birthLat, birthLng);
+      const parsed = await parseBirthDateTimeWithContext(birthDate, birthLat, birthLng);
+      date = parsed?.date;
+      timeContext = parsed?.timeContext || null;
     } catch (tzErr) {
       date = parseSLT(birthDate);
     }
@@ -609,8 +617,8 @@ router.post('/ai-analysis', phoneAuth, requireSubscription, aiUserLimiter, async
     const houseChart = buildHouseChart(date, birthLat, birthLng);
     const navamshaChart = buildNavamshaChart(date, birthLat, birthLng);
     const yogas = detectYogas(date, birthLat, birthLng);
-    const planetStrengths = getPlanetStrengths(date, birthLat, birthLng);
-    const panchanga = getPanchanga(date, birthLat, birthLng);
+    const planetStrengths = getPlanetStrengths(date, birthLat, birthLng, { timeContext });
+    const panchanga = getPanchanga(date, birthLat, birthLng, { timeContext });
     const drishtis = calculateDrishtis(houseChart.houses);
     const pushkara = analyzePushkara(houseChart.planets);
     const ashtakavarga = calculateAshtakavarga(date, birthLat, birthLng);
@@ -834,7 +842,7 @@ router.get('/birth-chart/data', optionalAuth, async (req, res) => {
     const shadvarga = buildShadvarga(birthDate, birthLat, birthLng);
     
     // Calculate Panchanga
-    const panchanga = getPanchanga(birthDate, birthLat, birthLng);
+    const panchanga = getPanchanga(birthDate, birthLat, birthLng, { timeContext: SRI_LANKA_TIME_CONTEXT });
 
     // New advanced calculations
     const drishtis = calculateDrishtis(houseChart.houses);
@@ -966,7 +974,7 @@ router.get('/birth-chart/data', optionalAuth, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 router.post('/full-report', reportLimiter, async (req, res) => {
   try {
-    const { birthDate, lat = 6.9271, lng = 79.8612 } = req.body;
+    const { birthDate, lat = 6.9271, lng = 79.8612, calculationSettings = null, settings = null, asOfDate = null } = req.body;
 
     if (!birthDate) {
       return res.status(400).json({ error: 'birthDate is required (ISO format or parseable date string)' });
@@ -975,8 +983,11 @@ router.post('/full-report', reportLimiter, async (req, res) => {
     const parsedLat = parseFloat(lat);
     const parsedLng = parseFloat(lng);
     let date;
+    let timeContext = null;
     try {
-      date = await parseBirthDateTime(birthDate, parsedLat, parsedLng);
+      const parsed = await parseBirthDateTimeWithContext(birthDate, parsedLat, parsedLng);
+      date = parsed?.date;
+      timeContext = parsed?.timeContext || null;
     } catch (tzErr) {
       date = parseSLT(birthDate);
     }
@@ -987,7 +998,11 @@ router.post('/full-report', reportLimiter, async (req, res) => {
     console.log(`[Full Report] Generating for ${date.toISOString()} at (${parsedLat}, ${parsedLng})`);
     const startTime = Date.now();
 
-    const report = generateFullReport(date, parsedLat, parsedLng);
+    const report = generateFullReport(date, parsedLat, parsedLng, {
+      calculationSettings: calculationSettings || settings || {},
+      asOfDate,
+      timeContext,
+    });
 
     const elapsed = Date.now() - startTime;
     console.log(`[Full Report] Generated in ${elapsed}ms — ${Object.keys(report.sections).length} sections`);
@@ -1040,7 +1055,7 @@ const _activeGenerations = new Map();
 router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, reportUserLimiter, async (req, res) => {
   let entitlementId = null;
   try {
-    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null, reportId: clientReportId = null } = req.body;
+    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null, reportId: clientReportId = null, calculationSettings = null, settings = null, asOfDate = null } = req.body;
 
     if (!birthDate) {
       return res.status(400).json({ error: 'birthDate is required (ISO format or parseable date string)' });
@@ -1066,8 +1081,11 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
     const reportLat = parseFloat(lat);
     const reportLng = parseFloat(lng);
     let date;
+    let timeContext = null;
     try {
-      date = await parseBirthDateTime(birthDate, reportLat, reportLng);
+      const parsed = await parseBirthDateTimeWithContext(birthDate, reportLat, reportLng);
+      date = parsed?.date;
+      timeContext = parsed?.timeContext || null;
     } catch (tzErr) {
       date = parseSLT(birthDate);
     }
@@ -1130,7 +1148,13 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
     const reportId = clientReportId || `rpt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     createReportProgress(reportId, 19); // 19 sections in sectionOrder
 
-    const report = await generateAINarrativeReport(date, reportLat, reportLng, language, birthLocation, userName, userGender, userReligion, { maritalStatus, marriageYear }, reportId);
+    const report = await generateAINarrativeReport(date, reportLat, reportLng, language, birthLocation, userName, userGender, userReligion, {
+      maritalStatus,
+      marriageYear,
+      calculationSettings: calculationSettings || settings || {},
+      asOfDate,
+      timeContext,
+    }, reportId);
 
     const elapsed = Date.now() - startTime;
     const sectionCount = Object.keys(report.narrativeSections).length;
@@ -1160,6 +1184,11 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
           sections: report.narrativeSections,
           rashiChart: report.rashiChart,
           birthInfo: report.birthData,
+          promptVersion: report.promptVersion || null,
+          promptMetadata: report.promptMetadata || null,
+          promptAnalytics: report.promptAnalytics || null,
+          calculationMetadata: report.calculationMetadata || null,
+          validationMetadata: report.validationMetadata || null,
           generationTime: `${elapsed}ms`,
           userName: userName || null,
           userGender: userGender || null,
@@ -1248,6 +1277,8 @@ router.get('/my-reports', optionalAuth, async (req, res) => {
       sectionCount: r.sections ? Object.keys(r.sections).length : 0,
       userName: r.userName || null,
       birthLocation: r.birthLocation || null,
+      lat: r.lat || null,
+      lng: r.lng || null,
     }));
     res.json({ success: true, data: { reports: list } });
   } catch (error) {
@@ -1289,6 +1320,11 @@ router.get('/saved-report/:id', optionalAuth, async (req, res) => {
         rashiChart: data.rashiChart,
         narrativeSections: data.sections,
         generationTime: data.generationTime,
+        promptVersion: data.promptVersion || null,
+        promptMetadata: data.promptMetadata || null,
+        promptAnalytics: data.promptAnalytics || null,
+        validationMetadata: data.validationMetadata || null,
+        feedbackSummary: data.feedbackSummary || null,
         userName: data.userName || null,
         userGender: data.userGender || null,
         birthLocation: data.birthLocation || null,
@@ -1299,6 +1335,71 @@ router.get('/saved-report/:id', optionalAuth, async (req, res) => {
   } catch (error) {
     console.error('[saved-report] Error:', error.message);
     res.status(500).json({ error: 'Failed to load report' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/horoscope/report-feedback
+// Record section-level feedback for prompt observability
+// ═══════════════════════════════════════════════════════════════════
+router.post('/report-feedback', optionalAuth, async (req, res) => {
+  try {
+    if (!req.user || req.user.anonymous) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { reportId, sectionKey, claimType, claimId, rating, helpful, issueType, comment, source } = req.body || {};
+    if (!reportId) return res.status(400).json({ error: 'reportId is required' });
+    if (rating !== undefined) {
+      const numericRating = Number(rating);
+      if (!Number.isFinite(numericRating) || numericRating < 1 || numericRating > 5) {
+        return res.status(400).json({ error: 'rating must be a number from 1 to 5' });
+      }
+    }
+
+    const feedback = await saveReportFeedback(req.user?.uid || null, {
+      reportId,
+      sectionKey,
+      claimType,
+      claimId,
+      rating,
+      helpful,
+      issueType,
+      comment,
+      source,
+    });
+
+    if (!feedback) return res.status(503).json({ error: 'Database unavailable' });
+    res.json({
+      success: true,
+      data: {
+        id: feedback.id,
+        reportId: feedback.reportId,
+        sectionKey: feedback.sectionKey,
+        claimType: feedback.claimType,
+        promptVersion: feedback.promptVersion,
+        createdAt: feedback.createdAt,
+      },
+    });
+  } catch (error) {
+    if (error.code === 'REPORT_NOT_FOUND') return res.status(404).json({ error: 'Report not found' });
+    if (error.code === 'ACCESS_DENIED') return res.status(403).json({ error: 'Access denied' });
+    console.error('[report-feedback] Error:', error.message);
+    res.status(500).json({ error: 'Failed to record report feedback' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// GET /api/horoscope/prompt-analytics
+// Admin prompt safety and feedback analytics summary
+// ═══════════════════════════════════════════════════════════════════
+router.get('/prompt-analytics', requireAdmin, async (req, res) => {
+  try {
+    const summary = await getPromptAnalyticsSummary(req.query.limit || 200);
+    res.json({ success: true, data: summary });
+  } catch (error) {
+    console.error('[prompt-analytics] Error:', error.message);
+    res.status(500).json({ error: 'Failed to load prompt analytics' });
   }
 });
 

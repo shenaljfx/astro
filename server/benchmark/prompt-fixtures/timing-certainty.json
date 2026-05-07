@@ -1,0 +1,20 @@
+{
+  "id": "timing-certainty",
+  "tags": ["timing_certainty", "female_user", "single_user"],
+  "sectionKey": "children",
+  "sectionData": {
+    "childrenBirthYears": {
+      "children": [
+        { "childNumber": "1st", "peakYear": 2032, "confidence": "moderate", "parentAge": 34 }
+      ]
+    }
+  },
+  "narrative": "Your chart's strongest child-related timing gathers around 2032, when you are approximately 34. Treat this as timing symbolism, not a promise.",
+  "expectations": {
+    "minTimingClaims": 1,
+    "maxTimingIssues": 0,
+    "maxHealthIssues": 0,
+    "maxRedFlags": 0,
+    "maxHallucinationSuspects": 0
+  }
+}

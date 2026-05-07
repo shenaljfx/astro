@@ -14,6 +14,7 @@ const { buildHouseChart } = require('../engine/astrology');
 const { generateAdvancedAnalysis } = require('../engine/advanced');
 const { chat } = require('../engine/chat');
 const { parseSLT } = require('../utils/dateUtils');
+const { parseBirthDateTime } = require('../services/timezone');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth } = require('../middleware/subscription');
 const { aiLimiter } = require('../middleware/security');
@@ -99,17 +100,27 @@ router.post('/check', aiLimiter, optionalAuth, async (req, res) => {
       });
     }
 
-    const brideBirthDate = parseSLT(bride.birthDate);
-    const groomBirthDate = parseSLT(groom.birthDate);
+    const brideLat = parseFloat(bride.lat) || 6.9271;
+    const brideLng = parseFloat(bride.lng) || 79.8612;
+    const groomLat = parseFloat(groom.lat) || 6.9271;
+    const groomLng = parseFloat(groom.lng) || 79.8612;
+
+    let brideBirthDate;
+    let groomBirthDate;
+    try {
+      brideBirthDate = await parseBirthDateTime(bride.birthDate, brideLat, brideLng);
+    } catch (tzErr) {
+      brideBirthDate = parseSLT(bride.birthDate);
+    }
+    try {
+      groomBirthDate = await parseBirthDateTime(groom.birthDate, groomLat, groomLng);
+    } catch (tzErr) {
+      groomBirthDate = parseSLT(groom.birthDate);
+    }
 
     if (!brideBirthDate || isNaN(brideBirthDate.getTime()) || !groomBirthDate || isNaN(groomBirthDate.getTime())) {
       return res.status(400).json({ error: 'Invalid date format. Use ISO 8601.' });
     }
-
-    const brideLat = bride.lat || 6.9271;
-    const brideLng = bride.lng || 79.8612;
-    const groomLat = groom.lat || 6.9271;
-    const groomLng = groom.lng || 79.8612;
 
     const result = calculatePorondam(brideBirthDate, groomBirthDate);
 

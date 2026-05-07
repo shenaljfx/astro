@@ -1,0 +1,19 @@
+{
+  "id": "missing-birth-time",
+  "tags": ["missing_birth_time", "female_user", "single_user"],
+  "sectionKey": "marriage",
+  "sectionData": {
+    "birthTimeQuality": "missing_or_approximate",
+    "marriageAfflictions": { "isMarriageDenied": false, "severity": "MILD", "severityScore": 12 },
+    "marriageTimingPrediction": { "bestWindow": { "dateRange": "2030-2032", "confidence": "weak" } }
+  },
+  "narrative": "With an approximate birth time, the relationship timing should be treated carefully. The strongest symbolic partnership window gathers around 2030-2032, but this is a weak-confidence timing window, not a promise.",
+  "expectations": {
+    "expectedAllowedClaimCategories": ["relationship_stability", "relationship_timing", "timing_window"],
+    "minTimingClaims": 1,
+    "maxTimingIssues": 0,
+    "maxHealthIssues": 0,
+    "maxRedFlags": 0,
+    "maxHallucinationSuspects": 0
+  }
+}

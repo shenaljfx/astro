@@ -10,6 +10,11 @@
 
 const { getDb, COLLECTIONS } = require('../config/firebase');
 const { v4: uuidv4 } = require('uuid');
+const {
+  buildFeedbackSummary,
+  buildPromptFeedbackRecord,
+  buildUnsupportedTermAnalytics,
+} = require('../engine/promptObservability');
 
 // ─── USER OPERATIONS ───────────────────────────────────────────
 
@@ -119,6 +124,8 @@ async function saveReport(uid, reportData) {
   if (!db) return null;
 
   const reportId = uuidv4();
+  const promptAnalytics = reportData.promptAnalytics
+    || buildUnsupportedTermAnalytics(reportData.validationMetadata || {}, reportData.promptMetadata || null);
   const report = {
     id: reportId,
     uid,
@@ -130,6 +137,11 @@ async function saveReport(uid, reportData) {
     sections: reportData.sections || [],
     rashiChart: reportData.rashiChart || null,
     birthInfo: reportData.birthInfo || null,
+    promptVersion: reportData.promptVersion || reportData.promptMetadata?.promptVersion || null,
+    promptMetadata: reportData.promptMetadata || null,
+    promptAnalytics,
+    calculationMetadata: reportData.calculationMetadata || null,
+    validationMetadata: reportData.validationMetadata || null,
     generationTime: reportData.generationTime || null,
     userName: reportData.userName || null,
     userGender: reportData.userGender || null,
@@ -139,6 +151,7 @@ async function saveReport(uid, reportData) {
   };
 
   await db.collection(COLLECTIONS.REPORTS).doc(reportId).set(report);
+  await savePromptAnalyticsSnapshot(uid, reportId, report).catch(() => null);
 
   // Increment user's report count
   try {
@@ -153,6 +166,181 @@ async function saveReport(uid, reportData) {
   } catch (e) { /* ignore */ }
 
   return reportId;
+}
+
+async function savePromptAnalyticsSnapshot(uid, reportId, reportData = {}) {
+  const db = getDb();
+  if (!db || !reportId) return null;
+
+  const analytics = reportData.promptAnalytics
+    || buildUnsupportedTermAnalytics(reportData.validationMetadata || {}, reportData.promptMetadata || null);
+  const record = {
+    id: reportId,
+    reportId,
+    uid: uid || reportData.uid || null,
+    promptVersion: analytics.promptVersion || reportData.promptVersion || null,
+    language: reportData.language || null,
+    unsupportedEventCount: analytics.unsupportedEventCount || 0,
+    repeatedUnsupportedTerms: analytics.repeatedUnsupportedTerms || [],
+    topUnsupportedTerms: analytics.topUnsupportedTerms || [],
+    byType: analytics.byType || {},
+    bySection: analytics.bySection || {},
+    bySource: analytics.bySource || {},
+    analytics,
+    createdAt: reportData.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  await db.collection(COLLECTIONS.PROMPT_ANALYTICS).doc(reportId).set(record);
+  return reportId;
+}
+
+async function saveReportFeedback(uid, feedbackInput = {}) {
+  const db = getDb();
+  if (!db) return null;
+
+  const reportId = feedbackInput.reportId || null;
+  let reportData = {};
+  let reportRef = null;
+  if (reportId) {
+    reportRef = db.collection(COLLECTIONS.REPORTS).doc(reportId);
+    const reportDoc = await reportRef.get();
+    if (!reportDoc.exists) {
+      const error = new Error('Report not found');
+      error.code = 'REPORT_NOT_FOUND';
+      throw error;
+    }
+    reportData = { id: reportDoc.id, ...reportDoc.data() };
+    if (uid && reportData.uid && reportData.uid !== uid) {
+      const error = new Error('Access denied');
+      error.code = 'ACCESS_DENIED';
+      throw error;
+    }
+  }
+
+  const id = uuidv4();
+  const feedback = {
+    id,
+    ...buildPromptFeedbackRecord({
+      uid,
+      reportId,
+      reportData,
+      sectionKey: feedbackInput.sectionKey,
+      claimType: feedbackInput.claimType,
+      claimId: feedbackInput.claimId,
+      rating: feedbackInput.rating,
+      helpful: feedbackInput.helpful,
+      issueType: feedbackInput.issueType,
+      comment: feedbackInput.comment,
+      source: feedbackInput.source || 'user',
+    }),
+  };
+
+  await db.collection(COLLECTIONS.REPORT_FEEDBACK).doc(id).set(feedback);
+
+  if (reportRef && reportData) {
+    await reportRef.update({
+      feedbackSummary: buildFeedbackSummary(reportData.feedbackSummary || null, feedback),
+      lastFeedbackAt: feedback.createdAt,
+    });
+  }
+
+  return feedback;
+}
+
+async function getPromptAnalyticsSummary(limit = 200) {
+  const db = getDb();
+  if (!db) {
+    return {
+      reports: 0,
+      unsupportedEventCount: 0,
+      repeatedUnsupportedTerms: [],
+      topUnsupportedTerms: [],
+      byType: {},
+      bySection: {},
+      bySource: {},
+      feedback: { total: 0, averageRating: null, bySection: {}, byClaimType: {}, byIssueType: {} },
+    };
+  }
+
+  const safeLimit = Math.max(1, Math.min(parseInt(limit, 10) || 200, 1000));
+  const analyticsSnapshot = await db.collection(COLLECTIONS.PROMPT_ANALYTICS)
+    .orderBy('createdAt', 'desc')
+    .limit(safeLimit)
+    .get();
+
+  const summary = {
+    reports: 0,
+    unsupportedEventCount: 0,
+    topUnsupportedTerms: {},
+    repeatedUnsupportedTerms: [],
+    byType: {},
+    bySection: {},
+    bySource: {},
+    feedback: {
+      total: 0,
+      helpful: 0,
+      unhelpful: 0,
+      ratingTotal: 0,
+      ratingCount: 0,
+      averageRating: null,
+      bySection: {},
+      byClaimType: {},
+      byIssueType: {},
+    },
+  };
+
+  analyticsSnapshot.forEach(doc => {
+    const data = doc.data();
+    summary.reports += 1;
+    summary.unsupportedEventCount += data.unsupportedEventCount || 0;
+    for (const item of data.topUnsupportedTerms || []) {
+      summary.topUnsupportedTerms[item.term] = (summary.topUnsupportedTerms[item.term] || 0) + (item.count || 0);
+    }
+    for (const [key, value] of Object.entries(data.byType || {})) {
+      summary.byType[key] = (summary.byType[key] || 0) + value;
+    }
+    for (const [key, value] of Object.entries(data.bySection || {})) {
+      summary.bySection[key] = (summary.bySection[key] || 0) + value;
+    }
+    for (const [key, value] of Object.entries(data.bySource || {})) {
+      summary.bySource[key] = (summary.bySource[key] || 0) + value;
+    }
+  });
+
+  const feedbackSnapshot = await db.collection(COLLECTIONS.REPORT_FEEDBACK)
+    .orderBy('createdAt', 'desc')
+    .limit(safeLimit)
+    .get();
+
+  feedbackSnapshot.forEach(doc => {
+    const data = doc.data();
+    summary.feedback.total += 1;
+    if (data.helpful === true) summary.feedback.helpful += 1;
+    if (data.helpful === false) summary.feedback.unhelpful += 1;
+    if (Number.isFinite(data.rating)) {
+      summary.feedback.ratingTotal += data.rating;
+      summary.feedback.ratingCount += 1;
+    }
+    const sectionKey = data.sectionKey || 'report';
+    const claimType = data.claimType || 'general';
+    summary.feedback.bySection[sectionKey] = (summary.feedback.bySection[sectionKey] || 0) + 1;
+    summary.feedback.byClaimType[claimType] = (summary.feedback.byClaimType[claimType] || 0) + 1;
+    if (data.issueType) summary.feedback.byIssueType[data.issueType] = (summary.feedback.byIssueType[data.issueType] || 0) + 1;
+  });
+
+  summary.topUnsupportedTerms = Object.entries(summary.topUnsupportedTerms)
+    .map(([term, count]) => ({ term, count }))
+    .sort((a, b) => b.count - a.count || a.term.localeCompare(b.term))
+    .slice(0, 20);
+  summary.repeatedUnsupportedTerms = summary.topUnsupportedTerms.filter(item => item.count > 1);
+  if (summary.feedback.ratingCount > 0) {
+    summary.feedback.averageRating = Math.round((summary.feedback.ratingTotal / summary.feedback.ratingCount) * 100) / 100;
+  }
+  delete summary.feedback.ratingTotal;
+  delete summary.feedback.ratingCount;
+
+  return summary;
 }
 
 /**
@@ -199,17 +387,38 @@ async function getUserReports(uid) {
   const db = getDb();
   if (!db) return [];
 
-  const snapshot = await db.collection(COLLECTIONS.REPORTS)
-    .where('uid', '==', uid)
-    .where('type', '==', 'ai-narrative')
-    .orderBy('createdAt', 'desc')
-    .limit(20)
-    .get();
+  try {
+    const snapshot = await db.collection(COLLECTIONS.REPORTS)
+      .where('uid', '==', uid)
+      .where('type', '==', 'ai-narrative')
+      .orderBy('createdAt', 'desc')
+      .limit(20)
+      .get();
 
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  } catch (e) {
+    console.error('[getUserReports] Firestore query failed:', e.message);
+    if (e.message && e.message.includes('index')) {
+      console.error('[getUserReports] ⚠️ Missing Firestore composite index! Create it at the URL in the error above, or deploy firestore.indexes.json');
+    }
+    // Fallback: query without ordering (no composite index needed)
+    try {
+      const fallback = await db.collection(COLLECTIONS.REPORTS)
+        .where('uid', '==', uid)
+        .where('type', '==', 'ai-narrative')
+        .limit(20)
+        .get();
+      const docs = fallback.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      docs.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      return docs;
+    } catch (e2) {
+      console.error('[getUserReports] Fallback query also failed:', e2.message);
+      return [];
+    }
+  }
 }
 
 // ─── CHAT OPERATIONS ───────────────────────────────────────────
@@ -548,6 +757,9 @@ module.exports = {
   saveReport,
   getCachedReport,
   getUserReports,
+  savePromptAnalyticsSnapshot,
+  saveReportFeedback,
+  getPromptAnalyticsSummary,
   saveChatSession,
   updateChatSession,
   getUserChats,

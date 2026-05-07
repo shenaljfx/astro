@@ -1,0 +1,24 @@
+{
+  "id": "international-timezone",
+  "tags": ["non_sri_lankan_timezone", "female_user", "single_user"],
+  "sectionKey": "foreignTravel",
+  "profile": {
+    "birthDate": "2001-04-14T08:30:00",
+    "lat": 51.5074,
+    "lng": -0.1278,
+    "location": "London, United Kingdom"
+  },
+  "sectionData": {
+    "foreignLikelihood": "HIGH",
+    "travelPeriods": [{ "period": "2031-2033", "confidence": "moderate" }],
+    "settlementAbroad": true
+  },
+  "narrative": "The overseas pattern is strong, with a symbolic travel and settlement window around 2031-2033. Treat this as timing symbolism, not a promise, and use the resolved local timezone metadata for birth-time claims.",
+  "expectations": {
+    "minTimingClaims": 1,
+    "maxTimingIssues": 0,
+    "maxHealthIssues": 0,
+    "maxRedFlags": 0,
+    "maxHallucinationSuspects": 0
+  }
+}

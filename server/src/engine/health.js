@@ -32,6 +32,7 @@ const {
   calculateAshtakavarga, calculateDrishtis,
   getPlanetStrengths, HOUSE_SIGNIFICATIONS, PLANET_KARAKAS,
 } = require('./astrology');
+const { resolveCalculationSettings } = require('./calculationSettings');
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -171,7 +172,8 @@ const RASHI_DOSHA = {
  * @param {number} lng — birth longitude
  * @returns {Object} comprehensive health analysis
  */
-function analyzeHealth(birthDate, lat = 6.9271, lng = 79.8612) {
+function analyzeHealth(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
+  const settings = resolveCalculationSettings(opts);
   const date = new Date(birthDate);
 
   // Build natal chart
@@ -649,7 +651,7 @@ function analyzeHealth(birthDate, lat = 6.9271, lng = 79.8612) {
       // ── RULE 8: Transit malefics over natal 1st/6th/8th at midpoint ──
       const midPoint = new Date(adStart.getTime() + (adEnd - adStart) / 2);
       try {
-        const tp = getAllPlanetPositions(midPoint);
+        const tp = getAllPlanetPositions(midPoint, lat, lng, settings);
         const satTransitRashi = tp.saturn?.rashiId || 1;
         const marsTransitRashi = tp.mars?.rashiId || 1;
         const rahuTransitRashi = tp.rahu?.rashiId || 1;
@@ -724,7 +726,7 @@ function analyzeHealth(birthDate, lat = 6.9271, lng = 79.8612) {
   crisisWindows.sort((a, b) => b.score - a.score);
 
   // Split into past, current, future
-  const now = new Date();
+  const now = opts.asOfDate ? new Date(opts.asOfDate) : new Date();
   const currentAge = (now - date) / (365.25 * 24 * 60 * 60 * 1000);
   const futureWindows = crisisWindows.filter(w => new Date(w.end) > now).slice(0, 8);
   const pastWindows = crisisWindows.filter(w => new Date(w.end) <= now).slice(0, 5);
@@ -954,7 +956,7 @@ function analyzeHealth(birthDate, lat = 6.9271, lng = 79.8612) {
   // ─────────────────────────────────────────────────────────────
   let currentTransitAlert = null;
   try {
-    const transitPlanets = getAllPlanetPositions(now);
+    const transitPlanets = getAllPlanetPositions(now, lat, lng, settings);
     const alerts = [];
 
     // Saturn transit check
@@ -1118,7 +1120,7 @@ function generateHealthRemedies(constitution, vulnerableParts, mentalScore, cris
 
   // Future crisis preparation
   if (crisisWindows.length > 0) {
-    const nextCrisis = crisisWindows.find(w => new Date(w.end) > new Date());
+    const nextCrisis = crisisWindows.find(w => new Date(w.end) > now);
     if (nextCrisis) {
       remedies.immediate.push(`Upcoming health-sensitive period: ${nextCrisis.start?.split?.('T')?.[0] || 'N/A'} to ${nextCrisis.end?.split?.('T')?.[0] || 'N/A'} (${nextCrisis.mahadasha}-${nextCrisis.antardasha})`);
       remedies.ongoing.push(`Preventive care for: ${nextCrisis.predictedDiseases?.slice(0, 3).join(', ') || 'general health'}`);

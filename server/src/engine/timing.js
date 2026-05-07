@@ -29,6 +29,7 @@ const {
   toSidereal, getMoonLongitude, getSunLongitude,
   calculateVimshottariDetailed, getFunctionalNature,
 } = require('./astrology');
+const { resolveCalculationSettings } = require('./calculationSettings');
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -177,7 +178,7 @@ const EVENT_RULES = {
  * @param {number} [lng] — birth longitude (if birthInfo is Date)
  * @returns {Object} ranked prediction windows with confidence scores
  */
-function predictEventTiming(eventType, birthInfo, lat, lng) {
+function predictEventTiming(eventType, birthInfo, lat, lng, opts = {}) {
   const rules = EVENT_RULES[eventType];
   if (!rules) {
     throw new Error(`Unknown event type: ${eventType}. Valid types: ${Object.keys(EVENT_RULES).join(', ')}`);
@@ -203,6 +204,7 @@ function predictEventTiming(eventType, birthInfo, lat, lng) {
   }
   lat = lat || 6.9271;
   lng = lng || 79.8612;
+  const settings = resolveCalculationSettings(opts);
 
   // Build natal chart
   const houseChart = buildHouseChart(date, lat, lng);
@@ -345,7 +347,7 @@ function predictEventTiming(eventType, birthInfo, lat, lng) {
       const transitReasons = [];
 
       try {
-        const tp = getAllPlanetPositions(midPoint);
+        const tp = getAllPlanetPositions(midPoint, lat, lng, settings);
         const jupRashiId = tp.jupiter?.rashiId || 1;
         const satRashiId = tp.saturn?.rashiId || 1;
         const jupH = ((jupRashiId - natalLagnaRashiId + 12) % 12) + 1;
@@ -445,20 +447,20 @@ function predictEventTiming(eventType, birthInfo, lat, lng) {
  * Run all event timing predictions for a birth chart
  * Returns a complete life timeline with all predicted events
  */
-function predictAllEvents(birthInfo, lat, lng) {
+function predictAllEvents(birthInfo, lat, lng, opts = {}) {
   const results = {};
   const eventTypes = Object.keys(EVENT_RULES);
 
   for (const eventType of eventTypes) {
     try {
-      results[eventType] = predictEventTiming(eventType, birthInfo, lat, lng);
+      results[eventType] = predictEventTiming(eventType, birthInfo, lat, lng, opts);
     } catch (e) {
       results[eventType] = { error: e.message };
     }
   }
 
   // Build unified timeline (next 10 years)
-  const now = new Date();
+  const now = opts.asOfDate ? new Date(opts.asOfDate) : new Date();
   const tenYearsLater = new Date(now);
   tenYearsLater.setFullYear(tenYearsLater.getFullYear() + 10);
 

@@ -29,27 +29,37 @@ const { detectDoshas, detectAdvancedYogas, calculateJaiminiKarakas,
 const { calculateYoginiDasha, calculateCharaDasha, crossValidateDashas } = require('./dasha');
 const { predictAllEvents, getKPChartAnalysis } = require('./kp');
 const { getEnhancedTransits } = require('./transit');
+const { resolveCalculationSettings, buildCalculationMetadata } = require('./calculationSettings');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // AGENT 1: CHART ANALYZER
 // ═══════════════════════════════════════════════════════════════════════════
 
-function buildChartAnalyzerContext(birthDate, lat, lng) {
+function buildChartAnalyzerContext(birthDate, lat, lng, opts = {}) {
   const date = new Date(birthDate);
-  const planets = getAllPlanetPositions(date, lat, lng);
+  const settings = resolveCalculationSettings(opts);
+  const planets = getAllPlanetPositions(date, lat, lng, settings);
   const lagna = getLagna(date, lat, lng);
   const houseChart = buildHouseChart(date, lat, lng);
   const navamsha = buildNavamshaChart(date, lat, lng);
   const drishtis = calculateDrishtis(houseChart.houses);
-  const shadbala = calculateShadbala(date, lat, lng);
-  const ishtaKashta = calculateIshtaKashta(date, lat, lng);
-  const jaimini = calculateJaiminiKarakas(date, lat, lng);
+  const shadbala = calculateShadbala(date, lat, lng, opts);
+  const ishtaKashta = calculateIshtaKashta(date, lat, lng, opts);
+  const jaimini = calculateJaiminiKarakas(date, lat, lng, opts);
 
   let vargas = null;
-  try { vargas = buildExtendedVargas(date, lat, lng); } catch (_) {}
+  try { vargas = buildExtendedVargas(date, lat, lng, opts); } catch (_) {}
 
   return {
     agent: 'chart_analyzer',
+    calculationMetadata: buildCalculationMetadata({
+      settings,
+      date,
+      lat,
+      lng,
+      timeContext: opts.timeContext || null,
+      ephemeris: planets?._calculationMetadata?.ephemeris || null,
+    }),
     systemPrompt: `You are an expert Vedic astrologer analyzing a birth chart (Kundali). 
 Focus on: planetary dignities, house lordships, key configurations, 
 strongest/weakest planets, and the overall life themes indicated by this chart.
@@ -85,24 +95,26 @@ Use Shadbala and Ishta/Kashta Phala to assess which planets can deliver results.
 // AGENT 2: TRANSIT TIMER
 // ═══════════════════════════════════════════════════════════════════════════
 
-function buildTransitTimerContext(birthDate, lat, lng) {
+function buildTransitTimerContext(birthDate, lat, lng, opts = {}) {
   const date = new Date(birthDate);
+  const asOfDate = opts.asOfDate ? new Date(opts.asOfDate) : new Date();
   const moonSid = toSidereal(getMoonLongitude(date), date);
   const dashas = calculateVimshottariDetailed(moonSid, date);
-  const shadbalaWeights = getShadbalaWeightsForDasha(date, lat, lng);
+  const shadbalaWeights = getShadbalaWeightsForDasha(date, lat, lng, opts);
 
   const yoginiDasha = calculateYoginiDasha(moonSid, date);
   const charaDasha = calculateCharaDasha(date, lat, lng);
 
   // Current period cross-validation
-  const crossVal = crossValidateDashas(date, lat, lng, new Date(), dashas);
+  const crossVal = crossValidateDashas(date, lat, lng, asOfDate, dashas);
 
   // Current transits
   let transits = null;
-  try { transits = getEnhancedTransits(null, birthDate, lat, lng); } catch (_) {}
+  try { transits = getEnhancedTransits(asOfDate, birthDate, lat, lng, opts); } catch (_) {}
 
   return {
     agent: 'transit_timer',
+    asOfDate: asOfDate.toISOString(),
     systemPrompt: `You are a Vedic timing specialist. Analyze the Dasha periods (Vimshottari, 
 Yogini, Chara) and current transits to identify:
 1. What life themes are active NOW (current Mahadasha/Antardasha)
@@ -140,13 +152,13 @@ Be precise about dates and timing windows.`,
 // AGENT 3: YOGA IDENTIFIER
 // ═══════════════════════════════════════════════════════════════════════════
 
-function buildYogaIdentifierContext(birthDate, lat, lng) {
+function buildYogaIdentifierContext(birthDate, lat, lng, opts = {}) {
   const date = new Date(birthDate);
   const classicalYogas = detectYogas(date, lat, lng);
 
   let advanced = null;
   try {
-    const adv = generateAdvancedAnalysis(date, lat, lng);
+    const adv = generateAdvancedAnalysis(date, lat, lng, opts);
     advanced = {
       doshas: adv.tier1?.doshas?.items || [],
       advancedYogas: adv.tier1?.advancedYogas?.items || [],
@@ -180,11 +192,12 @@ Prioritize the most impactful yogas.`,
 // AGENT 4: REMEDIAL ADVISOR
 // ═══════════════════════════════════════════════════════════════════════════
 
-function buildRemedialContext(birthDate, lat, lng) {
+function buildRemedialContext(birthDate, lat, lng, opts = {}) {
   const date = new Date(birthDate);
-  const planets = getAllPlanetPositions(date, lat, lng);
-  const shadbala = calculateShadbala(date, lat, lng);
-  const ishtaKashta = calculateIshtaKashta(date, lat, lng);
+  const settings = resolveCalculationSettings(opts);
+  const planets = getAllPlanetPositions(date, lat, lng, settings);
+  const shadbala = calculateShadbala(date, lat, lng, opts);
+  const ishtaKashta = calculateIshtaKashta(date, lat, lng, opts);
 
   // Find weak planets that need remedies
   const weakPlanets = [];
@@ -263,11 +276,13 @@ Do NOT fabricate data — only use what the specialist agents provided.`,
  * @param {string} language
  * @returns {object} All agent contexts ready for LLM processing
  */
-function generateMultiAgentContext(birthDate, lat = 6.9271, lng = 79.8612, language = 'en') {
-  const chartAnalyzer = buildChartAnalyzerContext(birthDate, lat, lng);
-  const transitTimer = buildTransitTimerContext(birthDate, lat, lng);
-  const yogaIdentifier = buildYogaIdentifierContext(birthDate, lat, lng);
-  const remedialAdvisor = buildRemedialContext(birthDate, lat, lng);
+function generateMultiAgentContext(birthDate, lat = 6.9271, lng = 79.8612, language = 'en', opts = {}) {
+  const date = new Date(birthDate);
+  const settings = resolveCalculationSettings(opts);
+  const chartAnalyzer = buildChartAnalyzerContext(date, lat, lng, opts);
+  const transitTimer = buildTransitTimerContext(date, lat, lng, opts);
+  const yogaIdentifier = buildYogaIdentifierContext(date, lat, lng, opts);
+  const remedialAdvisor = buildRemedialContext(date, lat, lng, opts);
 
   return {
     agents: {
@@ -278,10 +293,13 @@ function generateMultiAgentContext(birthDate, lat = 6.9271, lng = 79.8612, langu
     },
     buildSynthesisPrompt: (agentOutputs) => buildSynthesisPrompt(agentOutputs, language),
     metadata: {
-      birthDate: new Date(birthDate).toISOString(),
+      birthDate: date.toISOString(),
       lat, lng, language,
       generatedAt: new Date().toISOString(),
       engineVersion: '5.0-multi-agent',
+      calculationSettings: settings,
+      timeContext: opts.timeContext || null,
+      asOfDate: opts.asOfDate ? new Date(opts.asOfDate).toISOString() : null,
     },
   };
 }

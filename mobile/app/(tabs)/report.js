@@ -1166,8 +1166,9 @@ export default function ReportScreen() {
   var isLowEnd = useLowEndDevice();
   var reduced = useReducedMotion();
   var insets = useScreenInsets();
-  var [birthDate, setBirthDate] = useState('1998-10-09');
-  var [birthTime, setBirthTime] = useState('09:16');
+  var todayStr = new Date().toISOString().slice(0, 10);
+  var [birthDate, setBirthDate] = useState(todayStr);
+  var [birthTime, setBirthTime] = useState('12:00');
   var [birthLocation, setBirthLocation] = useState('');
   var [birthLat, setBirthLat] = useState(null);
   var [birthLng, setBirthLng] = useState(null);
@@ -1283,8 +1284,8 @@ export default function ReportScreen() {
             });
             setSavedReports(serverList);
             setServerReportsLoaded(true);
-            // Clear local cache to prevent duplicates when falling back later
-            try { await AsyncStorage.removeItem(REPORTS_CACHE_KEY); } catch (_) {}
+            // Cache server reports locally as offline fallback
+            try { await AsyncStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(serverList)); } catch (_) {}
             if (__DEV__) console.log('[Report] Loaded ' + serverList.length + ' reports from server');
             return;
           }
@@ -1366,7 +1367,7 @@ export default function ReportScreen() {
           setUserName(d.userName || entry.userName || '');
           // Server stores birthDate as full ISO (e.g. "1973-02-10T09:16:00") — extract parts
           var serverBirthDate = d.birthDate || entry.birthDate || '';
-          setBirthDate(extractDateOnly(serverBirthDate) || '1998-10-09');
+          setBirthDate(extractDateOnly(serverBirthDate) || '');
           // Extract time from ISO, then from entry, then from birthData
           var resolvedTime = entry.birthTime || extractTimeFromISO(serverBirthDate) || (d.birthData && d.birthData.birthTime) || '';
           setBirthTime(resolvedTime || '00:00');
@@ -1407,7 +1408,7 @@ export default function ReportScreen() {
       // Local cached report — load directly
       setUserName(entry.userName || '');
       var localBd = entry.birthDate || '';
-      setBirthDate(extractDateOnly(localBd) || '1998-10-09');
+      setBirthDate(extractDateOnly(localBd) || '');
       setBirthTime(entry.birthTime || extractTimeFromISO(localBd) || '00:00');
       setBirthLocation(entry.birthLocation || '');
       setBirthLat(entry.birthLat || null);
@@ -2563,7 +2564,7 @@ export default function ReportScreen() {
                 <Text style={s.inputHint}>{reportLang === 'si' ? 'උපන් දිනය' : 'BIRTH DATE'}</Text>
                 <DatePickerField value={birthDate} onChange={setBirthDate} lang={reportLang} />
               </View>
-              <View style={[s.inputGroup, { flex: 0.65 }]}>
+              <View style={[s.inputGroup, { flex: 0.75 }]}>
                 <Text style={s.inputHint}>{reportLang === 'si' ? 'වේලාව' : 'TIME'}</Text>
                 <TimePickerField value={birthTime} onChange={setBirthTime} lang={reportLang} />
               </View>

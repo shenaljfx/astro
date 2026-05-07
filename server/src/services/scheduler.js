@@ -18,8 +18,8 @@ const { getDb, COLLECTIONS } = require('../config/firebase');
 const { generateWeeklyLagnaReports } = require('../engine/weeklyLagna');
 const { trackCost } = require('./costTracker');
 
-// SLT offset in ms (UTC+5:30)
-const SLT_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+const SLT_OFFSET_MS = 19800 * 1000;
+const SRI_LANKA_TIME_CONTEXT = { zoneName: 'Asia/Colombo', offsetSeconds: 19800, source: 'traditional_slt' };
 const DAILY_GUIDANCE_HOUR_SLT = 6;
 const DAILY_GUIDANCE_MINUTE_SLT = 30;
 const DAILY_GUIDANCE_WINDOW_MINUTES = 5;
@@ -189,9 +189,9 @@ async function sendDailyGuidanceNotification() {
         const birthData = token.birthData || {};
         const lat = parseFloat(birthData.lat) || 6.9271;
         const lng = parseFloat(birthData.lng) || 79.8612;
-        const panchanga = getPanchanga(now, lat, lng);
-        const nakath = getDailyNakath(now, lat, lng);
-        const rahuKalaya = calculateRahuKalaya(now, lat, lng);
+        const panchanga = getPanchanga(now, lat, lng, { timeContext: SRI_LANKA_TIME_CONTEXT });
+        const nakath = getDailyNakath(now, lat, lng, { timeContext: SRI_LANKA_TIME_CONTEXT });
+        const rahuKalaya = calculateRahuKalaya(now, lat, lng, { timeContext: SRI_LANKA_TIME_CONTEXT });
         const guidance = buildDailyGuidanceMessage(now, token.language || 'si', panchanga, rahuKalaya, nakath);
         const data = {
           type: 'DAILY_GUIDANCE',
@@ -230,7 +230,7 @@ async function sendRahuKalayaWarning() {
 
   try {
     const now = new Date();
-    const rahuKalaya = calculateRahuKalaya(now, 6.9271, 79.8612);
+    const rahuKalaya = calculateRahuKalaya(now, 6.9271, 79.8612, { timeContext: SRI_LANKA_TIME_CONTEXT });
 
     if (!rahuKalaya?.start) {
       console.log('[Scheduler] No Rahu Kalaya data');

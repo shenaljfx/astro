@@ -1,0 +1,22 @@
+{
+  "id": "family-parent-health",
+  "tags": ["family_parent_health", "female_user", "married_user"],
+  "sectionKey": "familyPortrait",
+  "sectionData": {
+    "mother": {
+      "healthRisks": [{ "organ": "Kidneys", "risk": "HIGH" }],
+      "motherHealthPeriods": [{ "period": "2031-2033", "confidence": "weak" }]
+    },
+    "siblings": { "estimatedCount": { "count": 2, "estimatedElderSiblings": 1, "estimatedYoungerSiblings": 1 } }
+  },
+  "narrative": "On the mother side, the chart suggests broad wellness caution periods rather than naming a condition. Around 2031-2033, be mindful of family responsibilities and support rhythms; treat this as timing symbolism, not a promise.",
+  "expectations": {
+    "expectedAllowedClaimCategories": ["parent_wellness_pattern", "sibling_estimate", "timing_window"],
+    "narrativeAbsentTerms": ["kidney", "urinary", "diagnosis"],
+    "minTimingClaims": 1,
+    "maxTimingIssues": 0,
+    "maxHealthIssues": 0,
+    "maxRedFlags": 0,
+    "maxHallucinationSuspects": 0
+  }
+}

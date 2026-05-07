@@ -10,10 +10,37 @@
 const express = require('express');
 const router = express.Router();
 const { calculateRahuKalaya, getDailyNakath, getPanchanga } = require('../engine/astrology');
+const { formatLocalDateTime, formatUtcOffset } = require('../engine/calculationSettings');
 
 // Jyotish engine (graceful — null if unavailable)
 let jyotishEngine = null;
 try { jyotishEngine = require('../engine/jyotish'); } catch (e) { console.warn('[nakath] jyotish engine not available:', e.message); }
+
+function getQueryTimeContext(req) {
+  const offsetSeconds = Number.isFinite(parseInt(req.query.offsetSeconds, 10))
+    ? parseInt(req.query.offsetSeconds, 10)
+    : 19800;
+  return {
+    zoneName: req.query.zoneName || 'Asia/Colombo',
+    offsetSeconds,
+    offsetLabel: formatUtcOffset(offsetSeconds),
+    source: req.query.offsetSeconds ? 'query_offset' : 'traditional_slt',
+    assumedOffset: !req.query.offsetSeconds,
+  };
+}
+
+function formatNakathTime(date, timeContext) {
+  const local = formatLocalDateTime(date, timeContext);
+  const [hour, minute] = local.time.split(':').map(Number);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const h12 = hour % 12 || 12;
+  return {
+    utc: date.toISOString(),
+    local: local.display,
+    display: `${String(h12).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${ampm}`,
+    label: local.label,
+  };
+}
 
 /**
  * GET /api/nakath/daily
@@ -29,28 +56,13 @@ router.get('/daily', (req, res) => {
     const date = req.query.date ? new Date(req.query.date) : new Date();
     const lat = parseFloat(req.query.lat) || 6.9271;
     const lng = parseFloat(req.query.lng) || 79.8612;
+    const timeContext = getQueryTimeContext(req);
 
     if (isNaN(date.getTime())) {
       return res.status(400).json({ error: 'Invalid date format. Use ISO 8601.' });
     }
 
-    const dailyNakath = getDailyNakath(date, lat, lng);
-
-    // Format times for display in Sri Lanka timezone (UTC+5:30)
-    const formatTime = (d) => {
-      // Manually offset to Sri Lanka time
-      const sriLankaTime = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-      const h = sriLankaTime.getUTCHours();
-      const m = sriLankaTime.getUTCMinutes();
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const h12 = h % 12 || 12;
-      const display = `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
-      return {
-        utc: d.toISOString(),
-        local: sriLankaTime.toISOString().replace('T', ' ').substr(0, 19) + ' IST',
-        display,
-      };
-    };
+    const dailyNakath = getDailyNakath(date, lat, lng, { timeContext });
 
     res.json({
       success: true,
@@ -59,21 +71,37 @@ router.get('/daily', (req, res) => {
         rahuKalaya: {
           ...dailyNakath.rahuKalaya,
           isActive: new Date() >= dailyNakath.rahuKalaya.start && new Date() <= dailyNakath.rahuKalaya.end,
-          startFormatted: formatTime(dailyNakath.rahuKalaya.start),
-          endFormatted: formatTime(dailyNakath.rahuKalaya.end),
+          startFormatted: formatNakathTime(dailyNakath.rahuKalaya.start, timeContext),
+          endFormatted: formatNakathTime(dailyNakath.rahuKalaya.end, timeContext),
         },
-        sunriseFormatted: formatTime(dailyNakath.sunrise),
-        sunsetFormatted: formatTime(dailyNakath.sunset),
+        gulikaKalaya: dailyNakath.gulikaKalaya ? {
+          ...dailyNakath.gulikaKalaya,
+          startFormatted: formatNakathTime(dailyNakath.gulikaKalaya.start, timeContext),
+          endFormatted: formatNakathTime(dailyNakath.gulikaKalaya.end, timeContext),
+        } : null,
+        yamaganda: dailyNakath.yamaganda ? {
+          ...dailyNakath.yamaganda,
+          startFormatted: formatNakathTime(dailyNakath.yamaganda.start, timeContext),
+          endFormatted: formatNakathTime(dailyNakath.yamaganda.end, timeContext),
+        } : null,
+        sunriseFormatted: formatNakathTime(dailyNakath.sunrise, timeContext),
+        sunsetFormatted: formatNakathTime(dailyNakath.sunset, timeContext),
         auspiciousPeriods: dailyNakath.auspiciousPeriods.map(p => ({
           ...p,
-          startFormatted: formatTime(p.start),
-          endFormatted: formatTime(p.end),
+          startFormatted: formatNakathTime(p.start, timeContext),
+          endFormatted: formatNakathTime(p.end, timeContext),
+        })),
+        planetaryHoras: dailyNakath.planetaryHoras.map(h => ({
+          ...h,
+          startFormatted: formatNakathTime(h.start, timeContext),
+          endFormatted: formatNakathTime(h.end, timeContext),
         })),
         location: {
           lat,
           lng,
-          timezone: 'Asia/Colombo',
-          utcOffset: '+05:30',
+          timezone: timeContext.zoneName,
+          utcOffset: timeContext.offsetLabel,
+          timezoneSource: timeContext.source,
         },
         // Jyotish cross-validation (independent panchanga, disha shoola, special yogas)
         jyotish: jyotishEngine ? jyotishEngine.generateTodayJyotish(lat, lng) : null,
@@ -93,24 +121,16 @@ router.get('/rahu-kalaya', (req, res) => {
     const date = req.query.date ? new Date(req.query.date) : new Date();
     const lat = parseFloat(req.query.lat) || 6.9271;
     const lng = parseFloat(req.query.lng) || 79.8612;
+    const timeContext = getQueryTimeContext(req);
 
     if (isNaN(date.getTime())) {
       return res.status(400).json({ error: 'Invalid date format.' });
     }
 
-    const rahuKalaya = calculateRahuKalaya(date, lat, lng);
+    const rahuKalaya = calculateRahuKalaya(date, lat, lng, { timeContext });
 
-    // Format time for display (manual UTC+5:30 to avoid locale issues)
-    const fmtSLT = (d) => {
-      const slt = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-      const h = slt.getUTCHours();
-      const m = slt.getUTCMinutes();
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const h12 = h % 12 || 12;
-      return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
-    };
-    const startStr = fmtSLT(rahuKalaya.start);
-    const endStr = fmtSLT(rahuKalaya.end);
+    const startStr = formatNakathTime(rahuKalaya.start, timeContext).display;
+    const endStr = formatNakathTime(rahuKalaya.end, timeContext).display;
 
     res.json({
       success: true,
@@ -138,12 +158,13 @@ router.get('/panchanga', (req, res) => {
     const date = req.query.date ? new Date(req.query.date) : new Date();
     const lat = parseFloat(req.query.lat) || 6.9271;
     const lng = parseFloat(req.query.lng) || 79.8612;
+    const timeContext = getQueryTimeContext(req);
 
     if (isNaN(date.getTime())) {
       return res.status(400).json({ error: 'Invalid date format.' });
     }
 
-    const panchanga = getPanchanga(date, lat, lng);
+    const panchanga = getPanchanga(date, lat, lng, { timeContext });
 
     // Jyotish cross-validated panchanga
     let jyotishPanchanga = null;

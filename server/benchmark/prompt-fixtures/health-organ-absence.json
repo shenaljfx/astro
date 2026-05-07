@@ -1,0 +1,12 @@
+{
+  "id": "health-organ-absence",
+  "tags": ["health_organ_absence"],
+  "organAbsenceSweep": true,
+  "narrative": "The chart does not show enough evidence to name a specific health area here, so this section stays focused on general wellbeing, rest, and steady routines.",
+  "expectations": {
+    "maxHealthIssues": 0,
+    "maxTimingIssues": 0,
+    "maxRedFlags": 0,
+    "maxHallucinationSuspects": 0
+  }
+}

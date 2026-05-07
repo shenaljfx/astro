@@ -1,0 +1,16 @@
+{
+  "id": "cusp-birth-time",
+  "tags": ["cusp_birth_time", "male_user"],
+  "sectionKey": "physicalProfile",
+  "sectionData": {
+    "lagnaCuspWarning": { "isNearCusp": true, "degreeInSign": 0.7 },
+    "appearanceConfidence": "low"
+  },
+  "narrative": "Because the recorded birth time sits close to a boundary, appearance and temperament details should be described as possibilities rather than fixed traits.",
+  "expectations": {
+    "maxTimingIssues": 0,
+    "maxHealthIssues": 0,
+    "maxRedFlags": 0,
+    "maxHallucinationSuspects": 0
+  }
+}
