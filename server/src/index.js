@@ -60,6 +60,7 @@ const weeklyLagnaRoutes = require('./routes/weeklyLagna');
 const readingRoutes = require('./routes/reading');
 const enhancedRoutes = require('./routes/enhanced');
 const jyotishRoutes = require('./routes/jyotish');
+const geocodeRoutes = require('./routes/geocode');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -130,6 +131,7 @@ app.use('/api/weekly-lagna', weeklyLagnaRoutes);
 app.use('/api/reading', aiLimiter, readingRoutes);
 app.use('/api/enhanced', userDataLimiter, enhancedRoutes);
 app.use('/api/jyotish', userDataLimiter, jyotishRoutes);
+app.use('/api/geocode', geocodeRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -612,9 +612,9 @@ export function TimePickerField({ value, onChange, label, lang, style, error }) 
         <View style={fs.iconWrap}>
           <Ionicons name="time-outline" size={18} color="#60A5FA" />
         </View>
-        <View style={fs.fieldContent}>
-          <Text style={fs.fieldText}>{display}</Text>
-          {periodLabel ? <Text style={fs.fieldSub}>{periodLabel}</Text> : null}
+        <View style={[fs.fieldContent, { flexDirection: 'row', alignItems: 'baseline', gap: 5 }]}>
+          <Text style={[fs.fieldText, { fontSize: 18 }]}>{display}</Text>
+          {periodLabel ? <Text style={[fs.fieldSub, { marginTop: 0 }]}>{periodLabel}</Text> : null}
         </View>
         <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.3)" />
       </TouchableOpacity>

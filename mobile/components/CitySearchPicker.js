@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { searchCities } from '../services/api';
 
 /* ── Popular cities (shown when no search query) ── */
 var POPULAR_CITIES = [
@@ -56,7 +57,7 @@ export default function CitySearchPicker({ selectedCity, onSelect, lang, accentC
   var [expanded, setExpanded] = useState(false);
   var timer = useRef(null);
 
-  /* ── Nominatim geocoding with 400ms debounce ── */
+  /* ── City search via server proxy ── */
   var search = useCallback(function (text) {
     if (timer.current) clearTimeout(timer.current);
     if (!text || text.trim().length < 2) {
@@ -67,38 +68,11 @@ export default function CitySearchPicker({ selectedCity, onSelect, lang, accentC
     setSearching(true);
     timer.current = setTimeout(async function () {
       try {
-        var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' +
-          encodeURIComponent(text.trim()) + '&limit=8&addressdetails=1&accept-language=en';
-        var resp = await fetch(url, { headers: { 'User-Agent': 'GrahacharaApp/1.0' } });
-        var data = await resp.json();
-        var mapped = data.filter(function (item) {
-          return item.type === 'city' || item.type === 'town' || item.type === 'village' ||
-            item.type === 'administrative' || item.type === 'state' ||
-            item.class === 'place' || item.class === 'boundary';
-        }).map(function (item) {
-          var addr = item.address || {};
-          var cityName = addr.city || addr.town || addr.village || addr.state || item.display_name.split(',')[0];
-          var country = addr.country || '';
-          return {
-            name: cityName,
-            displayName: item.display_name,
-            country: country,
-            countryCode: (addr.country_code || '').toUpperCase(),
-            lat: parseFloat(item.lat),
-            lng: parseFloat(item.lon),
-          };
-        });
-        // Deduplicate
-        var seen = {};
-        mapped = mapped.filter(function (r) {
-          var key = r.name + '|' + r.country;
-          if (seen[key]) return false;
-          seen[key] = true;
-          return true;
-        });
+        var res = await searchCities(text.trim());
+        var mapped = (res && res.data && Array.isArray(res.data)) ? res.data : [];
         setResults(mapped);
       } catch (err) {
-        if (__DEV__) console.warn('Geocoding error:', err);
+        if (__DEV__) console.warn('City search error:', err && err.message);
         setResults([]);
       }
       setSearching(false);
@@ -124,8 +98,8 @@ export default function CitySearchPicker({ selectedCity, onSelect, lang, accentC
     if (compact) setExpanded(false);
   };
 
-  var displayList = query.trim().length >= 2 ? results : POPULAR_CITIES;
-  var showPopularLabel = query.trim().length < 2;
+  var displayList = results;
+  var showPopularLabel = false;
 
   // ── COMPACT MODE: collapsed = just a pill showing selected city ──
   if (compact && !expanded) {

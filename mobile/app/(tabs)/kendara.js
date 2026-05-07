@@ -154,23 +154,41 @@ function getKendaraEntryName(entry) {
 function getKendaraBirthFocus(entry, language) {
   var name = getKendaraEntryName(entry);
   var map = {
-    Ashwini: ['Quick starter energy', 'වැඩක් ඉක්මනින් පටන්ගන්න පුළුවන් ශක්තිය'], Bharani: ['Patient builder energy', 'ඉවසීමෙන් දේවල් ගොඩනගන ගුණයක්'],
-    Krittika: ['Sharp decision sense', 'හරි වැරදි ඉක්මනින් තේරුම්ගන්න පුළුවන් හැකියාව'], Rohini: ['Comfort and growth focus', 'සැනසීම, ලස්සන, සහ දියුණුවට ලොකු සහායක්'],
-    Mrigashira: ['Curious searching mind', 'නිතර අලුත් දෙයක් හොයන කුතුහලයක්'], Ardra: ['Reset after pressure', 'කලබලයකින් පස්සේ නැවත නැගීසිටින්න පුළුවන් ශක්තියක්'],
-    Punarvasu: ['Fresh start after setbacks', 'වැටිලා ඉන්න තැනකින් අලුත් පියවරක් ගන්න පුළුවන් හැකියාව'], Pushya: ['Caring and protective nature', 'අනිත් අයව රැකබලාගන්න, සහාය දෙන්න කැමති හිතක්'],
-    Ashlesha: ['Strong emotional boundaries', 'හැඟීම් ගැඹුරින් දැනෙන නිසා සීමාවන් පනවාගන්න එක හොඳයි'], Magha: ['Pride in roots and family', 'පවුල, මුල්, සහ ගෞරවය ගැන ලොකු හැඟීමක්'],
-    'Purva Phalguni': ['Warm connection style', 'ආදරය, විවේකය, සහ බැඳීම් වලට හිත හොඳයි'], 'Uttara Phalguni': ['Reliable commitment style', 'කිසියම් වගකීමක් ගත්තොත් ඒක හොඳින් ඉටුකරන ගුණයක්'],
-    Hasta: ['Practical hands-on skill', 'තමන්ගේම අතින් වැඩක් කරලා සාර්ථක කරගන්න පුළුවන් හැකියාව'], Chitra: ['Creative builder mind', 'පිළිවෙළට සහ ලස්සනට දේවල් නිර්මාණය කරන්න කැමති හිතක්'],
-    Swati: ['Independent movement', 'නිදහසට සහ තමන්ගේම විලාසයකට වැඩ කරන්න තියෙන ගුණයක්'], Vishakha: ['Goal-focused drive', 'ඉලක්කයක් තියාගෙන එකදිගට උත්සාහ කරන්න තියෙන ශක්තිය'],
-    Anuradha: ['Loyal friendship energy', 'විශ්වාසවන්ත බැඳීම් සැමදා රකින හිතක්'], Jyeshtha: ['Mature protective wisdom', 'වගකීම සහ අත්දැකීම් එක්ක හැදෙන නායකත්ව ගුණයක්'],
-    Mula: ['Root-cause seeker', 'දේවල් වල මුල හොයාගන්න කැමති ගැඹුරින් හිතන හිතක්'], 'Purva Ashadha': ['Confident emotional force', 'තමන් විශ්වාස කරන දේ වෙනුවෙන් පෙනී සිටින්න පුළුවන් ශක්තියක්'],
-    'Uttara Ashadha': ['Steady long-term success', 'දිගු කාලයක් ඉවසලා ජයගන්න පුළුවන් ගුණයක්'], Shravana: ['Good listener and learner', 'අහලා, ඉගෙනගෙන දේවල් හොඳට තේරුම්ගන්න පුළුවන් හැකියාව'],
-    Dhanishtha: ['Rhythm and teamwork', 'රිද්මය, කණ්ඩායම, සහ දියුණුවට තියෙන හොඳ ගුණයක්'], Shatabhisha: ['Healing and problem solving', 'ගැටලු විසඳලා අනිත් අයව සුවපත් කරන්න තියෙන හැකියාව'],
-    'Purva Bhadrapada': ['Deep serious thinking', 'ගැඹුරින් හිතන, කලබල තීරණ ගන්නේ නැති ගුණයක්'], 'Uttara Bhadrapada': ['Calm emotional depth', 'නිහඬව ගැඹුරු දේවල් දරාගන්න පුළුවන් හැකියාව'], Revati: ['Gentle finishing energy', 'මෘදු විදිහට දේවල් ඉවර කරලා අලුත් පියවරකට යන ගුණයක්'],
+    Ashwini: ['fast-moving, spontaneous energy to start new chapters quickly', 'බැරි දේවල් ඉක්මනින් පටන් අරන්, අලුත් තැනකින් ජීවිතේ ඉස්සරහට යන්න තියෙන ලොකු ශක්තියක්'],
+    Bharani: ['powerful, patient drive that helps you endure and build steadily', 'ලොකු ඉවසීමකින් ජීවිතේ අභියෝග දරාගෙන වෙනස්කම් එක්ක හැඩගැහෙන්න තියෙන හැකියාව'],
+    Krittika: ['sharp, protective instinct to cut through confusion and see the truth', 'වටේ තියෙන අවුල් අතරින් හරියටම නිවැරදි දේ තේරුම් අරගෙන කෙළින් වැඩ කරන්න තියෙන ගුණයක්'],
+    Rohini: ['deep love for growth, beauty, and creating comforting environments', 'හැමවෙලේම දියුණුවට සහ ලස්සනට ආදරය කරමින්, හිතට සැනසිල්ලක් දෙන තැන් වල ඉන්න තියෙන කැමැත්ත'],
+    Mrigashira: ['limitless curiosity that keeps you searching for deeper meaning', 'හැමදෙයක් ගැනම හොයලා බලලා, අලුත් දේවල් ඉගෙනගන්න තියෙන නොනවතින කුතුහලයක්'],
+    Ardra: ['resilient spirit that can completely rebuild itself after any storm', 'මොන ප්‍රශ්න ආවත් ඒවට මුහුණ දීලා අලුත් කෙනෙක් විදිහට ආයේ නැගිටින්න තියෙන හයියක්'],
+    Punarvasu: ['hopeful, nurturing energy that always finds a way to return and recover', 'කොහොම වැටුණත් ආයෙත් බලාපොරොත්තු ඇතිකරගෙන සම්පූර්ණයෙන්ම සුවපත් වෙන්න තියෙන ධෛර්යය'],
+    Pushya: ['deeply supportive and caring nature that helps both you and others bloom', 'තමන් වගේම අනිත් අය ගැනත් ආදරයෙන් හොයලා බලලා සහාය දෙන්න තියෙන ගුණයක්'],
+    Ashlesha: ['profound intuitive radar that senses hidden motives and protects your space', 'හැඟීම් ගැඹුරින් දැනෙන නිසාම, අනිත් අයගේ ඇතුලාන්තය තේරුම් අරන් පරිස්සම් වෙන්න තියෙන ඉවක්'],
+    Magha: ['strong sense of heritage, leadership, and natural pride in who you are', 'තමන්ගේ මුල් වලට, පවුලට ගරු කරමින් ආත්ම අභිමානයෙන් නායකත්වය ගන්න තියෙන හැකියාව'],
+    'Purva Phalguni': ['warm, restful vibe that draws in healthy connections and life’s pleasures', 'ආදරය, නිදහස වගේම සතුටින් ජීවිතේ විඳින්න තියෙන ලොකු කැමැත්තක් සහ ආකර්ෂණයක්'],
+    'Uttara Phalguni': ['dependable, committed nature that makes you a solid rock for your loved ones', 'ඕනෑම වගකීමක් පවරන්න පුළුවන් තරම් විශ්වාසවන්ත, ස්ථාවරව ඉලක්ක වලට යන ගුණයක්'],
+    Hasta: ['skilled, practical mindset that lets you manifest your ideas with your own hands', 'හිතන දේවල් තමන්ගේ අත්දැකීමෙන් සහ උත්සාහයෙන් ඇත්තටම කරලා පෙන්වන්න තියෙන හැකියාව'],
+    Chitra: ['bright, creative spark to design completely unique and beautiful outcomes', 'හැමදේම ලස්සනට, පිළිවෙළට සහ කලාත්මක විදිහට අලුතෙන් නිර්මාණය කරන්න තියෙන දක්ෂකමක්'],
+    Swati: ['gentle independence that helps you adapt completely to your own unique rhythm', 'කිසිම කෙනෙකුට යටත් නොවී තමන්ගේම නිදහස් විලාසයකට ජීවිතේ හැඩගස්වාගන්න තියෙන ගුණයක්'],
+    Vishakha: ['laser-focused drive that pushes you relentlessly toward your personal goals', 'ලොකු අරමුණක් තියාගෙන ඒක දිනනකම්ම එකදිගට උත්සාහ කරන්න තියෙන ශක්තිමත් කැපවීමක්'],
+    Anuradha: ['deeply devoted heart that stays loyal to the people and causes you love', 'අමාරු වෙලාවලදී වුණත් අත්හරින්නේ නැතුව විශ්වාසවන්තව ආදරය සහ බැඳීම් රකින හිතක්'],
+    Jyeshtha: ['protective, wise authority earned through deep and transformational experiences', 'ලොකු වගකීමක් දරාගෙන, අත්දැකීම් වලින් මුහුකුරා ගිය නායකත්වයක් ගන්න තියෙන හැකියාව'],
+    Mula: ['courageous urge to dig down to the absolute roots of any situation or truth', 'පිටින් පේන දේට වඩා හැමදෙයකම ඇත්තම මුල හොයාගෙන ගැඹුරින් හිතන්න තියෙන ආශාවක්'],
+    'Purva Ashadha': ['bold, undefeated emotional conviction that stands by what you feel is right', 'තමා විශ්වාස කරන දේ වෙනුවෙන් කිසිම දේකට නොබියව පෙනී සිටින්න පුළුවන් ආත්ම ශක්තියක්'],
+    'Uttara Ashadha': ['patient, enduring stamina capable of seeing even the longest journeys through', 'කොච්චර කල් ගියත් ඉලක්කයක් අත්හරින්නේ නැතුව ඉවසීමෙන් සාර්ථකත්වය වෙනකම්ම යන ගුණයක්'],
+    Shravana: ['quiet, receptive wisdom that learns powerfully by truly listening to the world', 'හොඳින් අහන් ඉඳලා, ඒ දේවල් තේරුම් අරගෙන බුද්ධිමත්ව ජීවිතේට එකතු කරගන්න අගනා හැකියාව'],
+    Dhanishtha: ['natural rhythm for community building and gathering resources successfully', 'අනිත් අයත් එක්ක එකතු වෙලා හොඳ රිද්මයකින් සාර්ථකත්වයට යන්න පුළුවන් හැකියාවක්'],
+    Shatabhisha: ['mystical, problem-solving intelligence that quietly heals what is broken', 'සාමාන්‍ය අයට පේන්නැති ප්‍රශ්න දැකලා ඒවා විසඳගෙන අනිත් අයවත් සුවපත් කරන්න තියෙන දක්ෂකමක්'],
+    'Purva Bhadrapada': ['highly serious, philosophical mind focused on transforming reality', 'හැමදේම දිහා ගැඹුරින් බලලා, හදිසි තීරණ ගන්නේ නැතුව බරපතල විදිහට හිතන්න පුළුවන් ගුණයක්'],
+    'Uttara Bhadrapada': ['peaceful, compassionate depth that intuitively shelters what matters most', 'හිත ඇතුලෙන් ලොකු සන්සුන් බවක් තියාගෙන අනිත් අය ගැනත් කරුණාවෙන් බලන්න තියෙන හැකියාව'],
+    Revati: ['gentle, spiritual closure that helps you perfectly wrap up old chapters for the new', 'පරණ දේවල් හරිම මෘදු විදිහට අත්හැරලා දාලා අලුත් පියවරවල් වලට යන්න පුළුවන් සුන්දර හිතක්'],
   };
   var selected = map[name];
-  if (!selected) return language === 'si' ? 'ඔයාගේ උපන් නැකතෙන් පෙන්වන මූලික ගුණය' : 'Your birth focus and natural style';
-  return language === 'si' ? selected[1] : selected[0];
+  if (!selected) return language === 'si' ? 'මේ නැකතේ ඉපදුණු නිසා, තමන්ගේ හිත කියන දේ අහලා, ඒකට අනුව වැඩ කරන එක තමයි ඔයාගේ සාර්ථකත්වයේ ලක්ෂණය.' : 'Being born under this star gives you emotional strength. Trusting your intuition guides your true path.';
+  if (language === 'si') {
+    return selected[1] + ' කියන එක තමයි ' + name + ' නැකතේ ඉපදුණු ඔයාගේ සාර්ථකත්වයේ ලක්ෂණය.';
+  } else {
+    return 'Your birth star ' + name + ' gives you a ' + selected[0].toLowerCase() + ' which constantly guides your true path.';
+  }
 }
 
 function getKendaraMoonRhythm(name, language) {
@@ -181,8 +199,12 @@ function getKendaraMoonRhythm(name, language) {
     Trayodashi: ['Finish gently', 'ඉවර කරන්න තියෙන වැඩ සන්සුන්ව නිම කරන්න හොඳම වෙලාවක්'], Chaturdashi: ['Let go and reset', 'අනවශ්‍ය බර අතහැරලා අලුත් වෙන්න කියන රිද්මයක්'], Purnima: ['Full moon clarity', 'හිතට හොඳ පැහැදිලි බවක් සහ ශක්තියක් දැනෙන රිද්මයක්'], Amavasya: ['Quiet reset', 'නිහඬව විවේක අරගෙන හිත නැවත හැඩගස්වාගන්න හොඳම කාලයක්'],
   };
   var selected = map[name];
-  if (!selected) return language === 'si' ? 'අද සඳු පෙන්වන හිතේ රිද්මය' : 'The emotional rhythm shown by the Moon';
-  return language === 'si' ? selected[1] : selected[0];
+  if (!selected) return language === 'si' ? 'ඔයා ඉපදෙනකොට සඳුගේ ශක්තිය තිබ්බ විදිහ අනුව තමයි ඔයාගෙ හිතේ නිදහස සහ සතුට රැඳිලා තියෙන්නේ.' : 'The lunar phase at your birth reveals what brings you emotional freedom and real fulfillment.';
+  if (language === 'si') {
+    return name + ' තිථියේ උපන් ඔයාට සඳුගේ බලපෑම ලොකුයි. ඒ නිසා ' + selected[1] + ' කියන එක හැමතිස්සෙම වටිනවා.';
+  } else {
+    return 'Born on ' + name + ', the Moon\'s rhythm strongly influences you. Finding a balance for ' + selected[0].toLowerCase() + ' is essential.';
+  }
 }
 
 function getKendaraRashiKey(sign) {
@@ -224,25 +246,25 @@ function getKendaraLifeStyle(sign, language) {
   var key = getKendaraRashiKey(sign);
   var signName = getKendaraRashiName(sign, language);
   var meanings = {
-    aries: ['new starts, courage, quick action', 'අලුත් ආරම්භ, ධෛර්යය, ඉක්මන් ක්‍රියා'],
-    taurus: ['money, comfort, patience, steady growth', 'මුදල්, සැනසීම, ඉවසීම, ස්ථිර වර්ධනය'],
-    gemini: ['ideas, talking, learning, movement', 'අදහස්, කතාබහ, ඉගෙනීම, ගමන් බිමන්'],
-    cancer: ['home, feelings, protection, family bonds', 'නිවස, හැඟීම්, ආරක්ෂාව, පවුලේ බැඳීම්'],
-    leo: ['confidence, leadership, visibility, pride', 'ආත්ම විශ්වාසය, නායකත්වය, පෙනීසිටීම'],
-    virgo: ['work habits, health, details, service', 'වැඩ පුරුදු, සෞඛ්‍යය, විස්තර, සේවය'],
-    libra: ['relationships, fairness, beauty, balance', 'සබඳතා, සාධාරණකම, ලස්සන, සමබරතාව'],
-    scorpio: ['deep feelings, privacy, change, healing', 'ගැඹුරු හැඟීම්, පෞද්ගලිකත්වය, වෙනස්වීම්'],
-    sagittarius: ['study, travel, faith, big goals', 'ඉගෙනීම, දුර ගමන්, විශ්වාසය, ලොකු අරමුණු'],
-    capricorn: ['career, discipline, responsibility, status', 'රැකියාව, විනය, වගකීම්, සමාජ තත්ත්වය'],
-    aquarius: ['friends, networks, technology, fresh ideas', 'මිතුරන්, සමාජ ජාල, තාක්ෂණය, නව අදහස්'],
-    pisces: ['intuition, kindness, art, inner peace', 'ඉව, කරුණාව, කලාව, අභ්‍යන්තර සැනසීම'],
+    aries: ['You tackle things head-on and make quick decisions. You prefer initiating action rather than waiting for things to happen to you.', 'ඔයා දේවල් වලට කෙළින්ම මූණ දෙන, ඉක්මනින් තීරණ ගන්න කෙනෙක්. පරක්කු වෙනවට වඩා, හැමදේම ඉස්සරහට ගිහින් කරන එක තමයි ඔයාගේ හැඟීම.'],
+    taurus: ['You value stability and comfort above all else. Your practical nature creates a steady foundation for your finances and relationships.', 'ඔයාට වැදගත්ම දේ තමයි ජීවිතේ ස්ථාවර කම. ලස්සන, පවුල සහ සල්ලිවලින් ලැබෙන ආරක්ෂාවට ඔයා ගොඩක් කැමතියි.'],
+    gemini: ['You are naturally curious and constantly thinking. Communicating your ideas and adapting to new situations is very easy for you.', 'ඔයා ගොඩක් හිතන, අලුත් දේවල් හොයන කෙනෙක්. කතාබහෙන් වගේම එකම වෙලාවේ වැඩ කීපයක් කරන එක ඔයාට හරිම ලේසියි.'],
+    cancer: ['You process the world through your feelings. Protecting your loved ones and maintaining a peaceful home are your deepest priorities.', 'ඔයා තීරණ ගන්නේ හැඟීම් වලට මුල් තැන දීලා. පවුල, ආදරය කරන අය සහ ගෙදරින් ලැබෙන සැනසිල්ල ඔයාට අනිත් හැමදේටම වඩා වටිනවා.'],
+    leo: ['You possess a natural warmth and leadership quality. You thrive when you can express yourself creatively and take charge with confidence.', 'ඔයාට මිනිස්සු අතරේ කැපී පෙනෙන්න පුළුවන් නායකත්ව ගුණයක් තියෙනවා. තමන් ගැන විශ්වාසයෙන් දේවල් කරන එක ඔයාගේ හැටි.'],
+    virgo: ['You are highly analytical and notice the practical details. Your deepest drive is to organize your life and be truly useful to others.', 'ඔයා හැමදේකම පිළිවෙළක් සහ හරි වැරැද්ද හොයන කෙනෙක්. අනිත් අයට උදව් කරන්න වගේම හැමදේම පරිපූර්ණව කරන්න ඔයා හැමතිස්සෙම උත්සාහ කරනවා.'],
+    libra: ['You have a strong instinct for fairness and harmony. You naturally build bridges between people and prefer sharing your life journey.', 'ඔයාට ප්‍රශ්න විසඳන්න සහ සාමය රැකගන්න ලොකු හැකියාවක් තියෙනවා. මිනිස්සු එක්ක එකතු වෙලා වැඩ කරන්නයි, සාධාරණව වැඩ කරන්නයි ඔයා කැමතියි.'],
+    scorpio: ['You experience life with intense depth and privacy. You have an incredible ability to transform and rebuild yourself after challenges.', 'ඔයා දේවල් සරලව ගන්නවට වඩා, හැමදේකම ගැඹුර හොයන කෙනෙක්. ප්‍රශ්න ආවාම වැටිලා ඉන්නේ නැතුව ශක්තිමත්ව නැගිටින්න ඔයාට පුළුවන්.'],
+    sagittarius: ['You are an optimistic seeker who needs freedom to explore. You use your personal beliefs to continually expand your understanding of the world.', 'ඔයා නිදහසට ආදරය කරන, හැමවෙලේම වාසනාව ගැන විශ්වාස කරන කෙනෙක්. අලුත් දේවල් ඉගෙනගන්න සහ දුර ගමන් යන්න ඔයාගේ හිතේ ලොකු ආසාවක් තියෙනවා.'],
+    capricorn: ['You take life seriously and value long-term achievement. Patience, discipline, and building a solid reputation are the foundations of your success.', 'ඔයා ජීවිතේට ගොඩක් වගකීමෙන් බර දෙන කෙනෙක්. ඉවසීමෙන් සහ සැලසුම් කරලා ඉලක්ක වලට යන එක තමයි ඔයාගේ සාර්ථකත්වයේ රහස.'],
+    aquarius: ['You are fiercely independent and often think ahead of your time. Your focus is on progressive ideas and creating positive social change.', 'ඔයා සම්ප්‍රදායික විදිහට හිතන්නෙ නැති, අලුත් විදිහට ලෝකය දකින කෙනෙක්. යාළුවෝ සහ සමාජයේ වෙනස්කම් වෙනුවෙන් පෙනී ඉන්න ඔයා කැමතියි.'],
+    pisces: ['You are highly empathetic with a deep inner emotional life. You navigate the world more through spiritual intuition than rigid logic.', 'ඔයා සංවේදී, අනිත් අයගේ දුක හොඳින් තේරුම් ගන්න කෙනෙක්. හිතාමතා සැලසුම් කරනවට වඩා, හිතට දැනෙන විදිහට වැඩ කරන එක ඔයාට පහසුයි.'],
   };
   var selected = meanings[key];
-  if (!selected) return language === 'si' ? 'මේ රාශි පිහිටීම ගැන තොරතුරු සලකා බලමින්' : 'This sign placement is being prepared';
+  if (!selected) return language === 'si' ? 'සාමාන්‍ය, සමබර ජීවිත රටාවක්.' : 'A very balanced energy.';
   if (language === 'si') {
-    return signName + ' රාශිය - ' + selected[1];
+    return selected[1];
   }
-  return signName + ' sign - ' + selected[0];
+  return selected[0];
 }
 
 function getKendaraCoreEnergy(planet, language) {
@@ -250,11 +272,19 @@ function getKendaraCoreEnergy(planet, language) {
   var alias = { surya: 'sun', chandra: 'moon', mangala: 'mars', budha: 'mercury', guru: 'jupiter', shukra: 'venus', shani: 'saturn', ascendant: 'lagna' };
   key = alias[key] || key;
   var map = {
-    sun: ['Sun - confidence and identity', 'රවි - ආත්ම විශ්වාසය සහ පෞරුෂය'], moon: ['Moon - feelings and comfort', 'සඳු - හැඟීම් සහ සැනසීම'], mars: ['Mars - courage and action', 'කුජ - ධෛර්යය සහ ක්‍රියාශීලී බව'], mercury: ['Mercury - speech and learning', 'බුධ - කතාබහ සහ ඉගෙනීම'],
-    jupiter: ['Jupiter - wisdom and support', 'ගුරු - දැනුම සහ ආශීර්වාදය'], venus: ['Venus - love and taste', 'සිකුරු - ආදරය සහ රසවින්දනය'], saturn: ['Saturn - duty and patience', 'ශනි - වගකීම සහ ඉවසීම'], rahu: ['Rahu - ambition and growth', 'රාහු - ආශාව සහ වර්ධන පාඩම'], ketu: ['Ketu - release and inner peace', 'කේතු - අත්හැරීම සහ අභ්‍යන්තර සැනසීම'], lagna: ['Ascendant - life direction', 'ලග්නය - ජීවිත දිශාව'],
+    sun: ['Sun - your confidence & true self', 'රවි - ඔයාගේ ආත්ම විශ්වාසය සහ පෞරුෂය'], 
+    moon: ['Moon - your feelings & peace of mind', 'සඳු - ඔයාගේ හැඟීම් සහ හිතේ සැනසිල්ල'], 
+    mars: ['Mars - your courage & drive', 'කුජ - ඔයාගේ ධෛර්යය සහ උත්සාහය'], 
+    mercury: ['Mercury - your mind & communication', 'බුධ - ඔයා හිතන විදිහ සහ කතාබහ'],
+    jupiter: ['Jupiter - your wisdom & luck', 'ගුරු - ඔයාගේ නුවණ සහ ලැබෙන වාසනාව'], 
+    venus: ['Venus - your love & tastes', 'සිකුරු - ඔයාගේ ආදරය සහ රසවින්දනය'], 
+    saturn: ['Saturn - your patience & responsibilities', 'ශනි - ඔයාගේ ඉවසීම සහ වගකීම්'], 
+    rahu: ['Rahu - your ambitions & growth', 'රාහු - ඔයාගේ ලොකු ආශාවන් සහ දියුණුව'], 
+    ketu: ['Ketu - your intuition & letting go', 'කේතු - ඔයාගේ ඉව සහ අත්හරින දේවල්'], 
+    lagna: ['Ascendant - your life path', 'ලග්නය - ඔයාගේ ජීවිතේ යන දිශාව'],
   };
   var selected = map[key];
-  if (!selected) return language === 'si' ? 'මේ ග්‍රහ ශක්තිය' : 'This planet energy';
+  if (!selected) return language === 'si' ? 'මේ ග්‍රහ ශක්තිය' : 'Your planetary energy';
   return language === 'si' ? selected[1] : selected[0];
 }
 
@@ -270,23 +300,26 @@ function getKendaraPlanetName(planet, language) {
     sun: 'Sun', moon: 'Moon', mars: 'Mars', mercury: 'Mercury', jupiter: 'Jupiter', venus: 'Venus', saturn: 'Saturn', rahu: 'Rahu', ketu: 'Ketu', lagna: 'Lagna'
   };
   var canonical = names[key] || planet;
-  var info = PLANET_INFO[canonical] || PLANET_INFO[planet];
-  return language === 'si' ? ((info && info.si) || String(planet || '--')) : String(canonical || planet || '--');
+  if (language === 'si') {
+    var info = PLANET_INFO[canonical];
+    return info ? info.si : canonical;
+  }
+  return canonical;
 }
 
 function getKendaraPlanetFocus(planet, language) {
   var key = getKendaraPlanetKey(planet);
   var map = {
-    sun: ['confidence, identity, decisions, and visibility', 'විශ්වාසය, තමන්ව පෙන්වන විදිහ, තීරණ'],
-    moon: ['feelings, comfort, family rhythm, and emotional safety', 'හිත, හැඟීම්, සැනසීම, පවුලේ රිද්මය'],
-    mars: ['courage, speed, conflict handling, and physical drive', 'ධෛර්යය, වේගය, ක්‍රියාශීලී බව, කෝපය පාලනය'],
-    mercury: ['speech, learning, business sense, and quick thinking', 'කතාබහ, ඉගෙනීම, ව්‍යාපාරික අදහස්, ඉක්මන් හිතීම'],
-    jupiter: ['growth, guidance, belief, teachers, and opportunity', 'දියුණුව, හොඳ උපදෙස්, විශ්වාසය, අවස්ථා'],
-    venus: ['love, comfort, taste, money enjoyment, and attraction', 'ආදරය, සැනසීම, රසවින්දනය, ආකර්ෂණය'],
-    saturn: ['discipline, delay, duty, patience, and long-term results', 'වගකීම, ඉවසීම, ප්‍රමාද හරහා ලැබෙන දිගුකාලීන ප්‍රතිඵල'],
-    rahu: ['ambition, unusual growth, risk-taking, and new experiences', 'ආශාව, අලුත් අත්දැකීම්, වෙනස් මාර්ග වලින් දියුණුව'],
-    ketu: ['release, inner peace, past skills, and spiritual distance', 'අතහැරීම, අභ්‍යන්තර සැනසීම, පුරුදු හැකියාවන්'],
-    lagna: ['life direction, body, first impression, and personal style', 'ජීවිත දිශාව, පෙනුම, තමන්ගේ හැසිරීම'],
+    sun: ['It gives you confidence, builds your personality, and helps you make bold decisions to stand out.', 'ඔයාගෙ ආත්ම විශ්වාසය, පෞරුෂය හදලා, බය නැතුව තීරණ අරන් කැපී පේන්න උදව් කරන්නේ මේ ශක්තියයි.'],
+    moon: ['It rules your feelings, daily moods, and brings you emotional safety and comfort.', 'ඔයාගෙ හැඟීම්, දවසේ මානසිකත්වය පාලනය කරලා, හිතට සැනසිල්ලක් ගේන්නේ මේ ශක්තියෙන්.'],
+    mars: ['It fuels your courage, drives your energy, and shapes how you handle anger and take action.', 'ඔයාගෙ ධෛර්යය, ශක්තිය වැඩි කරලා, ප්‍රශ්න වලට මූණ දෙන විදිහ හදන්නේ මේ ශක්තියයි.'],
+    mercury: ['It sharpens your speech, enhances your learning style, and brings out your quick thinking.', 'ඔයා කතා කරන විදිහ, ඉගෙනගන්න රටාව සහ ඉක්මන් බුද්ධිය මෙහෙයවන්නේ මේ ශක්තියෙන්.'],
+    jupiter: ['It brings growth, deepens your wisdom, and opens doors to natural opportunities.', 'ඔයාගේ දියුණුව, නුවණ වැඩි කරලා, ජීවිතේට වාසනාවන්ත අවස්ථා ගෙනත් දෙන්නේ මේ ශක්තියෙන්.'],
+    venus: ['It shapes your love life, refines your tastes, and determines what you naturally attract.', 'ඔයාට ආදරය, සැපපහසුව ගෙනත් දීලා, අනිත් අයව ආකර්ෂණය කරගන්න විදිහ හදන්නේ මේ ශක්තියයි.'],
+    saturn: ['It teaches you discipline, builds your patience, and ensures long-term achievements through duty.', 'ඔයාට විනය, ඉවසීම පුරුදු කරලා, කාලයක් ගිහින් ස්ථිර දියුණුවක් දෙන්නේ මේ ශක්තියයි.'],
+    rahu: ['It drives your ambitions, encourages risk-taking, and fuels your deepest desires for growth.', 'ඔයාගේ ලොකු බලාපොරොත්තු, අවදානම් ගන්න කැමැත්ත වැඩි කරලා, අලුත් දේවල් වලට යොමු කරන්නේ මේ ශක්තියයි.'],
+    ketu: ['It enhances your intuition, teaches you to let go, and helps you find true inner peace.', 'දේවල් අත්හරින්න පුරුදු කරලා, හිතේ නිස්කලංක බව සහ සහජ ඉව වැඩි කරන්නේ මේ ශක්තියයි.'],
+    lagna: ['It guides your life direction, affects your physical vitality, and shapes your first impression.', 'ඔයා ජීවිතේ යන පැත්ත, ශරීර සෞඛ්‍යය සහ අනිත් අයට ඔයාව මුලින්ම පේන විදිහ තීරණය වෙන්නේ මේ ශක්තියෙන්.'],
   };
   var selected = map[key];
   if (!selected) return language === 'si' ? 'මේ ග්‍රහ ශක්තිය' : 'this planet energy';
@@ -318,21 +351,21 @@ function getKendaraHouseLabel(houseNum, language) {
 
 function getKendaraHouseArea(houseNum, language) {
   var map = {
-    1: ['self, body, confidence, and first impression', 'තමන්ගේ පෙනුම, ශරීරය, විශ්වාසය, පළමු හැඟීම'],
-    2: ['money, family, speech, food, and saved resources', 'මුදල්, පවුල, කතා කරන වචන, ඉතිරි කරන දේවල්'],
-    3: ['communication, courage, siblings, short travel, and effort', 'කතාබහ, ධෛර්යය, සහෝදර සම්බන්ධතා, උත්සාහය'],
-    4: ['home, mother, land, vehicles, and emotional comfort', 'නිවස, අම්මා, ඉඩම්, වාහන, හිතේ සැනසීම'],
-    5: ['education, creativity, children, romance, and smart choices', 'ඉගෙනීම, නිර්මාණශීලී වැඩ, දරුවන්, ආදර හැඟීම්'],
-    6: ['work routine, health habits, service, debts, and competition', 'වැඩ පුරුදු, සෞඛ්‍ය පුරුදු, සේවය, තරඟය'],
-    7: ['marriage, partners, clients, agreements, and public dealings', 'විවාහය, හවුල්කරුවන්, ගිවිසුම්, ජනතාව එක්ක වැඩ'],
-    8: ['deep change, secrets, shared money, recovery, and research', 'ගැඹුරු වෙනස්කම්, රහස්, හවුල් මුදල්, සුවවීම'],
-    9: ['higher learning, luck, teachers, faith, and long travel', 'උසස් ඉගෙනීම, වාසනාව, ගුරුවරු, විශ්වාසය, දුර ගමන්'],
-    10: ['career, reputation, authority, goals, and public success', 'රැකියාව, නම, වගකීම, ඉලක්ක, මහජන සාර්ථකත්වය'],
-    11: ['friends, networks, income, supporters, and big dreams', 'මිතුරන්, ජාලය, ආදායම, සහායකයන්, ලොකු බලාපොරොත්තු'],
-    12: ['rest, foreign links, private life, release, and spiritual space', 'විවේකය, විදේශ සම්බන්ධතා, පෞද්ගලික ජීවිතය, අතහැරීම'],
+    1: ['your self, body, confidence, and first impression', 'ඔයාගේ පෙනුම, ශරීරය, ආත්ම විශ්වාසය සහ අනිත් අයට ඔයාව පේන විදිහ'],
+    2: ['your money, family, speech, food, and what you save', 'ඔයාගේ සල්ලි, පවුල, කතා කරන විදිහ, කෑම බීම සහ ඉතිරි කරන දේවල්'],
+    3: ['your communication, courage, siblings, short trips, and effort', 'ඔයාගේ කතාබහ, ධෛර්යය, සහෝදරයෝ, කෙටි ගමන් සහ උත්සාහය'],
+    4: ['your home, mother, land, vehicles, and inner peace', 'ඔයාගේ ගෙදර, අම්මා, ඉඩකඩම් වාහන, සහ හිතේ සැනසීම'],
+    5: ['your education, creativity, children, romance, and smart choices', 'ඔයාගේ ඉගෙනීම, නිර්මාණශීලී වැඩ, දරුවෝ, ආදර හැඟීම් සහ නුවණ'],
+    6: ['your work routine, health habits, daily service, and how you handle competition', 'ඔයාගේ වැඩ පුරුදු, සෞඛ්‍යය, සේවය කිරීම සහ ප්‍රශ්න වලට මුහුණ දෙන විදිහ'],
+    7: ['your marriage, partners, clients, agreements, and public life', 'ඔයාගේ විවාහය, හවුල්කාරයෝ, ගිවිසුම් සහ සමාජය එක්ක ගනුදෙනු'],
+    8: ['deep changes, secrets, shared money, and how you recover', 'ජීවිතේ ගැඹුරු වෙනස්කම්, රහස්, හවුල් මුදල් සහ අමාරු වෙලාවලින් ගොඩ එන විදිහ'],
+    9: ['higher learning, luck, teachers, faith, and long journeys', 'උසස් අධ්‍යාපනය, වාසනාව, ගුරුවරු, විශ්වාසයන් සහ දුර ගමන්'],
+    10: ['your career, reputation, authority, goals, and public success', 'ඔයාගේ රැකියාව, නම, වගකීම්, ඉලක්ක සහ සමාජයේ පිළිගැනීම'],
+    11: ['your friends, networks, income, supporters, and big dreams', 'ඔයාගේ යාළුවෝ, හිතවත්තු, ලාභ, සහ ලොකු බලාපොරොත්තු'],
+    12: ['rest, foreign connections, private life, letting go, and spirituality', 'විවේකය, පිටරට සම්බන්ධතා, පෞද්ගලික ජීවිතය, අත්හරින දේවල් සහ ආධ්‍යාත්මික පැත්ත'],
   };
   var selected = map[houseNum];
-  if (!selected) return language === 'si' ? 'ජීවිතයේ ඒ පැත්ත' : 'that life area';
+  if (!selected) return language === 'si' ? 'ජීවිතයේ ඒ පැත්ත' : 'that area of life';
   return language === 'si' ? selected[1] : selected[0];
 }
 
@@ -341,17 +374,17 @@ function getKendaraDegreeStage(degree, language) {
   var degreeNum = Number(degree);
   if (degreeNum < 10) {
     return language === 'si'
-      ? 'රාශියේ මුල් කොටසේ තියෙන නිසා, මේ ශක්තිය වැඩක් පටන්ගන්න වෙලාවට ඉක්මනින් මතුවෙන්න පුළුවන්.'
-      : 'Because it sits in the early part of the sign, this energy tends to show up quickly when something begins.';
+      ? 'ග්‍රහයා රාශියේ මුල හරියේ ඉන්න නිසා, මේ දේවල් ජීවිතේට ඉක්මනින්ම දැනෙන්න ගන්නවා.'
+      : 'Because it sits early in the sign, this energy tends to act quickly and show up right from the start.';
   }
   if (degreeNum < 20) {
     return language === 'si'
-      ? 'රාශියේ මැද කොටස නිසා, මේ ශක්තිය ස්ථාවරව වැඩ කරලා ප්‍රතිඵල ගන්න උදව් කරනවා.'
-      : 'Because it sits in the middle of the sign, this energy tends to work steadily and produce usable results.';
+      ? 'ග්‍රහයා රාශියේ මැද හරියේ ඉන්න නිසා, මේ ශක්තිය ගොඩක් ස්ථාවරව, සමබරව වැඩ කරනවා.'
+      : 'Because it sits in the middle of the sign, this energy is very steady and produces solid, balanced results.';
   }
   return language === 'si'
-    ? 'රාශියේ අවසාන කොටස නිසා, මේ ශක්තිය අත්දැකීම් එක්ක පරිණත වෙලා පෙන්වෙනවා.'
-    : 'Because it sits in the later part of the sign, this energy tends to mature through experience.';
+    ? 'ග්‍රහයා රාශියේ අග හරියේ ඉන්න නිසා, මේ දේවල්වල නියම ප්‍රතිඵල ලැබෙන්නේ ටිකක් කල් ගිහින් අත්දැකීම් ලැබුණාට පස්සෙයි.'
+    : 'Because it sits late in the sign, this energy matures over time and shows its best results with experience.';
 }
 
 function getKendaraShadbalaForPlanet(shadbala, planet) {
@@ -369,36 +402,36 @@ function getKendaraStrengthSentence(strength, language) {
   if (!strength) return '';
   var percent = Number(strength.percentage || 0);
   if (language === 'si') {
-    if (percent >= 75) return 'මේ ග්‍රහයාගේ බලය ඉතා ශක්තිමත් නිසා, ඒ පැත්තෙන් අවස්ථා ලැබුණාම ඉක්මනින් ප්‍රතිඵල දෙන්න පුළුවන්.';
-    if (percent >= 60) return 'මේ ග්‍රහයා හොඳ සහායක් දෙන නිසා, ඒ පැත්තේ වැඩ කරද්දී විශ්වාසයෙන් යන්න පුළුවන්.';
-    if (percent >= 45) return 'මේ ග්‍රහයා මධ්‍යම බලයකින් තියෙන නිසා, සැලසුම් කරලා ගියොත් හොඳ ප්‍රතිඵල ගන්න පුළුවන්.';
-    return 'මේ ග්‍රහයාට වැඩි අවධානයක් ඕන නිසා, ඉක්මන් තීරණ වලට වඩා ඉවසීමෙන් යන එක හොඳයි.';
+    if (percent >= 75) return 'ඔයාගේ කේන්දරේ මේ ග්‍රහයා ගොඩක් බලවත්. ඒ නිසා මේ පැත්තෙන් ලැබෙන ප්‍රතිඵල හරිම ශක්තිමත්.';
+    if (percent >= 60) return 'මේ ග්‍රහයාගෙන් ඔයාට හොඳ සහයෝගයක් තියෙනවා. ඒ නිසා මේ පැත්තේ දේවල් සාර්ථක කරගන්න ලේසියි.';
+    if (percent >= 45) return 'මේ ග්‍රහයාගේ බලය සාමාන්‍ය මට්ටමක තියෙන්නේ. ඒ නිසා මහන්සි වෙලා, සැලසුම් කරලා වැඩ කළොත් හොඳ ප්‍රතිඵල ගන්න පුළුවන්.';
+    return 'මේ ග්‍රහයාට ටිකක් විතර අපහසුතා තියෙන නිසා, මේ පැත්තේ දේවල් කරද්දී ඉක්මන් නොවී කල්පනාවෙන් වැඩ කරන එක තමයි හොඳම දේ.';
   }
-  if (percent >= 75) return 'This planet is very strong in your chart, so opportunities in this area can produce results quickly.';
-  if (percent >= 60) return 'This planet gives solid support in your chart, so you can lean into this area with confidence.';
-  if (percent >= 45) return 'This planet has moderate support, so planning and consistency help it deliver better results.';
-  return 'This planet needs extra attention, so patience and careful choices matter more than rushing.';
+  if (percent >= 75) return 'This planet is powerfully positioned in your chart, giving you very strong support in this area.';
+  if (percent >= 60) return 'This planet gives you solid backing, making it easier to find success here.';
+  if (percent >= 45) return 'This planet has moderate strength, which means your own effort and planning will determine the results.';
+  return 'This planet faces some challenges, so it is better to be patient, take your time, and avoid rushing things here.';
 }
 
 function getKendaraStrongestShadbalaPart(components, language) {
   if (!components) return language === 'si'
-    ? { label: 'සමස්ත බලය', meaning: 'මේ ග්‍රහයා සමස්තයෙන් කොච්චර සහාය දෙනවද කියන එක' }
+    ? { label: 'සමස්ත බලය', meaning: 'මේ ග්‍රහයා සම්පූර්ණයෙන්ම කොච්චර සහාය දෙනවද කියන එක' }
     : { label: 'overall strength', meaning: 'how strongly this planet can support you overall' };
   var labels = language === 'si'
     ? {
-      sthanaBala: { label: 'පිහිටීමේ බලය', meaning: 'ඉන්න තැන නිසා ලැබෙන සහාය' },
-      digBala: { label: 'දිශා බලය', meaning: 'ජීවිතයේ නිවැරදි දිශාවට යන්න දෙන සහාය' },
-      kalaBala: { label: 'කාල බලය', meaning: 'උපන් වෙලාවේ රිද්මයෙන් ලැබෙන සහාය' },
-      cheshtaBala: { label: 'ක්‍රියා බලය', meaning: 'උත්සාහයෙන් ප්‍රතිඵල ගන්න දෙන සහාය' },
-      naisargikaBala: { label: 'ස්වභාවික බලය', meaning: 'ග්‍රහයාගේ ස්වභාවික ශක්තියෙන් ලැබෙන සහාය' },
-      drigBala: { label: 'සම්බන්ධ බලය', meaning: 'අනිත් ග්‍රහ සම්බන්ධතා වලින් ලැබෙන සහාය' },
+      sthanaBala: { label: 'පිහිටීමේ බලය (ඉන්න තැනින් ලැබෙන ශක්තිය)', meaning: 'ඉන්න තැන නිසා ලැබෙන සහාය' },
+      digBala: { label: 'දිශා බලය (නිවැරදි දිශාවට යන්න දෙන සහාය)', meaning: 'ජීවිතයේ නිවැරදි දිශාවට යන්න දෙන සහාය' },
+      kalaBala: { label: 'කාල බලය (උපන් වෙලාවේ රිද්මය)', meaning: 'උපන් වෙලාවේ රිද්මයෙන් ලැබෙන සහාය' },
+      cheshtaBala: { label: 'ක්‍රියා බලය (මහන්සි වෙන තරමට ලැබෙන ප්‍රතිඵල)', meaning: 'උත්සාහයෙන් ප්‍රතිඵල ගන්න දෙන සහාය' },
+      naisargikaBala: { label: 'ස්වභාවික බලය (ග්‍රහයාගේම තියෙන ශක්තිය)', meaning: 'ග්‍රහයාගේ ස්වභාවික ශක්තියෙන් ලැබෙන සහාය' },
+      drigBala: { label: 'සම්බන්ධ බලය (අනිත් ග්‍රහයන්ගෙන් ලැබෙන සහයෝගය)', meaning: 'අනිත් ග්‍රහ සම්බන්ධතා වලින් ලැබෙන සහාය' },
     }
     : {
-      sthanaBala: { label: 'placement strength', meaning: 'support from where the planet sits' },
+      sthanaBala: { label: 'positional strength', meaning: 'support from where the planet sits' },
       digBala: { label: 'directional strength', meaning: 'support for moving in the right direction' },
-      kalaBala: { label: 'timing strength', meaning: 'support from the birth-time rhythm' },
-      cheshtaBala: { label: 'effort strength', meaning: 'support for turning effort into results' },
-      naisargikaBala: { label: 'natural strength', meaning: 'support from the planet’s own natural power' },
+      kalaBala: { label: 'rhythmic timing strength', meaning: 'support from the birth-time rhythm' },
+      cheshtaBala: { label: 'effort-based strength', meaning: 'support for turning effort into results' },
+      naisargikaBala: { label: 'natural intrinsic strength', meaning: 'support from the planet’s own natural power' },
       drigBala: { label: 'connection strength', meaning: 'support from other planetary links' },
     };
   var bestKey = '';
@@ -425,26 +458,27 @@ function getKendaraPlanetPlacementDetail(planet, rashiLabel, houseNumber, langua
   var strengthNote = getKendaraStrengthSentence(getKendaraShadbalaForPlanet(shadbala, planet && planet.name), language);
   if (language === 'si') {
     var siPlace = houseLabel ? signName + ' රාශියේ ' + houseLabel : signName + ' රාශියේ';
-    return planetName + ' ' + siPlace + ' තියෙන නිසා, ' + focus + ' ' + houseArea + ' පැත්තෙන් වැඩියෙන් පෙන්වෙනවා. ' + degreeNote + (strengthNote ? ' ' + strengthNote : '');
+    return 'ඔයාගේ ' + planetName + ' ඉන්නේ ' + siPlace + '. ඒ නිසා ඔයාගේ ' + focus + ' වැඩිපුරම බලපාන්නේ ' + houseArea + ' ගැන කටයුතු වලටයි. ' + degreeNote + (strengthNote ? ' ' + strengthNote : '');
   }
   var enPlace = houseLabel ? signName + ' in ' + houseLabel : signName;
-  return planetName + ' sits in ' + enPlace + ', so ' + focus + ' tends to work through ' + houseArea + '. ' + degreeNote + (strengthNote ? ' ' + strengthNote : '');
+  return planetName + ' is placed in ' + enPlace + '. This means your ' + focus + ' will naturally express itself through ' + houseArea + '. ' + degreeNote + (strengthNote ? ' ' + strengthNote : '');
 }
 
 function getKendaraShadbalaPersonalDetail(strength, language) {
   var planetName = getKendaraPlanetName(strength && strength.name, language);
   var percent = Number(strength && strength.percentage || 0);
-  var signName = strength && strength.rashi ? getKendaraRashiName(strength.rashi, language) : '';
-  var houseLabel = getKendaraHouseLabel(strength && strength.house, language);
-  var houseArea = getKendaraHouseArea(strength && strength.house, language);
   var focus = getKendaraPlanetFocus(strength && strength.name, language);
-  var strongestPart = getKendaraStrongestShadbalaPart(strength && strength.components, language);
+  var bestPart = getKendaraStrongestShadbalaPart(strength && strength.components, language);
+
   if (language === 'si') {
-    var siWhere = houseLabel ? houseLabel + ' (' + houseArea + ')' : (signName ? signName + ' රාශිය' : 'ඔයාගේ කේන්දරේ');
-    return planetName + ' ' + percent + '% බලයෙන් තියෙන නිසා, ' + focus + ' ' + siWhere + ' පැත්තෙන් ක්‍රියාත්මක වෙනවා. වැඩියෙන්ම සහාය දෙන්නේ ' + strongestPart.label + ' - ' + strongestPart.meaning + '.';
+    if (percent >= 60) return planetName + 'ට ඔයාගේ කේන්දරේ ' + percent + '% ක ඉහළ බලයක් තියෙනවා. ඒ නිසා ජීවිතේ ' + focus + ' වගේ දේවල් සාර්ථක කරගන්න මේ ශක්තිය ගොඩක් උදව් වෙනවා. විශේෂයෙන්ම ' + bestPart.label + ' හරහා තමයි මේකේ නියම ප්‍රයෝජනය ලැබෙන්නේ.';
+    if (percent >= 45) return planetName + 'ගේ බලය ' + percent + '% ක් වගේ මධ්‍යම මට්ටමක තියෙන්නේ. ඒ නිසා ' + focus + ' සම්බන්ධ වැඩ වලදී නිකම්ම වාසනාවට වඩා සැලසුම් කරලා වැඩ කළොත් ඉස්සරහට යන්න ලේසියි. ' + bestPart.label + ' හරහා යම් සහයෝගයක් මේකට ලැබෙනවා.';
+    return planetName + 'ගේ ස්වභාවික බලය තරමක් අඩුයි (' + percent + '%). ඒ නිසා ' + focus + ' කියලා කියන කටයුතු වලදී කලබල නොවී, හොඳට හිතලා අනිත් අයගේ අදහස් අහල තීරණ ගන්න එක තමයි නුවණට හුරු.';
   }
-  var enWhere = houseLabel ? houseLabel + ' (' + houseArea + ')' : (signName ? signName + ' sign' : 'your chart');
-  return planetName + ' is at ' + percent + '%, so ' + focus + ' is expressed through ' + enWhere + '. The strongest support comes from ' + strongestPart.label + ' - ' + strongestPart.meaning + '.';
+
+  if (percent >= 60) return planetName + ' provides steady support (' + percent + '%) for your ' + focus + '. Its most active trait is its ' + bestPart.label + ', making it a reliable pillar for building success here.';
+  if (percent >= 45) return planetName + ' offers moderate support (' + percent + '%). Your own planning and effort will matter more than pure luck when it comes to your ' + focus + ', though its ' + bestPart.label + ' helps smooth the path.';
+  return planetName + '’s natural momentum is on the lower side (' + percent + '%). It’s best to be patient with your ' + focus + '—avoid rushing and seek practical advice when things feel stuck.';
 }
 
 function getKendaraBhriguPersonalDetail(point, language) {
@@ -455,16 +489,17 @@ function getKendaraBhriguPersonalDetail(point, language) {
   var lifeStyle = getKendaraLifeStyle(point.rashi || point.rashiName || point.sinhala, language);
   var birthFocus = getKendaraBirthFocus({ english: point.nakshatra, name: point.nakshatra }, language);
   var activations = point.currentActivations || [];
+
   if (language === 'si') {
     var activeText = activations.length > 0
-      ? 'මේ දවස්වල ' + activations.map(function(item) { return getKendaraPlanetName(item.planet, language); }).join(', ') + ' මේ ලක්ෂ්‍යය අවදි කරන නිසා, අවස්ථා ඉක්මනින් දැනෙන්න පුළුවන්.'
-      : 'මේක දිනපතා හදිසි දෙයක් නෙවෙයි; දිගුකාලීනව ඔයා දියුණු වෙන දිශාවක් විදිහට බලන්න.';
-    return 'ඔයාගේ දෛවයේ ප්‍රධාන තැන ' + rashiName + ' රාශියේ ' + degreeText + ' වටේ තියෙනවා. ඒ නිසා ' + lifeStyle + ' කියන පැත්තෙන් අවස්ථා විවෘත වෙනවා. නැකත් ගුණය ලෙස ' + birthFocus + ' එකතු වෙනවා. ' + activeText;
+      ? 'මේ දවස්වල ' + activations.map(function(item) { return getKendaraPlanetName(item.planet, language); }).join(', ') + ' කියන ග්‍රහයන් මේ ලක්ෂ්‍යය අවදි කරන නිසා, මේ කියන අවස්ථා ඉක්මනින් ජීවිතේට දැනෙන්න පුළුවන්.'
+      : 'මේක දිනපතා හදිසි වෙනස්කම් ගේන දෙයක් නෙවෙයි; ජීවිතේ දිගුකාලීනව ඔයා දියුණු වෙන දිශාව විදිහට මේක තේරුම් ගන්න.';
+    return 'ඔයාගේ දෛවයේ ප්‍රධාන තැන ' + rashiName + ' රාශියේ තමයි පිහිටලා තියෙන්නේ. ඒ කියන්නේ ' + lifeStyle + ' හරහා තමයි ඔයාට වැඩියෙන්ම අවස්ථා හැදෙන්නේ. ඒ වගේම උපන් නැකතේ ගුණයක් විදිහට ' + birthFocus + ' කියන ලක්ෂණයත් මේකට එකතු වෙනවා. ' + activeText;
   }
   var enActiveText = activations.length > 0
-    ? 'Right now ' + activations.map(function(item) { return getKendaraPlanetName(item.planet, language); }).join(', ') + ' is activating this point, so opportunities may feel more immediate.'
-    : 'This is not a daily emergency point; read it as a long-term growth direction in your chart.';
-  return 'Your destiny point falls around ' + degreeText + ' in ' + rashiName + '. That means opportunities open through ' + lifeStyle + '. Its birth-focus quality adds ' + birthFocus + '. ' + enActiveText;
+    ? 'Right now, ' + activations.map(function(item) { return getKendaraPlanetName(item.planet, language); }).join(', ') + ' is activating this point, so you might notice opportunities coming up faster.'
+    : 'This isn’t about daily emergencies—think of it as a long-term compass showing where your real growth lies.';
+  return 'Your destiny point lands in ' + rashiName + ' at around ' + degreeText + '. This means your best opportunities will naturally open up through ' + lifeStyle + '. It also carries a touch of ' + birthFocus + ' from your birth star. ' + enActiveText;
 }
 
 function getKendaraPlanetList(planets, language) {
@@ -476,28 +511,24 @@ function getKendaraKetuPatternDetail(pastLife, language) {
   var data = pastLife && pastLife.pastLife;
   if (!data) return '';
   var theme = data.ketuThemes || {};
-  var houseLabel = getKendaraHouseLabel(data.ketuHouse, language);
   var rashiName = data.ketuRashi ? getKendaraRashiName(data.ketuRashi, language) : '';
   var domain = language === 'si' ? (theme.domainSi || theme.domain || '') : (theme.domain || '');
-  var archetype = language === 'si' ? (theme.archetypeSi || theme.archetype || '') : (theme.archetype || '');
   if (language === 'si') {
-    return 'කේතු ' + houseLabel + (rashiName ? ' / ' + rashiName + ' රාශියේ' : '') + ' තියෙන නිසා, ' + domain + ' පැත්ත ඔයාට පුරුදු වගේ දැනෙන්න පුළුවන්. ' + (archetype ? archetype + ' වගේ රටාවක් පරණ පුරුද්දක් ලෙස එන්න පුළුවන්. ' : '') + 'ඒකටම අල්ලාගෙන ඉන්නවාට වඩා, ඒ අත්දැකීම දැන් ලේසි උපකාරයක් කරගන්න.';
+    return 'කේතු ' + (rashiName ? rashiName + ' රාශියේ ' : '') + 'තියෙන නිසා, ' + domain + ' කියන පැත්ත හරියට ඔයාට ඉබේම පුරුදුයි වගේ දැනෙන්න පුළුවන්. හැබැයි ඒ හුරු පුරුදු තැනම හිරවෙලා ඉන්නේ නැතුව, ඒ අත්දැකීම් දැන් ඔයාගේ අලුත් ගමනට පඩිපෙළක් කරගන්න.';
   }
-  return 'Ketu sits in ' + houseLabel + (rashiName ? ' / ' + rashiName : '') + ', so ' + domain + ' can feel familiar or automatic. ' + (archetype ? 'The old pattern looks like ' + archetype + '. ' : '') + 'Use that experience as a tool, without staying stuck in it.';
+  return 'Since Ketu is in ' + (rashiName || 'this area') + ', things related to ' + domain + ' might feel almost automatically familiar to you. The key is to use that natural comfort as a tool to move forward, rather than getting stuck simply doing what’s easy.';
 }
 
 function getKendaraRahuDirectionDetail(pastLife, language) {
   var data = pastLife && pastLife.currentLifeDirection;
   if (!data) return '';
   var theme = data.rahuThemes || {};
-  var houseLabel = getKendaraHouseLabel(data.rahuHouse, language);
   var rashiName = data.rahuRashi ? getKendaraRashiName(data.rahuRashi, language) : '';
   var growth = language === 'si' ? (theme.growthSi || theme.growth || '') : (theme.growth || '');
-  var challenge = theme.challenge || '';
   if (language === 'si') {
-    return 'රාහු ' + houseLabel + (rashiName ? ' / ' + rashiName + ' රාශියේ' : '') + ' තියෙන නිසා, දැන් වැඩි දියුණුව ' + growth + ' පැත්තට යද්දී එනවා. මේ දිශාව මුලදී අලුත් වගේ දැනුණත්, ඔයාගේ කේන්දරේ ඉස්සරහට දියුණුවට යන මාවත මෙතනයි.';
+    return 'රාහු ' + (rashiName ? rashiName + ' රාශියේ ' : '') + 'ඉන්න නිසා, දැන් ඔයාගේ ජීවිතේ නියම දියුණුව තියෙන්නේ ' + growth + ' කියන පැත්තට යද්දියි. මුලදී මේක ටිකක් නුපුරුදු වගේ දැනුණත්, කේන්දරේ අනුව ඉස්සරහට යන්න තියෙන හොඳම පාර තමයි මේක.';
   }
-  return 'Rahu sits in ' + houseLabel + (rashiName ? ' / ' + rashiName : '') + ', so current growth comes through ' + growth + '. It may feel less familiar at first' + (challenge ? ' because it pulls you away from ' + challenge : '') + ', but it is the forward path in this chart.';
+  return 'With Rahu placed in ' + (rashiName || 'this area') + ', your real growth in this life comes from stepping into ' + growth + '. It might feel a bit unfamiliar or challenging at first, but this is the forward path that brings the biggest rewards.';
 }
 
 function getKendaraKarmaBalanceDetail(pastLife, language) {
@@ -506,13 +537,13 @@ function getKendaraKarmaBalanceDetail(pastLife, language) {
   var good = Number(balance.good || 0);
   var challenging = Number(balance.challenging || 0);
   if (language === 'si') {
-    if (good > challenging) return 'හොඳ සහාය පැත්ත වැඩියි. ඒ නිසා පැරණි පුරුදු හිරවීමක් නොවී, ඒවා දියුණුවට පාවිච්චි කරන්න පුළුවන්.';
-    if (challenging > good) return 'අභියෝග පැත්ත වැඩි නිසා, එකම පුරුද්ද නැවත නැවත කරන්නෙ නැතුව අලුත් තීරණ ගන්න ඕන.';
-    return 'හොඳ සහ අභියෝග දෙකම සමබරයි. ඒ නිසා අවධානයෙන් තේරීම් ගත්තොත් මේ රටාව හොඳට පාලනය කරගන්න පුළුවන්.';
+    if (good > challenging) return 'හොඳ සහාය දෙන රටාවන් මේකේ වැඩියි. ඒ නිසා ඔයාගේ පරණ පුරුදු බාධාවක් වෙනවා වෙනුවට, ඒවා ජීවිතේ ඉස්සරහට යන්න ලොකු හයියක් වෙනවා.';
+    if (challenging > good) return 'මේකේ අභියෝග පැත්ත ටිකක් වැඩියි. ඒ නිසා හැමතිස්සෙම එකම පරණ පුරුද්දට නොයා, හිතලා බලලා අලුත් තීරණ ගන්න එකෙන් තමයි දියුණුව ලැබෙන්නේ.';
+    return 'මේකෙදි හොඳ දේවල් වගේම අභියෝගත් දෙකම සමබරව තියෙනවා. ඒ නිසා ඔයා ගන්න තීරණ අනුව තමයි මේකේ නියම ප්‍රතිඵලය තීරණය වෙන්නේ.';
   }
-  if (good > challenging) return 'Supportive patterns are stronger, so old instincts can become useful tools instead of limitations.';
-  if (challenging > good) return 'Challenging patterns are stronger, so growth comes from choosing differently instead of repeating the same habit.';
-  return 'Support and challenge are balanced, so conscious choices decide how this pattern plays out.';
+  if (good > challenging) return 'The supportive patterns far outweigh the challenges here. This means your old instincts are more likely to act as a solid foundation rather than holding you back.';
+  if (challenging > good) return 'The challenging patterns are stronger right now. True growth will come when you actively choose to do things differently instead of falling back on familiar habits.';
+  return 'The support and challenges are pretty evenly balanced. Because of this, staying aware and making conscious choices is what will truly shape the outcome.';
 }
 
 function getKendaraMeritDetail(pastLife, language) {
@@ -520,15 +551,15 @@ function getKendaraMeritDetail(pastLife, language) {
   if (!merit) return '';
   var benefics = getKendaraPlanetList(merit.benefics || [], language);
   var malefics = getKendaraPlanetList(merit.malefics || [], language);
-  var lordText = merit.lord5 && merit.lord5.name ? getKendaraPlanetName(merit.lord5.name, language) + ' ' + getKendaraHouseLabel(merit.lord5.house, language) : '';
+  var lordText = merit.lord5 && merit.lord5.name ? getKendaraPlanetName(merit.lord5.name, language) + 'ගෙනුත්' : '';
   if (language === 'si') {
-    if (merit.assessment === 'highly_meritorious') return '5වැනි භාවයේ හොඳ සහායක ග්‍රහයන් (' + benefics + ') වැඩියෙන් තියෙන නිසා, ඉගෙනීම, නිර්මාණශීලී වැඩ, හොඳ තේරීම් ස්වභාවිකව සහාය දෙනවා.';
-    if (merit.assessment === 'karmic_debts') return '5වැනි භාවයේ වැඩි අවධානයක් ඕන ග්‍රහයන් (' + malefics + ') තියෙන නිසා, ඉක්මන් ප්‍රතිචාර වලට වඩා ඉගෙනගෙන යන රටාව හොඳයි.';
-    return '5වැනි භාවයේ සහායත් අභියෝගත් දෙකම මිශ්‍රයි. ' + (lordText ? lordText + ' නිසා මේ ගුණය කාලයත් එක්ක වැඩියෙන් පැහැදිලි වෙනවා.' : 'එක පැත්තකටම නොයන සමබර රටාවක් තියෙනවා.');
+    if (merit.assessment === 'highly_meritorious') return 'අධ්‍යාපනය, නිර්මාණශීලීත්වය වගේ දේවල් වලට ' + benefics + ' වගේ ග්‍රහයන්ගෙන් ස්වභාවිකවම සහාය ලැබෙනවා.';
+    if (merit.assessment === 'karmic_debts') return 'මේකේ ' + malefics + 'ගේ බලපෑම තියෙන නිසා, ඉක්මන් තීරණ ගන්නේ නැතුව ඉගෙනගෙන, ඉවසීමෙන් යන එක තමයි හොඳම දේ.';
+    return 'ස්වභාවික හැකියාවන් සහ අභියෝග කියන දෙකම ටිකක් මිශ්‍ර වෙලා තියෙන්නේ. ' + (lordText ? lordText + ' මේකට බලපාන නිසා, කාලයත් එක්ක මේකේ නියම ප්‍රතිඵලය පෙනෙන්න ගනීවි.' : 'ඒ නිසා හැමදේකම සමබරව ඉන්න එක වැදගත් වෙනවා.');
   }
-  if (merit.assessment === 'highly_meritorious') return 'Supportive planets in the 5th house (' + benefics + ') make learning, creativity, and wise choices come more naturally.';
-  if (merit.assessment === 'karmic_debts') return 'More demanding planets in the 5th house (' + malefics + ') ask for patience, learning, and careful emotional choices.';
-  return 'The 5th house is mixed, so natural gifts and growth lessons are both present. ' + (lordText ? lordText + ' shows where this becomes clearer over time.' : 'Balance matters here.');
+  if (merit.assessment === 'highly_meritorious') return 'With ' + benefics + ' lending their support, gifts like creativity, instinct, and learning come naturally to you without forcing them.';
+  if (merit.assessment === 'karmic_debts') return 'Because ' + malefics + ' are involved here, things demand more patience. Taking your time, learning step by step, and making careful emotional choices will help a lot.';
+  return 'Your natural gifts and your lessons are pretty evenly mixed. ' + (lordText ? 'The planet ' + lordText + ' will eventually show you how this plays out over time.' : 'It’s about keeping a steady balance rather than pushing too hard in one direction.');
 }
 
 function getKendaraDashaPlanet(part) {
@@ -561,14 +592,14 @@ function getKendaraDashaRemainingText(period, language) {
   var end = new Date(period.endTime || period.end);
   if (isNaN(end.getTime())) return '';
   var diffMs = end - new Date();
-  if (diffMs <= 0) return language === 'si' ? 'මේ කාලය අවසන් වෙන්න ආසන්නයි.' : 'This period is close to completion.';
+  if (diffMs <= 0) return language === 'si' ? 'මේ කාලය දැන් ඉවර වෙන්නමයි ඇවිත් තියෙන්නේ.' : 'This period is basically wrapping up now.';
   var months = Math.round(diffMs / (30.44 * 24 * 60 * 60 * 1000));
   if (language === 'si') {
-    if (months >= 18) return (months / 12).toFixed(1) + ' අවුරුදු වගේ ඉතිරියි, ඒ නිසා මේක දිගුකාලීන සැලසුම් වලට බලපානවා.';
-    return months + ' මාස වගේ ඉතිරියි, ඒ නිසා මේ බලපෑම දැනටමත් දෛනික තීරණ වලට ලඟින් දැනෙන්න පුළුවන්.';
+    if (months >= 18) return 'තව අවුරුදු ' + (months / 12).toFixed(1) + ' ක් වගේ මේ කාලය තියෙනවා. ඒ නිසා මේක මත තව දුරටත් ජීවිතේ සැලසුම් කරන්න පුළුවන්.';
+    return 'ඉතුරු වෙලා තියෙන්නේ තව මාස ' + months + ' ක් වගේ. ඒ නිසා දැන් වෙනස්කම් ටිකක් ළඟින්ම දැනෙන්න ඉඩ තියෙනවා.';
   }
-  if (months >= 18) return 'About ' + (months / 12).toFixed(1) + ' years remain, so this affects long-term planning.';
-  return 'About ' + months + ' months remain, so this influence may feel close to daily decisions.';
+  if (months >= 18) return 'You have about ' + (months / 12).toFixed(1) + ' years left in this phase, so it’s going to shape your long-term planning.';
+  return 'With roughly ' + months + ' months remaining, you’re in a timeframe where this influence might hit a bit closer to home.';
 }
 
 function getKendaraDashaPersonalNote(dasha, language, shadbala) {
@@ -583,43 +614,45 @@ function getKendaraDashaPersonalNote(dasha, language, shadbala) {
   var strength = getKendaraShadbalaForPlanet(shadbala, mainPlanet);
   var remaining = getKendaraDashaRemainingText(currentWindow, language);
   if (language === 'si') {
-    var siStrength = strength ? 'ඔයාගේ කේන්දරේ ' + mainName + ' ' + (strength.percentage || 0) + '% බලයෙන් තියෙන නිසා, මේ කාලයේ ප්‍රතිඵල එන්නේ ඒ බලය අනුවයි.' : '';
-    var siSub = subPlanet ? ' ' + subName + ' අතුරු ශක්තිය නිසා ' + subFocus + ' දිනපතා තීරණ වලට එකතු වෙනවා.' : '';
-    return mainName + ' කාලය නිසා මේ අදියරේ ' + mainFocus + ' වැඩියෙන් ඉස්සරහට එනවා.' + siSub + ' ' + siStrength + ' ' + remaining;
+    var siStrength = strength ? 'මේ ග්‍රහයාගේ ' + (strength.percentage || 0) + '% ක බලයක් කේන්දරේ තියෙන නිසා, ඒ බලය කොච්චරද කියන එක මේ කාලයේදී අනිවාර්යයෙන්ම බලපානවා.' : '';
+    var siSub = subPlanet ? ' ඒ වගේම ' + subName + ' අතුරු කාලයක් යන නිසා, ' + subFocus + ' කියන දේවලුත් දිනපතාම ඔයාට දැනෙන්න පටන් ගනීවි.' : '';
+    return 'දැන් යන්නේ ' + mainName + 'ගේ ප්‍රධාන කාලය නිසා, මුළු ජීවිතේම වැඩියෙන්ම කැරකිලා තියෙන්නේ ' + mainFocus + ' වටා තමයි.' + siSub + ' ' + siStrength + ' ' + remaining;
   }
-  var enStrength = strength ? 'In your chart ' + mainName + ' has ' + (strength.percentage || 0) + '% support, so results come through that level of strength.' : '';
-  var enSub = subPlanet ? ' The ' + subName + ' sub-period adds ' + subFocus + ' to everyday decisions.' : '';
-  return 'Because this is a ' + mainName + ' period, ' + mainFocus + ' becomes the main life theme now.' + enSub + ' ' + enStrength + ' ' + remaining;
+  var enStrength = strength ? 'Your chart gives ' + mainName + ' a ' + (strength.percentage || 0) + '% momentum level, which really sets the tone for how things manifest.' : '';
+  var enSub = subPlanet ? ' Meanwhile, the slightly quicker ' + subName + ' sub-period is adding ' + subFocus + ' into your day-to-day life.' : '';
+  return 'Right now, it’s all about a ' + mainName + ' major period, which means ' + mainFocus + ' is taking center stage as your life theme.' + enSub + ' ' + enStrength + ' ' + remaining;
 }
 
 function getKendaraStrengthCopy(item, language) {
   var category = String(item && item.category || '').toLowerCase();
+  
   if (language === 'si') {
-    if (category.indexOf('viparita') !== -1) return { label: 'අභියෝගය ජයගන්න ශක්තියක්', desc: 'අමාරු තැනකින් නැවත නැගිටලා, අත්දැකීම් ශක්තියක් කරගන්න පුළුවන් පිහිටීමක්.' };
-    if (category.indexOf('raja') !== -1) return { label: 'නායකත්වයට හොඳ පිහිටීමක්', desc: 'වගකීමක් ගත්තාම ඉදිරියට එන්න, මිනිසුන්ට බලපෑමක් කරන්න හැකි ශක්තියක්.' };
-    if (category.indexOf('dhana') !== -1) return { label: 'මුදල් සහ දියුණුවට සහාය', desc: 'උත්සාහය, හොඳ තීරණ, සහ නිවැරදි අවස්ථා එකතු වුණාම ලාභයක් ගන්න පහසු පිහිටීමක්.' };
-    if (category.indexOf('dosha') !== -1 || category.indexOf('challenge') !== -1) return { label: 'සැලකිලිමත් විය යුතු පැත්තක්', desc: 'මෙය බය විය යුතු දෙයක් නොවෙයි; තීරණ ගන්න කලින් ටිකක් වැඩිපුර හිතන්න කියන ඉඟියක්.' };
-    if (category.indexOf('moon') !== -1) return { label: 'හිත සහ කීර්තියට සහාය', desc: 'මනස, කතාබහ, ජනතාවගේ විශ්වාසය, සහ දිනපතා සබඳතා හරහා සහාය ලැබෙන පිහිටීමක්.' };
-    if (category.indexOf('education') !== -1) return { label: 'ඉගෙනීම සහ කලා හැකියාව', desc: 'දැනුම, කතාබහ, නිර්මාණශීලීත්වය, සහ හොඳ තේරුම්ගැනීමට සහාය දෙන පිහිටීමක්.' };
-    if (category.indexOf('character') !== -1) return { label: 'විශ්වාසය දිනාගන්න ගුණයක්', desc: 'හොඳ නමක්, සදාචාරය, සහ මිනිසුන්ගේ විශ්වාසය තබාගන්න උදව් වෙන පිහිටීමක්.' };
-    if (category.indexOf('personality') !== -1 || category.indexOf('panch') !== -1) return { label: 'පෞරුෂයට විශේෂ සහාය', desc: 'තමන්ගේ හැඩරුව, හැසිරීම, ආකර්ෂණය, සහ ඉදිරිපත් වීමේ ශක්තිය වැඩි කරන පිහිටීමක්.' };
-    if (category.indexOf('protection') !== -1 || category.indexOf('benefic') !== -1) return { label: 'ආරක්ෂාව සහ ආශීර්වාදය', desc: 'අමාරු තැන් මෘදු කරලා, හොඳ උපදෙස් සහ සහාය ලැබෙන්න පහසු කරන පිහිටීමක්.' };
-    if (category.indexOf('sun') !== -1) return { label: 'කතාබහ සහ පෙනීසිටීමට සහාය', desc: 'වචන වලින්, මතකයෙන්, සහ තමන්ව ඉදිරිපත් කරන හැටියෙන් බලපෑමක් කරන්න උදව් වෙන පිහිටීමක්.' };
-    if (category.indexOf('neechabhanga') !== -1) return { label: 'දුර්වලකම ශක්තියට හරවන පිහිටීමක්', desc: 'මුලදී අමාරු වගේ පෙනෙන දෙයක්, කාලයත් එක්ක ශක්තියක් බවට පත් කරන රටාවක්.' };
-    return { label: 'ඔයාට උපකාර කරන ස්වභාවික හැකියාවක්', desc: 'දෛනික ජීවිතයේ හොඳ තේරීම් ගන්න සහ ඉදිරියට යන්න සහාය දෙන පිහිටීමක්.' };
+    if (category.indexOf('viparita') !== -1) return { label: 'ප්‍රශ්න මැදින් එන ජයග්‍රහණ', desc: 'අමාරු කාලයක් ආවත් ඒකෙන් පාඩමක් ඉගෙනගෙන, වැටිච්ච තැනින් ආයෙත් ශක්තිමත්ව නැගිටින්න පුළුවන් හැකියාව.' };
+    if (category.indexOf('raja') !== -1) return { label: 'නායකත්වය සහ කැපී පෙනීම', desc: 'අනිත් අයට වැඩිය ඉස්සරහට ඇවිත්, වගකීමක් අරගෙන වැඩ කටයුතු සාර්ථකව මෙහෙයවන්න තියෙන ලොකු හැකියාව.' };
+    if (category.indexOf('dhana') !== -1) return { label: 'ආර්ථික දියුණුව සහ වාසනාව', desc: 'හොඳට මහන්සි වෙලා නිවැරදි වෙලාවට තීරණ ගත්තොත්, ඉක්මනින් සල්ලි හම්බවෙලා දියුණු වෙන්න තියෙන පින.' };
+    if (category.indexOf('dosha') !== -1 || category.indexOf('challenge') !== -1) return { label: 'විශේෂයෙන් පරිස්සම් වෙන්න ඕන තැනක්', desc: 'මේක බයවෙන්න ඕන දෙයක් නෙමෙයි. හැබැයි තීරණයක් ගනිද්දී දෙපාරක් හිතලා කරන්න කියන එක තමයි මේකෙන් මතක් කරන්නේ.' };
+    if (category.indexOf('moon') !== -1) return { label: 'හිතේ සැනසිල්ල සහ සමාජයේ නම', desc: 'මිනිස්සු එක්ක කතාබහ කරලා ඔවුන්ගේ විශ්වාසය දිනාගන්න සහ හිතේ නිදහස අඩුවක් නැතුව තියාගන්න තියෙන හැකියාව.' };
+    if (category.indexOf('education') !== -1) return { label: 'ඉගෙනීමට සහ කලා හැකියාවට ආශිර්වාදය', desc: 'අලුත් දේවල් ඉක්මනින් ඉගෙනගන්න, ලස්සනට කතා කරන්න සහ නිර්මාණශීලී වැඩ වලට ස්වභාවධර්මයෙන් ලැබෙන සහාය.' };
+    if (category.indexOf('character') !== -1) return { label: 'හොඳ නම සහ විශ්වාසය රැකීම', desc: 'කොච්චර දියුණු වුණත් ගුණවත් විදිහට ඉඳලා, සමාජයේ තමන්ගේ නම වගේම මිනිස්සුන්ගේ විශ්වාසය රැකගන්න තියෙන පින.' };
+    if (category.indexOf('personality') !== -1 || category.indexOf('panch') !== -1) return { label: 'පෞරුෂයේ විශේෂ ආකර්ෂණය', desc: 'අනිත් අයගේ හිත ඇදගන්න විදිහට කතා කරන්න, හැසිරෙන්න සහ පිරිසක් මැද තමන්ව කැපී පෙනෙන්න තියෙන සහජ දක්ෂකම.' };
+    if (category.indexOf('protection') !== -1 || category.indexOf('benefic') !== -1) return { label: 'සහාය සහ ආශීර්වාදය', desc: 'ප්‍රශ්නයක් ආවත් ඒක ලොකුවට දැනෙන්න කලින් කොහෙන් හරි පිහිටක් ලැබිලා ඒක මගහරවා ගන්න තියෙන ආරක්ෂාව.' };
+    if (category.indexOf('sun') !== -1) return { label: 'කතාබහෙන් අනිත් අයව මෙහෙයවීම', desc: 'ඔයා පාවිච්චි කරන වචන වලින් සහ කතාවෙන් අනිත් අයව හරියටම තේරුම් කරලා ඔවුන්ට බලපෑමක් කරන්න තියෙන හැකියාව.' };
+    if (category.indexOf('neechabhanga') !== -1) return { label: 'දුර්වලකම ශක්තියක් කරගැනීම', desc: 'මුලදී බැහැ වගේ පේන දෙයක් වුණත්, කල් යද්දී ඒකම ජීවිතේ ලොකුම ශක්තියක් බවට පත්කරගන්න පුළුවන් අපූරු පිහිටීමක්.' };
+    return { label: 'ඔයාට සහාය වෙන සහජ ශක්තියක්', desc: 'ජීවිතේ එදිනෙදා තීරණ ගනිද්දී ඔයාට නොදැනීම ජීවිතේ ඉස්සරහට අරන් යන්න උදව් වෙන ස්වභාවික හැකියාවක්.' };
   }
-  if (category.indexOf('viparita') !== -1) return { label: 'Resilience Support', desc: 'A placement that can turn difficulty into practical strength through persistence.' };
-  if (category.indexOf('raja') !== -1) return { label: 'Leadership Support', desc: 'A placement that can help you step forward, take responsibility, and influence others.' };
-  if (category.indexOf('dhana') !== -1) return { label: 'Money and Growth Support', desc: 'A placement that can support prosperity when effort and timing come together.' };
-  if (category.indexOf('dosha') !== -1 || category.indexOf('challenge') !== -1) return { label: 'Care Point', desc: 'Not something to fear; it simply asks for more awareness before big decisions.' };
-  if (category.indexOf('moon') !== -1) return { label: 'Mind and Reputation Support', desc: 'A placement that can support emotional rhythm, public trust, and everyday connection.' };
-  if (category.indexOf('education') !== -1) return { label: 'Learning and Creative Support', desc: 'A placement that can support knowledge, speech, creativity, and understanding.' };
-  if (category.indexOf('character') !== -1) return { label: 'Trusted Character Support', desc: 'A placement that can support reputation, ethical conduct, and public confidence.' };
-  if (category.indexOf('personality') !== -1 || category.indexOf('panch') !== -1) return { label: 'Personality Support', desc: 'A placement that can strengthen presence, charm, and self-expression.' };
-  if (category.indexOf('protection') !== -1 || category.indexOf('benefic') !== -1) return { label: 'Protection and Blessing Support', desc: 'A placement that can soften pressure and bring support from good guidance.' };
-  if (category.indexOf('sun') !== -1) return { label: 'Speech and Presence Support', desc: 'A placement that can help you influence through words, memory, and presence.' };
-  if (category.indexOf('neechabhanga') !== -1) return { label: 'Weakness-to-Strength Support', desc: 'A placement that can turn an early challenge into strength over time.' };
-  return { label: 'Natural Strength', desc: 'A supportive pattern that can help you make better choices in real life.' };
+  
+  if (category.indexOf('viparita') !== -1) return { label: 'Triumph Through Trials', desc: 'A deeply resilient placement that helps you learn from difficult times and completely rebuild yourself stronger than before.' };
+  if (category.indexOf('raja') !== -1) return { label: 'Natural Leadership Energy', desc: 'A powerful placement that helps you easily step up, take charge, and make a real impact on people around you.' };
+  if (category.indexOf('dhana') !== -1) return { label: 'Wealth & Prosperity Flow', desc: 'A highly supportive combination that attracts financial growth when you align your hard work with the right timing.' };
+  if (category.indexOf('dosha') !== -1 || category.indexOf('challenge') !== -1) return { label: 'Mindful Care Point', desc: 'This is absolutely not something to fear—it simply acts as a caution sign reminding you to double-check before major decisions.' };
+  if (category.indexOf('moon') !== -1) return { label: 'Emotional & Public Support', desc: 'A placement that protects your inner peace while naturally drawing trust, popularity, and supportive daily relationships.' };
+  if (category.indexOf('education') !== -1) return { label: 'Intellectual & Creative Gift', desc: 'A beautiful placement that enhances your ability to learn quickly, speak beautifully, and express yourself creatively.' };
+  if (category.indexOf('character') !== -1) return { label: 'Strong Moral Character', desc: 'A placement that ensures you build a solid, trustworthy reputation and maintain ethical balance throughout your success.' };
+  if (category.indexOf('personality') !== -1 || category.indexOf('panch') !== -1) return { label: 'Magnetic Personality', desc: 'A placement that greatly enhances your charm, physical presence, and the way you present yourself to the world.' };
+  if (category.indexOf('protection') !== -1 || category.indexOf('benefic') !== -1) return { label: 'Divine Protection & Grace', desc: 'A shielding placement that softens life\'s blows and ensures you receive the right help and guidance exactly when needed.' };
+  if (category.indexOf('sun') !== -1) return { label: 'Commanding Speech & Presence', desc: 'A placement that gives your words weight and power, making it incredibly easy for you to influence and persuade others.' };
+  if (category.indexOf('neechabhanga') !== -1) return { label: 'Weakness Turned to Power', desc: 'A unique pattern where an area that initially brings struggle transforms into one of your greatest long-term strengths.' };
+  return { label: 'Natural Flowing Strength', desc: 'A fundamentally positive pattern in your chart that continually helps you navigate life and make the right choices.' };
 }
 
 function getKendaraStrengthCategoryLabel(category, language) {
@@ -649,48 +682,48 @@ function getKendaraChallengeCopy(item, language) {
   if (language === 'si') {
     if (item && item.cancelled) {
       return {
-        label: 'මෙය දැන් දැඩි අවදානමක් නොවෙයි',
-        desc: 'කේන්දරේ අනිත් සහායක ආකෘති මේ බලපෑම අඩු කරලා තියෙනවා. සාමාන්‍ය විදිහට ඉන්නෙන් ඉස්සරහට යන්න.',
+        label: 'මේකෙන් ලොකු බලපෑමක් නෑ',
+        desc: 'ඔයාගේ කේන්දරේ තියෙන අනිත් ශක්තිමත් පිහිටීම් නිසා මේකෙන් එන අභියෝග මගහැරිලා ගිහින්. ඒ නිසා මේ ගැන බයවෙන්න දෙයක් නැහැ.',
       };
     }
     if (severity.indexOf('severe') !== -1) {
       return {
-        label: 'වැදගත්ම තීරණ වලදී දෙවරක් හිතන්න',
-        desc: 'හදිසි තීරණ, කෝපයෙන් කතා කිරීම, හෝ බලෙන් වැඩ කරවීමෙන් පීඩනය වැඩි වෙන්න පුළුවන්. ඉවසීමෙන් සහ හොඳ උපදෙස් එක්ක ගියොත් මේක හොඳින් කළමනාකරණය කරගන්න පුළුවන්.',
+        label: 'ලොකු තීරණ ගනිද්දී පරිස්සම් වෙන්න',
+        desc: 'හදිස්සි වෙලා ගන්න තීරණ සහ කේන්තියෙන් වැඩ කරන එකෙන් මේ කාලේ ප්‍රශ්න වැඩිවෙන්න පුළුවන්. හැම ආරවුලක්ම ඉවසීමෙන් සහ කතාබහ කරලා විසඳගන්න එක තමයි හොඳම දේ.',
       };
     }
     if (severity.indexOf('moderate') !== -1) {
       return {
-        label: 'කලබල නොවී සැලසුම් කරගෙන යන්න',
-        desc: 'මේ පිහිටීම ජීවිතයේ සමහර තැන්වල ප්‍රමාදයක් හරි අමතර වගකීමක් හරි දෙන්න පුළුවන්. වැඩ කලින් සැලසුම් කරලා, හදිසි ප්‍රතිචාර වලින් වැළකෙන්න.',
+        label: 'කලබල නැතුව ඉස්සරහට යන්න',
+        desc: 'මේ පිහිටීම නිසා සමහර වැඩ පරක්කු වෙන්න හරි, අමතර වගකීම් පැවරෙන්න හරි පුළුවන්. ඒ නිසා හැමදේකටම කලින් සූදානම් වෙලා ඉන්න එක ගොඩක් වැදගත්.',
       };
     }
     return {
-      label: 'සාමාන්‍ය විදිහට ඉන්නක් තියාගන්න',
-      desc: 'මෙය බය විය යුතු දෙයක් නොවෙයි. දෛනික වැඩ වලදී ඉවසීම, පැහැදිලි කතාබහ, සහ අධික අවදානම් තීරණ වලින් වැළකීම ප්‍රයෝජනවත් වේ.',
+      label: 'සාමාන්‍ය විදිහට කල්පනාවෙන් ඉන්න',
+      desc: 'මේක එච්චර බයවෙන්න ඕන දෙයක් නෙමෙයි. දෛනික වැඩ වලදී ඉවසීමෙන් කටයුතු කරලා, අනවශ්‍ය අවදානම් නොගෙන හිටියා නම් හොඳටම ඇති.',
     };
   }
   if (item && item.cancelled) {
     return {
-      label: 'This is not a major risk now',
-      desc: 'Other supportive placements soften this influence. Keep normal awareness and move forward steadily.',
+      label: 'Impact is Naturally Softened',
+      desc: 'Other strong placements in your chart have naturally neutralized this challenge. You don\'t need to worry about this area.',
     };
   }
   if (severity.indexOf('severe') !== -1) {
     return {
-      label: 'Think twice before major decisions',
-      desc: 'Rushed choices, angry conversations, or forcing outcomes can add pressure. Patience and good advice help you manage this well.',
+      label: 'Take Extra Time on Major Decisions',
+      desc: 'Rushing into things or reacting with anger will likely backfire right now. The best way forward is extreme patience and talking things out calmly.',
     };
   }
   if (severity.indexOf('moderate') !== -1) {
     return {
-      label: 'Plan calmly and avoid rushing',
-      desc: 'This placement can bring delay or extra responsibility in some areas. Planning ahead and avoiding reactive decisions will help.',
+      label: 'Plan Steadily, Avoid Rushing',
+      desc: 'You might face a few delays or added responsibilities because of this. Preparing in advance and staying out of sudden drama will protect your peace.',
     };
   }
   return {
-    label: 'Keep normal awareness',
-    desc: 'This is not something to fear. Patience, clear communication, and avoiding unnecessary risks are enough here.',
+    label: 'Maintain Gentle Awareness',
+    desc: 'There\'s nothing to be afraid of here. Just handle your day-to-day matters patiently and avoid taking completely unnecessary risks.',
   };
 }
 
@@ -699,49 +732,49 @@ function getKendaraIssueCopy(item, language) {
   var rawText = [item && item.name, item && item.sinhala, item && item.description, item && item.descriptionSi, item && item.type].filter(Boolean).join(' ').toLowerCase();
   var isSi = language === 'si';
   var issue = isSi
-    ? { name: 'කේන්දරේ පෙන්වන සැලකිලිමත් කරුණ', meaning: 'මේ පෙන්වන්නේ ඔයාගේ ජීවිතයේ වැඩිපුර හිතන්න ඕන තැනක්.' }
-    : { name: 'Chart care point', meaning: 'This shows a life area that needs extra awareness.' };
+    ? { name: 'සැලකිලිමත් වෙන්න ඕන තැනක්', meaning: 'මේකෙන් පෙන්වන්නේ ඔයාගේ ජීවිතේ වැඩිපුර හිතලා, පරිස්සමෙන් තීරණ ගන්න ඕන පැත්තක්.' }
+    : { name: 'Chart Focus Area', meaning: 'This highlights a specific part of your life where being extra mindful will help you avoid unnecessary stress.' };
 
   if (/mars|mangal|kuja|අංගහරු|කුජ/.test(rawText)) {
     issue = isSi
-      ? { name: 'කුජ බලපෑම - සබඳතා වල තීව්‍රතාව', meaning: 'කුජ පිහිටීම නිසා ආදරය, විවාහය, හෝ සමීප සබඳතා වලදී ඉක්මන් කෝපය, තද ප්‍රතිචාර, හරි අධික බලපෑමක් ඇති වෙන්න පුළුවන්ද කියලා මෙතනින් බලනවා.' }
-      : { name: 'Mars influence - relationship intensity', meaning: 'Checks whether Mars can create impatience, strong reactions, or intensity in close relationships.' };
+      ? { name: 'කුජ බලපෑම - සබඳතා වල තීව්‍රතාව', meaning: 'ආදරය, සහකාරයා වගේ කිට්ටු බැඳීම් වලදී ඉක්මනට කේන්ති යන්න, හිතුවක්කාර තීරණ ගන්න මේකෙන් බලපෑමක් වෙන්න පුළුවන්. ඒ ගැන පරිස්සම් වෙන්න.' }
+      : { name: 'Mars Influence - Relationship Intensity', meaning: 'Watch out for sudden impatience or taking things too aggressively in your close relationships and marriage.' };
   } else if (/kaal|sarp|කාල සර්ප/.test(rawText)) {
     issue = isSi
-      ? { name: 'රාහු-කේතු පීඩනය - හදිසි වෙනස්වීම්', meaning: 'ජීවිතයේ සමහර කාලවල හදිසි ඉහළ-පහළ යාම්, ප්‍රමාද, හෝ පැහැදිලි නැති බාධා වැඩි වෙන්න පුළුවන්ද කියලා මෙතනින් බලනවා.' }
-      : { name: 'Rahu-Ketu pressure - sudden changes', meaning: 'Checks whether life may bring sudden ups and downs, delay, or unclear obstacles.' };
+      ? { name: 'රාහු-කේතු බලපෑම - හදිසි වෙනස්වීම්', meaning: 'ජීවිතේ හදිසි වෙනස්කම්, බලාපොරොත්තු නොවුණු ප්‍රමාදයන් ගේන්න මේකෙන් පුළුවන්. කලබල නොවී ඉවසීමෙන් ඉන්න එක තමයි හොඳම දේ.' }
+      : { name: 'Rahu-Ketu Shift - Sudden Changes', meaning: 'This indicates periods where life brings unexpected ups and downs. The best approach is to stay calm and not rush major decisions.' };
   } else if (/saturn.*7\.5|sade|ශනි පැමිණීම/.test(rawText)) {
     issue = isSi
-      ? { name: 'සෙනසුරු කාල පීඩනය - වගකීම් සහ ප්‍රමාද', meaning: 'දැනට සෙනසුරු ගමන නිසා වැඩි වගකීම්, මනසට බරක්, හෝ ප්‍රමාදයක් දැනෙන්න පුළුවන්ද කියලා මෙතනින් බලනවා.' }
-      : { name: 'Saturn period pressure - responsibility and delay', meaning: 'Checks whether Saturn is currently adding responsibility, pressure, or delay.' };
+      ? { name: 'සෙනසුරු කාලය - වගකීම් සහ ප්‍රමාද', meaning: 'මේ කාලේදී වැඩියෙන් වගකීම්, මනසට වෙහෙස සහ කරන වැඩ වල ප්‍රමාදයන් දැනෙන්න පුළුවන්. පිළිවෙළකට මහන්සි වෙලා වැඩ කරන එක තමයි එකම විසඳුම.' }
+      : { name: 'Saturn Transit - Responsibility & Delay', meaning: 'You might feel extra heavy responsibilities, delays, or mental pressure right now. Staying disciplined and patient is your key to getting through it.' };
   } else if (/family heritage|pitru|පිතෘ|පරම්පරා/.test(rawText)) {
     issue = isSi
-      ? { name: 'පවුල් රටාව - පියා/මුල් පවුලෙන් එන බලපෑම', meaning: 'පවුලේ පරණ රටා, පියා සම්බන්ධ කරුණු, හෝ වැඩිහිටියන්ගෙන් එන වගකීම් ජීවිත දිශාවට බලපාන විදිහ මෙතනින් බලනවා.' }
-      : { name: 'Family pattern - father or roots influence', meaning: 'Checks whether family patterns, father-related matters, or inherited responsibilities affect life direction.' };
+      ? { name: 'පවුල් රටාව - මුල් පවුලෙන් එන බලපෑම', meaning: 'පවුලෙන් එන පරණ පුරුදු, තාත්තා සම්බන්ධ දේවල් සහ වැඩිහිටියන්ගේ වගකීම් ඔයාගේ ජීවිතේ ඉස්සරහට යන්න බලපෑම් කරනවා.' }
+      : { name: 'Family Pattern - Ancestral Influence', meaning: 'Old family dynamics, father-related matters, or generational expectations are actively playing a role in your life choices right now.' };
   } else if (/solar|සූර්ය/.test(rawText)) {
     issue = isSi
-      ? { name: 'රවි සංවේදිතාව - ආත්ම විශ්වාසය සහ අධිකාරීන්', meaning: 'ආත්ම විශ්වාසය, පියා/අධිකාරීන්, සහ නායකත්ව තීරණ වලදී ගොඩක් කල්පනාවෙන් ඉන්නක් ඕනෙද කියලා මෙතනින් බලනවා.' }
-      : { name: 'Sun sensitivity - confidence and authority', meaning: 'Checks confidence, father or authority matters, and leadership decisions.' };
+      ? { name: 'රවි සංවේදිතාව - ආත්ම විශ්වාසය සහ තීරණ', meaning: 'තමන් ගැන තියෙන විශ්වාසය, රැකියාවේ ලොකු අය එක්ක තියෙන සම්බන්ධය සහ ලොකු තීරණ ගන්නකොට දෙපාරක් හිතන්න වෙනවා.' }
+      : { name: 'Sun Sensitivity - Confidence & Authority', meaning: 'Take extra care when dealing with authority figures, making leadership decisions, or handling matters that affect your self-esteem.' };
   } else if (/lunar|moon|චන්ද්‍ර/.test(rawText) && !/saturn|ශනි/.test(rawText)) {
     issue = isSi
-      ? { name: 'සඳු සංවේදිතාව - මනස සහ හැඟීම්', meaning: 'මනස, නිදහස, නින්ද, මව/සැනසීම සම්බන්ධ කරුණු වලදී වැඩි අවධානයක් අවශ්‍යදැයි මෙයින් බලනවා.' }
-      : { name: 'Moon sensitivity - mind and emotions', meaning: 'Checks mental peace, sleep, comfort, mother-related matters, and emotional steadiness.' };
+      ? { name: 'සඳු සංවේදිතාව - මනස සහ හැඟීම්', meaning: 'හිතට දැනෙන සැනසිල්ල අඩුවෙන්න, නින්දට බාධා වෙන්න, අම්මා සම්බන්ධ දේවල් ගැන වැඩිපුර හිතන්න මේකෙන් සිද්ධ වෙනවා.' }
+      : { name: 'Moon Sensitivity - Emotional Balance', meaning: 'Your mind and emotional peace need extra protection right now. Prioritize your mental health, good sleep, and inner comfort.' };
   } else if (/moon-saturn|චන්ද්‍ර-ශනි/.test(rawText)) {
     issue = isSi
-      ? { name: 'සඳු-ශනි පීඩනය - හැඟීම් දරාගැනීම', meaning: 'හැඟීම් ඇතුළට තබාගැනීම, තනිකම, හෝ මනසට බරක් දැනෙන රටාවක් තිබේදැයි මෙයින් බලනවා.' }
-      : { name: 'Moon-Saturn pressure - emotional heaviness', meaning: 'Checks whether emotions are carried quietly, with loneliness, restraint, or mental heaviness.' };
+      ? { name: 'සඳු-ශනි පීඩනය - හැඟීම් දරාගැනීම', meaning: 'ප්‍රශ්න ආවාම කොතරම් දුක හිතුණත් තනියම ඒවා දරාගෙන ඉන්න ඔයා පුරුදු වෙලා. මේකෙන් හිතට ලොකු බරක් දැනෙනවා.' }
+      : { name: 'Moon-Saturn Weight - Emotional Heavy Lifting', meaning: 'You tend to carry your emotional burdens silently and alone. It’s important to release this mental heaviness and not isolate yourself.' };
   } else if (/saturn-rahu|ශනි-රාහු/.test(rawText)) {
     issue = isSi
-      ? { name: 'ශනි-රාහු පීඩනය - අනපේක්ෂිත බාධා', meaning: 'අනපේක්ෂිත ප්‍රමාද, විස්තර නොපෙනෙන බාධා, සහ දිගටම ඉවසීම ඕනේ තැන් මෙතනින් බලනවා.' }
-      : { name: 'Saturn-Rahu pressure - unexpected obstacles', meaning: 'Checks unexpected delays, unclear obstacles, and areas that need steady discipline.' };
+      ? { name: 'ශනි-රාහු බලපෑම - අනපේක්ෂිත බාධා', meaning: 'ඉස්සරහට යනකොට නොපෙනෙන දේවල් වලින් බාධා, ප්‍රමාදයන් එන්න පුළුවන්. ඒ නිසා හැමදේකටම කල්තියා සූදානම් වෙලා ඉන්න.' }
+      : { name: 'Saturn-Rahu Tension - Unseen Obstacles', meaning: 'Watch out for confusing delays or complicated obstacles. Pushing forward requires careful planning and immense patience.' };
   } else if (/jupiter|guru|ගුරු/.test(rawText)) {
     issue = isSi
-      ? { name: 'ගුරු බලපෑම - උපදෙස් සහ විශ්වාස තෝරාගැනීම', meaning: 'ගුරු/උපදේශකයින්, විශ්වාස, අධ්‍යාපනය, සහ වැදගත්ම උපදෙස් තෝරාගැනීමේදී පැහැදිලි බව ඕනෙද කියලා මෙතනින් බලනවා.' }
-      : { name: 'Jupiter influence - advice and beliefs', meaning: 'Checks clarity around mentors, beliefs, education, and important advice.' };
+      ? { name: 'ගුරු බලපෑම - උපදෙස් සහ තීරණ', meaning: 'අධ්‍යාපනයට, ජීවිතේට ගන්න උපදෙස් සහ විශ්වාස කරන දේවල් ගැන ලොකු වගකීමකින් තීරණ ගන්න ඕන කාලයක්.' }
+      : { name: 'Jupiter Caution - Advice & Growth', meaning: 'Be very mindful about whom you take advice from, your educational choices, and the larger beliefs guiding your life right now.' };
   } else if (/financial|daridra|මූල්‍ය/.test(rawText)) {
     issue = isSi
-      ? { name: 'මුදල් කළමනාකරණ අභියෝගය', meaning: 'ආදායම, වියදම්, ඉතුරුම්, සහ මුදල් තීරණ වලදී වැඩි පිළිවෙළක් ඕනෙද කියලා මෙතනින් බලනවා.' }
-      : { name: 'Financial management challenge', meaning: 'Checks whether income, spending, savings, and money decisions need more structure.' };
+      ? { name: 'මූල්‍ය කළමනාකරණය', meaning: 'වියදම් වැඩිවෙන්න, ඉතුරුම් නැතිවෙන්න පුළුවන් නිසා සල්ලි සම්බන්ධ තීරණ ගැනීමේදී ගොඩක් සැලකිලිමත් වෙන්න ඕන.' }
+      : { name: 'Financial Caution - Money Management', meaning: 'You need strict discipline with your finances right now. Avoid unnecessary spending and carefully monitor your savings and investments.' };
   }
 
   issue.technical = rawName || (isSi ? 'නම නොමැති ගණනයක්' : 'Unnamed calculation');
@@ -751,14 +784,16 @@ function getKendaraIssueCopy(item, language) {
 function getKendaraCancellationCopy(item, language) {
   var reason = String((item && item.cancellationReason) || (item && item.details && item.details.cancellationReason) || '');
   var rawText = [item && item.name, item && item.sinhala, item && item.description, item && item.descriptionSi, reason].filter(Boolean).join(' ').toLowerCase();
+  
   if (language === 'si') {
-    if (/mars|mangal|kuja|අංගහරු|කුජ/.test(rawText)) return 'කුජ තමන්ට ශක්තිමත් රාශියක ඉන්න නිසා හරි ගුරුගේ සහායක දෘෂ්ටිය ලැබීම නිසා, සබඳතා වලට එන කුජ පීඩනය අඩු වෙලා තියෙනවා.';
-    if (/moon-saturn|චන්ද්‍ර-ශනි/.test(rawText)) return 'ගුරුගේ සහායක බලපෑම සඳු-ශනි පීඩනය මෘදු කරන නිසා, හැඟීම් සම්බන්ධ අභියෝග කළමනාකරණය කරගන්න පහසුයි.';
-    return reason ? cleanKendaraExplanation(reason, language) : 'කේන්දරේ අනිත් හොඳ පිහිටීම් මේ කරුණේ බලපෑම අඩු කරලා තියෙනවා.';
+    if (/mars|mangal|kuja|අංගහරු|කුජ/.test(rawText)) return 'ඔයාගේ කේන්දරේ කුජ බලවත්ව ඉන්න නිසා හරි, ගුරුගේ ආශිර්වාදය තියෙන නිසා හරි සබඳතා වලට එන ප්‍රශ්න ගොඩක් දුරට මගහැරිලා යනවා.';
+    if (/moon-saturn|චන්ද්‍ර-ශනි/.test(rawText)) return 'ගුරුගේ බලපෑම නිසා මේ දෙන්නගේ එකතුවෙන් එන මානසික පීඩනය මෘදු කරලා තියෙනවා. ඒ නිසා ප්‍රශ්න ආවත් ඒවා දරාගන්න තරම් හිතේ හයියක් ඔයාට තියෙනවා.';
+    return reason ? cleanKendaraExplanation(reason, language) : 'කේන්දරේ තියෙන අනිත් ශක්තිමත් පිහිටීම් නිසා මේකෙන් ලොකු බලපෑමක් වෙන්නේ නැහැ. මේ ගැන බයවෙන්න දෙයක් නැහැ.';
   }
-  if (/mars|mangal|kuja/.test(rawText)) return 'Mars is in a stronger position or receives supportive Jupiter influence, so the relationship pressure is reduced.';
-  if (/moon-saturn/.test(rawText)) return 'Supportive Jupiter influence softens the Moon-Saturn pressure, making emotional challenges easier to manage.';
-  return reason ? cleanKendaraExplanation(reason, language) : 'Other supportive placements reduce the effect of this issue.';
+  
+  if (/mars|mangal|kuja/.test(rawText)) return 'Because Mars is placed in a strong position or receives Jupiter\'s steadying energy, the typical relationship tension it normally brings is smoothed out.';
+  if (/moon-saturn/.test(rawText)) return 'Jupiter\'s positive energy acts like a shield, softening the emotional heaviness here. You have the natural resilience to handle stress without letting it drag you down.';
+  return reason ? cleanKendaraExplanation(reason, language) : 'Other very strong and positive placements in your chart naturally protect you, heavily reducing the impact of this particular area.';
 }
 
 function cleanKendaraExplanation(text, language) {
@@ -766,16 +801,16 @@ function cleanKendaraExplanation(text, language) {
   var out = String(text);
   var replacements = language === 'si'
     ? [
-        [/Nakshatra|නක්ෂත්‍ර/g, 'උපන් නැකතෙන් පෙන්වන ගුණය'], [/Tithi|තිථි/g, 'සඳුගේ රිද්මය'], [/Yoga|Yogas|යෝග/g, 'ශක්ති පිහිටීම්'],
-        [/Dosha|Doshas|දෝෂ/g, 'සැලකිලිමත් විය යුතු කරුණු'], [/Navamsha|D9|D-9/g, 'විවාහ සහ අභ්‍යන්තර දැක්ම'], [/Rashi|රාශි/g, 'රාශි පිහිටීම'],
-        [/Lagna|ලග්න/g, 'ලග්නය'], [/Dasha|දශා/g, 'ජීවිතයේ කාල අදියර'], [/Atmakaraka/g, 'ප්‍රධාන අභ්‍යන්තර ශක්තිය'], [/Upapada/g, 'කැපවීමේ රටාව'],
-        [/Rahu|රාහු/g, 'වර්ධන පාඩම'], [/Ketu|කේතු/g, 'අභ්‍යන්තර නිදහස'], [/planetary positions|planet positions/gi, 'උපන් ශක්ති රටා'],
+        [/Nakshatra|නක්ෂත්‍ර/g, 'උපන් නැකතේ ශක්තිය'], [/Tithi|තිථි/g, 'සඳුගේ රිද්මය'], [/Yoga|Yogas|යෝග/g, 'විශේෂ ශක්තීන්'],
+        [/Dosha|Doshas|දෝෂ/g, 'පරිස්සම් වෙන්න ඕන පැති'], [/Navamsha|D9|D-9/g, 'ජීවිතේ ගැඹුරු බැඳීම්'], [/Rashi|රාශි/g, 'මූලික ජීවන රටාව'],
+        [/Lagna|ලග්න/g, 'ජීවිතේ යන පාර'], [/Dasha|දශා/g, 'මේ ගතකරන කාලය'], [/Atmakaraka/g, 'ආත්මයේ ඇත්තම ආශාව'], [/Upapada/g, 'ආදරය සහ බැඳීම'],
+        [/Rahu|රාහු/g, 'අලුත් දේවල් හොයන ආශාව'], [/Ketu|කේතු/g, 'අත්හැරීමේ සහජ ඉව'], [/planetary positions|planet positions/gi, 'උපන් වෙලාවේ ග්‍රහ ශක්තීන්'],
       ]
     : [
-        [/Nakshatra/g, 'Birth Focus'], [/Tithi/g, 'Moon Rhythm'], [/Yoga|Yogas/g, 'Strength Patterns'], [/Dosha|Doshas/g, 'Care Points'],
-        [/Navamsha|D9|D-9/g, 'Deep Relationship View'], [/Rashi/g, 'Life Area'], [/Lagna/g, 'Life Direction'], [/Dasha/g, 'Life Period'],
-        [/Atmakaraka/g, 'Core Inner Energy'], [/Upapada/g, 'Commitment Style'], [/Rahu/g, 'Growth Lesson'], [/Ketu/g, 'Inner Freedom'],
-        [/planetary positions|planet positions/gi, 'birth energy patterns'], [/Vedic astrology/gi, 'this life reading'],
+        [/Nakshatra/g, 'Inner Mindset'], [/Tithi/g, 'Emotional Rhythm'], [/Yoga|Yogas/g, 'Hidden Strengths'], [/Dosha|Doshas/g, 'Areas to Watch'],
+        [/Navamsha|D9|D-9/g, 'Deep Connection View'], [/Rashi/g, 'Life Energy'], [/Lagna/g, 'Life Path'], [/Dasha/g, 'Current Life Focus'],
+        [/Atmakaraka/g, 'Soul Purpose'], [/Upapada/g, 'Relationship Style'], [/Rahu/g, 'Eager Ambitions'], [/Ketu/g, 'Spiritual Instincts'],
+        [/planetary positions|planet positions/gi, 'natural energy patterns'], [/Vedic astrology/gi, 'this life reading'],
       ];
   replacements.forEach(function(pair) { out = out.replace(pair[0], pair[1]); });
   return out;
@@ -1328,8 +1363,8 @@ export default function KendaraScreen() {
           </Text>
           <Text style={styles.cardIntro}>
             {language === 'si'
-              ? 'එක් එක් ග්‍රහයාගෙන් පෙන්වන්නේ ඔයාගේ ජීවිතේ විවිධ ශක්තීන්. ඒ අය ඉන්න රාශිය අනුව ඒ ශක්තිය වැඩ කරන විදිහ වෙනස් වෙනවා.'
-              : 'Each planet describes one kind of energy. The sign shows where that energy tends to show up.'}
+              ? 'ග්‍රහයන්ගෙන් පෙන්වන්නේ ඔයාගේ ජීවිතේ එක එක කොටස්. එයාලා ඉන්න තැන් අනුව ඒ දේවල් ඔයාගේ ජීවිතේට බලපාන විදිහ මෙතනින් බලාගන්න පුළුවන්.'
+              : 'Each planet represents a different part of your personality. Its sign and house show how that energy plays out in your daily life.'}
           </Text>
           {chartData.rashiChart && chartData.rashiChart.map(function(entry) {
             if (!entry.planets || entry.planets.length === 0) return null;

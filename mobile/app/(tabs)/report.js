@@ -119,6 +119,23 @@ var SECTION_TITLES = {
 var MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var MONTH_NAMES_SI = ['ජන','පෙබ','මාර්','අප්‍රේ','මැයි','ජූනි','ජූලි','අගෝ','සැප්','ඔක්','නොවැ','දෙසැ'];
 
+// ── Safe date/time extraction from ISO or mixed formats ──
+// Extracts just the YYYY-MM-DD portion from an ISO datetime or date string
+function extractDateOnly(str) {
+  if (!str) return '';
+  var s = String(str);
+  var m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : s;
+}
+
+// Extracts just the HH:MM portion from an ISO datetime string like "1998-10-09T09:16:00"
+function extractTimeFromISO(str) {
+  if (!str) return '';
+  var s = String(str);
+  var m = s.match(/T(\d{2}:\d{2})/);
+  return m ? m[1] : '';
+}
+
 // Format a birthDate string (ISO or YYYY-MM-DD) to human-friendly "09 Oct 1998"
 function formatBirthDateDisplay(dateStr, lang) {
   if (!dateStr) return '';
@@ -1151,10 +1168,10 @@ export default function ReportScreen() {
   var insets = useScreenInsets();
   var [birthDate, setBirthDate] = useState('1998-10-09');
   var [birthTime, setBirthTime] = useState('09:16');
-  var [birthLocation, setBirthLocation] = useState('Colombo');
-  var [birthLat, setBirthLat] = useState(6.9271);
-  var [birthLng, setBirthLng] = useState(79.8612);
-  var [selectedCity, setSelectedCity] = useState({ name: 'Colombo', country: 'Sri Lanka', countryCode: 'LK', lat: 6.9271, lng: 79.8612 });
+  var [birthLocation, setBirthLocation] = useState('');
+  var [birthLat, setBirthLat] = useState(null);
+  var [birthLng, setBirthLng] = useState(null);
+  var [selectedCity, setSelectedCity] = useState(null);
   var handleCitySelect = useCallback(function(city) {
     setSelectedCity(city);
     setBirthLocation(city.name);
@@ -1251,8 +1268,8 @@ export default function ReportScreen() {
               return {
                 id: r.id,
                 userName: r.userName || '',
-                birthDate: r.birthDate || '',
-                birthTime: '',
+                birthDate: extractDateOnly(r.birthDate) || '',
+                birthTime: extractTimeFromISO(r.birthDate) || '',
                 birthLocation: r.birthLocation || '',
                 birthLat: r.lat || null,
                 birthLng: r.lng || null,
@@ -1347,11 +1364,23 @@ export default function ReportScreen() {
         if (res && res.data) {
           var d = res.data;
           setUserName(d.userName || entry.userName || '');
-          setBirthDate(d.birthDate || entry.birthDate || '1998-10-09');
-          setBirthTime(entry.birthTime || '09:16');
-          setBirthLocation(d.birthLocation || entry.birthLocation || 'Colombo');
-          setBirthLat(d.lat || entry.birthLat || 6.9271);
-          setBirthLng(d.lng || entry.birthLng || 79.8612);
+          // Server stores birthDate as full ISO (e.g. "1973-02-10T09:16:00") — extract parts
+          var serverBirthDate = d.birthDate || entry.birthDate || '';
+          setBirthDate(extractDateOnly(serverBirthDate) || '1998-10-09');
+          // Extract time from ISO, then from entry, then from birthData
+          var resolvedTime = entry.birthTime || extractTimeFromISO(serverBirthDate) || (d.birthData && d.birthData.birthTime) || '';
+          setBirthTime(resolvedTime || '00:00');
+          setBirthLocation(d.birthLocation || entry.birthLocation || '');
+          setBirthLat(d.lat || entry.birthLat || null);
+          setBirthLng(d.lng || entry.birthLng || null);
+          var loadedCity = (d.birthLocation || entry.birthLocation) ? {
+            name: d.birthLocation || entry.birthLocation,
+            country: '',
+            countryCode: '',
+            lat: d.lat || entry.birthLat || 0,
+            lng: d.lng || entry.birthLng || 0,
+          } : null;
+          setSelectedCity(loadedCity);
           setReportLang(d.language || entry.reportLang || 'en');
           setUserGender(d.userGender || null);
           setUserReligion(null);
@@ -1363,7 +1392,7 @@ export default function ReportScreen() {
           };
           setAiReport(aiReportData);
           // Use rashiChart from server-saved report so the chart renders
-          setChartData(d.rashiChart ? { rashiChart: d.rashiChart, lagna: d.birthData?.lagna || null } : null);
+          setChartData(d.rashiChart && typeof d.rashiChart === 'object' ? { rashiChart: d.rashiChart, lagna: d.birthData?.lagna || null } : null);
           setScreenState('report');
         } else {
           setError(t('failedLoadReport') || 'Failed to load report from server');
@@ -1377,11 +1406,20 @@ export default function ReportScreen() {
     } else {
       // Local cached report — load directly
       setUserName(entry.userName || '');
-      setBirthDate(entry.birthDate || '1998-10-09');
-      setBirthTime(entry.birthTime || '09:16');
-      setBirthLocation(entry.birthLocation || 'Colombo');
-      setBirthLat(entry.birthLat || 6.9271);
-      setBirthLng(entry.birthLng || 79.8612);
+      var localBd = entry.birthDate || '';
+      setBirthDate(extractDateOnly(localBd) || '1998-10-09');
+      setBirthTime(entry.birthTime || extractTimeFromISO(localBd) || '00:00');
+      setBirthLocation(entry.birthLocation || '');
+      setBirthLat(entry.birthLat || null);
+      setBirthLng(entry.birthLng || null);
+      var localCity = entry.birthLocation ? {
+        name: entry.birthLocation,
+        country: '',
+        countryCode: '',
+        lat: entry.birthLat || 0,
+        lng: entry.birthLng || 0,
+      } : null;
+      setSelectedCity(localCity);
       setReportLang(entry.reportLang || 'en');
       setUserGender(entry.userGender || null);
       setUserReligion(entry.userReligion || null);
@@ -1442,8 +1480,12 @@ export default function ReportScreen() {
       console.log('[DBG-8fb141] startFullGeneration:entry', JSON.stringify({ dateStr: dateStr, gender: gender, hasChartSnap: !!chartSnapshot, hyp: 'A' }));
     }
     try {
-      setScreenState('loading');
-      setLoading(true);
+      // Loading state is already set by handleGenerate/handleRetryGeneration
+      // Only set if not already loading (safety net)
+      if (screenState !== 'loading') {
+        setScreenState('loading');
+        setLoading(true);
+      }
       setGenProgress({ stage: 'starting', sectionsDone: 0, sectionsTotal: 19, currentSection: null, completedSections: [] });
       highWaterMarkRef.current = { sectionsDone: 0, stage: 'starting' };
       wasBackgroundedDuringGen.current = false;
@@ -1474,6 +1516,9 @@ export default function ReportScreen() {
       Promise.allSettled([rawReportPromise, aiReportPromise]).then(function(results) {
         httpRawResult = results[0];
         httpAiResult = results[1];
+        httpDone = true;
+      }).catch(function(e) {
+        if (__DEV__) console.warn('[Report] Promise.allSettled wrapper error:', e && e.message);
         httpDone = true;
       });
 
@@ -1523,8 +1568,8 @@ export default function ReportScreen() {
                     if (srvRes && srvRes.data && srvRes.data.reports) {
                       setSavedReports(srvRes.data.reports.map(function(r) {
                         return {
-                          id: r.id, userName: r.userName || '', birthDate: r.birthDate || '',
-                          birthTime: '', birthLocation: r.birthLocation || '',
+                          id: r.id, userName: r.userName || '', birthDate: extractDateOnly(r.birthDate) || '',
+                          birthTime: extractTimeFromISO(r.birthDate) || '', birthLocation: r.birthLocation || '',
                           birthLat: r.lat || null, birthLng: r.lng || null,
                           reportLang: r.language || 'en', userGender: null, userReligion: null,
                           sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
@@ -1588,8 +1633,8 @@ export default function ReportScreen() {
                 if (srvRes2 && srvRes2.data && srvRes2.data.reports) {
                   setSavedReports(srvRes2.data.reports.map(function(r) {
                     return {
-                      id: r.id, userName: r.userName || '', birthDate: r.birthDate || '',
-                      birthTime: '', birthLocation: r.birthLocation || '',
+                      id: r.id, userName: r.userName || '', birthDate: extractDateOnly(r.birthDate) || '',
+                      birthTime: extractTimeFromISO(r.birthDate) || '', birthLocation: r.birthLocation || '',
                       birthLat: r.lat || null, birthLng: r.lng || null,
                       reportLang: r.language || 'en', userGender: null, userReligion: null,
                       sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
@@ -1623,8 +1668,8 @@ export default function ReportScreen() {
                     setScreenState('report');
                     setSavedReports(reportsRes.data.reports.map(function(r) {
                       return {
-                        id: r.id, userName: r.userName || '', birthDate: r.birthDate || '',
-                        birthTime: '', birthLocation: r.birthLocation || '',
+                        id: r.id, userName: r.userName || '', birthDate: extractDateOnly(r.birthDate) || '',
+                        birthTime: extractTimeFromISO(r.birthDate) || '', birthLocation: r.birthLocation || '',
                         birthLat: r.lat || null, birthLng: r.lng || null,
                         reportLang: r.language || 'en', userGender: null, userReligion: null,
                         sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
@@ -1673,7 +1718,7 @@ export default function ReportScreen() {
   // User taps Generate → validate → show paywall → pay → generate
   var handleGenerate = async function() {
     if (isGeneratingRef.current || loading) return;
-    if (!userName || !userName.trim()) {
+    if (!userName || typeof userName !== 'string' || !userName.trim()) {
       setError(reportLang === 'si' ? '\u0D9A\u0DBB\u0DD4\u0DAB\u0DCF\u0D9A\u0DBB \u0D94\u0DBA\u0DCF\u0D9C\u0DDA \u0DB1\u0DB8 \u0D87\u0DAD\u0DD4\u0DBD\u0DAD\u0DCA \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1' : 'Please enter your name');
       return;
     }
@@ -1681,12 +1726,16 @@ export default function ReportScreen() {
       setError(reportLang === 'si' ? '\u0D9A\u0DBB\u0DD4\u0DAB\u0DCF\u0D9A\u0DBB \u0DC3\u0DCA\u0DAD\u0DCA\u200D\u0DBB\u0DD3/\u0DB4\u0DD4\u0DBB\u0DD4\u0DC2 \u0DB7\u0DCF\u0DC0\u0DBA \u0DAD\u0DDD\u0DBB\u0DB1\u0DCA\u0DB1' : 'Please select your gender');
       return;
     }
+    if (!selectedCity || !birthLat || !birthLng) {
+      setError(reportLang === 'si' ? 'කරුණාකර උපන් ස්ථානය තෝරන්න' : 'Please select your birth location');
+      return;
+    }
 
     // ── Check for pending entitlement (retry after failed generation) ──
     var isRetry = false;
     try {
       var entCheck = await api.checkEntitlement('report', {
-        birthDate: birthDate + 'T' + birthTime + ':00',
+        birthDate: extractDateOnly(birthDate) + 'T' + birthTime + ':00',
         lat: birthLat,
         lng: birthLng,
         language: reportLang,
@@ -1725,24 +1774,36 @@ export default function ReportScreen() {
       }
     }
 
-    // Payment succeeded — now generate the report
+    // Payment succeeded — show loading screen IMMEDIATELY (before any API calls)
     isGeneratingRef.current = true;
+    setError(null);
+    setReport(null);
+    setAiReport(null);
+    setChartData(null);
+    setScreenState('loading');
+    setLoading(true);
+    setGenProgress({ stage: 'starting', sectionsDone: 0, sectionsTotal: 19, currentSection: null, completedSections: [] });
+
     try {
-      setError(null);
-      setReport(null);
-      setAiReport(null);
-      setChartData(null);
+      var dateStr = extractDateOnly(birthDate) + 'T' + birthTime + ':00';
 
-      var dateStr = birthDate + 'T' + birthTime + ':00';
-
-      var chartRes = await api.getBirthChart(dateStr, birthLat, birthLng, reportLang);
-      if (chartRes.data) {
-        setChartData(chartRes.data);
-      } else {
-        setError('Failed to read birth chart');
+      var chartRes = null;
+      try {
+        chartRes = await api.getBirthChart(dateStr, birthLat, birthLng, reportLang);
+      } catch (chartErr) {
+        if (__DEV__) console.warn('[Report] getBirthChart threw:', chartErr.message);
+      }
+      if (!chartRes || !chartRes.data || (typeof chartRes.data === 'object' && Object.keys(chartRes.data).length === 0)) {
+        setError(reportLang === 'si'
+          ? 'උපත් සිතියම කියවීමට අසමත් විය. කරුණාකර නැවත උත්සාහ කරන්න.'
+          : 'Failed to read birth chart. Please try again.');
+        setScreenState('failed');
+        setLoading(false);
+        setFailedGenData({ dateStr: dateStr, gender: userGender });
         isGeneratingRef.current = false;
         return;
       }
+      setChartData(chartRes.data);
 
       await startFullGeneration(dateStr, userGender, chartRes.data);
     } catch (err) {
@@ -1751,6 +1812,9 @@ export default function ReportScreen() {
       }
       var msg = err.message || 'Error';
       setError(msg);
+      setScreenState('failed');
+      setLoading(false);
+      setFailedGenData({ dateStr: extractDateOnly(birthDate) + 'T' + birthTime + ':00', gender: userGender });
       isGeneratingRef.current = false;
     }
   };
@@ -1762,7 +1826,8 @@ export default function ReportScreen() {
       var isSi = reportLang === 'si';
       var bd = (report && report.birthData) || (aiReport && aiReport.birthData) || {};
 
-      var lagnaLabel = isSi ? (bd.lagna?.sinhala || bd.lagna?.english || '') : (bd.lagna?.english || bd.lagna?.name || '');
+      var lagnaObj = (bd.lagna && typeof bd.lagna === 'object') ? bd.lagna : {};
+      var lagnaLabel = isSi ? (lagnaObj.sinhala || lagnaObj.english || (typeof bd.lagna === 'string' ? bd.lagna : '')) : (lagnaObj.english || lagnaObj.name || (typeof bd.lagna === 'string' ? bd.lagna : ''));
       var nakLabel = getBirthFocusValue(bd.nakshatra, reportLang);
 
       var resolvedTitles = SECTION_KEYS.map(function(key) {
@@ -1909,8 +1974,8 @@ export default function ReportScreen() {
               if (srvRes && srvRes.data && srvRes.data.reports) {
                 setSavedReports(srvRes.data.reports.map(function(r) {
                   return {
-                    id: r.id, userName: r.userName || '', birthDate: r.birthDate || '',
-                    birthTime: '', birthLocation: r.birthLocation || '',
+                    id: r.id, userName: r.userName || '', birthDate: extractDateOnly(r.birthDate) || '',
+                    birthTime: extractTimeFromISO(r.birthDate) || '', birthLocation: r.birthLocation || '',
                     birthLat: r.lat || null, birthLng: r.lng || null,
                     reportLang: r.language || 'en', userGender: null, userReligion: null,
                     sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
@@ -1943,8 +2008,8 @@ export default function ReportScreen() {
                   setLoading(false);
                   setSavedReports(reportsRes.data.reports.map(function(r) {
                     return {
-                      id: r.id, userName: r.userName || '', birthDate: r.birthDate || '',
-                      birthTime: '', birthLocation: r.birthLocation || '',
+                      id: r.id, userName: r.userName || '', birthDate: extractDateOnly(r.birthDate) || '',
+                      birthTime: extractTimeFromISO(r.birthDate) || '', birthLocation: r.birthLocation || '',
                       birthLat: r.lat || null, birthLng: r.lng || null,
                       reportLang: r.language || 'en', userGender: null, userReligion: null,
                       sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
@@ -2111,7 +2176,7 @@ export default function ReportScreen() {
                   ? (userName ? userName + 'ගේ ජීවිත කතාව' : 'ඔයාගේ ජීවිත කතාව')
                   : (userName ? userName + '\'s Life Story' : 'Your Life Story')
               }</Text>
-              <Text style={s.subtitle}>{birthLocation} • {birthDate} • {birthTime}</Text>
+              <Text style={s.subtitle}>{birthLocation} • {formatBirthDateDisplay(birthDate, reportLang)} • {formatBirthTimeDisplay(birthTime)}</Text>
               <View style={s.heroStatsRow}>
                 <View style={s.heroStatChip}>
                   <Ionicons name="document-text-outline" size={12} color="#FF8C00" />
@@ -2498,7 +2563,7 @@ export default function ReportScreen() {
                 <Text style={s.inputHint}>{reportLang === 'si' ? 'උපන් දිනය' : 'BIRTH DATE'}</Text>
                 <DatePickerField value={birthDate} onChange={setBirthDate} lang={reportLang} />
               </View>
-              <View style={[s.inputGroup, { flex: 0.6 }]}>
+              <View style={[s.inputGroup, { flex: 0.65 }]}>
                 <Text style={s.inputHint}>{reportLang === 'si' ? 'වේලාව' : 'TIME'}</Text>
                 <TimePickerField value={birthTime} onChange={setBirthTime} lang={reportLang} />
               </View>
@@ -2599,11 +2664,11 @@ export default function ReportScreen() {
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                         <Text style={{ color: 'rgba(255,214,102,0.45)', fontSize: 11 }}>
-                          {entry.birthDate || ''}
+                          {formatBirthDateDisplay(entry.birthDate, reportLang) || entry.birthDate || ''}
                         </Text>
                         <Text style={{ color: 'rgba(255,214,102,0.2)', fontSize: 11 }}>•</Text>
                         <Text style={{ color: 'rgba(255,214,102,0.45)', fontSize: 11 }}>
-                          {entry.birthLocation || ''}
+                          {entry.birthTime ? formatBirthTimeDisplay(entry.birthTime) + ' ' : ''}{entry.birthLocation || ''}
                         </Text>
                         <Text style={{ color: 'rgba(255,214,102,0.2)', fontSize: 11 }}>•</Text>
                         <Text style={{ color: 'rgba(255,214,102,0.35)', fontSize: 10 }}>

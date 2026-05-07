@@ -13,6 +13,7 @@ import { LanguageProvider } from '../contexts/LanguageContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { PricingProvider } from '../contexts/PricingContext';
+import ErrorBoundary from '../components/ErrorBoundary';
 import OnboardingScreen from './onboarding';
 import { useTheme } from '../contexts/ThemeContext';
 import { boxShadow } from '../utils/shadow';
@@ -431,18 +432,20 @@ function ThemedRootView({ children }) {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <LanguageProvider>
-        <ThemeProvider>
-          <ThemedRootView>
-            <PricingProvider>
-              <AuthProvider>
-                <AppGate />
-              </AuthProvider>
-            </PricingProvider>
-          </ThemedRootView>
-        </ThemeProvider>
-      </LanguageProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <ThemedRootView>
+              <PricingProvider>
+                <AuthProvider>
+                  <AppGate />
+                </AuthProvider>
+              </PricingProvider>
+            </ThemedRootView>
+          </ThemeProvider>
+        </LanguageProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

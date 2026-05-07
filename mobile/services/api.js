@@ -162,6 +162,12 @@ export async function checkServerReachable() {
   }
 }
 
+export var searchCities = function(query) {
+  return request('/api/geocode/search?q=' + encodeURIComponent(query) + '&limit=8', {
+    _timeout: 10000,
+  });
+};
+
 export var getDailyNakath = function(date) {
   return request('/api/nakath/daily?date=' + date);
 };

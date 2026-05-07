@@ -636,7 +636,7 @@ function PorondamCosmicLoader({ brideName, groomName, language, reduced, lowEnd 
     };
   }, [skipAnim, stages.length]);
 
-  var sealSize = Math.min(W - (WIDE ? 116 : 44), WIDE ? 340 : 300);
+  var sealSize = Math.min(W - (WIDE ? 116 : 44), WIDE ? 340 : Math.min(280, H * 0.32));
   var zodiacSize = Math.max(23, sealSize * 0.085);
   var zodiacRadius = sealSize * 0.41;
   var partnerRadiusX = sealSize * 0.255;
@@ -791,8 +791,8 @@ function PorondamCosmicLoader({ brideName, groomName, language, reduced, lowEnd 
 }
 
 var lsStyles = StyleSheet.create({
-  loadingScreen: { flex: 1, minHeight: H, alignItems: 'center', justifyContent: 'center', paddingHorizontal: WIDE ? 38 : 12 },
-  container: { width: '100%', maxWidth: 520, alignItems: 'center', paddingHorizontal: 18, paddingVertical: WIDE ? 24 : 18 },
+  loadingScreen: { flexGrow: 1, minHeight: H * 0.9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: WIDE ? 38 : 12 },
+  container: { width: '100%', maxWidth: 520, alignItems: 'center', paddingHorizontal: 18, paddingVertical: WIDE ? 24 : 14 },
   particleField: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
   kickerPill: {
     flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 13, paddingVertical: 7,
@@ -837,7 +837,7 @@ var lsStyles = StyleSheet.create({
   },
   coreInner: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(20,8,30,0.36)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
   coreSweep: { position: 'absolute', width: 34, height: 120, backgroundColor: 'rgba(255,255,255,0.24)' },
-  textWrap: { width: '100%', minHeight: 108, alignItems: 'center', justifyContent: 'flex-start', marginTop: WIDE ? 10 : 6, marginBottom: 10 },
+  textWrap: { width: '100%', minHeight: 90, alignItems: 'center', justifyContent: 'flex-start', marginTop: WIDE ? 10 : 4, marginBottom: 8 },
   stageIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginBottom: 8, backgroundColor: 'rgba(255,184,0,0.10)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.22)' },
   stageText: { color: '#FFE8B0', fontSize: 17, fontWeight: '900', textAlign: 'center', marginBottom: 7, lineHeight: 23, letterSpacing: 0 },
   stageSub: { color: 'rgba(255,232,176,0.58)', fontSize: 12, textAlign: 'center', lineHeight: 18, paddingHorizontal: WIDE ? 36 : 10, maxWidth: 430 },
@@ -1090,12 +1090,12 @@ export default function PorondamScreen() {
   var [bDate, setBDate] = useState('1998-01-15');
   var [bTime, setBTime] = useState('08:30');
   var [bName, setBName] = useState('');
-  var [bCity, setBCity] = useState(DEFAULT_CITY);
+  var [bCity, setBCity] = useState(null);
 
   var [gDate, setGDate] = useState('1998-06-20');
   var [gTime, setGTime] = useState('10:00');
   var [gName, setGName] = useState('');
-  var [gCity, setGCity] = useState(DEFAULT_CITY);
+  var [gCity, setGCity] = useState(null);
 
   var [data, setData] = useState(null);
   var [loading, setLoading] = useState(false);
@@ -1124,10 +1124,10 @@ export default function PorondamScreen() {
                 groomName: r.groom?.name || '',
                 brideDate: r.bride?.birthDate || '',
                 brideTime: '',
-                brideCity: DEFAULT_CITY,
+                brideCity: null,
                 groomDate: r.groom?.birthDate || '',
                 groomTime: '',
-                groomCity: DEFAULT_CITY,
+                groomCity: null,
                 reportLang: r.reportLanguage || 'en',
                 percentage: r.percentage || 0,
                 score: r.score || 0,
@@ -1219,10 +1219,10 @@ export default function PorondamScreen() {
           setGName(d.groom?.name || entry.groomName || '');
           setBDate(d.bride?.birthDate || entry.brideDate || '1998-01-15');
           setBTime(entry.brideTime || '08:30');
-          setBCity(entry.brideCity || DEFAULT_CITY);
+          setBCity(entry.brideCity || null);
           setGDate(d.groom?.birthDate || entry.groomDate || '1998-06-20');
           setGTime(entry.groomTime || '10:00');
-          setGCity(entry.groomCity || DEFAULT_CITY);
+          setGCity(entry.groomCity || null);
           setReportLang(d.reportLanguage || entry.reportLang || 'en');
           setData(d);
           setReport(d.report || null);
@@ -1244,10 +1244,10 @@ export default function PorondamScreen() {
       setGName(entry.groomName || '');
       setBDate(entry.brideDate || '1998-01-15');
       setBTime(entry.brideTime || '08:30');
-      setBCity(entry.brideCity || DEFAULT_CITY);
+      setBCity(entry.brideCity || null);
       setGDate(entry.groomDate || '1998-06-20');
       setGTime(entry.groomTime || '10:00');
-      setGCity(entry.groomCity || DEFAULT_CITY);
+      setGCity(entry.groomCity || null);
       setReportLang(entry.reportLang || 'en');
       setData(entry.data);
       setReport(entry.report || null);
@@ -1270,6 +1270,14 @@ export default function PorondamScreen() {
   var check = useCallback(async function() {
     if (!bDate || !gDate) {
       Alert.alert('', T.missing); return;
+    }
+    if (!bCity || !bCity.lat) {
+      Alert.alert('', language === 'si' ? 'කරුණාකර මනමේගේ උපන් ස්ථානය තෝරන්න' : 'Please select bride birth place');
+      return;
+    }
+    if (!gCity || !gCity.lat) {
+      Alert.alert('', language === 'si' ? 'කරුණාකර මනමාලයාගේ උපන් ස්ථානය තෝරන්න' : 'Please select groom birth place');
+      return;
     }
 
     var brideData = { birthDate: buildDateISO(bDate, bTime), lat: bCity.lat, lng: bCity.lng, name: bName || undefined };
@@ -1452,9 +1460,9 @@ export default function PorondamScreen() {
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
-          <View style={[lsStyles.loadingScreen, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]}>
+          <ScrollView contentContainerStyle={[lsStyles.loadingScreen, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false} bounces={false}>
             <PorondamCosmicLoader brideName={bName} groomName={gName} language={language} reduced={reduced} lowEnd={lowEnd} />
-          </View>
+          </ScrollView>
         </View>
       </DesktopScreenWrapper>
     );

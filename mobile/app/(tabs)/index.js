@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
   StyleSheet, Platform, Dimensions, Image, InteractionManager,
@@ -35,16 +35,37 @@ import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
 
 // Lazy-load heavy THREE.js moon component — saves ~600KB parse on startup
 var RealisticMoonLazy = lazy(function () { return import('../../components/RealisticMoon'); });
-function RealisticMoon(props) {
+var RealisticMoon = React.memo(function RealisticMoonWrap(props) {
   return (
     <Suspense fallback={<View style={{ width: props.size, height: props.size, borderRadius: props.size / 2, backgroundColor: '#12101E' }} />}>
       <RealisticMoonLazy {...props} />
     </Suspense>
   );
-}
+});
 
 var { width: SCREEN_WIDTH } = Dimensions.get('window');
 var CHAKRA_HERO_SIZE = Math.min(SCREEN_WIDTH * 0.88, 400);
+
+// Memoized moon timeline item — prevents re-rendering all 15 moons when selection changes
+var MoonTimelineItem = React.memo(function MoonTimelineItem({ dt, isSelected, isKeyPhase, offset, onSelect, mpStyles }) {
+  var handlePress = useCallback(function () { onSelect(offset); }, [offset, onSelect]);
+  return (
+    <TouchableOpacity
+      activeOpacity={0.6}
+      onPress={handlePress}
+      style={[mpStyles.tlItem, isSelected && mpStyles.tlItemSelected]}
+    >
+      <Text style={[mpStyles.tlDayName, isSelected && mpStyles.tlDayNameActive, dt.isToday && mpStyles.tlDayNameToday]}>{dt.dayName}</Text>
+      <View style={[mpStyles.tlMoonWrap, isSelected && mpStyles.tlMoonWrapActive]}>
+        {isSelected && <View style={mpStyles.tlMoonGlow} />}
+        <RealisticMoon size={isSelected ? 36 : 28} tithiNum={dt.tithi} animate={false} />
+      </View>
+      <Text style={[mpStyles.tlDateNum, isSelected && mpStyles.tlDateNumActive]}>{dt.dayNum}</Text>
+      {dt.isToday && <View style={mpStyles.tlTodayDot} />}
+      {isKeyPhase && !dt.isToday && <View style={mpStyles.tlKeyPhaseDot} />}
+    </TouchableOpacity>
+  );
+});
 
 /* ── Ivory & Gold Luxe — Home Page Theme (derived from active palette) ── */
 function getHT(colors) {
@@ -1278,9 +1299,34 @@ export default function HomeScreen() {
   }
 
   /* ── Moon Phase Showcase — 15-day Lunar Timeline ── */
+  // Memoize dates array + tithiNum so timeline items get stable dt objects
+  var tithiNumForMoon = data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number
+    ? data.panchanga.tithi.number : getMoonPhaseFromDate();
+  var moonDates = useMemo(function () {
+    var today = new Date();
+    var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var dayNamesSi = ['\u0d89\u0dbb\u0dd2','\u0dc3\u0dba\u0dd4','\u0d85\u0d9f','\u0db6\u0daf\u0dcf','\u0db6\u0dca\u200d\u0dbb','\u0dc3\u0dd2\u0d9a\u0dd4','\u0dc3\u0dd9\u0db1'];
+    var arr = [];
+    for (var di = -MOON_DAYS_RANGE; di <= MOON_DAYS_RANGE; di++) {
+      var dd = new Date(today); dd.setDate(dd.getDate() + di);
+      var neighborTithi = ((tithiNumForMoon + di - 1 + 300) % 30) + 1;
+      var dayOfWeek = dd.getDay();
+      arr.push({
+        dayNum: dd.getDate(),
+        dayName: language === 'si' ? dayNamesSi[dayOfWeek] : dayNames[dayOfWeek],
+        monthShort: dd.toLocaleString('en', { month: 'short' }),
+        isToday: di === 0,
+        isFuture: di > 0,
+        isPast: di < 0,
+        tithi: neighborTithi,
+        offset: di,
+      });
+    }
+    return arr;
+  }, [tithiNumForMoon, language]);
+
   function renderMoonPhaseCard() {
-    var tithiNum = data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number
-      ? data.panchanga.tithi.number : getMoonPhaseFromDate();
+    var tithiNum = tithiNumForMoon;
     var illum = tithiNum <= 15 ? (tithiNum - 1) / 14 : (30 - tithiNum) / 14;
     illum = Math.max(0, Math.min(1, illum));
     var illumPct = Math.round(illum * 100);
@@ -1292,26 +1338,7 @@ export default function HomeScreen() {
 
     var moonDisplaySize = Math.min(SCREEN_WIDTH * 0.42, 180);
 
-    // 15-day timeline: 7 before + today + 7 after
-    var today = new Date();
-    var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    var dayNamesSi = ['ඉරි','සඳු','අඟ','බදා','බ්‍ර','සිකු','සෙන'];
-    var dates = [];
-    for (var di = -MOON_DAYS_RANGE; di <= MOON_DAYS_RANGE; di++) {
-      var dd = new Date(today); dd.setDate(dd.getDate() + di);
-      var neighborTithi = ((tithiNum + di - 1 + 300) % 30) + 1;
-      var dayOfWeek = dd.getDay();
-      dates.push({
-        dayNum: dd.getDate(),
-        dayName: language === 'si' ? dayNamesSi[dayOfWeek] : dayNames[dayOfWeek],
-        monthShort: dd.toLocaleString('en', { month: 'short' }),
-        isToday: di === 0,
-        isFuture: di > 0,
-        isPast: di < 0,
-        tithi: neighborTithi,
-        offset: di,
-      });
-    }
+    var dates = moonDates;
 
     var selectedTithi = ((tithiNum + selectedDayOffset - 1 + 300) % 30) + 1;
     var selIllum = selectedTithi <= 15 ? (selectedTithi - 1) / 14 : (30 - selectedTithi) / 14;
@@ -1321,7 +1348,7 @@ export default function HomeScreen() {
     var selPhaseName = language === 'si' ? phaseNamesSi[selPhaseIdx] : phaseNamesEn[selPhaseIdx];
 
     // Label for selected date
-    var selDate = new Date(today); selDate.setDate(selDate.getDate() + selectedDayOffset);
+    var selDate = new Date(); selDate.setDate(selDate.getDate() + selectedDayOffset);
     var selDateLabel = selectedDayOffset === 0
       ? (language === 'si' ? 'අද' : 'Today')
       : selDate.toLocaleDateString('en', { month: 'short', day: 'numeric' });
@@ -1360,28 +1387,15 @@ export default function HomeScreen() {
               var isSelected = dt.offset === selectedDayOffset;
               var isKeyPhase = dt.tithi === 1 || dt.tithi === 15; // new/full moon
               return (
-                <TouchableOpacity
-                  key={i}
-                  activeOpacity={0.6}
-                  onPress={function () { setSelectedDayOffset(dt.offset); }}
-                  style={[mp.tlItem, isSelected && mp.tlItemSelected]}
-                >
-                  {/* Day name */}
-                  <Text style={[mp.tlDayName, isSelected && mp.tlDayNameActive, dt.isToday && mp.tlDayNameToday]}>{dt.dayName}</Text>
-
-                  {/* Moon orb */}
-                  <View style={[mp.tlMoonWrap, isSelected && mp.tlMoonWrapActive]}>
-                    {isSelected && <View style={mp.tlMoonGlow} />}
-                    <RealisticMoon size={isSelected ? 36 : 28} tithiNum={dt.tithi} animate={false} />
-                  </View>
-
-                  {/* Date number */}
-                  <Text style={[mp.tlDateNum, isSelected && mp.tlDateNumActive]}>{dt.dayNum}</Text>
-
-                  {/* Today dot / Key phase dot */}
-                  {dt.isToday && <View style={mp.tlTodayDot} />}
-                  {isKeyPhase && !dt.isToday && <View style={mp.tlKeyPhaseDot} />}
-                </TouchableOpacity>
+                <MoonTimelineItem
+                  key={dt.offset}
+                  dt={dt}
+                  isSelected={isSelected}
+                  isKeyPhase={isKeyPhase}
+                  offset={dt.offset}
+                  onSelect={setSelectedDayOffset}
+                  mpStyles={mp}
+                />
               );
             })}
           </ScrollView>
