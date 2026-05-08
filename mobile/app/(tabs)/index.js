@@ -1213,7 +1213,7 @@ export default function HomeScreen() {
             )}
 
             <View style={s.rahuCardTop}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+              <View style={s.rahuTitleRow}>
                 <View style={[s.rahuIconCircle, rahuActive ? s.rahuIconCircleActive : s.rahuIconCircleSafe]}>
                   <Animated.View style={rahuActive ? coronaPulseStyle : undefined}>
                     <Ionicons
@@ -1223,7 +1223,12 @@ export default function HomeScreen() {
                     />
                   </Animated.View>
                 </View>
-                <Text style={[s.rahuCardTitle, rahuActive && s.rahuCardTitleActive]}>
+                <Text
+                  style={[s.rahuCardTitle, rahuActive && s.rahuCardTitleActive, language === 'si' && s.sinhalaTextFlow]}
+                  numberOfLines={2}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
+                >
                   {rahuActive
                     ? (language === 'si' ? '⚠️ දැඩි රාහු කාලය උදාවෙලා' : '⚠ Caution Window')
                     : (language === 'si' ? 'අද දවසේ රාහු කාලය' : 'Caution Window')
@@ -1232,7 +1237,12 @@ export default function HomeScreen() {
               </View>
               <View style={s.rahuStatusBadge}>
                 <Animated.View style={[s.rahuStatusDot, { backgroundColor: rahuActive ? '#EF4444' : '#34D399' }, rahuActive && coronaPulseStyle]} />
-                <Text style={[s.rahuStatusText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }]}>
+                <Text
+                  style={[s.rahuStatusText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }, language === 'si' && s.sinhalaTextFlow]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.72}
+                >
                   {rahuActive
                     ? (language === 'si' ? 'මේ වෙලාවේ බලපවත්වයි' : 'ACTIVE')
                     : (language === 'si' ? 'රාහු කාලයෙන් නිදහස්' : 'SAFE')
@@ -1243,14 +1253,14 @@ export default function HomeScreen() {
 
             <View style={[s.rahuTimeRow, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.06)' : 'rgba(0,0,0,0.15)' }]}>
               <View style={s.rahuTimeBlock}>
-                <Text style={s.rahuTimeLabel}>{language === 'si' ? 'ඇරඹෙන වෙලාව' : 'Starts'}</Text>
+                <Text style={[s.rahuTimeLabel, language === 'si' && s.sinhalaTextFlow]}>{language === 'si' ? 'ඇරඹෙන වෙලාව' : 'Starts'}</Text>
                 <Text style={[s.rahuTimeValue, rahuActive && s.rahuTimeValueActive]}>
                   {data.rahuKalaya.startFormatted ? data.rahuKalaya.startFormatted.display : toSLT(data.rahuKalaya.start, t)}
                 </Text>
               </View>
               <View style={[s.rahuTimeDivider, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.3)' : 'rgba(52,211,153,0.2)' }]} />
               <View style={s.rahuTimeBlock}>
-                <Text style={s.rahuTimeLabel}>{language === 'si' ? 'අවසන් වන වෙලාව' : 'Ends'}</Text>
+                <Text style={[s.rahuTimeLabel, language === 'si' && s.sinhalaTextFlow]}>{language === 'si' ? 'අවසන් වන වෙලාව' : 'Ends'}</Text>
                 <Text style={[s.rahuTimeValue, rahuActive && s.rahuTimeValueActive]}>
                   {data.rahuKalaya.endFormatted ? data.rahuKalaya.endFormatted.display : toSLT(data.rahuKalaya.end, t)}
                 </Text>
@@ -1260,7 +1270,7 @@ export default function HomeScreen() {
             {getRahuCountdown() ? (
               <View style={[s.rahuCountdownBar, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.12)' : 'rgba(52,211,153,0.08)' }]}>
                 <Ionicons name="time-outline" size={13} color={rahuActive ? '#FCA5A5' : '#6EE7B7'} />
-                <Text style={[s.rahuCountdownText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }]}>
+                <Text style={[s.rahuCountdownText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }, language === 'si' && s.sinhalaTextFlow]}>
                   {rahuActive
                     ? (language === 'si' ? 'තව ' + getRahuCountdown() + ' කින් අවසන් වේ' : 'Ends in ' + getRahuCountdown())
                     : (language === 'si' ? 'තව ' + getRahuCountdown() + ' කින් ඇරඹේ' : 'Starts in ' + getRahuCountdown())
@@ -1270,7 +1280,7 @@ export default function HomeScreen() {
             ) : null}
 
             <View style={s.rahuExplanationContainer}>
-              <Text style={s.rahuExplanationText}>
+              <Text style={[s.rahuExplanationText, language === 'si' && s.sinhalaTextFlow]}>
                 {language === 'si' 
                   ? 'රාහු කාලය යනු සුබ වැඩ පටන් ගැනීමට නුසුදුසු බව පිළිගැනෙන කෙටි කාල සීමාවකි.' 
                   : 'Rahu Kalaya is an inauspicious time window during which starting important new work is generally avoided.'}
@@ -1368,10 +1378,24 @@ export default function HomeScreen() {
           <View style={mp.cardBorder} />
 
           {/* Section title */}
-          <View style={mp.headerRow}>
-            <Text style={mp.sectionTitle}>{language === 'si' ? '🌙 අද දවසේ සඳේ ගමන්මග' : '🌙 Lunar Cycle'}</Text>
-            <View style={mp.timelineBadge}>
-              <Text style={mp.timelineBadgeText}>{language === 'si' ? 'දින 15ක පෙරැක්ම' : '15 Days'}</Text>
+          <View style={[mp.headerRow, language === 'si' && mp.headerRowSinhala]}>
+            <Text
+              style={[mp.sectionTitle, language === 'si' && mp.sectionTitleSinhala]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+            >
+              {language === 'si' ? '🌙 අද දවසේ සඳේ ගමන්මග' : '🌙 Lunar Cycle'}
+            </Text>
+            <View style={[mp.timelineBadge, language === 'si' && mp.timelineBadgeSinhala]}>
+              <Text
+                style={[mp.timelineBadgeText, language === 'si' && mp.timelineBadgeTextSinhala]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+              >
+                {language === 'si' ? 'දින 15ක පෙරැක්ම' : '15 Days'}
+              </Text>
             </View>
           </View>
 
@@ -2574,6 +2598,7 @@ var s = StyleSheet.create({
     backgroundColor: 'rgba(255,184,0,0.08)',
   },
   retryText: { color: '#FFB800', fontWeight: '700', fontSize: 14, letterSpacing: 1 },
+  sinhalaTextFlow: { letterSpacing: 0, textTransform: 'none' },
 
   // Greeting
   greetWrap: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 32 },
@@ -2721,8 +2746,12 @@ var s = StyleSheet.create({
     borderRadius: 20, borderWidth: 1,
   },
   rahuCardTop: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: 12,
+    alignItems: 'flex-start', justifyContent: 'flex-start',
+    marginBottom: 12, gap: 8,
+  },
+  rahuTitleRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    width: '100%', minWidth: 0,
   },
   rahuIconCircle: {
     width: 38, height: 38, borderRadius: 19,
@@ -2742,12 +2771,13 @@ var s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
     backgroundColor: 'rgba(218,165,32,0.06)',
     borderWidth: 1, borderColor: 'rgba(218,165,32,0.15)',
+    alignSelf: 'flex-start', marginLeft: 48, maxWidth: '84%',
   },
   rahuStatusDot: { width: 7, height: 7, borderRadius: 4 },
   rahuStatusText: { fontSize: 11, fontWeight: '900', letterSpacing: 1.5 },
   rahuCardTitle: {
     fontSize: 15, fontWeight: '900', color: '#A7F3D0',
-    letterSpacing: 0.3,
+    letterSpacing: 0.3, lineHeight: 21, flex: 1, minWidth: 0,
   },
   rahuCardTitleActive: { color: '#FCA5A5' },
   rahuTimeRow: {
@@ -2765,20 +2795,20 @@ var s = StyleSheet.create({
     gap: 6, paddingVertical: 8, borderRadius: 10,
   },
   rahuExplanationContainer: {
-    marginTop: 8,
-    paddingHorizontal: 4,
+    marginTop: 10,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rahuExplanationText: {
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 11,
+    lineHeight: 18,
     fontWeight: '400',
     color: 'rgba(255, 255, 255, 0.5)',
     textAlign: 'center',
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
-  rahuCountdownText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5, color: '#F4E4BC' },
+  rahuCountdownText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5, color: '#F4E4BC', flexShrink: 1, textAlign: 'center' },
 
   // Sky Grid
   skyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -3099,17 +3129,28 @@ var mp = StyleSheet.create({
     borderWidth: 0.5, borderColor: 'rgba(218,165,32,0.12)',
   },
   headerRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    flexWrap: 'wrap', gap: 8,
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4,
   },
+  headerRowSinhala: {
+    rowGap: 8,
+  },
   sectionTitle: {
-    color: '#F4E4BC', fontSize: 20, fontWeight: '900', letterSpacing: 0.3,
+    color: '#F4E4BC', fontSize: 20, lineHeight: 27, fontWeight: '900', letterSpacing: 0.3,
+    flex: 1, minWidth: 0,
+  },
+  sectionTitleSinhala: {
+    flexBasis: '100%', letterSpacing: 0,
   },
   timelineBadge: {
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12,
     backgroundColor: 'rgba(218,165,32,0.08)', borderWidth: 1, borderColor: 'rgba(218,165,32,0.18)',
+    alignSelf: 'flex-start', maxWidth: '100%',
   },
+  timelineBadgeSinhala: { marginLeft: 30 },
   timelineBadgeText: { color: 'rgba(218,165,32,0.55)', fontSize: 10, fontWeight: '700' },
+  timelineBadgeTextSinhala: { letterSpacing: 0 },
 
   // ── Timeline scroll ──
   timelineScroll: { paddingHorizontal: 12, paddingVertical: 12, gap: 0 },

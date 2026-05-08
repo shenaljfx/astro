@@ -700,9 +700,8 @@ export default function ChatScreen() {
   // Header = topPad + ~48px content + 8px paddingBottom
   var headerTotalHeight = topPad + 56;
   var kavOffset = Platform.OS === 'ios' ? headerTotalHeight : 0;
-  var inputBottomPad = kb.isOpen
-    ? Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 6)
-    : (TAB_BAR_VISUAL_HEIGHT + Math.max(insets.bottom, 4));
+  var composerSafePad = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 6);
+  var composerLift = kb.isOpen ? 0 : TAB_BAR_VISUAL_HEIGHT;
 
   return (
     <DesktopScreenWrapper routeName="chat">
@@ -744,9 +743,9 @@ export default function ChatScreen() {
       {/* KeyboardAvoidingView wraps messages + input */}
       <KeyboardAvoidingView
         style={{ flex: 1, minHeight: 0 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={kavOffset}
-        enabled={Platform.OS !== 'web'}
+        enabled={Platform.OS === 'ios'}
       >
         <ScrollView
           ref={scroll}
@@ -778,7 +777,7 @@ export default function ChatScreen() {
         )}
 
         {/* Input bar — sits directly above keyboard (WhatsApp style) */}
-        <View style={[s.inputBar, { paddingBottom: inputBottomPad }]}>
+        <View style={[s.inputBar, { paddingBottom: composerSafePad, marginBottom: composerLift }]}>
           <LinearGradient
             colors={['rgba(255,107,0,0.06)', 'rgba(147,51,234,0.04)', 'transparent']}
             start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }}

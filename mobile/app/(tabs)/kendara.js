@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
-  StyleSheet, Dimensions, Platform
+  StyleSheet, Dimensions, Platform, Image
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,8 +23,10 @@ import useScreenInsets from '../../hooks/useScreenInsets';
 import useReducedMotion from '../../hooks/useReducedMotion';
 import useLowEndDevice from '../../hooks/useLowEndDevice';
 import { CosmicBackground } from '../../components/CosmicBackground';
+import { ZODIAC_IMAGES, ZODIAC_IMAGE_MAP } from '../../components/ZodiacIcons';
 
 const CHART_CACHE_KEY = '@grahachara_chart_cache';
+const KENDARA_RITUAL_KEY = '@grahachara_kendara_ritual_state';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -100,15 +102,21 @@ function formatBirthTime(isoOrObj) {
 }
 
 // ── Chart Glow Aura wrapper ──────────────────────────────────────────
-function ChartGlowAura({ lagnaColor, children }) {
+function ChartGlowAura({ lagnaColor, children, reduced, lowEnd }) {
   var glow = useSharedValue(0.5);
+  var orbit = useSharedValue(0);
   useEffect(function () {
+    if (reduced || lowEnd) return;
     glow.value = withRepeat(withSequence(withTiming(1, { duration: 3200 }), withTiming(0.5, { duration: 3200 })), -1);
-  }, []);
+    orbit.value = withRepeat(withTiming(1, { duration: 26000 }), -1, false);
+  }, [reduced, lowEnd]);
   var glowStyle = useAnimatedStyle(function () { return { opacity: glow.value }; });
+  var orbitStyle = useAnimatedStyle(function () {
+    return { transform: [{ rotate: (orbit.value * 360) + 'deg' }] };
+  });
   var color = lagnaColor || '#9333EA';
   return (
-    <View style={{ alignItems: 'center', marginBottom: 20 }}>
+    <View style={styles.chartAuraWrap}>
       <Animated.View style={[StyleSheet.absoluteFill, glowStyle, { alignItems: 'center', justifyContent: 'center' }]}>
         <View style={{
           width: SCREEN_WIDTH * 0.82, height: SCREEN_WIDTH * 0.82, borderRadius: SCREEN_WIDTH * 0.41,
@@ -116,20 +124,515 @@ function ChartGlowAura({ lagnaColor, children }) {
           ...boxShadow(color, { width: 0, height: 0 }, 0.6, 40),
         }} />
       </Animated.View>
-      <View style={{
-        borderRadius: 16, overflow: 'hidden', padding: 3,
-        borderWidth: 1, borderColor: color + '40',
-        ...boxShadow(color, { width: 0, height: 0 }, 0.3, 18), elevation: 8,
-      }}>
+      {!lowEnd && (
+        <Animated.View style={[styles.chartOrbitRing, orbitStyle, { borderColor: color + '30' }]}> 
+          <View style={[styles.chartOrbitSpark, { backgroundColor: color }]} />
+          <View style={[styles.chartOrbitSparkAlt, { backgroundColor: '#FFB800' }]} />
+        </Animated.View>
+      )}
+      <View style={[styles.chartPremiumFrame, { borderColor: color + '45', ...boxShadow(color, { width: 0, height: 0 }, 0.34, 22) }]}>
         <LinearGradient
-          colors={[color + '22', 'rgba(10,5,25,0.9)', color + '10']}
-          style={{ padding: 2, borderRadius: 14 }}
+          colors={[color + '26', 'rgba(18,10,8,0.96)', 'rgba(255,184,0,0.08)', color + '12']}
+          style={styles.chartFrameGradient}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         >
+          <View style={styles.chartFrameInnerLine} />
           {children}
         </LinearGradient>
       </View>
     </View>
+  );
+}
+
+function getKendaraBirthLine(user, language) {
+  if (!user || !user.birthData || !user.birthData.dateTime) return language === 'si' ? 'උපන් විස්තර එක් කළාම සිතියම සම්පූර්ණයි' : 'Add birth details to complete your map';
+  var dt = String(user.birthData.dateTime);
+  var dateMatch = dt.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  var dateStr = dateMatch ? dateMatch[3] + '/' + dateMatch[2] + '/' + dateMatch[1] : dt.slice(0, 10);
+  return dateStr + '  ' + formatBirthTime(dt);
+}
+
+function getKendaraStrongestShadbala(shadbala) {
+  if (!shadbala) return null;
+  var items = Object.values(shadbala).filter(Boolean);
+  if (items.length === 0) return null;
+  items.sort(function (a, b) { return Number(b.percentage || 0) - Number(a.percentage || 0); });
+  return items[0];
+}
+
+function trimKendaraCopy(text, maxLength) {
+  var source = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!source || source.length <= maxLength) return source;
+  return source.slice(0, maxLength - 1).trim() + '...';
+}
+
+function fullKendaraCopy(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim();
+}
+
+function getKendaraSLTDayKey(date) {
+  var source = date instanceof Date ? date.getTime() : Date.now();
+  return new Date(source + (5.5 * 60 * 60 * 1000)).toISOString().slice(0, 10);
+}
+
+function getKendaraDailyIndex(dayKey, total) {
+  if (!total || total <= 0) return 0;
+  var key = String(dayKey || getKendaraSLTDayKey());
+  var sum = 0;
+  for (var i = 0; i < key.length; i += 1) sum += key.charCodeAt(i);
+  return sum % total;
+}
+
+function getKendaraRashiImage(rashi) {
+  if (!rashi) return null;
+  if (typeof rashi === 'number') return ZODIAC_IMAGES[rashi - 1] || null;
+  if (typeof rashi === 'string') return ZODIAC_IMAGE_MAP[rashi] || null;
+  return ZODIAC_IMAGE_MAP[rashi.name] || ZODIAC_IMAGE_MAP[rashi.english] || ZODIAC_IMAGE_MAP[rashi.sanskrit] || (rashi.rashiId ? ZODIAC_IMAGES[rashi.rashiId - 1] : null);
+}
+
+function buildKendaraInsightCards(chartData, jyotishData, topYogas, language) {
+  var cards = [];
+  var shadbala = chartData && chartData.advancedAnalysis && chartData.advancedAnalysis.tier2 ? chartData.advancedAnalysis.tier2.shadbala : null;
+  var strongest = getKendaraStrongestShadbala(shadbala);
+  var dasha = jyotishData && jyotishData.dasha;
+  var mainDasha = dasha && dasha.currentMahadasha;
+  var mainPlanet = getKendaraDashaPlanet(mainDasha);
+  var activeYoga = topYogas && topYogas.length > 0 ? topYogas[0] : null;
+  var bhrigu = chartData && chartData.advancedAnalysis && chartData.advancedAnalysis.tier2 ? chartData.advancedAnalysis.tier2.bhriguBindu : null;
+
+  if (mainPlanet) {
+    cards.push({
+      icon: 'git-branch-outline',
+      color: '#A78BFA',
+      eyebrow: language === 'si' ? 'දැන් ක්‍රියාත්මක කාලය' : 'Current Chapter',
+      title: getKendaraPlanetName(mainPlanet, language),
+      body: fullKendaraCopy(getKendaraDashaPersonalNote(dasha, language, shadbala)),
+    });
+  }
+
+  if (strongest) {
+    cards.push({
+      icon: 'bar-chart-outline',
+      color: PLANET_INFO[strongest.name] ? PLANET_INFO[strongest.name].color : '#FFB800',
+      eyebrow: language === 'si' ? 'වැඩියෙන්ම සහාය දෙන ග්‍රහයා' : 'Strongest Support',
+      title: getKendaraPlanetName(strongest.name, language) + ' ' + (strongest.percentage || 0) + '%',
+      body: fullKendaraCopy(getKendaraShadbalaPersonalDetail(strongest, language)),
+    });
+  }
+
+  if (activeYoga) {
+    var yogaCopy = getKendaraStrengthCopy(activeYoga, language);
+    cards.push({
+      icon: 'sparkles-outline',
+      color: '#FFB800',
+      eyebrow: language === 'si' ? 'සඟවුණු සහජ ශක්තිය' : 'Hidden Strength',
+      title: yogaCopy.label,
+      body: fullKendaraCopy(yogaCopy.desc),
+    });
+  }
+
+  if (bhrigu) {
+    cards.push({
+      icon: 'locate-outline',
+      color: '#06B6D4',
+      eyebrow: language === 'si' ? 'දෛව ලක්ෂ්‍යය' : 'Destiny Point',
+      title: getKendaraRashiName(bhrigu.rashi || bhrigu.rashiName || bhrigu.sinhala, language),
+      body: fullKendaraCopy(getKendaraBhriguPersonalDetail(bhrigu, language)),
+    });
+  }
+
+  if (cards.length === 0 && chartData) {
+    var lagna = chartData.lagna && (chartData.lagna.english || chartData.lagna.name || chartData.lagna.rashiId);
+    cards.push({
+      icon: 'compass-outline',
+      color: '#FFB800',
+      eyebrow: language === 'si' ? 'ජීවිත දිශාව' : 'Life Direction',
+      title: getKendaraRashiName(lagna, language),
+      body: fullKendaraCopy(getKendaraLifeStyle(lagna, language)),
+    });
+  }
+
+  return cards;
+}
+
+function trimKendaraBhriguPersonalDetail(point, language) {
+  return trimKendaraCopy(getKendaraBhriguPersonalDetail(point, language), 190);
+}
+
+function buildKendaraMasteryItems(chartData, jyotishData, marakaData, selectedVarga, language) {
+  return [
+    { done: !!(chartData && chartData.rashiChart), label: language === 'si' ? 'මූලික සිතියම' : 'Chart' },
+    { done: !!(chartData && chartData.advancedAnalysis && chartData.advancedAnalysis.tier1 && chartData.advancedAnalysis.tier1.advancedYogas), label: language === 'si' ? 'ශක්තීන්' : 'Strengths' },
+    { done: !!(jyotishData && jyotishData.dasha), label: language === 'si' ? 'කාලය' : 'Timeline' },
+    { done: !!selectedVarga, label: language === 'si' ? 'ජීවිත කොටස්' : 'Life Areas' },
+    { done: !!marakaData, label: language === 'si' ? 'ආරක්ෂාව' : 'Care' },
+  ];
+}
+
+function buildKendaraDailyRitual(insightCards, chartData, jyotishData, marakaData, visitState, language) {
+  if (!chartData) return null;
+  var dayKey = visitState && visitState.dayKey ? visitState.dayKey : getKendaraSLTDayKey();
+  var focus = insightCards && insightCards.length > 0 ? insightCards[getKendaraDailyIndex(dayKey, insightCards.length)] : null;
+  var dashaPlanet = jyotishData && jyotishData.dasha && jyotishData.dasha.currentMahadasha ? getKendaraDashaPlanet(jyotishData.dasha.currentMahadasha) : null;
+  var isCareActive = !!(marakaData && marakaData.status && marakaData.status !== 'SAFE');
+  var lagna = chartData.lagna && (chartData.lagna.english || chartData.lagna.name || chartData.lagna.rashiId);
+  var defaultFocus = {
+    icon: isCareActive ? 'shield-outline' : dashaPlanet ? 'git-branch-outline' : 'compass-outline',
+    color: isCareActive ? '#F87171' : dashaPlanet ? '#A78BFA' : '#FFB800',
+    eyebrow: language === 'si' ? 'අද දවසේ කේන්දර චාරිත්‍රය' : 'Today\'s Chart Ritual',
+    title: dashaPlanet ? getKendaraPlanetName(dashaPlanet, language) : getKendaraRashiName(lagna, language),
+    body: dashaPlanet ? getKendaraDashaPersonalNote(jyotishData.dasha, language, chartData.advancedAnalysis?.tier2?.shadbala) : getKendaraLifeStyle(lagna, language),
+  };
+  var focusCard = focus || defaultFocus;
+  var tasks = [
+    {
+      icon: focusCard.icon || 'sparkles-outline',
+      color: focusCard.color || '#FFB800',
+      label: language === 'si' ? 'අද ප්‍රධාන ඉඟිය' : 'Daily Key',
+      value: focusCard.title || defaultFocus.title,
+      detail: fullKendaraCopy(focusCard.body || defaultFocus.body),
+    },
+    {
+      icon: 'git-branch-outline',
+      color: '#A78BFA',
+      label: language === 'si' ? 'කාල පරිච්ඡේදය' : 'Chapter',
+      value: dashaPlanet ? getKendaraPlanetName(dashaPlanet, language) : (language === 'si' ? 'ලෑස්ති වෙමින්' : 'Preparing'),
+      detail: dashaPlanet ? fullKendaraCopy(getKendaraDashaPersonalNote(jyotishData.dasha, language, chartData.advancedAnalysis?.tier2?.shadbala)) : (language === 'si' ? 'දශා දත්ත ලැබුනාම මේ කොටස විවෘත වෙනවා.' : 'This opens once timeline data is available.'),
+    },
+    {
+      icon: isCareActive ? 'warning-outline' : 'shield-checkmark-outline',
+      color: isCareActive ? '#F87171' : '#34D399',
+      label: language === 'si' ? 'ආරක්ෂිත තත්ත්වය' : 'Care Signal',
+      value: isCareActive ? (language === 'si' ? 'අද සැලකිල්ලෙන්' : 'Review Today') : (language === 'si' ? 'සන්සුන්' : 'Clear'),
+      detail: marakaData ? fullKendaraCopy(language === 'si' ? (marakaData.statusSi || '') : (marakaData.statusEn || '')) : (language === 'si' ? 'සංවේදී කාල දත්ත ලැබෙන තුරු සාමාන්‍ය කියවීමක් පෙන්වයි.' : 'Care timing appears here once available.'),
+    },
+  ];
+
+  return {
+    icon: focusCard.icon || defaultFocus.icon,
+    color: focusCard.color || defaultFocus.color,
+    eyebrow: language === 'si' ? 'අද නැවත විවෘත කරන්න' : 'Return Ritual',
+    title: language === 'si' ? 'අද කේන්දර යතුර' : 'Today\'s Chart Key',
+    body: fullKendaraCopy(focusCard.body || defaultFocus.body),
+    focusTitle: focusCard.title || defaultFocus.title,
+    tasks: tasks,
+  };
+}
+
+function PremiumHeroMetric({ icon, label, value, color }) {
+  return (
+    <View style={[styles.heroMetric, { borderColor: color + '28', backgroundColor: color + '0D' }]}>
+      <Ionicons name={icon} size={14} color={color} />
+      <View style={styles.heroMetricTextWrap}>
+        <Text style={styles.heroMetricLabel} numberOfLines={1}>{label}</Text>
+        <Text style={[styles.heroMetricValue, { color: color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{value || '--'}</Text>
+      </View>
+    </View>
+  );
+}
+
+function PremiumKendaraHero({ chartData, jyotishData, user, language, gradients, reduced, lowEnd }) {
+  var hasChart = !!chartData;
+  var lagna = hasChart && chartData.lagna ? (chartData.lagna.english || chartData.lagna.name || chartData.lagna.rashiId) : null;
+  var moon = hasChart && chartData.moonSign ? (chartData.moonSign.english || chartData.moonSign.name || chartData.moonSign.rashiId) : null;
+  var nakshatra = hasChart ? ((chartData.panchanga && chartData.panchanga.nakshatra) || chartData.nakshatra) : null;
+  var dashaPlanet = jyotishData && jyotishData.dasha && jyotishData.dasha.currentMahadasha ? getKendaraDashaPlanet(jyotishData.dasha.currentMahadasha) : null;
+  var lagnaName = lagna ? getKendaraRashiName(lagna, language) : '--';
+  var lagnaImage = hasChart ? getKendaraRashiImage(chartData.lagna) : null;
+  var moonName = moon ? getKendaraRashiName(moon, language) : '--';
+  var nakName = nakshatra ? getKendaraEntryName(nakshatra) : '--';
+  var chapterName = dashaPlanet ? getKendaraPlanetName(dashaPlanet, language) : (language === 'si' ? 'සකස් වෙමින්' : 'Preparing');
+  var birthLine = getKendaraBirthLine(user, language);
+  var heroCopy = hasChart
+    ? getKendaraLifeStyle(lagna, language)
+    : (language === 'si' ? 'ඔයාගේ උපන් විස්තර එක් කළාම, කේන්දරේ ප්‍රධාන සිතියම මෙතනින් විවෘත වෙනවා.' : 'Your premium chart vault opens here once your birth details are ready.');
+  var sealBreath = useSharedValue(0);
+  var sealOrbit = useSharedValue(0);
+  useEffect(function () {
+    if (reduced || lowEnd) return;
+    sealBreath.value = withRepeat(withSequence(withTiming(1, { duration: 2400 }), withTiming(0, { duration: 2400 })), -1);
+    sealOrbit.value = withRepeat(withTiming(1, { duration: 18000 }), -1, false);
+  }, [reduced, lowEnd]);
+  var sealMotionStyle = useAnimatedStyle(function () {
+    return {
+      transform: [
+        { translateY: interpolate(sealBreath.value, [0, 1], [0, -5]) },
+        { scale: interpolate(sealBreath.value, [0, 1], [1, 1.025]) },
+      ],
+    };
+  });
+  var sealGlowStyle = useAnimatedStyle(function () {
+    return { opacity: reduced || lowEnd ? 0.38 : interpolate(sealBreath.value, [0, 1], [0.34, 0.76]) };
+  });
+  var sealOrbitStyle = useAnimatedStyle(function () {
+    return { transform: [{ rotate: (sealOrbit.value * 360) + 'deg' }] };
+  });
+  var sealCounterOrbitStyle = useAnimatedStyle(function () {
+    return { transform: [{ rotate: (-sealOrbit.value * 360) + 'deg' }] };
+  });
+  var sealImageStyle = useAnimatedStyle(function () {
+    return {
+      transform: [
+        { scale: reduced || lowEnd ? 1 : interpolate(sealBreath.value, [0, 1], [1, 1.045]) },
+        { rotate: reduced || lowEnd ? '0deg' : interpolate(sealBreath.value, [0, 1], [-1.5, 1.5]) + 'deg' },
+      ],
+    };
+  });
+  var sealShimmerStyle = useAnimatedStyle(function () {
+    return {
+      opacity: reduced || lowEnd ? 0.18 : interpolate(sealBreath.value, [0, 1], [0.12, 0.42]),
+      transform: [{ translateX: interpolate(sealBreath.value, [0, 1], [-70, 70]) }, { rotate: '-18deg' }],
+    };
+  });
+
+  return (
+    <Animated.View entering={FadeInDown.duration(650)} style={styles.premiumHeroWrap}>
+      <LinearGradient colors={['rgba(255,184,0,0.22)', 'rgba(67,24,120,0.18)', 'rgba(6,182,212,0.08)', 'rgba(6,4,2,0.92)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <LinearGradient colors={['rgba(255,255,255,0.16)', 'transparent']} style={styles.heroTopSheen} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0.8 }} />
+      <Animated.View style={[styles.heroPortalGlow, sealGlowStyle]} />
+      <View style={styles.heroConstellationLine} />
+
+      <View style={styles.heroPortalStage}>
+        <Animated.View style={[styles.heroPortalOrbitOuter, sealOrbitStyle]}>
+          <View style={styles.heroOrbitNodeGold} />
+          <View style={styles.heroOrbitNodeCyan} />
+        </Animated.View>
+        <Animated.View style={[styles.heroPortalOrbitInner, sealCounterOrbitStyle]}>
+          <View style={styles.heroOrbitNodePurple} />
+        </Animated.View>
+        <Animated.View style={[styles.heroPortalCard, sealMotionStyle]}>
+          <LinearGradient colors={['rgba(255,232,176,0.94)', 'rgba(255,184,0,0.88)', 'rgba(180,83,9,0.86)']} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.95, y: 1 }} />
+          <Animated.View style={[styles.heroPortalShimmer, sealShimmerStyle]} />
+          <Animated.View style={[styles.heroPortalImageOrb, sealImageStyle]}>
+            {lagnaImage ? (
+              <Image source={lagnaImage} style={styles.heroPortalImage} resizeMode="contain" />
+            ) : (
+              <Ionicons name="planet" size={74} color="#1A1040" />
+            )}
+          </Animated.View>
+          <Text style={styles.heroPortalName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.62}>{lagnaName}</Text>
+          <Text style={styles.heroPortalSub}>{language === 'si' ? 'ඔයාගේ ලග්න බලය' : 'Ascendant Power'}</Text>
+        </Animated.View>
+        <View style={styles.heroFloatingChipLeft}>
+          <Ionicons name="moon-outline" size={12} color="#C7D2FE" />
+          <Text style={styles.heroFloatingChipText} numberOfLines={1}>{moonName}</Text>
+        </View>
+        <View style={styles.heroFloatingChipRight}>
+          <Ionicons name="sparkles-outline" size={12} color="#FFB800" />
+          <Text style={styles.heroFloatingChipText} numberOfLines={1}>{chapterName}</Text>
+        </View>
+      </View>
+
+      <View style={styles.heroCopyPanel}>
+        <View style={styles.heroKickerRowPremium}>
+          <Ionicons name="diamond-outline" size={13} color="#FFB800" />
+          <Text style={styles.heroKicker}>{language === 'si' ? 'පුද්ගලික කේන්දර භණ්ඩාගාරය' : 'Personal Chart Vault'}</Text>
+        </View>
+        <Text style={[styles.heroTitlePremium, language === 'si' && styles.sinhalaTextFlow]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.82}>
+          {language === 'si' ? 'මගේ ජීවිත සිතියම' : 'My Life Map'}
+        </Text>
+        <Text style={[styles.heroSubtitlePremium, language === 'si' && styles.sinhalaTextFlow]}>
+          {fullKendaraCopy(heroCopy)}
+        </Text>
+      </View>
+
+      <View style={styles.heroBirthRow}>
+        <Ionicons name="time-outline" size={13} color="rgba(255,214,102,0.64)" />
+        <Text style={styles.heroBirthText} numberOfLines={1}>{birthLine}</Text>
+      </View>
+      <View style={styles.heroMetricGrid}>
+        <PremiumHeroMetric icon="compass-outline" label={language === 'si' ? 'ලග්නය' : 'Lagna'} value={lagnaName} color="#FFB800" />
+        <PremiumHeroMetric icon="moon-outline" label={language === 'si' ? 'සඳ රාශිය' : 'Moon'} value={moonName} color="#C7D2FE" />
+        <PremiumHeroMetric icon="star-outline" label={language === 'si' ? 'නැකත' : 'Nakshatra'} value={nakName} color="#60A5FA" />
+        <PremiumHeroMetric icon="git-branch-outline" label={language === 'si' ? 'දැන් කාලය' : 'Chapter'} value={chapterName} color="#A78BFA" />
+      </View>
+    </Animated.View>
+  );
+}
+
+function PremiumInsightRail({ insights, language }) {
+  var [active, setActive] = useState(0);
+  if (!insights || insights.length === 0) return null;
+  return (
+    <Animated.View entering={FadeInDown.delay(90).duration(520)} style={styles.insightRailWrap}>
+      <View style={styles.insightHeaderRow}>
+        <View style={styles.insightHeaderTextBlock}>
+          <Text style={styles.insightHeaderKicker}>{language === 'si' ? 'අද බලන්න වටින තැන' : 'Worth Checking First'}</Text>
+          <Text style={[styles.insightHeaderTitle, language === 'si' && styles.sinhalaTextFlow]}>{language === 'si' ? 'ඔයාගේ ප්‍රධාන ඉඟි' : 'Your Chart Keys'}</Text>
+        </View>
+        <View style={styles.insightCountPill}>
+          <Text style={styles.insightCountText}>{active + 1}/{insights.length}</Text>
+        </View>
+      </View>
+      <View style={styles.insightStack}>
+        {insights.map(function (item, index) {
+          var isActive = active === index;
+          return (
+            <SpringPressable key={index} haptic="light" scalePressed={0.97} onPress={function () { setActive(index); }} style={[styles.insightCard, isActive && styles.insightCardActive, { borderColor: isActive ? item.color + '55' : 'rgba(255,255,255,0.07)' }]}>
+              <LinearGradient colors={isActive ? [item.color + '18', 'rgba(255,255,255,0.035)', 'rgba(8,5,3,0.72)'] : ['rgba(255,255,255,0.04)', 'rgba(8,5,3,0.64)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+              <View style={[styles.insightIcon, { backgroundColor: item.color + '14', borderColor: item.color + '35' }]}>
+                <Ionicons name={item.icon} size={16} color={item.color} />
+              </View>
+              <Text style={[styles.insightEyebrow, { color: item.color }]} numberOfLines={1}>{item.eyebrow}</Text>
+              <Text style={[styles.insightTitle, language === 'si' && styles.sinhalaTextFlow]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.78}>{item.title}</Text>
+              <Text style={[styles.insightBody, language === 'si' && styles.sinhalaTextFlow]}>{item.body}</Text>
+            </SpringPressable>
+          );
+        })}
+      </View>
+    </Animated.View>
+  );
+}
+
+function KendaraMasteryStrip({ items, language }) {
+  if (!items || items.length === 0) return null;
+  var doneCount = items.filter(function (item) { return item.done; }).length;
+  var progress = Math.round((doneCount / items.length) * 100);
+  return (
+    <Animated.View entering={FadeInDown.delay(140).duration(520)} style={styles.masteryWrap}>
+      <View style={styles.masteryTopRow}>
+        <View>
+          <Text style={styles.masteryLabel}>{language === 'si' ? 'කේන්දර අධ්‍යයන මට්ටම' : 'Chart Mastery'}</Text>
+          <Text style={styles.masterySub}>{language === 'si' ? 'ඉහළ විස්තර ටික එකින් එක විවෘත වෙනවා' : 'Your deeper layers open as data loads'}</Text>
+        </View>
+        <Text style={styles.masteryPercent}>{progress}%</Text>
+      </View>
+      <View style={styles.masteryTrack}>
+        <View style={[styles.masteryFill, { width: progress + '%' }]} />
+      </View>
+      <View style={styles.masteryMilestones}>
+        {items.map(function (item, index) {
+          return (
+            <View key={index} style={styles.masteryMilestone}>
+              <View style={[styles.masteryDot, item.done && styles.masteryDotDone]}>
+                {item.done && <Ionicons name="checkmark" size={9} color="#1A1040" />}
+              </View>
+              <Text style={[styles.masteryMilestoneText, item.done && styles.masteryMilestoneTextDone]} numberOfLines={1}>{item.label}</Text>
+            </View>
+          );
+        })}
+      </View>
+    </Animated.View>
+  );
+}
+
+function PremiumDailyRitual({ ritual, visitState, language, reduced }) {
+  var [activeTask, setActiveTask] = useState(0);
+  var pulse = useSharedValue(0.32);
+  useEffect(function () {
+    if (reduced) return;
+    pulse.value = withRepeat(withSequence(withTiming(0.72, { duration: 2400 }), withTiming(0.32, { duration: 2400 })), -1);
+  }, [reduced]);
+  var pulseStyle = useAnimatedStyle(function () { return { opacity: pulse.value }; });
+  if (!ritual) return null;
+  var tasks = ritual.tasks || [];
+  var currentTask = tasks[activeTask] || tasks[0];
+  var streak = visitState && visitState.streak ? visitState.streak : 1;
+  var totalViews = visitState && visitState.totalViews ? visitState.totalViews : 1;
+
+  return (
+    <Animated.View entering={FadeInDown.delay(40).duration(560)} style={styles.ritualWrap}>
+      <LinearGradient colors={[ritual.color + '18', 'rgba(255,184,0,0.055)', 'rgba(8,5,3,0.76)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <Animated.View style={[styles.ritualPulse, pulseStyle, { backgroundColor: ritual.color + '22' }]} />
+      <View style={styles.ritualTopRow}>
+        <View style={[styles.ritualIconWrap, { borderColor: ritual.color + '38', backgroundColor: ritual.color + '12' }]}>
+          <Ionicons name={ritual.icon} size={19} color={ritual.color} />
+        </View>
+        <View style={styles.ritualTitleBlock}>
+          <Text style={[styles.ritualEyebrow, { color: ritual.color }]} numberOfLines={1}>{ritual.eyebrow}</Text>
+          <Text style={[styles.ritualTitle, language === 'si' && styles.sinhalaTextFlow]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.82}>{ritual.title}</Text>
+        </View>
+        <View style={styles.ritualStreakBadge}>
+          <Text style={styles.ritualStreakValue}>{streak}</Text>
+          <Text style={styles.ritualStreakLabel}>{language === 'si' ? 'දින' : 'day'}</Text>
+        </View>
+      </View>
+
+      <Text style={[styles.ritualBody, language === 'si' && styles.sinhalaTextFlow]}>{ritual.body}</Text>
+
+      <View style={styles.ritualTaskRow}>
+        {tasks.map(function (task, index) {
+          var isActive = activeTask === index;
+          return (
+            <SpringPressable key={index} haptic="light" scalePressed={0.97} onPress={function () { setActiveTask(index); }} style={[styles.ritualTaskPill, isActive && { borderColor: task.color + '46', backgroundColor: task.color + '10' }]}>
+              <Ionicons name={task.icon} size={13} color={isActive ? task.color : 'rgba(255,214,102,0.44)'} />
+              <Text style={[styles.ritualTaskText, isActive && { color: task.color }, language === 'si' && styles.sinhalaTextFlow]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.78}>{task.label}</Text>
+            </SpringPressable>
+          );
+        })}
+      </View>
+
+      {currentTask ? (
+        <View style={[styles.ritualDetailBox, { borderColor: currentTask.color + '20' }]}>
+          <View style={styles.ritualDetailHeader}>
+            <Text style={[styles.ritualDetailLabel, { color: currentTask.color }]} numberOfLines={1}>{currentTask.label}</Text>
+            <Text style={styles.ritualTotalViews}>{language === 'si' ? 'විවෘත කිරීම් ' : 'opens '}{totalViews}</Text>
+          </View>
+          <Text style={[styles.ritualDetailValue, language === 'si' && styles.sinhalaTextFlow]}>{currentTask.value}</Text>
+          <Text style={[styles.ritualDetailText, language === 'si' && styles.sinhalaTextFlow]}>{currentTask.detail}</Text>
+        </View>
+      ) : null}
+    </Animated.View>
+  );
+}
+
+function PremiumVaultSection({ icon, title, eyebrow, summary, color, count, defaultOpen, delay, children, language }) {
+  var [open, setOpen] = useState(defaultOpen !== false);
+  var accent = color || '#FFB800';
+  return (
+    <Animated.View entering={FadeInDown.delay(delay || 0).duration(520)} style={styles.vaultSectionWrap}>
+      <SpringPressable
+        haptic="light"
+        scalePressed={0.985}
+        onPress={function () { setOpen(!open); }}
+        style={[styles.vaultHeader, { borderColor: open ? accent + '42' : 'rgba(255,255,255,0.08)' }]}
+      >
+        <LinearGradient
+          colors={open ? [accent + '18', 'rgba(255,255,255,0.035)', 'rgba(8,5,3,0.70)'] : ['rgba(255,255,255,0.035)', 'rgba(8,5,3,0.62)']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        />
+        <View style={[styles.vaultIconWrap, { backgroundColor: accent + '14', borderColor: accent + '36' }]}>
+          <Ionicons name={icon} size={18} color={accent} />
+        </View>
+        <View style={styles.vaultHeaderText}>
+          <Text style={[styles.vaultEyebrow, { color: accent }]} numberOfLines={1}>{eyebrow}</Text>
+          <Text style={[styles.vaultTitle, language === 'si' && styles.sinhalaTextFlow]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.82}>{title}</Text>
+          <Text style={[styles.vaultSummary, language === 'si' && styles.sinhalaTextFlow]} numberOfLines={open ? undefined : 2}>{summary}</Text>
+        </View>
+        <View style={styles.vaultActionStack}>
+          {count != null ? (
+            <View style={[styles.vaultCountPill, { borderColor: accent + '28', backgroundColor: accent + '10' }]}>
+              <Text style={[styles.vaultCountText, { color: accent }]}>{count}</Text>
+            </View>
+          ) : null}
+          <View style={[styles.vaultChevron, open && { backgroundColor: accent + '18' }]}>
+            <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={15} color={open ? accent : 'rgba(255,214,102,0.48)'} />
+          </View>
+        </View>
+      </SpringPressable>
+      {open ? (
+        <Animated.View entering={FadeIn.duration(220)} style={styles.vaultBody}>
+          {children}
+        </Animated.View>
+      ) : null}
+    </Animated.View>
+  );
+}
+
+function PremiumAiNote({ text, language }) {
+  var [open, setOpen] = useState(false);
+  var cleaned = cleanKendaraExplanation(text, language);
+  if (!cleaned) return null;
+  return (
+    <SpringPressable haptic="light" scalePressed={0.985} onPress={function () { setOpen(!open); }} style={styles.aiExplainBox}>
+      <Ionicons name="bulb-outline" size={14} color="#FFB800" />
+      <View style={styles.aiExplainBody}>
+        <Text style={styles.aiExplainLabel}>{language === 'si' ? 'විශේෂ සටහන' : 'Insight Note'}</Text>
+        <Text style={styles.aiExplainText} numberOfLines={open ? undefined : 2}>{cleaned}</Text>
+      </View>
+      <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={13} color="rgba(255,184,0,0.52)" />
+    </SpringPressable>
   );
 }
 
@@ -246,18 +749,18 @@ function getKendaraLifeStyle(sign, language) {
   var key = getKendaraRashiKey(sign);
   var signName = getKendaraRashiName(sign, language);
   var meanings = {
-    aries: ['You tackle things head-on and make quick decisions. You prefer initiating action rather than waiting for things to happen to you.', 'ඔයා දේවල් වලට කෙළින්ම මූණ දෙන, ඉක්මනින් තීරණ ගන්න කෙනෙක්. පරක්කු වෙනවට වඩා, හැමදේම ඉස්සරහට ගිහින් කරන එක තමයි ඔයාගේ හැඟීම.'],
-    taurus: ['You value stability and comfort above all else. Your practical nature creates a steady foundation for your finances and relationships.', 'ඔයාට වැදගත්ම දේ තමයි ජීවිතේ ස්ථාවර කම. ලස්සන, පවුල සහ සල්ලිවලින් ලැබෙන ආරක්ෂාවට ඔයා ගොඩක් කැමතියි.'],
-    gemini: ['You are naturally curious and constantly thinking. Communicating your ideas and adapting to new situations is very easy for you.', 'ඔයා ගොඩක් හිතන, අලුත් දේවල් හොයන කෙනෙක්. කතාබහෙන් වගේම එකම වෙලාවේ වැඩ කීපයක් කරන එක ඔයාට හරිම ලේසියි.'],
-    cancer: ['You process the world through your feelings. Protecting your loved ones and maintaining a peaceful home are your deepest priorities.', 'ඔයා තීරණ ගන්නේ හැඟීම් වලට මුල් තැන දීලා. පවුල, ආදරය කරන අය සහ ගෙදරින් ලැබෙන සැනසිල්ල ඔයාට අනිත් හැමදේටම වඩා වටිනවා.'],
-    leo: ['You possess a natural warmth and leadership quality. You thrive when you can express yourself creatively and take charge with confidence.', 'ඔයාට මිනිස්සු අතරේ කැපී පෙනෙන්න පුළුවන් නායකත්ව ගුණයක් තියෙනවා. තමන් ගැන විශ්වාසයෙන් දේවල් කරන එක ඔයාගේ හැටි.'],
-    virgo: ['You are highly analytical and notice the practical details. Your deepest drive is to organize your life and be truly useful to others.', 'ඔයා හැමදේකම පිළිවෙළක් සහ හරි වැරැද්ද හොයන කෙනෙක්. අනිත් අයට උදව් කරන්න වගේම හැමදේම පරිපූර්ණව කරන්න ඔයා හැමතිස්සෙම උත්සාහ කරනවා.'],
-    libra: ['You have a strong instinct for fairness and harmony. You naturally build bridges between people and prefer sharing your life journey.', 'ඔයාට ප්‍රශ්න විසඳන්න සහ සාමය රැකගන්න ලොකු හැකියාවක් තියෙනවා. මිනිස්සු එක්ක එකතු වෙලා වැඩ කරන්නයි, සාධාරණව වැඩ කරන්නයි ඔයා කැමතියි.'],
-    scorpio: ['You experience life with intense depth and privacy. You have an incredible ability to transform and rebuild yourself after challenges.', 'ඔයා දේවල් සරලව ගන්නවට වඩා, හැමදේකම ගැඹුර හොයන කෙනෙක්. ප්‍රශ්න ආවාම වැටිලා ඉන්නේ නැතුව ශක්තිමත්ව නැගිටින්න ඔයාට පුළුවන්.'],
-    sagittarius: ['You are an optimistic seeker who needs freedom to explore. You use your personal beliefs to continually expand your understanding of the world.', 'ඔයා නිදහසට ආදරය කරන, හැමවෙලේම වාසනාව ගැන විශ්වාස කරන කෙනෙක්. අලුත් දේවල් ඉගෙනගන්න සහ දුර ගමන් යන්න ඔයාගේ හිතේ ලොකු ආසාවක් තියෙනවා.'],
-    capricorn: ['You take life seriously and value long-term achievement. Patience, discipline, and building a solid reputation are the foundations of your success.', 'ඔයා ජීවිතේට ගොඩක් වගකීමෙන් බර දෙන කෙනෙක්. ඉවසීමෙන් සහ සැලසුම් කරලා ඉලක්ක වලට යන එක තමයි ඔයාගේ සාර්ථකත්වයේ රහස.'],
-    aquarius: ['You are fiercely independent and often think ahead of your time. Your focus is on progressive ideas and creating positive social change.', 'ඔයා සම්ප්‍රදායික විදිහට හිතන්නෙ නැති, අලුත් විදිහට ලෝකය දකින කෙනෙක්. යාළුවෝ සහ සමාජයේ වෙනස්කම් වෙනුවෙන් පෙනී ඉන්න ඔයා කැමතියි.'],
-    pisces: ['You are highly empathetic with a deep inner emotional life. You navigate the world more through spiritual intuition than rigid logic.', 'ඔයා සංවේදී, අනිත් අයගේ දුක හොඳින් තේරුම් ගන්න කෙනෙක්. හිතාමතා සැලසුම් කරනවට වඩා, හිතට දැනෙන විදිහට වැඩ කරන එක ඔයාට පහසුයි.'],
+    aries: ['You are a natural trailblazer, defined by your unyielding courage and rapid decision-making. Your inherent drive is to initiate, conquer, and lead from the front.', 'ඔබ සහජයෙන්ම පෙරමුණ ගන්නා, නොසැලෙන ධෛර්යයෙන් සහ වේගවත් තීරණ ගැනීමේ හැකියාවෙන් යුතු අයෙකි. යමක් ආරම්භ කිරීම සහ අභියෝග ජය ගැනීම ඔබගේ ප්‍රධාන ස්වභාවයයි.'],
+    taurus: ['You are grounded in profound stability and deeply value life’s tangible comforts. Your practical resilience creates a secure, unshakable foundation in both wealth and relationships.', 'ජීවිතයේ ස්ථාවරත්වයට සහ සුරක්ෂිතභාවයට ඔබ ඉමහත් වටිනාකමක් දෙයි. ඔබගේ ප්‍රායෝගික හා නොසැලෙන ස්වභාවය, ආර්ථිකයේ මෙන්ම සබඳතාවලද ශක්තිමත් පදනමක් ගොඩනගයි.'],
+    gemini: ['Your mind is a brilliant, restless kaleidoscope of ideas. You process the world through exceptional adaptability, effortless communication, and a profound intellectual curiosity.', 'ඔබගේ මනස අතිශය තියුණු මෙන්ම නිරන්තරයෙන් අවදිව පවතින එකකි. විශිෂ්ට සන්නිවේදනය, බුද්ධිමය කුතුහලය සහ ඕනෑම තත්වයකට අනුවර්තනය වීමේ දුර්ලභ හැකියාවක් ඔබට හිමිය.'],
+    cancer: ['You navigate life through a deep, intuitive emotional current. Your highest calling is to nurture, fiercely protect your sanctuary, and foster profound emotional bonds.', 'හැඟීම් සහ සහජ ඉව මූලික කරගනිමින් ඔබ ජීවිතය දෙස බලයි. ආදරණීයයන් සුරැකීම, පවුලේ සෙනෙහස සහ මානසික සැනසිල්ල ඔබගේ ලෝකයේ වටිනාම සම්පත් වේ.'],
+    leo: ['You radiate an undeniable regal warmth and magnetic charisma. Your soul thrives on creative self-expression, natural authority, and a destiny meant to shine.', 'ඔබ සතුව ප්‍රතික්ෂේප කළ නොහැකි නායකත්ව පෞරුෂයක් සහ ආකර්ෂණීය තේජසක් ඇත. නිර්මාණශීලීව අදහස් දැක්වීමටත්, අන් අය මධ්‍යයේ කැපී පෙනෙමින් ආලෝකමත්ව වැජඹීමටත් ඔබ උපන් හැකියාවක් දරයි.'],
+    virgo: ['You possess a beautifully analytical mind driven by the perfection of structure. Your profound purpose is refined service, meticulous logic, and elevating the world around you.', 'අතිශය තර්කානුකූල හා ක්‍රමානුකූල මනසකින් ඔබ හෙබිය. යම් දෙයක හරි වැරැද්ද මැනවින් විනිශ්චය කරමින්, පරිපූර්ණත්වය ඔස්සේ ලෝකයට සේවය කිරීම ඔබගේ උතුම් අරමුණයි.'],
+    libra: ['You are the masterful architect of human harmony and aesthetic balance. Your finest strengths are diplomacy, partnership, and an innate pursuit of grace and fairness.', 'ඔබ මානව සබඳතාවල සමබරතාව මනාව රකින, සාධාරණත්වයේ සංකේතයකි. සහයෝගීතාවය, රාජ්‍යතාන්ත්‍රික බව සහ සෞන්දර්යය කෙරෙහි ඔබට සහජ නැඹුරුවක් ඇත.'],
+    scorpio: ['You experience existence through a lens of transformational depth and unmatched psychological power. Like a phoenix, you contain the ultimate resilience to conquer and rise.', 'ජීවිතයේ ඉතා ගැබුරු මානයන් ස්පර්ශ කරන, අද්භූත පරිවර්තනීය ශක්තියකින් ඔබ යුක්තය. ඕනෑම බිඳවැටීමකින් පසු අළු අස්සෙන් නැගී සිටින ෆීනික්ස් පක්ෂියෙකු වන් බලයක් ඔබේ ආත්මගතව ඇත.'],
+    sagittarius: ['You are a restless philosophical wanderer, fueled by expansion, higher truth, and eternal optimism. Your spirit is liberated only when exploring the limitless boundaries of life.', 'නිදහසට හා උදාර සත්‍යයට පෙම් බඳින තීක්ෂණ ගවේෂකයෙකු ලෙස ඔබ හැඳින්විය හැක. අනාගතය පිළිබඳ ගැඹුරු විශ්වාසයත්, නව ලෝකයන් සොයා යාමේ නොනිම් ආශාවත් ඔබව මෙහෙයවයි.'],
+    capricorn: ['Your spirit is defined by absolute sovereignty, discipline, and an architectural approach to success. You command the patience and fortitude required to build an enduring legacy.', 'අතිමහත් විනය, ඉවසීම සහ දැඩි වගකීම්බර බව ඔබගේ සාර්ථකත්වයේ අඩිතාලමයි. කාලාන්තරයක් පුරා නොසැලී ශක්තිමත් කීර්තියක් සහ අධිරාජ්‍යයක් ගොඩනැගීමට ඔබ සමත් වේ.'],
+    aquarius: ['You are a brilliant, unpredictable visionary operating constantly ahead of your time. Your destiny aligns with radical innovation, complete independence, and shaping the collective future.', 'සම්ප්‍රදායික සීමාවන්ගෙන් ඔබ්බට සිතන, අනාගතවාදී පෙරළිකාරයෙකු ලෙස ඔබ කැපී පෙනේ. පූර්ණ ස්වාධීනත්වය සහ සමාජයීය වෙනසක් ඇති කිරීමේ දැක්ම ඔබ තුළ ගැබ්ව තිබේ.'],
+    pisces: ['You are an incredibly empathic soul, tuned deeply into the unseen spiritual realms. You flow through life guided by dreams, boundless compassion, and mystical intuition.', 'කෙලවරක් නැති අනුකම්පාවෙන් සහ ගැඹුරු දාර්ශනික ඉවකින් පිරි සංවේදී ආත්මයක් ඔබට හිමිය. ලෝකය තේරුම් ගැනීමේදී භෞතික තර්කයට වඩා අධ්‍යාත්මික හැඟීම් මත ඔබ විශ්වාසය තබයි.'],
   };
   var selected = meanings[key];
   if (!selected) return language === 'si' ? 'සාමාන්‍ය, සමබර ජීවිත රටාවක්.' : 'A very balanced energy.';
@@ -310,16 +813,16 @@ function getKendaraPlanetName(planet, language) {
 function getKendaraPlanetFocus(planet, language) {
   var key = getKendaraPlanetKey(planet);
   var map = {
-    sun: ['It gives you confidence, builds your personality, and helps you make bold decisions to stand out.', 'ඔයාගෙ ආත්ම විශ්වාසය, පෞරුෂය හදලා, බය නැතුව තීරණ අරන් කැපී පේන්න උදව් කරන්නේ මේ ශක්තියයි.'],
-    moon: ['It rules your feelings, daily moods, and brings you emotional safety and comfort.', 'ඔයාගෙ හැඟීම්, දවසේ මානසිකත්වය පාලනය කරලා, හිතට සැනසිල්ලක් ගේන්නේ මේ ශක්තියෙන්.'],
-    mars: ['It fuels your courage, drives your energy, and shapes how you handle anger and take action.', 'ඔයාගෙ ධෛර්යය, ශක්තිය වැඩි කරලා, ප්‍රශ්න වලට මූණ දෙන විදිහ හදන්නේ මේ ශක්තියයි.'],
-    mercury: ['It sharpens your speech, enhances your learning style, and brings out your quick thinking.', 'ඔයා කතා කරන විදිහ, ඉගෙනගන්න රටාව සහ ඉක්මන් බුද්ධිය මෙහෙයවන්නේ මේ ශක්තියෙන්.'],
-    jupiter: ['It brings growth, deepens your wisdom, and opens doors to natural opportunities.', 'ඔයාගේ දියුණුව, නුවණ වැඩි කරලා, ජීවිතේට වාසනාවන්ත අවස්ථා ගෙනත් දෙන්නේ මේ ශක්තියෙන්.'],
-    venus: ['It shapes your love life, refines your tastes, and determines what you naturally attract.', 'ඔයාට ආදරය, සැපපහසුව ගෙනත් දීලා, අනිත් අයව ආකර්ෂණය කරගන්න විදිහ හදන්නේ මේ ශක්තියයි.'],
-    saturn: ['It teaches you discipline, builds your patience, and ensures long-term achievements through duty.', 'ඔයාට විනය, ඉවසීම පුරුදු කරලා, කාලයක් ගිහින් ස්ථිර දියුණුවක් දෙන්නේ මේ ශක්තියයි.'],
-    rahu: ['It drives your ambitions, encourages risk-taking, and fuels your deepest desires for growth.', 'ඔයාගේ ලොකු බලාපොරොත්තු, අවදානම් ගන්න කැමැත්ත වැඩි කරලා, අලුත් දේවල් වලට යොමු කරන්නේ මේ ශක්තියයි.'],
-    ketu: ['It enhances your intuition, teaches you to let go, and helps you find true inner peace.', 'දේවල් අත්හරින්න පුරුදු කරලා, හිතේ නිස්කලංක බව සහ සහජ ඉව වැඩි කරන්නේ මේ ශක්තියයි.'],
-    lagna: ['It guides your life direction, affects your physical vitality, and shapes your first impression.', 'ඔයා ජීවිතේ යන පැත්ත, ශරීර සෞඛ්‍යය සහ අනිත් අයට ඔයාව මුලින්ම පේන විදිහ තීරණය වෙන්නේ මේ ශක්තියෙන්.'],
+    sun: ['It bestows vital life force, undeniable royal confidence, and illuminates your highest path of self-realization.', 'මෙම හැසිරවීම ඔබගේ ආත්මීය තේජස ඉස්මතු කරමින්, ප්‍රබල පෞරුෂයක් සහ නොසැලෙන ආත්ම විශ්වාසයක් ඔබට උරුම කර දෙයි.'],
+    moon: ['It governs the deep oceans of your subconscious, bringing serene emotional intelligence, maternal comfort, and inner peace.', 'මෙය ඔබගේ අභ්‍යන්තර හැඟීම් සහ මානසික සංහිඳියාව සුරකිමින්, ජීවිතයට මෘදු, දයාබර සහ චිත්තවේගීය ගැඹුරක් එක් කරයි.'],
+    mars: ['It ignites your warrior spirit, tactical courage, and the pure kinetic drive needed to conquer formidable life obstacles.', 'ඔබ අභ්‍යන්තරයේ සිටින රණශූරයා අවදි කරමින්, අභියෝග හමුවේ නොබියව ක්‍රියා කිරීමේ පූර්ණ ධෛර්යය හා ප්‍රබල ශක්තිය මෙයින් ලඟා කරයි.'],
+    mercury: ['It refines your intellectual brilliance, analytical agility, and masters the art of profound communication and learning.', 'මෙමගින් ඔබගේ බුද්ධිමය තීක්ෂණ බව සහ විශ්ලේෂණ හැකියාවන් මුවහත් කර, විශිෂ්ට සන්නිවේදන කුසලතා ඔබට ලබා දෙයි.'],
+    jupiter: ['It serves as the grand benefactor of luck, expanding your philosophical wisdom, spiritual wealth, and manifesting divine grace.', 'ජීවිතයට අප්‍රමාණ වාසනාව සහ ආත්මීය දියුණුව කැඳවන මෙය, ඔබේ ප්‍රඥාව පුළුල් කර උදාර අවස්ථා රැසක් උදා කරනු ලබයි.'],
+    venus: ['It orchestrates the essence of earthly luxury, magnetic attraction, and the profound appreciation of romantic & aesthetic harmony.', 'ආදරයේ සහ සෞන්දර්යයේ ශක්තිය මූර්තිමත් කරන මෙය, ජීවිතයේ සැපපහසුකම් සහ ආකර්ෂණීය සබඳතා ඔබ වෙත නිතැතින්ම ගෙන එයි.'],
+    saturn: ['It acts as the ultimate cosmic teacher, demanding rigorous discipline, immense patience, and forging indestructible, long-term success.', 'විනය සහ අප්‍රමාණ ඉවසීම පුහුණු කරමින්, කාලයේ පරීක්ෂණයෙන් ජයගත හැකි ස්ථිරසාර, යෝධ සාර්ථකත්වයක් මෙය ඔබට ගොඩනගා දෙයි.'],
+    rahu: ['It fuels an insatiable magnetic ambition, breaking established boundaries to propel you toward unprecedented materialistic expansion.', 'ඔබේ ප්‍රබලම අරමුණු සහ ලෞකික ආශාවන් අවුළුවා, සමාජ සීමාවන් බිඳ දමමින් වේගවත් අතිවිශාල ජයග්‍රහණ කරා ඔබව මෙහෙයවයි.'],
+    ketu: ['It strips away the unnecessary, guiding you toward ultimate cosmic detachment, mystical intuition, and profound spiritual enlightenment.', 'ලෞකික බැඳීම්වලින් ඔබව මුදා හරිමින්, අතීත ජන්ම පුරුදු ඔස්සේ ගැඹුරු ආධ්‍යාත්මික සැනසිල්ල සහ සහජ ඉව අවදි කිරීමට මෙය ක්‍රියා කරයි.'],
+    lagna: ['It initiates your very existence, shaping the architectural blueprint of your destiny, physical vitality, and your primary persona.', 'ඔබගේ මුළුමහත් පැවැත්ම, ශරීර සෞඛ්‍යය සහ ලෝකයට ඔබව දර්ශනය වන ප්‍රධානම ආකාරය මින් තීරණය කරමින් ජීවිතයේ දිශානතිය පෙන්වයි.'],
   };
   var selected = map[key];
   if (!selected) return language === 'si' ? 'මේ ග්‍රහ ශක්තිය' : 'this planet energy';
@@ -351,18 +854,18 @@ function getKendaraHouseLabel(houseNum, language) {
 
 function getKendaraHouseArea(houseNum, language) {
   var map = {
-    1: ['your self, body, confidence, and first impression', 'ඔයාගේ පෙනුම, ශරීරය, ආත්ම විශ්වාසය සහ අනිත් අයට ඔයාව පේන විදිහ'],
-    2: ['your money, family, speech, food, and what you save', 'ඔයාගේ සල්ලි, පවුල, කතා කරන විදිහ, කෑම බීම සහ ඉතිරි කරන දේවල්'],
-    3: ['your communication, courage, siblings, short trips, and effort', 'ඔයාගේ කතාබහ, ධෛර්යය, සහෝදරයෝ, කෙටි ගමන් සහ උත්සාහය'],
-    4: ['your home, mother, land, vehicles, and inner peace', 'ඔයාගේ ගෙදර, අම්මා, ඉඩකඩම් වාහන, සහ හිතේ සැනසීම'],
-    5: ['your education, creativity, children, romance, and smart choices', 'ඔයාගේ ඉගෙනීම, නිර්මාණශීලී වැඩ, දරුවෝ, ආදර හැඟීම් සහ නුවණ'],
-    6: ['your work routine, health habits, daily service, and how you handle competition', 'ඔයාගේ වැඩ පුරුදු, සෞඛ්‍යය, සේවය කිරීම සහ ප්‍රශ්න වලට මුහුණ දෙන විදිහ'],
-    7: ['your marriage, partners, clients, agreements, and public life', 'ඔයාගේ විවාහය, හවුල්කාරයෝ, ගිවිසුම් සහ සමාජය එක්ක ගනුදෙනු'],
-    8: ['deep changes, secrets, shared money, and how you recover', 'ජීවිතේ ගැඹුරු වෙනස්කම්, රහස්, හවුල් මුදල් සහ අමාරු වෙලාවලින් ගොඩ එන විදිහ'],
-    9: ['higher learning, luck, teachers, faith, and long journeys', 'උසස් අධ්‍යාපනය, වාසනාව, ගුරුවරු, විශ්වාසයන් සහ දුර ගමන්'],
-    10: ['your career, reputation, authority, goals, and public success', 'ඔයාගේ රැකියාව, නම, වගකීම්, ඉලක්ක සහ සමාජයේ පිළිගැනීම'],
-    11: ['your friends, networks, income, supporters, and big dreams', 'ඔයාගේ යාළුවෝ, හිතවත්තු, ලාභ, සහ ලොකු බලාපොරොත්තු'],
-    12: ['rest, foreign connections, private life, letting go, and spirituality', 'විවේකය, පිටරට සම්බන්ධතා, පෞද්ගලික ජීවිතය, අත්හරින දේවල් සහ ආධ්‍යාත්මික පැත්ත'],
+    1: ['the essence of your existence, raw physical vitality, core identity, and how the world uniquely perceives you', 'ඔබගේ මූලික පැවැත්ම, පෞරුෂයේ දැවැන්ත බව, සෞඛ්‍යය සහ අන් අය ඔබව දකින සුවිශේෂී ආකාරය'],
+    2: ['accumulated wealth, ancestral roots, the power of your speech, and everything you hold as a deep personal value', 'ධනය ගොඩනැගීම, පවුලේ මූලයන්, වචනයේ බලපෑම සහ ඔබ ඉමහත් සේ අගය කරන වටිනාකම්'],
+    3: ['your instinctual courage, masterful communication, bond with younger siblings, and relentless driving momentum', 'ඔබගේ සහජ ධෛර්යය, අතිවිශිෂ්ට සන්නිවේදනය, සහෝදර සබඳතා සහ ඕනෑම දෙයක් වෙනුවෙන් ගන්නා වූ දැඩි උත්සාහය'],
+    4: ['the profound emotional sanctuary of your heart, maternal connections, foundational real estate, and ultimate inner peace', 'හදවතේ ගැඹුරුම සැනසිල්ල, මව් සෙනෙහස, දේපළ වාහන සහ ජීවිතයේ මූලික සුරක්ෂිතභාවය'],
+    5: ['your supreme intellectual creations, karmic blessings, romance, the lineage of children, and intuitive gambling of the mind', 'බුද්ධිමය නිර්මාණශීලීත්වය, පුණ්‍ය ශක්තිය, ආදරය, දරු සම්පත් සහ ජීවිතයේ ගන්නා නිවැරදි ඉහළ තීරණ'],
+    6: ['the arena where you conquer obstacles, dominate competition, refine daily health, and perfect the act of service', 'ජීවිතයේ අභියෝග සහ සතුරන් ජයගන්නා ආකාරය, එදිනෙදා සෞඛ්‍ය පුරුදු සහ ලෝකයට ඔබගෙන් ඉටුවන සේවය'],
+    7: ['the mirror of your soul through sacred partnerships, serious business alliances, and your grand interaction with the public', 'විවාහය නම් වූ උතුම් බැඳීම, ප්‍රබල ව්‍යාපාරික හවුල්කාරිත්වයන් සහ සමාජය සමග පවත්වන ශක්තිමත් ගනුදෙනු'],
+    8: ['the hidden realm of total transformation, mystical secrets, sudden windfalls, and the profound capacity for rebirth', 'ජීවිතයේ අතිශය ගැඹුරු පරිවර්තනයන්, රහසිගත ආධ්‍යාත්මික ශක්තීන්, හවුල් ධනය සහ බිඳවැටීමකින් පසු නැගීසිටීමේ බලය'],
+    9: ['your connection to divine luck, higher philosophical truth, ancestral gurus, spiritual faith, and expansive distant journeys', 'පෙර පින් බලය, උසස් දාර්ශනික ප්‍රඥාව, ගුරුවරුන්ගේ ආශිර්වාදය, විශ්වාසයන් සහ දුර බැහැර ගමන්'],
+    10: ['the absolute zenith of your worldly ambitions, commanding career legacy, immense public authority, and societal reputation', 'ඔබගේ වෘත්තීය ජීවිතයේ කූටප්‍රාප්තිය, සමාජයේ අතිමහත් කීර්තිය, වගකීම් දැරීමේ බලය සහ සාර්ථකත්වයේ සලකුණ'],
+    11: ['the ultimate fulfillment of your most massive desires, vast social networks, significant gains, and elite influential allies', 'ජීවිතයේ දැවැන්තම බලාපොරොත්තු ඉටුවීම, ලාභ ලැබීම්, ප්‍රබල සමාජ ජාල සහ ඔබට සහාය වන වැදගත් පුද්ගලයන්'],
+    12: ['your sacred withdrawal from the material world, foreign lands, enlightened spiritual release, and subconscious dream states', 'ලෞකික බැඳීම්වලින් කරන ආධ්‍යාත්මික මිදීම, විදේශීය සබඳතා, ගැඹුරු භාවනාත්මක විවේකය සහ අත්හැරීමේ කලාව'],
   };
   var selected = map[houseNum];
   if (!selected) return language === 'si' ? 'ජීවිතයේ ඒ පැත්ත' : 'that area of life';
@@ -374,17 +877,17 @@ function getKendaraDegreeStage(degree, language) {
   var degreeNum = Number(degree);
   if (degreeNum < 10) {
     return language === 'si'
-      ? 'ග්‍රහයා රාශියේ මුල හරියේ ඉන්න නිසා, මේ දේවල් ජීවිතේට ඉක්මනින්ම දැනෙන්න ගන්නවා.'
-      : 'Because it sits early in the sign, this energy tends to act quickly and show up right from the start.';
+      ? 'ග්‍රහයා රාශියේ ආරම්භක කලාපයේ පිහිටා ඇති බැවින්, මෙම ශක්තිය ඉතා තරුණ, වේගවත් හා සෘජුවම ජීවිතයට බලපෑම් කිරීමට සමත්ය.'
+      : 'Residing in the early degrees of the sign, this planetary energy is distinctly raw, dynamic, and manifests with immediate, youthful intensity.';
   }
   if (degreeNum < 20) {
     return language === 'si'
-      ? 'ග්‍රහයා රාශියේ මැද හරියේ ඉන්න නිසා, මේ ශක්තිය ගොඩක් ස්ථාවරව, සමබරව වැඩ කරනවා.'
-      : 'Because it sits in the middle of the sign, this energy is very steady and produces solid, balanced results.';
+      ? 'ග්‍රහයා රාශියේ මධ්‍යයේ බලවත්ව සිටින හෙයින්, මෙයින් ලැබෙන ප්‍රතිඵල අතිශය ස්ථාවර, පූර්ණ සහ ජීවිතයට දැඩි සමබරතාවයක් ගෙන එනු ලබයි.'
+      : 'Anchored firmly in the center of the sign, this energy operates at peak maturity, delivering incredibly stable, balanced, and fully-realized results.';
   }
   return language === 'si'
-    ? 'ග්‍රහයා රාශියේ අග හරියේ ඉන්න නිසා, මේ දේවල්වල නියම ප්‍රතිඵල ලැබෙන්නේ ටිකක් කල් ගිහින් අත්දැකීම් ලැබුණාට පස්සෙයි.'
-    : 'Because it sits late in the sign, this energy matures over time and shows its best results with experience.';
+    ? 'ග්‍රහයා රාශියේ අවසාන භාගයේ ගත කිරීම නිසා, මෙම ශක්තිය කාලයත් සමඟ පරිණත වී තරමක් ප්‍රමාද වී අතිවිශිෂ්ට හා ගැඹුරු ප්‍රතිඵල ලබා දෙනු ඇත.'
+    : 'Positioned in the late degrees, this energy is deeply seasoned and wise; it yields its most profound and rewarding manifestations as life experience accumulates.';
 }
 
 function getKendaraShadbalaForPlanet(shadbala, planet) {
@@ -402,15 +905,15 @@ function getKendaraStrengthSentence(strength, language) {
   if (!strength) return '';
   var percent = Number(strength.percentage || 0);
   if (language === 'si') {
-    if (percent >= 75) return 'ඔයාගේ කේන්දරේ මේ ග්‍රහයා ගොඩක් බලවත්. ඒ නිසා මේ පැත්තෙන් ලැබෙන ප්‍රතිඵල හරිම ශක්තිමත්.';
-    if (percent >= 60) return 'මේ ග්‍රහයාගෙන් ඔයාට හොඳ සහයෝගයක් තියෙනවා. ඒ නිසා මේ පැත්තේ දේවල් සාර්ථක කරගන්න ලේසියි.';
-    if (percent >= 45) return 'මේ ග්‍රහයාගේ බලය සාමාන්‍ය මට්ටමක තියෙන්නේ. ඒ නිසා මහන්සි වෙලා, සැලසුම් කරලා වැඩ කළොත් හොඳ ප්‍රතිඵල ගන්න පුළුවන්.';
-    return 'මේ ග්‍රහයාට ටිකක් විතර අපහසුතා තියෙන නිසා, මේ පැත්තේ දේවල් කරද්දී ඉක්මන් නොවී කල්පනාවෙන් වැඩ කරන එක තමයි හොඳම දේ.';
+    if (percent >= 75) return 'ඔබගේ කේන්දරය තුළ මෙම ග්‍රහයා අතිප්‍රබල ලෙස ස්ථානගත වී ඇත. එමනිසා නියෝජනය වන කටයුතුවලදී ඔබට සුවිශේෂී හා බාධා කළ නොහැකි වාසනාවක් උරුම වේ.';
+    if (percent >= 60) return 'මෙම ග්‍රහයාගෙන් ඔබට ඉතා ශක්තිමත් පදනමක් හිමිවෙයි. එබැවින් මෙම දිශානතිය යටතේ ඇති කටයුතු සාර්ථක කරගැනීම ඔබට බෙහෙවින් පහසු වනු ඇත.';
+    if (percent >= 45) return 'මෙම ග්‍රහයා මධ්‍යස්ථ බලයකින් යුක්තය. මෙහි නියම ප්‍රතිඵල ලබාගැනීමට නම්, ඔබගේම උත්සාහය සහ ක්‍රමානුකූල සැලසුම් අනිවාර්ය සාධකයන් වේ.';
+    return 'මෙම ග්‍රහයා යම්තාක් දුරකට අභියෝගාත්මක තත්වයක පවතී. එබැවින් කටයුතුවලදී හැඟීම්බර නොවී, ඉමහත් ඉවසීමෙන් හා උපක්‍රමශීලීව කටයුතු කිරීම අත්‍යවශ්‍ය වේ.';
   }
-  if (percent >= 75) return 'This planet is powerfully positioned in your chart, giving you very strong support in this area.';
-  if (percent >= 60) return 'This planet gives you solid backing, making it easier to find success here.';
-  if (percent >= 45) return 'This planet has moderate strength, which means your own effort and planning will determine the results.';
-  return 'This planet faces some challenges, so it is better to be patient, take your time, and avoid rushing things here.';
+  if (percent >= 75) return 'This planet is astronomically powerful in your chart, commanding exceptional dominion and guaranteeing nearly unshakeable success in its domains.';
+  if (percent >= 60) return 'Operating with highly solid fortitude, this planet acts as an excellent, reliable anchor, making it naturally easier to manifest your goals here.';
+  if (percent >= 45) return 'Possessing a moderate cosmic velocity, this planet requires that your own strategic planning and persistent human effort act as the primary drivers of your success.';
+  return 'Facing cosmic friction, this energy teaches you severe patience. It is highly advisable to avoid impulsiveness and navigate these waters with calm, calculated precision.';
 }
 
 function getKendaraStrongestShadbalaPart(components, language) {
@@ -458,10 +961,10 @@ function getKendaraPlanetPlacementDetail(planet, rashiLabel, houseNumber, langua
   var strengthNote = getKendaraStrengthSentence(getKendaraShadbalaForPlanet(shadbala, planet && planet.name), language);
   if (language === 'si') {
     var siPlace = houseLabel ? signName + ' රාශියේ ' + houseLabel : signName + ' රාශියේ';
-    return 'ඔයාගේ ' + planetName + ' ඉන්නේ ' + siPlace + '. ඒ නිසා ඔයාගේ ' + focus + ' වැඩිපුරම බලපාන්නේ ' + houseArea + ' ගැන කටයුතු වලටයි. ' + degreeNote + (strengthNote ? ' ' + strengthNote : '');
+    return planetName + ' ' + siPlace + ' තැන්පත් වෙමින් කේන්දරයේ ප්‍රබල සලකුණක් තබයි. ' + focus + ' මෙමඟින් ' + houseArea + ' කෙරෙහි සෘජුවම බලපෑම් එල්ල කරනු ඇත. ' + degreeNote + (strengthNote ? ' ' + strengthNote : '');
   }
   var enPlace = houseLabel ? signName + ' in ' + houseLabel : signName;
-  return planetName + ' is placed in ' + enPlace + '. This means your ' + focus + ' will naturally express itself through ' + houseArea + '. ' + degreeNote + (strengthNote ? ' ' + strengthNote : '');
+  return planetName + ' is strategically placed in ' + enPlace + '. This powerful cosmic alignment dictates that your ' + focus + ' will naturally dominate the realm of ' + houseArea + '. ' + degreeNote + (strengthNote ? ' ' + strengthNote : '');
 }
 
 function getKendaraShadbalaPersonalDetail(strength, language) {
@@ -471,14 +974,14 @@ function getKendaraShadbalaPersonalDetail(strength, language) {
   var bestPart = getKendaraStrongestShadbalaPart(strength && strength.components, language);
 
   if (language === 'si') {
-    if (percent >= 60) return planetName + 'ට ඔයාගේ කේන්දරේ ' + percent + '% ක ඉහළ බලයක් තියෙනවා. ඒ නිසා ජීවිතේ ' + focus + ' වගේ දේවල් සාර්ථක කරගන්න මේ ශක්තිය ගොඩක් උදව් වෙනවා. විශේෂයෙන්ම ' + bestPart.label + ' හරහා තමයි මේකේ නියම ප්‍රයෝජනය ලැබෙන්නේ.';
-    if (percent >= 45) return planetName + 'ගේ බලය ' + percent + '% ක් වගේ මධ්‍යම මට්ටමක තියෙන්නේ. ඒ නිසා ' + focus + ' සම්බන්ධ වැඩ වලදී නිකම්ම වාසනාවට වඩා සැලසුම් කරලා වැඩ කළොත් ඉස්සරහට යන්න ලේසියි. ' + bestPart.label + ' හරහා යම් සහයෝගයක් මේකට ලැබෙනවා.';
-    return planetName + 'ගේ ස්වභාවික බලය තරමක් අඩුයි (' + percent + '%). ඒ නිසා ' + focus + ' කියලා කියන කටයුතු වලදී කලබල නොවී, හොඳට හිතලා අනිත් අයගේ අදහස් අහල තීරණ ගන්න එක තමයි නුවණට හුරු.';
+    if (percent >= 60) return planetName + ' ග්‍රහයා ඔබගේ කේන්දරය තුළ ' + percent + '% ක ඉහළ සහ ප්‍රතික්ෂේප කළ නොහැකි බලයක් උසුලයි. මෙයින් ' + focus + ' ආශ්‍රිත කටයුතුවලදී ඔබට සුවිශේෂී ජයග්‍රහණ ගෙනෙන අතර මෙය ' + bestPart.label + ' හරහා ප්‍රශස්ත ලෙස ක්‍රියාත්මක වේ.';
+    if (percent >= 45) return planetName + ' ග්‍රහයා ' + percent + '% ක මධ්‍යස්ථ ශක්තියකින් ක්‍රියා කරයි. මෙහිදී අන්ධ වාසනාවට වඩා ඔබගේ බුද්ධිමත් තීරණ මත ' + focus + ' හි සාර්ථකත්වය තීරණය වේ. තවද ' + bestPart.label + ' ඔබගේ ගමනට අමතර පිටුබලයක් සපයයි.';
+    return planetName + ' ග්‍රහයා දරන්නේ කුඩා ස්වභාවික ශක්තියකි (' + percent + '%). එබැවින් ' + focus + ' හා සබැඳි කරුණුවලදී ක්ෂණික තීරණවලින් වැළකී, ගැඹුරින් සිතා බලා කටයුතු කිරීම ඔබට අතිශයින් වැදගත් වේ.';
   }
 
-  if (percent >= 60) return planetName + ' provides steady support (' + percent + '%) for your ' + focus + '. Its most active trait is its ' + bestPart.label + ', making it a reliable pillar for building success here.';
-  if (percent >= 45) return planetName + ' offers moderate support (' + percent + '%). Your own planning and effort will matter more than pure luck when it comes to your ' + focus + ', though its ' + bestPart.label + ' helps smooth the path.';
-  return planetName + '’s natural momentum is on the lower side (' + percent + '%). It’s best to be patient with your ' + focus + '—avoid rushing and seek practical advice when things feel stuck.';
+  if (percent >= 60) return planetName + ' commands an undeniable ' + percent + '% energetic influence in your chart. It acts as an elite cosmic architect for your ' + focus + ', channeling its ultimate power specifically through its ' + bestPart.label + '.';
+  if (percent >= 45) return planetName + ' operates at a highly tactical ' + percent + '% capacity. Achieving mastery over your ' + focus + ' will depend on sheer execution and deliberate planning rather than passive luck, though its ' + bestPart.label + ' provides an excellent foundational support.';
+  return planetName + ' maintains a subtler baseline vibration (' + percent + '%). It is a profound cosmic directive to exercise extreme patience and seek experienced counsel regarding your ' + focus + ', steering clear of rushed impulses.';
 }
 
 function getKendaraBhriguPersonalDetail(point, language) {
@@ -492,14 +995,14 @@ function getKendaraBhriguPersonalDetail(point, language) {
 
   if (language === 'si') {
     var activeText = activations.length > 0
-      ? 'මේ දවස්වල ' + activations.map(function(item) { return getKendaraPlanetName(item.planet, language); }).join(', ') + ' කියන ග්‍රහයන් මේ ලක්ෂ්‍යය අවදි කරන නිසා, මේ කියන අවස්ථා ඉක්මනින් ජීවිතේට දැනෙන්න පුළුවන්.'
-      : 'මේක දිනපතා හදිසි වෙනස්කම් ගේන දෙයක් නෙවෙයි; ජීවිතේ දිගුකාලීනව ඔයා දියුණු වෙන දිශාව විදිහට මේක තේරුම් ගන්න.';
-    return 'ඔයාගේ දෛවයේ ප්‍රධාන තැන ' + rashiName + ' රාශියේ තමයි පිහිටලා තියෙන්නේ. ඒ කියන්නේ ' + lifeStyle + ' හරහා තමයි ඔයාට වැඩියෙන්ම අවස්ථා හැදෙන්නේ. ඒ වගේම උපන් නැකතේ ගුණයක් විදිහට ' + birthFocus + ' කියන ලක්ෂණයත් මේකට එකතු වෙනවා. ' + activeText;
+      ? 'මේ දිනවල ' + activations.map(function(item) { return getKendaraPlanetName(item.planet, language); }).join(', ') + ' යන ග්‍රහ දෘෂ්ටීන් මෙම ලක්ෂ්‍යය අවදි කරන බැවින්, ඔබගේ ජීවිතයේ ඉතා වේගවත් හා සුවිශේෂී අවස්ථාවන් උදා වීමට නියමිතය.'
+      : 'මෙය ක්ෂණික වාසනාවට වඩා, ඔබගේ ජීවිත කාලය පුරා විහිදෙන ගැඹුරු, සදාකාලික දියුණුවේ එකම දිශානතිය ලෙස සැලකිය යුතුය.';
+    return 'ඔබේ දෛවයේ කේන්ද්‍රීය ලක්ෂ්‍යය ' + rashiName + ' රාශියේ ප්‍රබල ලෙස පිහිටා තිබේ. ' + lifeStyle + ' තවද, ඔබ උපන් නැකතේ ඉහළම ගුණය වන ' + birthFocus + ' මේ සඳහා ආත්මීයව සම්බන්ධ වේ. ' + activeText;
   }
   var enActiveText = activations.length > 0
-    ? 'Right now, ' + activations.map(function(item) { return getKendaraPlanetName(item.planet, language); }).join(', ') + ' is activating this point, so you might notice opportunities coming up faster.'
-    : 'This isn’t about daily emergencies—think of it as a long-term compass showing where your real growth lies.';
-  return 'Your destiny point lands in ' + rashiName + ' at around ' + degreeText + '. This means your best opportunities will naturally open up through ' + lifeStyle + '. It also carries a touch of ' + birthFocus + ' from your birth star. ' + enActiveText;
+    ? 'Currently, ' + activations.map(function(item) { return getKendaraPlanetName(item.planet, language); }).join(', ') + ' is powerfully activating this coordinate, precipitating rapid, high-impact opportunities on your timeline.'
+    : 'View this not as a fleeting daily horoscope, but as your absolute North Star—a profound geometric compass indicating your highest lifetime evolution.';
+  return 'The apex of your cosmic destiny is charted precisely in ' + rashiName + ' at ' + degreeText + '. ' + lifeStyle + ' This alignment flawlessly integrates the primal essence of ' + birthFocus + ' from your stellar birth coordinates. ' + enActiveText;
 }
 
 function getKendaraPlanetList(planets, language) {
@@ -514,9 +1017,9 @@ function getKendaraKetuPatternDetail(pastLife, language) {
   var rashiName = data.ketuRashi ? getKendaraRashiName(data.ketuRashi, language) : '';
   var domain = language === 'si' ? (theme.domainSi || theme.domain || '') : (theme.domain || '');
   if (language === 'si') {
-    return 'කේතු ' + (rashiName ? rashiName + ' රාශියේ ' : '') + 'තියෙන නිසා, ' + domain + ' කියන පැත්ත හරියට ඔයාට ඉබේම පුරුදුයි වගේ දැනෙන්න පුළුවන්. හැබැයි ඒ හුරු පුරුදු තැනම හිරවෙලා ඉන්නේ නැතුව, ඒ අත්දැකීම් දැන් ඔයාගේ අලුත් ගමනට පඩිපෙළක් කරගන්න.';
+    return 'කේතු ග්‍රහයා ' + (rashiName ? rashiName + ' රාශියෙහි ' : '') + 'නිදන්ගත වී ඇති බැවින්, ' + domain + ' සම්බන්ධ කාරණා ඔබට පෙර භවයක සිට සහජයෙන්ම හුරුපුරුදුය. එහෙත් එම සුවපහසු කලාපය තුළම සිරනොවී, එම සහජ ප්‍රඥාව ඔබගේ වර්තමාන අධ්‍යාත්මික ගමනට ශක්තිමත් පඩිපෙළක් කරගත යුතුව ඇත.';
   }
-  return 'Since Ketu is in ' + (rashiName || 'this area') + ', things related to ' + domain + ' might feel almost automatically familiar to you. The key is to use that natural comfort as a tool to move forward, rather than getting stuck simply doing what’s easy.';
+  return 'With Ketu stationed deeply in ' + (rashiName || 'this realm') + ', matters surrounding ' + domain + ' will feel intensely, almost unnervingly familiar due to past-life mastery. The cosmic challenge is to utilize this innate wisdom as a stepping stone rather than remaining stagnant in what is effortless.';
 }
 
 function getKendaraRahuDirectionDetail(pastLife, language) {
@@ -526,9 +1029,9 @@ function getKendaraRahuDirectionDetail(pastLife, language) {
   var rashiName = data.rahuRashi ? getKendaraRashiName(data.rahuRashi, language) : '';
   var growth = language === 'si' ? (theme.growthSi || theme.growth || '') : (theme.growth || '');
   if (language === 'si') {
-    return 'රාහු ' + (rashiName ? rashiName + ' රාශියේ ' : '') + 'ඉන්න නිසා, දැන් ඔයාගේ ජීවිතේ නියම දියුණුව තියෙන්නේ ' + growth + ' කියන පැත්තට යද්දියි. මුලදී මේක ටිකක් නුපුරුදු වගේ දැනුණත්, කේන්දරේ අනුව ඉස්සරහට යන්න තියෙන හොඳම පාර තමයි මේක.';
+    return 'රාහු, ' + (rashiName ? rashiName + ' රාශියේ ' : '') + 'බලපවත්වන බැවින්, මෙම ජීවිතයේ ඔබගේ උත්තරීතර පරිණාමය සහ දියුණුව සෘජුවම ' + growth + ' වෙත යොමුව තිබේ. ආරම්භයේදී මෙය අතිශය නුහුරු අභියෝගයක් සේ දැනුනද, කේන්දරයට අනුව ඔබගේ විශ්වීය ජයග්‍රහණය සැඟව ඇත්තේ එතැනය.';
   }
-  return 'With Rahu placed in ' + (rashiName || 'this area') + ', your real growth in this life comes from stepping into ' + growth + '. It might feel a bit unfamiliar or challenging at first, but this is the forward path that brings the biggest rewards.';
+  return 'As Rahu casts its powerful shadow in ' + (rashiName || 'this sector') + ', your soul’s ultimate evolutionary mandate in this lifetime demands expansion into ' + growth + '. While initially foreign and intimidating, stepping boldly into this exact arena is what guarantees your highest destined rewards.';
 }
 
 function getKendaraKarmaBalanceDetail(pastLife, language) {
@@ -537,13 +1040,13 @@ function getKendaraKarmaBalanceDetail(pastLife, language) {
   var good = Number(balance.good || 0);
   var challenging = Number(balance.challenging || 0);
   if (language === 'si') {
-    if (good > challenging) return 'හොඳ සහාය දෙන රටාවන් මේකේ වැඩියි. ඒ නිසා ඔයාගේ පරණ පුරුදු බාධාවක් වෙනවා වෙනුවට, ඒවා ජීවිතේ ඉස්සරහට යන්න ලොකු හයියක් වෙනවා.';
-    if (challenging > good) return 'මේකේ අභියෝග පැත්ත ටිකක් වැඩියි. ඒ නිසා හැමතිස්සෙම එකම පරණ පුරුද්දට නොයා, හිතලා බලලා අලුත් තීරණ ගන්න එකෙන් තමයි දියුණුව ලැබෙන්නේ.';
-    return 'මේකෙදි හොඳ දේවල් වගේම අභියෝගත් දෙකම සමබරව තියෙනවා. ඒ නිසා ඔයා ගන්න තීරණ අනුව තමයි මේකේ නියම ප්‍රතිඵලය තීරණය වෙන්නේ.';
+    if (good > challenging) return 'මෙම කලාපය තුළ ශුභ කර්ම බලපෑම් ඉහළය. ඒ අනුව අතීත පුරුදු ඔබට බාධාවක් නොවී, ඔබගේ ඉදිරි අනාගතයට අතිමහත් ආශීර්වාදයක් මෙන්ම නොසෙල්වෙන පදනමක් වනු ඇත.';
+    if (challenging > good) return 'මෙහිදී අභියෝගාත්මක කර්ම රටාවන් තරමක් ප්‍රබලය. එබැවින් හුරුපුරුදු සුලභ මාර්ගයෙන් මිදී, දැඩි සිහියෙන් යුතුව අලුත් තීරණ ගැනීම තුළින්ම පමණක් ඔබට මෙම අභියෝග විනිවිද යා හැක.';
+    return 'ශුභ මෙන්ම අභියෝගාත්මක තත්වයන් මෙහි අතිශය සමබරව පවතී. එබැවින් විචාර බුද්ධිය පවත්වාගෙන, ඔබ ගන්නා වූ සෑම තීරණයක් මතම ඔබගේ දෛවයේ අවසන් ප්‍රතිඵලය දැඩිව තීරණය වනු ඇත.';
   }
-  if (good > challenging) return 'The supportive patterns far outweigh the challenges here. This means your old instincts are more likely to act as a solid foundation rather than holding you back.';
-  if (challenging > good) return 'The challenging patterns are stronger right now. True growth will come when you actively choose to do things differently instead of falling back on familiar habits.';
-  return 'The support and challenges are pretty evenly balanced. Because of this, staying aware and making conscious choices is what will truly shape the outcome.';
+  if (good > challenging) return 'Supportive karmic patterns overwhelmingly dominate this alignment. Your past-life instincts will naturally seamlessly assemble an invincible foundation rather than creating modern roadblocks.';
+  if (challenging > good) return 'The karmic density here is heavily challenging. Profound evolution can only be unlocked by consciously severing old habits and forging radically different decisions in the present.';
+  return 'The cosmic scales of support and karmic debt sit in absolute equilibrium here. Because of this exact balance, living with razor-sharp mindfulness and making deliberate, profound choices will exclusively forge your ultimate reality.';
 }
 
 function getKendaraMeritDetail(pastLife, language) {
@@ -551,15 +1054,15 @@ function getKendaraMeritDetail(pastLife, language) {
   if (!merit) return '';
   var benefics = getKendaraPlanetList(merit.benefics || [], language);
   var malefics = getKendaraPlanetList(merit.malefics || [], language);
-  var lordText = merit.lord5 && merit.lord5.name ? getKendaraPlanetName(merit.lord5.name, language) + 'ගෙනුත්' : '';
+  var lordText = merit.lord5 && merit.lord5.name ? getKendaraPlanetName(merit.lord5.name, language) : '';
   if (language === 'si') {
-    if (merit.assessment === 'highly_meritorious') return 'අධ්‍යාපනය, නිර්මාණශීලීත්වය වගේ දේවල් වලට ' + benefics + ' වගේ ග්‍රහයන්ගෙන් ස්වභාවිකවම සහාය ලැබෙනවා.';
-    if (merit.assessment === 'karmic_debts') return 'මේකේ ' + malefics + 'ගේ බලපෑම තියෙන නිසා, ඉක්මන් තීරණ ගන්නේ නැතුව ඉගෙනගෙන, ඉවසීමෙන් යන එක තමයි හොඳම දේ.';
-    return 'ස්වභාවික හැකියාවන් සහ අභියෝග කියන දෙකම ටිකක් මිශ්‍ර වෙලා තියෙන්නේ. ' + (lordText ? lordText + ' මේකට බලපාන නිසා, කාලයත් එක්ක මේකේ නියම ප්‍රතිඵලය පෙනෙන්න ගනීවි.' : 'ඒ නිසා හැමදේකම සමබරව ඉන්න එක වැදගත් වෙනවා.');
+    if (merit.assessment === 'highly_meritorious') return 'පෙර භවයන්හි කළ උදාර පින් මහිමය හේතුවෙන් ' + benefics + ' වැනි සුබ ග්‍රහයන්ගෙන් ඔබට ප්‍රබල ආශීර්වාදයක් ලැබේ. නුවණ, ඉහළ නිර්මාණශීලීත්වය හා සහජ දක්ෂතා කිසිදු ආයාසයකින් තොරව ඔබ වෙත ගලා එයි.';
+    if (merit.assessment === 'karmic_debts') return 'මෙහිදී ' + malefics + ' ග්‍රහයන් ගේ කර්ම බලපෑම් ඇති බැවින්, දේවල් සඳහා දැඩි ඉවසීමක් අත්‍යවශ්‍ය වේ. ක්ෂණික ප්‍රතිඵල පසුපස නොගොස් පියවරෙන් පියවර අත්දැකීම් ලබමින් ඉදිරියට යාමෙන් මෙම ග්‍රහ දෝෂය යටපත් කළ හැක.';
+    return 'ඔබේ සහජ කුසලතා සහ ජීවිත පාඩම් එකිනෙකට සමබරව සම්මිශ්‍රණය වී තිබේ. ' + (lordText ? lordText + ' ග්‍රහයාගේ ගමන විසින් කාලයත් සමඟ මෙහි කූටප්‍රාප්තිය ඔබට පසක් කරනු ඇත.' : 'එබැවින් අන්තගාමී තීරණ නොගෙන, ගැඹුරු මානසික සමබරතාවයක් පවත්වා ගැනීම ඉතා වටී.');
   }
-  if (merit.assessment === 'highly_meritorious') return 'With ' + benefics + ' lending their support, gifts like creativity, instinct, and learning come naturally to you without forcing them.';
-  if (merit.assessment === 'karmic_debts') return 'Because ' + malefics + ' are involved here, things demand more patience. Taking your time, learning step by step, and making careful emotional choices will help a lot.';
-  return 'Your natural gifts and your lessons are pretty evenly mixed. ' + (lordText ? 'The planet ' + lordText + ' will eventually show you how this plays out over time.' : 'It’s about keeping a steady balance rather than pushing too hard in one direction.');
+  if (merit.assessment === 'highly_meritorious') return 'Blessed by powerful ancient merit, ' + benefics + ' continuously bestow immense cosmic favor upon you. Elite level intellect, creative genius, and instinctual wisdom simply flow to you without agonizing effort.';
+  if (merit.assessment === 'karmic_debts') return 'Due to the presence of ' + malefics + ' carrying karmic tension, this domain absolutely demands profound patience. True mastery here is unlocked not through force, but by undertaking slow, meticulous, and humbling life lessons.';
+  return 'Your divine gifts and necessary karmic lessons exist in a beautifully orchestrated equilibrium. ' + (lordText ? 'The sovereign planet ' + lordText + ' will systematically unveil how this destiny resolves as you age.' : 'Success here is purely defined by your ability to maintain stoic balance under varying life pressures.');
 }
 
 function getKendaraDashaPlanet(part) {
@@ -592,14 +1095,14 @@ function getKendaraDashaRemainingText(period, language) {
   var end = new Date(period.endTime || period.end);
   if (isNaN(end.getTime())) return '';
   var diffMs = end - new Date();
-  if (diffMs <= 0) return language === 'si' ? 'මේ කාලය දැන් ඉවර වෙන්නමයි ඇවිත් තියෙන්නේ.' : 'This period is basically wrapping up now.';
+  if (diffMs <= 0) return language === 'si' ? 'මෙම දශා කාල පරිච්ඡේදය මේ වන විට සම්පූර්ණයෙන්ම අවසානයට පැමිණ ඇත.' : 'This astrological epoch is currently in its absolute final stages of resolution.';
   var months = Math.round(diffMs / (30.44 * 24 * 60 * 60 * 1000));
   if (language === 'si') {
-    if (months >= 18) return 'තව අවුරුදු ' + (months / 12).toFixed(1) + ' ක් වගේ මේ කාලය තියෙනවා. ඒ නිසා මේක මත තව දුරටත් ජීවිතේ සැලසුම් කරන්න පුළුවන්.';
-    return 'ඉතුරු වෙලා තියෙන්නේ තව මාස ' + months + ' ක් වගේ. ඒ නිසා දැන් වෙනස්කම් ටිකක් ළඟින්ම දැනෙන්න ඉඩ තියෙනවා.';
+    if (months >= 18) return 'තව වසර ' + (months / 12).toFixed(1) + ' ක පමණ ප්‍රබල කාලසීමාවක් මෙම දශාව යටතේ පවතී. ඔබගේ ජීවිතයේ දැවැන්තම සහ දිගුකාලීන සැලසුම් දියත් කිරීමට මෙය පදනම වේ.';
+    return 'මෙම දශාවේ අවසන් මාස ' + months + ' ක පමණ කාලය දැන් උදා වී ඇත. එබැවින් විශාල පරිවර්තනයන් ඔබේ ජීවිතයට ඉතා ආසන්නව සිදුවෙමින් පවතී.';
   }
-  if (months >= 18) return 'You have about ' + (months / 12).toFixed(1) + ' years left in this phase, so it’s going to shape your long-term planning.';
-  return 'With roughly ' + months + ' months remaining, you’re in a timeframe where this influence might hit a bit closer to home.';
+  if (months >= 18) return 'You maintain a vast window of approximately ' + (months / 12).toFixed(1) + ' years under this phase, making it the definitive bedrock for architecting your grand, long-term visions.';
+  return 'With barely ' + months + ' months remaining in this cycle, the cosmic window is closing, condensing its themes into highly tangible, immediate life shifts.';
 }
 
 function getKendaraDashaPersonalNote(dasha, language, shadbala) {
@@ -614,45 +1117,45 @@ function getKendaraDashaPersonalNote(dasha, language, shadbala) {
   var strength = getKendaraShadbalaForPlanet(shadbala, mainPlanet);
   var remaining = getKendaraDashaRemainingText(currentWindow, language);
   if (language === 'si') {
-    var siStrength = strength ? 'මේ ග්‍රහයාගේ ' + (strength.percentage || 0) + '% ක බලයක් කේන්දරේ තියෙන නිසා, ඒ බලය කොච්චරද කියන එක මේ කාලයේදී අනිවාර්යයෙන්ම බලපානවා.' : '';
-    var siSub = subPlanet ? ' ඒ වගේම ' + subName + ' අතුරු කාලයක් යන නිසා, ' + subFocus + ' කියන දේවලුත් දිනපතාම ඔයාට දැනෙන්න පටන් ගනීවි.' : '';
-    return 'දැන් යන්නේ ' + mainName + 'ගේ ප්‍රධාන කාලය නිසා, මුළු ජීවිතේම වැඩියෙන්ම කැරකිලා තියෙන්නේ ' + mainFocus + ' වටා තමයි.' + siSub + ' ' + siStrength + ' ' + remaining;
+    var siStrength = strength ? 'මෙම ග්‍රහයා ඔබගේ කේන්දරයේ ' + (strength.percentage || 0) + '% ක විසල් බලයක් උසුලන බැවින්, ඉහත කී තත්වයන් ඔබගේ ඉරණම තුළ තීරණාත්මක ලෙස සටහන් වනු ඇත.' : '';
+    var siSub = subPlanet ? ' ඊට අමතරව ' + subName + ' ගේ අතුරු දශාව ද ක්‍රියාත්මක වන හෙයින්, ' + subFocus + ' දිනපතාම අත්විඳීමට ඔබට සිදු වේ.' : '';
+    return 'වර්තමානයේ ඔබ ගත කරන්නේ ' + mainName + ' ග්‍රහයාගේ ප්‍රධාන මහා දශාවයි. ඒ අනුව ඔබගේ සමස්ත ජීවන රටාවම ' + mainFocus + ' වටා කේන්ද්‍රගත වී ඇත.' + siSub + ' ' + siStrength + ' ' + remaining;
   }
-  var enStrength = strength ? 'Your chart gives ' + mainName + ' a ' + (strength.percentage || 0) + '% momentum level, which really sets the tone for how things manifest.' : '';
-  var enSub = subPlanet ? ' Meanwhile, the slightly quicker ' + subName + ' sub-period is adding ' + subFocus + ' into your day-to-day life.' : '';
-  return 'Right now, it’s all about a ' + mainName + ' major period, which means ' + mainFocus + ' is taking center stage as your life theme.' + enSub + ' ' + enStrength + ' ' + remaining;
+  var enStrength = strength ? 'Fortified by an immense ' + (strength.percentage || 0) + '% power rating in your chart, this planetary lord absolutely commands how forcefully these themes materialize.' : '';
+  var enSub = subPlanet ? ' Synchronously, the faster ' + subName + ' sub-period is intricately weaving ' + subFocus + ' into your microscopic daily reality.' : '';
+  return 'You are currently enveloped by the sovereign ' + mainName + ' major period, establishing unquestionable dominance wherein ' + mainFocus + ' dictates the overarching narrative of your existence.' + enSub + ' ' + enStrength + ' ' + remaining;
 }
 
 function getKendaraStrengthCopy(item, language) {
   var category = String(item && item.category || '').toLowerCase();
   
   if (language === 'si') {
-    if (category.indexOf('viparita') !== -1) return { label: 'ප්‍රශ්න මැදින් එන ජයග්‍රහණ', desc: 'අමාරු කාලයක් ආවත් ඒකෙන් පාඩමක් ඉගෙනගෙන, වැටිච්ච තැනින් ආයෙත් ශක්තිමත්ව නැගිටින්න පුළුවන් හැකියාව.' };
-    if (category.indexOf('raja') !== -1) return { label: 'නායකත්වය සහ කැපී පෙනීම', desc: 'අනිත් අයට වැඩිය ඉස්සරහට ඇවිත්, වගකීමක් අරගෙන වැඩ කටයුතු සාර්ථකව මෙහෙයවන්න තියෙන ලොකු හැකියාව.' };
-    if (category.indexOf('dhana') !== -1) return { label: 'ආර්ථික දියුණුව සහ වාසනාව', desc: 'හොඳට මහන්සි වෙලා නිවැරදි වෙලාවට තීරණ ගත්තොත්, ඉක්මනින් සල්ලි හම්බවෙලා දියුණු වෙන්න තියෙන පින.' };
-    if (category.indexOf('dosha') !== -1 || category.indexOf('challenge') !== -1) return { label: 'විශේෂයෙන් පරිස්සම් වෙන්න ඕන තැනක්', desc: 'මේක බයවෙන්න ඕන දෙයක් නෙමෙයි. හැබැයි තීරණයක් ගනිද්දී දෙපාරක් හිතලා කරන්න කියන එක තමයි මේකෙන් මතක් කරන්නේ.' };
-    if (category.indexOf('moon') !== -1) return { label: 'හිතේ සැනසිල්ල සහ සමාජයේ නම', desc: 'මිනිස්සු එක්ක කතාබහ කරලා ඔවුන්ගේ විශ්වාසය දිනාගන්න සහ හිතේ නිදහස අඩුවක් නැතුව තියාගන්න තියෙන හැකියාව.' };
-    if (category.indexOf('education') !== -1) return { label: 'ඉගෙනීමට සහ කලා හැකියාවට ආශිර්වාදය', desc: 'අලුත් දේවල් ඉක්මනින් ඉගෙනගන්න, ලස්සනට කතා කරන්න සහ නිර්මාණශීලී වැඩ වලට ස්වභාවධර්මයෙන් ලැබෙන සහාය.' };
-    if (category.indexOf('character') !== -1) return { label: 'හොඳ නම සහ විශ්වාසය රැකීම', desc: 'කොච්චර දියුණු වුණත් ගුණවත් විදිහට ඉඳලා, සමාජයේ තමන්ගේ නම වගේම මිනිස්සුන්ගේ විශ්වාසය රැකගන්න තියෙන පින.' };
-    if (category.indexOf('personality') !== -1 || category.indexOf('panch') !== -1) return { label: 'පෞරුෂයේ විශේෂ ආකර්ෂණය', desc: 'අනිත් අයගේ හිත ඇදගන්න විදිහට කතා කරන්න, හැසිරෙන්න සහ පිරිසක් මැද තමන්ව කැපී පෙනෙන්න තියෙන සහජ දක්ෂකම.' };
-    if (category.indexOf('protection') !== -1 || category.indexOf('benefic') !== -1) return { label: 'සහාය සහ ආශීර්වාදය', desc: 'ප්‍රශ්නයක් ආවත් ඒක ලොකුවට දැනෙන්න කලින් කොහෙන් හරි පිහිටක් ලැබිලා ඒක මගහරවා ගන්න තියෙන ආරක්ෂාව.' };
-    if (category.indexOf('sun') !== -1) return { label: 'කතාබහෙන් අනිත් අයව මෙහෙයවීම', desc: 'ඔයා පාවිච්චි කරන වචන වලින් සහ කතාවෙන් අනිත් අයව හරියටම තේරුම් කරලා ඔවුන්ට බලපෑමක් කරන්න තියෙන හැකියාව.' };
-    if (category.indexOf('neechabhanga') !== -1) return { label: 'දුර්වලකම ශක්තියක් කරගැනීම', desc: 'මුලදී බැහැ වගේ පේන දෙයක් වුණත්, කල් යද්දී ඒකම ජීවිතේ ලොකුම ශක්තියක් බවට පත්කරගන්න පුළුවන් අපූරු පිහිටීමක්.' };
-    return { label: 'ඔයාට සහාය වෙන සහජ ශක්තියක්', desc: 'ජීවිතේ එදිනෙදා තීරණ ගනිද්දී ඔයාට නොදැනීම ජීවිතේ ඉස්සරහට අරන් යන්න උදව් වෙන ස්වභාවික හැකියාවක්.' };
+    if (category.indexOf('viparita') !== -1) return { label: 'පරීවර්තනීය ජයග්‍රහණය', desc: 'අතිශය අභියෝගාත්මක බිඳවැටීමකින් පසුවද, ලැබූ පන්නරය තුළින් කිසිවෙකුට සමකළ නොහැකි ප්‍රබලත්වයකින් යළි නැගී සිටීමේ අපූරු හැකියාව.' };
+    if (category.indexOf('raja') !== -1) return { label: 'රාජකීය නායකත්වය', desc: 'ප්‍රතික්ෂේප කළ නොහැකි රාජ්‍යතාන්ත්‍රික පෞරුෂයක් මඟින්, ඕනෑම වගකීමක් නොපිරිහෙලා ඉටුකරමින් අන් අයව සාර්ථකව මෙහෙයවීමේ බලය.' };
+    if (category.indexOf('dhana') !== -1) return { label: 'අප්‍රමාණ ආර්ථික බලය', desc: 'නිසි කාලයේදී දරන අවංක උත්සාහය මඟින්, දැවැන්ත සහ ස්ථාවර ආර්ථික ව්‍යාප්තියක් කරා ශීඝ්‍රයෙන් ඔබව ගෙනයන උත්තරීතර වාසනාව.' };
+    if (category.indexOf('dosha') !== -1 || category.indexOf('challenge') !== -1) return { label: 'ඉහළ වූ අවබෝධය', desc: 'මෙය භීතියට කරුණක් නොව, ජීවිතයේ ඉතා වැදගත් තීරණ ගැනීමේදී මින් පෙරට වඩා ගැඹුරින් සහ තියුණු කල්පනාවකින් යුතු වීමට දෙන විශ්වීය කමා ප්‍රවේශයි.' };
+    if (category.indexOf('moon') !== -1) return { label: 'මානසික සහ සමාජීය සංහිඳියාව', desc: 'බාහිර ලෝකයෙන් විශ්වාසය හා ජනප්‍රියත්වය දිනාගන්නා අතරම, ඔබගේ අපිරිසිදු ආධ්‍යාත්මික සහ මානසික සැනසිල්ල අඛණ්ඩව සුරක්ෂිත කරන පිහිටීමකි.' };
+    if (category.indexOf('education') !== -1) return { label: 'බුද්ධිමය හා නෛසර්ගික ප්‍රතිභාව', desc: 'අතිශය නිර්මාණශීලී ගුණයෙන් සහ මනා සන්නිවේදනයෙන් හෙබි, ඕනෑම දෙයක් ක්ෂණිකව ග්‍රහණය කරගත හැකි අසමසම ප්‍රඥාවන්ත පිහිටීමකි.' };
+    if (category.indexOf('character') !== -1) return { label: 'උදාර සදාචාරය', desc: 'කෙතරම් ඉහළට ගියද, නොසැලෙන සදාචාරාත්මක පදනමක් මත පිහිටමින් සමාජයේ උත්තරීතර ගෞරවය සහ විශ්වාසය තහවුරු කරන බලයක්.' };
+    if (category.indexOf('personality') !== -1 || category.indexOf('panch') !== -1) return { label: 'චුම්භක ආකර්ෂණය', desc: 'මහා පිරිසක් මැද වුවද රාජකීය තේජසින් යුක්තව කැපී පෙනීමටත්, ඔබගේ අසමසම පෞරුෂයෙන් මනුෂ්‍ය සිත් වසඟ කිරීමටත් ඇති විශ්මිත බලය.' };
+    if (category.indexOf('protection') !== -1 || category.indexOf('benefic') !== -1) return { label: 'දිව්‍යමය ආරක්ෂාව', desc: 'ව්‍යසනයක් සිදු වීමට පෙර නිසි මොහොතේදී ලඟාවන දේව ආශීර්වාදයක් මෙන්, ඔබව ආරක්ෂා කර ගනිමින් බාධක ජයගැනීමට මඟ පෙන්වන ශක්තිය.' };
+    if (category.indexOf('sun') !== -1) return { label: 'ආධිපත්‍යමය සන්නිවේදනය', desc: 'ඔබගේ සෑම වචනයකටම දැවැන්ත බරක් හා රාජකීය බලයක් ලබා දෙමින්, කිසිදු ආයාසයකින් තොරව අන් අයව ආකර්ෂණය කර මෙහෙයවීමේ ශක්තිය.' };
+    if (category.indexOf('neechabhanga') !== -1) return { label: 'දුබලතාවය ශක්තියක් වීම', desc: 'ආරම්භයේදී ඔබව දුර්වල කළ යම් ලක්ෂණයක්ම, කාලයත් සමඟ පරිණත වී මුළු ජීවිතයම ඔසවා තබන ප්‍රබලතම ශක්තිය බවට පත්වන මහා යෝගයක්.' };
+    return { label: 'විශ්වීය සමතුලිත බලය', desc: 'ඔබගේ කේන්දරය තුළ ක්‍රියාත්මක වන ස්වභාවික යහපත් ශක්ති ප්‍රවාහයක් මඟින්, නිවැරදි ඉලක්ක කරා යාමට අඛණ්ඩව උදව් වන පිහිටීමකි.' };
   }
   
-  if (category.indexOf('viparita') !== -1) return { label: 'Triumph Through Trials', desc: 'A deeply resilient placement that helps you learn from difficult times and completely rebuild yourself stronger than before.' };
-  if (category.indexOf('raja') !== -1) return { label: 'Natural Leadership Energy', desc: 'A powerful placement that helps you easily step up, take charge, and make a real impact on people around you.' };
-  if (category.indexOf('dhana') !== -1) return { label: 'Wealth & Prosperity Flow', desc: 'A highly supportive combination that attracts financial growth when you align your hard work with the right timing.' };
-  if (category.indexOf('dosha') !== -1 || category.indexOf('challenge') !== -1) return { label: 'Mindful Care Point', desc: 'This is absolutely not something to fear—it simply acts as a caution sign reminding you to double-check before major decisions.' };
-  if (category.indexOf('moon') !== -1) return { label: 'Emotional & Public Support', desc: 'A placement that protects your inner peace while naturally drawing trust, popularity, and supportive daily relationships.' };
-  if (category.indexOf('education') !== -1) return { label: 'Intellectual & Creative Gift', desc: 'A beautiful placement that enhances your ability to learn quickly, speak beautifully, and express yourself creatively.' };
-  if (category.indexOf('character') !== -1) return { label: 'Strong Moral Character', desc: 'A placement that ensures you build a solid, trustworthy reputation and maintain ethical balance throughout your success.' };
-  if (category.indexOf('personality') !== -1 || category.indexOf('panch') !== -1) return { label: 'Magnetic Personality', desc: 'A placement that greatly enhances your charm, physical presence, and the way you present yourself to the world.' };
-  if (category.indexOf('protection') !== -1 || category.indexOf('benefic') !== -1) return { label: 'Divine Protection & Grace', desc: 'A shielding placement that softens life\'s blows and ensures you receive the right help and guidance exactly when needed.' };
-  if (category.indexOf('sun') !== -1) return { label: 'Commanding Speech & Presence', desc: 'A placement that gives your words weight and power, making it incredibly easy for you to influence and persuade others.' };
-  if (category.indexOf('neechabhanga') !== -1) return { label: 'Weakness Turned to Power', desc: 'A unique pattern where an area that initially brings struggle transforms into one of your greatest long-term strengths.' };
-  return { label: 'Natural Flowing Strength', desc: 'A fundamentally positive pattern in your chart that continually helps you navigate life and make the right choices.' };
+  if (category.indexOf('viparita') !== -1) return { label: 'Triumph Through Ruin', desc: 'A staggeringly resilient astrological configuration that mandates you crush devastating obstacles and rebuild an unconquerable empire from the ashes.' };
+  if (category.indexOf('raja') !== -1) return { label: 'Sovereign Leadership Matrix', desc: 'An elite cosmic signature that guarantees supreme authority, allowing you to effortlessly command respect and magnetize public influence out of nothing.' };
+  if (category.indexOf('dhana') !== -1) return { label: 'Uncapped Wealth Architecture', desc: 'A deeply rare prosperity grid within your chart that relentlessly attracts elite financial expansion when properly aligned with your supreme labor.' };
+  if (category.indexOf('dosha') !== -1 || category.indexOf('challenge') !== -1) return { label: 'Strategic Cosmic Buffer', desc: 'Do not fear this alignment—it merely functions as a high-level cosmic fail-safe, demanding rigorous double-verification of all extreme life strategies.' };
+  if (category.indexOf('moon') !== -1) return { label: 'Magnetic Public Serenity', desc: 'A psychological fortress that eternally safeguards your inner tranquility while simultaneously rendering you wildly magnetic and universally trusted.' };
+  if (category.indexOf('education') !== -1) return { label: 'Hyper-Intellectual Genesis', desc: 'An absolutely beautiful constellation that violently accelerates your mental processing speed, creative divinity, and eloquent mass communication.' };
+  if (category.indexOf('character') !== -1) return { label: 'Indestructible Moral Reputation', desc: 'A framework that ensures regardless of your titanic success, your foundational integrity and societal honor remain forever untarnished.' };
+  if (category.indexOf('personality') !== -1 || category.indexOf('panch') !== -1) return { label: 'Hypnotic Persona Aura', desc: 'A devastatingly charming planetary stance that exponentially amplifies your sheer physical magnetism and charismatic gravity in any room.' };
+  if (category.indexOf('protection') !== -1 || category.indexOf('benefic') !== -1) return { label: 'Divine Intervention Protocol', desc: 'A guardian placement acting as ultimate cosmic armor; deflecting severe trauma and orchestrating miraculous rescue pathways exactly at the 11th hour.' };
+  if (category.indexOf('sun') !== -1) return { label: 'Dictatorial Vocal Power', desc: 'A configuration that infuses your pure speech with blinding solar radiation; allowing you to persuade, alter, and completely dominate human consciousness.' };
+  if (category.indexOf('neechabhanga') !== -1) return { label: 'Alchemy of the Weakened', desc: 'An exceptionally rare cosmic phenomenon where your initial, profound vulnerability ultimately mutates into your single most lethal existential weapon.' };
+  return { label: 'Fundamental Harmonic Strength', desc: 'A universally positive mathematical hum in your chart that continually steers your subconscious toward flawless, evolutionary decisions.' };
 }
 
 function getKendaraStrengthCategoryLabel(category, language) {
@@ -1012,6 +1515,7 @@ export default function KendaraScreen() {
   const [jyotishData, setJyotishData] = useState(null);
   const [jyotishLoading, setJyotishLoading] = useState(false);
   const [selectedVarga, setSelectedVarga] = useState('d9');
+  const [ritualState, setRitualState] = useState({ dayKey: getKendaraSLTDayKey(), streak: 1, totalViews: 1, viewedToday: false });
   
   const stepTimers = useRef([]);
   const lastFetchedBirth = useRef(null);
@@ -1155,6 +1659,36 @@ export default function KendaraScreen() {
     })();
     return () => { cancelled = true; };
   }, [hasBirthData, birthDateTime, birthLat, birthLng, refreshKey]);
+
+  useEffect(() => {
+    if (!hasBirthData || !birthDateTime || !chartData) return;
+    var cancelled = false;
+    (async () => {
+      var today = getKendaraSLTDayKey();
+      var yesterday = getKendaraSLTDayKey(new Date(Date.now() - (24 * 60 * 60 * 1000)));
+      var nextState = { dayKey: today, streak: 1, totalViews: 1, viewedToday: true, birthDateTime: birthDateTime };
+      try {
+        var raw = await AsyncStorage.getItem(KENDARA_RITUAL_KEY);
+        var saved = raw ? JSON.parse(raw) : null;
+        var sameChart = !!(saved && saved.birthDateTime === birthDateTime);
+        var savedStreak = sameChart ? Number(saved.streak || 0) : 0;
+        var savedViews = sameChart ? Number(saved.totalViews || 0) : 0;
+        var savedDay = sameChart ? saved.dayKey : null;
+
+        if (savedDay === today) {
+          nextState = { dayKey: today, streak: Math.max(1, savedStreak), totalViews: Math.max(1, savedViews), viewedToday: true, birthDateTime: birthDateTime };
+        } else {
+          var nextStreak = savedDay === yesterday ? Math.max(1, savedStreak + 1) : 1;
+          nextState = { dayKey: today, streak: nextStreak, totalViews: savedViews + 1, viewedToday: true, birthDateTime: birthDateTime };
+          await AsyncStorage.setItem(KENDARA_RITUAL_KEY, JSON.stringify({ ...nextState, savedAt: Date.now() }));
+        }
+      } catch (_) {
+        try { await AsyncStorage.setItem(KENDARA_RITUAL_KEY, JSON.stringify({ ...nextState, savedAt: Date.now() })); } catch (__) {}
+      }
+      if (!cancelled) setRitualState(nextState);
+    })();
+    return () => { cancelled = true; };
+  }, [hasBirthData, birthDateTime, chartData]);
 
   // Pull-to-refresh: clear caches and force the effect to re-run
   const onRefresh = useCallback(() => {
@@ -1308,9 +1842,16 @@ export default function KendaraScreen() {
         value: getKendaraLifeStyle(chartData.sunSign && (chartData.sunSign.english || chartData.sunSign.name || chartData.sunSign.rashiId), language),
       },
     ];
+    var insightCards = buildKendaraInsightCards(chartData, jyotishData, topYogas, language);
+    var masteryItems = buildKendaraMasteryItems(chartData, jyotishData, marakaData, selectedVarga, language);
+    var dailyRitual = buildKendaraDailyRitual(insightCards, chartData, jyotishData, marakaData, ritualState, language);
 
     return (
       <View style={styles.chartContainer}>
+        <PremiumDailyRitual ritual={dailyRitual} visitState={ritualState} language={language} reduced={reduced || lowEnd} />
+        <PremiumInsightRail insights={insightCards} language={language} />
+        <KendaraMasteryStrip items={masteryItems} language={language} />
+
         <View style={styles.headerRow}>
           <Ionicons name="grid-outline" size={20} color="#FFB800" />
           <Text style={styles.sectionTitle}>
@@ -1326,7 +1867,7 @@ export default function KendaraScreen() {
         )}
 
         <PinchableView minScale={1} maxScale={2.5}>
-          <ChartGlowAura lagnaColor={lagnaGlowColor}>
+          <ChartGlowAura lagnaColor={lagnaGlowColor} reduced={reduced} lowEnd={lowEnd}>
             <SriLankanChart
               rashiChart={chartData.rashiChart}
               lagnaRashiId={lagnaRashiId}
@@ -1410,7 +1951,7 @@ export default function KendaraScreen() {
             </View>
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
               <PinchableView minScale={1} maxScale={2.5}>
-                <ChartGlowAura lagnaColor="#A78BFA">
+                <ChartGlowAura lagnaColor="#A78BFA" reduced={reduced} lowEnd={lowEnd}>
                   <SriLankanChart
                     rashiChart={chartData.navamsaChart || chartData.navamshaChart}
                     lagnaRashiId={(chartData.navamshaLagna && chartData.navamshaLagna.rashi && chartData.navamshaLagna.rashi.id) || (chartData.navamsaLagna && chartData.navamsaLagna.rashi && chartData.navamsaLagna.rashi.id) || lagnaRashiId}
@@ -1428,7 +1969,16 @@ export default function KendaraScreen() {
 
             {/* ── AI OVERALL SUMMARY ── */}
             {chartData.chartExplanations?.overall && (
-              <Animated.View entering={FadeInDown.delay(150).duration(600)}>
+              <PremiumVaultSection
+                icon="sparkles-outline"
+                color="#FF8C00"
+                eyebrow={language === 'si' ? 'ප්‍රධාන කියවීම' : 'Primary Reading'}
+                title={t('kpChartAtGlance') || 'Your Chart Summary'}
+                summary={fullKendaraCopy(cleanKendaraExplanation(chartData.chartExplanations.overall, language))}
+                defaultOpen={true}
+                delay={150}
+                language={language}
+              >
                 <View style={[styles.advCard, { borderColor: 'rgba(255,140,0,0.25)', marginBottom: 12 }]}>
                   <LinearGradient colors={['rgba(255,140,0,0.12)', 'rgba(255,184,0,0.06)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
@@ -1441,18 +1991,22 @@ export default function KendaraScreen() {
                     {cleanKendaraExplanation(chartData.chartExplanations.overall, language)}
                   </Text>
                 </View>
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* ── DOSHAS ── */}
             {chartData.advancedAnalysis.tier1?.doshas?.items?.length > 0 && (
-              <Animated.View entering={FadeInDown.delay(200).duration(600)}>
-                <View style={styles.headerRow}>
-                  <Ionicons name="alert-circle-outline" size={20} color="#f87171" />
-                  <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'අවධානය දෙන්න ඕන තැන්' : 'Care Points to Review'}
-                  </Text>
-                </View>
+              <PremiumVaultSection
+                icon="alert-circle-outline"
+                color="#F87171"
+                eyebrow={language === 'si' ? 'ආරක්ෂිත කියවීම' : 'Care Reading'}
+                title={language === 'si' ? 'අවධානය දෙන්න ඕන තැන්' : 'Care Points to Review'}
+                summary={language === 'si' ? 'සම්බන්ධතා, තීරණ, සහ ඉවසීම ගැන වැඩි අවධානයක් දිය යුතු තැන් එකතු කරලා.' : 'Relationship, patience, and decision areas that deserve a closer look.'}
+                count={chartData.advancedAnalysis.tier1.doshas.items.length}
+                defaultOpen={chartData.advancedAnalysis.tier1.doshas.items.some(function (d) { return d.severity === 'Severe'; })}
+                delay={200}
+                language={language}
+              >
                 <View style={styles.advCard}>
                   {chartData.advancedAnalysis.tier1.doshas.items.map(function(d, i) {
                     var sevColor = d.severity === 'Severe' ? '#ef4444' : d.severity === 'Moderate' ? '#f59e0b' : '#10b981';
@@ -1493,29 +2047,27 @@ export default function KendaraScreen() {
                     );
                   })}
                 </View>
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* Dosha AI explanation */}
             {chartData.chartExplanations?.doshas && chartData.chartExplanations.doshas !== 'N/A' && (
-              <View style={styles.aiExplainBox}>
-                <Ionicons name="bulb-outline" size={14} color="#FFB800" />
-                <Text style={styles.aiExplainText}>{cleanKendaraExplanation(chartData.chartExplanations.doshas, language)}</Text>
-              </View>
+              <PremiumAiNote text={chartData.chartExplanations.doshas} language={language} />
             )}
 
             {/* ── ADVANCED YOGAS ── */}
             {chartData.advancedAnalysis.tier1?.advancedYogas?.items?.length > 0 && (
-              <Animated.View entering={FadeInDown.delay(300).duration(600)}>
-                <View style={styles.headerRow}>
-                  <Ionicons name="star-outline" size={20} color="#FFB800" />
-                  <Text style={styles.sectionTitle}>
-                    {t('kpYogaTitle') || 'Your Natural Strengths & Talents'}
-                  </Text>
-                  <View style={styles.countBadge}>
-                    <Text style={styles.countText}>{chartData.advancedAnalysis.tier1.advancedYogas.found}</Text>
-                  </View>
-                </View>
+              <PremiumVaultSection
+                icon="star-outline"
+                color="#FFB800"
+                eyebrow={language === 'si' ? 'ශක්ති භණ්ඩාගාරය' : 'Strength Vault'}
+                title={t('kpYogaTitle') || 'Your Natural Strengths & Talents'}
+                summary={language === 'si' ? 'ඔයාගේ කේන්දරේ වැඩිපුරම දීප්තිමත් වෙන සහජ හැකියා මෙතනින් බලන්න.' : 'The strongest talent patterns and fortunate combinations in your chart.'}
+                count={chartData.advancedAnalysis.tier1.advancedYogas.found}
+                defaultOpen={true}
+                delay={300}
+                language={language}
+              >
                 <View style={styles.advCard}>
                   {chartData.advancedAnalysis.tier1.advancedYogas.items.map(function(y, i) {
                     var catColor = y.category === 'Raja Yoga' ? '#FF8C00' : y.category === 'Dhana Yoga' ? '#FFB800' : y.category?.includes('Dosha') ? '#f87171' : '#60a5fa';
@@ -1538,26 +2090,26 @@ export default function KendaraScreen() {
                     );
                   })}
                 </View>
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* Yoga AI explanation */}
             {chartData.chartExplanations?.yogas && chartData.chartExplanations.yogas !== 'N/A' && (
-              <View style={styles.aiExplainBox}>
-                <Ionicons name="bulb-outline" size={14} color="#FFB800" />
-                <Text style={styles.aiExplainText}>{cleanKendaraExplanation(chartData.chartExplanations.yogas, language)}</Text>
-              </View>
+              <PremiumAiNote text={chartData.chartExplanations.yogas} language={language} />
             )}
 
             {/* ── JAIMINI KARAKAS ── */}
             {chartData.advancedAnalysis.tier1?.jaimini && (
-              <Animated.View entering={FadeInDown.delay(400).duration(600)}>
-                <View style={styles.headerRow}>
-                  <Ionicons name="compass-outline" size={20} color="#FF8C00" />
-                  <Text style={styles.sectionTitle}>
-                    {t('kpJaiminiTitle') || 'Your Life Direction'}
-                  </Text>
-                </View>
+              <PremiumVaultSection
+                icon="compass-outline"
+                color="#FF8C00"
+                eyebrow={language === 'si' ? 'අරමුණු කියවීම' : 'Purpose Reading'}
+                title={t('kpJaiminiTitle') || 'Your Life Direction'}
+                summary={language === 'si' ? 'අභ්‍යන්තර අරමුණ, අන් අයට පෙනෙන විදිහ, සහ බැඳීම් රටාව සරලව.' : 'Your inner purpose, public image, and commitment pattern in one focused read.'}
+                defaultOpen={false}
+                delay={400}
+                language={language}
+              >
                 <View style={styles.advCard}>
                   {chartData.advancedAnalysis.tier1.jaimini.atmakaraka && (
                     <View style={styles.jaiminiHighlight}>
@@ -1595,26 +2147,27 @@ export default function KendaraScreen() {
                     )}
                   </View>
                 </View>
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* Soul Purpose AI explanation */}
             {chartData.chartExplanations?.soulPurpose && chartData.chartExplanations.soulPurpose !== 'N/A' && (
-              <View style={styles.aiExplainBox}>
-                <Ionicons name="bulb-outline" size={14} color="#FFB800" />
-                <Text style={styles.aiExplainText}>{cleanKendaraExplanation(chartData.chartExplanations.soulPurpose, language)}</Text>
-              </View>
+              <PremiumAiNote text={chartData.chartExplanations.soulPurpose} language={language} />
             )}
 
             {/* ── SHADBALA ── */}
             {chartData.advancedAnalysis.tier2?.shadbala && typeof chartData.advancedAnalysis.tier2.shadbala === 'object' && (
-              <Animated.View entering={FadeInDown.delay(500).duration(600)}>
-                <View style={styles.headerRow}>
-                  <Ionicons name="bar-chart-outline" size={20} color="#60a5fa" />
-                  <Text style={styles.sectionTitle}>
-                    {t('kpShadbalaTitle') || 'Your Energy Support Levels'}
-                  </Text>
-                </View>
+              <PremiumVaultSection
+                icon="bar-chart-outline"
+                color="#60A5FA"
+                eyebrow={language === 'si' ? 'ග්‍රහ බල මීටරය' : 'Planet Power'}
+                title={t('kpShadbalaTitle') || 'Your Energy Support Levels'}
+                summary={language === 'si' ? 'කොච්චර ශක්තිමත් ලෙස එක් එක් ග්‍රහ ශක්තිය ඔයාට සහාය දෙනවද කියන මැනීම.' : 'A clean strength meter for how each planet supports real-life progress.'}
+                count={Object.values(chartData.advancedAnalysis.tier2.shadbala).length}
+                defaultOpen={false}
+                delay={500}
+                language={language}
+              >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
                   {language === 'si' ? 'ඔයාගේ ජීවිතේ විවිධ පැති වලට මේ ශක්තීන් කොච්චර උදව් වෙනවද කියලා මෙතනින් පෙන්වනවා.' : 'Shows how strongly each part of your birth pattern supports real-life progress.'}
                 </Text>
@@ -1645,26 +2198,26 @@ export default function KendaraScreen() {
                     );
                   })}
                 </View>
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* Planet Power AI explanation */}
             {chartData.chartExplanations?.planetPower && chartData.chartExplanations.planetPower !== 'N/A' && (
-              <View style={styles.aiExplainBox}>
-                <Ionicons name="bulb-outline" size={14} color="#FFB800" />
-                <Text style={styles.aiExplainText}>{cleanKendaraExplanation(chartData.chartExplanations.planetPower, language)}</Text>
-              </View>
+              <PremiumAiNote text={chartData.chartExplanations.planetPower} language={language} />
             )}
 
             {/* ── BHRIGU BINDU ── */}
             {chartData.advancedAnalysis.tier2?.bhriguBindu && (
-              <Animated.View entering={FadeInDown.delay(600).duration(600)}>
-                <View style={styles.headerRow}>
-                  <Ionicons name="locate-outline" size={20} color="#FFB800" />
-                  <Text style={styles.sectionTitle}>
-                    {t('kpBhriguTitle') || 'Your Destiny Point'}
-                  </Text>
-                </View>
+              <PremiumVaultSection
+                icon="locate-outline"
+                color="#06B6D4"
+                eyebrow={language === 'si' ? 'දෛව ලක්ෂ්‍යය' : 'Destiny Marker'}
+                title={t('kpBhriguTitle') || 'Your Destiny Point'}
+                summary={trimKendaraBhriguPersonalDetail(chartData.advancedAnalysis.tier2.bhriguBindu, language)}
+                defaultOpen={false}
+                delay={600}
+                language={language}
+              >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
                   {language === 'si' ? 'ඔයාගේ වර්ධනයට අවශ්‍ය අවස්ථා සහ ජීවිත අරමුණු වැඩිපුරම ක්‍රියාත්මක වෙන තැන මෙතනින් බලන්න පුළුවන්.' : 'Shows the life area where growth, opportunity, and purpose tend to activate strongly.'}
                 </Text>
@@ -1684,26 +2237,26 @@ export default function KendaraScreen() {
                   )}
                   <Text style={styles.bbPersonalNote}>{getKendaraBhriguPersonalDetail(chartData.advancedAnalysis.tier2.bhriguBindu, language)}</Text>
                 </View>
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* Destiny Point AI explanation */}
             {chartData.chartExplanations?.destinyPoint && chartData.chartExplanations.destinyPoint !== 'N/A' && (
-              <View style={styles.aiExplainBox}>
-                <Ionicons name="bulb-outline" size={14} color="#FFB800" />
-                <Text style={styles.aiExplainText}>{cleanKendaraExplanation(chartData.chartExplanations.destinyPoint, language)}</Text>
-              </View>
+              <PremiumAiNote text={chartData.chartExplanations.destinyPoint} language={language} />
             )}
 
             {/* ── PAST LIFE ── */}
             {chartData.advancedAnalysis.tier3?.pastLife && (
-              <Animated.View entering={FadeInDown.delay(700).duration(600)}>
-                <View style={styles.headerRow}>
-                  <Ionicons name="time-outline" size={20} color="#a78bfa" />
-                  <Text style={styles.sectionTitle}>
-                    {t('kpPastLifeTitle') || 'Your Deeper Patterns'}
-                  </Text>
-                </View>
+              <PremiumVaultSection
+                icon="time-outline"
+                color="#A78BFA"
+                eyebrow={language === 'si' ? 'ගැඹුරු රටා' : 'Deep Patterns'}
+                title={t('kpPastLifeTitle') || 'Your Deeper Patterns'}
+                summary={language === 'si' ? 'පුරුදු රටා, වර්ධන දිශාව, සහ ස්වාභාවික ශක්ති එක තැනකට.' : 'Old tendencies, growth direction, and natural strengths gathered into one layer.'}
+                defaultOpen={false}
+                delay={700}
+                language={language}
+              >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
                   {language === 'si' ? 'ඔයාට පුරුදු දේවල් සහ දැන් දියුණු වෙන්න හොඳම දිශාව මෙතනින් පෙන්වනවා.' : 'Shows familiar old patterns and the healthier direction for growth now.'}
                 </Text>
@@ -1746,15 +2299,12 @@ export default function KendaraScreen() {
                     </View>
                   )}
                 </View>
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* Past Life AI explanation */}
             {chartData.chartExplanations?.pastLife && chartData.chartExplanations.pastLife !== 'N/A' && (
-              <View style={styles.aiExplainBox}>
-                <Ionicons name="bulb-outline" size={14} color="#FFB800" />
-                <Text style={styles.aiExplainText}>{cleanKendaraExplanation(chartData.chartExplanations.pastLife, language)}</Text>
-              </View>
+              <PremiumAiNote text={chartData.chartExplanations.pastLife} language={language} />
             )}
 
             {/* ═══════════════════════════════════════════════ */}
@@ -1763,13 +2313,17 @@ export default function KendaraScreen() {
 
             {/* ── DASHA TIMELINE ── */}
             {jyotishData?.dasha && (
-              <Animated.View entering={FadeInDown.delay(820).duration(600)}>
-                <View style={styles.headerRow}>
-                  <Ionicons name="git-branch-outline" size={20} color="#A78BFA" />
-                  <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'ජීවිතයේ මේ කාලේ බලපාන ශක්තිය' : 'Your Current Life Timeline'}
-                  </Text>
-                </View>
+              <PremiumVaultSection
+                icon="git-branch-outline"
+                color="#A78BFA"
+                eyebrow={language === 'si' ? 'දැනට ක්‍රියාත්මක කාලය' : 'Active Chapter'}
+                title={language === 'si' ? 'ජීවිතයේ මේ කාලේ බලපාන ශක්තිය' : 'Your Current Life Timeline'}
+                summary={fullKendaraCopy(getKendaraDashaPersonalNote(jyotishData.dasha, language, chartData.advancedAnalysis?.tier2?.shadbala))}
+                count={(jyotishData.dasha.mahadashas || []).length}
+                defaultOpen={true}
+                delay={820}
+                language={language}
+              >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
                   {language === 'si' ? 'ඔයාගේ ජීවිතේ එක් එක් කාලයට වැඩිපුරම බලපාන ග්‍රහ ශක්තිය මෙතනින් බලන්න පුළුවන්.' : 'Shows which planet energy is most active in each chapter of your life.'}
                 </Text>
@@ -1829,18 +2383,21 @@ export default function KendaraScreen() {
                     );
                   })}
                 </View>
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* ── MANGAL DOSHA ── */}
             {jyotishData?.mangalDosha && (
-              <Animated.View entering={FadeInDown.delay(860).duration(600)}>
-                <View style={styles.headerRow}>
-                  <Ionicons name="flame-outline" size={20} color={jyotishData.mangalDosha.hasDosha ? '#F87171' : '#34D399'} />
-                  <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'සබඳතා වලට කුජගෙන් එන බලපෑම' : 'Mars Influence in Relationships'}
-                  </Text>
-                </View>
+              <PremiumVaultSection
+                icon="flame-outline"
+                color={jyotishData.mangalDosha.hasDosha ? '#F87171' : '#34D399'}
+                eyebrow={language === 'si' ? 'සබඳතා පරීක්ෂාව' : 'Relationship Check'}
+                title={language === 'si' ? 'සබඳතා වලට කුජගෙන් එන බලපෑම' : 'Mars Influence in Relationships'}
+                summary={jyotishData.mangalDosha.hasDosha ? (language === 'si' ? 'කුජ ශක්තිය සබඳතා වලදී වැඩි ඉවසීමක් ඉල්ලන තැනක් පෙන්වනවා.' : 'Mars asks for extra patience and maturity in long-term relationships.') : (language === 'si' ? 'කුජගෙන් විශේෂ පීඩනයක් පෙනෙන්නේ නැහැ.' : 'Mars is not showing a major relationship pressure signal.')}
+                defaultOpen={false}
+                delay={860}
+                language={language}
+              >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
                   {language === 'si' ? 'සබඳතා සහ විවාහය ගැන කුජ ග්‍රහයාගෙන් පෙන්වන විස්තර මෙතනින් බලන්න.' : 'Shows whether Mars asks for extra patience in marriage and long-term relationships.'}
                 </Text>
@@ -1883,18 +2440,21 @@ export default function KendaraScreen() {
                     </View>
                   </View>
                 </View>
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* ── SADE SATI STATUS ── */}
             {jyotishData?.sadeSati && (
-              <Animated.View entering={FadeInDown.delay(900).duration(600)}>
-                <View style={styles.headerRow}>
-                  <Ionicons name="planet-outline" size={20} color={jyotishData.sadeSati.status ? '#F59E0B' : '#34D399'} />
-                  <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'සෙනසුරු ගමනේ දැනට පවතින බලපෑම' : 'Current Saturn Pressure'}
-                  </Text>
-                </View>
+              <PremiumVaultSection
+                icon="planet-outline"
+                color={jyotishData.sadeSati.status ? '#F59E0B' : '#34D399'}
+                eyebrow={language === 'si' ? 'සෙනසුරු තත්ත්වය' : 'Saturn Weather'}
+                title={language === 'si' ? 'සෙනසුරු ගමනේ දැනට පවතින බලපෑම' : 'Current Saturn Pressure'}
+                summary={jyotishData.sadeSati.status ? (language === 'si' ? 'වගකීම්, ප්‍රමාද, සහ ඉවසීම වැඩි වෙන්න පුළුවන් කාලයක්.' : 'A heavier responsibility cycle may be active, asking for patience and structure.') : (language === 'si' ? 'දැනට සෙනසුරු පීඩනය අඩුයි.' : 'Saturn pressure is not showing as active right now.')}
+                defaultOpen={false}
+                delay={900}
+                language={language}
+              >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
                   {language === 'si' ? 'දැනට සෙනසුරු ගමන නිසා වගකීම් සහ ඉවසීම ඕන කාලයක්ද කියලා මෙතනින් බලන්න.' : 'Shows whether Saturn is currently bringing more responsibility, delay, or pressure.'}
                 </Text>
@@ -1931,18 +2491,22 @@ export default function KendaraScreen() {
                     </View>
                   </View>
                 </View>
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* ── CHALIT CHART (Planet Shifts) ── */}
             {jyotishData?.chalit && jyotishData.chalit.planets && (
-              <Animated.View entering={FadeInDown.delay(940).duration(600)}>
-                <View style={styles.headerRow}>
-                  <Ionicons name="swap-horizontal-outline" size={20} color="#818CF8" />
-                  <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'ග්‍රහයින් ක්‍රියාත්මක වන ප්‍රදේශ' : 'Where Planets Work in Real Life'}
-                  </Text>
-                </View>
+              <PremiumVaultSection
+                icon="swap-horizontal-outline"
+                color="#818CF8"
+                eyebrow={language === 'si' ? 'ප්‍රතිඵල පෙන්වන තැන' : 'Result Zones'}
+                title={language === 'si' ? 'ග්‍රහයින් ක්‍රියාත්මක වන ප්‍රදේශ' : 'Where Planets Work in Real Life'}
+                summary={language === 'si' ? 'භාව චලිත අනුව ග්‍රහ ප්‍රතිඵල වැඩිපුර ක්‍රියාත්මක වන ජීවිත ප්‍රදේශ.' : 'Bhava Chalit shows the life areas where planet results actually land.'}
+                count={(Array.isArray(jyotishData.chalit.planets) ? jyotishData.chalit.planets : []).filter(function (p) { return p.d1House !== p.house && p.d1House && p.house; }).length}
+                defaultOpen={false}
+                delay={940}
+                language={language}
+              >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
                   {language === 'si' ? 'උපන් වෙලාව අනුව සමහර ග්‍රහයින් කේන්දරේ පෙන්වන තැන්වලට වඩා වෙනස් තැන්වල ප්‍රතිඵල දෙන්න පුළුවන්.' : 'Sometimes planets give results for a different house than where they initially appear due to the Earth\'s real-time rotation (Bhava Chalit).'}
                 </Text>
@@ -1977,18 +2541,22 @@ export default function KendaraScreen() {
                     </View>
                   )}
                 </View>
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* ── VARGA CHART PICKER ── */}
             {hasBirthData && (
-              <Animated.View entering={FadeInDown.delay(980).duration(600)}>
-                <View style={styles.headerRow}>
-                  <Ionicons name="layers-outline" size={20} color="#06B6D4" />
-                  <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'ජීවිතේ විවිධ කොටස් ගැන විස්තර' : 'Detailed Life Area Charts'}
-                  </Text>
-                </View>
+              <PremiumVaultSection
+                icon="layers-outline"
+                color="#06B6D4"
+                eyebrow={language === 'si' ? 'විශේෂ කොටස්' : 'Life Area Charts'}
+                title={language === 'si' ? 'ජීවිතේ විවිධ කොටස් ගැන විස්තර' : 'Detailed Life Area Charts'}
+                summary={language === 'si' ? 'විවාහය, රැකියාව, දරුවන්, දේපළ, ඉගෙනීම වගේ කොටස් වෙන වෙනම කියවන්න.' : 'Separate focused charts for relationships, career, children, assets, learning, and inner growth.'}
+                count={6}
+                defaultOpen={false}
+                delay={980}
+                language={language}
+              >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
                   {language === 'si' ? 'විවාහය, රැකියාව, දරුවන්, සහ දේපළ වගේ දේවල් වෙන වෙනම තේරුම් ගන්න මේ ටැබ් පාවිච්චි කරන්න.' : 'Use these tabs to understand one life area at a time, such as marriage, career, children, property, and learning.'}
                 </Text>
@@ -2017,18 +2585,22 @@ export default function KendaraScreen() {
                   </ScrollView>
                   <VargaChartDisplay division={selectedVarga} birthDateTime={birthDateTime} lat={birthLat} lng={birthLng} language={language} />
                 </View>
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* ═══ MARAKA APALA (Dangerous Periods) ═══ */}
             {(marakaData || marakaLoading) && (
-              <Animated.View entering={FadeInDown.delay(750).duration(600)}>
-                <View style={styles.headerRow}>
-                  <Ionicons name="shield-outline" size={20} color="#f87171" />
-                  <Text style={styles.sectionTitle}>
-                    {language === 'si' ? 'පරිස්සම් වෙන්න ඕන කාල' : 'Sensitive Periods'}
-                  </Text>
-                </View>
+              <PremiumVaultSection
+                icon="shield-outline"
+                color={marakaData && marakaData.status === 'SAFE' ? '#34D399' : '#F87171'}
+                eyebrow={language === 'si' ? 'ආරක්ෂිත දිනදර්ශනය' : 'Care Calendar'}
+                title={language === 'si' ? 'පරිස්සම් වෙන්න ඕන කාල' : 'Sensitive Periods'}
+                summary={marakaLoading && !marakaData ? (language === 'si' ? 'සංවේදී කාල විශ්ලේෂණය තවම ක්‍රියාත්මකයි.' : 'Sensitive period analysis is still loading.') : (marakaData ? (language === 'si' ? (marakaData.statusSi || 'ආරක්ෂාව ගැන කෙටි කියවීමක්.') : (marakaData.statusEn || 'A focused read on timing and caution.')) : '')}
+                count={marakaData ? ((marakaData.activeCount || 0) + ((marakaData.upcomingApala || []).length)) : null}
+                defaultOpen={!!(marakaData && marakaData.status !== 'SAFE')}
+                delay={750}
+                language={language}
+              >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
                   {language === 'si' ? 'ග්‍රහ ගමනට අනුව සෞඛ්‍යය සහ ආරක්ෂාව ගැන ටිකක් වැඩියෙන් හිතන්න ඕන කාල සීමාවන් මෙතනින් බලන්න පුළුවන්.' : 'High-friction periods based on your current astrological cycle where taking caution with health and decisions is advised. Avoid starting big new things.'}
                 </Text>
@@ -2286,7 +2858,7 @@ export default function KendaraScreen() {
                     )}
                   </View>
                 ) : null}
-              </Animated.View>
+              </PremiumVaultSection>
             )}
 
             {/* ── ENGINE FOOTER ── */}
@@ -2305,32 +2877,10 @@ export default function KendaraScreen() {
   return (
     <DesktopScreenWrapper routeName="kendara">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <CosmicBackground reduced={reduced} lowEnd={lowEnd} />
+      <CosmicBackground reduced={reduced} lowEnd={lowEnd} variant="golden" />
       <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={sc.iconAccent} />}>
         <View style={[styles.content, isDesktop && styles.contentDesktop, !isDesktop && { paddingTop: insets.contentTop }]}>
-          <Animated.View entering={FadeIn.duration(700)} style={styles.pageTitleRow}>
-            <View>
-              <Text style={[styles.pageTitle, { color: sc.iconAccent }]}>
-                {language === 'si' ? 'මගේ ජීවිත සිතියම' : 'My Life Map'}
-              </Text>
-              <Text style={[styles.pageSubtitle, { color: sc.labelColor }]}>
-                {user && user.birthData && user.birthData.dateTime
-                  ? (function() {
-                      var dt = String(user.birthData.dateTime);
-                      var dateMatch = dt.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                      var dateStr = dateMatch ? dateMatch[3] + '/' + dateMatch[2] + '/' + dateMatch[1] : new Date(dt).toLocaleDateString();
-                      return dateStr + '  ' + formatBirthTime(dt);
-                    })()
-                  : ''}
-              </Text>
-            </View>
-            {user?.birthData && (
-              <View style={styles.lagnaOrb}>
-                <LinearGradient colors={gradients.orangeButton} style={StyleSheet.absoluteFill} />
-                <Ionicons name="planet" size={22} color={sc.iconAccent} />
-              </View>
-            )}
-          </Animated.View>
+          <PremiumKendaraHero chartData={chartData} jyotishData={jyotishData} user={user} language={language} gradients={gradients} reduced={reduced} lowEnd={lowEnd} />
           {renderContent()}
         </View>
         <View style={{ height: isDesktop ? 32 : insets.contentBottom }} />
@@ -2347,6 +2897,233 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: 30, fontWeight: '800', color: '#FFB800', marginBottom: 3, ...textShadow('rgba(255,184,0,0.3)', { width: 0, height: 2 }, 8) },
   pageSubtitle: { fontSize: 13, color: 'rgba(255,214,102,0.50)', fontWeight: '500' },
   lagnaOrb: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.35)', ...boxShadow('#FF8C00', { width: 0, height: 0 }, 0.5, 10) },
+  sinhalaTextFlow: { letterSpacing: 0, textTransform: 'none' },
+  premiumHeroWrap: {
+    borderRadius: 30, paddingHorizontal: 16, paddingTop: 18, paddingBottom: 17, marginBottom: 18, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(255,184,0,0.24)',
+    backgroundColor: 'rgba(9,6,3,0.86)',
+    ...boxShadow('rgba(255,140,0,0.52)', { width: 0, height: 14 }, 0.38, 30),
+  },
+  heroTopSheen: {
+    position: 'absolute', left: 0, right: 0, top: 0, height: 112,
+  },
+  heroPortalGlow: {
+    position: 'absolute', width: 260, height: 260, borderRadius: 130, top: 4, alignSelf: 'center',
+    backgroundColor: 'rgba(255,184,0,0.24)',
+    ...boxShadow('rgba(255,184,0,0.72)', { width: 0, height: 0 }, 0.48, 38),
+  },
+  heroConstellationLine: {
+    position: 'absolute', left: -18, right: -18, top: 112, height: 1,
+    backgroundColor: 'rgba(255,184,0,0.16)', transform: [{ rotate: '-7deg' }],
+  },
+  heroPortalStage: {
+    height: 248, alignItems: 'center', justifyContent: 'center', marginTop: 2, marginBottom: 10,
+  },
+  heroPortalOrbitOuter: {
+    position: 'absolute', width: 226, height: 226, borderRadius: 113,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(255,214,102,0.28)',
+  },
+  heroPortalOrbitInner: {
+    position: 'absolute', width: 178, height: 178, borderRadius: 89,
+    borderWidth: 1, borderColor: 'rgba(6,182,212,0.22)',
+  },
+  heroOrbitNodeGold: {
+    position: 'absolute', width: 10, height: 10, borderRadius: 5, top: 9, left: 104,
+    backgroundColor: '#FFB800', ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.7, 10),
+  },
+  heroOrbitNodeCyan: {
+    position: 'absolute', width: 7, height: 7, borderRadius: 4, bottom: 26, right: 31,
+    backgroundColor: '#4CC9F0', ...boxShadow('#4CC9F0', { width: 0, height: 0 }, 0.6, 8),
+  },
+  heroOrbitNodePurple: {
+    position: 'absolute', width: 8, height: 8, borderRadius: 4, top: 34, right: 16,
+    backgroundColor: '#A78BFA', ...boxShadow('#A78BFA', { width: 0, height: 0 }, 0.58, 8),
+  },
+  heroPortalCard: {
+    width: 164, height: 192, borderRadius: 42, overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.38)',
+    ...boxShadow('rgba(255,184,0,0.68)', { width: 0, height: 0 }, 0.55, 30),
+  },
+  heroPortalShimmer: {
+    position: 'absolute', width: 74, height: 240, top: -24,
+    backgroundColor: 'rgba(255,255,255,0.42)',
+  },
+  heroPortalImageOrb: {
+    width: 134, height: 134, borderRadius: 67, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    backgroundColor: 'rgba(26,16,64,0.16)', borderWidth: 1, borderColor: 'rgba(26,16,64,0.18)',
+  },
+  heroPortalImage: { width: 128, height: 128 },
+  heroPortalName: { color: '#1A1040', fontSize: 18, lineHeight: 22, fontWeight: '900', marginTop: 8, textAlign: 'center', maxWidth: 132 },
+  heroPortalSub: { color: 'rgba(26,16,64,0.72)', fontSize: 9, lineHeight: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8 },
+  heroFloatingChipLeft: {
+    position: 'absolute', left: 8, bottom: 32, maxWidth: 112, minHeight: 34, borderRadius: 999,
+    flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10,
+    backgroundColor: 'rgba(12,8,28,0.70)', borderWidth: 1, borderColor: 'rgba(199,210,254,0.20)',
+  },
+  heroFloatingChipRight: {
+    position: 'absolute', right: 8, top: 30, maxWidth: 116, minHeight: 34, borderRadius: 999,
+    flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10,
+    backgroundColor: 'rgba(36,20,4,0.72)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.22)',
+  },
+  heroFloatingChipText: { color: 'rgba(255,244,214,0.78)', fontSize: 10, lineHeight: 13, fontWeight: '900', flexShrink: 1 },
+  heroCopyPanel: {
+    alignItems: 'center', paddingHorizontal: 6, marginTop: -2,
+  },
+  heroTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 },
+  heroTextBlock: { flex: 1, minWidth: 0 },
+  heroKickerRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 },
+  heroKickerRowPremium: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 7 },
+  heroKicker: { color: 'rgba(255,214,102,0.64)', fontSize: 10, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' },
+  heroTitlePremium: { color: '#FFE8B0', fontSize: 32, lineHeight: 38, fontWeight: '900', letterSpacing: 0, textAlign: 'center', ...textShadow('rgba(255,184,0,0.30)', { width: 0, height: 2 }, 11) },
+  heroSubtitlePremium: { color: 'rgba(255,244,214,0.68)', fontSize: 13, lineHeight: 21, fontWeight: '600', marginTop: 8, maxWidth: 520, textAlign: 'center' },
+  heroSealMotion: { width: 104, height: 124, alignItems: 'center', justifyContent: 'center', marginTop: -1 },
+  heroSealHalo: {
+    position: 'absolute', width: 112, height: 112, borderRadius: 56,
+    backgroundColor: 'rgba(255,184,0,0.24)',
+    ...boxShadow('rgba(255,184,0,0.70)', { width: 0, height: 0 }, 0.58, 26),
+  },
+  heroSealOrbit: {
+    position: 'absolute', width: 108, height: 108, borderRadius: 54,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(26,16,64,0.24)',
+  },
+  heroSealSpark: { position: 'absolute', width: 7, height: 7, borderRadius: 4, top: -2, left: 49, backgroundColor: '#1A1040' },
+  heroSealSparkAlt: { position: 'absolute', width: 5, height: 5, borderRadius: 3, bottom: 4, right: 18, backgroundColor: 'rgba(26,16,64,0.72)' },
+  heroSealWrap: {
+    width: 94, height: 110, borderRadius: 24, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.20)',
+    ...boxShadow('#FF8C00', { width: 0, height: 0 }, 0.42, 22),
+  },
+  heroSealInner: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.12)' },
+  heroSealImageOrb: {
+    width: 62, height: 62, borderRadius: 31, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    backgroundColor: 'rgba(26,16,64,0.16)', borderWidth: 1, borderColor: 'rgba(26,16,64,0.18)',
+  },
+  heroSealImage: { width: 58, height: 58 },
+  heroSealText: { color: '#1A1040', fontSize: 14, lineHeight: 17, fontWeight: '900', marginTop: 4, textAlign: 'center' },
+  heroSealSub: { color: 'rgba(26,16,64,0.72)', fontSize: 9, fontWeight: '900', marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.7 },
+  heroBirthRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'center', maxWidth: '100%',
+    marginTop: 14, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
+    backgroundColor: 'rgba(255,184,0,0.07)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.14)',
+  },
+  heroBirthText: { color: 'rgba(255,214,102,0.66)', fontSize: 11, fontWeight: '800', maxWidth: 260 },
+  heroMetricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 15 },
+  heroMetric: {
+    flexGrow: 1, flexBasis: '47%', minHeight: 56, borderRadius: 15, paddingHorizontal: 11, paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 1,
+  },
+  heroMetricTextWrap: { flex: 1, minWidth: 0 },
+  heroMetricLabel: { color: 'rgba(255,214,102,0.42)', fontSize: 9, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 3 },
+  heroMetricValue: { fontSize: 13, lineHeight: 17, fontWeight: '900' },
+
+  chartAuraWrap: { alignItems: 'center', marginBottom: 20, paddingVertical: 8, minHeight: Math.min(SCREEN_WIDTH - 40, 380) + 26 },
+  chartOrbitRing: {
+    position: 'absolute', width: Math.min(SCREEN_WIDTH - 12, 390), height: Math.min(SCREEN_WIDTH - 12, 390),
+    borderRadius: Math.min(SCREEN_WIDTH - 12, 390) / 2, borderWidth: 1, borderStyle: 'dashed',
+    top: 0, alignSelf: 'center', opacity: 0.88,
+  },
+  chartOrbitSpark: { position: 'absolute', width: 8, height: 8, borderRadius: 4, top: 18, left: '50%' },
+  chartOrbitSparkAlt: { position: 'absolute', width: 5, height: 5, borderRadius: 3, bottom: 26, right: 64, opacity: 0.82 },
+  chartPremiumFrame: {
+    borderRadius: 22, overflow: 'hidden', padding: 4,
+    borderWidth: 1, backgroundColor: 'rgba(14,8,4,0.88)', elevation: 10,
+  },
+  chartFrameGradient: { padding: 4, borderRadius: 18, overflow: 'hidden' },
+  chartFrameInnerLine: {
+    position: 'absolute', left: 7, right: 7, top: 7, bottom: 7,
+    borderRadius: 15, borderWidth: 1, borderColor: 'rgba(255,184,0,0.10)',
+  },
+
+  ritualWrap: {
+    borderRadius: 22, padding: 15, marginBottom: 14, overflow: 'hidden',
+    backgroundColor: 'rgba(10,7,3,0.82)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.16)',
+    ...boxShadow('rgba(255,140,0,0.26)', { width: 0, height: 9 }, 0.28, 18),
+  },
+  ritualPulse: {
+    position: 'absolute', width: 170, height: 170, borderRadius: 85, right: -68, top: -70,
+  },
+  ritualTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
+  ritualIconWrap: { width: 40, height: 40, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  ritualTitleBlock: { flex: 1, minWidth: 0, paddingTop: 1 },
+  ritualEyebrow: { fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
+  ritualTitle: { color: '#FFE8B0', fontSize: 18, lineHeight: 23, fontWeight: '900' },
+  ritualStreakBadge: {
+    minWidth: 52, minHeight: 45, borderRadius: 15, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8,
+    backgroundColor: 'rgba(255,184,0,0.10)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.18)',
+  },
+  ritualStreakValue: { color: '#FFB800', fontSize: 19, lineHeight: 21, fontWeight: '900' },
+  ritualStreakLabel: { color: 'rgba(255,214,102,0.52)', fontSize: 9, lineHeight: 12, fontWeight: '900', textTransform: 'uppercase' },
+  ritualBody: { color: 'rgba(255,244,214,0.64)', fontSize: 12, lineHeight: 20, fontWeight: '600', marginBottom: 13 },
+  ritualTaskRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  ritualTaskPill: {
+    minHeight: 42, maxWidth: '48%', flexGrow: 1, flexBasis: '30%', borderRadius: 16, borderWidth: 1,
+    borderColor: 'rgba(255,184,0,0.12)', backgroundColor: 'rgba(255,255,255,0.035)',
+    paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+  },
+  ritualTaskText: { color: 'rgba(255,214,102,0.48)', fontSize: 10, lineHeight: 14, fontWeight: '900', flexShrink: 1, textAlign: 'center' },
+  ritualDetailBox: { borderRadius: 17, borderWidth: 1, padding: 12, backgroundColor: 'rgba(255,255,255,0.035)' },
+  ritualDetailHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 6 },
+  ritualDetailLabel: { fontSize: 10, lineHeight: 13, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase', flexShrink: 1 },
+  ritualTotalViews: { color: 'rgba(255,214,102,0.42)', fontSize: 10, lineHeight: 13, fontWeight: '800' },
+  ritualDetailValue: { color: '#FFE8B0', fontSize: 15, lineHeight: 21, fontWeight: '900', marginBottom: 6 },
+  ritualDetailText: { color: 'rgba(255,244,214,0.56)', fontSize: 11, lineHeight: 18, fontWeight: '600' },
+
+  insightRailWrap: { marginBottom: 14 },
+  insightHeaderRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 10, gap: 12 },
+  insightHeaderTextBlock: { flex: 1, minWidth: 0 },
+  insightHeaderKicker: { color: 'rgba(255,184,0,0.50)', fontSize: 10, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase', marginBottom: 2 },
+  insightHeaderTitle: { color: '#FFE8B0', fontSize: 18, lineHeight: 23, fontWeight: '900' },
+  insightCountPill: {
+    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: 'rgba(255,184,0,0.08)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.16)',
+  },
+  insightCountText: { color: '#FFB800', fontSize: 11, fontWeight: '900' },
+  insightStack: { gap: 10 },
+  insightCard: {
+    width: '100%', minHeight: 0, borderRadius: 18, padding: 14, overflow: 'hidden',
+    borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.035)',
+  },
+  insightCardActive: { ...boxShadow('rgba(255,184,0,0.28)', { width: 0, height: 6 }, 0.34, 18) },
+  insightIcon: { width: 34, height: 34, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  insightEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 5 },
+  insightTitle: { color: '#FFE8B0', fontSize: 15, lineHeight: 20, fontWeight: '900', marginBottom: 6 },
+  insightBody: { color: 'rgba(255,244,214,0.58)', fontSize: 11, lineHeight: 18, fontWeight: '600' },
+
+  masteryWrap: {
+    borderRadius: 18, padding: 13, marginBottom: 18, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.035)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)',
+  },
+  masteryTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
+  masteryLabel: { color: '#FFE8B0', fontSize: 13, lineHeight: 18, fontWeight: '900' },
+  masterySub: { color: 'rgba(255,214,102,0.42)', fontSize: 10, lineHeight: 15, fontWeight: '700', marginTop: 2 },
+  masteryPercent: { color: '#FFB800', fontSize: 20, fontWeight: '900' },
+  masteryTrack: { height: 7, borderRadius: 999, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.07)', marginBottom: 10 },
+  masteryFill: { height: 7, borderRadius: 999, backgroundColor: '#FFB800' },
+  masteryMilestones: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  masteryMilestone: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '48%' },
+  masteryDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  masteryDotDone: { backgroundColor: '#FFB800', borderColor: '#FFB800' },
+  masteryMilestoneText: { color: 'rgba(255,214,102,0.36)', fontSize: 10, fontWeight: '800', flexShrink: 1 },
+  masteryMilestoneTextDone: { color: 'rgba(255,232,176,0.82)' },
+  vaultSectionWrap: { marginBottom: 12 },
+  vaultHeader: {
+    minHeight: 96, borderRadius: 18, padding: 13, overflow: 'hidden',
+    borderWidth: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 11,
+    backgroundColor: 'rgba(255,255,255,0.035)',
+  },
+  vaultIconWrap: {
+    width: 38, height: 38, borderRadius: 13, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center', marginTop: 2,
+  },
+  vaultHeaderText: { flex: 1, minWidth: 0 },
+  vaultEyebrow: { fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase', marginBottom: 4 },
+  vaultTitle: { color: '#FFE8B0', fontSize: 16, lineHeight: 21, fontWeight: '900', marginBottom: 5 },
+  vaultSummary: { color: 'rgba(255,244,214,0.55)', fontSize: 11, lineHeight: 17, fontWeight: '600' },
+  vaultActionStack: { alignItems: 'center', gap: 8, marginTop: 1 },
+  vaultCountPill: { minWidth: 30, height: 25, borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7 },
+  vaultCountText: { fontSize: 11, fontWeight: '900' },
+  vaultChevron: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.04)' },
+  vaultBody: { paddingTop: 10 },
   center: { alignItems: 'center', justifyContent: 'center', height: 300 },
   emptyState: { alignItems: 'center', padding: 40, backgroundColor: 'rgba(255,140,0,0.07)', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)' },
   emptyTitle: { color: '#FFB800', fontSize: 18, marginVertical: 16, fontWeight: '700' },
@@ -2471,10 +3248,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
     backgroundColor: 'rgba(255,184,0,0.05)',
     borderLeftWidth: 3, borderLeftColor: 'rgba(255,184,0,0.4)',
-    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10,
-    marginHorizontal: 2, marginBottom: 10, marginTop: -4,
+    borderRadius: 11, paddingHorizontal: 12, paddingVertical: 10,
+    marginHorizontal: 2, marginBottom: 12, marginTop: -2,
+    borderTopWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderTopColor: 'rgba(255,184,0,0.10)', borderRightColor: 'rgba(255,184,0,0.10)', borderBottomColor: 'rgba(255,184,0,0.10)',
   },
-  aiExplainText: { flex: 1, color: 'rgba(255,214,102,0.65)', fontSize: 13, lineHeight: 20, fontStyle: 'italic' },
+  aiExplainBody: { flex: 1, minWidth: 0 },
+  aiExplainLabel: { color: 'rgba(255,184,0,0.68)', fontSize: 9, lineHeight: 12, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
+  aiExplainText: { color: 'rgba(255,214,102,0.65)', fontSize: 12, lineHeight: 19, fontStyle: 'italic' },
 
   // Loading screen styles
   loadingContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },

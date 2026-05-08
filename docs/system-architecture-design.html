@@ -1,0 +1,1217 @@
+<!DOCTYPE html><html><head>
+      <title>system-architecture-design</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      
+      <link rel="stylesheet" href="file:///c:\Users\sesalk\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.25\crossnote\dependencies\katex\katex.min.css">
+      
+      
+      
+      <script type="text/javascript" src="file:///c:\Users\sesalk\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.25\crossnote\dependencies\mermaid\mermaid.min.js" charset="UTF-8"></script>
+      
+      
+      
+      <style>
+      code[class*=language-],pre[class*=language-]{color:#333;background:0 0;font-family:Consolas,"Liberation Mono",Menlo,Courier,monospace;text-align:left;white-space:pre;word-spacing:normal;word-break:normal;word-wrap:normal;line-height:1.4;-moz-tab-size:8;-o-tab-size:8;tab-size:8;-webkit-hyphens:none;-moz-hyphens:none;-ms-hyphens:none;hyphens:none}pre[class*=language-]{padding:.8em;overflow:auto;border-radius:3px;background:#f5f5f5}:not(pre)>code[class*=language-]{padding:.1em;border-radius:.3em;white-space:normal;background:#f5f5f5}.token.blockquote,.token.comment{color:#969896}.token.cdata{color:#183691}.token.doctype,.token.macro.property,.token.punctuation,.token.variable{color:#333}.token.builtin,.token.important,.token.keyword,.token.operator,.token.rule{color:#a71d5d}.token.attr-value,.token.regex,.token.string,.token.url{color:#183691}.token.atrule,.token.boolean,.token.code,.token.command,.token.constant,.token.entity,.token.number,.token.property,.token.symbol{color:#0086b3}.token.prolog,.token.selector,.token.tag{color:#63a35c}.token.attr-name,.token.class,.token.class-name,.token.function,.token.id,.token.namespace,.token.pseudo-class,.token.pseudo-element,.token.url-reference .token.variable{color:#795da3}.token.entity{cursor:help}.token.title,.token.title .token.punctuation{font-weight:700;color:#1d3e81}.token.list{color:#ed6a43}.token.inserted{background-color:#eaffea;color:#55a532}.token.deleted{background-color:#ffecec;color:#bd2c00}.token.bold{font-weight:700}.token.italic{font-style:italic}.language-json .token.property{color:#183691}.language-markup .token.tag .token.punctuation{color:#333}.language-css .token.function,code.language-css{color:#0086b3}.language-yaml .token.atrule{color:#63a35c}code.language-yaml{color:#183691}.language-ruby .token.function{color:#333}.language-markdown .token.url{color:#795da3}.language-makefile .token.symbol{color:#795da3}.language-makefile .token.variable{color:#183691}.language-makefile .token.builtin{color:#0086b3}.language-bash .token.keyword{color:#0086b3}pre[data-line]{position:relative;padding:1em 0 1em 3em}pre[data-line] .line-highlight-wrapper{position:absolute;top:0;left:0;background-color:transparent;display:block;width:100%}pre[data-line] .line-highlight{position:absolute;left:0;right:0;padding:inherit 0;margin-top:1em;background:hsla(24,20%,50%,.08);background:linear-gradient(to right,hsla(24,20%,50%,.1) 70%,hsla(24,20%,50%,0));pointer-events:none;line-height:inherit;white-space:pre}pre[data-line] .line-highlight:before,pre[data-line] .line-highlight[data-end]:after{content:attr(data-start);position:absolute;top:.4em;left:.6em;min-width:1em;padding:0 .5em;background-color:hsla(24,20%,50%,.4);color:#f4f1ef;font:bold 65%/1.5 sans-serif;text-align:center;vertical-align:.3em;border-radius:999px;text-shadow:none;box-shadow:0 1px #fff}pre[data-line] .line-highlight[data-end]:after{content:attr(data-end);top:auto;bottom:.4em}html body{font-family:'Helvetica Neue',Helvetica,'Segoe UI',Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ol,html body>ul{margin-bottom:16px}html body ol,html body ul{padding-left:2em}html body ol.no-list,html body ul.no-list{padding:0;list-style-type:none}html body ol ol,html body ol ul,html body ul ol,html body ul ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:700;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:700}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::after,html body code::before{letter-spacing:-.2em;content:'\00a0'}html body pre>code{padding:0;margin:0;word-break:normal;white-space:pre;background:0 0;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:after,html body pre code:before,html body pre tt:after,html body pre tt:before{content:normal}html body blockquote,html body dl,html body ol,html body p,html body pre,html body ul{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body code,html body pre{word-wrap:break-word;white-space:pre}}.markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview ul{list-style:disc}.markdown-preview ul ul{list-style:circle}.markdown-preview ul ul ul{list-style:square}.markdown-preview ol{list-style:decimal}.markdown-preview ol ol,.markdown-preview ul ol{list-style-type:lower-roman}.markdown-preview ol ol ol,.markdown-preview ol ul ol,.markdown-preview ul ol ol,.markdown-preview ul ul ol{list-style-type:lower-alpha}.markdown-preview .newpage,.markdown-preview .pagebreak{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center!important}.markdown-preview:not([data-for=preview]) .code-chunk .code-chunk-btn-group{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .status{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-details{margin:0;padding:0;border:none}.markdown-preview .md-toc summary.md-toc-link-wrapper{cursor:pointer;list-style-position:outside}.markdown-preview .md-toc summary.md-toc-link-wrapper::marker{font-size:.85em}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='0']{margin-left:12px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='1']{margin-left:28px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='2']{margin-left:44px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='3']{margin-left:60px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='4']{margin-left:76px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='5']{margin-left:80px}.markdown-preview a.tag,.markdown-preview a.tag:active,.markdown-preview a.tag:link,.markdown-preview a.tag:visited,.markdown-preview span.tag{display:inline-block;background-color:var(--vscode-badge-background,rgba(127,127,127,.18));color:var(--vscode-badge-foreground,currentColor);border-radius:2em;font-size:.85em;font-weight:500;padding:.05em .55em;line-height:1.5;white-space:nowrap;text-decoration:none;text-shadow:none;box-shadow:none;transition:background-color .12s ease,opacity .12s ease}.markdown-preview a.tag{cursor:pointer}.markdown-preview a.tag:focus,.markdown-preview a.tag:hover{background-color:var(--vscode-badge-background,rgba(127,127,127,.32));color:var(--vscode-badge-foreground,currentColor);opacity:.85;text-decoration:none;outline:0}.markdown-preview .wikilink-embed-content{border-left:3px solid var(--vscode-textBlockQuote-border,rgba(128,128,128,.3));background:var(--vscode-textBlockQuote-background,rgba(128,128,128,.05));margin:.5em 0;padding:.5em .75em;border-radius:0 3px 3px 0}.markdown-preview .wikilink-embed-content.wikilink-embed-error{border-left-color:var(--vscode-errorForeground,#cf222e);color:var(--vscode-errorForeground,#cf222e);font-style:italic;opacity:.8}.markdown-preview .wikilink-embed-content h1:first-child,.markdown-preview .wikilink-embed-content h2:first-child,.markdown-preview .wikilink-embed-content h3:first-child,.markdown-preview .wikilink-embed-content h4:first-child,.markdown-preview .wikilink-embed-content h5:first-child,.markdown-preview .wikilink-embed-content h6:first-child{margin-top:.25em}.markdown-preview .wikilink-embed-content .wikilink-embed-content{margin:.25em 0;padding:.25em .5em}.markdown-preview .block-id{display:none}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0;min-height:100vh}@media screen and (min-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{font-size:14px!important;padding:1em}}@media print{html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-details{margin:0;padding:0;border:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div,html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='0']{padding-left:0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='1']{padding-left:16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='2']{padding-left:32px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='3']{padding-left:48px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='4']{padding-left:64px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='5']{padding-left:80px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% - 300px);padding:2em calc(50% - 457px - 300px / 2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}
+/* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+      </style>
+      <script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    // your code here
+  });
+</script>
+    </head>
+    <body for="html-export">
+      <div class="crossnote markdown-preview  ">
+      
+<h1 id="grahachara-system-architecture-design">Grahachara System Architecture Design </h1>
+<p>Last updated: 2026-05-08</p>
+<h2 id="1-purpose">1. Purpose </h2>
+<p>Grahachara is a Sri Lankan astrology product with a React Native/Expo mobile app, a Node.js/Express backend, a pure astrology calculation layer, AI-assisted interpretation features, RevenueCat subscription billing, Firestore persistence, and durable background workers for expensive long-running jobs.</p>
+<p>This document explains how the full system works end to end: runtime components, request flows, authentication, subscriptions, AI cost controls, durable workers, Firestore collections, operational monitoring, backups, and local/production startup.</p>
+<h2 id="2-architectural-goals">2. Architectural Goals </h2>
+<p>The current architecture is designed around these goals:</p>
+<ul>
+<li>Keep mobile clients thin and untrusted. The mobile app talks only to the REST API and does not directly read or write Firebase/Firestore application data.</li>
+<li>Keep astrology calculations deterministic and server-owned. Mobile requests chart, Nakath, Porondam, and prediction outputs from the server.</li>
+<li>Protect paid AI features with server-side subscription checks, one-time entitlement retry support, rate limits, and budget enforcement.</li>
+<li>Decouple long AI work from HTTP request lifetimes by queueing report and weekly Lagna jobs into durable Firestore-backed workers.</li>
+<li>Track real AI usage and cost so subscription economics can be monitored instead of guessed.</li>
+<li>Fail safely in production for billing/auth misconfiguration, while remaining usable in local development without Firebase credentials.</li>
+</ul>
+<h2 id="3-repository-layout">3. Repository Layout </h2>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>astro/
+  mobile/                   Expo React Native application
+    app/                    Expo Router screens and tab layout
+    components/             Shared UI components
+    constants/theme.js      Design tokens
+    contexts/               Auth, language, pricing, theme state
+    hooks/                  Responsive, device, network, keyboard helpers
+    services/api.js         REST API client and auth token injection
+    services/revenuecat.js  RevenueCat SDK integration
+    services/firebase.js    Firebase client auth setup
+
+  server/                   Node.js/Express API and worker runtime
+    src/index.js            Express app entry point
+    src/routes/             REST route modules
+    src/middleware/         Auth, subscription, security, entitlements
+    src/engine/             Astrology, AI prompts, report generation
+    src/models/firestore.js Firestore data access layer
+    src/services/           Queue, worker, cost, alerts, scheduler, storage
+    scripts/worker.js       Durable worker process entry point
+    scripts/firestore-*.js  Backup and restore scripts
+
+  shared/                   Shared type definitions
+  website/                  Static website and web assets
+  docs/                     Operational and architecture documentation
+  firestore.rules           Firestore client access rules
+  firebase.json             Firebase rules/index configuration
+</code></pre><h2 id="4-runtime-topology">4. Runtime Topology </h2>
+<p>The production system has three core runtime processes plus external services:</p>
+<ol>
+<li>Mobile app: Expo/React Native app distributed to iOS, Android, and optionally web.</li>
+<li>API server: Express REST API running <code>server/src/index.js</code> on port <code>3000</code> or the platform-provided <code>PORT</code>.</li>
+<li>Worker process: Node worker running <code>server/scripts/worker.js</code>, processing Firestore <code>jobs</code>.</li>
+<li>External services: Firebase Auth/Admin/Firestore, RevenueCat, AI providers, push notification services, alert webhooks, and uptime monitoring.</li>
+</ol>
+<div class="mermaid">flowchart LR
+  User[Mobile User]
+  Mobile[Expo Mobile App]
+  API[Express API Server]
+  Worker[Durable Worker]
+  Engine[Astrology Engine]
+  AI[AI Providers]
+  Firestore[(Firestore)]
+  RC[RevenueCat]
+  Push[Push Notifications]
+  Alerts[Alert Webhook]
+  Uptime[External Uptime Monitor]
+
+  User --&gt; Mobile
+  Mobile --&gt;|REST JSON| API
+  API --&gt; Engine
+  API --&gt; Firestore
+  API --&gt; RC
+  API --&gt;|enqueue long work| Firestore
+  Worker --&gt;|claim jobs| Firestore
+  Worker --&gt; Engine
+  Worker --&gt; AI
+  Worker --&gt; Firestore
+  API --&gt; AI
+  API --&gt; Push
+  Worker --&gt; Push
+  API --&gt; Alerts
+  Worker --&gt; Alerts
+  Uptime --&gt;|GET /api/health| API
+</div><p>The mobile app never calls Firestore for application data. It authenticates through Firebase/Google and RevenueCat SDKs, but all business data, paid access checks, AI execution, and persistence go through the server.</p>
+<h2 id="5-mobile-application-architecture">5. Mobile Application Architecture </h2>
+<h3 id="51-main-responsibilities">5.1 Main Responsibilities </h3>
+<p>The mobile app is responsible for:</p>
+<ul>
+<li>Rendering the user experience across onboarding, Today, Kendara/chart, AI report, Porondam, chat, and profile screens.</li>
+<li>Collecting birth details, city/location, language, and user preferences.</li>
+<li>Performing Google sign-in using Firebase client auth.</li>
+<li>Presenting RevenueCat paywalls and customer center.</li>
+<li>Calling the REST API via <code>mobile/services/api.js</code>.</li>
+<li>Polling report generation progress for queued AI reports.</li>
+<li>Storing auth tokens securely where supported.</li>
+<li>Keeping report cache metadata locally without storing full report bodies in AsyncStorage.</li>
+</ul>
+<h3 id="52-api-client-boundary">5.2 API Client Boundary </h3>
+<p><code>mobile/services/api.js</code> centralizes all network calls. It chooses the API base URL automatically:</p>
+<ul>
+<li><code>EXPO_PUBLIC_API_URL</code> when explicitly configured.</li>
+<li><code>https://api.grahachara.com</code> in production builds.</li>
+<li><code>http://&lt;expo-host&gt;:3000</code> during Expo Go development.</li>
+<li><code>http://10.0.2.2:3000</code> for Android emulator fallback.</li>
+<li><code>http://localhost:3000</code> as the final local fallback.</li>
+</ul>
+<p>The API client also:</p>
+<ul>
+<li>Injects <code>Authorization: Bearer &lt;token&gt;</code> through <code>setAuthTokenGetter()</code>.</li>
+<li>Sends <code>X-App-Country</code> for pricing localization when available.</li>
+<li>Applies fetch timeouts.</li>
+<li>Retries transient <code>429</code>, <code>502</code>, <code>503</code>, and <code>504</code> responses with exponential backoff where enabled.</li>
+<li>Returns normalized errors with <code>statusCode</code>, <code>code</code>, <code>retryAfter</code>, entitlement metadata, and retry flags.</li>
+</ul>
+<h3 id="53-auth-context">5.3 Auth Context </h3>
+<p><code>mobile/contexts/AuthContext.js</code> owns login state:</p>
+<ol>
+<li>User signs in with Google.</li>
+<li>Firebase client produces an ID token.</li>
+<li>Mobile posts the ID token to <code>POST /api/auth/google</code>.</li>
+<li>Server verifies the token and returns an application JWT.</li>
+<li>Mobile stores the JWT in <code>expo-secure-store</code> when available.</li>
+<li>Mobile falls back to AsyncStorage only where SecureStore is unavailable, mainly web.</li>
+<li>AuthContext wires the JWT into the API client with <code>setAuthTokenGetter()</code>.</li>
+<li>RevenueCat is initialized and logged in with the Firebase UID.</li>
+<li>Push registration is attempted after auth.</li>
+</ol>
+<p>User profile data and onboarding flags still use AsyncStorage, but the bearer token is migrated into SecureStore on native platforms.</p>
+<h3 id="54-mobile-report-storage">5.4 Mobile Report Storage </h3>
+<p>The report screen stores local metadata only:</p>
+<ul>
+<li><code>serverReportId</code></li>
+<li>birth date/time/location summary</li>
+<li>language</li>
+<li>section count</li>
+<li>saved timestamp</li>
+<li>flags indicating server ownership</li>
+</ul>
+<p>Full report narrative content lives on the server in Firestore <code>reports</code>. This reduces the amount of sensitive generated report text stored on the device.</p>
+<h3 id="55-mobile-screen-areas">5.5 Mobile Screen Areas </h3>
+<p>The tab layout is under <code>mobile/app/(tabs)/</code>:</p>
+<ul>
+<li><code>index.js</code>: Today dashboard, Nakath, Panchanga, Rahu Kalaya.</li>
+<li><code>kendara.js</code>: Birth chart and Sri Lankan chart display.</li>
+<li><code>report.js</code>: Full AI report request, progress, saved report display, PDF export.</li>
+<li><code>porondam.js</code>: Marriage compatibility and shareable Vibe Check flows.</li>
+<li><code>chat.js</code>: Paid AI astrologer chat.</li>
+<li><code>profile.js</code>: Account, subscription, language, preferences.</li>
+</ul>
+<p>Shared UI lives in <code>mobile/components/</code>, and design tokens come from <code>mobile/constants/theme.js</code>.</p>
+<h2 id="6-server-application-architecture">6. Server Application Architecture </h2>
+<h3 id="61-express-entry-point">6.1 Express Entry Point </h3>
+<p><code>server/src/index.js</code> initializes the API:</p>
+<ol>
+<li>Loads <code>.env</code>.</li>
+<li>Applies production boot guards.</li>
+<li>Initializes Firebase Admin and Firestore if credentials are available.</li>
+<li>Adds security middleware in a fixed order.</li>
+<li>Registers route modules.</li>
+<li>Starts the HTTP listener.</li>
+<li>Starts memory monitoring and notification scheduler.</li>
+<li>Optionally starts an embedded worker only when <code>START_EMBEDDED_WORKER=true</code>.</li>
+</ol>
+<p>Production boot fails if any of these unsafe conditions are present:</p>
+<ul>
+<li><code>MOCK_PAYMENTS=true</code>.</li>
+<li>Missing or weak <code>JWT_SECRET</code>.</li>
+<li>Missing <code>REVENUECAT_WEBHOOK_AUTH_KEY</code>.</li>
+<li>Missing <code>GOOGLE_OAUTH_CLIENT_ID</code>.</li>
+</ul>
+<h3 id="62-middleware-pipeline">6.2 Middleware Pipeline </h3>
+<p>Requests pass through the following server-wide pipeline:</p>
+<div class="mermaid">flowchart TD
+  Req[HTTP Request]
+  Cors[CORS allowlist]
+  Helmet[Helmet security headers]
+  Logs[Morgan logs]
+  Alerts[Request alert middleware]
+  Compress[Compression]
+  Body[JSON/urlencoded body limits]
+  HPP[HTTP parameter pollution guard]
+  Sanitize[Recursive input sanitizer]
+  GlobalLimit[Global rate limit]
+  Routes[Route modules]
+  Error[Error handler]
+
+  Req --&gt; Cors --&gt; Helmet --&gt; Logs --&gt; Alerts --&gt; Compress --&gt; Body --&gt; HPP --&gt; Sanitize --&gt; GlobalLimit --&gt; Routes --&gt; Error
+</div><p>Route-specific middleware then adds combinations of:</p>
+<ul>
+<li>IP rate limits such as <code>authLimiter</code>, <code>aiLimiter</code>, <code>reportLimiter</code>, and <code>chatLimiter</code>.</li>
+<li><code>phoneAuth</code> for JWT/Firebase bearer token decoding.</li>
+<li><code>requireSubscription</code> for paid features.</li>
+<li><code>requireAdmin</code> for telemetry/admin endpoints.</li>
+<li><code>distributedAiUserLimiter</code> and <code>distributedReportUserLimiter</code> for Firestore-backed cross-instance quotas.</li>
+<li><code>budgetGuard(feature)</code> for global/user AI spend preflight checks.</li>
+</ul>
+<h3 id="63-route-modules">6.3 Route Modules </h3>
+<p>The API is mounted under <code>/api</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Prefix</th>
+<th>Module</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/health</code></td>
+<td>inline</td>
+<td>Health check for uptime monitoring.</td>
+</tr>
+<tr>
+<td><code>/api/auth</code></td>
+<td><code>routes/auth.js</code></td>
+<td>Google login, JWT issuing, onboarding, subscription status.</td>
+</tr>
+<tr>
+<td><code>/api/revenuecat</code></td>
+<td><code>routes/revenuecat.js</code></td>
+<td>RevenueCat webhook and server-side subscription status.</td>
+</tr>
+<tr>
+<td><code>/api/pricing</code></td>
+<td><code>routes/pricing.js</code></td>
+<td>Public pricing plus admin cost/unit-economics telemetry.</td>
+</tr>
+<tr>
+<td><code>/api/nakath</code></td>
+<td><code>routes/nakath.js</code></td>
+<td>Daily Nakath, Panchanga, Rahu Kalaya.</td>
+</tr>
+<tr>
+<td><code>/api/horoscope</code></td>
+<td><code>routes/horoscope.js</code></td>
+<td>Daily horoscope, birth chart, AI report queueing, saved reports, analytics.</td>
+</tr>
+<tr>
+<td><code>/api/porondam</code></td>
+<td><code>routes/porondam.js</code></td>
+<td>Compatibility check, paid AI report, Vibe Check links, history.</td>
+</tr>
+<tr>
+<td><code>/api/chat</code></td>
+<td><code>routes/chat.js</code></td>
+<td>Paid AI astrologer chat and quota.</td>
+</tr>
+<tr>
+<td><code>/api/reading</code></td>
+<td><code>routes/reading.js</code></td>
+<td>Paid full AI reading.</td>
+</tr>
+<tr>
+<td><code>/api/weekly-lagna</code></td>
+<td><code>routes/weeklyLagna.js</code></td>
+<td>Weekly Lagna reads and admin generation queueing.</td>
+</tr>
+<tr>
+<td><code>/api/notifications</code></td>
+<td><code>routes/notifications.js</code></td>
+<td>Push token registration, history, preferences, alert helpers.</td>
+</tr>
+<tr>
+<td><code>/api/user</code></td>
+<td><code>routes/user.js</code></td>
+<td>Profile, birth data, preferences, user history.</td>
+</tr>
+<tr>
+<td><code>/api/tokens</code></td>
+<td><code>routes/tokens.js</code></td>
+<td>Token balance, top-up placeholders, generation entitlement checks.</td>
+</tr>
+<tr>
+<td><code>/api/predictions</code></td>
+<td><code>routes/predictions.js</code></td>
+<td>Transit, timing, Muhurtha, health, annual, feedback helpers.</td>
+</tr>
+<tr>
+<td><code>/api/rectification</code></td>
+<td><code>routes/rectification.js</code></td>
+<td>Birth-time rectification helpers.</td>
+</tr>
+<tr>
+<td><code>/api/share</code></td>
+<td><code>routes/share.js</code></td>
+<td>Weekly cards and personality share outputs.</td>
+</tr>
+<tr>
+<td><code>/api/enhanced</code></td>
+<td><code>routes/enhanced.js</code></td>
+<td>Advanced deterministic astrology helpers.</td>
+</tr>
+<tr>
+<td><code>/api/jyotish</code></td>
+<td><code>routes/jyotish.js</code></td>
+<td>Jyotish library-backed calculations when available.</td>
+</tr>
+<tr>
+<td><code>/api/geocode</code></td>
+<td><code>routes/geocode.js</code></td>
+<td>City/location search.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-astrology-engine-architecture">7. Astrology Engine Architecture </h2>
+<p>The core astrology layer is in <code>server/src/engine/</code>.</p>
+<h3 id="71-deterministic-calculation-layer">7.1 Deterministic Calculation Layer </h3>
+<p><code>server/src/engine/astrology.js</code> is the main Vedic calculation module. It provides:</p>
+<ul>
+<li>Panchanga.</li>
+<li>Daily Nakath.</li>
+<li>Planet positions.</li>
+<li>Lagna.</li>
+<li>Rashi chart.</li>
+<li>Navamsha chart.</li>
+<li>House charts.</li>
+<li>Full deterministic report data.</li>
+</ul>
+<p>The project convention is sidereal astrology. Tropical longitudes must be converted through <code>toSidereal(...)</code> before Rashi or Nakshatra lookup. Lahiri Ayanamsha is used by the local engine.</p>
+<p>Other deterministic modules include:</p>
+<ul>
+<li><code>porondam.js</code>: 7-factor Porondam scoring out of 20.</li>
+<li><code>advanced.js</code>: advanced chart analysis.</li>
+<li><code>predictions.js</code>, <code>muhurtha.js</code>, <code>maraka.js</code>, and related modules for timing and transit features.</li>
+</ul>
+<h3 id="72-ai-interpretation-layer">7.2 AI Interpretation Layer </h3>
+<p>AI lives above deterministic chart calculations. The server builds structured astrology payloads, prompt policy blocks, and language instructions, then asks Gemini/OpenAI-compatible providers to generate user-facing interpretation.</p>
+<p>Important properties:</p>
+<ul>
+<li>The server owns prompt construction and model configuration.</li>
+<li>AI calls are wrapped with token usage extraction.</li>
+<li>Token output caps and thinking budgets are kept bounded.</li>
+<li><code>trackCost(feature, uid, usage)</code> records actual usage after successful AI calls.</li>
+<li>Expensive AI features are guarded before execution with budget and subscription middleware.</li>
+</ul>
+<p>AI features include:</p>
+<ul>
+<li>Chat astrology answers.</li>
+<li>Full AI narrative report sections.</li>
+<li>AI chart analysis.</li>
+<li>Sinhala/English chart translations and explanations.</li>
+<li>Porondam AI report.</li>
+<li>Weekly Lagna generation.</li>
+<li>Full reading endpoint.</li>
+</ul>
+<h2 id="8-authentication-and-subscription-architecture">8. Authentication And Subscription Architecture </h2>
+<h3 id="81-login-flow">8.1 Login Flow </h3>
+<div class="mermaid">sequenceDiagram
+  participant U as User
+  participant M as Mobile App
+  participant F as Firebase Auth
+  participant A as API Server
+  participant DB as Firestore
+
+  U-&gt;&gt;M: Tap Google sign-in
+  M-&gt;&gt;F: Google/Firebase auth
+  F--&gt;&gt;M: Firebase ID token
+  M-&gt;&gt;A: POST /api/auth/google
+  A-&gt;&gt;F: Verify Firebase ID token
+  A-&gt;&gt;DB: Find or create user profile
+  A--&gt;&gt;M: App JWT + profile
+  M-&gt;&gt;M: Store JWT in SecureStore
+  M-&gt;&gt;A: Future requests with Authorization bearer token
+</div><p>The server can verify:</p>
+<ul>
+<li>App JWTs signed with <code>JWT_SECRET</code>.</li>
+<li>Firebase ID tokens as a fallback path.</li>
+</ul>
+<p><code>phoneAuth</code> attaches <code>req.user</code> when a bearer token is valid. Paid routes pair <code>phoneAuth</code> with <code>requireSubscription</code>; <code>phoneAuth</code> by itself is not a paid access gate.</p>
+<h3 id="82-subscription-flow">8.2 Subscription Flow </h3>
+<p>RevenueCat handles in-app purchase billing. The mobile app presents RevenueCat paywalls and logs RevenueCat in with the Firebase UID. Server-side access decisions are based on Firestore subscription state.</p>
+<div class="mermaid">sequenceDiagram
+  participant M as Mobile App
+  participant RC as RevenueCat SDK/Service
+  participant A as API Server
+  participant DB as Firestore
+
+  M-&gt;&gt;RC: Present paywall and purchase
+  RC--&gt;&gt;M: Customer info/entitlement update
+  RC-&gt;&gt;A: POST /api/revenuecat/webhook
+  A-&gt;&gt;A: Timing-safe auth header check
+  A-&gt;&gt;A: Replay window and payload validation
+  A-&gt;&gt;DB: Claim webhook event ID
+  A-&gt;&gt;DB: Update users/{uid}.subscription
+  A-&gt;&gt;DB: Mark event processed/skipped/failed
+</div><p>Paid API routes require active Firestore subscription status unless <code>MOCK_PAYMENTS=true</code> in local development. Production boot blocks <code>MOCK_PAYMENTS=true</code>.</p>
+<h3 id="83-revenuecat-webhook-hardening">8.3 RevenueCat Webhook Hardening </h3>
+<p>The webhook route uses these controls:</p>
+<ul>
+<li><code>Authorization: Bearer &lt;REVENUECAT_WEBHOOK_AUTH_KEY&gt;</code>.</li>
+<li>Timing-safe string comparison.</li>
+<li>Payload shape validation.</li>
+<li>Event timestamp replay window.</li>
+<li>Deterministic event ID construction.</li>
+<li>Firestore <code>revenuecatWebhookEvents</code> de-duplication.</li>
+<li>Explicit processed, skipped, duplicate, and failed states.</li>
+<li>Critical alert on webhook processing failure.</li>
+</ul>
+<h2 id="9-paid-feature-gates">9. Paid Feature Gates </h2>
+<p>Important paid/admin route classifications:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Route</th>
+<th>Main Guards</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chat</td>
+<td><code>POST /api/chat/ask</code></td>
+<td><code>phoneAuth</code>, <code>requireSubscription</code>, user AI limit, distributed limit, <code>budgetGuard('chat')</code>.</td>
+</tr>
+<tr>
+<td>Full AI report</td>
+<td><code>POST /api/horoscope/full-report-ai</code></td>
+<td>report IP limit, <code>phoneAuth</code>, <code>requireSubscription</code>, per-user report limit, distributed report limit, <code>budgetGuard('fullReport')</code>.</td>
+</tr>
+<tr>
+<td>AI analysis</td>
+<td><code>POST /api/horoscope/ai-analysis</code></td>
+<td><code>phoneAuth</code>, <code>requireSubscription</code>, AI user limit.</td>
+</tr>
+<tr>
+<td>Porondam AI report</td>
+<td><code>POST /api/porondam/report</code></td>
+<td>AI IP limit, <code>phoneAuth</code>, <code>requireSubscription</code>, user AI limit, distributed AI limit, <code>budgetGuard('porondamReport')</code>.</td>
+</tr>
+<tr>
+<td>Full reading</td>
+<td><code>POST /api/reading/full</code></td>
+<td><code>phoneAuth</code>, <code>requireSubscription</code>, report user limits, distributed report limit, <code>budgetGuard('reading')</code>.</td>
+</tr>
+<tr>
+<td>Weekly Lagna generation</td>
+<td><code>POST /api/weekly-lagna/generate</code></td>
+<td><code>requireAdmin</code>, <code>budgetGuard('weeklyLagna')</code>, queues job.</td>
+</tr>
+<tr>
+<td>Live cost stats</td>
+<td><code>GET /api/pricing/live-stats</code></td>
+<td><code>requireAdmin</code>.</td>
+</tr>
+<tr>
+<td>Persist cost stats</td>
+<td><code>POST /api/pricing/persist-stats</code></td>
+<td><code>requireAdmin</code>.</td>
+</tr>
+<tr>
+<td>Unit economics</td>
+<td><code>GET /api/pricing/unit-economics</code></td>
+<td><code>requireAdmin</code>.</td>
+</tr>
+<tr>
+<td>Prompt analytics</td>
+<td><code>GET /api/horoscope/prompt-analytics</code></td>
+<td><code>requireAdmin</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Route classification tests live in <code>server/src/routes/__tests__/routeClassification.test.js</code>.</p>
+<h2 id="10-full-ai-report-architecture">10. Full AI Report Architecture </h2>
+<p>Full AI report generation is the most expensive user-facing workflow. It is designed as an asynchronous durable job.</p>
+<h3 id="101-report-request-flow">10.1 Report Request Flow </h3>
+<div class="mermaid">sequenceDiagram
+  participant M as Mobile Report Screen
+  participant A as API /api/horoscope/full-report-ai
+  participant DB as Firestore
+  participant W as Worker
+  participant AI as AI Provider
+
+  M-&gt;&gt;A: POST full-report-ai with birth input
+  A-&gt;&gt;A: Rate limit, auth, subscription, budget preflight
+  A-&gt;&gt;A: Build prompt/engine cache key
+  A-&gt;&gt;DB: Lookup cached report by uid/cacheKey
+  alt Cache hit
+    A--&gt;&gt;M: 200 cached report
+  else Cache miss
+    A-&gt;&gt;DB: Create reportProgress owner record
+    A-&gt;&gt;DB: Enqueue jobs/{jobId} type aiReport
+    A--&gt;&gt;M: 202 queued { reportId, jobId }
+    M-&gt;&gt;A: Poll GET /report-progress/{reportId}
+    W-&gt;&gt;DB: Claim queued aiReport job
+    W-&gt;&gt;AI: Generate report sections
+    W-&gt;&gt;DB: Update reportProgress stages
+    W-&gt;&gt;DB: Save report in reports
+    W-&gt;&gt;DB: Complete job
+    M-&gt;&gt;A: Poll progress
+    A--&gt;&gt;M: complete + savedReportId
+    M-&gt;&gt;A: GET saved-report/{savedReportId}
+  end
+</div><h3 id="102-cache-key-design">10.2 Cache Key Design </h3>
+<p>AI report caching is versioned and input-normalized. <code>buildReportCacheKey()</code> includes:</p>
+<ul>
+<li>birth date/time</li>
+<li>rounded latitude/longitude</li>
+<li>language</li>
+<li>birth location</li>
+<li>user profile attributes used in the prompt</li>
+<li>marital status/year when present</li>
+<li>calculation settings</li>
+<li><code>asOfDate</code></li>
+<li>prompt version</li>
+<li>engine version</li>
+<li>cache version</li>
+</ul>
+<p>The final cache key shape is:</p>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>ai-report:&lt;cacheVersion&gt;:&lt;promptVersion&gt;:&lt;engineVersion&gt;:&lt;inputHash&gt;
+</code></pre><p>This prevents stale prompt or engine outputs from being reused after meaningful changes.</p>
+<h3 id="103-report-progress-model">10.3 Report Progress Model </h3>
+<p>Progress is stored in two places:</p>
+<ul>
+<li>In-memory Map for fast local access during active generation.</li>
+<li>Firestore <code>reportProgress</code> for durable cross-process and post-restart polling.</li>
+</ul>
+<p>The durable record contains:</p>
+<ul>
+<li><code>reportId</code></li>
+<li><code>ownerUid</code></li>
+<li><code>jobId</code></li>
+<li><code>stage</code></li>
+<li><code>sectionsDone</code></li>
+<li><code>sectionsTotal</code></li>
+<li><code>currentSection</code></li>
+<li><code>completedSections</code></li>
+<li><code>savedReportId</code></li>
+<li><code>error</code></li>
+<li>timestamps and TTL expiration</li>
+</ul>
+<p>The progress endpoint requires auth and checks that the polling user owns the progress record.</p>
+<h3 id="104-report-job-completion">10.4 Report Job Completion </h3>
+<p>The worker:</p>
+<ol>
+<li>Claims an <code>aiReport</code> job.</li>
+<li>Creates or updates report progress.</li>
+<li>Runs deterministic chart generation and AI section generation.</li>
+<li>Tracks AI cost as <code>fullReport</code>.</li>
+<li>Saves the report to Firestore <code>reports</code> with cache metadata.</li>
+<li>Marks progress complete with <code>savedReportId</code>.</li>
+<li>Fulfills any generation entitlement.</li>
+<li>Marks the job complete.</li>
+</ol>
+<p>If the AI provider returns a temporary error, the job is requeued until max attempts. Permanent failures mark progress failed and alert <code>report_generation_failed</code>.</p>
+<h2 id="11-durable-worker-architecture">11. Durable Worker Architecture </h2>
+<p>Long report and weekly Lagna work is processed by <code>server/scripts/worker.js</code>.</p>
+<h3 id="111-job-queue-data-model">11.1 Job Queue Data Model </h3>
+<p>Jobs are stored in Firestore <code>jobs</code> with fields such as:</p>
+<ul>
+<li><code>id</code></li>
+<li><code>type</code>: currently <code>aiReport</code> or <code>weeklyLagna</code></li>
+<li><code>uid</code></li>
+<li><code>status</code>: <code>queued</code>, <code>running</code>, <code>complete</code>, or <code>failed</code></li>
+<li><code>payload</code></li>
+<li><code>uniqueKey</code> for de-duplication</li>
+<li><code>progressId</code></li>
+<li><code>attempts</code></li>
+<li><code>maxAttempts</code></li>
+<li><code>runAfter</code></li>
+<li><code>lockedBy</code></li>
+<li><code>lockUntil</code></li>
+<li><code>result</code></li>
+<li><code>error</code></li>
+<li><code>expiresAt</code></li>
+</ul>
+<p><code>enqueueJob()</code> uses a deterministic job ID when a <code>uniqueKey</code> is provided. Existing queued/running/retrying jobs with the same ID are returned as deduped instead of duplicated.</p>
+<h3 id="112-claiming-and-locking">11.2 Claiming And Locking </h3>
+<p>Workers call <code>claimNextJob(workerId, types)</code>:</p>
+<ol>
+<li>Query a small batch of <code>queued</code> jobs.</li>
+<li>Filter by type in process.</li>
+<li>Skip jobs whose <code>runAfter</code> is in the future.</li>
+<li>Use a Firestore transaction to atomically change status to <code>running</code>.</li>
+<li>Set <code>lockedBy</code>, <code>lockUntil</code>, increment <code>attempts</code>, and update timestamps.</li>
+</ol>
+<p>This lets multiple workers run at the same time without intentionally processing the same job.</p>
+<h3 id="113-worker-modes">11.3 Worker Modes </h3>
+<p>Run continuously:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> server
+<span class="token function">npm</span> run worker
+</code></pre><p>Run one job and exit:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> server
+<span class="token function">npm</span> run worker:once
+</code></pre><p>Limit job types:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">node</span> scripts/worker.js <span class="token parameter variable">--types</span><span class="token operator">=</span>aiReport
+<span class="token function">node</span> scripts/worker.js <span class="token parameter variable">--types</span><span class="token operator">=</span>weeklyLagna <span class="token parameter variable">--once</span>
+</code></pre><p>API and worker should be separate production processes. <code>START_EMBEDDED_WORKER=true</code> is for local smoke testing only.</p>
+<h2 id="12-weekly-lagna-and-scheduler-architecture">12. Weekly Lagna And Scheduler Architecture </h2>
+<p>The API starts a notification scheduler when Firebase is available. The scheduler handles:</p>
+<ul>
+<li>Rahu Kalaya warning notifications.</li>
+<li>Daily guidance notifications.</li>
+<li>Maraka Apala checks.</li>
+<li>Weekly Lagna generation scheduling.</li>
+</ul>
+<p>Weekly Lagna generation is no longer executed inline by the scheduler or admin route. Both paths enqueue a <code>weeklyLagna</code> job. The worker generates weekly reports, tracks <code>weeklyLagna</code> AI cost, stores results, and sends weekly push notifications.</p>
+<p>For production reliability, the worker should run as a service, Cloud Run service/job, VM process, Kubernetes deployment, or scheduler-invoked one-shot worker.</p>
+<h2 id="13-porondam-and-vibe-link-architecture">13. Porondam And Vibe Link Architecture </h2>
+<h3 id="131-porondam-compatibility">13.1 Porondam Compatibility </h3>
+<p><code>POST /api/porondam/check</code> performs deterministic compatibility scoring. It can run with optional auth and saves history when a user is authenticated.</p>
+<p><code>POST /api/porondam/report</code> is the paid AI interpretation layer. It requires subscription and budget/rate guards before invoking AI.</p>
+<h3 id="132-vibe-links">13.2 Vibe Links </h3>
+<p>Vibe links are shareable compatibility invites. They are stored in Firestore <code>vibeLinks</code> with:</p>
+<ul>
+<li><code>linkId</code></li>
+<li>optional <code>ownerUid</code></li>
+<li>sender name and birth data</li>
+<li>receiver name after use</li>
+<li><code>used</code> and <code>usedAt</code></li>
+<li><code>expiresAt</code></li>
+</ul>
+<p>The server also has in-memory fallback behavior for local development without Firestore. Production should rely on Firestore and configure TTL for expiration.</p>
+<h2 id="14-data-storage-architecture">14. Data Storage Architecture </h2>
+<p>Firestore is the main durable store. Firebase Admin SDK is used by the server, so server writes bypass Firestore client rules. Client rules still matter as defense in depth if direct client access is introduced later.</p>
+<h3 id="141-firestore-collections">14.1 Firestore Collections </h3>
+<table>
+<thead>
+<tr>
+<th>Collection</th>
+<th>Purpose</th>
+<th>Typical Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>users</code></td>
+<td>Profiles, birth data, preferences, subscription state, usage counts.</td>
+<td>User document ID is Firebase UID.</td>
+</tr>
+<tr>
+<td><code>reports</code></td>
+<td>Saved AI reports and report cache metadata.</td>
+<td><code>uid</code> field.</td>
+</tr>
+<tr>
+<td><code>reportFeedback</code></td>
+<td>User feedback on generated report claims/sections.</td>
+<td><code>uid</code> field.</td>
+</tr>
+<tr>
+<td><code>promptAnalytics</code></td>
+<td>Prompt validation and unsupported-term analytics.</td>
+<td>Server/admin.</td>
+</tr>
+<tr>
+<td><code>charts</code></td>
+<td>Cached chart, translation, explanation data.</td>
+<td><code>uid</code> field.</td>
+</tr>
+<tr>
+<td><code>chatSessions</code></td>
+<td>Saved chat sessions and message history.</td>
+<td><code>uid</code> field.</td>
+</tr>
+<tr>
+<td><code>porondamResults</code></td>
+<td>Saved compatibility results and AI report text.</td>
+<td><code>uid</code> field.</td>
+</tr>
+<tr>
+<td><code>notifications</code></td>
+<td>Push notification history and preference-derived records.</td>
+<td><code>uid</code> field.</td>
+</tr>
+<tr>
+<td><code>jobs</code></td>
+<td>Durable queued/running/completed/failed worker jobs.</td>
+<td>Server only.</td>
+</tr>
+<tr>
+<td><code>reportProgress</code></td>
+<td>Durable report generation progress with owner UID and TTL.</td>
+<td><code>ownerUid</code> field.</td>
+</tr>
+<tr>
+<td><code>vibeLinks</code></td>
+<td>Shareable compatibility invite records with TTL.</td>
+<td>Optional <code>ownerUid</code>.</td>
+</tr>
+<tr>
+<td><code>rateLimits</code></td>
+<td>Distributed fixed-window counters.</td>
+<td>Server only.</td>
+</tr>
+<tr>
+<td><code>dailyAiSpend</code></td>
+<td>Global daily AI spend counters.</td>
+<td>Server only.</td>
+</tr>
+<tr>
+<td><code>dailyAiUserSpend</code></td>
+<td>Per-user daily AI spend counters.</td>
+<td>Server only.</td>
+</tr>
+<tr>
+<td><code>aiCostEvents</code></td>
+<td>Per-call AI cost audit events.</td>
+<td>Server only.</td>
+</tr>
+<tr>
+<td><code>revenuecatWebhookEvents</code></td>
+<td>Webhook replay/de-duplication audit records.</td>
+<td>Server only.</td>
+</tr>
+<tr>
+<td><code>entitlements</code></td>
+<td>Retryable generation entitlements.</td>
+<td><code>uid</code> field, server-created.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="142-firestore-rules">14.2 Firestore Rules </h3>
+<p><code>firestore.rules</code> follows a default-deny model:</p>
+<ul>
+<li>Users can read their own <code>users/{uid}</code> document.</li>
+<li>Users can read documents where <code>resource.data.uid == request.auth.uid</code> for reports, charts, chats, Porondam, and feedback.</li>
+<li>Users can read their own <code>reportProgress</code> where <code>ownerUid</code> matches.</li>
+<li>Weekly Lagna reports are public read.</li>
+<li>All writes are denied to clients.</li>
+<li>Operational collections such as <code>jobs</code>, rate limits, budgets, AI cost events, and webhook events deny all client read/write.</li>
+</ul>
+<p>Rules are covered by static tests in <code>server/src/security/__tests__/firestoreRules.test.js</code>.</p>
+<h3 id="143-ttl-fields">14.3 TTL Fields </h3>
+<p>The following collections write <code>expiresAt</code> fields and should have Firestore TTL policies configured:</p>
+<ul>
+<li><code>jobs</code></li>
+<li><code>reportProgress</code></li>
+<li><code>vibeLinks</code></li>
+<li><code>rateLimits</code></li>
+<li><code>dailyAiSpend</code></li>
+<li><code>dailyAiUserSpend</code></li>
+<li><code>aiCostEvents</code></li>
+<li><code>revenuecatWebhookEvents</code></li>
+<li><code>entitlements</code></li>
+</ul>
+<h2 id="15-ai-cost-budget-and-rate-limit-architecture">15. AI Cost, Budget, And Rate Limit Architecture </h2>
+<h3 id="151-cost-tracking">15.1 Cost Tracking </h3>
+<p><code>server/src/services/costTracker.js</code> maintains live in-memory daily cost stats and writes distributed cost audit records through <code>recordAICostEvent()</code>.</p>
+<p>Tracked feature buckets include:</p>
+<ul>
+<li><code>fullReport</code></li>
+<li><code>porondam</code></li>
+<li><code>chat</code></li>
+<li><code>weeklyLagna</code></li>
+<li><code>reading</code></li>
+<li><code>aiAnalysis</code></li>
+<li><code>chartTranslation</code></li>
+<li><code>chartExplanation</code></li>
+</ul>
+<p>The tracker normalizes token usage into cost USD/LKR, input/output/thinking token counts, generation time, and feature-level contribution metrics.</p>
+<h3 id="152-budget-enforcement">15.2 Budget Enforcement </h3>
+<p><code>budgetGuard(feature)</code> performs preflight checks against Firestore counters before expensive AI work starts.</p>
+<p>Supported budget controls:</p>
+<ul>
+<li><code>DAILY_GLOBAL_AI_SPEND_LIMIT_LKR</code></li>
+<li><code>DAILY_USER_AI_SPEND_LIMIT_LKR</code></li>
+<li>per-feature estimate overrides using <code>AI_BUDGET_ESTIMATE_&lt;FEATURE&gt;_LKR</code></li>
+</ul>
+<p>If Firestore is unavailable, budget enforcement fails open. In production, Firebase should be configured so this control is active.</p>
+<h3 id="153-distributed-rate-limiting">15.3 Distributed Rate Limiting </h3>
+<p>The API uses both process-local Express rate limits and Firestore-backed distributed rate limits.</p>
+<p>Distributed limiters:</p>
+<ul>
+<li><code>distributedAiUserLimiter</code>: default <code>DISTRIBUTED_AI_USER_PER_MINUTE=8</code>.</li>
+<li><code>distributedReportUserLimiter</code>: default <code>DISTRIBUTED_REPORT_USER_PER_HOUR=2</code>.</li>
+</ul>
+<p>Counters are fixed-window buckets in <code>rateLimits</code>, keyed by hashed user ID or IP. If Firestore errors, the limiter logs and fails open to preserve availability.</p>
+<h2 id="16-entitlement-retry-architecture">16. Entitlement Retry Architecture </h2>
+<p>Generation entitlements prevent users from paying again when a paid generation fails after payment.</p>
+<p>The flow is:</p>
+<ol>
+<li>Server creates or resumes an entitlement for a user, feature type, and input hash.</li>
+<li>Generation starts.</li>
+<li>On success, the entitlement is fulfilled.</li>
+<li>On failure, the entitlement remains pending with error metadata.</li>
+<li>The user can retry the same input with the same entitlement.</li>
+<li>Retry count, pending count, and TTL constrain abuse.</li>
+</ol>
+<p>Entitlements are server-created, input-hash-bound, transactionally updated, and expire after 7 days by default.</p>
+<h2 id="17-observability-and-alerting">17. Observability And Alerting </h2>
+<p>The server can send JSON alerts to <code>ALERT_WEBHOOK_URL</code>.</p>
+<p>In-code alert events:</p>
+<ul>
+<li><code>http_5xx</code></li>
+<li><code>http_latency_high</code></li>
+<li><code>memory_rss_high</code></li>
+<li><code>report_generation_failed</code></li>
+<li><code>revenuecat_webhook_failed</code></li>
+<li><code>ai_spend_threshold</code></li>
+</ul>
+<p>Recommended external monitoring:</p>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>GET https://api.grahachara.com/api/health
+</code></pre><p>Suggested platform alerts:</p>
+<ul>
+<li>5xx rate over 2 percent for 5 minutes.</li>
+<li>p95 latency over 10 seconds for 5 minutes.</li>
+<li>p99 latency over 45 seconds for 5 minutes.</li>
+<li>Container memory over 85 percent for 5 minutes.</li>
+<li>Worker queue age over 5 minutes for normal traffic.</li>
+<li>RevenueCat webhook failures.</li>
+<li>Backup failures.</li>
+</ul>
+<p>More detail lives in <code>docs/production-monitoring-alerts.md</code>.</p>
+<h2 id="18-backup-and-restore-architecture">18. Backup And Restore Architecture </h2>
+<p>Firestore backups are handled by scripts in <code>server/scripts/</code>:</p>
+<ul>
+<li><code>npm run firestore:backup</code></li>
+<li><code>npm run firestore:restore</code></li>
+</ul>
+<p>Backups export Firestore to a Google Cloud Storage bucket. Restore requires explicit <code>CONFIRM_FIRESTORE_RESTORE=YES</code> and should be tested against staging before production.</p>
+<p>Recommended operating model:</p>
+<ul>
+<li>Daily automated export near midnight Sri Lanka time.</li>
+<li>At least 30 days of daily backup retention.</li>
+<li>Monthly backup retention for 12 months.</li>
+<li>Restore drills in staging.</li>
+<li>Backup failure alerts.</li>
+</ul>
+<p>More detail lives in <code>docs/firestore-backup-restore-runbook.md</code>.</p>
+<h2 id="19-deployment-and-startup">19. Deployment And Startup </h2>
+<h3 id="191-local-development">19.1 Local Development </h3>
+<p>Install dependencies:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> server
+<span class="token function">npm</span> <span class="token function">install</span>
+
+<span class="token builtin class-name">cd</span> <span class="token punctuation">..</span>/mobile
+<span class="token function">npm</span> <span class="token function">install</span>
+</code></pre><p>Start the API:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> server
+<span class="token function">npm</span> run dev
+</code></pre><p>Start the mobile app:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> mobile
+npx expo start
+</code></pre><p>Start the worker in a separate terminal when testing queued reports or weekly Lagna:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> server
+<span class="token function">npm</span> run worker
+</code></pre><p>For one queued job:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> server
+<span class="token function">npm</span> run worker:once
+</code></pre><p>Local Firebase is optional. Without credentials, the API starts in reduced dev mode and skips Firestore-dependent behavior where possible.</p>
+<h3 id="192-production-runtime">19.2 Production Runtime </h3>
+<p>Production should run at least two independent process types:</p>
+<ol>
+<li>API service:</li>
+</ol>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> server
+<span class="token function">npm</span> start
+</code></pre><ol start="2">
+<li>Worker service:</li>
+</ol>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> server
+<span class="token function">npm</span> run worker
+</code></pre><p>Optional supporting jobs:</p>
+<ul>
+<li>Scheduled Firestore backup.</li>
+<li>Periodic one-shot worker if using managed tasks instead of a long-running worker.</li>
+<li>External uptime monitor.</li>
+</ul>
+<p>Do not rely on <code>START_EMBEDDED_WORKER=true</code> for production scale. Use a separate worker deployment so API request handling and long AI execution can scale independently.</p>
+<h2 id="20-environment-configuration">20. Environment Configuration </h2>
+<p>Key server environment variables:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NODE_ENV</code></td>
+<td>Enables production boot guards when <code>production</code>.</td>
+</tr>
+<tr>
+<td><code>PORT</code></td>
+<td>API server port, defaults to <code>3000</code>.</td>
+</tr>
+<tr>
+<td><code>JWT_SECRET</code></td>
+<td>Signs app JWTs. Must be strong in production.</td>
+</tr>
+<tr>
+<td><code>GOOGLE_OAUTH_CLIENT_ID</code></td>
+<td>Google token verification.</td>
+</tr>
+<tr>
+<td><code>FIREBASE_SERVICE_ACCOUNT</code></td>
+<td>Firebase Admin credentials as JSON.</td>
+</tr>
+<tr>
+<td><code>GEMINI_API_KEY</code></td>
+<td>Gemini AI access.</td>
+</tr>
+<tr>
+<td><code>AI_PROVIDER</code></td>
+<td>AI provider selection where supported.</td>
+</tr>
+<tr>
+<td><code>REVENUECAT_WEBHOOK_AUTH_KEY</code></td>
+<td>RevenueCat webhook bearer secret.</td>
+</tr>
+<tr>
+<td><code>MOCK_PAYMENTS</code></td>
+<td>Local dev subscription bypass. Forbidden in production.</td>
+</tr>
+<tr>
+<td><code>START_EMBEDDED_WORKER</code></td>
+<td>Local-only API-embedded worker toggle.</td>
+</tr>
+<tr>
+<td><code>WORKER_POLL_MS</code></td>
+<td>Worker poll interval.</td>
+</tr>
+<tr>
+<td><code>JOB_TTL_MS</code></td>
+<td>Job expiration TTL.</td>
+</tr>
+<tr>
+<td><code>JOB_LOCK_MS</code></td>
+<td>Worker lock duration.</td>
+</tr>
+<tr>
+<td><code>REPORT_PROGRESS_TTL_MS</code></td>
+<td>Progress record expiration.</td>
+</tr>
+<tr>
+<td><code>VIBE_LINK_TTL_MS</code></td>
+<td>Vibe link expiration.</td>
+</tr>
+<tr>
+<td><code>DISTRIBUTED_AI_USER_PER_MINUTE</code></td>
+<td>Cross-instance AI user quota.</td>
+</tr>
+<tr>
+<td><code>DISTRIBUTED_REPORT_USER_PER_HOUR</code></td>
+<td>Cross-instance report quota.</td>
+</tr>
+<tr>
+<td><code>DAILY_GLOBAL_AI_SPEND_LIMIT_LKR</code></td>
+<td>Global daily AI spend ceiling.</td>
+</tr>
+<tr>
+<td><code>DAILY_USER_AI_SPEND_LIMIT_LKR</code></td>
+<td>Per-user daily AI spend ceiling.</td>
+</tr>
+<tr>
+<td><code>ALERT_WEBHOOK_URL</code></td>
+<td>Operational alert destination.</td>
+</tr>
+<tr>
+<td><code>ALERT_LATENCY_MS</code></td>
+<td>Slow request alert threshold.</td>
+</tr>
+<tr>
+<td><code>ALERT_MEMORY_RSS_MB</code></td>
+<td>Memory alert threshold.</td>
+</tr>
+<tr>
+<td><code>ALERT_DAILY_AI_SPEND_LKR</code></td>
+<td>Daily spend alert threshold.</td>
+</tr>
+<tr>
+<td><code>GOOGLE_CLOUD_PROJECT</code></td>
+<td>Firestore backup/restore project.</td>
+</tr>
+<tr>
+<td><code>FIRESTORE_BACKUP_BUCKET</code></td>
+<td>Backup export bucket.</td>
+</tr>
+</tbody>
+</table>
+<p>Mobile environment variables:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EXPO_PUBLIC_API_URL</code></td>
+<td>API base URL override.</td>
+</tr>
+<tr>
+<td><code>EXPO_PUBLIC_FIREBASE_*</code></td>
+<td>Firebase client configuration.</td>
+</tr>
+<tr>
+<td><code>EXPO_PUBLIC_MOCK_PAYMENTS</code></td>
+<td>Mobile-side local RevenueCat bypass.</td>
+</tr>
+</tbody>
+</table>
+<p>When adding a new environment variable, update the real local <code>.env</code> and the appropriate <code>.env.example</code> file.</p>
+<h2 id="21-security-model">21. Security Model </h2>
+<p>Security controls are layered:</p>
+<h3 id="211-client-boundary">21.1 Client Boundary </h3>
+<ul>
+<li>Mobile calls only REST API for application data.</li>
+<li>No direct mobile Firestore access is used for normal app behavior.</li>
+<li>JWT stored in SecureStore on native platforms.</li>
+<li>Report bodies are server-owned, with local metadata-only cache.</li>
+</ul>
+<h3 id="212-api-boundary">21.2 API Boundary </h3>
+<ul>
+<li>CORS allowlist.</li>
+<li>Helmet headers.</li>
+<li>Request body size limits.</li>
+<li>HPP protection.</li>
+<li>XSS-oriented recursive input sanitization.</li>
+<li>Global and route-specific rate limits.</li>
+<li>JWT/Firebase token verification.</li>
+<li>Subscription and admin middleware.</li>
+<li>Firestore-backed distributed quotas and budgets.</li>
+</ul>
+<h3 id="213-billing-boundary">21.3 Billing Boundary </h3>
+<ul>
+<li>RevenueCat handles platform billing.</li>
+<li>Server accepts subscription state through authenticated webhooks.</li>
+<li>Webhooks are replay-limited and de-duplicated.</li>
+<li>Paid feature gates are tested statically.</li>
+</ul>
+<h3 id="214-data-boundary">21.4 Data Boundary </h3>
+<ul>
+<li>Server writes all Firestore data through Admin SDK.</li>
+<li>Firestore client rules are default-deny for writes.</li>
+<li>Operational collections deny client read and write.</li>
+<li>User-owned reads require matching UID.</li>
+</ul>
+<h2 id="22-testing-and-validation">22. Testing And Validation </h2>
+<p>Main server test command:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> server
+<span class="token function">npm</span> <span class="token builtin class-name">test</span>
+</code></pre><p>Important test areas:</p>
+<ul>
+<li>Route classification tests for paid/admin endpoints.</li>
+<li>Firestore rules static tests.</li>
+<li>Existing server unit/integration tests.</li>
+<li>Worker smoke loading.</li>
+<li>Engine benchmark scripts.</li>
+<li>Prompt validation scripts.</li>
+</ul>
+<p>Useful smoke checks:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> server
+<span class="token function">node</span> <span class="token parameter variable">-e</span> <span class="token string">"require('./src/services/jobWorker'); require('./src/services/jobQueue'); require('./src/services/unitEconomics'); console.log('worker modules ok')"</span>
+</code></pre><pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">curl</span> http://localhost:3000/api/health
+</code></pre><h2 id="23-operational-runbooks">23. Operational Runbooks </h2>
+<p>Detailed runbooks:</p>
+<ul>
+<li><code>docs/durable-workers-and-limits-runbook.md</code></li>
+<li><code>docs/firestore-backup-restore-runbook.md</code></li>
+<li><code>docs/production-monitoring-alerts.md</code></li>
+<li><code>docs/subscription-unit-economics.md</code></li>
+<li><code>docs/dependency-audit-triage-2026-05-08.md</code></li>
+</ul>
+<h2 id="24-common-end-to-end-flows">24. Common End-To-End Flows </h2>
+<h3 id="241-daily-nakath">24.1 Daily Nakath </h3>
+<ol>
+<li>Mobile opens Today tab.</li>
+<li>Mobile calls <code>GET /api/nakath/daily</code>.</li>
+<li>Server calculates daily Nakath, Panchanga, Rahu Kalaya from the engine.</li>
+<li>Server returns deterministic JSON.</li>
+<li>Mobile renders dashboard.</li>
+</ol>
+<p>This flow does not require AI or subscription.</p>
+<h3 id="242-birth-chart">24.2 Birth Chart </h3>
+<ol>
+<li>Mobile sends birth date/time and coordinates.</li>
+<li>Server validates input.</li>
+<li>Server computes chart data through <code>engine/astrology.js</code>.</li>
+<li>If authenticated, server can use chart cache helpers.</li>
+<li>Mobile renders Sri Lankan chart and supporting analysis.</li>
+</ol>
+<h3 id="243-ai-chat">24.3 AI Chat </h3>
+<ol>
+<li>Mobile sends chat message to <code>POST /api/chat/ask</code>.</li>
+<li>API applies auth, subscription, user AI limit, distributed limit, and budget guard.</li>
+<li>Server builds prompt with language and optional birth context.</li>
+<li>AI provider returns answer and token usage.</li>
+<li>Server records chat cost and session metadata.</li>
+<li>Mobile renders the answer.</li>
+</ol>
+<h3 id="244-porondam">24.4 Porondam </h3>
+<ol>
+<li>Mobile sends bride/groom data to <code>/api/porondam/check</code>.</li>
+<li>Server computes deterministic compatibility result.</li>
+<li>Authenticated users may get saved history.</li>
+<li>If user requests AI report, <code>/api/porondam/report</code> requires subscription and budget/rate guards.</li>
+<li>Server generates interpretation, tracks cost, and updates saved Porondam record when applicable.</li>
+</ol>
+<h3 id="245-revenuecat-subscription-update">24.5 RevenueCat Subscription Update </h3>
+<ol>
+<li>User purchases through mobile RevenueCat paywall.</li>
+<li>RevenueCat sends webhook to server.</li>
+<li>Server verifies webhook secret and validates payload timestamp.</li>
+<li>Server claims event ID in Firestore.</li>
+<li>Server updates <code>users/{uid}.subscription</code>.</li>
+<li>Paid API calls now pass <code>requireSubscription</code>.</li>
+</ol>
+<h3 id="246-full-ai-report">24.6 Full AI Report </h3>
+<ol>
+<li>Mobile posts report input.</li>
+<li>API checks cache.</li>
+<li>Cache hit returns report immediately.</li>
+<li>Cache miss creates progress and queues job.</li>
+<li>Worker generates and saves report.</li>
+<li>Mobile polls progress and fetches saved report after completion.</li>
+</ol>
+<h2 id="25-known-architectural-tradeoffs">25. Known Architectural Tradeoffs </h2>
+<ul>
+<li>Firestore-backed rate limits and budgets are simpler than Redis to operate in this Firebase-centered system, but they fail open on Firestore errors and are not as low-latency as Redis.</li>
+<li>The API still starts an in-process notification scheduler. For higher production rigor, scheduled notification work can be moved to managed tasks just like weekly Lagna generation.</li>
+<li>Local development supports no-Firebase mode, which is convenient but means some production controls are inactive locally.</li>
+<li>Firestore rules are defensive because the mobile app does not currently use direct Firestore access for app data.</li>
+<li>The astrology engine is large and centralized. This keeps calculation behavior discoverable but makes careful testing important when changing core logic.</li>
+</ul>
+<h2 id="26-production-readiness-checklist">26. Production Readiness Checklist </h2>
+<p>Before enabling production paid AI traffic:</p>
+<ul>
+<li>API service is deployed with <code>NODE_ENV=production</code>.</li>
+<li>Worker service is deployed separately and processing <code>jobs</code>.</li>
+<li>Firebase Admin credentials are configured.</li>
+<li>Firestore rules and indexes are deployed.</li>
+<li>TTL policies are configured for expiring collections.</li>
+<li>RevenueCat webhook secret is configured in both RevenueCat and server env.</li>
+<li><code>MOCK_PAYMENTS</code> and <code>EXPO_PUBLIC_MOCK_PAYMENTS</code> are disabled.</li>
+<li><code>JWT_SECRET</code> is strong and stored in a secret manager.</li>
+<li>AI provider keys and model settings are configured.</li>
+<li>Budget limits and distributed quotas are set.</li>
+<li>Alert webhook and external uptime monitor are active.</li>
+<li>Firestore backup automation is scheduled and restore drill has passed.</li>
+<li>Server tests and route classification tests pass.</li>
+<li>Subscription unit economics endpoint shows acceptable contribution margin.</li>
+</ul>
+<h2 id="27-mental-model">27. Mental Model </h2>
+<p>The simplest way to understand the system is:</p>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>Mobile is presentation and device integration.
+API is trust, billing, validation, orchestration, and synchronous calculations.
+Engine is deterministic astrology plus AI prompt construction.
+Firestore is durable state, queue, cache, and audit trail.
+Worker is long-running AI execution.
+RevenueCat is billing truth input.
+Cost/rate/budget services keep paid AI economically bounded.
+</code></pre><p>That separation is the main architectural invariant. New features should preserve it: mobile should call the API; the API should guard and orchestrate; deterministic astrology should stay in engine modules; long expensive work should move through durable jobs; server-owned data should remain in Firestore behind auth and ownership checks.</p>
+
+      </div>
+      
+      
+    
+    
+    <script type="module">
+// TODO: If ZenUML gets integrated into mermaid in the future,
+//      we can remove the following lines.
+
+
+var MERMAID_CONFIG = ({"startOnLoad":false});
+if (typeof MERMAID_CONFIG !== 'undefined') {
+  MERMAID_CONFIG.startOnLoad = false
+  MERMAID_CONFIG.cloneCssStyles = false
+  MERMAID_CONFIG.theme = "default"
+}
+
+mermaid.initialize(MERMAID_CONFIG || {})
+if (typeof(window['Reveal']) !== 'undefined') {
+  function mermaidRevealHelper(event) {
+    var currentSlide = event.currentSlide
+    var diagrams = currentSlide.querySelectorAll('div.mermaid')
+    for (var i = 0; i < diagrams.length; i++) {
+      var diagram = diagrams[i]
+      if (!diagram.hasAttribute('data-processed')) {
+        mermaid.init(null, diagram, ()=> {
+          Reveal.slide(event.indexh, event.indexv)
+        })
+      }
+    }
+  }
+  Reveal.addEventListener('slidetransitionend', mermaidRevealHelper)
+  Reveal.addEventListener('ready', mermaidRevealHelper)
+  await mermaid.run({
+    nodes: document.querySelectorAll('div.mermaid')
+  })
+} else {
+  await mermaid.run({
+    nodes: document.querySelectorAll('div.mermaid')
+  })
+}
+</script>
+    
+    
+    
+  
+    </body></html>
