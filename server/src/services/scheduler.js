@@ -15,14 +15,22 @@ const { calculateRahuKalaya, getPanchanga, getDailyNakath } = require('../engine
 const { calculateMarakaApala } = require('../engine/maraka');
 const { sendPush, getTokensWithPreference, logNotification } = require('./notifications');
 const { getDb, COLLECTIONS } = require('../config/firebase');
-const { generateWeeklyLagnaReports } = require('../engine/weeklyLagna');
-const { trackCost } = require('./costTracker');
+const { enqueueWeeklyLagnaJob } = require('./jobQueue');
 
 const SLT_OFFSET_MS = 19800 * 1000;
 const SRI_LANKA_TIME_CONTEXT = { zoneName: 'Asia/Colombo', offsetSeconds: 19800, source: 'traditional_slt' };
 const DAILY_GUIDANCE_HOUR_SLT = 6;
 const DAILY_GUIDANCE_MINUTE_SLT = 30;
 const DAILY_GUIDANCE_WINDOW_MINUTES = 5;
+
+function getWeekId(date) {
+  const d = new Date(date);
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + 3 - ((d.getUTCDay() + 6) % 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  const weekNum = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return d.getUTCFullYear() + '-W' + String(weekNum).padStart(2, '0');
+}
 
 function toSLTDate(date) {
   return new Date(date.getTime() + SLT_OFFSET_MS);
@@ -455,23 +463,15 @@ function startScheduler() {
       if (weeklyLagnaGenerated) return;
       weeklyLagnaGenerated = true;
 
-      console.log('[Scheduler] 🔮 Starting weekly lagna palapala generation...');
-      generateWeeklyLagnaReports()
-        .then(async (result) => {
-          console.log(`[Scheduler] ✅ Weekly lagna reports generated: ${result.reportCount} lagnas for ${result.weekId}`);
-          // Track AI cost
-          if (result.usage) {
-            trackCost('weeklyLagna', null, result.usage);
-          }
-          // Send notification to all users
-          try {
-            await sendWeeklyLagnaPushNotification();
-          } catch (pushErr) {
-            console.error('[Scheduler] Weekly lagna push error:', pushErr.message);
-          }
+      const weekId = getWeekId(now);
+      console.log(`[Scheduler] Queueing weekly lagna palapala generation for ${weekId}...`);
+      enqueueWeeklyLagnaJob({ weekId, requestedBy: 'scheduler', requestedAt: new Date().toISOString() })
+        .then((job) => {
+          if (!job) throw new Error('Durable weekly job storage is unavailable');
+          console.log(`[Scheduler] Weekly lagna job queued: ${job.id}${job.deduped ? ' (duplicate)' : ''}`);
         })
         .catch(err => {
-          console.error('[Scheduler] Weekly lagna generation error:', err.message);
+          console.error('[Scheduler] Weekly lagna queue error:', err.message);
           weeklyLagnaGenerated = false; // Allow retry
         });
     }

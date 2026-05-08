@@ -50,6 +50,32 @@ import { checkServerReachable } from '../../services/api';
 var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var MAX_SAVED_REPORTS = 20;
 
+function sanitizeSavedReportEntry(entry) {
+  if (!entry) return null;
+  return {
+    id: entry.id || entry.serverReportId || Date.now().toString(),
+    serverReportId: entry.serverReportId || (entry.isServerReport ? entry.id : null),
+    userName: entry.userName || '',
+    birthDate: entry.birthDate || '',
+    birthTime: entry.birthTime || '',
+    birthLocation: entry.birthLocation || '',
+    birthLat: entry.birthLat || null,
+    birthLng: entry.birthLng || null,
+    reportLang: entry.reportLang || 'en',
+    userGender: entry.userGender || null,
+    userReligion: entry.userReligion || null,
+    sectionCount: entry.sectionCount || 0,
+    savedAt: entry.savedAt || new Date().toISOString(),
+    isServerReport: !!entry.isServerReport || !!entry.serverReportId,
+    contentCached: false,
+  };
+}
+
+function sanitizeSavedReportList(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(sanitizeSavedReportEntry).filter(Boolean).slice(0, MAX_SAVED_REPORTS);
+}
+
 var { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ──────────────────────────────────────────
@@ -1413,7 +1439,11 @@ export default function ReportScreen() {
       try {
         var stored = await AsyncStorage.getItem(REPORTS_CACHE_KEY);
         if (stored) {
-          localList = JSON.parse(stored) || [];
+          var parsedLocal = JSON.parse(stored) || [];
+          localList = sanitizeSavedReportList(parsedLocal);
+          if (JSON.stringify(parsedLocal) !== JSON.stringify(localList)) {
+            await AsyncStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(localList));
+          }
           if (active && Array.isArray(localList) && localList.length > 0) {
             setSavedReports(localList);
           }
@@ -1441,13 +1471,14 @@ export default function ReportScreen() {
                 userReligion: null,
                 sectionCount: r.sectionCount || 0,
                 savedAt: r.createdAt || '',
+                contentCached: false,
                 isServerReport: true,
               };
             });
             if (!active) return;
             setSavedReports(serverList.length > 0 ? serverList : localList);
             setServerReportsLoaded(true);
-            // Cache server reports locally as offline fallback
+            // Cache server report metadata locally; full report bodies stay server-side.
             if (serverList.length > 0) {
               try { await AsyncStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(serverList)); } catch (_) {}
             }
@@ -1473,7 +1504,8 @@ export default function ReportScreen() {
   var saveReportToCache = useCallback(async function(reportData) {
     try {
       var entry = {
-        id: Date.now().toString(),
+        id: reportData.serverReportId || Date.now().toString(),
+        serverReportId: reportData.serverReportId || null,
         userName: reportData.userName,
         birthDate: reportData.birthDate,
         birthTime: reportData.birthTime,
@@ -1483,12 +1515,12 @@ export default function ReportScreen() {
         reportLang: reportData.reportLang,
         userGender: reportData.userGender,
         userReligion: reportData.userReligion,
-        report: reportData.report,
-        aiReport: reportData.aiReport,
-        chartData: reportData.chartData,
+        sectionCount: reportData.sectionCount || 0,
+        contentCached: false,
+        isServerReport: !!reportData.serverReportId,
         savedAt: new Date().toISOString(),
       };
-      var updated = [entry].concat(savedReports).slice(0, MAX_SAVED_REPORTS);
+      var updated = sanitizeSavedReportList([entry].concat(savedReports)).slice(0, MAX_SAVED_REPORTS);
       await AsyncStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(updated));
       setSavedReports(updated);
     } catch (e) {
@@ -1501,12 +1533,12 @@ export default function ReportScreen() {
     try {
       // Find entry to check if it's server-side
       var entry = savedReports.find(function(r) { return r.id === reportId; });
-      if (entry && entry.isServerReport) {
-        try { await api.deleteSavedReport(reportId); } catch (e) {
+      if (entry && (entry.isServerReport || entry.serverReportId)) {
+        try { await api.deleteSavedReport(entry.serverReportId || reportId); } catch (e) {
           if (__DEV__) console.warn('Server delete failed:', e.message);
         }
       }
-      var updated = savedReports.filter(function(r) { return r.id !== reportId; });
+      var updated = savedReports.filter(function(r) { return r.id !== reportId && r.serverReportId !== reportId; });
       await AsyncStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(updated));
       setSavedReports(updated);
     } catch (e) {
@@ -1517,12 +1549,13 @@ export default function ReportScreen() {
   // Load a saved report (fetch full content from server if needed)
   var [loadingReport, setLoadingReport] = useState(false);
   var loadSavedReport = useCallback(async function(entry) {
-    if (entry.isServerReport) {
+    if (entry.isServerReport || entry.serverReportId) {
       // Fetch full report from server
       setLoadingReport(true);
       setError(null);
       try {
-        var res = await api.getSavedReport(entry.id);
+        var reportIdToLoad = entry.serverReportId || entry.id;
+        var res = await api.getSavedReport(reportIdToLoad);
         if (__DEV__) {
           console.log('[DBG-8fb141] loadSavedReport', JSON.stringify({ hasRes: !!res, hasData: !!(res && res.data), hyp: 'C,D' }));
         }
@@ -1568,33 +1601,10 @@ export default function ReportScreen() {
       } finally {
         setLoadingReport(false);
       }
-    } else {
-      // Local cached report — load directly
-      setUserName(entry.userName || '');
-      var localBd = entry.birthDate || '';
-      setBirthDate(extractDateOnly(localBd) || '');
-      setBirthTime(entry.birthTime || extractTimeFromISO(localBd) || '00:00');
-      setBirthLocation(entry.birthLocation || '');
-      setBirthLat(entry.birthLat || null);
-      setBirthLng(entry.birthLng || null);
-      var localCity = entry.birthLocation ? {
-        name: entry.birthLocation,
-        country: '',
-        countryCode: '',
-        lat: entry.birthLat || 0,
-        lng: entry.birthLng || 0,
-      } : null;
-      setSelectedCity(localCity);
-      setReportLang(entry.reportLang || 'en');
-      setUserGender(entry.userGender || null);
-      setUserReligion(entry.userReligion || null);
-      setReport(entry.report);
-      setAiReport(entry.aiReport);
-      setChartData(entry.chartData);
-      setError(null);
-      setScreenState('report');
+      return;
     }
-  }, [t]);
+    setError(reportLang === 'si' ? 'මෙම වාර්තාවේ සම්පූර්ණ අන්තර්ගතය මේ උපාංගයේ ගබඩා කර නැත. කරුණාකර අන්තර්ජාලය සමඟ සේවාදායකයෙන් නැවත පූරණය කරන්න.' : 'This report content is not stored on this device. Connect to the server and reload the report.');
+  }, [t, reportLang]);
 
   // Calculate overview scores for Hero Card (must be at top level, not conditional)
   var overviewScores = useMemo(function() {
@@ -1737,7 +1747,7 @@ export default function ReportScreen() {
                           birthTime: extractTimeFromISO(r.birthDate) || '', birthLocation: r.birthLocation || '',
                           birthLat: r.lat || null, birthLng: r.lng || null,
                           reportLang: r.language || 'en', userGender: null, userReligion: null,
-                          sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
+                          sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '', contentCached: false,
                           isServerReport: true,
                         };
                       }));
@@ -1802,7 +1812,7 @@ export default function ReportScreen() {
                       birthTime: extractTimeFromISO(r.birthDate) || '', birthLocation: r.birthLocation || '',
                       birthLat: r.lat || null, birthLng: r.lng || null,
                       reportLang: r.language || 'en', userGender: null, userReligion: null,
-                      sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
+                      sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '', contentCached: false,
                       isServerReport: true,
                     };
                   }));
@@ -1852,7 +1862,7 @@ export default function ReportScreen() {
                         birthTime: extractTimeFromISO(r.birthDate) || '', birthLocation: r.birthLocation || '',
                         birthLat: r.lat || null, birthLng: r.lng || null,
                         reportLang: r.language || 'en', userGender: null, userReligion: null,
-                        sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
+                        sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '', contentCached: false,
                         isServerReport: true,
                       };
                     }));
@@ -2158,7 +2168,7 @@ export default function ReportScreen() {
                     birthTime: extractTimeFromISO(r.birthDate) || '', birthLocation: r.birthLocation || '',
                     birthLat: r.lat || null, birthLng: r.lng || null,
                     reportLang: r.language || 'en', userGender: null, userReligion: null,
-                    sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
+                    sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '', contentCached: false,
                     isServerReport: true,
                   };
                 }));
@@ -2192,7 +2202,7 @@ export default function ReportScreen() {
                       birthTime: extractTimeFromISO(r.birthDate) || '', birthLocation: r.birthLocation || '',
                       birthLat: r.lat || null, birthLng: r.lng || null,
                       reportLang: r.language || 'en', userGender: null, userReligion: null,
-                      sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '',
+                      sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '', contentCached: false,
                       isServerReport: true,
                     };
                   }));

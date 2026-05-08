@@ -11,6 +11,7 @@ const { formatLocalDateTime } = require('./calculationSettings');
 const { buildHealthPromptPayload, buildHealthPromptPolicyBlock, buildSectionPromptPayload, buildSectionPromptPolicyBlock } = require('./promptClaimBuilder');
 const { PROMPT_VERSION, buildPromptRunMetadata, buildSectionGenerationMetadata, buildUnsupportedTermAnalytics } = require('./promptObservability');
 const { extractGeminiUsage, createTokenTracker, recordUsage, finalizeTracker, formatCostLog } = require('../utils/tokenCalculator');
+const { createProgressRecord, updateProgressRecord, getProgressRecord, archiveProgressRecord } = require('../services/reportProgressStore');
 
 // ══════════════════════════════════════════════════════════════
 // REPORT PROGRESS TRACKER — allows mobile to poll generation status
@@ -21,8 +22,8 @@ const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 const DEFAULT_GEMINI_HERO_MODEL = 'gemini-3.1-pro-preview';
 const geminiCooldownUntilByModel = new Map();
 
-function createReportProgress(reportId, totalSections) {
-  _reportProgress.set(reportId, {
+function createReportProgress(reportId, totalSections, ownerUid = null, metadata = {}) {
+  const progress = {
     stage: 'engine',      // engine → coherence → sections → complete / failed
     sectionsDone: 0,
     sectionsTotal: totalSections,
@@ -30,7 +31,12 @@ function createReportProgress(reportId, totalSections) {
     completedSections: [],
     startedAt: Date.now(),
     error: null,
-  });
+    ownerUid,
+    jobId: metadata.jobId || null,
+    ...metadata,
+  };
+  _reportProgress.set(reportId, progress);
+  createProgressRecord(reportId, progress).catch(err => console.warn('[ReportProgress] create failed:', err.message));
   // Auto-cleanup after TTL
   setTimeout(() => _reportProgress.delete(reportId), PROGRESS_TTL);
 }
@@ -38,14 +44,20 @@ function createReportProgress(reportId, totalSections) {
 function updateReportProgress(reportId, update) {
   const prog = _reportProgress.get(reportId);
   if (prog) Object.assign(prog, update);
+  updateProgressRecord(reportId, update).catch(err => console.warn('[ReportProgress] update failed:', err.message));
 }
 
 function getReportProgress(reportId) {
   return _reportProgress.get(reportId) || null;
 }
 
+async function getReportProgressDurable(reportId) {
+  return await getProgressRecord(reportId) || _reportProgress.get(reportId) || null;
+}
+
 function deleteReportProgress(reportId) {
   _reportProgress.delete(reportId);
+  archiveProgressRecord(reportId).catch(err => console.warn('[ReportProgress] archive failed:', err.message));
 }
 
 function sleep(ms) {
@@ -974,7 +986,7 @@ async function callGemini(messages, maxTokens = 4096, temperature = 0.55) {
             maxOutputTokens: maxTokens,
             temperature,
             thinkingConfig: {
-              thinkingBudget: 8192,
+              thinkingBudget: 4096,
             },
           },
         }),
@@ -4144,11 +4156,11 @@ async function callGeminiLong(messages, sectionTemperature = 0.55) {
           system_instruction: { parts: [{ text: systemInstruction }] },
           contents,
           generationConfig: {
-            maxOutputTokens: 65536,
+            maxOutputTokens: 6000,
             temperature: sectionTemperature,
             topP: 0.90,
             thinkingConfig: {
-              thinkingBudget: 12288,
+              thinkingBudget: 4096,
             },
           },
         }),
@@ -4235,11 +4247,11 @@ async function callGeminiHero(messages, sectionTemperature = 0.55) {
         system_instruction: { parts: [{ text: systemInstruction }] },
         contents,
         generationConfig: {
-          maxOutputTokens: 65536,
+          maxOutputTokens: 9000,
           temperature: sectionTemperature,
           topP: 0.90,
           thinkingConfig: {
-            thinkingBudget: 24576,
+            thinkingBudget: 8192,
           },
         },
       };
@@ -5459,7 +5471,7 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
  * Collects all English description/interpretation strings into a numbered list,
  * sends ONE batch call to Gemini with ~1500 tokens, maps translations back.
  */
-async function translateAdvancedForDisplay(advancedAnalysis) {
+async function translateAdvancedForDisplay(advancedAnalysis, options = {}) {
   if (!advancedAnalysis) return advancedAnalysis;
 
   // ── Collect all translatable text into a flat array ──
@@ -5523,6 +5535,14 @@ async function translateAdvancedForDisplay(advancedAnalysis) {
         { role: 'user', content: numbered }
       ], Math.max(3000, batchTexts.length * 400));
 
+      if (typeof options.onUsage === 'function') {
+        try {
+          options.onUsage({ usage: translateResult.usage || null, model: translateResult.model || null });
+        } catch (usageErr) {
+          console.warn('[translateAdvanced] usage callback failed:', usageErr.message);
+        }
+      }
+
       // ── Parse numbered responses back ──
       const lines = translateResult.text.split('\n').filter(l => /^\d+\./.test(l.trim()));
       lines.forEach(line => {
@@ -5568,7 +5588,7 @@ async function translateAdvancedForDisplay(advancedAnalysis) {
  * in ONE small AI call. Returns an object with plain-language summaries.
  * Works for both English and Sinhala.
  */
-async function explainChartSimple(advancedAnalysis, language = 'en') {
+async function explainChartSimple(advancedAnalysis, language = 'en', options = {}) {
   if (!advancedAnalysis) return null;
 
   // ── Build a compact summary of all chart data for AI ──
@@ -5663,6 +5683,14 @@ Rules:
       { role: 'user', content: prompt }
     ], maxTok);
 
+    if (typeof options.onUsage === 'function') {
+      try {
+        options.onUsage({ usage: rawResult.usage || null, model: rawResult.model || null });
+      } catch (usageErr) {
+        console.warn('[ExplainChart] usage callback failed:', usageErr.message);
+      }
+    }
+
     // Clean markdown fences if present
     let cleaned = rawResult.text.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
 
@@ -5734,5 +5762,6 @@ module.exports = {
   createReportProgress,
   updateReportProgress,
   getReportProgress,
+  getReportProgressDurable,
   deleteReportProgress,
 };

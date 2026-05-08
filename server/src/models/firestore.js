@@ -10,11 +10,57 @@
 
 const { getDb, COLLECTIONS } = require('../config/firebase');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const {
   buildFeedbackSummary,
   buildPromptFeedbackRecord,
   buildUnsupportedTermAnalytics,
 } = require('../engine/promptObservability');
+
+const AI_REPORT_CACHE_VERSION = 'ai-report-cache-v1';
+
+function stableStringify(value) {
+  if (value === null || value === undefined) return JSON.stringify(value);
+  if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']';
+  if (typeof value === 'object') {
+    return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + stableStringify(value[key])).join(',') + '}';
+  }
+  return JSON.stringify(value);
+}
+
+function normalizeCacheCoord(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return null;
+  return Number(num.toFixed(4));
+}
+
+function buildReportCacheKey(input = {}) {
+  const normalized = {
+    birthDate: input.birthDate || null,
+    lat: normalizeCacheCoord(input.lat),
+    lng: normalizeCacheCoord(input.lng),
+    language: input.language || 'en',
+    birthLocation: input.birthLocation || null,
+    userName: input.userName || null,
+    userGender: input.userGender || null,
+    userReligion: input.userReligion || null,
+    maritalStatus: input.maritalStatus || null,
+    marriageYear: input.marriageYear || null,
+    calculationSettings: input.calculationSettings || {},
+    asOfDate: input.asOfDate || null,
+    promptVersion: input.promptVersion || null,
+    engineVersion: input.engineVersion || null,
+    cacheVersion: AI_REPORT_CACHE_VERSION,
+  };
+  const serialized = stableStringify(normalized);
+  const inputHash = crypto.createHash('sha256').update(serialized).digest('hex');
+  return {
+    cacheKey: ['ai-report', normalized.cacheVersion, normalized.promptVersion || 'unknown-prompt', normalized.engineVersion || 'unknown-engine', inputHash].join(':'),
+    cacheVersion: normalized.cacheVersion,
+    inputHash,
+    normalizedInput: normalized,
+  };
+}
 
 // ─── USER OPERATIONS ───────────────────────────────────────────
 
@@ -138,6 +184,11 @@ async function saveReport(uid, reportData) {
     rashiChart: reportData.rashiChart || null,
     birthInfo: reportData.birthInfo || null,
     promptVersion: reportData.promptVersion || reportData.promptMetadata?.promptVersion || null,
+    cacheKey: reportData.cacheKey || null,
+    cacheVersion: reportData.cacheVersion || null,
+    cacheInputHash: reportData.cacheInputHash || null,
+    cacheInput: reportData.cacheInput || null,
+    engineVersion: reportData.engineVersion || null,
     promptMetadata: reportData.promptMetadata || null,
     promptAnalytics,
     calculationMetadata: reportData.calculationMetadata || null,
@@ -344,25 +395,43 @@ async function getPromptAnalyticsSummary(limit = 200) {
 }
 
 /**
- * Get cached report for a user + birth date + language combo
+ * Get cached report for a user + normalized input/prompt/engine cache key
  */
-async function getCachedReport(uid, birthDate, language) {
+async function getCachedReport(uid, cacheKey, options = {}) {
   const db = getDb();
   if (!db) return null;
+  if (!uid || !cacheKey) return null;
 
   try {
-    const snapshot = await db.collection(COLLECTIONS.REPORTS)
-      .where('uid', '==', uid)
-      .where('birthDate', '==', birthDate)
-      .where('language', '==', language || 'en')
-      .where('type', '==', 'ai-narrative')
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .get();
+    let snapshot;
+    try {
+      snapshot = await db.collection(COLLECTIONS.REPORTS)
+        .where('uid', '==', uid)
+        .where('type', '==', 'ai-narrative')
+        .where('cacheKey', '==', cacheKey)
+        .limit(10)
+        .get();
+    } catch (indexedErr) {
+      console.warn('getCachedReport indexed query failed, using fallback:', indexedErr.message);
+      snapshot = await db.collection(COLLECTIONS.REPORTS)
+        .where('uid', '==', uid)
+        .where('type', '==', 'ai-narrative')
+        .limit(50)
+        .get();
+    }
 
     if (snapshot.empty) return null;
 
-    const doc = snapshot.docs[0];
+    const matchingDocs = snapshot.docs
+      .map(doc => ({ doc, data: doc.data() }))
+      .filter(item => item.data.cacheKey === cacheKey)
+      .filter(item => !options.promptVersion || item.data.promptVersion === options.promptVersion)
+      .filter(item => !options.engineVersion || item.data.engineVersion === options.engineVersion)
+      .sort((a, b) => (b.data.createdAt || '').localeCompare(a.data.createdAt || ''));
+
+    if (matchingDocs.length === 0) return null;
+
+    const doc = matchingDocs[0].doc;
     const data = doc.data();
 
     // Check expiry (reports older than 7 days get regenerated)
@@ -750,6 +819,8 @@ async function getCachedBirthChart(uid) {
 }
 
 module.exports = {
+  AI_REPORT_CACHE_VERSION,
+  buildReportCacheKey,
   upsertUser,
   getUser,
   updateBirthData,

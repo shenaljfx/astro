@@ -4,7 +4,7 @@
  * Flow:
  * 1. User taps "Sign in with Google" → Firebase Auth → ID token
  * 2. ID token sent to server → server verifies with Firebase Admin → JWT returned
- * 3. JWT stored in AsyncStorage for persistent login
+ * 3. JWT stored in SecureStore for persistent login
  * 4. Onboarding: Subscription → RevenueCat Paywall (Google Play / App Store billing)
  * 5. Onboarding: name + birth data (skippable)
  * 
@@ -19,6 +19,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { setAuthTokenGetter, getBaseUrl } from '../services/api';
 import {
   googleAuth as apiGoogleAuth,
@@ -46,7 +47,51 @@ var STORAGE_TOKEN = 'grahachara_auth_token';
 var STORAGE_USER = 'grahachara_user_profile';
 var STORAGE_ONBOARDING = 'grahachara_onboarding_done';
 var STORAGE_PUSH_REGISTERED = 'grahachara_push_registered_for';
+var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var PUSH_REGISTER_REFRESH_MS = 24 * 60 * 60 * 1000;
+
+async function canUseSecureStore() {
+  if (Platform.OS === 'web') return false;
+  try {
+    return await SecureStore.isAvailableAsync();
+  } catch (e) {
+    return false;
+  }
+}
+
+async function getStoredAuthToken() {
+  var secureAvailable = await canUseSecureStore();
+  if (secureAvailable) {
+    var secureToken = await SecureStore.getItemAsync(STORAGE_TOKEN);
+    if (secureToken) return secureToken;
+  }
+
+  var legacyToken = await AsyncStorage.getItem(STORAGE_TOKEN);
+  if (legacyToken && secureAvailable) {
+    await SecureStore.setItemAsync(STORAGE_TOKEN, legacyToken);
+    await AsyncStorage.removeItem(STORAGE_TOKEN);
+  }
+  return legacyToken;
+}
+
+async function setStoredAuthToken(authToken) {
+  if (!authToken) return;
+  if (await canUseSecureStore()) {
+    await SecureStore.setItemAsync(STORAGE_TOKEN, authToken);
+    await AsyncStorage.removeItem(STORAGE_TOKEN);
+  } else {
+    await AsyncStorage.setItem(STORAGE_TOKEN, authToken);
+  }
+}
+
+async function removeStoredAuthToken() {
+  try {
+    if (await canUseSecureStore()) {
+      await SecureStore.deleteItemAsync(STORAGE_TOKEN);
+    }
+  } catch (e) { /* continue clearing fallback storage */ }
+  await AsyncStorage.removeItem(STORAGE_TOKEN);
+}
 
 // Register push token with server after auth. Idempotent — only POSTs once
 // per (uid, token) pair via AsyncStorage marker so we don't spam the API.
@@ -187,7 +232,7 @@ export function AuthProvider({ children }) {
       // Initialize RevenueCat early (anonymous until login)
       await initRevenueCat(null);
 
-      var savedToken = await AsyncStorage.getItem(STORAGE_TOKEN);
+      var savedToken = await getStoredAuthToken();
       var savedUser = await AsyncStorage.getItem(STORAGE_USER);
 
       if (savedToken && savedUser) {
@@ -260,7 +305,8 @@ export function AuthProvider({ children }) {
         } catch (e) { /* non-critical */ }
         // Give screens 2s to persist any in-flight data, then clear auth
         await new Promise(function(r) { setTimeout(r, 2000); });
-        await AsyncStorage.multiRemove([STORAGE_TOKEN, STORAGE_USER, STORAGE_ONBOARDING, '@grahachara_auth_expired']);
+        await removeStoredAuthToken();
+        await AsyncStorage.multiRemove([STORAGE_USER, STORAGE_ONBOARDING, '@grahachara_auth_expired', REPORTS_CACHE_KEY]);
         setToken(null);
         setUser(null);
         setSubscription(null);
@@ -382,7 +428,7 @@ export function AuthProvider({ children }) {
           var userData = result.user;
 
           currentStage = 'persist-session';
-          await AsyncStorage.setItem(STORAGE_TOKEN, authToken);
+          await setStoredAuthToken(authToken);
           await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
 
           setToken(authToken);
@@ -448,7 +494,7 @@ export function AuthProvider({ children }) {
       var userData = result.user;
 
       currentStage = 'persist-session';
-      await AsyncStorage.setItem(STORAGE_TOKEN, authToken);
+      await setStoredAuthToken(authToken);
       await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
 
       setToken(authToken);
@@ -693,7 +739,7 @@ export function AuthProvider({ children }) {
   var signOut = useCallback(async function() {
     try {
       try {
-        var storedToken = await AsyncStorage.getItem(STORAGE_TOKEN);
+        var storedToken = await getStoredAuthToken();
         if (storedToken) {
           await fetch(getBaseUrl() + '/api/notifications/unregister', {
             method: 'POST',
@@ -721,7 +767,8 @@ export function AuthProvider({ children }) {
       }
 
       // Clear all stored auth data
-      await AsyncStorage.multiRemove([STORAGE_TOKEN, STORAGE_USER, STORAGE_ONBOARDING, STORAGE_PUSH_REGISTERED, 'pushToken']);
+      await removeStoredAuthToken();
+      await AsyncStorage.multiRemove([STORAGE_USER, STORAGE_ONBOARDING, STORAGE_PUSH_REGISTERED, 'pushToken', REPORTS_CACHE_KEY]);
       
       // Clear the API auth token getter
       setAuthTokenGetter(null);
@@ -733,7 +780,8 @@ export function AuthProvider({ children }) {
     } catch (err) {
       if (__DEV__) console.error('Sign out error:', err);
       try {
-        await AsyncStorage.multiRemove([STORAGE_TOKEN, STORAGE_USER, STORAGE_ONBOARDING, STORAGE_PUSH_REGISTERED, 'pushToken']);
+        await removeStoredAuthToken();
+        await AsyncStorage.multiRemove([STORAGE_USER, STORAGE_ONBOARDING, STORAGE_PUSH_REGISTERED, 'pushToken', REPORTS_CACHE_KEY]);
       } catch (e) { /* ignore */ }
       // Force clear state even if AsyncStorage fails
       setAuthTokenGetter(null);

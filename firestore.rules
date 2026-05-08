@@ -1,0 +1,94 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function ownsExistingDoc() {
+      return signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    function ownsProgressDoc() {
+      return signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    match /reports/{reportId} {
+      allow read: if ownsExistingDoc();
+      allow write: if false;
+    }
+
+    match /charts/{chartId} {
+      allow read: if ownsExistingDoc();
+      allow write: if false;
+    }
+
+    match /chatSessions/{sessionId} {
+      allow read: if ownsExistingDoc();
+      allow write: if false;
+    }
+
+    match /porondamResults/{resultId} {
+      allow read: if ownsExistingDoc();
+      allow write: if false;
+    }
+
+    match /reportFeedback/{feedbackId} {
+      allow read: if ownsExistingDoc();
+      allow write: if false;
+    }
+
+    match /reportProgress/{reportId} {
+      allow read: if ownsProgressDoc();
+      allow write: if false;
+    }
+
+    match /vibeLinks/{linkId} {
+      allow read: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /weeklyLagnaReports/{weekId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /jobs/{jobId} {
+      allow read, write: if false;
+    }
+
+    match /rateLimits/{counterId} {
+      allow read, write: if false;
+    }
+
+    match /dailyAiSpend/{dateId} {
+      allow read, write: if false;
+    }
+
+    match /dailyAiUserSpend/{counterId} {
+      allow read, write: if false;
+    }
+
+    match /aiCostEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /revenuecatWebhookEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

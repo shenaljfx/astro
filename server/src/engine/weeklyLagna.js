@@ -281,7 +281,7 @@ async function callGemini(systemPrompt, userPrompt) {
     contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 65536,
+      maxOutputTokens: 16000,
       responseMimeType: 'application/json',
     },
   };
@@ -346,7 +346,7 @@ async function callGemini(systemPrompt, userPrompt) {
       console.log(`[WeeklyLagna] ✅ Generated with ${model} (tokens: ${usage.totalTokenCount || '?'})`);
       
       const reports = parseAIResponse(text);
-      return { reports, usage: { inputTokens: usage.promptTokenCount || 0, outputTokens: usage.candidatesTokenCount || 0, thinkingTokens: usage.thoughtsTokenCount || 0 } };
+      return { reports, usage: { inputTokens: usage.promptTokenCount || 0, outputTokens: usage.candidatesTokenCount || 0, thinkingTokens: usage.thoughtsTokenCount || 0, model } };
     } catch (err) {
       const retryable = /fetch failed|AbortError|ECONNRESET|UND_ERR_CONNECT_TIMEOUT/i.test(err.message || '');
       if (retryable && attempt < MAX_RETRIES) {
@@ -380,7 +380,7 @@ async function callGeminiFallback(systemPrompt, userPrompt) {
     systemInstruction: systemPrompt,
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 32768,
+      maxOutputTokens: 16000,
       responseMimeType: 'application/json',
     },
   });
@@ -389,15 +389,16 @@ async function callGeminiFallback(systemPrompt, userPrompt) {
   const text = result.response.text();
   const usageMeta = result.response.usageMetadata || {};
   const reports = parseAIResponse(text);
-  return { reports, usage: { inputTokens: usageMeta.promptTokenCount || 0, outputTokens: usageMeta.candidatesTokenCount || 0, thinkingTokens: usageMeta.thoughtsTokenCount || 0 } };
+  return { reports, usage: { inputTokens: usageMeta.promptTokenCount || 0, outputTokens: usageMeta.candidatesTokenCount || 0, thinkingTokens: usageMeta.thoughtsTokenCount || 0, model } };
 }
 
 async function callOpenAI(systemPrompt, userPrompt) {
   const OpenAI = require('openai');
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
   const response = await openai.chat.completions.create({
-    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    model,
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
@@ -409,7 +410,7 @@ async function callOpenAI(systemPrompt, userPrompt) {
 
   const text = response.choices[0].message.content;
   const reports = parseAIResponse(text);
-  return { reports, usage: { inputTokens: response.usage?.prompt_tokens || 0, outputTokens: response.usage?.completion_tokens || 0, thinkingTokens: 0 } };
+  return { reports, usage: { inputTokens: response.usage?.prompt_tokens || 0, outputTokens: response.usage?.completion_tokens || 0, thinkingTokens: 0, model } };
 }
 
 function parseAIResponse(text) {

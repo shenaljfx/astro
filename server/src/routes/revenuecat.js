@@ -21,10 +21,74 @@
 
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { getDb, COLLECTIONS } = require('../config/firebase');
+const { notifyAlert } = require('../services/alerting');
 
 // RevenueCat webhook authorization header (set in dashboard)
 const WEBHOOK_AUTH_KEY = process.env.REVENUECAT_WEBHOOK_AUTH_KEY || '';
+const WEBHOOK_MAX_AGE_MS = Number(process.env.REVENUECAT_WEBHOOK_MAX_AGE_MS || 3 * 24 * 60 * 60 * 1000);
+
+function timingSafeEqualString(actual, expected) {
+  const actualBuffer = Buffer.from(String(actual || ''), 'utf8');
+  const expectedBuffer = Buffer.from(String(expected || ''), 'utf8');
+  if (actualBuffer.length !== expectedBuffer.length) return false;
+  return crypto.timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
+function buildRevenueCatEventId(payload) {
+  const e = payload?.event || {};
+  if (e.id) return String(e.id);
+  if (e.event_id) return String(e.event_id);
+  const stable = [e.type, e.app_user_id, e.transaction_id, e.original_transaction_id, e.product_id, e.purchased_at_ms, e.event_timestamp_ms].filter(Boolean).join(':');
+  if (stable) return crypto.createHash('sha256').update(stable).digest('hex');
+  return crypto.createHash('sha256').update(JSON.stringify(payload || {})).digest('hex');
+}
+
+function validateWebhookPayload(payload) {
+  if (!payload || typeof payload !== 'object' || !payload.event || typeof payload.event !== 'object') {
+    return 'Invalid webhook payload';
+  }
+  const e = payload.event;
+  if (!e.type || typeof e.type !== 'string') return 'Missing event.type';
+  if (e.app_user_id && typeof e.app_user_id !== 'string') return 'Invalid event.app_user_id';
+  const timestampMs = Number(e.event_timestamp_ms || e.purchased_at_ms || 0);
+  if (timestampMs) {
+    const ageMs = Date.now() - timestampMs;
+    if (ageMs > WEBHOOK_MAX_AGE_MS) return 'RevenueCat event is outside the replay window';
+    if (ageMs < -10 * 60 * 1000) return 'RevenueCat event timestamp is too far in the future';
+  } else if (process.env.NODE_ENV === 'production') {
+    return 'Missing RevenueCat event timestamp';
+  }
+  return null;
+}
+
+async function claimWebhookEvent(db, eventId, metadata) {
+  const ref = db.collection(COLLECTIONS.REVENUECAT_WEBHOOK_EVENTS).doc(eventId);
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (doc.exists) return { duplicate: true, record: doc.data() };
+    const now = new Date().toISOString();
+    tx.set(ref, {
+      eventId,
+      status: 'received',
+      eventType: metadata.eventType || null,
+      appUserId: metadata.appUserId || null,
+      receivedAt: now,
+      updatedAt: now,
+      expiresAt: new Date(Date.now() + Number(process.env.REVENUECAT_WEBHOOK_EVENT_TTL_MS || 90 * 24 * 60 * 60 * 1000)).toISOString(),
+    });
+    return { duplicate: false };
+  });
+}
+
+async function markWebhookEvent(db, eventId, status, patch = {}) {
+  await db.collection(COLLECTIONS.REVENUECAT_WEBHOOK_EVENTS).doc(eventId).set({
+    status,
+    ...patch,
+    updatedAt: new Date().toISOString(),
+  }, { merge: true });
+}
 
 /**
  * Verify webhook authenticity via Authorization header.
@@ -41,7 +105,7 @@ function verifyWebhook(req, res, next) {
     return next();
   }
   var authHeader = req.headers['authorization'] || '';
-  if (authHeader !== 'Bearer ' + WEBHOOK_AUTH_KEY) {
+  if (!timingSafeEqualString(authHeader, 'Bearer ' + WEBHOOK_AUTH_KEY)) {
     console.warn('[RevenueCat Webhook] ✘ Unauthorized request');
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -54,8 +118,9 @@ router.post('/webhook', verifyWebhook, async (req, res) => {
   try {
     var event = req.body;
 
-    if (!event || !event.event) {
-      return res.status(400).json({ error: 'Invalid webhook payload' });
+    var validationError = validateWebhookPayload(event);
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
     }
 
     var eventType = event.event.type;
@@ -72,15 +137,23 @@ router.post('/webhook', verifyWebhook, async (req, res) => {
 
     console.log('[RevenueCat Webhook] Event:', eventType, '| User:', appUserId, '| Product:', productId, '| Store:', store, '| Env:', environment);
 
-    // Skip anonymous RevenueCat IDs (start with $RCAnonymousID)
-    if (!appUserId || appUserId.startsWith('$RCAnonymousID')) {
-      console.log('[RevenueCat Webhook] Skipping anonymous user:', appUserId);
-      return res.status(200).json({ success: true, skipped: true });
-    }
-
     var db = getDb();
     if (!db) {
       console.warn('[RevenueCat Webhook] No database — skipping');
+      return res.status(200).json({ success: true, skipped: true });
+    }
+
+    var revenueCatEventId = buildRevenueCatEventId(event);
+    var claim = await claimWebhookEvent(db, revenueCatEventId, { eventType, appUserId });
+    if (claim.duplicate) {
+      console.log('[RevenueCat Webhook] Duplicate event ignored:', revenueCatEventId);
+      return res.status(200).json({ success: true, duplicate: true });
+    }
+
+    // Skip anonymous RevenueCat IDs (start with $RCAnonymousID)
+    if (!appUserId || appUserId.startsWith('$RCAnonymousID')) {
+      console.log('[RevenueCat Webhook] Skipping anonymous user:', appUserId);
+      await markWebhookEvent(db, revenueCatEventId, 'skipped', { reason: 'anonymous_user' });
       return res.status(200).json({ success: true, skipped: true });
     }
 
@@ -89,6 +162,7 @@ router.post('/webhook', verifyWebhook, async (req, res) => {
 
     if (!userDoc.exists) {
       console.warn('[RevenueCat Webhook] User not found:', appUserId);
+      await markWebhookEvent(db, revenueCatEventId, 'skipped', { reason: 'user_not_found' });
       return res.status(200).json({ success: true, userNotFound: true });
     }
 
@@ -163,16 +237,30 @@ router.post('/webhook', verifyWebhook, async (req, res) => {
 
       default:
         console.log('[RevenueCat Webhook] Unhandled event type:', eventType);
+        await markWebhookEvent(db, revenueCatEventId, 'skipped', { reason: 'unhandled_event_type' });
         return res.status(200).json({ success: true, unhandled: true });
     }
 
     // Update Firestore
     await userRef.update(subscriptionUpdate);
+    await markWebhookEvent(db, revenueCatEventId, 'processed', { processedAt: new Date().toISOString() });
     console.log('[RevenueCat Webhook] ✔ Updated user:', appUserId, '→', eventType);
 
-    res.status(200).json({ success: true });
+    res.status(200).json({ success: true, eventId: revenueCatEventId });
   } catch (err) {
     console.error('[RevenueCat Webhook] ✘ Error:', err.message);
+    try {
+      var failedEvent = req.body && req.body.event ? buildRevenueCatEventId(req.body) : null;
+      var failedDb = getDb();
+      if (failedEvent && failedDb) {
+        await markWebhookEvent(failedDb, failedEvent, 'failed', { error: err.message });
+      }
+    } catch (_) {}
+    notifyAlert('revenuecat_webhook_failed', {
+      message: err.message,
+      eventType: req.body?.event?.type || null,
+      appUserId: req.body?.event?.app_user_id || null,
+    }, { severity: 'critical', dedupeKey: 'revenuecat_webhook_failed:' + (req.body?.event?.type || 'unknown') }).catch(() => null);
     // Always return 200 to prevent RevenueCat retries on server errors
     res.status(200).json({ success: false, error: err.message });
   }

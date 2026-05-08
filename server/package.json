@@ -8,7 +8,11 @@
     "dev": "nodemon src/index.js",
     "test": "jest",
     "benchmark:engine": "node benchmark/validate-engine.js",
-    "benchmark:prompts": "node benchmark/validate-prompts.js"
+    "benchmark:prompts": "node benchmark/validate-prompts.js",
+    "firestore:backup": "node scripts/firestore-backup.js",
+    "firestore:restore": "node scripts/firestore-restore.js",
+    "worker": "node scripts/worker.js",
+    "worker:once": "node scripts/worker.js --once"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

@@ -15,6 +15,8 @@ const { buildFullBirthContext, formatContextForAI } = require('../engine/aiConte
 const { phoneAuth, requireSubscription } = require('../middleware/subscription');
 const { aiUserLimiter, reportUserLimiter } = require('../middleware/security');
 const { trackCost } = require('../services/costTracker');
+const { budgetGuard } = require('../services/budgetEnforcer');
+const { distributedReportUserLimiter } = require('../services/distributedRateLimit');
 
 /**
  * Call Gemini 3.1 Pro with Google Search grounding for a reading section
@@ -107,7 +109,7 @@ async function callGeminiForReading(systemPrompt, userPrompt, options = {}) {
  *   language: "si"  // optional, defaults to "si"
  * }
  */
-router.post('/full', phoneAuth, requireSubscription, reportUserLimiter, async (req, res) => {
+router.post('/full', phoneAuth, requireSubscription, reportUserLimiter, distributedReportUserLimiter, budgetGuard('reading'), async (req, res) => {
   try {
     var { dateTime, lat, lng, language } = req.body;
 

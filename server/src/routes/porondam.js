@@ -16,9 +16,12 @@ const { chat } = require('../engine/chat');
 const { parseSLT } = require('../utils/dateUtils');
 const { parseBirthDateTime } = require('../services/timezone');
 const { optionalAuth } = require('../middleware/auth');
-const { phoneAuth } = require('../middleware/subscription');
-const { aiLimiter } = require('../middleware/security');
+const { phoneAuth, requireSubscription } = require('../middleware/subscription');
+const { aiLimiter, aiUserLimiter } = require('../middleware/security');
 const { trackCost } = require('../services/costTracker');
+const { budgetGuard } = require('../services/budgetEnforcer');
+const { distributedAiUserLimiter } = require('../services/distributedRateLimit');
+const { saveVibeLink, getVibeLink, markVibeLinkUsed } = require('../services/vibeLinkStore');
 const { savePorondamResult, updatePorondamReport } = require('../models/firestore');
 const { getDb, COLLECTIONS } = require('../config/firebase');
 const { createOrResumeEntitlement, fulfillEntitlement, recordEntitlementError, restoreEntitlementRetry } = require('../middleware/entitlements');
@@ -31,7 +34,7 @@ try { enhancedEngine = require('../engine/enhanced'); } catch (e) { console.warn
 let jyotishEngine = null;
 try { jyotishEngine = require('../engine/jyotish'); } catch (e) { console.warn('[porondam] jyotish engine not available:', e.message); }
 
-// In-memory store for vibe-check links (use Redis/DB in production)
+// Dev fallback only; production links are stored durably in Firestore.
 const vibeLinks = new Map();
 
 function normalizeEntitlementCoord(value, fallback) {
@@ -227,7 +230,7 @@ router.post('/check', aiLimiter, optionalAuth, async (req, res) => {
  *   groomName: "optional"
  * }
  */
-router.post('/report', aiLimiter, phoneAuth, async (req, res) => {
+router.post('/report', aiLimiter, phoneAuth, requireSubscription, aiUserLimiter, distributedAiUserLimiter, budgetGuard('porondamReport'), async (req, res) => {
   let entitlementId = null;
   let entitlementWasRetry = false;
   try {
@@ -529,7 +532,7 @@ WRITE THE REPORT:
  *   senderLng: 79.8612
  * }
  */
-router.post('/vibe-link', (req, res) => {
+router.post('/vibe-link', optionalAuth, async (req, res) => {
   try {
     const { senderName, senderBirthDate, senderLat, senderLng } = req.body;
 
@@ -542,15 +545,15 @@ router.post('/vibe-link', (req, res) => {
     const linkId = uuidv4().split('-')[0]; // Short unique ID
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    vibeLinks.set(linkId, {
+    const record = await saveVibeLink(linkId, {
+      ownerUid: req.user && !req.user.anonymous ? req.user.uid : null,
       senderName,
       senderBirthDate,
       senderLat: senderLat || 6.9271,
       senderLng: senderLng || 79.8612,
-      createdAt: new Date().toISOString(),
       expiresAt: expiresAt.toISOString(),
-      used: false,
     });
+    vibeLinks.set(linkId, record);
 
     const shareUrl = `https://grahachara.com/vibe/${linkId}`;
     const whatsappMessage = encodeURIComponent(
@@ -589,12 +592,12 @@ router.post('/vibe-link', (req, res) => {
  *   receiverBirthDate: "1996-08-20T10:00:00Z"
  * }
  */
-router.post('/vibe-check/:linkId', (req, res) => {
+router.post('/vibe-check/:linkId', async (req, res) => {
   try {
     const { linkId } = req.params;
     const { receiverName, receiverBirthDate } = req.body;
 
-    const vibeLink = vibeLinks.get(linkId);
+    const vibeLink = await getVibeLink(linkId) || vibeLinks.get(linkId);
 
     if (!vibeLink) {
       return res.status(404).json({ error: 'Vibe check link not found or expired.' });
@@ -615,6 +618,7 @@ router.post('/vibe-check/:linkId', (req, res) => {
     );
 
     // Mark link as used
+    await markVibeLinkUsed(linkId, receiverName).catch(err => console.warn('[VibeLink] mark used failed:', err.message));
     vibeLink.used = true;
     vibeLink.receiverName = receiverName;
 

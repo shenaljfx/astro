@@ -11,6 +11,8 @@ const express = require('express');
 const router = express.Router();
 const { detectCurrency, getPricing } = require('../config/pricing');
 const { getStats, persistDailyStats } = require('../services/costTracker');
+const { calculateSubscriptionUnitEconomics } = require('../services/unitEconomics');
+const { requireAdmin } = require('../middleware/security');
 
 /**
  * GET /api/pricing
@@ -62,9 +64,9 @@ router.get('/', (req, res) => {
  * Returns real-time AI cost tracking data from the current server session.
  * Shows per-feature costs, revenue, profit margins, and recent requests.
  * 
- * No auth required — meant for admin/dev dashboard.
+ * Admin-only dashboard endpoint.
  */
-router.get('/live-stats', (req, res) => {
+router.get('/live-stats', requireAdmin, (req, res) => {
   try {
     const stats = getStats();
     res.json({ success: true, ...stats });
@@ -80,13 +82,26 @@ router.get('/live-stats', (req, res) => {
  * Force-persist current daily stats to Firestore.
  * Useful for manual snapshots before server restarts.
  */
-router.post('/persist-stats', async (req, res) => {
+router.post('/persist-stats', requireAdmin, async (req, res) => {
   try {
     await persistDailyStats();
     res.json({ success: true, message: 'Stats persisted to Firestore' });
   } catch (err) {
     console.error('[Pricing] Persist stats error:', err);
     res.status(500).json({ error: 'Failed to persist stats' });
+  }
+});
+
+/**
+ * GET /api/pricing/unit-economics
+ * Admin-only subscription contribution model from live env assumptions.
+ */
+router.get('/unit-economics', requireAdmin, (req, res) => {
+  try {
+    res.json({ success: true, ...calculateSubscriptionUnitEconomics({ currency: req.query.currency }) });
+  } catch (err) {
+    console.error('[Pricing] Unit economics error:', err);
+    res.status(500).json({ error: 'Failed to calculate unit economics' });
   }
 });
 

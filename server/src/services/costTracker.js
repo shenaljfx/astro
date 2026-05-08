@@ -10,6 +10,7 @@
  *   - Chat Questions: usage from chat() call  
  *   - Weekly Lagna: usage from generateWeeklyLagnaReports()
  *   - Full Reading: usage from reading route
+ *   - AI Analysis / chart translation / chart explanation: usage from horoscope routes
  * 
  * Usage:
  *   const { trackCost, getStats } = require('./costTracker');
@@ -19,6 +20,8 @@
 
 const { getDb } = require('../config/firebase');
 const { getUsdToLkr, MODEL_PRICING } = require('../utils/tokenCalculator');
+const { notifyAlert } = require('./alerting');
+const { recordAICostEvent } = require('./budgetEnforcer');
 
 // ── Revenue constants (LKR) ─────────────────────────────────────
 const REVENUE = {
@@ -28,12 +31,17 @@ const REVENUE = {
   chat: 0,              // included in subscription (5/day)
   weeklyLagna: 0,       // shared cost, no per-user revenue
   reading: 0,           // part of report flow
+  aiAnalysis: 0,         // included in subscription
+  chartTranslation: 0,   // background chart helper
+  chartExplanation: 0,   // background chart helper
   kendara: 0,           // pure calculation, no AI cost
 };
 
 // ── In-memory accumulator ────────────────────────────────────────
 // Resets daily at midnight SLT (18:30 UTC)
 let stats = createEmptyStats();
+let lastSpendAlertDate = null;
+const DAILY_AI_SPEND_ALERT_LKR = Number(process.env.ALERT_DAILY_AI_SPEND_LKR || 0);
 
 function createEmptyStats() {
   return {
@@ -47,6 +55,9 @@ function createEmptyStats() {
     chat:       { count: 0, totalCostUSD: 0, totalCostLKR: 0, totalRevenueLKR: 0, totalInputTokens: 0, totalOutputTokens: 0, totalThinkingTokens: 0, avgTimeSec: 0, _totalTimeSec: 0 },
     weeklyLagna:{ count: 0, totalCostUSD: 0, totalCostLKR: 0, totalRevenueLKR: 0, totalInputTokens: 0, totalOutputTokens: 0, totalThinkingTokens: 0, avgTimeSec: 0, _totalTimeSec: 0 },
     reading:    { count: 0, totalCostUSD: 0, totalCostLKR: 0, totalRevenueLKR: 0, totalInputTokens: 0, totalOutputTokens: 0, totalThinkingTokens: 0, avgTimeSec: 0, _totalTimeSec: 0 },
+    aiAnalysis: { count: 0, totalCostUSD: 0, totalCostLKR: 0, totalRevenueLKR: 0, totalInputTokens: 0, totalOutputTokens: 0, totalThinkingTokens: 0, avgTimeSec: 0, _totalTimeSec: 0 },
+    chartTranslation: { count: 0, totalCostUSD: 0, totalCostLKR: 0, totalRevenueLKR: 0, totalInputTokens: 0, totalOutputTokens: 0, totalThinkingTokens: 0, avgTimeSec: 0, _totalTimeSec: 0 },
+    chartExplanation: { count: 0, totalCostUSD: 0, totalCostLKR: 0, totalRevenueLKR: 0, totalInputTokens: 0, totalOutputTokens: 0, totalThinkingTokens: 0, avgTimeSec: 0, _totalTimeSec: 0 },
 
     // Grand totals
     totals: { requests: 0, costUSD: 0, costLKR: 0, revenueLKR: 0, profitLKR: 0, marginPercent: 0, inputTokens: 0, outputTokens: 0 },
@@ -63,7 +74,7 @@ function todaySLT() {
 /**
  * Track a real AI cost from an API call
  * 
- * @param {'fullReport'|'porondam'|'chat'|'weeklyLagna'|'reading'} feature
+ * @param {'fullReport'|'porondam'|'chat'|'weeklyLagna'|'reading'|'aiAnalysis'|'chartTranslation'|'chartExplanation'} feature
  * @param {string|null} userId - Firebase UID or null
  * @param {Object} tokenUsage - The finalized token usage object from tokenCalculator
  *   Expected shape: { summary: { costUSD, costLKR, totalInputTokens, totalOutputTokens, totalThinkingTokens, generationTimeSec }, breakdown: [...] }
@@ -142,6 +153,17 @@ function trackCost(feature, userId, tokenUsage) {
   stats.totals.inputTokens += inputTokens;
   stats.totals.outputTokens += outputTokens;
 
+  if (DAILY_AI_SPEND_ALERT_LKR > 0 && stats.totals.costLKR >= DAILY_AI_SPEND_ALERT_LKR && lastSpendAlertDate !== stats.date) {
+    lastSpendAlertDate = stats.date;
+    notifyAlert('ai_spend_threshold', {
+      date: stats.date,
+      costLKR: round2(stats.totals.costLKR),
+      costUSD: round6(stats.totals.costUSD),
+      thresholdLKR: DAILY_AI_SPEND_ALERT_LKR,
+      requests: stats.totals.requests,
+    }, { severity: 'critical', dedupeKey: `ai_spend_threshold:${stats.date}` }).catch(() => null);
+  }
+
   // Add to recent requests (keep last 50)
   stats.recentRequests.unshift({
     feature,
@@ -164,6 +186,16 @@ function trackCost(feature, userId, tokenUsage) {
   // Log to console
   const profitEmoji = (revenue - costLKR) >= 0 ? '✅' : '⚠️';
   console.log(`[CostTracker] ${profitEmoji} ${feature} | Cost: LKR ${round2(costLKR)} | Revenue: LKR ${revenue} | Profit: LKR ${round2(revenue - costLKR)} | ${inputTokens + outputTokens} tokens | ${round2(timeSec)}s${userId ? ' | user:' + userId.slice(0, 8) : ''}`);
+
+  recordAICostEvent(feature, userId || null, {
+    costUSD,
+    costLKR,
+    totalTokens: inputTokens + outputTokens + thinkingTokens,
+    inputTokens,
+    outputTokens,
+    thinkingTokens,
+    model: tokenUsage.model || tokenUsage.summary?.model || null,
+  }).catch(err => console.warn('[CostTracker] distributed cost record failed:', err.message));
 }
 
 /**
@@ -178,7 +210,7 @@ function getStats() {
   }
 
   // Calculate per-feature margins
-  const features = ['fullReport', 'porondam', 'chat', 'weeklyLagna', 'reading'];
+  const features = ['fullReport', 'porondam', 'chat', 'weeklyLagna', 'reading', 'aiAnalysis', 'chartTranslation', 'chartExplanation'];
   const featureSummaries = {};
   for (const f of features) {
     const b = stats[f];

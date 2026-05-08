@@ -61,6 +61,7 @@ const readingRoutes = require('./routes/reading');
 const enhancedRoutes = require('./routes/enhanced');
 const jyotishRoutes = require('./routes/jyotish');
 const geocodeRoutes = require('./routes/geocode');
+const { requestAlertMiddleware, startMemoryMonitor } = require('./services/alerting');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -79,6 +80,9 @@ app.use(helmet({
 
 // 3. Request logging
 app.use(morgan('dev'));
+
+// 3a. Operational alert hooks — throttled and inert unless ALERT_WEBHOOK_URL is set
+app.use(requestAlertMiddleware);
 
 // 3b. gzip compression — large JSON reports compress 5-10x. Skip for already
 // compressed payloads (images) and respect the standard Cache-Control hint.
@@ -146,6 +150,7 @@ const server = app.listen(PORT, () => {
   console.log(`🪐 Grahachara Server running on port ${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   AI Provider: ${process.env.AI_PROVIDER || 'openai'}`);
+  startMemoryMonitor();
 
   // Start notification scheduler (only if Firebase is available)
   try {
@@ -158,6 +163,16 @@ const server = app.listen(PORT, () => {
     }
   } catch (err) {
     console.error('   ⚠️  Notification scheduler failed to start:', err.message);
+  }
+
+  if (process.env.START_EMBEDDED_WORKER === 'true') {
+    try {
+      const { startWorkerLoop } = require('./services/jobWorker');
+      startWorkerLoop({ workerId: `api-${process.pid}` });
+      console.log('   ⚙️  Embedded durable worker started');
+    } catch (err) {
+      console.error('   ⚠️  Embedded worker failed to start:', err.message);
+    }
   }
 });
 

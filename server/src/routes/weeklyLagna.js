@@ -12,9 +12,9 @@
 const express = require('express');
 const router = express.Router();
 const { getDb } = require('../config/firebase');
-const { generateWeeklyLagnaReports } = require('../engine/weeklyLagna');
-const { trackCost } = require('../services/costTracker');
 const { requireAdmin } = require('../middleware/security');
+const { budgetGuard } = require('../services/budgetEnforcer');
+const { enqueueWeeklyLagnaJob } = require('../services/jobQueue');
 
 const COLLECTION = 'weeklyLagnaReports';
 
@@ -161,20 +161,18 @@ router.get('/:lagnaId', async (req, res) => {
  * POST /api/weekly-lagna/generate
  * Force-generate reports (called by scheduler or admin)
  */
-router.post('/generate', requireAdmin, async (req, res) => {
+router.post('/generate', requireAdmin, budgetGuard('weeklyLagna'), async (req, res) => {
   try {
-    console.log('[WeeklyLagna] Force-generating weekly reports...');
-    const result = await generateWeeklyLagnaReports();
-
-    // Track AI cost
-    if (result.usage) {
-      trackCost('weeklyLagna', null, result.usage);
+    const weekId = req.body?.weekId || getWeekId(new Date());
+    console.log(`[WeeklyLagna] Queueing weekly reports generation for ${weekId}...`);
+    const job = await enqueueWeeklyLagnaJob({ weekId, requestedBy: 'admin', requestedAt: new Date().toISOString() });
+    if (!job) {
+      return res.status(503).json({ error: 'Durable weekly job storage is unavailable', code: 'WEEKLY_JOB_STORE_UNAVAILABLE' });
     }
-
-    res.json({ success: true, ...result });
+    res.status(202).json({ success: true, queued: true, jobId: job.id, duplicate: !!job.deduped, weekId });
   } catch (err) {
     console.error('[WeeklyLagna] Generate error:', err.message);
-    res.status(500).json({ error: 'Failed to generate reports: ' + err.message });
+    res.status(500).json({ error: 'Failed to queue reports: ' + err.message });
   }
 });
 

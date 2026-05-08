@@ -81,6 +81,14 @@ const COLLECTIONS = {
   CHAT_SESSIONS: 'chatSessions',
   PORONDAM: 'porondamResults',
   NOTIFICATIONS: 'notifications',
+  JOBS: 'jobs',
+  REPORT_PROGRESS: 'reportProgress',
+  VIBE_LINKS: 'vibeLinks',
+  RATE_LIMITS: 'rateLimits',
+  DAILY_AI_SPEND: 'dailyAiSpend',
+  DAILY_AI_USER_SPEND: 'dailyAiUserSpend',
+  AI_COST_EVENTS: 'aiCostEvents',
+  REVENUECAT_WEBHOOK_EVENTS: 'revenuecatWebhookEvents',
 };
 
 module.exports = { initFirebase, getDb, getAuth, COLLECTIONS };

@@ -13,6 +13,8 @@ const { phoneAuth, requireSubscription } = require('../middleware/subscription')
 const { aiUserLimiter } = require('../middleware/security');
 const { getDb, COLLECTIONS } = require('../config/firebase');
 const { trackCost } = require('../services/costTracker');
+const { budgetGuard } = require('../services/budgetEnforcer');
+const { distributedAiUserLimiter } = require('../services/distributedRateLimit');
 
 const DAILY_LIMIT = 5;
 
@@ -105,7 +107,7 @@ router.get('/quota', phoneAuth, async (req, res) => {
  *   chatHistory: []                       // optional previous messages
  * }
  */
-router.post('/ask', phoneAuth, requireSubscription, aiUserLimiter, async (req, res) => {
+router.post('/ask', phoneAuth, requireSubscription, aiUserLimiter, distributedAiUserLimiter, budgetGuard('chat'), async (req, res) => {
   try {
     const { message, birthDate, birthLat, birthLng, language, chatHistory } = req.body;
     const uid = req.user?.uid || null;

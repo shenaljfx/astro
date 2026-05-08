@@ -46,8 +46,3 @@ info "  docker.io/$IMAGE_BASE:$VERSION"
 info "  docker.io/$IMAGE_BASE:latest"
 info ""
 info "Deploy on your VM with: ./vm-deploy.sh (set VERSION=$VERSION and DOCKER_USER=$DOCKER_USER there too)"
-done
-
-warn "Health check did not pass in time. Check logs:"
-docker logs --tail 30 "$CONTAINER_NAME"
-exit 1

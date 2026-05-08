@@ -10,7 +10,7 @@ const express = require('express');
 const router = express.Router();
 const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getSunLongitude, getLagna, getAllPlanetPositions, buildHouseChart, buildNavamshaChart, buildShadvarga, calculateDrishtis, analyzePushkara, calculateAshtakavarga, buildBhavaChalit, detectYogas, getPlanetStrengths, calculateVimshottari, generateDetailedReport, generateFullReport, RASHIS } = require('../engine/astrology');
 const { generateAdvancedAnalysis } = require('../engine/advanced');
-const { chat, generateAINarrativeReport, translateAdvancedForDisplay, explainChartSimple, createReportProgress, updateReportProgress, getReportProgress, deleteReportProgress } = require('../engine/chat');
+const { chat, translateAdvancedForDisplay, explainChartSimple, createReportProgress, getReportProgressDurable } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth, requireSubscription } = require('../middleware/subscription');
 const { reportLimiter, aiUserLimiter, reportUserLimiter, validateBirthData, requireAdmin } = require('../middleware/security');
@@ -23,12 +23,29 @@ try { enhancedEngine = require('../engine/enhanced'); } catch (e) { console.warn
 let jyotishEngine = null;
 try { jyotishEngine = require('../engine/jyotish'); } catch (e) { console.warn('[horoscope] jyotish engine not available:', e.message); }
 const { trackCost } = require('../services/costTracker');
-const { createOrResumeEntitlement, fulfillEntitlement, recordEntitlementError } = require('../middleware/entitlements');
-const { saveReport, getCachedReport, saveChartExplanation, getCachedChartExplanation, saveTranslationCache, getCachedTranslation, getUserReports, saveBirthChartCache, getCachedBirthChart, saveReportFeedback, getPromptAnalyticsSummary } = require('../models/firestore');
+const { notifyAlert } = require('../services/alerting');
+const { budgetGuard } = require('../services/budgetEnforcer');
+const { distributedReportUserLimiter } = require('../services/distributedRateLimit');
+const { enqueueReportJob } = require('../services/jobQueue');
+const { createOrResumeEntitlement, recordEntitlementError } = require('../middleware/entitlements');
+const { getCachedReport, buildReportCacheKey, saveChartExplanation, getCachedChartExplanation, saveTranslationCache, getCachedTranslation, getUserReports, saveBirthChartCache, getCachedBirthChart, saveReportFeedback, getPromptAnalyticsSummary } = require('../models/firestore');
+const { PROMPT_VERSION } = require('../engine/promptObservability');
 const { parseSLT } = require('../utils/dateUtils');
 const { parseBirthDateTime, parseBirthDateTimeWithContext } = require('../services/timezone');
 
 const SRI_LANKA_TIME_CONTEXT = { zoneName: 'Asia/Colombo', offsetSeconds: 19800, source: 'traditional_slt' };
+const AI_REPORT_ENGINE_VERSION = 'grahachara-report-engine-v2026-05-08-cache-v1';
+
+function trackAIUsage(feature, userId, result = {}) {
+  const usage = result.usage || result;
+  if (!usage) return;
+  trackCost(feature, userId || null, {
+    inputTokens: usage.promptTokenCount || usage.prompt_tokens || usage.inputTokens || 0,
+    outputTokens: usage.candidatesTokenCount || usage.completion_tokens || usage.outputTokens || 0,
+    thinkingTokens: usage.thoughtsTokenCount || usage.thinkingTokens || 0,
+    model: result.model || usage.model,
+  });
+}
 
 /**
  * Detailed Lagna Palapala (ලග්න පලාපල) - traditional Sri Lankan interpretations
@@ -530,7 +547,9 @@ router.post('/birth-chart', optionalAuth, async (req, res) => {
           const analysisToTranslate = JSON.parse(JSON.stringify(advancedAnalysis));
           (async () => {
             try {
-              const translated = await translateAdvancedForDisplay(analysisToTranslate);
+              const translated = await translateAdvancedForDisplay(analysisToTranslate, {
+                onUsage: function(usageEvent) { trackAIUsage('chartTranslation', uid, usageEvent); },
+              });
               await saveTranslationCache(uid, birthDate, translated);
               console.log('[birth-chart:bg] si translation saved');
             } catch (bgErr) {
@@ -553,7 +572,9 @@ router.post('/birth-chart', optionalAuth, async (req, res) => {
           console.log('[birth-chart]   AI explanations cache miss — generating in background');
           (async () => {
             try {
-              const expl = await explainChartSimple(advancedAnalysis, lang);
+              const expl = await explainChartSimple(advancedAnalysis, lang, {
+                onUsage: function(usageEvent) { trackAIUsage('chartExplanation', uid, usageEvent); },
+              });
               await saveChartExplanation(uid, birthDate, lang, expl);
               console.log('[birth-chart:bg] AI explanations saved');
             } catch (bgErr) {
@@ -717,6 +738,8 @@ CRITICAL RULES:
       provider: 'gemini',
     });
 
+    trackAIUsage('aiAnalysis', req.user?.uid || null, aiResponse);
+
     res.json({
       success: true,
       data: {
@@ -869,7 +892,9 @@ router.get('/birth-chart/data', optionalAuth, async (req, res) => {
           const cloned = JSON.parse(JSON.stringify(advancedAnalysis));
           (async () => {
             try {
-              const translated = await translateAdvancedForDisplay(cloned);
+              const translated = await translateAdvancedForDisplay(cloned, {
+                onUsage: function(usageEvent) { trackAIUsage('chartTranslation', getUid, usageEvent); },
+              });
               try { await saveTranslationCache(getUid, date, translated); } catch (se) { console.warn('Save translation (GET) failed:', se.message); }
             } catch (e) { console.error('BG translation (GET) failed:', e.message); }
           })();
@@ -932,7 +957,9 @@ router.get('/birth-chart/data', optionalAuth, async (req, res) => {
           const analysisForAI = JSON.parse(JSON.stringify(advancedAnalysis));
           (async () => {
             try {
-              const expl = await explainChartSimple(analysisForAI, getLang);
+              const expl = await explainChartSimple(analysisForAI, getLang, {
+                onUsage: function(usageEvent) { trackAIUsage('chartExplanation', getUid, usageEvent); },
+              });
               try { await saveChartExplanation(getUid, date, getLang, expl); } catch (se) { console.warn('Save explanation (GET) failed:', se.message); }
             } catch (e) { console.error('BG explanation (GET) failed:', e.message); }
           })();
@@ -1025,21 +1052,40 @@ router.post('/full-report', reportLimiter, async (req, res) => {
 // GET /api/horoscope/report-progress/:reportId
 // Poll generation progress for the loading screen
 // ═══════════════════════════════════════════════════════════════════
-router.get('/report-progress/:reportId', (req, res) => {
-  const prog = getReportProgress(req.params.reportId);
-  if (!prog) {
-    return res.json({ stage: 'unknown', sectionsDone: 0, sectionsTotal: 0 });
+router.get('/report-progress/:reportId', phoneAuth, async (req, res) => {
+  try {
+    if (!req.user || !req.user.uid || req.user.authType === 'anonymous') {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const prog = await getReportProgressDurable(req.params.reportId);
+    if (!prog) {
+      return res.json({ stage: 'unknown', sectionsDone: 0, sectionsTotal: 0 });
+    }
+
+    if (prog.ownerUid && prog.ownerUid !== req.user.uid) {
+      return res.status(403).json({ error: 'Report progress belongs to another user' });
+    }
+    if (!prog.ownerUid && process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Report progress ownership is missing' });
+    }
+
+    res.json({
+      stage: prog.stage,
+      sectionsDone: prog.sectionsDone,
+      sectionsTotal: prog.sectionsTotal,
+      currentSection: prog.currentSection,
+      completedSections: prog.completedSections || [],
+      elapsedMs: Date.now() - (prog.startedAt || Date.now()),
+      error: prog.error || null,
+      savedReportId: prog.savedReportId || null,
+      jobId: prog.jobId || null,
+      expiresAt: prog.expiresAt || null,
+    });
+  } catch (error) {
+    console.error('[ReportProgress] Error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch report progress' });
   }
-  res.json({
-    stage: prog.stage,
-    sectionsDone: prog.sectionsDone,
-    sectionsTotal: prog.sectionsTotal,
-    currentSection: prog.currentSection,
-    completedSections: prog.completedSections || [],
-    elapsedMs: Date.now() - prog.startedAt,
-    error: prog.error || null,
-    savedReportId: prog.savedReportId || null,
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1049,27 +1095,13 @@ router.get('/report-progress/:reportId', (req, res) => {
 // Optional auth: if logged in, caches report & returns cached if available
 // ═══════════════════════════════════════════════════════════════════
 
-// In-flight generation guard: prevent duplicate concurrent generations per user
-const _activeGenerations = new Map();
-
-router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, reportUserLimiter, async (req, res) => {
+router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, reportUserLimiter, distributedReportUserLimiter, budgetGuard('fullReport'), async (req, res) => {
   let entitlementId = null;
   try {
-    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null, reportId: clientReportId = null, calculationSettings = null, settings = null, asOfDate = null } = req.body;
+    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null, reportId: clientReportId = null, calculationSettings = null, settings = null, asOfDate = null, forceRegenerate = false } = req.body;
 
     if (!birthDate) {
       return res.status(400).json({ error: 'birthDate is required (ISO format or parseable date string)' });
-    }
-
-    // Deduplicate: reject if the same user already has a generation in flight
-    const uid = req.user?.uid;
-    if (uid) {
-      const existingGen = _activeGenerations.get(uid);
-      if (existingGen && (Date.now() - existingGen.startedAt) < 180000) {
-        console.log(`[AI Report] Rejecting duplicate request for uid=${uid} (in-flight since ${Date.now() - existingGen.startedAt}ms ago)`);
-        return res.status(429).json({ error: 'Report generation already in progress. Please wait for it to complete.', code: 'DUPLICATE_GENERATION' });
-      }
-      _activeGenerations.set(uid, { startedAt: Date.now() });
     }
 
     // Input validation
@@ -1093,12 +1125,31 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
       return res.status(400).json({ error: 'Invalid birthDate format. Use ISO format e.g. 1998-10-09T09:16:00' });
     }
 
-    // Check for cached report — DISABLED: always regenerate fresh
-    // Cache lookup disabled to ensure latest engine + prompt improvements are used
-    /*
-    if (req.user && !req.user.anonymous && !req.query.forceRegenerate) {
+    const normalizedSettings = calculationSettings || settings || {};
+    const cacheDescriptor = buildReportCacheKey({
+      birthDate: date.toISOString(),
+      lat: reportLat,
+      lng: reportLng,
+      language,
+      birthLocation,
+      userName,
+      userGender,
+      userReligion,
+      maritalStatus,
+      marriageYear,
+      calculationSettings: normalizedSettings,
+      asOfDate,
+      promptVersion: PROMPT_VERSION,
+      engineVersion: AI_REPORT_ENGINE_VERSION,
+    });
+    const shouldForceRegenerate = forceRegenerate === true || forceRegenerate === 'true' || forceRegenerate === '1' || req.query.forceRegenerate === 'true' || req.query.forceRegenerate === '1';
+
+    if (req.user && !req.user.anonymous && !shouldForceRegenerate) {
       try {
-        const cached = await getCachedReport(req.user.uid, birthDate, language);
+        const cached = await getCachedReport(req.user.uid, cacheDescriptor.cacheKey, {
+          promptVersion: PROMPT_VERSION,
+          engineVersion: AI_REPORT_ENGINE_VERSION,
+        });
         if (cached) {
           console.log(`[AI Report] Returning cached report ${cached.id} for user ${req.user.uid}`);
           return res.json({
@@ -1107,12 +1158,18 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
             tokenCost: 0,
             balance: req.tokenBalanceBefore,
             generationTime: '0ms',
+            savedReportId: cached.id,
             data: {
               generatedAt: cached.createdAt,
               language: cached.language,
               birthData: cached.birthInfo,
               rashiChart: cached.rashiChart,
               narrativeSections: cached.sections,
+              promptVersion: cached.promptVersion || null,
+              promptMetadata: cached.promptMetadata || null,
+              promptAnalytics: cached.promptAnalytics || null,
+              calculationMetadata: cached.calculationMetadata || null,
+              validationMetadata: cached.validationMetadata || null,
             },
           });
         }
@@ -1120,7 +1177,8 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
         console.warn('[AI Report] Cache check failed:', e.message);
       }
     }
-    */
+
+    const uid = req.user?.uid;
 
     // Deduct LKR 15 BEFORE generation — REMOVED: payment handled by RevenueCat subscription
 
@@ -1141,100 +1199,71 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
       }
     }
 
-    console.log(`[AI Report] Generating narrative report for ${date.toISOString()} at (${reportLat}, ${reportLng}) in ${language}`);
-    const startTime = Date.now();
-
-    // Generate a reportId for progress tracking (use client-provided if available)
     const reportId = clientReportId || `rpt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    createReportProgress(reportId, 19); // 19 sections in sectionOrder
-
-    const report = await generateAINarrativeReport(date, reportLat, reportLng, language, birthLocation, userName, userGender, userReligion, {
+    const jobPayload = {
+      uid,
+      reportId,
+      birthDate,
+      parsedDateISO: date.toISOString(),
+      lat: reportLat,
+      lng: reportLng,
+      language,
+      birthLocation,
+      userName,
+      userGender,
+      userReligion,
       maritalStatus,
       marriageYear,
-      calculationSettings: calculationSettings || settings || {},
+      calculationSettings: normalizedSettings,
       asOfDate,
       timeContext,
-    }, reportId);
+      entitlementId,
+      cacheKey: cacheDescriptor.cacheKey,
+      cacheVersion: cacheDescriptor.cacheVersion,
+      cacheInputHash: cacheDescriptor.inputHash,
+      cacheInput: cacheDescriptor.normalizedInput,
+      engineVersion: AI_REPORT_ENGINE_VERSION,
+      promptVersion: PROMPT_VERSION,
+    };
 
-    const elapsed = Date.now() - startTime;
-    const sectionCount = Object.keys(report.narrativeSections).length;
-    console.log(`[AI Report] Complete in ${elapsed}ms — ${sectionCount} narrative sections`);
-
-    // ── FAIL-SAFE: Validate report has actual content before returning ──
-    // This is a PAID feature — never return an empty/degraded report as success
-    if (sectionCount === 0) {
-      const error = new Error('Report generation produced zero narrative sections');
-      error.code = 'EMPTY_REPORT';
-      throw error;
-    }
-
-    // Track real AI cost
-    trackCost('fullReport', req.user?.uid || null, report.tokenUsage);
-
-    // Save report to Firestore (fire-and-forget — don't block the response)
-    let savedReportId = null;
-    if (req.user && !req.user.anonymous && req.user.uid) {
-      try {
-        savedReportId = await saveReport(req.user.uid, {
-          birthDate,
-          lat: reportLat,
-          lng: reportLng,
-          language,
-          type: 'ai-narrative',
-          sections: report.narrativeSections,
-          rashiChart: report.rashiChart,
-          birthInfo: report.birthData,
-          promptVersion: report.promptVersion || null,
-          promptMetadata: report.promptMetadata || null,
-          promptAnalytics: report.promptAnalytics || null,
-          calculationMetadata: report.calculationMetadata || null,
-          validationMetadata: report.validationMetadata || null,
-          generationTime: `${elapsed}ms`,
-          userName: userName || null,
-          userGender: userGender || null,
-          birthLocation: birthLocation || null,
-        });
-        console.log(`[AI Report] Saved to Firestore: ${savedReportId}`);
-        // Store savedReportId in progress so clients that timed out on the HTTP request
-        // can discover the completed report via progress polling
-        updateReportProgress(reportId, { stage: 'complete', savedReportId });
-      } catch (e) {
-        console.warn('[AI Report] Failed to save report to Firestore:', e.message);
-      }
-    }
-
-    res.json({
-      success: true,
-      cached: false,
-      generationTime: `${elapsed}ms`,
-      data: report,
-      tokenUsage: report.tokenUsage || null,
-      entitlementId: entitlementId || null,
-      savedReportId: savedReportId || null,
-      quality: {
-        sectionsGenerated: report.successCount || sectionCount,
-        sectionsTotal: report.totalSections || sectionCount,
-        failedSections: report.failedSections ? report.failedSections.map(f => f.key) : [],
-      },
+    const job = await enqueueReportJob(jobPayload, {
+      uniqueKey: shouldForceRegenerate ? `${uid}:${cacheDescriptor.cacheKey}:force:${reportId}` : `${uid}:${cacheDescriptor.cacheKey}:normal`,
     });
 
-    // ── Entitlement: mark as fulfilled (generation succeeded) ──
-    if (entitlementId) {
-      try { await fulfillEntitlement(entitlementId); }
-      catch (e) { console.warn('[AI Report] Entitlement fulfill failed (non-critical):', e.message); }
+    if (!job) {
+      return res.status(503).json({
+        error: 'Durable report job storage is unavailable',
+        code: 'REPORT_JOB_STORE_UNAVAILABLE',
+      });
     }
 
-    // Clean up progress tracker after a generous delay — clients may need to recover from timeout
-    setTimeout(() => deleteReportProgress(reportId), 300000); // 5 min after completion
+    const queuedReportId = job.payload?.reportId || reportId;
+    if (!job.deduped) {
+      createReportProgress(queuedReportId, 19, uid, { stage: 'queued', jobId: job.id });
+    }
 
-    // Clear in-flight guard
-    if (uid) _activeGenerations.delete(uid);
+    res.status(202).json({
+      success: true,
+      cached: false,
+      queued: true,
+      reportId: queuedReportId,
+      jobId: job.id,
+      duplicate: !!job.deduped,
+      entitlementId: entitlementId || job.payload?.entitlementId || null,
+      data: {
+        stage: 'queued',
+        reportId: queuedReportId,
+        jobId: job.id,
+      },
+    });
   } catch (error) {
-    // Clear in-flight guard
-    const uid = req.user?.uid;
-    if (uid) _activeGenerations.delete(uid);
-
     console.error('[AI Report] Error:', error);
+    notifyAlert('report_generation_failed', {
+      uid: req.user?.uid || null,
+      code: error.code || 'GENERATION_FAILED',
+      message: error.message || 'Unknown report generation failure',
+      route: '/api/horoscope/full-report-ai',
+    }, { severity: 'critical', dedupeKey: 'report_generation_failed:' + (error.code || 'unknown') }).catch(() => null);
 
     // ── Entitlement: record error (keeps status 'pending' for retry) ──
     if (entitlementId) {
