@@ -166,15 +166,19 @@ function formatBirthTimeDisplay(timeStr) {
 // ──────────────────────────────────────────
 // Glass box wrapper
 // ──────────────────────────────────────────
-function AuraBox({ children, style }) {
+function AuraBox({ children, style, variant }) {
+  var isReading = variant === 'reading';
+  var boxColors = isReading
+    ? ['rgba(8, 10, 18, 0.96)', 'rgba(18, 12, 20, 0.98)', 'rgba(7, 6, 13, 0.98)']
+    : ['rgba(20, 12, 50, 0.55)', 'rgba(10, 6, 28, 0.65)'];
   return (
     <View style={[gs.box, style]}>
       <LinearGradient
-        colors={['rgba(20, 12, 50, 0.55)', 'rgba(10, 6, 28, 0.65)']}
+        colors={boxColors}
         style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       />
-      <View style={[gs.innerGlow, { pointerEvents: 'none' }]} />
+      <View style={[gs.innerGlow, isReading && gs.readingGlow, { pointerEvents: 'none' }]} />
       {children}
     </View>
   );
@@ -188,6 +192,10 @@ var gs = StyleSheet.create({
   innerGlow: {
     ...StyleSheet.absoluteFillObject,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)', borderRadius: 20,
+  },
+  readingGlow: {
+    borderColor: 'rgba(255,236,190,0.08)',
+    backgroundColor: 'rgba(255,248,234,0.015)',
   },
 });
 
@@ -537,7 +545,7 @@ function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang, rawD
           <Text style={sc.sectionNumText}>{sectionNumber}</Text>
         </BadgeView>
 
-        <AuraBox style={[sc.cardBox, expanded && sc.cardBoxExpanded]}>
+        <AuraBox variant={expanded ? 'reading' : 'default'} style={[sc.cardBox, expanded && sc.cardBoxExpanded]}>
           {/* Accent top border glow */}
           <LinearGradient
             colors={[...(meta.gradient || meta.colors || ['#333', '#111']), 'transparent']}
@@ -629,7 +637,7 @@ function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang, rawD
 
               {/* Main narrative */}
               <View style={sc.narrativeWrap}>
-                <MarkdownText>{aiNarrative.narrative}</MarkdownText>
+                <MarkdownText variant="report">{aiNarrative.narrative}</MarkdownText>
               </View>
 
               {/* Collapse button at bottom */}
@@ -645,39 +653,173 @@ function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang, rawD
   );
 }
 
+function formatReportTimeAgo(savedAt, reportLang) {
+  if (!savedAt) return '';
+  var savedDate = new Date(savedAt);
+  var savedMs = savedDate.getTime();
+  if (!Number.isFinite(savedMs)) return '';
+  var diffMs = Date.now() - savedMs;
+  var diffMin = Math.max(0, Math.floor(diffMs / 60000));
+  var diffHr = Math.floor(diffMin / 60);
+  var diffDay = Math.floor(diffHr / 24);
+  if (diffMin < 1) return reportLang === 'si' ? 'දැන්' : 'just now';
+  if (diffMin < 60) return diffMin + (reportLang === 'si' ? ' මිනි. පෙර' : 'm ago');
+  if (diffHr < 24) return diffHr + (reportLang === 'si' ? ' පැ. පෙර' : 'h ago');
+  return diffDay + (reportLang === 'si' ? ' දින පෙර' : 'd ago');
+}
+
+function GeneratedReportsPanel({ displayReports, reportsLoading, reportsLoadError, reportLang, loadSavedReport, deleteSavedReport, loadingReport }) {
+  var isSi = reportLang === 'si';
+  var hasReports = Array.isArray(displayReports) && displayReports.length > 0;
+
+  return (
+    <Animated.View entering={FadeInDown.delay(180).duration(700)}>
+      <AuraBox style={s.generatedPanel}>
+        <View style={s.generatedHeader}>
+          <View style={s.generatedIconBox}>
+            <Ionicons name="library-outline" size={18} color="#F6C66F" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.generatedTitle}>{isSi ? 'සාදන ලද වාර්තා' : 'Generated Reports'}</Text>
+            <Text style={s.generatedSubtitle}>
+              {hasReports
+                ? (isSi ? 'ඕනෑම පැරණි වාර්තාවක් මෙතනින් විවෘත කරන්න' : 'Open any report you already generated')
+                : (isSi ? 'ඔයාගේ වාර්තා මෙතන පෙන්වනු ලැබේ' : 'Your generated reports will appear here')}
+            </Text>
+          </View>
+          <View style={s.generatedCountPill}>
+            <Text style={s.generatedCountText}>{reportsLoading ? '...' : String(displayReports.length)}</Text>
+          </View>
+        </View>
+
+        {reportsLoading && !hasReports && (
+          <View style={s.generatedStateBox}>
+            <Ionicons name="sync-outline" size={20} color="rgba(246,198,111,0.75)" />
+            <Text style={s.generatedStateText}>{isSi ? 'වාර්තා ලැයිස්තුව පූරණය වෙමින්...' : 'Loading your report list...'}</Text>
+          </View>
+        )}
+
+        {!reportsLoading && !hasReports && (
+          <View style={s.generatedStateBox}>
+            <Text style={s.generatedEmptyIcon}>📜</Text>
+            <Text style={s.generatedEmptyTitle}>{isSi ? 'තවම වාර්තා නැහැ' : 'No generated reports yet'}</Text>
+            <Text style={s.generatedEmptyText}>{isSi ? 'පළමු වාර්තාව සාදන්න. ඉන්පසු එය මෙතන ලැයිස්තුවේ පෙනේ.' : 'Generate your first report. After it finishes, it will stay visible in this list.'}</Text>
+          </View>
+        )}
+
+        {reportsLoadError && !reportsLoading && (
+          <View style={s.generatedWarningBox}>
+            <Ionicons name="cloud-offline-outline" size={15} color="#FCA5A5" />
+            <Text style={s.generatedWarningText}>{reportsLoadError}</Text>
+          </View>
+        )}
+
+        {hasReports && (
+          <ScrollView
+            style={displayReports.length > 3 ? s.generatedListScroll : null}
+            contentContainerStyle={s.generatedList}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={displayReports.length > 3}
+            keyboardShouldPersistTaps="handled"
+          >
+            {displayReports.map(function(entry) {
+              var timeAgo = formatReportTimeAgo(entry.savedAt, reportLang);
+              return (
+                <TouchableOpacity
+                  key={entry.id}
+                  onPress={function() { if (!loadingReport) loadSavedReport(entry); }}
+                  activeOpacity={0.75}
+                  style={s.generatedRow}
+                  disabled={loadingReport}
+                >
+                  <View style={s.generatedScrollIcon}>
+                    <Text style={{ fontSize: 18 }}>📜</Text>
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={s.generatedName} numberOfLines={1}>
+                      {entry.userName || (isSi ? 'නම නැත' : 'No Name')}
+                    </Text>
+                    <Text style={s.generatedMeta} numberOfLines={1}>
+                      {(formatBirthDateDisplay(entry.birthDate, reportLang) || entry.birthDate || '')}
+                      {entry.birthTime ? ' • ' + formatBirthTimeDisplay(entry.birthTime) : ''}
+                      {entry.birthLocation ? ' • ' + entry.birthLocation : ''}
+                    </Text>
+                    <View style={s.generatedMiniRow}>
+                      <Text style={s.generatedLang}>{entry.reportLang === 'si' ? 'සිංහල' : 'English'}</Text>
+                      {entry.sectionCount ? <Text style={s.generatedDot}>•</Text> : null}
+                      {entry.sectionCount ? <Text style={s.generatedLang}>{entry.sectionCount} {isSi ? 'කොටස්' : 'chapters'}</Text> : null}
+                    </View>
+                  </View>
+                  <View style={s.generatedRightCol}>
+                    <Text style={s.generatedTime}>{timeAgo}</Text>
+                    <TouchableOpacity
+                      onPress={function(e) {
+                        e.stopPropagation && e.stopPropagation();
+                        if (Platform.OS === 'web') {
+                          if (confirm(isSi ? 'මෙම වාර්තාව මකන්නද?' : 'Delete this report?')) {
+                            deleteSavedReport(entry.id);
+                          }
+                        } else {
+                          Alert.alert(
+                            isSi ? 'මකන්න' : 'Delete',
+                            isSi ? 'මෙම වාර්තාව මකන්නද?' : 'Delete this report?',
+                            [
+                              { text: isSi ? 'නැහැ' : 'Cancel', style: 'cancel' },
+                              { text: isSi ? 'ඔව්' : 'Delete', style: 'destructive', onPress: function() { deleteSavedReport(entry.id); } },
+                            ]
+                          );
+                        }
+                      }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      style={s.generatedDeleteBtn}
+                    >
+                      <Ionicons name="trash-outline" size={14} color="rgba(252,165,165,0.70)" />
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+      </AuraBox>
+    </Animated.View>
+  );
+}
+
 var sc = StyleSheet.create({
   outerWrap: { position: 'relative', marginBottom: 4 },
   sectionNumBadge: {
     position: 'absolute', left: -4, top: 14, zIndex: 10, width: 22, height: 22, borderRadius: 11,
-    backgroundColor: 'rgba(255,140,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,140,0,0.3)',
+    backgroundColor: 'rgba(12,10,18,0.92)', borderWidth: 1, borderColor: 'rgba(218,165,86,0.42)',
     alignItems: 'center', justifyContent: 'center',
   },
-  sectionNumText: { fontSize: 9, fontWeight: '900', color: '#FF8C00' },
-  cardBox: { padding: 0, marginLeft: 12, borderColor: 'rgba(255,184,0,0.08)' },
-  cardBoxExpanded: { borderColor: 'rgba(255,140,0,0.20)' },
-  topGlow: { height: 2, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 14, paddingBottom: 8 },
-  iconBg: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  sectionNumText: { fontSize: 9, fontWeight: '900', color: '#F6C66F' },
+  cardBox: { padding: 0, marginLeft: 12, borderColor: 'rgba(255,236,190,0.09)' },
+  cardBoxExpanded: { borderColor: 'rgba(218,165,86,0.28)' },
+  topGlow: { height: 3, borderTopLeftRadius: 20, borderTopRightRadius: 20, opacity: 0.75 },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 15, paddingBottom: 10 },
+  iconBg: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   emoji: { fontSize: 20 },
-  title: { color: '#FFE8B0', fontSize: 14, fontWeight: '800', lineHeight: 20 },
-  hookLine: { color: 'rgba(255,214,102,0.50)', fontSize: 12, lineHeight: 17, marginTop: 3, fontStyle: 'italic' },
+  title: { color: '#FFF3D4', fontSize: 14.5, fontWeight: '800', lineHeight: 21, letterSpacing: 0 },
+  hookLine: { color: 'rgba(248,238,216,0.72)', fontSize: 12.5, lineHeight: 18, marginTop: 4, fontStyle: 'italic' },
   rightCol: { alignItems: 'center', gap: 4 },
-  chevronBg: { width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', alignItems: 'center', justifyContent: 'center' },
-  chevronBgActive: { backgroundColor: 'rgba(255,140,0,0.15)' },
-  statsRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14, paddingBottom: 8 },
-  statsRowExpanded: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 },
+  chevronBg: { width: 25, height: 25, borderRadius: 12.5, backgroundColor: 'rgba(255,248,234,0.06)', alignItems: 'center', justifyContent: 'center' },
+  chevronBgActive: { backgroundColor: 'rgba(218,165,86,0.18)' },
+  statsRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 15, paddingBottom: 9 },
+  statsRowExpanded: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 14 },
   readMoreBtn: { marginHorizontal: 14, marginBottom: 12, borderRadius: 10, overflow: 'hidden' },
-  readMoreGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,140,0,0.12)' },
-  readMoreText: { fontSize: 11, color: '#FF8C00', fontWeight: '700' },
-  content: { paddingHorizontal: 14, paddingBottom: 14 },
-  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginBottom: 12 },
-  scoreBarWrap: { marginBottom: 12 },
+  readMoreGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(218,165,86,0.18)' },
+  readMoreText: { fontSize: 11.5, color: '#F6C66F', fontWeight: '800' },
+  content: { paddingHorizontal: 15, paddingBottom: 16 },
+  divider: { height: 1, backgroundColor: 'rgba(255,236,190,0.10)', marginBottom: 14 },
+  scoreBarWrap: { marginBottom: 14 },
   narrativeWrap: {
-    backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: 'rgba(5,8,15,0.72)', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 17,
+    borderWidth: 1, borderColor: 'rgba(255,236,190,0.12)',
+    ...boxShadow('rgba(0,0,0,0.55)', { width: 0, height: 8 }, 0.8, 18), elevation: 8,
   },
-  collapseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: 'rgba(255,140,0,0.06)', borderWidth: 1, borderColor: 'rgba(255,140,0,0.10)' },
-  collapseText: { fontSize: 11, color: 'rgba(255,140,0,0.6)', fontWeight: '600' },
+  collapseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 13, paddingVertical: 9, borderRadius: 9, backgroundColor: 'rgba(218,165,86,0.08)', borderWidth: 1, borderColor: 'rgba(218,165,86,0.14)' },
+  collapseText: { fontSize: 11.5, color: 'rgba(246,198,111,0.78)', fontWeight: '700' },
 });
 
 // ══════════════════════════════════════════
@@ -1191,6 +1333,8 @@ export default function ReportScreen() {
   // Flow states: 'form' -> 'loading' -> 'report'
   var [screenState, setScreenState] = useState('form');
   var [savedReports, setSavedReports] = useState([]);
+  var [reportsLoading, setReportsLoading] = useState(true);
+  var [reportsLoadError, setReportsLoadError] = useState(null);
 
   // De-duplicate saved reports by (userName + birthDate + birthLocation).
   // Server + AsyncStorage can both retain entries for the same person
@@ -1259,12 +1403,30 @@ export default function ReportScreen() {
   // ── Load saved reports: server-first, AsyncStorage fallback ──
   var [serverReportsLoaded, setServerReportsLoaded] = useState(false);
   useEffect(function() {
+    var active = true;
     (async function() {
-      // Try server first (source of truth)
+      setReportsLoading(true);
+      setReportsLoadError(null);
+      var localList = [];
+
+      // Load local cache first so the generated list is never hidden while the server warms up.
+      try {
+        var stored = await AsyncStorage.getItem(REPORTS_CACHE_KEY);
+        if (stored) {
+          localList = JSON.parse(stored) || [];
+          if (active && Array.isArray(localList) && localList.length > 0) {
+            setSavedReports(localList);
+          }
+        }
+      } catch (e) {
+        if (__DEV__) console.warn('Failed to load saved reports:', e);
+      }
+
+      // Try server next (source of truth when available).
       if (user && !user.isAnonymous) {
         try {
           var serverRes = await api.getMyHoroscopeReports();
-          if (serverRes && serverRes.data && serverRes.data.reports && serverRes.data.reports.length > 0) {
+          if (serverRes && serverRes.data && Array.isArray(serverRes.data.reports)) {
             var serverList = serverRes.data.reports.map(function(r) {
               return {
                 id: r.id,
@@ -1282,28 +1444,30 @@ export default function ReportScreen() {
                 isServerReport: true,
               };
             });
-            setSavedReports(serverList);
+            if (!active) return;
+            setSavedReports(serverList.length > 0 ? serverList : localList);
             setServerReportsLoaded(true);
             // Cache server reports locally as offline fallback
-            try { await AsyncStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(serverList)); } catch (_) {}
+            if (serverList.length > 0) {
+              try { await AsyncStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(serverList)); } catch (_) {}
+            }
             if (__DEV__) console.log('[Report] Loaded ' + serverList.length + ' reports from server');
             return;
           }
         } catch (e) {
           if (__DEV__) console.warn('[Report] Server reports failed, falling back to local:', e.message);
+          if (active) setReportsLoadError(reportLang === 'si' ? 'සේවාදායක වාර්තා පූරණය කළ නොහැකි විය. දේශීය ලැයිස්තුව පෙන්වයි.' : 'Could not refresh server reports. Showing local list.');
         }
       }
-      // Fallback to AsyncStorage
-      try {
-        var stored = await AsyncStorage.getItem(REPORTS_CACHE_KEY);
-        if (stored) {
-          setSavedReports(JSON.parse(stored));
-        }
-      } catch (e) {
-        if (__DEV__) console.warn('Failed to load saved reports:', e);
+
+      if (active && (!Array.isArray(localList) || localList.length === 0)) {
+        setSavedReports([]);
       }
-    })();
-  }, [user]);
+    })().finally(function() {
+      if (active) setReportsLoading(false);
+    });
+    return function() { active = false; };
+  }, [user, reportLang]);
 
   // Save a report to cache
   var saveReportToCache = useCallback(async function(reportData) {
@@ -1644,6 +1808,21 @@ export default function ReportScreen() {
                   }));
                 }
               } catch (_) {}
+            } else {
+              await saveReportToCache({
+                userName: userName || '',
+                birthDate: birthDate,
+                birthTime: birthTime,
+                birthLocation: birthLocation,
+                birthLat: birthLat,
+                birthLng: birthLng,
+                reportLang: reportLang,
+                userGender: gender,
+                userReligion: userReligion || null,
+                report: httpRawResult && httpRawResult.status === 'fulfilled' && httpRawResult.value ? httpRawResult.value.data : null,
+                aiReport: aiData,
+                chartData: chartSnapshot,
+              });
             }
             return; // Done!
           }
@@ -2616,99 +2795,15 @@ export default function ReportScreen() {
           </AuraBox>
         </Animated.View>
 
-        {/* Saved Reports */}
-        {displayReports.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(250).duration(800)}>
-            <AuraBox style={{ marginBottom: 4 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <Ionicons name="document-text-outline" size={18} color="#FF8C00" style={{ marginRight: 8 }} />
-                <Text style={{ color: '#D4B06A', fontSize: 14, fontWeight: '700', flex: 1 }}>
-                  {reportLang === 'si' ? 'සුරකින ලද වාර්තා' : 'Saved Reports'}
-                </Text>
-                <Text style={{ color: 'rgba(255,214,102,0.35)', fontSize: 11 }}>
-                  {displayReports.length + '/' + MAX_SAVED_REPORTS}
-                </Text>
-              </View>
-              {displayReports.map(function(entry, idx) {
-                var savedDate = entry.savedAt ? new Date(entry.savedAt) : null;
-                var timeAgo = '';
-                if (savedDate) {
-                  var diffMs = Date.now() - savedDate.getTime();
-                  var diffMin = Math.floor(diffMs / 60000);
-                  var diffHr = Math.floor(diffMin / 60);
-                  var diffDay = Math.floor(diffHr / 24);
-                  if (diffMin < 1) timeAgo = reportLang === 'si' ? 'දැන්' : 'just now';
-                  else if (diffMin < 60) timeAgo = diffMin + (reportLang === 'si' ? ' මිනි. පෙර' : 'm ago');
-                  else if (diffHr < 24) timeAgo = diffHr + (reportLang === 'si' ? ' පැ. පෙර' : 'h ago');
-                  else timeAgo = diffDay + (reportLang === 'si' ? ' දින පෙර' : 'd ago');
-                }
-                return (
-                  <TouchableOpacity
-                    key={entry.id}
-                    onPress={function() { loadSavedReport(entry); }}
-                    activeOpacity={0.7}
-                    style={{
-                      flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 12,
-                      backgroundColor: 'rgba(255,140,0,0.04)', borderRadius: 12, marginBottom: 8,
-                      borderWidth: 1, borderColor: 'rgba(255,140,0,0.1)',
-                    }}
-                  >
-                    <View style={{
-                      width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,140,0,0.1)',
-                      alignItems: 'center', justifyContent: 'center', marginRight: 12,
-                    }}>
-                      <Text style={{ fontSize: 18 }}>📜</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: '#FFE8B0', fontSize: 14, fontWeight: '700' }} numberOfLines={1}>
-                        {entry.userName || (reportLang === 'si' ? 'නම නැත' : 'No Name')}
-                      </Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                        <Text style={{ color: 'rgba(255,214,102,0.45)', fontSize: 11 }}>
-                          {formatBirthDateDisplay(entry.birthDate, reportLang) || entry.birthDate || ''}
-                        </Text>
-                        <Text style={{ color: 'rgba(255,214,102,0.2)', fontSize: 11 }}>•</Text>
-                        <Text style={{ color: 'rgba(255,214,102,0.45)', fontSize: 11 }}>
-                          {entry.birthTime ? formatBirthTimeDisplay(entry.birthTime) + ' ' : ''}{entry.birthLocation || ''}
-                        </Text>
-                        <Text style={{ color: 'rgba(255,214,102,0.2)', fontSize: 11 }}>•</Text>
-                        <Text style={{ color: 'rgba(255,214,102,0.35)', fontSize: 10 }}>
-                          {entry.reportLang === 'si' ? '🇱🇰' : '🇬🇧'}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={{ alignItems: 'flex-end', marginLeft: 8 }}>
-                      <Text style={{ color: 'rgba(255,214,102,0.3)', fontSize: 10 }}>{timeAgo}</Text>
-                      <TouchableOpacity
-                        onPress={function(e) {
-                          e.stopPropagation && e.stopPropagation();
-                          if (Platform.OS === 'web') {
-                            if (confirm(reportLang === 'si' ? 'මෙම වාර්තාව මකන්නද?' : 'Delete this report?')) {
-                              deleteSavedReport(entry.id);
-                            }
-                          } else {
-                            Alert.alert(
-                              reportLang === 'si' ? 'මකන්න' : 'Delete',
-                              reportLang === 'si' ? 'මෙම වාර්තාව මකන්නද?' : 'Delete this report?',
-                              [
-                                { text: reportLang === 'si' ? 'නැහැ' : 'Cancel', style: 'cancel' },
-                                { text: reportLang === 'si' ? 'ඔව්' : 'Delete', style: 'destructive', onPress: function() { deleteSavedReport(entry.id); } },
-                              ]
-                            );
-                          }
-                        }}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        style={{ marginTop: 4, padding: 4 }}
-                      >
-                        <Ionicons name="trash-outline" size={14} color="rgba(239,68,68,0.5)" />
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </AuraBox>
-          </Animated.View>
-        )}
+        <GeneratedReportsPanel
+          displayReports={displayReports}
+          reportsLoading={reportsLoading}
+          reportsLoadError={reportsLoadError}
+          reportLang={reportLang}
+          loadSavedReport={loadSavedReport}
+          deleteSavedReport={deleteSavedReport}
+          loadingReport={loadingReport}
+        />
 
         {/* Error */}
         {error && (
@@ -2751,6 +2846,56 @@ var s = StyleSheet.create({
   heroStatsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
   heroStatChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(255,140,0,0.08)', borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)' },
   heroStatText: { fontSize: 10, color: 'rgba(255,214,102,0.55)', fontWeight: '600' },
+
+  // Generated reports list
+  generatedPanel: { marginBottom: 12, borderColor: 'rgba(218,165,86,0.18)' },
+  generatedHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  generatedIconBox: {
+    width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(218,165,86,0.12)',
+    alignItems: 'center', justifyContent: 'center', marginRight: 12,
+    borderWidth: 1, borderColor: 'rgba(218,165,86,0.22)',
+  },
+  generatedTitle: { color: '#FFF3D4', fontSize: 15.5, fontWeight: '900', lineHeight: 20 },
+  generatedSubtitle: { color: 'rgba(248,238,216,0.58)', fontSize: 11.5, lineHeight: 16, marginTop: 2 },
+  generatedCountPill: {
+    minWidth: 34, height: 28, borderRadius: 14, paddingHorizontal: 10,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(246,198,111,0.10)',
+    borderWidth: 1, borderColor: 'rgba(246,198,111,0.22)', marginLeft: 10,
+  },
+  generatedCountText: { color: '#F6C66F', fontSize: 12, fontWeight: '900' },
+  generatedStateBox: {
+    alignItems: 'center', justifyContent: 'center', paddingVertical: 20, paddingHorizontal: 12,
+    borderRadius: 14, backgroundColor: 'rgba(5,8,15,0.46)', borderWidth: 1, borderColor: 'rgba(255,236,190,0.08)',
+  },
+  generatedStateText: { color: 'rgba(248,238,216,0.68)', fontSize: 12.5, fontWeight: '700', marginTop: 8, textAlign: 'center' },
+  generatedEmptyIcon: { fontSize: 30, marginBottom: 8 },
+  generatedEmptyTitle: { color: '#FFF3D4', fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  generatedEmptyText: { color: 'rgba(248,238,216,0.56)', fontSize: 12, lineHeight: 18, textAlign: 'center', marginTop: 5, maxWidth: 280 },
+  generatedWarningBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 8, paddingHorizontal: 10,
+    borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.16)', marginBottom: 10,
+  },
+  generatedWarningText: { flex: 1, color: 'rgba(252,165,165,0.86)', fontSize: 11.5, lineHeight: 16 },
+  generatedList: { gap: 8 },
+  generatedListScroll: { maxHeight: 256 },
+  generatedRow: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 12,
+    backgroundColor: 'rgba(5,8,15,0.58)', borderRadius: 14,
+    borderWidth: 1, borderColor: 'rgba(255,236,190,0.10)',
+  },
+  generatedScrollIcon: {
+    width: 42, height: 42, borderRadius: 13, backgroundColor: 'rgba(246,198,111,0.12)',
+    alignItems: 'center', justifyContent: 'center', marginRight: 12,
+    borderWidth: 1, borderColor: 'rgba(246,198,111,0.18)',
+  },
+  generatedName: { color: '#FFF3D4', fontSize: 14.5, fontWeight: '800', lineHeight: 19 },
+  generatedMeta: { color: 'rgba(248,238,216,0.62)', fontSize: 11.5, lineHeight: 16, marginTop: 3 },
+  generatedMiniRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 },
+  generatedLang: { color: 'rgba(246,198,111,0.64)', fontSize: 10.5, fontWeight: '700' },
+  generatedDot: { color: 'rgba(246,198,111,0.30)', fontSize: 10 },
+  generatedRightCol: { alignItems: 'flex-end', marginLeft: 10, alignSelf: 'stretch', justifyContent: 'space-between' },
+  generatedTime: { color: 'rgba(248,238,216,0.38)', fontSize: 10.5, fontWeight: '700' },
+  generatedDeleteBtn: { padding: 5, borderRadius: 9, backgroundColor: 'rgba(239,68,68,0.08)' },
 
   // Hero Score Card
   heroScoreCenter: { alignItems: 'center', marginBottom: 16 },

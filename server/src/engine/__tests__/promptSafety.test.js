@@ -141,6 +141,85 @@ describe('general prompt claim builder', () => {
     expect(payload.allowedClaims.some(claim => claim.category === 'relationship_timing')).toBe(false);
     expect(payload.omitTopics.some(topic => topic.id === 'marriage.relationshipTiming.bestWindow')).toBe(true);
   });
+
+  test('builds career direction claims from the top ranked indicators only', () => {
+    const payload = buildSectionPromptPayload('career', {
+      careerPlanetRanking: [
+        { planet: 'Mercury', role: 'analysis', dignity: 'strong' },
+        { planet: 'Saturn', role: 'operations', dignity: 'stable' },
+        { planet: 'Venus', role: 'design', dignity: 'friendly' },
+        { planet: 'Mars', role: 'engineering', dignity: 'mixed' },
+      ],
+    });
+    const careerClaim = payload.allowedClaims.find(claim => claim.category === 'career_direction');
+
+    expect(careerClaim).toBeTruthy();
+    expect(careerClaim.publicClaim).toContain('Mercury');
+    expect(careerClaim.publicClaim).toContain('Venus');
+    expect(careerClaim.publicClaim).not.toContain('Mars');
+    expect(careerClaim.forbidden).toContain('guaranteed_job');
+  });
+
+  test('financial claims forbid direct investment advice and guaranteed wealth', () => {
+    const payload = buildSectionPromptPayload('financial', {
+      income: {
+        secondHouse: { strengthScore: 72 },
+        eleventhHouse: { strengthScore: 64 },
+      },
+      losses: { riskPeriods: [{ period: '2031-2032', lord: 'Saturn' }] },
+    });
+    const incomeClaim = payload.allowedClaims.find(claim => claim.id === 'financial.incomePattern');
+    const riskClaim = payload.allowedClaims.find(claim => claim.id === 'financial.riskWindows');
+
+    expect(incomeClaim).toBeTruthy();
+    expect(incomeClaim.publicClaim.toLowerCase()).toContain('do not promise wealth');
+    expect(incomeClaim.forbidden).toContain('specific_investment_advice');
+    expect(riskClaim.framing).toContain('not a promise');
+  });
+
+  test('children timing claims are omitted when marriage denial is active', () => {
+    const payload = buildSectionPromptPayload('children', {
+      estimatedChildren: { count: 2, genderTendency: 'mixed', score: 6 },
+      childrenBirthYears: {
+        children: [{ childNumber: '1st', peakYear: 2031, confidence: 'high' }],
+      },
+    }, {
+      marriage: { marriageAfflictions: { isMarriageDenied: true, severity: 'HIGH' } },
+    });
+
+    expect(payload.allowedClaims.some(claim => claim.category === 'children_estimate')).toBe(true);
+    expect(payload.allowedClaims.some(claim => claim.category === 'timing_window')).toBe(false);
+    expect(payload.omitTopics.some(topic => topic.reason.includes('blocked by stronger'))).toBe(true);
+  });
+
+  test('legal claims stay practical and block guaranteed outcomes', () => {
+    const payload = buildSectionPromptPayload('legal', {
+      enemyProfile: { tendency: 'competitive', source: '6th house' },
+      legalIndicators: { score: 62 },
+      legalCasePeriods: [{ period: '2029-2030', confidence: 'moderate' }],
+    });
+    const pressureClaim = payload.allowedClaims.find(claim => claim.id === 'legal.pressurePattern');
+    const cautionClaim = payload.allowedClaims.find(claim => claim.id === 'legal.caseCautionWindows');
+
+    expect(pressureClaim).toBeTruthy();
+    expect(pressureClaim.publicClaim).toContain('do not predict case outcomes');
+    expect(pressureClaim.forbidden).toContain('guaranteed_legal_outcome');
+    expect(cautionClaim.framing).toContain('not a promise');
+  });
+
+  test('luck speculation claims explicitly forbid gambling encouragement', () => {
+    const payload = buildSectionPromptPayload('luck', {
+      overallLuck: 'High',
+      lotteryIndication: 'Moderate',
+      luckyNumbers: [3, 9, 21],
+    });
+    const speculationClaim = payload.allowedClaims.find(claim => claim.id === 'luck.speculationCaution');
+
+    expect(speculationClaim).toBeTruthy();
+    expect(speculationClaim.publicClaim).toContain('Never encourage gambling');
+    expect(speculationClaim.forbidden).toContain('gambling_encouragement');
+    expect(speculationClaim.forbidden).toContain('guaranteed_lottery');
+  });
 });
 
 describe('health narrative safety validator', () => {

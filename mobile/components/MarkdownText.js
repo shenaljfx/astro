@@ -11,8 +11,9 @@ import { View, Text, StyleSheet } from 'react-native';
 /**
  * Parse inline markdown (**bold**, *italic*) into Text elements
  */
-function parseInline(text, baseStyle) {
+function parseInline(text, baseStyle, inlineStyles) {
   if (!text) return null;
+  var inline = inlineStyles || styles;
   var parts = [];
   // Match ***bolditalic***, **bold**, *italic* — non-greedy, single line
   var regex = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*([^*]+?)\*)/g;
@@ -25,11 +26,11 @@ function parseInline(text, baseStyle) {
       parts.push(<Text key={'t' + key++} style={baseStyle}>{text.slice(lastIndex, match.index)}</Text>);
     }
     if (match[2]) {
-      parts.push(<Text key={'t' + key++} style={[baseStyle, styles.boldItalic]}>{match[2]}</Text>);
+      parts.push(<Text key={'t' + key++} style={[baseStyle, inline.boldItalic]}>{match[2]}</Text>);
     } else if (match[3]) {
-      parts.push(<Text key={'t' + key++} style={[baseStyle, styles.bold]}>{match[3]}</Text>);
+      parts.push(<Text key={'t' + key++} style={[baseStyle, inline.bold]}>{match[3]}</Text>);
     } else if (match[4]) {
-      parts.push(<Text key={'t' + key++} style={[baseStyle, styles.italic]}>{match[4]}</Text>);
+      parts.push(<Text key={'t' + key++} style={[baseStyle, inline.italic]}>{match[4]}</Text>);
     }
     lastIndex = regex.lastIndex;
   }
@@ -47,10 +48,11 @@ function parseInline(text, baseStyle) {
  * @param {string} children - the markdown string to render
  * @param {object} style - additional container style
  */
-export default function MarkdownText({ children, style }) {
+export default function MarkdownText({ children, style, variant }) {
   // Fallback: if not a string, render as plain text
   if (!children) return null;
   var raw = typeof children === 'string' ? children : String(children);
+  var md = variant === 'report' || variant === 'readable' ? readableStyles : styles;
 
   var text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   var lines = text.split('\n');
@@ -63,20 +65,20 @@ export default function MarkdownText({ children, style }) {
 
     // Empty line → spacer
     if (trimmed === '') {
-      elements.push(<View key={k++} style={styles.spacer} />);
+      elements.push(<View key={k++} style={md.spacer} />);
       continue;
     }
 
     // --- Horizontal divider
     if (/^[-*_]{3,}$/.test(trimmed)) {
-      elements.push(<View key={k++} style={styles.divider} />);
+      elements.push(<View key={k++} style={md.divider} />);
       continue;
     }
 
     // ### Heading 3
     if (/^###\s+/.test(trimmed)) {
       elements.push(
-        <Text key={k++} style={styles.h3}>{parseInline(trimmed.replace(/^###\s+/, ''), styles.h3)}</Text>
+        <Text key={k++} style={md.h3}>{parseInline(trimmed.replace(/^###\s+/, ''), md.h3, md)}</Text>
       );
       continue;
     }
@@ -84,9 +86,9 @@ export default function MarkdownText({ children, style }) {
     // ## Heading 2
     if (/^##\s+/.test(trimmed)) {
       elements.push(
-        <View key={k++} style={styles.h2Wrap}>
-          <Text style={styles.h2}>{parseInline(trimmed.replace(/^##\s+/, ''), styles.h2)}</Text>
-          <View style={styles.h2Line} />
+        <View key={k++} style={md.h2Wrap}>
+          <Text style={md.h2}>{parseInline(trimmed.replace(/^##\s+/, ''), md.h2, md)}</Text>
+          <View style={md.h2Line} />
         </View>
       );
       continue;
@@ -95,9 +97,9 @@ export default function MarkdownText({ children, style }) {
     // # Heading 1
     if (/^#\s+/.test(trimmed)) {
       elements.push(
-        <View key={k++} style={styles.h1Wrap}>
-          <Text style={styles.h1}>{parseInline(trimmed.replace(/^#\s+/, ''), styles.h1)}</Text>
-          <View style={styles.h1Line} />
+        <View key={k++} style={md.h1Wrap}>
+          <Text style={md.h1}>{parseInline(trimmed.replace(/^#\s+/, ''), md.h1, md)}</Text>
+          <View style={md.h1Line} />
         </View>
       );
       continue;
@@ -119,9 +121,9 @@ export default function MarkdownText({ children, style }) {
         ? { bar: '#EF4444', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.15)' }
         : { bar: '#D4A020', bg: 'rgba(255,184,0,0.06)', border: 'rgba(255,184,0,0.10)' };
       elements.push(
-        <View key={k++} style={[styles.blockquote, { backgroundColor: bqColors.bg, borderColor: bqColors.border, borderWidth: 1 }]}>
-          <View style={[styles.bqBar, { backgroundColor: bqColors.bar }]} />
-          <Text style={[styles.bqText, calloutType === 'highlight' && { color: '#FFE8B0' }]}>{parseInline(bqContent, styles.bqText)}</Text>
+        <View key={k++} style={[md.blockquote, { backgroundColor: bqColors.bg, borderColor: bqColors.border, borderWidth: 1 }]}>
+          <View style={[md.bqBar, { backgroundColor: bqColors.bar }]} />
+          <Text style={[md.bqText, calloutType === 'highlight' && { color: variant === 'report' || variant === 'readable' ? '#FFF8EA' : '#FFE8B0' }]}>{parseInline(bqContent, md.bqText, md)}</Text>
         </View>
       );
       continue;
@@ -132,9 +134,9 @@ export default function MarkdownText({ children, style }) {
     if (/^[-•]\s+/.test(trimmed) || /^\*\s+/.test(trimmed)) {
       var bulletContent = trimmed.replace(/^[-•*]\s+/, '');
       elements.push(
-        <View key={k++} style={styles.bulletRow}>
-          <Text style={styles.bulletDot}>{'\u2726'}</Text>
-          <Text style={styles.bulletText}>{parseInline(bulletContent, styles.bulletTextInline)}</Text>
+        <View key={k++} style={md.bulletRow}>
+          <Text style={md.bulletDot}>{'\u2726'}</Text>
+          <Text style={md.bulletText}>{parseInline(bulletContent, md.bulletTextInline, md)}</Text>
         </View>
       );
       continue;
@@ -144,11 +146,11 @@ export default function MarkdownText({ children, style }) {
     var numMatch = trimmed.match(/^(\d+)[.)]\s+(.*)/);
     if (numMatch) {
       elements.push(
-        <View key={k++} style={styles.bulletRow}>
-          <View style={styles.numBadge}>
-            <Text style={styles.numText}>{numMatch[1]}</Text>
+        <View key={k++} style={md.bulletRow}>
+          <View style={md.numBadge}>
+            <Text style={md.numText}>{numMatch[1]}</Text>
           </View>
-          <Text style={styles.bulletText}>{parseInline(numMatch[2], styles.bulletTextInline)}</Text>
+          <Text style={md.bulletText}>{parseInline(numMatch[2], md.bulletTextInline, md)}</Text>
         </View>
       );
       continue;
@@ -156,7 +158,7 @@ export default function MarkdownText({ children, style }) {
 
     // Regular paragraph
     elements.push(
-      <Text key={k++} style={styles.para}>{parseInline(trimmed, styles.paraInline)}</Text>
+      <Text key={k++} style={md.para}>{parseInline(trimmed, md.paraInline, md)}</Text>
     );
   }
 
@@ -216,4 +218,49 @@ var styles = StyleSheet.create({
   },
   bqBar: { width: 3, backgroundColor: '#D4A020', borderRadius: 2, marginRight: 12 },
   bqText: { flex: 1, color: 'rgba(255,220,160,0.9)', fontSize: 14, lineHeight: 23, fontStyle: 'italic' },
+});
+
+var readableStyles = StyleSheet.create({
+  spacer: { height: 10 },
+
+  divider: {
+    height: 1, marginVertical: 20, marginHorizontal: 2,
+    backgroundColor: 'rgba(218,165,86,0.22)',
+  },
+
+  h1Wrap: { marginTop: 24, marginBottom: 14 },
+  h1: { fontSize: 24, fontWeight: '900', color: '#FFF6DC', letterSpacing: 0, lineHeight: 31 },
+  h1Line: { height: 3, backgroundColor: 'rgba(218,165,86,0.55)', borderRadius: 2, marginTop: 8, width: '54%' },
+
+  h2Wrap: { marginTop: 22, marginBottom: 12 },
+  h2: { fontSize: 19, fontWeight: '800', color: '#FFE7AA', letterSpacing: 0, lineHeight: 26 },
+  h2Line: { height: 2, backgroundColor: 'rgba(218,165,86,0.40)', borderRadius: 1, marginTop: 7, width: '38%' },
+
+  h3: { fontSize: 16.5, fontWeight: '800', color: '#F7D38B', marginTop: 18, marginBottom: 9, lineHeight: 23 },
+
+  para: { color: '#F8EED8', fontSize: 15.5, lineHeight: 27, marginBottom: 9, letterSpacing: 0 },
+  paraInline: { color: '#F8EED8', fontSize: 15.5, lineHeight: 27, letterSpacing: 0 },
+
+  bold: { fontWeight: '900', color: '#FFF8EA' },
+  italic: { fontStyle: 'italic', color: '#EBD8B3' },
+  boldItalic: { fontWeight: '900', fontStyle: 'italic', color: '#FFF8EA' },
+
+  bulletRow: { flexDirection: 'row', paddingLeft: 2, marginBottom: 11, alignItems: 'flex-start' },
+  bulletDot: { color: '#D9A856', fontSize: 12, marginRight: 10, marginTop: 6, width: 17, textAlign: 'center' },
+  bulletText: { flex: 1, color: '#F8EED8', fontSize: 15.25, lineHeight: 26 },
+  bulletTextInline: { color: '#F8EED8', fontSize: 15.25, lineHeight: 26, letterSpacing: 0 },
+
+  numBadge: {
+    width: 25, height: 25, borderRadius: 12.5, backgroundColor: 'rgba(218,165,86,0.16)',
+    alignItems: 'center', justifyContent: 'center', marginRight: 11, marginTop: 2,
+    borderWidth: 1, borderColor: 'rgba(218,165,86,0.35)',
+  },
+  numText: { color: '#F7D38B', fontSize: 11, fontWeight: '900' },
+
+  blockquote: {
+    flexDirection: 'row', marginVertical: 12, paddingVertical: 14,
+    paddingHorizontal: 15, borderRadius: 12,
+  },
+  bqBar: { width: 3, backgroundColor: '#D9A856', borderRadius: 2, marginRight: 12 },
+  bqText: { flex: 1, color: '#EBD8B3', fontSize: 15, lineHeight: 25, fontStyle: 'italic' },
 });
