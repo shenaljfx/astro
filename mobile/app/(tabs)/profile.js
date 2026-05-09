@@ -42,6 +42,25 @@ import AwesomeRashiChakra from '../../components/AwesomeRashiChakra';
 var SW = Dimensions.get('window').width;
 var SH = Dimensions.get('window').height;
 
+function formatSubscriptionDate(value) {
+  if (!value) return '';
+  var text = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+  var date = new Date(text);
+  if (!Number.isFinite(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+}
+
+function formatSubscriptionLabel(value) {
+  if (!value) return '';
+  var text = String(value)
+    .replace(/^com\.grahachara\./i, '')
+    .replace(/[_-]+/g, ' ')
+    .trim();
+  if (!text) return '';
+  return text.replace(/\b\w/g, function (letter) { return letter.toUpperCase(); });
+}
+
 // ─────────────────────────────────────────────────────────────────────
 //  CITY DATA
 // ─────────────────────────────────────────────────────────────────────
@@ -464,7 +483,6 @@ function ProfileScreen() {
   var {
     user, loading, isLoggedIn, subscription, isSubscribed,
     signOut, saveBirthData, activateSubscription, cancelSubscription, renewSubscription,
-    restorePurchases, presentCustomerCenter,
   } = useAuth();
 
   // ── Notification permission & preference state ──
@@ -584,16 +602,75 @@ function ProfileScreen() {
   var reportCount = user?.reportCount || 0;
   var chatCount   = user?.chatCount   || 0;
   var subStatus   = subscription?.status || 'none';
+  var subscriptionEndsAccess = subStatus === 'active' && subscription?.willRenew === false && !subscription?.isLifetime;
+  var subscriptionEndDate = formatSubscriptionDate(subscription?.expiresAt);
+  var subscriptionStatusText = subscriptionEndsAccess
+    ? t('subCancelledAccessUntil').replace('{{date}}', subscriptionEndDate || '--')
+    : subscription?.isLifetime
+      ? t('subLifetime')
+      : t('subActive').replace('{{amount}}', subscription?.amount || '280');
+  var subscriptionStatusColor = subStatus === 'active'
+    ? (subscriptionEndsAccess ? '#FBBF24' : '#34D399')
+    : subStatus === 'expired' || subStatus === 'cancelled' || subStatus === 'payment_failed'
+      ? '#F87171'
+      : '#A78BFA';
+  var subscriptionStatusIcon = subStatus === 'active'
+    ? (subscriptionEndsAccess ? 'time-outline' : 'shield-checkmark-outline')
+    : subStatus === 'expired'
+      ? 'alert-circle-outline'
+      : subStatus === 'payment_failed'
+        ? 'card-outline'
+      : subStatus === 'cancelled'
+        ? 'close-circle-outline'
+        : 'sparkles-outline';
+  var subscriptionAccessLabel = subStatus === 'active'
+    ? t('subStatusActiveAccess')
+    : subStatus === 'expired'
+      ? t('subStatusExpiredAccess')
+      : subStatus === 'payment_failed'
+        ? t('subStatusPaymentFailedAccess')
+      : subStatus === 'cancelled'
+        ? t('subStatusCancelledAccess')
+        : t('subStatusFreeAccess');
+  var subscriptionRenewalLabel = subStatus === 'active'
+    ? subscription?.isLifetime
+      ? t('subStatusLifetime')
+      : subscriptionEndsAccess
+        ? t('subStatusRenewOffShort')
+        : t('subStatusRenewing')
+    : t('subStatusNotRenewing');
+  var subscriptionExpiryLabel = subStatus === 'active'
+    ? subscription?.isLifetime
+      ? t('subStatusNoExpiry')
+      : (subscriptionEndDate || t('subStatusUnknown'))
+    : t('subStatusNoActiveExpiry');
+  var subscriptionPlanLabel = subStatus === 'active'
+    ? (formatSubscriptionLabel(subscription?.plan || subscription?.productIdentifier) || t('subStatusProPlan'))
+    : t('subStatusNoPlan');
+  var subscriptionStoreLabel = subStatus === 'active'
+    ? (formatSubscriptionLabel(subscription?.store) || t('subStatusStoreUnknown'))
+    : t('subStatusStoreUnknown');
+  var subscriptionDetailText = subStatus === 'active'
+    ? subscriptionEndsAccess
+      ? t('subStatusCancelledDetail')
+      : t('subStatusActiveDetail')
+    : subStatus === 'expired'
+      ? t('subStatusExpiredDetail')
+      : subStatus === 'payment_failed'
+        ? t('subStatusPaymentFailedDetail')
+      : subStatus === 'cancelled'
+        ? t('subStatusCancelledDetailNoAccess')
+        : t('subStatusFreeDetail');
   var lagnaIdx    = birthData ? (new Date(birthData.dateTime).getMonth() % 12) : 0;
   var moonIdx     = birthData ? (new Date(birthData.dateTime).getDate()  % 8)  : 4;
 
   return (
     <DesktopScreenWrapper routeName="profile">
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} enabled={Platform.OS === 'ios'}>
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <CosmicBackground reduced={reduced} lowEnd={lowEnd} />
       <StatusBar barStyle={colors.statusBarStyle} />
-      <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView style={s.scroll} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
 
         {/* ═══ HERO CARD ══════════════════════════════════════════════ */}
         <Animated.View entering={FadeIn.duration(900)} style={s.heroCard}>
@@ -753,19 +830,49 @@ function ProfileScreen() {
                 <SectionHeader
                   icon={isSubscribed ? 'star' : 'star-outline'}
                   title={t('subscription')}
-                  subtitle={isSubscribed ? t('subChargedBy') : t('subPromo')}
+                  subtitle={isSubscribed ? (subscriptionEndsAccess ? t('subRenewOff') : t('subChargedBy')) : t('subPromo')}
                   color={isSubscribed ? '#FFB800' : '#A78BFA'}
                 />
+                <View style={s.subStatusPanel}>
+                  <View style={s.subStatusHead}>
+                    <View style={[s.subStatusIcon, { backgroundColor: subscriptionStatusColor + '18', borderColor: subscriptionStatusColor + '55' }]}>
+                      <Ionicons name={subscriptionStatusIcon} size={18} color={subscriptionStatusColor} />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[s.subStatusTitle, { color: subscriptionStatusColor }]}>{subscriptionAccessLabel}</Text>
+                      <Text style={s.subStatusDetail}>{subscriptionDetailText}</Text>
+                    </View>
+                  </View>
+
+                  <View style={s.subMetaGrid}>
+                    <View style={s.subMetaItem}>
+                      <Text style={s.subMetaLabel}>{t('subStatusPlan')}</Text>
+                      <Text style={s.subMetaValue} numberOfLines={1}>{subscriptionPlanLabel}</Text>
+                    </View>
+                    <View style={s.subMetaItem}>
+                      <Text style={s.subMetaLabel}>{t('subStatusRenewal')}</Text>
+                      <Text style={s.subMetaValue} numberOfLines={2}>{subscriptionRenewalLabel}</Text>
+                    </View>
+                    <View style={s.subMetaItem}>
+                      <Text style={s.subMetaLabel}>{t('subStatusExpiry')}</Text>
+                      <Text style={s.subMetaValue} numberOfLines={1}>{subscriptionExpiryLabel}</Text>
+                    </View>
+                    <View style={s.subMetaItem}>
+                      <Text style={s.subMetaLabel}>{t('subStatusStore')}</Text>
+                      <Text style={s.subMetaValue} numberOfLines={1}>{subscriptionStoreLabel}</Text>
+                    </View>
+                  </View>
+                </View>
                 {subStatus === 'active' && (
                   <>
                     <View style={s.subActiveRow}>
-                      <Ionicons name="checkmark-circle" size={16} color="#34D399" />
-                      <Text style={s.subActiveText}>
-                        {t('subActive').replace('{{amount}}', subscription?.amount || '280')}
+                      <Ionicons name={subscriptionEndsAccess ? 'time-outline' : 'checkmark-circle'} size={16} color={subscriptionStatusColor} />
+                      <Text style={[s.subActiveText, subscriptionEndsAccess && s.subEndingText]}>
+                        {subscriptionStatusText}
                       </Text>
                     </View>
                     <TouchableOpacity style={s.cancelBtn} onPress={function () {
-                      presentCustomerCenter().catch(function(e) { if (__DEV__) console.warn('Customer Center error:', e.message); });
+                      cancelSubscription().catch(function(e) { if (__DEV__) console.warn('Customer Center error:', e.message); });
                     }}>
                       <Text style={s.cancelBtnText}>{t('manageSub') || t('subCancel')}</Text>
                     </TouchableOpacity>
@@ -936,8 +1043,18 @@ var s = StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
 
   // ── Subscription ───────────────────────────────────────────────────
+  subStatusPanel: { borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,184,0,0.16)', backgroundColor: 'rgba(255,255,255,0.045)', padding: 12, marginBottom: 12, gap: 11 },
+  subStatusHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  subStatusIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  subStatusTitle: { fontSize: 15, fontWeight: '900', letterSpacing: 0.2, marginBottom: 2 },
+  subStatusDetail: { color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 18, fontWeight: '500' },
+  subMetaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  subMetaItem: { flexGrow: 1, flexBasis: '47%', minWidth: 124, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', backgroundColor: 'rgba(0,0,0,0.16)', paddingVertical: 9, paddingHorizontal: 10 },
+  subMetaLabel: { color: 'rgba(255,255,255,0.34)', fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase', marginBottom: 3 },
+  subMetaValue: { color: '#FFF1D0', fontSize: 12, lineHeight: 17, fontWeight: '800' },
   subActiveRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   subActiveText: { color: '#34D399', fontWeight: '700', fontSize: 14 },
+  subEndingText: { color: '#FBBF24' },
   subBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 16, overflow: 'hidden', ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 16) },
   subBtnText:    { color: '#FFF1D0', fontSize: 14, fontWeight: '800', flexShrink: 1, textAlign: 'center' },
   cancelBtn:     { paddingVertical: 11, alignItems: 'center', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)' },

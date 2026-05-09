@@ -61,6 +61,7 @@ const readingRoutes = require('./routes/reading');
 const enhancedRoutes = require('./routes/enhanced');
 const jyotishRoutes = require('./routes/jyotish');
 const geocodeRoutes = require('./routes/geocode');
+const { phoneAuth, requireSubscription } = require('./middleware/subscription');
 const { requestAlertMiddleware, startMemoryMonitor } = require('./services/alerting');
 
 const app = express();
@@ -117,24 +118,26 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+var paidAccess = [phoneAuth, requireSubscription];
+
 // Routes — with per-route rate limits
-app.use('/api/nakath', nakathRoutes);
-app.use('/api/porondam', porondamRoutes);
-app.use('/api/chat', chatLimiter, chatRoutes);
-app.use('/api/horoscope', horoscopeRoutes);
-app.use('/api/share', userDataLimiter, shareRoutes);
+app.use('/api/nakath', paidAccess, nakathRoutes);
+app.use('/api/porondam', paidAccess, porondamRoutes);
+app.use('/api/chat', chatLimiter, paidAccess, chatRoutes);
+app.use('/api/horoscope', paidAccess, horoscopeRoutes);
+app.use('/api/share', userDataLimiter, paidAccess, shareRoutes);
 app.use('/api/user', userDataLimiter, userRoutes);
 app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/rectification', aiLimiter, rectificationRoutes);
-app.use('/api/predictions', aiLimiter, predictionRoutes);
+app.use('/api/rectification', aiLimiter, paidAccess, rectificationRoutes);
+app.use('/api/predictions', aiLimiter, paidAccess, predictionRoutes);
 app.use('/api/tokens', userDataLimiter, tokensRoutes);
 app.use('/api/notifications', userDataLimiter, notificationRoutes);
 app.use('/api/revenuecat', revenuecatRoutes);
 app.use('/api/pricing', userDataLimiter, pricingRoutes);
-app.use('/api/weekly-lagna', weeklyLagnaRoutes);
-app.use('/api/reading', aiLimiter, readingRoutes);
-app.use('/api/enhanced', userDataLimiter, enhancedRoutes);
-app.use('/api/jyotish', userDataLimiter, jyotishRoutes);
+app.use('/api/weekly-lagna', paidAccess, weeklyLagnaRoutes);
+app.use('/api/reading', aiLimiter, paidAccess, readingRoutes);
+app.use('/api/enhanced', userDataLimiter, paidAccess, enhancedRoutes);
+app.use('/api/jyotish', userDataLimiter, paidAccess, jyotishRoutes);
 app.use('/api/geocode', geocodeRoutes);
 
 // Error handling middleware

@@ -975,7 +975,7 @@ var L = {
   en: {
     title: 'Compatibility', subtitle: 'Marriage Compatibility Check',
     bride: '\uD83D\uDC70 Bride', groom: '\uD83E\uDD35 Groom',
-    namePh: 'Name (optional)',
+    namePh: 'Full name',
     yearPh: 'YYYY', monthPh: 'MM', dayPh: 'DD', hourPh: 'HH', minutePh: 'MM',
     date: 'Date of Birth', time: 'Time',
     birthPlace: 'Birth Place',
@@ -1014,7 +1014,7 @@ var L = {
   si: {
     title: '\u0DC3\u0DB6\u0DB3\u0DAD\u0DCF \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8', subtitle: '\u0DC0\u0DD2\u0DC0\u0DCF\u0DC4 \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8\u0DCA \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF\u0DC0',
     bride: '\uD83D\uDC70 \u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA', groom: '\uD83E\uDD35 \u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF',
-    namePh: '\u0DB1\u0DB8 (\u0D85\u0DC0\u0DC1\u0DCA\u200D\u0DBA \u0DB1\u0DB8\u0DCA)',
+    namePh: '\u0DC3\u0DB8\u0DCA\u0DB4\u0DD6\u0DBB\u0DCA\u0DAB \u0DB1\u0DB8',
     yearPh: 'YYYY', monthPh: 'MM', dayPh: 'DD', hourPh: 'HH', minutePh: 'MM',
     date: '\u0D89\u0DB4\u0DB1\u0DCA \u0DAF\u0DD2\u0DB1\u0DBA', time: '\u0DC0\u0DDA\u0DBD\u0DCF\u0DC0',
     birthPlace: '\u0D8B\u0DB4\u0DB1\u0DCA \u0DC3\u0DCA\u0DAE\u0DCF\u0DB1\u0DBA',
@@ -1053,24 +1053,42 @@ var L = {
 };
 
 // Person Input Card (with cosmic date/time pickers + CitySearchPicker)
-function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTimeStr, city, setCity, T, lang }) {
+function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTimeStr, city, setCity, T, lang, fieldPrefix, errors, clearFieldError }) {
+  var nameField = fieldPrefix + 'Name';
+  var dateField = fieldPrefix + 'Date';
+  var cityField = fieldPrefix + 'City';
+  var nameError = errors && errors[nameField];
+  var dateError = errors && errors[dateField];
+  var cityError = errors && errors[cityField];
   return (
     <Glass style={sty.personCard}>
       <Text style={sty.personLabel}>{label}</Text>
-      <TextInput style={sty.nameInput} value={name} onChangeText={setName} placeholder={T.namePh} placeholderTextColor="rgba(255,255,255,0.2)" />
+      <Text style={sty.fieldTag}>{lang === 'si' ? 'නම *' : 'Name *'}</Text>
+      <TextInput
+        style={[sty.nameInput, nameError ? sty.inputError : {}, { marginBottom: nameError ? 6 : 12 }]}
+        value={name}
+        onChangeText={function(value) { setName(value); if (String(value || '').trim().length >= 2) clearFieldError(nameField); }}
+        placeholder={T.namePh}
+        placeholderTextColor="rgba(255,255,255,0.2)"
+        autoCorrect={false}
+        returnKeyType="next"
+      />
+      {nameError ? <Text style={sty.inlineError}>{nameError}</Text> : null}
       <Text style={sty.fieldTag}>{T.date}</Text>
-      <DatePickerField value={dateStr} onChange={setDateStr} lang={lang} />
+      <DatePickerField value={dateStr} onChange={function(value) { setDateStr(value); if (value) clearFieldError(dateField); }} lang={lang} />
+      {dateError ? <Text style={[sty.inlineError, { marginTop: 6 }]}>{dateError}</Text> : null}
       <Text style={[sty.fieldTag, { marginTop: 12 }]}>{T.time}</Text>
       <TimePickerField value={timeStr} onChange={setTimeStr} lang={lang} />
       <Text style={[sty.fieldTag, { marginTop: 12 }]}>{T.birthPlace}</Text>
       <CitySearchPicker
         selectedCity={city}
-        onSelect={setCity}
+        onSelect={function(value) { setCity(value); if (value && value.lat !== null && value.lat !== undefined && value.lng !== null && value.lng !== undefined) clearFieldError(cityField); }}
         lang={lang}
         accentColor="#FF8C00"
         maxHeight={160}
         compact
       />
+      {cityError ? <Text style={[sty.inlineError, { marginTop: 6, marginBottom: 0 }]}>{cityError}</Text> : null}
     </Glass>
   );
 }
@@ -1100,6 +1118,7 @@ export default function PorondamScreen() {
   var [data, setData] = useState(null);
   var [loading, setLoading] = useState(false);
   var [error, setError] = useState(null);
+  var [fieldErrors, setFieldErrors] = useState({});
   var [collapsed, setCollapsed] = useState(false);
   var scrollRef = useRef(null);
   var [report, setReport] = useState(null);
@@ -1267,21 +1286,51 @@ export default function PorondamScreen() {
     return dateStr + 'T' + (timeStr || '12:00') + ':00';
   }
 
-  var check = useCallback(async function() {
-    if (!bDate || !gDate) {
-      Alert.alert('', T.missing); return;
-    }
-    if (!bCity || !bCity.lat) {
-      Alert.alert('', language === 'si' ? 'කරුණාකර මනමේගේ උපන් ස්ථානය තෝරන්න' : 'Please select bride birth place');
-      return;
-    }
-    if (!gCity || !gCity.lat) {
-      Alert.alert('', language === 'si' ? 'කරුණාකර මනමාලයාගේ උපන් ස්ථානය තෝරන්න' : 'Please select groom birth place');
-      return;
-    }
+  function clearFieldError(fieldName) {
+    setFieldErrors(function(prev) {
+      if (!prev || !prev[fieldName]) return prev;
+      var next = { ...prev };
+      delete next[fieldName];
+      return next;
+    });
+  }
 
-    var brideData = { birthDate: buildDateISO(bDate, bTime), lat: bCity.lat, lng: bCity.lng, name: bName || undefined };
-    var groomData = { birthDate: buildDateISO(gDate, gTime), lat: gCity.lat, lng: gCity.lng, name: gName || undefined };
+  function validatePorondamForm() {
+    var nextErrors = {};
+    var brideName = String(bName || '').trim();
+    var groomName = String(gName || '').trim();
+    if (brideName.length < 2) {
+      nextErrors.brideName = language === 'si' ? 'මනාලියගේ නම අකුරු 2කට වඩා ඇතුළත් කරන්න.' : 'Enter the bride name, at least 2 characters.';
+    }
+    if (groomName.length < 2) {
+      nextErrors.groomName = language === 'si' ? 'මනාලයාගේ නම අකුරු 2කට වඩා ඇතුළත් කරන්න.' : 'Enter the groom name, at least 2 characters.';
+    }
+    if (!bDate) {
+      nextErrors.brideDate = language === 'si' ? 'මනාලියගේ උපන් දිනය තෝරන්න.' : 'Select the bride birth date.';
+    }
+    if (!gDate) {
+      nextErrors.groomDate = language === 'si' ? 'මනාලයාගේ උපන් දිනය තෝරන්න.' : 'Select the groom birth date.';
+    }
+    if (!bCity || bCity.lat === null || bCity.lat === undefined || bCity.lng === null || bCity.lng === undefined) {
+      nextErrors.brideCity = language === 'si' ? 'මනාලියගේ උපන් ස්ථානය තෝරන්න.' : 'Select the bride birth place.';
+    }
+    if (!gCity || gCity.lat === null || gCity.lat === undefined || gCity.lng === null || gCity.lng === undefined) {
+      nextErrors.groomCity = language === 'si' ? 'මනාලයාගේ උපන් ස්ථානය තෝරන්න.' : 'Select the groom birth place.';
+    }
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }
+
+  var check = useCallback(async function() {
+    if (!validatePorondamForm()) {
+      setError(null);
+      if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true });
+      return;
+    }
+    setFieldErrors({});
+
+    var brideData = { birthDate: buildDateISO(bDate, bTime), lat: bCity.lat, lng: bCity.lng, name: String(bName || '').trim() };
+    var groomData = { birthDate: buildDateISO(gDate, gTime), lat: gCity.lat, lng: gCity.lng, name: String(gName || '').trim() };
     var entitlementInput = {
       brideBirthDate: brideData.birthDate,
       brideLat: brideData.lat,
@@ -1327,7 +1376,7 @@ export default function PorondamScreen() {
       setReportLoading(true);
       var reportRes = null;
       try {
-        reportRes = await api.getPorondamReport(checkRes.data, reportLang, bName || undefined, gName || undefined, checkRes.porondamId || undefined, entitlementInput);
+        reportRes = await api.getPorondamReport(checkRes.data, reportLang, brideData.name, groomData.name, checkRes.porondamId || undefined, entitlementInput);
         setReport(reportRes.report);
         if (reportRes.porondamId) setPorondamId(reportRes.porondamId);
       } catch (rErr) {
@@ -1340,7 +1389,7 @@ export default function PorondamScreen() {
           if (__DEV__) console.warn('[Porondam] AI report failed, retrying in 3s:', rErr.message);
           try {
             await new Promise(function(r) { setTimeout(r, 3000); });
-            reportRes = await api.getPorondamReport(checkRes.data, reportLang, bName || undefined, gName || undefined, checkRes.porondamId || undefined, entitlementInput);
+            reportRes = await api.getPorondamReport(checkRes.data, reportLang, brideData.name, groomData.name, checkRes.porondamId || undefined, entitlementInput);
             setReport(reportRes.report);
             if (reportRes.porondamId) setPorondamId(reportRes.porondamId);
           } catch (rErr2) {
@@ -1356,8 +1405,8 @@ export default function PorondamScreen() {
 
       // Save to cache
       savePorondamToCache({
-        brideName: bName,
-        groomName: gName,
+        brideName: brideData.name,
+        groomName: groomData.name,
         brideDate: bDate,
         brideTime: bTime,
         brideCity: bCity,
@@ -1377,7 +1426,7 @@ export default function PorondamScreen() {
     } finally {
       setLoading(false);
     }
-  }, [bDate, bTime, gDate, gTime, bCity, gCity, bName, gName, T, isLoggedIn, reportLang]);
+  }, [bDate, bTime, gDate, gTime, bCity, gCity, bName, gName, T, language, reportLang]);
 
   
   // â”€â”€ DOWNLOAD PORONDAM AS PDF â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1468,12 +1517,14 @@ export default function PorondamScreen() {
     );
   }
 
+  var validationItems = Object.keys(fieldErrors || {}).map(function(key) { return fieldErrors[key]; });
+
   return (
     <DesktopScreenWrapper routeName="porondam">
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} enabled={Platform.OS === 'ios'}>
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <CosmicBackground reduced={reduced} lowEnd={lowEnd} />
-      <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
         <View style={[sty.scrollInner, isDesktop && sty.scrollInnerDesktop]}>
 
         <Animated.View entering={FadeInDown.duration(600)}>
@@ -1544,18 +1595,29 @@ export default function PorondamScreen() {
 
         {!collapsed && !showHistory && (
           <View>
+            {validationItems.length > 0 ? (
+              <Animated.View entering={FadeInDown.duration(250)}>
+                <Glass style={sty.validationSummary}>
+                  <Ionicons name="alert-circle-outline" size={18} color="#FCA5A5" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={sty.validationTitle}>{language === 'si' ? 'කරුණාකර මේ විස්තර සම්පූර්ණ කරන්න' : 'Complete these details'}</Text>
+                    <Text style={sty.validationText}>{validationItems.join(' ')}</Text>
+                  </View>
+                </Glass>
+              </Animated.View>
+            ) : null}
             <View style={WIDE ? sty.formRow : undefined}>
               <Animated.View entering={FadeInDown.delay(100).duration(600)} exiting={FadeOut.duration(300)} style={WIDE ? sty.formCol : undefined}>
                 <PersonCard label={T.bride} name={bName} setName={setBName}
                   dateStr={bDate} setDateStr={setBDate} timeStr={bTime} setTimeStr={setBTime}
                   city={bCity} setCity={setBCity}
-                  T={T} lang={language} />
+                  T={T} lang={language} fieldPrefix="bride" errors={fieldErrors} clearFieldError={clearFieldError} />
               </Animated.View>
               <Animated.View entering={FadeInDown.delay(180).duration(600)} exiting={FadeOut.duration(300)} style={WIDE ? sty.formCol : undefined}>
                 <PersonCard label={T.groom} name={gName} setName={setGName}
                   dateStr={gDate} setDateStr={setGDate} timeStr={gTime} setTimeStr={setGTime}
                   city={gCity} setCity={setGCity}
-                  T={T} lang={language} />
+                  T={T} lang={language} fieldPrefix="groom" errors={fieldErrors} clearFieldError={clearFieldError} />
               </Animated.View>
             </View>
             <Text style={sty.timeHint}>{T.timeHint}</Text>
@@ -2213,6 +2275,11 @@ var sty = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 12 : 10,
     color: '#FFF1D0', fontSize: 14, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)', marginBottom: 12,
   },
+  inputError: { borderColor: 'rgba(248,113,113,0.75)', backgroundColor: 'rgba(127,29,29,0.14)' },
+  inlineError: { color: '#FCA5A5', fontSize: 11.5, lineHeight: 16, fontWeight: '700', marginBottom: 12 },
+  validationSummary: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderColor: 'rgba(248,113,113,0.24)', backgroundColor: 'rgba(127,29,29,0.10)', marginBottom: 14 },
+  validationTitle: { color: '#FECACA', fontSize: 12.5, lineHeight: 17, fontWeight: '900', marginBottom: 2 },
+  validationText: { color: 'rgba(254,202,202,0.78)', fontSize: 11.5, lineHeight: 17, fontWeight: '600' },
   fieldTag: { fontSize: 10, fontWeight: '700', color: 'rgba(255,140,0,0.7)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6, marginTop: 4 },
   fieldRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   numInput: {

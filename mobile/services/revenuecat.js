@@ -57,6 +57,20 @@ export { PRODUCT_IDS, ENTITLEMENT_ID };
 
 var _initialized = false;
 
+function getActiveEntitlement(customerInfo) {
+  var entitlements = customerInfo && customerInfo.entitlements ? customerInfo.entitlements : null;
+  if (!entitlements) return null;
+  if (entitlements.active && entitlements.active[ENTITLEMENT_ID]) return entitlements.active[ENTITLEMENT_ID];
+  if (entitlements.all && entitlements.all[ENTITLEMENT_ID] && entitlements.all[ENTITLEMENT_ID].isActive) {
+    return entitlements.all[ENTITLEMENT_ID];
+  }
+  return null;
+}
+
+function hasActiveEntitlement(customerInfo) {
+  return !!getActiveEntitlement(customerInfo);
+}
+
 // ─── Initialize RevenueCat ──────────────────────────────────────
 
 /**
@@ -132,8 +146,7 @@ export async function checkEntitlement() {
   if (!Purchases) return false;
   try {
     var customerInfo = await Purchases.getCustomerInfo();
-    var isActive = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
-    return isActive;
+    return hasActiveEntitlement(customerInfo);
   } catch (err) {
     if (__DEV__) console.warn('[RevenueCat] ✘ Entitlement check failed:', err.message);
     return false;
@@ -175,7 +188,7 @@ export async function getActiveSubscription() {
   if (!Purchases) return null;
   try {
     var customerInfo = await Purchases.getCustomerInfo();
-    var entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+    var entitlement = getActiveEntitlement(customerInfo);
 
     if (!entitlement) return null;
 
@@ -187,6 +200,11 @@ export async function getActiveSubscription() {
       productId: entitlement.productIdentifier,
       isSandbox: entitlement.isSandbox,
       store: entitlement.store,
+      unsubscribeDetectedAt: entitlement.unsubscribeDetectedAt || null,
+      billingIssueDetectedAt: entitlement.billingIssueDetectedAt || null,
+      periodType: entitlement.periodType || null,
+      ownershipType: entitlement.ownershipType || null,
+      isLifetime: !entitlement.expirationDate,
     };
   } catch (err) {
     if (__DEV__) console.warn('[RevenueCat] ✘ Get active subscription failed:', err.message);
@@ -247,10 +265,11 @@ export async function purchasePackage(pkg) {
   }
   try {
     var result = await Purchases.purchasePackage(pkg);
-    var isActive = result.customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+    var isActive = hasActiveEntitlement(result.customerInfo);
     return {
       customerInfo: result.customerInfo,
       productIdentifier: pkg.product.identifier,
+      purchased: true,
       isProActive: isActive,
     };
   } catch (err) {
@@ -303,7 +322,7 @@ export async function purchaseOneTimeProduct(productId) {
     // If found in offerings, purchase as package (preferred path)
     if (pkg) {
       var result = await Purchases.purchasePackage(pkg);
-      var isActiveA = result.customerInfo && result.customerInfo.entitlements && result.customerInfo.entitlements.active && result.customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+      var isActiveA = hasActiveEntitlement(result.customerInfo);
       return {
         customerInfo: result.customerInfo,
         productIdentifier: productId,
@@ -317,7 +336,7 @@ export async function purchaseOneTimeProduct(productId) {
       throw new Error('Product unavailable');
     }
     var storeResult = await Purchases.purchaseStoreProduct(products[0]);
-    var isActiveB = storeResult.customerInfo && storeResult.customerInfo.entitlements && storeResult.customerInfo.entitlements.active && storeResult.customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+    var isActiveB = hasActiveEntitlement(storeResult.customerInfo);
     return {
       customerInfo: storeResult.customerInfo,
       productIdentifier: productId,
@@ -432,7 +451,7 @@ export async function restorePurchases() {
   if (!Purchases) return { customerInfo: null, isProActive: false };
   try {
     var customerInfo = await Purchases.restorePurchases();
-    var isActive = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+    var isActive = hasActiveEntitlement(customerInfo);
     return { customerInfo: customerInfo, isProActive: isActive };
   } catch (err) {
     if (__DEV__) console.warn('[RevenueCat] Restore failed:', err && err.message);
@@ -450,11 +469,12 @@ export async function restorePurchases() {
 export function addCustomerInfoListener(callback) {
   if (!Purchases) return { remove: function() {} };
   var listener = Purchases.addCustomerInfoUpdateListener(function(info) {
-    var isActive = info.entitlements.active[ENTITLEMENT_ID] !== undefined;
+    var entitlement = getActiveEntitlement(info);
+    var isActive = !!entitlement;
     callback({
       customerInfo: info,
       isProActive: isActive,
-      activeSubscription: isActive ? info.entitlements.active[ENTITLEMENT_ID] : null,
+      activeSubscription: isActive ? entitlement : null,
     });
   });
   return listener;

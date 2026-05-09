@@ -10,7 +10,7 @@ const express = require('express');
 const router = express.Router();
 const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getSunLongitude, getLagna, getAllPlanetPositions, buildHouseChart, buildNavamshaChart, buildShadvarga, calculateDrishtis, analyzePushkara, calculateAshtakavarga, buildBhavaChalit, detectYogas, getPlanetStrengths, calculateVimshottari, generateDetailedReport, generateFullReport, RASHIS } = require('../engine/astrology');
 const { generateAdvancedAnalysis } = require('../engine/advanced');
-const { chat, translateAdvancedForDisplay, explainChartSimple, createReportProgress, getReportProgressDurable } = require('../engine/chat');
+const { chat, translateAdvancedForDisplay, explainChartSimple, createReportProgress, updateReportProgress, getReportProgressDurable } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth, requireSubscription } = require('../middleware/subscription');
 const { reportLimiter, aiUserLimiter, reportUserLimiter, validateBirthData, requireAdmin } = require('../middleware/security');
@@ -1070,17 +1070,42 @@ router.get('/report-progress/:reportId', phoneAuth, async (req, res) => {
       return res.status(403).json({ error: 'Report progress ownership is missing' });
     }
 
+    let responseProgress = prog;
+    if (prog.stage === 'failed' && !prog.savedReportId && prog.cacheKey) {
+      const cached = await getCachedReport(req.user.uid, prog.cacheKey, {
+        promptVersion: prog.promptVersion || PROMPT_VERSION,
+        engineVersion: prog.engineVersion || AI_REPORT_ENGINE_VERSION,
+      });
+      if (cached) {
+        responseProgress = {
+          ...prog,
+          stage: 'complete',
+          savedReportId: cached.id,
+          sectionsDone: Object.keys(cached.sections || {}).length || prog.sectionsTotal || 19,
+          currentSection: null,
+          error: null,
+        };
+        updateReportProgress(req.params.reportId, {
+          stage: 'complete',
+          savedReportId: cached.id,
+          sectionsDone: responseProgress.sectionsDone,
+          currentSection: null,
+          error: null,
+        });
+      }
+    }
+
     res.json({
-      stage: prog.stage,
-      sectionsDone: prog.sectionsDone,
-      sectionsTotal: prog.sectionsTotal,
-      currentSection: prog.currentSection,
-      completedSections: prog.completedSections || [],
+      stage: responseProgress.stage,
+      sectionsDone: responseProgress.sectionsDone,
+      sectionsTotal: responseProgress.sectionsTotal,
+      currentSection: responseProgress.currentSection,
+      completedSections: responseProgress.completedSections || [],
       elapsedMs: Date.now() - (prog.startedAt || Date.now()),
-      error: prog.error || null,
-      savedReportId: prog.savedReportId || null,
-      jobId: prog.jobId || null,
-      expiresAt: prog.expiresAt || null,
+      error: responseProgress.error || null,
+      savedReportId: responseProgress.savedReportId || null,
+      jobId: responseProgress.jobId || null,
+      expiresAt: responseProgress.expiresAt || null,
     });
   } catch (error) {
     console.error('[ReportProgress] Error:', error.message);
@@ -1098,7 +1123,7 @@ router.get('/report-progress/:reportId', phoneAuth, async (req, res) => {
 router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, reportUserLimiter, distributedReportUserLimiter, budgetGuard('fullReport'), async (req, res) => {
   let entitlementId = null;
   try {
-    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null, reportId: clientReportId = null, calculationSettings = null, settings = null, asOfDate = null, forceRegenerate = false } = req.body;
+    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null, reportId: clientReportId = null, previousReportId = null, retryReportId = null, recoveryRetry = false, calculationSettings = null, settings = null, asOfDate = null, forceRegenerate = false } = req.body;
 
     if (!birthDate) {
       return res.status(400).json({ error: 'birthDate is required (ISO format or parseable date string)' });
@@ -1143,8 +1168,9 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
       engineVersion: AI_REPORT_ENGINE_VERSION,
     });
     const shouldForceRegenerate = forceRegenerate === true || forceRegenerate === 'true' || forceRegenerate === '1' || req.query.forceRegenerate === 'true' || req.query.forceRegenerate === '1';
+    const requestedRecoveryRetry = recoveryRetry === true || recoveryRetry === 'true' || recoveryRetry === '1' || !!previousReportId || !!retryReportId;
 
-    if (req.user && !req.user.anonymous && !shouldForceRegenerate) {
+    if (req.user && !req.user.anonymous && (!shouldForceRegenerate || requestedRecoveryRetry)) {
       try {
         const cached = await getCachedReport(req.user.uid, cacheDescriptor.cacheKey, {
           promptVersion: PROMPT_VERSION,
@@ -1183,10 +1209,12 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
     // Deduct LKR 15 BEFORE generation — REMOVED: payment handled by RevenueCat subscription
 
     // ── Entitlement: create or resume (allows free retry on failure) ──
+    let entitlement = null;
     if (req.user && req.user.uid && req.user.authType !== 'anonymous') {
       try {
         const inputData = { birthDate, lat: reportLat, lng: reportLng, language };
         const ent = await createOrResumeEntitlement(req.user.uid, 'report', inputData);
+        entitlement = ent;
         entitlementId = ent.id;
         if (ent.isRetry) {
           console.log(`[AI Report] ♻️ Retry — entitlement ${ent.id} (${ent.retriesLeft} retries left)`);
@@ -1199,10 +1227,14 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
       }
     }
 
-    const reportId = clientReportId || `rpt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const isRecoveryRetry = requestedRecoveryRetry || !!entitlement?.isRetry;
+    const effectiveForceRegenerate = shouldForceRegenerate && !isRecoveryRetry;
+    const reportId = previousReportId || retryReportId || clientReportId || `rpt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const jobPayload = {
       uid,
       reportId,
+      previousReportId: previousReportId || retryReportId || null,
+      recoveryRetry: isRecoveryRetry,
       birthDate,
       parsedDateISO: date.toISOString(),
       lat: reportLat,
@@ -1224,10 +1256,12 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
       cacheInput: cacheDescriptor.normalizedInput,
       engineVersion: AI_REPORT_ENGINE_VERSION,
       promptVersion: PROMPT_VERSION,
+      forceRegenerate: effectiveForceRegenerate,
     };
 
     const job = await enqueueReportJob(jobPayload, {
-      uniqueKey: shouldForceRegenerate ? `${uid}:${cacheDescriptor.cacheKey}:force:${reportId}` : `${uid}:${cacheDescriptor.cacheKey}:normal`,
+      uniqueKey: effectiveForceRegenerate ? `${uid}:${cacheDescriptor.cacheKey}:force:${reportId}` : `${uid}:${cacheDescriptor.cacheKey}:normal`,
+      maxAttempts: isRecoveryRetry ? 1 : 2,
     });
 
     if (!job) {
@@ -1239,19 +1273,28 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
 
     const queuedReportId = job.payload?.reportId || reportId;
     if (!job.deduped) {
-      createReportProgress(queuedReportId, 19, uid, { stage: 'queued', jobId: job.id });
+      createReportProgress(queuedReportId, 19, uid, {
+        stage: isRecoveryRetry ? 'recovering' : 'queued',
+        jobId: job.id,
+        currentSection: isRecoveryRetry ? 'checking_saved_report' : null,
+        cacheKey: cacheDescriptor.cacheKey,
+        promptVersion: PROMPT_VERSION,
+        engineVersion: AI_REPORT_ENGINE_VERSION,
+        recoveryRetry: isRecoveryRetry,
+      });
     }
 
     res.status(202).json({
       success: true,
       cached: false,
       queued: true,
+      recovery: isRecoveryRetry,
       reportId: queuedReportId,
       jobId: job.id,
       duplicate: !!job.deduped,
       entitlementId: entitlementId || job.payload?.entitlementId || null,
       data: {
-        stage: 'queued',
+        stage: isRecoveryRetry ? 'recovering' : 'queued',
         reportId: queuedReportId,
         jobId: job.id,
       },

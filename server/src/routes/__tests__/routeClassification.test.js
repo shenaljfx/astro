@@ -21,6 +21,24 @@ function readRouteDefinition(fileName, method, routePath) {
 
 describe('route security classification', () => {
   test.each([
+    '/api/nakath',
+    '/api/porondam',
+    '/api/chat',
+    '/api/horoscope',
+    '/api/share',
+    '/api/rectification',
+    '/api/predictions',
+    '/api/weekly-lagna',
+    '/api/reading',
+    '/api/enhanced',
+    '/api/jyotish',
+  ])('%s is protected by paid app access at mount', (routePrefix) => {
+    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'index.js'), 'utf8');
+    const pattern = new RegExp(`app\\.use\\(\\s*['"]${escapeRegExp(routePrefix)}['"][^;]*paidAccess`);
+    expect(source).toMatch(pattern);
+  });
+
+  test.each([
     ['chat.js', 'post', '/ask', ['phoneAuth', 'requireSubscription', 'aiUserLimiter', 'distributedAiUserLimiter', 'budgetGuard']],
     ['horoscope.js', 'post', '/ai-analysis', ['phoneAuth', 'requireSubscription', 'aiUserLimiter']],
     ['horoscope.js', 'post', '/full-report-ai', ['reportLimiter', 'phoneAuth', 'requireSubscription', 'reportUserLimiter', 'distributedReportUserLimiter', 'budgetGuard']],
@@ -29,6 +47,20 @@ describe('route security classification', () => {
   ])('%s %s %s includes paid-route middleware', (fileName, method, routePath, middleware) => {
     const routeDefinition = readRouteDefinition(fileName, method, routePath);
     middleware.forEach(name => expect(routeDefinition).toContain(name));
+  });
+
+  test.each([
+    ['user.js', 'get', '/reports'],
+    ['user.js', 'get', '/chats'],
+    ['user.js', 'get', '/porondam'],
+    ['notifications.js', 'get', '/history'],
+    ['notifications.js', 'get', '/unread-count'],
+    ['notifications.js', 'get', '/maraka-apala'],
+    ['notifications.js', 'post', '/maraka-apala/full'],
+    ['notifications.js', 'get', '/today'],
+  ])('%s %s %s requires active subscription', (fileName, method, routePath) => {
+    const routeDefinition = readRouteDefinition(fileName, method, routePath);
+    expect(routeDefinition).toContain('requireSubscription');
   });
 
   test.each([

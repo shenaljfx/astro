@@ -239,10 +239,11 @@ export var getFullReport = function(birthDate, lat, lng, language) {
   });
 };
 
-export var getAIReport = function(birthDate, lat, lng, language, birthLocation, userName, userGender, userReligion, reportId) {
+export var getAIReport = function(birthDate, lat, lng, language, birthLocation, userName, userGender, userReligion, reportId, options) {
+  if (!options) options = {};
   return request('/api/horoscope/full-report-ai', {
     method: 'POST',
-    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en', birthLocation: birthLocation || null, userName: userName || null, userGender: userGender || null, userReligion: userReligion || null, reportId: reportId || null }),
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en', birthLocation: birthLocation || null, userName: userName || null, userGender: userGender || null, userReligion: userReligion || null, reportId: reportId || null, previousReportId: options.previousReportId || null, retryReportId: options.retryReportId || null, recoveryRetry: !!options.recoveryRetry }),
     _timeout: 600000,
     _maxRetries: 0,
   });

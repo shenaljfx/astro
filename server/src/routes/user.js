@@ -14,6 +14,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
+const { requireSubscription } = require('../middleware/subscription');
 const {
   upsertUser,
   getUser,
@@ -204,7 +205,7 @@ router.put('/preferences', requireAuth, async (req, res) => {
  * GET /api/user/reports
  * Get user's saved AI reports
  */
-router.get('/reports', requireAuth, async (req, res) => {
+router.get('/reports', requireAuth, requireSubscription, async (req, res) => {
   try {
     const reports = await getUserReports(req.user.uid);
     // Return lightweight list (no full sections)
@@ -228,7 +229,7 @@ router.get('/reports', requireAuth, async (req, res) => {
  * GET /api/user/chats
  * Get user's chat history
  */
-router.get('/chats', requireAuth, async (req, res) => {
+router.get('/chats', requireAuth, requireSubscription, async (req, res) => {
   try {
     const chats = await getUserChats(req.user.uid, parseInt(req.query.limit) || 10);
     // Return lightweight list
@@ -252,7 +253,7 @@ router.get('/chats', requireAuth, async (req, res) => {
  * GET /api/user/porondam
  * Get user's porondam (compatibility) history
  */
-router.get('/porondam', requireAuth, async (req, res) => {
+router.get('/porondam', requireAuth, requireSubscription, async (req, res) => {
   try {
     const results = await getUserPorondamHistory(req.user.uid, parseInt(req.query.limit) || 10);
     res.json({ success: true, results });

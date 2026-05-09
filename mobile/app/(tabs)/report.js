@@ -76,6 +76,49 @@ function sanitizeSavedReportList(list) {
   return list.map(sanitizeSavedReportEntry).filter(Boolean).slice(0, MAX_SAVED_REPORTS);
 }
 
+function mapServerReportToSavedEntry(r) {
+  return {
+    id: r.id,
+    userName: r.userName || '',
+    birthDate: extractDateOnly(r.birthDate) || '',
+    birthTime: extractTimeFromISO(r.birthDate) || '',
+    birthLocation: r.birthLocation || '',
+    birthLat: r.lat || null,
+    birthLng: r.lng || null,
+    reportLang: r.language || 'en',
+    userGender: null,
+    userReligion: null,
+    sectionCount: r.sectionCount || 0,
+    savedAt: r.createdAt || '',
+    contentCached: false,
+    isServerReport: true,
+  };
+}
+
+function mapServerReportsToSavedEntries(reports) {
+  if (!Array.isArray(reports)) return [];
+  return reports.map(mapServerReportToSavedEntry);
+}
+
+function reportMatchesGenerationInput(r, dateStr, lat, lng, reportLang) {
+  if (!r || !dateStr) return false;
+  var reportDate = String(r.birthDate || '');
+  var requestedDate = String(dateStr || '');
+  var sameDateTime = reportDate === requestedDate || (
+    extractDateOnly(reportDate) === extractDateOnly(requestedDate) &&
+    extractTimeFromISO(reportDate) === extractTimeFromISO(requestedDate)
+  );
+  if (!sameDateTime) return false;
+  if (reportLang && r.language && r.language !== reportLang) return false;
+  var reportLat = Number(r.lat);
+  var reportLng = Number(r.lng);
+  var targetLat = Number(lat);
+  var targetLng = Number(lng);
+  if (Number.isFinite(reportLat) && Number.isFinite(targetLat) && Math.abs(reportLat - targetLat) > 0.01) return false;
+  if (Number.isFinite(reportLng) && Number.isFinite(targetLng) && Math.abs(reportLng - targetLng) > 0.01) return false;
+  return true;
+}
+
 var { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ──────────────────────────────────────────
@@ -1346,6 +1389,12 @@ export default function ReportScreen() {
     setBirthLocation(city.name);
     setBirthLat(city.lat);
     setBirthLng(city.lng);
+    setFieldErrors(function(prev) {
+      if (!prev || !prev.birthLocation) return prev;
+      var next = { ...prev };
+      delete next.birthLocation;
+      return next;
+    });
   }, []);
   var [reportLang, setReportLang] = useState(language || 'en');
   var [userName, setUserName] = useState('');
@@ -1356,6 +1405,7 @@ export default function ReportScreen() {
   var [chartData, setChartData] = useState(null);
   var [loading, setLoading] = useState(false);
   var [error, setError] = useState(null);
+  var [fieldErrors, setFieldErrors] = useState({});
   // Flow states: 'form' -> 'loading' -> 'report'
   var [screenState, setScreenState] = useState('form');
   var [savedReports, setSavedReports] = useState([]);
@@ -1650,10 +1700,46 @@ export default function ReportScreen() {
 
   // chartSnapshot: birth chart object from API — passed explicitly because React state
   // from setChartData is still stale in the same tick (fixes empty chartData in local cache on Android).
-  var startFullGeneration = async function(dateStr, gender, chartSnapshot) {
+  var startFullGeneration = async function(dateStr, gender, chartSnapshot, generationOptions) {
+    if (!generationOptions) generationOptions = {};
     if (__DEV__) {
       console.log('[DBG-8fb141] startFullGeneration:entry', JSON.stringify({ dateStr: dateStr, gender: gender, hasChartSnap: !!chartSnapshot, hyp: 'A' }));
     }
+    var tryRecoverFromSavedReports = async function(reason) {
+      if (!user || user.isAnonymous) return false;
+      try {
+        var reportsRes = await api.getMyHoroscopeReports();
+        if (!reportsRes || !reportsRes.data || !Array.isArray(reportsRes.data.reports)) return false;
+        var recent = reportsRes.data.reports.find(function(r) {
+          var createdMs = new Date(r.createdAt || 0).getTime();
+          var isRecent = Number.isFinite(createdMs) && (Date.now() - createdMs) < 30 * 60 * 1000;
+          return isRecent && reportMatchesGenerationInput(r, dateStr, birthLat, birthLng, reportLang);
+        });
+        if (!recent) return false;
+        if (__DEV__) console.log('[Report] ✅ Recovered saved report after ' + reason + ': ' + recent.id);
+        var recoveredRes = await api.getSavedReport(recent.id);
+        if (!recoveredRes || !recoveredRes.data) return false;
+        var rd = recoveredRes.data;
+        setAiReport({
+          narrativeSections: rd.narrativeSections || {},
+          rashiChart: rd.rashiChart || null,
+          birthData: rd.birthData || null,
+        });
+        if (rd.rashiChart) {
+          setChartData({ rashiChart: rd.rashiChart, lagna: rd.birthData?.lagna || null });
+        } else {
+          setChartData(chartSnapshot);
+        }
+        setSavedReports(mapServerReportsToSavedEntries(reportsRes.data.reports));
+        setFailedGenData(null);
+        setError(null);
+        setScreenState('report');
+        return true;
+      } catch (recoverErr) {
+        if (__DEV__) console.warn('[Report] Saved report recovery failed after ' + reason + ':', recoverErr.message);
+        return false;
+      }
+    };
     try {
       // Loading state is already set by handleGenerate/handleRetryGeneration
       // Only set if not already loading (safety net)
@@ -1661,16 +1747,18 @@ export default function ReportScreen() {
         setScreenState('loading');
         setLoading(true);
       }
-      setGenProgress({ stage: 'starting', sectionsDone: 0, sectionsTotal: 19, currentSection: null, completedSections: [] });
-      highWaterMarkRef.current = { sectionsDone: 0, stage: 'starting' };
+      var initialStage = generationOptions.recoveryRetry ? 'recovering' : 'starting';
+      var initialDone = generationOptions.recoveryRetry ? 19 : 0;
+      setGenProgress({ stage: initialStage, sectionsDone: initialDone, sectionsTotal: 19, currentSection: generationOptions.recoveryRetry ? 'checking_saved_report' : null, completedSections: [] });
+      highWaterMarkRef.current = { sectionsDone: initialDone, stage: initialStage };
       wasBackgroundedDuringGen.current = false;
 
       // Generate a reportId for progress tracking
-      var reportId = 'rpt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      var reportId = generationOptions.previousReportId || generationOptions.reportId || 'rpt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
       lastReportIdRef.current = reportId;
 
       // Stage ordering for monotonic progress (never go backwards)
-      var STAGE_ORDER = { starting: 0, engine: 1, charts: 2, coherence: 3, sections: 4, retrying: 5, complete: 6, failed: 7 };
+      var STAGE_ORDER = { starting: 0, recovering: 1, engine: 2, charts: 3, coherence: 4, sections: 5, retrying: 6, complete: 7, failed: 8 };
 
       // ── FIRE-AND-FORGET: launch API calls but DON'T await them ──
       // The progress polling loop below is the primary completion mechanism.
@@ -1679,7 +1767,11 @@ export default function ReportScreen() {
         if (__DEV__) console.warn('[Report] Raw report request failed (non-blocking):', e.message);
         return null;
       });
-      var aiReportPromise = api.getAIReport(dateStr, birthLat, birthLng, reportLang, birthLocation, userName || null, gender, userReligion || null, reportId).catch(function(e) {
+      var aiReportPromise = api.getAIReport(dateStr, birthLat, birthLng, reportLang, birthLocation, userName || null, gender, userReligion || null, reportId, {
+        previousReportId: generationOptions.previousReportId || null,
+        retryReportId: generationOptions.retryReportId || null,
+        recoveryRetry: !!generationOptions.recoveryRetry,
+      }).catch(function(e) {
         if (__DEV__) console.warn('[Report] AI report request failed (non-blocking):', e.message);
         return null;
       });
@@ -1763,6 +1855,7 @@ export default function ReportScreen() {
             // Server confirmed FAILED
             if (prog.stage === 'failed') {
               if (__DEV__) console.log('[Report] Server confirmed generation failed');
+              if (await tryRecoverFromSavedReports('failed-progress')) return;
               setFailedGenData({ dateStr: dateStr, gender: gender, reportId: reportId });
               setError(prog.error || (reportLang === 'si'
                 ? 'වාර්තාව සෑදීමට අසමත් විය. කරුණාකර නැවත උත්සාහ කරන්න.'
@@ -1842,36 +1935,7 @@ export default function ReportScreen() {
         if (consecutiveUnknowns >= MAX_UNKNOWNS) {
           // Server doesn't know about our report anymore — check my-reports as last resort
           if (__DEV__) console.log('[Report] Server lost reportId, checking my-reports...');
-          if (user && !user.isAnonymous) {
-            try {
-              var reportsRes = await api.getMyHoroscopeReports();
-              if (reportsRes && reportsRes.data && reportsRes.data.reports) {
-                var recent = reportsRes.data.reports.find(function(r) {
-                  return r.birthDate === dateStr && (Date.now() - new Date(r.createdAt).getTime()) < 900000;
-                });
-                if (recent) {
-                  var recentRes = await api.getSavedReport(recent.id);
-                  if (recentRes && recentRes.data) {
-                    var rd = recentRes.data;
-                    setAiReport({ narrativeSections: rd.narrativeSections || {}, rashiChart: rd.rashiChart || null, birthData: rd.birthData || null });
-                    setChartData(rd.rashiChart ? { rashiChart: rd.rashiChart, lagna: rd.birthData?.lagna || null } : chartSnapshot);
-                    setScreenState('report');
-                    setSavedReports(reportsRes.data.reports.map(function(r) {
-                      return {
-                        id: r.id, userName: r.userName || '', birthDate: extractDateOnly(r.birthDate) || '',
-                        birthTime: extractTimeFromISO(r.birthDate) || '', birthLocation: r.birthLocation || '',
-                        birthLat: r.lat || null, birthLng: r.lng || null,
-                        reportLang: r.language || 'en', userGender: null, userReligion: null,
-                        sectionCount: r.sectionCount || 0, savedAt: r.createdAt || '', contentCached: false,
-                        isServerReport: true,
-                      };
-                    }));
-                    return; // Recovered from my-reports!
-                  }
-                }
-              }
-            } catch (_) {}
-          }
+          if (await tryRecoverFromSavedReports('unknown-progress')) return;
           // Truly lost — fail
           setFailedGenData({ dateStr: dateStr, gender: gender, reportId: reportId });
           setError(reportLang === 'si'
@@ -1886,6 +1950,7 @@ export default function ReportScreen() {
       }
 
       // ── Hard timeout (15 min) — should never happen but just in case ──
+      if (await tryRecoverFromSavedReports('hard-timeout')) return;
       setFailedGenData({ dateStr: dateStr, gender: gender, reportId: reportId });
       setError(reportLang === 'si'
         ? 'වාර්තාව සෑදීමට බොහෝ කාලයක් ගත විය. කරුණාකර නැවත උත්සාහ කරන්න.'
@@ -1893,6 +1958,7 @@ export default function ReportScreen() {
       setScreenState('failed');
     } catch (err) {
       if (__DEV__) console.error('[Report] startFullGeneration error:', err);
+      if (await tryRecoverFromSavedReports('generation-exception')) return;
       setFailedGenData({ dateStr: dateStr, gender: gender, reportId: lastReportIdRef.current });
       setError(err.message || 'Failed to generate report');
       setScreenState('failed');
@@ -1905,21 +1971,38 @@ export default function ReportScreen() {
   // Guard: prevent multiple simultaneous generations (double-tap, etc.)
   var isGeneratingRef = useRef(false);
 
+  function clearFieldError(fieldName) {
+    setFieldErrors(function(prev) {
+      if (!prev || !prev[fieldName]) return prev;
+      var next = { ...prev };
+      delete next[fieldName];
+      return next;
+    });
+  }
+
+  function validateReportForm() {
+    var nextErrors = {};
+    if (!userName || typeof userName !== 'string' || !userName.trim()) {
+      nextErrors.userName = reportLang === 'si' ? 'ඔයාගේ නම ඇතුළත් කරන්න.' : 'Enter your name.';
+    }
+    if (!userGender) {
+      nextErrors.userGender = reportLang === 'si' ? 'ස්ත්‍රී / පුරුෂ භාවය තෝරන්න.' : 'Select your gender.';
+    }
+    if (!selectedCity || birthLat === null || birthLat === undefined || birthLng === null || birthLng === undefined) {
+      nextErrors.birthLocation = reportLang === 'si' ? 'උපන් ස්ථානය තෝරන්න.' : 'Select your birth location.';
+    }
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }
+
   // User taps Generate → validate → show paywall → pay → generate
   var handleGenerate = async function() {
     if (isGeneratingRef.current || loading) return;
-    if (!userName || typeof userName !== 'string' || !userName.trim()) {
-      setError(reportLang === 'si' ? '\u0D9A\u0DBB\u0DD4\u0DAB\u0DCF\u0D9A\u0DBB \u0D94\u0DBA\u0DCF\u0D9C\u0DDA \u0DB1\u0DB8 \u0D87\u0DAD\u0DD4\u0DBD\u0DAD\u0DCA \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1' : 'Please enter your name');
+    if (!validateReportForm()) {
+      setError(null);
       return;
     }
-    if (!userGender) {
-      setError(reportLang === 'si' ? '\u0D9A\u0DBB\u0DD4\u0DAB\u0DCF\u0D9A\u0DBB \u0DC3\u0DCA\u0DAD\u0DCA\u200D\u0DBB\u0DD3/\u0DB4\u0DD4\u0DBB\u0DD4\u0DC2 \u0DB7\u0DCF\u0DC0\u0DBA \u0DAD\u0DDD\u0DBB\u0DB1\u0DCA\u0DB1' : 'Please select your gender');
-      return;
-    }
-    if (!selectedCity || !birthLat || !birthLng) {
-      setError(reportLang === 'si' ? 'කරුණාකර උපන් ස්ථානය තෝරන්න' : 'Please select your birth location');
-      return;
-    }
+    setFieldErrors({});
 
     // ── Check for pending entitlement (retry after failed generation) ──
     var isRetry = false;
@@ -2140,7 +2223,7 @@ export default function ReportScreen() {
       try {
         setScreenState('loading');
         setLoading(true);
-        setGenProgress({ stage: 'recovering', sectionsDone: 0, sectionsTotal: 19, currentSection: null, completedSections: [] });
+        setGenProgress({ stage: 'recovering', sectionsDone: 19, sectionsTotal: 19, currentSection: 'checking_saved_report', completedSections: [] });
         var prog = await api.getReportProgress(failedGenData.reportId);
         if (prog && prog.stage === 'complete' && prog.savedReportId) {
           if (__DEV__) console.log('[Report] ✅ Previous generation completed! Fetching saved report: ' + prog.savedReportId);
@@ -2238,7 +2321,10 @@ export default function ReportScreen() {
           setChartData(chartRes.data);
         }
       }
-      await startFullGeneration(retryDateStr, retryGender, chartSnap || null);
+      await startFullGeneration(retryDateStr, retryGender, chartSnap || null, {
+        previousReportId: failedGenData.reportId || null,
+        recoveryRetry: true,
+      });
     } catch (err) {
       setFailedGenData({ dateStr: retryDateStr, gender: retryGender });
       setError(err.message || 'Retry failed');
@@ -2642,9 +2728,11 @@ export default function ReportScreen() {
   }
 
   // ── INPUT FORM (default view) ────────────────────────────
+  var validationItems = Object.keys(fieldErrors || {}).map(function(key) { return fieldErrors[key]; });
+
   return (
     <DesktopScreenWrapper routeName="report">
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} enabled={Platform.OS === 'ios'}>
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <CosmicBackground reduced={reduced} lowEnd={isLowEnd} />
       {loadingReport ? (
@@ -2683,25 +2771,35 @@ export default function ReportScreen() {
         <Animated.View entering={FadeInDown.delay(200).duration(800)}>
           <AuraBox>
             <Text style={s.inputLabel}>{t('reportEnterBirth')}</Text>
+            {validationItems.length > 0 ? (
+              <View style={s.validationSummary}>
+                <Ionicons name="alert-circle-outline" size={17} color="#FCA5A5" />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.validationTitle}>{reportLang === 'si' ? 'කරුණාකර මේ විස්තර සම්පූර්ණ කරන්න' : 'Complete these details'}</Text>
+                  <Text style={s.validationText}>{validationItems.join(' ')}</Text>
+                </View>
+              </View>
+            ) : null}
 
             {/* Name Input */}
             <Text style={s.inputHint}>{reportLang === 'si' ? 'ඔයාගේ නම *' : 'YOUR NAME *'}</Text>
             <TextInput
-              style={[s.input, { marginBottom: 16 }, error && (!userName || !userName.trim()) ? s.inputError : {}]}
+              style={[s.input, fieldErrors.userName ? s.inputError : {}, { marginBottom: fieldErrors.userName ? 6 : 16 }]}
               value={userName}
-              onChangeText={function(val) { setUserName(val); if (error && val.trim()) { setError(null); } }}
+              onChangeText={function(val) { setUserName(val); if (val.trim()) clearFieldError('userName'); if (error) setError(null); }}
               placeholder={reportLang === 'si' ? 'ඔයාගේ නම ඇතුලත් කරන්න' : 'Enter your name'}
               placeholderTextColor="#475569"
               autoCorrect={false}
               returnKeyType="next"
             />
+            {fieldErrors.userName ? <Text style={s.inlineError}>{fieldErrors.userName}</Text> : null}
 
             {/* Gender Selector */}
             <Text style={s.inputHint}>{reportLang === 'si' ? 'ස්ත්‍රී / පුරුෂ භාවය *' : 'GENDER *'}</Text>
-            <View style={s.genderRow}>
+            <View style={[s.genderRow, fieldErrors.userGender ? s.choiceRowError : {}]}>
               <TouchableOpacity
                 style={[s.genderBtn, userGender === 'male' && s.genderBtnMaleActive]}
-                onPress={function() { setUserGender('male'); if (error) setError(null); }}
+                onPress={function() { setUserGender('male'); clearFieldError('userGender'); if (error) setError(null); }}
                 activeOpacity={0.8}
               >
                 <Text style={s.genderIcon}>♂️</Text>
@@ -2711,7 +2809,7 @@ export default function ReportScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.genderBtn, userGender === 'female' && s.genderBtnFemaleActive]}
-                onPress={function() { setUserGender('female'); if (error) setError(null); }}
+                onPress={function() { setUserGender('female'); clearFieldError('userGender'); if (error) setError(null); }}
                 activeOpacity={0.8}
               >
                 <Text style={s.genderIcon}>♀️</Text>
@@ -2720,6 +2818,7 @@ export default function ReportScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+            {fieldErrors.userGender ? <Text style={s.inlineError}>{fieldErrors.userGender}</Text> : null}
 
             {/* Religion Selector (Optional) */}
             <Text style={s.inputHint}>{reportLang === 'si' ? 'ආගම (අත්‍යවශ්‍ය නොවේ)' : 'RELIGION (OPTIONAL)'}</Text>
@@ -2769,6 +2868,7 @@ export default function ReportScreen() {
               maxHeight={160}
               compact
             />
+            {fieldErrors.birthLocation ? <Text style={[s.inlineError, { marginTop: 6 }]}>{fieldErrors.birthLocation}</Text> : null}
 
             {/* Language Selector */}
             <Text style={s.inputHint}>{reportLang === 'si' ? 'භාෂාව' : 'REPORT LANGUAGE'}</Text>
@@ -2935,7 +3035,12 @@ var s = StyleSheet.create({
     backgroundColor: 'rgba(8,20,12,0.65)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
     color: '#FFE8B0', fontSize: 15, fontWeight: '600', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
-  inputError: { borderColor: 'rgba(239,68,68,0.5)' },
+  inputError: { borderColor: 'rgba(248,113,113,0.75)', backgroundColor: 'rgba(127,29,29,0.14)' },
+  validationSummary: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(248,113,113,0.24)', backgroundColor: 'rgba(127,29,29,0.14)', paddingVertical: 10, paddingHorizontal: 11, marginBottom: 14 },
+  validationTitle: { color: '#FECACA', fontSize: 12, lineHeight: 16, fontWeight: '900', marginBottom: 2 },
+  validationText: { color: 'rgba(254,202,202,0.78)', fontSize: 11.5, lineHeight: 17, fontWeight: '600' },
+  inlineError: { color: '#FCA5A5', fontSize: 11.5, lineHeight: 16, fontWeight: '700', marginBottom: 12 },
+  choiceRowError: { borderWidth: 1, borderColor: 'rgba(248,113,113,0.35)', borderRadius: 16, padding: 4, backgroundColor: 'rgba(127,29,29,0.08)' },
   generateBtn: { borderRadius: 14, overflow: 'hidden', marginTop: 4, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 18) },
   generateGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 15 },
   generateText: { color: '#FFF1D0', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },

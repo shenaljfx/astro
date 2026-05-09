@@ -137,10 +137,29 @@ function requireSubscription(req, res, next) {
         });
       }
 
+      // Active recurring subscriptions must have a valid expiry. Only explicit
+      // lifetime purchases are allowed to omit expiresAt.
+      if (sub.status === 'active' && !sub.expiresAt && sub.isLifetime !== true) {
+        return res.status(402).json({
+          error: 'Subscription verification incomplete',
+          message: 'Please restore or renew your subscription to continue.',
+          subscriptionRequired: true,
+          needsRenewal: true,
+        });
+      }
+
       // Check if expired
       if (sub.status === 'active' && sub.expiresAt) {
         const now = new Date();
         const expires = new Date(sub.expiresAt);
+        if (!Number.isFinite(expires.getTime())) {
+          return res.status(402).json({
+            error: 'Subscription verification invalid',
+            message: 'Please restore or renew your subscription to continue.',
+            subscriptionRequired: true,
+            needsRenewal: true,
+          });
+        }
         if (now > expires) {
           return res.status(402).json({
             error: 'Subscription expired',

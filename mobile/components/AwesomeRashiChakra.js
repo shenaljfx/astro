@@ -130,16 +130,100 @@ function makeStarDots(n, rMin, rMax, cx, cy) {
   return out;
 }
 
+function SolarOrbitBody({ bodySize, kind }) {
+  var center = bodySize / 2;
+  var isSun = kind === 'sun';
+  var glowId = isSun ? 'rashiOrbitSunGlow' : 'rashiOrbitMoonGlow';
+  var discId = isSun ? 'rashiOrbitSunDisc' : 'rashiOrbitMoonDisc';
+
+  if (isSun) {
+    return (
+      <Svg width={bodySize} height={bodySize}>
+        <Defs>
+          <RadialGradient id={glowId} cx="50%" cy="50%" r="52%">
+            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.92" />
+            <Stop offset="18%" stopColor="#FFF3B0" stopOpacity="0.86" />
+            <Stop offset="48%" stopColor="#FBBF24" stopOpacity="0.72" />
+            <Stop offset="76%" stopColor="#EA580C" stopOpacity="0.30" />
+            <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+          </RadialGradient>
+          <RadialGradient id={discId} cx="38%" cy="32%" r="58%">
+            <Stop offset="0%" stopColor="#FFFDF2" stopOpacity="1" />
+            <Stop offset="28%" stopColor="#FDE68A" stopOpacity="1" />
+            <Stop offset="66%" stopColor="#F59E0B" stopOpacity="0.96" />
+            <Stop offset="100%" stopColor="#9A3412" stopOpacity="0.88" />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={center} cy={center} r={center * 0.92} fill={'url(#' + glowId + ')'} opacity="0.95" />
+        {Array.from({ length: 14 }).map(function (_, rayIndex) {
+          var angle = ((rayIndex * 25.714) * Math.PI) / 180;
+          var inner = center * 0.54;
+          var outer = center * (rayIndex % 2 === 0 ? 0.94 : 0.82);
+          return (
+            <Line
+              key={'sunray' + rayIndex}
+              x1={(center + inner * Math.cos(angle)).toFixed(2)}
+              y1={(center + inner * Math.sin(angle)).toFixed(2)}
+              x2={(center + outer * Math.cos(angle)).toFixed(2)}
+              y2={(center + outer * Math.sin(angle)).toFixed(2)}
+              stroke="#FDE68A"
+              strokeWidth={rayIndex % 2 === 0 ? '1.2' : '0.7'}
+              strokeLinecap="round"
+              opacity={rayIndex % 2 === 0 ? 0.38 : 0.22}
+            />
+          );
+        })}
+        <Circle cx={center} cy={center} r={center * 0.54} fill={'url(#' + discId + ')'} />
+        <Circle cx={center * 0.82} cy={center * 0.74} r={center * 0.16} fill="#FFFFFF" opacity="0.34" />
+        <Path
+          d={'M' + (center * 0.45) + ' ' + (center * 1.12) + ' C ' + (center * 0.9) + ' ' + (center * 1.32) + ', ' + (center * 1.38) + ' ' + (center * 0.9) + ', ' + (center * 1.56) + ' ' + (center * 0.55)}
+          stroke="#FED7AA"
+          strokeWidth="1.1"
+          strokeLinecap="round"
+          fill="none"
+          opacity="0.22"
+        />
+      </Svg>
+    );
+  }
+
+  return (
+    <Svg width={bodySize} height={bodySize}>
+      <Defs>
+        <RadialGradient id={glowId} cx="50%" cy="50%" r="58%">
+          <Stop offset="0%" stopColor="#F8FAFC" stopOpacity="0.38" />
+          <Stop offset="62%" stopColor="#A5B4FC" stopOpacity="0.16" />
+          <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+        </RadialGradient>
+        <RadialGradient id={discId} cx="36%" cy="30%" r="62%">
+          <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+          <Stop offset="24%" stopColor="#E5E7EB" stopOpacity="1" />
+          <Stop offset="62%" stopColor="#94A3B8" stopOpacity="0.96" />
+          <Stop offset="100%" stopColor="#334155" stopOpacity="0.94" />
+        </RadialGradient>
+      </Defs>
+      <Circle cx={center} cy={center} r={center * 0.96} fill={'url(#' + glowId + ')'} />
+      <Circle cx={center} cy={center} r={center * 0.58} fill={'url(#' + discId + ')'} />
+      <Circle cx={center * 0.78} cy={center * 0.76} r={center * 0.11} fill="#CBD5E1" opacity="0.58" />
+      <Circle cx={center * 1.08} cy={center * 0.94} r={center * 0.08} fill="#64748B" opacity="0.38" />
+      <Circle cx={center * 0.94} cy={center * 1.18} r={center * 0.065} fill="#475569" opacity="0.28" />
+      <Ellipse cx={center * 1.12} cy={center} rx={center * 0.28} ry={center * 0.52} fill="#0F172A" opacity="0.22" />
+      <Circle cx={center * 0.74} cy={center * 0.68} r={center * 0.12} fill="#FFFFFF" opacity="0.24" />
+    </Svg>
+  );
+}
+
 // ═══════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════
 
-function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
+function AwesomeRashiChakra({ size = 320, activeSignIndex, variant = 'classic', showSolarOrbit = true }) {
   var cx = size / 2;
   var cy = size / 2;
   var reduced = useReducedMotion();
   var lowEnd = useLowEndDevice();
   var skipAnimations = reduced || lowEnd;
+  var shouldShowSolarOrbit = showSolarOrbit !== false;
 
   // ── Radii ──
   var Redge    = cx - 2;
@@ -163,16 +247,20 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
   var pulse     = useSharedValue(0);
   var pulse2    = useSharedValue(0);
   var glow      = useSharedValue(0);
+  var sunOrbit  = useSharedValue(18);
+  var moonOrbit = useSharedValue(206);
 
   useEffect(function () {
-    if (skipAnimations) {
+    if (skipAnimations || !shouldShowSolarOrbit) {
       // Cancel all running animations and set static midpoints
       cancelAnimation(rotSlow); cancelAnimation(rotMed);
       cancelAnimation(rotStars1); cancelAnimation(rotStars2); cancelAnimation(rotStars3);
       cancelAnimation(rotAura); cancelAnimation(pulse); cancelAnimation(pulse2); cancelAnimation(glow);
+      cancelAnimation(sunOrbit); cancelAnimation(moonOrbit);
       rotSlow.value = 0; rotMed.value = 0;
       rotStars1.value = 0; rotStars2.value = 0; rotStars3.value = 0;
       rotAura.value = 0; pulse.value = 0.5; pulse2.value = 0.5; glow.value = 0.5;
+      sunOrbit.value = 18; moonOrbit.value = 206;
       return;
     }
     rotSlow.value   = withRepeat(withTiming(360,  { duration: 140000, easing: Easing.linear }), -1, false);
@@ -184,12 +272,15 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
     pulse.value     = withRepeat(withTiming(1, { duration: 3200, easing: Easing.inOut(Easing.ease) }), -1, true);
     pulse2.value    = withRepeat(withTiming(1, { duration: 5000, easing: Easing.inOut(Easing.ease) }), -1, true);
     glow.value      = withRepeat(withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.ease) }), -1, true);
+    sunOrbit.value  = withRepeat(withTiming(378, { duration: 68000, easing: Easing.linear }), -1, false);
+    moonOrbit.value = withRepeat(withTiming(-154, { duration: 52000, easing: Easing.linear }), -1, false);
     return function () {
       cancelAnimation(rotSlow); cancelAnimation(rotMed);
       cancelAnimation(rotStars1); cancelAnimation(rotStars2); cancelAnimation(rotStars3);
       cancelAnimation(rotAura); cancelAnimation(pulse); cancelAnimation(pulse2); cancelAnimation(glow);
+      cancelAnimation(sunOrbit); cancelAnimation(moonOrbit);
     };
-  }, [skipAnimations]);
+  }, [skipAnimations, shouldShowSolarOrbit]);
 
   var slowStyle   = useAnimatedStyle(function () { return { transform: [{ rotate: rotSlow.value + 'deg' }] }; });
   var medStyle    = useAnimatedStyle(function () { return { transform: [{ rotate: rotMed.value + 'deg' }] }; });
@@ -197,6 +288,26 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
   var stars2Style = useAnimatedStyle(function () { return { transform: [{ rotate: rotStars2.value + 'deg' }] }; });
   var stars3Style = useAnimatedStyle(function () { return { transform: [{ rotate: rotStars3.value + 'deg' }] }; });
   var auraStyle   = useAnimatedStyle(function () { return { transform: [{ rotate: rotAura.value + 'deg' }] }; });
+  var sunOrbitStyle = useAnimatedStyle(function () { return { transform: [{ rotate: sunOrbit.value + 'deg' }] }; });
+  var moonOrbitStyle = useAnimatedStyle(function () { return { transform: [{ rotate: moonOrbit.value + 'deg' }] }; });
+
+  var sunBodyStyle = useAnimatedStyle(function () {
+    return {
+      transform: [
+        { rotate: (-sunOrbit.value) + 'deg' },
+        { scale: interpolate(glow.value, [0, 1], [0.97, 1.04]) },
+      ],
+    };
+  });
+
+  var moonBodyStyle = useAnimatedStyle(function () {
+    return {
+      transform: [
+        { rotate: (-moonOrbit.value) + 'deg' },
+        { scale: interpolate(pulse.value, [0, 1], [0.98, 1.02]) },
+      ],
+    };
+  });
 
   var breatheStyle = useAnimatedStyle(function () {
     return {
@@ -227,9 +338,208 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
   var starsOuter = useMemo(function () { return makeStarDots(starCountOuter, Rband + 6, Redge + 35, cx, cy); }, [size, starCountOuter]);
   var starsMid   = useMemo(function () { return makeStarDots(starCountMid, RsegOut + 6, Rband - 2, cx, cy); }, [size, starCountMid]);
   var starsInner = useMemo(function () { return makeStarDots(starCountInner, Rorbit - 8, RsegIn - 4, cx, cy); }, [size, starCountInner]);
+  var solarOrbitPad = Math.max(34, size * 0.11);
+  var solarTrackSize = size + solarOrbitPad * 2;
+  var solarTrackCenter = solarTrackSize / 2;
+  var solarTrackRadius = cx + solarOrbitPad * 0.64;
+  var sunBodySize = Math.max(42, Math.min(64, size * 0.16));
+  var moonBodySize = Math.max(34, Math.min(54, size * 0.135));
+  var sunOrbitTop = cy - solarTrackRadius - sunBodySize / 2;
+  var moonOrbitTop = cy - solarTrackRadius - moonBodySize / 2;
+
+  if (variant === 'astrolabe') {
+    var activeIndex = typeof activeSignIndex === 'number' ? ((activeSignIndex % 12) + 12) % 12 : 0;
+    var astEdge = cx - 3;
+    var astOuter = cx * 0.90;
+    var astBandOuter = cx * 0.77;
+    var astBandInner = cx * 0.52;
+    var astGlyphR = (astBandOuter + astBandInner) / 2;
+    var astOrbit = cx * 0.43;
+    var astCore = cx * 0.36;
+    var astCenterImage = astCore * 1.08;
+    var astOuterImg = Math.max(size * 0.056, Math.min(size * 0.075, 24));
+    var activeMidDeg = activeIndex * 30 + 15;
+    var activeMidRad = ((activeMidDeg - 90) * Math.PI) / 180;
+    var activeOuterX = cx + astBandOuter * Math.cos(activeMidRad);
+    var activeOuterY = cy + astBandOuter * Math.sin(activeMidRad);
+    var activeInnerX = cx + (astCore * 1.08) * Math.cos(activeMidRad);
+    var activeInnerY = cy + (astCore * 1.08) * Math.sin(activeMidRad);
+    var healingGrahas = [
+      { color: '#F8C66A', glow: '#FFE8A3', ang: 12, r: 2.8 },
+      { color: '#B7D8FF', glow: '#E0F2FE', ang: 54, r: 2.5 },
+      { color: '#F49B8F', glow: '#FECACA', ang: 106, r: 2.5 },
+      { color: '#86EFAC', glow: '#BBF7D0', ang: 150, r: 2.4 },
+      { color: '#FFD666', glow: '#FEF3C7', ang: 206, r: 3.0 },
+      { color: '#F5A8C7', glow: '#FBCFE8', ang: 254, r: 2.6 },
+      { color: '#C4B5FD', glow: '#DDD6FE', ang: 302, r: 2.5 },
+      { color: '#CBD5E1', glow: '#F8FAFC', ang: 178, r: 2.2 },
+      { color: '#A78BFA', glow: '#DDD6FE', ang: 350, r: 2.2 },
+    ];
+
+    return (
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'visible' }}>
+        <Animated.View style={[{ position: 'absolute' }, auraPulseStyle]}>
+          <Svg width={size} height={size}>
+            <Defs>
+              <RadialGradient id="astAura" cx="50%" cy="50%" r="58%">
+                <Stop offset="0%" stopColor="#FDF0C4" stopOpacity="0.34" />
+                <Stop offset="34%" stopColor="#78DCCA" stopOpacity="0.15" />
+                <Stop offset="64%" stopColor="#C4B5FD" stopOpacity="0.11" />
+                <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+              </RadialGradient>
+              <RadialGradient id="astCoreGlow" cx="50%" cy="48%" r="54%">
+                <Stop offset="0%" stopColor="#FFF8E7" stopOpacity="0.90" />
+                <Stop offset="22%" stopColor="#FFE8A3" stopOpacity="0.54" />
+                <Stop offset="55%" stopColor="#B88936" stopOpacity="0.20" />
+                <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+              </RadialGradient>
+              <LinearGradient id="astMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#FFF1BE" stopOpacity="0.82" />
+                <Stop offset="38%" stopColor="#B88936" stopOpacity="0.45" />
+                <Stop offset="70%" stopColor="#F6D37A" stopOpacity="0.66" />
+                <Stop offset="100%" stopColor="#7C5522" stopOpacity="0.44" />
+              </LinearGradient>
+              <LinearGradient id="astActive" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#FFE8A3" stopOpacity="0.46" />
+                <Stop offset="45%" stopColor="#7DD3FC" stopOpacity="0.20" />
+                <Stop offset="100%" stopColor="#F0ABFC" stopOpacity="0.22" />
+              </LinearGradient>
+            </Defs>
+
+            <Circle cx={cx} cy={cy} r={astEdge + 20} fill="url(#astAura)" />
+            <Circle cx={cx} cy={cy} r={astOuter + 10} fill="rgba(7,5,3,0.56)" />
+            <Circle cx={cx} cy={cy} r={astEdge} fill="rgba(10,7,4,0.66)" stroke="url(#astMetal)" strokeWidth="1.2" opacity="0.95" />
+            <Circle cx={cx} cy={cy} r={astEdge - 5} fill="none" stroke="rgba(255,232,163,0.20)" strokeWidth="0.5" />
+
+            {Array.from({ length: 96 }).map(function (_, tickIndex) {
+              var tickAngle = ((tickIndex * 3.75 - 90) * Math.PI) / 180;
+              var isMajorTick = tickIndex % 8 === 0;
+              var isMediumTick = tickIndex % 4 === 0;
+              var tickLen = isMajorTick ? 8 : isMediumTick ? 5 : 2.4;
+              return (
+                <Line
+                  key={'astTick' + tickIndex}
+                  x1={(cx + (astOuter - tickLen) * Math.cos(tickAngle)).toFixed(2)}
+                  y1={(cy + (astOuter - tickLen) * Math.sin(tickAngle)).toFixed(2)}
+                  x2={(cx + astOuter * Math.cos(tickAngle)).toFixed(2)}
+                  y2={(cy + astOuter * Math.sin(tickAngle)).toFixed(2)}
+                  stroke={isMajorTick ? '#FFE8A3' : '#B88936'}
+                  strokeWidth={isMajorTick ? '0.72' : isMediumTick ? '0.45' : '0.25'}
+                  opacity={isMajorTick ? 0.66 : isMediumTick ? 0.38 : 0.18}
+                />
+              );
+            })}
+
+            {RASHIS.map(function (_, signIndex) {
+              var isActive = signIndex === activeIndex;
+              return (
+                <Path
+                  key={'astWedge' + signIndex}
+                  d={wedgePath(cx, cy, astBandInner, astBandOuter, signIndex * 30 + 0.7, signIndex * 30 + 29.3)}
+                  fill={isActive ? 'url(#astActive)' : 'rgba(255,232,163,0.025)'}
+                  stroke={isActive ? 'rgba(255,232,163,0.46)' : 'rgba(255,232,163,0.105)'}
+                  strokeWidth={isActive ? '0.9' : '0.42'}
+                />
+              );
+            })}
+
+            {RASHIS.map(function (_, signIndex) {
+              var dividerAngle = ((signIndex * 30 - 90) * Math.PI) / 180;
+              return (
+                <Line
+                  key={'astDivider' + signIndex}
+                  x1={(cx + astBandInner * Math.cos(dividerAngle)).toFixed(2)}
+                  y1={(cy + astBandInner * Math.sin(dividerAngle)).toFixed(2)}
+                  x2={(cx + astBandOuter * Math.cos(dividerAngle)).toFixed(2)}
+                  y2={(cy + astBandOuter * Math.sin(dividerAngle)).toFixed(2)}
+                  stroke="rgba(255,232,163,0.20)"
+                  strokeWidth="0.55"
+                />
+              );
+            })}
+
+            <Circle cx={cx} cy={cy} r={astBandOuter} fill="none" stroke="url(#astMetal)" strokeWidth="1.15" opacity="0.82" />
+            <Circle cx={cx} cy={cy} r={astBandInner} fill="none" stroke="rgba(255,232,163,0.40)" strokeWidth="1" />
+            <Line
+              x1={activeOuterX.toFixed(2)} y1={activeOuterY.toFixed(2)}
+              x2={activeInnerX.toFixed(2)} y2={activeInnerY.toFixed(2)}
+              stroke="#FFE8A3" strokeWidth="1.1" opacity="0.40"
+            />
+
+            {RASHIS.map(function (_, signIndex) {
+              var isActive = signIndex === activeIndex;
+              var midDeg = signIndex * 30 + 15;
+              var midRad = ((midDeg - 90) * Math.PI) / 180;
+              var imageX = cx + astGlyphR * Math.cos(midRad);
+              var imageY = cy + astGlyphR * Math.sin(midRad);
+              var imageSize = isActive ? astOuterImg * 1.34 : astOuterImg;
+              return (
+                <G key={'astImage' + signIndex}>
+                  {isActive ? <Circle cx={imageX.toFixed(2)} cy={imageY.toFixed(2)} r={imageSize * 0.86} fill="#FFE8A3" opacity="0.16" /> : null}
+                  <SvgImage
+                    x={imageX - imageSize / 2}
+                    y={imageY - imageSize / 2}
+                    width={imageSize}
+                    height={imageSize}
+                    href={ZODIAC_IMAGES[signIndex].uri}
+                    opacity={isActive ? 0.98 : 0.38}
+                  />
+                </G>
+              );
+            })}
+
+            <Circle cx={cx} cy={cy} r={astOrbit} fill="none" stroke="rgba(125,211,252,0.16)" strokeWidth="0.7" />
+            <Circle cx={cx} cy={cy} r={astOrbit - 5} fill="none" stroke="rgba(240,171,252,0.10)" strokeWidth="0.45" />
+          </Svg>
+        </Animated.View>
+
+        <Animated.View style={[{ position: 'absolute' }, medStyle]}>
+          <Svg width={size} height={size}>
+            {healingGrahas.map(function (graha, grahaIndex) {
+              var grahaAngle = ((graha.ang - 90) * Math.PI) / 180;
+              var grahaX = cx + astOrbit * Math.cos(grahaAngle);
+              var grahaY = cy + astOrbit * Math.sin(grahaAngle);
+              return (
+                <G key={'astGraha' + grahaIndex}>
+                  <Circle cx={grahaX.toFixed(2)} cy={grahaY.toFixed(2)} r={graha.r + 6} fill={graha.glow} opacity="0.06" />
+                  <Circle cx={grahaX.toFixed(2)} cy={grahaY.toFixed(2)} r={graha.r + 2.5} fill={graha.glow} opacity="0.15" />
+                  <Circle cx={grahaX.toFixed(2)} cy={grahaY.toFixed(2)} r={graha.r} fill={graha.color} opacity="0.88" />
+                </G>
+              );
+            })}
+          </Svg>
+        </Animated.View>
+
+        <Animated.View style={[{ position: 'absolute' }, glowStyle]}>
+          <Svg width={size} height={size}>
+            <Defs>
+              <RadialGradient id="astSealGlow" cx="50%" cy="50%" r="55%">
+                <Stop offset="0%" stopColor="#FFF8E7" stopOpacity="0.72" />
+                <Stop offset="36%" stopColor="#FFE8A3" stopOpacity="0.34" />
+                <Stop offset="68%" stopColor="#7DD3FC" stopOpacity="0.12" />
+                <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+              </RadialGradient>
+            </Defs>
+            <Circle cx={cx} cy={cy} r={astCore * 1.52} fill="url(#astSealGlow)" />
+            <Circle cx={cx} cy={cy} r={astCore * 1.03} fill="rgba(4,3,8,0.78)" stroke="rgba(255,232,163,0.42)" strokeWidth="1.2" />
+            <Circle cx={cx} cy={cy} r={astCore * 0.86} fill="rgba(255,232,163,0.035)" stroke="rgba(125,211,252,0.18)" strokeWidth="0.7" />
+            <SvgImage
+              x={cx - astCenterImage / 2}
+              y={cy - astCenterImage / 2}
+              width={astCenterImage}
+              height={astCenterImage}
+              href={ZODIAC_IMAGES[activeIndex].uri}
+              opacity={0.96}
+            />
+            <Circle cx={cx} cy={cy} r={astCore * 1.12} fill="none" stroke="rgba(255,232,163,0.22)" strokeWidth="0.55" />
+          </Svg>
+        </Animated.View>
+      </View>
+    );
+  }
 
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center', position: 'absolute' }}>
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center', position: 'absolute', overflow: 'visible' }}>
 
       {/* ══════════════════════════════════════════════════════
           L0 — Deep-space vignette base
@@ -394,6 +704,19 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
           <Circle cx={cx} cy={cy} r={Rband - 2.5} stroke="#B8A88A" strokeWidth="0.3" fill="none" opacity={0.2} />
         </Svg>
       </Animated.View>
+
+      {/* ══════════════════════════════════════════════════════
+          L3b — Sun / Moon outer orbit
+      ══════════════════════════════════════════════════════ */}
+      {shouldShowSolarOrbit ? (
+        <Animated.View pointerEvents="none" style={[{ position: 'absolute' }, breatheStyle]}>
+          <Svg width={solarTrackSize} height={solarTrackSize} style={{ marginLeft: -solarOrbitPad, marginTop: -solarOrbitPad }}>
+            <Circle cx={solarTrackCenter} cy={solarTrackCenter} r={solarTrackRadius} stroke="#F8D27A" strokeWidth="0.75" strokeDasharray="3 11" fill="none" opacity="0.36" />
+            <Circle cx={solarTrackCenter} cy={solarTrackCenter} r={solarTrackRadius + 3.5} stroke="#FFFFFF" strokeWidth="0.35" fill="none" opacity="0.13" />
+            <Circle cx={solarTrackCenter} cy={solarTrackCenter} r={solarTrackRadius - 3.5} stroke="#C4B5FD" strokeWidth="0.35" fill="none" opacity="0.18" />
+          </Svg>
+        </Animated.View>
+      ) : null}
 
       {/* ══════════════════════════════════════════════════════
           L4 — Zodiac arcs + SVG zodiac glyphs (slow CW)
@@ -601,6 +924,37 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex }) {
           })()}
         </Svg>
       </Animated.View>
+
+      {/* ══════════════════════════════════════════════════════
+          L7 — Visible rotating sun and moon, above the chakra
+      ══════════════════════════════════════════════════════ */}
+      {shouldShowSolarOrbit ? (
+        <>
+          <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: size, height: size, zIndex: 40, elevation: 40 }, sunOrbitStyle]}>
+            <Animated.View style={[{
+              position: 'absolute',
+              left: (size - sunBodySize) / 2,
+              top: sunOrbitTop,
+              width: sunBodySize,
+              height: sunBodySize,
+            }, sunBodyStyle]}>
+              <SolarOrbitBody kind="sun" bodySize={sunBodySize} />
+            </Animated.View>
+          </Animated.View>
+
+          <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: size, height: size, zIndex: 41, elevation: 41 }, moonOrbitStyle]}>
+            <Animated.View style={[{
+              position: 'absolute',
+              left: (size - moonBodySize) / 2,
+              top: moonOrbitTop,
+              width: moonBodySize,
+              height: moonBodySize,
+            }, moonBodyStyle]}>
+              <SolarOrbitBody kind="moon" bodySize={moonBodySize} />
+            </Animated.View>
+          </Animated.View>
+        </>
+      ) : null}
 
     </View>
   );

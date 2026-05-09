@@ -62,6 +62,50 @@ function buildReportCacheKey(input = {}) {
   };
 }
 
+function sanitizeForFirestore(value, seen = new WeakSet()) {
+  if (value === undefined) return null;
+  if (value === null) return null;
+  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : null;
+
+  const valueType = typeof value;
+  if (valueType === 'string' || valueType === 'boolean') return value;
+  if (valueType === 'number') return Number.isFinite(value) ? value : null;
+  if (valueType === 'bigint') return value.toString();
+  if (valueType === 'function' || valueType === 'symbol') return null;
+
+  if (Array.isArray(value)) {
+    if (seen.has(value)) return null;
+    seen.add(value);
+    const sanitizedArray = value.map(item => sanitizeForFirestore(item, seen));
+    seen.delete(value);
+    return sanitizedArray;
+  }
+
+  if (valueType === 'object') {
+    if (seen.has(value)) return null;
+    seen.add(value);
+    const sanitizedObject = {};
+    Object.keys(value).forEach(key => {
+      if (key === '__proto__' || key === 'prototype' || key === 'constructor') return;
+      sanitizedObject[key] = sanitizeForFirestore(value[key], seen);
+    });
+    seen.delete(value);
+    return sanitizedObject;
+  }
+
+  return null;
+}
+
+function normalizeReportBirthInfo(birthInfo) {
+  if (!birthInfo || typeof birthInfo !== 'object') return birthInfo || null;
+  const normalized = {};
+  Object.keys(birthInfo).forEach(key => {
+    if (key.charAt(0) === '_') return;
+    normalized[key] = birthInfo[key];
+  });
+  return normalized;
+}
+
 // ─── USER OPERATIONS ───────────────────────────────────────────
 
 /**
@@ -169,10 +213,22 @@ async function saveReport(uid, reportData) {
   const db = getDb();
   if (!db) return null;
 
+  if (uid && reportData.cacheKey && !reportData.forceRegenerate) {
+    try {
+      const existing = await getCachedReport(uid, reportData.cacheKey, {
+        promptVersion: reportData.promptVersion || reportData.promptMetadata?.promptVersion || null,
+        engineVersion: reportData.engineVersion || null,
+      });
+      if (existing) return existing.id;
+    } catch (e) {
+      console.warn('[saveReport] existing report lookup failed:', e.message);
+    }
+  }
+
   const reportId = uuidv4();
   const promptAnalytics = reportData.promptAnalytics
     || buildUnsupportedTermAnalytics(reportData.validationMetadata || {}, reportData.promptMetadata || null);
-  const report = {
+  const report = sanitizeForFirestore({
     id: reportId,
     uid,
     birthDate: reportData.birthDate,
@@ -182,7 +238,7 @@ async function saveReport(uid, reportData) {
     type: reportData.type || 'ai-narrative',
     sections: reportData.sections || [],
     rashiChart: reportData.rashiChart || null,
-    birthInfo: reportData.birthInfo || null,
+    birthInfo: normalizeReportBirthInfo(reportData.birthInfo),
     promptVersion: reportData.promptVersion || reportData.promptMetadata?.promptVersion || null,
     cacheKey: reportData.cacheKey || null,
     cacheVersion: reportData.cacheVersion || null,
@@ -199,9 +255,21 @@ async function saveReport(uid, reportData) {
     birthLocation: reportData.birthLocation || null,
     createdAt: new Date().toISOString(),
     expiresAt: reportData.expiresAt || null, // null = never expires
-  };
+  });
 
-  await db.collection(COLLECTIONS.REPORTS).doc(reportId).set(report);
+  try {
+    await db.collection(COLLECTIONS.REPORTS).doc(reportId).set(report);
+  } catch (saveErr) {
+    if (uid && reportData.cacheKey) {
+      const existing = await getCachedReport(uid, reportData.cacheKey, {
+        promptVersion: report.promptVersion || null,
+        engineVersion: report.engineVersion || null,
+      });
+      if (existing) return existing.id;
+    }
+    console.error('[saveReport] Firestore save failed:', saveErr.message);
+    throw saveErr;
+  }
   await savePromptAnalyticsSnapshot(uid, reportId, report).catch(() => null);
 
   // Increment user's report count

@@ -83,13 +83,13 @@ function OrbitalNode({ tabConfig, focused, onPress, label, isCenter, index, tota
 
   // Focused: glowing accent, unfocused: dim muted
   var bgColor = focused
-    ? (isCenter ? 'rgba(147,51,234,0.35)' : 'rgba(147,51,234,0.22)')
-    : 'rgba(30,26,60,0.70)';
+    ? (isCenter ? 'rgba(123,73,207,0.34)' : 'rgba(123,73,207,0.24)')
+    : 'rgba(8,6,13,0.78)';
   var borderColor = focused
-    ? (isCenter ? 'rgba(147,51,234,0.65)' : 'rgba(147,51,234,0.45)')
-    : 'rgba(80,70,130,0.30)';
-  var iconColor = focused ? '#E0DAFF' : 'rgba(160,150,200,0.50)';
-  var labelColor = focused ? '#E0DAFF' : 'rgba(160,150,200,0.50)';
+    ? (isCenter ? 'rgba(214,181,109,0.68)' : 'rgba(214,181,109,0.50)')
+    : 'rgba(214,181,109,0.18)';
+  var iconColor = focused ? Colors.luxuryPearl : 'rgba(220,207,170,0.52)';
+  var labelColor = focused ? Colors.luxuryPearl : 'rgba(220,207,170,0.48)';
 
   return (
     <TouchableOpacity
@@ -145,13 +145,14 @@ function OrbitalRing({ width }) {
     <Svg width={width} height={h} style={orb.ringSvg}>
       <Defs>
         <RadialGradient id="orbGlow" cx="50%" cy="30%" r="60%">
-          <Stop offset="0%" stopColor="#9333EA" stopOpacity={0.12} />
-          <Stop offset="100%" stopColor="#9333EA" stopOpacity={0} />
+          <Stop offset="0%" stopColor={Colors.luxuryGold} stopOpacity={0.13} />
+          <Stop offset="58%" stopColor="#7B49CF" stopOpacity={0.06} />
+          <Stop offset="100%" stopColor="#7B49CF" stopOpacity={0} />
         </RadialGradient>
       </Defs>
       <Ellipse cx={midX} cy={h - 10} rx={width * 0.38} ry={28} fill="url(#orbGlow)" />
-      <Path d={d} fill="none" stroke="rgba(147,51,234,0.18)" strokeWidth={1.2} />
-      <Path d={d} fill="none" stroke="rgba(147,51,234,0.08)" strokeWidth={3} />
+      <Path d={d} fill="none" stroke="rgba(214,181,109,0.24)" strokeWidth={1.2} />
+      <Path d={d} fill="none" stroke="rgba(123,73,207,0.12)" strokeWidth={3} />
     </Svg>
   );
 }
@@ -194,21 +195,21 @@ function OrbitalNavBar({ state, navigation }) {
           <View style={[StyleSheet.absoluteFill, { overflow: 'hidden', borderTopLeftRadius: 28, borderTopRightRadius: 28 }]}>
             <BlurView intensity={70} tint="dark" style={StyleSheet.absoluteFill} />
             <LinearGradient
-              colors={['rgba(18,14,40,0.50)', 'rgba(12,9,30,0.85)', 'rgba(8,5,22,0.95)']}
+              colors={['rgba(23,16,33,0.58)', 'rgba(10,6,16,0.90)', 'rgba(5,4,9,0.98)']}
               style={StyleSheet.absoluteFill}
               start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
             />
           </View>
         ) : (
           <LinearGradient
-            colors={['rgba(18,14,40,0.85)', 'rgba(12,9,30,0.95)']}
+            colors={['rgba(23,16,33,0.92)', 'rgba(5,4,9,0.98)']}
             style={[StyleSheet.absoluteFill, { borderTopLeftRadius: 28, borderTopRightRadius: 28 }]}
             start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
           />
         )}
         {/* Top accent line */}
         <LinearGradient
-          colors={['transparent', 'rgba(147,51,234,0.40)', 'rgba(147,51,234,0.60)', 'rgba(147,51,234,0.40)', 'transparent']}
+          colors={['transparent', 'rgba(214,181,109,0.30)', 'rgba(244,228,188,0.58)', 'rgba(214,181,109,0.30)', 'transparent']}
           style={orb.topEdge}
           start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
         />
@@ -252,10 +253,10 @@ var orb = StyleSheet.create({
   barBg: {
     position: 'absolute', bottom: 0, left: 0, right: 0, height: BAR_H + ARC_HEIGHT + 10,
     borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden',
-    borderTopWidth: 1, borderTopColor: 'rgba(147,51,234,0.25)',
-    borderLeftWidth: 0.5, borderLeftColor: 'rgba(147,51,234,0.10)',
-    borderRightWidth: 0.5, borderRightColor: 'rgba(147,51,234,0.10)',
-    ...boxShadow('rgba(147,51,234,0.15)', { width: 0, height: -8 }, 1, 24),
+    borderTopWidth: 1, borderTopColor: Colors.luxuryHairline,
+    borderLeftWidth: 0.5, borderLeftColor: 'rgba(214,181,109,0.12)',
+    borderRightWidth: 0.5, borderRightColor: 'rgba(214,181,109,0.12)',
+    ...boxShadow('rgba(214,181,109,0.16)', { width: 0, height: -8 }, 1, 24),
     elevation: 16,
   },
   topEdge: { position: 'absolute', top: 0, left: 20, right: 20, height: 1.5, borderRadius: 1 },
@@ -268,28 +269,27 @@ var orb = StyleSheet.create({
   node: {
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5,
-    ...boxShadow('rgba(147,51,234,0.25)', { width: 0, height: 2 }, 0.8, 10),
+    ...boxShadow('rgba(214,181,109,0.18)', { width: 0, height: 2 }, 0.8, 10),
     elevation: 6,
   },
   centerNode: {
-    ...boxShadow('rgba(147,51,234,0.35)', { width: 0, height: 4 }, 1, 16),
+    ...boxShadow('rgba(214,181,109,0.26)', { width: 0, height: 4 }, 1, 16),
     elevation: 10,
   },
   centerGlow: {
     position: 'absolute',
-    backgroundColor: 'rgba(147,51,234,0.08)',
+    backgroundColor: 'rgba(123,73,207,0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(147,51,234,0.12)',
+    borderColor: 'rgba(214,181,109,0.16)',
   },
   label: { fontSize: 10, fontWeight: '600', marginTop: 5, letterSpacing: 0.3, textAlign: 'center' },
 });
 
 function HeaderTitle({ title }) {
-  var { colors } = useTheme();
   return (
     <View style={hs.wrap}>
       <Image source={LOGO} style={hs.logoIcon} resizeMode="contain" />
-      <Text style={[hs.title, { color: '#E0DAFF' }]}>{title}</Text>
+      <Text style={[hs.title, { color: Colors.luxuryPearl }]}>{title}</Text>
     </View>
   );
 }
@@ -308,7 +308,7 @@ function ProfileAvatar() {
       accessibilityRole="button"
       accessibilityLabel="Profile"
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      style={[hs.avatarBtn, { backgroundColor: colors.surfaceElevated, borderColor: colors.accent + '88' }]}
+      style={[hs.avatarBtn, { backgroundColor: 'rgba(8,6,13,0.84)', borderColor: 'rgba(214,181,109,0.74)' }]}
     >
       {user && user.photoURL ? (
         <Image source={{ uri: user.photoURL }} style={hs.avatarImg} />
@@ -479,30 +479,48 @@ export default function TabLayout() {
 var hs = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   logoIcon: { width: 22, height: 22, borderRadius: 6 },
-  title: { fontSize: 15, fontWeight: '800', letterSpacing: 2.5, textTransform: 'uppercase' },
-  avatarBtn: { width: 34, height: 34, borderRadius: 17, marginRight: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, overflow: 'hidden' },
+  title: { fontSize: 15, fontWeight: '800', letterSpacing: 2.5, textTransform: 'uppercase', ...textShadow('rgba(214,181,109,0.26)', { width: 0, height: 1 }, 8) },
+  avatarBtn: { width: 34, height: 34, borderRadius: 17, marginRight: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, overflow: 'hidden', ...boxShadow('rgba(214,181,109,0.26)', { width: 0, height: 2 }, 0.7, 10) },
   avatarImg: { width: '100%', height: '100%' },
   avatarInitial: { fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
 });
 
 function ThemedHeaderBackground() {
-  var { colors } = useTheme();
   if (Platform.OS === 'web') {
     return (
       <View style={[StyleSheet.absoluteFillObject, {
-        backgroundColor: 'rgba(26,23,48,0.94)',
+        backgroundColor: 'rgba(5,4,9,0.96)',
         borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-      }]} />
+        borderBottomColor: Colors.luxuryHairline,
+        overflow: 'hidden',
+      }]}>
+        <LinearGradient
+          colors={['rgba(23,16,33,0.92)', 'rgba(5,4,9,0.98)']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(214,181,109,0.10)', 'transparent']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+        />
+      </View>
     );
   }
   return (
     <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill}>
       <LinearGradient
-        colors={['rgba(26,23,48,0.95)', 'rgba(19,16,42,0.65)']}
+        colors={['rgba(23,16,33,0.96)', 'rgba(10,6,16,0.82)', 'rgba(5,4,9,0.66)']}
+        locations={[0, 0.52, 1]}
         style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       />
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 0.5, backgroundColor: colors.border }} />
+      <LinearGradient
+        colors={['transparent', 'rgba(214,181,109,0.12)', 'transparent']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+      />
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 0.8, backgroundColor: Colors.luxuryHairline }} />
     </BlurView>
   );
 }

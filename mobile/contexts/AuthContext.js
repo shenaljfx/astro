@@ -50,6 +50,55 @@ var STORAGE_PUSH_REGISTERED = 'grahachara_push_registered_for';
 var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var PUSH_REGISTER_REFRESH_MS = 24 * 60 * 60 * 1000;
 
+function buildActiveSubscription(activeSub, fallback) {
+  fallback = fallback || {};
+  var plan = activeSub ? (activeSub.plan || activeSub.productIdentifier) : null;
+  var expiresAt = activeSub ? (activeSub.expiresDate || activeSub.expirationDate) : null;
+  var willRenew = activeSub && activeSub.willRenew !== undefined
+    ? activeSub.willRenew !== false
+    : fallback.willRenew !== false;
+  var isLifetime = activeSub && activeSub.isLifetime !== undefined
+    ? !!activeSub.isLifetime
+    : (!expiresAt && fallback.isLifetime === true);
+
+  return {
+    status: 'active',
+    plan: plan || fallback.productIdentifier || fallback.plan || 'pro',
+    expiresAt: expiresAt || fallback.expiresAt || null,
+    willRenew: isLifetime ? false : willRenew,
+    store: activeSub ? (activeSub.store || fallback.store || null) : (fallback.store || null),
+    cancelledAt: activeSub ? (activeSub.unsubscribeDetectedAt || activeSub.cancelledAt || null) : (fallback.cancelledAt || null),
+    billingIssueAt: activeSub ? (activeSub.billingIssueDetectedAt || null) : (fallback.billingIssueAt || null),
+    isLifetime: isLifetime,
+  };
+}
+
+function normalizeStoredSubscription(storedSub) {
+  if (!storedSub) return null;
+  if (storedSub.status === 'none' || storedSub.status === 'pending') return null;
+  if (storedSub.status === 'active' && storedSub.expiresAt) {
+    var expires = new Date(storedSub.expiresAt);
+    if (Number.isFinite(expires.getTime()) && Date.now() > expires.getTime()) {
+      return { ...storedSub, status: 'expired', willRenew: false };
+    }
+  }
+  return storedSub;
+}
+
+function isSubscriptionCurrentlyActive(sub) {
+  if (!sub || sub.status !== 'active') return false;
+  if (sub.isLifetime === true || !sub.expiresAt) return true;
+  var expires = new Date(sub.expiresAt);
+  if (!Number.isFinite(expires.getTime())) return false;
+  return Date.now() <= expires.getTime();
+}
+
+function buildInactiveSubscription(storedSub) {
+  var normalized = normalizeStoredSubscription(storedSub);
+  if (!normalized || normalized.status === 'active') return null;
+  return normalized;
+}
+
 async function canUseSecureStore() {
   if (Platform.OS === 'web') return false;
   try {
@@ -195,13 +244,7 @@ export function AuthProvider({ children }) {
       if (__DEV__) console.log('[Auth] RevenueCat update — pro active:', update.isProActive);
       if (update.isProActive) {
         var activeSub = update.activeSubscription;
-        var sub = {
-          status: 'active',
-          plan: activeSub ? activeSub.productIdentifier : 'pro',
-          expiresAt: activeSub ? activeSub.expirationDate : null,
-          willRenew: activeSub ? activeSub.willRenew : true,
-          store: activeSub ? activeSub.store : null,
-        };
+        var sub = buildActiveSubscription(activeSub);
         setSubscription(sub);
         setUser(function(prev) {
           if (!prev) return prev;
@@ -237,9 +280,10 @@ export function AuthProvider({ children }) {
 
       if (savedToken && savedUser) {
         var userData = JSON.parse(savedUser);
+        userData.subscription = normalizeStoredSubscription(userData.subscription);
         setToken(savedToken);
         setUser(userData);
-        setSubscription(userData.subscription || null);
+        setSubscription(userData.subscription);
 
         // Wire token to API service
         setAuthTokenGetter(function() {
@@ -260,14 +304,14 @@ export function AuthProvider({ children }) {
           var isProActive = await checkEntitlement();
           if (isProActive) {
             var activeSub = await getActiveSubscription();
-            var sub = {
-              status: 'active',
-              plan: activeSub ? activeSub.plan : 'pro',
-              expiresAt: activeSub ? activeSub.expiresDate : null,
-              willRenew: activeSub ? activeSub.willRenew : true,
-            };
+            var sub = buildActiveSubscription(activeSub);
             setSubscription(sub);
             userData.subscription = sub;
+            await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
+          } else {
+            var inactiveSub = buildInactiveSubscription(userData.subscription);
+            setSubscription(inactiveSub);
+            userData.subscription = inactiveSub;
             await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
           }
         } catch (rcErr) {
@@ -322,6 +366,7 @@ export function AuthProvider({ children }) {
             ...serverUser,
             onboardingComplete: serverUser.onboardingComplete || prev?.onboardingComplete || false,
           };
+          merged.subscription = normalizeStoredSubscription(merged.subscription);
           // Preserve local birthData if server doesn't have it yet (race condition after onboarding)
           if (prev?.birthData?.dateTime && !serverUser.birthData?.dateTime) {
             merged.birthData = prev.birthData;
@@ -336,7 +381,7 @@ export function AuthProvider({ children }) {
           AsyncStorage.setItem(STORAGE_USER, JSON.stringify(merged));
           return merged;
         });
-        setSubscription(json.user.subscription || null);
+        setSubscription(normalizeStoredSubscription(json.user.subscription) || null);
       }
     } catch (err) {
       if (__DEV__) console.warn('Profile refresh failed:', err.message);
@@ -426,6 +471,7 @@ export function AuthProvider({ children }) {
 
           var authToken = result.token;
           var userData = result.user;
+          userData.subscription = normalizeStoredSubscription(userData.subscription);
 
           currentStage = 'persist-session';
           await setStoredAuthToken(authToken);
@@ -446,14 +492,14 @@ export function AuthProvider({ children }) {
               var isActive = await checkEntitlement();
               if (isActive) {
                 var activeSub = await getActiveSubscription();
-                var sub = {
-                  status: 'active',
-                  plan: activeSub ? activeSub.plan : 'pro',
-                  expiresAt: activeSub ? activeSub.expiresDate : null,
-                  willRenew: activeSub ? activeSub.willRenew : true,
-                };
+                var sub = buildActiveSubscription(activeSub);
                 setSubscription(sub);
                 userData.subscription = sub;
+                await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
+              } else {
+                var inactiveSub = buildInactiveSubscription(userData.subscription);
+                setSubscription(inactiveSub);
+                userData.subscription = inactiveSub;
                 await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
               }
             } catch (rcErr) {
@@ -492,6 +538,7 @@ export function AuthProvider({ children }) {
 
       var authToken = result.token;
       var userData = result.user;
+      userData.subscription = normalizeStoredSubscription(userData.subscription);
 
       currentStage = 'persist-session';
       await setStoredAuthToken(authToken);
@@ -513,14 +560,14 @@ export function AuthProvider({ children }) {
           var isActive = await checkEntitlement();
           if (isActive) {
             var activeSub = await getActiveSubscription();
-            var sub = {
-              status: 'active',
-              plan: activeSub ? activeSub.plan : 'pro',
-              expiresAt: activeSub ? activeSub.expiresDate : null,
-              willRenew: activeSub ? activeSub.willRenew : true,
-            };
+            var sub = buildActiveSubscription(activeSub);
             setSubscription(sub);
             userData.subscription = sub;
+            await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
+          } else {
+            var inactiveSub = buildInactiveSubscription(userData.subscription);
+            setSubscription(inactiveSub);
+            userData.subscription = inactiveSub;
             await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
           }
         } catch (rcErr) {
@@ -596,13 +643,7 @@ export function AuthProvider({ children }) {
     paywallResolverRef.current = null;
     try {
       var activeSub = await getActiveSubscription();
-      var sub = {
-        status: 'active',
-        plan: activeSub ? activeSub.plan : 'pro',
-        expiresAt: activeSub ? activeSub.expiresDate : null,
-        willRenew: activeSub ? activeSub.willRenew : true,
-        store: activeSub ? activeSub.store : null,
-      };
+      var sub = buildActiveSubscription(activeSub, result || {});
       setSubscription(sub);
       setUser(function(prev) {
         var updated = { ...prev, subscription: sub };
@@ -630,15 +671,16 @@ export function AuthProvider({ children }) {
       await presentCustomerCenter();
       // After Customer Center closes, refresh subscription status
       var isActive = await checkEntitlement();
-      if (!isActive) {
-        setSubscription({ status: 'cancelled' });
-        setUser(function(prev) {
-          var updated = { ...prev, subscription: { status: 'cancelled' } };
-          AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
-          return updated;
-        });
-      }
-      return { success: true };
+      var activeSub = isActive ? await getActiveSubscription() : null;
+      var sub = isActive ? buildActiveSubscription(activeSub) : { status: 'cancelled' };
+      setSubscription(sub);
+      setUser(function(prev) {
+        if (!prev) return prev;
+        var updated = { ...prev, subscription: sub };
+        AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
+        return updated;
+      });
+      return { success: true, subscription: sub };
     } catch (err) {
       throw err;
     }
@@ -648,13 +690,14 @@ export function AuthProvider({ children }) {
     try {
       var isActive = await checkEntitlement();
       var activeSub = isActive ? await getActiveSubscription() : null;
-      var sub = isActive ? {
-        status: 'active',
-        plan: activeSub ? activeSub.plan : 'pro',
-        expiresAt: activeSub ? activeSub.expiresDate : null,
-        willRenew: activeSub ? activeSub.willRenew : true,
-      } : null;
+      var sub = isActive ? buildActiveSubscription(activeSub) : null;
       setSubscription(sub);
+      setUser(function(prev) {
+        if (!prev) return prev;
+        var updated = { ...prev, subscription: sub };
+        AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
+        return updated;
+      });
       return { success: true, subscription: sub };
     } catch (err) {
       if (__DEV__) console.warn('Subscription check failed:', err.message);
@@ -800,7 +843,9 @@ export function AuthProvider({ children }) {
     isLoggedIn: !!token && !!user,
     isAnonymous: false,
     subscription: subscription,
-    isSubscribed: subscription?.status === 'active',
+    isSubscribed: isSubscriptionCurrentlyActive(subscription),
+    isSubscriptionRenewing: isSubscriptionCurrentlyActive(subscription) && subscription?.willRenew !== false,
+    isSubscriptionCancelled: isSubscriptionCurrentlyActive(subscription) && subscription?.willRenew === false && !subscription?.isLifetime,
     getAuthToken: getAuthToken,
     signInWithGoogle: signInWithGoogle,
     completeOnboarding: completeOnboarding,
@@ -824,14 +869,18 @@ export function AuthProvider({ children }) {
     signOut: signOut,
   };
 
+  var forceSubscriptionPaywall = !!token && !!user && user.onboardingComplete === true && !isSubscriptionCurrentlyActive(subscription);
+  var effectivePaywallVisible = paywallVisible || forceSubscriptionPaywall;
+  var effectivePaywallSource = forceSubscriptionPaywall && !paywallVisible ? 'onboarding' : paywallSource;
+
   return (
     <AuthContext.Provider value={value}>
       <View style={{ flex: 1 }}>
         {children}
         <PaywallScreen
-          visible={paywallVisible}
-          source={paywallSource}
-          onClose={handlePaywallClose}
+          visible={effectivePaywallVisible}
+          source={effectivePaywallSource}
+          onClose={forceSubscriptionPaywall ? null : handlePaywallClose}
           onPurchased={handlePaywallPurchased}
         />
       </View>

@@ -250,7 +250,7 @@ var SHARED = {
     restore: 'Restore purchases', terms: 'Terms', privacy: 'Privacy',
     secured: 'Secured by Google Play',
     noSub: 'No active subscription found',
-    purchaseFail: 'Purchase failed. Please try again.',
+    purchaseFail: 'Purchase could not be confirmed. Please try again or restore purchases.',
     restoreFail: 'Restore failed.',
     oneTime: 'one-time',
     perMonth: '/month',
@@ -265,7 +265,7 @@ var SHARED = {
     restore: 'ප්‍රතිස්ථාපනය', terms: 'කොන්දේසි', privacy: 'රහස්‍යතාව',
     secured: 'Google Play ආරක්ෂිතයි',
     noSub: 'දායකත්වයක් නැහැ',
-    purchaseFail: 'මිලදී ගැනීම අසාර්ථකයි.',
+    purchaseFail: 'මිලදී ගැනීම තහවුරු කළ නොහැකි විය. නැවත උත්සාහ කරන්න.',
     restoreFail: 'ප්‍රතිස්ථාපනය අසාර්ථකයි.',
     oneTime: 'එක් වරක්',
     perMonth: '/මාසයට',
@@ -515,7 +515,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
         if (!pkg) {
           try {
             var direct = await purchaseOneTimeProduct(PRODUCT_IDS.monthly);
-            if (direct && direct.isProActive) {
+            if (direct && (direct.isProActive || direct.purchased)) {
               if (onPurchased) onPurchased(direct);
               setPurchasing(false);
               return;
@@ -531,7 +531,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
           return;
         }
         var result = await purchasePackage(pkg);
-        if (result && result.isProActive) {
+        if (result && (result.isProActive || result.purchased)) {
           if (onPurchased) onPurchased(result);
         } else {
           setError(shared.purchaseFail);

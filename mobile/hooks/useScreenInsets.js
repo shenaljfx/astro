@@ -1,7 +1,7 @@
 ﻿/**
  * useScreenInsets — production-grade safe-area + chrome padding.
  *
- * Combines eact-native-safe-area-context insets (notch/cutout/home-bar)
+ * Combines react-native-safe-area-context insets (notch/cutout/home-bar)
  * with the Android translucent StatusBar height and the bottom tab bar
  * height, returning ready-to-use top/bottom padding values.
  *
@@ -25,11 +25,15 @@
 import { Platform, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Layout } from '../constants/theme';
+import useKeyboard from './useKeyboard';
+import useResponsive from './useResponsive';
 
 var HEADER_BREATHING = 12;
 
 export default function useScreenInsets() {
   var insets = useSafeAreaInsets();
+  var keyboard = useKeyboard();
+  var responsive = useResponsive();
 
   // On Android with translucent StatusBar, insets.top can be 0 in some
   // edge cases. Fall back to StatusBar.currentHeight.
@@ -39,13 +43,21 @@ export default function useScreenInsets() {
 
   var headerH = (Layout && Layout.headerHeight) || 64;
   var tabBarVisual = (Layout && Layout.tabBarHeight) || 60;
+  var breathing = responsive.isShort ? 6 : responsive.isSmall ? 8 : HEADER_BREATHING;
+  var bottomBreathing = responsive.isShort ? 8 : 16;
+  var keyboardBottom = Math.max(bottom, 8) + bottomBreathing;
+  var restingBottom = tabBarVisual + bottom + bottomBreathing;
 
   return {
     top: top,
     bottom: bottom,
-    headerTop: top + HEADER_BREATHING,
-    contentTop: top + headerH + HEADER_BREATHING,
-    contentBottom: tabBarVisual + bottom + 16,
+    keyboard: keyboard,
+    responsive: responsive,
+    headerTop: top + breathing,
+    contentTop: top + headerH + breathing,
+    contentBottom: keyboard.isOpen ? keyboardBottom : restingBottom,
+    keyboardBottom: keyboardBottom,
+    restingBottom: restingBottom,
     tabBarHeight: tabBarVisual + bottom,
   };
 }

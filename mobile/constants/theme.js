@@ -42,6 +42,18 @@ export const Colors = {
   solarAmberGlow: 'rgba(255,140,0,0.30)',
   stardustSilver: 'rgba(226,232,240,0.10)',
 
+  // Royal obsidian luxury palette
+  luxuryObsidian: '#050409',
+  luxuryObsidianMid: '#0A0610',
+  luxuryObsidianLift: '#171021',
+  luxuryAubergine: '#261235',
+  luxuryAmethystGlow: 'rgba(123,73,207,0.24)',
+  luxuryGold: '#D6B56D',
+  luxuryGoldSoft: '#F4E4BC',
+  luxuryGoldMuted: 'rgba(214,181,109,0.38)',
+  luxuryHairline: 'rgba(214,181,109,0.34)',
+  luxuryPearl: '#F7EED3',
+
   // Background layers (warm cosmic dark)
   background: '#04030C',
   backgroundMid: '#0A0714',

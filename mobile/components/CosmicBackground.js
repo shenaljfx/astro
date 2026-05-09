@@ -1,6 +1,7 @@
 import React, { useEffect, memo } from 'react';
 import { View, Dimensions, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Colors } from '../constants/theme';
 import Animated, {
   useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay, withSequence,
   interpolate, Easing,
@@ -16,6 +17,9 @@ var STARS_BRIGHT = [];
 var STARS_DIM_GOLD = [];
 var STARS_MID_GOLD = [];
 var STARS_BRIGHT_GOLD = [];
+var STARS_DIM_ROYAL = [];
+var STARS_MID_ROYAL = [];
+var STARS_BRIGHT_ROYAL = [];
 (function () {
   for (var i = 0; i < 35; i++) {
     var baseX = ((i * 7919 + 2741) % 1000) / 10;
@@ -29,6 +33,9 @@ var STARS_BRIGHT_GOLD = [];
     });
     STARS_DIM_GOLD.push({ x: baseX, y: baseY, size: baseSize, baseOpacity: baseOp * 0.9, speed: baseSpd, delay: baseDly,
       color: i % 3 === 0 ? '#FFE4B5' : i % 3 === 1 ? '#D4A574' : '#FFF0D0',
+    });
+    STARS_DIM_ROYAL.push({ x: baseX, y: baseY, size: baseSize, baseOpacity: baseOp * 0.92, speed: baseSpd, delay: baseDly,
+      color: i % 3 === 0 ? Colors.luxuryGoldSoft : i % 3 === 1 ? '#C8A96A' : '#BFA4FF',
     });
   }
   for (var i = 0; i < 14; i++) {
@@ -44,6 +51,9 @@ var STARS_BRIGHT_GOLD = [];
     STARS_MID_GOLD.push({ x: baseX, y: baseY, size: baseSize, baseOpacity: baseOp, speed: baseSpd, delay: baseDly,
       color: i % 4 === 0 ? '#FFD700' : i % 4 === 1 ? '#DAA520' : i % 4 === 2 ? '#F4C430' : '#FFEAA7',
     });
+    STARS_MID_ROYAL.push({ x: baseX, y: baseY, size: baseSize, baseOpacity: baseOp, speed: baseSpd, delay: baseDly,
+      color: i % 4 === 0 ? Colors.luxuryGold : i % 4 === 1 ? Colors.luxuryGoldSoft : i % 4 === 2 ? '#A987FF' : '#FFF7DD',
+    });
   }
   for (var i = 0; i < 6; i++) {
     var baseX = ((i * 9721 + 1571) % 1000) / 10;
@@ -57,6 +67,9 @@ var STARS_BRIGHT_GOLD = [];
     });
     STARS_BRIGHT_GOLD.push({ x: baseX, y: baseY, size: baseSize * 1.1, baseOpacity: baseOp * 1.1, speed: baseSpd, delay: baseDly,
       color: i % 3 === 0 ? '#FFB800' : i % 3 === 1 ? '#FF8C00' : '#FFD700',
+    });
+    STARS_BRIGHT_ROYAL.push({ x: baseX, y: baseY, size: baseSize * 1.05, baseOpacity: baseOp * 1.04, speed: baseSpd, delay: baseDly,
+      color: i % 3 === 0 ? Colors.luxuryGoldSoft : i % 3 === 1 ? Colors.luxuryGold : '#BFA4FF',
     });
   }
 })();
@@ -88,6 +101,7 @@ var CosmicStar = memo(function CosmicStar({ star, reduced }) {
 });
 
 function CosmicBackground({ reduced, lowEnd, variant }) {
+  var isRoyal = variant === 'royalObsidian';
   var isGolden = variant === 'golden';
   var nebulaDrift = useSharedValue(0);
   var auroraPulse = useSharedValue(0);
@@ -163,7 +177,9 @@ function CosmicBackground({ reduced, lowEnd, variant }) {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <LinearGradient
-        colors={isGolden
+        colors={isRoyal
+          ? [Colors.luxuryObsidian, '#07050C', Colors.luxuryObsidianMid, '#130B1B', Colors.luxuryObsidianLift, '#0A0610', '#040307']
+          : isGolden
           ? ['#0C0804', '#140E06', '#1C1208', '#1A1006', '#170E05', '#100A03', '#0A0602']
           : ['#08031A', '#0D0526', '#150A38', '#1A0D3A', '#12072E', '#0A0420', '#06021A']}
         locations={[0, 0.15, 0.3, 0.45, 0.65, 0.82, 1]}
@@ -174,51 +190,53 @@ function CosmicBackground({ reduced, lowEnd, variant }) {
           <Animated.View style={[{
             position: 'absolute', width: SW * 0.95, height: SW * 0.95,
             borderRadius: SW * 0.475, top: -SH * 0.12, right: -SW * 0.3,
-            backgroundColor: isGolden ? 'rgba(180,120,30,0.18)' : 'rgba(147,51,234,0.20)',
+            backgroundColor: isRoyal ? 'rgba(214,181,109,0.12)' : isGolden ? 'rgba(180,120,30,0.18)' : 'rgba(147,51,234,0.20)',
           }, nebula1Style]} />
           <Animated.View style={[{
             position: 'absolute', width: SW * 0.8, height: SW * 0.8,
             borderRadius: SW * 0.4, bottom: -SH * 0.02, left: -SW * 0.25,
-            backgroundColor: isGolden ? 'rgba(139,90,20,0.16)' : 'rgba(109,40,217,0.18)',
+            backgroundColor: isRoyal ? 'rgba(123,73,207,0.14)' : isGolden ? 'rgba(139,90,20,0.16)' : 'rgba(109,40,217,0.18)',
           }, nebula2Style]} />
           <Animated.View style={[{
             position: 'absolute', width: SW * 0.55, height: SW * 0.55,
             borderRadius: SW * 0.275, top: SH * 0.28, right: -SW * 0.1,
-            backgroundColor: isGolden ? 'rgba(218,165,32,0.12)' : 'rgba(192,132,252,0.14)',
+            backgroundColor: isRoyal ? 'rgba(244,228,188,0.08)' : isGolden ? 'rgba(218,165,32,0.12)' : 'rgba(192,132,252,0.14)',
           }, nebula3Style]} />
           <Animated.View style={[{
             position: 'absolute', width: SW * 0.65, height: SW * 0.45,
             borderRadius: SW * 0.225, top: SH * 0.15, left: -SW * 0.08,
-            backgroundColor: isGolden ? 'rgba(160,100,20,0.10)' : 'rgba(99,102,241,0.10)',
+            backgroundColor: isRoyal ? 'rgba(71,43,118,0.12)' : isGolden ? 'rgba(160,100,20,0.10)' : 'rgba(99,102,241,0.10)',
           }, nebula4Style]} />
           <Animated.View style={[{
             position: 'absolute', width: SW * 1.2, height: SH * 0.5,
             borderRadius: SW * 0.3, top: SH * 0.2, left: -SW * 0.1,
-            backgroundColor: isGolden ? 'rgba(200,150,50,0.07)' : 'rgba(139,92,246,0.08)',
+            backgroundColor: isRoyal ? 'rgba(214,181,109,0.055)' : isGolden ? 'rgba(200,150,50,0.07)' : 'rgba(139,92,246,0.08)',
           }, nebula5Style]} />
           <Animated.View style={[{
             position: 'absolute', width: SW * 0.85, height: SW * 0.85,
             borderRadius: SW * 0.425,
             top: SH * 0.2, left: (SW - SW * 0.85) / 2,
-            backgroundColor: isGolden ? 'rgba(255,184,0,0.06)' : 'rgba(167,139,250,0.08)',
+            backgroundColor: isRoyal ? 'rgba(244,228,188,0.055)' : isGolden ? 'rgba(255,184,0,0.06)' : 'rgba(167,139,250,0.08)',
           }, centerGlow]} />
         </>
       )}
       {!lowEnd && (
         <>
-          {(isGolden ? STARS_DIM_GOLD : STARS_DIM).map(function (star, i) {
+          {(isRoyal ? STARS_DIM_ROYAL : isGolden ? STARS_DIM_GOLD : STARS_DIM).map(function (star, i) {
             return <CosmicStar key={'sd' + i} star={star} reduced={reduced} />;
           })}
-          {(isGolden ? STARS_MID_GOLD : STARS_MID).map(function (star, i) {
+          {(isRoyal ? STARS_MID_ROYAL : isGolden ? STARS_MID_GOLD : STARS_MID).map(function (star, i) {
             return <CosmicStar key={'sm' + i} star={star} reduced={reduced} />;
           })}
-          {(isGolden ? STARS_BRIGHT_GOLD : STARS_BRIGHT).map(function (star, i) {
+          {(isRoyal ? STARS_BRIGHT_ROYAL : isGolden ? STARS_BRIGHT_GOLD : STARS_BRIGHT).map(function (star, i) {
             return <CosmicStar key={'sb' + i} star={star} reduced={reduced} />;
           })}
         </>
       )}
       <LinearGradient
-        colors={isGolden
+        colors={isRoyal
+          ? ['rgba(5,4,9,0.84)', 'transparent', 'transparent', 'rgba(4,3,7,0.80)']
+          : isGolden
           ? ['rgba(12,8,4,0.80)', 'transparent', 'transparent', 'rgba(10,6,2,0.75)']
           : ['rgba(15,5,36,0.85)', 'transparent', 'transparent', 'rgba(10,4,32,0.80)']}
         locations={[0, 0.18, 0.82, 1]}

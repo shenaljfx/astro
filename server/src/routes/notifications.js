@@ -16,6 +16,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth, optionalAuth } = require('../middleware/auth');
+const { requireSubscription } = require('../middleware/subscription');
 const {
   registerPushToken,
   unregisterPushToken,
@@ -61,7 +62,7 @@ router.post('/unregister', requireAuth, async (req, res) => {
 });
 
 // ─── Get Notification History ─────────────────────────────────
-router.get('/history', requireAuth, async (req, res) => {
+router.get('/history', requireAuth, requireSubscription, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 30;
     const notifications = await getUserNotifications(req.user.uid, limit);
@@ -89,7 +90,7 @@ router.post('/read', requireAuth, async (req, res) => {
 });
 
 // ─── Get Unread Count ────────────────────────────────────────
-router.get('/unread-count', requireAuth, async (req, res) => {
+router.get('/unread-count', requireAuth, requireSubscription, async (req, res) => {
   try {
     const count = await getUnreadCount(req.user.uid);
     res.json({ success: true, count });
@@ -124,7 +125,7 @@ router.put('/preferences', requireAuth, async (req, res) => {
 });
 
 // ─── Get Maraka Apala for Authenticated User ──────────────────
-router.get('/maraka-apala', requireAuth, async (req, res) => {
+router.get('/maraka-apala', requireAuth, requireSubscription, async (req, res) => {
   try {
     const user = await getUser(req.user.uid);
     if (!user?.birthData?.dateTime) {
@@ -159,7 +160,7 @@ router.get('/maraka-apala', requireAuth, async (req, res) => {
 });
 
 // ─── Get Full Maraka Apala (with all periods) ─────────────────
-router.post('/maraka-apala/full', requireAuth, async (req, res) => {
+router.post('/maraka-apala/full', requireAuth, requireSubscription, async (req, res) => {
   try {
     const { birthDate, lat, lng, yearsAhead } = req.body;
 
@@ -192,7 +193,7 @@ router.post('/maraka-apala/full', requireAuth, async (req, res) => {
 });
 
 // ─── Today's Dashboard — Palapa + Rahu Kalaya + Active Apala ──
-router.get('/today', requireAuth, async (req, res) => {
+router.get('/today', requireAuth, requireSubscription, async (req, res) => {
   try {
     const user = await getUser(req.user.uid);
     const today = new Date();

@@ -81,7 +81,7 @@ function getStageMessage(stage, language) {
     coherence: { en: 'Weaving the threads of your destiny…', si: 'ඔබේ දෛවයේ සැඟවුණු රහස් ගලපා බලමින්…' },
     sections: { en: 'Transcribing your cosmic life chapters…', si: 'ඔබේ ජීවිතයේ විවිධ පැතිකඩයන් විශ්ලේෂණය කරමින්…' },
     retrying: { en: 'Refining the astrological alignments…', si: 'ජ්‍යෝතිෂ්‍යමය කරුණු තවදුරටත් තහවුරු කරමින්…' },
-    recovering: { en: 'Re-establishing cosmic connection…', si: 'ග්‍රහ තාරකා සමඟ බැඳීම යළි තහවුරු කරමින්…' },
+    recovering: { en: 'Checking your saved report…', si: 'ඔබේ වාර්තාව සොයමින්…' },
   };
   var m = msgs[stage] || msgs.starting;
   return language === 'si' ? m.si : m.en;
