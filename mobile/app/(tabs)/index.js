@@ -1390,6 +1390,102 @@ export default function HomeScreen() {
     );
   }
 
+  function renderRahuKalayaCard() {
+    if (!data || !data.rahuKalaya) return null;
+    var startText = data.rahuKalaya.startFormatted ? data.rahuKalaya.startFormatted.display : toSLT(data.rahuKalaya.start, t);
+    var endText = data.rahuKalaya.endFormatted ? data.rahuKalaya.endFormatted.display : toSLT(data.rahuKalaya.end, t);
+    var countdownText = getRahuCountdown();
+
+    return (
+      <View style={[s.rahuCard, s.rahuCardToday, rahuActive && s.rahuCardActive]}>
+        <LinearGradient
+          colors={rahuActive
+            ? ['rgba(26,21,10,0.90)', 'rgba(80,20,20,0.25)', 'rgba(26,21,10,0.90)']
+            : ['rgba(26,21,10,0.90)', 'rgba(10,40,25,0.20)', 'rgba(26,21,10,0.90)']
+          }
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        {rahuActive && (
+          <Animated.View style={[s.rahuEdgeGlow, coronaPulseStyle]} />
+        )}
+
+        <View style={s.rahuCardTop}>
+          <View style={s.rahuTitleRow}>
+            <View style={[s.rahuIconCircle, rahuActive ? s.rahuIconCircleActive : s.rahuIconCircleSafe]}>
+              <Animated.View style={rahuActive ? coronaPulseStyle : undefined}>
+                <Ionicons
+                  name={rahuActive ? 'warning' : 'shield-checkmark'}
+                  size={20}
+                  color={rahuActive ? '#FCA5A5' : '#6EE7B7'}
+                />
+              </Animated.View>
+            </View>
+            <Text
+              style={[s.rahuCardTitle, rahuActive && s.rahuCardTitleActive, language === 'si' && s.sinhalaTextFlow]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+            >
+              {rahuActive
+                ? (language === 'si' ? 'දැඩි රාහු කාලය උදාවෙලා' : 'Caution Window')
+                : (language === 'si' ? 'අද දවසේ රාහු කාලය' : 'Caution Window')
+              }
+            </Text>
+          </View>
+          <View style={s.rahuStatusBadge}>
+            <Animated.View style={[s.rahuStatusDot, { backgroundColor: rahuActive ? '#EF4444' : '#34D399' }, rahuActive && coronaPulseStyle]} />
+            <Text
+              style={[s.rahuStatusText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }, language === 'si' && s.sinhalaTextFlow]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.72}
+            >
+              {rahuActive
+                ? (language === 'si' ? 'මේ වෙලාවේ බලපවත්වයි' : 'ACTIVE')
+                : (language === 'si' ? 'රාහු කාලයෙන් නිදහස්' : 'SAFE')
+              }
+            </Text>
+          </View>
+        </View>
+
+        <View style={[s.rahuTimeRow, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.06)' : 'rgba(0,0,0,0.15)' }]}>
+          <View style={s.rahuTimeBlock}>
+            <Text style={[s.rahuTimeLabel, language === 'si' && s.sinhalaTextFlow]}>{language === 'si' ? 'ඇරඹෙන වෙලාව' : 'Starts'}</Text>
+            <Text style={[s.rahuTimeValue, rahuActive && s.rahuTimeValueActive]}>{startText}</Text>
+          </View>
+          <View style={[s.rahuTimeDivider, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.3)' : 'rgba(52,211,153,0.2)' }]} />
+          <View style={s.rahuTimeBlock}>
+            <Text style={[s.rahuTimeLabel, language === 'si' && s.sinhalaTextFlow]}>{language === 'si' ? 'අවසන් වන වෙලාව' : 'Ends'}</Text>
+            <Text style={[s.rahuTimeValue, rahuActive && s.rahuTimeValueActive]}>{endText}</Text>
+          </View>
+        </View>
+
+        {countdownText ? (
+          <View style={[s.rahuCountdownBar, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.12)' : 'rgba(52,211,153,0.08)' }]}>
+            <Ionicons name="time-outline" size={13} color={rahuActive ? '#FCA5A5' : '#6EE7B7'} />
+            <Text style={[s.rahuCountdownText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }, language === 'si' && s.sinhalaTextFlow]}>
+              {rahuActive
+                ? (language === 'si' ? 'තව ' + countdownText + ' කින් අවසන් වේ' : 'Ends in ' + countdownText)
+                : (language === 'si' ? 'තව ' + countdownText + ' කින් ඇරඹේ' : 'Starts in ' + countdownText)
+              }
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={s.rahuExplanationContainer}>
+          <Text style={[s.rahuExplanationText, language === 'si' && s.sinhalaTextFlow]}>
+            {language === 'si'
+              ? 'රාහු කාලය යනු සුබ වැඩ පටන් ගැනීමට නුසුදුසු බව පිළිගැනෙන කෙටි කාල සීමාවකි.'
+              : 'Rahu Kalaya is an inauspicious time window during which starting important new work is generally avoided.'}
+          </Text>
+        </View>
+
+        <View style={[s.rahuCardBorder, { borderColor: rahuActive ? 'rgba(239,68,68,0.25)' : 'rgba(52,211,153,0.15)' }]} />
+      </View>
+    );
+  }
+
   /* ── Cosmic Orrery Hero ── */
   function renderZodiacHero() {
     var activeNakIndex = 0;
@@ -2868,6 +2964,9 @@ export default function HomeScreen() {
               {/* Personal Oracle Hero */}
               {renderOracleHero()}
 
+              {/* Rahu Kalaya */}
+              {renderRahuKalayaCard()}
+
               {/* Your Cosmic Identity */}
               {hasBirthData && chartData && renderBirthSummary()}
               {hasBirthData && chartData && renderChartCard()}
@@ -3186,6 +3285,7 @@ var s = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16,
     borderWidth: 1.5, borderColor: 'rgba(218,165,32,0.18)',
   },
+  rahuCardToday: { marginTop: 0 },
   rahuCardActive: {
     ...boxShadow('#EF4444', { width: 0, height: 4 }, 0.35, 20), elevation: 8,
   },

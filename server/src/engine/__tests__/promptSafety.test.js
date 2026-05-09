@@ -220,6 +220,60 @@ describe('general prompt claim builder', () => {
     expect(speculationClaim.forbidden).toContain('gambling_encouragement');
     expect(speculationClaim.forbidden).toContain('guaranteed_lottery');
   });
+
+  test('attraction claims use weighted evidence and block unsafe romantic assumptions', () => {
+    const payload = buildSectionPromptPayload('attractionProfile', {
+      attractionPower: 6.8,
+      attractionBand: 'warm',
+      attractionConfidence: 'moderate',
+      scoreBreakdown: [
+        { factor: 'venusAppeal', score: 74, weight: 0.24 },
+        { factor: 'romanceCreativity', score: 66, weight: 0.16 },
+      ],
+      supportiveFactors: [{ factor: 'Strong Venus appeal', impact: 'High social grace' }],
+      challengingFactors: [{ factor: 'Saturn restraint', impact: 'Reserved first impression' }],
+      h5SignEnglish: 'Libra',
+      h5Strength: 68,
+      h7SignEnglish: 'Aquarius',
+      h7Strength: 61,
+      darakaraka: { planet: 'Venus', rashi: 'Tula' },
+      venusAnalysis: { house: 5, strength: 72, dignity: 'Own Sign' },
+      marsAnalysis: { house: 3, strength: 58 },
+      venusMarsSameHouse: false,
+      h8Planets: ['Moon'],
+      h8Strength: 52,
+      socialAppeal: { moonStrength: 64, mercuryStrength: 71, jupiterStrength: 55 },
+    });
+
+    const scoreClaim = payload.allowedClaims.find(claim => claim.id === 'attractionProfile.score');
+    const presenceClaim = payload.allowedClaims.find(claim => claim.id === 'attractionProfile.romanticPresence');
+    const partnerClaim = payload.allowedClaims.find(claim => claim.id === 'attractionProfile.partnerType');
+    const intimacyClaim = payload.allowedClaims.find(claim => claim.id === 'attractionProfile.intimacyStyle');
+
+    expect(scoreClaim).toBeTruthy();
+    expect(scoreClaim.allowedDetails.objectiveHumanWorth).toBe(false);
+    expect(presenceClaim.evidence[0].value).toContain('venusAppeal');
+    expect(partnerClaim.allowedDetails.orientationAssumption).toBe(false);
+    expect(partnerClaim.allowedDetails.genderStereotypes).toBe(false);
+    expect(intimacyClaim.allowedDetails.explicitSexualContent).toBe(false);
+    expect(intimacyClaim.allowedDetails.sexualPerformanceClaim).toBe(false);
+  });
+
+  test('attraction policy block exposes explicit safety boundaries', () => {
+    const block = buildSectionPromptPolicyBlock('attractionProfile', {
+      attractionPower: 4.2,
+      scoreBreakdown: [{ factor: 'partnerResponse', score: 41, weight: 0.16 }],
+      h7SignEnglish: 'Cancer',
+      venusHouse: 12,
+      marsHouse: 8,
+      venusMarsSameHouse: false,
+    }).toLowerCase();
+
+    expect(block).toContain('orientation_assumption');
+    expect(block).toContain('explicit_sexual_content');
+    expect(block).toContain('objective_worth_rating');
+    expect(block).toContain('symbolicscoreonly');
+  });
 });
 
 describe('health narrative safety validator', () => {

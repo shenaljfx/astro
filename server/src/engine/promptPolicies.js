@@ -61,7 +61,7 @@ const HEALTH_ORGAN_POLICIES = Object.freeze([
   },
 ]);
 
-const PROMPT_POLICY_VERSION = 'prompt-policy-v2';
+const PROMPT_POLICY_VERSION = 'prompt-policy-v3';
 
 const SECTION_PROMPT_POLICIES = Object.freeze({
   yogaAnalysis: {
@@ -141,7 +141,7 @@ const SECTION_PROMPT_POLICIES = Object.freeze({
     modelTemperature: 0.5,
     maxParagraphs: 8,
     claimTypesAllowed: ['romantic_presence', 'attraction_score', 'partner_type_pattern', 'love_language', 'intimacy_style', 'romantic_growth_pattern'],
-    claimTypesBlocked: ['explicit_sexual_content', 'gender_stereotype', 'insulting_attraction_claim'],
+    claimTypesBlocked: ['explicit_sexual_content', 'sexual_performance_claim', 'orientation_assumption', 'gender_stereotype', 'opposite_gender_assumption', 'insulting_attraction_claim', 'objective_worth_rating'],
     requireEvidenceFor: ['attraction_score', 'partner_type', 'intimacy_style'],
   },
   foreignTravel: {

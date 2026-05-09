@@ -2745,11 +2745,12 @@ export default function ReportScreen() {
           }}
           pointerEvents="auto"
         >
-          <CosmicLoader
+          <ReportLoadingScreen
             progress={{ stage: 'starting', sectionsDone: 0, sectionsTotal: 19 }}
             userName={userName}
             language={reportLang}
-            colors={colors}
+            reduced={reduced}
+            isLowEnd={isLowEnd}
           />
         </View>
       ) : null}

@@ -34,7 +34,7 @@ const { parseSLT } = require('../utils/dateUtils');
 const { parseBirthDateTime, parseBirthDateTimeWithContext } = require('../services/timezone');
 
 const SRI_LANKA_TIME_CONTEXT = { zoneName: 'Asia/Colombo', offsetSeconds: 19800, source: 'traditional_slt' };
-const AI_REPORT_ENGINE_VERSION = 'grahachara-report-engine-v2026-05-08-cache-v1';
+const AI_REPORT_ENGINE_VERSION = 'grahachara-report-engine-v2026-05-09-attraction-v2';
 
 function trackAIUsage(feature, userId, result = {}) {
   const usage = result.usage || result;

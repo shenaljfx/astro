@@ -3278,52 +3278,71 @@ ${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). No
 ║  SECTION: ATTRACTION PROFILE — CONVERGENCE ARCHITECTURE v3   ║
 ╚═══════════════════════════════════════════════════════════════╝
 
-SECTION IDENTITY: Romantic magnetism, attraction power, sexual energy, love evolution.
+SECTION IDENTITY: Romantic presence, social charm, partner response, intimacy style, and love evolution. This is sensitive and highly personal, so stay respectful.
 
 CONVERGENCE RULES FOR THIS SECTION:
-• Attraction power → attractionPower score + Venus strength + lagna lord dignity + planets in 1st = composite attraction
-• Type attracted to → 7th house sign + Darakaraka + 5th house (chemistry) = who they attract
-• Sexual energy → Mars data + Venus-Mars relationship + 8th house (intimacy) = energy profile
-• Love evolution → "First impression → 3 months → commitment" arc using: lagna (first), Moon (3 months), Navamsha (deep commitment)
-• Honest scoring → If attractionPower < 5/10, do NOT reframe as "hidden beauty." State honestly what holds it back.
+• Attraction power → use the weighted scoreBreakdown first, then Venus, 1st/5th/7th houses, Moon/Mercury social appeal, and Rahu/Saturn/Ketu modifiers.
+• First impression → rising sign, planets in 1st, lagna lord strength, and aspects on the 1st.
+• Romantic chemistry → 5th-house sign/lord/strength, 5th-house planets/aspects, Venus condition, and Moon warmth.
+• Partner response → 7th-house sign/lord/strength, Darakaraka, 7th-house planets/aspects, and marriage-affliction cross-reference.
+• Intimacy style → Mars, Venus-Mars relationship, and 8th-house data. Keep it tasteful: pace, trust, warmth, intensity, boundaries. No explicit sexual content.
+• Love evolution → "first impression → after trust grows → commitment" arc using: 1st house (first), Moon/Mercury/Venus (getting close), Navamsha (commitment).
+• Honest scoring → if attractionPower is low, explain it as reserved/selective expression, mixed signals, or delayed warmth. Never insult the person or present the score as objective human worth.
+• Confidence → if attractionConfidence is low or lagna is cusp-sensitive, say appearance/presence details are more approximate and emphasize non-lagna indicators.
 
 ANTI-GENERIC MUTATIONS FOR ATTRACTION:
-✗ BANNED: "You are attractive to others" → ✓ USE: "Attraction power: [X]/10. [Lagna sign] presence + [Venus dignity] + [planet modifications] = [specific attractive qualities + honest limitations]"
-✗ BANNED: "You have a magnetic personality" → ✓ USE: "[Lagna element] gives [specific first impression]. Venus in H[X] at [Y]% adds [specific quality]. Mars in H[Z] brings [specific energy]."
-✗ BANNED: "Love will find you" → ✓ USE: "You're drawn to [7th house sign] energy — someone who [specific Darakaraka description]. Your Venus-Mars [same house/different house] pattern means [specific romantic dynamic]."
+✗ BANNED: "You are attractive to others" → ✓ USE: "Attraction power: [X]/10 ([band]). Strongest evidence: [top scoreBreakdown factor] + [supportive factor]. Main limitation: [challenge if any]."
+✗ BANNED: "The opposite gender sees you as..." → ✓ USE: "People who are romantically receptive to you tend to notice..."
+✗ BANNED: "You have sexual power" → ✓ USE: "Your closeness style is [warm/direct/private/intense], and trust develops through [specific Mars/Venus/8th-house evidence]."
+✗ BANNED: "Love will find you" → ✓ USE: "You respond strongly to [7th/5th-house pattern] energy — someone who [specific Darakaraka/partner-type description]."
 
-Write the attraction and romantic profile based on the technical data below.
+Write the attraction and romantic profile based only on the technical data below. Do not invent height, body parts, explicit sexual behavior, orientation, or a guaranteed partner outcome. Treat the score as symbolic astrology, not a rating of worth.
 
-REMINDER: No astrology jargon. No "7th house", "Venus placement", "Darakaraka." Describe as romantic profile of a real person.
+REMINDER: No astrology jargon in the final answer. Do not say "7th house", "5th house", "Venus placement", "Darakaraka", "Rahu", "Ketu", or "Navamsha" to the user. Translate them into natural relationship language.
 
 Birth details: ${lagnaEn} rising, Moon in ${moonEn}, Nakshatra: ${nakshatraName}
-Gender: ${extraContext?.userGender || 'Unknown'}
+Gender context: ${extraContext?.userGender || 'Unknown'} (do not assume orientation or use stereotypes)
+Age context: ${personAge || 'Unknown'}
 
 ━━━ ATTRACTION PROFILE ENGINE DATA (TECHNICAL — YOU INTERPRET) ━━━
 
-🔥 ATTRACTION POWER SCORE: ${sectionData?.attractionPower || 'N/A'}/10
+ATTRACTION POWER SCORE: ${sectionData?.attractionPower || 'N/A'}/10 (${sectionData?.attractionBand || 'N/A'}; confidence: ${sectionData?.attractionConfidence || 'N/A'})
+Score breakdown: ${JSON.stringify(sectionData?.scoreBreakdown || [])}
+Supportive factors: ${JSON.stringify(sectionData?.supportiveFactors || [])}
+Challenging factors: ${JSON.stringify(sectionData?.challengingFactors || [])}
+Birth-time sensitivity: ${sectionData?.lagnaCuspWarning?.isNearCusp ? `Near cusp (${sectionData.lagnaCuspWarning.degreeInSign}°, alternate ${sectionData.lagnaCuspWarning.alternateSign}) — downgrade rising-sign appearance and first-impression claims.` : 'No major lagna cusp warning'}
 
 RISING SIGN & APPEARANCE: ${sectionData?.lagnaEnglish || 'N/A'} (Element: ${sectionData?.lagnaElement || 'N/A'})
 Planets in 1st House: ${(sectionData?.planetsIn1st || []).join(', ') || 'None'}
-Lagna Lord Dignity: ${sectionData?.lagnaLordDignity || 'N/A'}
+Lagna Lord: ${sectionData?.lagnaLord?.name || 'N/A'}, Strength: ${sectionData?.lagnaLord?.score || 'N/A'}%, Dignity: ${sectionData?.lagnaLord?.dignity || 'N/A'}, House: ${sectionData?.lagnaLord?.house || 'N/A'}
+
+5TH HOUSE (ROMANCE, PLAYFULNESS, CHEMISTRY):
+- 5th House Sign: ${sectionData?.h5SignEnglish || 'N/A'} (${sectionData?.h5Sign || 'N/A'}), Strength: ${sectionData?.h5Strength || 'N/A'}%
+- 5th Lord: ${sectionData?.fifthLord || 'N/A'} in House ${sectionData?.fifthLordHouse || 'N/A'} (strength ${sectionData?.fifthLordStrength || 'N/A'}%)
+- Planets in 5th: ${(sectionData?.h5Planets || []).join(', ') || 'None'}
+- Aspects on 5th: ${(sectionData?.aspectsOn5th || []).join(', ') || 'None'}
 
 7TH HOUSE (PARTNER TYPE):
-- 7th House Sign: ${sectionData?.h7SignEnglish || 'N/A'} (${sectionData?.h7Sign || 'N/A'})
-- 7th Lord: ${sectionData?.seventhLord || 'N/A'} in House ${sectionData?.seventhLordHouse || 'N/A'}
+- 7th House Sign: ${sectionData?.h7SignEnglish || 'N/A'} (${sectionData?.h7Sign || 'N/A'}), Strength: ${sectionData?.h7Strength || 'N/A'}%
+- 7th Lord: ${sectionData?.seventhLord || 'N/A'} in House ${sectionData?.seventhLordHouse || 'N/A'} (strength ${sectionData?.seventhLordStrength || 'N/A'}%)
+- Planets in 7th: ${(sectionData?.h7Planets || []).join(', ') || 'None'}
+- Aspects on 7th: ${(sectionData?.aspectsOn7th || []).join(', ') || 'None'}
 ${sectionData?.darakaraka ? `- Darakaraka (Soul Spouse): ${sectionData.darakaraka.planet} in ${sectionData.darakaraka.rashi || 'N/A'}` : ''}
 
 VENUS (LOVE & BEAUTY):
-- Venus House: ${sectionData?.venusHouse || 'N/A'}, Strength: ${sectionData?.venusStrength || 'N/A'}%, Dignity: ${sectionData?.venusDignity || 'N/A'}
+- Venus House: ${sectionData?.venusHouse || 'N/A'}, Strength: ${sectionData?.venusStrength || 'N/A'}%, Dignity: ${sectionData?.venusDignity || 'N/A'}, Combust: ${sectionData?.venusAnalysis?.isCombust ? 'YES' : 'No'}, Retrograde: ${sectionData?.venusAnalysis?.isRetrograde ? 'YES' : 'No'}
 - Venus Element: ${sectionData?.venusElement || 'N/A'}, Rashi: ${sectionData?.venusRashi || 'N/A'}
 
-MARS (SEXUAL ENERGY):
-- Mars House: ${sectionData?.marsHouse || 'N/A'}, Strength: ${sectionData?.marsStrength || 'N/A'}%
+MARS (PASSION, ASSERTIVENESS, PACE OF CLOSENESS):
+- Mars House: ${sectionData?.marsHouse || 'N/A'}, Strength: ${sectionData?.marsStrength || 'N/A'}%, Dignity: ${sectionData?.marsAnalysis?.dignity || 'N/A'}
 - Mars Element: ${sectionData?.marsElement || 'N/A'}, Rashi: ${sectionData?.marsRashi || 'N/A'}
 - Venus-Mars Same House: ${sectionData?.venusMarsSameHouse ? 'YES' : 'No'}
 
-8TH HOUSE (INTIMACY): Planets: ${(sectionData?.h8Planets || []).join(', ') || 'None'}
+8TH HOUSE (TRUST, VULNERABILITY, PRIVATE CLOSENESS): Strength: ${sectionData?.h8Strength || 'N/A'}%, Planets: ${(sectionData?.h8Planets || []).join(', ') || 'None'}
 
 MOON SIGN: ${sectionData?.moonSign || 'N/A'} (Element: ${sectionData?.moonElement || 'N/A'}) — emotional depth in relationships
+SOCIAL APPEAL: ${sectionData?.socialAppeal ? `Moon ${sectionData.socialAppeal.moonStrength || 'N/A'}%, Mercury ${sectionData.socialAppeal.mercuryStrength || 'N/A'}%, Jupiter ${sectionData.socialAppeal.jupiterStrength || 'N/A'}%, 11th strength ${sectionData.socialAppeal.eleventhHouseStrength || 'N/A'}%` : 'N/A'}
+MAGNETIC MODIFIERS: ${JSON.stringify(sectionData?.magneticModifiers || {})}
 NAVAMSHA LAGNA: ${sectionData?.navamshaLagnaEnglish || 'N/A'} — how they change after deep commitment
 
 CROSS-REFERENCE:
@@ -3332,17 +3351,17 @@ CROSS-REFERENCE:
 - Jealousy level: ${allSections?.surpriseInsights?.loveLanguage?.jealousy?.level || 'N/A'}
 
 OUTPUT STRUCTURE (dedicate a FULL paragraph to each):
-1. 🔥 **Attraction Power Score reveal** — dramatic reveal of the score. If 8+, celebrate it boldly. If 5-7, state it as average and explain why. If below 5, be HONEST — state the score directly and explain what holds it back. Do NOT reframe a low score as a hidden strength.
-2. **How the opposite gender sees you** — paint a vivid picture of the first impression. Make it feel like a movie scene.
-3. **Your romantic modifiers** — what amplifies/changes the base attraction (planet modifiers).
-4. **Your type** — who you're drawn to and WHY. From 7th house sign and Darakaraka.
-5. **Love language** — how you express and receive love. Be specific, not generic.
-6. **Sexual energy profile** — tasteful but honest. The Mars element and Venus-Mars relationship tell the story.
-7. **The reveal journey** — First impression → 3 months → after commitment. This is the MOST shareable paragraph. "At first they see... but after 3 months they discover... and after full commitment, the real you emerges as..."
-8. **Your ultimate romantic superpower** — the one thing about your romantic energy that nobody else has.
+1. **Attraction Power Score reveal** — state the score, band, confidence, strongest evidence, and main limitation. Use respectful language.
+2. **How romantically receptive people first read you** — first impression from rising/1st-house evidence, not gender stereotypes.
+3. **What grows after conversation** — Moon/Mercury/Jupiter/social appeal: humor, warmth, emotional accessibility, communication.
+4. **Romantic chemistry pattern** — use 5th-house evidence and Venus condition for playfulness, flirtation, softness, glamour, or restraint.
+5. **Who you tend to draw in and respond to** — from 7th-house sign, 7th lord, Darakaraka, and partner-response score.
+6. **Closeness and intimacy style** — tasteful, broad, non-explicit. Talk about pace, trust, privacy, intensity, boundaries, and vulnerability.
+7. **The reveal journey** — first impression → after trust grows → commitment. Use the actual evidence trail; do not make unsupported promises.
+8. **Practical romantic edge** — one grounded strength they can lean into and one growth edge to improve their attraction signal.
 
-Write AT LEAST 10-12 detailed paragraphs. This section should make the reader's heart race.
-${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish.' : 'Write in bold, engaging English.'}`,
+Write 8-10 detailed paragraphs. Make it vivid and emotionally engaging, but calibrated to the score and evidence.
+${language === 'si' ? 'MUST write ENTIRELY in pure Sinhala (සිංහල). Not a single English or Tamil word.' : language === 'ta' ? 'Write in Tamil.' : language === 'singlish' ? 'Write in Singlish.' : 'Write in grounded, engaging English.'}`,
     },
   };
 

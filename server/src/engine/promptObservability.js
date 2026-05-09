@@ -1,8 +1,8 @@
 const { PROMPT_POLICY_VERSION, TIMING_PROMPT_POLICY } = require('./promptPolicies');
 
-const PROMPT_VERSION = 'grahachara-report-prompt-v7';
+const PROMPT_VERSION = 'grahachara-report-prompt-v8';
 const PROMPT_OBSERVABILITY_VERSION = 'prompt-observability-v1';
-const CLAIM_BUILDER_VERSION = 'prompt-claim-builder-v3';
+const CLAIM_BUILDER_VERSION = 'prompt-claim-builder-v4';
 
 function normalizeAnalyticsTerm(value = '') {
   return String(value || '')

@@ -850,24 +850,58 @@ function buildPhysicalProfileClaims(sectionData = {}) {
 function buildAttractionClaims(sectionData = {}, allSections = {}) {
   const claims = [];
   if (hasValue(sectionData.attractionPower)) {
-    claims.push(makeSectionClaim('attractionProfile', 'attraction_score', `Attraction power score: ${sectionData.attractionPower}/10. Explain respectfully and never as objective human worth.`, {
+    claims.push(makeSectionClaim('attractionProfile', 'attraction_score', `Attraction power score: ${sectionData.attractionPower}/10 (${sectionData.attractionBand || 'unbanded'}). Explain respectfully and never as objective human worth.`, {
       id: 'attractionProfile.score',
       confidence: scoreConfidence(Number(sectionData.attractionPower) * 10, 75, 50),
-      evidence: [{ path: 'sections.attractionProfile.attractionPower', value: sectionData.attractionPower }],
+      allowedDetails: {
+        objectiveHumanWorth: false,
+        insultingLowScore: false,
+        symbolicScoreOnly: true,
+      },
+      evidence: [{ path: 'sections.attractionProfile.attractionPower|scoreBreakdown', value: compactValue({ score: sectionData.attractionPower, band: sectionData.attractionBand, confidence: sectionData.attractionConfidence, breakdown: sectionData.scoreBreakdown }) }],
+    }));
+  }
+  if (sectionData.scoreBreakdown || sectionData.supportiveFactors || sectionData.challengingFactors) {
+    claims.push(makeSectionClaim('attractionProfile', 'romantic_presence', `Romantic presence must be derived from the weighted score breakdown, supportive factors, and challenging factors.`, {
+      id: 'attractionProfile.romanticPresence',
+      confidence: sectionData.attractionConfidence === 'low' ? 'weak' : 'moderate',
+      allowedDetails: {
+        useScoreBreakdown: true,
+        mentionConfidenceWhenLow: true,
+        physicalCertainty: false,
+      },
+      evidence: [{ path: 'sections.attractionProfile.scoreBreakdown|supportiveFactors|challengingFactors', value: compactValue({ breakdown: sectionData.scoreBreakdown, supportive: sectionData.supportiveFactors, challenging: sectionData.challengingFactors }) }],
     }));
   }
   if (sectionData.h7SignEnglish || sectionData.darakaraka) {
     claims.push(makeSectionClaim('attractionProfile', 'partner_type_pattern', `Partner type pattern exists. Use partner-aware language and avoid gender stereotypes.`, {
       id: 'attractionProfile.partnerType',
       confidence: 'moderate',
-      evidence: [{ path: 'sections.attractionProfile.h7SignEnglish|darakaraka', value: compactValue({ h7Sign: sectionData.h7SignEnglish, darakaraka: sectionData.darakaraka }) }],
+      allowedDetails: {
+        genderStereotypes: false,
+        orientationAssumption: false,
+        guaranteedPartnerOutcome: false,
+      },
+      evidence: [{ path: 'sections.attractionProfile.h5|h7|darakaraka', value: compactValue({ h5Sign: sectionData.h5SignEnglish, h5Strength: sectionData.h5Strength, h7Sign: sectionData.h7SignEnglish, h7Strength: sectionData.h7Strength, darakaraka: sectionData.darakaraka }) }],
     }));
   }
   if (sectionData.marsHouse || sectionData.venusHouse || sectionData.venusMarsSameHouse !== undefined) {
     claims.push(makeSectionClaim('attractionProfile', 'intimacy_style', `Intimacy style can be discussed tastefully and broadly only. No explicit sexual content.`, {
       id: 'attractionProfile.intimacyStyle',
       confidence: 'weak',
-      evidence: [{ path: 'sections.attractionProfile.venus|mars', value: compactValue({ venusHouse: sectionData.venusHouse, marsHouse: sectionData.marsHouse, sameHouse: sectionData.venusMarsSameHouse }) }],
+      allowedDetails: {
+        explicitSexualContent: false,
+        sexualPerformanceClaim: false,
+        paceTrustBoundariesOnly: true,
+      },
+      evidence: [{ path: 'sections.attractionProfile.venus|mars|h8', value: compactValue({ venus: sectionData.venusAnalysis || { house: sectionData.venusHouse }, mars: sectionData.marsAnalysis || { house: sectionData.marsHouse }, sameHouse: sectionData.venusMarsSameHouse, h8Planets: sectionData.h8Planets, h8Strength: sectionData.h8Strength }) }],
+    }));
+  }
+  if (sectionData.socialAppeal) {
+    claims.push(makeSectionClaim('attractionProfile', 'love_language', `Social and emotional appeal data may be used for how warmth, humor, and communication develop after first impression.`, {
+      id: 'attractionProfile.socialAppeal',
+      confidence: 'engine_supplied',
+      evidence: [{ path: 'sections.attractionProfile.socialAppeal', value: compactValue(sectionData.socialAppeal) }],
     }));
   }
   if (allSections?.surpriseInsights?.loveLanguage) {

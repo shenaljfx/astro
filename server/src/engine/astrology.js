@@ -9577,9 +9577,21 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const attractionProfile = (() => {
     const venusH = getPlanetHouse('Venus');
     const marsH = getPlanetHouse('Mars');
+    const moonH = getPlanetHouse('Moon');
+    const mercuryH = getPlanetHouse('Mercury');
+    const jupiterH = getPlanetHouse('Jupiter');
+    const saturnH = getPlanetHouse('Saturn');
+    const rahuH = getPlanetHouse('Rahu');
+    const ketuH = getPlanetHouse('Ketu');
+    const h5Data = analyzeHouse(5, houses, planets, drishtis, lagnaName, ashtakavarga, bhavaChalit);
     const h7Data = analyzeHouse(7, houses, planets, drishtis, lagnaName, ashtakavarga, bhavaChalit);
+    const h11Data = analyzeHouse(11, houses, planets, drishtis, lagnaName, ashtakavarga, bhavaChalit);
     const h7Rashi = h7Data?.rashi || '';
     const h7RashiEn = h7Data?.rashiEnglish || '';
+    const h5Rashi = h5Data?.rashi || '';
+    const h5RashiEn = h5Data?.rashiEnglish || '';
+    const lord5 = getHouseLord(5);
+    const lord5H = getPlanetHouse(lord5);
     const lord7 = getHouseLord(7);
     const lord7H = getPlanetHouse(lord7);
     const h8Data = analyzeHouse(8, houses, planets, drishtis, lagnaName, ashtakavarga, bhavaChalit);
@@ -9591,41 +9603,184 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     const marsRashi = planets.mars?.rashi || planets.Mars?.rashi || '';
     const marsElement = Object.entries(ELEMENTS).find(([, signs]) => signs.includes(marsRashi))?.[0] || 'mixed';
     const venusMarsSameHouse = venusH === marsH;
-    const venusDignity = planetStrengths.venus?.dignityLevel || '';
+    const venusStrengthMeta = planetStrengths.venus || {};
+    const marsStrengthMeta = planetStrengths.mars || {};
+    const moonStrengthMeta = planetStrengths.moon || {};
+    const mercuryStrengthMeta = planetStrengths.mercury || {};
+    const venusDignity = venusStrengthMeta.dignityLevel || '';
     const venusScoreAP = getHealthScore('venus');
+    const moonScoreAP = getHealthScore('moon');
+    const mercuryScoreAP = getHealthScore('mercury');
+    const jupiterScoreAP = getHealthScore('jupiter');
+    const lord5Score = getHealthScore(lord5.toLowerCase());
+    const lord7Score = getHealthScore(lord7.toLowerCase());
     const lagnaLordName2 = lagna.rashi.lord;
     const lagnaLordDignity = planetStrengths[lagnaLordName2.toLowerCase()]?.dignityLevel || '';
+    const lagnaLordScore = getHealthScore(lagnaLordName2.toLowerCase());
     const navLagnaSign = navamsha?.lagna?.rashi?.name || '';
     const navLagnaEn = navamsha?.lagna?.rashi?.english || '';
 
-    // Attraction power score (pure math)
-    let attractPower = 5;
-    if (venusDignity === 'Exalted') attractPower += 3;
-    else if (venusDignity === 'Own Sign' || venusDignity === 'Moolatrikona') attractPower += 2;
-    else if (venusDignity === 'Friendly') attractPower += 1;
-    else if (venusDignity === 'Debilitated') attractPower -= 2;
-    if (venusH === 1) attractPower += 1.5;
-    if (venusH === 7) attractPower += 1;
-    if (venusMarsSameHouse) attractPower += 1;
-    if (['Tula', 'Vrishabha'].includes(lagnaName)) attractPower += 0.5;
-    if (h1?.planetsInHouse?.includes('Venus')) attractPower += 1;
-    if (lagnaLordDignity === 'Exalted') attractPower += 0.5;
-    attractPower = Math.max(1, Math.min(10, Math.round(attractPower)));
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, Number.isFinite(value) ? value : 50));
+    const aspectNames = (aspectList) => (aspectList || []).map(asp => asp.planet || asp).filter(Boolean);
+    const aspectsOn1st = aspectNames(h1?.aspectingPlanets);
+    const aspectsOn5th = aspectNames(h5Data?.aspectingPlanets);
+    const aspectsOn7th = aspectNames(h7Data?.aspectingPlanets);
+    const beneficAspectNames = (names) => names.filter(name => {
+      const nature = getFunctionalNature(lagnaName, name);
+      return nature === 'benefic' || nature === 'yogaKaraka' || name === 'Jupiter' || name === 'Venus';
+    });
+    const challengingAspectNames = (names) => names.filter(name => {
+      const nature = getFunctionalNature(lagnaName, name);
+      return nature === 'malefic' || ['Saturn', 'Rahu', 'Ketu'].includes(name);
+    });
+    const dignityDelta = (dignity) => {
+      const text = String(dignity || '').toLowerCase();
+      if (text.includes('exalted')) return 16;
+      if (text.includes('moolatrikona') || text.includes('own sign')) return 12;
+      if (text.includes('friend')) return 6;
+      if (text.includes('enemy')) return -7;
+      if (text.includes('debilitated')) return -16;
+      return 0;
+    };
+    const houseRomanceDelta = (house, planetName) => {
+      if (!house) return 0;
+      if (planetName === 'Venus') {
+        if ([1, 5, 7].includes(house)) return 12;
+        if ([2, 4, 9, 10, 11].includes(house)) return 7;
+        if ([6, 8, 12].includes(house)) return -8;
+      }
+      if (planetName === 'Mars') {
+        if ([1, 3, 5, 7, 10, 11].includes(house)) return 10;
+        if (house === 8) return 6;
+        if ([6, 12].includes(house)) return -6;
+      }
+      return 0;
+    };
+    const planetListDelta = (planetList) => {
+      let total = 0;
+      for (const planetName of planetList || []) {
+        if (['Venus', 'Moon', 'Mercury', 'Jupiter'].includes(planetName)) total += 7;
+        else if (planetName === 'Rahu') total += 4;
+        else if (planetName === 'Mars') total += 3;
+        else if (planetName === 'Saturn') total -= 5;
+        else if (planetName === 'Ketu') total -= 6;
+      }
+      return total;
+    };
+    const h1Planets = h1?.planetsInHouse || [];
+    const h5Planets = h5Data?.planetsInHouse || [];
+    const h7Planets = h7Data?.planetsInHouse || [];
+    const beneficsOn1st = beneficAspectNames(aspectsOn1st);
+    const maleficsOn1st = challengingAspectNames(aspectsOn1st);
+    const beneficsOn5th = beneficAspectNames(aspectsOn5th);
+    const maleficsOn5th = challengingAspectNames(aspectsOn5th);
+    const beneficsOn7th = beneficAspectNames(aspectsOn7th);
+    const maleficsOn7th = challengingAspectNames(aspectsOn7th);
+
+    const firstImpressionScore = clamp(
+      (h1?.strengthScore ?? 50) * 0.45 + lagnaLordScore * 0.35 + 50 * 0.20 +
+      dignityDelta(lagnaLordDignity) + planetListDelta(h1Planets) + beneficsOn1st.length * 4 - maleficsOn1st.length * 4,
+      0, 100
+    );
+    const venusAppealScore = clamp(
+      venusScoreAP + dignityDelta(venusDignity) + houseRomanceDelta(venusH, 'Venus') +
+      (venusStrengthMeta.isCombust ? -10 : 0) + (venusStrengthMeta.isRetrograde ? -3 : 0) + (venusStrengthMeta.isVargottama ? 6 : 0),
+      0, 100
+    );
+    const romanceCreativityScore = clamp(
+      (h5Data?.strengthScore ?? 50) * 0.55 + lord5Score * 0.25 + 50 * 0.20 +
+      planetListDelta(h5Planets) + beneficsOn5th.length * 4 - maleficsOn5th.length * 4,
+      0, 100
+    );
+    const partnerResponseScore = clamp(
+      (h7Data?.strengthScore ?? 50) * 0.55 + lord7Score * 0.25 + 50 * 0.20 +
+      planetListDelta(h7Planets) + beneficsOn7th.length * 4 - maleficsOn7th.length * 4,
+      0, 100
+    );
+    const emotionalSocialScore = clamp(
+      moonScoreAP * 0.30 + mercuryScoreAP * 0.28 + jupiterScoreAP * 0.17 + (h11Data?.strengthScore ?? 50) * 0.25 +
+      dignityDelta(moonStrengthMeta.dignityLevel) * 0.35 + dignityDelta(mercuryStrengthMeta.dignityLevel) * 0.25,
+      0, 100
+    );
+    const passionPaceScore = clamp(
+      marsScore * 0.55 + 50 * 0.20 + (h8Data?.strengthScore ?? 50) * 0.10 +
+      dignityDelta(marsStrengthMeta.dignityLevel) * 0.45 + houseRomanceDelta(marsH, 'Mars') + (venusMarsSameHouse ? 8 : 0),
+      0, 100
+    );
+    const magnetismScore = clamp(
+      50 + ([1, 5, 7, 8, 11].includes(rahuH) ? 14 : [6, 12].includes(rahuH) ? -6 : 0) +
+      (venusH && venusH === rahuH ? 8 : 0) + (marsH && marsH === rahuH ? 5 : 0) +
+      ([1, 5, 7].includes(saturnH) ? -7 : 0) + ([1, 5, 7].includes(ketuH) ? -8 : 0) +
+      beneficsOn1st.length * 3 + beneficsOn5th.length * 2 + beneficsOn7th.length * 2 -
+      maleficsOn1st.length * 3 - maleficsOn5th.length * 2 - maleficsOn7th.length * 2,
+      0, 100
+    );
+    const scoreBreakdown = [
+      { factor: 'firstImpression', score: Math.round(firstImpressionScore), weight: 0.18, evidence: { lagna: lagna.rashi.english, planetsIn1st: h1Planets, lagnaLord: lagnaLordName2, lagnaLordScore } },
+      { factor: 'venusAppeal', score: Math.round(venusAppealScore), weight: 0.24, evidence: { house: venusH, strength: venusScoreAP, dignity: venusDignity, combust: !!venusStrengthMeta.isCombust, retrograde: !!venusStrengthMeta.isRetrograde } },
+      { factor: 'romanceCreativity', score: Math.round(romanceCreativityScore), weight: 0.16, evidence: { fifthHouseStrength: h5Data?.strengthScore, fifthLord: lord5, fifthLordHouse: lord5H, planetsIn5th: h5Planets } },
+      { factor: 'partnerResponse', score: Math.round(partnerResponseScore), weight: 0.16, evidence: { seventhHouseStrength: h7Data?.strengthScore, seventhLord: lord7, seventhLordHouse: lord7H, planetsIn7th: h7Planets } },
+      { factor: 'emotionalSocialAppeal', score: Math.round(emotionalSocialScore), weight: 0.13, evidence: { moonStrength: moonScoreAP, mercuryStrength: mercuryScoreAP, jupiterStrength: jupiterScoreAP, eleventhHouseStrength: h11Data?.strengthScore } },
+      { factor: 'passionPace', score: Math.round(passionPaceScore), weight: 0.08, evidence: { marsHouse: marsH, marsStrength: marsScore, venusMarsSameHouse, eighthHouseStrength: h8Data?.strengthScore } },
+      { factor: 'magneticIntensity', score: Math.round(magnetismScore), weight: 0.05, evidence: { rahuHouse: rahuH, ketuHouse: ketuH, saturnHouse: saturnH } },
+    ];
+    const totalWeight = scoreBreakdown.reduce((sum, item) => sum + item.weight, 0);
+    const attractionPowerRaw = scoreBreakdown.reduce((sum, item) => sum + item.score * item.weight, 0) / totalWeight / 10;
+    const attractionPower = Math.max(1, Math.min(10, Number(attractionPowerRaw.toFixed(1))));
+    const attractionBand = attractionPower >= 8 ? 'strong' : attractionPower >= 6 ? 'warm' : attractionPower >= 4 ? 'selective' : 'reserved';
+    const attractionConfidence = lagnaCuspWarning?.isNearCusp ? 'low' : 'moderate';
+    const supportiveFactors = [];
+    const challengingFactors = [];
+    const addSupport = (condition, factor, impact, evidence) => { if (condition) supportiveFactors.push({ factor, impact, evidence }); };
+    const addChallenge = (condition, factor, impact, evidence) => { if (condition) challengingFactors.push({ factor, impact, evidence }); };
+    addSupport(venusAppealScore >= 70, 'Strong Venus appeal', 'High social grace and aesthetic pull', { venusScore: venusScoreAP, venusDignity, venusHouse: venusH });
+    addSupport([1, 5, 7].includes(venusH), 'Venus in an expressive relationship house', 'Attraction is easier for others to notice', { venusHouse: venusH });
+    addSupport((h5Data?.strengthScore || 0) >= 65, 'Strong 5th-house romance signature', 'Playful charm and flirtation come naturally', { fifthHouseStrength: h5Data?.strengthScore });
+    addSupport((h7Data?.strengthScore || 0) >= 65, 'Responsive partnership axis', 'Others tend to mirror interest back clearly', { seventhHouseStrength: h7Data?.strengthScore });
+    addSupport(beneficsOn1st.length + beneficsOn5th.length + beneficsOn7th.length >= 2, 'Benefic support to attraction houses', 'Softens first impression and romantic response', { beneficsOn1st, beneficsOn5th, beneficsOn7th });
+    addSupport([1, 5, 7, 8, 11].includes(rahuH), 'Rahu magnetic intensity', 'Unusual or memorable presence', { rahuHouse: rahuH });
+    addChallenge(venusStrengthMeta.isCombust, 'Combust Venus', 'Love style may be harder for others to read at first', { venusHouse: venusH, combustDistance: venusStrengthMeta.combustDistance });
+    addChallenge(String(venusDignity).toLowerCase().includes('debilitated'), 'Debilitated Venus', 'Romantic ease needs conscious cultivation', { venusDignity });
+    addChallenge((h5Data?.strengthScore || 50) < 40, 'Challenged 5th-house romance signature', 'Playfulness and flirting can feel inconsistent', { fifthHouseStrength: h5Data?.strengthScore });
+    addChallenge((h7Data?.strengthScore || 50) < 40, 'Challenged 7th-house response signature', 'Mutual interest may take time to stabilize', { seventhHouseStrength: h7Data?.strengthScore });
+    addChallenge([1, 5, 7].includes(saturnH), 'Saturn restraint on attraction axis', 'Reserved or serious first impression', { saturnHouse: saturnH });
+    addChallenge([1, 5, 7].includes(ketuH), 'Ketu detachment on attraction axis', 'Selective, private, or hard-to-read romantic signal', { ketuHouse: ketuH });
+    addChallenge(maleficsOn1st.length + maleficsOn5th.length + maleficsOn7th.length >= 2, 'Multiple challenging aspects to attraction houses', 'Magnetism may come with intensity or mixed signals', { maleficsOn1st, maleficsOn5th, maleficsOn7th });
 
     return {
       lagnaSign: lagnaName, lagnaEnglish: lagna.rashi.english, lagnaElement,
       planetsIn1st: h1?.planetsInHouse || [],
+      lagnaLord: { name: lagnaLordName2, score: lagnaLordScore, dignity: lagnaLordDignity, house: getPlanetHouse(lagnaLordName2) },
       lagnaLordDignity,
       moonSign: moonRashi.name, moonElement,
       navamshaLagna: navLagnaSign, navamshaLagnaEnglish: navLagnaEn,
       venusHouse: venusH, venusStrength: venusScoreAP, venusDignity, venusElement, venusRashi,
+      venusAnalysis: { house: venusH, strength: venusScoreAP, dignity: venusDignity, element: venusElement, rashi: venusRashi, isCombust: !!venusStrengthMeta.isCombust, isRetrograde: !!venusStrengthMeta.isRetrograde, isVargottama: !!venusStrengthMeta.isVargottama },
       marsHouse: marsH, marsStrength: marsScore, marsElement, marsRashi,
+      marsAnalysis: { house: marsH, strength: marsScore, dignity: marsStrengthMeta.dignityLevel || 'Neutral', element: marsElement, rashi: marsRashi, isRetrograde: !!marsStrengthMeta.isRetrograde },
+      socialAppeal: { moonHouse: moonH, moonStrength: moonScoreAP, mercuryHouse: mercuryH, mercuryStrength: mercuryScoreAP, jupiterHouse: jupiterH, jupiterStrength: jupiterScoreAP, eleventhHouseStrength: h11Data?.strengthScore || null },
       venusMarsSameHouse,
+      h5Sign: h5Rashi, h5SignEnglish: h5RashiEn,
+      fifthLord: lord5, fifthLordHouse: lord5H, fifthLordStrength: lord5Score,
+      h5Strength: h5Data?.strengthScore || null,
+      h5Planets: h5Planets,
+      aspectsOn5th,
       h7Sign: h7Rashi, h7SignEnglish: h7RashiEn,
-      seventhLord: lord7, seventhLordHouse: lord7H,
-      h8Planets,
+      seventhLord: lord7, seventhLordHouse: lord7H, seventhLordStrength: lord7Score,
+      h7Strength: h7Data?.strengthScore || null,
+      h7Planets,
+      aspectsOn7th,
+      h8Planets, h8Strength: h8Data?.strengthScore || null,
+      magneticModifiers: { rahuHouse: rahuH, ketuHouse: ketuH, saturnHouse: saturnH, beneficsOn1st, maleficsOn1st, beneficsOn5th, maleficsOn5th, beneficsOn7th, maleficsOn7th },
       darakaraka: dk ? { planet: dk.planet, rashi: dk.rashi } : null,
-      attractionPower: attractPower,
+      attractionPower,
+      attractionPowerRaw: Number(attractionPowerRaw.toFixed(2)),
+      attractionBand,
+      attractionConfidence,
+      scoreBreakdown,
+      supportiveFactors,
+      challengingFactors,
+      lagnaCuspWarning,
     };
   })();
   // ══════════════════════════════════════════════════════════════
@@ -10065,6 +10220,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
               spiritual:       'spiritual',
               surpriseInsights:'surpriseInsights',
               physicalProfile: 'physicalProfile',
+              attractionProfile: 'attractionProfile',
             };
 
             let mergeCount = 0;
