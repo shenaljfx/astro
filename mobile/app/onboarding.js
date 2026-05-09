@@ -1215,6 +1215,7 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
   var [restoring, setRestoring] = useState(false);
   var [payError, setPayError] = useState('');
   var [agreed, setAgreed] = useState(false);
+  var [agreementError, setAgreementError] = useState('');
   var { activateSubscription, restorePurchases } = useAuth();
   // usePricingForBirth syncs the global pricing context to the user's
   // birth-city country. Birth city always wins over device locale.
@@ -1251,7 +1252,25 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
     { icon: 'star-outline', text: T.subFeature6, color: '#FFD666' },
   ];
 
+  var agreementMessage = lang === 'si'
+    ? 'කරුණාකර නියමයන් සහ කොන්දේසි පිළිගෙන ඉදිරියට යන්න.'
+    : 'Please accept the Terms & Conditions to continue.';
+
+  var toggleAgreement = function () {
+    var nextAgreed = !agreed;
+    setAgreed(nextAgreed);
+    if (nextAgreed) setAgreementError('');
+  };
+
+  var ensureAgreement = function () {
+    if (agreed) return true;
+    setPayError('');
+    setAgreementError(agreementMessage);
+    return false;
+  };
+
   var handleSub = async function () {
+    if (!ensureAgreement()) return;
     setLoading(true);
     setPayError('');
     try {
@@ -1268,6 +1287,7 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
   };
 
   var handleRestore = async function () {
+    if (!ensureAgreement()) return;
     setRestoring(true);
     setPayError('');
     try {
@@ -1284,6 +1304,8 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
 
   var resp = useResponsive();
   var isSmall = resp.isSmall;
+  var checkboxBorderColor = agreed ? '#FF8C00' : agreementError ? '#FCA5A5' : 'rgba(255,255,255,0.3)';
+  var checkboxBgColor = agreed ? '#FF8C00' : agreementError ? 'rgba(127,29,29,0.18)' : 'rgba(0,0,0,0.2)';
 
   // ── Compact, scrollable paywall ───────────────────────────────
   // Removed (caused overlap on real devices):
@@ -1379,14 +1401,14 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
 
       {/* ═══ TERMS ═══ */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', paddingHorizontal: 8 }}>
-        <TouchableOpacity onPress={function () { setAgreed(!agreed); }} activeOpacity={0.7} hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}>
-          <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: agreed ? '#FF8C00' : 'rgba(255,255,255,0.3)', backgroundColor: agreed ? '#FF8C00' : 'rgba(0,0,0,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+        <TouchableOpacity onPress={toggleAgreement} activeOpacity={0.7} hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}>
+          <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: checkboxBorderColor, backgroundColor: checkboxBgColor, alignItems: 'center', justifyContent: 'center' }}>
             {agreed ? <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(100)}><Ionicons name="checkmark" size={16} color="#FFF" /></Animated.View> : null}
           </View>
         </TouchableOpacity>
         <Text
-          style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, lineHeight: 18, flexShrink: 1 }}
-          onPress={function () { setAgreed(!agreed); }}
+          style={{ color: agreementError ? '#FECACA' : 'rgba(255,255,255,0.75)', fontSize: 12, lineHeight: 18, flexShrink: 1 }}
+          onPress={toggleAgreement}
         >
           {lang === 'si' ? 'මම ' : 'I agree to the '}
           <Text
@@ -1398,6 +1420,12 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
           {lang === 'si' ? ' එකඟ වෙමි' : ''}
         </Text>
       </View>
+      {agreementError ? (
+        <Animated.View entering={FadeInDown.duration(220)} exiting={FadeOut.duration(150)} style={ss.agreementErrorWrap}>
+          <Ionicons name="alert-circle-outline" size={14} color="#FCA5A5" />
+          <Text style={ss.agreementErrorText}>{agreementError}</Text>
+        </Animated.View>
+      ) : null}
 
       {/* ═══ ERROR ═══ */}
       {payError ? (
@@ -1414,7 +1442,6 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
           onPress={handleSub}
           loading={loading}
           icon="sparkles"
-          disabled={!agreed}
         />
       </Animated.View>
 
@@ -1454,6 +1481,8 @@ var ss = StyleSheet.create({
   priceLabel: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.5)' },
   priceAmount: { fontSize: 38, fontWeight: '900', color: '#FFB800', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12) },
   pricePer: { fontSize: 14, color: 'rgba(255,255,255,0.5)', marginLeft: 2 },
+  agreementErrorWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: -4, marginBottom: 10, backgroundColor: 'rgba(127,29,29,0.14)', borderRadius: 12, paddingVertical: 9, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(248,113,113,0.22)' },
+  agreementErrorText: { color: '#FCA5A5', fontSize: 12.5, lineHeight: 17, fontWeight: '700', flex: 1 },
   payErrorWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8, backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(239,68,68,0.20)' },
   payErrorText: { color: '#FCA5A5', fontSize: 13, fontWeight: '600', flex: 1 },
 });
@@ -1800,23 +1829,6 @@ var ZODIAC_SYMBOLS = {
 
 var ZODIAC_IMAGE_MAP = ZODIAC_IMG_MAP;
 
-var ZODIAC_ELEMENTS = {
-  'Mesha': 'fire', 'Vrishabha': 'earth', 'Mithuna': 'air', 'Kataka': 'water',
-  'Simha': 'fire', 'Kanya': 'earth', 'Tula': 'air', 'Vrischika': 'water',
-  'Dhanus': 'fire', 'Makara': 'earth', 'Kumbha': 'air', 'Meena': 'water',
-  'Aries': 'fire', 'Taurus': 'earth', 'Gemini': 'air', 'Cancer': 'water',
-  'Leo': 'fire', 'Virgo': 'earth', 'Libra': 'air', 'Scorpio': 'water',
-  'Sagittarius': 'fire', 'Capricorn': 'earth', 'Aquarius': 'air', 'Pisces': 'water',
-};
-
-var ELEMENT_COLORS = {
-  fire: ['#FF6B35', '#FF4500', 'rgba(255,107,53,0.12)'],
-  earth: ['#4CAF50', '#2E7D32', 'rgba(76,175,80,0.12)'],
-  air: ['#42A5F5', '#1565C0', 'rgba(66,165,245,0.12)'],
-  water: ['#26C6DA', '#00838F', 'rgba(38,198,218,0.12)'],
-};
-
-
 function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
   var T = OB[lang] || OB.en;
   var resp = useResponsive();
@@ -2001,10 +2013,21 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
   var bgPulseStyle = useAnimatedStyle(function () {
     return { opacity: interpolate(bgPulse.value, [0, 1], [0, 0.12]) };
   });
-  var revealAuraStyle = useAnimatedStyle(function () {
+  var mainChakraStyle = useAnimatedStyle(function () {
+    if (reduced) {
+      return { transform: [{ rotate: '0deg' }, { scale: 1 }] };
+    }
     return {
-      opacity: interpolate(orbGlow.value, [0, 1], [0.38, 0.82]),
-      transform: [{ scale: interpolate(orbGlow.value, [0, 1], [0.96, 1.05]) }],
+      transform: [
+        { rotate: (orbRotate.value * 0.12) + 'deg' },
+        { scale: interpolate(orbGlow.value, [0, 1], [0.988, 1.012]) },
+      ],
+    };
+  });
+  var mainChakraGlowStyle = useAnimatedStyle(function () {
+    return {
+      opacity: reduced ? 0.58 : interpolate(orbGlow.value, [0, 1], [0.42, 0.74]),
+      transform: [{ scale: reduced ? 1 : interpolate(orbGlow.value, [0, 1], [0.95, 1.04]) }],
     };
   });
   var progressBarStyle = useAnimatedStyle(function () {
@@ -2173,8 +2196,6 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     var sunSign = chartData.sunSign || {};
     var nakshatra = chartData.nakshatra || {};
     var personality = chartData.personality || {};
-    var element = ZODIAC_ELEMENTS[lagna.name] || 'fire';
-    var elemColors = ELEMENT_COLORS[element];
     var zodiacSymbol = ZODIAC_SYMBOLS[lagna.name] || ZODIAC_SYMBOLS[lagna.english] || null;
     var zodiacImage = ZODIAC_IMAGE_MAP[lagna.name] || ZODIAC_IMAGE_MAP[lagna.english] || (lagna.rashiId ? ZODIAC_IMAGES[lagna.rashiId - 1] : null);
     var lagnaName = lang === 'si' ? (lagna.sinhala || lagna.english) : (lagna.english || lagna.name);
@@ -2187,7 +2208,6 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
 
     var isSmallScreen = resp.isSmall;
     var HERO_SIZE = isSmallScreen ? 154 : 184;
-    var astrolabeSize = Math.min(SW * 0.78, isSmallScreen ? 280 : 330);
     var focusChakraSize = Math.min(SW * 0.86, isSmallScreen ? 286 : 336);
     var lagnaIndex = lagna.rashiId ? lagna.rashiId - 1 : 0;
     var heroZodiacImage = zodiacImage || ZODIAC_IMAGES[lagnaIndex] || null;
@@ -2199,17 +2219,12 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
           locations={[0, 0.34, 0.72, 1]}
           style={StyleSheet.absoluteFill}
         />
-        <Animated.View style={[lr.revealAura, revealAuraStyle]} />
 
         {/* Big Bang flash overlay */}
         <Animated.View style={[{
           position: 'absolute', top: -100, left: -100, right: -100, bottom: -100,
           backgroundColor: '#F4E4BC', zIndex: 100, pointerEvents: 'none',
         }, bigBangStyle]} />
-
-        <View style={[lr.astrolabeBack, { width: astrolabeSize, height: astrolabeSize, top: isSmallScreen ? 12 : 26, left: (SW - astrolabeSize) / 2 }]}>
-          <AwesomeRashiChakra size={astrolabeSize} activeSignIndex={lagnaIndex} variant="astrolabe" showSolarOrbit={false} />
-        </View>
 
         <ScrollView
           style={{ flex: 1 }}
@@ -2224,9 +2239,15 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
         </Animated.View>
 
         <View style={lr.heroStage}>
-          <Animated.View style={[lr.heroHalo, { width: focusChakraSize + 24, height: focusChakraSize + 24, borderRadius: (focusChakraSize + 24) / 2 }, revealAuraStyle]} />
           <View style={[lr.heroChakraStage, { width: focusChakraSize, height: focusChakraSize }]}>
-            <AwesomeRashiChakra size={focusChakraSize} activeSignIndex={lagnaIndex} variant="astrolabe" showSolarOrbit={false} />
+            <Animated.View style={[lr.heroChakraGlow, {
+              width: focusChakraSize * 0.88,
+              height: focusChakraSize * 0.88,
+              borderRadius: (focusChakraSize * 0.88) / 2,
+            }, mainChakraGlowStyle]} />
+            <Animated.View style={[lr.heroChakraSpin, mainChakraStyle]}>
+              <AwesomeRashiChakra size={focusChakraSize} activeSignIndex={lagnaIndex} variant="astrolabe" showSolarOrbit={false} />
+            </Animated.View>
             <Animated.View style={[lr.heroSeal, {
               position: 'absolute',
               top: (focusChakraSize - HERO_SIZE) / 2,
@@ -2425,20 +2446,24 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
 var lr = StyleSheet.create({
   ring: { position: 'absolute', borderWidth: 1.5, borderStyle: 'dashed' },
   revealRoot: { flex: 1, overflow: 'hidden', backgroundColor: '#020106' },
-  revealAura: {
-    position: 'absolute', top: SH * 0.05, alignSelf: 'center',
-    width: Math.min(SW * 1.05, 430), height: Math.min(SW * 1.05, 430), borderRadius: 240,
-    backgroundColor: 'rgba(214,181,109,0.08)',
-    ...boxShadow('rgba(214,181,109,0.35)', { width: 0, height: 0 }, 0.9, 60),
-  },
-  astrolabeBack: { position: 'absolute', opacity: 0.16, pointerEvents: 'none' },
   revealScroll: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 20 },
   revealHeader: { alignItems: 'center', marginBottom: 10 },
   revealKicker: { color: 'rgba(244,228,188,0.48)', fontSize: 10, lineHeight: 14, fontWeight: '900', letterSpacing: 2.2, textTransform: 'uppercase' },
   revealWelcome: { color: '#F7EED3', fontSize: 15, lineHeight: 21, fontWeight: '800', marginTop: 4, maxWidth: '92%' },
   heroStage: { alignItems: 'center', justifyContent: 'center', paddingTop: 4, paddingBottom: 8 },
-  heroHalo: { position: 'absolute', backgroundColor: 'rgba(244,228,188,0.055)', borderWidth: 1, borderColor: 'rgba(214,181,109,0.12)' },
   heroChakraStage: { position: 'relative', alignItems: 'center', justifyContent: 'center', overflow: 'visible', marginTop: -4 },
+  heroChakraGlow: {
+    position: 'absolute',
+    backgroundColor: 'rgba(214,181,109,0.045)',
+    borderWidth: 1,
+    borderColor: 'rgba(244,228,188,0.18)',
+    ...boxShadow('rgba(214,181,109,0.58)', { width: 0, height: 0 }, 0.85, 30),
+  },
+  heroChakraSpin: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   heroSeal: {
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden', zIndex: 4, elevation: 4,
     borderWidth: 1.4, borderColor: 'rgba(244,228,188,0.58)',
