@@ -75,7 +75,14 @@ function phoneAuth(req, res, next) {
 
 /**
  * Require active subscription
- * Returns 402 if no active subscription
+ * 
+ * Uses the `isSubscribed` boolean flag on the user document as the single
+ * source of truth. This flag is set exclusively by the RevenueCat webhook.
+ * 
+ * Lazy migration: if `isSubscribed` is undefined (pre-migration user),
+ * derives the value from `subscription.status` and backfills the field.
+ * 
+ * Returns 402 if not subscribed.
  */
 function requireSubscription(req, res, next) {
   // Mock payments bypass — skip all subscription checks in dev
@@ -104,87 +111,36 @@ function requireSubscription(req, res, next) {
       }
 
       const user = doc.data();
-      const sub = user.subscription;
+      var isSubscribed = user.isSubscribed;
 
-      // No subscription at all
-      if (!sub || sub.status === 'none' || sub.status === 'pending') {
-        const currency = detectCurrency(req);
-        const pricing = getPricing(currency);
-        return res.status(402).json({
-          error: 'Subscription required',
-          message: 'Please subscribe to access this feature.',
-          subscriptionRequired: true,
-          pricing: pricing.subscription,
-        });
+      // Lazy migration: if the field doesn't exist yet, derive from
+      // subscription.status and backfill the document for future reads.
+      if (isSubscribed === undefined) {
+        const sub = user.subscription;
+        isSubscribed = !!(sub && sub.status === 'active');
+        // Best-effort backfill — don't block the request
+        db.collection(COLLECTIONS.USERS).doc(req.user.uid)
+          .update({ isSubscribed })
+          .catch(e => console.warn('[subscription] Lazy migration failed:', e.message));
       }
 
-      // Cancelled subscription
-      if (sub.status === 'cancelled') {
-        return res.status(402).json({
-          error: 'Subscription cancelled',
-          message: 'Your subscription has been cancelled. Please re-subscribe to continue.',
-          subscriptionRequired: true,
-        });
-      }
-
-      // Payment failed (recurring charge failed)
-      if (sub.status === 'payment_failed') {
-        return res.status(402).json({
-          error: 'Payment failed',
-          message: 'Your last payment failed. Please update your payment method or re-subscribe.',
-          subscriptionRequired: true,
-          paymentFailed: true,
-        });
-      }
-
-      // Active recurring subscriptions must have a valid expiry. Only explicit
-      // lifetime purchases are allowed to omit expiresAt.
-      if (sub.status === 'active' && !sub.expiresAt && sub.isLifetime !== true) {
-        return res.status(402).json({
-          error: 'Subscription verification incomplete',
-          message: 'Please restore or renew your subscription to continue.',
-          subscriptionRequired: true,
-          needsRenewal: true,
-        });
-      }
-
-      // Check if expired
-      if (sub.status === 'active' && sub.expiresAt) {
-        const now = new Date();
-        const expires = new Date(sub.expiresAt);
-        if (!Number.isFinite(expires.getTime())) {
-          return res.status(402).json({
-            error: 'Subscription verification invalid',
-            message: 'Please restore or renew your subscription to continue.',
-            subscriptionRequired: true,
-            needsRenewal: true,
-          });
-        }
-        if (now > expires) {
-          return res.status(402).json({
-            error: 'Subscription expired',
-            message: 'Your subscription has expired. Please re-subscribe.',
-            subscriptionRequired: true,
-            needsRenewal: true,
-          });
-        }
-      }
-
-      // Active and valid
-      if (sub.status === 'active') {
-        req.subscription = sub;
+      if (isSubscribed === true) {
+        req.subscription = user.subscription || { status: 'active' };
         return next();
       }
 
-      // Any other status
+      // Not subscribed — return 402 with pricing info
+      const currency = detectCurrency(req);
+      const pricing = getPricing(currency);
       return res.status(402).json({
         error: 'Subscription required',
+        message: 'Please subscribe to access this feature.',
         subscriptionRequired: true,
+        pricing: pricing.subscription,
       });
     })
     .catch(err => {
       console.error('Subscription check error:', err);
-      // Fail closed — deny access when we can't verify subscription
       return res.status(503).json({
         error: 'Subscription verification temporarily unavailable',
         message: 'Please try again in a moment.',

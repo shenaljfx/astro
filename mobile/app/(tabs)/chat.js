@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform, StyleSheet, Dimensions,
-  Image,
+  Image, LayoutAnimation,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -428,6 +428,7 @@ export default function ChatScreen() {
   var [remaining, setRemaining] = useState(DAILY_LIMIT);
   var [mode, setMode] = useState('chat');
   var [selectedMode, setSelectedMode] = useState(null);
+  var [inputFocused, setInputFocused] = useState(false);
   var scroll = useRef(null);
 
   // Derive birth data from user profile
@@ -701,7 +702,10 @@ export default function ChatScreen() {
   var headerTotalHeight = topPad + 56;
   var kavOffset = Platform.OS === 'ios' ? headerTotalHeight : 0;
   var composerSafePad = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 6);
-  var composerLift = kb.isOpen ? 0 : TAB_BAR_VISUAL_HEIGHT;
+  // Use focus-based lift so marginBottom collapses *immediately* on focus (before
+  // keyboardDidShow fires) — fixes the ~300ms window on Android where resize had
+  // already shrunk the window but the tab bar margin was still reserving space.
+  var composerLift = inputFocused ? 0 : TAB_BAR_VISUAL_HEIGHT;
 
   return (
     <DesktopScreenWrapper routeName="chat">
@@ -743,9 +747,9 @@ export default function ChatScreen() {
       {/* KeyboardAvoidingView wraps messages + input */}
       <KeyboardAvoidingView
         style={{ flex: 1, minHeight: 0 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={kavOffset}
-        enabled={Platform.OS === 'ios'}
+        enabled={true}
       >
         <ScrollView
           ref={scroll}
@@ -799,9 +803,15 @@ export default function ChatScreen() {
                 underlineColorAndroid="transparent"
                 blurOnSubmit={false}
                 onFocus={function () {
+                  LayoutAnimation.configureNext(LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
+                  setInputFocused(true);
                   setTimeout(function () {
                     if (scroll.current) scroll.current.scrollToEnd({ animated: true });
                   }, 300);
+                }}
+                onBlur={function () {
+                  LayoutAnimation.configureNext(LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
+                  setInputFocused(false);
                 }}
               />
             </View>

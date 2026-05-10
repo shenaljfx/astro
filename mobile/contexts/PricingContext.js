@@ -12,8 +12,8 @@ import { setDetectedCountry } from '../services/api';
  * 
  * Usage:
  *   var { pricing, currency, isInternational, priceLabel } = usePricing();
- *   priceLabel('porondam')  → "LKR 100" or "$2"
- *   pricing.porondam.amount → 100 or 2
+ *   priceLabel('porondam')  → "LKR 200" or "$2"
+ *   pricing.porondam.amount → 200 or 2
  */
 
 var PricingContext = createContext(null);
@@ -24,9 +24,9 @@ var DEFAULT_PRICING = {
   currencySymbol: 'LKR',
   country: 'Sri Lanka',
   subscription: { amount: 280, amountFormatted: '280.00', label: 'LKR 280/month', period: 'month' },
-  porondam: { amount: 100, amountFormatted: '100.00', label: 'LKR 100' },
-  report: { amount: 380, amountFormatted: '380.00', label: 'LKR 380' },
-  topUpPackages: [100, 280, 380, 500],
+  porondam: { amount: 200, amountFormatted: '200.00', label: 'LKR 200' },
+  report: { amount: 499, amountFormatted: '499.00', label: 'LKR 499' },
+  topUpPackages: [200, 280, 499, 500],
 };
 
 // Default USD pricing (international fallback — mirrors server/src/config/pricing.js)
@@ -141,7 +141,7 @@ export function PricingProvider({ children }) {
   /**
    * Get a formatted price label for a feature.
    * @param {'porondam'|'report'|'subscription'} feature
-   * @returns {string} e.g. "LKR 100" or "$2"
+  * @returns {string} e.g. "LKR 200" or "$2"
    */
   var priceLabel = function(feature) {
     var feat = pricing[feature];

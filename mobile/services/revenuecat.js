@@ -56,6 +56,7 @@ var PRODUCT_IDS = {
 export { PRODUCT_IDS, ENTITLEMENT_ID };
 
 var _initialized = false;
+var _configuredUserId = null; // Track which user ID was used for configure
 
 function getActiveEntitlement(customerInfo) {
   var entitlements = customerInfo && customerInfo.entitlements ? customerInfo.entitlements : null;
@@ -74,13 +75,18 @@ function hasActiveEntitlement(customerInfo) {
 // ─── Initialize RevenueCat ──────────────────────────────────────
 
 /**
- * Initialize RevenueCat SDK. Call once at app startup after auth.
+ * Initialize RevenueCat SDK. Call once at app startup.
+ * Per RevenueCat docs: if you have the user ID at launch, pass it here
+ * to avoid the anonymous→identified identity switch that triggers spurious
+ * CustomerInfo listener events.
  * @param {string|null} appUserID — Firebase UID or null for anonymous
  */
 export async function initRevenueCat(appUserID) {
-  if (_initialized) return;
   if (MOCK_PAYMENTS) { _initialized = true; return; }
   if (!Purchases) { _initialized = true; return; }
+
+  // Already configured with the same user — skip
+  if (_initialized && _configuredUserId === (appUserID || null)) return;
 
   try {
     if (__DEV__) {
@@ -93,6 +99,7 @@ export async function initRevenueCat(appUserID) {
     });
 
     _initialized = true;
+    _configuredUserId = appUserID || null;
   } catch (err) {
     if (__DEV__) console.warn('[RevenueCat] Init failed:', err && err.message);
     throw err;
@@ -104,6 +111,9 @@ export async function initRevenueCat(appUserID) {
 /**
  * Log in to RevenueCat with a specific user ID (e.g. Firebase UID).
  * Call this after Google Sign-In completes.
+ * The logIn() result contains fresh CustomerInfo — use it directly
+ * instead of making a separate getCustomerInfo() call to avoid
+ * the sync gap that causes false negatives.
  * @param {string} appUserID — Firebase UID
  * @returns {Object} { customerInfo, created }
  */
@@ -112,6 +122,7 @@ export async function loginUser(appUserID) {
   if (!Purchases) return { customerInfo: null, created: false };
   try {
     var result = await Purchases.logIn(appUserID);
+    _configuredUserId = appUserID;
     return result;
   } catch (err) {
     if (__DEV__) console.warn('[RevenueCat] Login failed:', err && err.message);
@@ -151,6 +162,50 @@ export async function checkEntitlement() {
     if (__DEV__) console.warn('[RevenueCat] ✘ Entitlement check failed:', err.message);
     return false;
   }
+}
+
+/**
+ * Robust entitlement check with retry + sync fallback.
+ * Retries up to 3 times with exponential backoff, then falls back to
+ * syncPurchases() which forces a server-side sync with the store.
+ * 
+ * Per RevenueCat docs: restorePurchases() should NOT be called programmatically
+ * as it may trigger OS-level sign-in prompts. Use syncPurchases() instead.
+ * 
+ * @returns {boolean}
+ */
+export async function checkEntitlementWithRetry() {
+  if (MOCK_PAYMENTS) return true;
+  if (!Purchases) return false;
+
+  var delays = [500, 1500, 3000]; // exponential backoff
+  for (var i = 0; i < delays.length; i++) {
+    try {
+      var customerInfo = await Purchases.getCustomerInfo();
+      if (hasActiveEntitlement(customerInfo)) return true;
+    } catch (err) {
+      if (__DEV__) console.warn('[RevenueCat] Entitlement retry ' + (i + 1) + ' error:', err.message);
+    }
+    // Only wait before next attempt, not after last
+    if (i < delays.length - 1) {
+      await new Promise(function(r) { setTimeout(r, delays[i]); });
+    }
+  }
+
+  // Final fallback: syncPurchases() forces a sync without OS-level prompts
+  // (unlike restorePurchases which may show sign-in dialogs)
+  try {
+    if (__DEV__) console.log('[RevenueCat] Entitlement retries exhausted — trying syncPurchases()');
+    var synced = await Purchases.syncPurchases();
+    // syncPurchases doesn't return customerInfo on all platforms,
+    // so fetch it separately
+    var customerInfo = await Purchases.getCustomerInfo();
+    if (hasActiveEntitlement(customerInfo)) return true;
+  } catch (syncErr) {
+    if (__DEV__) console.warn('[RevenueCat] Sync fallback failed:', syncErr.message);
+  }
+
+  return false;
 }
 
 /**
@@ -487,6 +542,7 @@ export default {
   loginUser: loginUser,
   logoutUser: logoutUser,
   checkEntitlement: checkEntitlement,
+  checkEntitlementWithRetry: checkEntitlementWithRetry,
   getCustomerInfo: getCustomerInfo,
   getActiveSubscription: getActiveSubscription,
   getOfferings: getOfferings,

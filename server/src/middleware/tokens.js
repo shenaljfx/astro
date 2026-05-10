@@ -2,10 +2,10 @@
  * Token / Micro-transaction Middleware
  *
  * Users hold an LKR token balance in their Firestore document.
- * Generating a Full AI Report costs LKR 380; a Porondam Report costs LKR 100.
+ * Generating a Full AI Report costs LKR 499; a Porondam Report costs LKR 200.
  *
  * Usage (route):
- *   router.post('/full-report-ai', phoneAuth, requireTokens(380, 'Full Report'), handler);
+ *   router.post('/full-report-ai', phoneAuth, requireTokens(499, 'Full Report'), handler);
  *
  * The middleware:
  *   1. Reads tokenBalance from Firestore

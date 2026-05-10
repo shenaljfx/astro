@@ -15,6 +15,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const { getDb, getAuth, COLLECTIONS } = require('../config/firebase');
+const { getPricing } = require('../config/pricing');
 
 // Google OAuth web client ID — MUST be set via env var; no fallback in production (boot guard enforces this)
 const GOOGLE_WEB_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -91,6 +92,7 @@ async function createGoogleUser(uid, profile) {
       transitAlerts: false,
       theme: 'cosmic',
     },
+    isSubscribed: false,
     subscription: {
       status: 'pending',
       plan: null,
@@ -230,6 +232,7 @@ router.post('/google', async (req, res) => {
         photoURL: user.photoURL,
         birthData: user.birthData,
         subscription: user.subscription,
+        isSubscribed: user.isSubscribed === true,
         onboardingComplete: user.onboardingComplete,
         preferences: user.preferences,
       },
@@ -255,7 +258,7 @@ router.post('/unsubscribe', async (req, res) => {
       await updateUserSubscription(decoded.uid, {
         status: 'cancelled',
         plan: 'monthly',
-        amount: MONTHLY_AMOUNT,
+        amount: getPricing('LKR').subscription.amount,
         currency: 'LKR',
         cancelledAt: new Date().toISOString(),
       });
@@ -277,10 +280,20 @@ router.get('/subscription', async (req, res) => {
     const decoded = extractUser(req);
     if (!decoded) return res.status(401).json({ error: 'Authentication required' });
 
+    // Mock payments bypass — return active subscription in dev
+    if (process.env.MOCK_PAYMENTS === 'true') {
+      return res.json({
+        success: true,
+        isSubscribed: true,
+        subscription: { status: 'active', plan: 'mock_pro', store: 'mock' },
+      });
+    }
+
     const db = getDb();
     if (!db) {
       return res.json({
         success: true,
+        isSubscribed: true,
         subscription: { status: 'active', plan: 'free-dev' },
       });
     }
@@ -291,21 +304,42 @@ router.get('/subscription', async (req, res) => {
     const user = doc.data();
     const subscription = user.subscription || { status: 'none' };
 
-    // Check if subscription has expired
+    // Check if subscription has expired — report it to the client but do NOT
+    // mutate Firestore in a GET handler. Subscription state transitions are
+    // the webhook's responsibility. Writing here caused 500s when Firestore
+    // was unavailable and created race conditions with webhook updates.
     if (subscription.status === 'active' && subscription.expiresAt) {
       const now = new Date();
       const expires = new Date(subscription.expiresAt);
       if (now > expires) {
-        subscription.status = 'expired';
-        subscription.needsRenewal = true;
-        await updateUserSubscription(decoded.uid, subscription);
+        // Add a grace period: auto-renewing subscriptions may have a short gap
+        // between period end and renewal webhook. Give 24 hours before reporting
+        // as expired to avoid false negatives during the renewal window.
+        const GRACE_PERIOD_MS = 24 * 60 * 60 * 1000; // 24 hours
+        if (now - expires > GRACE_PERIOD_MS) {
+          subscription.status = 'expired';
+          subscription.needsRenewal = true;
+        }
+        // Within grace period: keep status='active' — renewal may be in progress
       }
+    }
+
+    // isSubscribed is the authoritative flag set by the webhook.
+    // If the field doesn't exist yet (pre-migration user), derive it.
+    var isSubscribed = user.isSubscribed;
+    if (isSubscribed === undefined) {
+      isSubscribed = subscription.status === 'active';
+      // Lazy migration: backfill the field so next read is instant
+      db.collection(COLLECTIONS.USERS).doc(decoded.uid).update({ isSubscribed }).catch(function(e) {
+        console.warn('[subscription] Lazy migration write failed:', e.message);
+      });
     }
 
     res.json({
       success: true,
+      isSubscribed,
       subscription,
-      monthlyRate: MONTHLY_AMOUNT,
+      monthlyRate: getPricing('LKR').subscription.amount,
       currency: 'LKR',
     });
   } catch (err) {

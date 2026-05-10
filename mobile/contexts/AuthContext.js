@@ -31,10 +31,12 @@ import {
   loginUser as rcLoginUser,
   logoutUser as rcLogoutUser,
   checkEntitlement,
+  checkEntitlementWithRetry,
   getActiveSubscription,
   presentCustomerCenter,
   restorePurchases,
   addCustomerInfoListener,
+  ENTITLEMENT_ID,
 } from '../services/revenuecat';
 import { registerForPushNotifications, cancelDailyGuidanceNotifications } from '../services/notifications';
 import { auth as firebaseAuth, GoogleAuthProvider, signInWithPopup, signInWithCredential } from '../services/firebase';
@@ -78,8 +80,15 @@ function normalizeStoredSubscription(storedSub) {
   if (storedSub.status === 'none' || storedSub.status === 'pending') return null;
   if (storedSub.status === 'active' && storedSub.expiresAt) {
     var expires = new Date(storedSub.expiresAt);
-    if (Number.isFinite(expires.getTime()) && Date.now() > expires.getTime()) {
-      return { ...storedSub, status: 'expired', willRenew: false };
+    if (Number.isFinite(expires.getTime())) {
+      // Add 24-hour grace period for auto-renewing subscriptions.
+      // expiresAt is the *current billing period end*, not the subscription end.
+      // Auto-renewing subs renew within hours — without grace, we'd wrongly
+      // mark them as expired during the renewal window.
+      var GRACE_MS = 24 * 60 * 60 * 1000; // 24 hours
+      if (Date.now() > expires.getTime() + GRACE_MS) {
+        return { ...storedSub, status: 'expired', willRenew: false };
+      }
     }
   }
   return storedSub;
@@ -90,7 +99,11 @@ function isSubscriptionCurrentlyActive(sub) {
   if (sub.isLifetime === true || !sub.expiresAt) return true;
   var expires = new Date(sub.expiresAt);
   if (!Number.isFinite(expires.getTime())) return false;
-  return Date.now() <= expires.getTime();
+  // 24-hour grace period: auto-renewing subscriptions may have a gap between
+  // period end and the RENEWAL webhook/SDK update. Without this, users get
+  // blocked during the renewal window.
+  var GRACE_MS = 24 * 60 * 60 * 1000;
+  return Date.now() <= expires.getTime() + GRACE_MS;
 }
 
 function buildInactiveSubscription(storedSub) {
@@ -226,6 +239,7 @@ export function AuthProvider({ children }) {
   var [loading, setLoading] = useState(true);
   var [authReady, setAuthReady] = useState(false);
   var [subscription, setSubscription] = useState(null);
+  var [subscriptionLoading, setSubscriptionLoading] = useState(true);
   var [paywallVisible, setPaywallVisible] = useState(false);
   var [paywallSource, setPaywallSource] = useState('onboarding');
   // Use a ref for the resolve/reject pair so it's read fresh by the modal
@@ -238,29 +252,34 @@ export function AuthProvider({ children }) {
     loadSavedAuth();
   }, []);
 
-  // Listen for RevenueCat subscription changes in real-time
+  // Listen for RevenueCat subscription changes in real-time.
+  // CRITICAL: This listener fires during SDK initialization before logIn()
+  // completes, often with isProActive=false (stale anonymous customer info).
+  // We must NEVER downgrade subscription here — only upgrade.
+  // Downgrades are handled by verifySubscriptionInBackground() which has
+  // retry + server fallback safety nets. Downgrading here caused the
+  // subscription to flap (active→null→active) on every app launch, which
+  // RevenueCat interpreted as cancel/resubscribe events and sent 2-5 emails.
   useEffect(function() {
     var unsubscribe = addCustomerInfoListener(function(update) {
       if (__DEV__) console.log('[Auth] RevenueCat update — pro active:', update.isProActive);
       if (update.isProActive) {
+        // Upgrade: user gained entitlement — always apply
         var activeSub = update.activeSubscription;
         var sub = buildActiveSubscription(activeSub);
         setSubscription(sub);
         setUser(function(prev) {
           if (!prev) return prev;
-          var updated = { ...prev, subscription: sub };
-          AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
-          return updated;
-        });
-      } else {
-        setSubscription(null);
-        setUser(function(prev) {
-          if (!prev) return prev;
-          var updated = { ...prev, subscription: null };
+          var updated = { ...prev, subscription: sub, isSubscribed: true };
           AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
           return updated;
         });
       }
+      // else: DO NOT set subscription to null here.
+      // The listener fires with false during SDK init (before logIn),
+      // when switching from anonymous to identified user, and on
+      // network errors. Let verifySubscriptionInBackground handle
+      // downgrade decisions with proper fallback logic.
     });
 
     return function() {
@@ -272,63 +291,176 @@ export function AuthProvider({ children }) {
 
   async function loadSavedAuth() {
     try {
-      // Initialize RevenueCat early (anonymous until login)
-      await initRevenueCat(null);
-
       var savedToken = await getStoredAuthToken();
       var savedUser = await AsyncStorage.getItem(STORAGE_USER);
 
       if (savedToken && savedUser) {
         var userData = JSON.parse(savedUser);
+        // Keep the raw stored subscription BEFORE normalization — we need this
+        // in verifySubscriptionInBackground to detect if the user previously had
+        // an active subscription (normalization may change 'active' to 'expired'
+        // if expiresAt is past, even though the store may have auto-renewed).
+        var rawStoredSubscription = userData.subscription ? { ...userData.subscription } : null;
         userData.subscription = normalizeStoredSubscription(userData.subscription);
         setToken(savedToken);
         setUser(userData);
-        setSubscription(userData.subscription);
+
+        // CRITICAL: Trust the stored subscription immediately so we never
+        // flash the paywall while RevenueCat SDK is still syncing.
+        // Use isSubscribed (server-authoritative boolean) if available,
+        // otherwise fall back to raw stored subscription status.
+        var initialSub = null;
+        if (userData.isSubscribed === true) {
+          // Server previously confirmed subscription — trust it
+          initialSub = rawStoredSubscription || userData.subscription;
+        } else if (rawStoredSubscription && rawStoredSubscription.status === 'active') {
+          // Legacy: no isSubscribed field yet, trust raw status
+          initialSub = rawStoredSubscription;
+        } else {
+          initialSub = userData.subscription;
+        }
+        setSubscription(initialSub);
 
         // Wire token to API service
         setAuthTokenGetter(function() {
           return Promise.resolve(savedToken);
         });
 
-        // Login to RevenueCat with user's Firebase UID
+        // Per RevenueCat docs: configure with the UID directly if known at launch.
+        // This avoids the anonymous→identified switch that fires the listener
+        // with stale anonymous customer info (isProActive=false).
+        // Then logIn() to ensure the identified user is properly linked.
+        var rcLoginResult = null;
         if (userData.uid) {
           try {
-            await rcLoginUser(userData.uid);
+            await initRevenueCat(userData.uid);
+            rcLoginResult = await rcLoginUser(userData.uid);
           } catch (rcErr) {
-            if (__DEV__) console.warn('[Auth] RevenueCat login failed (non-fatal):', rcErr.message);
+            if (__DEV__) console.warn('[Auth] RevenueCat init/login failed (non-fatal):', rcErr.message);
+            // Ensure SDK is at least initialized even if logIn fails
+            try { await initRevenueCat(null); } catch (_) {}
           }
+        } else {
+          await initRevenueCat(null);
         }
 
-        // Sync subscription status from RevenueCat
-        try {
-          var isProActive = await checkEntitlement();
-          if (isProActive) {
-            var activeSub = await getActiveSubscription();
-            var sub = buildActiveSubscription(activeSub);
-            setSubscription(sub);
-            userData.subscription = sub;
-            await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
-          } else {
-            var inactiveSub = buildInactiveSubscription(userData.subscription);
-            setSubscription(inactiveSub);
-            userData.subscription = inactiveSub;
-            await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
-          }
-        } catch (rcErr) {
-          if (__DEV__) console.warn('[Auth] RevenueCat entitlement check failed (non-fatal):', rcErr.message);
-        }
+        // Verify subscription in background — use logIn result + retry + server fallback.
+        // This runs AFTER the UI has already rendered with the trusted stored subscription,
+        // so the user never sees a paywall flash.
+        verifySubscriptionInBackground(userData, savedToken, rawStoredSubscription, rcLoginResult);
 
         // Refresh profile from server in background
         refreshProfile(savedToken);
 
         // Register for push notifications (idempotent, fires once per token)
         registerPushTokenWithServer(savedToken, userData.uid, userData?.preferences?.language);
+      } else {
+        // No saved user — initialize anonymous
+        try { await initRevenueCat(null); } catch (_) {}
+        setSubscriptionLoading(false);
       }
     } catch (err) {
       if (__DEV__) console.warn('Failed to load saved auth:', err.message);
+      setSubscriptionLoading(false);
     } finally {
       setLoading(false);
       setAuthReady(true);
+    }
+  }
+
+  /**
+   * Background subscription verification — runs AFTER UI is rendered with
+   * trusted stored subscription. Uses logIn result + retry + server fallback.
+   * Only downgrades subscription if ALL sources confirm it's inactive.
+   * 
+   * @param {Object} userData — user data from storage
+   * @param {string} authToken — JWT token
+   * @param {Object|null} rawStoredSubscription — subscription before normalization
+   * @param {Object|null} rcLoginResult — result from rcLoginUser() containing customerInfo
+   */
+  async function verifySubscriptionInBackground(userData, authToken, rawStoredSubscription, rcLoginResult) {
+    var rawStoredSub = rawStoredSubscription || userData.subscription;
+
+    try {
+      // Step 1a: Check the logIn() result first — it already has fresh CustomerInfo
+      var isProActive = false;
+      if (rcLoginResult && rcLoginResult.customerInfo) {
+        var entitlements = rcLoginResult.customerInfo.entitlements;
+        if (entitlements && entitlements.active && entitlements.active[ENTITLEMENT_ID]) {
+          isProActive = true;
+          if (__DEV__) console.log('[Auth] logIn() result confirms active entitlement');
+        }
+      }
+
+      // Step 1b: If logIn result didn't confirm, try retry + sync fallback
+      if (!isProActive) {
+        isProActive = await checkEntitlementWithRetry();
+      }
+
+      if (isProActive) {
+        // Subscription confirmed active via RevenueCat SDK
+        var activeSub = await getActiveSubscription();
+        var sub = buildActiveSubscription(activeSub);
+        setSubscription(sub);
+        userData.subscription = sub;
+        userData.isSubscribed = true;
+        await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
+        setSubscriptionLoading(false);
+        return;
+      }
+
+      // Step 2: RevenueCat says inactive — check server's isSubscribed flag.
+      // This is the authoritative source (set by webhook).
+      var serverConfirmedInactive = false;
+      try {
+        var serverStatus = await apiGetSubscriptionStatus();
+        if (serverStatus && serverStatus.isSubscribed === true) {
+          // Server says subscribed — trust it over SDK (SDK sync delay)
+          if (__DEV__) console.log('[Auth] Server isSubscribed=true (RevenueCat disagreed)');
+          var serverSub = {
+            status: 'active',
+            plan: serverStatus.subscription ? (serverStatus.subscription.plan || 'pro') : 'pro',
+            expiresAt: serverStatus.subscription ? (serverStatus.subscription.expiresAt || null) : null,
+            willRenew: serverStatus.subscription ? (serverStatus.subscription.willRenew !== false) : true,
+            store: serverStatus.subscription ? (serverStatus.subscription.store || null) : null,
+            isLifetime: serverStatus.subscription ? (serverStatus.subscription.isLifetime || false) : false,
+          };
+          setSubscription(serverSub);
+          userData.subscription = serverSub;
+          userData.isSubscribed = true;
+          await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
+          setSubscriptionLoading(false);
+          return;
+        }
+        // Server explicitly says isSubscribed is false/missing
+        serverConfirmedInactive = true;
+      } catch (serverErr) {
+        if (__DEV__) console.warn('[Auth] Server subscription check failed (non-fatal):', serverErr.message);
+        // Server error — NOT a confirmation of inactive
+      }
+
+      // Step 3: Safety net — if we had a stored active sub and server errored
+      // (not explicitly inactive), keep the stored subscription
+      var hadStoredActiveSub = rawStoredSub && rawStoredSub.status === 'active';
+
+      if (hadStoredActiveSub && !serverConfirmedInactive) {
+        if (__DEV__) console.log('[Auth] Keeping stored subscription — server did not explicitly confirm inactive');
+        setSubscription(rawStoredSub);
+        setSubscriptionLoading(false);
+        return;
+      }
+
+      // Step 4: Both sources confirm inactive — downgrade
+      if (__DEV__) console.log('[Auth] Both sources confirm subscription inactive — downgrading');
+      var inactiveSub = buildInactiveSubscription(userData.subscription);
+      setSubscription(inactiveSub);
+      userData.subscription = inactiveSub;
+      userData.isSubscribed = false;
+      await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
+    } catch (rcErr) {
+      if (__DEV__) console.warn('[Auth] Background subscription verify failed (non-fatal):', rcErr.message);
+    } finally {
+      setSubscriptionLoading(false);
     }
   }
 
@@ -381,7 +513,16 @@ export function AuthProvider({ children }) {
           AsyncStorage.setItem(STORAGE_USER, JSON.stringify(merged));
           return merged;
         });
-        setSubscription(normalizeStoredSubscription(json.user.subscription) || null);
+        setSubscription(function(currentSub) {
+          // CRITICAL: Never downgrade a locally-verified active subscription
+          // with stale server data. The server profile endpoint may return
+          // outdated subscription info (e.g. before RevenueCat webhook fires).
+          var serverSub = normalizeStoredSubscription(json.user.subscription) || null;
+          if (isSubscriptionCurrentlyActive(currentSub) && !isSubscriptionCurrentlyActive(serverSub)) {
+            return currentSub; // keep local truth
+          }
+          return serverSub;
+        });
       }
     } catch (err) {
       if (__DEV__) console.warn('Profile refresh failed:', err.message);
@@ -488,18 +629,33 @@ export function AuthProvider({ children }) {
           // Login to RevenueCat with Firebase UID
           if (userData.uid) {
             try {
-              await rcLoginUser(userData.uid);
-              var isActive = await checkEntitlement();
-              if (isActive) {
+              var rcResult = await rcLoginUser(userData.uid);
+              // Use logIn() result's customerInfo directly — it's already fresh from
+              // the RevenueCat server. Only fall back to getCustomerInfo() + retry
+              // if logIn didn't return entitlement data.
+              var rcEntitlementActive = false;
+              if (rcResult && rcResult.customerInfo && rcResult.customerInfo.entitlements &&
+                  rcResult.customerInfo.entitlements.active &&
+                  rcResult.customerInfo.entitlements.active[ENTITLEMENT_ID]) {
+                rcEntitlementActive = true;
+              }
+              if (!rcEntitlementActive) {
+                rcEntitlementActive = await checkEntitlementWithRetry();
+              }
+              if (rcEntitlementActive) {
                 var activeSub = await getActiveSubscription();
                 var sub = buildActiveSubscription(activeSub);
                 setSubscription(sub);
                 userData.subscription = sub;
+                userData.isSubscribed = true;
                 await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
               } else {
                 var inactiveSub = buildInactiveSubscription(userData.subscription);
                 setSubscription(inactiveSub);
                 userData.subscription = inactiveSub;
+                // Don't override isSubscribed here — server's value from
+                // the response is authoritative. RevenueCat SDK may have sync
+                // delays but the server flag is set by the webhook.
                 await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
               }
             } catch (rcErr) {
@@ -510,6 +666,7 @@ export function AuthProvider({ children }) {
           // Register for push notifications (idempotent)
           registerPushTokenWithServer(authToken, userData.uid, userData?.preferences?.language);
 
+          setSubscriptionLoading(false);
           return {
             success: true,
             user: userData,
@@ -555,19 +712,29 @@ export function AuthProvider({ children }) {
       // Login to RevenueCat with Firebase UID
       if (userData.uid) {
         try {
-          await rcLoginUser(userData.uid);
-          // Check if user already has an active subscription via RevenueCat
-          var isActive = await checkEntitlement();
-          if (isActive) {
+          var rcResult = await rcLoginUser(userData.uid);
+          // Check logIn() result's customerInfo first — already fresh from server
+          var rcEntitlementActive = false;
+          if (rcResult && rcResult.customerInfo && rcResult.customerInfo.entitlements &&
+              rcResult.customerInfo.entitlements.active &&
+              rcResult.customerInfo.entitlements.active[ENTITLEMENT_ID]) {
+            rcEntitlementActive = true;
+          }
+          if (!rcEntitlementActive) {
+            rcEntitlementActive = await checkEntitlementWithRetry();
+          }
+          if (rcEntitlementActive) {
             var activeSub = await getActiveSubscription();
             var sub = buildActiveSubscription(activeSub);
             setSubscription(sub);
             userData.subscription = sub;
+            userData.isSubscribed = true;
             await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
           } else {
             var inactiveSub = buildInactiveSubscription(userData.subscription);
             setSubscription(inactiveSub);
             userData.subscription = inactiveSub;
+            // Don't override isSubscribed — server value is authoritative
             await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(userData));
           }
         } catch (rcErr) {
@@ -575,6 +742,7 @@ export function AuthProvider({ children }) {
         }
       }
 
+      setSubscriptionLoading(false);
       return {
         success: true,
         user: userData,
@@ -646,7 +814,7 @@ export function AuthProvider({ children }) {
       var sub = buildActiveSubscription(activeSub, result || {});
       setSubscription(sub);
       setUser(function(prev) {
-        var updated = { ...prev, subscription: sub };
+        var updated = { ...prev, subscription: sub, isSubscribed: true };
         AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
         return updated;
       });
@@ -676,7 +844,9 @@ export function AuthProvider({ children }) {
       setSubscription(sub);
       setUser(function(prev) {
         if (!prev) return prev;
-        var updated = { ...prev, subscription: sub };
+        // Note: after cancellation, isSubscribed stays true until EXPIRATION
+        // webhook fires. The user keeps access until period end.
+        var updated = { ...prev, subscription: sub, isSubscribed: isActive };
         AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
         return updated;
       });
@@ -688,13 +858,13 @@ export function AuthProvider({ children }) {
 
   var checkSubscription = useCallback(async function() {
     try {
-      var isActive = await checkEntitlement();
+      var isActive = await checkEntitlementWithRetry();
       var activeSub = isActive ? await getActiveSubscription() : null;
       var sub = isActive ? buildActiveSubscription(activeSub) : null;
       setSubscription(sub);
       setUser(function(prev) {
         if (!prev) return prev;
-        var updated = { ...prev, subscription: sub };
+        var updated = { ...prev, subscription: sub, isSubscribed: isActive };
         AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
         return updated;
       });
@@ -818,6 +988,7 @@ export function AuthProvider({ children }) {
       
       // Reset all state — order matters: clear token last so isLoggedIn flips
       setSubscription(null);
+      setSubscriptionLoading(true);
       setUser(null);
       setToken(null);
     } catch (err) {
@@ -829,6 +1000,7 @@ export function AuthProvider({ children }) {
       // Force clear state even if AsyncStorage fails
       setAuthTokenGetter(null);
       setSubscription(null);
+      setSubscriptionLoading(true);
       setUser(null);
       setToken(null);
     }
@@ -843,9 +1015,10 @@ export function AuthProvider({ children }) {
     isLoggedIn: !!token && !!user,
     isAnonymous: false,
     subscription: subscription,
-    isSubscribed: isSubscriptionCurrentlyActive(subscription),
-    isSubscriptionRenewing: isSubscriptionCurrentlyActive(subscription) && subscription?.willRenew !== false,
-    isSubscriptionCancelled: isSubscriptionCurrentlyActive(subscription) && subscription?.willRenew === false && !subscription?.isLifetime,
+    subscriptionLoading: subscriptionLoading,
+    isSubscribed: !!(user && user.isSubscribed) || isSubscriptionCurrentlyActive(subscription),
+    isSubscriptionRenewing: (!!(user && user.isSubscribed) || isSubscriptionCurrentlyActive(subscription)) && subscription?.willRenew !== false,
+    isSubscriptionCancelled: (!!(user && user.isSubscribed) || isSubscriptionCurrentlyActive(subscription)) && subscription?.willRenew === false && !subscription?.isLifetime,
     getAuthToken: getAuthToken,
     signInWithGoogle: signInWithGoogle,
     completeOnboarding: completeOnboarding,
@@ -869,7 +1042,14 @@ export function AuthProvider({ children }) {
     signOut: signOut,
   };
 
-  var forceSubscriptionPaywall = !!token && !!user && user.onboardingComplete === true && !isSubscriptionCurrentlyActive(subscription);
+  // CRITICAL: Never force paywall while subscription verification is in progress.
+  // subscriptionLoading=true means we haven't finished checking RevenueCat/server yet.
+  // Without this guard, the paywall flashes on every app restart for paid users.
+  // forceSubscriptionPaywall: show paywall if user is logged in, onboarded,
+  // subscription check is complete, AND the user is not subscribed.
+  // Uses isSubscribed from server (stored in userData) as primary check,
+  // falls back to isSubscriptionCurrentlyActive for display-derived state.
+  var forceSubscriptionPaywall = !!token && !!user && user.onboardingComplete === true && !subscriptionLoading && !user.isSubscribed && !isSubscriptionCurrentlyActive(subscription);
   var effectivePaywallVisible = paywallVisible || forceSubscriptionPaywall;
   var effectivePaywallSource = forceSubscriptionPaywall && !paywallVisible ? 'onboarding' : paywallSource;
 

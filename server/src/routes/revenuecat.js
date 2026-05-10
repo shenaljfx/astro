@@ -173,6 +173,7 @@ router.post('/webhook', verifyWebhook, async (req, res) => {
       case 'RENEWAL':
       case 'UNCANCELLATION':
         subscriptionUpdate = {
+          isSubscribed: true,
           'subscription.status': 'active',
           'subscription.plan': productId,
           'subscription.store': store,
@@ -182,10 +183,16 @@ router.post('/webhook', verifyWebhook, async (req, res) => {
           'subscription.provider': 'revenuecat',
           'subscription.updatedAt': new Date().toISOString(),
         };
+        // RENEWAL after a BILLING_ISSUE means the payment succeeded on retry.
+        // Clear the billing issue marker so the user isn't stuck in a bad state.
+        if (eventType === 'RENEWAL') {
+          subscriptionUpdate['subscription.billingIssueAt'] = null;
+        }
         break;
 
       case 'PRODUCT_CHANGE':
         subscriptionUpdate = {
+          isSubscribed: true,
           'subscription.status': 'active',
           'subscription.plan': event.event.new_product_id || productId,
           'subscription.store': store,
@@ -196,7 +203,8 @@ router.post('/webhook', verifyWebhook, async (req, res) => {
         break;
 
       case 'CANCELLATION':
-        // User cancelled but still has access until expiration
+        // User cancelled but still has access until expiration.
+        // isSubscribed stays true — access continues until EXPIRATION event.
         subscriptionUpdate = {
           'subscription.willRenew': false,
           'subscription.cancelledAt': new Date().toISOString(),
@@ -206,6 +214,7 @@ router.post('/webhook', verifyWebhook, async (req, res) => {
 
       case 'EXPIRATION':
         subscriptionUpdate = {
+          isSubscribed: false,
           'subscription.status': 'expired',
           'subscription.willRenew': false,
           'subscription.expiredAt': new Date().toISOString(),
@@ -224,6 +233,7 @@ router.post('/webhook', verifyWebhook, async (req, res) => {
       case 'NON_RENEWING_PURCHASE':
         // Lifetime purchase — never expires
         subscriptionUpdate = {
+          isSubscribed: true,
           'subscription.status': 'active',
           'subscription.plan': productId,
           'subscription.store': store,

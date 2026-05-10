@@ -96,6 +96,86 @@ function sanitizeForFirestore(value, seen = new WeakSet()) {
   return null;
 }
 
+function toFiniteNumberOrNull(value) {
+  const num = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function toStringOrNull(value) {
+  if (value === null || value === undefined) return null;
+  try {
+    const str = String(value);
+    return str.length > 0 ? str : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function normalizeCalculationMetadata(metadata) {
+  if (!metadata || typeof metadata !== 'object') return null;
+
+  const settings = metadata.settings && typeof metadata.settings === 'object'
+    ? {
+        ayanamsha: toStringOrNull(metadata.settings.ayanamsha),
+        houseSystem: toStringOrNull(metadata.settings.houseSystem),
+        nodeType: toStringOrNull(metadata.settings.nodeType),
+        observerMode: toStringOrNull(metadata.settings.observerMode),
+        sunriseMode: toStringOrNull(metadata.settings.sunriseMode),
+        dashaYearMode: toStringOrNull(metadata.settings.dashaYearMode),
+        ephemeris: toStringOrNull(metadata.settings.ephemeris),
+        timezoneSource: toStringOrNull(metadata.settings.timezoneSource),
+      }
+    : null;
+
+  const ephemeris = metadata.ephemeris && typeof metadata.ephemeris === 'object'
+    ? {
+        provider: toStringOrNull(metadata.ephemeris.provider),
+        requestedFlags: Array.isArray(metadata.ephemeris.requestedFlags)
+          ? metadata.ephemeris.requestedFlags.map(flag => toStringOrNull(flag)).filter(Boolean)
+          : [],
+        returnedFlags: Array.isArray(metadata.ephemeris.returnedFlags)
+          ? metadata.ephemeris.returnedFlags.map(group =>
+            Array.isArray(group)
+              ? group.map(flag => toStringOrNull(flag)).filter(Boolean)
+              : []
+          )
+          : [],
+        returnedFlagsOk: typeof metadata.ephemeris.returnedFlagsOk === 'boolean'
+          ? metadata.ephemeris.returnedFlagsOk
+          : null,
+      }
+    : null;
+
+  const timeContext = metadata.timeContext && typeof metadata.timeContext === 'object'
+    ? {
+        utcDate: toStringOrNull(metadata.timeContext.utcDate),
+        zoneName: toStringOrNull(metadata.timeContext.zoneName),
+        offsetSeconds: toFiniteNumberOrNull(metadata.timeContext.offsetSeconds),
+        offsetLabel: toStringOrNull(metadata.timeContext.offsetLabel),
+        source: toStringOrNull(metadata.timeContext.source),
+        assumedOffset: typeof metadata.timeContext.assumedOffset === 'boolean'
+          ? metadata.timeContext.assumedOffset
+          : null,
+        displayLocalDate: toStringOrNull(metadata.timeContext.displayLocalDate),
+        displayLocalTime: toStringOrNull(metadata.timeContext.displayLocalTime),
+        displayLocalDateTime: toStringOrNull(metadata.timeContext.displayLocalDateTime),
+      }
+    : null;
+
+  return {
+    engineVersion: toStringOrNull(metadata.engineVersion),
+    generatedAt: toStringOrNull(metadata.generatedAt),
+    calculationDate: toStringOrNull(metadata.calculationDate),
+    observer: {
+      lat: toFiniteNumberOrNull(metadata.observer?.lat),
+      lng: toFiniteNumberOrNull(metadata.observer?.lng),
+    },
+    settings,
+    ephemeris,
+    timeContext,
+  };
+}
+
 function normalizeReportBirthInfo(birthInfo) {
   if (!birthInfo || typeof birthInfo !== 'object') return birthInfo || null;
   const normalized = {};
@@ -228,6 +308,7 @@ async function saveReport(uid, reportData) {
   const reportId = uuidv4();
   const promptAnalytics = reportData.promptAnalytics
     || buildUnsupportedTermAnalytics(reportData.validationMetadata || {}, reportData.promptMetadata || null);
+  const normalizedCalculationMetadata = normalizeCalculationMetadata(reportData.calculationMetadata);
   const report = sanitizeForFirestore({
     id: reportId,
     uid,
@@ -247,7 +328,7 @@ async function saveReport(uid, reportData) {
     engineVersion: reportData.engineVersion || null,
     promptMetadata: reportData.promptMetadata || null,
     promptAnalytics,
-    calculationMetadata: reportData.calculationMetadata || null,
+    calculationMetadata: normalizedCalculationMetadata,
     validationMetadata: reportData.validationMetadata || null,
     generationTime: reportData.generationTime || null,
     userName: reportData.userName || null,
@@ -256,10 +337,29 @@ async function saveReport(uid, reportData) {
     createdAt: new Date().toISOString(),
     expiresAt: reportData.expiresAt || null, // null = never expires
   });
+  let persistedReport = report;
 
   try {
     await db.collection(COLLECTIONS.REPORTS).doc(reportId).set(report);
   } catch (saveErr) {
+    let savedViaMetadataFallback = false;
+    if (/calculationMetadata/i.test(saveErr?.message || '')) {
+      try {
+        const reportWithoutMetadata = {
+          ...report,
+          calculationMetadata: null,
+        };
+        await db.collection(COLLECTIONS.REPORTS).doc(reportId).set(reportWithoutMetadata);
+        console.warn('[saveReport] Saved report after dropping invalid calculationMetadata payload');
+        persistedReport = reportWithoutMetadata;
+        savedViaMetadataFallback = true;
+      } catch (_) {
+        // Fall through to existing error handling
+      }
+    }
+    if (savedViaMetadataFallback) {
+      // Continue to shared post-save flow (analytics snapshot + user counters).
+    } else {
     if (uid && reportData.cacheKey) {
       const existing = await getCachedReport(uid, reportData.cacheKey, {
         promptVersion: report.promptVersion || null,
@@ -269,8 +369,9 @@ async function saveReport(uid, reportData) {
     }
     console.error('[saveReport] Firestore save failed:', saveErr.message);
     throw saveErr;
+    }
   }
-  await savePromptAnalyticsSnapshot(uid, reportId, report).catch(() => null);
+  await savePromptAnalyticsSnapshot(uid, reportId, persistedReport).catch(() => null);
 
   // Increment user's report count
   try {

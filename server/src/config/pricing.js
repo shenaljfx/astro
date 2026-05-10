@@ -5,7 +5,7 @@
  * International users: USD pricing via RevenueCat (in-app purchases)
  * 
  * Pricing tiers:
- *   SL:  LKR 280/month subscription, LKR 100 porondam, LKR 380 report
+ *   SL:  LKR 280/month subscription, LKR 200 porondam, LKR 499 report
  *   INT: USD 4.99/month subscription, USD 1.99 porondam, USD 5.99 report
  */
 
@@ -24,18 +24,18 @@ const PRICING = {
       productId: 'monthly',
     },
     porondam: {
-      amount: 100,
-      amountFormatted: '100.00',
-      label: 'LKR 100',
+      amount: 200,
+      amountFormatted: '200.00',
+      label: 'LKR 200',
       productId: 'porondam_check',
     },
     report: {
-      amount: 380,
-      amountFormatted: '380.00',
-      label: 'LKR 380',
+      amount: 499,
+      amountFormatted: '499.00',
+      label: 'LKR 499',
       productId: 'full_report',
     },
-    topUpPackages: [100, 280, 380, 500],
+    topUpPackages: [200, 280, 499, 500],
   },
   USD: {
     currency: 'USD',

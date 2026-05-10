@@ -14,6 +14,7 @@ import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Path, G }
 import { Colors } from '../constants/theme';
 import { boxShadow } from '../utils/shadow';
 import { APP_LOGO_IMAGE } from '../assets/logo-inline';
+var ZODIAC_BASE64 = require('../assets/zodiac/zodiac-base64');
 
 var { width: SW, height: SH } = Dimensions.get('window');
 
@@ -172,7 +173,8 @@ var SECTION_COLORS = {
   timeline25: '#B3B7FF', remedies: '#D6B56D', checking_saved_report: '#F4E4BC',
 };
 
-var ZODIAC_GLYPHS = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
+// Zodiac ring: 12 sign images in ecliptic order (Aries → Pisces)
+var ZODIAC_IMAGES = ZODIAC_BASE64;
 
 var STAR_FIELD = [
   { x: 8, y: 12, size: 2, delay: 0 }, { x: 16, y: 68, size: 1.5, delay: 500 },
@@ -261,10 +263,11 @@ function PremiumStar({ star, skipAnim }) {
   );
 }
 
-function ZodiacMark({ glyph, index, size, rotation }) {
-  var baseAngle = -Math.PI / 2 + (Math.PI * 2 / ZODIAC_GLYPHS.length) * index;
+function ZodiacMark({ image, index, size, rotation }) {
+  var baseAngle = -Math.PI / 2 + (Math.PI * 2 / ZODIAC_IMAGES.length) * index;
   var radius = size * 0.405;
   var markSize = size < 250 ? 24 : 28;
+  var imgSize = markSize - 6;
   var style = useAnimatedStyle(function() {
     var angle = baseAngle + rotation.value * 0.16;
     return {
@@ -279,7 +282,7 @@ function ZodiacMark({ glyph, index, size, rotation }) {
 
   return (
     <Animated.View style={[st.zodiacMark, { width: markSize, height: markSize, borderRadius: markSize / 2, left: size / 2 - markSize / 2, top: size / 2 - markSize / 2 }, style]}>
-      <Text style={[st.zodiacText, { fontSize: size < 250 ? 12 : 13 }]}>{glyph}</Text>
+      <Image source={image} style={{ width: imgSize, height: imgSize, borderRadius: imgSize / 2 }} resizeMode="contain" />
     </Animated.View>
   );
 }
@@ -518,8 +521,8 @@ export default function ReportLoadingScreen({ progress, userName, language, redu
           />
           <Animated.View pointerEvents="none" style={[st.dialHalo, { width: dialSize * 0.8, height: dialSize * 0.8, borderRadius: dialSize * 0.4 }, haloStyle]} />
           <AstrolabeDial size={dialSize} progressFraction={progressFraction} rotation={rotation} />
-          {!isLowEnd && ZODIAC_GLYPHS.map(function(glyph, i) {
-            return <ZodiacMark key={'zodiacMark' + glyph} glyph={glyph} index={i} size={dialSize} rotation={rotation} />;
+          {!isLowEnd && ZODIAC_IMAGES.map(function(image, i) {
+            return <ZodiacMark key={'zodiacMark' + i} image={image} index={i} size={dialSize} rotation={rotation} />;
           })}
           {!isLowEnd && [Colors.luxuryGoldSoft, '#BFA4FF', Colors.luxuryGold, '#8DE2CE'].map(function(color, i) {
             return <OrbitGem key={'gem' + i} index={i} count={4} radius={dialSize * 0.25} color={color} size={i === 0 ? 7 : 5} orbit={orbit} />;
@@ -701,12 +704,7 @@ var st = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(244,228,188,0.18)',
     backgroundColor: 'rgba(11,8,17,0.68)',
-  },
-  zodiacText: {
-    color: Colors.luxuryGoldSoft,
-    fontWeight: '800',
-    textAlign: 'center',
-    includeFontPadding: false,
+    overflow: 'hidden',
   },
   orbitGem: {
     position: 'absolute',

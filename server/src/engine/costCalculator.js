@@ -60,8 +60,8 @@ const HERO_SECTIONS = ['lifePredictions', 'surpriseInsights', 'marriage', 'caree
 // ── Revenue / Business Model ────────────────────────────────────
 // Prices charged to users (LKR)
 const REVENUE = {
-  fullReportLKR: 380,        // One-time charge per full AI report
-  porondamLKR: 100,          // One-time charge per porondam report
+  fullReportLKR: 499,        // One-time charge per full AI report
+  porondamLKR: 200,          // One-time charge per porondam report
   subscriptionLKR: 280,      // Monthly subscription
   // Subscription includes:
   //   - Weekly Lagna Palapala (generated once, shared across ALL subscribers)
@@ -299,8 +299,8 @@ async function runLiveCostTest(birthDateStr = '1998-10-09T03:46:00.000Z', lat = 
  * Print a comprehensive cost estimate summary with correct business model
  * 
  * Business Model:
- *   - Full AI Report: LKR 380 (one-time, separate charge)
- *   - Porondam Report: LKR 100 (one-time, separate charge)
+ *   - Full AI Report: LKR 499 (one-time, separate charge)
+ *   - Porondam Report: LKR 200 (one-time, separate charge)
  *   - Monthly Subscription: LKR 280/month includes:
  *       • Weekly Lagna Palapala (generated once, shared across ALL users)
  *       • 10 AI chat questions per month
@@ -341,7 +341,7 @@ function printCostSummary() {
   // 1. Full Report (free search)
   const fullReportFree = estimateFullReportCost(true);
   console.log('┌──────────────────────────────────────────────────────────────────┐');
-  console.log('│  1. FULL AI REPORT  (charged: LKR 380)                          │');
+  console.log('│  1. FULL AI REPORT  (charged: LKR 499)                          │');
   console.log('├──────────────────────────────────────────────────────────────────┤');
   console.log(`│  Sections: ${fullReportFree.totalSections} (${fullReportFree.heroSections} hero @3.1Pro + ${fullReportFree.standardSections} std @2.5Flash + coherence)`);
   console.log(`│  Tokens: ~${(fullReportFree.totalTokens / 1000).toFixed(0)}K (${(fullReportFree.totalInputTokens / 1000).toFixed(0)}K in + ${(fullReportFree.totalOutputTokens / 1000).toFixed(0)}K out)`);
@@ -364,7 +364,7 @@ function printCostSummary() {
   // 2. Porondam
   const porondam = estimatePorondamCost();
   console.log('┌──────────────────────────────────────────────────────────────────┐');
-  console.log('│  2. PORONDAM AI REPORT  (charged: LKR 100)                      │');
+  console.log('│  2. PORONDAM AI REPORT  (charged: LKR 200)                      │');
   console.log('├──────────────────────────────────────────────────────────────────┤');
   console.log(`│  Model: ${porondam.model}`);
   console.log(`│  Tokens: ~${((porondam.inputTokens + porondam.outputTokens) / 1000).toFixed(0)}K`);

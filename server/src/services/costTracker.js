@@ -25,8 +25,8 @@ const { recordAICostEvent } = require('./budgetEnforcer');
 
 // ── Revenue constants (LKR) ─────────────────────────────────────
 const REVENUE = {
-  fullReport: 380,
-  porondam: 100,
+  fullReport: 499,
+  porondam: 200,
   subscription: 280,    // per month (includes: weekly lagna shared, 5 chats/day, 1 kendara)
   chat: 0,              // included in subscription (5/day)
   weeklyLagna: 0,       // shared cost, no per-user revenue
