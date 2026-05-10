@@ -36,6 +36,7 @@ import { CosmicBackground } from '../../components/CosmicBackground';
 import { generatePorondamHTML, loadLogoBase64 } from '../../utils/pdfReportGenerator';
 import RadarChart from '../../components/RadarChart';
 import { ZODIAC_IMAGES as ZODIAC_IMAGE_LIST } from '../../components/ZodiacIcons';
+import MagnetismCard from '../../components/MagnetismCard';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -1776,6 +1777,11 @@ export default function PorondamScreen() {
               </Animated.View>
             )}
 
+
+            {/* Attraction Magnetism */}
+            {data.magnetism && (
+              <MagnetismCard magnetism={data.magnetism} language={language} />
+            )}
             {/* â•â•â• ADVANCED DOSHA COMPARISON â•â•â• */}
             {(data.brideAdvanced || data.groomAdvanced) && (
               <Animated.View entering={FadeInUp.delay(900).duration(700)}>

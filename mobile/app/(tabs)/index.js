@@ -33,6 +33,9 @@ import useLowEndDevice from '../../hooks/useLowEndDevice';
 import { CosmicBackground } from '../../components/CosmicBackground';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
+import AffirmationCard from '../../components/AffirmationCard';
+import IntentionCard from '../../components/IntentionCard';
+import ManifestationCard from '../../components/ManifestationCard';
 
 // Lazy-load heavy THREE.js moon component — saves ~600KB parse on startup
 var RealisticMoonLazy = lazy(function () { return import('../../components/RealisticMoon'); });
@@ -2963,6 +2966,28 @@ export default function HomeScreen() {
             <View style={[s.todayStack, isDesktop && s.todayStackDesktop]}>
               {/* Personal Oracle Hero */}
               {renderOracleHero()}
+
+              {/* Daily Affirmations */}
+              {hasBirthData && (
+                <AffirmationCard
+                  language={language}
+                  birthDate={birthDateTime}
+                  birthLat={birthLat}
+                  birthLng={birthLng}
+                  getAffirmations={api.getAffirmations}
+                />
+              )}
+
+              {/* Intention of the Day */}
+              <IntentionCard language={language} />
+
+              {/* Manifestation Power */}
+              {data?.jyotish?.manifestation && (
+                <ManifestationCard
+                  manifestation={data.jyotish.manifestation}
+                  language={language}
+                />
+              )}
 
               {/* Rahu Kalaya */}
               {renderRahuKalayaCard()}

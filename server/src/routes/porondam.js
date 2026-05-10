@@ -10,6 +10,7 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { calculatePorondam, calculateAdvancedPorondam } = require('../engine/porondam');
+const { calculateMagnetism } = require('../engine/manifestation');
 const { buildHouseChart } = require('../engine/astrology');
 const { generateAdvancedAnalysis } = require('../engine/advanced');
 const { chat } = require('../engine/chat');
@@ -177,6 +178,12 @@ router.post('/check', aiLimiter, optionalAuth, async (req, res) => {
       } catch (e) { console.error('Jyotish matching error:', e.message); }
     }
 
+    // Attraction Magnetism (Law of Attraction chemistry analysis)
+    let magnetism = null;
+    try {
+      magnetism = calculateMagnetism(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng);
+    } catch (e) { console.error('Magnetism calculation error:', e.message); }
+
     const responseData = {
       ...result,
       advancedPorondam,
@@ -187,6 +194,7 @@ router.post('/check', aiLimiter, optionalAuth, async (req, res) => {
       brideEnhanced,
       groomEnhanced,
       jyotishMatching,
+      magnetism,
     };
 
     // Save to Firestore

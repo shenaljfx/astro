@@ -262,6 +262,19 @@ const translations = {
     weddingSub: 'Favorable dates for both partners',
     noWindows: 'No overlapping favorable window found in the next 2 years',
 
+    // Law of Attraction / Manifestation
+    manifestationTitle: 'Manifestation Power',
+    manifestationSub: 'Your cosmic energy for attracting today',
+    affirmationsTitle: 'Daily Affirmations',
+    affirmationsSub: 'Personalized cosmic affirmations from your chart',
+    setIntention: 'Set as Intention',
+    intentionSet: 'Intention Set ✓',
+    magnetismTitle: 'Attraction Magnetism',
+    magnetismSub: 'Based on Law of Attraction',
+    magneticPull: 'Magnetic Pull',
+    todayFocus: 'Today\'s Focus',
+    readingChart: 'Reading your chart...',
+
     // DST
     dstTitle: 'Daylight Saving Time',
     dstWarning: 'Your birth date falls within a DST period!',
@@ -725,6 +738,19 @@ const translations = {
     weddingTitle: 'හොඳම විවාහ කාල',
     weddingSub: 'දෙදෙනාටම හිතකර කාල',
     noWindows: 'ඉදිරි වසර 2 තුළ ගැලපෙන සුභ කාලයක් හමු නොවීය',
+
+    // Law of Attraction / Manifestation
+    manifestationTitle: 'ප්‍රකාශන බලය',
+    manifestationSub: 'අද ඔබේ ආකර්ෂණ බලය',
+    affirmationsTitle: 'දෛනික ප්‍රතිපත්ති',
+    affirmationsSub: 'ඔබේ කේන්දරයෙන් ලබාගත් ප්‍රතිපත්ති',
+    setIntention: 'අරමුණ තියන්න',
+    intentionSet: 'අරමුණ තියලා ✓',
+    magnetismTitle: 'ආකර්ෂණ චුම්බකත්වය',
+    magnetismSub: 'ආකර්ෂණ නීතිය මත පදනම්ව',
+    magneticPull: 'චුම්බක ඇදීම',
+    todayFocus: 'අද අවධානය',
+    readingChart: 'කේන්දරය කියවමින්...',
 
     // DST
     dstTitle: 'වෙලාව වෙනස් වෙච්ච කාල (DST)',

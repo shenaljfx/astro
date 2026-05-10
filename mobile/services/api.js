@@ -199,6 +199,13 @@ export var checkPorondam = function(bride, groom) {
   });
 };
 
+export var getAffirmations = function(birthDate, lat, lng, date) {
+  var dateStr = date || new Date().toISOString().split('T')[0];
+  return request('/api/manifest/affirmations?birthDate=' + encodeURIComponent(birthDate) + '&lat=' + (lat || 6.9271) + '&lng=' + (lng || 79.8612) + '&date=' + dateStr, {
+    _timeout: 30000,
+  });
+};
+
 export var getPorondamReport = function(porondamData, language, brideName, groomName, porondamId, entitlementInput) {
   return request('/api/porondam/report', {
     method: 'POST',
@@ -869,4 +876,6 @@ export default {
   getJyotishMatch: getJyotishMatch,
   getJyotishPanchanga: getJyotishPanchanga,
   getJyotishSpecialYogas: getJyotishSpecialYogas,
+  // Manifestation / Law of Attraction
+  getAffirmations: getAffirmations,
 };

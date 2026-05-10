@@ -10,6 +10,7 @@
 const express = require('express');
 const router = express.Router();
 const { calculateRahuKalaya, getDailyNakath, getPanchanga } = require('../engine/astrology');
+const { getManifestationScore } = require('../engine/manifestation');
 const { formatLocalDateTime, formatUtcOffset } = require('../engine/calculationSettings');
 
 // Jyotish engine (graceful — null if unavailable)
@@ -105,6 +106,8 @@ router.get('/daily', (req, res) => {
         },
         // Jyotish cross-validation (independent panchanga, disha shoola, special yogas)
         jyotish: jyotishEngine ? jyotishEngine.generateTodayJyotish(lat, lng) : null,
+        // Manifestation score (Law of Attraction — daily manifestation power)
+        manifestation: (() => { try { return getManifestationScore(date, lat, lng); } catch (e) { console.error('[nakath] manifestation score error:', e.message); return null; } })(),
       },
     });
   } catch (error) {
