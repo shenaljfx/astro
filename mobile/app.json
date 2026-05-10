@@ -28,7 +28,7 @@
       "package": "com.grahachara.app",
       "versionCode": 70,
       "googleServicesFile": "./google-services.json",
-      "softwareKeyboardLayoutMode": "resize",
+      "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",

@@ -609,7 +609,7 @@ export default function ChatScreen() {
               {/* ── Messages + chips + input ── */}
               <KeyboardAvoidingView
                 style={{ flex: 1, minHeight: 0 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior="padding"
               >
                 <ScrollView
                   ref={scroll}
@@ -702,10 +702,9 @@ export default function ChatScreen() {
   var headerTotalHeight = topPad + 56;
   var kavOffset = Platform.OS === 'ios' ? headerTotalHeight : 0;
   var composerSafePad = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 6);
-  // Use focus-based lift so marginBottom collapses *immediately* on focus (before
-  // keyboardDidShow fires) — fixes the ~300ms window on Android where resize had
-  // already shrunk the window but the tab bar margin was still reserving space.
-  var composerLift = inputFocused ? 0 : TAB_BAR_VISUAL_HEIGHT;
+  // With softwareKeyboardLayoutMode='pan' + custom tab bar hiding on keyboard,
+  // the tab-bar margin should collapse when keyboard is open (tab bar is gone).
+  var composerLift = kb.isOpen ? 0 : TAB_BAR_VISUAL_HEIGHT;
 
   return (
     <DesktopScreenWrapper routeName="chat">
@@ -747,7 +746,7 @@ export default function ChatScreen() {
       {/* KeyboardAvoidingView wraps messages + input */}
       <KeyboardAvoidingView
         style={{ flex: 1, minHeight: 0 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         keyboardVerticalOffset={kavOffset}
         enabled={true}
       >
