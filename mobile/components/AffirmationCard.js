@@ -99,7 +99,7 @@ export default function AffirmationCard({ language, birthDate, birthLat, birthLn
     try {
       var tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(7, 0, 0, 0);
+      tomorrow.setHours(8, 0, 0, 0);
 
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -107,7 +107,11 @@ export default function AffirmationCard({ language, birthDate, birthLat, birthLn
           body: intention.text,
           data: { type: 'intention', category: aff.category },
         },
-        trigger: { date: tomorrow },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: tomorrow,
+          channelId: 'daily-guidance',
+        },
       });
     } catch (e) {
       // Notification scheduling is best-effort

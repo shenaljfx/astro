@@ -220,6 +220,7 @@ async function getTokensWithPreference(preferenceKey) {
               ...token,
               birthData: userData.birthData || null,
               language: prefs.language || 'si',
+              timezone: userData.birthData?.timezone || prefs.timezone || 'Asia/Colombo',
             });
           }
         }

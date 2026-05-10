@@ -281,7 +281,7 @@ async function callGemini(systemPrompt, userPrompt) {
     contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 16000,
+      maxOutputTokens: 65536,
       responseMimeType: 'application/json',
     },
   };
@@ -380,7 +380,7 @@ async function callGeminiFallback(systemPrompt, userPrompt) {
     systemInstruction: systemPrompt,
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 16000,
+      maxOutputTokens: 65536,
       responseMimeType: 'application/json',
     },
   });
@@ -413,6 +413,77 @@ async function callOpenAI(systemPrompt, userPrompt) {
   return { reports, usage: { inputTokens: response.usage?.prompt_tokens || 0, outputTokens: response.usage?.completion_tokens || 0, thinkingTokens: 0, model } };
 }
 
+/**
+ * Attempt to repair truncated JSON arrays.
+ * If the AI output was cut mid-object, close open strings/objects/arrays.
+ */
+function repairTruncatedJSON(text) {
+  let trimmed = text.trim();
+  // Must start with [ to be a JSON array
+  if (!trimmed.startsWith('[')) {
+    const arrStart = trimmed.indexOf('[');
+    if (arrStart === -1) return null;
+    trimmed = trimmed.substring(arrStart);
+  }
+
+  // Already valid?
+  try { return JSON.parse(trimmed); } catch (e) { /* continue repair */ }
+
+  // Close open strings, objects, arrays
+  // Find the last complete object in the array by finding the last '}}' or '}'
+  const lastCompleteObj = trimmed.lastIndexOf('}');
+  if (lastCompleteObj === -1) return null;
+
+  // Walk back to find a point where we can close the array
+  let candidate = trimmed.substring(0, lastCompleteObj + 1);
+
+  // Count open brackets to determine what needs closing
+  let openBrackets = 0;
+  let openBraces = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < candidate.length; i++) {
+    const ch = candidate[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '[') openBrackets++;
+    else if (ch === ']') openBrackets--;
+    else if (ch === '{') openBraces++;
+    else if (ch === '}') openBraces--;
+  }
+
+  // Close any open braces then brackets
+  let suffix = '';
+  for (let i = 0; i < openBraces; i++) suffix += '}';
+  for (let i = 0; i < openBrackets; i++) suffix += ']';
+  candidate += suffix;
+
+  try {
+    const parsed = JSON.parse(candidate);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      console.warn(`[WeeklyLagna] Repaired truncated JSON: recovered ${parsed.length}/12 lagnas`);
+      return parsed;
+    }
+  } catch (e) { /* final fallback below */ }
+
+  // More aggressive: find last complete object ending with },
+  const lastComma = trimmed.lastIndexOf('},');
+  if (lastComma > 0) {
+    const aggressive = trimmed.substring(0, lastComma + 1) + ']';
+    try {
+      const parsed = JSON.parse(aggressive);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        console.warn(`[WeeklyLagna] Aggressively repaired JSON: recovered ${parsed.length}/12 lagnas`);
+        return parsed;
+      }
+    } catch (e) { /* give up */ }
+  }
+
+  return null;
+}
+
 function parseAIResponse(text) {
   try {
     // Try direct JSON parse
@@ -430,8 +501,15 @@ function parseAIResponse(text) {
     // Try extracting JSON array from text
     const match = text.match(/\[[\s\S]*\]/);
     if (match) {
-      return JSON.parse(match[0]);
+      try {
+        return JSON.parse(match[0]);
+      } catch (e2) { /* fall through to repair */ }
     }
+
+    // Attempt truncated JSON repair (common when maxOutputTokens is hit)
+    const repaired = repairTruncatedJSON(text);
+    if (repaired) return repaired;
+
     throw new Error('Failed to parse AI response: ' + e.message);
   }
 }

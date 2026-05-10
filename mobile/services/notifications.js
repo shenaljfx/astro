@@ -17,68 +17,68 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 var DAILY_GUIDANCE_IDS_KEY = 'grahachara_daily_guidance_notification_ids';
 var DAILY_GUIDANCE_LANG_KEY = 'grahachara_daily_guidance_notification_language';
 var DAILY_GUIDANCE_PREFS_KEY = '@grahachara_notif_prefs';
-var DAILY_GUIDANCE_HOUR = 6;
-var DAILY_GUIDANCE_MINUTE = 30;
+var DAILY_GUIDANCE_HOUR = 8;
+var DAILY_GUIDANCE_MINUTE = 0;
 
 var DAILY_GUIDANCE_MESSAGES = {
   en: [
     {
-      title: 'Daily guidance',
-      body: 'Motivation: begin with one clear intention. Do: handle important work early. Do not: rush decisions during tense moments.',
+      title: '🌅 Morning Blessing',
+      body: 'You are aligned with the rhythm of the cosmos. Today, every step carries purpose. Trust the path unfolding before you. ✨',
     },
     {
-      title: 'Daily guidance',
-      body: 'Motivation: steady effort brings quiet progress. Do: protect your focus. Do not: carry yesterday into today.',
+      title: '✨ Cosmic Energy',
+      body: 'The universe is conspiring in your favour today. Open your heart to receive what is already on its way to you. 💫',
     },
     {
-      title: 'Daily guidance',
-      body: 'Motivation: choose patience before pressure. Do: speak clearly. Do not: start conflict over small delays.',
+      title: '🌸 Inner Light',
+      body: 'Your inner light shines brighter than any shadow. Today you radiate warmth, wisdom, and quiet confidence to everyone around you.',
     },
     {
-      title: 'Daily guidance',
-      body: 'Motivation: your calm is your strength. Do: finish one pending task. Do not: overpromise your time.',
+      title: '🌿 Sacred Morning',
+      body: 'Like the lotus rising through still water, you rise above yesterday. This morning is your fresh beginning — breathe it in deeply. 🕊️',
     },
     {
-      title: 'Daily guidance',
-      body: 'Motivation: small discipline changes the day. Do: review plans before acting. Do not: ignore your intuition.',
+      title: '💫 Abundant Day',
+      body: 'Abundance flows through you like a river finding the sea. Today you attract exactly what your soul has been preparing for. 🌟',
     },
     {
-      title: 'Daily guidance',
-      body: 'Motivation: move with grace, not haste. Do: spend time in reflection. Do not: make emotional purchases.',
+      title: '🔥 Inner Strength',
+      body: 'There is a fire within you that no storm can extinguish. Today you move forward with courage, clarity, and unwavering determination.',
     },
     {
-      title: 'Daily guidance',
-      body: 'Motivation: rest is part of alignment. Do: reconnect with family or faith. Do not: let worry decide for you.',
+      title: '🙏 Gratitude Sunrise',
+      body: 'This breath is a gift. This morning is a blessing. Today you walk with a grateful heart, and the universe rewards your appreciation. ☀️',
     },
   ],
   si: [
     {
-      title: 'දෛනික මඟපෙන්වීම',
-      body: 'උද්දීපනය: පැහැදිලි අරමුණකින් පටන් ගන්න. කරන්න: වැදගත් වැඩ කලින් කරන්න. නොකරන්න: තීරණ හදිසි කරගන්න එපා.',
+      title: '🌅 උදෑසන ආශිර්වාදය',
+      body: 'ඔයා විශ්වයේ ලයට එකතු වෙලා ඉන්නේ. අද හැම පියවරක්ම අරමුණක් දරනවා. ඉදිරියේ මතුවන මාර්ගය විශ්වාස කරන්න. ✨',
     },
     {
-      title: 'දෛනික මඟපෙන්වීම',
-      body: 'උද්දීපනය: ස්ථිර උත්සාහය නිහඬ ප්‍රගතියක් ගෙන එයි. කරන්න: අවධානය රකින්න. නොකරන්න: ඊයේ බර අදට ගෙන එන්න එපා.',
+      title: '✨ විශ්ව ශක්තිය',
+      body: 'විශ්වය අද ඔයාට හිතකර ලෙස ක්‍රියා කරනවා. ඔයා ළඟට එන දේවල් ලැබීමට හදවත විවෘත කරන්න. 💫',
     },
     {
-      title: 'දෛනික මඟපෙන්වීම',
-      body: 'උද්දීපනය: පීඩනයට පෙර ඉවසීම තෝරන්න. කරන්න: පැහැදිලිව කතා කරන්න. නොකරන්න: කුඩා ප්‍රමාදයකින් ගැටුම් අරඹන්න එපා.',
+      title: '🌸 අභ්‍යන්තර ආලෝකය',
+      body: 'ඔයාගේ ඇතුළත ආලෝකය ඕනෑම සෙවණැල්ලකට වඩා දීප්තිමත්. අද උණුසුම, ප්‍රඥාව සහ සන්සුන් විශ්වාසය පතුරවන්න.',
     },
     {
-      title: 'දෛනික මඟපෙන්වීම',
-      body: 'උද්දීපනය: ඔබේ සන්සුන්කම ඔබේ ශක්තියයි. කරන්න: එක ඉතිරි වැඩක් අවසන් කරන්න. නොකරන්න: ඔබේ කාලය අධිකව පොරොන්දු වෙන්න එපා.',
+      title: '🌿 ශුද්ධ උදෑසන',
+      body: 'නිස්කලංක දියෙන් නැගෙන නෙළුම මෙන් ඔයා ඊයේ ඉහළට නැඟෙනවා. මේ උදෑසන අලුත් ආරම්භයයි — ගැඹුරින් හුස්ම ගන්න. 🕊️',
     },
     {
-      title: 'දෛනික මඟපෙන්වීම',
-      body: 'උද්දීපනය: කුඩා විනය දවස වෙනස් කරයි. කරන්න: ක්‍රියාවට පෙර සැලසුම් බලන්න. නොකරන්න: අභ්‍යන්තර හැඟීම නොසලකා හරින්න එපා.',
+      title: '💫 සෞභාග්‍යමත් දවස',
+      body: 'සමෘද්ධිය මුහුදට ගලන ගඟක් වගේ ඔයා තුළින් ගලනවා. ඔයාගේ ආත්මය සූදානම් කළ දේ හරියටම අද ඇදෙනවා. 🌟',
     },
     {
-      title: 'දෛනික මඟපෙන්වීම',
-      body: 'උද්දීපනය: ඉක්මන් නොවී සුරුවමෙන් ඉදිරියට යන්න. කරන්න: සිතීමකට වේලාවක් දෙන්න. නොකරන්න: හැඟීම් මත වියදම් කරන්න එපා.',
+      title: '🔥 අභ්‍යන්තර ශක්තිය',
+      body: 'ඔයා තුළ කිසිදු කුණාටුවකට නිවිය නොහැකි ගින්නක් තියෙනවා. අද නිර්භීතව, පැහැදිලිව ඉදිරියට යන්න.',
     },
     {
-      title: 'දෛනික මඟපෙන්වීම',
-      body: 'උද්දීපනය: විවේකයත් සන්ධානයේ කොටසකි. කරන්න: පවුල හෝ ආගමික සිතුවිලි සමඟ සම්බන්ධ වෙන්න. නොකරන්න: කනස්සල්ලට තීරණ දෙන්න එපා.',
+      title: '🙏 කෘතඥතා උදාව',
+      body: 'මේ හුස්ම දීමනාවක්. මේ උදෑසන ආශිර්වාදයක්. අද කෘතඥ හදවතකින් ගමන් කරන්න — විශ්වය ඔයාට ත්‍යාග දෙනවා. ☀️',
     },
   ],
 };
@@ -104,20 +104,13 @@ async function isDailyGuidanceEnabled() {
 }
 
 function buildWeeklyTrigger(weekday) {
-  var trigger = {
+  return {
+    type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
     weekday: weekday,
     hour: DAILY_GUIDANCE_HOUR,
     minute: DAILY_GUIDANCE_MINUTE,
     channelId: 'daily-guidance',
   };
-
-  if (Notifications.SchedulableTriggerInputTypes && Notifications.SchedulableTriggerInputTypes.WEEKLY) {
-    trigger.type = Notifications.SchedulableTriggerInputTypes.WEEKLY;
-  } else {
-    trigger.repeats = true;
-  }
-
-  return trigger;
 }
 
 // ─── Notification Channel Setup (Android) ────────────────────
@@ -127,28 +120,40 @@ export async function setupNotificationChannels() {
 
   await Notifications.setNotificationChannelAsync('default', {
     name: 'Grahachara',
-    importance: Notifications.AndroidImportance.DEFAULT,
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
     sound: 'default',
   });
 
   await Notifications.setNotificationChannelAsync('daily-guidance', {
     name: 'දෛනික මඟපෙන්වීම / Daily Guidance',
-    importance: Notifications.AndroidImportance.DEFAULT,
+    importance: Notifications.AndroidImportance.HIGH,
     sound: 'default',
+    vibrationPattern: [0, 250, 250, 250],
     description: 'Daily motivation, do and do not guidance',
+  });
+
+  await Notifications.setNotificationChannelAsync('daily-affirmation', {
+    name: '🌅 උදෑසන ආශිර්වාදය / Morning Affirmation',
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: 'default',
+    vibrationPattern: [0, 250, 250, 250],
+    description: 'Beautiful morning affirmation to start your day',
   });
 
   await Notifications.setNotificationChannelAsync('daily-palapa', {
     name: 'දෛනික පලාපල / Daily Horoscope',
-    importance: Notifications.AndroidImportance.DEFAULT,
+    importance: Notifications.AndroidImportance.HIGH,
     sound: 'default',
+    vibrationPattern: [0, 250, 250, 250],
     description: 'Daily horoscope and celestial guidance',
   });
 
   await Notifications.setNotificationChannelAsync('weekly-lagna', {
     name: 'සතිපතා ලග්න පලාපල / Weekly Lagna',
-    importance: Notifications.AndroidImportance.DEFAULT,
+    importance: Notifications.AndroidImportance.HIGH,
     sound: 'default',
+    vibrationPattern: [0, 250, 250, 250],
     description: 'Weekly lagna horoscope predictions',
   });
 
@@ -309,6 +314,14 @@ export async function clearBadge() {
 // ─── Schedule a local notification ────────────────────────────
 export async function scheduleLocalNotification(title, body, data, triggerDate) {
   try {
+    var trigger = null;
+    if (triggerDate) {
+      trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: triggerDate instanceof Date ? triggerDate : new Date(triggerDate),
+        channelId: 'default',
+      };
+    }
     var id = await Notifications.scheduleNotificationAsync({
       content: {
         title: title,
@@ -316,7 +329,7 @@ export async function scheduleLocalNotification(title, body, data, triggerDate) 
         data: data || {},
         sound: 'default',
       },
-      trigger: triggerDate ? { date: triggerDate, channelId: 'default' } : null,
+      trigger: trigger,
     });
     return id;
   } catch (err) {

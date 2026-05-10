@@ -328,4 +328,47 @@ router.post('/test-daily', requireAuth, async (req, res) => {
   }
 });
 
+// ─── Test Daily Affirmation Notification (dev only) ───────────
+router.post('/test-affirmation', requireAuth, async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Test notifications disabled in production' });
+  }
+
+  try {
+    const user = await getUser(req.user.uid);
+    const db = require('../config/firebase').getDb();
+    if (!db) return res.status(500).json({ error: 'Firebase not initialized' });
+
+    const tokenDoc = await db.collection('pushTokens').doc(req.user.uid).get();
+    if (!tokenDoc.exists || !tokenDoc.data().pushToken) {
+      return res.status(400).json({ error: 'No push token registered' });
+    }
+
+    const { buildDailyAffirmationMessage } = require('../services/scheduler');
+    const now = new Date();
+    const lang = user?.preferences?.language || 'si';
+    const affirmation = buildDailyAffirmationMessage(now, lang);
+
+    const panchangaData = getPanchanga(now, 6.9271, 79.8612, { timeContext: SRI_LANKA_TIME_CONTEXT });
+    const nakshatraName = lang === 'en'
+      ? (panchangaData?.nakshatra?.name || '')
+      : (panchangaData?.nakshatra?.sinhala || panchangaData?.nakshatra?.name || '');
+    const suffix = nakshatraName
+      ? (lang === 'en' ? `\n🌙 ${nakshatraName} Nakshatra` : `\n🌙 ${nakshatraName} නැකත`)
+      : '';
+    const body = affirmation.body + suffix;
+
+    const result = await sendPush(tokenDoc.data().pushToken, affirmation.title, body, {
+      type: 'DAILY_AFFIRMATION',
+      date: now.toISOString().split('T')[0],
+      test: true,
+    }, { channelId: 'daily-affirmation', priority: 'high' });
+
+    res.json({ success: true, result, preview: { title: affirmation.title, body } });
+  } catch (err) {
+    console.error('Test affirmation notification error:', err);
+    res.status(500).json({ error: 'Test affirmation notification failed', details: err.message });
+  }
+});
+
 module.exports = router;
