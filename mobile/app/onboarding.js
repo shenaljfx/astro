@@ -1605,6 +1605,7 @@ function BirthDataStep({ onComplete, lang }) {
               onChangeText={function (t) { setDisplayName(t); setError(''); }}
               autoFocus
               selectionColor="#A78BFA"
+              maxLength={25}
             />
             {error && page === 0 ? <Animated.Text entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={g.error}>{error}</Animated.Text> : null}
           </GlowCard>

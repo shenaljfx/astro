@@ -17,6 +17,7 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { requireSubscription } = require('../middleware/subscription');
+const { INPUT_LIMITS, sanitizeString } = require('../middleware/security');
 const {
   registerPushToken,
   unregisterPushToken,
@@ -37,7 +38,8 @@ const SRI_LANKA_TIME_CONTEXT = { zoneName: 'Asia/Colombo', offsetSeconds: 19800,
 // ─── Register Push Token ─────────────────────────────────────
 router.post('/register', requireAuth, async (req, res) => {
   try {
-    const { pushToken, platform } = req.body;
+    const pushToken = sanitizeString(req.body.pushToken, INPUT_LIMITS.pushToken);
+    const platform = sanitizeString(req.body.platform, INPUT_LIMITS.platform);
     if (!pushToken) {
       return res.status(400).json({ error: 'pushToken is required' });
     }

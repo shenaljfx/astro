@@ -9,6 +9,7 @@
 const express = require('express');
 const router = express.Router();
 const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getDailyNakath, RASHIS } = require('../engine/astrology');
+const { INPUT_LIMITS, sanitizeString } = require('../middleware/security');
 
 const SRI_LANKA_TIME_CONTEXT = { zoneName: 'Asia/Colombo', offsetSeconds: 19800, source: 'traditional_slt' };
 
@@ -24,7 +25,8 @@ const SRI_LANKA_TIME_CONTEXT = { zoneName: 'Asia/Colombo', offsetSeconds: 19800,
  */
 router.post('/weekly-card', (req, res) => {
   try {
-    const { birthDate, name } = req.body;
+    const { birthDate } = req.body;
+    const name = sanitizeString(req.body.name, INPUT_LIMITS.name);
 
     if (!birthDate) {
       return res.status(400).json({ error: 'Birth date is required.' });
@@ -95,7 +97,8 @@ router.post('/weekly-card', (req, res) => {
  */
 router.post('/personality', (req, res) => {
   try {
-    const { birthDate, name } = req.body;
+    const { birthDate } = req.body;
+    const name = sanitizeString(req.body.name, INPUT_LIMITS.name);
 
     if (!birthDate) {
       return res.status(400).json({ error: 'Birth date is required.' });

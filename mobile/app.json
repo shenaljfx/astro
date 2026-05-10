@@ -2,7 +2,7 @@
   "expo": {
     "name": "Grahachara",
     "slug": "grahachara",
-    "version": "1.8.4",
+    "version": "1.8.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "grahachara",
@@ -26,7 +26,7 @@
         "backgroundColor": "#0D0B2E"
       },
       "package": "com.grahachara.app",
-      "versionCode": 69,
+      "versionCode": 70,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [

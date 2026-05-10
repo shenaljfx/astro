@@ -13,7 +13,7 @@ const { generateAdvancedAnalysis } = require('../engine/advanced');
 const { chat, translateAdvancedForDisplay, explainChartSimple, createReportProgress, updateReportProgress, getReportProgressDurable } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth, requireSubscription } = require('../middleware/subscription');
-const { reportLimiter, aiUserLimiter, reportUserLimiter, validateBirthData, requireAdmin } = require('../middleware/security');
+const { reportLimiter, aiUserLimiter, reportUserLimiter, validateBirthData, requireAdmin, INPUT_LIMITS, sanitizeString } = require('../middleware/security');
 
 // Enhanced engine (graceful — null if unavailable)
 let enhancedEngine = null;
@@ -1123,7 +1123,14 @@ router.get('/report-progress/:reportId', phoneAuth, async (req, res) => {
 router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, reportUserLimiter, distributedReportUserLimiter, budgetGuard('fullReport'), async (req, res) => {
   let entitlementId = null;
   try {
-    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, maritalStatus = null, marriageYear = null, reportId: clientReportId = null, previousReportId = null, retryReportId = null, recoveryRetry = false, calculationSettings = null, settings = null, asOfDate = null, forceRegenerate = false } = req.body;
+    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation: rawLocation = null, userName: rawName = null, userGender: rawGender = null, userReligion: rawReligion = null, maritalStatus: rawMarital = null, marriageYear = null, reportId: clientReportId = null, previousReportId = null, retryReportId = null, recoveryRetry = false, calculationSettings = null, settings = null, asOfDate = null, forceRegenerate = false } = req.body;
+
+    // Sanitize free-text inputs
+    const userName = sanitizeString(rawName, INPUT_LIMITS.name);
+    const birthLocation = sanitizeString(rawLocation, INPUT_LIMITS.locationName);
+    const userGender = sanitizeString(rawGender, 20);
+    const userReligion = sanitizeString(rawReligion, 30);
+    const maritalStatus = sanitizeString(rawMarital, 30);
 
     if (!birthDate) {
       return res.status(400).json({ error: 'birthDate is required (ISO format or parseable date string)' });
@@ -1420,8 +1427,14 @@ router.post('/report-feedback', optionalAuth, async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { reportId, sectionKey, claimType, claimId, rating, helpful, issueType, comment, source } = req.body || {};
+    const { reportId, sectionKey, claimType, claimId, rating, helpful, issueType: rawIssueType, comment: rawComment, source: rawSource } = req.body || {};
     if (!reportId) return res.status(400).json({ error: 'reportId is required' });
+
+    // Sanitize free-text feedback fields
+    const comment = sanitizeString(rawComment, INPUT_LIMITS.comment);
+    const issueType = sanitizeString(rawIssueType, INPUT_LIMITS.issueType);
+    const source = sanitizeString(rawSource, INPUT_LIMITS.source);
+
     if (rating !== undefined) {
       const numericRating = Number(rating);
       if (!Number.isFinite(numericRating) || numericRating < 1 || numericRating > 5) {

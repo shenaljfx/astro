@@ -96,8 +96,8 @@ app.use(compression({
 }));
 
 // 4. Body parsers with size limits
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
 // 5. HTTP Parameter Pollution protection
 app.use(hppProtection);

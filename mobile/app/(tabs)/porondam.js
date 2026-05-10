@@ -1072,6 +1072,7 @@ function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTim
         placeholderTextColor="rgba(255,255,255,0.2)"
         autoCorrect={false}
         returnKeyType="next"
+        maxLength={25}
       />
       {nameError ? <Text style={sty.inlineError}>{nameError}</Text> : null}
       <Text style={sty.fieldTag}>{T.date}</Text>

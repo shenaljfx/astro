@@ -146,6 +146,7 @@ export default function CitySearchPicker({ selectedCity, onSelect, lang, accentC
           autoCorrect={false}
           returnKeyType="search"
           autoFocus={compact && expanded}
+          maxLength={100}
         />
         {searching ? (
           <ActivityIndicator size="small" color={accent} />

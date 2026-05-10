@@ -235,6 +235,32 @@ const corsOptions = {
 
 // ─── Input Validation Helpers ───────────────────────────────────
 
+/** Max lengths for common free-text fields */
+const INPUT_LIMITS = {
+  name: 25,           // displayName, userName, brideName, groomName, senderName, receiverName
+  locationName: 100,  // city / birth location
+  timezone: 60,       // IANA tz identifier
+  comment: 1000,      // feedback comments
+  notes: 500,         // prediction notes
+  pushToken: 200,     // Expo push token
+  platform: 20,       // "ios" | "android" | "web"
+  issueType: 50,      // feedback issue type
+  source: 50,         // feedback source
+  message: 2000,      // chat message (already enforced in chat.js)
+  eventType: 50,      // prediction event type
+  activityType: 50,   // muhurtha activity type
+};
+
+/**
+ * Sanitize a string field: must be a string, trimmed, max length enforced.
+ * Returns the trimmed string or null if empty/invalid.
+ */
+function sanitizeString(value, maxLen) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string') return null;
+  return value.slice(0, maxLen).trim() || null;
+}
+
 /**
  * Validate birth data inputs (reusable across routes)
  */
@@ -380,4 +406,6 @@ module.exports = {
   corsOptions,
   validateBirthData,
   hppProtection,
+  INPUT_LIMITS,
+  sanitizeString,
 };

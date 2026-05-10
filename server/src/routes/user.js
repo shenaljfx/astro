@@ -15,6 +15,7 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const { requireSubscription } = require('../middleware/subscription');
+const { INPUT_LIMITS, sanitizeString } = require('../middleware/security');
 const {
   upsertUser,
   getUser,
@@ -67,13 +68,18 @@ function getBirthTimeKey(dateTime) {
  */
 router.post('/profile', requireAuth, async (req, res) => {
   try {
+    const safeName = sanitizeString(req.user.displayName || req.body.displayName, INPUT_LIMITS.name);
+    const safeEmail = sanitizeString(req.user.email || req.body.email, 254);
+    const safePhoto = sanitizeString(req.user.photoURL || req.body.photoURL, 500);
+    const safeLanguage = sanitizeString(req.body.language, 10);
+    const validLangs = ['en', 'si', 'ta', 'singlish'];
     const user = await upsertUser(req.user.uid, {
-      displayName: req.user.displayName || req.body.displayName,
-      email: req.user.email || req.body.email,
-      photoURL: req.user.photoURL || req.body.photoURL,
+      displayName: safeName || 'Cosmic Seeker',
+      email: safeEmail || null,
+      photoURL: safePhoto || null,
       birthData: req.body.birthData || null,
       location: req.body.location || null,
-      language: req.body.language || 'en',
+      language: validLangs.includes(safeLanguage) ? safeLanguage : 'en',
     });
     res.json({ success: true, user });
   } catch (err) {
@@ -167,8 +173,8 @@ router.put('/birth-data', requireAuth, async (req, res) => {
       dateTime,
       lat: lat || 6.9271,
       lng: lng || 79.8612,
-      locationName: locationName || '',
-      timezone: timezone || 'Asia/Colombo',
+      locationName: sanitizeString(locationName, INPUT_LIMITS.locationName) || '',
+      timezone: sanitizeString(timezone, INPUT_LIMITS.timezone) || 'Asia/Colombo',
     }, nextBirthTimeLimit ? { birthTimeEditLimit: nextBirthTimeLimit } : {});
     res.json({
       success: true,
@@ -193,7 +199,22 @@ router.put('/birth-data', requireAuth, async (req, res) => {
  */
 router.put('/preferences', requireAuth, async (req, res) => {
   try {
-    await updatePreferences(req.user.uid, req.body);
+    // Whitelist allowed preference keys and sanitize values
+    const allowed = ['language', 'notifications', 'dailyPalapa', 'rahuKalayaAlerts', 'marakaApalaAlerts', 'transitAlerts', 'theme'];
+    const validLangs = ['en', 'si', 'ta', 'singlish'];
+    const validThemes = ['cosmic', 'light', 'dark'];
+    const safePrefs = {};
+    for (const key of allowed) {
+      if (req.body[key] === undefined) continue;
+      if (key === 'language') {
+        if (validLangs.includes(req.body[key])) safePrefs[key] = req.body[key];
+      } else if (key === 'theme') {
+        if (validThemes.includes(req.body[key])) safePrefs[key] = req.body[key];
+      } else {
+        safePrefs[key] = !!req.body[key];
+      }
+    }
+    await updatePreferences(req.user.uid, safePrefs);
     res.json({ success: true, message: 'Preferences updated' });
   } catch (err) {
     console.error('Preferences update error:', err);

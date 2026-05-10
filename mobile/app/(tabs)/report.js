@@ -2792,6 +2792,7 @@ export default function ReportScreen() {
               placeholderTextColor="#475569"
               autoCorrect={false}
               returnKeyType="next"
+              maxLength={25}
             />
             {fieldErrors.userName ? <Text style={s.inlineError}>{fieldErrors.userName}</Text> : null}
 

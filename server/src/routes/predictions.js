@@ -30,6 +30,7 @@ const { predictEventTiming, predictAllEvents, EVENT_RULES } = require('../engine
 const { scoreMuhurtha, findMuhurtha, getInauspiciousPeriods, isGoodTimeNow, ACTIVITY_RULES } = require('../engine/muhurtha');
 const { analyzeHealth } = require('../engine/health');
 const { optionalAuth } = require('../middleware/auth');
+const { INPUT_LIMITS, sanitizeString } = require('../middleware/security');
 const { parseSLT } = require('../utils/dateUtils');
 const { parseBirthDateTime } = require('../services/timezone');
 
@@ -38,6 +39,10 @@ function combineDatetime(dateStr, timeStr) {
   if (!timeStr) return dateStr;
   return `${dateStr.split('T')[0]}T${timeStr}`;
 }
+
+/** Valid whitelists for enum-like text fields */
+const VALID_EVENT_TYPES = ['career', 'wealth', 'children', 'healthCrisis', 'foreignTravel', 'property', 'education', 'business', 'danger', 'debtClearance', 'marriage', 'spiritual'];
+const VALID_ACTIVITY_TYPES = ['marriage', 'business', 'travel', 'education', 'medical', 'housewarming', 'vehicle', 'naming', 'interview', 'investment', 'religious', 'agriculture'];
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -198,13 +203,17 @@ router.post('/timing/event', optionalAuth, async (req, res) => {
     if (!eventType || !birthDate) {
       return res.status(400).json({ error: 'eventType and birthDate are required' });
     }
+    const safeEventType = sanitizeString(eventType, INPUT_LIMITS.eventType);
+    if (!safeEventType || !VALID_EVENT_TYPES.includes(safeEventType)) {
+      return res.status(400).json({ error: `eventType must be one of: ${VALID_EVENT_TYPES.join(', ')}` });
+    }
 
     const latitude = parseFloat(lat) || 6.9271;
     const longitude = parseFloat(lng) || 79.8612;
     const bDate = await parseBirthDateTime(combineDatetime(birthDate, birthTime), latitude, longitude).catch(() => parseSLT(combineDatetime(birthDate, birthTime)));
 
     const birthInfo = { date: bDate, lat: latitude, lng: longitude };
-    const result = predictEventTiming(eventType, birthInfo, latitude, longitude);
+    const result = predictEventTiming(safeEventType, birthInfo, latitude, longitude);
     res.json({ success: true, data: result });
   } catch (error) {
     console.error('Event timing error:', error);
@@ -266,13 +275,17 @@ router.post('/muhurtha/score', optionalAuth, async (req, res) => {
     if (!dateTime || !activityType) {
       return res.status(400).json({ error: 'dateTime and activityType are required' });
     }
+    const safeActivity = sanitizeString(activityType, INPUT_LIMITS.activityType);
+    if (!safeActivity || !VALID_ACTIVITY_TYPES.includes(safeActivity)) {
+      return res.status(400).json({ error: `activityType must be one of: ${VALID_ACTIVITY_TYPES.join(', ')}` });
+    }
 
     const dt = new Date(dateTime);
     const bDate = birthDate ? new Date(birthDate) : null;
     const latitude = lat || 6.9271;
     const longitude = lng || 79.8612;
 
-    const result = scoreMuhurtha(dt, activityType, bDate, latitude, longitude);
+    const result = scoreMuhurtha(dt, safeActivity, bDate, latitude, longitude);
     res.json({ success: true, data: result });
   } catch (error) {
     console.error('Muhurtha score error:', error);
@@ -290,13 +303,17 @@ router.post('/muhurtha/find', optionalAuth, async (req, res) => {
     if (!activityType || !startDate || !endDate) {
       return res.status(400).json({ error: 'activityType, startDate, and endDate are required' });
     }
+    const safeActivity = sanitizeString(activityType, INPUT_LIMITS.activityType);
+    if (!safeActivity || !VALID_ACTIVITY_TYPES.includes(safeActivity)) {
+      return res.status(400).json({ error: `activityType must be one of: ${VALID_ACTIVITY_TYPES.join(', ')}` });
+    }
 
     const bDate = birthDate ? new Date(birthDate) : null;
     const latitude = lat || 6.9271;
     const longitude = lng || 79.8612;
     const limit = maxResults || 5;
 
-    const result = findMuhurtha(activityType, startDate, endDate, bDate, latitude, longitude, limit);
+    const result = findMuhurtha(safeActivity, startDate, endDate, bDate, latitude, longitude, limit);
     res.json({ success: true, data: result });
   } catch (error) {
     console.error('Muhurtha find error:', error);
@@ -432,11 +449,15 @@ router.post('/kp/predict', optionalAuth, async (req, res) => {
   try {
     const { eventType, birthDate, birthTime, lat, lng } = req.body;
     if (!birthDate || !eventType) return res.status(400).json({ error: 'birthDate and eventType are required' });
+    const safeEventType = sanitizeString(eventType, INPUT_LIMITS.eventType);
+    if (!safeEventType || !VALID_EVENT_TYPES.includes(safeEventType)) {
+      return res.status(400).json({ error: `eventType must be one of: ${VALID_EVENT_TYPES.join(', ')}` });
+    }
     const bDateStr = birthTime ? `${birthDate.split('T')[0]}T${birthTime}` : birthDate;
     const latitude = parseFloat(lat) || 6.9271;
     const longitude = parseFloat(lng) || 79.8612;
     const bDate = await parseBirthDateTime(bDateStr, latitude, longitude).catch(() => parseSLT(bDateStr));
-    const result = kpPredict(eventType, bDate, latitude, longitude);
+    const result = kpPredict(safeEventType, bDate, latitude, longitude);
     res.json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ error: 'KP prediction failed', message: error.message });
@@ -548,7 +569,8 @@ router.post('/confidence/all', optionalAuth, async (req, res) => {
  */
 router.post('/feedback/record', optionalAuth, async (req, res) => {
   try {
-    const { predictionId, didHappen, notes } = req.body;
+    const { predictionId, didHappen } = req.body;
+    const notes = sanitizeString(req.body.notes, INPUT_LIMITS.notes);
     if (!predictionId || didHappen === undefined) return res.status(400).json({ error: 'predictionId and didHappen are required' });
     const success = await recordOutcome(predictionId, didHappen, notes);
     res.json({ success, message: success ? 'Feedback recorded' : 'Failed to record feedback' });

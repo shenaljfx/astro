@@ -17,7 +17,7 @@ const { parseSLT } = require('../utils/dateUtils');
 const { parseBirthDateTime } = require('../services/timezone');
 const { optionalAuth } = require('../middleware/auth');
 const { phoneAuth, requireSubscription } = require('../middleware/subscription');
-const { aiLimiter, aiUserLimiter } = require('../middleware/security');
+const { aiLimiter, aiUserLimiter, INPUT_LIMITS, sanitizeString } = require('../middleware/security');
 const { trackCost } = require('../services/costTracker');
 const { budgetGuard } = require('../services/budgetEnforcer');
 const { distributedAiUserLimiter } = require('../services/distributedRateLimit');
@@ -234,7 +234,9 @@ router.post('/report', aiLimiter, phoneAuth, requireSubscription, aiUserLimiter,
   let entitlementId = null;
   let entitlementWasRetry = false;
   try {
-    const { porondamData, language = 'en', brideName, groomName, porondamId, entitlementInput } = req.body;
+    const { porondamData, language = 'en', brideName: rawBrideName, groomName: rawGroomName, porondamId, entitlementInput } = req.body;
+    const brideName = sanitizeString(rawBrideName, INPUT_LIMITS.name);
+    const groomName = sanitizeString(rawGroomName, INPUT_LIMITS.name);
 
     if (!porondamData) {
       return res.status(400).json({ error: 'porondamData is required' });
@@ -534,7 +536,8 @@ WRITE THE REPORT:
  */
 router.post('/vibe-link', optionalAuth, async (req, res) => {
   try {
-    const { senderName, senderBirthDate, senderLat, senderLng } = req.body;
+    const senderName = sanitizeString(req.body.senderName, INPUT_LIMITS.name);
+    const { senderBirthDate, senderLat, senderLng } = req.body;
 
     if (!senderName || !senderBirthDate) {
       return res.status(400).json({
@@ -595,7 +598,8 @@ router.post('/vibe-link', optionalAuth, async (req, res) => {
 router.post('/vibe-check/:linkId', async (req, res) => {
   try {
     const { linkId } = req.params;
-    const { receiverName, receiverBirthDate } = req.body;
+    const receiverName = sanitizeString(req.body.receiverName, INPUT_LIMITS.name);
+    const { receiverBirthDate } = req.body;
 
     const vibeLink = await getVibeLink(linkId) || vibeLinks.get(linkId);
 

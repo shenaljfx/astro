@@ -16,6 +16,7 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const { getDb, getAuth, COLLECTIONS } = require('../config/firebase');
 const { getPricing } = require('../config/pricing');
+const { INPUT_LIMITS, sanitizeString } = require('../middleware/security');
 
 // Google OAuth web client ID — MUST be set via env var; no fallback in production (boot guard enforces this)
 const GOOGLE_WEB_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -361,12 +362,15 @@ router.post('/onboarding-complete', async (req, res) => {
     const { displayName, birthData, language } = req.body;
     const db = getDb();
 
+    // Sanitize free-text inputs
+    const safeName = sanitizeString(displayName, INPUT_LIMITS.name);
+
     if (db) {
       const updates = {
         onboardingComplete: true,
         updatedAt: new Date().toISOString(),
       };
-      if (displayName) updates.displayName = displayName;
+      if (safeName) updates.displayName = safeName;
       if (language && (language === 'en' || language === 'si')) {
         updates['preferences.language'] = language;
       }
@@ -375,8 +379,8 @@ router.post('/onboarding-complete', async (req, res) => {
           dateTime: birthData.dateTime,
           lat: birthData.lat || 6.9271,
           lng: birthData.lng || 79.8612,
-          locationName: birthData.locationName || '',
-          timezone: birthData.timezone || 'Asia/Colombo',
+          locationName: sanitizeString(birthData.locationName, INPUT_LIMITS.locationName) || '',
+          timezone: sanitizeString(birthData.timezone, INPUT_LIMITS.timezone) || 'Asia/Colombo',
         };
       }
       await db.collection(COLLECTIONS.USERS).doc(decoded.uid).update(updates);
