@@ -16,6 +16,22 @@
   <link rel="stylesheet" href="../css/legal.css" />
 </head>
 <body>
+  <!-- === LOADING SCREEN === -->
+  <div class="loader" id="loader">
+    <div class="loader__cosmos">
+      <div class="loader__ring loader__ring--1"></div>
+      <div class="loader__ring loader__ring--2"></div>
+      <div class="loader__ring loader__ring--3"></div>
+      <div class="loader__planet"></div>
+    </div>
+    <div class="loader__text">
+      <span class="loader__brand">Grahachara</span>
+      <span class="loader__tagline">Reading the stars...</span>
+    </div>
+  </div>
+  <script>
+  (function(){var l=document.getElementById('loader');if(!l)return;document.body.style.overflow='hidden';function d(){l.classList.add('loaded');document.body.style.overflow='';}var s=Date.now();window.addEventListener('load',function(){var r=Math.max(0,2000-(Date.now()-s));setTimeout(d,r);});setTimeout(d,5000);})();
+  </script>
 
   <!-- Stars Background -->
   <div class="legal-stars" aria-hidden="true"></div>
