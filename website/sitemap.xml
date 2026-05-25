@@ -9,16 +9,16 @@
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://grahachara.com/" />
-    <xhtml:link rel="alternate" hreflang="si" href="https://grahachara.com/si/" />
+    <xhtml:link rel="alternate" hreflang="si" href="https://grahachara.com/si.html" />
   </url>
 
   <!-- Sinhala version -->
   <url>
-    <loc>https://grahachara.com/si/</loc>
-    <lastmod>2026-03-31</lastmod>
+    <loc>https://grahachara.com/si.html</loc>
+    <lastmod>2026-05-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
-    <xhtml:link rel="alternate" hreflang="si" href="https://grahachara.com/si/" />
+    <xhtml:link rel="alternate" hreflang="si" href="https://grahachara.com/si.html" />
     <xhtml:link rel="alternate" hreflang="en" href="https://grahachara.com/" />
   </url>
 

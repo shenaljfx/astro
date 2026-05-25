@@ -448,6 +448,9 @@ WRITE THE REPORT:
       language,
       provider: process.env.AI_PROVIDER || 'gemini',
       maxTokens: 16384,
+      rawSystemPrompt: true,
+      timeout: 180000,
+      thinkingBudget: 2048,
     });
 
     // Save report to Firestore

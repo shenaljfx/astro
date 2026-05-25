@@ -165,6 +165,24 @@
   }
 
   // ══════════════════════════════════════════════════════════════════════
+  // HERO FADE-IN ANIMATION (re-triggers on scroll back)
+  // ══════════════════════════════════════════════════════════════════════
+  const heroEl = document.querySelector('.hero');
+  if (heroEl) {
+    const heroObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          heroEl.classList.add('hero--visible');
+        } else {
+          heroEl.classList.remove('hero--visible');
+        }
+      });
+    }, { threshold: 0.15 });
+
+    heroObserver.observe(heroEl);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
   // SCROLL REVEAL ANIMATIONS
   // ══════════════════════════════════════════════════════════════════════
   const revealElements = document.querySelectorAll('[data-reveal]');
@@ -212,6 +230,41 @@
 
     featureSections.forEach(function(section) {
       featureObserver.observe(section);
+    });
+
+    // ── Feature screenshots click-to-shuffle ──
+    featureSections.forEach(function(section) {
+      var screenshots = section.querySelector('.feature__screenshots');
+      if (!screenshots) return;
+      var imgs = screenshots.querySelectorAll('.feature__img');
+      if (imgs.length < 2) return;
+
+      imgs.forEach(function(img) {
+        img.style.cursor = 'pointer';
+        img.addEventListener('click', function(e) {
+          e.stopPropagation();
+          // Cycle: clicked image gets highest z-index and moves to center
+          var currentZ = parseInt(window.getComputedStyle(img).zIndex) || 0;
+          var maxZ = 0;
+          imgs.forEach(function(i) { 
+            var z = parseInt(window.getComputedStyle(i).zIndex) || 0;
+            if (z > maxZ) maxZ = z;
+          });
+          if (currentZ >= maxZ) return; // Already on top
+
+          // Swap classes: put clicked on top
+          var clickedClass = img.className;
+          var topImg = null;
+          imgs.forEach(function(i) {
+            var z = parseInt(window.getComputedStyle(i).zIndex) || 0;
+            if (z === maxZ) topImg = i;
+          });
+          if (topImg && topImg !== img) {
+            img.className = topImg.className;
+            topImg.className = clickedClass;
+          }
+        });
+      });
     });
   }
 
@@ -342,4 +395,189 @@
     }, { passive: true });
   }
 
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+// CURSOR PARTICLE TRAIL
+// ══════════════════════════════════════════════════════════════════════
+(function() {
+  'use strict';
+
+  // Skip on touch devices
+  if ('ontouchstart' in window) return;
+
+  var canvas = document.createElement('canvas');
+  canvas.id = 'cursorTrail';
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+  document.body.appendChild(canvas);
+
+  var ctx = canvas.getContext('2d');
+  var particles = [];
+  var mouseX = -100, mouseY = -100;
+  var animating = true;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  document.addEventListener('mousemove', function(e) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+
+    // Spawn particles on move
+    for (var i = 0; i < 2; i++) {
+      particles.push({
+        x: mouseX + (Math.random() - 0.5) * 8,
+        y: mouseY + (Math.random() - 0.5) * 8,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: (Math.random() - 0.5) * 1.5 - 0.5,
+        life: 1,
+        decay: 0.02 + Math.random() * 0.02,
+        size: Math.random() * 3 + 1.5,
+        hue: 40 + Math.random() * 20 // Gold range
+      });
+    }
+  });
+
+  function loop() {
+    if (!animating) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= p.decay;
+
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fillStyle = 'hsla(' + p.hue + ', 80%, 60%, ' + (p.life * 0.7) + ')';
+      ctx.fill();
+
+      // Glow
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life * 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'hsla(' + p.hue + ', 80%, 50%, ' + (p.life * 0.15) + ')';
+      ctx.fill();
+    }
+
+    // Cap particles for performance
+    if (particles.length > 80) {
+      particles.splice(0, particles.length - 80);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  loop();
+
+  // Pause when tab is hidden
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      animating = false;
+    } else {
+      animating = true;
+      loop();
+    }
+  });
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+// TOUCH SPARKLE BURST (mobile)
+// ══════════════════════════════════════════════════════════════════════
+(function() {
+  'use strict';
+
+  // Only on touch devices
+  if (!('ontouchstart' in window)) return;
+
+  var canvas = document.createElement('canvas');
+  canvas.id = 'touchSparkle';
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+  document.body.appendChild(canvas);
+
+  var ctx = canvas.getContext('2d');
+  var particles = [];
+  var animating = false;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function spawnBurst(x, y) {
+    var count = 15 + Math.floor(Math.random() * 6); // 15-20
+    for (var i = 0; i < count; i++) {
+      var angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+      var speed = 2 + Math.random() * 3;
+      particles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        decay: 0.025 + Math.random() * 0.015,
+        size: 1.5 + Math.random() * 2.5,
+        hue: 38 + Math.random() * 24 // Gold-amber range
+      });
+    }
+    if (!animating) {
+      animating = true;
+      loop();
+    }
+  }
+
+  function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+      p.vy += 0.08; // slight gravity
+      p.life -= p.decay;
+
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+
+      // Star sparkle
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fillStyle = 'hsla(' + p.hue + ', 85%, 65%, ' + p.life + ')';
+      ctx.fill();
+
+      // Soft glow
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life * 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'hsla(' + p.hue + ', 80%, 50%, ' + (p.life * 0.2) + ')';
+      ctx.fill();
+    }
+
+    if (particles.length > 0) {
+      requestAnimationFrame(loop);
+    } else {
+      animating = false;
+    }
+  }
+
+  document.addEventListener('touchstart', function(e) {
+    var touch = e.touches[0];
+    if (touch) {
+      spawnBurst(touch.clientX, touch.clientY);
+    }
+  }, { passive: true });
 })();

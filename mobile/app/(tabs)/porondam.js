@@ -1559,7 +1559,9 @@ export default function PorondamScreen() {
               </View>
               <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
                 {savedChecks.map(function(entry, idx) {
-                  var pct = entry.data?.maxPossibleScore > 0 ? Math.round((entry.data?.totalScore || 0) / entry.data.maxPossibleScore * 100) : 0;
+                  var pct = entry.isServerRecord
+                    ? (entry.percentage || (entry.maxScore > 0 ? Math.round((entry.score || 0) / entry.maxScore * 100) : 0))
+                    : (entry.data?.maxPossibleScore > 0 ? Math.round((entry.data?.totalScore || 0) / entry.data.maxPossibleScore * 100) : 0);
                   var pctColor = pct >= 75 ? '#34D399' : pct >= 50 ? '#FFB800' : pct >= 30 ? '#F97316' : '#F87171';
                   var dateLabel = entry.savedAt ? new Date(entry.savedAt).toLocaleDateString() : '';
                   return (
@@ -1575,7 +1577,7 @@ export default function PorondamScreen() {
                             {(entry.brideName || '👰') + '  ×  ' + (entry.groomName || '🤵')}
                           </Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>{entry.data?.totalScore || 0}/{entry.data?.maxPossibleScore || 20}</Text>
+                            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>{entry.isServerRecord ? (entry.score || 0) : (entry.data?.totalScore || 0)}/{entry.isServerRecord ? (entry.maxScore || 20) : (entry.data?.maxPossibleScore || 20)}</Text>
                             <Text style={{ color: 'rgba(255,255,255,0.15)', fontSize: 9 }}>•</Text>
                             <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10 }}>{dateLabel}</Text>
                           </View>

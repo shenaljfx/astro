@@ -951,7 +951,7 @@ function buildChatMessages(userMessage, birthDate, birthLat, birthLng, language 
 /**
  * Call Gemini API — with retry + exponential backoff
  */
-async function callGemini(messages, maxTokens = 4096, temperature = 0.55) {
+async function callGemini(messages, maxTokens = 4096, temperature = 0.55, options = {}) {
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -966,7 +966,8 @@ async function callGemini(messages, maxTokens = 4096, temperature = 0.55) {
 
   const MAX_RETRIES = 5;
   const BASE_DELAY = 2000;
-  const TIMEOUT_MS = 90000;
+  const TIMEOUT_MS = options.timeout || 90000;
+  const thinkingBudget = options.thinkingBudget !== undefined ? options.thinkingBudget : 4096;
 
   throwIfGeminiCoolingDown('Gemini API', model);
 
@@ -986,7 +987,7 @@ async function callGemini(messages, maxTokens = 4096, temperature = 0.55) {
             maxOutputTokens: maxTokens,
             temperature,
             thinkingConfig: {
-              thinkingBudget: 4096,
+              thinkingBudget,
             },
           },
         }),
@@ -1048,12 +1049,27 @@ async function chat(userMessage, options = {}) {
     language = 'en',
     chatHistory = [],
     maxTokens = 4096,
+    rawSystemPrompt = false,
+    timeout,
+    thinkingBudget,
   } = options;
 
-  const messages = buildChatMessages(userMessage, birthDate, birthLat, birthLng, language, chatHistory);
+  let messages;
+  if (rawSystemPrompt) {
+    // Use userMessage directly as system instruction — no chat persona wrapping
+    messages = [
+      { role: 'system', content: userMessage },
+      { role: 'user', content: 'Generate the report based on the data and instructions above.' },
+    ];
+  } else {
+    messages = buildChatMessages(userMessage, birthDate, birthLat, birthLng, language, chatHistory);
+  }
 
   try {
-    const result = await callGemini(messages, maxTokens);
+    const geminiOpts = {};
+    if (timeout) geminiOpts.timeout = timeout;
+    if (thinkingBudget !== undefined) geminiOpts.thinkingBudget = thinkingBudget;
+    const result = await callGemini(messages, maxTokens, 0.55, geminiOpts);
     return {
       message: result.text,
       provider: 'gemini',
