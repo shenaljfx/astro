@@ -802,9 +802,9 @@ function findBestWeddingWindow(brideBirthDate, groomBirthDate, brideLat, brideLn
     const groomDashas = calculateVimshottariDetailed(groomMoonSid, groomBirthDate);
     
     const now = new Date();
-    const nextTwoYears = new Date(now.getTime() + 2 * 365.25 * 24 * 60 * 60 * 1000);
+    const searchEnd = new Date(now.getTime() + 3 * 365.25 * 24 * 60 * 60 * 1000);
     
-    // Find favorable dasha periods for marriage within the next 2 years
+    // Find favorable dasha periods for marriage within the next 3 years
     const beneficForMarriage = ['Venus', 'Jupiter', 'Moon', 'Mercury'];
     
     const findFavorablePeriods = (dashas, label) => {
@@ -812,12 +812,12 @@ function findBestWeddingWindow(brideBirthDate, groomBirthDate, brideLat, brideLn
       for (const d of dashas) {
         const start = new Date(d.start);
         const end = new Date(d.endDate);
-        if (end < now || start > nextTwoYears) continue;
+        if (end < now || start > searchEnd) continue;
         if (beneficForMarriage.includes(d.lord)) {
           periods.push({
             lord: d.lord,
             start: start > now ? start.toISOString().split('T')[0] : now.toISOString().split('T')[0],
-            end: end < nextTwoYears ? end.toISOString().split('T')[0] : nextTwoYears.toISOString().split('T')[0],
+            end: end < searchEnd ? end.toISOString().split('T')[0] : searchEnd.toISOString().split('T')[0],
           });
         }
       }
@@ -829,14 +829,20 @@ function findBestWeddingWindow(brideBirthDate, groomBirthDate, brideLat, brideLn
     
     // Find overlapping periods
     const overlaps = [];
+    // Score planets for marriage favorability
+    const marriageWeight = { Venus: 5, Jupiter: 4, Moon: 3, Mercury: 2 };
     for (const bp of brideFavorable) {
       for (const gp of groomFavorable) {
         const overlapStart = new Date(Math.max(new Date(bp.start).getTime(), new Date(gp.start).getTime()));
         const overlapEnd = new Date(Math.min(new Date(bp.end).getTime(), new Date(gp.end).getTime()));
         if (overlapStart < overlapEnd) {
+          const durationDays = (overlapEnd - overlapStart) / (24 * 60 * 60 * 1000);
+          const score = (marriageWeight[bp.lord] || 1) + (marriageWeight[gp.lord] || 1) + Math.min(durationDays / 60, 3);
           overlaps.push({
             start: overlapStart.toISOString().split('T')[0],
             end: overlapEnd.toISOString().split('T')[0],
+            durationDays: Math.round(durationDays),
+            score: Math.round(score * 10) / 10,
             brideDashaLord: bp.lord,
             groomDashaLord: gp.lord,
             reason: `${bp.lord} period for bride + ${gp.lord} period for groom — both in favorable phases`,
@@ -846,8 +852,14 @@ function findBestWeddingWindow(brideBirthDate, groomBirthDate, brideLat, brideLn
       }
     }
     
+    // Sort by score descending — best windows first
+    overlaps.sort((a, b) => b.score - a.score);
+    
+    // Mark the best one
+    if (overlaps.length > 0) overlaps[0].best = true;
+    
     return {
-      favorableWindows: overlaps.length > 0 ? overlaps : [{ start: 'No overlapping favorable period found in next 2 years', startSi: 'ඉදිරි වසර 2ක් තුළ අනුකූල කාල කවුළුවක් හමු නොවුණි', end: '', reason: 'Consider consulting for specific muhurtha dates', reasonSi: 'නිශ්චිත මුහුර්ත දිනයන් සඳහා ජ්‍යෝතිෂවෙනවාදියෙකුගෙන් උපදෙස් ගන්න' }],
+      favorableWindows: overlaps.length > 0 ? overlaps : [{ start: 'No overlapping favorable period found in next 3 years', startSi: 'ඉදිරි වසර 3ක් තුළ අනුකූල කාල කවුළුවක් හමු නොවුණි', end: '', reason: 'Consider consulting for specific muhurtha dates', reasonSi: 'නිශ්චිත මුහුර්ත දිනයන් සඳහා ජ්‍යෝතිෂවෙනවාදියෙකුගෙන් උපදෙස් ගන්න' }],
       bridePeriods: brideFavorable,
       groomPeriods: groomFavorable,
     };

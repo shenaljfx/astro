@@ -47,81 +47,159 @@ var LOGO = APP_LOGO_IMAGE;
 //  CINEMATIC COMPONENTS — Movie-quality onboarding experience
 // ═══════════════════════════════════════════════════════════════════════
 
-// ── Animated Starfield Background ──────────────────────────────────
-// Persistent parallax starfield that runs behind ALL onboarding steps
-// Multiple layers for depth: distant dim stars, mid-range, and close bright ones
+// ── Animated Starfield Background (matching website WebGL starfield) ──
+// Persistent parallax starfield behind ALL onboarding steps
+// Multiple layers with realistic brightness distribution, color temperatures, and flicker
 
 var STAR_LAYERS = [];
-// Generate 3 layers of stars (seeded positions so they don't regenerate)
 (function () {
-  // Layer 1: distant dim stars (many, small, slow)
+  // Layer 1: distant dim stars (many, small, slow flicker) — like website's depth=0-0.3
   var layer1 = [];
-  for (var i = 0; i < 18; i++) {
+  for (var i = 0; i < 45; i++) {
+    var colorTemp = ((i * 3137) % 100) / 100;
+    var color = colorTemp < 0.33 ? 'rgba(180,200,255,' :
+                colorTemp < 0.66 ? 'rgba(255,255,255,' :
+                'rgba(255,220,150,';
     layer1.push({
-      x: ((i * 7919 + 3571) % 1000) / 10,   // pseudo-random 0-100%
+      x: ((i * 7919 + 3571) % 1000) / 10,
       y: ((i * 6271 + 1433) % 1000) / 10,
-      size: 1 + ((i * 3137) % 100) / 100,    // 1-2px
-      opacity: 0.15 + ((i * 4219) % 100) / 250,  // 0.15-0.55
-      twinkleSpeed: 3000 + ((i * 2399) % 4000),
-      twinkleDelay: ((i * 1847) % 3000),
+      size: 0.8 + ((i * 3137) % 100) / 200,
+      opacity: 0.4 + ((i * 4219) % 100) / 250,
+      twinkleSpeed: 2500 + ((i * 2399) % 5000),
+      twinkleDelay: ((i * 1847) % 4000),
+      color: color,
     });
   }
-  // Layer 2: mid-range stars
+  // Layer 2: mid-range stars — depth 0.3-0.7
   var layer2 = [];
-  for (var i = 0; i < 8; i++) {
+  for (var i = 0; i < 20; i++) {
+    var colorTemp = ((i * 2741) % 100) / 100;
+    var color = colorTemp < 0.33 ? 'rgba(180,200,255,' :
+                colorTemp < 0.66 ? 'rgba(255,255,255,' :
+                'rgba(255,220,150,';
     layer2.push({
       x: ((i * 5431 + 2917) % 1000) / 10,
       y: ((i * 8513 + 4219) % 1000) / 10,
-      size: 1.5 + ((i * 2741) % 100) / 60,   // 1.5-3.2px
-      opacity: 0.3 + ((i * 3719) % 100) / 200,
-      twinkleSpeed: 2000 + ((i * 1913) % 3000),
-      twinkleDelay: ((i * 2371) % 2500),
+      size: 1.0 + ((i * 2741) % 100) / 120,
+      opacity: 0.55 + ((i * 3719) % 100) / 300,
+      twinkleSpeed: 1800 + ((i * 1913) % 3500),
+      twinkleDelay: ((i * 2371) % 3000),
+      color: color,
     });
   }
-  // Layer 3: close bright stars (few, larger, faster twinkle)
+  // Layer 3: close bright stars (few, larger, faster scintillation) — depth 0.7-1.0
   var layer3 = [];
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < 8; i++) {
+    var colorTemp = ((i * 1847) % 100) / 100;
+    var color = colorTemp < 0.4 ? 'rgba(200,220,255,' :
+                colorTemp < 0.7 ? 'rgba(255,255,240,' :
+                'rgba(255,210,130,';
     layer3.push({
       x: ((i * 9721 + 1571) % 1000) / 10,
       y: ((i * 4517 + 7919) % 1000) / 10,
-      size: 2.5 + ((i * 1847) % 100) / 50,   // 2.5-4.5px
-      opacity: 0.5 + ((i * 6197) % 100) / 300,
-      twinkleSpeed: 1500 + ((i * 3571) % 2000),
+      size: 1.5 + ((i * 1847) % 100) / 100,
+      opacity: 0.7 + ((i * 6197) % 100) / 400,
+      twinkleSpeed: 1200 + ((i * 3571) % 2500),
       twinkleDelay: ((i * 997) % 2000),
+      color: color,
     });
   }
   STAR_LAYERS.push(layer1, layer2, layer3);
 })();
 
 function TwinklingStar({ star, layerSpeed, reduced }) {
-  var twinkle = useSharedValue(0);
+  var twinkle = useSharedValue(0.5);
   useEffect(function () {
-    if (reduced) return;
+    if (reduced) {
+      twinkle.value = 0.7;
+      return;
+    }
     twinkle.value = withDelay(star.twinkleDelay,
       withRepeat(
         withSequence(
           withTiming(1, { duration: star.twinkleSpeed * 0.4, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: star.twinkleSpeed * 0.6, easing: Easing.inOut(Easing.sin) })
-        ), -1, false
+          withTiming(0.3, { duration: star.twinkleSpeed * 0.6, easing: Easing.inOut(Easing.sin) })
+        ), -1, true
       )
     );
   }, [reduced]);
   var style = useAnimatedStyle(function () {
-    return {
-      opacity: interpolate(twinkle.value, [0, 1], [star.opacity * 0.3, star.opacity]),
-      transform: [{ scale: interpolate(twinkle.value, [0, 1], [0.6, 1.2]) }],
-    };
+    var o = interpolate(twinkle.value, [0, 0.3, 1], [star.opacity * 0.5, star.opacity * 0.7, star.opacity]);
+    var s = interpolate(twinkle.value, [0, 1], [0.8, 1.15]);
+    return { opacity: o, transform: [{ scale: s }] };
   });
+
+  // Spike length proportional to star size (brighter = longer spikes)
+  var spikeLen = star.size * 1.2;
+  var coreSize = star.size * 0.4;
+  var glowSize = star.size * 1.1;
+  var baseColor = (star.color || 'rgba(255,248,225,');
+
   return (
     <Animated.View style={[{
       position: 'absolute',
       left: star.x + '%',
       top: star.y + '%',
-      width: star.size,
-      height: star.size,
-      borderRadius: star.size / 2,
-      backgroundColor: '#FFF8E1',
-    }, style]} />
+      width: spikeLen * 2,
+      height: spikeLen * 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: -spikeLen,
+      marginTop: -spikeLen,
+    }, style]}>
+      {/* Soft glow halo */}
+      <View style={{
+        position: 'absolute',
+        width: glowSize,
+        height: glowSize,
+        borderRadius: glowSize / 2,
+        backgroundColor: baseColor + '0.15)',
+      }} />
+      {/* Horizontal spike */}
+      <View style={{
+        position: 'absolute',
+        width: spikeLen * 2,
+        height: 1,
+        borderRadius: 0.5,
+        backgroundColor: baseColor + '0.4)',
+      }} />
+      {/* Vertical spike */}
+      <View style={{
+        position: 'absolute',
+        width: 1,
+        height: spikeLen * 2,
+        borderRadius: 0.5,
+        backgroundColor: baseColor + '0.4)',
+      }} />
+      {/* Diagonal spike (45°) — only for brighter stars */}
+      {star.opacity > 0.5 ? (
+        <>
+          <View style={{
+            position: 'absolute',
+            width: spikeLen * 1.4,
+            height: 0.5,
+            borderRadius: 0.25,
+            backgroundColor: baseColor + '0.2)',
+            transform: [{ rotate: '45deg' }],
+          }} />
+          <View style={{
+            position: 'absolute',
+            width: spikeLen * 1.4,
+            height: 0.5,
+            borderRadius: 0.25,
+            backgroundColor: baseColor + '0.2)',
+            transform: [{ rotate: '-45deg' }],
+          }} />
+        </>
+      ) : null}
+      {/* Bright core */}
+      <View style={{
+        width: coreSize,
+        height: coreSize,
+        borderRadius: coreSize / 2,
+        backgroundColor: baseColor + '1)',
+      }} />
+    </Animated.View>
   );
 }
 
@@ -155,11 +233,13 @@ function CinematicStarfield() {
   });
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000000' }]} pointerEvents="none">
-      {/* Nebula clouds */}
-      <Animated.View style={[{ position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(147,51,234,0.055)', top: -50, right: -80 }, nebula1]} />
-      <Animated.View style={[{ position: 'absolute', width: 250, height: 250, borderRadius: 125, backgroundColor: 'rgba(255,140,0,0.035)', bottom: SH * 0.2, left: -60 }, nebula2]} />
-      <Animated.View style={[{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(59,130,246,0.025)', top: SH * 0.4, right: -40 }, nebula1]} />
-      {/* Star layers — skip dim layer for performance, keep mid + bright */}
+      {/* Nebula clouds — warm amber/indigo palette */}
+      <Animated.View style={[{ position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(255,140,0,0.05)', top: -50, right: -80 }, nebula1]} />
+      <Animated.View style={[{ position: 'absolute', width: 250, height: 250, borderRadius: 125, backgroundColor: 'rgba(147,51,234,0.04)', bottom: SH * 0.2, left: -60 }, nebula2]} />
+      <Animated.View style={[{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,184,0,0.03)', top: SH * 0.4, right: -40 }, nebula1]} />
+      <Animated.View style={[{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(99,102,241,0.03)', top: SH * 0.15, left: -30 }, nebula2]} />
+      {/* Star layers — all 3 depths for rich sky (matching website starfield) */}
+      {STAR_LAYERS[0].map(function (s, i) { return <TwinklingStar key={'s1_' + i} star={s} layerSpeed={0.3} reduced={reduced} />; })}
       {STAR_LAYERS[1].map(function (s, i) { return <TwinklingStar key={'s2_' + i} star={s} layerSpeed={0.6} reduced={reduced} />; })}
       {STAR_LAYERS[2].map(function (s, i) { return <TwinklingStar key={'s3_' + i} star={s} layerSpeed={1} reduced={reduced} />; })}
     </View>
@@ -513,103 +593,63 @@ function StepProgressBar({ current, total, lang }) {
 
 
 // ═══════════════════════════════════════════════════════════════════════
-//  STEP -1: LANGUAGE SELECTION — Global-First, Button-Focused Layout
-//  Compact hero → big prominent language buttons → users tap within 2s
-//  Content is universal/global — no country-specific branding
+//  STEP -1: LANGUAGE SELECTION — Premium editorial, minimal & focused
+//  Logo → app name → language buttons. No clutter, no broken overlays.
 // ═══════════════════════════════════════════════════════════════════════
 
 function LanguageStep({ onSelect }) {
   var reduced = useReducedMotion();
-  var titleScale = useSharedValue(0);
-  var ringRotate = useSharedValue(0);
-  var orbPulse = useSharedValue(0);
   var logoGlow = useSharedValue(0);
   var btnShimmer = useSharedValue(0);
   var [selectedLang, setSelectedLang] = useState(null);
 
   useEffect(function () {
-    titleScale.value = withDelay(300, withSpring(1, { damping: 14, stiffness: 100 }));
     if (reduced) return;
-    ringRotate.value = withRepeat(withTiming(360, { duration: 25000, easing: Easing.linear }), -1, false);
-    orbPulse.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    logoGlow.value = withRepeat(withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }), -1, true);
+    logoGlow.value = withRepeat(withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sin) }), -1, true);
     btnShimmer.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
   }, [reduced]);
 
-  var titleAnim = useAnimatedStyle(function () {
-    return { transform: [{ scale: titleScale.value }], opacity: titleScale.value };
-  });
-  var ringStyle = useAnimatedStyle(function () {
-    return { transform: [{ rotate: ringRotate.value + 'deg' }] };
-  });
-  var orbGlowStyle = useAnimatedStyle(function () {
-    return {
-      opacity: interpolate(orbPulse.value, [0, 1], [0.12, 0.3]),
-      transform: [{ scale: interpolate(orbPulse.value, [0, 1], [0.9, 1.1]) }],
-    };
-  });
   var logoStyle = useAnimatedStyle(function () {
     return {
-      opacity: interpolate(logoGlow.value, [0, 1], [0.88, 1]),
-      transform: [{ scale: interpolate(logoGlow.value, [0, 1], [1, 1.06]) }],
+      opacity: interpolate(logoGlow.value, [0, 1], [0.9, 1]),
+      transform: [{ scale: interpolate(logoGlow.value, [0, 1], [1, 1.04]) }],
     };
   });
   var shimmerStyle = useAnimatedStyle(function () {
-    return {
-      opacity: interpolate(btnShimmer.value, [0, 0.5, 1], [0.6, 1, 0.6]),
-    };
+    return { opacity: interpolate(btnShimmer.value, [0, 0.5, 1], [0.6, 1, 0.6]) };
   });
 
   var handleSelect = function (lang) {
     setSelectedLang(lang);
-    // Brief delay lets the selected-state style render before transition
     setTimeout(function () { onSelect(lang); }, 200);
   };
 
-  // Hero — big chakra with prominent logo
-  var chakraSize = Math.min(SH * 0.34, 300);
-  var logoSize = Math.min(chakraSize * 0.3, 80);
+  var logoSize = 72;
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Ambient background glow orbs */}
-      <Animated.View style={[ls.ambientOrb, ls.ambientOrb1, orbGlowStyle]} />
-      <Animated.View style={[ls.ambientOrb, ls.ambientOrb2, orbGlowStyle]} />
-      <Animated.View style={[ls.ambientOrb, ls.ambientOrb3, orbGlowStyle]} />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 28, paddingVertical: 24 }} showsVerticalScrollIndicator={false} bounces={false}>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16 }} showsVerticalScrollIndicator={false} bounces={false}>
-
-        {/* ═══ COMPACT HERO: Chakra + Logo + Title ═══ */}
-        <Animated.View entering={FadeInDown.duration(800)} style={{ alignItems: 'center', marginBottom: 20 }}>
-
-          {/* Rotating cosmic ring */}
-          <Animated.View style={[ls.cosmicRing, { width: chakraSize + 32, height: chakraSize + 32, borderRadius: (chakraSize + 32) / 2 }, ringStyle]}>
-            <View style={[ls.cosmicRingInner, { width: chakraSize + 28, height: chakraSize + 28, borderRadius: (chakraSize + 28) / 2 }]} />
+        {/* ═══ HERO: Logo + App Name ═══ */}
+        <Animated.View entering={FadeInDown.duration(900)} style={{ alignItems: 'center', marginBottom: 32 }}>
+          {/* Logo with gold ring */}
+          <Animated.View style={[{ width: logoSize + 20, height: logoSize + 20, borderRadius: (logoSize + 20) / 2, borderWidth: 2, borderColor: 'rgba(255,184,0,0.35)', alignItems: 'center', justifyContent: 'center', marginBottom: 20, ...boxShadow('rgba(255,184,0,0.3)', { width: 0, height: 0 }, 0.5, 20) }, logoStyle]}>
+            <LinearGradient
+              colors={['rgba(255,184,0,0.15)', 'rgba(255,140,0,0.08)', 'rgba(13,11,46,0.9)']}
+              style={{ width: logoSize + 8, height: logoSize + 8, borderRadius: (logoSize + 8) / 2, alignItems: 'center', justifyContent: 'center' }}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            >
+              <Image source={LOGO} style={{ width: logoSize, height: logoSize, borderRadius: logoSize / 2 }} resizeMode="contain" />
+            </LinearGradient>
           </Animated.View>
 
-          {/* Chakra + Logo centered inside */}
-          <View style={{ alignItems: 'center', justifyContent: 'center', width: chakraSize, height: chakraSize }}>
-            <AwesomeRashiChakra size={chakraSize} showSolarOrbit={false} />
-            <Animated.View style={[ls.logoOrb, { width: logoSize + 24, height: logoSize + 24, borderRadius: (logoSize + 24) / 2 }, logoStyle]}>
-              <LinearGradient
-                colors={['rgba(255,184,0,0.25)', 'rgba(255,140,0,0.15)', 'rgba(255,184,0,0.08)']}
-                style={[ls.logoOrbInner, { width: logoSize + 12, height: logoSize + 12, borderRadius: (logoSize + 12) / 2 }]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              >
-                <Image source={LOGO} style={{ width: logoSize, height: logoSize, borderRadius: logoSize / 2 }} resizeMode="contain" />
-              </LinearGradient>
-            </Animated.View>
-          </View>
-
-          {/* App name — English-first for global appeal */}
-          <Animated.View style={[titleAnim, { alignItems: 'center', marginTop: 6 }]}>
-            <Text style={ls.mainTitleEn}>Grahachara</Text>
-            <Text style={ls.mainTitleSi}>{'\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB'}</Text>
-            <Text style={ls.tagline}>Vedic Astrology & Horoscope</Text>
-          </Animated.View>
+          {/* App name */}
+          <Text style={ls.mainTitleEn}>Grahachara</Text>
+          <Text style={ls.mainTitleSi}>{'\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB'}</Text>
+          <Text style={ls.tagline}>Vedic Astrology & Horoscope</Text>
         </Animated.View>
 
-        {/* ═══ LANGUAGE PROMPT — bilingual, globally neutral ═══ */}
+        {/* ═══ LANGUAGE PROMPT ═══ */}
         <Animated.View entering={FadeIn.delay(400).duration(500)} style={ls.promptWrap}>
           <View style={ls.promptDividerLeft}>
             <LinearGradient colors={['transparent', 'rgba(255,184,0,0.3)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
@@ -620,10 +660,10 @@ function LanguageStep({ onSelect }) {
           </View>
         </Animated.View>
 
-        {/* ═══ LANGUAGE BUTTONS — Big, bold, impossible to miss ═══ */}
-        <Animated.View entering={FadeInUp.delay(300).duration(700)} style={{ width: '100%', gap: 14, marginTop: 20 }}>
+        {/* ═══ LANGUAGE BUTTONS ═══ */}
+        <Animated.View entering={FadeInUp.delay(300).duration(700)} style={{ width: '100%', gap: 14, marginTop: 24 }}>
 
-          {/* ── ENGLISH BUTTON (global-first — top position) ── */}
+          {/* English */}
           <SpringPressable
             style={[ls.langCard, selectedLang === 'en' && ls.langCardSelectedEn]}
             onPress={function () { handleSelect('en'); }}
@@ -631,7 +671,7 @@ function LanguageStep({ onSelect }) {
             scalePressed={0.96}
           >
             <LinearGradient
-              colors={selectedLang === 'en' ? ['#6366F1', '#4338CA'] : ['rgba(99,102,241,0.12)', 'rgba(99,102,241,0.04)']}
+              colors={selectedLang === 'en' ? ['#6366F1', '#4338CA'] : ['rgba(99,102,241,0.10)', 'rgba(99,102,241,0.03)']}
               style={ls.langCardGrad}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             >
@@ -652,7 +692,7 @@ function LanguageStep({ onSelect }) {
             </LinearGradient>
           </SpringPressable>
 
-          {/* ── SINHALA BUTTON ── */}
+          {/* Sinhala */}
           <SpringPressable
             style={[ls.langCard, selectedLang === 'si' && ls.langCardSelectedSi]}
             onPress={function () { handleSelect('si'); }}
@@ -660,7 +700,7 @@ function LanguageStep({ onSelect }) {
             scalePressed={0.96}
           >
             <LinearGradient
-              colors={selectedLang === 'si' ? ['#FF8C00', '#E65100'] : ['rgba(255,140,0,0.12)', 'rgba(255,140,0,0.04)']}
+              colors={selectedLang === 'si' ? ['#FF8C00', '#E65100'] : ['rgba(255,140,0,0.10)', 'rgba(255,140,0,0.03)']}
               style={ls.langCardGrad}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             >
@@ -682,7 +722,7 @@ function LanguageStep({ onSelect }) {
           </SpringPressable>
         </Animated.View>
 
-        {/* ═══ FOOTER — global-first trust signals ═══ */}
+        {/* ═══ FOOTER ═══ */}
         <Animated.View entering={FadeIn.delay(700).duration(500)} style={ls.footer}>
           <View style={ls.footerDivider}>
             <LinearGradient colors={['transparent', 'rgba(255,184,0,0.15)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
@@ -710,39 +750,25 @@ function LanguageStep({ onSelect }) {
 }
 
 var ls = StyleSheet.create({
-  // Ambient background orbs
-  ambientOrb:  { position: 'absolute', borderRadius: 999 },
-  ambientOrb1: { width: 280, height: 280, backgroundColor: 'rgba(147,51,234,0.07)', top: -60, right: -80 },
-  ambientOrb2: { width: 220, height: 220, backgroundColor: 'rgba(255,140,0,0.05)', bottom: -30, left: -50 },
-  ambientOrb3: { width: 180, height: 180, backgroundColor: 'rgba(99,102,241,0.05)', top: '40%', left: -40 },
+  // Titles
+  mainTitleEn: { fontSize: 32, fontWeight: '900', color: '#FFB800', letterSpacing: 1.2, ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 16), textAlign: 'center' },
+  mainTitleSi: { fontSize: 15, fontWeight: '600', color: 'rgba(255,220,140,0.4)', letterSpacing: 2, marginTop: 4, textAlign: 'center' },
+  tagline:     { fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.35)', marginTop: 8, textAlign: 'center', letterSpacing: 0.5 },
 
-  // Rotating cosmic ring
-  cosmicRing:      { position: 'absolute', borderWidth: 1, borderColor: 'rgba(255,184,0,0.1)', alignItems: 'center', justifyContent: 'center' },
-  cosmicRingInner: { borderWidth: 1, borderColor: 'rgba(147,51,234,0.08)', borderStyle: 'dashed' },
-
-  // Logo orb
-  logoOrb:      { borderWidth: 2, borderColor: 'rgba(255,184,0,0.4)', alignItems: 'center', justifyContent: 'center', ...boxShadow('rgba(255,184,0,0.4)', { width: 0, height: 0 }, 0.6, 24) },
-  logoOrbInner: { alignItems: 'center', justifyContent: 'center' },
-
-  // Titles — English-first, Sinhala subtle
-  mainTitleEn: { fontSize: 30, fontWeight: '900', color: '#FFB800', letterSpacing: 1, ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 16), textAlign: 'center' },
-  mainTitleSi: { fontSize: 14, fontWeight: '600', color: 'rgba(255,220,140,0.4)', letterSpacing: 2, marginTop: 2, textAlign: 'center' },
-  tagline:     { fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.35)', marginTop: 6, textAlign: 'center', letterSpacing: 0.5 },
-
-  // Bilingual prompt — centered divider style
+  // Bilingual prompt
   promptWrap:         { flexDirection: 'row', alignItems: 'center', width: '100%', marginTop: 4 },
   promptDividerLeft:  { flex: 1, height: 1, overflow: 'hidden' },
   promptDividerRight: { flex: 1, height: 1, overflow: 'hidden' },
   promptText:         { fontSize: 13, fontWeight: '600', color: 'rgba(255,220,140,0.6)', paddingHorizontal: 12 },
 
-  // Language cards — big and prominent
+  // Language cards
   langCard:           { borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.06)' },
   langCardSelectedEn: { borderColor: 'rgba(99,102,241,0.5)', ...boxShadow('rgba(99,102,241,0.35)', { width: 0, height: 4 }, 0.8, 20) },
   langCardSelectedSi: { borderColor: 'rgba(255,140,0,0.5)', ...boxShadow('rgba(255,140,0,0.3)', { width: 0, height: 4 }, 0.8, 20) },
   langCardGrad:       { paddingVertical: 22, paddingHorizontal: 20, borderRadius: 20 },
   langCardRow:        { flexDirection: 'row', alignItems: 'center', gap: 14 },
 
-  // Icon circle (replaces flag)
+  // Icon circle
   langIconCircle:         { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
   langIconCircleActiveEn: { backgroundColor: 'rgba(99,102,241,0.25)', borderColor: 'rgba(165,180,252,0.4)' },
   langIconCircleActiveSi: { backgroundColor: 'rgba(255,140,0,0.2)', borderColor: 'rgba(255,184,0,0.4)' },
@@ -753,13 +779,13 @@ var ls = StyleSheet.create({
   langSecondary:       { fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.35)', marginTop: 2 },
   langSecondaryActive: { color: 'rgba(255,255,255,0.7)' },
 
-  // Arrow circle (CTA indicator — replaces radio)
+  // Arrow circle
   arrowCircle:         { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
   arrowCircleActiveEn: { backgroundColor: 'rgba(99,102,241,0.4)', borderColor: 'rgba(165,180,252,0.5)' },
   arrowCircleActiveSi: { backgroundColor: 'rgba(255,140,0,0.4)', borderColor: 'rgba(255,184,0,0.5)' },
 
-  // Footer — trust signals
-  footer:        { marginTop: 24, alignItems: 'center' },
+  // Footer
+  footer:        { marginTop: 32, alignItems: 'center' },
   footerDivider: { width: 140, height: 1, borderRadius: 1, overflow: 'hidden', marginBottom: 12 },
   trustRow:      { flexDirection: 'row', alignItems: 'center', gap: 6 },
   trustItem:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -769,123 +795,128 @@ var ls = StyleSheet.create({
 
 
 // ═══════════════════════════════════════════════════════════════════════
-//  STEP 0: WELCOME — Single-screen, no-scroll, no fake numbers
-//  Everything fits in one viewport: hero + features + CTA
+//  STEP 0: WELCOME — Luxury editorial feel, immersive & cinematic
+//  Full-screen atmosphere → short impactful copy → glass feature cards → CTA
 // ═══════════════════════════════════════════════════════════════════════
 
 function WelcomeStep({ onContinue, onBack, lang }) {
   var T = OB[lang] || OB.en;
   var reduced = useReducedMotion();
-  var pulse = useSharedValue(0);
-  var haloRotate = useSharedValue(0);
   var ctaGlow = useSharedValue(0);
-
-  // Hero — big chakra with prominent logo
-  var chakraSize = Math.min(SH * 0.3, 260);
-  var logoSize = Math.min(chakraSize * 0.3, 72);
+  var heroFloat = useSharedValue(0);
+  var glowPulse = useSharedValue(0);
 
   useEffect(function () {
     if (reduced) return;
-    pulse.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    haloRotate.value = withRepeat(withTiming(360, { duration: 15000, easing: Easing.linear }), -1, false);
-    ctaGlow.value = withRepeat(withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }), -1, true);
+    ctaGlow.value = withRepeat(withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }), -1, true);
+    heroFloat.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    glowPulse.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
   }, [reduced]);
 
-  var pulseStyle = useAnimatedStyle(function () {
-    return {
-      transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.06]) }],
-      opacity: interpolate(pulse.value, [0, 1], [0.9, 1]),
-    };
-  });
-  var haloStyle = useAnimatedStyle(function () {
-    return { transform: [{ rotate: haloRotate.value + 'deg' }] };
-  });
   var ctaGlowStyle = useAnimatedStyle(function () {
     if (Platform.OS === 'web') return {};
     return {
-      shadowColor: '#FF8C00',
-      shadowOpacity: interpolate(ctaGlow.value, [0, 1], [0.4, 0.9]),
-      shadowRadius: interpolate(ctaGlow.value, [0, 1], [10, 26]),
+      shadowColor: '#FFB800',
+      shadowOpacity: interpolate(ctaGlow.value, [0, 1], [0.3, 0.7]),
+      shadowRadius: interpolate(ctaGlow.value, [0, 1], [8, 20]),
       shadowOffset: { width: 0, height: 4 },
     };
   });
 
-  // Feature items — compact horizontal rows
+  var floatStyle = useAnimatedStyle(function () {
+    return { transform: [{ translateY: interpolate(heroFloat.value, [0, 1], [-3, 3]) }] };
+  });
+
+  var glowStyle = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(glowPulse.value, [0, 1], [0.4, 0.8]),
+      transform: [{ scale: interpolate(glowPulse.value, [0, 1], [0.95, 1.05]) }],
+    };
+  });
+
+  // Feature items — healing & life transformation (premium icons)
   var FEATURES = lang === 'si' ? [
-    { icon: 'compass-outline', color: '#A78BFA', text: 'ඔයාගේ ලග්නයෙන් පෙනෙන ස්වභාවික දිශාව' },
-    { icon: 'planet-outline', color: '#FFB800', text: 'ග්‍රහ පිහිටීම් ජීවිත රටාවට ගැලපෙන හැටි' },
-    { icon: 'heart-outline', color: '#FF6B9D', text: 'සම්බන්ධතා සහ පොරොන්දම් ගැන පැහැදිලි කියවීම' },
-    { icon: 'sparkles-outline', color: '#4CC9F0', text: 'ප්‍රශ්න සඳහා පෞද්ගලික AI මඟපෙන්වීම' },
+    { icon: 'compass', color: '#FFB800', title: 'ඔබේ දවස ජයගන්න', desc: 'සෑම උදෑසනකම ඔබව සවිබල ගන්වන පුද්ගලික මගපෙන්වීම්' },
+    { icon: 'water', color: '#A78BFA', title: 'සිතට මනසට සැනසිල්ල', desc: 'ඕනෑම අභියෝගයකදී නිවැරදි තීරණ ගැනීමට අවශ්‍ය පැහැදිලි බව' },
+    { icon: 'trending-up', color: '#4ADE80', title: 'ජීවිතය අර්ථවත් කරගන්න', desc: 'විශ්වීය ශක්තීන් හඳුනාගෙන ඔබේ අනාගතය සාර්ථකව සැලසුම් කරන්න' },
+    { icon: 'time', color: '#60A5FA', title: 'රාත්‍රී මාර්ගෝපදේශ', desc: 'සෑම රාත්‍රියකම සුබ අසුබ කාල හඳුනාගන්න' },
   ] : [
-    { icon: 'compass-outline', color: '#A78BFA', text: 'Your rising sign and natural direction' },
-    { icon: 'planet-outline', color: '#FFB800', text: 'How planetary positions shape your daily rhythm' },
-    { icon: 'heart-outline', color: '#FF6B9D', text: 'Clear relationship and compatibility readings' },
-    { icon: 'sparkles-outline', color: '#4CC9F0', text: 'Personal AI guidance for timing and questions' },
+    { icon: 'compass', color: '#FFB800', title: 'Plan Your Day', desc: 'Know what\'s good and what to avoid each morning' },
+    { icon: 'water', color: '#A78BFA', title: 'Feel Calm & Clear', desc: 'Stop worrying — see what the stars say about your path' },
+    { icon: 'trending-up', color: '#4ADE80', title: 'Live a Better Life', desc: 'Simple daily tips based on your birth chart' },
+    { icon: 'time', color: '#60A5FA', title: 'Good & Bad Times', desc: 'Know the best times to start anything important' },
   ];
 
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 0, paddingBottom: 16 }}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 0, paddingTop: 0, paddingBottom: 20 }}
       showsVerticalScrollIndicator={false}
       bounces={false}
     >
 
-      {/* ═══ HERO — Compact chakra + title ═══ */}
-      <Animated.View entering={FadeInDown.duration(700)} style={{ alignItems: 'center' }}>
-        {/* Rotating halo */}
-        <Animated.View style={[ws.haloRing, { width: chakraSize + 20, height: chakraSize + 20, borderRadius: (chakraSize + 20) / 2 }, haloStyle]}>
-          <LinearGradient colors={['#FF8C00', '#FFB800', '#FF6D00', '#FF8C00']} style={[ws.haloGrad, { borderRadius: (chakraSize + 20) / 2 }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      {/* ═══ HERO SECTION — full-width atmospheric ═══ */}
+      <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 20 }}>
+        {/* Ambient glow behind hero */}
+        <Animated.View style={[{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,184,0,0.08)', top: 20 }, glowStyle]} />
+        <Animated.View style={[{ position: 'absolute', width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(147,51,234,0.06)', top: 60, left: 40 }, glowStyle]} />
+
+        {/* 3 Featured zodiac images in a premium row */}
+        <Animated.View entering={FadeInDown.duration(900)} style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 24 }, floatStyle]}>
+          <View style={ws.zodiacShowcase}>
+            <Image source={ZODIAC_IMAGES[4]} style={ws.zodiacShowcaseImg} resizeMode="contain" />
+          </View>
+          <View style={[ws.zodiacShowcase, ws.zodiacShowcaseCenter]}>
+            <Image source={ZODIAC_IMAGES[0]} style={ws.zodiacShowcaseImgLg} resizeMode="contain" />
+          </View>
+          <View style={ws.zodiacShowcase}>
+            <Image source={ZODIAC_IMAGES[7]} style={ws.zodiacShowcaseImg} resizeMode="contain" />
+          </View>
         </Animated.View>
 
-        {/* Chakra + Logo */}
-        <View style={{ alignItems: 'center', justifyContent: 'center', width: chakraSize, height: chakraSize }}>
-          <AwesomeRashiChakra size={chakraSize} showSolarOrbit={false} />
-          <Animated.View style={[ws.logoRing, { width: logoSize + 20, height: logoSize + 20, borderRadius: (logoSize + 20) / 2 }, pulseStyle]}>
-            <LinearGradient
-              colors={['rgba(255,184,0,0.25)', 'rgba(255,140,0,0.15)', 'rgba(255,184,0,0.1)']}
-              style={[ws.logoInner, { width: logoSize + 10, height: logoSize + 10, borderRadius: (logoSize + 10) / 2 }]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            >
-              <Image source={LOGO} style={{ width: logoSize, height: logoSize, borderRadius: logoSize / 2 }} resizeMode="contain" />
-            </LinearGradient>
-          </Animated.View>
-        </View>
+        {/* Headline — emotional, healing-focused */}
+        <Animated.View entering={FadeInUp.delay(200).duration(700)} style={{ alignItems: 'center', paddingHorizontal: 28 }}>
+          <Text style={ws.heroTitle}>
+            {lang === 'si' ? 'යහපත් හෙට දවසකට\nඅදම මුලපුරන්න' : 'Your Stars,\nYour Guide'}
+          </Text>
+          <Text style={ws.heroDesc}>
+            {lang === 'si'
+              ? 'විශ්වීය තරු රටා අතරින් ඔබේ ජීවිතයේ සැඟවුණු රහස් හඳුනාගෙන, සෑම දිනකම සතුටින් සහ විශ්වාසයෙන් යුතුව සැලසුම් කරන්න.'
+              : 'Get simple daily advice based on your birth time. Know what days are good, what to watch out for, and how to make better choices.'}
+          </Text>
+        </Animated.View>
+      </View>
 
-        <Text style={ws.titleEn}>Grahachara</Text>
-        <Text style={ws.titleSi}>{'\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB'}</Text>
-        <Text style={ws.subtitle}>{T.welcomeSubtitle}</Text>
-      </Animated.View>
-
-      {/* ═══ FEATURE LIST — compact icon rows ═══ */}
-      <View style={ws.featureList}>
+      {/* ═══ FEATURE CARDS — glass morphism ═══ */}
+      <View style={{ paddingHorizontal: 20, gap: 10 }}>
         {FEATURES.map(function (f, i) {
           return (
-            <Animated.View key={i} entering={FadeInUp.delay(250 + i * 80).duration(400)} style={ws.featureRow}>
-              <View style={[ws.featureIcon, { backgroundColor: f.color + '1A', borderColor: f.color + '40' }]}>
-                <Ionicons name={f.icon} size={18} color={f.color} />
+            <Animated.View key={i} entering={FadeInUp.delay(400 + i * 100).duration(500)}>
+              <View style={ws.featureCard}>
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.01)']}
+                  style={StyleSheet.absoluteFill}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                />
+                <View style={[ws.featureCardIcon, { backgroundColor: f.color + '18', borderColor: f.color + '35' }]}>
+                  <Ionicons name={f.icon} size={20} color={f.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={ws.featureCardTitle}>{f.title}</Text>
+                  <Text style={ws.featureCardDesc}>{f.desc}</Text>
+                </View>
               </View>
-              <Text style={ws.featureText}>{f.text}</Text>
             </Animated.View>
           );
         })}
       </View>
 
-      {/* ═══ CTA — teaser + button + change language ═══ */}
-      <Animated.View entering={FadeInUp.delay(600).duration(500)} style={{ width: '100%' }}>
-        {/* NASA accuracy badge */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(167,139,250,0.08)', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(167,139,250,0.15)' }}>
-          <Text style={{ color: 'rgba(255,220,180,0.7)', fontSize: 11, fontWeight: '700', textAlign: 'center', lineHeight: 17 }}>
-            {T.nasaBadge}
-          </Text>
-        </View>
-
-        {/* Curiosity hook */}
-        <View style={ws.teaserRow}>
-          <Ionicons name="time-outline" size={15} color="#FFB800" />
-          <Text style={ws.teaserText}>
-            {lang === 'si' ? 'ඔයා උපන් අහස කියවීම ආරම්භ කිරීමට සූදානම්' : 'Your birth sky is ready to be read'}
-          </Text>
+      {/* ═══ CTA SECTION ═══ */}
+      <Animated.View entering={FadeInUp.delay(800).duration(600)} style={{ paddingHorizontal: 24, marginTop: 20 }}>
+        {/* Trust signal */}
+        <View style={ws.precisionBadge}>
+          <Ionicons name="rocket-outline" size={14} color="rgba(255,184,0,0.9)" />
+          <Text style={ws.precisionText}>{lang === 'si' ? 'NASA JPL ග්‍රහ දත්ත · නිවැරදි ගණනය' : 'NASA JPL planetary data · precision calculations'}</Text>
         </View>
 
         <Animated.View style={ctaGlowStyle}>
@@ -899,28 +930,31 @@ function WelcomeStep({ onContinue, onBack, lang }) {
 }
 
 var ws = StyleSheet.create({
-  haloRing: { position: 'absolute', top: -6, overflow: 'hidden' },
-  haloGrad: { width: '100%', height: '100%', opacity: 0.18 },
-  logoRing: { borderWidth: 2, borderColor: 'rgba(255,184,0,0.4)', alignItems: 'center', justifyContent: 'center' },
-  logoInner: { alignItems: 'center', justifyContent: 'center' },
-  titleEn: { fontSize: 26, fontWeight: '900', color: '#FFB800', letterSpacing: 1, ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12), marginTop: 4, textAlign: 'center' },
-  titleSi: { fontSize: 13, fontWeight: '600', color: 'rgba(255,220,140,0.35)', letterSpacing: 2, marginBottom: 1, textAlign: 'center' },
-  subtitle: { fontSize: 13, fontWeight: '600', color: 'rgba(255,220,140,0.65)', textAlign: 'center' },
+  // Hero
+  heroTitle: { fontSize: 28, fontWeight: '900', color: '#FFB800', textAlign: 'center', lineHeight: 36, letterSpacing: 0.3, ...textShadow('rgba(255,184,0,0.3)', { width: 0, height: 2 }, 8) },
+  heroDesc: { fontSize: 14, fontWeight: '500', color: 'rgba(255,220,180,0.6)', textAlign: 'center', marginTop: 10, lineHeight: 21, paddingHorizontal: 12 },
 
-  // Feature list — horizontal icon + text rows
-  featureList: { gap: 10, marginTop: 8 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  featureIcon: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  featureText: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.7)', flex: 1, lineHeight: 19 },
+  // Zodiac showcase row
+  zodiacShowcase: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,184,0,0.06)', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.15)', alignItems: 'center', justifyContent: 'center' },
+  zodiacShowcaseCenter: { width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: 'rgba(255,184,0,0.3)', backgroundColor: 'rgba(255,184,0,0.08)', ...boxShadow('rgba(255,184,0,0.25)', { width: 0, height: 0 }, 0.6, 16) },
+  zodiacShowcaseImg: { width: 38, height: 38, borderRadius: 19 },
+  zodiacShowcaseImgLg: { width: 50, height: 50, borderRadius: 25 },
 
-  // Teaser row
-  teaserRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 12, backgroundColor: 'rgba(255,184,0,0.05)', paddingVertical: 9, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,184,0,0.08)' },
-  teaserText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,220,140,0.75)' },
+  // Feature cards
+  featureCard: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
+  featureCardIcon: { width: 42, height: 42, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  featureCardTitle: { fontSize: 15, fontWeight: '700', color: '#FFD666', letterSpacing: 0.2 },
+  featureCardDesc: { fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.45)', marginTop: 2, lineHeight: 16 },
+
+  // Precision badge
+  precisionBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(255,184,0,0.06)', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)' },
+  precisionText: { color: 'rgba(255,220,180,0.65)', fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 15 },
 });
 
 
 // ═══════════════════════════════════════════════════════════════════════
-//  STEP 1: GOOGLE SIGN-IN
+//  STEP 1: GOOGLE SIGN-IN — Immersive, atmospheric, luxury
+//  Full sensory experience: depth layers, zodiac imagery, emotional copy
 // ═══════════════════════════════════════════════════════════════════════
 
 function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
@@ -928,16 +962,18 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
   var [loading, setLoading] = useState(false);
   var [error, setError] = useState('');
   var { signInWithGoogle } = useAuth();
-  var googlePulse = useSharedValue(0);
-  var logoFloat = useSharedValue(0);
-  var iconBounce = useSharedValue(0);
-  var iconGlow = useSharedValue(0);
-  // Responsive sizing
-  var chakraSize = Math.min(SH * 0.32, 280);
-  var logoImgSize = Math.min(chakraSize * 0.18, 48);
+  var reduced = useReducedMotion();
 
-  // Override title/subtitle for returning users
-  var title = isReturningUser 
+  // Animations
+  var ringRotate = useSharedValue(0);
+  var innerRingRotate = useSharedValue(0);
+  var heroScale = useSharedValue(0.85);
+  var heroOpacity = useSharedValue(0);
+  var glowBreath = useSharedValue(0);
+  var btnPulse = useSharedValue(0);
+  var particleFloat = useSharedValue(0);
+
+  var title = isReturningUser
     ? (lang === 'si' ? 'නැවත සාදරයෙන්' : 'Welcome Back')
     : T.googleTitle;
   var subtitle = isReturningUser
@@ -945,36 +981,47 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
     : T.googleSubtitle;
 
   useEffect(function () {
-    googlePulse.value = withRepeat(withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sin) }), -1, true);
-    logoFloat.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
-    iconBounce.value = withSequence(withDelay(300, withSpring(1, { damping: 8, stiffness: 200 })));
-    iconGlow.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
-  }, []);
+    // Hero entrance
+    heroScale.value = withSpring(1, { damping: 15, stiffness: 100 });
+    heroOpacity.value = withTiming(1, { duration: 800 });
 
-  var pulseStyle = useAnimatedStyle(function () {
+    if (reduced) return;
+    ringRotate.value = withRepeat(withTiming(360, { duration: 30000, easing: Easing.linear }), -1, false);
+    innerRingRotate.value = withRepeat(withTiming(-360, { duration: 20000, easing: Easing.linear }), -1, false);
+    glowBreath.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    btnPulse.value = withRepeat(withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    particleFloat.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, [reduced]);
+
+  var ringStyle = useAnimatedStyle(function () {
+    return { transform: [{ rotate: ringRotate.value + 'deg' }] };
+  });
+  var innerRingStyle = useAnimatedStyle(function () {
+    return { transform: [{ rotate: innerRingRotate.value + 'deg' }] };
+  });
+  var heroEntranceStyle = useAnimatedStyle(function () {
+    return { transform: [{ scale: heroScale.value }], opacity: heroOpacity.value };
+  });
+  var glowStyle = useAnimatedStyle(function () {
     return {
-      transform: [{ scale: interpolate(googlePulse.value, [0, 1], [1, 1.05]) }],
-      opacity: interpolate(googlePulse.value, [0, 1], [0.7, 1]),
+      opacity: interpolate(glowBreath.value, [0, 1], [0.15, 0.4]),
+      transform: [{ scale: interpolate(glowBreath.value, [0, 1], [0.9, 1.1]) }],
     };
   });
-
-  var floatStyle = useAnimatedStyle(function () {
-    return { transform: [{ translateY: interpolate(logoFloat.value, [0, 1], [-4, 4]) }] };
-  });
-
-  var iconAnim = useAnimatedStyle(function () {
-    return {
-      transform: [{ scale: interpolate(iconBounce.value, [0, 1], [0.85, 1]) }],
-      opacity: iconBounce.value,
-    };
-  });
-
-  var glowAnim = useAnimatedStyle(function () {
+  var btnGlowStyle = useAnimatedStyle(function () {
     if (Platform.OS === 'web') return {};
     return {
-      shadowOpacity: interpolate(iconGlow.value, [0, 1], [0.3, 0.8]),
-      shadowRadius: interpolate(iconGlow.value, [0, 1], [10, 22]),
+      shadowColor: '#FFFFFF',
+      shadowOpacity: interpolate(btnPulse.value, [0, 1], [0.15, 0.35]),
+      shadowRadius: interpolate(btnPulse.value, [0, 1], [6, 16]),
+      shadowOffset: { width: 0, height: 4 },
     };
+  });
+  var particle1Style = useAnimatedStyle(function () {
+    return { transform: [{ translateY: interpolate(particleFloat.value, [0, 1], [-8, 8]) }, { translateX: interpolate(particleFloat.value, [0, 1], [3, -3]) }] };
+  });
+  var particle2Style = useAnimatedStyle(function () {
+    return { transform: [{ translateY: interpolate(particleFloat.value, [0, 1], [5, -5]) }, { translateX: interpolate(particleFloat.value, [0, 1], [-4, 4]) }] };
   });
 
   var handleSignIn = async function () {
@@ -982,7 +1029,6 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
     try {
       var result = await signInWithGoogle();
       if (result && result.cancelled) {
-        // User cancelled — no error
         setLoading(false);
         return;
       }
@@ -994,103 +1040,102 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
     } finally { setLoading(false); }
   };
 
+  // Zodiac ring positions (6 images, semi-circle above logo)
+  var RING_SIGNS = [0, 2, 4, 7, 9, 11]; // Aries, Gemini, Leo, Scorpio, Sag, Pisces
+  var ringRadius = 85;
+
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 }} showsVerticalScrollIndicator={false} bounces={false}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 0, paddingTop: 0, paddingBottom: 20 }} showsVerticalScrollIndicator={false} bounces={false}>
 
-      {/* ── Top Section ── */}
-      <View style={{ alignItems: 'center' }}>
+      {/* ═══ IMMERSIVE HERO — Zodiac constellation + Logo ═══ */}
+      <Animated.View style={[{ alignItems: 'center', paddingTop: 20, paddingBottom: 10 }, heroEntranceStyle]}>
 
-        {/* ── Premium Header ── */}
-        <Animated.View entering={FadeInDown.duration(600)} style={{ alignItems: 'center', marginBottom: 6, zIndex: 10 }}>
-          <Animated.View style={[gs.headerIconBg, Platform.OS !== 'web' ? { shadowColor: '#FFB800' } : {}, iconAnim, glowAnim]}>
-            <Ionicons name="lock-closed" size={20} color="#FFB800" />
-          </Animated.View>
-          <Text style={gs.headerTitle}>{title}</Text>
-          <Text style={gs.headerSub}>{subtitle}</Text>
-        </Animated.View>
+        {/* Ambient glow layers */}
+        <Animated.View style={[{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(147,51,234,0.08)', top: 0 }, glowStyle]} />
+        <Animated.View style={[{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,184,0,0.06)', top: 20 }, glowStyle]} />
 
-        {/* ── Platform Logo ── */}
-        <Animated.View entering={FadeInUp.delay(200).duration(500)} style={[{ marginBottom: 10, alignItems: 'center' }, floatStyle]}>
-          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <AwesomeRashiChakra size={chakraSize} showSolarOrbit={false} />
-            <Animated.View style={[gs.platformLogoOuter, { width: logoImgSize + 28, height: logoImgSize + 28, borderRadius: (logoImgSize + 28) / 2 }, pulseStyle]}>
-              <View style={[gs.platformLogoInner, { width: logoImgSize + 18, height: logoImgSize + 18, borderRadius: (logoImgSize + 18) / 2 }]}>
-                <LinearGradient
-                  colors={['rgba(255,140,0,0.06)', 'rgba(255,255,255,0.02)']}
-                  style={StyleSheet.absoluteFill}
-                />
-                <Image source={LOGO} style={{ width: logoImgSize, height: logoImgSize }} resizeMode="contain" />
-              </View>
-            </Animated.View>
-          </View>
-          <View style={gs.secureRow}>
-            <Ionicons name="shield-checkmark" size={12} color="#34D399" />
-            <Text style={gs.secureText}>
-              {lang === 'si' ? '100% ආරක්ෂිත Google පිවිසුම' : 'Secure Google Authentication'}
-            </Text>
-          </View>
-        </Animated.View>
-
-      </View>
-
-      {/* ── Middle Section ── */}
-      <View style={{ alignItems: 'center' }}>
-
-        {/* ── Benefits Card — Glass Effect ── */}
-        <View style={gs.benefitsCard}>
-          <LinearGradient
-            colors={['rgba(15,12,35,0.85)', 'rgba(8,6,22,0.95)']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          />
-          <LinearGradient
-            colors={['rgba(255,140,0,0.08)', 'transparent']}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
-          />
-          <View style={gs.benefitList}>
-            {(isReturningUser ? [
-              { icon: 'reload-outline', color: '#4CC9F0', text: lang === 'si' ? 'ඔයාගේ කේන්දරය ආයෙත් ගන්න' : 'Restore your saved Birth Chart' },
-              { icon: 'calendar-outline', color: '#FFB800', text: lang === 'si' ? 'ඔයාගේ දිනපතා ග්‍රහ පලාපල' : 'Continue your daily predictions' },
-              { icon: 'people-outline', color: '#FF8C00', text: lang === 'si' ? 'ඔයාගේ පවුලේ අයගේ කේන්දර' : 'Access your saved profiles' },
-              { icon: 'sync-outline', color: '#34D399', text: lang === 'si' ? 'ඕනෑම උපාංගයකින් පිවිසෙන්න' : 'Securely sync your data' },
-            ] : [
-              { icon: 'star-outline', color: '#FFB800', text: lang === 'si' ? 'ඔයාගේ උපන් ග්‍රහ සටහන සුරකින්න' : 'Save your unique Birth Chart' },
-              { icon: 'calendar-outline', color: '#4CC9F0', text: lang === 'si' ? 'දිනපතා පෞද්ගලික පලාපල' : 'Get daily personalized predictions' },
-              { icon: 'heart-outline', color: '#FF8C00', text: lang === 'si' ? 'පොරොන්දම් ගැලපීම පරීක්ෂා කරන්න' : 'Check compatibility with anyone' },
-              { icon: 'cloud-done-outline', color: '#34D399', text: lang === 'si' ? 'ඔයාගේ දත්ත 100% ක් සුරක්ෂිතයි' : 'Secure backup in the cloud' },
-            ]).map(function (b, i) {
+        {/* Outer zodiac ring — slowly rotating */}
+        <View style={{ width: 220, height: 220, alignItems: 'center', justifyContent: 'center' }}>
+          <Animated.View style={[{ position: 'absolute', width: 220, height: 220, alignItems: 'center', justifyContent: 'center' }, ringStyle]}>
+            {RING_SIGNS.map(function (signIdx, i) {
+              var angle = (2 * Math.PI / 6) * i - Math.PI / 2;
+              var x = Math.cos(angle) * ringRadius;
+              var y = Math.sin(angle) * ringRadius;
               return (
-                <Animated.View key={i} entering={FadeInDown.delay(400 + i * 100).duration(250)} style={gs.benefitRow}>
-                  <View style={[gs.benefitIconWrap, { backgroundColor: b.color + '1A', borderColor: b.color + '40' }]}>
-                    <Ionicons name={b.icon} size={14} color={b.color} />
-                  </View>
-                  <Text style={gs.benefitText}>{b.text}</Text>
-                </Animated.View>
+                <View key={i} style={{ position: 'absolute', width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,184,0,0.06)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.18)', alignItems: 'center', justifyContent: 'center', transform: [{ translateX: x }, { translateY: y }] }}>
+                  <Image source={ZODIAC_IMAGES[signIdx]} style={{ width: 24, height: 24, borderRadius: 12 }} resizeMode="contain" />
+                </View>
               );
             })}
+          </Animated.View>
+
+          {/* Inner decorative ring — counter-rotating */}
+          <Animated.View style={[{ position: 'absolute', width: 140, height: 140, borderRadius: 70, borderWidth: 1, borderColor: 'rgba(167,139,250,0.12)', borderStyle: 'dashed' }, innerRingStyle]} />
+
+          {/* Central logo orb */}
+          <View style={gs.centralOrb}>
+            <LinearGradient
+              colors={['rgba(147,51,234,0.12)', 'rgba(255,184,0,0.08)', 'rgba(13,11,46,0.9)']}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            />
+            <Image source={LOGO} style={{ width: 52, height: 52 }} resizeMode="contain" />
           </View>
         </View>
 
-        {/* ── Platform Badges ── */}
-        <Animated.View entering={FadeInUp.delay(700).duration(400)} style={gs.platformRow}>
-          {[
-            { label: 'iOS', icon: 'logo-apple' },
-            { label: 'Android', icon: 'logo-android' },
-            { label: 'Web', icon: 'globe-outline' },
-          ].map(function (p, i) {
-            return (
-              <View key={i} style={gs.platformBadge}>
-                <Ionicons name={p.icon} size={13} color="rgba(255,190,60,0.5)" />
-                <Text style={gs.platformText}>{p.label}</Text>
-              </View>
-            );
-          })}
+        {/* Floating particles */}
+        <Animated.View style={[{ position: 'absolute', top: 30, left: 50 }, particle1Style]}>
+          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,184,0,0.5)' }} />
         </Animated.View>
+        <Animated.View style={[{ position: 'absolute', top: 80, right: 40 }, particle2Style]}>
+          <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(167,139,250,0.5)' }} />
+        </Animated.View>
+        <Animated.View style={[{ position: 'absolute', bottom: 40, left: 70 }, particle2Style]}>
+          <View style={{ width: 2.5, height: 2.5, borderRadius: 1.25, backgroundColor: 'rgba(52,211,153,0.4)' }} />
+        </Animated.View>
+      </Animated.View>
 
+      {/* ═══ HEADLINE — Impactful, emotional ═══ */}
+      <Animated.View entering={FadeInUp.delay(300).duration(700)} style={{ alignItems: 'center', paddingHorizontal: 28 }}>
+        <Text style={gs.heroTitle}>{title}</Text>
+        <Text style={gs.heroSub}>{subtitle}</Text>
+      </Animated.View>
+
+      {/* ═══ VALUE PROPOSITION — Glass cards ═══ */}
+      <View style={{ paddingHorizontal: 20, gap: 8, marginTop: 16 }}>
+        {(isReturningUser ? (lang === 'si' ? [
+          { icon: 'reload-outline', color: '#A78BFA', title: 'ඔබේ සටහන ලබා ගන්න', desc: 'කේන්දරය සහ පලාපල ආයෙත්' },
+          { icon: 'sync-outline', color: '#34D399', title: 'සියලුම උපාංග', desc: 'ඕනෑම තැනකින් ප්‍රවේශ වන්න' },
+        ] : [
+          { icon: 'reload-outline', color: '#A78BFA', title: 'Restore Your Chart', desc: 'Birth chart & predictions await' },
+          { icon: 'sync-outline', color: '#34D399', title: 'All Devices', desc: 'Access from anywhere securely' },
+        ]) : (lang === 'si' ? [
+          { icon: 'star-outline', color: '#FFB800', title: 'පෞද්ගලික සටහන', desc: 'ඔබේ උපන් ග්‍රහ සටහන සුරකින්න' },
+          { icon: 'sparkles-outline', color: '#A78BFA', title: 'AI මඟපෙන්වීම', desc: 'පෞද්ගලික ජ්‍යොතිෂ උපදෙස්' },
+        ] : [
+          { icon: 'star-outline', color: '#FFB800', title: 'Personal Chart', desc: 'Save your unique birth sky forever' },
+          { icon: 'sparkles-outline', color: '#A78BFA', title: 'AI Guidance', desc: 'Personalized astrological insights' },
+        ])).map(function (card, i) {
+          return (
+            <Animated.View key={i} entering={FadeInUp.delay(500 + i * 100).duration(450)}>
+              <View style={gs.valueCard}>
+                <LinearGradient colors={['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.01)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                <View style={[gs.valueCardIcon, { backgroundColor: card.color + '14', borderColor: card.color + '30' }]}>
+                  <Ionicons name={card.icon} size={18} color={card.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={gs.valueCardTitle}>{card.title}</Text>
+                  <Text style={gs.valueCardDesc}>{card.desc}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.15)" />
+              </View>
+            </Animated.View>
+          );
+        })}
       </View>
 
-      {/* ── Bottom Section ── */}
-      <View style={{ alignItems: 'center' }}>
+      {/* ═══ CTA SECTION ═══ */}
+      <Animated.View entering={FadeInUp.delay(750).duration(500)} style={{ paddingHorizontal: 24, marginTop: 20 }}>
 
         {error ? (
           <Animated.View entering={FadeInDown.duration(300)} exiting={FadeOut.duration(200)} style={gs.errorWrap}>
@@ -1100,107 +1145,97 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
         ) : null}
 
         {/* ── Premium Google Sign-In Button ── */}
-        <View style={{ width: '100%' }}>
-          <Animated.View style={[gs.googleBtnShadow, glowAnim]}>
-            <SpringPressable
-              onPress={handleSignIn}
-              disabled={loading}
-              haptic="heavy"
-              scalePressed={0.96}
-              style={{ borderRadius: 16, overflow: 'hidden', opacity: loading ? 0.5 : 1 }}
-            >
+        <Animated.View style={btnGlowStyle}>
+          <SpringPressable
+            onPress={handleSignIn}
+            disabled={loading}
+            haptic="heavy"
+            scalePressed={0.97}
+            style={{ borderRadius: 18, overflow: 'hidden', opacity: loading ? 0.5 : 1 }}
+          >
+            <View style={gs.googleBtn}>
               <LinearGradient
-                colors={loading ? ['#333', '#444'] : ['#FF8C00', '#FF6D00', '#E65100']}
-                style={gs.googleBtnGrad}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              >
-                <LinearGradient
-                  colors={['rgba(255,255,255,0.20)', 'rgba(255,255,255,0.05)', 'transparent']}
-                  style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
-                />
-                {loading ? (
-                  <CosmicLoader size={24} color="#FFF" />
-                ) : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View style={gs.googleBtnIcon}>
-                      <View style={gs.googleBtnGWrap}>
-                        <View style={[gs.gBtnSeg, gs.gBtnBlue]} />
-                        <View style={[gs.gBtnSeg, gs.gBtnRed]} />
-                        <View style={[gs.gBtnSeg, gs.gBtnYellow]} />
-                        <View style={[gs.gBtnSeg, gs.gBtnGreen]} />
-                        <Text style={gs.googleBtnGLetter}>G</Text>
-                      </View>
-                    </View>
-                    <Text style={gs.googleBtnText}>{T.googleBtn}</Text>
-                    <Ionicons name="arrow-forward" size={17} color="rgba(255,220,120,0.7)" />
+                colors={['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.04)']}
+                style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 18, borderTopRightRadius: 18 }}
+              />
+              {loading ? (
+                <CosmicLoader size={22} color="#FFF" />
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  {/* Google logo — 4 color dots */}
+                  <View style={gs.googleLogoWrap}>
+                    <View style={[gs.gDot, { backgroundColor: '#4285F4', top: 0, left: 4 }]} />
+                    <View style={[gs.gDot, { backgroundColor: '#EA4335', top: 0, right: 4 }]} />
+                    <View style={[gs.gDot, { backgroundColor: '#FBBC05', bottom: 0, left: 4 }]} />
+                    <View style={[gs.gDot, { backgroundColor: '#34A853', bottom: 0, right: 4 }]} />
+                    <Text style={gs.googleG}>G</Text>
                   </View>
-                )}
-              </LinearGradient>
-            </SpringPressable>
-          </Animated.View>
-        </View>
-
-        {/* ── Trust footer ── */}
-        <Animated.View entering={FadeInUp.delay(900).duration(400)} style={gs.trustRow}>
-          <Ionicons name="lock-closed-outline" size={10} color="rgba(255,255,255,0.25)" />
-          <Text style={gs.trustText}>
-            {lang === 'si' ? '256-bit SSL මගින් ආරක්ෂිතයි · Google හරහා තහවුරු කර තියෙනවා' : '256-bit SSL · Verified by Google'}
-          </Text>
+                  <Text style={gs.googleBtnLabel}>{T.googleBtn}</Text>
+                  <View style={gs.btnArrow}>
+                    <Ionicons name="arrow-forward" size={15} color="rgba(255,255,255,0.8)" />
+                  </View>
+                </View>
+              )}
+            </View>
+          </SpringPressable>
         </Animated.View>
 
+        {/* ── Trust signals ── */}
+        <View style={gs.trustRow}>
+          <View style={gs.trustItem}>
+            <Ionicons name="shield-checkmark" size={13} color="#34D399" />
+            <Text style={gs.trustText}>{lang === 'si' ? 'Google තහවුරු කළා' : 'Google Verified'}</Text>
+          </View>
+          <View style={gs.trustDot} />
+          <View style={gs.trustItem}>
+            <Ionicons name="lock-closed" size={12} color="#A78BFA" />
+            <Text style={gs.trustText}>{lang === 'si' ? 'සංකේතනය කළ' : 'Encrypted'}</Text>
+          </View>
+          <View style={gs.trustDot} />
+          <View style={gs.trustItem}>
+            <Ionicons name="eye-off" size={12} color="#FFB800" />
+            <Text style={gs.trustText}>{lang === 'si' ? 'පෞද්ගලික' : 'Private'}</Text>
+          </View>
+        </View>
+
         {onBack ? <GhostButton label={T.back || 'Back'} onPress={onBack} /> : null}
-      </View>
+      </Animated.View>
 
     </ScrollView>
   );
 }
 
 var gs = StyleSheet.create({
-  /* Header */
-  headerIconBg: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,184,0,0.08)', alignItems: 'center', justifyContent: 'center', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,184,0,0.25)' },
-  headerTitle: { fontSize: 22, fontWeight: '900', color: '#FBBF24', textAlign: 'center', letterSpacing: 0.3 },
-  headerSub: { fontSize: 13, color: 'rgba(255,200,80,0.6)', textAlign: 'center', marginTop: 4, lineHeight: 18 },
+  /* Central orb */
+  centralOrb: { width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,184,0,0.2)', overflow: 'hidden', ...boxShadow('rgba(147,51,234,0.3)', { width: 0, height: 0 }, 0.6, 24) },
 
-  /* Platform Logo */
-  platformLogoOuter: { borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 10, ...boxShadow('#FF8C00', { width: 0, height: 0 }, 0.25, 16) },
-  platformLogoInner: { backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  /* Hero text */
+  heroTitle: { fontSize: 28, fontWeight: '900', color: '#FFB800', textAlign: 'center', letterSpacing: 0.3, lineHeight: 34, ...textShadow('rgba(255,184,0,0.4)', { width: 0, height: 2 }, 10) },
+  heroSub: { fontSize: 14, fontWeight: '500', color: 'rgba(255,220,180,0.55)', textAlign: 'center', marginTop: 10, lineHeight: 21, paddingHorizontal: 8 },
 
-  /* Secure badge */
-  secureRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  secureText: { fontSize: 10, color: 'rgba(255,190,60,0.5)', fontWeight: '600', letterSpacing: 0.5 },
-
-  /* Benefits card */
-  benefitsCard: { width: '100%', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', marginBottom: 10 },
-  benefitList: { padding: 14, gap: 10 },
-  benefitRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  benefitIconWrap: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  benefitText: { color: 'rgba(255,220,120,0.85)', fontSize: 13, fontWeight: '500', flex: 1 },
-
-  /* Platform badges */
-  platformRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4, marginTop: 2 },
-  platformBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.04)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  platformText: { fontSize: 10, color: 'rgba(255,190,60,0.5)', fontWeight: '600' },
+  /* Value cards */
+  valueCard: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
+  valueCardIcon: { width: 40, height: 40, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  valueCardTitle: { fontSize: 14, fontWeight: '700', color: '#FFF1D0', letterSpacing: 0.2 },
+  valueCardDesc: { fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.4)', marginTop: 2, lineHeight: 16 },
 
   /* Error */
-  errorWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10, backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(239,68,68,0.20)', width: '100%' },
+  errorWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(239,68,68,0.20)', width: '100%' },
   errorText: { color: '#FCA5A5', fontSize: 12, fontWeight: '600', flex: 1 },
 
-  /* Google button */
-  googleBtnShadow: { borderRadius: 16, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 16) },
-  googleBtnGrad: { paddingVertical: 15, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
-  googleBtnIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#FFF1D0', alignItems: 'center', justifyContent: 'center', ...boxShadow('#000', { width: 0, height: 1 }, 0.15, 4) },
-  googleBtnGWrap: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  gBtnSeg: { position: 'absolute', width: 24, height: 24, borderRadius: 12 },
-  gBtnBlue: { borderWidth: 2.5, borderColor: 'transparent', borderTopColor: '#4285F4', borderRightColor: '#4285F4' },
-  gBtnRed: { borderWidth: 2.5, borderColor: 'transparent', borderTopColor: '#EA4335', borderLeftColor: '#EA4335' },
-  gBtnYellow: { borderWidth: 2.5, borderColor: 'transparent', borderBottomColor: '#FBBC05', borderLeftColor: '#FBBC05' },
-  gBtnGreen: { borderWidth: 2.5, borderColor: 'transparent', borderBottomColor: '#34A853', borderRightColor: '#34A853' },
-  googleBtnGLetter: { fontSize: 14, fontWeight: '900', color: '#4285F4', zIndex: 10 },
-  googleBtnText: { fontSize: 15, fontWeight: '800', color: '#FFE8A0', letterSpacing: 0.5, ...textShadow('rgba(0,0,0,0.2)', { width: 0, height: 1 }, 4) },
+  /* Google button — dark premium glass */
+  googleBtn: { backgroundColor: 'rgba(255,255,255,0.08)', paddingVertical: 17, paddingHorizontal: 22, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)' },
+  googleLogoWrap: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', position: 'relative', ...boxShadow('rgba(0,0,0,0.2)', { width: 0, height: 1 }, 0.8, 4) },
+  gDot: { position: 'absolute', width: 4, height: 4, borderRadius: 2 },
+  googleG: { fontSize: 14, fontWeight: '900', color: '#4285F4' },
+  googleBtnLabel: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3, flex: 1 },
+  btnArrow: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
 
   /* Trust */
-  trustRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
-  trustText: { fontSize: 10, color: 'rgba(255,190,60,0.35)', fontWeight: '500', letterSpacing: 0.3 },
+  trustRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 18, marginBottom: 10 },
+  trustItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  trustDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.15)' },
+  trustText: { fontSize: 11, color: 'rgba(255,220,180,0.4)', fontWeight: '600' },
 });
 
 
@@ -2449,8 +2484,8 @@ var lr = StyleSheet.create({
   revealRoot: { flex: 1, overflow: 'hidden', backgroundColor: '#020106' },
   revealScroll: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 20 },
   revealHeader: { alignItems: 'center', marginBottom: 10 },
-  revealKicker: { color: 'rgba(244,228,188,0.48)', fontSize: 10, lineHeight: 14, fontWeight: '900', letterSpacing: 2.2, textTransform: 'uppercase' },
-  revealWelcome: { color: '#F7EED3', fontSize: 15, lineHeight: 21, fontWeight: '800', marginTop: 4, maxWidth: '92%' },
+  revealKicker: { color: 'rgba(255,184,0,0.7)', fontSize: 10, lineHeight: 14, fontWeight: '900', letterSpacing: 2.2, textTransform: 'uppercase' },
+  revealWelcome: { color: '#FFB800', fontSize: 15, lineHeight: 21, fontWeight: '800', marginTop: 4, maxWidth: '92%' },
   heroStage: { alignItems: 'center', justifyContent: 'center', paddingTop: 4, paddingBottom: 8 },
   heroChakraStage: { position: 'relative', alignItems: 'center', justifyContent: 'center', overflow: 'visible', marginTop: -4 },
   heroChakraGlow: {
@@ -2476,8 +2511,8 @@ var lr = StyleSheet.create({
   heroImage: { alignItems: 'center', justifyContent: 'center', zIndex: 3, elevation: 5 },
   heroZodiacImage: { opacity: 1, ...boxShadow('rgba(255,214,102,0.28)', { width: 0, height: 0 }, 0.7, 16) },
   lagnaTitleBlock: { alignItems: 'center', marginTop: 14, width: '100%' },
-  lagnaEyebrow: { color: 'rgba(214,181,109,0.62)', fontSize: 10, lineHeight: 14, fontWeight: '900', letterSpacing: 2.8, textTransform: 'uppercase' },
-  lagnaTitle: { color: '#F7EED3', fontSize: 38, lineHeight: 46, fontWeight: '900', letterSpacing: 0, marginTop: 2, ...textShadow('rgba(214,181,109,0.36)', { width: 0, height: 2 }, 16) },
+  lagnaEyebrow: { color: 'rgba(255,184,0,0.75)', fontSize: 10, lineHeight: 14, fontWeight: '900', letterSpacing: 2.8, textTransform: 'uppercase' },
+  lagnaTitle: { color: '#FFD666', fontSize: 38, lineHeight: 46, fontWeight: '900', letterSpacing: 0, marginTop: 2, ...textShadow('rgba(255,184,0,0.4)', { width: 0, height: 2 }, 16) },
   lagnaTitleSmall: { fontSize: 33, lineHeight: 40 },
   lagnaSubtitle: { color: 'rgba(244,228,188,0.48)', fontSize: 13, lineHeight: 18, fontWeight: '700', marginTop: 2 },
   signGrid: { flexDirection: 'row', gap: 8, marginTop: 18 },
@@ -2501,7 +2536,7 @@ var lr = StyleSheet.create({
   premiumPanel: { position: 'relative', borderRadius: 17, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(214,181,109,0.19)', marginTop: 14, marginBottom: 10, padding: 13 },
   premiumHeader: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 10 },
   premiumIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(214,181,109,0.12)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(214,181,109,0.24)' },
-  premiumTitle: { color: '#FFD666', fontSize: 13, lineHeight: 17, fontWeight: '900', letterSpacing: 0.2 },
+  premiumTitle: { color: '#FFB800', fontSize: 13, lineHeight: 17, fontWeight: '900', letterSpacing: 0.2 },
   premiumSub: { color: 'rgba(244,228,188,0.42)', fontSize: 9, lineHeight: 13, fontWeight: '700', marginTop: 2 },
   lockGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 });
@@ -2684,7 +2719,7 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
       <CinematicStarfield />
 
       <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: '#000000', overflow: 'hidden' }}
+        style={{ flex: 1, backgroundColor: 'transparent', overflow: 'hidden' }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         enabled={Platform.OS === 'ios'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}

@@ -2166,28 +2166,58 @@ export default function HomeScreen() {
             <Animated.View entering={FadeInDown.delay(400).springify()} style={[s.glassTrioCard, { borderColor: HT.blueBg }]}>
               <LinearGradient colors={[HT.blueBg, 'transparent']} style={StyleSheet.absoluteFill} />
               <View style={[s.glassTrioIcon, { borderColor: HT.blue + '35', backgroundColor: HT.blue + '12' }]}>
-                <Ionicons name="moon-outline" size={14} color={HT.blue} />
+                <Ionicons name="moon" size={14} color={HT.blue} />
               </View>
-              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'චන්ද්‍ර රාශිය' : 'Moon'}</Text>
+              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'චන්ද්‍ර රාශිය' : 'Moon Energy'}</Text>
               <Text style={[s.glassTrioValue, { color: HT.blue }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.72}>{moonName}</Text>
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(460).springify()} style={[s.glassTrioCard, { borderColor: HT.goldBorder }]}>
               <LinearGradient colors={[HT.goldSubtle, 'transparent']} style={StyleSheet.absoluteFill} />
               <View style={[s.glassTrioIcon, { borderColor: HT.gold + '35', backgroundColor: HT.gold + '12' }]}>
-                <Ionicons name="sunny-outline" size={14} color={HT.gold} />
+                <Ionicons name="sunny" size={14} color={HT.gold} />
               </View>
-              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'සූර්ය රාශිය' : 'Sun'}</Text>
+              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'සූර්ය රාශිය' : 'Sun Energy'}</Text>
               <Text style={[s.glassTrioValue, { color: HT.gold }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.72}>{sunName}</Text>
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(520).springify()} style={[s.glassTrioCard, { borderColor: HT.tealBg }]}>
               <LinearGradient colors={[HT.tealBg, 'transparent']} style={StyleSheet.absoluteFill} />
               <View style={[s.glassTrioIcon, { borderColor: HT.teal + '35', backgroundColor: HT.teal + '12' }]}>
-                <Ionicons name="sparkles-outline" size={14} color={HT.teal} />
+                <Ionicons name="sparkles" size={14} color={HT.teal} />
               </View>
               <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'උපන් නැකත' : 'Birth Focus'}</Text>
               <Text style={[s.glassTrioValue, { color: HT.teal }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.68}>{nakName}</Text>
+            </Animated.View>
+          </View>
+
+          {/* ═══ 3 MINI GLASS CARDS — Row 2: Nakshatra Pada / Lord / Lagna Nature ═══ */}
+          <View style={[s.glassTrioRow, { paddingTop: 0 }]}>
+            <Animated.View entering={FadeInDown.delay(560).springify()} style={[s.glassTrioCard, { borderColor: 'rgba(168,85,247,0.12)' }]}>
+              <LinearGradient colors={['rgba(168,85,247,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
+              <View style={[s.glassTrioIcon, { borderColor: 'rgba(168,85,247,0.35)', backgroundColor: 'rgba(168,85,247,0.12)' }]}>
+                <Ionicons name="leaf" size={14} color="#A855F7" />
+              </View>
+              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'ස්වභාව රටාව' : 'Nature Style'}</Text>
+              <Text style={[s.glassTrioValue, { color: '#A855F7' }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.68}>{nakshatra?.lord ? (language === 'si' ? nakshatra.lord + ' බලය' : nakshatra.lord + ' Ruled') : '--'}</Text>
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(620).springify()} style={[s.glassTrioCard, { borderColor: 'rgba(34,211,153,0.12)' }]}>
+              <LinearGradient colors={['rgba(34,211,153,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
+              <View style={[s.glassTrioIcon, { borderColor: 'rgba(34,211,153,0.35)', backgroundColor: 'rgba(34,211,153,0.12)' }]}>
+                <Ionicons name="sync" size={14} color="#22D399" />
+              </View>
+              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'ජීවන රිද්මය' : 'Life Rhythm'}</Text>
+              <Text style={[s.glassTrioValue, { color: '#22D399' }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.68}>{nakshatra?.pada ? (language === 'si' ? 'පාද ' + nakshatra.pada : 'Pada ' + nakshatra.pada + '/4') : '--'}</Text>
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(680).springify()} style={[s.glassTrioCard, { borderColor: 'rgba(251,191,36,0.12)' }]}>
+              <LinearGradient colors={['rgba(251,191,36,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
+              <View style={[s.glassTrioIcon, { borderColor: 'rgba(251,191,36,0.35)', backgroundColor: 'rgba(251,191,36,0.12)' }]}>
+                <Ionicons name="star" size={14} color="#FBBF24" />
+              </View>
+              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'උපන් ගුණය' : 'Birth Quality'}</Text>
+              <Text style={[s.glassTrioValue, { color: '#FBBF24' }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.68}>{lagna?.lord ? (language === 'si' ? lagna.lord + ' ශක්තිය' : lagna.lord + ' Power') : '--'}</Text>
             </Animated.View>
           </View>
         </View>

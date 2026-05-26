@@ -125,29 +125,29 @@ var { width: SCREEN_WIDTH } = Dimensions.get('window');
 // Section icons, gradients & dopamine config
 // ──────────────────────────────────────────
 var SECTION_META = {
-  personality:      { colors: ['#3B82F6', '#1E3A8A'], emoji: '✨', gradient: ['#818CF8', '#3B82F6'], icon: 'person-outline', scoreKey: 'personality' },
-  yogaAnalysis:     { colors: ['#9333EA', '#581C87'], emoji: '⚡', gradient: ['#FF8C00', '#9333EA'], icon: 'flash-outline', scoreKey: 'yogas' },
-  lifePredictions:  { colors: ['#8B5CF6', '#4C1D95'], emoji: '🔮', gradient: ['#A78BFA', '#8B5CF6'], icon: 'telescope-outline', scoreKey: 'destiny' },
-  career:           { colors: ['#F59E0B', '#92400E'], emoji: '💼', gradient: ['#FFB800', '#F59E0B'], icon: 'briefcase-outline', scoreKey: 'career' },
-  marriage:         { colors: ['#EC4899', '#831843'], emoji: '💍', gradient: ['#F9A8D4', '#EC4899'], icon: 'heart-outline', scoreKey: 'love' },
-  marriedLife:      { colors: ['#E11D48', '#881337'], emoji: '🏠', gradient: ['#FDA4AF', '#E11D48'], icon: 'home-outline', scoreKey: 'marriage' },
-  financial:        { colors: ['#22C55E', '#14532D'], emoji: '💰', gradient: ['#4ADE80', '#22C55E'], icon: 'cash-outline', scoreKey: 'wealth' },
-  children:         { colors: ['#10B981', '#064E3B'], emoji: '👶', gradient: ['#34D399', '#10B981'], icon: 'happy-outline', scoreKey: 'children' },
-  familyPortrait:   { colors: ['#0EA5E9', '#0C4A6E'], emoji: '👨‍👩‍👧‍👦', gradient: ['#38BDF8', '#0EA5E9'], icon: 'people-outline', scoreKey: 'family' },
-  health:           { colors: ['#EF4444', '#7F1D1D'], emoji: '🏥', gradient: ['#FCA5A5', '#EF4444'], icon: 'fitness-outline', scoreKey: 'health' },
-  physicalProfile:  { colors: ['#D946EF', '#86198F'], emoji: '🪞', gradient: ['#F0ABFC', '#D946EF'], icon: 'body-outline', scoreKey: 'physical' },
-  attractionProfile:{ colors: ['#F43F5E', '#9F1239'], emoji: '💘', gradient: ['#FDA4AF', '#F43F5E'], icon: 'flame-outline', scoreKey: 'attraction' },
-  mentalHealth:     { colors: ['#06B6D4', '#0E7490'], emoji: '🧠', gradient: ['#67E8F9', '#06B6D4'], icon: 'bulb-outline', scoreKey: 'mind' },
-  foreignTravel:    { colors: ['#6366F1', '#312E81'], emoji: '✈️', gradient: ['#A5B4FC', '#6366F1'], icon: 'airplane-outline', scoreKey: 'travel' },
-  education:        { colors: ['#7C3AED', '#4C1D95'], emoji: '🎓', gradient: ['#A78BFA', '#7C3AED'], icon: 'school-outline', scoreKey: 'education' },
-  luck:             { colors: ['#FFB800', '#78350F'], emoji: '🎰', gradient: ['#FDE68A', '#FFB800'], icon: 'diamond-outline', scoreKey: 'luck' },
-  legal:            { colors: ['#64748B', '#1E293B'], emoji: '⚖️', gradient: ['#94A3B8', '#64748B'], icon: 'shield-outline', scoreKey: 'protection' },
-  spiritual:        { colors: ['#A855F7', '#581C87'], emoji: '🙏', gradient: ['#D8B4FE', '#A855F7'], icon: 'sparkles-outline', scoreKey: 'spiritual' },
-  realEstate:       { colors: ['#84CC16', '#365314'], emoji: '🏡', gradient: ['#BEF264', '#84CC16'], icon: 'business-outline', scoreKey: 'property' },
-  transits:         { colors: ['#14B8A6', '#134E4A'], emoji: '🌍', gradient: ['#5EEAD4', '#14B8A6'], icon: 'planet-outline', scoreKey: 'transits' },
-  surpriseInsights: { colors: ['#F97316', '#9A3412'], emoji: '🤯', gradient: ['#FDBA74', '#F97316'], icon: 'eye-outline', scoreKey: 'surprise' },
-  timeline25:       { colors: ['#6366F1', '#312E81'], emoji: '📅', gradient: ['#A5B4FC', '#6366F1'], icon: 'calendar-outline', scoreKey: 'timeline' },
-  remedies:         { colors: ['#FFB800', '#78350F'], emoji: '💎', gradient: ['#FDE68A', '#FFB800'], icon: 'color-wand-outline', scoreKey: 'remedies' },
+  personality:      { colors: ['#3B82F6', '#1E3A8A'], gradient: ['#818CF8', '#3B82F6'], icon: 'person', scoreKey: 'personality' },
+  yogaAnalysis:     { colors: ['#9333EA', '#581C87'], gradient: ['#FF8C00', '#9333EA'], icon: 'flash', scoreKey: 'yogas' },
+  lifePredictions:  { colors: ['#8B5CF6', '#4C1D95'], gradient: ['#A78BFA', '#8B5CF6'], icon: 'telescope', scoreKey: 'destiny' },
+  career:           { colors: ['#F59E0B', '#92400E'], gradient: ['#FFB800', '#F59E0B'], icon: 'briefcase', scoreKey: 'career' },
+  marriage:         { colors: ['#EC4899', '#831843'], gradient: ['#F9A8D4', '#EC4899'], icon: 'heart', scoreKey: 'love' },
+  marriedLife:      { colors: ['#E11D48', '#881337'], gradient: ['#FDA4AF', '#E11D48'], icon: 'home', scoreKey: 'marriage' },
+  financial:        { colors: ['#22C55E', '#14532D'], gradient: ['#4ADE80', '#22C55E'], icon: 'wallet', scoreKey: 'wealth' },
+  children:         { colors: ['#10B981', '#064E3B'], gradient: ['#34D399', '#10B981'], icon: 'happy', scoreKey: 'children' },
+  familyPortrait:   { colors: ['#0EA5E9', '#0C4A6E'], gradient: ['#38BDF8', '#0EA5E9'], icon: 'people', scoreKey: 'family' },
+  health:           { colors: ['#EF4444', '#7F1D1D'], gradient: ['#FCA5A5', '#EF4444'], icon: 'fitness', scoreKey: 'health' },
+  physicalProfile:  { colors: ['#D946EF', '#86198F'], gradient: ['#F0ABFC', '#D946EF'], icon: 'body', scoreKey: 'physical' },
+  attractionProfile:{ colors: ['#F43F5E', '#9F1239'], gradient: ['#FDA4AF', '#F43F5E'], icon: 'flame', scoreKey: 'attraction' },
+  mentalHealth:     { colors: ['#06B6D4', '#0E7490'], gradient: ['#67E8F9', '#06B6D4'], icon: 'bulb', scoreKey: 'mind' },
+  foreignTravel:    { colors: ['#6366F1', '#312E81'], gradient: ['#A5B4FC', '#6366F1'], icon: 'airplane', scoreKey: 'travel' },
+  education:        { colors: ['#7C3AED', '#4C1D95'], gradient: ['#A78BFA', '#7C3AED'], icon: 'school', scoreKey: 'education' },
+  luck:             { colors: ['#FFB800', '#78350F'], gradient: ['#FDE68A', '#FFB800'], icon: 'diamond', scoreKey: 'luck' },
+  legal:            { colors: ['#64748B', '#1E293B'], gradient: ['#94A3B8', '#64748B'], icon: 'shield', scoreKey: 'protection' },
+  spiritual:        { colors: ['#A855F7', '#581C87'], gradient: ['#D8B4FE', '#A855F7'], icon: 'sparkles', scoreKey: 'spiritual' },
+  realEstate:       { colors: ['#84CC16', '#365314'], gradient: ['#BEF264', '#84CC16'], icon: 'business', scoreKey: 'property' },
+  transits:         { colors: ['#14B8A6', '#134E4A'], gradient: ['#5EEAD4', '#14B8A6'], icon: 'planet', scoreKey: 'transits' },
+  surpriseInsights: { colors: ['#F97316', '#9A3412'], gradient: ['#FDBA74', '#F97316'], icon: 'eye', scoreKey: 'surprise' },
+  timeline25:       { colors: ['#6366F1', '#312E81'], gradient: ['#A5B4FC', '#6366F1'], icon: 'calendar', scoreKey: 'timeline' },
+  remedies:         { colors: ['#FFB800', '#78350F'], gradient: ['#FDE68A', '#FFB800'], icon: 'color-wand', scoreKey: 'remedies' },
 };
 
 var SECTION_KEYS = [
@@ -569,7 +569,9 @@ function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang, rawD
   var meta = SECTION_META[sectionKey] || {};
   var isSi = reportLang === 'si';
   var i18nTitle = t(SECTION_TITLES[sectionKey]);
-  var title = isSi ? (i18nTitle || aiNarrative?.title || sectionKey) : (aiNarrative?.title || i18nTitle || sectionKey);
+  var rawTitle = isSi ? (i18nTitle || aiNarrative?.title || sectionKey) : (aiNarrative?.title || i18nTitle || sectionKey);
+  // Strip Sinhala text and emojis from English titles (AI sometimes returns "සිංහල — English" or emoji-prefixed titles)
+  var title = rawTitle ? String(rawTitle).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}]/gu, '').replace(!isSi ? /[\u0D80-\u0DFF]+[^a-zA-Z]*/g : /(?!x)x/, '').replace(/^[\s—–\-•:]+/, '').trim() || i18nTitle || sectionKey : rawTitle;
 
   if (!aiNarrative?.narrative) return null;
 
@@ -630,7 +632,7 @@ function SectionCard({ sectionKey, data, index, t, aiNarrative, reportLang, rawD
                 style={sc.iconBg}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               >
-                <Text style={sc.emoji}>{meta.emoji || '📋'}</Text>
+                <Ionicons name={meta.icon || 'document-text'} size={20} color="#FFFFFF" />
               </LinearGradient>
               <View style={{ flex: 1 }}>
                 <Text style={sc.title} numberOfLines={2}>{title}</Text>
@@ -897,15 +899,15 @@ var sc = StyleSheet.create({
 // Tap an orb → scrolls to that section
 // ══════════════════════════════════════════
 var DNA_ITEMS = [
-  { key: 'career', emoji: '💼', label: 'Career', labelSi: 'රැකියාව' },
-  { key: 'marriage', emoji: '💍', label: 'Love', labelSi: 'ආදරය' },
-  { key: 'health', emoji: '❤️', label: 'Health', labelSi: 'සෞඛ්‍යය' },
-  { key: 'financial', emoji: '💰', label: 'Wealth', labelSi: 'මුදල්' },
-  { key: 'luck', emoji: '🍀', label: 'Luck', labelSi: 'වාසනාව' },
-  { key: 'education', emoji: '🎓', label: 'Study', labelSi: 'අධ්‍යාපන' },
-  { key: 'children', emoji: '👶', label: 'Children', labelSi: 'දරු' },
-  { key: 'foreignTravel', emoji: '✈️', label: 'Travel', labelSi: 'විදේශ' },
-  { key: 'spiritual', emoji: '🙏', label: 'Spirit', labelSi: 'ආත්ම' },
+  { key: 'career', icon: 'briefcase', label: 'Career', labelSi: 'රැකියාව' },
+  { key: 'marriage', icon: 'heart', label: 'Love', labelSi: 'ආදරය' },
+  { key: 'health', icon: 'fitness', label: 'Health', labelSi: 'සෞඛ්‍යය' },
+  { key: 'financial', icon: 'wallet', label: 'Wealth', labelSi: 'මුදල්' },
+  { key: 'luck', icon: 'diamond', label: 'Luck', labelSi: 'වාසනාව' },
+  { key: 'education', icon: 'school', label: 'Study', labelSi: 'අධ්‍යාපන' },
+  { key: 'children', icon: 'happy', label: 'Children', labelSi: 'දරු' },
+  { key: 'foreignTravel', icon: 'airplane', label: 'Travel', labelSi: 'විදේශ' },
+  { key: 'spiritual', icon: 'sparkles', label: 'Spirit', labelSi: 'ආත්ම' },
 ];
 
 function DnaOrb({ item, score, isSi, index, onPress }) {
@@ -937,7 +939,7 @@ function DnaOrb({ item, score, isSi, index, onPress }) {
             {hasScore ? (
               <Text style={[dna.orbScore, { color: color }]}>{score}</Text>
             ) : (
-              <Text style={dna.orbEmoji}>{item.emoji}</Text>
+              <Ionicons name={item.icon || 'ellipse'} size={18} color="rgba(255,255,255,0.4)" />
             )}
           </LinearGradient>
         </View>
@@ -2446,7 +2448,6 @@ export default function ReportScreen() {
           {/* ═══ HERO TITLE ═══ */}
           <Animated.View entering={FadeInDown.delay(50).duration(800)}>
             <View style={s.heroTitleWrap}>
-              <Text style={s.heroEmoji}>🌟</Text>
               <Text style={s.title}>{
                 reportLang === 'si'
                   ? (userName ? userName + 'ගේ ජීවිත කතාව' : 'ඔයාගේ ජීවිත කතාව')
@@ -2549,66 +2550,100 @@ export default function ReportScreen() {
           {/* ═══ BIRTH SUMMARY ═══ */}
           {birthDataResolved && Object.keys(birthDataResolved).length > 0 && (
             <Animated.View entering={FadeInDown.delay(200).duration(600)}>
-              <AuraBox style={{ borderColor: 'rgba(255,184,0,0.15)' }}>
+              <AuraBox style={{ borderColor: 'rgba(255,184,0,0.18)' }}>
                 <LinearGradient
-                  colors={['rgba(255,184,0,0.06)', 'transparent']}
+                  colors={['rgba(255,184,0,0.08)', 'rgba(147,51,234,0.03)', 'transparent']}
                   style={StyleSheet.absoluteFill}
-                  start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 />
                 <View style={s.birthHeader}>
-                  <View style={s.birthIconBg}>
-                    <Text style={{ fontSize: 28 }}>🪐</Text>
-                  </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.birthLagna}>{userName || '✨'}</Text>
+                    <Text style={s.birthLagna}>{userName || 'You'}</Text>
                     <Text style={s.birthSinhala}>{
                       reportLang === 'si'
                         ? (birthDataResolved.lagna?.sinhala ? birthDataResolved.lagna.sinhala + ' බලය යටතේ උපන්නා' : '')
-                        : (birthDataResolved.lagna?.english ? 'Born under the power of ' + birthDataResolved.lagna.english : '')
+                        : (birthDataResolved.lagna?.english ? 'Born under ' + birthDataResolved.lagna.english + ' Rising' : '')
                     }</Text>
-                    <Text style={s.birthSub}>
-                      {reportLang === 'si' ? 'උපන් ස්ථානය: ' : 'Born: '}{birthLocation} • {birthDate} • {birthTime}
-                    </Text>
-                    {birthDataResolved.currentAge != null && (
-                      <Text style={s.birthSub}>
-                        {reportLang === 'si' ? '🎂 වයස: ' + birthDataResolved.currentAge + ' වසර' : '🎂 Age: ' + birthDataResolved.currentAge + ' years'}
-                        {birthDataResolved.birthDayOfWeek ? (reportLang === 'si' ? ' • ' + birthDataResolved.birthDayOfWeek + ' දිනයේ උපන්නා' : ' • Born on a ' + birthDataResolved.birthDayOfWeek) : ''}
-                      </Text>
-                    )}
                   </View>
                 </View>
-                <View style={s.panchangaRow}>
-                  <View style={s.panchangaItem}>
-                    <Text style={s.panchangaLabel}>{reportLang === 'si' ? '🌙 චන්ද්‍ර ශක්තිය' : '🌙 Moon Energy'}</Text>
-                    <Text style={s.panchangaValue}>{reportLang === 'si' ? (birthDataResolved.moonSign?.sinhala || birthDataResolved.moonSign?.english || '') : (birthDataResolved.moonSign?.english || '')}</Text>
+                {/* Birth meta pills */}
+                <View style={s.birthMetaRow}>
+                  <View style={s.birthMetaPill}>
+                    <Ionicons name="location" size={11} color="rgba(255,184,0,0.7)" />
+                    <Text style={s.birthMetaText}>{birthLocation}</Text>
                   </View>
-                  <View style={s.panchangaItem}>
-                    <Text style={s.panchangaLabel}>{reportLang === 'si' ? '☀️ සූර්ය ශක්තිය' : '☀️ Sun Energy'}</Text>
-                    <Text style={s.panchangaValue}>{reportLang === 'si' ? (birthDataResolved.sunSign?.sinhala || birthDataResolved.sunSign?.english || '') : (birthDataResolved.sunSign?.english || '')}</Text>
+                  <View style={s.birthMetaPill}>
+                    <Ionicons name="calendar" size={11} color="rgba(255,184,0,0.7)" />
+                    <Text style={s.birthMetaText}>{birthDate}</Text>
                   </View>
-                  <View style={s.panchangaItem}>
-                    <Text style={s.panchangaLabel}>{reportLang === 'si' ? '⭐ උපන් අවධානය' : '⭐ Birth Focus'}</Text>
-                    <Text style={s.panchangaValue}>{getBirthFocusValue(birthDataResolved.nakshatra, reportLang)}</Text>
+                  <View style={s.birthMetaPill}>
+                    <Ionicons name="time" size={11} color="rgba(255,184,0,0.7)" />
+                    <Text style={s.birthMetaText}>{birthTime}</Text>
+                  </View>
+                  {birthDataResolved.currentAge != null && (
+                    <View style={s.birthMetaPill}>
+                      <Ionicons name="person" size={11} color="rgba(255,184,0,0.7)" />
+                      <Text style={s.birthMetaText}>{reportLang === 'si' ? birthDataResolved.currentAge + ' වසර' : birthDataResolved.currentAge + ' yrs'}{birthDataResolved.birthDayOfWeek ? ' • ' + birthDataResolved.birthDayOfWeek : ''}</Text>
+                    </View>
+                  )}
+                </View>
+                {/* Attribute grid */}
+                <View style={s.birthGridRow}>
+                  <View style={[s.birthGridCard, { borderColor: 'rgba(147,197,253,0.15)' }]}>
+                    <LinearGradient colors={['rgba(147,197,253,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
+                    <View style={[s.birthGridIcon, { backgroundColor: 'rgba(147,197,253,0.12)', borderColor: 'rgba(147,197,253,0.25)' }]}>
+                      <Ionicons name="moon" size={13} color="#93C5FD" />
+                    </View>
+                    <Text style={s.birthGridLabel}>{reportLang === 'si' ? 'චන්ද්‍ර ශක්තිය' : 'Moon'}</Text>
+                    <Text style={[s.birthGridValue, { color: '#93C5FD' }]}>{reportLang === 'si' ? (birthDataResolved.moonSign?.sinhala || birthDataResolved.moonSign?.english || '') : (birthDataResolved.moonSign?.english || '')}</Text>
+                  </View>
+                  <View style={[s.birthGridCard, { borderColor: 'rgba(255,184,0,0.15)' }]}>
+                    <LinearGradient colors={['rgba(255,184,0,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
+                    <View style={[s.birthGridIcon, { backgroundColor: 'rgba(255,184,0,0.12)', borderColor: 'rgba(255,184,0,0.25)' }]}>
+                      <Ionicons name="sunny" size={13} color="#FFB800" />
+                    </View>
+                    <Text style={s.birthGridLabel}>{reportLang === 'si' ? 'සූර්ය ශක්තිය' : 'Sun'}</Text>
+                    <Text style={[s.birthGridValue, { color: '#FFB800' }]}>{reportLang === 'si' ? (birthDataResolved.sunSign?.sinhala || birthDataResolved.sunSign?.english || '') : (birthDataResolved.sunSign?.english || '')}</Text>
+                  </View>
+                  <View style={[s.birthGridCard, { borderColor: 'rgba(52,211,153,0.15)' }]}>
+                    <LinearGradient colors={['rgba(52,211,153,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
+                    <View style={[s.birthGridIcon, { backgroundColor: 'rgba(52,211,153,0.12)', borderColor: 'rgba(52,211,153,0.25)' }]}>
+                      <Ionicons name="sparkles" size={13} color="#34D399" />
+                    </View>
+                    <Text style={s.birthGridLabel}>{reportLang === 'si' ? 'උපන් නැකත' : 'Birth Star'}</Text>
+                    <Text style={[s.birthGridValue, { color: '#34D399' }]}>{getBirthFocusValue(birthDataResolved.nakshatra, reportLang)}</Text>
                   </View>
                 </View>
-                <View style={[s.panchangaRow, { marginTop: 4 }]}>
+                <View style={s.birthGridRow}>
                   {birthDataResolved.gana && (
-                    <View style={s.panchangaItem}>
-                      <Text style={s.panchangaLabel}>{reportLang === 'si' ? '🔥 ස්වභාව රටාව' : '🔥 Nature Style'}</Text>
-                      <Text style={s.panchangaValue}>{getFriendlyTemperamentValue(birthDataResolved.gana.type, reportLang)}</Text>
+                    <View style={[s.birthGridCard, { borderColor: 'rgba(168,85,247,0.15)' }]}>
+                      <LinearGradient colors={['rgba(168,85,247,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
+                      <View style={[s.birthGridIcon, { backgroundColor: 'rgba(168,85,247,0.12)', borderColor: 'rgba(168,85,247,0.25)' }]}>
+                        <Ionicons name="leaf" size={13} color="#A855F7" />
+                      </View>
+                      <Text style={s.birthGridLabel}>{reportLang === 'si' ? 'ස්වභාවය' : 'Nature'}</Text>
+                      <Text style={[s.birthGridValue, { color: '#A855F7' }]}>{getFriendlyTemperamentValue(birthDataResolved.gana.type, reportLang)}</Text>
                     </View>
                   )}
                   {birthDataResolved.nadi && (
-                    <View style={s.panchangaItem}>
-                      <Text style={s.panchangaLabel}>{reportLang === 'si' ? '💨 ජීව රටාව' : '💨 Life Rhythm'}</Text>
-                      <Text style={s.panchangaValue}>{getFriendlyEnergyValue(birthDataResolved.nadi.type, reportLang)}</Text>
+                    <View style={[s.birthGridCard, { borderColor: 'rgba(56,189,248,0.15)' }]}>
+                      <LinearGradient colors={['rgba(56,189,248,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
+                      <View style={[s.birthGridIcon, { backgroundColor: 'rgba(56,189,248,0.12)', borderColor: 'rgba(56,189,248,0.25)' }]}>
+                        <Ionicons name="pulse" size={13} color="#38BDF8" />
+                      </View>
+                      <Text style={s.birthGridLabel}>{reportLang === 'si' ? 'ජීව රිද්මය' : 'Rhythm'}</Text>
+                      <Text style={[s.birthGridValue, { color: '#38BDF8' }]}>{getFriendlyEnergyValue(birthDataResolved.nadi.type, reportLang)}</Text>
                     </View>
                   )}
                   {birthDataResolved.panchanga?.panchangaQuality && (
-                    <View style={s.panchangaItem}>
-                      <Text style={s.panchangaLabel}>{reportLang === 'si' ? '✨ උපන් ගුණය' : '✨ Birth Quality'}</Text>
-                      <Text style={[s.panchangaValue, { color: birthDataResolved.panchanga.panchangaQuality.score >= 2 ? '#4ADE80' : birthDataResolved.panchanga.panchangaQuality.score >= 0 ? '#FBBF24' : '#F87171' }]}>
-                        {birthDataResolved.panchanga.panchangaQuality.quality} ({birthDataResolved.panchanga.panchangaQuality.score}/5)
+                    <View style={[s.birthGridCard, { borderColor: 'rgba(251,191,36,0.15)' }]}>
+                      <LinearGradient colors={['rgba(251,191,36,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
+                      <View style={[s.birthGridIcon, { backgroundColor: 'rgba(251,191,36,0.12)', borderColor: 'rgba(251,191,36,0.25)' }]}>
+                        <Ionicons name="star" size={13} color="#FBBF24" />
+                      </View>
+                      <Text style={s.birthGridLabel}>{reportLang === 'si' ? 'උපන් ගුණය' : 'Quality'}</Text>
+                      <Text style={[s.birthGridValue, { color: birthDataResolved.panchanga.panchangaQuality.score >= 2 ? '#4ADE80' : birthDataResolved.panchanga.panchangaQuality.score >= 0 ? '#FBBF24' : '#F87171' }]}>
+                        {birthDataResolved.panchanga.panchangaQuality.score}/5
                       </Text>
                     </View>
                   )}
@@ -3070,11 +3105,18 @@ var s = StyleSheet.create({
   locationChipTextActive: { color: '#FF8C00' },
   newReportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginBottom: 12, backgroundColor: 'rgba(255,140,0,0.1)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.25)' },
   newReportText: { color: '#FF8C00', fontSize: 13, fontWeight: '700' },
-  birthHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  birthIconBg: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,184,0,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
-  birthLagna: { color: '#FFB800', fontSize: 20, fontWeight: '900' },
-  birthSinhala: { color: 'rgba(255,214,102,0.50)', fontSize: 12, marginTop: 2 },
-  birthSub: { color: '#64748B', fontSize: 11, marginTop: 2 },
+  birthHeader: { marginBottom: 14 },
+  birthIconBg: { width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(255,184,0,0.08)', alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: 'rgba(255,184,0,0.20)', overflow: 'hidden' },
+  birthLagna: { color: '#FFB800', fontSize: 20, fontWeight: '900', letterSpacing: 0.2 },
+  birthSinhala: { color: 'rgba(255,214,102,0.60)', fontSize: 12.5, marginTop: 3, fontWeight: '600' },
+  birthMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 },
+  birthMetaPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,184,0,0.06)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)' },
+  birthMetaText: { color: 'rgba(255,214,102,0.65)', fontSize: 10.5, fontWeight: '600' },
+  birthGridRow: { flexDirection: 'row', gap: 6, marginTop: 6 },
+  birthGridCard: { flex: 1, borderRadius: 14, overflow: 'hidden', padding: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, backgroundColor: 'rgba(0,0,0,0.20)', minHeight: 80, gap: 3 },
+  birthGridIcon: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 2 },
+  birthGridLabel: { color: 'rgba(148,163,184,0.80)', fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, textAlign: 'center' },
+  birthGridValue: { color: '#F4E4BC', fontSize: 12, fontWeight: '800', textAlign: 'center' },
   panchangaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   panchangaItem: { alignItems: 'center', flex: 1 },
   panchangaLabel: { color: '#475569', fontSize: 9, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },

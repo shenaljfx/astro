@@ -26,6 +26,7 @@ import {
   clearBadge,
 } from '../services/notifications';
 import { APP_LOGO_IMAGE } from '../assets/logo-inline';
+import { ZODIAC_IMAGES } from '../components/ZodiacIcons';
 
 // Suppress known harmless warnings from third-party libs on web
 // - "Unexpected text node" comes from react-native-gesture-handler's GestureDetector on web
@@ -68,28 +69,29 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   document.head.appendChild(style);
 }
 
-// ── Zodiac glyph orbiting around the logo ──
-var ZODIAC_GLYPHS = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
-var GLYPH_COLORS = [
+// ── Zodiac PNG images orbiting around the logo ──
+var ZODIAC_ORBIT_COLORS = [
   '#EF4444', '#22C55E', '#FBBF24', '#94A3B8', '#F97316', '#C084FC',
   '#EC4899', '#DC2626', '#818CF8', '#64748B', '#06B6D4', '#14B8A6',
 ];
 
-function SplashZodiacGlyph({ glyph, color, index, total, radius, rotation }) {
+function SplashZodiacIcon({ index, total, radius, rotation }) {
   var baseAngle = (2 * Math.PI / total) * index;
   var aStyle = useAnimatedStyle(function() {
     var angle = baseAngle + rotation.value;
     var x = Math.cos(angle) * radius;
     var y = Math.sin(angle) * radius;
-    var osc = interpolate(Math.sin(rotation.value * 2 + index), [-1, 1], [0.35, 0.85]);
+    var osc = interpolate(Math.sin(rotation.value * 2 + index), [-1, 1], [0.5, 1]);
     return {
-      transform: [{ translateX: x }, { translateY: y }],
+      transform: [{ translateX: x }, { translateY: y }, { scale: interpolate(osc, [0.5, 1], [0.8, 1.05]) }],
       opacity: osc,
     };
   });
   return (
-    <Animated.View style={[{ position: 'absolute', width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }, aStyle]}>
-      <Text style={{ fontSize: 16, color: color }}>{glyph}</Text>
+    <Animated.View style={[{ position: 'absolute', width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }, aStyle]}>
+      <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,184,0,0.08)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <Image source={ZODIAC_IMAGES[index]} style={{ width: 22, height: 22 }} resizeMode="contain" />
+      </View>
     </Animated.View>
   );
 }
@@ -110,12 +112,87 @@ function ShimmerDot({ index, delay }) {
   return <Animated.View style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#C084FC' }, ds]} />;
 }
 
+// ── Starfield (matching website WebGL starfield) ──
+var SCREEN_WIDTH = Dimensions.get('window').width;
+var SCREEN_HEIGHT = Dimensions.get('window').height;
+var STAR_COUNT = Platform.OS === 'web' ? 120 : 80;
+
+// Pre-generate star positions/properties once (like website's starData array)
+var STAR_DATA = (function() {
+  var stars = [];
+  for (var i = 0; i < STAR_COUNT; i++) {
+    var sizeRand = Math.random();
+    var size = sizeRand < 0.7 ? 1.0 + Math.random() * 1.2 :
+               sizeRand < 0.95 ? 2.0 + Math.random() * 1.5 :
+               3.0 + Math.random() * 1.5;
+    var brightRand = Math.random();
+    var brightness = brightRand < 0.5 ? 0.25 + Math.random() * 0.3 :
+                     brightRand < 0.85 ? 0.55 + Math.random() * 0.25 :
+                     0.8 + Math.random() * 0.2;
+    // Color temperature: 0=blue-white, 0.5=white, 1=warm gold
+    var colorTemp = Math.random();
+    var color = colorTemp < 0.33 ? 'rgba(180,200,255,' :
+                colorTemp < 0.66 ? 'rgba(255,255,255,' :
+                'rgba(255,220,150,';
+    stars.push({
+      x: Math.random() * 100,      // % position
+      y: Math.random() * 100,
+      size: size,
+      brightness: brightness,
+      color: color,
+      flickerDuration: 1200 + Math.random() * 3000,
+      flickerDelay: Math.random() * 2000,
+      depth: Math.random(),         // 0=far, 1=near (affects parallax)
+    });
+  }
+  return stars;
+})();
+
+function StarDot({ star }) {
+  var opacity = useSharedValue(star.brightness * 0.3);
+  useEffect(function() {
+    opacity.value = withDelay(star.flickerDelay, withRepeat(
+      withSequence(
+        withTiming(star.brightness, { duration: star.flickerDuration, easing: Easing.inOut(Easing.sin) }),
+        withTiming(star.brightness * 0.2, { duration: star.flickerDuration * 0.8, easing: Easing.inOut(Easing.sin) }),
+      ), -1, true
+    ));
+    return function() { cancelAnimation(opacity); };
+  }, []);
+  var aStyle = useAnimatedStyle(function() {
+    return { opacity: opacity.value };
+  });
+  return (
+    <Animated.View style={[{
+      position: 'absolute',
+      left: star.x + '%',
+      top: star.y + '%',
+      width: star.size,
+      height: star.size,
+      borderRadius: star.size / 2,
+      backgroundColor: star.color + '1)',
+    }, aStyle]} />
+  );
+}
+
+function StarField() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {STAR_DATA.map(function(star, i) {
+        return <StarDot key={i} star={star} />;
+      })}
+    </View>
+  );
+}
+
 // ── Cinematic Splash Loading Screen ──
 function SplashLoadingScreen({ resolved }) {
   var isDark = resolved !== 'light';
-  var bgColor = isDark ? '#0D0B2E' : '#FAF6EE';
+  var bgColor = isDark ? '#04030C' : '#FAF6EE';
   var wheelRotation = useSharedValue(0);
   var logoGlow = useSharedValue(0);
+  var nebulaShift = useSharedValue(0);
+  var ringPulse = useSharedValue(0);
 
   useEffect(function() {
     wheelRotation.value = withRepeat(
@@ -127,46 +204,102 @@ function SplashLoadingScreen({ resolved }) {
         withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
       ), -1, true
     );
+    nebulaShift.value = withRepeat(
+      withTiming(1, { duration: 12000, easing: Easing.inOut(Easing.sin) }),
+      -1, true
+    );
+    ringPulse.value = withRepeat(
+      withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
+      -1, true
+    );
     return function() {
       cancelAnimation(wheelRotation);
       cancelAnimation(logoGlow);
+      cancelAnimation(nebulaShift);
+      cancelAnimation(ringPulse);
     };
   }, []);
 
   var glowStyle = useAnimatedStyle(function() {
-    var s = interpolate(logoGlow.value, [0, 1], [1, 1.4]);
-    var o = interpolate(logoGlow.value, [0, 1], [0.15, 0.45]);
+    var s = interpolate(logoGlow.value, [0, 1], [1, 1.3]);
+    var o = interpolate(logoGlow.value, [0, 1], [0.2, 0.5]);
     return { transform: [{ scale: s }], opacity: o };
   });
 
-  var wheelRadius = 110;
+  var ringPulseStyle = useAnimatedStyle(function() {
+    return {
+      transform: [{ scale: interpolate(ringPulse.value, [0, 1], [1, 1.08]) }],
+      opacity: interpolate(ringPulse.value, [0, 1], [0.3, 0.12]),
+    };
+  });
+
+  var nebula1Style = useAnimatedStyle(function() {
+    return {
+      opacity: interpolate(nebulaShift.value, [0, 1], [0.06, 0.14]),
+      transform: [
+        { translateX: interpolate(nebulaShift.value, [0, 1], [-15, 15]) },
+        { translateY: interpolate(nebulaShift.value, [0, 1], [8, -12]) },
+      ],
+    };
+  });
+
+  var nebula2Style = useAnimatedStyle(function() {
+    return {
+      opacity: interpolate(nebulaShift.value, [0, 1], [0.08, 0.04]),
+      transform: [
+        { translateX: interpolate(nebulaShift.value, [0, 1], [12, -18]) },
+        { translateY: interpolate(nebulaShift.value, [0, 1], [-6, 14]) },
+      ],
+    };
+  });
+
+  var wheelRadius = 105;
 
   return (
     <View style={{ flex: 1, backgroundColor: bgColor }}>
       <LinearGradient
         colors={isDark
-          ? ['#0D0B2E', '#1A1040', '#0D0B2E']
+          ? ['#04030C', '#0D0B2E', '#1A1040', '#04030C']
           : ['#FAF6EE', '#F0E8D8', '#FAF6EE']}
+        locations={isDark ? [0, 0.3, 0.7, 1] : undefined}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
       />
 
+      {/* Atmospheric nebula blobs */}
+      {isDark ? (
+        <>
+          <Animated.View style={[{ position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(147,51,234,0.05)', top: '10%', right: -100 }, nebula1Style]} />
+          <Animated.View style={[{ position: 'absolute', width: 250, height: 250, borderRadius: 125, backgroundColor: 'rgba(255,140,0,0.04)', bottom: '15%', left: -80 }, nebula2Style]} />
+          <Animated.View style={[{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(66,133,244,0.03)', top: '40%', left: '55%' }, nebula1Style]} />
+        </>
+      ) : null}
+
+      {/* Star field — matching website WebGL starfield */}
+      {isDark ? <StarField /> : null}
+
       <View style={gs.splashContent}>
         {/* ── Zodiac orbit ring ── */}
         <View style={gs.orbArea}>
-          {ZODIAC_GLYPHS.map(function(g, i) {
+          {ZODIAC_IMAGES.map(function(_, i) {
             return (
-              <SplashZodiacGlyph
-                key={i} glyph={g} color={isDark ? GLYPH_COLORS[i] : GLYPH_COLORS[i] + 'CC'}
+              <SplashZodiacIcon
+                key={i}
                 index={i} total={12} radius={wheelRadius} rotation={wheelRotation}
               />
             );
           })}
 
+          {/* Pulsing outer ring */}
+          <Animated.View style={[{ position: 'absolute', width: 140, height: 140, borderRadius: 70, borderWidth: 1, borderColor: 'rgba(255,184,0,0.2)' }, ringPulseStyle]} />
+
+          {/* Inner ring */}
+          <View style={{ position: 'absolute', width: 116, height: 116, borderRadius: 58, borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.15)' }} />
+
           {/* Glow behind logo */}
           <Animated.View style={[gs.logoGlow, {
-            backgroundColor: isDark ? 'rgba(147,51,234,0.2)' : 'rgba(107,70,193,0.12)',
+            backgroundColor: isDark ? 'rgba(255,184,0,0.12)' : 'rgba(107,70,193,0.12)',
           }, glowStyle]} />
 
           {/* Logo */}
@@ -179,37 +312,29 @@ function SplashLoadingScreen({ resolved }) {
           </Animated.View>
         </View>
 
-        {/* ── App name ── */}
+        {/* ── Brand name — English primary ── */}
         <Animated.View entering={FadeInUp.duration(600).delay(300)}>
-          <Text style={[gs.titleSinhala, {
-            color: isDark ? '#FBBF24' : '#8B6914',
-          }]}>
-            ග්‍රහචාර
-          </Text>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.duration(600).delay(500)}>
           <Text style={[gs.titleEnglish, {
-            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(44,36,24,0.85)',
+            color: isDark ? '#FFB800' : '#8B6914',
           }]}>
             GRAHACHARA
           </Text>
         </Animated.View>
 
-        {/* ── Tagline ── */}
-        <Animated.View entering={FadeInUp.duration(600).delay(700)}>
+        {/* ── Tagline — universal ── */}
+        <Animated.View entering={FadeInUp.duration(600).delay(500)}>
           <Text style={[gs.tagline, {
-            color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(44,36,24,0.45)',
+            color: isDark ? 'rgba(255,220,180,0.5)' : 'rgba(44,36,24,0.45)',
           }]}>
-            Vedic Astrology · ජ්‍යෝතිෂ්‍ය විද්‍යාව
+            Vedic Astrology & Birth Chart Insights
           </Text>
         </Animated.View>
 
-        {/* ── Decorative divider ── */}
-        <Animated.View entering={FadeIn.duration(600).delay(900)} style={gs.dividerRow}>
-          <View style={[gs.dividerLine, { backgroundColor: isDark ? 'rgba(192,132,252,0.2)' : 'rgba(107,70,193,0.15)' }]} />
-          <Text style={{ color: isDark ? '#C084FC' : '#6B46C1', fontSize: 14 }}>✦</Text>
-          <View style={[gs.dividerLine, { backgroundColor: isDark ? 'rgba(192,132,252,0.2)' : 'rgba(107,70,193,0.15)' }]} />
+        {/* ── Loading progress bar ── */}
+        <Animated.View entering={FadeIn.duration(400).delay(900)} style={gs.progressWrap}>
+          <View style={gs.progressTrack}>
+            <Animated.View style={[gs.progressFill, { backgroundColor: isDark ? '#FFB800' : '#8B6914' }]} />
+          </View>
         </Animated.View>
 
         {/* ── Loading dots ── */}
@@ -217,15 +342,6 @@ function SplashLoadingScreen({ resolved }) {
           <ShimmerDot index={0} delay={0} />
           <ShimmerDot index={1} delay={150} />
           <ShimmerDot index={2} delay={300} />
-        </Animated.View>
-
-        {/* ── Loading text ── */}
-        <Animated.View entering={FadeInDown.duration(400).delay(1200)}>
-          <Text style={[gs.loadingText, {
-            color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(44,36,24,0.3)',
-          }]}>
-            Consulting the cosmos...
-          </Text>
         </Animated.View>
       </View>
     </View>
@@ -237,6 +353,13 @@ function AppGate() {
   var { resolved } = useTheme();
   var [showOnboarding, setShowOnboarding] = useState(null); // null = checking
   var [onboardingPassed, setOnboardingPassed] = useState(false);
+  var [splashReady, setSplashReady] = useState(false);
+
+  // Minimum 2 second splash screen
+  useEffect(function () {
+    var timer = setTimeout(function () { setSplashReady(true); }, 2000);
+    return function () { clearTimeout(timer); };
+  }, []);
   // Track if user was previously logged in (for re-login skip flow)
   var wasLoggedIn = useRef(false);
   var [isReturningUser, setIsReturningUser] = useState(false);
@@ -309,8 +432,8 @@ function AppGate() {
     };
   }, []);
 
-  // Still loading
-  if (loading || showOnboarding === null) {
+  // Still loading or splash minimum not met
+  if (loading || showOnboarding === null || !splashReady) {
     return <SplashLoadingScreen resolved={resolved} />;
   }
 
@@ -352,72 +475,63 @@ var gs = StyleSheet.create({
     height: 260,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 28,
+    marginBottom: 32,
   },
   logoGlow: {
     position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
   },
   logoWrap: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 92,
+    height: 92,
+    borderRadius: 46,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(13,11,46,0.6)',
+    backgroundColor: 'rgba(4,3,12,0.8)',
     borderWidth: 2,
-    borderColor: 'rgba(192,132,252,0.3)',
+    borderColor: 'rgba(255,184,0,0.25)',
   },
   logo: {
-    width: 80,
-    height: 80,
-  },
-  titleSinhala: {
-    fontSize: 36,
-    fontWeight: '800',
-    textAlign: 'center',
-    letterSpacing: 2,
-    lineHeight: 44,
+    width: 72,
+    height: 72,
   },
   titleEnglish: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '900',
     textAlign: 'center',
     letterSpacing: 6,
-    marginTop: 4,
   },
   tagline: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: 10,
     letterSpacing: 0.5,
   },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 20,
+  progressWrap: {
+    width: 120,
+    marginTop: 28,
   },
-  dividerLine: {
-    width: 40,
-    height: 1,
+  progressTrack: {
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: 'rgba(255,184,0,0.1)',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    width: '60%',
+    height: '100%',
+    borderRadius: 1,
+    opacity: 0.6,
   },
   dotsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 28,
+    marginTop: 16,
     alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 11,
-    fontWeight: '500',
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    marginTop: 12,
   },
 });
 
