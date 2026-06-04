@@ -1,8 +1,12 @@
 ﻿import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
-  StyleSheet, Platform, Dimensions, Image, InteractionManager,
+  StyleSheet, Platform, Dimensions, Image, InteractionManager, Alert,
 } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
+import * as htmlToImage from 'html-to-image';
+import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,6 +37,7 @@ import useLowEndDevice from '../../hooks/useLowEndDevice';
 import { CosmicBackground } from '../../components/CosmicBackground';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
+import WeeklyShareCard from '../../components/WeeklyShareCard';
 import AffirmationCard from '../../components/AffirmationCard';
 import IntentionCard from '../../components/IntentionCard';
 import ManifestationCard from '../../components/ManifestationCard';
@@ -1035,6 +1040,10 @@ export default function HomeScreen() {
   var [chartData, setChartData] = useState(null);
   var [weeklyLagna, setWeeklyLagna] = useState(null);
   var [weeklyLagnaExpanded, setWeeklyLagnaExpanded] = useState(null);
+  var [shareReport, setShareReport] = useState(null);
+  var [sharePageNum, setSharePageNum] = useState(1);
+  var [sharingBusy, setSharingBusy] = useState(false);
+  var shareCardRef = useRef(null);
   var [jyotishToday, setJyotishToday] = useState(null);
   var [expandedPanchanga, setExpandedPanchanga] = useState(null);
   var [loading, setLoading] = useState(true);
@@ -2648,6 +2657,113 @@ export default function HomeScreen() {
   }
 
   /* ── Weekly Lagna Palapala ── */
+  function weeklyShareLabel() {
+    if (!weeklyLagna) return '';
+    var ws = weeklyLagna.weekStart ? new Date(weeklyLagna.weekStart).toLocaleDateString(language === 'si' ? 'si-LK' : 'en-US', { month: 'short', day: 'numeric' }) : '';
+    var we = weeklyLagna.weekEnd ? new Date(weeklyLagna.weekEnd).toLocaleDateString(language === 'si' ? 'si-LK' : 'en-US', { month: 'short', day: 'numeric' }) : '';
+    return ws && we ? ws + ' – ' + we : '';
+  }
+
+  async function handleShareWeekly(report) {
+    if (sharingBusy) return;
+    console.log('[ShareWeekly] start', report.nameEn, Platform.OS);
+    try {
+      setSharingBusy(true);
+      setShareReport(report);
+
+      var baseName = String(report.nameEn || 'forecast').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      var pages = [1, 2, 3];
+      var uris = [];
+
+      for (var i = 0; i < pages.length; i++) {
+        setSharePageNum(pages[i]);
+        // Wait for re-render + paint
+        await new Promise(function (r) { setTimeout(r, Platform.OS === 'web' ? 600 : 350); });
+        console.log('[ShareWeekly] capturing page', pages[i], 'ref:', !!shareCardRef.current);
+        if (!shareCardRef.current) throw new Error('card-not-ready-page-' + pages[i]);
+
+        if (Platform.OS === 'web') {
+          var node = shareCardRef.current;
+          var dataUri = await htmlToImage.toPng(node, {
+            width: 360,
+            height: 640,
+            pixelRatio: 3,
+            backgroundColor: '#04030C',
+          });
+          uris.push(dataUri);
+        } else {
+          var uri = await captureRef(shareCardRef, {
+            format: 'png',
+            quality: 1,
+            result: 'tmpfile',
+            width: 1080,
+            height: 1920,
+          });
+          uris.push(uri);
+        }
+      }
+
+      console.log('[ShareWeekly] captured all 3 pages');
+
+      if (Platform.OS === 'web') {
+        // Download all 3 images with a slight delay between
+        for (var j = 0; j < uris.length; j++) {
+          var fileName = 'grahachara-' + baseName + '-' + (j + 1) + '.png';
+          var link = document.createElement('a');
+          link.href = uris[j];
+          link.download = fileName;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          if (j < uris.length - 1) {
+            await new Promise(function (r) { setTimeout(r, 400); });
+          }
+        }
+        console.log('[ShareWeekly] all 3 downloads triggered');
+      } else {
+        // Native: save to gallery + share first image
+        var savedToGallery = false;
+        try {
+          var perm = await MediaLibrary.requestPermissionsAsync();
+          if (perm && (perm.granted || perm.accessPrivileges === 'limited')) {
+            for (var k = 0; k < uris.length; k++) {
+              await MediaLibrary.saveToLibraryAsync(uris[k]);
+            }
+            savedToGallery = true;
+          }
+        } catch (e) { /* optional */ }
+
+        var canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(uris[0], {
+            mimeType: 'image/png',
+            UTI: 'public.png',
+            dialogTitle: language === 'si' ? '\u0D94\u0DBA\u0DCF\u0D9C\u0DD9 \u0DC3\u0DAD\u0DD2\u0DBA\u0DD9 \u0DB4\u0DBD\u0DCF\u0DB4\u0DBD \u0DB6\u0DD9\u0DAF\u0DCF\u0D9C\u0DB1\u0DCA\u0DB1' : 'Share your weekly forecast',
+          });
+        } else if (savedToGallery) {
+          Alert.alert(
+            language === 'si' ? '\u0DC3\u0DD4\u0DBB\u0DD0\u0D9A\u0DD4\u0DAB\u0DCF' : 'Saved',
+            language === 'si' ? '\u0DB4\u0DD2\u0DB1\u0DCA\u0DAD\u0DD6\u0DBB 3\u0D9A\u0DCA \u0D94\u0DBA\u0DCF\u0D9C\u0DD9 \u0D9C\u0DD0\u0DBD\u0DBB\u0DD2\u0DBA\u0DA7 \u0DC3\u0DD4\u0DBB\u0DD0\u0D9A\u0DD4\u0DAB\u0DCF.' : 'All 3 images saved to your gallery.'
+          );
+        }
+      }
+    } catch (e) {
+      console.error('[ShareWeekly] ERROR:', e);
+      if (Platform.OS === 'web') {
+        window.alert('Could not create the image: ' + (e && e.message ? e.message : String(e)));
+      } else {
+        Alert.alert(
+          language === 'si' ? '\u0D85\u0DB4\u0DDC\u0DBA\u0DD2' : 'Oops',
+          language === 'si' ? '\u0DB4\u0DD2\u0DB1\u0DCA\u0DAD\u0DD6\u0DBB\u0DBA \u0DC4\u0DAF\u0DB1\u0DCA\u0DB1 \u0DB6\u0DD0\u0DBB\u0DD2 \u0DC0\u0DD4\u0DAB\u0DCF. \u0DB1\u0DD0\u0DC0\u0DAD \u0D89\u0DAD\u0DCA\u0DC3\u0DCF\u0DC4 \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1.' : "Couldn't create the images. Please try again."
+        );
+      }
+    } finally {
+      setSharingBusy(false);
+      setShareReport(null);
+    }
+  }
+
   function renderWeeklyLagna() {
     if (!weeklyLagna || !weeklyLagna.reports || weeklyLagna.reports.length === 0) return null;
 
@@ -2915,6 +3031,26 @@ export default function HomeScreen() {
                           </View>
                         ) : null}
                       </View>
+
+                      {/* Download & Share branded image */}
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        disabled={sharingBusy}
+                        onPress={function () { handleShareWeekly(report); }}
+                        style={[s.wlShareBtn, sharingBusy && { opacity: 0.6 }]}
+                      >
+                        <LinearGradient
+                          colors={['#FBBF24', '#F59E0B']}
+                          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                          style={StyleSheet.absoluteFill}
+                        />
+                        <Ionicons name={sharingBusy ? 'hourglass-outline' : 'share-social'} size={16} color="#1A1206" />
+                        <Text style={s.wlShareBtnText}>
+                          {sharingBusy
+                            ? (language === 'si' ? 'හදනවා…' : 'Creating…')
+                            : (language === 'si' ? 'පින්තූර 3ක් බාගන්න' : 'Download 3 story images')}
+                        </Text>
+                      </TouchableOpacity>
                     </Animated.View>
                   )}
                 </View>
@@ -3077,6 +3213,21 @@ export default function HomeScreen() {
             </View>
           )}
         </Animated.ScrollView>
+
+        {/* Off-screen branded card used only for capturing a shareable image */}
+        {shareReport ? (
+          <View style={s.shareCapture} pointerEvents="none">
+            <View style={{ width: 360, height: 640 }}>
+              <WeeklyShareCard
+                ref={shareCardRef}
+                report={shareReport}
+                weekLabel={weeklyShareLabel()}
+                language={language}
+                page={sharePageNum}
+              />
+            </View>
+          </View>
+        ) : null}
       </View>
     </DesktopScreenWrapper>
   );
@@ -3084,6 +3235,16 @@ export default function HomeScreen() {
 
 var s = StyleSheet.create({
   flex: { flex: 1 },
+  shareCapture: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 1,
+    height: 1,
+    overflow: 'hidden',
+    opacity: 0.99,
+    zIndex: -9999,
+  },
   content: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 108 : 88 },
   contentDesktop: { paddingTop: 24, paddingHorizontal: 28, maxWidth: 680, alignSelf: 'center', width: '100%' },
   todayStack: { gap: 10 },
@@ -3740,6 +3901,11 @@ var s = StyleSheet.create({
     padding: 12, borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)',
   },
   wlAdviceText: { color: '#FFD666', fontSize: 12, fontWeight: '600', lineHeight: 18, flex: 1 },
+  wlShareBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: 14, paddingVertical: 13, borderRadius: 14, overflow: 'hidden',
+  },
+  wlShareBtnText: { color: '#1A1206', fontSize: 13.5, fontWeight: '800', letterSpacing: 0.3 },
   wlLuckyRow: { flexDirection: 'row', gap: 8 },
   wlLuckyItem: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4,

@@ -2,8 +2,8 @@
   "expo": {
     "name": "Grahachara",
     "slug": "grahachara",
-    "version": "1.8.9",
-    "orientation": "default",
+    "version": "1.9.3",
+    "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "grahachara",
     "userInterfaceStyle": "automatic",
@@ -26,14 +26,16 @@
         "backgroundColor": "#0D0B2E"
       },
       "package": "com.grahachara.app",
-      "versionCode": 74,
+      "versionCode": 87,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "POST_NOTIFICATIONS",
-        "com.android.vending.BILLING"
+        "com.android.vending.BILLING",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "blockedPermissions": [
         "android.permission.CAMERA",
@@ -58,6 +60,14 @@
         }
       ],
       "expo-asset",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Grahachara to save your forecast images to your gallery.",
+          "savePhotosPermission": "Allow Grahachara to save your forecast images to your gallery.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
       "@react-native-google-signin/google-signin",
       [
         "expo-build-properties",
@@ -65,13 +75,13 @@
           "android": {
             "targetSdkVersion": 35,
             "compileSdkVersion": 35,
-            "ndkVersion": "27.0.12077973",
+            "buildToolsVersion": "35.0.0",
             "usesCleartextTraffic": true,
-            "edgeToEdgeEnabled": true
+            "edgeToEdgeEnabled": false,
+            "useLegacyPackaging": false
           }
         }
-      ],
-      "./plugins/withAndroid16KBPages.js"
+      ]
     ],
     "experiments": {
       "typedRoutes": true

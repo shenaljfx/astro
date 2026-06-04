@@ -194,9 +194,9 @@ IMPORTANT RULES:
 4. Consider planetary transits, aspects (drishti), and house placements FROM each lagna
 5. Be specific — mention exact planets, their positions, and effects
 6. Keep each lagna's prediction concise but meaningful (3-4 sentences per section)
-7. The tone should be positive yet honest — warn about challenges with remedies
+7. The tone should be positive yet honest — warn about challenges with practical, actionable suggestions
 8. Include practical advice, not just vague spiritual platitudes
-9. Mention specific astrological remedies (mantras, colors, gemstones, donations) for challenging periods
+9. For the "remedy" field, give a practical, real-world action the person can take during challenging periods (a habit, routine, planning step, self-care or mindset shift) — do NOT prescribe mantras, gemstones, pujas, or donations
 10. Search for any special astronomical events (eclipses, planetary conjunctions, retrogrades) happening during this week
 11. If Choghadiya data is provided, incorporate auspicious/inauspicious daily timing into advice (e.g., "early mornings are especially auspicious this week")
 12. If Aspect Patterns (T-Square, Grand Trine, Yod) are present in the sky, explain how they affect each lagna — these are major cosmic configurations
@@ -235,9 +235,9 @@ For EACH of the 12 lagnas, provide a JSON object with:
   "familySi": "Same in Sinhala",
   "spiritualEn": "Spiritual growth, religious activities, pilgrimages (1 sentence)",
   "spiritualSi": "Same in Sinhala",
-  "remedyEn": "Specific astrological remedy or precaution for the week — mention specific mantras, colors to wear, gemstones, or offerings (1-2 sentences)",
+  "remedyEn": "A practical, actionable wellbeing tip for the week — something concrete the person can actually do (e.g. a habit, routine, mindset shift, planning step, conversation to have, or self-care action). Do NOT mention mantras, gemstones, pujas, or superstitious offerings (1-2 sentences)",
   "remedySi": "Same in Sinhala",
-  "adviceEn": "Key practical advice for the week in English (1 sentence)",
+  "adviceEn": "Key practical advice for the week in English — one concrete, useful action the person can take (1 sentence). No mantras or rituals.",
   "adviceSi": "Same in Sinhala",
   "luckyDayIndex": 0-6 (Monday=0 to Sunday=6),
   "luckyColorIndex": 0-14,

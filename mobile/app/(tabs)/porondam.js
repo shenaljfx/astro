@@ -78,6 +78,84 @@ var ZODIAC_IMAGES = {
   12: ZODIAC_IMAGE_LIST[11],
 };
 var RASHI_NAMES = ['', 'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+var RASHI_NAMES_SI = ['', 'මේෂ', 'වෘෂභ', 'මිථුන', 'කටක', 'සිංහ', 'කන්‍යා', 'තුලා', 'වෘශ්චික', 'ධනු', 'මකර', 'කුම්භ', 'මීන'];
+
+// Vedic Lagna-to-Lagna compatibility (house position of partner's lagna from yours)
+// Score: 5=trine (best), 4=kendra, 3=friendly, 2=neutral, 1=difficult
+function getLagnaCompatScore(myRashiId, theirRashiId) {
+  var diff = ((theirRashiId - myRashiId) % 12 + 12) % 12; // 0-11 position
+  // Trine houses (5, 9) = best synergy
+  if (diff === 4 || diff === 8) return { score: 5, tier: 'best' };
+  // Same sign = strong mirror
+  if (diff === 0) return { score: 4, tier: 'best' };
+  // Kendra (4, 7, 10) = powerful attraction
+  if (diff === 3 || diff === 6 || diff === 9) return { score: 4, tier: 'good' };
+  // 2nd and 12th = moderate support
+  if (diff === 1 || diff === 11) return { score: 3, tier: 'neutral' };
+  // 3rd and 11th = friendly
+  if (diff === 2 || diff === 10) return { score: 3, tier: 'neutral' };
+  // 6th and 8th = challenging / karmic
+  if (diff === 5 || diff === 7) return { score: 1, tier: 'avoid' };
+  return { score: 2, tier: 'neutral' };
+}
+
+function getLagnaCompatList(myRashiId) {
+  var results = [];
+  for (var i = 1; i <= 12; i++) {
+    if (i === myRashiId) continue;
+    var compat = getLagnaCompatScore(myRashiId, i);
+    results.push({ rashiId: i, name: RASHI_NAMES[i], nameSi: RASHI_NAMES_SI[i], score: compat.score, tier: compat.tier });
+  }
+  results.sort(function(a, b) { return b.score - a.score; });
+  return results;
+}
+
+var COMPAT_HOOKS_EN = {
+  best: [
+    '{name}, they can\u2019t stop thinking about you',
+    '{name}, this person loses sleep over you',
+    '{name}, they\u2019re already yours \u2014 they just don\u2019t know it yet',
+  ],
+  good: [
+    '{name}, strong pull \u2014 they feel safe around you',
+    '{name}, something about you haunts their mind',
+    '{name}, they\u2019d choose you over anyone',
+  ],
+  neutral: [
+    '{name}, it could go either way \u2014 depends on your next move',
+    '{name}, slow burn \u2014 takes time but can surprise you',
+    '{name}, comfortable but won\u2019t set your soul on fire',
+    '{name}, predictable energy \u2014 no sparks, no danger',
+  ],
+  avoid: [
+    '{name}, this one will drain your energy completely',
+    '{name}, they\u2019ll take everything and leave you empty',
+    '{name}, you\u2019ll lose yourself trying to make this work',
+  ],
+};
+var COMPAT_HOOKS_SI = {
+  best: [
+    '{name}, ඔවුන්ගේ සිතුවිලිවලින් ඔබව ඉවත් කළ නොහැකි වනු ඇත',
+    '{name}, ඔබ නිසා ඔවුන්ට නින්ද පවා අහිමි වීමට ඉඩ ඇත',
+    '{name}, ඔවුන් දැනටමත් ඔබේ ය — ඔවුන් තවමත් එය නොදන්නවා වුවද',
+  ],
+  good: [
+    '{name}, ඔබ වෙත ප්‍රබල ආකර්ෂණයක් ඇත — ඔබ ළඟ ඔවුන්ට ආරක්ෂාව දැනෙයි',
+    '{name}, ඔබේ ස්වභාවය ඔවුන්ගේ මනසේ හොල්මන් කරනු ඇත',
+    '{name}, ඔවුන් ඕනෑම කෙනෙකුට වඩා ඔබව තෝරා ගැනීමට පෙළඹෙයි',
+  ],
+  neutral: [
+    '{name}, මෙය ඔබේ මීළඟ පියවර මත තීරණය වනු ඇත',
+    '{name}, සෙමින් ඇරඹෙන සම්බන්ධයක් — කාලයත් සමග ඔබව පුදුම කරවයි',
+    '{name}, පහසුවක් දැනෙනු ඇතත් හදවත දැවෙන ආශාවක් ඇති නොවනු ඇත',
+    '{name}, අනාවැකි කිව හැකි ශක්තියක් — ලොකු ආකර්ෂණයක් හෝ අනතුරක් නැත',
+  ],
+  avoid: [
+    '{name}, මෙම පුද්ගලයා ඔබේ මානසික ශක්තිය සම්පූර්ණයෙන්ම උරා ගනු ඇත',
+    '{name}, ඔවුන් සියල්ල ලබාගෙන ඔබව හිස් කර දමනු ඇත',
+    '{name}, මෙය සාර්ථක කර ගැනීමට යාමේදී ඔබවම නැති කර ගැනීමට ඉඩ ඇත',
+  ],
+};
 
 // Yoga category/strength Sinhala
 var YOGA_CAT_SI = { 'Raja Yoga': 'à¶»à·à¶¢ à¶ºà·à¶œà¶º', 'Dhana Yoga': 'à¶°à¶± à¶ºà·à¶œà¶º', 'Gnana Yoga': 'à¶¥à·à¶± à¶ºà·à¶œà¶º', 'Pancha Mahapurusha': 'à¶´à¶‚à¶  à¶¸à·„à· à¶´à·”à¶»à·”à·‚', 'Chandra Yoga': 'à¶ à¶±à·Šà¶¯à·Šâ€à¶» à¶ºà·à¶œà¶º', 'Special': 'à·€à·’à·à·šà·‚', 'Arishta': 'à¶…à¶»à·’à·‚à·Šà¶§' };
@@ -2142,6 +2220,24 @@ export default function PorondamScreen() {
   var [showHistory, setShowHistory] = useState(false);
   var [chartsExpanded, setChartsExpanded] = useState(false);
 
+  // User's own lagna for compatibility section
+  var [myLagnaId, setMyLagnaId] = useState(null);
+  var [myLagnaName, setMyLagnaName] = useState('');
+
+  useEffect(function() {
+    if (!user || !user.birthData || !user.birthData.dateTime) return;
+    (async function() {
+      try {
+        var res = await api.getBirthChartBasic(user.birthData.dateTime, user.birthData.lat, user.birthData.lng, language);
+        if (res && res.success && res.data && res.data.lagna) {
+          setMyLagnaId(res.data.lagna.rashiId);
+          var name = language === 'si' ? (res.data.lagna.sinhala || res.data.lagna.english) : (res.data.lagna.english || res.data.lagna.name);
+          setMyLagnaName(name);
+        }
+      } catch (e) { /* silent */ }
+    })();
+  }, [user, language]);
+
   // â”€â”€ Load saved porondam: server-first, AsyncStorage fallback â”€â”€
   useEffect(function() {
     (async function() {
@@ -2558,6 +2654,115 @@ export default function PorondamScreen() {
           </View>
         </Animated.View>
 
+        {/* YOUR LAGNA COMPATIBILITY */}
+        {myLagnaId && !collapsed ? (function() {
+          var compatList = getLagnaCompatList(myLagnaId);
+          var hooks = language === 'si' ? COMPAT_HOOKS_SI : COMPAT_HOOKS_EN;
+          var userName = (user && user.displayName) ? user.displayName.split(' ')[0] : '';
+          var fillHook = function(text) { return text.replace('{name}', userName || (language === 'si' ? '\u0D94\u0DB6' : 'you')); };
+
+          // Group by tier
+          var groups = [
+            { tier: 'best', items: compatList.filter(function(c) { return c.tier === 'best'; }), color: '#34D399', gradient: ['#34D399', '#10B981'], label: language === 'si' ? '\u0D94\u0DB6\u0DA7 \u0DC3\u0DCF\u0DBB\u0DCA\u0DAE\u0D9A\u0DB8' : 'THEY\u2019RE ALREADY YOURS' },
+            { tier: 'good', items: compatList.filter(function(c) { return c.tier === 'good'; }), color: '#FBBF24', gradient: ['#FBBF24', '#F59E0B'], label: language === 'si' ? '\u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA' : 'STRONG PULL TOWARD YOU' },
+            { tier: 'neutral', items: compatList.filter(function(c) { return c.tier === 'neutral'; }), color: '#94A3B8', gradient: ['#94A3B8', '#64748B'], label: language === 'si' ? '\u0DC3\u0DB8\u0DAD\u0DD4\u0DBD\u0DD2\u0DAD' : 'COULD GO EITHER WAY' },
+            { tier: 'avoid', items: compatList.filter(function(c) { return c.tier === 'avoid'; }), color: '#FF6B9D', gradient: ['#FF6B9D', '#EC4899'], label: language === 'si' ? '\u0D94\u0DB6\u0DDA \u0DC1\u0D9A\u0DCA\u0DAD\u0DD2\u0DBA \u0DB6\u0DD3\u0DB8 \u0DC0\u0DD2\u0DBA' : 'WILL DRAIN YOUR ENERGY' },
+          ];
+
+          var rowIndex = 0;
+
+          return (
+            <Animated.View entering={FadeInDown.delay(200).duration(600).springify().damping(14)} style={cSty.compatCard}>
+              <LinearGradient
+                colors={['rgba(147,51,234,0.18)', 'rgba(251,191,36,0.06)', 'rgba(5,3,12,0.96)']}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              />
+              <View style={cSty.compatGoldEdge} />
+              <View style={cSty.compatGlow} />
+
+              {/* Urgency pulse */}
+              <Animated.View entering={FadeIn.delay(600).duration(800)} style={cSty.compatUrgency}>
+                <View style={cSty.compatUrgencyDot} />
+                <Text style={cSty.compatUrgencyText}>
+                  {language === 'si' ? '\u0D94\u0DB6\u0DDA \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB \u0D9A\u0DC0\u0DD4\u0DC5\u0DD4\u0DC0 \u0DAF\u0DD1\u0DB1\u0DCA \u0DC4\u0DD4\u0DBB\u0DAD\u0DCA \u0DC0\u0DD2\u0DC0\u0DD8\u0DAD\u0DBA\u0DD2' : 'Your attraction window is open right now'}
+                </Text>
+              </Animated.View>
+
+              {/* Hero */}
+              <Animated.View entering={FadeIn.delay(300).duration(500)} style={cSty.compatHero}>
+                <View style={cSty.compatHeroRing}>
+                  <View style={cSty.compatHeroInner}>
+                    <Image source={ZODIAC_IMAGES[myLagnaId]} resizeMode="contain" style={cSty.compatHeroImg} />
+                  </View>
+                </View>
+              </Animated.View>
+
+              <View style={cSty.compatHeader}>
+                <Text style={cSty.compatKicker}>
+                  {language === 'si' ? '\u0DB8\u0DD9\u0DB8 \u0DB4\u0DD0\u0DBA\u0DDA\u0DB8 \u0D9A\u0DD9\u0DB1\u0DD9\u0D9A\u0DCA \u0D94\u0DB6 \u0D9C\u0DD1\u0DB1 \u0DC4\u0DD2\u0DAD\u0DB1\u0DC0\u0DCF' : 'SOMEONE IS THINKING ABOUT YOU RIGHT NOW'}
+                </Text>
+                <Text style={cSty.compatTitle}>
+                  {userName
+                    ? (language === 'si'
+                      ? userName + ', \u0D94\u0DB6\u0DA7 \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u0D9A\u0DBB\u0DB1 \u0D9A\u0DD9\u0DB1\u0DCF \u0D9A\u0DC0\u0DD4\u0DAF\u0DCF\u0D9A\u0DD2\u0DBA\u0DBD\u0DD2 \u0DAF\u0DD0\u0DB1\u0D9C\u0DB1\u0DCA\u0DB1'
+                      : userName + ', find out who can\u2019t get you out of their head')
+                    : (language === 'si'
+                      ? '\u0D94\u0DB6\u0DA7 \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u0D9A\u0DBB\u0DB1 \u0D9A\u0DD9\u0DB1\u0DCF \u0D9A\u0DC0\u0DD4\u0DAF\u0DCF\u0D9A\u0DD2\u0DBA\u0DBD\u0DD2 \u0DAF\u0DD0\u0DB1\u0D9C\u0DB1\u0DCA\u0DB1'
+                      : 'Find out who can\u2019t get you out of their head')}
+                </Text>
+              </View>
+
+              {/* All 4 tiers */}
+              {groups.map(function(group) {
+                if (group.items.length === 0) return null;
+                return (
+                  <View key={group.tier} style={[cSty.compatSection, group.tier !== 'best' ? { marginTop: 16 } : null]}>
+                    <View style={cSty.compatSectionHeader}>
+                      <LinearGradient colors={group.gradient} style={cSty.compatDotGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                      <Text style={[cSty.compatSectionTitle, { color: group.color }]}>{group.label}</Text>
+                    </View>
+                    {group.items.map(function(match, i) {
+                      rowIndex++;
+                      var hookArr = hooks[group.tier] || hooks.neutral;
+                      var hookText = fillHook(hookArr[i % hookArr.length]);
+                      var hookColor = group.tier === 'avoid' ? 'rgba(255,107,157,0.75)'
+                        : group.tier === 'neutral' ? 'rgba(148,163,184,0.7)'
+                        : group.tier === 'good' ? 'rgba(251,191,36,0.7)'
+                        : 'rgba(52,211,153,0.75)';
+                      return (
+                        <Animated.View key={match.rashiId} entering={FadeInDown.delay(300 + rowIndex * 80).duration(400).springify()} style={cSty.compatRow}>
+                          <View style={[cSty.compatImgWrap, { borderColor: group.color + '60' }]}>
+                            <Image source={ZODIAC_IMAGES[match.rashiId]} resizeMode="contain" style={cSty.compatImg} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={cSty.compatName}>{language === 'si' ? match.nameSi : match.name}</Text>
+                            <Text style={[cSty.compatHook, { color: hookColor }]}>{hookText}</Text>
+                          </View>
+                          <View style={cSty.compatScoreWrap}>
+                            <View style={cSty.compatScoreBar}>
+                              <LinearGradient colors={group.gradient} style={[cSty.compatScoreFill, { width: (match.score / 5 * 100) + '%' }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+                            </View>
+                          </View>
+                        </Animated.View>
+                      );
+                    })}
+                  </View>
+                );
+              })}
+
+              <View style={cSty.compatFooterWrap}>
+                <Ionicons name="sparkles" size={13} color="#FBBF24" />
+                <Text style={cSty.compatFooter}>
+                  {language === 'si'
+                    ? '\u0D94\u0DB6\u0DDA \u0DC3\u0DB8\u0DCA\u0DB4\u0DD6\u0DBB\u0DCA\u0DAB \u0D9C\u0DD1\u0DC5\u0DD0\u0DB4\u0DD3\u0DB8 \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1 \u2014 \u0D89\u0DC4\u0DA7 \u0DB4\u0DD6\u0DBB\u0DC0\u0DB1\u0DCA\u0DB1 \u2728'
+                    : 'See your full match \u2014 enter their details above \u2728'}
+                </Text>
+              </View>
+            </Animated.View>
+          );
+        })() : null}
+
         {/* â”€â”€ SAVED HISTORY â”€â”€ */}
         {showHistory && savedChecks.length > 0 && !collapsed && (
           <Animated.View entering={FadeInDown.duration(400)}>
@@ -2904,6 +3109,194 @@ export default function PorondamScreen() {
     </DesktopScreenWrapper>
   );
 }
+
+// ======= COMPAT STYLES =======
+var cSty = StyleSheet.create({
+  compatCard: {
+    borderRadius: 22,
+    overflow: 'hidden',
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(147,51,234,0.3)',
+    position: 'relative',
+  },
+  compatGoldEdge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2.5,
+    backgroundColor: '#FBBF24',
+    opacity: 0.7,
+  },
+  compatGlow: {
+    position: 'absolute',
+    top: -40,
+    right: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(147,51,234,0.12)',
+  },
+  compatUrgency: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: 'rgba(251,191,36,0.08)',
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.15)',
+  },
+  compatUrgencyDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#34D399',
+  },
+  compatUrgencyText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'rgba(251,191,36,0.85)',
+    letterSpacing: 0.3,
+  },
+  compatHero: {
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  compatHeroRing: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 2,
+    borderColor: 'rgba(251,191,36,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(147,51,234,0.08)',
+  },
+  compatHeroInner: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compatHeroImg: {
+    width: 36,
+    height: 36,
+  },
+  compatHeader: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  compatKicker: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.8,
+    color: 'rgba(251,191,36,0.9)',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  compatTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  compatSection: {
+    marginTop: 6,
+  },
+  compatSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 12,
+  },
+  compatDotGrad: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  compatSectionTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.4,
+  },
+  compatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.04)',
+  },
+  compatImgWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  compatImg: {
+    width: 26,
+    height: 26,
+  },
+  compatName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  compatHook: {
+    fontSize: 11,
+    color: 'rgba(52,211,153,0.75)',
+    fontStyle: 'italic',
+    lineHeight: 15,
+  },
+  compatScoreWrap: {
+    alignItems: 'flex-end',
+  },
+  compatScoreBar: {
+    width: 44,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  compatScoreFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  compatFooterWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  compatFooter: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.4)',
+    textAlign: 'center',
+    lineHeight: 15,
+  },
+});
 
 // ======= STYLES =======
 var sty = StyleSheet.create({

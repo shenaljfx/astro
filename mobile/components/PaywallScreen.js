@@ -713,6 +713,52 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
           })}
         </Animated.View>
 
+        {/* Lagna Compatibility Preview (subscription paywall only) */}
+        {src === 'onboarding' ? (
+          <Animated.View entering={FadeInDown.delay(340).duration(500)} style={s.compatPreview}>
+            <LinearGradient
+              colors={['rgba(147,51,234,0.12)', 'rgba(255,184,0,0.05)', 'rgba(5,3,9,0.95)']}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            />
+            <View style={s.compatPreviewGold} />
+            <View style={s.compatPreviewHeader}>
+              <Ionicons name="heart-circle" size={18} color="#FBBF24" />
+              <Text style={s.compatPreviewTitle}>
+                {lang === 'si' ? '\u0D94\u0DB6\u0DDA \u0DBD\u0D9C\u0DCA\u0DB1\u0DBA\u0DA7 \u0D9C\u0DD1\u0DC5\u0DD0\u0DB4\u0DD9\u0DB1 \u0DBB\u0DCF\u0DC1\u0DD2' : 'YOUR LAGNA COMPATIBILITY'}
+              </Text>
+            </View>
+            <Text style={s.compatPreviewDesc}>
+              {lang === 'si'
+                ? '\u0D94\u0DB6\u0DDA \u0DBD\u0D9C\u0DCA\u0DB1\u0DBA\u0DA7 \u0DC0\u0DA9\u0DCF\u0DAD\u0DCA\u0DB8 \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u0D9A\u0DBB\u0DB1 \u0DBB\u0DCF\u0DC1\u0DD2 \u0DC3\u0DC4 \u0DB4\u0DCA\u200D\u0DBB\u0DC0\u0DDA\u0DC1\u0DB8\u0DCA \u0DC0\u0DD2\u0DBA \u0DBA\u0DD4\u0DAD\u0DD4 \u0D9C\u0DD1\u0DC5\u0DD0\u0DB4\u0DD3\u0DB8\u0DCA \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1'
+                : 'Discover which signs are magnetically drawn to your Rising Sign \u2014 and which ones to watch out for'}
+            </Text>
+            <View style={s.compatPreviewRow}>
+              <View style={s.compatPreviewItem}>
+                <View style={[s.compatPreviewCircle, { borderColor: '#34D39950' }]}>
+                  <Ionicons name="lock-closed" size={14} color="#34D399" />
+                </View>
+                <View style={s.compatPreviewBlurLine} />
+              </View>
+              <View style={s.compatPreviewItem}>
+                <View style={[s.compatPreviewCircle, { borderColor: '#34D39950' }]}>
+                  <Ionicons name="lock-closed" size={14} color="#34D399" />
+                </View>
+                <View style={s.compatPreviewBlurLine} />
+              </View>
+              <View style={s.compatPreviewItem}>
+                <View style={[s.compatPreviewCircle, { borderColor: '#FF6B9D50' }]}>
+                  <Ionicons name="lock-closed" size={14} color="#FF6B9D" />
+                </View>
+                <View style={s.compatPreviewBlurLine} />
+              </View>
+            </View>
+            <Text style={s.compatPreviewFooter}>
+              {lang === 'si' ? '\uD83D\uDD12 \u0DAF\u0DCF\u0DBA\u0D9A\u0DAD\u0DCA\u0DC0\u0DBA\u0DD9\u0DB1\u0DCA \u0DB4\u0DC3\u0DD4 \u0D85\u0D9C\u0DD4\u0DC5\u0DD4 \u0D87\u0DBB\u0DDA' : '\uD83D\uDD12 Unlocks with subscription'}
+            </Text>
+          </Animated.View>
+        ) : null}
+
         {/* Testimonial */}
         {content.testimonial ? (
           <Animated.View
@@ -1024,6 +1070,74 @@ var s = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     lineHeight: 16,
+    marginTop: 2,
+  },
+
+  // Compat preview
+  compatPreview: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    padding: 16,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(147,51,234,0.25)',
+    position: 'relative',
+  },
+  compatPreviewGold: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: 2,
+    backgroundColor: '#FBBF24',
+    opacity: 0.5,
+  },
+  compatPreviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  compatPreviewTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.4,
+    color: 'rgba(251,191,36,0.85)',
+  },
+  compatPreviewDesc: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
+    lineHeight: 17,
+    marginBottom: 14,
+  },
+  compatPreviewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  compatPreviewItem: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  compatPreviewCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  compatPreviewBlurLine: {
+    width: 36,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  compatPreviewFooter: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.35)',
+    textAlign: 'center',
     marginTop: 2,
   },
 

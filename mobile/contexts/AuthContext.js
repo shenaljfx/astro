@@ -1060,7 +1060,7 @@ export function AuthProvider({ children }) {
         <PaywallScreen
           visible={effectivePaywallVisible}
           source={effectivePaywallSource}
-          onClose={forceSubscriptionPaywall ? null : handlePaywallClose}
+          onClose={handlePaywallClose}
           onPurchased={handlePaywallPurchased}
         />
       </View>

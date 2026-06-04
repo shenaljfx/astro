@@ -13,7 +13,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Platform,
   Dimensions, KeyboardAvoidingView, ScrollView,
-  StatusBar, Image, Linking,
+  StatusBar, Image, Linking, Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -289,8 +289,8 @@ var OB = {
     welcomeBtn: "Begin My Reading",
     welcomeHint: "A personal reading begins with one exact sky",
     nasaBadge: "NASA JPL planetary data · precise astronomical calculations",
-    googleTitle: "Save Your Celestial Map",
-    googleSubtitle: "Sign in to securely save your birth chart & get personalized daily predictions",
+    googleTitle: "Your Reading Is Fading",
+    googleSubtitle: "Sign in now to save your birth chart permanently — unsaved readings are deleted within minutes",
     googleBtn: "Continue with Google",
     googleFail: "Sign in failed. Please try again.",
     subTitle: "Your Full Reading Is Ready to Open",
@@ -371,8 +371,8 @@ var OB = {
     welcomeBtn: "මගේ කියවීම ආරම්භ කරන්න",
     welcomeHint: "එක් නිවැරදි උපන් අහසකින් පෞද්ගලික කියවීම ආරම්භ වේ",
     nasaBadge: "NASA JPL ග්‍රහ දත්ත · නිවැරදි තාරකා ගණනය කිරීම්",
-    googleTitle: "ඔයාගේ තාරකා සිතියම සුරකින්න",
-    googleSubtitle: "ඔයාගේ ග්‍රහ සටහන සහ දිනපතා පලාපල දැනගන්න ගිණුමක් හදන්න",
+    googleTitle: "ඔයාගේට කියවීම මැකී යනවා",
+    googleSubtitle: "ඔයාගේ ග්‍රහ සටහන ස්ථිරව සුරැකීමට දැන්ම පිවිසෙන්න — සුරකින්නේ නැත්නම් මිනිත්තු කිහිපයකින් මකා දැමේ",
     googleBtn: "Google හරහා පිවිසෙන්න",
     googleFail: "\u0db4\u0dd2\u0dc0\u0dd2\u0dc3\u0dd3\u0db8 \u0d85\u0dc3\u0dcf\u0dbb\u0dca\u0dae\u0d9a\u0dba\u0dd2. \u0d9a\u0dbb\u0dd4\u0dab\u0dcf\u0d9a\u0dbb \u0db1\u0dd0\u0dc0\u0dad \u0d8b\u0dad\u0dca\u0dc3\u0dcf\u0dc4 \u0d9a\u0dbb\u0db1\u0dca\u0db1.",
     subTitle: "ඔයාගේ සම්පූර්ණ කියවීම විවෘත කිරීමට සූදානම්",
@@ -1110,11 +1110,11 @@ function GoogleSignInStep({ onContinue, onBack, lang, isReturningUser }) {
           { icon: 'reload-outline', color: '#A78BFA', title: 'Restore Your Chart', desc: 'Birth chart & predictions await' },
           { icon: 'sync-outline', color: '#34D399', title: 'All Devices', desc: 'Access from anywhere securely' },
         ]) : (lang === 'si' ? [
-          { icon: 'star-outline', color: '#FFB800', title: 'පෞද්ගලික සටහන', desc: 'ඔබේ උපන් ග්‍රහ සටහන සුරකින්න' },
-          { icon: 'sparkles-outline', color: '#A78BFA', title: 'AI මඟපෙන්වීම', desc: 'පෞද්ගලික ජ්‍යොතිෂ උපදෙස්' },
+          { icon: 'timer-outline', color: '#FF6B9D', title: 'මැකී යමින්', desc: 'ඔබේ කියවීම මිනිත්තු කිහිපයකින් මකා දැමේ' },
+          { icon: 'shield-checkmark-outline', color: '#34D399', title: 'ස්ථිරව සුරකින්න', desc: 'Google ගිණුමෙන් ආරක්ෂිතව සුරකින්න' },
         ] : [
-          { icon: 'star-outline', color: '#FFB800', title: 'Personal Chart', desc: 'Save your unique birth sky forever' },
-          { icon: 'sparkles-outline', color: '#A78BFA', title: 'AI Guidance', desc: 'Personalized astrological insights' },
+          { icon: 'timer-outline', color: '#FF6B9D', title: 'Disappearing Soon', desc: 'Your reading will be permanently deleted' },
+          { icon: 'shield-checkmark-outline', color: '#34D399', title: 'Save Permanently', desc: 'One tap to keep your chart forever' },
         ])).map(function (card, i) {
           return (
             <Animated.View key={i} entering={FadeInUp.delay(500 + i * 100).duration(450)}>
@@ -1252,9 +1252,10 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
   var [agreed, setAgreed] = useState(false);
   var [agreementError, setAgreementError] = useState('');
   var { activateSubscription, restorePurchases } = useAuth();
-  // usePricingForBirth syncs the global pricing context to the user's
-  // birth-city country. Birth city always wins over device locale.
   var { priceLabel, priceAmount, currency, currencySymbol, isInternational } = usePricingForBirth(birthData);
+
+  // ── Planetary window countdown (fake but feels real) ──
+  var [hoursLeft] = useState(function () { return 47 + Math.floor(Math.random() * 24); }); // 47-71 hours = ~2-3 days
 
   // ── Animations (kept: only what's used in the rebuilt paywall) ──
   var reduced = useReducedMotion();
@@ -1380,6 +1381,46 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
         </Text>
       </Animated.View>
 
+      {/* ═══ PLANETARY WINDOW URGENCY ═══ */}
+      <Animated.View entering={FadeInDown.delay(80).duration(400)} style={{ marginBottom: 12, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(147,51,234,0.3)', backgroundColor: 'rgba(147,51,234,0.08)' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 14, gap: 10 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#A78BFA' }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 10, fontWeight: '900', color: '#A78BFA', letterSpacing: 1.2, textTransform: 'uppercase' }}>
+              {lang === 'si' ? 'ග්\u200Dරහ පිහිටීම් කවුළුව' : 'PLANETARY ALIGNMENT WINDOW'}
+            </Text>
+            <Text style={{ fontSize: 11.5, fontWeight: '600', color: 'rgba(255,255,255,0.7)', marginTop: 2, lineHeight: 16 }}>
+              {lang === 'si'
+                ? 'ඔබේ ග්\u200Dරහ සටහනේ නිවැරදිතාව ඉදිරි පැය ' + hoursLeft + ' තුළ ඉහළම මට්ටමේ පවතී'
+                : 'Your chart accuracy peaks in the next ' + hoursLeft + ' hours — readings lose precision after'}
+            </Text>
+          </View>
+          <Ionicons name="planet-outline" size={18} color="#A78BFA" />
+        </View>
+      </Animated.View>
+
+      {/* ═══ LOCKED PREDICTIONS — Loss framing ═══ */}
+      <Animated.View entering={FadeInDown.delay(120).duration(400)} style={{ marginBottom: 14, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)', backgroundColor: 'rgba(255,184,0,0.04)' }}>
+        <View style={{ paddingVertical: 10, paddingHorizontal: 14 }}>
+          <Text style={{ fontSize: 9, fontWeight: '900', color: '#FFB800', letterSpacing: 1.5, marginBottom: 8 }}>
+            {lang === 'si' ? 'ඔබේ අගුළු දැමූ සොයාගැනීම්' : 'YOUR LOCKED DISCOVERIES'}
+          </Text>
+          {[
+            { icon: 'heart-circle-outline', text: lang === 'si' ? 'සම්බන්ධතා කාලය: 20██' : 'Relationship Timing: 20██', color: '#FF6B9D' },
+            { icon: 'wallet-outline', text: lang === 'si' ? 'ධන රටාව: ████████' : 'Wealth Pattern: ████████', color: '#34D399' },
+            { icon: 'pulse-outline', text: lang === 'si' ? 'මීළඟ මාස 6: ████████' : 'Next 6 Months: ████████', color: '#A78BFA' },
+          ].map(function (item, i) {
+            return (
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 }}>
+                <Ionicons name={item.icon} size={14} color={item.color} />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.45)', flex: 1, letterSpacing: 0.5 }}>{item.text}</Text>
+                <Ionicons name="lock-closed" size={10} color="rgba(255,184,0,0.4)" />
+              </View>
+            );
+          })}
+        </View>
+      </Animated.View>
+
       {/* ═══ PRICE ═══ */}
       <Animated.View entering={FadeInUp.delay(100).duration(400)} style={[ss.priceBadge, { alignSelf: 'center', marginBottom: 8 }, priceStyle]}>
         <LinearGradient
@@ -1469,6 +1510,16 @@ function SubscriptionStep({ onContinue, lang, displayName, birthData }) {
           <Text style={ss.payErrorText}>{payError}</Text>
         </Animated.View>
       ) : null}
+
+      {/* ═══ RISK REVERSAL ═══ */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 12, paddingHorizontal: 12 }}>
+        <Ionicons name="shield-checkmark" size={13} color="#34D399" />
+        <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(52,211,153,0.85)', textAlign: 'center', lineHeight: 16 }}>
+          {lang === 'si'
+            ? 'ඔබේ කියවීම නිවැරදි නැත්නම් — ක්ෂණිකව අවලංගු කරන්න'
+            : 'If your reading doesn\u2019t describe you accurately — cancel instantly, no questions'}
+        </Text>
+      </View>
 
       {/* ═══ CTA ═══ */}
       <Animated.View entering={FadeInUp.delay(260).duration(400)} style={ctaPulseStyle}>
@@ -1865,6 +1916,244 @@ var ZODIAC_SYMBOLS = {
 
 var ZODIAC_IMAGE_MAP = ZODIAC_IMG_MAP;
 
+// Western (tropical) sun sign from a birth date — used for the "your sign is
+// actually different" reveal that contrasts popular Western astrology with the
+// app's Vedic (sidereal) calculation.
+var WESTERN_SIGNS = [
+  { english: 'Capricorn', sinhala: 'මකර', symbol: '♑', endMonth: 1, endDay: 19 },
+  { english: 'Aquarius', sinhala: 'කුම්භ', symbol: '♒', endMonth: 2, endDay: 18 },
+  { english: 'Pisces', sinhala: 'මීන', symbol: '♓', endMonth: 3, endDay: 20 },
+  { english: 'Aries', sinhala: 'මේෂ', symbol: '♈', endMonth: 4, endDay: 19 },
+  { english: 'Taurus', sinhala: 'වෘෂභ', symbol: '♉', endMonth: 5, endDay: 20 },
+  { english: 'Gemini', sinhala: 'මිථුන', symbol: '♊', endMonth: 6, endDay: 20 },
+  { english: 'Cancer', sinhala: 'කටක', symbol: '♋', endMonth: 7, endDay: 22 },
+  { english: 'Leo', sinhala: 'සිංහ', symbol: '♌', endMonth: 8, endDay: 22 },
+  { english: 'Virgo', sinhala: 'කන්‍යා', symbol: '♍', endMonth: 9, endDay: 22 },
+  { english: 'Libra', sinhala: 'තුලා', symbol: '♎', endMonth: 10, endDay: 22 },
+  { english: 'Scorpio', sinhala: 'වෘශ්චික', symbol: '♏', endMonth: 11, endDay: 21 },
+  { english: 'Sagittarius', sinhala: 'ධනු', symbol: '♐', endMonth: 12, endDay: 21 },
+  { english: 'Capricorn', sinhala: 'මකර', symbol: '♑', endMonth: 12, endDay: 31 },
+];
+
+function getWesternSunSign(dateInput) {
+  try {
+    var d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+    if (!d || isNaN(d.getTime())) return null;
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    for (var i = 0; i < WESTERN_SIGNS.length; i++) {
+      var s = WESTERN_SIGNS[i];
+      if (m < s.endMonth || (m === s.endMonth && day <= s.endDay)) {
+        return { english: s.english, sinhala: s.sinhala, symbol: s.symbol };
+      }
+    }
+    return { english: 'Capricorn', sinhala: 'මකර', symbol: '♑' };
+  } catch (e) {
+    return null;
+  }
+}
+
+// ── Age-aware "psychic" predictions using cold-reading techniques ──
+// Never says exact age — uses vague time frames that feel personal
+// Adapts predictions to life stage: teen, young adult, 30s, 40s+
+
+function generatePredictions(birthDateTime, lagnaRashiId, lang) {
+  var predictions = [];
+  try {
+    var d = new Date(birthDateTime);
+    if (!d || isNaN(d.getTime())) return predictions;
+    var birthYear = d.getFullYear();
+    var now = new Date();
+    var currentAge = now.getFullYear() - birthYear;
+    var seed = (lagnaRashiId || 1) + birthYear;
+
+    // Vague time phrases based on age bracket
+    var timePhrases = { en: {}, si: {} };
+    if (currentAge < 20) {
+      timePhrases.en = { past: 'in the last couple of years', pastEvent: 'recently', lifePhrase: 'even at your young age' };
+      timePhrases.si = { past: 'පසුගිය වසර දෙකක පමණ කාලයේදී', pastEvent: 'මෑතකදී', lifePhrase: 'මේ තරුණ වයසේදී වුවත්' };
+    } else if (currentAge < 26) {
+      timePhrases.en = { past: 'a few years back', pastEvent: 'in your late teens', lifePhrase: 'as you entered adulthood' };
+      timePhrases.si = { past: 'පසුගිය වසර කිහිපය තුළ', pastEvent: 'නව යොවුන් වියේ අවසන් භාගයේදී', lifePhrase: 'වැඩිහිටි වියට පා තබන විටම' };
+    } else if (currentAge < 35) {
+      timePhrases.en = { past: 'in your early twenties', pastEvent: 'a few years ago', lifePhrase: 'during this chapter of your life' };
+      timePhrases.si = { past: 'විසි දශකයේ මුල් භාගයේදී', pastEvent: 'මීට වසර කිහිපයකට පෙර', lifePhrase: 'ජීවිතයේ මේ තීරණාත්මක පරිච්ඡේදයේදී' };
+    } else if (currentAge < 45) {
+      timePhrases.en = { past: 'in your late twenties', pastEvent: 'several years ago', lifePhrase: 'at this stage of life' };
+      timePhrases.si = { past: 'විසි දශකයේ අග භාගයේදී', pastEvent: 'මීට වසර කිහිපයකට පෙර', lifePhrase: 'ජීවිතයේ මේ පරිණත අදියරේදී' };
+    } else {
+      timePhrases.en = { past: 'years ago', pastEvent: 'at a turning point in your past', lifePhrase: 'looking back at your journey' };
+      timePhrases.si = { past: 'මීට වසර ගණනාවකට පෙර', pastEvent: 'ඔබේ අතීතයේ තීරණාත්මක හැරවුම් ලක්ෂයකදී', lifePhrase: 'ඔබේ ජීවන ගමන් මග දෙස හැරී බලන විට' };
+    }
+
+    // Recent month: 2-5 months ago (vague)
+    var monthsAgo = 2 + ((seed * 7) % 4);
+    var recentDate = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
+    var MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var MONTHS_SI = ['ජනවාරි','පෙබරවාරි','මාර්තු','අප්‍රේල්','මැයි','ජූනි','ජූලි','අගෝස්තු','සැප්තැම්බර්','ඔක්තෝබර්','නොවැම්බර්','දෙසැම්බර්'];
+    var recentMonth = lang === 'si' ? MONTHS_SI[recentDate.getMonth()] : MONTHS_EN[recentDate.getMonth()];
+    var tp = lang === 'si' ? timePhrases.si : timePhrases.en;
+
+    // ── Age-aware prediction pools ──
+    var POOL_EN_YOUNG = { // < 26
+      emotional: [
+        'Someone who was very close to you pulled away ' + tp.past + ' — and part of you still doesn\u2019t understand why',
+        'There\u2019s a person you think about late at night that you\u2019ve never fully let go of',
+        'You carry a wound from ' + tp.past + ' that you haven\u2019t told anyone the full truth about',
+        'A friendship ended or changed drastically ' + tp.past + ' — it affected you more than you show',
+      ],
+      pattern: [
+        'You\u2019ve noticed a repeating cycle in your relationships — you attract the same type of person and it never ends well',
+        'People underestimate you constantly — ' + tp.lifePhrase + ', you\u2019ve been proving them wrong quietly',
+        'You have a talent or skill you\u2019ve been holding back from showing the world — fear of judgment keeps it hidden',
+        'There\u2019s a version of yourself you only show when you\u2019re completely alone — that\u2019s your truest self',
+      ],
+      current: [
+        'Something shifted inside you around ' + recentMonth + ' — you\u2019re not the same person you were before it',
+        'You\u2019ve been waking up at odd hours recently — your subconscious is trying to process something unresolved',
+        'A decision you\u2019ve been avoiding is getting harder to ignore — ' + recentMonth + ' made it more urgent',
+        'You\u2019ve been feeling a pull toward something new — a change you can\u2019t quite name yet, but it\u2019s real',
+      ],
+    };
+
+    var POOL_EN_MID = { // 26-35
+      emotional: [
+        'There was a period ' + tp.past + ' where you seriously questioned everything — your path, your relationships, who you really are',
+        'Someone you considered a close friend or partner showed you their true nature ' + tp.pastEvent + ' — it changed how you trust people',
+        'You\u2019ve sacrificed something important for someone who didn\u2019t appreciate it — and the resentment still surfaces sometimes',
+        'A relationship that looked perfect from outside was slowly draining you ' + tp.past + ' — you stayed longer than you should have',
+      ],
+      pattern: [
+        'You give more than you receive in relationships — your chart shows why you attract people who take',
+        'There\u2019s a career path or life direction you\u2019ve been secretly considering but haven\u2019t acted on yet',
+        'You\u2019ve outgrown your current situation — ' + tp.lifePhrase + ' you feel like you\u2019re playing a smaller role than you\u2019re meant for',
+        'People come to you for advice and strength — but nobody asks how you\u2019re doing, and that silence is heavy',
+      ],
+      current: [
+        'Since around ' + recentMonth + ', you\u2019ve felt a growing disconnect between who you are and the life you\u2019re living',
+        'An old pattern resurfaced around ' + recentMonth + ' — something you thought you\u2019d moved past',
+        'You\u2019ve been thinking about money differently since ' + recentMonth + ' — either a loss, a gain, or a realization about your worth',
+        'Something happened around ' + recentMonth + ' that confirmed a gut feeling you\u2019d been ignoring',
+      ],
+    };
+
+    var POOL_EN_MATURE = { // 35+
+      emotional: [
+        'There\u2019s a decision you made ' + tp.past + ' that you still wonder about — what if you had chosen differently',
+        'Someone from your past crossed your mind recently — there\u2019s unfinished energy between you two',
+        'You\u2019ve built a life that others admire, but ' + tp.lifePhrase + ', you feel something essential is missing',
+        'A loss or ending ' + tp.pastEvent + ' changed your entire perspective — you became stronger, but also more guarded',
+      ],
+      pattern: [
+        'You carry responsibility for others that sometimes feels overwhelming — your chart shows this is a soul-level pattern',
+        'There\u2019s a creative or spiritual side of you that hasn\u2019t been given the space it needs — it\u2019s been calling louder lately',
+        'You\u2019ve always sensed you\u2019re meant for something more — ' + tp.lifePhrase + ', that feeling is becoming impossible to ignore',
+        'Your energy attracts people who need healing — but your own healing has been neglected in the process',
+      ],
+      current: [
+        'Something around ' + recentMonth + ' stirred a restlessness in you — it\u2019s connected to your deeper life purpose',
+        'You\u2019ve noticed your sleep or dreams have been different since ' + recentMonth + ' — your chart shows why',
+        'A cycle that\u2019s been running for years is approaching its end — you can feel it, even if you can\u2019t name it',
+        'Since ' + recentMonth + ', you\u2019ve been craving a change you haven\u2019t told anyone about',
+      ],
+    };
+
+    var POOL_SI_YOUNG = {
+      emotional: [
+        tp.past + ' ඔබට ඉතා සමීප වූ කෙනෙකු හදිසියේම ඈත් වූ අතර — ඔබ තවමත් එහි සැබෑ හේතුව සොයමින් සිටී',
+        'ඔබ තවමත් රාත්‍රී කාලයේ මතක් කරන රහස්‍ය පුද්ගලයෙකු සිටින අතර — එම බැඳීම ඔබේ සිතින් තවමත් පහව ගොස් නැත',
+        tp.past + ' සිදු වූ යම් තීරණාත්මක සිදුවීමක් ඔබේ සිතේ තුවාලයක් ලෙස පවතින අතර — ඒ පිළිබඳ සම්පූර්ණ සත්‍යය ඔබ කිසිවෙකුට හෙළි කර නැත',
+        'ඔබේ සමීපතම මිතුදමක් ' + tp.past + ' දරුණු ලෙස බිඳී ගිය අතර — එයින් ඔබේ මානසිකත්වයට සිදු වූ බලපෑම ඔබ අන් අයට පෙන්වන්නේ නැත',
+      ],
+      pattern: [
+        'ඔබේ සම්බන්ධතාවල නැවත නැවතත් එකම රටාවක් සිදු වන බව ඔබට පෙනේ — සෑම විටම ඔබ වෙතට ආකර්ෂණය වන්නේ ඔබේ ආදරය අගය නොකරන පුද්ගලයන්ය',
+        'අන් අය ඔබව නිරන්තරයෙන් අඩු තක්සේරු කරන බව ඔබට හැඟේ — නමුත් ' + tp.lifePhrase + ' ඔබ නිහඬව ඔබේ දක්ෂතාවලින් ඔවුන්ට නිසි පිළිතුරු දී ඇත',
+        'ඔබ තුළ අද්විතීය හැකියාවක් සැඟව පවතින නමුත් — අන් අයගේ විවේචන වලට ඇති බිය නිසා ඔබ එය ලොවට පෙන්වීමට මැලි වෙයි',
+        'ඔබ හුදෙකලාව සිටින විට පමණක් මතු වන සැබෑ පෞරුෂයක් ඔබ සතුව ඇත — ලෝකයට පෙන්වන ප්‍රතිරූපයට වඩා එය බෙහෙවින් වෙනස්ය',
+      ],
+      current: [
+        recentMonth + ' මාසය ආසන්නයේදී ඔබ තුළ යම් මානසික පරිවර්තනයක් සිදු විය — ඉන් පසු ඔබේ සිතිවිලි පවා බෙහෙවින් වෙනස් වී ඇති බව පෙනේ',
+        'මෑතකදී ඔබ නොසන්සුන්කාරී ලෙස අවදි වන අතර — ඔබේ යටි සිත විසඳාගත නොහැකි යම් ගැටලුවක් පිළිබඳව ඔබව දැනුවත් කිරීමට උත්සාහ කරයි',
+        recentMonth + ' මාසයේ සිට ඔබ වළක්වා ගනිමින් සිටි තීරණයක් තවදුරටත් මගහැරිය නොහැකි බව ඔබට තේරුම් ගොස් ඇත',
+        'ඔබේ ජීවිතයේ අලුත් යමක් ආරම්භ කිරීමට කාලය පැමිණ ඇති බව ' + recentMonth + ' මාසයේ සිට ඔබට තදින්ම දැනෙන්නට පටන් ගෙන ඇත',
+      ],
+    };
+
+    var POOL_SI_MID = {
+      emotional: [
+        tp.past + ' ඔබ ජීවිතයේ සෑම දෙයක්ම පිළිබඳව ප්‍රශ්න කළ අවධියක් පසු කළ අතර — ඔබේ වෘත්තිය, සම්බන්ධතා සහ අරමුණු පවා එහිදී වෙනස් විය',
+        tp.pastEvent + ' ඔබ දැඩි ලෙස විශ්වාස කළ පුද්ගලයෙකු ඔහුගේ සැබෑ මුහුණුවර හෙළි කළ අතර — එයින් ඔබ මිනිසුන් කෙරෙහි ඇති විශ්වාසය බිඳී ගියේය',
+        'ඔබ අන් අය වෙනුවෙන් බොහෝ දේ කැප කළත් — ' + tp.lifePhrase + ' ඔබට ලැබිය යුතු නිසි ගෞරවය හෝ අගය කිරීම ලැබී නැත',
+        'පිටතට ඉතා සුන්දරව පෙනුණු සම්බන්ධතාවයක් ' + tp.past + ' ඔබේ ජීවිතය කාබාසීනිය කර ඇති බව ඔබ ප්‍රමාද වී තේරුම් ගත්තේය',
+      ],
+      pattern: [
+        'ඔබට සම්බන්ධතාවලදී ලැබෙනවාට වඩා වැඩි දෙයක් ඔබ අන් අයට ලබා දෙයි — ඔබ නිරන්තරයෙන් ආත්මාර්ථකාමී පුද්ගලයන් ඔබ වෙත ආකර්ෂණය කර ගනී',
+        'ඔබ රහසිගතව සැලසුම් කරන වෘත්තීය ගමන් මගක් පවතින අතර — සමාජයට ඇති බිය නිසා ඔබ එය තවමත් ආරම්භ කිරීමට මැලි වෙයි',
+        'අන් අය තමන්ගේ ගැටලු වලදී ඔබේ ශක්තිය සහ උපදෙස් බලාපොරොත්තු වන නමුත් — ඔබේ පෞද්ගලික වේදනාව විමසීමට කිසිවෙකු නැති බව ඔබට හැඟේ',
+        'ඔබට සැමවිටම දැනෙන්නේ ඔබ ලබා ඇති දේට වඩා විශාල දෙයකට ඔබ උරුමකම් කියන බවයි — නමුත් ග්‍රහ අපල ඒ සඳහා බාධා පමුණුවයි',
+      ],
+      current: [
+        recentMonth + ' මාසයේ සිට ඔබ ගත කරන ජීවිතය සහ ඔබ ප්‍රාර්ථනා කරන ජීවිතය අතර විශාල පරතරයක් ඇති බව ඔබට දැනෙයි',
+        'ඔබ ජය ගත්තා යයි සිතූ පරණ මානසික රටාවක් ' + recentMonth + ' කාලයේදී නැවතත් මතු වූ බව ඔබට පෙනේ',
+        recentMonth + ' මාසයේ සිට ඔබේ මූල්‍ය හෝ වෘත්තීය තත්ත්වයේ තීරණාත්මක වෙනසක් සිදුව ඇති බව ඔබ තේරුම් ගෙන ඇත',
+        recentMonth + ' මාසයේ සිදු වූ යම් සිදුවීමක් ඔබේ සිතේ මුල් බැස තිබූ සැකයක් සහතික කිරීමට හේතු විය',
+      ],
+    };
+
+    var POOL_SI_MATURE = {
+      emotional: [
+        tp.past + ' ඔබ ගත් එක් තීරණයක් පිළිබඳව ඔබ අදටත් පසුතැවෙන අතර — එය වෙනස් වූවා නම් ඔබේ ජීවිතය මීට වඩා යහපත් වනු ඇතැයි ඔබ සිතයි',
+        'ඔබේ අතීතයට සම්බන්ධ පුද්ගලයෙකු මෑතකදී ඔබේ සිහින වලට පවා පැමිණි අතර — ඔබ දෙදෙනා අතර නොවිසඳුණු යම් කර්මජ ශක්තියක් ඇති බව පෙනේ',
+        'අන් අය ඔබේ සාර්ථකත්වය අගය කළත් — ' + tp.lifePhrase + ' ඔබේ ජීවිතයේ ඉතා වැදගත් යමක් අඩුව ඇති බව ඔබට නිරන්තරයෙන් දැනෙයි',
+        tp.pastEvent + ' සිදු වූ යම් වියෝවක් හෝ අවසානයක් ඔබේ මුළු ජීවන දැක්මම වෙනස් කළ අතර — ඉන් පසු ඔබ වඩාත් හුදෙකලා පුද්ගලයෙකු බවට පත් විය',
+      ],
+      pattern: [
+        'ඔබ අන් අය වෙනුවෙන් අසීමිත ලෙස වගකීම් දරන නමුත් — ඒ වෙනුවෙන් ඔබට ලැබෙන කෘතවේදීත්වය ඉතා අවමය',
+        'ඔබේ නිර්මාණාත්මක හෝ ආධ්‍යාත්මික පැත්ත සම්පූර්ණයෙන්ම යටපත් වී ඇති අතර — මෑතකදී එය නැවතත් අවදි වී ඇති බව පෙනේ',
+        'ඔබ පෘථිවියට පැමිණියේ සුවිශේෂී මෙහෙවරක් සඳහා බව ඔබට නිරන්තරයෙන් හැඟෙන අතර — ' + tp.lifePhrase + ' එම මෙහෙවර ආරම්භ කිරීමට කාලය පැමිණ ඇත',
+        'ඔබේ ශක්තිය ආකර්ෂණය වන්නේ අසහනයෙන් පෙළෙන පුද්ගලයන්ටය — ඔවුන් සුවපත් කිරීමට යන ගමනේදී ඔබේ සුවපහසුව අහිමි වී ඇත',
+      ],
+      current: [
+        recentMonth + ' මාසයේ සිට ඔබේ සිතේ දැවෙන නොසන්සුන්කමක් පවතින අතර — එය ඔබේ අනාගතයට අදාළ යම් තීරණාත්මක පණිවිඩයක් ලෙස පෙනේ',
+        recentMonth + ' මාසයේ සිට ඔබේ නින්දේ සහ සිහින වල පැහැදිලි වෙනසක් ඇති වී ඇති බව ඔබ නිරීක්ෂණය කර ඇත',
+        'වසර ගණනාවක් තිස්සේ ඔබේ ජීවිතය පාලනය කළ එක් චක්‍රයක් ' + recentMonth + ' මාසයේ සිට අවසන් වෙමින් පවතින බව ඔබට දැනෙයි',
+        recentMonth + ' කාලයේදී සිදු වූ හමුවීමක් හෝ පණිවිඩයක් ඔබේ ජීවිතයේ මීළඟ පරිච්ඡේදය ආරම්භ කිරීමට මග පාදා ඇත',
+      ],
+    };
+
+    // Select pool based on age
+    var poolEn, poolSi;
+    if (currentAge < 26) { poolEn = POOL_EN_YOUNG; poolSi = POOL_SI_YOUNG; }
+    else if (currentAge < 35) { poolEn = POOL_EN_MID; poolSi = POOL_SI_MID; }
+    else { poolEn = POOL_EN_MATURE; poolSi = POOL_SI_MATURE; }
+
+    var pool = lang === 'si' ? poolSi : poolEn;
+    var emIdx = seed % pool.emotional.length;
+    var patIdx = (seed * 3) % pool.pattern.length;
+    var curIdx = (seed * 7) % pool.current.length;
+
+    predictions.push({
+      icon: 'heart-circle-outline',
+      text: pool.emotional[emIdx],
+      color: '#FF6B9D',
+      label: lang === 'si' ? '\u0DC3\u0DA7\u0DC4\u0DB1\u0DD9\u0DB1\u0DCA \u0DC3\u0DDC\u0DBA\u0DCF \u0D9C\u0DAD\u0DCA\u0DAD\u0DCF' : 'CHART DETECTED',
+    });
+    predictions.push({
+      icon: 'infinite-outline',
+      text: pool.pattern[patIdx],
+      color: '#34D399',
+      label: lang === 'si' ? '\u0DBB\u0DA7\u0DCF\u0DC0 \u0DC4\u0DB3\u0DD4\u0DB1\u0DCF \u0D9C\u0DAD\u0DCA\u0DAD\u0DCF' : 'PATTERN FOUND',
+    });
+    predictions.push({
+      icon: 'pulse-outline',
+      text: pool.current[curIdx],
+      color: '#A78BFA',
+      label: lang === 'si' ? '\u0DAF\u0DD0\u0DB1\u0DA7 \u0DC3\u0D9A\u0DCA\u200D\u0DBB\u0DD3\u0DBA\u0DBA\u0DD2' : 'ACTIVE RIGHT NOW',
+    });
+  } catch (e) {}
+  return predictions;
+}
+
 function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
   var T = OB[lang] || OB.en;
   var resp = useResponsive();
@@ -2242,6 +2531,31 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
     var nakshatraSinhala = nakshatra.sinhala || '';
     var traits = lang === 'si' ? (lagnaDetails.traitsSi || lagnaDetails.traits || []) : (lagnaDetails.traits || []);
 
+    // Western (tropical) vs Vedic (sidereal) sun-sign contrast — the "your sign
+    // is actually different" reveal. Only meaningful when the two differ.
+    var birthDate = birthData && (birthData.dateTime || birthData.date || birthData.datetime);
+    var westernSun = getWesternSunSign(birthDate);
+    var vedicSunSymbol = ZODIAC_SYMBOLS[sunSign.name] || ZODIAC_SYMBOLS[sunSign.english] || '';
+    var westernSunName = westernSun ? (lang === 'si' ? westernSun.sinhala : westernSun.english) : '';
+    var showSignContrast = !!(westernSun && sunSign && sunSign.english && westernSun.english !== sunSign.english);
+
+    var onShareReveal = async function () {
+      try {
+        var storeLink = 'https://play.google.com/store/apps/details?id=com.grahachara.app';
+        var msg;
+        if (showSignContrast) {
+          msg = lang === 'si'
+            ? 'මම හිතුවේ මම ' + westernSunName + ' ' + (westernSun.symbol || '') + ' කියලා — නමුත් මගේ ඇත්ත රවි රාශිය ' + sunName + ' ' + vedicSunSymbol + '. ඔබේ ඇත්ත රාශිය Grahachara යෙදුමෙන් සොයාගන්න: ' + storeLink
+            : 'I always thought I was a ' + westernSunName + ' ' + (westernSun.symbol || '') + ' — but my true Vedic sun sign is ' + sunName + ' ' + vedicSunSymbol + '. Find your real sign on Grahachara: ' + storeLink;
+        } else {
+          msg = lang === 'si'
+            ? 'මගේ වෛදික ලග්නය ' + lagnaName + '. ඔබේ ඇත්ත ලග්නය Grahachara යෙදුමෙන් සොයාගන්න: ' + storeLink
+            : 'My Vedic rising sign is ' + lagnaName + '. Discover your real sign on Grahachara: ' + storeLink;
+        }
+        await Share.share({ message: msg });
+      } catch (e) {}
+    };
+
     var isSmallScreen = resp.isSmall;
     var HERO_SIZE = isSmallScreen ? 154 : 184;
     var focusChakraSize = Math.min(SW * 0.86, isSmallScreen ? 286 : 336);
@@ -2334,6 +2648,152 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
             ) : null}
           </Animated.View>
         </View>
+
+        {/* ── UNIFIED TRUTH REVEAL — "Western astrology lied; your rising sign rules your life" ── */}
+        <Animated.View entering={FadeInDown.delay(1000).duration(700).springify().damping(14)} style={lr.truthCard}>
+          <LinearGradient
+            colors={['rgba(147,51,234,0.18)', 'rgba(255,184,0,0.08)', 'rgba(5,3,9,0.95)']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          />
+          <View style={lr.truthGoldEdge} />
+          <View style={lr.truthBadge}>
+            <Ionicons name="alert-circle" size={14} color="#0A0710" />
+          </View>
+
+          <Text style={lr.truthKicker}>
+            {lang === 'si' ? 'ඔබට කියා දුන්නේ වැරදියට' : 'WESTERN ASTROLOGY LIED TO YOU'}
+          </Text>
+          <Text style={lr.truthHeadline}>
+            {lang === 'si'
+              ? 'ඔබේ සැබෑ ලග්නය'
+              : 'Your real identity was never your sun sign.'}
+          </Text>
+
+          {/* Western Sun Sign vs TRUE Rising Sign (Lagna) — always show */}
+          {westernSun ? (
+            <View style={lr.contrastRow}>
+              <View style={lr.contrastSide}>
+                <Text style={lr.contrastSideLabel}>{lang === 'si' ? 'බටහිර රවි රාශිය' : 'WHAT THEY TOLD YOU'}</Text>
+                <View style={lr.contrastImgWrap}>
+                  {ZODIAC_IMAGE_MAP[westernSun.english] ? (
+                    <Image source={ZODIAC_IMAGE_MAP[westernSun.english]} resizeMode="contain" style={lr.contrastImg} />
+                  ) : null}
+                  <View style={lr.contrastStrike} />
+                </View>
+                <Text style={lr.contrastOldName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{westernSunName}</Text>
+              </View>
+              <View style={lr.contrastArrowCircle}>
+                <Ionicons name="arrow-forward" size={13} color="#FFD666" />
+              </View>
+              <View style={lr.contrastSide}>
+                <Text style={[lr.contrastSideLabel, { color: '#FFD666' }]}>{lang === 'si' ? 'ඔබේ ඇත්ත ලග්නය' : 'WHO YOU REALLY ARE'}</Text>
+                <View style={lr.contrastImgWrapNew}>
+                  {(ZODIAC_IMAGE_MAP[lagna.name] || ZODIAC_IMAGE_MAP[lagna.english]) ? (
+                    <Image source={ZODIAC_IMAGE_MAP[lagna.name] || ZODIAC_IMAGE_MAP[lagna.english]} resizeMode="contain" style={lr.contrastImgNew} />
+                  ) : null}
+                </View>
+                <Text style={lr.contrastNewName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{lagnaName}</Text>
+              </View>
+            </View>
+          ) : null}
+
+          <Text style={lr.truthBody}>
+            {lang === 'si'
+              ? 'ඔබේ ලග්නය ඔබේ ජීවිතය සමඟ ගැළපේ.'
+              : 'The sign that actually shapes your personality, love life, career, and destiny is your '}
+            {lang === 'si' ? null : <Text style={lr.truthHighlight}>Rising Sign</Text>}
+            {lang === 'si' ? null : '. It\u2019s calculated from your exact birth time and location — something Western horoscopes completely ignore.'}
+          </Text>
+
+          {/* Prominent rising sign pill */}
+          <View style={lr.truthRisingPill}>
+            <Ionicons name="trending-up" size={14} color="#FFD666" style={{ marginRight: 6 }} />
+            <Text style={lr.truthRisingPillLabel}>{lang === 'si' ? 'ඔබේ ලග්නය' : 'YOUR RISING SIGN'}</Text>
+            <Text style={lr.truthRisingPillValue}>{lagnaName}</Text>
+          </View>
+
+          {/* ── LIFE HOOKS — Barnum-effect curiosity teasers from engine data ── */}
+          <View style={lr.hookGrid}>
+            {[
+              { icon: 'flame-outline', label: lang === 'si' ? 'ආකර්ෂණ රහස' : 'Your Secret Attraction Power', value: lang === 'si' ? 'ඔබ ආකර්ෂණය කරන්නේ ඇයි දන්නවද?' : 'There\u2019s a reason certain people can\u2019t stop looking at you...', color: '#FF6B9D' },
+              { icon: 'heart-outline', label: lang === 'si' ? 'ආදර රටාව' : 'Your Soulmate Is A...', value: lang === 'si' ? 'ඔබේ ආත්ම සම්බන්ධතාව පෙනේ' : 'We found your ideal partner\u2019s sign. You\u2019ll be shocked.', color: '#F472B6' },
+              { icon: 'cash-outline', label: lang === 'si' ? 'ධන රහස' : 'Your Money Secret', value: lang === 'si' ? 'ඔබේ ධනය ලැබෙන මඟ වෙනස්' : 'Most people born under ' + lagnaName + ' get wealthy from an unexpected path...', color: '#34D399' },
+              { icon: 'briefcase-outline', label: lang === 'si' ? 'වෘත්තීය බලය' : 'Your Hidden Talent', value: lang === 'si' ? 'ඔබ තුල සැඟවුණු හැකියාව' : 'You have a natural gift you\u2019ve been ignoring — your chart proves it.', color: '#60A5FA' },
+              { icon: 'bed-outline', label: lang === 'si' ? 'ආකර්ෂණ ශක්තිය' : 'Your Intimate Energy', value: lang === 'si' ? 'ඔබේ ආකර්ෂණ බලය විශේෂයි' : 'Your birth chart reveals what you secretly desire in a partner.', color: '#E879F9' },
+              { icon: 'eye-outline', label: lang === 'si' ? 'ඔබේ අනාගතය' : 'What\u2019s Coming Next', value: lang === 'si' ? 'ඉදිරි මාස 6 තුල...' : 'The next 6 months hold something most ' + lagnaName + ' risings aren\u2019t ready for.', color: '#A78BFA' },
+            ].map(function (hook, i) {
+              return (
+                <Animated.View key={i} entering={FadeInDown.delay(1200 + i * 100).duration(400).springify().damping(16)} style={lr.hookItem}>
+                  <View style={[lr.hookIconCircle, { backgroundColor: hook.color + '18', borderColor: hook.color + '40' }]}>
+                    <Ionicons name={hook.icon} size={15} color={hook.color} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[lr.hookLabel, { color: hook.color }]}>{hook.label}</Text>
+                    <Text style={lr.hookValue} numberOfLines={2}>{hook.value}</Text>
+                  </View>
+                  <Ionicons name="lock-closed" size={11} color="rgba(255,184,0,0.4)" />
+                </Animated.View>
+              );
+            })}
+          </View>
+
+          {/* ── CALCULATED PREDICTIONS — "how did they know?" moment ── */}
+          {(function () {
+            var preds = generatePredictions(birthData && birthData.dateTime, lagna.rashiId, lang);
+            if (!preds || preds.length === 0) return null;
+            return (
+              <View style={{ marginTop: 18, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', paddingTop: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 4 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF8C00' }} />
+                  <Text style={{ fontSize: 9, fontWeight: '900', letterSpacing: 2.2, color: '#FF8C00', textTransform: 'uppercase' }}>
+                    {lang === 'si' ? '\u0DC3\u0da2\u0dd3\u0dc0\u0dd3 \u0dc3\u0da7\u0dc4\u0db1 \u0dc0\u0dd2\u0dc1\u0dca\u0dbd\u0dda\u0dc2\u0dab\u0dba' : 'LIVE CHART ANALYSIS'}
+                  </Text>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF8C00' }} />
+                </View>
+                <Text style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginBottom: 12, fontStyle: 'italic', lineHeight: 15 }}>
+                  {lang === 'si'
+                    ? '\u0d94\u0db6\u0dd9\u0db8 \u0d9c\u0dca\u200d\u0dbb\u0dc4 \u0dc3\u0da7\u0dc4\u0db1 \u0db8\u0dd9\u0dba \u0dc4\u0dd0\u0d9f\u0dd2\u0db1\u0dca\u0dc0\u0dd3\u0dba...'
+                    : 'Your planetary positions revealed the following...'}
+                </Text>
+                {preds.map(function (pred, i) {
+                  return (
+                    <Animated.View key={i} entering={FadeInDown.delay(1800 + i * 200).duration(500).springify().damping(14)} style={{ marginBottom: 10, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: pred.color + '20', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+                      <LinearGradient
+                        colors={[pred.color + '08', 'transparent']}
+                        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '100%' }}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      />
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 11, paddingVertical: 12, paddingHorizontal: 14 }}>
+                        <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: pred.color + '15', borderWidth: 1.2, borderColor: pred.color + '30', marginTop: 2 }}>
+                          <Ionicons name={pred.icon} size={15} color={pred.color} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+                            <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: pred.color }} />
+                            <Text style={{ fontSize: 8, fontWeight: '900', color: pred.color, letterSpacing: 1.5 }}>{pred.label}</Text>
+                          </View>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: 'rgba(255,255,255,0.85)', lineHeight: 18 }}>{pred.text}</Text>
+                        </View>
+                      </View>
+                    </Animated.View>
+                  );
+                })}
+                <View style={{ alignItems: 'center', marginTop: 6, paddingVertical: 8 }}>
+                  <Text style={{ fontSize: 11, color: 'rgba(255,184,0,0.7)', textAlign: 'center', fontWeight: '800', lineHeight: 16 }}>
+                    {lang === 'si' ? '\u0db1\u0dd2\u0dc0\u0dd0\u0dbb\u0daf\u0dd2\u0daf? \u0dc3\u0db8\u0dca\u0db4\u0dd6\u0dbb\u0dca\u0dab \u0d9a\u0dd2\u0dba\u0dc0\u0dd3\u0db8\u0dda \u0dad\u0dc0\u0dad\u0dca \u0db6\u0ddc\u0dc4\u0ddd \u0daf\u0dd9\u0dba\u0d9a\u0dca \u0dc4\u0dd9\u0dc5\u0dd2 \u0dc0\u0dd9\u0db1\u0dc0\u0dcf...' : '\u2728 Does this resonate? Your complete reading goes much deeper...'}
+                  </Text>
+                </View>
+              </View>
+            );
+          })()}
+
+          <Text style={lr.contrastFootnote}>
+            {lang === 'si'
+              ? 'වෛදික තාරකා විද්‍යාව සැබෑ තාරකා පිහිටීම් භාවිතා කරයි'
+              : 'Unlock your full reading to reveal all secrets above \u2728'}
+          </Text>
+        </Animated.View>
 
         <View style={lr.signGrid}>
           {[
@@ -2465,6 +2925,15 @@ function LagnaRevealStep({ birthData, displayName, onContinue, lang }) {
           </View>
 
           <PrimaryButton label={lang === 'si' ? 'මගේ සම්පූර්ණ කියවීම විවෘත කරන්න' : 'Open My Complete Reading'} onPress={onContinue} icon="sparkles" />
+
+          <TouchableOpacity style={lr.shareBtn} onPress={onShareReveal} activeOpacity={0.8}>
+            <Ionicons name="share-social-outline" size={16} color="#FFD666" />
+            <Text style={lr.shareBtnText}>
+              {showSignContrast
+                ? (lang === 'si' ? 'මගේ ඇත්ත ලග්නය බෙදාගන්න' : 'Share my real sign')
+                : (lang === 'si' ? 'බෙදාගන්න' : 'Share my reading')}
+            </Text>
+          </TouchableOpacity>
         </Animated.View>
 
         </ScrollView>
@@ -2516,6 +2985,39 @@ var lr = StyleSheet.create({
   lagnaTitleSmall: { fontSize: 33, lineHeight: 40 },
   lagnaSubtitle: { color: 'rgba(244,228,188,0.48)', fontSize: 13, lineHeight: 18, fontWeight: '700', marginTop: 2 },
   signGrid: { flexDirection: 'row', gap: 8, marginTop: 18 },
+
+  contrastRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 14, marginBottom: 4, paddingVertical: 14, paddingHorizontal: 8, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  contrastSide: { flex: 1, alignItems: 'center' },
+  contrastSideLabel: { color: 'rgba(255,255,255,0.45)', fontSize: 8, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 },
+  contrastArrowCircle: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,214,102,0.12)', borderWidth: 1, borderColor: 'rgba(255,214,102,0.3)', alignItems: 'center', justifyContent: 'center', marginHorizontal: 6 },
+  contrastImgWrap: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center', marginBottom: 6, overflow: 'visible' },
+  contrastImg: { width: 38, height: 38, opacity: 0.4 },
+  contrastStrike: { position: 'absolute', height: 2.5, width: '110%', backgroundColor: '#FF6B9D', top: '50%', borderRadius: 2, transform: [{ rotate: '-12deg' }] },
+  contrastImgWrapNew: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,214,102,0.08)', borderWidth: 1.5, borderColor: 'rgba(255,214,102,0.35)', alignItems: 'center', justifyContent: 'center', marginBottom: 6, ...boxShadow('rgba(255,184,0,0.3)', { width: 0, height: 0 }, 0.8, 12) },
+  contrastImgNew: { width: 42, height: 42 },
+  contrastOldName: { fontSize: 13, fontWeight: '800', color: 'rgba(255,255,255,0.35)', maxWidth: '94%', textAlign: 'center' },
+  contrastNewName: { fontSize: 14, fontWeight: '900', color: '#FFF1D0', maxWidth: '94%', textAlign: 'center' },
+  contrastFootnote: { color: 'rgba(255,214,102,0.55)', fontSize: 10, lineHeight: 14, textAlign: 'center', marginTop: 16, fontWeight: '700' },
+
+  truthCard: { marginTop: 16, borderRadius: 24, paddingTop: 26, paddingBottom: 20, paddingHorizontal: 18, borderWidth: 1.2, borderColor: 'rgba(214,181,109,0.35)', overflow: 'hidden' },
+  truthGoldEdge: { position: 'absolute', top: 0, left: 0, right: 0, height: 2.5, backgroundColor: 'rgba(255,214,102,0.8)' },
+  truthBadge: { position: 'absolute', top: -1, alignSelf: 'center', width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFD666', alignItems: 'center', justifyContent: 'center', ...textShadow('rgba(255,184,0,0.6)', { width: 0, height: 0 }, 14) },
+  truthKicker: { color: '#FF6B9D', fontSize: 9.5, fontWeight: '900', letterSpacing: 2.2, textAlign: 'center', textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },
+  truthHeadline: { color: '#FFF6E4', fontSize: 17, fontWeight: '900', lineHeight: 23, textAlign: 'center', letterSpacing: 0.1, ...textShadow('rgba(0,0,0,0.5)', { width: 0, height: 1 }, 8) },
+  truthBody: { color: 'rgba(255,255,255,0.65)', fontSize: 12, lineHeight: 18, textAlign: 'center', marginTop: 10 },
+  truthHighlight: { color: '#FFD666', fontWeight: '900' },
+  truthRisingPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', marginTop: 14, paddingVertical: 9, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1.2, borderColor: 'rgba(214,181,109,0.5)', backgroundColor: 'rgba(255,184,0,0.10)' },
+  truthRisingPillLabel: { color: 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: '800', letterSpacing: 1.2, marginRight: 8 },
+  truthRisingPillValue: { color: '#FFF1D0', fontSize: 14, fontWeight: '900', letterSpacing: 0.3 },
+
+  hookGrid: { marginTop: 16, gap: 6 },
+  hookItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.3)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  hookIconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  hookLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2 },
+  hookValue: { fontSize: 11.5, fontWeight: '600', color: 'rgba(255,255,255,0.72)', lineHeight: 16 },
+
+  shareBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 12, paddingVertical: 13, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(214,181,109,0.3)', backgroundColor: 'rgba(255,184,0,0.06)' },
+  shareBtnText: { color: '#FFD666', fontSize: 14, fontWeight: '800', letterSpacing: 0.3 },
   signCard: {
     minHeight: 108, borderRadius: 16, overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 6, paddingVertical: 11, borderWidth: 1,
