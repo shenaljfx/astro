@@ -242,6 +242,7 @@ export function AuthProvider({ children }) {
   var [subscriptionLoading, setSubscriptionLoading] = useState(true);
   var [paywallVisible, setPaywallVisible] = useState(false);
   var [paywallSource, setPaywallSource] = useState('onboarding');
+  var [paywallDismissed, setPaywallDismissed] = useState(false);
   // Use a ref for the resolve/reject pair so it's read fresh by the modal
   // close/purchase callbacks (avoids stale closures and a race where the
   // paywall opens but the resolver hasn't been committed to state yet).
@@ -828,6 +829,7 @@ export function AuthProvider({ children }) {
   var handlePaywallClose = useCallback(function() {
     console.log('[Auth] handlePaywallClose — dismissing paywall');
     setPaywallVisible(false);
+    setPaywallDismissed(true);
     var resolver = paywallResolverRef.current;
     paywallResolverRef.current = null;
     if (resolver && resolver.reject) resolver.reject(new Error('Payment cancelled'));
@@ -1049,7 +1051,7 @@ export function AuthProvider({ children }) {
   // subscription check is complete, AND the user is not subscribed.
   // Uses isSubscribed from server (stored in userData) as primary check,
   // falls back to isSubscriptionCurrentlyActive for display-derived state.
-  var forceSubscriptionPaywall = !!token && !!user && user.onboardingComplete === true && !subscriptionLoading && !user.isSubscribed && !isSubscriptionCurrentlyActive(subscription);
+  var forceSubscriptionPaywall = !!token && !!user && user.onboardingComplete === true && !subscriptionLoading && !user.isSubscribed && !isSubscriptionCurrentlyActive(subscription) && !paywallDismissed;
   var effectivePaywallVisible = paywallVisible || forceSubscriptionPaywall;
   var effectivePaywallSource = forceSubscriptionPaywall && !paywallVisible ? 'onboarding' : paywallSource;
 

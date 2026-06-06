@@ -618,20 +618,6 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
       {/* Decorative accent glow */}
       <View style={[s.accentGlow, { backgroundColor: accent.primary + '08' }]} />
 
-      {/* Close button */}
-      {onClose ? (
-        <TouchableOpacity
-          style={[s.closeBtn, { top: insets.top + 10 }]}
-          onPress={onClose}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.6}
-        >
-          <View style={s.closeBtnInner}>
-            <Ionicons name="close" size={20} color="rgba(255,255,255,0.6)" />
-          </View>
-        </TouchableOpacity>
-      ) : null}
-
       {/* Scrollable content */}
       <ScrollView
         style={s.scroll}
@@ -880,6 +866,20 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Close button — rendered AFTER ScrollView so it sits on top and receives touches */}
+      {onClose ? (
+        <TouchableOpacity
+          style={[s.closeBtn, { top: insets.top + 10 }]}
+          onPress={onClose}
+          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          activeOpacity={0.6}
+        >
+          <View style={s.closeBtnInner}>
+            <Ionicons name="close" size={20} color="rgba(255,255,255,0.6)" />
+          </View>
+        </TouchableOpacity>
+      ) : null}
     </Animated.View>
   );
 }
@@ -911,7 +911,8 @@ var s = StyleSheet.create({
   closeBtn: {
     position: 'absolute',
     right: 16,
-    zIndex: 100,
+    zIndex: 999,
+    elevation: 10,
   },
   closeBtnInner: {
     width: 36, height: 36, borderRadius: 18,

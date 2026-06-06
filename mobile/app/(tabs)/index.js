@@ -2725,7 +2725,9 @@ export default function HomeScreen() {
         // Native: save to gallery + share first image
         var savedToGallery = false;
         try {
-          var perm = await MediaLibrary.requestPermissionsAsync();
+          // writeOnly: true -> only requests save/write access, never the
+          // READ_MEDIA_IMAGES / READ_MEDIA_VIDEO permissions (Android 13+).
+          var perm = await MediaLibrary.requestPermissionsAsync(true);
           if (perm && (perm.granted || perm.accessPrivileges === 'limited')) {
             for (var k = 0; k < uris.length; k++) {
               await MediaLibrary.saveToLibraryAsync(uris[k]);

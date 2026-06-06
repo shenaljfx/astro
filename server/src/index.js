@@ -62,6 +62,7 @@ const enhancedRoutes = require('./routes/enhanced');
 const jyotishRoutes = require('./routes/jyotish');
 const geocodeRoutes = require('./routes/geocode');
 const manifestRoutes = require('./routes/manifest');
+const marketingRoutes = require('./routes/marketing');
 const { phoneAuth, requireSubscription } = require('./middleware/subscription');
 const { requestAlertMiddleware, startMemoryMonitor } = require('./services/alerting');
 
@@ -141,6 +142,7 @@ app.use('/api/enhanced', userDataLimiter, paidAccess, enhancedRoutes);
 app.use('/api/jyotish', userDataLimiter, paidAccess, jyotishRoutes);
 app.use('/api/geocode', geocodeRoutes);
 app.use('/api/manifest', aiLimiter, paidAccess, manifestRoutes);
+app.use('/api/marketing', marketingRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

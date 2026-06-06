@@ -1,0 +1,140 @@
+/**
+ * Marketing data routes — serves astrology data to the admin marketing studio.
+ * ONLY accessible from localhost (no auth required for local development).
+ */
+const express = require('express');
+const router = express.Router();
+
+const {
+  getPanchanga,
+  getDailyNakath,
+  getAllPlanetPositions,
+  getNakshatra,
+  getRashi,
+  detectYogas,
+} = require('../engine/astrology');
+
+// Localhost-only guard
+function localhostOnly(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress;
+  const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip === 'localhost';
+  if (!isLocal && process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Marketing routes are localhost-only' });
+  }
+  next();
+}
+
+router.use(localhostOnly);
+
+/**
+ * GET /api/marketing/today
+ * Full astrology data package for today's content generation
+ */
+router.get('/today', async (req, res) => {
+  try {
+    const now = new Date();
+    const panchanga = getPanchanga(now);
+    const nakath = getDailyNakath(now);
+    const planets = getAllPlanetPositions(now);
+    const yogas = detectYogas ? detectYogas(planets) : [];
+
+    res.json({
+      date: now.toISOString().split('T')[0],
+      panchanga,
+      nakath,
+      planets,
+      yogas,
+      summary: {
+        nakshatra: panchanga?.nakshatra || 'Unknown',
+        tithi: panchanga?.tithi || 'Unknown',
+        yoga: panchanga?.yoga || 'Unknown',
+        moonSign: panchanga?.moonSign || 'Unknown',
+      },
+    });
+  } catch (err) {
+    console.error('Marketing today error:', err);
+    res.status(500).json({ error: 'Failed to get today data' });
+  }
+});
+
+/**
+ * GET /api/marketing/sign/:sign
+ * Quick daily insight for a specific sign (for reel scripts)
+ */
+router.get('/sign/:sign', async (req, res) => {
+  try {
+    const { sign } = req.params;
+    const now = new Date();
+    const panchanga = getPanchanga(now);
+    const planets = getAllPlanetPositions(now);
+
+    // Find relevant transits for this sign
+    const signPlanets = planets.filter(p => 
+      p.sign?.toLowerCase() === sign.toLowerCase() ||
+      p.rashi?.toLowerCase() === sign.toLowerCase()
+    );
+
+    res.json({
+      sign,
+      date: now.toISOString().split('T')[0],
+      panchanga: {
+        nakshatra: panchanga?.nakshatra,
+        tithi: panchanga?.tithi,
+        yoga: panchanga?.yoga,
+      },
+      planetsInSign: signPlanets,
+      allPlanets: planets,
+    });
+  } catch (err) {
+    console.error('Marketing sign error:', err);
+    res.status(500).json({ error: 'Failed to get sign data' });
+  }
+});
+
+/**
+ * GET /api/marketing/compatibility/:sign1/:sign2
+ * Quick compatibility data for teaser reels
+ */
+router.get('/compatibility/:sign1/:sign2', async (req, res) => {
+  try {
+    const { sign1, sign2 } = req.params;
+    // Basic compatibility based on element harmony
+    const elements = {
+      Aries: 'fire', Leo: 'fire', Sagittarius: 'fire',
+      Taurus: 'earth', Virgo: 'earth', Capricorn: 'earth',
+      Gemini: 'air', Libra: 'air', Aquarius: 'air',
+      Cancer: 'water', Scorpio: 'water', Pisces: 'water',
+    };
+
+    const el1 = elements[sign1] || 'unknown';
+    const el2 = elements[sign2] || 'unknown';
+    
+    let score = 50;
+    if (el1 === el2) score = 85;
+    else if ((el1 === 'fire' && el2 === 'air') || (el1 === 'air' && el2 === 'fire')) score = 75;
+    else if ((el1 === 'earth' && el2 === 'water') || (el1 === 'water' && el2 === 'earth')) score = 75;
+    else if ((el1 === 'fire' && el2 === 'water') || (el1 === 'water' && el2 === 'fire')) score = 35;
+    else if ((el1 === 'earth' && el2 === 'air') || (el1 === 'air' && el2 === 'earth')) score = 45;
+
+    res.json({
+      sign1,
+      sign2,
+      element1: el1,
+      element2: el2,
+      score,
+      chemistry: score >= 75 ? 'High' : score >= 50 ? 'Moderate' : 'Challenging',
+      description: getCompatibilityDesc(sign1, sign2, score),
+    });
+  } catch (err) {
+    console.error('Marketing compatibility error:', err);
+    res.status(500).json({ error: 'Failed to get compatibility' });
+  }
+});
+
+function getCompatibilityDesc(sign1, sign2, score) {
+  if (score >= 75) return `${sign1} and ${sign2} share natural harmony. Their energies complement and elevate each other.`;
+  if (score >= 50) return `${sign1} and ${sign2} have a dynamic connection with growth potential through understanding differences.`;
+  return `${sign1} and ${sign2} face challenges that can become powerful catalysts for personal transformation.`;
+}
+
+module.exports = router;
