@@ -935,6 +935,8 @@ export default {
   getFullReport: getFullReport,
   getAIReport: getAIReport,
   getReportProgress: getReportProgress,
+  getPredictionCheckins: getPredictionCheckins,
+  sendPredictionOutcome: sendPredictionOutcome,
   getFullReading: getFullReading,
   setAuthTokenGetter: setAuthTokenGetter,
   setDetectedCountry: setDetectedCountry,
