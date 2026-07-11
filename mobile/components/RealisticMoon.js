@@ -207,17 +207,19 @@ function assembleMoonScene(THREE, rendererObj, sunAngle, shouldAnimate, stateHol
   scene.add(mainSun);
   stateHolder.mainSun = mainSun;
 
-  var reflectedEarth = new THREE.DirectionalLight(0x4466AA, 0.22);
+  // Earthshine: light reflected off Earth faintly illuminates the dark side —
+  // strong enough that a new moon reads as a blue-gray sphere, never a black hole
+  var reflectedEarth = new THREE.DirectionalLight(0x5577BB, 0.60);
   reflectedEarth.position.set(-sx, -0.2, -sz);
   scene.add(reflectedEarth);
   stateHolder.reflectedEarth = reflectedEarth;
 
   // Rim light so dark side is never pure black
-  var rimFill = new THREE.PointLight(0x223355, 0.12, 20);
+  var rimFill = new THREE.PointLight(0x334466, 0.35, 20);
   rimFill.position.set(0, 2, -3);
   scene.add(rimFill);
 
-  var ambientFill = new THREE.AmbientLight(0x12122E, 0.35);
+  var ambientFill = new THREE.AmbientLight(0x1C1C40, 0.55);
   scene.add(ambientFill);
 
   stateHolder.sceneObj = scene;
@@ -340,8 +342,9 @@ function MoonCanvasWeb({ size, tithiNum, animate }) {
   }, [sunAngle]);
 
   var illum = computeIllumFraction(tithiNum);
-  var glowR = Math.round(illum * 20 + 4);
-  var glowA = (illum * 0.5 + 0.1).toFixed(2);
+  // Glow floor: even a new moon keeps a soft silver-blue silhouette halo
+  var glowR = Math.round(illum * 20 + 10);
+  var glowA = (illum * 0.4 + 0.22).toFixed(2);
 
   return (
     <div ref={boxRef} style={{
@@ -427,11 +430,13 @@ function MoonGLNative({ size, tithiNum, animate }) {
   }, [animate]);
 
   var illum = computeIllumFraction(tithiNum);
+  // Glow floor keeps the dark-moon silhouette visible against the night card
+  var glowMul = 0.3 + 0.7 * illum;
   var glowStyle = useAnimatedStyle(function() {
-    var gr = interpolate(pulse.value, [0, 1], [8, 22]) * illum;
-    var ga = interpolate(pulse.value, [0, 1], [0.2, 0.5]) * illum;
+    var gr = interpolate(pulse.value, [0, 1], [8, 22]) * glowMul;
+    var ga = interpolate(pulse.value, [0, 1], [0.2, 0.5]) * glowMul;
     return {
-      shadowColor: illum > 0.5 ? '#D8D0FF' : '#9088C0',
+      shadowColor: illum > 0.5 ? '#D8D0FF' : '#8FA0D8',
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: ga,
       shadowRadius: gr,
@@ -475,12 +480,22 @@ function TinyMoonSVG({ size, tithiNum }) {
     );
   }
 
-  // New moon
+  // New moon — earthshine disc: blue-gray surface, faint craters, silver rim
   if (illum < 0.003) {
     return (
       <Svg width={size} height={size} viewBox={'0 0 ' + size + ' ' + size}>
-        <Circle cx={mid} cy={mid} r={R} fill='#12101E' />
-        <Circle cx={mid} cy={mid} r={R} fill='rgba(70,90,130,0.06)' />
+        <Defs>
+          <RadialGradient id='tnm' cx='40%' cy='36%' r='64%'>
+            <Stop offset='0%' stopColor='#2E3454' />
+            <Stop offset='65%' stopColor='#1D2238' />
+            <Stop offset='100%' stopColor='#141728' />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={mid} cy={mid} r={R} fill='url(#tnm)' />
+        <Circle cx={mid * 0.85} cy={mid * 0.80} r={R * 0.22} fill='rgba(200,210,240,0.05)' />
+        <Circle cx={mid * 1.2} cy={mid * 0.70} r={R * 0.14} fill='rgba(200,210,240,0.04)' />
+        <Circle cx={mid * 0.75} cy={mid * 1.15} r={R * 0.17} fill='rgba(200,210,240,0.04)' />
+        <Circle cx={mid} cy={mid} r={R} fill='none' stroke='rgba(170,185,230,0.40)' strokeWidth={Math.max(0.8, R * 0.055)} />
       </Svg>
     );
   }

@@ -49,6 +49,10 @@ var STORAGE_TOKEN = 'grahachara_auth_token';
 var STORAGE_USER = 'grahachara_user_profile';
 var STORAGE_ONBOARDING = 'grahachara_onboarding_done';
 var STORAGE_PUSH_REGISTERED = 'grahachara_push_registered_for';
+// Last calendar day (YYYY-MM-DD) the app-open paywall auto-fired. Caps the
+// forced wall at once/day so it doesn't nag on every cold start; contextual
+// paywalls (chat, aura, kendara, porondam) still fire freely.
+var STORAGE_AUTOWALL_DATE = 'grahachara_autowall_date';
 var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var PUSH_REGISTER_REFRESH_MS = 24 * 60 * 60 * 1000;
 
@@ -243,6 +247,9 @@ export function AuthProvider({ children }) {
   var [paywallVisible, setPaywallVisible] = useState(false);
   var [paywallSource, setPaywallSource] = useState('onboarding');
   var [paywallDismissed, setPaywallDismissed] = useState(false);
+  // Once/day cap for the forced app-open wall.
+  var [autoWallDate, setAutoWallDate] = useState(null);
+  var [autoWallLoaded, setAutoWallLoaded] = useState(false);
   // Use a ref for the resolve/reject pair so it's read fresh by the modal
   // close/purchase callbacks (avoids stale closures and a race where the
   // paywall opens but the resolver hasn't been committed to state yet).
@@ -251,6 +258,14 @@ export function AuthProvider({ children }) {
   // Initialize: Load saved token on app start
   useEffect(function() {
     loadSavedAuth();
+  }, []);
+
+  // Load the once/day forced-paywall gate.
+  useEffect(function() {
+    AsyncStorage.getItem(STORAGE_AUTOWALL_DATE)
+      .then(function(v) { setAutoWallDate(v || null); })
+      .catch(function() {})
+      .finally(function() { setAutoWallLoaded(true); });
   }, []);
 
   // Listen for RevenueCat subscription changes in real-time.
@@ -1051,9 +1066,22 @@ export function AuthProvider({ children }) {
   // subscription check is complete, AND the user is not subscribed.
   // Uses isSubscribed from server (stored in userData) as primary check,
   // falls back to isSubscriptionCurrentlyActive for display-derived state.
-  var forceSubscriptionPaywall = !!token && !!user && user.onboardingComplete === true && !subscriptionLoading && !user.isSubscribed && !isSubscriptionCurrentlyActive(subscription) && !paywallDismissed;
+  // Once/day cap: suppress the auto-wall if it already fired today. The gate
+  // must be loaded first (avoid a flash before AsyncStorage answers), and a
+  // NEW calendar day re-enables it. Contextual paywalls bypass this entirely.
+  var autoWallTodayStr = new Date().toISOString().slice(0, 10);
+  var autoWallAllowedToday = autoWallLoaded && autoWallDate !== autoWallTodayStr;
+  var forceSubscriptionPaywall = !!token && !!user && user.onboardingComplete === true && !subscriptionLoading && !user.isSubscribed && !isSubscriptionCurrentlyActive(subscription) && !paywallDismissed && autoWallAllowedToday;
   var effectivePaywallVisible = paywallVisible || forceSubscriptionPaywall;
   var effectivePaywallSource = forceSubscriptionPaywall && !paywallVisible ? 'onboarding' : paywallSource;
+
+  // Record the day the forced wall fired, so it caps at once/day.
+  useEffect(function() {
+    if (forceSubscriptionPaywall && autoWallDate !== autoWallTodayStr) {
+      setAutoWallDate(autoWallTodayStr);
+      AsyncStorage.setItem(STORAGE_AUTOWALL_DATE, autoWallTodayStr).catch(function() {});
+    }
+  }, [forceSubscriptionPaywall, autoWallDate, autoWallTodayStr]);
 
   return (
     <AuthContext.Provider value={value}>

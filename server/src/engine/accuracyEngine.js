@@ -1,33 +1,33 @@
 ﻿/**
- * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
- * ACCURACY ENGINE â€” Tier 1 / Tier 2 / Tier 3 Precision Enhancements
- * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ACCURACY ENGINE — Tier 1 / Tier 2 / Tier 3 Precision Enhancements
+ * ═══════════════════════════════════════════════════════════════════════════
  *
  * Single orchestrator for accuracy-improving computations that aren't
  * already implemented elsewhere, plus cross-system bridges that lift the
  * precision of the main report:
  *
- *  â”€â”€ Tier 1 (highest impact) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
- *    â€¢ Varshaphal cross-validation of dasha-based predictions
- *    â€¢ Locality-aware dasha activation (transit cross-reference)
- *    â€¢ Per-section confidence tiering (â˜… / â˜…â˜… / â˜…â˜…â˜…)
+ *  ── Tier 1 (highest impact) ─────────────────────────────────────────────
+ *    • Varshaphal cross-validation of dasha-based predictions
+ *    • Locality-aware dasha activation (transit cross-reference)
+ *    • Per-section confidence tiering (★ / ★★ / ★★★)
  *
- *  â”€â”€ Tier 2 (strong impact) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
- *    â€¢ Multi-ayanamsha cross-check (lagna-sensitivity flag)
- *    â€¢ D9 (Navamsha) promise verification per planet
- *    â€¢ Yogi / Avayogi planet calculator
- *    â€¢ Argala / Virodhargala doctrine
- *    â€¢ Saturn / Jupiter return precision dates
+ *  ── Tier 2 (strong impact) ──────────────────────────────────────────────
+ *    • Multi-ayanamsha cross-check (lagna-sensitivity flag)
+ *    • D9 (Navamsha) promise verification per planet
+ *    • Yogi / Avayogi planet calculator
+ *    • Argala / Virodhargala doctrine
+ *    • Saturn / Jupiter return precision dates
  *
- *  â”€â”€ Tier 3 (specialized) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
- *    â€¢ KP sub-lord fine-timing layer
- *    â€¢ Nadi dispositor chain verification
- *    â€¢ Bhava Bala (six-fold house strength)
- *    â€¢ Sade Sati phase precision (rising / peak / setting)
- *    â€¢ Eclipse trigger detector (Â±3Â° natal-orb in next 6 months)
+ *  ── Tier 3 (specialized) ────────────────────────────────────────────────
+ *    • KP sub-lord fine-timing layer
+ *    • Nadi dispositor chain verification
+ *    • Bhava Bala (six-fold house strength)
+ *    • Sade Sati phase precision (rising / peak / setting)
+ *    • Eclipse trigger detector (Â±3Â° natal-orb in next 6 months)
  *
- * Strategy: the report calls one entry point â€” `computeAccuracyEnhancements()`
- * â€” which returns a single object that is serialised into the LLM prompt and
+ * Strategy: the report calls one entry point — `computeAccuracyEnhancements()`
+ * — which returns a single object that is serialised into the LLM prompt and
  * also surfaced for confidence-tier rendering.
  */
 
@@ -40,7 +40,7 @@ function astro() {
   if (!_astro) _astro = require('./astrology');
   return _astro;
 }
-// Convenience accessors â€” always lazy.
+// Convenience accessors — always lazy.
 const getAyanamsha = (...a) => astro().getAyanamsha(...a);
 const setAyanamshaMode = (...a) => astro().setAyanamshaMode(...a);
 const getCurrentAyanamshaMode = (...a) => astro().getCurrentAyanamshaMode(...a);
@@ -59,9 +59,9 @@ const RASHIS = () => astro().RASHIS;
 const NAKSHATRAS = () => astro().NAKSHATRAS;
 const { resolveCalculationSettings } = require('./calculationSettings');
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
 // Shared helpers
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
 
 const PLANET_LIST = ['sun', 'moon', 'mars', 'mercury', 'jupiter', 'venus', 'saturn'];
 const norm360 = (d) => ((d % 360) + 360) % 360;
@@ -105,9 +105,9 @@ function getPlanetSidereal(planets, key) {
   return p ? p.sidereal : null;
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T2 #5 â€” MULTI-AYANAMSHA CROSS-CHECK
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T2 #5 — MULTI-AYANAMSHA CROSS-CHECK
+// ════════════════════════════════════════════════════════════════════════
 /**
  * Compute the lagna sign + degree under three ayanamshas (Lahiri, KP,
  * Raman). If the lagna SIGN flips across systems, the chart is
@@ -165,14 +165,14 @@ function computeMultiAyanamsha(birthDate, lat, lng) {
     advisory: uniqueLagnaSigns.length > 1
       ? `Lagna varies across ayanamshas (${uniqueLagnaSigns.join(' / ')}). All lagna-driven claims should carry low confidence until birth time is rectified.`
       : lagnaCuspRisk
-        ? `Lagna sits within 1Â° of a sign cusp under Lahiri â€” even a 4-minute birth-time error flips the rising sign. Consider rectification.`
-        : `Lagna and Moon nakshatra are stable across all three ayanamshas â€” chart foundation is reliable.`,
+        ? `Lagna sits within 1Â° of a sign cusp under Lahiri — even a 4-minute birth-time error flips the rising sign. Consider rectification.`
+        : `Lagna and Moon nakshatra are stable across all three ayanamshas — chart foundation is reliable.`,
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T2 #6 â€” D9 (NAVAMSHA) PROMISE VERIFICATION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T2 #6 — D9 (NAVAMSHA) PROMISE VERIFICATION
+// ════════════════════════════════════════════════════════════════════════
 /**
  * Classical rule: a planet that promises results in D1 must also retain
  * dignity in D9 to actually deliver. For each natal planet, check its
@@ -210,35 +210,35 @@ function computeD9Verification(planets, navamsha) {
     let verdict;
     let weight; // how much weight to give this planet's promises
     if (d1Dig === 'Exalted' || d1Dig === 'Own Sign') {
-      // Promise is strong in D1 â€” does D9 confirm?
+      // Promise is strong in D1 — does D9 confirm?
       if (d9Dig === 'Exalted' || d9Dig === 'Own Sign') {
-        verdict = 'Vargottama-style â€” promise CONFIRMED in D9';
+        verdict = 'Vargottama-style — promise CONFIRMED in D9';
         weight = 1.5;
       } else if (d9Dig === 'Debilitated') {
-        verdict = 'D1 promise BROKEN in D9 â€” results delayed or unfulfilled';
+        verdict = 'D1 promise BROKEN in D9 — results delayed or unfulfilled';
         weight = 0.4;
       } else {
-        verdict = 'D1 promise PARTIAL â€” D9 neutral, results moderate';
+        verdict = 'D1 promise PARTIAL — D9 neutral, results moderate';
         weight = 0.85;
       }
     } else if (d1Dig === 'Debilitated') {
       if (d9Dig === 'Exalted' || d9Dig === 'Own Sign') {
-        verdict = 'Neecha Bhanga-style â€” D9 RESCUES the natal weakness';
+        verdict = 'Neecha Bhanga-style — D9 RESCUES the natal weakness';
         weight = 1.1;
       } else {
-        verdict = 'Weakness CONFIRMED in D9 â€” significations strain';
+        verdict = 'Weakness CONFIRMED in D9 — significations strain';
         weight = 0.4;
       }
     } else {
       // Neutral D1
       if (d9Dig === 'Exalted' || d9Dig === 'Own Sign') {
-        verdict = 'D9 ELEVATES â€” silent promise, blooms after age 36';
+        verdict = 'D9 ELEVATES — silent promise, blooms after age 36';
         weight = 1.15;
       } else if (d9Dig === 'Debilitated') {
-        verdict = 'D9 weakens â€” promises softer than they look';
+        verdict = 'D9 weakens — promises softer than they look';
         weight = 0.7;
       } else {
-        verdict = 'Neutral both charts â€” average results';
+        verdict = 'Neutral both charts — average results';
         weight = 1.0;
       }
     }
@@ -263,9 +263,9 @@ function computeD9Verification(planets, navamsha) {
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T2 #7 â€” YOGI / AVAYOGI PLANET
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T2 #7 — YOGI / AVAYOGI PLANET
+// ════════════════════════════════════════════════════════════════════════
 /**
  * Yogi point  = (Sun + Moon longitudes + 93Â°20') mod 360
  * Avayogi point = (Yogi + 186Â°40') mod 360
@@ -307,16 +307,16 @@ function computeYogiAvayogi(planets) {
     sahayogi,
     dagdhaRashi: yogiRashi.english,
     interpretation: {
-      yogi: `${yogiNak.lord}'s major and sub-periods bring the year's most favourable outcomes â€” career breakthroughs, marriage opportunities, and luck-based gains tend to cluster here.`,
-      avayogi: `${avayogiNak.lord}'s periods are statistically the most fragile â€” finalise nothing critical, expect delays, treat as a "maintenance" phase.`,
+      yogi: `${yogiNak.lord}'s major and sub-periods bring the year's most favourable outcomes — career breakthroughs, marriage opportunities, and luck-based gains tend to cluster here.`,
+      avayogi: `${avayogiNak.lord}'s periods are statistically the most fragile — finalise nothing critical, expect delays, treat as a "maintenance" phase.`,
       dagdha: `Avoid initiating new ventures, marriage muhurthas, or property purchases when transit Sun/Moon are in ${yogiRashi.english} (~30 days/year).`,
     },
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T2 #8 â€” ARGALA / VIRODHARGALA DOCTRINE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T2 #8 — ARGALA / VIRODHARGALA DOCTRINE
+// ════════════════════════════════════════════════════════════════════════
 /**
  * Jaimini argala: planets in the 2nd, 4th, 5th, and 11th from any house
  * "intervene" in that house's results. Counter-intervention (virodhargala)
@@ -327,7 +327,7 @@ function computeArgala(planets, lagnaRashiId) {
   if (!planets || !lagnaRashiId) return null;
   const ARGALA_OFFSETS = { primary: [2, 4, 11], secondary: [5] };
   const VIRODHA_OFFSETS = { primary: [12, 10, 3], secondary: [9] };
-  // Map planet â†’ its rashi id and house
+  // Map planet → its rashi id and house
   const planetMap = {};
   for (const key of [...PLANET_LIST, 'rahu', 'ketu']) {
     const p = planets[key];
@@ -357,7 +357,7 @@ function computeArgala(planets, lagnaRashiId) {
     }
     for (const v of virodhaPlanets) {
       const k = v.kind === 'primary' ? 1 : 0.5;
-      // Virodha cancels argala â€” invert sign
+      // Virodha cancels argala — invert sign
       netScore += benefics.includes(v.planet) ? -k * 0.7 : k * 0.7;
     }
     perHouse[h] = {
@@ -378,9 +378,9 @@ function computeArgala(planets, lagnaRashiId) {
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T2 #10 â€” SATURN / JUPITER RETURN PRECISION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T2 #10 — SATURN / JUPITER RETURN PRECISION
+// ════════════════════════════════════════════════════════════════════════
 /**
  * Find the next exact return date for a slow planet by binary-searching
  * around the expected return age, looking for the moment the planet's
@@ -472,25 +472,25 @@ function computeReturns(birthDate, planets, asOfDate, lat, lng, settings) {
   return {
     ...result,
     interpretation: {
-      saturnReturn: 'Saturn returns (~age 29.5, 59, 88) mark structural life resets â€” career, identity, mortality awareness. Used by every clinical astrology study as the most validated event timer.',
-      jupiterReturn: 'Jupiter returns (~age 12, 24, 36, 48, 60) typically open expansion phases â€” education, marriage, children, philosophical awakening.',
+      saturnReturn: 'Saturn returns (~age 29.5, 59, 88) mark structural life resets — career, identity, mortality awareness. Used by every clinical astrology study as the most validated event timer.',
+      jupiterReturn: 'Jupiter returns (~age 12, 24, 36, 48, 60) typically open expansion phases — education, marriage, children, philosophical awakening.',
     },
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T3 #13 â€” BHAVA BALA (six-fold house strength)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T3 #13 — BHAVA BALA (six-fold house strength)
+// ════════════════════════════════════════════════════════════════════════
 /**
  * Six components per BPHS / Phaladeepika:
- *   1. Bhavadhipati Bala â€” strength of the house lord (from shadbala)
- *   2. Bhava Digbala â€” directional strength of house
- *   3. Bhava Drishti Bala â€” net aspectual support from benefics âˆ’ malefics
+ *   1. Bhavadhipati Bala — strength of the house lord (from shadbala)
+ *   2. Bhava Digbala — directional strength of house
+ *   3. Bhava Drishti Bala — net aspectual support from benefics − malefics
  *   4. Bhavayoga (occupants benefic vs malefic)
- *   5. Bhava Sthana Bala â€” kendra/trikona/dusthana baseline
- *   6. Karaka Bala â€” natural significator strength for the house
+ *   5. Bhava Sthana Bala — kendra/trikona/dusthana baseline
+ *   6. Karaka Bala — natural significator strength for the house
  *
- * Returns scores normalized to 0â€“100 per house.
+ * Returns scores normalized to 0–100 per house.
  */
 const HOUSE_BASELINE = {
   1: 70, 2: 55, 3: 45, 4: 65, 5: 65, 6: 30,
@@ -589,12 +589,12 @@ function computeBhavaBala(houses, planets, lagnaRashiId, planetStrengths) {
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T3 #14 â€” SADE SATI PHASE PRECISION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T3 #14 — SADE SATI PHASE PRECISION
+// ════════════════════════════════════════════════════════════════════════
 /**
  * Sade Sati = Saturn transiting the 12th, 1st, and 2nd from natal Moon
- * â€” a 7.5 year span. The three phases have distinct themes:
+ * — a 7.5 year span. The three phases have distinct themes:
  *   Phase 1 (12th): Loss/release, foreign exposure, sleep disturbance
  *   Phase 2 (1st):  Identity reconstruction (peak)
  *   Phase 3 (2nd):  Family/finance reorganization
@@ -632,7 +632,7 @@ function computeSadeSatiPhase(birthDate, asOfDate, lat, lng, settings) {
   const yearsToExit = remainingDeg / 12; // rough
 
   const interpretations = {
-    'Rising (Phase 1 of 3)': 'Loss-release energy. Old structures dissolve before new ones form. Sleep, money, and travel patterns shift. Avoid high-stakes commitments â€” practice acceptance.',
+    'Rising (Phase 1 of 3)': 'Loss-release energy. Old structures dissolve before new ones form. Sleep, money, and travel patterns shift. Avoid high-stakes commitments — practice acceptance.',
     'Peak (Phase 2 of 3)': 'Identity reconstruction. Most intense psychologically. Health, body weight, public image all undergo restructuring. Therapy, fitness, discipline all amplified.',
     'Setting (Phase 3 of 3)': 'Family / finance reorganization. Easier than peak but consolidation is required. Long-term debts, parental responsibilities, food/diet themes dominate.',
   };
@@ -650,12 +650,12 @@ function computeSadeSatiPhase(birthDate, asOfDate, lat, lng, settings) {
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T3 #15 â€” ECLIPSE TRIGGER DETECTOR
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T3 #15 — ECLIPSE TRIGGER DETECTOR
+// ════════════════════════════════════════════════════════════════════════
 /**
  * Find solar/lunar eclipses in the next 6 months and check if their
- * sidereal degree falls within Â±3Â° of any natal planet â€” those planets'
+ * sidereal degree falls within Â±3Â° of any natal planet — those planets'
  * significations are likely to "trigger" within 6 months of the eclipse.
  */
 function findNextEclipses(asOfDate, monthsAhead = 6, lat = 6.9271, lng = 79.8612, settings = {}) {
@@ -754,14 +754,14 @@ function computeEclipseTriggers(birthDate, planets, asOfDate, lat, lng, settings
     upcomingEclipses: eclipses.slice(0, 4),
     naturalTriggers: triggered.sort((a, b) => a.orb - b.orb).slice(0, 6),
     note: triggered.length > 0
-      ? `${triggered.length} natal planet(s) fall within Â±3Â° of an upcoming eclipse â€” significations of those planets become hot zones within Â±6 months of the eclipse date.`
-      : 'No natal planets fall within tight orb of upcoming eclipses â€” eclipse impact will be general/transit-only.',
+      ? `${triggered.length} natal planet(s) fall within Â±3Â° of an upcoming eclipse — significations of those planets become hot zones within Â±6 months of the eclipse date.`
+      : 'No natal planets fall within tight orb of upcoming eclipses — eclipse impact will be general/transit-only.',
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T1 #4 â€” LOCALITY-AWARE DASHA ACTIVATION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T1 #4 — LOCALITY-AWARE DASHA ACTIVATION
+// ════════════════════════════════════════════════════════════════════════
 /**
  * The current dasha lord activates a planet. But which house's results
  * actually fire depends on which house Jupiter and Saturn are currently
@@ -831,14 +831,14 @@ function computeLocalityDashaActivation(birthDate, planets, lagnaRashiId, vimsho
     transitAmplifiedHouses: transitAmplified,
     transitDampenedHouses: transitDampened,
     advisory: transitAmplified.length > 0
-      ? `Jupiter/Saturn currently transit house(s) ${transitAmplified.join(', ')} which the dasha lord ${mdLord} also activates â€” these life areas are in a rare double-activation window. Predictions touching those houses get +1 confidence tier.`
-      : `Dasha lord ${mdLord} activates house(s) ${activatedHouses.join(', ')}, but no major transit currently amplifies them â€” results manifest steadily without special acceleration.`,
+      ? `Jupiter/Saturn currently transit house(s) ${transitAmplified.join(', ')} which the dasha lord ${mdLord} also activates — these life areas are in a rare double-activation window. Predictions touching those houses get +1 confidence tier.`
+      : `Dasha lord ${mdLord} activates house(s) ${activatedHouses.join(', ')}, but no major transit currently amplifies them — results manifest steadily without special acceleration.`,
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T1 #2 â€” VARSHAPHAL CROSS-VALIDATION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T1 #2 — VARSHAPHAL CROSS-VALIDATION
+// ════════════════════════════════════════════════════════════════════════
 /**
  * Cross-reference dasha-based predictions with the current year's
  * Varshaphal (Tajaka) chart. A year flagged BOTH by dasha AND by
@@ -871,18 +871,18 @@ function computeVarshaphalCrossValidation(birthDate, lat, lng, asOfDate) {
       muddaDasha: (annual.muddaDasha || []).slice(0, 3).map(d => ({ lord: d.lord, days: d.days })),
       netScore,
       yearVerdict: netScore >= 3 ? 'Strong year' : netScore >= 1 ? 'Mildly favourable' : netScore <= -3 ? 'Difficult year' : netScore <= -1 ? 'Mildly challenging' : 'Mixed / neutral',
-      crossValidationRule: 'Predictions for current year that also align with this Tajaka verdict carry â˜…â˜…â˜… confidence; conflicts â†’ â˜… confidence and should be hedged.',
+      crossValidationRule: 'Predictions for current year that also align with this Tajaka verdict carry ★★★ confidence; conflicts → ★ confidence and should be hedged.',
     };
   } catch (e) {
     return null;
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T1 #3 â€” CONFIDENCE TIER (â˜… â˜…â˜… â˜…â˜…â˜…)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T1 #3 — CONFIDENCE TIER (★ ★★ ★★★)
+// ════════════════════════════════════════════════════════════════════════
 /**
- * Emit a per-section confidence map. Each section gets â˜… / â˜…â˜… / â˜…â˜…â˜…
+ * Emit a per-section confidence map. Each section gets ★ / ★★ / ★★★
  * based on (a) how many independent indicators converge, (b) lagna
  * stability, (c) D9 promise verification, (d) dasha-transit alignment.
  */
@@ -935,7 +935,7 @@ function buildSectionConfidenceTiers({
         reasons.push('Transit amplifies current dasha');
       }
       if (varshaphal && Math.abs(varshaphal.netScore) >= 3) {
-        // Very strong varshaphal verdict â€” predictions for the year carry weight
+        // Very strong varshaphal verdict — predictions for the year carry weight
         tier = Math.min(3, Math.max(tier, 2));
         reasons.push(`Varshaphal: ${varshaphal.yearVerdict}`);
       }
@@ -957,7 +957,7 @@ function buildSectionConfidenceTiers({
 
     tiers[sec] = {
       tier,
-      stars: 'â˜…'.repeat(tier) + 'â˜†'.repeat(3 - tier),
+      stars: '★'.repeat(tier) + '☆'.repeat(3 - tier),
       label: tier === 3 ? 'High Confidence' : tier === 2 ? 'Moderate Confidence' : 'Speculative',
       reasons,
     };
@@ -966,12 +966,12 @@ function buildSectionConfidenceTiers({
   return tiers;
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T3 #11 â€” KP FINE-TIMING LAYER
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T3 #11 — KP FINE-TIMING LAYER
+// ════════════════════════════════════════════════════════════════════════
 /**
  * Use the KP sub-lord layers to narrow event windows from
- * year (MD) â†’ month (BD) â†’ week (AD sub) â†’ day (sookshma).
+ * year (MD) → month (BD) → week (AD sub) → day (sookshma).
  * Surfaces the next 6 months of "hot" sub-period activations.
  */
 function computeKPFineTiming(birthDate, lat, lng, asOfDate) {
@@ -996,19 +996,19 @@ function computeKPFineTiming(birthDate, lat, lng, asOfDate) {
       currentRulingPlanets: ruling.ranked.slice(0, 3),
       strongestRuler: ruling.strongest,
       criticalCuspSubLords: criticalCusps,
-      fineTimingRule: 'Events happen when transit Moon/Sun activate the cusp sub-lord of the relevant house. The sub-lord acts as the "permission switch" â€” when transit dasha + sub-lord + ruling planet align, the event fires within days.',
+      fineTimingRule: 'Events happen when transit Moon/Sun activate the cusp sub-lord of the relevant house. The sub-lord acts as the "permission switch" — when transit dasha + sub-lord + ruling planet align, the event fires within days.',
     };
   } catch (e) {
     return null;
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// T3 #12 â€” NADI DISPOSITOR CHAIN VERIFIER
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
+// T3 #12 — NADI DISPOSITOR CHAIN VERIFIER
+// ════════════════════════════════════════════════════════════════════════
 /**
- * Trace dispositor chains for each planet â€” "lord of lord of lord..."
- * â€” until reaching a planet in its own sign or a fixed loop. The end
+ * Trace dispositor chains for each planet — "lord of lord of lord..."
+ * — until reaching a planet in its own sign or a fixed loop. The end
  * point ("activation") indicates which planet ultimately delivers
  * each natal planet's promise.
  */
@@ -1032,7 +1032,7 @@ function computeNadiDispositorChains(planets, lagnaRashiId) {
       if (!lord) break;
       // Self-disposit (planet in own sign) = final activation
       if (lord === current) {
-        chain.push('(in own sign â€” terminal activation)');
+        chain.push('(in own sign — terminal activation)');
         return { chain, terminal: current, terminalReason: 'own-sign self-activation', cyclic: false };
       }
       if (visited.has(lord)) {
@@ -1059,9 +1059,9 @@ function computeNadiDispositorChains(planets, lagnaRashiId) {
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
 // MASTER ENTRY POINT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════
 /**
  * Compute all accuracy enhancements for a chart in a single call. Designed
  * to be invoked from generateFullReport with already-computed planets/houses.
@@ -1070,13 +1070,13 @@ function computeNadiDispositorChains(planets, lagnaRashiId) {
  * @param {Date}   ctx.birthDate
  * @param {number} ctx.lat
  * @param {number} ctx.lng
- * @param {Object} ctx.planets       â€” getAllPlanetPositions output
- * @param {Object} ctx.navamsha      â€” buildNavamshaChart output
- * @param {Object} ctx.lagna         â€” getLagna output
+ * @param {Object} ctx.planets       — getAllPlanetPositions output
+ * @param {Object} ctx.navamsha      — buildNavamshaChart output
+ * @param {Object} ctx.lagna         — getLagna output
  * @param {Object} [ctx.planetStrengths]
  * @param {Object} [ctx.vimshottari]
  * @param {Object} [ctx.houses]
- * @param {Date}   [ctx.asOfDate]    â€” defaults to now
+ * @param {Date}   [ctx.asOfDate]    — defaults to now
  */
 function computeAccuracyEnhancements(ctx) {
   const {

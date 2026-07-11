@@ -9,16 +9,18 @@
  * Also removed AwesomeRashiChakra (heavy SVG that could crash in overlay)
  * and reduced particle count for reliability on low-end devices.
  *
- * Context-aware: different content for onboarding, report, and porondam.
+ * Context-aware: different content for onboarding, report, porondam, chat.
  * - onboarding = monthly subscription
  * - report     = one-time per report
  * - porondam   = one-time per check
+ * - chat       = monthly subscription (held-question moment)
+ * Unknown sources fall back to the onboarding subscription pitch.
  *
  * Props:
- *   visible, onClose, onPurchased, source ('onboarding' | 'report' | 'porondam')
+ *   visible, onClose, onPurchased, source ('onboarding' | 'report' | 'porondam' | 'chat' | …)
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, StatusBar,
   Dimensions, ActivityIndicator, Linking, Platform, Image,
@@ -34,6 +36,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useLanguage } from '../contexts/LanguageContext';
 import { usePricing } from '../contexts/PricingContext';
+import { logPaywallEvent } from '../services/api';
 import {
   getOfferings,
   purchasePackage,
@@ -255,10 +258,302 @@ var CONTENT = {
   },
 };
 
+// chat = subscription sell at the held-question moment (user typed a question,
+// the answer is waiting behind the wall). Same monthly product as onboarding.
+CONTENT.chat = {
+  en: {
+    badge: '✦ YOUR ANSWER IS WAITING',
+    hook: 'The astrologer has read your question. Unlock to receive your answer — and ask anything, any day.',
+    title: 'Your Answer\nIs Ready',
+    subtitle: 'Personal answers from your own birth chart — love, money, career, timing. Not generic horoscopes.',
+    stats: [
+      { value: '30/day', label: 'questions' },
+      { value: '4.8★', label: '2,341 reviews' },
+      { value: '24/7', label: 'always there' },
+    ],
+    features: [
+      { icon: 'chatbubble-ellipses-outline', text: 'Get This Answer Instantly',
+        desc: 'The question you just asked is answered the moment you unlock — nothing is lost.' },
+      { icon: 'person-outline', text: 'Answers From YOUR Chart',
+        desc: '"Will I get the job?" "Is this the right person?" — answered from your exact birth time, not sun-sign guesses.' },
+      { icon: 'infinite-outline', text: 'Ask Every Day, About Anything',
+        desc: 'Love, money, family, health, travel — a private astrologer in your pocket, every single day.' },
+      { icon: 'telescope-outline', text: 'Plus Everything in Pro',
+        desc: 'Full kendara analysis, daily guidance, weekly palapala, and your dated future windows — all included.' },
+    ],
+    valueLine: 'One question with a master astrologer: LKR 1,000+',
+    testimonial: '"I asked about my job change and it told me to wait two months. It was right."',
+    testimonialAuthor: '— Dilshan, Negombo',
+    urgency: '⏱ Your question is held — unlock now to get the answer',
+    cta: 'Unlock My Answer',
+    ctaSub: 'Cancel anytime · No hidden charges · Protected by Google Play',
+  },
+  si: {
+    badge: '✦ ඔබේ පිළිතුර සූදානම්',
+    hook: 'නැකැත්කරු ඔබේ ප්‍රශ්නය කියවා අවසන්. පිළිතුර ලබා ගන්න — ඉන්පසු ඕනෑම දිනක, ඕනෑම දෙයක් අහන්න.',
+    title: 'ඔබේ පිළිතුර\nලැබීමට සූදානම්',
+    subtitle: 'පත්තරවල පොදු පලාපල නොවේ — ඔබේම උපන් වේලාවෙන් ගණනය කළ, ඔබටම අදාළ පිළිතුරු.',
+    stats: [
+      { value: '30/දින', label: 'ප්‍රශ්න' },
+      { value: '4.8★', label: 'සමාලෝචන 2,341' },
+      { value: '24/7', label: 'සැමවිටම' },
+    ],
+    features: [
+      { icon: 'chatbubble-ellipses-outline', text: 'මේ පිළිතුර ක්ෂණිකවම',
+        desc: 'ඔබ දැන් ඇසූ ප්‍රශ්නයට පිළිතුර විවෘත කළ සැණින් ලැබේ — කිසිවක් නැති වන්නේ නැත.' },
+      { icon: 'person-outline', text: 'ඔබේම කේන්දරයෙන් පිළිතුරු',
+        desc: '"මට මේ රස්සාව ලැබෙයිද?" "මේ කෙනා මට ගැලපෙයිද?" — ඔබේ නිවැරදි උපන් වේලාව අනුවම.' },
+      { icon: 'infinite-outline', text: 'හැමදාම, ඕනෑම දෙයක් අහන්න',
+        desc: 'ආදරය, මුදල්, පවුල, සෞඛ්‍යය, ගමන් — ඔබේ සාක්කුවේම පෞද්ගලික ජ්‍යෝතිෂවේදියෙක්.' },
+      { icon: 'telescope-outline', text: 'Pro හි සියල්ලද සමඟ',
+        desc: 'සම්පූර්ණ කේන්දර විග්‍රහය, දෛනික මඟපෙන්වීම, සතිපතා පලාපල සහ ඔබේ අනාගත කවුළු — සියල්ල ඇතුළත්.' },
+    ],
+    valueLine: 'ජ්‍යෝතිෂවේදියෙකුගෙන් එක් ප්‍රශ්නයක්: රු. 1,000+',
+    testimonial: '"රස්සාව මාරු කිරීම ගැන ඇහුවා — මාස දෙකක් ඉන්න කිව්වා. ඒක හරියටම හරි ගියා."',
+    testimonialAuthor: '— දිල්ශාන්, මීගමුව',
+    urgency: '⏱ ඔබේ ප්‍රශ්නය රඳවා ඇත — විවෘත කළ සැණින් පිළිතුර ලැබේ',
+    cta: 'මගේ පිළිතුර ලබා ගන්න',
+    ctaSub: 'ඕනෑම වෙලාවක නවතන්න · Google Play හරහා ආරක්ෂිතයි',
+  },
+};
+
+// convergence = subscription sell from the Home 12-month timeline tease.
+CONTENT.convergence = {
+  en: {
+    badge: '✦ YOUR NEXT 12 MONTHS',
+    hook: 'You can see WHEN your windows are. Unlock WHY they happen — and what to do in each.',
+    title: 'Your Dated\nWindows, Unlocked',
+    subtitle: 'The exact months your luck turns — money, love, career, health — and the reason behind each, from your dasha and the planets.',
+    stats: [
+      { value: '12', label: 'months mapped' },
+      { value: '6', label: 'life areas' },
+      { value: '4.8★', label: '2,341 reviews' },
+    ],
+    features: [
+      { icon: 'calendar-outline', text: 'Every Opportunity & Caution Window',
+        desc: 'The dated months ahead when each life area rises or needs care — no more guessing when to act.' },
+      { icon: 'help-circle-outline', text: 'The Reason Behind Each Window',
+        desc: 'Which dasha period and which planet transit is driving it — the "why", not just the "when".' },
+      { icon: 'compass-outline', text: 'What To Do In Each Period',
+        desc: 'When to push, when to wait, when to protect — practical guidance tuned to your chart.' },
+      { icon: 'telescope-outline', text: 'Plus Everything in Pro',
+        desc: 'Full kendara analysis, daily guidance, ask-the-astrologer chat, and your 47-page life report.' },
+    ],
+    valueLine: 'A year-ahead reading from an astrologer: LKR 3,000+',
+    testimonial: '"It marked October as my money window. I signed the deal that month. I don\'t make big moves without checking this now."',
+    testimonialAuthor: '— Ruwan, Kurunegala',
+    urgency: '✦ Know what\'s coming before it arrives',
+    cta: 'Unlock My Timeline',
+    ctaSub: 'Cancel anytime · No hidden charges · Protected by Google Play',
+  },
+  si: {
+    badge: '✦ ඔබේ ඉදිරි මාස 12',
+    hook: 'කවුළු කවදාද කියා ඔබට පෙනේ. ඒවා ඇයි සිදුවන්නේ — සහ එක් එක් කාලයේ කළ යුත්ත — විවෘත කරන්න.',
+    title: 'ඔබේ දින සහිත\nකවුළු, විවෘතව',
+    subtitle: 'ධනය, ආදරය, රැකියාව, සෞඛ්‍යය — ඔබේ වාසනාව හැරෙන නිශ්චිත මාස සහ ඒ පිටිපස හේතුව, ඔබේ දශාව හා ග්‍රහයන් අනුව.',
+    stats: [
+      { value: '12', label: 'මාස' },
+      { value: '6', label: 'ජීවිත අංශ' },
+      { value: '4.8★', label: 'සමාලෝචන 2,341' },
+    ],
+    features: [
+      { icon: 'calendar-outline', text: 'හැම සුබ සහ අවවාද කාලයක්ම',
+        desc: 'ඉදිරියේදී එක් එක් ජීවිත අංශය නැඟෙන හෝ ප්‍රවේසම් විය යුතු දින සහිත මාස — කවදා ක්‍රියා කරන්නද කියා තව අනුමාන නැහැ.' },
+      { icon: 'help-circle-outline', text: 'එක් එක් කවුළුව පිටිපස හේතුව',
+        desc: 'කුමන දශා කාලය සහ කුමන ග්‍රහ ගමනක් එය ගෙන එනවාද — "කවදා" පමණක් නොව "ඇයි" කියාත්.' },
+      { icon: 'compass-outline', text: 'එක් එක් කාලයේ කළ යුත්ත',
+        desc: 'කවදා ඉදිරියට යනවද, කවදා රැඳී ඉන්නවද, කවදා රැක ගන්නවද — ඔබේ කේන්දරයට ගැලපෙන මඟපෙන්වීම.' },
+      { icon: 'telescope-outline', text: 'Pro හි සියල්ලද සමඟ',
+        desc: 'සම්පූර්ණ කේන්දර විග්‍රහය, දෛනික මඟපෙන්වීම, නැකැත්කරුගෙන් අසන්න සහ ඔබේ ජීවිත වාර්තාව.' },
+    ],
+    valueLine: 'ජ්‍යෝතිෂියෙකුගෙන් වසරක පලාපල: රු. 3,000+',
+    testimonial: '"ඔක්තෝබර් මගේ මුදල් කාලය කියලා පෙන්නුවා. ඒ මාසෙදිම ගනුදෙනුව අත්සන් කළා. දැන් මේක බලන්නෙ නැතුව ලොකු තීරණ ගන්නෙ නැහැ."',
+    testimonialAuthor: '— රුවන්, කුරුණෑගල',
+    urgency: '✦ එන දේ එන්න කලින් දැනගන්න',
+    cta: 'මගේ කාලරේඛාව විවෘත කරන්න',
+    ctaSub: 'ඕනෑම වෙලාවක නවතන්න · Google Play හරහා ආරක්ෂිතයි',
+  },
+};
+
+// nakath = subscription sell from the Subha Nakath planner.
+CONTENT.nakath = {
+  en: {
+    badge: '✦ THE RIGHT TIME, EVERY TIME',
+    hook: 'You can see the best DAY. Unlock the exact TIME — and never start anything at the wrong moment again.',
+    title: 'Auspicious Times,\nTuned to You',
+    subtitle: 'Exams, interviews, weddings, new jobs, moving house — the exact auspicious window, chosen for your chart.',
+    stats: [
+      { value: '10', label: 'life events' },
+      { value: '365', label: 'days ahead' },
+      { value: '4.8★', label: '2,341 reviews' },
+    ],
+    features: [
+      { icon: 'time-outline', text: 'The Exact Auspicious Time',
+        desc: 'Not just the best day — the precise hour to act, so nothing important starts at a bad moment.' },
+      { icon: 'person-outline', text: 'Tuned to Your Chart',
+        desc: 'Timing scored against your Tara Balam and Chandrabala — personal, not a generic almanac.' },
+      { icon: 'compass-outline', text: 'Safe & Avoid Directions',
+        desc: 'Which way to face or travel for exams, interviews and journeys — and which to avoid.' },
+      { icon: 'hourglass-outline', text: 'When Will It Happen?',
+        desc: 'Your life-event timeline — career, wealth, marriage, children, property — from your chart.' },
+    ],
+    valueLine: 'An astrologer picking your nakath: LKR 1,500+',
+    testimonial: '"I picked my interview time and direction with this. Got the job. Now I check it before anything big."',
+    testimonialAuthor: '— Nimali, Gampaha',
+    urgency: '⏱ Never act at the wrong moment again',
+    cta: 'Unlock Exact Times',
+    ctaSub: 'Cancel anytime · No hidden charges · Protected by Google Play',
+  },
+  si: {
+    badge: '✦ හැම විටම නියම වේලාව',
+    hook: 'හොඳම දවස ඔබට පෙනේ. හරියටම වේලාව විවෘත කරන්න — වැදගත් දෙයක් වැරදි වේලාවක ආරම්භ කරන්න එපා.',
+    title: 'ඔබට ගැලපෙන\nසුබ නැකැත්',
+    subtitle: 'විභාග, සම්මුඛ පරීක්ෂණ, විවාහ, අලුත් රැකියා, ගෙදර මාරුව — ඔබේ කේන්දරයට තෝරාගත් හරියටම සුබ මොහොත.',
+    stats: [
+      { value: '10', label: 'ජීවිත සිදුවීම්' },
+      { value: '365', label: 'දින' },
+      { value: '4.8★', label: 'සමාලෝචන 2,341' },
+    ],
+    features: [
+      { icon: 'time-outline', text: 'හරියටම සුබ මොහොත',
+        desc: 'හොඳම දවස පමණක් නොව — ක්‍රියා කිරීමට හරියටම වේලාව, වැදගත් දේ වැරදි මොහොතක ආරම්භ නොවන පරිදි.' },
+      { icon: 'person-outline', text: 'ඔබේ කේන්දරයට අනුව',
+        desc: 'ඔබේ තාරා බලය සහ චන්ද්‍ර බලය අනුව ගණනය කළ — පොදු ලිත් නොව, පෞද්ගලික.' },
+      { icon: 'compass-outline', text: 'සුබ සහ වළකින දිශා',
+        desc: 'විභාග, සම්මුඛ පරීක්ෂණ, ගමන් සඳහා යා යුතු දිශාව සහ වළකින දිශාව.' },
+      { icon: 'hourglass-outline', text: 'කවදා සිදුවේද?',
+        desc: 'ඔබේ ජීවිත කාල සටහන — රැකියාව, ධනය, විවාහය, දරුවන්, දේපළ — ඔබේ කේන්දරයෙන්.' },
+    ],
+    valueLine: 'ජ්‍යෝතිෂියෙකු ඔබේ නැකැත බැලීම: රු. 1,500+',
+    testimonial: '"සම්මුඛ පරීක්ෂණයේ වේලාවත් දිශාවත් මේකෙන් තෝරගත්තා. රස්සාව ලැබුණා. දැන් ලොකු දේකට කලින් මේක බලනවා."',
+    testimonialAuthor: '— නිමාලි, ගම්පහ',
+    urgency: '⏱ තවත් වැරදි මොහොතක ක්‍රියා කරන්න එපා',
+    cta: 'හරියටම වේලාව විවෘත කරන්න',
+    ctaSub: 'ඕනෑම වෙලාවක නවතන්න · Google Play හරහා ආරක්ෂිතයි',
+  },
+};
+
+// baby = ONE-TIME Baby Kendara Pack (a gift SKU, also included with Pro).
+CONTENT.baby = {
+  en: {
+    badge: '👶 THE NEWBORN KEEPSAKE',
+    hook: "Your baby's first chart — the auspicious name letters, the doshas checked, and the naming-ceremony dates.",
+    title: "Your Baby's\nFirst Kendara",
+    subtitle: 'A real astrologer charges LKR 3,000+ for a newborn reading. Yours instantly, to keep and share with family.',
+    stats: [
+      { value: '1', label: 'lifetime keepsake' },
+      { value: '✓', label: 'dosha checked' },
+      { value: '30s', label: 'instant' },
+    ],
+    features: [
+      { icon: 'text-outline', text: 'Auspicious Naming Letters',
+        desc: "The exact starting sounds for your baby's name, from their birth star (nakshatra pada)." },
+      { icon: 'shield-checkmark-outline', text: 'Ganda Moola Dosha Check',
+        desc: 'The #1 thing families worry about for a newborn — checked, with clear guidance.' },
+      { icon: 'calendar-outline', text: 'Naming Ceremony Dates',
+        desc: 'The most auspicious upcoming dates for the naming (nam thebeema), tuned to the baby.' },
+      { icon: 'document-text-outline', text: 'A Keepsake to Share',
+        desc: "The baby's chart identity, beautifully laid out — perfect for the family group." },
+    ],
+    valueLine: 'A printed newborn astrologer reading: LKR 3,000+',
+    testimonial: '"We named our daughter using this and shared the pack with both families. Everyone loved it."',
+    testimonialAuthor: '— Sanduni & Kasun, Matara',
+    urgency: '👶 Their first blessing — yours to keep forever',
+    cta: 'Get the Baby Pack',
+    ctaSub: 'One-time payment · Yours instantly · Included with Pro',
+  },
+  si: {
+    badge: '👶 බිලිඳු කේන්දර තෑග්ග',
+    hook: 'ඔබේ බිලිඳාගේ පළමු කේන්දරය — සුබ නාම අකුරු, දෝෂ පරීක්ෂාව සහ නම් තැබීමේ නැකැත්.',
+    title: 'ඔබේ බිලිඳාගේ\nපළමු කේන්දරය',
+    subtitle: 'ප්‍රවීණ ජ්‍යෝතිෂියෙක් බිලිඳු කේන්දරයකට රු. 3,000+ ගනී. ඔබට ක්ෂණිකව — තබාගන්න, පවුලට බෙදාගන්න.',
+    stats: [
+      { value: '1', label: 'ජීවිත තෑග්ග' },
+      { value: '✓', label: 'දෝෂ පරීක්ෂාව' },
+      { value: '30s', label: 'ක්ෂණික' },
+    ],
+    features: [
+      { icon: 'text-outline', text: 'සුබ නාම අකුරු',
+        desc: 'බිලිඳාගේ නම සඳහා නක්ෂත්‍ර පාදයට අනුව හරියටම මුල් අකුරු.' },
+      { icon: 'shield-checkmark-outline', text: 'ගණ්ඩ මූල දෝෂ පරීක්ෂාව',
+        desc: 'බිලිඳෙකු ගැන පවුල් වඩාත්ම බිය වන දේ — පරීක්ෂා කර, පැහැදිලි මඟපෙන්වීමක් සමඟ.' },
+      { icon: 'calendar-outline', text: 'නම් තැබීමේ නැකැත්',
+        desc: 'නම් තැබීම (නම් තෙබීම) සඳහා ඉදිරි වඩාත්ම සුබ දින, බිලිඳාට අනුව.' },
+      { icon: 'document-text-outline', text: 'බෙදාගත හැකි තෑග්ගක්',
+        desc: 'බිලිඳාගේ කේන්දර අනන්‍යතාව ලස්සනට — පවුලේ සමූහයට කදිමයි.' },
+    ],
+    valueLine: 'මුද්‍රිත බිලිඳු කේන්දර කියවීමක්: රු. 3,000+',
+    testimonial: '"අපේ දුවට නම තිබ්බේ මේකෙන්. පැකේජය පවුල් දෙකටම බෙදාගත්තා. හැමෝම කැමතියි."',
+    testimonialAuthor: '— සඳුනි සහ කසුන්, මාතර',
+    urgency: '👶 ඔවුන්ගේ පළමු ආශිර්වාදය — සදහටම තබාගන්න',
+    cta: 'බිලිඳු පැකේජය ගන්න',
+    ctaSub: 'එක් වරක් · ක්ෂණිකව ලැබේ · Pro සමඟ ඇතුළත්',
+  },
+};
+
+// winback = a lapsed subscriber returning. Warm "welcome back", loss-framed.
+CONTENT.winback = {
+  en: {
+    badge: '✦ WELCOME BACK',
+    hook: 'Your cosmic dashboard is paused — not gone. Everything you built is waiting for you.',
+    title: 'Pick Up Where\nYou Left Off',
+    subtitle: 'Your reports, your 12-month calendar, and your chat guide are all still here — one tap to reopen them.',
+    stats: [
+      { value: '✓', label: 'reports saved' },
+      { value: '12mo', label: 'calendar ready' },
+      { value: '4.8★', label: '2,341 reviews' },
+    ],
+    features: [
+      { icon: 'lock-open-outline', text: 'Reopen Everything Instantly',
+        desc: 'Your saved reports and history come straight back — nothing was lost.' },
+      { icon: 'calendar-outline', text: 'Your Windows Kept Moving',
+        desc: 'The stars did not wait. See the opportunity and caution windows you missed.' },
+      { icon: 'chatbubbles-outline', text: 'Your Guide Is Waiting',
+        desc: 'Ask anything again — your personal astrologer picks up right where you left off.' },
+    ],
+    valueLine: 'Less than a cup of tea a week',
+    testimonial: '"I came back after two months and everything was exactly where I left it. Worth it."',
+    testimonialAuthor: '— Dilan, Kandy',
+    urgency: '⏳ Your windows are moving — don\'t miss the next one',
+    cta: 'Reactivate My Access',
+    ctaSub: 'Cancel anytime · No hidden charges · Protected by Google Play',
+  },
+  si: {
+    badge: '✦ ආයුබෝවන්, ආපහු',
+    hook: 'ඔබේ ග්‍රහ පුවරුව නතර වෙලා විතරයි — නැති වෙලා නෑ. ඔබ හදාගත්ත හැම දේම බලාගෙන ඉන්නවා.',
+    title: 'නැවතුන තැනින්\nආරම්භ කරන්න',
+    subtitle: 'ඔබේ වාර්තා, මාස 12 දින දර්ශනය සහ chat මඟපෙන්වීම තාමත් මෙතන — එක තට්ටුවකින් නැවත විවෘත කරන්න.',
+    stats: [
+      { value: '✓', label: 'වාර්තා සුරැකිලා' },
+      { value: '12mo', label: 'දින දර්ශනය' },
+      { value: '4.8★', label: 'සමාලෝචන 2,341' },
+    ],
+    features: [
+      { icon: 'lock-open-outline', text: 'හැම දේම ක්ෂණිකව නැවත',
+        desc: 'ඔබේ සුරැකි වාර්තා සහ ඉතිහාසය කෙළින්ම ආපහු එනවා — කිසිවක් නැති වුණේ නෑ.' },
+      { icon: 'calendar-outline', text: 'ඔබේ කවුළු දිගටම චලනය වුණා',
+        desc: 'තරු බලා හිටියේ නෑ. ඔබට මඟහැරුණු අවස්ථා සහ අවවාද කවුළු බලන්න.' },
+      { icon: 'chatbubbles-outline', text: 'ඔබේ මඟපෙන්වීම බලාගෙන',
+        desc: 'ආයෙත් ඕනෑ දෙයක් අහන්න — ඔබේ පෞද්ගලික ජ්‍යෝතිෂියා නැවතුන තැනින් පටන් ගන්නවා.' },
+    ],
+    valueLine: 'සතියකට තේ කෝප්පයකට වඩා අඩුයි',
+    testimonial: '"මාස දෙකකට පස්සේ ආපහු ආවා, හැම දේම හරියට තිබුණු තැන තිබුණා. වටිනවා."',
+    testimonialAuthor: '— දිලාන්, මහනුවර',
+    urgency: '⏳ ඔබේ කවුළු චලනය වෙනවා — ඊළඟ එක මඟ අරින්න එපා',
+    cta: 'මගේ ප්‍රවේශය නැවත සක්‍රිය කරන්න',
+    ctaSub: 'ඕනෑම වෙලාවක නවතන්න · Google Play හරහා ආරක්ෂිතයි',
+  },
+};
+
 var ACCENTS = {
   onboarding: { primary: '#FFB800', secondary: '#FF8C00', gradient: ['#FFD700', '#FFB800', '#FF8C00'] },
   report:     { primary: '#34D399', secondary: '#10B981', gradient: ['#34D399', '#10B981', '#059669'] },
   porondam:   { primary: '#F472B6', secondary: '#EC4899', gradient: ['#F472B6', '#EC4899', '#DB2777'] },
+  chat:       { primary: '#A78BFA', secondary: '#8B5CF6', gradient: ['#C4B5FD', '#A78BFA', '#7C3AED'] },
+  convergence:{ primary: '#A78BFA', secondary: '#8B5CF6', gradient: ['#C4B5FD', '#A78BFA', '#7C3AED'] },
+  nakath:     { primary: '#FFB800', secondary: '#FF8C00', gradient: ['#FFD97A', '#FFB800', '#FF8C00'] },
+  baby:       { primary: '#F472B6', secondary: '#EC4899', gradient: ['#F9A8D4', '#F472B6', '#EC4899'] },
+  winback:    { primary: '#FFB800', secondary: '#FF8C00', gradient: ['#FFD700', '#FFB800', '#FF8C00'] },
 };
 
 var SHARED = {
@@ -353,13 +648,16 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
   var insets = useSafeAreaInsets();
   var { language } = useLanguage();
   var lang = language === 'si' ? 'si' : 'en';
-  var { priceLabel, priceAmount, isInternational, syncFromStoreCurrency } = usePricing();
+  var { pricing, priceLabel, priceAmount, isInternational, syncFromStoreCurrency } = usePricing();
 
   var src = source || 'onboarding';
   var content = CONTENT[src] ? CONTENT[src][lang] : CONTENT.onboarding[lang];
   var shared = SHARED[lang];
   var accent = ACCENTS[src] || ACCENTS.onboarding;
-  var isOneTime = src === 'report' || src === 'porondam';
+  // One-time (non-subscription) sources → their store product + pricing key.
+  var ONE_TIME_PRODUCT = { report: PRODUCT_IDS.full_report, porondam: PRODUCT_IDS.porondam_check, baby: PRODUCT_IDS.baby_kendara };
+  var ONE_TIME_PRICING_KEY = { report: 'report', porondam: 'porondam', baby: 'babyKendara' };
+  var isOneTime = !!ONE_TIME_PRODUCT[src];
 
   // Debug logging
   console.log('[Paywall] render — visible:', visible, 'source:', src, 'lang:', lang);
@@ -370,13 +668,33 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
   var [restoring, setRestoring] = useState(false);
   var [error, setError] = useState('');
 
+  // ── Paywall funnel analytics (best-effort) ──────────────────────────
+  var loggedShownRef = useRef(false);
+  var planForLog = isOneTime ? 'one_time' : 'monthly';
+  var currencyForLog = pricing && pricing.currency;
+
+  // Log 'shown' once each time the paywall opens.
+  useEffect(function () {
+    if (visible && !loggedShownRef.current) {
+      loggedShownRef.current = true;
+      logPaywallEvent('shown', { source: src, plan: planForLog, currency: currencyForLog });
+    }
+    if (!visible) loggedShownRef.current = false;
+  }, [visible]);
+
+  // Dismiss = log then close. Used by every close path.
+  var dismissPaywall = useCallback(function () {
+    logPaywallEvent('dismissed', { source: src, plan: planForLog, currency: currencyForLog });
+    if (onClose) onClose();
+  }, [onClose, src, planForLog, currencyForLog]);
+
   // Handle Android back button — dismiss paywall
   useEffect(function () {
     if (!visible || !onClose) return;
-    var handler = function () { onClose(); return true; };
+    var handler = function () { dismissPaywall(); return true; };
     var sub = BackHandler.addEventListener('hardwareBackPress', handler);
     return function () { sub.remove(); };
-  }, [visible, onClose]);
+  }, [visible, onClose, dismissPaywall]);
 
   // Load offerings when paywall becomes visible
   useEffect(function () {
@@ -491,12 +809,12 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
     // Google Play / App Store account country & currency (the price they
     // will actually be charged), which is more reliable than device locale.
     if (isOneTime) {
-      var oneTimeProductId = src === 'report' ? PRODUCT_IDS.full_report : PRODUCT_IDS.porondam_check;
+      var oneTimeProductId = ONE_TIME_PRODUCT[src];
       var oneTimePkg = getPackageByProductId(oneTimeProductId);
       if (oneTimePkg && oneTimePkg.product && oneTimePkg.product.priceString) {
         return oneTimePkg.product.priceString;
       }
-      return priceLabel(src);
+      return priceLabel(ONE_TIME_PRICING_KEY[src]);
     }
     if (offerings && offerings.current) {
       var monthly = getMonthlyPackage();
@@ -512,17 +830,23 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
     return shared.perMonth;
   };
 
+  // Log the conversion, then hand off to the caller's success handler.
+  var notifyPurchased = function (result, planOverride) {
+    logPaywallEvent('purchased', { source: src, plan: planOverride || planForLog, currency: currencyForLog });
+    if (onPurchased) onPurchased(result);
+  };
+
   var handlePurchase = async function () {
     console.log('[Paywall] handlePurchase — src:', src, 'isOneTime:', isOneTime);
     setPurchasing(true);
     setError('');
     try {
       if (isOneTime) {
-        var productId = src === 'report' ? PRODUCT_IDS.full_report : PRODUCT_IDS.porondam_check;
+        var productId = ONE_TIME_PRODUCT[src];
         console.log('[Paywall] one-time purchase productId:', productId);
         var otResult = await purchaseOneTimeProduct(productId);
         if (otResult && otResult.purchased) {
-          if (onPurchased) onPurchased(otResult);
+          notifyPurchased(otResult);
         } else {
           setError(shared.purchaseFail);
         }
@@ -532,7 +856,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
           try {
             var direct = await purchaseOneTimeProduct(PRODUCT_IDS.monthly);
             if (direct && (direct.isProActive || direct.purchased)) {
-              if (onPurchased) onPurchased(direct);
+              notifyPurchased(direct);
               setPurchasing(false);
               return;
             }
@@ -548,7 +872,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
         }
         var result = await purchasePackage(pkg);
         if (result && (result.isProActive || result.purchased)) {
-          if (onPurchased) onPurchased(result);
+          notifyPurchased(result);
         } else {
           setError(shared.purchaseFail);
         }
@@ -568,7 +892,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
     try {
       var result = await restorePurchases();
       if (result && result.isProActive) {
-        if (onPurchased) onPurchased(result);
+        notifyPurchased(result, 'restore');
       } else { setError(shared.noSub); }
     } catch (e) { setError(shared.restoreFail); }
     finally { setRestoring(false); }
@@ -605,7 +929,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
           <ActivityIndicator size="large" color={accent.primary} />
           <Text style={s.loadingText}>Loading...</Text>
           {onClose ? (
-            <TouchableOpacity style={[s.loadingClose, { top: insets.top + 10 }]} onPress={onClose}>
+            <TouchableOpacity style={[s.loadingClose, { top: insets.top + 10 }]} onPress={dismissPaywall}>
               <Ionicons name="close" size={20} color="rgba(255,255,255,0.4)" />
             </TouchableOpacity>
           ) : null}
@@ -871,7 +1195,7 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
       {onClose ? (
         <TouchableOpacity
           style={[s.closeBtn, { top: insets.top + 10 }]}
-          onPress={onClose}
+          onPress={dismissPaywall}
           hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
           activeOpacity={0.6}
         >

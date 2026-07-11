@@ -38,6 +38,7 @@ import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
 import AwesomeRashiChakra from '../../components/AwesomeRashiChakra';
+import CosmicIdentity from '../../components/CosmicIdentity';
 
 var SW = Dimensions.get('window').width;
 var SH = Dimensions.get('window').height;
@@ -479,7 +480,7 @@ function ProfileScreen() {
   var insets = useScreenInsets();
   var reduced = useReducedMotion();
   var lowEnd = useLowEndDevice();
-  var { priceLabel } = usePricing();
+  var { priceLabel, priceAmount } = usePricing();
   var {
     user, loading, isLoggedIn, subscription, isSubscribed,
     signOut, saveBirthData, activateSubscription, cancelSubscription, renewSubscription,
@@ -608,7 +609,7 @@ function ProfileScreen() {
     ? t('subCancelledAccessUntil').replace('{{date}}', subscriptionEndDate || '--')
     : subscription?.isLifetime
       ? t('subLifetime')
-      : t('subActive').replace('{{amount}}', subscription?.amount || '280');
+      : t('subActive').replace('{{amount}}', subscription?.amount || priceAmount('subscription'));
   var subscriptionStatusColor = subStatus === 'active'
     ? (subscriptionEndsAccess ? '#FBBF24' : '#34D399')
     : subStatus === 'expired' || subStatus === 'cancelled' || subStatus === 'payment_failed'
@@ -823,6 +824,13 @@ function ProfileScreen() {
                 color="#34D399"
               />
             </Animated.View>
+
+            {/* ── COSMIC IDENTITY — the full birth chart, relocated from Today ── */}
+            {birthData && (
+              <Animated.View entering={FadeInDown.delay(150).duration(700)} style={{ marginBottom: 14 }}>
+                <CosmicIdentity />
+              </Animated.View>
+            )}
 
             {/* ── SUBSCRIPTION ── */}
             <Animated.View entering={FadeInDown.delay(180).duration(700)}>

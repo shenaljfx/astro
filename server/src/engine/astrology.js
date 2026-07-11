@@ -26,6 +26,41 @@ const DEBUG_ASTRO = process.env.DEBUG_ASTRO === '1';
 const debugLog = DEBUG_ASTRO ? console.log.bind(console) : function(){};
 
 // ---------------------------------------------------------------------------
+// Ephemeris fallback observability
+// When Swiss Ephemeris fails and the engine drops to the lower-precision
+// Moshier/Meeus path (and mean lunar node instead of true node, ~1.7° off),
+// accuracy silently degrades for EVERY chart. Rather than hiding that in a
+// metadata field, we log it loudly and count it so health checks / alerting
+// can surface a native-module problem in production. A caller (e.g. server
+// bootstrap) may register an alert sink via onEphemerisFallback().
+// ---------------------------------------------------------------------------
+const _ephemerisFallbackStats = { count: 0, lastAt: null, lastContext: null, lastError: null };
+let _ephemerisFallbackSink = null;
+let _ephemerisFallbackWarned = false;
+
+function onEphemerisFallback(fn) { _ephemerisFallbackSink = typeof fn === 'function' ? fn : null; }
+function getEphemerisFallbackStats() { return { ..._ephemerisFallbackStats }; }
+
+function reportEphemerisFallback(context, err) {
+  _ephemerisFallbackStats.count += 1;
+  _ephemerisFallbackStats.lastAt = new Date().toISOString();
+  _ephemerisFallbackStats.lastContext = context;
+  _ephemerisFallbackStats.lastError = err && err.message ? err.message : String(err || 'unknown');
+  // Log the first occurrence at error level (so it is never missed), then
+  // throttle to avoid flooding — but keep counting.
+  if (!_ephemerisFallbackWarned || _ephemerisFallbackStats.count % 100 === 0) {
+    console.error(
+      `[astrology] ⚠ SWISS_EPHEMERIS_FALLBACK in ${context} — degraded precision ` +
+      `(Moshier/mean-node). count=${_ephemerisFallbackStats.count}. reason=${_ephemerisFallbackStats.lastError}`
+    );
+    _ephemerisFallbackWarned = true;
+  }
+  if (_ephemerisFallbackSink) {
+    try { _ephemerisFallbackSink({ context, ..._ephemerisFallbackStats }); } catch (_) { /* never let alerting break calc */ }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Swiss Ephemeris — high-precision planetary calculation engine (0.001 arcsec)
 // Replaces Moshier/Meeus for all critical calculations while keeping the old
 // libraries as fallback.
@@ -790,6 +825,7 @@ function getAllPlanetPositions(date, lat = 6.9271, lng = 79.8612, opts = {}) {
 
   } catch (_sweErr) {
     // -------- Fallback: astronomia + ephemeris (Moshier) --------
+    reportEphemerisFallback('getAllPlanetPositions', _sweErr);
     const jd = dateToJD(date);
     const T = (jd - 2451545.0) / 36525;
 
@@ -862,10 +898,10 @@ function getAllPlanetPositions(date, lat = 6.9271, lng = 79.8612, opts = {}) {
  *   - rashi (name)
  *   - planets (array of planet keys in this house)
  */
-function buildHouseChart(date, lat, lng) {
-  const lagna = getLagna(date, lat, lng);
+function buildHouseChart(date, lat, lng, opts = {}) {
+  const lagna = getLagna(date, lat, lng, opts);
   const lagnaRashiId = lagna.rashi.id; // 1-12
-  const planets = getAllPlanetPositions(date, lat, lng);
+  const planets = getAllPlanetPositions(date, lat, lng, opts);
 
   const houses = [];
   for (let i = 0; i < 12; i++) {
@@ -909,11 +945,11 @@ function buildHouseChart(date, lat, lng) {
  * 
  * Each sign is 30 degrees, divided into 9 navamshas of 3°20' (3.333deg)
  */
-function buildNavamshaChart(date, lat, lng) {
+function buildNavamshaChart(date, lat, lng, opts = {}) {
   // Get Lagna and Planets
-  const lagna = getLagna(date, lat, lng);
-  const planets = getAllPlanetPositions(date, lat, lng);
-  
+  const lagna = getLagna(date, lat, lng, opts);
+  const planets = getAllPlanetPositions(date, lat, lng, opts);
+
   // Helper to calc Navamsha Rashi
   const getNavamshaRashiId = (rashiId, degree) => {
     // 1. Find element group start
@@ -1946,7 +1982,13 @@ function getKarana(date, opts = {}) {
  * @param {number} lng - Longitude in degrees
  * @returns {object} Lagna rashi and degree
  */
-function getLagna(date, lat = 6.9271, lng = 79.8612) {
+function getLagna(date, lat = 6.9271, lng = 79.8612, opts = {}) {
+  // Honor the per-request ayanamsha. Previously the lagna was always computed
+  // in whatever global mode happened to be set (default Lahiri), so a chart
+  // requested in Krishnamurti/Raman got planets in one zodiac and a lagna in
+  // another — a divergence large enough to flip cusp-adjacent rising signs.
+  const settings = resolveCalculationSettings(opts);
+  return withAyanamshaMode(settings, () => {
   try {
     const jd = swe.dateToJulianDay(date);
     const houses = swe.calculateHouses(jd, lat, lng, SweHouseSystem.WholeSign);
@@ -1985,6 +2027,7 @@ function getLagna(date, lat = 6.9271, lng = 79.8612) {
       rashi: getRashi(siderealAsc),
     };
   }
+  });
 }
 
 /**
@@ -2541,11 +2584,14 @@ function predictMarriageTiming(birthInfo, lat, lng, opts = {}) {
     date = new Date(birthInfo);
   }
   const marriageSettings = resolveCalculationSettings(opts);
-  const houseChart = buildHouseChart(date, lat, lng);
+  // Thread the resolved settings — a non-Lahiri user must get marriage windows
+  // from the SAME zodiac as the rest of their report.
+  const houseChart = buildHouseChart(date, lat, lng, marriageSettings);
   const houses = houseChart.houses;
   const planets = houseChart.planets;
-  const navamsha = buildNavamshaChart(date, lat, lng);
-  const moonSidereal = toSidereal(getMoonLongitude(date), date);
+  const navamsha = buildNavamshaChart(date, lat, lng, marriageSettings);
+  const moonSidCalcMt = calculateSiderealPosition(date, SwePlanet.Moon, { ...marriageSettings, lat, lng });
+  const moonSidereal = moonSidCalcMt ? moonSidCalcMt.longitude : toSidereal(getMoonLongitude(date), date);
   const dasaPeriods = calculateVimshottariDetailed(moonSidereal, date);
   const lagnaName = houseChart.lagna?.rashi?.name || houses[0]?.rashi;
 
@@ -3730,36 +3776,58 @@ function calculateVimshottariDetailed(moonLongitude, birthDate) {
   const nakshatraSpan = 13.333333;
   const nakshatraIndex = Math.floor(moonLongitude / nakshatraSpan);
   const degreesInNakshatra = moonLongitude % nakshatraSpan;
-  const percentageRemaining = 1 - (degreesInNakshatra / nakshatraSpan);
+  const fractionElapsed = degreesInNakshatra / nakshatraSpan;
+  const percentageRemaining = 1 - fractionElapsed;
 
   const startDasaIndex = nakshatraIndex % 9;
+  const birthMs = birthDate.getTime();
 
   const periods = [];
-  let cursorMs = birthDate.getTime();
 
   for (let i = 0; i < 9; i++) {
     const idx = (startDasaIndex + i) % 9;
     const lord = DASA_LORDS[idx];
     const totalYears = DASA_YEARS[lord];
-    const duration = i === 0 ? totalYears * percentageRemaining : totalYears;
 
-    const mdStartMs = cursorMs;
-    const mdEndMs = cursorMs + duration * MS_PER_YEAR;
+    // ── Virtual (natural) mahadasha start ──────────────────────────────
+    // The birth mahadasha (i===0) began BEFORE birth — the native is born
+    // partway through it. We lay all antardashas/pratyantars on the FULL
+    // natural timeline anchored at that virtual start, then clip everything
+    // that completed before birth. This is the classical construction: at
+    // birth you are mid-sequence (e.g. inside Moon–Saturn), NOT at the start
+    // of a freshly-scaled Moon–Moon. The previous implementation scaled every
+    // antardasha by the remaining fraction and restarted from the MD lord's
+    // own antardasha, which mislaid every sub-period until the first
+    // mahadasha ended (often age 6–20).
+    let mdVirtualStartMs;
+    let mdStartMs;
+    let mdEndMs;
+    if (i === 0) {
+      const elapsedYears = totalYears * fractionElapsed;
+      mdVirtualStartMs = birthMs - elapsedYears * MS_PER_YEAR;
+      mdStartMs = birthMs;
+      mdEndMs = mdVirtualStartMs + totalYears * MS_PER_YEAR;
+    } else {
+      mdVirtualStartMs = periods[i - 1]._endMs;
+      mdStartMs = mdVirtualStartMs;
+      mdEndMs = mdStartMs + totalYears * MS_PER_YEAR;
+    }
 
-    // ── Antardashas (sub-periods) ──
+    // ── Antardashas (sub-periods) — full length from the virtual start ──
     const antardashas = [];
-    let adMs = mdStartMs;
+    let adMs = mdVirtualStartMs;
     for (let j = 0; j < 9; j++) {
       const adIdx = (idx + j) % 9;
       const adLord = DASA_LORDS[adIdx];
-      const adFullYears = (DASA_YEARS[lord] * DASA_YEARS[adLord]) / TOTAL_YEARS;
-      // First mahadasha is fractional → shrink antardashas proportionally
-      const adYears = i === 0 ? adFullYears * percentageRemaining : adFullYears;
+      const adYears = (totalYears * DASA_YEARS[adLord]) / TOTAL_YEARS;
       const adStartMs = adMs;
       const adEndMs = adMs + adYears * MS_PER_YEAR;
+      adMs = adEndMs;
 
-      // ── Pratyantar dashas (sub-sub) — each antardasha divided by Vimshottari ratios
-      // Pratyantar = (AD_years * PD_lord_years) / 120, starting from antardasha lord
+      // Skip antardashas that fully elapsed before birth (balance mahadasha).
+      if (adEndMs <= birthMs) continue;
+
+      // ── Pratyantar dashas (sub-sub), full length from AD virtual start ──
       const pratyantars = [];
       let pdMs = adStartMs;
       for (let k = 0; k < 9; k++) {
@@ -3768,23 +3836,23 @@ function calculateVimshottariDetailed(moonLongitude, birthDate) {
         const pdYears = (adYears * DASA_YEARS[pdLord]) / TOTAL_YEARS;
         const pdStartMs = pdMs;
         const pdEndMs = pdMs + pdYears * MS_PER_YEAR;
+        pdMs = pdEndMs;
+        if (pdEndMs <= birthMs) continue; // clip pre-birth pratyantars
         pratyantars.push({
           lord: pdLord,
-          start: new Date(pdStartMs).toISOString().split('T')[0],
+          start: new Date(Math.max(pdStartMs, birthMs)).toISOString().split('T')[0],
           endDate: new Date(pdEndMs).toISOString().split('T')[0],
           years: pdYears,
         });
-        pdMs = pdEndMs;
       }
 
       antardashas.push({
         lord: adLord,
-        start: new Date(adStartMs).toISOString().split('T')[0],
+        start: new Date(Math.max(adStartMs, birthMs)).toISOString().split('T')[0],
         endDate: new Date(adEndMs).toISOString().split('T')[0],
         years: adYears,
         pratyantars,
       });
-      adMs = adEndMs;
     }
 
     periods.push({
@@ -3792,13 +3860,14 @@ function calculateVimshottariDetailed(moonLongitude, birthDate) {
       lord,
       start: new Date(mdStartMs).toISOString().split('T')[0],
       endDate: new Date(mdEndMs).toISOString().split('T')[0],
-      years: duration,
+      years: i === 0 ? totalYears * percentageRemaining : totalYears,
       antardashas,
+      _endMs: mdEndMs, // internal: chains the next mahadasha's natural start
     });
-
-    cursorMs = mdEndMs;
   }
 
+  // Strip internal bookkeeping before returning.
+  periods.forEach(p => { delete p._endMs; });
   return periods;
 }
 
@@ -3973,7 +4042,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     }
   }
 
-  const lagna = getLagna(date, lat, lng);
+  const lagna = getLagna(date, lat, lng, calculationSettings);
   const lagnaName = lagna.rashi.name;
   const moonSidCalc = calculateSiderealPosition(date, SwePlanet.Moon, { ...calculationSettings, lat, lng });
   const sunSidCalc = calculateSiderealPosition(date, SwePlanet.Sun, { ...calculationSettings, lat, lng });
@@ -3982,10 +4051,10 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   const moonRashi = getRashi(moonSidereal);
   const sunRashi = getRashi(sunSidereal);
   const moonNakshatra = getNakshatra(moonSidereal);
-  const houseChart = buildHouseChart(date, lat, lng);
+  const houseChart = buildHouseChart(date, lat, lng, calculationSettings);
   const houses = houseChart.houses;
   const planets = houseChart.planets;
-  const navamsha = buildNavamshaChart(date, lat, lng);
+  const navamsha = buildNavamshaChart(date, lat, lng, calculationSettings);
   const drishtis = calculateDrishtis(houses);
   const ashtakavarga = calculateAshtakavarga(date, lat, lng);
   const bhavaChalit = buildBhavaChalit(date, lat, lng);
@@ -5307,7 +5376,9 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   // ══════════════════════════════════════════════════════════════
   // SECTION 6: LIFELONG FUTURE PREDICTIONS
   // ══════════════════════════════════════════════════════════════
-  const currentDate = new Date();
+  // "Current" honours opts.asOfDate so preview-as-of-date shifts the WHOLE
+  // report consistently (accuracy engine already did; these didn't).
+  const currentDate = opts.asOfDate ? new Date(opts.asOfDate) : new Date();
   const currentDasha = dasaPeriods.find(d => new Date(d.start) <= currentDate && new Date(d.endDate) >= currentDate);
   const currentAntardasha = currentDasha?.antardashas?.find(ad => new Date(ad.start) <= currentDate && new Date(ad.endDate) >= currentDate);
   const nextDasha = dasaPeriods.find(d => new Date(d.start) > currentDate);
@@ -5559,7 +5630,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
   // ══════════════════════════════════════════════════════════════
   // SECTION 9: COMPREHENSIVE TRANSIT OVERLAY (Gochara)
   // ══════════════════════════════════════════════════════════════
-  const today = new Date();
+  const today = opts.asOfDate ? new Date(opts.asOfDate) : new Date();
   const transitPlanets = getAllPlanetPositions(today);
   const transitSun = transitPlanets.sun;
   const transitJupiter = transitPlanets.jupiter;
@@ -9820,6 +9891,30 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     }
   })();
 
+  // ── CONVERGENCE CALENDAR (Tier: real predictions) ────────────
+  // Deterministic dated windows for the next 12 months from the PD ladder,
+  // Jupiter/Saturn gochara, eclipse triggers, yogi/avayogi and varshaphal.
+  // Feeds the `next12Months` narrative section + the mobile timeline UI.
+  const convergenceCalendar = (() => {
+    try {
+      const { buildConvergenceCalendar } = require('./convergenceCalendar');
+      return buildConvergenceCalendar({
+        birthDate: date,
+        lat, lng,
+        settings: calculationSettings,
+        houses,
+        lagna,
+        dasaPeriods,
+        accuracy: accuracyEnhancements,
+        asOfDate: opts.asOfDate ? new Date(opts.asOfDate) : new Date(),
+        months: 12,
+      });
+    } catch (e) {
+      console.warn('[generateFullReport] Convergence calendar failed:', e.message);
+      return null;
+    }
+  })();
+
   const localBirthTime = formatLocalDateTime(date, opts.timeContext || null);
 
   const calculationMetadata = buildCalculationMetadata({
@@ -9844,6 +9939,18 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       moonSign: personality.moonSign,
       sunSign: personality.sunSign,
       nakshatra: personality.nakshatra,
+      // ── Unknown birth time → Moon-chart (chandra lagna) framing ──
+      // When the birth time is unknown the ascendant is a coin-flip (a noon
+      // default), so the report must NOT present lagna-derived claims as fact.
+      // We expose the flag plus the Moon sign as the classical fallback
+      // ascendant, and the prompt layer downgrades lagna-driven sections.
+      _timeUnknown: !!opts.timeUnknown,
+      chandraLagna: opts.timeUnknown ? {
+        rashi: moonRashi.name,
+        rashiEnglish: moonRashi.english,
+        rashiSinhala: moonRashi.sinhala,
+        note: 'Birth time unknown — readings are anchored to the Moon sign, not the rising sign.',
+      } : null,
       // ── Enriched personal profile from Nakshatra ──
       gana: (() => {
         try {
@@ -9956,6 +10063,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
         employment, financial, timeline25, bestYearsRanking, remedies, health,
         foreignTravel, legal, education, luck, spiritual,
         surpriseInsights, familyPortrait, physicalProfile, attractionProfile,
+        next12Months: convergenceCalendar,
       };
 
       // Copy secondMarriage into marriage section for badge/UI direct access
@@ -10251,6 +10359,25 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
         console.warn('[FullReport] Jyotish section enrichment failed (non-fatal):', enrichErr.message);
       }
 
+      // ── Flat section-score map (post cross-validation) ────────────
+      // Tiny single source of truth for the mobile hero card + PDF gauges,
+      // so clients no longer need the heavy raw /full-report call or full
+      // per-section rawData persisted in Firestore.
+      allSections._sectionScores = {
+        marriage: getScore(marriage, 'seventhHouse.strengthScore'),
+        marriedLife: getScore(marriage, 'seventhHouse.strengthScore'),
+        career: getScore(career, 'tenthHouse.strengthScore'),
+        financial: getScore(financial, 'income.secondHouse.strengthScore', 'income.eleventhHouse.strengthScore', 'secondHouse.strengthScore'),
+        children: getScore(children, 'fifthHouse.strengthScore'),
+        health: getScore(health, 'sixthHouse.strengthScore', 'eighthHouse.strengthScore', 'firstHouse.strengthScore'),
+        education: getScore(education, 'fourthHouse.strengthScore', 'fifthHouse.strengthScore'),
+        foreignTravel: getScore(foreignTravel, 'ninthHouse.strengthScore', 'twelfthHouse.strengthScore'),
+        luck: getScore(luck, 'ninthHouse.strengthScore'),
+        spiritual: getScore(spiritual, 'twelfthHouse.strengthScore'),
+        realEstate: getScore(realEstate, 'fourthHouse.strengthScore'),
+        mentalHealth: getScore(mentalHealth, 'fourthHouse.strengthScore', 'moon.score'),
+      };
+
       return allSections;
     })(),
     // ── Nadi Astrology Significator System (Umang Taneja methodology) ──
@@ -10482,7 +10609,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
  * Returns a score 0-100 for each planet
  */
 function getPlanetStrengths(date, lat, lng, opts = {}) {
-  const { houses, lagna } = buildHouseChart(date, lat, lng);
+  const { houses, lagna } = buildHouseChart(date, lat, lng, opts);
   const planets = getAllPlanetPositions(date, lat, lng, opts);
   const lagnaName = lagna?.rashi?.name || 'Mesha';
   const drishtis = calculateDrishtis(houses);
@@ -11101,4 +11228,6 @@ module.exports = {
   getRahuLongitude,
   getRashiDrishti,
   buildJaiminiRashiDrishti,
+  onEphemerisFallback,
+  getEphemerisFallbackStats,
 };

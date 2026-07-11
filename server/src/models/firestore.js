@@ -46,8 +46,13 @@ function buildReportCacheKey(input = {}) {
     userReligion: input.userReligion || null,
     maritalStatus: input.maritalStatus || null,
     marriageYear: input.marriageYear || null,
+    careerField: input.careerField || null,
+    lifeEvents: Array.isArray(input.lifeEvents) && input.lifeEvents.length > 0
+      ? input.lifeEvents.map(e => ({ type: e?.type || null, year: e?.year || null }))
+      : null,
     calculationSettings: input.calculationSettings || {},
     asOfDate: input.asOfDate || null,
+    timeUnknown: input.timeUnknown === true,
     promptVersion: input.promptVersion || null,
     engineVersion: input.engineVersion || null,
     cacheVersion: AI_REPORT_CACHE_VERSION,
@@ -320,6 +325,8 @@ async function saveReport(uid, reportData) {
     sections: reportData.sections || [],
     rashiChart: reportData.rashiChart || null,
     birthInfo: normalizeReportBirthInfo(reportData.birthInfo),
+    sectionScores: reportData.sectionScores || null,
+    predictions: reportData.predictions || [],
     promptVersion: reportData.promptVersion || reportData.promptMetadata?.promptVersion || null,
     cacheKey: reportData.cacheKey || null,
     cacheVersion: reportData.cacheVersion || null,
@@ -987,6 +994,65 @@ async function getCachedBirthChart(uid) {
   }
 }
 
+// ─── PREDICTION LEDGER (Phase 3) ────────────────────────────────
+// Each report carries dated `predictions`. When a window closes the app
+// asks "did this happen?" and the answer lands here — the raw material
+// for calibrating the convergence-calendar rule weights over time.
+
+/**
+ * Record a user's outcome answer for one prediction.
+ * outcome ∈ 'yes' | 'no' | 'partial'
+ */
+async function savePredictionOutcome(uid, { reportId, predictionId, outcome, note = null, prediction = null } = {}) {
+  const db = getDb();
+  if (!db) return null;
+  if (!uid || !reportId || !predictionId || !['yes', 'no', 'partial'].includes(outcome)) return null;
+
+  try {
+    // Idempotent per (uid, report, prediction) — answering twice overwrites.
+    const docId = crypto.createHash('sha1').update(`${uid}:${reportId}:${predictionId}`).digest('hex');
+    const record = sanitizeForFirestore({
+      uid,
+      reportId,
+      predictionId,
+      outcome,
+      note: note ? String(note).slice(0, 300) : null,
+      domain: prediction?.domain || null,
+      type: prediction?.type || null,
+      tier: prediction?.tier || null,
+      score: prediction?.score ?? null,
+      source: prediction?.source || null,
+      drivers: prediction?.drivers || null,
+      windowStart: prediction?.windowStart || null,
+      windowEnd: prediction?.windowEnd || null,
+      respondedAt: new Date().toISOString(),
+    });
+    await db.collection(COLLECTIONS.PREDICTION_OUTCOMES).doc(docId).set(record, { merge: true });
+    return docId;
+  } catch (err) {
+    console.error('savePredictionOutcome error:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Outcomes already recorded by this user (to filter check-in prompts).
+ */
+async function getUserPredictionOutcomes(uid, limit = 100) {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    const snapshot = await db.collection(COLLECTIONS.PREDICTION_OUTCOMES)
+      .where('uid', '==', uid)
+      .limit(limit)
+      .get();
+    return snapshot.docs.map(d => d.data());
+  } catch (err) {
+    console.error('getUserPredictionOutcomes error:', err.message);
+    return [];
+  }
+}
+
 module.exports = {
   AI_REPORT_CACHE_VERSION,
   buildReportCacheKey,
@@ -997,6 +1063,8 @@ module.exports = {
   saveReport,
   getCachedReport,
   getUserReports,
+  savePredictionOutcome,
+  getUserPredictionOutcomes,
   savePromptAnalyticsSnapshot,
   saveReportFeedback,
   getPromptAnalyticsSummary,

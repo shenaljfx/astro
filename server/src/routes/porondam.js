@@ -17,15 +17,18 @@ const { chat } = require('../engine/chat');
 const { parseSLT } = require('../utils/dateUtils');
 const { parseBirthDateTime } = require('../services/timezone');
 const { optionalAuth } = require('../middleware/auth');
-const { phoneAuth, requireSubscription } = require('../middleware/subscription');
+const { phoneAuth, requireSubscription, requireSubscriptionOrCredit } = require('../middleware/subscription');
+const { consumeCredit } = require('../services/purchaseCredits');
 const { aiLimiter, aiUserLimiter, INPUT_LIMITS, sanitizeString } = require('../middleware/security');
 const { trackCost } = require('../services/costTracker');
-const { budgetGuard } = require('../services/budgetEnforcer');
+const { budgetGuard, assertBudgetAvailable } = require('../services/budgetEnforcer');
+const { recordAISuccess, recordAIFailure, getAIHealth } = require('../services/aiHealth');
 const { distributedAiUserLimiter } = require('../services/distributedRateLimit');
 const { saveVibeLink, getVibeLink, markVibeLinkUsed } = require('../services/vibeLinkStore');
 const { savePorondamResult, updatePorondamReport } = require('../models/firestore');
 const { getDb, COLLECTIONS } = require('../config/firebase');
-const { createOrResumeEntitlement, fulfillEntitlement, recordEntitlementError, restoreEntitlementRetry } = require('../middleware/entitlements');
+const { createOrResumeEntitlement, fulfillEntitlement, recordEntitlementError, restoreEntitlementRetry, checkPendingEntitlement } = require('../middleware/entitlements');
+const { getMonthlyUse, recordMonthlyUse, fairUseMessage } = require('../services/fairUse');
 
 // Enhanced engine (graceful — null if unavailable)
 let enhancedEngine = null;
@@ -90,7 +93,9 @@ function getProviderRetryAfter(error) {
  *   groom: { birthDate: "1993-07-22T14:00:00Z", lat: 7.2906, lng: 80.6337 }
  * }
  */
-router.post('/check', aiLimiter, optionalAuth, async (req, res) => {
+// Subscription or porondam-credit gated at ROUTE level (the mount exempts
+// this path so one-time Marriage Pack buyers can run their paid check).
+router.post('/check', aiLimiter, phoneAuth, requireSubscriptionOrCredit('porondam', 'porondam_check'), async (req, res) => {
   try {
     const { bride, groom, entitlementId } = req.body;
 
@@ -184,8 +189,27 @@ router.post('/check', aiLimiter, optionalAuth, async (req, res) => {
       magnetism = calculateMagnetism(brideBirthDate, groomBirthDate, brideLat, brideLng, groomLat, groomLng);
     } catch (e) { console.error('Magnetism calculation error:', e.message); }
 
+    // ── Relationship Archetype reading (deterministic, free, both languages) ──
+    // The motivating headline: a culturally-rooted couple-archetype + celebrated
+    // gifts + gravity-tiered growth edges + forward paths. Shares one vocabulary
+    // with the 12-lagna explorer (both derive from lagna signs).
+    let coupleReading = null;
+    try {
+      const { buildCoupleReading } = require('../engine/porondamArchetype');
+      const brideLagna = (brideChart && brideChart.lagnaRashiId) || (result.bride && result.bride.rashi && result.bride.rashi.id) || 1;
+      const groomLagna = (groomChart && groomChart.lagnaRashiId) || (result.groom && result.groom.rashi && result.groom.rashi.id) || 1;
+      const win = advancedPorondam && advancedPorondam.advanced && advancedPorondam.advanced.weddingWindows &&
+        advancedPorondam.advanced.weddingWindows.favorableWindows && advancedPorondam.advanced.weddingWindows.favorableWindows[0];
+      const weddingWindow = (win && typeof win.start === 'string' && /^\d{4}-/.test(win.start)) ? { start: win.start, end: win.end } : null;
+      coupleReading = {
+        en: buildCoupleReading(result, brideLagna, groomLagna, 'en', { weddingWindow }),
+        si: buildCoupleReading(result, brideLagna, groomLagna, 'si', { weddingWindow }),
+      };
+    } catch (e) { console.error('Couple reading (archetype) error:', e.message); }
+
     const responseData = {
       ...result,
+      coupleReading,
       advancedPorondam,
       brideChart,
       groomChart,
@@ -212,7 +236,13 @@ router.post('/check', aiLimiter, optionalAuth, async (req, res) => {
           advancedPorondam,
         });
         console.log(`[Porondam] Saved to Firestore: ${porondamId}`);
-      } catch (e) { console.error('Save porondam error:', e.message); }
+      } catch (e) {
+        // Persistence is best-effort — the calculation is already complete and
+        // is returned below regardless. Feed DB errors to the breaker so the
+        // rest of the app can fail fast under quota.
+        require('../services/firestoreCircuit').recordError(e);
+        console.error('Save porondam error (non-fatal, result still returned):', e.message);
+      }
     }
 
     res.json({
@@ -227,9 +257,39 @@ router.post('/check', aiLimiter, optionalAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/porondam/report/health
+ * The pre-payment gate. The app calls this BEFORE showing the paywall so a
+ * user is never charged when we already know the report writer is down
+ * (provider circuit tripped) or today's AI budget is exhausted.
+ * Always answers 200 with { available, reason?, retryInSeconds? } — a broken
+ * health check must never block a purchase, so unexpected errors fail open.
+ */
+router.get('/report/health', phoneAuth, async (req, res) => {
+  try {
+    const circuit = getAIHealth();
+    if (!circuit.available) {
+      return res.json({
+        available: false,
+        reason: circuit.reason,
+        retryInSeconds: circuit.retryInSeconds || 120,
+      });
+    }
+    try {
+      await assertBudgetAvailable('porondamReport', req.user?.uid || null);
+    } catch (budgetErr) {
+      return res.json({ available: false, reason: 'budget', retryInSeconds: 3600 });
+    }
+    return res.json({ available: true });
+  } catch (e) {
+    console.warn('[Porondam Health] check failed (failing open):', e.message);
+    return res.json({ available: true, degraded: true });
+  }
+});
+
+/**
  * POST /api/porondam/report
  * Generate an AI-written porondam report in the user's preferred language
- * 
+ *
  * Body:
  * {
  *   porondamData: { ... result from /check ... },
@@ -238,7 +298,7 @@ router.post('/check', aiLimiter, optionalAuth, async (req, res) => {
  *   groomName: "optional"
  * }
  */
-router.post('/report', aiLimiter, phoneAuth, requireSubscription, aiUserLimiter, distributedAiUserLimiter, budgetGuard('porondamReport'), async (req, res) => {
+router.post('/report', aiLimiter, phoneAuth, requireSubscriptionOrCredit('porondam', 'porondam_check'), aiUserLimiter, distributedAiUserLimiter, budgetGuard('porondamReport'), async (req, res) => {
   let entitlementId = null;
   let entitlementWasRetry = false;
   try {
@@ -254,11 +314,37 @@ router.post('/report', aiLimiter, phoneAuth, requireSubscription, aiUserLimiter,
     if (req.user && req.user.uid && req.user.authType !== 'anonymous') {
       try {
         const inputData = buildPorondamEntitlementInput(entitlementInput, porondamData, language);
+
+        // Pro fair-use: subscribers get generous monthly generation included.
+        // Enforce only for a genuinely NEW generation — a retry reuses the
+        // pending entitlement and must never be blocked or counted.
+        if (req.accessVia === 'subscription') {
+          const pending = await checkPendingEntitlement(req.user.uid, 'porondam', inputData);
+          if (!pending) {
+            const fu = await getMonthlyUse(req.user.uid, 'porondam');
+            if (fu.remaining <= 0) {
+              return res.status(429).json({
+                error: fairUseMessage('porondam', language),
+                code: 'FAIR_USE_LIMIT_MONTHLY',
+                limit: fu.limit,
+              });
+            }
+          }
+        }
+
         const ent = await createOrResumeEntitlement(req.user.uid, 'porondam', inputData);
         entitlementId = ent.id;
         entitlementWasRetry = !!ent.isRetry;
         if (ent.isRetry) {
           console.log(`[Porondam Report] ♻️ Retry — entitlement ${ent.id} (${ent.retriesLeft} retries left)`);
+        } else if (req.accessVia === 'credit' && req.purchaseCredit) {
+          // One-time Marriage Pack buyer starting a NEW generation — spend the
+          // credit. Retries of this entitlement stay free.
+          await consumeCredit(req.purchaseCredit.id, ent.id).catch((cErr) =>
+            console.warn('[Porondam Report] Credit consume failed (non-critical):', cErr.message));
+        } else if (req.accessVia === 'subscription') {
+          // New subscriber generation — count it toward the monthly fair-use cap.
+          await recordMonthlyUse(req.user.uid, 'porondam');
         }
       } catch (entErr) {
         if (entErr.code === 'ENTITLEMENT_EXHAUSTED') {
@@ -272,28 +358,34 @@ router.post('/report', aiLimiter, phoneAuth, requireSubscription, aiUserLimiter,
     // Payment handled by RevenueCat subscription — no token deduction needed
 
     const langInstruction = language === 'si'
-      ? `ඔබ ශ්‍රී ලංකාවේ ප්‍රසිද්ධ විවාහ ගැළපුම් උපදේශකයෙක්. මේ යුවලයාගේ ගැළපීම ගැන සිංහලෙන් ලියන්න.
+      ? `ඔබ ශ්‍රී ලංකාවේ ප්‍රසිද්ධ, හිතවත් විවාහ ගැළපුම් උපදේශකයෙක්. මේ යුවළගේ ගැළපීම ගැන සරල සිංහලෙන් ලියන්න.
 
-100% සිංහල වචන පමණක් — ඉංග්‍රීසි වචන සිංහල අකුරින් ලියන්න එපා ("use", "score", "remedy", "factor" වගේ ඉංග්‍රීසි words එපා).
-පොරොන්දම් ගැන කතා කරන විට එහි නම (උදා: දින පොරොන්දම, ගණ පොරොන්දම) සහ එහි ප්‍රායෝගික අදහස එකට පාවිච්චි කරන්න.
-උදාහරණ: 
-- "දින පොරොන්දම (දෛනික සමගිය)"
-- "නාඩි පොරොන්දම (සෞඛ්‍ය හා පවුල් පැවැත්ම)"
-- "මහේන්ද්‍ර පොරොන්දම (දිගුකාලීන සමෘද්ධිය)"
-sugar-coat කරන්න එපා. අවුල් තියෙනවා නම් කෙළින්ම කියන්න, ඒත් එදිනෙදා ජීවිතයේ ප්‍රායෝගික උපදෙස් දෙන්න.
-හිතවත් යාලුවෙක් කතා කරනවා වගේ ලියන්න.
-"AI" කියන වචනය කිසිම තැනක ලියන්න එපා. ඔබ AI බව කිසි විටෙක හෙළි නොකරන්න. ඔබ පළපුරුදු මිනිස් ජ්‍යෝතිෂවේදියෙකු ලෙස ලියන්න.
-ඉංග්‍රීසි වචන එකක්වත් භාවිතා නොකරන්න — Singlish ද එපා. 100% පිරිසිදු සිංහල පමණක්.`
-      : `You are a wise marriage compatibility advisor. Write a compatibility report for this couple based on the data below.
+භාෂා විලාසය — ඉතාම වැදගත්:
+- හිතවත් කෙනෙක් ළඟ ඉඳගෙන කතා කරනවා වගේ, උණුසුම්, සරල සිංහලෙන් ලියන්න. කෙටි වාක්‍ය. එදිනෙදා වචන. ජ්‍යෝතිෂය ගැන කිසිවක් නොදන්නා කෙනෙකුටත් හැම වාක්‍යයක්ම එක පාරින් තේරෙන්න ඕනෑ.
+- පොත්වල ඇති බර, ගාම්භීර වචන පාවිච්චි කරන්න එපා (උදා: "අන්‍යෝන්‍ය", "සුසංයෝගය", "පරිශීලනය" වගේ වචන එපා). ඒ වෙනුවට සරල වචන ලියන්න: "එකිනෙකාට", "ගැළපීම", "පාවිච්චිය".
+- "ඔබ දෙදෙනා" ලෙස ගෞරවයෙන් අමතන්න — "ඔයා" කියන්න එපා.
+- හැම ජ්‍යෝතිෂ වචනයක්ම මුල් වතාවේදීම වරහන් තුළ සරලව පැහැදිලි කරන්න. උදාහරණ:
+  - "දින පොරොන්දම (එකට ගෙවෙන දවසේ පහසුව බලන ලකුණ)"
+  - "නාඩි පොරොන්දම (දරුවන්ගේ සහ පවුලේ සෞඛ්‍යය බලන ලකුණ)"
+  - "නවාංශකය (විවාහ ජීවිතය ගැනම බලන කේන්දරය)"
+- හැම කරුණක්ම ඇත්ත ජීවිතයේ උදාහරණයකින් පැහැදිලි කරන්න — සල්ලි, කෑම වේල්, නෑදෑයන්, රැකියාවේ මහන්සිය, දරුවන් වගේ දේවල් ගැන.
+- 100% සිංහල වචන පමණයි — ඉංග්‍රීසි වචන සිංහල අකුරින් ලියන්නත් එපා ("use", "score", "remedy" වගේ words එපා). Singlish ද එපා.
+මෙම වාර්තාව ලියන්නේ ඉහත 'සම්බන්ධතා ආකෘතිය' වටා. මුලින්ම ඒ ආකෘතියෙන් යුවළගේ චරිතය උණුසුම්ව, දිරිගන්වන ලෙස හඳුන්වා දෙන්න. ඉන්පසු සැබෑ ශක්තීන් සමරන්න. පසුව බලාගත යුතු තැන් අවංකව කියන්න — බැරෑරුම් ඒවා බැරෑරුම් ලෙසම, පොඩි ඒවා මෘදුව — නමුත් කිසි විටෙක "නරකයි" කියා අවසන් නොකරන්න. හැම අභියෝගයක්ම ඉදිරි මගක් සමඟ අවසන් කරන්න: තේරුම් ගැනීම, සුබ මුහුර්තයක්, හෝ ශක්තීන් පාවිච්චි කිරීම. බැරෑරුම් සම්ප්‍රදායික ලකුණක් ගැන පළපුරුදු ජ්‍යෝතිෂවේදියෙකුගෙන් විමසන ලෙස යෝජනා කරන්න — නමුත් පූජා, ශාන්තිකර්ම, මන්ත්‍ර වැනි ආගමික දේ කිසිවක් නිර්දේශ නොකරන්න.
+"AI" කියන වචනය කිසිම තැනක ලියන්න එපා. ඔබ AI බව කිසි විටෙක හෙළි නොකරන්න. පළපුරුදු මිනිස් ජ්‍යෝතිෂවේදියෙකු ලෙස ලියන්න.`
+      : `You are a wise, kind marriage compatibility advisor. Write a compatibility report for this couple based on the data below.
 
 IDENTITY RULE: You are a professional human astrologer, NOT an AI. NEVER mention AI, machine learning, algorithms, language models, or that you are artificial in any way.
 
-ABSOLUTE LANGUAGE RULES:
-- When discussing the 7 factors, use both the traditional name and practical meaning (e.g., "Dina Porondam (Daily Harmony)").
+LANGUAGE STYLE — VERY IMPORTANT:
+- Write like a kind friend sitting with the couple. Short sentences. Everyday words. A reader with zero astrology knowledge must understand every line on first read.
+- Explain every astrology term in brackets the FIRST time it appears, e.g. "Dina Porondam (how easily your daily life fits together)", "Navamsha (the chart that looks at married life itself)".
+- Use real-life examples for every point — money, meals, in-laws, work stress, children.
+- Frame the ENTIRE report around the RELATIONSHIP ARCHETYPE above. OPEN by introducing who this couple is as a warm couple-character — never with a score.
+- Then celebrate their real strengths, then name what needs care HONESTLY — serious flags seriously, minor ones gently — but NEVER end on "this match is bad". Every challenge closes with a forward path: understanding each other, an auspicious wedding time, or leaning on strengths.
+- For a SIGNIFICANT traditional flag, suggest consulting an experienced astrologer — but do NOT prescribe religious rituals, poojas, shanthikarma, mantras or temple visits.
+- The traditional count is secondary context, not the headline.
 - NEVER mention AI, artificial intelligence, machine learning, or algorithms
-- Write EVERYTHING in English — no Sinhala words
-- Be HONEST and DIRECT — do not sugarcoat. If there are problems, say so clearly, but always provide remedies and practical advice.
-- Write like a wise friend giving advice — not a textbook.`;
+- Write EVERYTHING in English — no Sinhala words.`;
 
     const brideLabel = brideName || (language === 'si' ? 'මනාලිය' : 'Bride');
     const groomLabel = groomName || (language === 'si' ? 'මනාලයා' : 'Groom');
@@ -316,8 +408,20 @@ ABSOLUTE LANGUAGE RULES:
     const brideChartStr = formatChart(porondamData.brideChart, brideLabel);
     const groomChartStr = formatChart(porondamData.groomChart, groomLabel);
 
-    const prompt = `${langInstruction}
+    // ── Relationship Archetype frame (the headline the report is built around) ──
+    const cr = porondamData.coupleReading && (porondamData.coupleReading[language === 'si' ? 'si' : 'en'] || porondamData.coupleReading.en);
+    const archetypeBlock = (cr && cr.archetype) ? `
+═══ RELATIONSHIP ARCHETYPE — frame the ENTIRE report around this; it is the headline ═══
+- Archetype: "${cr.archetype.name}" — ${cr.archetype.essence}
+- Band: ${cr.archetype.bandLabel}
+- Celebrated strengths (open by honouring these): ${(cr.gifts || []).map(g => `${g.area} — ${g.text}`).join('  |  ') || '—'}
+- Growth edges (gravity-tiered — narrate serious ones seriously, gentle ones gently, NEVER as "bad"): ${(cr.nurture || []).map(n => `[${n.severity === 'significant' ? 'SIGNIFICANT' : 'gentle'}] ${n.area} — ${n.text}`).join('  |  ') || '—'}
+- Forward paths (close every challenge with these — GUIDANCE, never rituals): ${(cr.forwardPaths || []).map(p => p.text).join('  |  ') || '—'}
+════════════════════════════════════════════════════════════════════════
+` : '';
 
+    const prompt = `${langInstruction}
+${archetypeBlock}
 PORONDAM DATA:
 - Total Score: ${porondamData.totalScore}/${porondamData.maxPossibleScore} (${porondamData.percentage}%)
 - Rating: ${porondamData.rating}
@@ -419,6 +523,8 @@ IDENTITY RULE: You are a professional human astrologer. NEVER mention AI, machin
 
 LANGUAGE RULE: If writing in Sinhala, use ZERO English words — pure Sinhala only. If writing in English, use ZERO Sinhala/Sanskrit/Pali words (except the core Astrological terms like Porondam/Yoga names) — pure English only.
 
+SIMPLICITY RULE: Assume the couple knows nothing about astrology. Every technical term gets a one-line plain explanation in brackets the first time it appears. Short sentences, everyday words, and a real-life example for every major point.
+
 FORMAT RULES: Use Markdown formatting throughout:
 - Use ## for main section headings (e.g. ## 💍 The Big Picture)
 - Use ### for sub-sections
@@ -452,6 +558,8 @@ WRITE THE REPORT:
       timeout: 180000,
       thinkingBudget: 2048,
     });
+
+    recordAISuccess(); // provider answered — reset the pre-payment circuit
 
     // Save report to Firestore
     let savedPorondamId = porondamId || null;
@@ -506,6 +614,11 @@ WRITE THE REPORT:
     const isProviderTemporary = isTemporaryAIProviderError(error);
     const isProviderRateLimited = error?.code === 'AI_PROVIDER_RATE_LIMIT' || error?.statusCode === 429;
     const retryAfter = isProviderTemporary ? getProviderRetryAfter(error) : null;
+
+    // Feed the pre-payment circuit — only provider-side, temporary failures count.
+    if (isProviderTemporary) {
+      recordAIFailure(isProviderRateLimited ? 'AI_PROVIDER_RATE_LIMIT' : 'AI_PROVIDER_UNAVAILABLE', retryAfter);
+    }
 
     // ── Entitlement: record error (keeps status 'pending' for retry) ──
     if (entitlementId) {

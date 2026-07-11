@@ -59,14 +59,24 @@ const HIGH_STAKES_TIMING_SECTIONS = new Set([
   'luck',
 ]);
 const FUTURE_YEAR_RX = /\b((?:20|21)\d{2})\b/g;
-const TIMING_EVENT_RX = /\b(marriage|marry|wedding|spouse|child|children|baby|son|daughter|pregnancy|birth|born|career|job|promotion|business|property|home|vehicle|foreign|visa|settlement|travel|money|wealth|loss|investment|legal|court|health|illness|disease|risk|caution|period|window)\b/i;
-const TIMING_FRAME_RX = /\b(may|might|likely|suggests?|indicates?|points? to|around|approximately|roughly|window|period|phase|symbolic|symbolism|not a promise|probability|possible|potential|tends? to|can|could|chart-supported|chart shows|strongest|energy|caution)\b/i;
+// Event/frame/promise patterns exist per language. The English-only versions
+// left Sinhala reports — the primary market — completely unvalidated for
+// guaranteed-timing claims. Sinhala digits are Western, so year regexes work;
+// the surrounding event/hedge words needed native patterns.
+const TIMING_EVENT_RX = /\b(marriage|marry|wedding|spouse|child|children|baby|son|daughter|pregnancy|birth|born|career|job|promotion|business|property|home|vehicle|foreign|visa|settlement|travel|money|wealth|loss|investment|legal|court|health|illness|disease|risk|caution|period|window)\b|විවාහ|මංගල|සහකරු|සහකාරිය|සැමිය|බිරිඳ|දරුව|දරුවන්|දරුවෙක්|ගැබ්|රැකියා|රස්සාව|උසස්වීම|ව්‍යාපාර|දේපළ|ගෙයක්|ඉඩම|වාහන|විදේශ|වීසා|මුදල්|ධනය|පාඩුව|ආයෝජන|නඩු|උසාවි|සෞඛ්‍ය|රෝග|අවදානම|කාලය|කාල/;
+const TIMING_FRAME_RX = /\b(may|might|likely|suggests?|indicates?|points? to|around|approximately|roughly|window|period|phase|symbolic|symbolism|not a promise|probability|possible|potential|tends? to|can|could|chart-supported|chart shows|strongest|energy|caution)\b|පුළුවන්|හැකියි|හැකියාව|ඉඩකඩ|ඉඩ තියෙනවා|වගේ|විය හැකි|පෙනෙනවා|පෙන්නනවා|පෙන්වනවා|වටේ|පමණ|අවට|කාලසීමා|කාල රාමු|ශක්තිය|ලකුණ|සලකුණ|ප්‍රවණතා|බලාපොරොත්තු විය හැක/;
 const TIMING_PROMISE_PATTERNS = [
   { type: 'guaranteed_timing_language', rx: /\b(guaranteed|definitely|certainly|inevitably|unavoidably|fixed fate|will happen for sure)\b/i },
   { type: 'guaranteed_marriage_timing', rx: /\bwill\s+(?:definitely\s+)?marry\b/i },
   { type: 'guaranteed_child_timing', rx: /\b(?:child|children|baby|son|daughter).{0,60}\bwill\s+be\s+born\b|\bwill\s+have\s+(?:a\s+)?(?:child|children|baby|son|daughter)\b/i },
   { type: 'guaranteed_event_timing', rx: /\b(?:will|must)\s+(?:happen|occur|arrive|manifest|come true)\b/i },
   { type: 'guaranteed_life_outcome', rx: /\bwill\s+(?:settle abroad|go abroad|get a visa|win|lose|become rich|get rich|buy property|fall ill)\b/i },
+  // ── Sinhala guaranteed-language ──
+  // Deliberately narrow: "ස්ථිර" alone is normal Sinhala ("ස්ථිර රැකියාව" =
+  // permanent job) — only adverbial certainty forms and -මයි promise suffixes count.
+  { type: 'guaranteed_timing_language_si', rx: /අනිවාර්යයෙන්ම?|නියත වශයෙන්ම?|සහතික(?:යෙන්ම|වම)|විශ්වාසයෙන්ම|කිසිම සැකයක් නැ|සැකයක් නැතුවම/ },
+  { type: 'guaranteed_marriage_timing_si', rx: /(?:අනිවාර්යයෙන්|නියත වශයෙන්|සහතිකයෙන්)[^.!?\n]{0,60}විවාහ|විවාහ[^.!?\n]{0,60}(?:අනිවාර්යයි|සහතිකයි|වෙනවාමයි)/ },
+  { type: 'guaranteed_event_timing_si', rx: /වෙනවාමයි|ලැබෙනවාමයි|එනවාමයි|හම්බවෙනවාමයි|සිද්ධ වෙනවාමයි/ },
 ];
 
 // AI self-references / disclaimers — reader should never see these
@@ -74,6 +84,10 @@ const AI_DISCLOSURE_RX = /\b(as an? (AI|language model|assistant)|I (am|'m) (an?
 
 // Astrology-jargon leakage (tech terms that should be translated)
 const JARGON_RX = /\b(navamsha|navamsa|d9|d10|drishti|graha drishti|shadbala|ashtakavarga|vimshottari|dasha|antardasha|pratyantar|rahu|ketu|lagna|rashi|nakshatra|kendra|trikona|dushthana|kuja dosha|mangal dosha|kaal sarp|sade ?sati|dhanurdhar|exalted|debilitated|combust|retrograde|stationary|atmakaraka|darakaraka|arudha|moolatrikona|vargottama|ishta devata|paap|saumya|krura|asthamana)\b/i;
+// Sinhala astrology jargon the prompt explicitly bans. Conservative list —
+// compounds only where the standalone word has an everyday meaning
+// ("දෝෂ" = fault, "භාවය" = emotion/state, "කේන්දරය" is consumer-friendly).
+const JARGON_SI_RX = /ලග්නය|ලග්නයේ|මහ දශාව?|අන්තර් ?දශාව?|ප්‍රත්‍යන්තර|විම්ශෝත්තරී|නවාංශක|අෂ්ටකවර්ග|ෂඩ්බල|ගෝචරය?|ග්‍රහ දෘෂ්ටිය?|කුජ දෝෂය?|මංගල් දෝෂ|කාල සර්ප දෝෂ|සාඩේ සති|නීච භංග|රාජ යෝගය?|ධන යෝගය?|ආත්මකාරක|දාරකාරක|උපපද|ආරූඪ/;
 
 // Vague filler phrases that signal lazy writing — caught and flagged
 const VAGUE_PHRASES = [
@@ -152,7 +166,7 @@ function autoRedactImpossibleYears(narrative, birthDate) {
  *
  * @returns {Array<{type:string, snippet:string}>}
  */
-function detectRedFlags(narrative) {
+function detectRedFlags(narrative, language = 'en') {
   if (!narrative) return [];
   const flags = [];
   const sample = narrative.slice(0, 12000);
@@ -172,6 +186,10 @@ function detectRedFlags(narrative) {
   if (JARGON_RX.test(sample)) {
     const m = sample.match(JARGON_RX);
     flags.push({ type: 'astrology_jargon_leak', snippet: m && m[0] });
+  }
+  if ((language === 'si' || SINHALA_BLOCK_RX.test(sample)) && JARGON_SI_RX.test(sample)) {
+    const m = sample.match(JARGON_SI_RX);
+    flags.push({ type: 'astrology_jargon_leak_si', snippet: m && m[0] });
   }
   for (const rx of VAGUE_PHRASES) {
     if (rx.test(sample)) {
@@ -421,6 +439,64 @@ function validateTimingNarrativeSafety(narrative, sectionKey, promptClaims = nul
   };
 }
 
+const ANY_YEAR_RX = /\b((?:19|20|21)\d{2})\b/g;
+
+/**
+ * Collect every year that legitimately appears in the engine data / claim
+ * payload for this section (dasha timeline, timing windows, etc.).
+ */
+function collectSupportedYears(sectionData, promptClaims) {
+  const years = new Set();
+  const scan = (obj, depth = 0) => {
+    if (obj == null || depth > 8) return;
+    const t = typeof obj;
+    if (t === 'string' || t === 'number') {
+      const str = String(obj);
+      let m; ANY_YEAR_RX.lastIndex = 0;
+      while ((m = ANY_YEAR_RX.exec(str)) !== null) years.add(parseInt(m[1], 10));
+      return;
+    }
+    if (t === 'object') {
+      const values = Array.isArray(obj) ? obj : Object.values(obj);
+      for (const v of values) scan(v, depth + 1);
+    }
+  };
+  scan(sectionData);
+  scan(promptClaims);
+  return years;
+}
+
+/**
+ * Detect FABRICATED future years — specific years presented as event timing
+ * that trace to NO year in the section's source data (±1y tolerance). Closes
+ * the gap where an invented "your breakthrough comes in 2031" passed simply
+ * because 2031 was within the lifespan window. Pure detection: it flags for
+ * the self-critique pass, it does not itself rewrite the text.
+ */
+function detectFabricatedYears(narrative, sectionData, promptClaims) {
+  if (!narrative || !sectionData) return { suspect: [] };
+  const supported = collectSupportedYears(sectionData, promptClaims);
+  const currentYear = new Date().getUTCFullYear();
+  const suspect = [];
+  const seen = new Set();
+  for (const sentence of splitSentences(narrative.slice(0, 20000))) {
+    if (!TIMING_EVENT_RX.test(sentence)) continue; // only years used as event timing
+    let m; ANY_YEAR_RX.lastIndex = 0;
+    while ((m = ANY_YEAR_RX.exec(sentence)) !== null) {
+      const year = parseInt(m[1], 10);
+      if (year < currentYear) continue;          // past years → validation framing, skip
+      if (seen.has(year)) continue;
+      let ok = false;
+      for (const sy of supported) { if (Math.abs(sy - year) <= 1) { ok = true; break; } }
+      if (!ok) {
+        seen.add(year);
+        suspect.push({ type: 'fabricated_timing_year', snippet: String(year), sentence: sentence.slice(0, 240) });
+      }
+    }
+  }
+  return { suspect };
+}
+
 /**
  * Stage 2 — self-critique pass via an LLM call.
  * Reuses the project's Gemini Flash model with a tight, cheap fix-prompt.
@@ -479,17 +555,31 @@ ORIGINAL NARRATIVE:
 ${narrative}
 """`;
 
+  // Sinhala/Tamil need ~2-4× the tokens per character of English. A budget of
+  // narrative.length/2 silently truncated long si/ta rewrites mid-sentence.
+  const tokenBudget = (language === 'si' || language === 'ta')
+    ? Math.min(8192, Math.max(4096, narrative.length))
+    : Math.max(2048, Math.ceil(narrative.length / 2));
+
   try {
     const res = await callGemini(
       [
         { role: 'system', content: 'You are a precise editor that fixes factual implausibility, removes AI tells, translates jargon, and preserves voice perfectly.' },
         { role: 'user', content: fixPrompt },
       ],
-      Math.max(2048, Math.ceil(narrative.length / 2)),
+      tokenBudget,
       0.3
     );
     if (res && typeof res.text === 'string' && res.text.trim().length > 100) {
-      return { text: res.text.trim(), used: true };
+      const fixed = res.text.trim();
+      // Reject rewrites that look truncated: much shorter than the original
+      // or ending without terminal punctuation / closing markdown.
+      const tooShort = fixed.length < narrative.length * 0.55;
+      const endsCleanly = /[.!?।"'’”)\]*_-]$/.test(fixed) || /\n$/.test(res.text);
+      if (!tooShort && endsCleanly) {
+        return { text: fixed, used: true };
+      }
+      console.warn(`[validator] self-critique rewrite rejected (tooShort=${tooShort}, endsCleanly=${endsCleanly}) — keeping Stage-1 output`);
     }
   } catch (e) {
     // Swallow — return Stage-1 output as safe fallback
@@ -531,7 +621,7 @@ async function validateAndFixNarrative(narrative, birthDate, options = {}) {
   const stripped = stripAIDisclosures(stage1.text);
 
   // 3. Red-flag detection on the cleaned text
-  const redFlags = detectRedFlags(stripped.text);
+  const redFlags = detectRedFlags(stripped.text, language);
 
   // 4. Hallucination check
   const hallucination = sectionData
@@ -544,6 +634,11 @@ async function validateAndFixNarrative(narrative, birthDate, options = {}) {
 
   const timingSafety = validateTimingNarrativeSafety(stripped.text, sectionKey, promptClaims);
 
+  // 4b. Fabricated-year check — future timing years not traceable to source data
+  const fabricatedYears = sectionData
+    ? detectFabricatedYears(stripped.text, sectionData, promptClaims)
+    : { suspect: [] };
+
   // 5. Language purity
   const langCheck = detectLanguageImpurity(stripped.text, language);
 
@@ -554,6 +649,7 @@ async function validateAndFixNarrative(narrative, birthDate, options = {}) {
     hallucination.suspect.length * 3 +
     healthSafety.issues.length * 5 +
     timingSafety.issues.length * 4 +
+    fabricatedYears.suspect.length * 3 +
     (langCheck.ok ? 0 : 5) +
     stripped.removed * 2;
 
@@ -567,6 +663,7 @@ async function validateAndFixNarrative(narrative, birthDate, options = {}) {
       ...hallucination.suspect,
       ...healthSafety.issues,
       ...timingSafety.issues,
+      ...fabricatedYears.suspect,
       ...(langCheck.ok ? [] : [{ type: 'language_impurity', snippet: `English leaks: ${langCheck.leaks.slice(0, 5).join(', ')}` }]),
     ];
     const fix = await selfCritiqueAndFix({
@@ -588,6 +685,7 @@ async function validateAndFixNarrative(narrative, birthDate, options = {}) {
     hallucinations: hallucination,
     healthSafety,
     timingSafety,
+    fabricatedYears,
     language: langCheck,
     aiDisclosuresRemoved: stripped.removed,
     severity,
@@ -604,4 +702,5 @@ module.exports = {
   checkClaimsAgainstEngine,
   validateHealthNarrativeSafety,
   validateTimingNarrativeSafety,
+  detectFabricatedYears,
 };

@@ -134,10 +134,12 @@ function calculateGanaPorondam(brideNakshatra, groomNakshatra) {
     descriptionSinhala = 'එකම ගණයේ ගැලපීම - ඉතා උසස් ගැලපීමකි';
   } else if (
     (brideGana === 'Deva' && groomGana === 'Manushya') ||
-    (brideGana === 'Manushya' && groomGana === 'Deva') ||
-    (brideGana === 'Deva' && groomGana === 'Rakshasa') ||
-    (brideGana === 'Rakshasa' && groomGana === 'Deva')
+    (brideGana === 'Manushya' && groomGana === 'Deva')
   ) {
+    // Deva–Manushya is the only acceptable cross-gana pairing. Any pairing
+    // involving Rakshasa with a non-Rakshasa (Deva–Rakshasa OR Manushya–Rakshasa)
+    // is a classical incompatibility and scores zero. The previous code
+    // wrongly promoted Deva–Rakshasa — one of the worst pairings — to "moderate".
     score = 1;
     description = 'Moderate temperament compatibility';
     descriptionSinhala = 'සාමාන්‍ය ගණ ගැලපීමකි';
@@ -212,22 +214,41 @@ function calculateYoniPorondam(brideNakshatra, groomNakshatra) {
  */
 function calculateRashiPorondam(brideRashi, groomRashi) {
   const diff = Math.abs(brideRashi.id - groomRashi.id);
-  const normalizedDiff = Math.min(diff, 12 - diff);
+  const normalizedDiff = Math.min(diff, 12 - diff); // 0..6 (fold to nearest)
 
   let score = 0;
   let description = '';
   let descriptionSinhala = '';
+  let isDosha = false;
+  let severity = null;
 
-  // 1, 7 (kendras), 5, 9 (trikonas) are good
-  if ([1, 5, 7, 9].includes(normalizedDiff + 1) || normalizedDiff === 0) {
+  // normalizedDiff maps to the sign relationship between the two Moon signs:
+  //   0 → same sign, 1 → 2/12, 2 → 3/11, 3 → 4/10 (kendra),
+  //   4 → 5/9 (trikona), 5 → 6/8 (shadashtaka), 6 → 7th (opposition).
+  // The previous logic did `[1,5,7,9].includes(normalizedDiff+1)` which never
+  // matched 9 and let the 6/8 shadashtaka fall through to a "moderate" 1 — the
+  // single worst combination scoring as average with no warning.
+  if (normalizedDiff === 5) {
+    // Shadashtaka (6-8) — classical hard flag.
+    score = 0;
+    isDosha = true;
+    severity = 'high';
+    description = '6-8 relationship (Shadashtaka) - the most challenging sign match; friction in health and harmony';
+    descriptionSinhala = '6-8 සම්බන්ධය (ෂඩාෂ්ටක) - රාශි ගැලපීම්වලින් වඩාත්ම දුෂ්කරයි; සෞඛ්‍යයට හා සමඟියට බලපායි';
+  } else if (normalizedDiff === 1) {
+    // Dwirdwadasha (2-12) — financial/expenditure concern.
+    score = 0;
+    isDosha = true;
+    severity = 'moderate';
+    description = '2-12 relationship (Dwirdwadasha) - concerns around finances and expenditure';
+    descriptionSinhala = '2-12 සම්බන්ධය (ද්විර්ද්වාදශ) - මූල්‍ය හා වියදම් සම්බන්ධ ගැටළු';
+  } else if (normalizedDiff === 0 || normalizedDiff === 3 || normalizedDiff === 4 || normalizedDiff === 6) {
+    // Same sign, kendra (4/10), trikona (5/9), or 7th — emotionally harmonious.
     score = 2;
     description = 'Good sign compatibility - emotional harmony';
     descriptionSinhala = 'යහපත් රාශි ගැලපීමක් - මානසික එකඟතාවය තියෙනවා';
-  } else if ([2, 12].includes(normalizedDiff + 1)) {
-    score = 0;
-    description = '2-12 relationship - financial concerns';
-    descriptionSinhala = '2-12 සම්බන්ධතාවය - මූල්‍යමය ගැටළු තියෙනවාි විය පුළුවන්';
   } else {
+    // 3/11 relationship — workable but not ideal.
     score = 1;
     description = 'Moderate sign compatibility';
     descriptionSinhala = 'සාමාන්‍ය රාශි ගැලපීමකි';
@@ -239,6 +260,8 @@ function calculateRashiPorondam(brideRashi, groomRashi) {
     tamil: 'ராசி',
     score,
     maxScore: 2,
+    isDosha,
+    severity,
     description,
     descriptionSinhala,
   };
@@ -290,22 +313,48 @@ function calculateVasyaPorondam(brideRashi, groomRashi) {
  * Health and genetic compatibility
  * Maximum: 8 points (most important!)
  */
-function calculateNadiPorondam(brideNakshatra, groomNakshatra) {
+function calculateNadiPorondam(brideNakshatra, groomNakshatra, brideRashi = null, groomRashi = null) {
   const brideNadi = NADI_MAP[brideNakshatra.name];
   const groomNadi = NADI_MAP[groomNakshatra.name];
 
   let score = 0;
   let description = '';
   let descriptionSinhala = '';
+  let isDosha = false;
+  let parihara = null; // cancellation reason, if any
 
   if (brideNadi !== groomNadi) {
     score = 8;
     description = 'Different Nadi - excellent health compatibility for offspring';
     descriptionSinhala = 'වෙනස් නාඩි - දරුවන්ගේ සෞඛ්‍යය සදහා ඉතා යහපත්';
   } else {
-    score = 0;
-    description = 'Same Nadi (Nadi Dosha) - potential health concerns for offspring. Remedies may be recommended.';
-    descriptionSinhala = 'එකම නාඩි (නාඩි දෝෂය) - දරුවන්ගේ සෞඛ්‍යය ගැන සැලකිලිමත් වන්න. ශාන්තිකර්ම අවශ්‍ය විය පුළුවන්.';
+    // Same Nadi = Nadi Dosha, UNLESS a classical parihara (cancellation) applies:
+    //   1. Same nakshatra but different pada (quarter) → dosha cancelled.
+    //   2. Different nakshatras falling in different rashis → dosha cancelled.
+    // The previous implementation flagged EVERY same-Nadi pair with no
+    // parihara check, over-reporting the scariest dosha in the whole system.
+    const sameNakshatra = brideNakshatra.id === groomNakshatra.id;
+    const differentPada = (brideNakshatra.pada || 0) !== (groomNakshatra.pada || 0);
+    const differentNakshatra = brideNakshatra.id !== groomNakshatra.id;
+    const differentRashi = brideRashi && groomRashi && brideRashi.id !== groomRashi.id;
+
+    if (sameNakshatra && differentPada) {
+      parihara = 'Same birth star but different quarter (pada) — Nadi Dosha is cancelled';
+      score = 8;
+    } else if (differentNakshatra && differentRashi) {
+      parihara = 'Different birth stars in different Moon signs — Nadi Dosha is cancelled';
+      score = 8;
+    } else {
+      isDosha = true;
+      score = 0;
+    }
+
+    description = isDosha
+      ? 'Same Nadi (Nadi Dosha) - a traditional consideration for family health. Consulting an experienced astrologer is customarily advised.'
+      : `Same Nadi, but cancelled: ${parihara}.`;
+    descriptionSinhala = isDosha
+      ? 'එකම නාඩි (නාඩි දෝෂය) - පවුලේ සෞඛ්‍යය පිළිබඳ සම්ප්‍රදායික සලකා බැලීමකි. පළපුරුදු ජ්‍යෝතිෂවේදියෙකුගෙන් විමසීම සුදුසුයි.'
+      : 'එකම නාඩි වුවත් දෝෂය පිරිහරණය වී ඇත (පාද/රාශි වෙනස).';
   }
 
   return {
@@ -318,7 +367,103 @@ function calculateNadiPorondam(brideNakshatra, groomNakshatra) {
     groomNadi,
     description,
     descriptionSinhala,
-    isDosha: brideNadi === groomNadi,
+    isDosha,
+    parihara,
+  };
+}
+
+/**
+ * Rajju group (body-limb) for each of the 27 nakshatras.
+ * The 27 stars zig-zag across 5 limbs (foot→head→foot). A SAME-Rajju match
+ * is the single most serious flag in Sri Lankan / South Indian matching —
+ * traditionally a hard veto on spouse longevity, severity depending on the
+ * shared limb. Different Rajju = full marks.
+ */
+const RAJJU_MAP = {
+  // Pada (feet) — misfortune / constant wandering
+  1: 'Pada', 9: 'Pada', 10: 'Pada', 18: 'Pada', 19: 'Pada', 27: 'Pada',
+  // Kati (waist) — poverty / loss of wealth
+  2: 'Kati', 8: 'Kati', 11: 'Kati', 17: 'Kati', 20: 'Kati', 26: 'Kati',
+  // Nabhi (navel) — danger to children / progeny
+  3: 'Nabhi', 7: 'Nabhi', 12: 'Nabhi', 16: 'Nabhi', 21: 'Nabhi', 25: 'Nabhi',
+  // Kantha (neck) — danger to the wife
+  4: 'Kantha', 6: 'Kantha', 13: 'Kantha', 15: 'Kantha', 22: 'Kantha', 24: 'Kantha',
+  // Siro (head) — danger to the husband
+  5: 'Siro', 14: 'Siro', 23: 'Siro',
+};
+
+const RAJJU_MEANING = {
+  Siro:   { en: 'danger to the husband', si: 'සැමියාට අනතුරු' },
+  Kantha: { en: 'danger to the wife', si: 'බිරිඳට අනතුරු' },
+  Nabhi:  { en: 'danger to children / progeny', si: 'දරුවන්ට අනතුරු' },
+  Kati:   { en: 'loss of wealth / poverty', si: 'ධන හානි' },
+  Pada:   { en: 'wandering and hardship', si: 'ඉබ්බාගාතේ යාම හා දුක්' },
+};
+
+/**
+ * Calculate Rajju Porondam (spouse-longevity veto).
+ * Maximum: 5 points. Same limb → 0 and a hard dosha flag.
+ */
+function calculateRajjuPorondam(brideNakshatra, groomNakshatra) {
+  const brideRajju = RAJJU_MAP[brideNakshatra.id];
+  const groomRajju = RAJJU_MAP[groomNakshatra.id];
+  const sameRajju = brideRajju === groomRajju;
+
+  const meaning = sameRajju ? RAJJU_MEANING[brideRajju] : null;
+
+  return {
+    name: 'Rajju',
+    sinhala: 'රජ්ජු',
+    tamil: 'ரஜ்ஜு',
+    score: sameRajju ? 0 : 5,
+    maxScore: 5,
+    brideRajju,
+    groomRajju,
+    isDosha: sameRajju,
+    severity: sameRajju ? (brideRajju === 'Siro' || brideRajju === 'Kantha' ? 'high' : 'moderate') : null,
+    isHardVeto: sameRajju,
+    description: sameRajju
+      ? `Same Rajju (${brideRajju}) — a serious longevity consideration: ${meaning.en}. Consulting an experienced astrologer before proceeding is strongly advised.`
+      : 'Different Rajju — the couple fall on different body-limbs, which is auspicious for a long, stable union.',
+    descriptionSinhala: sameRajju
+      ? `එකම රජ්ජුව (${brideRajju}) — ${meaning.si}. ඉදිරියට යාමට පෙර පළපුරුදු ජ්‍යෝතිෂවේදියෙකුගෙන් විමසීම දැඩිව නිර්දේශ කෙරේ.`
+      : 'වෙනස් රජ්ජු — දිගු, ස්ථාවර විවාහයකට සුබයි.',
+  };
+}
+
+/**
+ * Vedha (mutual obstruction) nakshatra pairs. A Vedha pairing is a classical
+ * hard flag — the two stars obstruct each other. Chitra (14) is Vedha-free.
+ */
+const VEDHA_PAIRS = [
+  [1, 18], [2, 17], [3, 16], [4, 15], [5, 23], [6, 22], [7, 21],
+  [8, 20], [9, 19], [10, 27], [11, 26], [12, 25], [13, 24],
+];
+
+/**
+ * Calculate Vedha Porondam (mutual-obstruction veto).
+ * Maximum: 2 points. Vedha pair → 0 and a hard dosha flag.
+ */
+function calculateVedhaPorondam(brideNakshatra, groomNakshatra) {
+  const a = brideNakshatra.id;
+  const b = groomNakshatra.id;
+  const hasVedha = VEDHA_PAIRS.some(([x, y]) => (a === x && b === y) || (a === y && b === x));
+
+  return {
+    name: 'Vedha',
+    sinhala: 'වේධ',
+    tamil: 'வேதை',
+    score: hasVedha ? 0 : 2,
+    maxScore: 2,
+    isDosha: hasVedha,
+    isHardVeto: hasVedha,
+    severity: hasVedha ? 'high' : null,
+    description: hasVedha
+      ? 'Vedha present — the two birth stars mutually obstruct each other, a serious classical consideration. Consulting an experienced astrologer is advised.'
+      : 'No Vedha — the birth stars do not obstruct each other.',
+    descriptionSinhala: hasVedha
+      ? 'වේධ දෝෂය — උපන් තරු දෙක එකිනෙක අවහිර කරයි; බැරෑරුම් සලකා බැලීමකි. පළපුරුදු ජ්‍යෝතිෂවේදියෙකුගෙන් විමසීම නිර්දේශ කෙරේ.'
+      : 'වේධ දෝෂයක් නැත — උපන් තරු දෙක එකිනෙකට බාධා නොකරයි.',
   };
 }
 
@@ -362,20 +507,35 @@ function calculatePorondam(brideBirthDate, groomBirthDate) {
   const brideRashi = getRashi(brideMoonSidereal);
   const groomRashi = getRashi(groomMoonSidereal);
 
-  // Calculate all Porondam factors
-  const factors = [
+  // ── Traditional 20-point factors (the additive score) ──────────────
+  const traditionalFactors = [
     calculateDinaPorondam(brideNakshatra, groomNakshatra),
     calculateGanaPorondam(brideNakshatra, groomNakshatra),
     calculateYoniPorondam(brideNakshatra, groomNakshatra),
     calculateRashiPorondam(brideRashi, groomRashi),
     calculateVasyaPorondam(brideRashi, groomRashi),
-    calculateNadiPorondam(brideNakshatra, groomNakshatra),
+    calculateNadiPorondam(brideNakshatra, groomNakshatra, brideRashi, groomRashi),
     calculateMahendraPorondam(brideNakshatra, groomNakshatra),
   ];
 
-  const totalScore = factors.reduce((sum, f) => sum + f.score, 0);
+  // ── Rajju & Vedha — traditional PASS/FAIL vetoes, not additive points ──
+  // In the Sri Lankan / South Indian system these gate the match rather than
+  // contributing to the 20-point tally, so the headline score stays out of 20
+  // for backward compatibility while these surface as prominent flags.
+  const rajju = calculateRajjuPorondam(brideNakshatra, groomNakshatra);
+  const vedha = calculateVedhaPorondam(brideNakshatra, groomNakshatra);
+
+  const totalScore = traditionalFactors.reduce((sum, f) => sum + f.score, 0);
   const maxPossibleScore = 20;
   const percentage = Math.round((totalScore / maxPossibleScore) * 100);
+
+  // Factors shown to the user include the two vetoes, tagged so the UI can
+  // render them distinctly (they don't count toward the /20 headline).
+  const factors = [
+    ...traditionalFactors,
+    { ...rajju, isVeto: true },
+    { ...vedha, isVeto: true },
+  ];
 
   // Determine overall compatibility rating
   let rating, ratingEmoji, ratingSinhala, ratingTamil;
@@ -406,17 +566,60 @@ function calculatePorondam(brideBirthDate, groomBirthDate) {
     ratingTamil = 'சராசரிக்கு கீழே';
   }
 
-  // Check for major doshas
+  // Check for major doshas (including the Rajju / Vedha hard vetoes)
   const doshas = [];
-  const nadiResult = factors.find(f => f.name === 'Nadi');
+  const nadiResult = traditionalFactors.find(f => f.name === 'Nadi');
   if (nadiResult && nadiResult.isDosha) {
     doshas.push({
       name: 'Nadi Dosha',
       sinhala: 'නාඩි දෝෂය',
       severity: 'high',
-      description: 'Same Nadi indicates potential health issues for children. Traditional remedies available.',
+      description: 'Same Nadi is a traditional consideration for children\'s health. An experienced astrologer can advise on how to honour it.',
       descriptionSinhala: 'එකම නාඩි ගැලපීම දරුවන්ගේ සෞඛ්‍ය ගැටළු පෙන්නුම් කරයි.',
     });
+  }
+  if (rajju.isDosha) {
+    doshas.push({
+      name: 'Rajju Dosha',
+      sinhala: 'රජ්ජු දෝෂය',
+      severity: rajju.severity || 'high',
+      description: rajju.description,
+      descriptionSinhala: rajju.descriptionSinhala,
+    });
+  }
+  if (vedha.isDosha) {
+    doshas.push({
+      name: 'Vedha Dosha',
+      sinhala: 'වේධ දෝෂය',
+      severity: 'high',
+      description: vedha.description,
+      descriptionSinhala: vedha.descriptionSinhala,
+    });
+  }
+
+  // ── Hard-veto override ──────────────────────────────────────────────
+  // A Rajju or Vedha clash (or an uncancelled Nadi Dosha) is a classical
+  // pass/fail gate: even a high point score cannot be presented as
+  // "Excellent" when one is present. Cap the rating and flag it clearly.
+  const hardVetoes = [];
+  if (rajju.isDosha) hardVetoes.push('Rajju');
+  if (vedha.isDosha) hardVetoes.push('Vedha');
+  if (nadiResult && nadiResult.isDosha) hardVetoes.push('Nadi');
+  const hasHardVeto = hardVetoes.length > 0;
+
+  if (hasHardVeto) {
+    // Never above "Average" while a hard veto stands.
+    if (totalScore >= 10) {
+      rating = 'Caution';
+      ratingEmoji = '⚠️';
+      ratingSinhala = 'ප්‍රවේශමෙන්';
+      ratingTamil = 'எச்சரிக்கை';
+    } else {
+      rating = 'Below Average';
+      ratingEmoji = '🔮';
+      ratingSinhala = 'සාමාන්‍යයට පහළ';
+      ratingTamil = 'சராசரிக்கு கீழே';
+    }
   }
 
   return {
@@ -440,13 +643,21 @@ function calculatePorondam(brideBirthDate, groomBirthDate) {
     ratingSinhala,
     ratingTamil,
     factors,
+    rajju,
+    vedha,
     doshas,
-    recommendation: totalScore >= 10
-      ? 'This match is considered favorable according to traditional Vedic astrology.'
-      : 'This match may face challenges. Consulting a traditional astrologer for remedies is recommended.',
-    recommendationSinhala: totalScore >= 10
-      ? 'සාම්ප්‍රදායික වෙනවාද ජ්‍යෝතිෂ්‍ය අනුව මෙම ගැලපීම හිතකර ලෙස සැලකේ.'
-      : 'මෙම ගැලපීම අභියෝගවලට මුහුණ දිය පුළුවන්. ප්‍රතිකාර සඳහා සාම්ප්‍රදායික ජ්‍යෝතිෂ්‍යවෙනවාදියෙකුගෙන් විමසන්න.',
+    hardVetoes,
+    hasHardVeto,
+    recommendation: hasHardVeto
+      ? `A traditional hard flag is present (${hardVetoes.join(', ')}). Regardless of the point score, an experienced astrologer should be consulted about remedies before proceeding.`
+      : totalScore >= 10
+        ? 'This match is considered favorable according to traditional Vedic astrology.'
+        : 'This match may face challenges. Consulting a traditional astrologer for remedies is recommended.',
+    recommendationSinhala: hasHardVeto
+      ? `සම්ප්‍රදායික බැරෑරුම් දෝෂයක් ඇත (${hardVetoes.join(', ')}). ලකුණු කොපමණ වුවත්, ඉදිරියට යාමට පෙර පළපුරුදු ජ්‍යෝතිෂවේදියෙකුගෙන් පිළියම් ගැන විමසන්න.`
+      : totalScore >= 10
+        ? 'සාම්ප්‍රදායික ජ්‍යෝතිෂ්‍ය අනුව මෙම ගැලපීම හිතකර ලෙස සැලකේ.'
+        : 'මෙම ගැලපීම අභියෝගවලට මුහුණ දිය පුළුවන්. ප්‍රතිකාර සඳහා සාම්ප්‍රදායික ජ්‍යෝතිෂවේදියෙකුගෙන් විමසන්න.',
   };
 }
 
@@ -654,47 +865,55 @@ function analyzeMangalaDosha(brideBirthDate, groomBirthDate, brideLat, brideLng,
   try {
     const checkMangala = (birthDate, lat, lng) => {
       const houseChart = buildHouseChart(birthDate, lat, lng);
-      const marsHouse = (() => {
-        for (const h of houseChart.houses) {
-          if (h.planets.find(p => p.name === 'Mars')) return h.houseNumber;
-        }
-        return 0;
-      })();
-      // Mars in 1st, 2nd, 4th, 7th, 8th, or 12th house = Mangala Dosha
+      const planets = houseChart.planets || {};
+      const mars = planets.mars;
+      const moon = planets.moon;
+      const venus = planets.venus;
+      const lagnaRashiId = houseChart.lagna?.rashi?.id || 1;
+      if (!mars) return { hasDosha: false, marsHouse: 0, cancelled: false, cancellationReason: '', references: [] };
+
+      const marsRashi = mars.rashiId;
+      // Mangala/Kuja Dosha is reckoned from the Ascendant, the MOON, AND VENUS
+      // — Mars in the 1st/2nd/4th/7th/8th/12th from ANY of the three triggers
+      // it. The previous implementation checked the Ascendant only, missing the
+      // Moon- and Venus-based dosha that traditional matching always includes.
+      const houseFrom = (refRashiId) => ((marsRashi - refRashiId + 12) % 12) + 1;
       const doshaHouses = [1, 2, 4, 7, 8, 12];
-      const hasDosha = doshaHouses.includes(marsHouse);
-      
+
+      const fromLagna = houseFrom(lagnaRashiId);
+      const fromMoon = moon ? houseFrom(moon.rashiId) : 0;
+      const fromVenus = venus ? houseFrom(venus.rashiId) : 0;
+
+      const references = [];
+      if (doshaHouses.includes(fromLagna)) references.push('Ascendant');
+      if (moon && doshaHouses.includes(fromMoon)) references.push('Moon');
+      if (venus && doshaHouses.includes(fromVenus)) references.push('Venus');
+      const hasDosha = references.length > 0;
+      const marsHouse = fromLagna; // primary reference for display
+
       // Check for cancellations
       let cancelled = false;
       let cancellationReason = '';
       if (hasDosha) {
-        // Mars in own sign (Aries=1/Scorpio=8), exalted (Capricorn=10), or friend's sign (Leo=5) — cancelled
-        const marsRashi = houseChart.houses[marsHouse - 1]?.rashiId;
-        if ([1, 5, 8, 10].includes(marsRashi)) {
+        // Mars in own sign (Aries=1 / Scorpio=8) or exalted (Capricorn=10) → neutralized.
+        // (The old blanket "Leo cancels" rule was a minority reading and is dropped.)
+        if ([1, 8, 10].includes(marsRashi)) {
           cancelled = true;
-          cancellationReason = marsRashi === 5
-            ? 'Mars is in Leo (friend Sun\'s sign) — dosha is neutralized'
-            : 'Mars is in own sign or exalted — dosha is neutralized';
+          cancellationReason = 'Mars is in its own sign or exalted — dosha is neutralized';
         }
-        // Jupiter aspects Mars — cancelled
-        const jupiterHouse = (() => {
-          for (const h of houseChart.houses) {
-            if (h.planets.find(p => p.name === 'Jupiter')) return h.houseNumber;
-          }
-          return 0;
-        })();
-        if (jupiterHouse > 0) {
-          // Jupiter aspects: own house + 5th, 7th, 9th from itself (special drishti)
-          // For 1-based house numbers: ((house - 1 + offset) % 12) + 1
-          const jupAspects = [jupiterHouse, ((jupiterHouse - 1 + 4) % 12) + 1, ((jupiterHouse - 1 + 6) % 12) + 1, ((jupiterHouse - 1 + 8) % 12) + 1];
-          if (jupAspects.includes(marsHouse)) {
+        // Jupiter aspects Mars (from-lagna houses) — neutralized.
+        const jup = planets.jupiter;
+        if (jup) {
+          const jupHouse = ((jup.rashiId - lagnaRashiId + 12) % 12) + 1;
+          const jupAspects = [jupHouse, ((jupHouse - 1 + 4) % 12) + 1, ((jupHouse - 1 + 6) % 12) + 1, ((jupHouse - 1 + 8) % 12) + 1];
+          if (jupAspects.includes(fromLagna)) {
             cancelled = true;
             cancellationReason = 'Jupiter aspects Mars — dosha is neutralized by Jupiter\'s grace';
           }
         }
       }
-      
-      return { hasDosha, marsHouse, cancelled, cancellationReason };
+
+      return { hasDosha, marsHouse, fromLagna, fromMoon, fromVenus, references, cancelled, cancellationReason };
     };
     
     const brideMangala = checkMangala(brideBirthDate, brideLat, brideLng);
@@ -722,8 +941,8 @@ function analyzeMangalaDosha(brideBirthDate, groomBirthDate, brideLat, brideLng,
       score = 1;
     } else {
       severity = 'present';
-      description = 'One partner has Mars influence while the other doesn\'t — may cause friction in temperament. Remedies recommended.';
-      descriptionSi = 'එක් පාර්ශ්වකරුවෙකුට කුජ බලපෑමක් තියෙනවාි අතර අනෙකාට නැත — ස්වභාවයේ ගැටුම් තියෙනවාි විය පුළුවන්. පිළියම් නිර්දේශ කෙරේ.';
+      description = 'One partner has Mars influence while the other doesn\'t — may bring friction in temperament that awareness and timing help balance.';
+      descriptionSi = 'එක් අයෙකුට කුජ බලපෑමක් ඇති අතර අනෙකාට නැත — දැනුවත්භාවයෙන් හා කාලය තෝරාගැනීමෙන් සමනය කළ හැකි ස්වභාවයේ ඝට්ටනයක් ඇති විය හැක.';
       score = 0;
     }
     
@@ -926,7 +1145,19 @@ function calculateAdvancedPorondam(brideBirthDate, groomBirthDate, brideLat, bri
 module.exports = {
   calculatePorondam,
   calculateAdvancedPorondam,
+  // Individual factor calculators — exported for unit testing / reuse.
+  calculateDinaPorondam,
+  calculateGanaPorondam,
+  calculateYoniPorondam,
+  calculateRashiPorondam,
+  calculateVasyaPorondam,
+  calculateNadiPorondam,
+  calculateMahendraPorondam,
+  calculateRajjuPorondam,
+  calculateVedhaPorondam,
   GANA_MAP,
   YONI_MAP,
   NADI_MAP,
+  RAJJU_MAP,
+  VEDHA_PAIRS,
 };

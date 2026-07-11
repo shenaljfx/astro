@@ -44,8 +44,68 @@ function formatNakathTime(date, timeContext) {
 }
 
 /**
+ * Build the full daily-nakath response payload. Pure date+location
+ * computation — NO user chart, NO AI — so it is safe to serve free (see
+ * routes/preview.js, which reuses this for the logged-out Home habit
+ * surface). Kept as the single source of truth for the shape the mobile
+ * Home screen consumes.
+ *
+ * @param {Date} date
+ * @param {number} lat
+ * @param {number} lng
+ * @param {object} timeContext
+ * @returns {object} the `data` object (same shape /daily returns)
+ */
+function buildDailyNakathData(date, lat, lng, timeContext) {
+  const dailyNakath = getDailyNakath(date, lat, lng, { timeContext });
+
+  return {
+    ...dailyNakath,
+    rahuKalaya: {
+      ...dailyNakath.rahuKalaya,
+      isActive: new Date() >= dailyNakath.rahuKalaya.start && new Date() <= dailyNakath.rahuKalaya.end,
+      startFormatted: formatNakathTime(dailyNakath.rahuKalaya.start, timeContext),
+      endFormatted: formatNakathTime(dailyNakath.rahuKalaya.end, timeContext),
+    },
+    gulikaKalaya: dailyNakath.gulikaKalaya ? {
+      ...dailyNakath.gulikaKalaya,
+      startFormatted: formatNakathTime(dailyNakath.gulikaKalaya.start, timeContext),
+      endFormatted: formatNakathTime(dailyNakath.gulikaKalaya.end, timeContext),
+    } : null,
+    yamaganda: dailyNakath.yamaganda ? {
+      ...dailyNakath.yamaganda,
+      startFormatted: formatNakathTime(dailyNakath.yamaganda.start, timeContext),
+      endFormatted: formatNakathTime(dailyNakath.yamaganda.end, timeContext),
+    } : null,
+    sunriseFormatted: formatNakathTime(dailyNakath.sunrise, timeContext),
+    sunsetFormatted: formatNakathTime(dailyNakath.sunset, timeContext),
+    auspiciousPeriods: dailyNakath.auspiciousPeriods.map(p => ({
+      ...p,
+      startFormatted: formatNakathTime(p.start, timeContext),
+      endFormatted: formatNakathTime(p.end, timeContext),
+    })),
+    planetaryHoras: dailyNakath.planetaryHoras.map(h => ({
+      ...h,
+      startFormatted: formatNakathTime(h.start, timeContext),
+      endFormatted: formatNakathTime(h.end, timeContext),
+    })),
+    location: {
+      lat,
+      lng,
+      timezone: timeContext.zoneName,
+      utcOffset: timeContext.offsetLabel,
+      timezoneSource: timeContext.source,
+    },
+    // Jyotish cross-validation (independent panchanga, disha shoola, special yogas)
+    jyotish: jyotishEngine ? jyotishEngine.generateTodayJyotish(lat, lng) : null,
+    // Manifestation score (Law of Attraction — daily manifestation power)
+    manifestation: (() => { try { return getManifestationScore(date, lat, lng); } catch (e) { console.error('[nakath] manifestation score error:', e.message); return null; } })(),
+  };
+}
+
+/**
  * GET /api/nakath/daily
- * 
+ *
  * Query params:
  * - date (optional): ISO date string, defaults to today
  * - lat (optional): Latitude, defaults to Colombo (6.9271)
@@ -63,53 +123,7 @@ router.get('/daily', (req, res) => {
       return res.status(400).json({ error: 'Invalid date format. Use ISO 8601.' });
     }
 
-    const dailyNakath = getDailyNakath(date, lat, lng, { timeContext });
-
-    res.json({
-      success: true,
-      data: {
-        ...dailyNakath,
-        rahuKalaya: {
-          ...dailyNakath.rahuKalaya,
-          isActive: new Date() >= dailyNakath.rahuKalaya.start && new Date() <= dailyNakath.rahuKalaya.end,
-          startFormatted: formatNakathTime(dailyNakath.rahuKalaya.start, timeContext),
-          endFormatted: formatNakathTime(dailyNakath.rahuKalaya.end, timeContext),
-        },
-        gulikaKalaya: dailyNakath.gulikaKalaya ? {
-          ...dailyNakath.gulikaKalaya,
-          startFormatted: formatNakathTime(dailyNakath.gulikaKalaya.start, timeContext),
-          endFormatted: formatNakathTime(dailyNakath.gulikaKalaya.end, timeContext),
-        } : null,
-        yamaganda: dailyNakath.yamaganda ? {
-          ...dailyNakath.yamaganda,
-          startFormatted: formatNakathTime(dailyNakath.yamaganda.start, timeContext),
-          endFormatted: formatNakathTime(dailyNakath.yamaganda.end, timeContext),
-        } : null,
-        sunriseFormatted: formatNakathTime(dailyNakath.sunrise, timeContext),
-        sunsetFormatted: formatNakathTime(dailyNakath.sunset, timeContext),
-        auspiciousPeriods: dailyNakath.auspiciousPeriods.map(p => ({
-          ...p,
-          startFormatted: formatNakathTime(p.start, timeContext),
-          endFormatted: formatNakathTime(p.end, timeContext),
-        })),
-        planetaryHoras: dailyNakath.planetaryHoras.map(h => ({
-          ...h,
-          startFormatted: formatNakathTime(h.start, timeContext),
-          endFormatted: formatNakathTime(h.end, timeContext),
-        })),
-        location: {
-          lat,
-          lng,
-          timezone: timeContext.zoneName,
-          utcOffset: timeContext.offsetLabel,
-          timezoneSource: timeContext.source,
-        },
-        // Jyotish cross-validation (independent panchanga, disha shoola, special yogas)
-        jyotish: jyotishEngine ? jyotishEngine.generateTodayJyotish(lat, lng) : null,
-        // Manifestation score (Law of Attraction — daily manifestation power)
-        manifestation: (() => { try { return getManifestationScore(date, lat, lng); } catch (e) { console.error('[nakath] manifestation score error:', e.message); return null; } })(),
-      },
-    });
+    res.json({ success: true, data: buildDailyNakathData(date, lat, lng, timeContext) });
   } catch (error) {
     console.error('Error calculating daily Nakath:', error);
     res.status(500).json({ error: 'Failed to calculate daily Nakath', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
@@ -188,3 +202,6 @@ router.get('/panchanga', (req, res) => {
 });
 
 module.exports = router;
+// Shared with routes/preview.js for the free logged-out Home surface.
+module.exports.buildDailyNakathData = buildDailyNakathData;
+module.exports.getQueryTimeContext = getQueryTimeContext;

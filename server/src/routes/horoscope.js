@@ -8,12 +8,14 @@
 
 const express = require('express');
 const router = express.Router();
-const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getSunLongitude, getLagna, getAllPlanetPositions, buildHouseChart, buildNavamshaChart, buildShadvarga, calculateDrishtis, analyzePushkara, calculateAshtakavarga, buildBhavaChalit, detectYogas, getPlanetStrengths, calculateVimshottari, generateDetailedReport, generateFullReport, RASHIS } = require('../engine/astrology');
+const { getPanchanga, getNakshatra, getRashi, toSidereal, getMoonLongitude, getSunLongitude, getLagna, getAllPlanetPositions, buildHouseChart, buildNavamshaChart, buildShadvarga, calculateDrishtis, analyzePushkara, calculateAshtakavarga, buildBhavaChalit, detectYogas, getPlanetStrengths, calculateVimshottari, calculateVimshottariDetailed, generateDetailedReport, generateFullReport, RASHIS } = require('../engine/astrology');
+const { composeReveal } = require('../content/onboardingReveal');
 const { generateAdvancedAnalysis } = require('../engine/advanced');
-const { chat, translateAdvancedForDisplay, explainChartSimple, createReportProgress, updateReportProgress, getReportProgressDurable } = require('../engine/chat');
+const { chat, translateAdvancedForDisplay, explainChartSimple, createReportProgress, updateReportProgress, getReportProgressDurable, REPORT_SECTION_ORDER } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
-const { phoneAuth, requireSubscription } = require('../middleware/subscription');
-const { reportLimiter, aiUserLimiter, reportUserLimiter, validateBirthData, requireAdmin, INPUT_LIMITS, sanitizeString } = require('../middleware/security');
+const { phoneAuth, requireSubscription, requireSubscriptionOrCredit } = require('../middleware/subscription');
+const { consumeCredit } = require('../services/purchaseCredits');
+const { reportLimiter, aiLimiter, aiUserLimiter, reportUserLimiter, validateBirthData, requireAdmin, INPUT_LIMITS, sanitizeString } = require('../middleware/security');
 
 // Enhanced engine (graceful — null if unavailable)
 let enhancedEngine = null;
@@ -27,14 +29,16 @@ const { notifyAlert } = require('../services/alerting');
 const { budgetGuard } = require('../services/budgetEnforcer');
 const { distributedReportUserLimiter } = require('../services/distributedRateLimit');
 const { enqueueReportJob } = require('../services/jobQueue');
-const { createOrResumeEntitlement, recordEntitlementError } = require('../middleware/entitlements');
-const { getCachedReport, buildReportCacheKey, saveChartExplanation, getCachedChartExplanation, saveTranslationCache, getCachedTranslation, getUserReports, saveBirthChartCache, getCachedBirthChart, saveReportFeedback, getPromptAnalyticsSummary } = require('../models/firestore');
+const firestoreCircuit = require('../services/firestoreCircuit');
+const { createOrResumeEntitlement, recordEntitlementError, checkPendingEntitlement } = require('../middleware/entitlements');
+const { getMonthlyUse, recordMonthlyUse, fairUseMessage } = require('../services/fairUse');
+const { getCachedReport, buildReportCacheKey, saveChartExplanation, getCachedChartExplanation, saveTranslationCache, getCachedTranslation, getUserReports, saveBirthChartCache, getCachedBirthChart, saveReportFeedback, getPromptAnalyticsSummary, savePredictionOutcome, getUserPredictionOutcomes } = require('../models/firestore');
 const { PROMPT_VERSION } = require('../engine/promptObservability');
 const { parseSLT } = require('../utils/dateUtils');
 const { parseBirthDateTime, parseBirthDateTimeWithContext } = require('../services/timezone');
 
 const SRI_LANKA_TIME_CONTEXT = { zoneName: 'Asia/Colombo', offsetSeconds: 19800, source: 'traditional_slt' };
-const AI_REPORT_ENGINE_VERSION = 'grahachara-report-engine-v2026-05-09-attraction-v2';
+const AI_REPORT_ENGINE_VERSION = 'grahachara-report-engine-v2026-07-11-convergence-v1';
 
 function trackAIUsage(feature, userId, result = {}) {
   const usage = result.usage || result;
@@ -328,7 +332,9 @@ router.get('/daily/:sign', (req, res) => {
  *   lng: 79.8612
  * }
  */
-router.post('/birth-chart', optionalAuth, async (req, res) => {
+// Subscription or report-credit gated at ROUTE level (the mount exempts this
+// path so one-time report buyers can reach it during their paid generation).
+router.post('/birth-chart', phoneAuth, requireSubscriptionOrCredit('report', 'full_report'), async (req, res) => {
   const reqStart = Date.now();
   try {
     const { birthDate, lat, lng, language } = req.body;
@@ -770,7 +776,90 @@ CRITICAL RULES:
  * - lat: Latitude (optional)
  * - lng: Longitude (optional)
  */
-router.get('/birth-chart/data', optionalAuth, async (req, res) => {
+// Rashi traits used by the basic chart identity (pure lookup, no AI).
+const BASIC_RASHI_TRAITS = {
+  'Mesha': ['Courageous', 'Energetic', 'Independent', 'Impulsive'],
+  'Vrishabha': ['Patient', 'Reliable', 'Devoted', 'Stubborn'],
+  'Mithuna': ['Versatile', 'Communicative', 'Witty', 'Restless'],
+  'Kataka': ['Intuitive', 'Protective', 'Caring', 'Moody'],
+  'Simha': ['Confident', 'Ambitious', 'Generous', 'Proud'],
+  'Kanya': ['Analytical', 'Practical', 'Diligent', 'Critical'],
+  'Tula': ['Diplomatic', 'Graceful', 'Idealistic', 'Indecisive'],
+  'Vrischika': ['Passionate', 'Resourceful', 'Determined', 'Secretive'],
+  'Dhanus': ['Optimistic', 'Philosophical', 'Adventurous', 'Careless'],
+  'Makara': ['Disciplined', 'Responsible', 'Patient', 'Reserved'],
+  'Kumbha': ['Progressive', 'Original', 'Humanitarian', 'Detached'],
+  'Meena': ['Intuitive', 'Compassionate', 'Artistic', 'Escapist'],
+};
+
+/**
+ * Build the "basic" chart identity — lagna, moon/sun signs, nakshatra, the D1
+ * grid and personality traits. Pure computation, NO AI and nothing user-
+ * private, so it is safe to serve free (see routes/preview.js). Single source
+ * of truth for both the paid /birth-chart/data?basic=true and the free
+ * /api/preview/birth-chart surfaces.
+ *
+ * @param {Date} birthDate
+ * @param {number} lat
+ * @param {number} lng
+ * @param {object} [houseChart] optional precomputed buildHouseChart() result
+ * @returns {object} the `data` payload the Home screen consumes
+ */
+function buildBasicChartData(birthDate, lat, lng, houseChart) {
+  const chart = houseChart || buildHouseChart(birthDate, lat, lng);
+  const lagna = getLagna(birthDate, lat, lng);
+  const moonSidereal = toSidereal(getMoonLongitude(birthDate), birthDate);
+  const sunSidereal = toSidereal(getSunLongitude(birthDate), birthDate);
+  const moonNakshatra = getNakshatra(moonSidereal);
+  const moonRashi = getRashi(moonSidereal);
+  const sunRashi = getRashi(sunSidereal);
+  const lagnaDetails = LAGNA_PALAPALA[lagna.rashi.name] || {};
+
+  const d1Chart = [];
+  const allPlanets = chart.planets;
+  for (let i = 0; i < 12; i++) {
+    const rashiId = i + 1;
+    const r = RASHIS[i];
+    const planetsInRashi = [];
+    for (const [key, p] of Object.entries(allPlanets)) {
+      if (p.rashiId === rashiId) {
+        planetsInRashi.push({ key, name: p.name, sinhala: p.sinhala, degree: p.degreeInSign });
+      }
+    }
+    if (lagna.rashi.id === rashiId) {
+      planetsInRashi.unshift({ name: 'Lagna', sinhala: 'ලග්න' });
+    }
+    d1Chart.push({
+      rashiId, rashi: r.name,
+      rashiEnglish: r.english, rashiSinhala: r.sinhala, rashiLord: r.lord,
+      planets: planetsInRashi,
+    });
+  }
+
+  return {
+    lagna: {
+      ...lagna.rashi,
+      rashiId: lagna.rashi.id,
+      degree: lagna.sidereal % 30,
+      siderealDegree: lagna.sidereal,
+    },
+    lagnaDetails,
+    moonSign: { ...moonRashi, degree: moonSidereal % 30 },
+    sunSign: { ...sunRashi, degree: sunSidereal % 30 },
+    nakshatra: moonNakshatra,
+    rashiChart: d1Chart,
+    personality: {
+      lagnaTraits: BASIC_RASHI_TRAITS[lagna.rashi.name] || [],
+      moonTraits: BASIC_RASHI_TRAITS[moonRashi.name] || [],
+      sunTraits: BASIC_RASHI_TRAITS[sunRashi.name] || [],
+    },
+  };
+}
+
+// Subscription-only (the Home basic chart is not a purchasable one-time
+// product, so it uses requireSubscription — not the credit-or-subscription
+// gate — to avoid a misleading "buy this once" 402 on the Home screen).
+router.get('/birth-chart/data', phoneAuth, requireSubscription, async (req, res) => {
   try {
     const { date, lat, lng, language, basic } = req.query;
     if (!date) return res.status(400).json({ error: 'Date is required' });
@@ -793,73 +882,11 @@ router.get('/birth-chart/data', optionalAuth, async (req, res) => {
     const navamshaChart = buildNavamshaChart(birthDate, birthLat, birthLng);
 
     // ── Basic mode: return only what the home screen needs (no AI calls) ──
+    // Pure chart identity (lagna/moon/sun/nakshatra) — the "mirror". Shared
+    // with the free /api/preview/birth-chart surface so the Home page shows
+    // an identity even before subscribing.
     if (isBasic) {
-      const lagna = getLagna(birthDate, birthLat, birthLng);
-      const moonSidereal = toSidereal(getMoonLongitude(birthDate), birthDate);
-      const sunSidereal = toSidereal(getSunLongitude(birthDate), birthDate);
-      const moonNakshatra = getNakshatra(moonSidereal);
-      const moonRashi = getRashi(moonSidereal);
-      const sunRashi = getRashi(sunSidereal);
-      const lagnaDetails = LAGNA_PALAPALA[lagna.rashi.name] || {};
-
-      // Build D1 chart (same as POST /birth-chart)
-      const d1Chart = [];
-      const allPlanets = houseChart.planets;
-      for (let i = 0; i < 12; i++) {
-        const rashiId = i + 1;
-        const r = RASHIS[i];
-        const planetsInRashi = [];
-        for (const [key, p] of Object.entries(allPlanets)) {
-          if (p.rashiId === rashiId) {
-            planetsInRashi.push({ key, name: p.name, sinhala: p.sinhala, degree: p.degreeInSign });
-          }
-        }
-        if (lagna.rashi.id === rashiId) {
-          planetsInRashi.unshift({ name: 'Lagna', sinhala: 'ලග්න' });
-        }
-        d1Chart.push({
-          rashiId, rashi: r.name,
-          rashiEnglish: r.english, rashiSinhala: r.sinhala, rashiLord: r.lord,
-          planets: planetsInRashi,
-        });
-      }
-
-      const RASHI_TRAITS = {
-        'Mesha': ['Courageous', 'Energetic', 'Independent', 'Impulsive'],
-        'Vrishabha': ['Patient', 'Reliable', 'Devoted', 'Stubborn'],
-        'Mithuna': ['Versatile', 'Communicative', 'Witty', 'Restless'],
-        'Kataka': ['Intuitive', 'Protective', 'Caring', 'Moody'],
-        'Simha': ['Confident', 'Ambitious', 'Generous', 'Proud'],
-        'Kanya': ['Analytical', 'Practical', 'Diligent', 'Critical'],
-        'Tula': ['Diplomatic', 'Graceful', 'Idealistic', 'Indecisive'],
-        'Vrischika': ['Passionate', 'Resourceful', 'Determined', 'Secretive'],
-        'Dhanus': ['Optimistic', 'Philosophical', 'Adventurous', 'Careless'],
-        'Makara': ['Disciplined', 'Responsible', 'Patient', 'Reserved'],
-        'Kumbha': ['Progressive', 'Original', 'Humanitarian', 'Detached'],
-        'Meena': ['Intuitive', 'Compassionate', 'Artistic', 'Escapist'],
-      };
-
-      return res.json({
-        success: true,
-        data: {
-          lagna: {
-            ...lagna.rashi,
-            rashiId: lagna.rashi.id,
-            degree: lagna.sidereal % 30,
-            siderealDegree: lagna.sidereal,
-          },
-          lagnaDetails,
-          moonSign: { ...moonRashi, degree: moonSidereal % 30 },
-          sunSign: { ...sunRashi, degree: sunSidereal % 30 },
-          nakshatra: moonNakshatra,
-          rashiChart: d1Chart,
-          personality: {
-            lagnaTraits: RASHI_TRAITS[lagna.rashi.name] || [],
-            moonTraits: RASHI_TRAITS[moonRashi.name] || [],
-            sunTraits: RASHI_TRAITS[sunRashi.name] || [],
-          },
-        },
-      });
+      return res.json({ success: true, data: buildBasicChartData(birthDate, birthLat, birthLng, houseChart) });
     }
 
     const shadvarga = buildShadvarga(birthDate, birthLat, birthLng);
@@ -999,7 +1026,9 @@ router.get('/birth-chart/data', optionalAuth, async (req, res) => {
 // Comprehensive 13-section Jyotish report
 // Body: { birthDate, lat?, lng? }
 // ═══════════════════════════════════════════════════════════════════
-router.post('/full-report', reportLimiter, async (req, res) => {
+// optionalAuth: identifies the caller when possible; keep the endpoint usable
+// for legacy clients but no longer a fully anonymous heavy-compute target.
+router.post('/full-report', reportLimiter, optionalAuth, async (req, res) => {
   try {
     const { birthDate, lat = 6.9271, lng = 79.8612, calculationSettings = null, settings = null, asOfDate = null } = req.body;
 
@@ -1081,7 +1110,7 @@ router.get('/report-progress/:reportId', phoneAuth, async (req, res) => {
           ...prog,
           stage: 'complete',
           savedReportId: cached.id,
-          sectionsDone: Object.keys(cached.sections || {}).length || prog.sectionsTotal || 19,
+          sectionsDone: Object.keys(cached.sections || {}).length || prog.sectionsTotal || REPORT_SECTION_ORDER.length,
           currentSection: null,
           error: null,
         };
@@ -1120,10 +1149,16 @@ router.get('/report-progress/:reportId', phoneAuth, async (req, res) => {
 // Optional auth: if logged in, caches report & returns cached if available
 // ═══════════════════════════════════════════════════════════════════
 
-router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, reportUserLimiter, distributedReportUserLimiter, budgetGuard('fullReport'), async (req, res) => {
+router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscriptionOrCredit('report', 'full_report'), reportUserLimiter, distributedReportUserLimiter, budgetGuard('fullReport'), async (req, res) => {
   let entitlementId = null;
   try {
-    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation: rawLocation = null, userName: rawName = null, userGender: rawGender = null, userReligion: rawReligion = null, maritalStatus: rawMarital = null, marriageYear = null, reportId: clientReportId = null, previousReportId = null, retryReportId = null, recoveryRetry = false, calculationSettings = null, settings = null, asOfDate = null, forceRegenerate = false } = req.body;
+    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation: rawLocation = null, userName: rawName = null, userGender: rawGender = null, userReligion: rawReligion = null, maritalStatus: rawMarital = null, marriageYear = null, careerField: rawCareerField = null, lifeEvents: rawLifeEvents = null, reportId: clientReportId = null, previousReportId = null, retryReportId = null, recoveryRetry = false, calculationSettings = null, settings = null, asOfDate = null, forceRegenerate = false, timeUnknown: rawTimeUnknown = false } = req.body;
+
+    // Birth time unknown → the ascendant is a noon-default coin-flip, so the
+    // report must anchor to the Moon sign and hedge lagna-derived claims.
+    // Also treat suspiciously round times (:00 / :30 exactly) with no seconds
+    // as low-confidence unless the client explicitly asserts the time is known.
+    const timeUnknown = rawTimeUnknown === true || rawTimeUnknown === 'true' || rawTimeUnknown === '1';
 
     // Sanitize free-text inputs
     const userName = sanitizeString(rawName, INPUT_LIMITS.name);
@@ -1131,6 +1166,18 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
     const userGender = sanitizeString(rawGender, 20);
     const userReligion = sanitizeString(rawReligion, 30);
     const maritalStatus = sanitizeString(rawMarital, 30);
+    const careerField = sanitizeString(rawCareerField, 60);
+
+    // Known Facts life events: fixed type vocabulary + plausible years only.
+    // Must match EVENT_SIGNATURES in engine/rectification.js
+    const LIFE_EVENT_TYPES = new Set(['marriage', 'firstJob', 'firstChild', 'majorIllness', 'accident', 'foreignTravel', 'education', 'fatherDeath', 'motherDeath', 'propertyPurchase', 'promotion', 'divorce']);
+    const nowYear = new Date().getFullYear();
+    const lifeEvents = Array.isArray(rawLifeEvents)
+      ? rawLifeEvents
+          .filter(e => e && LIFE_EVENT_TYPES.has(String(e.type)) && Number.isInteger(Number(e.year)) && Number(e.year) >= 1930 && Number(e.year) <= nowYear)
+          .slice(0, 5)
+          .map(e => ({ type: String(e.type), year: Number(e.year) }))
+      : [];
 
     if (!birthDate) {
       return res.status(400).json({ error: 'birthDate is required (ISO format or parseable date string)' });
@@ -1157,6 +1204,20 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
       return res.status(400).json({ error: 'Invalid birthDate format. Use ISO format e.g. 1998-10-09T09:16:00' });
     }
 
+    // ── Fail fast if the database is over quota / unavailable ──────────
+    // Report generation needs Firestore (cache lookup, entitlement, job
+    // queue, save). If the breaker is open, return a clean, retryable 503
+    // instead of consuming an entitlement or hammering a dead database.
+    if (firestoreCircuit.isOpen()) {
+      const retryAfter = Math.ceil(firestoreCircuit.msRemaining() / 1000) || 60;
+      res.set('Retry-After', String(retryAfter));
+      return res.status(503).json({
+        error: 'The service is briefly at capacity. Your details are safe — please try again shortly.',
+        code: 'SERVICE_TEMPORARILY_UNAVAILABLE',
+        retryAfterSeconds: retryAfter,
+      });
+    }
+
     const normalizedSettings = calculationSettings || settings || {};
     const cacheDescriptor = buildReportCacheKey({
       birthDate: date.toISOString(),
@@ -1169,8 +1230,11 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
       userReligion,
       maritalStatus,
       marriageYear,
+      careerField,
+      lifeEvents,
       calculationSettings: normalizedSettings,
       asOfDate,
+      timeUnknown,
       promptVersion: PROMPT_VERSION,
       engineVersion: AI_REPORT_ENGINE_VERSION,
     });
@@ -1188,8 +1252,6 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
           return res.json({
             success: true,
             cached: true,
-            tokenCost: 0,
-            balance: req.tokenBalanceBefore,
             generationTime: '0ms',
             savedReportId: cached.id,
             data: {
@@ -1198,6 +1260,8 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
               birthData: cached.birthInfo,
               rashiChart: cached.rashiChart,
               narrativeSections: cached.sections,
+              sectionScores: cached.sectionScores || null,
+              predictions: cached.predictions || [],
               promptVersion: cached.promptVersion || null,
               promptMetadata: cached.promptMetadata || null,
               promptAnalytics: cached.promptAnalytics || null,
@@ -1220,11 +1284,37 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
     if (req.user && req.user.uid && req.user.authType !== 'anonymous') {
       try {
         const inputData = { birthDate, lat: reportLat, lng: reportLng, language };
+
+        // Pro fair-use: subscribers get generous monthly reports included.
+        // Enforce only for a genuinely NEW generation — a retry reuses the
+        // pending entitlement and must never be blocked or counted.
+        if (req.accessVia === 'subscription') {
+          const pending = await checkPendingEntitlement(req.user.uid, 'report', inputData);
+          if (!pending) {
+            const fu = await getMonthlyUse(req.user.uid, 'report');
+            if (fu.remaining <= 0) {
+              return res.status(429).json({
+                error: fairUseMessage('report', language),
+                code: 'FAIR_USE_LIMIT_MONTHLY',
+                limit: fu.limit,
+              });
+            }
+          }
+        }
+
         const ent = await createOrResumeEntitlement(req.user.uid, 'report', inputData);
         entitlement = ent;
         entitlementId = ent.id;
         if (ent.isRetry) {
           console.log(`[AI Report] ♻️ Retry — entitlement ${ent.id} (${ent.retriesLeft} retries left)`);
+        } else if (req.accessVia === 'credit' && req.purchaseCredit) {
+          // One-time buyer starting a NEW generation — spend their credit.
+          // Retries of this entitlement stay free (pay once, generate until success).
+          await consumeCredit(req.purchaseCredit.id, ent.id).catch((cErr) =>
+            console.warn('[AI Report] Credit consume failed (non-critical):', cErr.message));
+        } else if (req.accessVia === 'subscription') {
+          // New subscriber report — count it toward the monthly fair-use cap.
+          await recordMonthlyUse(req.user.uid, 'report');
         }
       } catch (entErr) {
         if (entErr.code === 'ENTITLEMENT_EXHAUSTED') {
@@ -1253,8 +1343,11 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
       userReligion,
       maritalStatus,
       marriageYear,
+      careerField,
+      lifeEvents,
       calculationSettings: normalizedSettings,
       asOfDate,
+      timeUnknown,
       timeContext,
       entitlementId,
       cacheKey: cacheDescriptor.cacheKey,
@@ -1280,7 +1373,7 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
 
     const queuedReportId = job.payload?.reportId || reportId;
     if (!job.deduped) {
-      createReportProgress(queuedReportId, 19, uid, {
+      createReportProgress(queuedReportId, REPORT_SECTION_ORDER.length, uid, {
         stage: isRecoveryRetry ? 'recovering' : 'queued',
         jobId: job.id,
         currentSection: isRecoveryRetry ? 'checking_saved_report' : null,
@@ -1307,6 +1400,25 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscription, re
       },
     });
   } catch (error) {
+    // ── Database over-quota / unavailable → clean, retryable 503 ───────
+    // Record it on the breaker so subsequent requests fail fast, and tell the
+    // client to retry rather than surfacing a 500. The entitlement stays
+    // 'pending' (createOrResume resumes it) so the user is never charged for a
+    // report the system couldn't deliver.
+    const cls = firestoreCircuit.recordError(error);
+    if (cls.isDbError || error.code === 'FIRESTORE_CIRCUIT_OPEN' || error.code === 'REPORT_JOB_STORE_UNAVAILABLE') {
+      console.warn('[AI Report] Database unavailable — returning 503:', error.message);
+      const retryAfter = Math.ceil((error.retryAfterMs || firestoreCircuit.msRemaining()) / 1000) || 60;
+      res.set('Retry-After', String(retryAfter));
+      return res.status(503).json({
+        error: 'The service is briefly at capacity. Your details are safe — please try again shortly.',
+        code: 'SERVICE_TEMPORARILY_UNAVAILABLE',
+        retryAfterSeconds: retryAfter,
+        entitlementId: entitlementId || null,
+        canRetry: true,
+      });
+    }
+
     console.error('[AI Report] Error:', error);
     notifyAlert('report_generation_failed', {
       uid: req.user?.uid || null,
@@ -1398,6 +1510,8 @@ router.get('/saved-report/:id', optionalAuth, async (req, res) => {
         birthData: data.birthInfo,
         rashiChart: data.rashiChart,
         narrativeSections: data.sections,
+        sectionScores: data.sectionScores || null,
+        predictions: data.predictions || [],
         generationTime: data.generationTime,
         promptVersion: data.promptVersion || null,
         promptMetadata: data.promptMetadata || null,
@@ -1475,6 +1589,73 @@ router.post('/report-feedback', optionalAuth, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// PREDICTION LEDGER (Phase 3) — the calibration feedback loop
+// GET  /prediction-checkins  → predictions from the user's reports whose
+//                              window is open or recently closed, minus
+//                              ones already answered
+// POST /prediction-outcome   → record "did this happen?" (yes/no/partial)
+// ═══════════════════════════════════════════════════════════════════
+router.get('/prediction-checkins', phoneAuth, async (req, res) => {
+  try {
+    if (!req.user || !req.user.uid || req.user.authType === 'anonymous') {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const reports = await getUserReports(req.user.uid);
+    const answered = new Set(
+      (await getUserPredictionOutcomes(req.user.uid)).map(o => `${o.reportId}:${o.predictionId}`)
+    );
+
+    const now = new Date();
+    const GRACE_DAYS = 60; // keep asking for 2 months after a window closes
+    const due = [];
+    for (const r of reports || []) {
+      for (const p of r.predictions || []) {
+        if (!p?.id) continue;
+        if (answered.has(`${r.id}:${p.id}`)) continue;
+        const start = p.windowStart ? new Date(p.windowStart) : null;
+        const end = p.windowEnd ? new Date(p.windowEnd) : null;
+        if (!start || !end || isNaN(start) || isNaN(end)) continue;
+        const graceEnd = new Date(end.getTime() + GRACE_DAYS * 86400000);
+        // Ask once the window has started and until grace expires.
+        if (now >= start && now <= graceEnd) {
+          due.push({ reportId: r.id, windowClosed: now > end, ...p });
+        }
+      }
+    }
+    // Windows that already closed first (they're answerable now), then by start.
+    due.sort((a, b) => (b.windowClosed ? 1 : 0) - (a.windowClosed ? 1 : 0) || String(a.windowStart).localeCompare(String(b.windowStart)));
+    res.json({ success: true, data: { due: due.slice(0, 5) } });
+  } catch (error) {
+    console.error('[prediction-checkins] Error:', error.message);
+    res.status(500).json({ error: 'Failed to load prediction check-ins' });
+  }
+});
+
+router.post('/prediction-outcome', phoneAuth, async (req, res) => {
+  try {
+    if (!req.user || !req.user.uid || req.user.authType === 'anonymous') {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const { reportId, predictionId, outcome, note = null, prediction = null } = req.body || {};
+    if (!reportId || !predictionId) return res.status(400).json({ error: 'reportId and predictionId are required' });
+    if (!['yes', 'no', 'partial'].includes(outcome)) return res.status(400).json({ error: "outcome must be 'yes' | 'no' | 'partial'" });
+
+    const saved = await savePredictionOutcome(req.user.uid, {
+      reportId,
+      predictionId,
+      outcome,
+      note: sanitizeString(note, 300),
+      prediction: prediction && typeof prediction === 'object' ? prediction : null,
+    });
+    if (!saved) return res.status(503).json({ error: 'Database unavailable' });
+    res.json({ success: true, data: { id: saved } });
+  } catch (error) {
+    console.error('[prediction-outcome] Error:', error.message);
+    res.status(500).json({ error: 'Failed to record prediction outcome' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // GET /api/horoscope/prompt-analytics
 // Admin prompt safety and feedback analytics summary
 // ═══════════════════════════════════════════════════════════════════
@@ -1520,4 +1701,128 @@ router.delete('/saved-report/:id', phoneAuth, async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// GET /api/horoscope/onboarding-reveal
+// Personalized pre-paywall reveal for NEW users (anonymous allowed).
+// Pure engine math + hand-written template blocks — no AI calls.
+// Returns: identity read (lagna/nakshatra/dasha) + locked future cards
+// whose titles carry REAL dates from the user's Vimshottari timeline.
+// ═══════════════════════════════════════════════════════════════════
+router.get('/onboarding-reveal', optionalAuth, aiLimiter, async (req, res) => {
+  try {
+    const { date, lat, lng, name, language } = req.query;
+    if (!date) return res.status(400).json({ error: 'Date is required' });
+
+    const birthLat = parseFloat(lat) || 6.9271;
+    const birthLng = parseFloat(lng) || 79.8612;
+    if (birthLat < -90 || birthLat > 90 || birthLng < -180 || birthLng > 180) {
+      return res.status(400).json({ error: 'Invalid coordinates' });
+    }
+
+    let birthDate;
+    try {
+      birthDate = await parseBirthDateTime(date, birthLat, birthLng);
+    } catch (tzErr) {
+      birthDate = parseSLT(date);
+    }
+    if (!birthDate || isNaN(birthDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format.' });
+    }
+
+    const lagna = getLagna(birthDate, birthLat, birthLng);
+    const moonSidereal = toSidereal(getMoonLongitude(birthDate), birthDate);
+    const nakshatra = getNakshatra(moonSidereal);
+    const moonRashi = getRashi(moonSidereal);
+    const dashaPeriods = calculateVimshottariDetailed(moonSidereal, birthDate);
+
+    const reveal = composeReveal({
+      name: name ? sanitizeString(String(name)).slice(0, 40) : null,
+      lagna,
+      nakshatra,
+      moonRashi,
+      dashaPeriods,
+      language: language === 'si' ? 'si' : 'en',
+      now: new Date(),
+    });
+
+    // D1 rashi chart grid — lets the app render the Lagna Patha before payment
+    const houseChart = buildHouseChart(birthDate, birthLat, birthLng);
+    const d1Chart = [];
+    for (let i = 0; i < 12; i++) {
+      const rashiId = i + 1;
+      const r = RASHIS[i];
+      const planetsInRashi = [];
+      for (const [key, pl] of Object.entries(houseChart.planets)) {
+        if (pl.rashiId === rashiId) {
+          planetsInRashi.push({ key, name: pl.name, sinhala: pl.sinhala, degree: pl.degreeInSign });
+        }
+      }
+      if (lagna.rashi.id === rashiId) {
+        planetsInRashi.unshift({ name: 'Lagna', sinhala: 'ලග්න' });
+      }
+      d1Chart.push({
+        rashiId, rashi: r.name,
+        rashiEnglish: r.english, rashiSinhala: r.sinhala, rashiLord: r.lord,
+        planets: planetsInRashi,
+      });
+    }
+    reveal.rashiChart = d1Chart;
+    reveal.lagnaRashiId = lagna.rashi.id;
+
+    res.json({ success: true, data: reveal });
+  } catch (error) {
+    console.error('[onboarding-reveal] Error:', error.message);
+    res.status(500).json({ error: 'Failed to compose reveal' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// GET /api/horoscope/transit-today
+// A cheap, no-AI "what's moving today" line for the chart — the Moon's
+// current house from the natal lagna (changes every ~2 days → a real daily
+// hook) plus any slow planet sitting in a kendra/trikona/dusthana. Returns
+// STRUCTURED house numbers so the client formats bilingual copy itself.
+// Subscriber-only (paidAccess mount) — a reason to keep the subscription.
+// ═══════════════════════════════════════════════════════════════════
+router.get('/transit-today', optionalAuth, async (req, res) => {
+  try {
+    const { date: birthDate, lat = 6.9271, lng = 79.8612 } = req.query;
+    if (!birthDate) return res.status(400).json({ error: 'date (birth) is required' });
+    const plat = parseFloat(lat), plng = parseFloat(lng);
+
+    let natal = null;
+    try { natal = await parseBirthDateTime(birthDate, plat, plng); } catch (_) { natal = parseSLT(birthDate); }
+    if (!natal || isNaN(natal.getTime())) return res.status(400).json({ error: 'Invalid birth date' });
+
+    const lagnaRashiId = getLagna(natal, plat, plng).rashi.id;
+    const now = new Date();
+    const t = getAllPlanetPositions(now, plat, plng);
+    const houseFrom = (rid) => (((rid - lagnaRashiId) % 12) + 12) % 12 + 1;
+
+    const notable = [];
+    ['jupiter', 'saturn', 'rahu', 'mars'].forEach((k) => {
+      const p = t[k];
+      if (!p) return;
+      const h = houseFrom(p.rashiId);
+      const kind = [1, 4, 7, 10].includes(h) ? 'kendra' : [5, 9].includes(h) ? 'trikona' : [6, 8, 12].includes(h) ? 'dusthana' : null;
+      if (kind) notable.push({ planet: p.name, house: h, kind });
+    });
+
+    res.json({
+      success: true,
+      transit: {
+        date: now.toISOString().slice(0, 10),
+        moon: { rashiId: t.moon.rashiId, house: houseFrom(t.moon.rashiId), sign: t.moon.rashi },
+        sun: { rashiId: t.sun.rashiId, house: houseFrom(t.sun.rashiId), sign: t.sun.rashi },
+        notable: notable.slice(0, 2),
+      },
+    });
+  } catch (e) {
+    console.error('[transit-today] error:', e.message);
+    res.status(500).json({ error: 'Failed to compute transit' });
+  }
+});
+
 module.exports = router;
+// Shared with routes/preview.js for the free Home identity surface.
+module.exports.buildBasicChartData = buildBasicChartData;

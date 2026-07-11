@@ -2,7 +2,7 @@
  * AI Chat Routes - "Ask the Astrologer"
  *
  * Endpoints:
- * - POST /api/chat/ask        — Send a message (enforces daily quota)
+ * - POST /api/chat/ask        — Send a message (fair-use daily cap)
  * - GET  /api/chat/quota      — Get remaining questions for today
  */
 
@@ -16,7 +16,14 @@ const { trackCost } = require('../services/costTracker');
 const { budgetGuard } = require('../services/budgetEnforcer');
 const { distributedAiUserLimiter } = require('../services/distributedRateLimit');
 
-const DAILY_LIMIT = 5;
+// ── Fair-use daily cap for the "unlimited" chat plan ────────────────────────
+// Generous enough that a normal subscriber (a handful of questions a day) never
+// hits it, so the "unlimited" promise holds — but it bounds the worst-case AI
+// cost per subscriber and stops scripted abuse. Tune via env as you learn your
+// real usage distribution: lower protects margin, higher feels more unlimited.
+// At ~LKR 1.25/message: 30/day caps a heavy day near LKR 37; the average user
+// (~5/day) is nowhere near it.
+const CHAT_FAIR_USE_DAILY = Math.max(1, Number(process.env.CHAT_FAIR_USE_DAILY) || 30);
 
 // ─── Quota helpers ─────────────────────────────────────────────────────────
 
@@ -31,7 +38,7 @@ function todayUTC() {
  */
 async function getQuota(uid) {
   const db = getDb();
-  if (!db || !uid) return { count: 0, remaining: DAILY_LIMIT };
+  if (!db || !uid) return { count: 0, remaining: CHAT_FAIR_USE_DAILY };
 
   try {
     const ref = db.collection('chatQuota').doc(uid);
@@ -39,13 +46,13 @@ async function getQuota(uid) {
     const today = todayUTC();
 
     if (!doc.exists || doc.data().date !== today) {
-      return { count: 0, remaining: DAILY_LIMIT, date: today };
+      return { count: 0, remaining: CHAT_FAIR_USE_DAILY, date: today };
     }
     const count = doc.data().count || 0;
-    return { count, remaining: Math.max(0, DAILY_LIMIT - count), date: today };
+    return { count, remaining: Math.max(0, CHAT_FAIR_USE_DAILY - count), date: today };
   } catch (e) {
     console.error('[chat/quota] read error:', e.message);
-    return { count: 0, remaining: DAILY_LIMIT };
+    return { count: 0, remaining: CHAT_FAIR_USE_DAILY };
   }
 }
 
@@ -55,7 +62,7 @@ async function getQuota(uid) {
  */
 async function incrementQuota(uid) {
   const db = getDb();
-  if (!db || !uid) return { count: 1, remaining: DAILY_LIMIT - 1 };
+  if (!db || !uid) return { count: 1, remaining: CHAT_FAIR_USE_DAILY - 1 };
 
   try {
     const ref = db.collection('chatQuota').doc(uid);
@@ -72,10 +79,10 @@ async function incrementQuota(uid) {
       return count;
     });
 
-    return { count: result, remaining: Math.max(0, DAILY_LIMIT - result) };
+    return { count: result, remaining: Math.max(0, CHAT_FAIR_USE_DAILY - result) };
   } catch (e) {
     console.error('[chat/quota] increment error:', e.message);
-    return { count: 1, remaining: DAILY_LIMIT - 1 };
+    return { count: 1, remaining: CHAT_FAIR_USE_DAILY - 1 };
   }
 }
 
@@ -86,7 +93,7 @@ router.get('/quota', phoneAuth, async (req, res) => {
   const quota = await getQuota(uid);
   res.json({
     success: true,
-    dailyLimit: DAILY_LIMIT,
+    dailyLimit: CHAT_FAIR_USE_DAILY,
     used: quota.count,
     remaining: quota.remaining,
     date: quota.date || todayUTC(),
@@ -132,9 +139,16 @@ router.post('/ask', phoneAuth, requireSubscription, aiUserLimiter, distributedAi
     if (db && uid) {
       const quota = await getQuota(uid);
       if (quota.remaining <= 0) {
+        // Fair-use framing (not a harsh quota) — resets at midnight SLT.
+        const fairUseMsg = {
+          si: 'ඔබ අද බොහෝ ප්‍රශ්න ඇසුවා 🌙 නැකැත්කරු හැමෝටම වේගවත්ව තබා ගැනීමට මෙය සාධාරණ භාවිත සීමාවකි. ඔබේ ප්‍රශ්න මධ්‍යම රාත්‍රියේ නැවත විවෘත වෙනවා.',
+          ta: 'இன்று நீங்கள் நிறைய கேள்விகள் கேட்டீர்கள் 🌙 அனைவருக்கும் சேவையை வேகமாக வைத்திருக்க இது நியாயமான பயன்பாட்டு வரம்பு. உங்கள் கேள்விகள் நள்ளிரவில் மீண்டும் திறக்கும்.',
+          en: "You've asked a lot today 🌙 — this is our fair-use limit, so the astrologer stays fast for everyone. Your questions reopen at midnight.",
+        };
         return res.status(429).json({
-          error: 'Daily question limit reached.',
-          dailyLimit: DAILY_LIMIT,
+          error: fairUseMsg[language] || fairUseMsg.en,
+          code: 'FAIR_USE_LIMIT',
+          dailyLimit: CHAT_FAIR_USE_DAILY,
           remaining: 0,
           resetsAt: todayUTC() + 'T18:30:00Z',
           limitReached: true,
@@ -152,7 +166,7 @@ router.post('/ask', phoneAuth, requireSubscription, aiUserLimiter, distributedAi
     });
 
     // Increment quota AFTER successful response
-    let quotaAfter = { remaining: DAILY_LIMIT - 1 };
+    let quotaAfter = { remaining: CHAT_FAIR_USE_DAILY - 1 };
     if (db && uid) {
       quotaAfter = await incrementQuota(uid);
     }
@@ -169,7 +183,7 @@ router.post('/ask', phoneAuth, requireSubscription, aiUserLimiter, distributedAi
       success: true,
       data: result,
       remaining: quotaAfter.remaining,
-      dailyLimit: DAILY_LIMIT,
+      dailyLimit: CHAT_FAIR_USE_DAILY,
     });
   } catch (error) {
     console.error('AI Chat error:', error);

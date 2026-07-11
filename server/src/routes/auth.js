@@ -102,7 +102,6 @@ async function createGoogleUser(uid, profile) {
       provider: null,
     },
     onboardingComplete: false,
-    tokenBalance: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     reportCount: 0,

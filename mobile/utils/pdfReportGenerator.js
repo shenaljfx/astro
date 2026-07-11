@@ -11,7 +11,9 @@
  * ─ Ornamental corner borders + diagonal watermark
  * ─ Branded header/footer on every page
  * ─ Marketing end-page with app CTA
- * ─ Porondam: dual-chart layout, 7-factor bars, advanced analysis
+ * ─ Porondam: mirrors the in-app report — verdict-first archetype hero,
+ *   numbered plain-language chapters, dual charts, chaptered written
+ *   reading, method + guidance footer
  * 
  * Exports:
  *   generateReportHTML(opts)  – Full Life Report PDF
@@ -21,6 +23,7 @@
  */
 
 import { APP_LOGO_BASE64 } from '../assets/logo-base64';
+import { deriveArchetype } from './porondamArchetypes';
 
 // In-memory cache so loadLogoBase64() runs at most once per app session.
 // The logo is ~50-100 KB; reading + base64-encoding it is slow enough to
@@ -60,6 +63,7 @@ var SECTION_COLORS = {
   spiritual:        { primary: '#A855F7', accent: '#D8B4FE', bg: '#FAF5FF', emoji: '🙏' },
   realEstate:       { primary: '#84CC16', accent: '#BEF264', bg: '#F7FEE7', emoji: '🏡' },
   transits:         { primary: '#14B8A6', accent: '#5EEAD4', bg: '#F0FDFA', emoji: '🌍' },
+  next12Months:     { primary: '#D97706', accent: '#FBBF24', bg: '#FFFBEB', emoji: '📅' },
   surpriseInsights: { primary: '#F97316', accent: '#FDBA74', bg: '#FFF7ED', emoji: '🤯' },
   timeline25:       { primary: '#6366F1', accent: '#A5B4FC', bg: '#EEF2FF', emoji: '📅' },
   remedies:         { primary: '#FBBF24', accent: '#FDE68A', bg: '#FFFBEB', emoji: '💎' },
@@ -82,53 +86,178 @@ var PLANET_SI = {
   Surya:'රවි',Chandra:'චන්ද්‍ර',Mangala:'කුජ',Budha:'බුධ',Guru:'ගුරු',Shukra:'සිකුරු',Shani:'ශනි',
 };
 
-function pdfFactorCopy(name, isSi) {
-  var map = {
-    Dina: ['Daily Harmony', 'දෛනික සමගිය'], Gana: ['Temperament Fit', 'ස්වභාව ගැළපීම'],
-    Yoni: ['Intimacy Comfort', 'සමීප පහසුව'], Rashi: ['Mind & Home Fit', 'මනස සහ ගෘහ ගැළපීම'],
-    Vasya: ['Mutual Attraction', 'ආකර්ෂණ ගැළපීම'], Nadi: ['Family Line Fit', 'පවුල් ගලායෑම් ගැළපීම'],
-    Mahendra: ['Growth Support', 'වර්ධන සහාය'],
+// ── Porondam PDF copy — mirrors SIGNAL_COPY / getSignalCopy and
+// getRelationshipChallengeCopy in app/(tabs)/porondam.js. The exported
+// PDF must read exactly like the in-app report; keep these in sync.
+// Voice: warm counsel (EN) · elevated ඔබ register (SI).
+// Tiers speak of care, never doom — care-amber, no alarm-red.
+var PDF_TIERS = {
+  good:  { label: { en: 'Matches well', si: 'හොඳින් ගැළපේ' }, text: '#0E9F6E', fill: '#34D399', soft: 'rgba(52,211,153,0.10)', line: 'rgba(52,211,153,0.38)' },
+  mixed: { label: { en: 'In between', si: 'මධ්‍යමයි' }, text: '#B08430', fill: '#E8C97A', soft: 'rgba(232,201,122,0.16)', line: 'rgba(232,201,122,0.50)' },
+  poor:  { label: { en: 'Needs attention', si: 'අවධානය ඕනෑ' }, text: '#B45309', fill: '#F59E0B', soft: 'rgba(245,158,11,0.10)', line: 'rgba(245,158,11,0.40)' },
+};
+
+var PDF_SIGNAL_COPY = {
+  Dina: {
+    plainName: { en: 'Everyday Life Together', si: 'එකට ගෙවෙන දවස' },
+    techName: { en: 'Dina Porondam', si: 'දින පොරොන්දම' },
+    what: { en: 'This checks how easily your daily routines — waking, meals, work, rest — fit together.', si: 'මෙයින් බලන්නේ දෙදෙනාගේ දවසේ රටාව — නැගිටින වෙලාව, කෑම, වැඩ, විවේකය — කොතරම් පහසුවෙන් එකට ගැළපෙනවාද කියායි.' },
+    good: { en: 'Your daily routines match well. Living together should feel easy and comfortable on most days.', si: 'දෙදෙනාගේ දවසේ රටාව හොඳින් ගැළපෙනවා. එකට ජීවත් වෙද්දී බොහෝ දවස්වල පහසුවක් සහ සැහැල්ලුවක් දැනේවි.' },
+    mixed: { en: 'Your routines differ a little. Talk early about sleep, meals and money habits — small agreements make daily life smooth.', si: 'දවසේ රටාවල පොඩි වෙනස්කම් තිබෙනවා. නින්ද, කෑම සහ වියදම් ගැන කලින්ම කතා කරගන්න — පොඩි එකඟතාවලින් එදිනෙදා ජීවිතය පහසු වෙනවා.' },
+    poor: { en: 'You run on quite different daily clocks. This is workable — but talk honestly about routines from the very start, so neither of you quietly gets worn out.', si: 'දෙදෙනාගේ දවසේ රටා සෑහෙන්න වෙනස්. මේක හදාගත හැකි දෙයක් — නමුත් මුල සිටම දවසේ රටාව ගැන අවංකව කතා කරගන්න. එවිට කාටවත් නොදැනී මහන්සිය එකතු වන්නේ නැහැ.' },
+  },
+  Gana: {
+    plainName: { en: 'Temper & Stress Style', si: 'තරහ සහ පීඩනය දරන විදිය' },
+    techName: { en: 'Gana Porondam', si: 'ගණ පොරොන්දම' },
+    what: { en: 'This checks whether you two react to stress and anger in a similar way.', si: 'මෙයින් බලන්නේ තරහ ගිය විට හෝ පීඩනයක් ආ විට දෙදෙනා හැසිරෙන විදිය සමානද කියායි.' },
+    good: { en: 'You handle stress the same way, so arguments cool down fast instead of growing into big fights.', si: 'දෙදෙනාම පීඩනය දරන විදිය සමානයි. ඒ නිසා අමනාපයක් ආවත් ඉක්මනින් නිවෙනවා — ලොකු රණ්ඩුවක් බවට වැඩෙන්නේ නැහැ.' },
+    mixed: { en: 'You react differently when upset. Learn what upsets each other — then a clash becomes a chance to understand, not a fight.', si: 'තරහ ගිය විට දෙදෙනා හැසිරෙන විදිය වෙනස්. එකිනෙකාව කලබල කරන දේවල් හඳුනාගන්න — එවිට ගැටුමක් රණ්ඩුවක් නොවී, තේරුම් ගැනීමට අවස්ථාවක් වෙනවා.' },
+    poor: { en: 'One of you stays quiet while the other heats up fast. Neither is wrong — just give tempers time to cool, and be patient with each other’s pace.', si: 'එක් අයෙක් නිහඬ වෙද්දී අනෙකා ඉක්මනින් රත් වෙනවා. දෙදෙනාම වැරදි නැහැ — තරහ නිවෙන්න එකිනෙකාට වෙලාව දෙන්න, එකිනෙකාගේ වේගයට ඉවසීමෙන් ඉඩ දෙන්න.' },
+  },
+  Yoni: {
+    plainName: { en: 'Physical Closeness', si: 'ශාරීරික සමීපකම' },
+    techName: { en: 'Yoni Porondam', si: 'යෝනි පොරොන්දම' },
+    what: { en: 'This checks the natural physical attraction between you, and how easily closeness comes.', si: 'මෙයින් බලන්නේ දෙදෙනා අතර ස්වාභාවික ශාරීරික ආකර්ෂණය සහ සමීප වීමේ පහසුව ගැනයි.' },
+    good: { en: 'A strong natural attraction. Physical and emotional closeness come easily for you two.', si: 'ස්වාභාවික ආකර්ෂණය හොඳටම තිබෙනවා. ශාරීරික සහ හිතේ සමීපකම දෙකම ඔබ දෙදෙනාට පහසුවෙන් ලැබෙනවා.' },
+    mixed: { en: 'The attraction is real, but it needs time and care to stay strong. Unhurried time alone together helps a lot.', si: 'ආකර්ෂණය ඇත්තටම තිබෙනවා. නමුත් එය දිගටම තියාගන්න කාලය සහ සැලකිල්ල ඕනෑ. හදිසි නොවී දෙදෙනාම එකට ගත කරන කාලය ලොකු උදව්වක්.' },
+    poor: { en: 'Closeness may not come by itself. Talk openly and kindly about what each of you needs — that honest talk is what builds it.', si: 'සමීපකම ඉබේම නොඑන්න පුළුවන්. එකිනෙකාට අවශ්‍ය දේ ගැන විවෘතව, කරුණාවෙන් කතා කරන්න — ඒ අවංක කතාබහෙන් තමයි එය ගොඩනැගෙන්නේ.' },
+  },
+  Rashi: {
+    plainName: { en: 'Understanding Feelings', si: 'හැඟීම් තේරුම් ගැනීම' },
+    techName: { en: 'Rashi Porondam', si: 'රාශි පොරොන්දම' },
+    what: { en: 'This checks how easily you understand each other’s feelings and moods.', si: 'මෙයින් බලන්නේ එකිනෙකාගේ හැඟීම් සහ මනෝභාව කොතරම් පහසුවෙන් තේරුම් ගන්නවාද කියායි.' },
+    good: { en: 'You understand each other’s feelings without long explanations. Home will feel calm and safe.', si: 'දිග පැහැදිලි කිරීම් නැතුවම ඔබ එකිනෙකාගේ හැඟීම් තේරුම් ගන්නවා. නිවස සන්සුන්, ආරක්ෂිත තැනක් වගේ දැනේවි.' },
+    mixed: { en: 'You feel things differently. Simply saying “this is how I feel” early stops silent distance from growing.', si: 'දෙදෙනා හැඟීම් විඳින විදිය වෙනස්. “මට දැනෙන්නේ මෙහෙමයි” කියා කලින්ම කීවොත්, නිහඬ දුරස්කමක් වැඩෙන එක නවතිනවා.' },
+    poor: { en: 'Your emotional styles are far apart. Listen patiently instead of guessing — asking “what do you feel?” works far better than assuming.', si: 'දෙදෙනාගේ හැඟීම් රටා තරමක් දුරයි. අනුමාන නොකර ඉවසීමෙන් සවන් දෙන්න — “ඔබට මොකද දැනෙන්නේ?” කියා ඇසීම, හිතාගැනීමට වඩා හොඳින් වැඩ කරනවා.' },
+  },
+  Vasya: {
+    plainName: { en: 'Pull Toward Each Other', si: 'එකිනෙකාට ඇදෙන බව' },
+    techName: { en: 'Vasya Porondam', si: 'වශ්‍ය පොරොන්දම' },
+    what: { en: 'This checks the natural pull between you — how willingly you listen to and go along with each other.', si: 'මෙයින් බලන්නේ දෙදෙනා අතර ස්වාභාවික ඇදීම — එකිනෙකාට කැමැත්තෙන් සවන් දෙන, එකඟ වන ගතිය ගැනයි.' },
+    good: { en: 'A strong, willing pull toward each other. You soften each other, and agreeing feels natural.', si: 'එකිනෙකාට කැමැත්තෙන්ම ඇදෙන ප්‍රබල බැඳීමක්. ඔබ එකිනෙකාව මෘදු කරනවා — එකඟ වීම ඉබේම සිදු වෙනවා.' },
+    mixed: { en: 'One of you tends to lead more. Take turns — when both feel heard, respect stays strong.', si: 'එක් අයෙක් වැඩිපුර මූලිකත්වය ගන්නවා. මාරුවෙන් මාරුවට ඉඩ දෙන්න — දෙදෙනාටම ඇහුම්කන් ලැබෙනවා යැයි දැනුණොත් ගෞරවය රැකෙනවා.' },
+    poor: { en: 'The natural pull is quiet here. That’s okay — the bond stays strong when you choose to care for each other on purpose, every day.', si: 'ස්වාභාවික ඇදීම මෙහි අඩුයි. ඒක ප්‍රශ්නයක් නොවේ — දවසින් දවස හිතාමතාම එකිනෙකාට සැලකුවොත් බැඳීම ශක්තිමත්ව තියාගන්න පුළුවන්.' },
+  },
+  Nadi: {
+    plainName: { en: 'Health of Children & Family', si: 'දරුවන්ගේ සහ පවුලේ සෞඛ්‍යය' },
+    techName: { en: 'Nadi Porondam', si: 'නාඩි පොරොන්දම' },
+    what: { en: 'In tradition this is one of the most important checks — it looks at the health of the family line and future children.', si: 'සම්ප්‍රදායේ වැදගත්ම පරීක්ෂාවලින් එකක් මෙයයි — ඉදිරි පරම්පරාවේ, එනම් දරුවන්ගේ සෞඛ්‍යය ගැන බලනවා.' },
+    good: { en: 'This lines up well — traditionally a very good sign for healthy children and a healthy family.', si: 'මෙය හොඳින් ගැළපෙනවා — නිරෝගී දරුවන්ට සහ නිරෝගී පවුලකට ඉතා හොඳ ලකුණක් ලෙසයි සම්ප්‍රදායේ සලකන්නේ.' },
+    mixed: { en: 'A middle result. Good habits and regular medical check-ups keep this side well covered.', si: 'මධ්‍යම ප්‍රතිඵලයක්. හොඳ පුරුදු සහ නියමිත වෛද්‍ය පරීක්ෂණවලින් මේ පැත්ත හොඳින් බලාගන්න පුළුවන්.' },
+    poor: { en: 'Tradition treats this signal seriously. It is worth showing both horoscopes to an experienced astrologer, who can weigh it with everything else.', si: 'මේ ලකුණ සම්ප්‍රදායේ බැරෑරුම්ව සලකනවා. කේන්දර දෙකම පළපුරුදු ජ්‍යෝතිෂවේදියෙකුට පෙන්වා, අනෙක් සියල්ල සමඟ කිරා බලා ගැනීම වටිනවා.' },
+  },
+  Mahendra: {
+    plainName: { en: 'Growing & Doing Well Together', si: 'එකට දියුණු වීම' },
+    techName: { en: 'Mahendra Porondam', si: 'මහේන්ද්‍ර පොරොන්දම' },
+    what: { en: 'This checks support for prosperity — income, progress, and the blessing of children.', si: 'මෙයින් බලන්නේ දියුණුවට ඇති සහයෝගයයි — ආදායම, ඉදිරි ගමන සහ දරු භාග්‍යය.' },
+    good: { en: 'Good support for growing together — your efforts tend to add up instead of pulling apart.', si: 'එකට දියුණු වීමට හොඳ සහයක් තිබෙනවා — දෙදෙනාගේ උත්සාහය එකට එකතු වෙනවා මිස, විසිරෙන්නේ නැහැ.' },
+    mixed: { en: 'Progress will come from planning together. Decide your goals as a pair and write them down — it truly helps.', si: 'දියුණුව එන්නේ එකට සැලසුම් කිරීමෙන්. අරමුණු දෙදෙනාම එකතු වී තීරණය කර ලියා තබාගන්න — එය ඇත්තටම උදව් වෙනවා.' },
+    poor: { en: 'Success won’t come on its own here — it comes when you actively support each other’s work and dreams.', si: 'මෙහි සාර්ථකත්වය ඉබේම එන්නේ නැහැ — එකිනෙකාගේ රැකියාවට සහ සිහිනවලට සක්‍රියව උදව් කරන විට තමයි එය එන්නේ.' },
+  },
+  Rajju: {
+    plainName: { en: 'Long Life of the Marriage', si: 'විවාහයේ දිගු පැවැත්ම' },
+    techName: { en: 'Rajju Porondam', si: 'රජ්ජු පොරොන්දම' },
+    what: { en: 'Tradition treats this as the most serious check — it reads the long life and stability of the marriage itself.', si: 'සම්ප්‍රදායේ වඩාත්ම බැරෑරුම් පරීක්ෂාව මෙයයි — විවාහයේ දිගු පැවැත්ම සහ ස්ථාවර බව ගැන බලනවා.' },
+    good: { en: 'Your rajju groups are different — traditionally the strongest sign of a long, steady marriage.', si: 'දෙදෙනාගේ රජ්ජු කාණ්ඩ වෙනස් — දිගු, ස්ථාවර විවාහයකට සම්ප්‍රදායේ තිබෙන ප්‍රබලම හොඳ ලකුණ.' },
+    mixed: { en: 'A partial result — worth a closer look from an experienced astrologer.', si: 'අර්ධ ප්‍රතිඵලයක් — පළපුරුදු ජ්‍යෝතිෂවේදියෙකු ලවා සමීපව බලවා ගැනීම වටිනවා.' },
+    poor: { en: 'You share the same rajju group. This is the one signal tradition takes most seriously — families usually show both horoscopes to an experienced astrologer before deciding.', si: 'දෙදෙනාම එකම රජ්ජු කාණ්ඩයේ. සම්ප්‍රදායේ වඩාත්ම බැරෑරුම්ව සලකන ලකුණ මෙයයි — සාමාන්‍යයෙන් පවුල් තීරණයකට පෙර කේන්දර දෙකම පළපුරුදු ජ්‍යෝතිෂවේදියෙකුට පෙන්වනවා.' },
+  },
+  Vedha: {
+    plainName: { en: 'No Blocking Stars', si: 'බාධා නැති බව' },
+    techName: { en: 'Vedha Porondam', si: 'වේධ පොරොන්දම' },
+    what: { en: 'This checks that your two birth stars do not block each other.', si: 'මෙයින් බලන්නේ දෙදෙනාගේ උපන් නැකැත් එකිනෙකාට බාධා නොකරනවාද කියායි.' },
+    good: { en: 'No blocking — your birth stars leave the road clear for each other.', si: 'බාධාවක් නැහැ — දෙදෙනාගේ නැකැත් එකිනෙකාට ඉඩ දී, මග නිදහස්ව තබනවා.' },
+    mixed: { en: 'A small crossing — being aware of it is enough to keep things smooth.', si: 'පොඩි හරස්වීමක් තිබෙනවා — ඒ ගැන දැනුවත්ව සිටීමම ප්‍රමාණවත්.' },
+    poor: { en: 'Your birth stars push against each other — tradition takes this seriously, so an experienced astrologer should weigh it with the full picture.', si: 'දෙදෙනාගේ නැකැත් එකිනෙකාට විරුද්ධව අදිනවා — සම්ප්‍රදායේ මෙය බැරෑරුම් ලකුණක්. සම්පූර්ණ චිත්‍රය සමඟ කිරා බලන්න පළපුරුදු ජ්‍යෝතිෂවේදියෙකු හමුවෙන්න.' },
+  },
+};
+
+function pdfSignalCopy(name, isSi, score, maxScore) {
+  var pct = maxScore > 0 ? score / maxScore : 0;
+  var tier = pct >= 0.75 ? 'good' : pct >= 0.25 ? 'mixed' : 'poor';
+  var lang = isSi ? 'si' : 'en';
+  var t = PDF_TIERS[tier];
+  var sc = PDF_SIGNAL_COPY[name];
+  if (!sc) {
+    return { plainName: name, techName: name + ' Porondam', what: '', insight: '', tier: tier, tierLabel: t.label[lang], colors: t };
+  }
+  return {
+    plainName: sc.plainName[lang],
+    techName: sc.techName[lang],
+    what: sc.what[lang],
+    insight: sc[tier][lang],
+    tier: tier,
+    tierLabel: t.label[lang],
+    colors: t,
   };
-  var selected = map[name];
-  return selected ? (isSi ? selected[1] : selected[0]) : (isSi ? 'සබඳතා ගැළපීම' : 'Relationship Fit');
 }
+
+var PDF_CHALLENGE_MAP = {
+  mangal: {
+    si: { label: 'චර්යාව හා කෝපය පාලනය', desc: 'එක් අයකුගේ තීව්‍ර ශක්තිය නිසා ඉක්මනින් කේන්ති ගැනීම හෝ ආධිපත්‍ය පැවරීම විය හැක. ඉවසීමෙන් කතා කිරීම වැදගත්.' },
+    en: { label: 'Temperament & Anger Control', desc: 'One partner may have intense energy leading to quick reactions or dominance. Patient communication is key.' },
+  },
+  kaal: {
+    si: { label: 'ජීවිතයේ හදිසි මාරු', desc: 'ජීවිතයේ අනපේක්ෂිත වෙනස්කම් එකින් එක පැමිණිය හැක. එකිනෙකා සවිමත්ව රැඳී සිටීම වැදගත්.' },
+    en: { label: 'Sudden Life Shifts', desc: 'Life may bring unexpected changes one after another. Staying resilient together is important.' },
+  },
+  sade: {
+    si: { label: 'ජීවිතයේ අභියෝගකාරී කාල පරිච්ඡේදය', desc: 'දැනට අභියෝගකාරී කාලයක ගමන් කරමින් සිටී. අන්‍යෝන්‍ය උදව් හා ඉවසීම ඉතා වැදගත්.' },
+    en: { label: 'Challenging Life Phase', desc: 'Currently going through a demanding period. Mutual support and patience are crucial.' },
+  },
+  pitru: {
+    si: { label: 'පවුල් රටා හා උරුමය', desc: 'පවුලේ පරම්පරාවෙන් ආ සබඳතා රටා බලපෑම් කළ හැක. අලුත් පුරුදු ගොඩනගා ගැනීම හොඳයි.' },
+    en: { label: 'Family Patterns & Legacy', desc: 'Inherited family relationship patterns may influence the bond. Building new habits together helps.' },
+  },
+  grahan: {
+    si: { label: 'මානසික පීඩනය හා අවිනිශ්චිතභාවය', desc: 'සිතේ ව්‍යාකූලත්වය හෝ තීරණ ගැනීමේ දුෂ්කරතා ඇති විය හැක. පැහැදිලි සන්නිවේදනය අත්‍යවශ්‍යයි.' },
+    en: { label: 'Mental Pressure & Confusion', desc: 'There may be confusion or difficulty making decisions together. Clear communication is essential.' },
+  },
+  shrapit: {
+    si: { label: 'පැරණි හැඟීම්මය බැමි', desc: 'අතීත සබඳතා අත්දැකීම් නිසා පැවරෙන බිය හෝ විශ්වාස ගැටලු විය හැක. අලුත් ආරම්භයක් ගොඩනගන්න.' },
+    en: { label: 'Emotional Baggage from the Past', desc: 'Past relationship experiences may carry fear or trust issues. Focus on building a fresh start.' },
+  },
+  guru: {
+    si: { label: 'විවේකය හා නුවණ යොදා ගැනීම', desc: 'සමහරවිට නොමේරූ තීරණ ගැනීමට නැඹුරුවක් ඇත. වැදගත් කරුණු ගැන හිතාමතා සාකච්ඡා කරන්න.' },
+    en: { label: 'Wisdom & Judgement', desc: 'There may be a tendency toward impulsive decisions. Important matters need deliberate discussion.' },
+  },
+  kemdrum: {
+    si: { label: 'තනිකම හා හැඟීම්මය හුදෙකලාව', desc: 'එක් පාර්ශවයකට හැඟීම්මය වශයෙන් හුදෙකලා වූ හැඟීමක් ඇති විය හැක. සැලකිල්ල ප්‍රකාශ කිරීම අමතක නොකරන්න.' },
+    en: { label: 'Emotional Isolation', desc: 'One partner may sometimes feel emotionally alone. Regularly expressing care is vital.' },
+  },
+};
 
 function pdfChallengeCopy(item, isSi) {
   var severity = item && item.severity ? String(item.severity).toLowerCase() : '';
+  var name = item && item.name ? String(item.name).toLowerCase() : '';
+  var matchedKey = Object.keys(PDF_CHALLENGE_MAP).find(function (k) { return name.indexOf(k) !== -1; });
+  var mapped = matchedKey ? PDF_CHALLENGE_MAP[matchedKey] : null;
+
+  if (item && item.cancelled) {
+    if (isSi) {
+      return {
+        label: mapped ? mapped.si.label + ' — නිවාරණය වී ඇත' : 'සැලකිල්ල අඩු වූ කරුණ',
+        desc: 'මේ බලපෑම සැලකිය යුතු ලෙස අඩු වී ඇත. සාමාන්‍ය සැලකිල්ලෙන් ප්‍රමාණවත්.',
+      };
+    }
+    return {
+      label: mapped ? mapped.en.label + ' — Resolved' : 'Reduced Care Point',
+      desc: 'This influence has been significantly reduced. Normal care is sufficient.',
+    };
+  }
+
+  if (mapped) return isSi ? mapped.si : mapped.en;
+
   if (isSi) {
     return {
-      label: item && item.cancelled ? 'සැලකිල්ල අඩු වූ කරුණ' : (severity.indexOf('severe') !== -1 ? 'වැඩි සැලකිල්ලක් අවශ්‍ය කරුණ' : 'සබඳතාවේ සැලකිලිමත් කරුණ'),
-      desc: item && item.cancelled ? 'දැඩි අවදානමක් ලෙස ගන්න ඕන නෑ. එත් විවෘත කතාව සහ හොඳ පුරුදු තබාගන්න.' : 'ඉවසීම, විශ්වාසය, සහ තීරණ ගැනීමේදී වැඩි සැලකිල්ලක් ඕනේ කියලා පෙන්වනවා.',
+      label: severity.indexOf('severe') !== -1 ? 'වැඩි සැලකිල්ලක් අවශ්‍ය කරුණ' : 'සබඳතාවේ සැලකිලිමත් කරුණ',
+      desc: 'මෙය සබඳතාවේ ඉවසීම, විශ්වාසය සහ තීරණ ගැනීමේදී වැඩි සැලකිල්ලක් අවශ්‍ය බව පෙන්වනවා.',
     };
   }
   return {
-    label: item && item.cancelled ? 'Reduced Care Point' : (severity.indexOf('severe') !== -1 ? 'High-Care Relationship Point' : 'Relationship Care Point'),
-    desc: item && item.cancelled ? 'This is not a strong warning now, but open communication and steady habits still matter.' : 'This suggests an area where patience, trust, and careful decisions are important.',
+    label: severity.indexOf('severe') !== -1 ? 'High-Care Relationship Point' : 'Relationship Care Point',
+    desc: 'This suggests an area where patience, trust, and careful decisions are important for the relationship.',
   };
-}
-
-function pdfSupportLevel(score, maxScore, isSi) {
-  var ratio = (score || 0) / (maxScore || 1);
-  if (isSi) return ratio >= 0.7 ? 'ශක්තිමත් සහාය' : (ratio >= 0.45 ? 'මිශ්‍ර සහාය' : 'වැඩි සැලකිල්ලක් අවශ්‍යයි');
-  return ratio >= 0.7 ? 'Strong Support' : (ratio >= 0.45 ? 'Mixed Support' : 'Needs Extra Care');
-}
-
-function pdfLifePeriodCopy(period, isSi) {
-  return period && period.isBeneficPeriod
-    ? (isSi ? 'සහාය දෙන ජීවිත අදියර' : 'Supportive Life Period')
-    : (isSi ? 'වැඩි සැලකිල්ලක් අවශ්‍ය අදියර' : 'Careful Life Period');
-}
-
-function pdfAdvancedDesc(kind, data, isSi) {
-  if (kind === 'lifePhase') {
-    var harmony = String(data && data.harmony || '').toLowerCase();
-    if (harmony === 'harmonious') return isSi ? 'දෙදෙනාගේ වර්තමාන ජීවිත අදියර එකිනෙකාට සහාය දෙන බව පෙන්වනවා.' : 'Both current life periods look supportive together.';
-    if (harmony === 'conflicting') return isSi ? 'වර්තමාන ජීවිත රටා වෙනස් විය හැක. ඉක්මන් තීරණ වලට පෙර කතාබහ සහ ඉවසීම වැදගත්.' : 'The current life rhythms may feel different. Use patience and clear conversations before major decisions.';
-    return isSi ? 'මේ අදියර මිශ්‍ර සහායක් පෙන්වනවා. කාලය සහ පවුල් තීරණ පැහැදිලිව සකසන්න.' : 'This period shows mixed support. Keep timing and family decisions clear.';
-  }
-  if (kind === 'deepBond') return isSi ? 'දිගුකාලීන බැඳීම, තියෙනවාුළත පහසුව, සහ එකට ජීවත් වීමේ රටාව ගැන ප්‍රායෝගික කියවීමකි.' : 'This reads long-term bond, inner comfort, and shared-life rhythm.';
-  if (kind === 'carePoint') return isSi ? 'මේ කොටස ගැටුම්, කෝපය, සහ ඉක්මන් තීරණ ගැන වැඩි සැලකිල්ලක් ඕනෙද කියලා පෙන්වනවා.' : 'This shows whether conflict, impatience, and rushed decisions need extra care.';
-  return isSi ? 'මේ කොටස දිගුකාලීන සබඳතා සහාය පෙන්වනවා.' : 'This section shows long-term relationship support.';
 }
 
 // ════════════════════════════════════════════════
@@ -703,13 +832,20 @@ function generateReportHTML(opts) {
       +'</div>';
   }
 
-  // Hero scores
+  // Hero scores — prefer the server's flat post-cross-validation map, fall
+  // back to extracting from raw section data (legacy reports).
+  var flatScores = (opts.aiReport && opts.aiReport.sectionScores) || null;
   var heroHTML = '';
   var heroKeys = ['career','marriage','health','financial','luck','education','children','foreignTravel','spiritual'];
   var heroScores = [];
   heroKeys.forEach(function(key) {
-    var rd = reportSections[key] || rawSections[key] || {};
-    var s2 = extractScore(key, rd);
+    var s2 = null;
+    if (flatScores && flatScores[key] != null && isFinite(Number(flatScores[key]))) {
+      s2 = Math.min(100, Math.max(0, Math.round(Number(flatScores[key]))));
+    } else {
+      var rd = reportSections[key] || rawSections[key] || {};
+      s2 = extractScore(key, rd);
+    }
     if (s2 != null) heroScores.push({ key:key, score:s2 });
   });
 
@@ -739,8 +875,11 @@ function generateReportHTML(opts) {
     if (!narrative?.narrative) return;
     var sc4 = SECTION_COLORS[key]||{primary:'#7C3AED',accent:'#A78BFA',bg:'#F5F3FF',emoji:'📋'};
     var title = sectionTitles[index]||narrative.title||key;
-    var rawD = reportSections[key]||rawSections[key]||{};
+    var rawD = reportSections[key]||rawSections[key]||narrative.rawData||{};
     var sScore = extractScore(key,rawD);
+    if (sScore == null && flatScores && flatScores[key] != null && isFinite(Number(flatScores[key]))) {
+      sScore = Math.min(100, Math.max(0, Math.round(Number(flatScores[key]))));
+    }
 
     var verdictHTML = '';
     if (sScore != null) {
@@ -799,221 +938,962 @@ function generateReportHTML(opts) {
 
 // ═══════════════════════════════════════════════════════════════
 // ███ PORONDAM PDF ███
+// Mirrors the in-app report in app/(tabs)/porondam.js:
+// verdict-first archetype hero → numbered plain-language chapters
+// (glance / strengths & care / seven signals / attraction / life now /
+// deeper bond / wedding windows / birth stars / for the curious) →
+// the two birth charts → chaptered written reading → method + guidance.
 // ═══════════════════════════════════════════════════════════════
+
+var PDF_RASHI_EN = ['', 'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+var PDF_RASHI_SI = ['', 'මේෂ', 'වෘෂභ', 'මිථුන', 'කටක', 'සිංහ', 'කන්‍යා', 'තුලා', 'වෘශ්චික', 'ධනු', 'මකර', 'කුම්භ', 'මීන'];
+
+// The one-line verdict everyone understands — always a full plain phrase,
+// never an archetype name or a bare rating word. Mirrors getVerdictPhrase
+// in app/(tabs)/porondam.js; `dark` is the print-safe text variant of the
+// app's on-screen colour (`fill`).
+function pdfVerdictPhrase(data, isSi) {
+  var pct = data.percentage != null ? data.percentage
+    : (data.maxPossibleScore > 0 && data.totalScore != null ? Math.round((data.totalScore / data.maxPossibleScore) * 100) : null);
+  if (pct == null) {
+    return { text: isSi ? (data.ratingSinhala || data.rating || 'ගැළපීමේ ප්‍රතිඵලය') : (data.rating || 'Your match result'), dark: '#B08430', fill: '#E8C97A' };
+  }
+  if (pct >= 75) return { text: isSi ? 'ඉතා හොඳ ගැළපීමක්' : 'A Very Good Match', dark: '#0E9F6E', fill: '#34D399' };
+  if (pct >= 55) return { text: isSi ? 'හොඳ ගැළපීමක්' : 'A Good Match', dark: '#B08430', fill: '#FBBF24' };
+  if (pct >= 40) return { text: isSi ? 'සමබර ගැළපීමක්' : 'A Balanced Match', dark: '#7C3AED', fill: '#A78BFA' };
+  return { text: isSi ? 'උත්සාහයෙන් වැඩෙන ගැළපීමක්' : 'A Match That Grows with Effort', dark: '#DB2777', fill: '#F472B6' };
+}
+
+var PDF_MAG_LABELS = {
+  'Venus-Mars Spark': { en: 'Physical spark', si: 'කායික ආකර්ෂණය' },
+  '7th House Resonance': { en: 'Partnership fit', si: 'සහකරු ගැළපීම' },
+  'Nakshatra Lord Affinity': { en: 'Star-lord friendship', si: 'තරු අධිපති මිත්‍රත්වය' },
+  'Rahu-Ketu Karmic Axis': { en: 'Karmic thread', si: 'කර්ම බැඳීම' },
+  'Moon Emotional Sync': { en: 'Emotional sync', si: 'හැඟීම් සමමුහුර්තය' },
+};
+
+var PDF_YONI = {
+  Horse: { si: 'අශ්ව', trait: { en: 'Free-spirited & adventurous', si: 'නිදහස් සිතැති, වේගවත්' } },
+  Elephant: { si: 'ගජ', trait: { en: 'Powerful & protective', si: 'බලවත්, ආරක්ෂාකාරී' } },
+  Goat: { si: 'ඡාග', trait: { en: 'Tender & affectionate', si: 'මෘදු, සෙනෙහෙබර' } },
+  Serpent: { si: 'සර්ප', trait: { en: 'Intense & magnetic', si: 'තීව්‍ර, ආකර්ෂණීය' } },
+  Dog: { si: 'ශ්වාන', trait: { en: 'Devoted & faithful', si: 'පක්ෂපාත, විශ්වාසවන්ත' } },
+  Cat: { si: 'මාර්ජාර', trait: { en: 'Graceful & independent', si: 'සියුම්, ස්වාධීන' } },
+  Rat: { si: 'මූෂික', trait: { en: 'Quick & adaptable', si: 'චතුර, අනුවර්තී' } },
+  Cow: { si: 'ගව', trait: { en: 'Warm & nurturing', si: 'උණුසුම්, පෝෂණශීලී' } },
+  Buffalo: { si: 'මහිෂ', trait: { en: 'Strong & enduring', si: 'ශක්තිමත්, ඉවසිලිවන්ත' } },
+  Tiger: { si: 'ව්‍යාඝ්‍ර', trait: { en: 'Fierce & passionate', si: 'නිර්භීත, ආවේගශීලී' } },
+  Deer: { si: 'මෘග', trait: { en: 'Romantic & sensitive', si: 'රොමැන්තික, සංවේදී' } },
+  Monkey: { si: 'වානර', trait: { en: 'Playful & curious', si: 'ක්‍රීඩාශීලී, කුතුහලප්‍රිය' } },
+  Mongoose: { si: 'නකුල', trait: { en: 'Bold & fearless', si: 'නිර්භය, ක්ෂණික' } },
+  Lion: { si: 'සිංහ', trait: { en: 'Commanding & generous', si: 'අභිමානවත්, ත්‍යාගශීලී' } },
+};
+
+var PDF_ELEM = {
+  Fire: { si: 'අග්නි', color: '#C2410C' },
+  Earth: { si: 'පෘථිවි', color: '#4D7C0F' },
+  Air: { si: 'වායු', color: '#1D4ED8' },
+  Water: { si: 'ජල', color: '#0E7490' },
+  Ether: { si: 'ආකාශ', color: '#7C3AED' },
+};
+
+var PDF_ELEM_METAPHORS = {
+  'Fire+Water': { en: 'Steam when you meet — intense and transformative.', si: 'ගින්දරයි දියයි හමු වූ විට හුමාලයක් — තීව්‍රයි, පරිවර්තනීයයි.' },
+  'Fire+Fire': { en: 'Two flames — passionate; just mind the pace so neither burns out.', si: 'ගිනිදැල් දෙකක් — ආවේගශීලීයි; දෙදෙනාම නොදැවෙන වේගයක් සොයාගන්න.' },
+  'Fire+Earth': { en: 'Fire warms earth — you bring each other to life.', si: 'ගින්දර පොළොව උණුසුම් කරනවා — ඔබ එකිනෙකාට ජීවය දෙනවා.' },
+  'Fire+Air': { en: 'Air fans the flame — lively, and always growing.', si: 'සුළඟ ගින්දර අවුළුවනවා — උද්‍යෝගී, නොනවතින වර්ධනයක්.' },
+  'Water+Water': { en: 'A deep ocean together — emotionally boundless.', si: 'එකට ගැඹුරු සාගරයක් — හැඟීම්වලට සීමා නැහැ.' },
+  'Water+Earth': { en: 'Water nourishes earth — a naturally fertile bond.', si: 'දිය පොළොව පෝෂණය කරනවා — ස්වාභාවිකවම සරුසාර බැඳීමක්.' },
+  'Water+Air': { en: 'Mist and breeze — dreamy; a little grounding helps.', si: 'මීදුමයි සුළඟයි — සිහිනමය බැඳීමක්; පොළොවේ පය තැබීම වැදගත්.' },
+  'Earth+Earth': { en: 'Solid bedrock — stable and unshakeable.', si: 'ස්ථිර පර්වතයක් — නොසැලෙන, විශ්වාසදායක බැඳීමක්.' },
+  'Earth+Air': { en: 'Mountain and wind — steady yet free.', si: 'කන්දයි සුළඟයි — ස්ථාවරත්වයයි නිදහසයි එකට.' },
+  'Air+Air': { en: 'Two winds — sparkling conversation; an anchor helps.', si: 'සුළං දෙකක් — අදහස්වල දිලිසීමක්; නැංගුරමක් උපකාරී වෙනවා.' },
+};
+
+var PDF_PLANET_DRIVE = {
+  Sun: { en: 'Leadership & recognition', si: 'නායකත්වය සහ පිළිගැනීම' },
+  Moon: { en: 'Emotional security & nurturing', si: 'හැඟීම් සුරක්ෂිතභාවය සහ රැකවරණය' },
+  Mars: { en: 'Courage & achievement', si: 'ධෛර්යය සහ ජයග්‍රහණය' },
+  Mercury: { en: 'Intellect & communication', si: 'බුද්ධිය සහ සන්නිවේදනය' },
+  Jupiter: { en: 'Freedom & expansion', si: 'නිදහස සහ ප්‍රසාරණය' },
+  Venus: { en: 'Love & beauty', si: 'ආදරය සහ සුන්දරත්වය' },
+  Saturn: { en: 'Stability & discipline', si: 'ස්ථාවරත්වය සහ විනය' },
+  Rahu: { en: 'Transformation & ambition', si: 'පරිවර්තනය සහ අභිලාෂය' },
+  Ketu: { en: 'Inner freedom', si: 'අභ්‍යන්තර නිදහස' },
+};
+
+var PDF_PASTLIFE = {
+  healer: { en: 'Healer', si: 'සුවකරු' }, warrior: { en: 'Warrior', si: 'රණශූර' },
+  teacher: { en: 'Teacher', si: 'ගුරුවර' }, artist: { en: 'Artist', si: 'කලාකරු' },
+  leader: { en: 'Leader', si: 'නායක' }, mystic: { en: 'Mystic', si: 'රහස්වාදී' },
+  merchant: { en: 'Merchant', si: 'වෙළෙන්දා' }, scholar: { en: 'Scholar', si: 'විද්වතා' },
+  caretaker: { en: 'Caretaker', si: 'රැකවරණකරු' }, explorer: { en: 'Explorer', si: 'ගවේෂක' },
+  pioneer: { en: 'Pioneer', si: 'පුරෝගාමී' }, king: { en: 'Ruler', si: 'පාලක' },
+  administrator: { en: 'Administrator', si: 'පරිපාලක' }, monk: { en: 'Monk', si: 'තවුසා' },
+  hermit: { en: 'Hermit', si: 'තාපස' }, seeker: { en: 'Seeker', si: 'සොයන්නා' },
+  philosopher: { en: 'Philosopher', si: 'දාර්ශනික' }, pilgrim: { en: 'Pilgrim', si: 'වන්දනාකරු' },
+  writer: { en: 'Writer', si: 'ලේඛක' }, messenger: { en: 'Messenger', si: 'පණිවිඩකරු' },
+  soldier: { en: 'Soldier', si: 'සෙබළ' }, farmer: { en: 'Farmer', si: 'ගොවි' },
+  landowner: { en: 'Landowner', si: 'ඉඩම් හිමි' }, priest: { en: 'Priest', si: 'පූජක' },
+  performer: { en: 'Performer', si: 'රංගන ශිල්පී' }, servant: { en: 'Helper', si: 'සේවක' },
+  partner: { en: 'Partner', si: 'හවුල්කරු' }, diplomat: { en: 'Diplomat', si: 'තානාපති' },
+  researcher: { en: 'Researcher', si: 'පර්යේෂක' }, alchemist: { en: 'Alchemist', si: 'රසවාදී' },
+  trader: { en: 'Trader', si: 'වෙළඳ' }, banker: { en: 'Banker', si: 'බැංකුකරු' },
+  networker: { en: 'Networker', si: 'ජාලකරු' }, elder: { en: 'Elder', si: 'වැඩිහිටි' },
+  mediator: { en: 'Mediator', si: 'මධ්‍යස්ථ' },
+};
+
+// Chapter titles/labels — mirrors L in app/(tabs)/porondam.js
+var PDF_PT = {
+  en: {
+    bride: 'Bride', groom: 'Groom',
+    coverTitle: 'Marriage Match', coverSub: 'All the porondam checks — explained in simple words',
+    headerTag: 'Marriage Match Report',
+    heroKicker: 'YOUR MATCH, READ AS ONE',
+    bondStyle: 'YOUR BOND STYLE',
+    heroEssence: 'Your full report unfolds below, step by step, in simple words.',
+    tradCount: 'Traditional porondams',
+    glanceTitle: 'At a glance', glanceSub: 'The three things to know first',
+    glanceStrong: 'What matches best', glanceCare: 'What needs the most care', glanceTiming: 'About timing',
+    scTitle: 'What’s good & what needs care', scSub: 'Both sides honestly — nothing hidden, nothing scary',
+    scGifts: 'What’s already good', scCare: 'What to look after', scPaths: 'What you can do next',
+    scSignificant: 'An important point — please consider it',
+    factors: 'The seven porondam checks', factorsSub: 'The traditional 20 points — what each check means, in plain words',
+    signalsNote: 'Scored the traditional way — 20 points across the classical porondam checks, read from both charts.',
+    attractionTitle: 'Attraction & closeness', attractionSub: 'How strong the pull between you is, and what kind it is',
+    naturesTitle: 'Your two natures',
+    lifeNowTitle: 'Life right now', lifeNowSub: 'What kind of period each of you is going through',
+    deepTitle: 'The deeper bond', deepSub: 'Checks that look at married life itself, beyond the surface',
+    weddingTitle: 'Good wedding dates', weddingSub: 'Time periods that are good in both charts at once',
+    noWindows: 'No shared favourable period was found',
+    starsTitle: 'Your birth stars', starsSub: 'The key details an astrologer would ask for — sign, star, ruler',
+    curioTitle: 'For the curious', curioSub: 'Symbolic readings — fun to explore, not for decisions',
+    chartsTitle: 'The Two Birth Charts',
+    brideChart: 'Bride’s Birth Chart', groomChart: 'Groom’s Birth Chart',
+    report: 'The Written Report', readerChapters: 'chapters', readerMin: 'min read',
+    readerSub: 'Written from both charts — read it together, slowly.',
+    methodTitle: 'How this report is made',
+    methodBody: 'First we build both birth charts from the date, time and place you gave. Then we read the seven porondam checks, the navamsha match (the chart for married life), the life periods you are each in now, and the Mars check — the same order a traditional matcher follows, calculated precisely.',
+    guidanceNote: 'This report is here to help you think — it is not a final verdict on your future. The decision, and the relationship, always belong to you two.',
+  },
+  si: {
+    bride: 'මනාලිය', groom: 'මනාලයා',
+    coverTitle: 'පොරොන්දම් ගැළපීම', coverSub: 'පොරොන්දම් සියල්ල — සරල බසින්, තේරෙන විදියට',
+    headerTag: 'පොරොන්දම් වාර්තාව',
+    heroKicker: 'ඔබ දෙදෙනාගේ ගැළපීම — සම්පූර්ණ කියවීම',
+    bondStyle: 'ඔබේ බැඳීමේ විදිය',
+    heroEssence: 'ඔබ දෙදෙනාගේ සම්පූර්ණ වාර්තාව පහතින්, පියවරෙන් පියවර සරලව විස්තර වෙනවා.',
+    tradCount: 'සම්ප්‍රදායික පොරොන්දම්',
+    glanceTitle: 'එක බැල්මෙන්', glanceSub: 'මුලින්ම දැනගත යුතු කරුණු තුන',
+    glanceStrong: 'හොඳින්ම ගැළපෙන දේ', glanceCare: 'වැඩිපුරම බලාගත යුතු දේ', glanceTiming: 'කාලය ගැන',
+    scTitle: 'ගැළපෙන තැන් සහ හදාගත යුතු තැන්', scSub: 'ඇත්ත ඇති සැටියෙන් — සැඟවීමකුත් නැහැ, බය කිරීමකුත් නැහැ',
+    scGifts: 'දැනටමත් හොඳින් ගැළපෙන තැන්', scCare: 'සැලකිලිමත් විය යුතු තැන්', scPaths: 'ඉදිරියට යන මග',
+    scSignificant: 'වැදගත් කරුණක් — සලකා බලන්න',
+    factors: 'පොරොන්දම් හත', factorsSub: 'එක් එක් පොරොන්දම, තේරෙන බසින් — සම්ප්‍රදායික ලකුණු 20',
+    signalsNote: 'ලකුණු ගණන් කරන්නේ පැරණි සම්ප්‍රදායික ක්‍රමයටමයි — කේන්දර දෙකෙන් කියවෙන පොරොන්දම් ලකුණු 20ක් ලෙස.',
+    attractionTitle: 'ආකර්ෂණය සහ සමීපකම', attractionSub: 'දෙදෙනා අතර ඇදීම — කොපමණද, කොහොමද',
+    naturesTitle: 'දෙදෙනාගේ ස්වභාවය',
+    lifeNowTitle: 'මේ දවස්වල ජීවිතය', lifeNowSub: 'දෙදෙනා දැන් ගෙවන්නේ මොන වගේ කාලයක්ද',
+    deepTitle: 'ගැඹුරු බැඳීම', deepSub: 'මතුපිට ලකුණුවලට එහායින් — විවාහ ජීවිතයම ගැන බලන පරීක්ෂා',
+    weddingTitle: 'විවාහයට සුබම කාල', weddingSub: 'කේන්දර දෙකටම එකවර හිතකර කාල වකවානු',
+    noWindows: 'දෙකටම ගැළපෙන සුබ කාලයක් හමු වුණේ නැහැ',
+    starsTitle: 'උපන් නැකැත් සහ රාශි', starsSub: 'ජ්‍යෝතිෂවේදියෙක් මුලින්ම අහන විස්තර — රාශිය, නැකැත, අධිපති ග්‍රහයා',
+    curioTitle: 'රසවත් අමතර කියවීම්', curioSub: 'හිතට රසවත් සංකේත කියවීම් — තීරණවලට නම් නොවේ',
+    chartsTitle: 'උපන් කේන්දර දෙක',
+    brideChart: 'මනාලියගේ කේන්දරය', groomChart: 'මනාලයාගේ කේන්දරය',
+    report: 'ලිඛිත වාර්තාව', readerChapters: 'පරිච්ඡේද', readerMin: 'මිනි. කියවීම',
+    readerSub: 'කේන්දර දෙකම බලා ලියූ වාර්තාව — දෙදෙනාම එකට, හෙමින් කියවන්න.',
+    methodTitle: 'මේ වාර්තාව හැදෙන විදිය',
+    methodBody: 'මුලින්ම, ඔබ දුන් උපන් දිනය, වේලාව සහ ස්ථානය අනුව දෙදෙනාගේ කේන්දර දෙක හදනවා. ඉන්පසු පොරොන්දම් හත, නවාංශක ගැළපීම (විවාහ ජීවිතය ගැනම බලන කේන්දරය), දැන් ගෙවෙන දශා කාල සහ කුජ පරීක්ෂාව — පරම්පරාවෙන් ආ පිළිවෙළටම — නිවැරදිව ගණනය කරනවා.',
+    guidanceNote: 'මේ වාර්තාව තිබෙන්නේ ඔබට හිතන්න උදව්වක් විදියටයි — ඔබේ අනාගතය ගැන අවසාන තීන්දුවක් නොවේ. තීරණයත්, සම්බන්ධයත් හැම විටම ඔබ දෙදෙනාගේමයි.',
+  },
+};
+
+// Split the written reading into chapters on #/## headings.
+// Mirrors splitReportSections in app/(tabs)/porondam.js.
+function pdfSplitReportSections(md) {
+  if (!md || typeof md !== 'string') return null;
+  var lines = md.replace(/\r\n/g, '\n').split('\n');
+  var intro = [];
+  var sections = [];
+  var current = null;
+  for (var i = 0; i < lines.length; i++) {
+    var m = lines[i].match(/^#{1,2}\s+(.+?)\s*$/);
+    if (m) {
+      if (current) sections.push(current);
+      current = { title: m[1].trim(), body: [] };
+    } else if (current) {
+      current.body.push(lines[i]);
+    } else {
+      intro.push(lines[i]);
+    }
+  }
+  if (current) sections.push(current);
+  if (sections.length < 2) return null;
+
+  function splitGlyph(title) {
+    var m2 = title.match(/^([^A-Za-z0-9඀-෿ऀ-ॿ]+)(.+)$/);
+    if (!m2) return { glyph: null, title: title };
+    var lead = m2[1].trim();
+    var rest = m2[2].trim();
+    var hasSymbol = false;
+    for (var c = 0; c < lead.length; c++) {
+      if (lead.charCodeAt(c) >= 0x2190) { hasSymbol = true; break; }
+    }
+    if (!hasSymbol || !rest) return { glyph: null, title: title };
+    return { glyph: lead, title: rest };
+  }
+
+  var parsed = sections.map(function (s) {
+    var g = splitGlyph(s.title);
+    return { glyph: g.glyph, title: g.title, body: s.body.join('\n').trim() };
+  }).filter(function (s) { return s.body.length > 0 || s.title.length > 0; });
+
+  return { intro: intro.join('\n').trim(), sections: parsed };
+}
+
+// Print styles for the porondam chapter layout
+function porondamPrintCSS() {
+  return ''
+    + '.phero{background:linear-gradient(180deg,#FFFDF6,#FFF6E4);border:1px solid rgba(214,168,58,.42);border-top:3px solid var(--gold);border-radius:24px;padding:26px 24px 22px;margin-bottom:16px;text-align:center;page-break-inside:avoid;box-shadow:0 14px 40px rgba(72,52,24,.08);}'
+    + '.phero-kicker{font-size:9.5px;font-weight:900;letter-spacing:2.4px;text-transform:uppercase;color:#B08430;margin-bottom:16px;}'
+    + '.phero-medals{display:flex;align-items:flex-start;justify-content:center;gap:8px;margin-bottom:14px;}'
+    + '.pmedal{width:120px;}'
+    + '.pmedal-ring{width:56px;height:56px;border-radius:50%;border:2px solid;margin:0 auto 7px;display:flex;align-items:center;justify-content:center;font-size:24px;background:#fff;}'
+    + '.pmedal-name{font-size:12.5px;font-weight:900;}'
+    + '.pmedal-sign{font-size:10px;color:var(--muted);margin-top:1px;}'
+    + '.pthread{display:flex;align-items:center;width:76px;margin-top:26px;}'
+    + '.pthread-line{flex:1;height:1.5px;background:linear-gradient(90deg,rgba(214,168,58,.12),rgba(214,168,58,.75),rgba(214,168,58,.12));}'
+    + '.pthread-heart{font-size:13px;margin:0 5px;line-height:1;}'
+    + '.phero-name{font-size:25px;font-weight:900;color:var(--ink);letter-spacing:.2px;line-height:1.25;}'
+    + '.pstyle-caption{font-size:8.5px;font-weight:900;letter-spacing:1.8px;text-transform:uppercase;color:#A79B84;margin-top:9px;}'
+    + '.pstyle-name{font-size:14px;font-weight:900;margin-top:2px;}'
+    + '.phero-essence{font-size:12.5px;line-height:1.65;color:var(--ink-2);max-width:430px;margin:8px auto 0;}'
+    + '.phero-count{display:inline-block;margin-top:14px;padding:7px 14px;border-radius:999px;border:1px solid rgba(176,132,48,.4);background:rgba(217,164,65,.09);color:#B08430;font-size:11px;font-weight:800;}'
+    + '.pchap{background:#fff;border:1px solid rgba(214,168,58,.30);border-radius:20px;padding:20px 22px;margin-bottom:14px;box-shadow:0 10px 28px rgba(32,26,46,.05);page-break-inside:avoid;}'
+    + '.pchap.pflow{page-break-inside:auto;}'
+    + '.pchap-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;}'
+    + '.pchap-num{font-size:20px;font-weight:900;color:rgba(176,132,48,.42);line-height:1.2;min-width:26px;}'
+    + '.pchap-hgroup{flex:1;}'
+    + '.pchap-title{font-size:15px;font-weight:900;color:var(--ink);letter-spacing:.1px;}'
+    + '.pchap-sub{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.5;}'
+    + '.pchip{display:inline-block;padding:3px 10px;border-radius:999px;border:1px solid;font-size:10px;font-weight:900;white-space:nowrap;}'
+    + '.pglance{margin-bottom:11px;}'
+    + '.pglance-label{font-size:9px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:2px;}'
+    + '.pglance-text{font-size:12px;line-height:1.62;color:var(--ink-2);}'
+    + '.pschead{font-size:10px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;margin:10px 0 8px;}'
+    + '.pscrow{display:flex;gap:8px;margin-bottom:9px;page-break-inside:avoid;}'
+    + '.pscmark{font-weight:900;line-height:1.5;}'
+    + '.pscarea{font-size:12.5px;font-weight:800;color:var(--ink);}'
+    + '.psctext{font-size:11.5px;line-height:1.6;color:#5B5468;margin-top:1px;}'
+    + '.pscbox{background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.28);border-radius:12px;padding:11px 12px;margin-bottom:9px;page-break-inside:avoid;}'
+    + '.psctag{font-size:8.5px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#B45309;margin-bottom:3px;}'
+    + '.pscpath{font-size:11px;line-height:1.55;color:#B08430;font-style:italic;margin-top:4px;}'
+    + '.psig{padding:12px 0;border-top:1px solid rgba(32,26,46,.06);page-break-inside:avoid;}'
+    + '.psig-top{display:flex;align-items:center;gap:10px;}'
+    + '.psig-names{flex:1;}'
+    + '.psig-name{font-size:13px;font-weight:900;color:var(--ink);}'
+    + '.psig-tech{font-size:10px;color:#A79B84;margin-top:1px;}'
+    + '.psig-score{font-size:11px;font-weight:800;color:#8A8095;margin-left:6px;white-space:nowrap;}'
+    + '.psig-what{font-size:10.5px;line-height:1.55;color:#7A7188;margin-top:6px;}'
+    + '.psig-track{height:6px;background:rgba(32,26,46,.06);border-radius:99px;overflow:hidden;margin-top:8px;}'
+    + '.psig-fill{height:6px;border-radius:99px;}'
+    + '.psig-insight{font-size:11.5px;line-height:1.62;color:#6B5A2E;margin-top:7px;}'
+    + '.pnote{font-size:10.5px;line-height:1.6;color:#9A8F7D;margin-top:12px;text-align:center;font-style:italic;}'
+    + '.pmag{display:flex;align-items:center;gap:10px;margin-bottom:9px;}'
+    + '.pmag-label{width:150px;font-size:11.5px;font-weight:700;color:var(--ink-2);}'
+    + '.pmag-bar{flex:1;height:6px;background:rgba(32,26,46,.06);border-radius:99px;overflow:hidden;}'
+    + '.pmag-fill{height:6px;border-radius:99px;}'
+    + '.pmag-score{font-size:11px;font-weight:800;width:38px;text-align:right;}'
+    + '.pnatures{display:flex;gap:10px;align-items:stretch;margin-top:6px;}'
+    + '.pnature{flex:1;text-align:center;padding:12px 10px;border:1px solid rgba(32,26,46,.08);border-radius:14px;background:#FFFDF8;}'
+    + '.pnature-who{font-size:9.5px;font-weight:800;color:#9A90A5;text-transform:uppercase;letter-spacing:.6px;}'
+    + '.pnature-name{font-size:14px;font-weight:900;color:var(--ink);margin-top:3px;}'
+    + '.pnature-trait{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.5;}'
+    + '.pnature-mid{display:flex;align-items:center;justify-content:center;font-size:15px;color:#B08430;}'
+    + '.pnarr{margin-top:10px;padding:9px 12px;border:1px dashed rgba(214,168,58,.45);border-radius:12px;font-size:11px;line-height:1.6;color:#6B5A2E;background:rgba(255,248,232,.6);}'
+    + '.pdeep{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid rgba(32,26,46,.05);page-break-inside:avoid;}'
+    + '.pdeep-main{flex:1;}'
+    + '.pdeep-title{font-size:12.5px;font-weight:800;color:var(--ink);}'
+    + '.pdeep-cap{font-size:10px;color:#A79B84;margin-top:1px;}'
+    + '.pdeep-desc{font-size:11.5px;line-height:1.6;color:#5B5468;margin-top:4px;}'
+    + '.pharmony{margin-top:10px;padding-top:10px;border-top:1px solid rgba(32,26,46,.06);font-size:11.5px;line-height:1.6;color:#6B5A2E;}'
+    + '.pwed{display:flex;gap:10px;padding:10px 0;border-top:1px solid rgba(32,26,46,.05);page-break-inside:avoid;}'
+    + '.pwed-dates{font-size:12.5px;font-weight:900;}'
+    + '.pbest{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;background:rgba(14,159,110,.10);border:1px solid rgba(14,159,110,.35);color:#0E9F6E;font-size:8.5px;font-weight:900;letter-spacing:.8px;vertical-align:1px;}'
+    + '.pwed-reason{font-size:11px;color:#6E6580;margin-top:2px;line-height:1.55;}'
+    + '.pwed-meta{font-size:10px;color:#9A8F7D;margin-top:2px;}'
+    + '.ppills{display:flex;gap:12px;}'
+    + '.ppill{flex:1;padding:12px 14px;border:1px solid rgba(32,26,46,.08);border-radius:14px;background:#FFFDF8;}'
+    + '.ppill-name{font-size:12.5px;font-weight:900;}'
+    + '.ppill-sign{font-size:12px;font-weight:800;color:var(--ink-2);margin-top:4px;}'
+    + '.ppill-star{font-size:11px;color:#6E6580;margin-top:2px;}'
+    + '.ppill-lord{font-size:10px;color:#B08430;margin-top:4px;font-weight:700;}'
+    + '.pelems{display:flex;gap:10px;align-items:center;margin-top:12px;}'
+    + '.pelem{flex:1;text-align:center;padding:10px;border:1px solid rgba(32,26,46,.07);border-radius:12px;background:#FFFDF8;}'
+    + '.pelem-name{font-size:12.5px;font-weight:900;}'
+    + '.pelem-who{font-size:9.5px;color:#9A90A5;margin-top:2px;}'
+    + '.pmeta{margin-top:10px;text-align:center;font-size:11px;font-style:italic;color:#6B5A2E;line-height:1.6;}'
+    + '.pcurio-block{font-size:10px;font-weight:900;letter-spacing:1.1px;text-transform:uppercase;color:#B08430;margin:10px 0 8px;}'
+    + '.psoul{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(32,26,46,.05);}'
+    + '.psoul-main{flex:1;}'
+    + '.psoul-who{font-size:10px;color:#9A90A5;font-weight:800;}'
+    + '.psoul-drive{font-size:12px;font-weight:800;color:var(--ink);margin-top:1px;}'
+    + '.psoul-planet{font-size:11px;font-weight:900;color:#B08430;}'
+    + '.preader-cover{text-align:center;padding:18px 14px 14px;border-bottom:1px solid rgba(214,168,58,.25);margin-bottom:14px;background:linear-gradient(180deg,rgba(214,168,58,.07),transparent);border-radius:14px 14px 0 0;}'
+    + '.preader-kicker{font-size:9.5px;font-weight:900;letter-spacing:2.2px;text-transform:uppercase;color:#B08430;}'
+    + '.preader-names{font-size:17px;font-weight:900;color:var(--ink);margin-top:6px;}'
+    + '.preader-meta{margin-top:8px;}'
+    + '.preader-chip{display:inline-block;margin:0 4px;padding:3px 10px;border-radius:999px;border:1px solid rgba(176,132,48,.35);font-size:9.5px;font-weight:800;color:#8A6A20;background:rgba(217,164,65,.08);}'
+    + '.preader-hint{font-size:10.5px;color:var(--muted);margin-top:8px;font-style:italic;}'
+    + '.prchap{margin-bottom:12px;}'
+    + '.prchap-head{display:flex;align-items:center;gap:9px;padding:9px 12px;background:rgba(255,248,232,.75);border:1px solid rgba(214,168,58,.3);border-radius:12px;page-break-inside:avoid;page-break-after:avoid;}'
+    + '.prchap-glyph{font-size:13px;line-height:1;}'
+    + '.prchap-title{font-size:13px;font-weight:900;color:var(--ink);}'
+    + '.prchap-body{padding:10px 6px 2px;}'
+    + '.pmethod{background:#fff;border:1px solid rgba(214,168,58,.3);border-radius:18px;padding:18px 20px;margin-bottom:14px;page-break-inside:avoid;}'
+    + '.pmethod-title{font-size:12px;font-weight:900;color:var(--ink);letter-spacing:.4px;margin-bottom:8px;}'
+    + '.pmethod-body{font-size:11px;line-height:1.7;color:#5B5468;}'
+    + '.pguidance{margin-top:12px;padding:12px 14px;border:1px solid rgba(214,168,58,.45);border-radius:12px;background:rgba(255,248,232,.8);font-size:11.5px;line-height:1.65;color:#6B5A2E;font-weight:600;}';
+}
+
 function generatePorondamHTML(opts) {
   var isSi = opts.lang === 'si';
+  var lang = isSi ? 'si' : 'en';
+  var PT = PDF_PT[lang];
   var data = opts.data || {};
-  var brideName = opts.brideName || (isSi?'මනාලිය':'Bride');
-  var groomName = opts.groomName || (isSi?'මනාලයා':'Groom');
-  var pct = data.maxPossibleScore > 0 ? Math.round((data.totalScore/data.maxPossibleScore)*100) : 0;
-  var scoreColor = pct>=75?'#10B981':pct>=50?'#F59E0B':pct>=30?'#F97316':'#EF4444';
+  var brideName = opts.brideName || PT.bride;
+  var groomName = opts.groomName || PT.groom;
+  var esc = escapeHTML;
 
-  var logoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'"/>' : '<div style="font-size:44px;">💍</div>';
+  var brideRashiId = (data.brideChart && data.brideChart.lagnaRashiId) || (data.bride && data.bride.rashi && data.bride.rashi.id);
+  var groomRashiId = (data.groomChart && data.groomChart.lagnaRashiId) || (data.groom && data.groom.rashi && data.groom.rashi.id);
 
-  // Cover
+  var cr = data.coupleReading && (data.coupleReading[lang] || data.coupleReading.en);
+  // Older saved results carry no coupleReading — derive the archetype the
+  // same way the results screen does, so the PDF never loses the bond style.
+  if (!cr || !cr.archetype) {
+    if (brideRashiId && groomRashiId) {
+      cr = {
+        archetype: deriveArchetype(brideRashiId, groomRashiId, lang),
+        gifts: (cr && cr.gifts) || [],
+        nurture: (cr && cr.nurture) || [],
+        forwardPaths: (cr && cr.forwardPaths) || [],
+        traditionalCount: { score: data.totalScore != null ? data.totalScore : null, max: data.maxPossibleScore || 20 },
+      };
+    }
+  }
+  var adv = data.advancedPorondam && data.advancedPorondam.advanced;
+  var jm = data.jyotishMatching;
+  var factors = data.factors || [];
+
+  function tierFor(pct) {
+    return pct >= 0.7 ? PDF_TIERS.good : pct >= 0.4 ? PDF_TIERS.mixed : PDF_TIERS.poor;
+  }
+
+  function chip(text, textColor, lineColor, softColor) {
+    return '<span class="pchip" style="color:' + textColor + ';border-color:' + lineColor + ';background:' + softColor + ';">' + esc(text) + '</span>';
+  }
+
+  function chapterShell(index, title, sub, rightHTML, bodyHTML, flow) {
+    return '<div class="pchap' + (flow ? ' pflow' : '') + '">'
+      + '<div class="pchap-head">'
+      + (index ? '<div class="pchap-num">' + index + '</div>' : '')
+      + '<div class="pchap-hgroup"><div class="pchap-title">' + esc(title) + '</div>'
+      + (sub ? '<div class="pchap-sub">' + esc(sub) + '</div>' : '')
+      + '</div>'
+      + (rightHTML ? '<div>' + rightHTML + '</div>' : '')
+      + '</div>' + bodyHTML + '</div>';
+  }
+
+  // ── Cover ──────────────────────────────────────────────────────
+  var logoTag = opts.logoBase64 ? '<img src="data:image/png;base64,' + opts.logoBase64 + '"/>' : '<div style="font-size:44px;">💍</div>';
   var coverHTML = '<div class="cover cover-porondam">'
-    +'<div class="zr" style="border-color:rgba(249,168,212,0.15);"></div><div class="zri" style="border-color:rgba(255,255,255,0.05);"></div>'
-    +'<div class="cc"><div class="cl" style="border-color:rgba(249,168,212,0.5);">'+logoTag+'</div>'
-    +'<div class="cb">ග්‍රහචාර</div>'
-    +'<div class="ct"><span class="ctg">'+(isSi?'සම්පූර්ණ සබඳතා ගැලපීම් වාර්තාව':'Complete Compatibility Report')+'</span></div>'
-    +'<div class="cs">'+(isSi?'ප්‍රායෝගික සබඳතා විශ්ලේෂණය':'Practical Relationship Compatibility')+'</div>'
-    +'<div class="cd"></div>'
-    +'<div class="cn">'+brideName+'<span style="display:block;font-size:14px;color:rgba(255,255,255,0.5);margin:6px 0;font-weight:400;">'+(isSi?'සහ':'&')+'</span>'+groomName+'</div>'
-    +'</div><div class="cfb">'+new Date().toLocaleDateString()+'</div></div>';
+    + '<div class="zr" style="border-color:rgba(249,168,212,0.15);"></div><div class="zri" style="border-color:rgba(255,255,255,0.05);"></div>'
+    + '<div class="cc"><div class="cl" style="border-color:rgba(249,168,212,0.5);">' + logoTag + '</div>'
+    + '<div class="cb">ග්‍රහචාර</div>'
+    + '<div class="ct"><span class="ctg">' + esc(PT.coverTitle) + '</span></div>'
+    + '<div class="cs">' + esc(PT.coverSub) + '</div>'
+    + '<div class="cd"></div>'
+    + '<div class="cn">' + esc(brideName) + '<span style="display:block;font-size:14px;color:rgba(255,255,255,0.5);margin:6px 0;font-weight:400;">' + (isSi ? 'සහ' : '&') + '</span>' + esc(groomName) + '</div>'
+    + '</div><div class="cfb">' + new Date().toLocaleDateString() + '</div></div>';
 
-  // Grand score page
-  var scoreHTML = '<div class="hero-scores" style="text-align:center;">'
-    +'<div class="hero-title" style="color:#BE185D;">'+(isSi?'ගැලපීම් ප්‍රතිඵලය':'Compatibility Result')+'</div>'
-    +'<div class="hero-sub">'+(isSi?'සබඳතා රටා 7 · ලකුණු 20':'7 Signals · 20 Points')+'</div>'
-    +'<div class="hero-overall" style="background:linear-gradient(135deg,#FDF2F8,#FEF3C7,#F5F3FF);border-color:rgba(236,72,153,0.12);">'
-    +svgScoreGauge(pct,140,scoreColor,null)
-    +'<div class="ho-label" style="margin-top:8px;">'+(data.ratingEmoji||'💍')+' '+(isSi&&data.ratingSinhala?data.ratingSinhala:data.rating||'')+'</div>'
-    +'<div class="ho-sub">'+(data.totalScore||0)+'/'+(data.maxPossibleScore||20)+' '+(isSi?'ගැලපීම් ලකුණු':'Compatibility Score')+'</div></div>';
+  // ── Verdict hero — the plain verdict phrase is the headline, the
+  // archetype is a small labelled "bond style" line, X/20 stands by ──
+  var arc = cr && cr.archetype;
+  var verdict = pdfVerdictPhrase(data, isSi);
+  var count = cr && cr.traditionalCount && cr.traditionalCount.score != null
+    ? cr.traditionalCount
+    : { score: data.totalScore, max: data.maxPossibleScore || 20 };
+  var essence = arc && arc.essence ? arc.essence : PT.heroEssence;
 
-  // Combined score
-  if (data.advancedPorondam?.combined) {
-    var adv = data.advancedPorondam.combined;
-    scoreHTML += '<div style="display:flex;justify-content:center;gap:20px;margin-top:24px;">'
-      +'<div style="text-align:center;padding:16px 24px;background:#fdf2f8;border-radius:14px;border:1px solid rgba(236,72,153,0.1);">'
-      +'<div style="font-size:28px;font-weight:900;color:#FF8C00;">'+(data.totalScore||0)+'/'+(data.maxPossibleScore||20)+'</div>'
-      +'<div style="font-size:10px;color:#888;margin-top:2px;">'+(isSi?'සාම්ප්‍රදායික':'Traditional')+'</div></div>'
-      +'<div style="text-align:center;padding:16px 24px;background:#fdf2f8;border-radius:14px;border:1px solid rgba(236,72,153,0.1);">'
-      +'<div style="font-size:28px;font-weight:900;color:#3B82F6;">'+(data.advancedPorondam.advanced?.advancedScore||'?')+'/'+(data.advancedPorondam.advanced?.advancedMaxScore||'?')+'</div>'
-      +'<div style="font-size:10px;color:#888;margin-top:2px;">'+(isSi?'උසස්':'Advanced')+'</div></div>'
-      +'<div style="text-align:center;padding:16px 24px;background:linear-gradient(135deg,#fdf2f8,#FEF3C7);border-radius:14px;border:1px solid rgba(236,72,153,0.15);">'
-      +svgScoreGauge(adv.percentage,60,null,null)
-      +'<div style="font-size:10px;color:#888;margin-top:4px;">'+(isSi?'එකාබද්ධ':'Combined')+'</div></div></div>';
+  function medal(name, rashiId, ringColor, nameColor) {
+    var glyph = rashiId >= 1 && rashiId <= 12 ? ZODIAC_SYMBOLS[rashiId - 1] : '✶';
+    var sign = rashiId >= 1 && rashiId <= 12 ? (isSi ? PDF_RASHI_SI[rashiId] : PDF_RASHI_EN[rashiId]) : '';
+    return '<div class="pmedal">'
+      + '<div class="pmedal-ring" style="border-color:' + ringColor + ';color:' + nameColor + ';">' + glyph + '</div>'
+      + '<div class="pmedal-name" style="color:' + nameColor + ';">' + esc(name) + '</div>'
+      + (sign ? '<div class="pmedal-sign">' + esc(sign) + '</div>' : '')
+      + '</div>';
   }
-  scoreHTML += '</div>';
 
-  // Charts side by side
+  var heroHTML = '<div class="phero" style="border-top-color:' + verdict.fill + ';">'
+    + '<div class="phero-kicker">' + esc(PT.heroKicker) + '</div>'
+    + '<div class="phero-medals">'
+    + medal(brideName, brideRashiId, 'rgba(236,72,153,0.5)', '#BE185D')
+    + '<div class="pthread"><span class="pthread-line"></span><span class="pthread-heart" style="color:' + verdict.dark + ';">♥</span><span class="pthread-line"></span></div>'
+    + medal(groomName, groomRashiId, 'rgba(59,130,246,0.5)', '#1D4ED8')
+    + '</div>'
+    + '<div class="phero-name">' + esc(verdict.text) + '</div>'
+    + (arc ? '<div class="pstyle-caption">' + esc(PT.bondStyle) + '</div><div class="pstyle-name" style="color:' + verdict.dark + ';">' + esc(arc.name) + '</div>' : '')
+    + '<div class="phero-essence">' + esc(essence) + '</div>'
+    + (count.score != null ? '<div class="phero-count">' + esc(PT.tradCount) + ': <strong style="color:#8A5A17;">' + count.score + '/' + count.max + '</strong></div>' : '')
+    + '</div>';
+
+  // ── 01 · At a glance — mirrors buildGlance ─────────────────────
+  var glanceRows = [];
+  (function buildGlance() {
+    var scored = factors.filter(function (f) { return f.maxScore > 0; });
+    if (scored.length > 0) {
+      var best = scored.reduce(function (a, b) { return (b.score / b.maxScore) > (a.score / a.maxScore) ? b : a; });
+      if (best.score / best.maxScore >= 0.6) {
+        var bc = pdfSignalCopy(best.name, isSi, best.score, best.maxScore);
+        glanceRows.push({ color: '#0E9F6E', label: PT.glanceStrong, text: bc.plainName + ' — ' + bc.insight });
+      }
+    }
+    var care = cr && cr.nurture && cr.nurture.length > 0 ? cr.nurture[0] : null;
+    if (care) {
+      glanceRows.push({ color: '#B08430', label: PT.glanceCare, text: care.area + ' — ' + care.text });
+    } else if (scored.length > 0) {
+      var low = scored.reduce(function (a, b) { return (b.score / b.maxScore) < (a.score / a.maxScore) ? b : a; });
+      if (low.score / low.maxScore < 0.5) {
+        var lc = pdfSignalCopy(low.name, isSi, low.score, low.maxScore);
+        glanceRows.push({ color: '#B08430', label: PT.glanceCare, text: lc.plainName + ' — ' + lc.insight });
+      }
+    }
+    var windows = adv && adv.weddingWindows && adv.weddingWindows.favorableWindows;
+    var realWindows = (windows || []).filter(function (w) { return w.end && w.end.length > 0; });
+    if (realWindows.length > 0) {
+      glanceRows.push({
+        color: '#7C3AED', label: PT.glanceTiming,
+        text: isSi
+          ? 'ඉදිරි වසර 3 තුළ දෙදෙනාටම හිතකර විවාහ කාල ' + realWindows.length + 'ක් හමු වුණා — විස්තර පහතින්.'
+          : realWindows.length + ' favourable wedding ' + (realWindows.length === 1 ? 'window' : 'windows') + ' found for you both in the next 3 years — details below.',
+      });
+    } else {
+      var harmony = adv && adv.dashaCompatibility && adv.dashaCompatibility.harmony;
+      if (harmony === 'harmonious') {
+        glanceRows.push({ color: '#7C3AED', label: PT.glanceTiming, text: isSi ? 'දෙදෙනාම දැන් ගෙවන්නේ එකිනෙකාට සහාය දෙන ජීවිත කාලයක් — හවුල් තීරණවලට හොඳ මොහොතක්.' : 'You are both moving through supportive life periods right now — a good moment for shared decisions.' });
+      } else if (harmony === 'conflicting') {
+        glanceRows.push({ color: '#7C3AED', label: PT.glanceTiming, text: isSi ? 'දෙදෙනාගේ වත්මන් ජීවිත කාල වෙනස් රිද්මවල — ලොකු තීරණ ඉවසීමෙන්, කතා කරමින් ගන්න.' : 'Your current life periods run on different rhythms — take big decisions patiently, and talk them through.' });
+      }
+    }
+  })();
+
+  function glanceChapter(ix) {
+    var body = glanceRows.map(function (r) {
+      return '<div class="pglance"><div class="pglance-label" style="color:' + r.color + ';">' + esc(r.label) + '</div>'
+        + '<div class="pglance-text">' + esc(r.text) + '</div></div>';
+    }).join('');
+    return chapterShell(ix, PT.glanceTitle, PT.glanceSub, '', body);
+  }
+
+  // ── 02 · Strengths & care — mirrors buildStrengthsCare ─────────
+  var scContent = (function buildStrengthsCare() {
+    var gifts = (cr && cr.gifts ? cr.gifts.slice() : []);
+    var nurture = (cr && cr.nurture ? cr.nurture.slice() : []);
+    var paths = (cr && cr.forwardPaths ? cr.forwardPaths.slice() : []);
+
+    if (gifts.length === 0 && nurture.length === 0) {
+      // Legacy fallback — derive from the classical factors + doshas.
+      factors.forEach(function (f) {
+        if (!f.maxScore) return;
+        var ratio = f.score / f.maxScore;
+        var copy = pdfSignalCopy(f.name, isSi, f.score, f.maxScore);
+        if (ratio >= 0.75) {
+          gifts.push({ area: copy.plainName, text: copy.insight });
+        } else if (ratio < 0.5) {
+          var serious = (f.name === 'Nadi' || f.name === 'Rajju' || f.name === 'Vedha') && ratio < 0.25;
+          nurture.push({ area: copy.plainName, text: copy.insight, severity: serious ? 'significant' : 'gentle' });
+        }
+      });
+      (data.doshas || []).forEach(function (d) {
+        var cc = pdfChallengeCopy(d, isSi);
+        var sev = String(d.severity || '').toLowerCase().indexOf('severe') !== -1 && !d.cancelled ? 'significant' : 'gentle';
+        nurture.push({ area: cc.label, text: cc.desc, severity: d.cancelled ? 'gentle' : sev });
+      });
+      nurture.sort(function (a, b) { return (a.severity === 'significant' ? -1 : 0) - (b.severity === 'significant' ? -1 : 0); });
+      if (gifts.length > 0 || nurture.length > 0) {
+        paths = [
+          { kind: 'timing', text: isSi ? 'සුබ මුහුර්තයකින් විවාහය අරඹන්න — හොඳ ආරම්භයක් හැම ගැළපීමකටම උදව්වක්.' : 'Pick an auspicious wedding time — a good start helps every match.' },
+          { kind: 'understanding', text: isSi ? 'බලාගත යුතු තැන් ගැන කලින්ම එකට කතා කරගන්න — දැනුවත්කම ගැටුම සමීපකමට හරවනවා.' : 'Talk about the tender areas together, early — awareness turns friction into closeness.' },
+        ];
+      }
+    }
+
+    if (gifts.length === 0 && nurture.length === 0) return null;
+    return { gifts: gifts, nurture: nurture, paths: paths };
+  })();
+
+  function strengthsCareChapter(ix) {
+    var body = '';
+    if (scContent.gifts.length > 0) {
+      body += '<div class="pschead" style="color:#0E9F6E;margin-top:0;">' + esc(PT.scGifts) + '</div>';
+      scContent.gifts.forEach(function (g) {
+        body += '<div class="pscrow"><span class="pscmark" style="color:#0E9F6E;">✓</span>'
+          + '<div><div class="pscarea">' + esc(g.area) + '</div><div class="psctext">' + esc(g.text) + '</div></div></div>';
+      });
+    }
+    if (scContent.nurture.length > 0) {
+      body += '<div class="pschead" style="color:#B08430;">' + esc(PT.scCare) + '</div>';
+      scContent.nurture.forEach(function (n) {
+        var serious = n.severity === 'significant';
+        var inner = '<div class="pscrow" style="margin-bottom:0;"><span class="pscmark" style="color:' + (serious ? '#B45309' : '#B08430') + ';">' + (serious ? '!' : '•') + '</span>'
+          + '<div>'
+          + (serious ? '<div class="psctag">' + esc(PT.scSignificant) + '</div>' : '')
+          + '<div class="pscarea">' + esc(n.area) + '</div><div class="psctext">' + esc(n.text) + '</div>'
+          + (n.path ? '<div class="pscpath">' + esc(n.path) + '</div>' : '')
+          + '</div></div>';
+        body += serious ? '<div class="pscbox">' + inner + '</div>' : '<div style="margin-bottom:9px;">' + inner + '</div>';
+      });
+    }
+    if (scContent.paths.length > 0) {
+      body += '<div class="pschead" style="color:#8A6A20;">' + esc(PT.scPaths) + '</div>';
+      scContent.paths.forEach(function (p) {
+        body += '<div class="pscrow"><span class="pscmark" style="color:#8A6A20;">→</span>'
+          + '<div class="psctext" style="margin-top:0;">' + esc(p.text) + '</div></div>';
+      });
+    }
+    return chapterShell(ix, PT.scTitle, PT.scSub, '', body);
+  }
+
+  // ── 03 · The seven classical signals ───────────────────────────
+  function signalsChapter(ix) {
+    var body = factors.map(function (f, i) {
+      var copy = pdfSignalCopy(f.name, isSi, f.score, f.maxScore);
+      var pct = f.maxScore > 0 ? f.score / f.maxScore : 0;
+      var c = copy.colors;
+      return '<div class="psig"' + (i === 0 ? ' style="border-top:none;padding-top:2px;"' : '') + '>'
+        + '<div class="psig-top"><div class="psig-names">'
+        + '<div class="psig-name">' + esc(copy.plainName) + '</div>'
+        + '<div class="psig-tech">' + esc(copy.techName) + '</div>'
+        + '</div>'
+        + chip(copy.tierLabel, c.text, c.line, c.soft)
+        + '<span class="psig-score">' + f.score + '/' + f.maxScore + '</span>'
+        + '</div>'
+        + (copy.what ? '<div class="psig-what">' + esc(copy.what) + '</div>' : '')
+        + '<div class="psig-track"><div class="psig-fill" style="width:' + Math.max(pct * 100, 3).toFixed(0) + '%;background:' + c.fill + ';"></div></div>'
+        + (copy.insight ? '<div class="psig-insight">' + esc(copy.insight) + '</div>' : '')
+        + '</div>';
+    }).join('');
+    body += '<div class="pnote">' + esc(PT.signalsNote) + '</div>';
+    var right = data.totalScore != null
+      ? chip(data.totalScore + '/' + (data.maxPossibleScore || 20), '#8A6A20', 'rgba(176,132,48,.4)', 'rgba(217,164,65,.09)')
+      : '';
+    return chapterShell(ix, PT.factors, PT.factorsSub, right, body, true);
+  }
+
+  // ── 04 · Attraction & closeness ────────────────────────────────
+  var mag = data.magnetism;
+  var hasMag = mag && mag.totalScore != null && mag.maxScore;
+  var yoniFactor = factors.find(function (f) { return f.name === 'Yoni'; });
+  var brideYoni = yoniFactor && yoniFactor.brideYoni;
+  var groomYoni = yoniFactor && yoniFactor.groomYoni;
+
+  function attractionChapter(ix) {
+    var body = '';
+    var magFactors = (hasMag && mag.factors) || [];
+    magFactors.forEach(function (fac) {
+      var meta = PDF_MAG_LABELS[fac.nameEn] || { en: fac.nameEn || fac.nameSi || 'Signal', si: fac.nameSi || fac.nameEn || 'සංඥාව' };
+      var pct = fac.maxScore > 0 ? fac.score / fac.maxScore : 0;
+      var t = tierFor(pct);
+      body += '<div class="pmag">'
+        + '<div class="pmag-label">' + esc(isSi ? meta.si : meta.en) + '</div>'
+        + '<div class="pmag-bar"><div class="pmag-fill" style="width:' + Math.max(pct * 100, 4).toFixed(0) + '%;background:' + t.fill + ';"></div></div>'
+        + '<div class="pmag-score" style="color:' + t.text + ';">' + fac.score + '/' + fac.maxScore + '</div>'
+        + '</div>';
+    });
+
+    if (brideYoni && groomYoni) {
+      var bm = PDF_YONI[brideYoni] || { si: brideYoni, trait: { en: '', si: '' } };
+      var gm = PDF_YONI[groomYoni] || { si: groomYoni, trait: { en: '', si: '' } };
+      var yoniScore = yoniFactor ? yoniFactor.score : 0;
+      var yoniNarrative = yoniScore >= 3
+        ? (isSi ? 'එකම ස්වභාවය — නොවෙහෙසී එකට ගැළපෙනවා.' : 'The same nature — effortlessly in tune.')
+        : yoniScore >= 2
+          ? (isSi ? 'මිත්‍ර ස්වභාවයන් — ස්වාභාවික ආකර්ෂණයක් තිබෙනවා.' : 'Friendly natures — you simply click.')
+          : (isSi ? 'වෙනස් ස්වභාවයන් — හිතාමතා එකට කාලය ගත කිරීමෙන් සමීපත්වය වර්ධනය වෙනවා.' : 'Different natures — closeness grows with deliberate time together.');
+      body += '<div class="pschead" style="color:#BE185D;margin-top:' + (magFactors.length > 0 ? '12px' : '0') + ';">' + esc(PT.naturesTitle) + '</div>'
+        + '<div class="pnatures">'
+        + '<div class="pnature"><div class="pnature-who">' + esc(brideName) + '</div>'
+        + '<div class="pnature-name">' + esc(isSi ? bm.si : brideYoni) + '</div>'
+        + '<div class="pnature-trait">' + esc(isSi ? bm.trait.si : bm.trait.en) + '</div></div>'
+        + '<div class="pnature-mid">' + (yoniScore >= 2 ? '♥' : '♡') + '</div>'
+        + '<div class="pnature"><div class="pnature-who">' + esc(groomName) + '</div>'
+        + '<div class="pnature-name">' + esc(isSi ? gm.si : groomYoni) + '</div>'
+        + '<div class="pnature-trait">' + esc(isSi ? gm.trait.si : gm.trait.en) + '</div></div>'
+        + '</div>'
+        + '<div class="pnarr">' + esc(yoniNarrative) + '</div>';
+    }
+
+    if (hasMag && mag.summary) {
+      var summary = isSi ? (mag.summary.si || mag.summary.en) : (mag.summary.en || mag.summary.si);
+      if (summary) body += '<div class="pnote">' + esc(summary) + '</div>';
+    }
+
+    var right = hasMag ? chip(mag.totalScore + '/' + mag.maxScore, '#BE185D', 'rgba(236,72,153,.4)', 'rgba(236,72,153,.08)') : '';
+    return chapterShell(ix, PT.attractionTitle, PT.attractionSub, right, body);
+  }
+
+  // ── 05 · Life right now ────────────────────────────────────────
+  var lifeRows = [];
+  (function buildLifeNow() {
+    var dc = adv && adv.dashaCompatibility;
+    function dashaRow(person, name) {
+      if (!person || !person.currentDasha) return;
+      var benefic = person.isBeneficPeriod === true;
+      var t = benefic ? PDF_TIERS.good : PDF_TIERS.mixed;
+      lifeRows.push({
+        colors: t,
+        label: benefic ? (isSi ? 'හොඳ කාලයක්' : 'A good period') : (isSi ? 'ටිකක් බර කාලයක්' : 'A heavier period'),
+        caption: isSi ? (PLANET_SI[person.currentDasha] || person.currentDasha) + ' මහදශාව' : person.currentDasha + ' major period',
+        name: name,
+      });
+    }
+    if (dc) {
+      dashaRow(dc.bride, brideName);
+      dashaRow(dc.groom, groomName);
+    }
+    if (jm && jm.brideSadeSati && jm.brideSadeSati.status) {
+      lifeRows.push({ colors: PDF_TIERS.mixed, name: brideName, label: isSi ? 'තව බර කාලයක් ගෙවෙනවා' : 'Also in a heavier Saturn period', caption: isSi ? 'සාඩේ සති කාලය — කලකින් පහව යනවා' : 'Sade Sati — it passes with time' });
+    }
+    if (jm && jm.groomSadeSati && jm.groomSadeSati.status) {
+      lifeRows.push({ colors: PDF_TIERS.mixed, name: groomName, label: isSi ? 'තව බර කාලයක් ගෙවෙනවා' : 'Also in a heavier Saturn period', caption: isSi ? 'සාඩේ සති කාලය — කලකින් පහව යනවා' : 'Sade Sati — it passes with time' });
+    }
+  })();
+
+  function lifeNowChapter(ix) {
+    var body = lifeRows.map(function (r, i) {
+      return '<div class="pdeep"' + (i === 0 ? ' style="border-top:none;padding-top:2px;"' : '') + '>'
+        + '<div class="pdeep-main"><div class="pdeep-title">' + esc(r.name) + '</div>'
+        + '<div class="pdeep-cap">' + esc(r.caption) + '</div></div>'
+        + chip(r.label, r.colors.text, r.colors.line, r.colors.soft)
+        + '</div>';
+    }).join('');
+    var dc = adv && adv.dashaCompatibility;
+    if (dc) {
+      var harmony = dc.harmony;
+      var harmonyText = harmony === 'harmonious'
+        ? (isSi ? 'දෙදෙනා දැන් ගෙවන කාල එකිනෙකාට උදව් වෙනවා — එකට ලොකු තීරණ ගන්න හොඳ වෙලාවක්.' : 'The periods you are both in now help each other — a good time for big decisions together.')
+        : harmony === 'conflicting'
+          ? (isSi ? 'දැන් දෙදෙනා ගෙවන කාල දෙක වෙනස් රිද්මවල. ලොකු තීරණ හදිසියේ නොගෙන, කතා කර ඉවසීමෙන් ගන්න.' : 'Right now your two periods run on different rhythms. Don’t rush big decisions — talk them through patiently.')
+          : (isSi ? 'කාල මිශ්‍රයි — ලොකු තීරණ හෙමින්, දෙදෙනාම එකඟ වී ගන්න.' : 'The timing is mixed — take big decisions slowly, and only together.');
+      body += '<div class="pharmony">' + esc(harmonyText) + '</div>';
+    }
+    return chapterShell(ix, PT.lifeNowTitle, PT.lifeNowSub, '', body);
+  }
+
+  // ── 06 · The deeper bond ───────────────────────────────────────
+  var deepRows = [];
+  (function buildDeeperBond() {
+    var nc = adv && adv.navamshaCompatibility;
+    var mp = adv && adv.marriagePlanetStrength;
+    var md = adv && adv.mangalaDosha;
+    var jb = jm && jm.brideMangalDosha;
+    var jg = jm && jm.groomMangalDosha;
+
+    if (nc) {
+      var nScore = nc.score || 0;
+      var nMax = nc.maxScore || 8;
+      var nT = tierFor(nMax > 0 ? nScore / nMax : 0);
+      var nDesc = (isSi ? (nc.descriptionSi || (nc.insightsSi && nc.insightsSi[0])) : null)
+        || nc.description || (nc.insights && nc.insights[0])
+        || (isSi ? 'මතුපිට ලකුණුවලට අමතරව, විවාහ ජීවිතය ගැනම බලන ගැඹුරු ගැළපීමයි මේ.' : 'Beyond the surface points, this is the deeper match for married life itself.');
+      deepRows.push({
+        colors: nT, badge: nScore + '/' + nMax,
+        title: isSi ? 'ඇතුළතම ගැළපීම' : 'Soul-level match',
+        caption: isSi ? 'නවාංශක (D9) — විවාහ ජීවිතය ගැනම බලන කේන්දරය' : 'Navamsha (D9) — the chart that looks at married life itself',
+        desc: nDesc,
+      });
+    }
+
+    if (mp) {
+      var mScore = mp.score || 0;
+      var mMax = mp.maxScore || 3;
+      var mPct = mMax > 0 ? mScore / mMax : 0;
+      var mT = tierFor(mPct);
+      var mLabel = mPct >= 0.7 ? (isSi ? 'ප්‍රබලයි' : 'Strong') : mPct >= 0.4 ? (isSi ? 'මධ්‍යමයි' : 'Steady') : (isSi ? 'මෘදුයි' : 'Gentle');
+      var mDesc = (isSi ? mp.assessmentSi : null) || mp.assessment
+        || (isSi ? 'ආදරයටත් කැපවීමටත් උදව් කරන ග්‍රහයෝ දෙදෙනාගේ කේන්දරවල කොතරම් ශක්තිමත්ද කියායි මේ බලන්නේ.' : 'This looks at how strong the planets of love and commitment are in both charts.');
+      deepRows.push({
+        colors: mT, badge: mLabel,
+        title: isSi ? 'කැපවීමේ ශක්තිය' : 'Capacity for commitment',
+        caption: isSi ? 'සිකුරු සහ 7 වැනි ගෙයි අධිපති — ආදරය පෙන්වන ග්‍රහයෝ' : 'Venus & the 7th-house lord — the love planets',
+        desc: mDesc,
+      });
+    }
+
+    // Mars balance — the honest, calm version; never alarm-red.
+    var bHas = md && md.bride ? !!md.bride.hasDosha : (jb ? !!jb.hasDosha : null);
+    var gHas = md && md.groom ? !!md.groom.hasDosha : (jg ? !!jg.hasDosha : null);
+    var bCancelled = md && md.bride && md.bride.cancelled;
+    var gCancelled = md && md.groom && md.groom.cancelled;
+    if (bHas !== null || gHas !== null) {
+      var bEff = bHas && !bCancelled;
+      var gEff = gHas && !gCancelled;
+      var marsTitle = isSi ? 'කුජ සමතුලිතය' : 'Mars balance';
+      var marsCaption = isSi ? 'කුජ (මංගල) දෝෂ පරීක්ෂාව' : 'The mangal (Mars) check';
+      if (!bEff && !gEff) {
+        var wasCancelled = (bHas && bCancelled) || (gHas && gCancelled);
+        deepRows.push({
+          colors: PDF_TIERS.good, badge: isSi ? 'සමතුලිතයි' : 'Balanced', title: marsTitle, caption: marsCaption,
+          desc: wasCancelled
+            ? (isSi ? 'කුජ බලපෑමක් තිබුණත්, කේන්දරයේම වෙනත් හේතු නිසා එය නැති වී ඇති බවයි සම්ප්‍රදාය කියන්නේ.' : 'There is a Mars influence, but tradition reads it as cancelled out by other parts of the chart itself.')
+            : (isSi ? 'දෙදෙනාගේම කුජ පිහිටීම සන්සුන්යි — මෙතැන බය වෙන්න දෙයක් නැහැ.' : 'Both Mars placements are calm — nothing to worry about here.'),
+        });
+      } else if (bEff && gEff) {
+        deepRows.push({
+          colors: PDF_TIERS.good, badge: isSi ? 'ගැළපී සමනයි' : 'Matched', title: marsTitle, caption: marsCaption,
+          desc: isSi ? 'දෙදෙනා තුළම සමාන කුජ ශක්තියක් තිබෙනවා — සම්ප්‍රදායට අනුව එය එකිනෙක සමනය වෙනවා; ප්‍රශ්නයක් නොවේ.' : 'You both carry the same Mars energy — tradition reads this as balancing out. Not a problem.',
+        });
+      } else {
+        var carrier = bEff ? brideName : groomName;
+        deepRows.push({
+          colors: PDF_TIERS.poor, badge: isSi ? 'සැලකිල්ල ඕනෑ' : 'Needs care', title: marsTitle, caption: marsCaption,
+          desc: isSi
+            ? carrier + 'ගේ කේන්දරයේ කුජ බලය තීව්‍රයි — තරහ ඉක්මනින් ආ හැකියි. ඉවසීමෙන් කතා කිරීම මෙතැන යතුරයි; බැරෑරුම් කියවීමකට පළපුරුදු ජ්‍යෝතිෂවේදියෙකු හමුවීම හොඳයි.'
+            : carrier + '’s chart carries strong Mars energy — tempers can rise quickly. Patient talk is the key here; for a serious reading, meeting an experienced astrologer is wise.',
+        });
+      }
+    }
+  })();
+
+  function deeperBondChapter(ix) {
+    var body = deepRows.map(function (r, i) {
+      return '<div class="pdeep"' + (i === 0 ? ' style="border-top:none;padding-top:2px;"' : '') + '>'
+        + '<div class="pdeep-main"><div class="pdeep-title">' + esc(r.title) + '</div>'
+        + '<div class="pdeep-cap">' + esc(r.caption) + '</div>'
+        + '<div class="pdeep-desc">' + esc(r.desc) + '</div></div>'
+        + chip(r.badge, r.colors.text, r.colors.line, r.colors.soft)
+        + '</div>';
+    }).join('');
+    return chapterShell(ix, PT.deepTitle, PT.deepSub, '', body);
+  }
+
+  // ── 07 · Good wedding dates ────────────────────────────────────
+  var weddingWindows = (adv && adv.weddingWindows && adv.weddingWindows.favorableWindows) || [];
+
+  function weddingChapter(ix) {
+    var body = weddingWindows.map(function (w, i) {
+      var hasDate = w.end && w.end.length > 0;
+      var isBest = w.best === true;
+      var row = '<div class="pwed"' + (i === 0 ? ' style="border-top:none;padding-top:2px;"' : '') + '><div style="flex:1;">';
+      if (hasDate) {
+        row += '<div class="pwed-dates" style="color:' + (isBest ? '#0E9F6E' : 'var(--ink)') + ';">' + esc(w.start) + '  →  ' + esc(w.end)
+          + (isBest ? '<span class="pbest">' + (isSi ? 'හොඳම' : 'BEST') + '</span>' : '') + '</div>';
+      } else {
+        row += '<div style="font-size:12px;color:#8A8095;">' + esc(isSi ? (w.startSi || PT.noWindows) : PT.noWindows) + '</div>';
+      }
+      var reason = isSi ? (w.reasonSi || w.reason) : w.reason;
+      if (reason) row += '<div class="pwed-reason">' + esc(reason) + '</div>';
+      if (w.durationDays > 0) row += '<div class="pwed-meta">' + w.durationDays + ' ' + (isSi ? 'දින' : 'days') + '</div>';
+      row += '</div></div>';
+      return row;
+    }).join('');
+    return chapterShell(ix, PT.weddingTitle, PT.weddingSub, '', body);
+  }
+
+  // ── 08 · Your birth stars ──────────────────────────────────────
+  function birthStarsChapter(ix) {
+    var bride = data.bride;
+    var groom = data.groom;
+
+    function pill(person, name, dotColor) {
+      var sign = person.rashi ? (isSi ? person.rashi.sinhala : person.rashi.name) : '';
+      var star = person.nakshatra ? (isSi ? person.nakshatra.sinhala : person.nakshatra.name) : '';
+      var pada = person.nakshatra && person.nakshatra.pada ? (isSi ? ' · පාද ' + person.nakshatra.pada : ' · Pada ' + person.nakshatra.pada) : '';
+      var lordName = person.nakshatra ? (isSi ? (PLANET_SI[person.nakshatra.lord] || person.nakshatra.lord) : person.nakshatra.lord) : '';
+      return '<div class="ppill">'
+        + '<div class="ppill-name" style="color:' + dotColor + ';">' + esc(name) + '</div>'
+        + (sign ? '<div class="ppill-sign">' + esc(sign) + '</div>' : '')
+        + (star ? '<div class="ppill-star">' + esc(star) + esc(pada) + '</div>' : '')
+        + (lordName ? '<div class="ppill-lord">' + esc(isSi ? 'අධිපති ග්‍රහයා: ' : 'Ruled by ') + esc(lordName) + '</div>' : '')
+        + '</div>';
+    }
+
+    var body = '<div class="ppills">' + pill(bride, brideName, '#BE185D') + pill(groom, groomName, '#1D4ED8') + '</div>';
+
+    var be = data.brideEnhanced && data.brideEnhanced.tattvaBalance;
+    var ge = data.groomEnhanced && data.groomEnhanced.tattvaBalance;
+    if (be && ge && be.dominant && ge.dominant) {
+      var bEl = PDF_ELEM[be.dominant] || PDF_ELEM.Fire;
+      var gEl = PDF_ELEM[ge.dominant] || PDF_ELEM.Fire;
+      var metaphor = PDF_ELEM_METAPHORS[be.dominant + '+' + ge.dominant] || PDF_ELEM_METAPHORS[ge.dominant + '+' + be.dominant]
+        || { en: 'A rare elemental mix — a chemistry of its own.', si: 'දුර්ලභ මූලධාතු සංයෝගයක් — එයටම ආවේණික රසායනයක්.' };
+      body += '<div class="pelems">'
+        + '<div class="pelem"><div class="pelem-name" style="color:' + bEl.color + ';">' + esc(isSi ? bEl.si : be.dominant) + '</div><div class="pelem-who">' + esc(brideName) + '</div></div>'
+        + '<div style="font-size:13px;color:#B08430;">✦</div>'
+        + '<div class="pelem"><div class="pelem-name" style="color:' + gEl.color + ';">' + esc(isSi ? gEl.si : ge.dominant) + '</div><div class="pelem-who">' + esc(groomName) + '</div></div>'
+        + '</div>'
+        + '<div class="pmeta">' + esc(isSi ? metaphor.si : metaphor.en) + '</div>';
+    }
+    return chapterShell(ix, PT.starsTitle, PT.starsSub, '', body);
+  }
+
+  // ── 09 · For the curious ───────────────────────────────────────
+  var bj = data.brideAdvanced && data.brideAdvanced.tier1 && data.brideAdvanced.tier1.jaimini;
+  var gj = data.groomAdvanced && data.groomAdvanced.tier1 && data.groomAdvanced.tier1.jaimini;
+  var bKey = bj && (typeof bj.atmakaraka === 'string' ? bj.atmakaraka : (bj.atmakaraka && bj.atmakaraka.planet));
+  var gKey = gj && (typeof gj.atmakaraka === 'string' ? gj.atmakaraka : (gj.atmakaraka && gj.atmakaraka.planet));
+  var bpl = data.brideAdvanced && data.brideAdvanced.tier3 && data.brideAdvanced.tier3.pastLife;
+  var gpl = data.groomAdvanced && data.groomAdvanced.tier3 && data.groomAdvanced.tier3.pastLife;
+  var hasDrives = !!(bKey && gKey);
+
+  function pdfPastMeta(pl) {
+    var themes = pl && (pl.ketuThemes || (pl.pastLife && pl.pastLife.ketuThemes));
+    if (!themes || !themes.archetype) return null;
+    var parts = String(themes.archetype).toLowerCase().split('/');
+    for (var p = 0; p < parts.length; p++) {
+      var key = parts[p].trim();
+      if (PDF_PASTLIFE[key]) return PDF_PASTLIFE[key];
+    }
+    var name = parts[0] ? parts[0].trim() : '';
+    if (!name) return null;
+    return { en: name.charAt(0).toUpperCase() + name.slice(1), si: themes.archetypeSi ? String(themes.archetypeSi).split('/')[0].trim() : name };
+  }
+
+  var pastB = bpl && gpl ? pdfPastMeta(bpl) : null;
+  var pastG = bpl && gpl ? pdfPastMeta(gpl) : null;
+  var hasPast = !!(pastB && pastG);
+
+  function curiousChapter(ix) {
+    var body = '';
+    if (hasDrives) {
+      body += '<div class="pcurio-block" style="margin-top:0;">' + esc(isSi ? 'හදවතින්ම ඕනෑ දේ' : 'What each of you deeply wants') + '</div>';
+      [{ key: bKey, name: brideName }, { key: gKey, name: groomName }].forEach(function (p, i) {
+        var drive = PDF_PLANET_DRIVE[p.key] || { en: p.key, si: p.key };
+        body += '<div class="psoul"' + (i === 0 ? ' style="border-top:none;"' : '') + '>'
+          + '<div class="psoul-main"><div class="psoul-who">' + esc(p.name) + '</div>'
+          + '<div class="psoul-drive">' + esc(isSi ? drive.si : drive.en) + '</div></div>'
+          + '<div class="psoul-planet">' + esc(isSi ? (PLANET_SI[p.key] || p.key) : p.key) + '</div>'
+          + '</div>';
+      });
+    }
+    if (hasPast) {
+      body += '<div class="pcurio-block">' + esc(isSi ? 'පෙර භව දෝංකාර' : 'Past-life echoes') + '</div>'
+        + '<div class="pnatures">'
+        + '<div class="pnature"><div class="pnature-who">' + esc(brideName) + '</div><div class="pnature-name">' + esc(isSi ? pastB.si : pastB.en) + '</div></div>'
+        + '<div class="pnature-mid">∞</div>'
+        + '<div class="pnature"><div class="pnature-who">' + esc(groomName) + '</div><div class="pnature-name">' + esc(isSi ? pastG.si : pastG.en) + '</div></div>'
+        + '</div>'
+        + '<div class="pmeta">' + esc(isSi
+          ? pastB.si + ' කෙනෙක් සහ ' + pastG.si + ' කෙනෙක් — කලින් හඳුනනවා වගේ දැනෙන බැඳීමක්.'
+          : 'A ' + pastB.en.toLowerCase() + ' and a ' + pastG.en.toLowerCase() + ' — a bond that feels like you already know each other.') + '</div>';
+    }
+    return chapterShell(ix, PT.curioTitle, PT.curioSub, '', body);
+  }
+
+  // ── Chapters render in reading order, numbered like a report ───
+  var chapters = [];
+  if (glanceRows.length > 0) chapters.push(glanceChapter);
+  if (scContent) chapters.push(strengthsCareChapter);
+  if (factors.length > 0) chapters.push(signalsChapter);
+  if (hasMag || (brideYoni && groomYoni)) chapters.push(attractionChapter);
+  if (lifeRows.length > 0) chapters.push(lifeNowChapter);
+  if (deepRows.length > 0) chapters.push(deeperBondChapter);
+  if (weddingWindows.length > 0) chapters.push(weddingChapter);
+  if (data.bride && data.groom) chapters.push(birthStarsChapter);
+  if (hasDrives || hasPast) chapters.push(curiousChapter);
+
+  var chaptersHTML = chapters.map(function (renderChapter, i) {
+    return renderChapter((i + 1 < 10 ? '0' : '') + (i + 1));
+  }).join('');
+
+  // ── The two birth charts ───────────────────────────────────────
   var chartsHTML = '';
-  if (data.brideChart || data.groomChart) {
-    chartsHTML = '<div class="cp" style="page-break-inside:avoid;"><div style="display:flex;gap:20px;justify-content:center;align-items:flex-start;">';
-    if (data.brideChart) chartsHTML += '<div class="chart-wrap" style="flex:1;max-width:48%;"><div class="chart-title" style="color:#EC4899;">💐 '+(isSi?'මනාලියගේ උපන් විස්තර':"Bride's Birth Details")+'</div>'+svgSriLankanChart(data.brideChart.rashiChart,data.brideChart.lagnaRashiId,opts.lang,240)+'</div>';
-    if (data.groomChart) chartsHTML += '<div class="chart-wrap" style="flex:1;max-width:48%;"><div class="chart-title" style="color:#3B82F6;">🤵 '+(isSi?'මනාලයාගේ උපන් විස්තර':"Groom's Birth Details")+'</div>'+svgSriLankanChart(data.groomChart.rashiChart,data.groomChart.lagnaRashiId,opts.lang,240)+'</div>';
-    chartsHTML += '</div></div>';
+  if ((data.brideChart && data.brideChart.rashiChart) || (data.groomChart && data.groomChart.rashiChart)) {
+    var chartsBody = '<div style="display:flex;gap:16px;justify-content:center;align-items:flex-start;">';
+    if (data.brideChart && data.brideChart.rashiChart) {
+      chartsBody += '<div class="chart-wrap" style="flex:1;max-width:48%;margin:0;"><div class="chart-title" style="color:#BE185D;">' + esc(PT.brideChart) + '</div>'
+        + svgSriLankanChart(data.brideChart.rashiChart, data.brideChart.lagnaRashiId, opts.lang, 240) + '</div>';
+    }
+    if (data.groomChart && data.groomChart.rashiChart) {
+      chartsBody += '<div class="chart-wrap" style="flex:1;max-width:48%;margin:0;"><div class="chart-title" style="color:#1D4ED8;">' + esc(PT.groomChart) + '</div>'
+        + svgSriLankanChart(data.groomChart.rashiChart, data.groomChart.lagnaRashiId, opts.lang, 240) + '</div>';
+    }
+    chartsBody += '</div>';
+    chartsHTML = chapterShell('', PT.chartsTitle, '', '', chartsBody);
   }
 
-  // 7 Factors
-  var factorsHTML = '';
-  if (data.factors?.length > 0) {
-    factorsHTML = '<div class="cp" style="page-break-inside:avoid;">'
-      +'<div style="text-align:center;margin-bottom:18px;"><h2 style="font-size:18px;font-weight:800;color:#BE185D;letter-spacing:1px;">📊 '+(isSi?'සබඳතා රටා':'Relationship Signals')+'</h2>'
-      +'<p style="font-size:12px;color:#888;">'+(isSi?'රටා 7 · ලකුණු 20':'7 Signals · 20 Points')+'</p></div>';
-    data.factors.forEach(function(f) {
-      var fPct = f.maxScore>0 ? Math.round((f.score/f.maxScore)*100) : 0;
-      var fColor = fPct>=75?'#10B981':fPct>=50?'#F59E0B':'#EF4444';
-      var desc = isSi ? 'මේ කොටස දිනපතා සැනසීම, විශ්වාසය, සහ දිගුකාලීන ගෘහ ජීවිතයට බලපාන විදිහ පෙන්වනවා.' : 'This shows how this area affects daily comfort, trust, and long-term home life.';
-      var fName = pdfFactorCopy(f.name, isSi);
-      factorsHTML += '<div class="factor-row" style="--factor-color:'+fColor+';">'
-        +'<div class="factor-head">'
-        +'<strong class="factor-title">'+fName+'</strong>'
-        +'<div class="factor-score">'+svgScoreGauge(fPct,36,fColor,null)
-        +'<strong>'+f.score+'/'+f.maxScore+'</strong></div></div>'
-        +'<div class="factor-track"><div class="factor-fill" style="width:'+fPct+'%;"></div></div>'
-        +(desc?'<p class="factor-desc">'+desc+'</p>':'')
-        +'</div>';
-    });
-    factorsHTML += '</div>';
+  // ── The written reading — a chaptered reader, not a wall of text
+  var readerHTML = '';
+  if (opts.report && typeof opts.report === 'string') {
+    var names = [opts.brideName, opts.groomName].filter(Boolean).join(isSi ? ' සහ ' : ' & ');
+    var parsed = pdfSplitReportSections(opts.report);
+    var words = String(opts.report).trim().split(/\s+/).length;
+    var mins = Math.max(1, Math.round(words / 170));
+
+    var readerBody = '<div class="preader-cover">'
+      + '<div class="preader-kicker">' + esc(PT.report) + '</div>'
+      + (names ? '<div class="preader-names">' + esc(names) + '</div>' : '')
+      + '<div class="preader-meta">'
+      + (parsed ? '<span class="preader-chip">' + parsed.sections.length + ' ' + esc(PT.readerChapters) + '</span>' : '')
+      + '<span class="preader-chip">~' + mins + ' ' + esc(PT.readerMin) + '</span>'
+      + '</div>'
+      + '<div class="preader-hint">' + esc(PT.readerSub) + '</div>'
+      + '</div>';
+
+    if (!parsed) {
+      readerBody += '<div class="prose">' + markdownToHTML(opts.report) + '</div>';
+    } else {
+      if (parsed.intro) readerBody += '<div class="prose" style="margin-bottom:12px;">' + markdownToHTML(parsed.intro) + '</div>';
+      parsed.sections.forEach(function (s) {
+        readerBody += '<div class="prchap">'
+          + '<div class="prchap-head"><span class="prchap-glyph">' + (s.glyph ? esc(s.glyph) : '✦') + '</span>'
+          + '<span class="prchap-title">' + esc(s.title) + '</span></div>'
+          + '<div class="prchap-body prose">' + markdownToHTML(s.body) + '</div>'
+          + '</div>';
+      });
+    }
+    readerHTML = '<div class="pchap pflow">' + readerBody + '</div>';
   }
 
-  // Doshas
-  var doshasHTML = '';
-  if (data.doshas?.length > 0) {
-    doshasHTML = '<div class="cp" style="page-break-inside:avoid;">'
-      +'<h2 style="font-size:18px;font-weight:800;color:#DC2626;margin-bottom:14px;border-bottom:2px solid #FEE2E2;padding-bottom:8px;">⚠️ '+(isSi?'සැලකිලිමත් කරුණු':'Challenges')+'</h2>';
-    data.doshas.forEach(function(d) {
-      var challenge = pdfChallengeCopy(d, isSi);
-      doshasHTML += '<div class="care-card">'
-        +'<strong>'+challenge.label+'</strong>'
-        +'<p>'+challenge.desc+'</p></div>';
-    });
-    doshasHTML += '</div>';
-  }
+  // ── Method + guidance footer — the quiet trust anchor ──────────
+  var methodHTML = '<div class="pmethod">'
+    + '<div class="pmethod-title">' + esc(PT.methodTitle) + '</div>'
+    + '<div class="pmethod-body">' + esc(PT.methodBody) + '</div>'
+    + '<div class="pguidance">' + esc(PT.guidanceNote) + '</div>'
+    + '</div>';
 
-  // Advanced analysis sections
-  var advHTML = '';
-
-  // Dasha Compatibility
-  if (data.advancedPorondam?.advanced?.dashaCompatibility && data.advancedPorondam.advanced.dashaCompatibility.harmony !== 'unknown') {
-    var da = data.advancedPorondam.advanced.dashaCompatibility;
-    advHTML += '<div class="rs" style="page-break-inside:avoid;">'
-      +'<div class="rs-hdr" style="background:linear-gradient(135deg,#6366F1,#A5B4FC);"><span class="se">🌀</span><h2>'+(isSi?'ජීවිත අදියර ගැලපුම':'Life Phase Match')+'</h2><span class="ss">'+da.score+'/'+da.maxScore+'</span></div>'
-      +'<div class="rs-body" style="background:#EEF2FF;"><div style="display:flex;gap:14px;margin-bottom:12px;">';
-    [{label:brideName,emoji:'👰',color:'#EC4899',d:da.bride},{label:groomName,emoji:'🤵',color:'#3B82F6',d:da.groom}].forEach(function(p){
-      if(!p.d)return;
-      advHTML+='<div style="flex:1;padding:12px;background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);">'
-        +'<div style="font-size:11px;font-weight:700;color:'+p.color+';margin-bottom:6px;">'+p.emoji+' '+p.label+'</div>'
-        +'<div style="font-size:10px;color:#888;">'+(isSi?'දැන් ඉන්න ජීවිත අදියර':'Current Life Period')+'</div>'
-        +'<div style="font-size:16px;font-weight:800;color:#333;">'+pdfLifePeriodCopy(p.d, isSi)+'</div>'
-        +'<div style="margin-top:4px;display:inline-block;padding:2px 8px;border-radius:8px;font-size:9px;font-weight:700;background:'+(p.d.isBeneficPeriod?'rgba(16,185,129,0.1);color:#10B981':'rgba(245,158,11,0.1);color:#F59E0B')+';">'
-        +(p.d.isBeneficPeriod?(isSi?'සහාය දෙයි':'Supportive'):(isSi?'වැඩි සැලකිල්ලක් ඕන':'Needs Care'))+'</div></div>';
-    });
-      advHTML+='</div><p style="color:#555;font-size:12px;line-height:1.7;">'+pdfAdvancedDesc('lifePhase', da, isSi)+'</p></div></div>';
-  }
-
-  // Navamsha D9
-  if (data.advancedPorondam?.advanced?.navamshaCompatibility) {
-    var nav = data.advancedPorondam.advanced.navamshaCompatibility;
-    advHTML += '<div class="rs" style="page-break-inside:avoid;">'
-      +'<div class="rs-hdr" style="background:linear-gradient(135deg,#EC4899,#F9A8D4);"><span class="se">💞</span><h2>'+(isSi?'ගැඹුරු සබඳතා ගැලපීම':'Deep Relationship Match')+'</h2><span class="ss">'+nav.score+'/'+nav.maxScore+'</span></div>'
-      +'<div class="rs-body" style="background:#FDF2F8;"><div style="display:flex;gap:14px;margin-bottom:12px;">'
-      +'<div style="flex:1;text-align:center;padding:12px;background:#fff;border-radius:10px;border:1px solid rgba(236,72,153,0.1);"><div style="font-size:10px;color:#EC4899;font-weight:700;">👰 '+(isSi?'ඇතුළත රටාව':'Inner Pattern')+'</div><div style="font-size:18px;font-weight:800;color:#333;margin-top:4px;">'+pdfSupportLevel(nav.score, nav.maxScore, isSi)+'</div></div>'
-      +'<div style="flex:1;text-align:center;padding:12px;background:#fff;border-radius:10px;border:1px solid rgba(59,130,246,0.1);"><div style="font-size:10px;color:#3B82F6;font-weight:700;">🤵 '+(isSi?'ඇතුළත රටාව':'Inner Pattern')+'</div><div style="font-size:18px;font-weight:800;color:#333;margin-top:4px;">'+pdfSupportLevel(nav.score, nav.maxScore, isSi)+'</div></div></div>';
-    advHTML+='<div class="insight-strip">✨ '+pdfAdvancedDesc('deepBond', nav, isSi)+'</div>';
-    advHTML+='<p style="color:#888;font-size:11px;font-style:italic;margin-top:8px;">'+pdfAdvancedDesc('deepBond', nav, isSi)+'</p></div></div>';
-  }
-
-  // Mangala Dosha
-  if (data.advancedPorondam?.advanced?.mangalaDosha && data.advancedPorondam.advanced.mangalaDosha.severity !== 'unknown') {
-    var mars = data.advancedPorondam.advanced.mangalaDosha;
-    advHTML += '<div class="rs" style="page-break-inside:avoid;">'
-      +'<div class="rs-hdr" style="background:linear-gradient(135deg,#EF4444,#FCA5A5);"><span class="se">⚔️</span><h2>'+(isSi?'ගැටුම් සැලකිල්ල පරීක්ෂාව':'Conflict Care Check')+'</h2><span class="ss">'+mars.score+'/'+mars.maxScore+'</span></div>'
-      +'<div class="rs-body" style="background:#FEF2F2;"><div style="display:flex;gap:14px;margin-bottom:12px;">';
-    [{label:brideName,emoji:'👰',d:mars.bride},{label:groomName,emoji:'🤵',d:mars.groom}].forEach(function(p){
-      if(!p.d)return;
-      var hasD=p.d.hasDosha;
-      advHTML+='<div style="flex:1;padding:12px;background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);">'
-        +'<div style="font-size:11px;font-weight:700;color:#555;margin-bottom:6px;">'+p.emoji+' '+p.label+'</div>'
-        +'<div style="font-size:12px;">'+(hasD?(p.d.cancelled?'✅':'🔥'):'✅')+' '
-        +(hasD?(p.d.cancelled?(isSi?'අඩු වූ සැලකිලිමත් කරුණ':'Reduced Care Point'):(isSi?'වැඩි සැලකිලිමත් කරුණ':'High-Care Point')):(isSi?'මේ කොටස හොඳින් සහාය දෙනවා':'This area looks supportive'))+'</div>'
-        +(hasD&&p.d.cancelled?'<div style="font-size:10px;color:#10B981;font-weight:700;margin-top:4px;">✅ '+(isSi?'බලය අඩුයි':'Reduced')+'</div>':'')+'</div>';
-    });
-    advHTML+='</div><p style="color:#555;font-size:12px;line-height:1.7;">'+pdfAdvancedDesc('carePoint', mars, isSi)+'</p></div></div>';
-  }
-
-  // Relationship support strength
-  if (data.advancedPorondam?.advanced?.marriagePlanetStrength) {
-    var mps = data.advancedPorondam.advanced.marriagePlanetStrength;
-    advHTML += '<div class="rs" style="page-break-inside:avoid;">'
-      +'<div class="rs-hdr" style="background:linear-gradient(135deg,#A855F7,#D8B4FE);"><span class="se">💎</span><h2>'+(isSi?'සබඳතා සහාය ශක්තිය':'Relationship Support Strength')+'</h2><span class="ss">'+mps.score+'/'+mps.maxScore+'</span></div>'
-      +'<div class="rs-body" style="background:#FAF5FF;"><div style="display:flex;gap:14px;margin-bottom:12px;">';
-    [{label:brideName,emoji:'👰',color:'#EC4899',d:mps.bride},{label:groomName,emoji:'🤵',color:'#3B82F6',d:mps.groom}].forEach(function(p){
-      if(!p.d)return;
-      var vc=p.d.venusAssessment==='Strong'?'#10B981':p.d.venusAssessment==='Moderate'?'#F59E0B':'#EF4444';
-      var lc=p.d.seventhLordAssessment==='Strong'?'#10B981':p.d.seventhLordAssessment==='Moderate'?'#F59E0B':'#EF4444';
-      advHTML+='<div style="flex:1;padding:12px;background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,0.06);">'
-        +'<div style="font-size:11px;font-weight:700;color:'+p.color+';margin-bottom:8px;">'+p.emoji+' '+p.label+'</div>'
-        +'<div style="font-size:9px;color:#888;font-weight:700;">'+(isSi?'ආදර සහාය':'Affection Support')+'</div>'
-        +'<div style="height:4px;background:rgba(0,0,0,0.04);border-radius:2px;margin:3px 0 8px;overflow:hidden;"><div style="height:4px;background:'+vc+';width:'+(p.d.venusStrength||0)+'%;border-radius:2px;"></div></div>'
-        +'<div style="font-size:9px;color:#888;font-weight:700;">'+(isSi?'කැපවීම් සහාය':'Commitment Support')+'</div>'
-        +'<div style="height:4px;background:rgba(0,0,0,0.04);border-radius:2px;margin:3px 0;overflow:hidden;"><div style="height:4px;background:'+lc+';width:'+(p.d.seventhLordStrength||0)+'%;border-radius:2px;"></div></div></div>';
-    });
-    advHTML+='</div><p style="color:#555;font-size:12px;line-height:1.7;">'+(isSi?'ආදරය පෙන්වීම, කැපවීම, සහ දිගුකාලීන සම්බන්ධතාව පවත්වා ගැනීමට ලැබෙන සහාය මෙතනින් පෙන්වනවා.':'This shows support for affection, commitment, and maintaining the relationship over time.')+'</p></div></div>';
-  }
-
-  // Wedding Windows
-  if (data.advancedPorondam?.advanced?.weddingWindows?.favorableWindows?.length > 0) {
-    advHTML += '<div class="rs" style="page-break-inside:avoid;">'
-      +'<div class="rs-hdr" style="background:linear-gradient(135deg,#10B981,#34D399);"><span class="se">📅</span><h2>'+(isSi?'හොඳම විවාහ කාල':'Best Wedding Windows')+'</h2></div>'
-      +'<div class="rs-body" style="background:#ECFDF5;">';
-    data.advancedPorondam.advanced.weddingWindows.favorableWindows.forEach(function(w,i){
-      advHTML+='<div style="display:flex;gap:10px;padding:10px 0;'+(i>0?'border-top:1px solid rgba(0,0,0,0.04);':'')+'">'
-        +'<div style="width:32px;height:32px;border-radius:16px;background:rgba(16,185,129,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;">📅</div>'
-        +'<div style="flex:1;">'
-        +(w.end?'<div style="font-size:13px;font-weight:700;color:#333;">'+w.start+' → '+w.end+'</div>':'')
-        +'<div style="font-size:11px;color:#666;margin-top:2px;">'+(w.reason||'')+'</div></div></div>';
-    });
-    advHTML+='</div></div>';
-  }
-
-  // AI Report
-  var reportHTML = '';
-  if (opts.report) {
-    reportHTML = '<div class="cp" style="page-break-inside:avoid;">'
-      +'<h2 style="font-size:18px;font-weight:800;color:#BE185D;margin-bottom:14px;border-bottom:2px solid #FCE7F3;padding-bottom:8px;">🔮 '+(isSi?'විස්තරාත්මක ජ්‍යෝතිෂ වාර්තාව':'Detailed Astrology Report')+'</h2>'
-      +'<div class="rs-body" style="background:#fdf2f8;">'
-      +'<div class="prose">'+markdownToHTML(opts.report)+'</div></div></div>';
-  }
-
-  // End page
-  var pEndLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'" style="width:64px;height:64px;border-radius:16px;object-fit:cover;"/>' : '<div class="ep-icon">💍</div>';
+  // ── End page ───────────────────────────────────────────────────
+  var pEndLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,' + opts.logoBase64 + '" style="width:64px;height:64px;border-radius:16px;object-fit:cover;"/>' : '<div class="ep-icon">💍</div>';
   var endHTML = '<div class="ep ep-porondam">'
-    +pEndLogoTag+'<div class="ep-brand" style="margin-top:12px;">ග්‍රහචාර</div><div class="ep-line"></div>'
-    +'<div class="ep-tag">'+(isSi?'ඔයාගේ ජීවිතයේ තරු බලන්න':'Read the Stars of Your Life')+'</div>'
-    +'<div class="ep-cta">'+(isSi?'📱 යෙදුම බාගන්න':'📱 Download the App')+'</div>'
-    +'<div class="ep-features"><span class="ep-feat">🔮 '+(isSi?'සතිපතා නැකැත්':'Weekly Nakath')+'</span>'
-    +'<span class="ep-feat">📊 '+(isSi?'සම්පූර්ණ වාර්තා':'Full Reports')+'</span>'
-    +'<span class="ep-feat">💬 '+(isSi?'AI ජ්‍යෝතිෂ chat':'AI Astro Chat')+'</span></div>'
-    +'<div class="ep-url">www.grahachara.com</div>'
-    +'<div class="ep-disc">'+(isSi
-      ?'මේ වාර්තාව සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වෙනවා. මේක දැනගැනීම් සඳහා පමණි.'
-      :'This report is for informational and reflective guidance only.')+'</div></div>';
+    + pEndLogoTag + '<div class="ep-brand" style="margin-top:12px;">ග්‍රහචාර</div><div class="ep-line"></div>'
+    + '<div class="ep-tag">' + (isSi ? 'ඔයාගේ ජීවිතයේ තරු බලන්න' : 'Read the Stars of Your Life') + '</div>'
+    + '<div class="ep-cta">' + (isSi ? '📱 යෙදුම බාගන්න' : '📱 Download the App') + '</div>'
+    + '<div class="ep-features"><span class="ep-feat">🔮 ' + (isSi ? 'සතිපතා නැකැත්' : 'Weekly Nakath') + '</span>'
+    + '<span class="ep-feat">📊 ' + (isSi ? 'සම්පූර්ණ වාර්තා' : 'Full Reports') + '</span>'
+    + '<span class="ep-feat">💬 ' + (isSi ? 'AI ජ්‍යෝතිෂ chat' : 'AI Astro Chat') + '</span></div>'
+    + '<div class="ep-url">www.grahachara.com</div>'
+    + '<div class="ep-disc">' + (isSi
+      ? 'මේ වාර්තාව සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වෙනවා. මේක දැනගැනීම් සඳහා පමණි.'
+      : 'This report is for informational and reflective guidance only.') + '</div></div>';
 
-  var pHeaderLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'" style="width:18px;height:18px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;"/>' : '';
+  var pHeaderLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,' + opts.logoBase64 + '" style="width:18px;height:18px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;"/>' : '';
 
-  return '<!DOCTYPE html><html lang="'+(isSi?'si':'en')+'"><head>'
-    +'<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>'
-    +'<title>'+(isSi?'ග්‍රහචාර සබඳතා ගැලපීම':'Grahachara Compatibility')+'</title>'
-    +'<style>'+sharedCSS('pink')+'</style></head><body>'
-    +'<div class="wm">ග්‍රහචාර</div>'
-    +'<div class="oc oc-tl"></div><div class="oc oc-tr"></div><div class="oc oc-bl"></div><div class="oc oc-br"></div>'
-    +'<div class="ph"><span class="lm" style="color:#EC4899;">'+pHeaderLogoTag+'ග්‍රහචාර</span><span>'+(isSi?'පොරොන්දම් වාර්තාව':'Porondam Report')+'</span></div>'
-    +'<div class="pf">ග්‍රහචාර &bull; www.grahachara.com &bull; '+new Date().toLocaleDateString()+'</div>'
-    +coverHTML+scoreHTML+chartsHTML+factorsHTML+doshasHTML
-    +'<div class="cp">'+advHTML+'</div>'
-    +reportHTML+endHTML+'</body></html>';
+  return '<!DOCTYPE html><html lang="' + (isSi ? 'si' : 'en') + '"><head>'
+    + '<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>'
+    + '<title>' + (isSi ? 'ග්‍රහචාර පොරොන්දම් ගැළපීම' : 'Grahachara Marriage Match') + '</title>'
+    + '<style>' + sharedCSS('pink') + porondamPrintCSS() + '</style></head><body>'
+    + '<div class="wm">ග්‍රහචාර</div>'
+    + '<div class="oc oc-tl"></div><div class="oc oc-tr"></div><div class="oc oc-bl"></div><div class="oc oc-br"></div>'
+    + '<div class="ph"><span class="lm" style="color:#EC4899;">' + pHeaderLogoTag + 'ග්‍රහචාර</span><span>' + esc(PT.headerTag) + '</span></div>'
+    + '<div class="pf">ග්‍රහචාර &bull; www.grahachara.com &bull; ' + new Date().toLocaleDateString() + '</div>'
+    + coverHTML
+    // Charts come right after the verdict, before the chapters — the
+    // traditional order, matching the results screen.
+    + '<div class="cp">' + heroHTML + chartsHTML + chaptersHTML + readerHTML + methodHTML + '</div>'
+    + endHTML + '</body></html>';
 }
 
 module.exports = { generateReportHTML, generatePorondamHTML, loadLogoBase64, SECTION_COLORS };

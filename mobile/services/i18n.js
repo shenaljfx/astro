@@ -25,7 +25,7 @@ const translations = {
 
     // Tab names
     tabHome: 'Today',
-    tabPorondam: 'Match',
+    tabPorondam: 'Marriage',
     tabKendara: 'Chart',
     tabChat: 'Guide',
     chatTitle: 'Cosmic Guide',
@@ -50,6 +50,9 @@ const translations = {
     chatTimeout: 'The cosmos required too much time to align. Please try again ⏳',
     chatAuthExpired: 'Your session has expired. Please sign in again 🔒',
     chatRateLimit: 'Too many questions too fast! Wait a moment and try again ⏱️',
+    chatHeldAnswer: 'The astrologer has read your question — your answer is ready. Unlock to receive it 🔓',
+    chatUnlocked: 'Unlocked ✨ Asking the astrologer your question now…',
+    chatUnlockDelay: 'Your subscription is activating — give it a few seconds, then send your question again.',
     chartLoaded: 'Chart ✓',
     noBirthData: 'No chart',
     tabHoroscope: 'Horoscope',
@@ -62,22 +65,6 @@ const translations = {
     themeLight: 'Dawn',
     themeDusk: 'Dusk',
     themeSubtitle: 'Choose how Grahachara feels.',
-
-    // Token / micro-transaction
-    tokenBalance: 'Balance',
-    tokenTopUp: 'Top Up',
-    tokenInsufficient: 'Not enough balance',
-    tokenCost: 'This will cost',
-    tokenConfirm: 'Confirm & Generate',
-    tokenCancelBtn: 'Cancel',
-    tokenTopUpBtn: 'Top Up Balance',
-    tokenLkr: 'LKR',
-    tokenReportCost: 'LKR 499',
-    tokenPorondamCost: 'LKR 200',
-    tokenAfterBalance: 'Balance after',
-    tokenSelectPackage: 'Select a package',
-    tokenTopUpSuccess: 'Balance topped up!',
-    tokenTopUpFail: 'Top-up failed',
 
     // Kendara (Chart)
     kpBirthChart: 'Birth Life Map',
@@ -151,6 +138,7 @@ const translations = {
     reportBusiness: 'Business & Growth',
     reportPlanetStrength: 'Your Strongest & Weakest Energies',
     reportTransits: 'What\'s Happening Right Now',
+    reportNext12Months: 'Your Next 12 Months — Dated Windows',
     reportRealEstate: 'Home, Property & Assets',
     reportEmployment: 'Career Growth & Promotions',
     reportFinancial: 'Your Money Blueprint',
@@ -222,8 +210,8 @@ const translations = {
     tapToLearn: 'tap to expand',
 
     // Compatibility
-    porondamTitle: 'Marriage Compatibility',
-    porondamSubtitle: 'Check your compatibility score (out of 20)',
+    porondamTitle: 'Marriage Pack',
+    porondamSubtitle: 'Full porondam match — archetype, report & shareable PDF',
     brideDetails: 'Bride Details',
     groomDetails: 'Groom Details',
     birthDate: 'Birth Date & Time',
@@ -418,6 +406,7 @@ const translations = {
     subStatusCancelledDetailNoAccess: 'This subscription is cancelled and no longer unlocks premium access.',
     subStatusFreeDetail: 'Subscribe to unlock reports, matching, and the AI guide.',
     subCancel: 'Cancel Subscription',
+    manageSub: 'Manage Subscription',
     subExpired: 'Your subscription has expired.',
     subCancelled: 'Subscription cancelled.',
     subPromo: 'Subscribe for full access to all features.',
@@ -526,6 +515,9 @@ const translations = {
     chatDreamPlaceholder: 'ඔයා දුටු සිහිනයේ සැඟවුණු අරුත පවසන්න...',
     chatTimeout: 'විශ්වයේ පිහිටීම් ග්‍රහණය කරගැනීමට වැඩි වේලාවක් ගත විය. නැවත උත්සාහ කරන්න ⏳',
     chatAuthExpired: 'ඔයාගේ සැසිය කල් ඉකුත් වී ඇත. කරුණාකර නැවත ඇතුල් වන්න 🔒',
+    chatHeldAnswer: 'නැකැත්කරු ඔබේ ප්‍රශ්නය කියවා අවසන් — පිළිතුර සූදානම්. එය ලබා ගැනීමට විවෘත කරන්න 🔓',
+    chatUnlocked: 'විවෘත වුණා ✨ ඔබේ ප්‍රශ්නය නැකැත්කරුගෙන් අහනවා…',
+    chatUnlockDelay: 'ඔබේ දායකත්වය සක්‍රීය වෙමින් පවතී — තත්පර කිහිපයකින් ප්‍රශ්නය නැවත යවන්න.',
     chatRateLimit: 'එකවර ගැටළු රාශියක් ඉදිරිපත් විය! මඳ වේලාවකින් නැවත උත්සාහ කරන්න ⏱️',
     chartLoaded: 'කේන්දරය ✓',
     noBirthData: 'කේන්දරය නැත',
@@ -539,22 +531,6 @@ const translations = {
     themeLight: 'උදෑසන',
     themeDusk: 'සඳ එළිය',
     themeSubtitle: 'ග්‍රහචාරයේ පෙනුම තෝරන්න.',
-
-    // Token / micro-transaction
-    tokenBalance: 'ශේෂය',
-    tokenTopUp: 'රිචාජ්',
-    tokenInsufficient: 'ශේෂය මදි',
-    tokenCost: 'මෙතනට ගෙවන්නේ',
-    tokenConfirm: 'තහවුරු කරලා හදන්න',
-    tokenCancelBtn: 'අවලංගු',
-    tokenTopUpBtn: 'ශේෂය රිචාජ් කරන්න',
-    tokenLkr: 'රු',
-    tokenReportCost: 'රු 499',
-    tokenPorondamCost: 'රු 200',
-    tokenAfterBalance: 'පසු ශේෂය',
-    tokenSelectPackage: 'ඇමවුමක් තෝරන්න',
-    tokenTopUpSuccess: 'ශේෂය එකතු විය!',
-    tokenTopUpFail: 'රිචාජ් අසාර්ථකයි',
 
     // Report screen (Sinhala)
     reportTitle: '\uD83D\uDD2E ඔයාගේ සම්පූර්ණ ජීවිත කතාව',
@@ -628,6 +604,7 @@ const translations = {
     reportBusiness: '📈 ව්‍යාපාර සහ වර්ධනය',
     reportPlanetStrength: '📊 ඔයාගේ ශක්තිමත්ම සහ දුර්වලම ශක්ති',
     reportTransits: '🌍 දැන් මොකද වෙන්නේ?',
+    reportNext12Months: '📅 ඉදිරි මාස 12 — දින සහිත කාල රාමු',
     reportRealEstate: '🏠 ගෙවල්, ඉඩකඩම්, වාහන',
     reportEmployment: '🏅 රැකියාවේ ඉදිරියට යන හැටි',
     reportFinancial: '💰 ඔයාගේ සල්ලි සැලැස්ම',
@@ -699,8 +676,8 @@ const translations = {
     tapToLearn: 'විස්තර බැලීමට ඔයාන්න',
 
     // Porondam
-    porondamTitle: '\u2764\uFE0F විවාහ ගැලපීම්',
-    porondamSubtitle: 'ඔයාලා දෙන්නා ගැලපෙනවද බලමු?',
+    porondamTitle: '\u2764\uFE0F විවාහ පැකේජය',
+    porondamSubtitle: 'සම්පූර්ණ පොරොන්දම් ගැලපීම · ආකෘතිය, වාර්තාව සහ PDF',
     brideDetails: 'කෙල්ලගේ විස්තර \uD83D\uDC70',
     groomDetails: 'කොල්ලගේ විස්තර \uD83E\uDD35',
     birthDate: 'උපන් දවස',
@@ -997,6 +974,7 @@ const translations = {
     subStatusCancelledDetailNoAccess: 'මෙම සාමාජිකත්වය අවලංගු වී ඇති අතර Premium ප්‍රවේශය ලබා නොදේ.',
     subStatusFreeDetail: 'වාර්තා, පොරොන්දම් සහ AI Guide සඳහා සාමාජික වන්න.',
     subCancel: 'සාමාජිකත්වය අවලංගු කරන්න',
+    manageSub: 'දායකත්වය කළමනාකරණය',
     subExpired: 'ඔයාගේ සාමාජිකත්වය කල් ඉකුත් වී ඇත.',
     subCancelled: 'සාමාජිකත්වය අවලංගු කෙරිණ.',
     subPromo: 'සියලු ලක්ෂණ සඳහා සාමාජිකත්වය ලබාගන්න.',

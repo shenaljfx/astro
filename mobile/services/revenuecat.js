@@ -51,6 +51,7 @@ var PRODUCT_IDS = {
   // One-time purchases
   full_report: 'full_report',
   porondam_check: 'porondam_check',
+  baby_kendara: 'baby_kendara',
 };
 
 export { PRODUCT_IDS, ENTITLEMENT_ID };
@@ -281,7 +282,7 @@ export async function getOfferings() {
         availablePackages: [{
           packageType: 'MONTHLY',
           identifier: '$rc_monthly',
-          product: { identifier: 'monthly', priceString: 'LKR 280.00', price: 280 },
+          product: { identifier: 'monthly', priceString: 'LKR 490.00', price: 490 },
         }],
       },
     };

@@ -39,7 +39,7 @@ router.get('/', (req, res) => {
       subscription: pricing.subscription,
       porondam: pricing.porondam,
       report: pricing.report,
-      topUpPackages: pricing.topUpPackages,
+      babyKendara: pricing.babyKendara,
     });
   } catch (err) {
     console.error('[Pricing] Error:', err);
@@ -53,7 +53,7 @@ router.get('/', (req, res) => {
       subscription: fallback.subscription,
       porondam: fallback.porondam,
       report: fallback.report,
-      topUpPackages: fallback.topUpPackages,
+      babyKendara: fallback.babyKendara,
     });
   }
 });

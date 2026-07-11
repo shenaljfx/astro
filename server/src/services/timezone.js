@@ -5,8 +5,9 @@
  * time — accounting for historical DST rules that have changed over the decades.
  *
  * Priority chain:
- *   1. TimeZoneDB API  (free tier — 1 req/sec, no daily cap, historical DST aware)
- *   2. Local IANA zone lookup via `Intl` (fast but not historical-DST-aware)
+ *   1. IANA zone lookup via `Intl` (ICU tzdata — IS historical-DST/offset
+ *      aware; correctly returns Sri Lanka's 1996–2006 UTC+6:00/+6:30 window)
+ *   2. TimeZoneDB API  (for coordinates outside the built-in zone map)
  *   3. Hard-coded offset fallback (Sri Lanka = UTC+5:30, no DST)
  *
  * Why this matters for Vedic astrology:
@@ -56,21 +57,43 @@ async function resolveTimezoneInfo(lat, lng, date) {
     };
   }
 
-  // ── Sri Lanka / India fixed offset ─────────────────────────────────
-  // Sri Lanka temporarily used UTC+6:00 and UTC+6:30 between 1996–2006,
-  // but Sri Lankan astrologers universally continued using IST (UTC+5:30)
-  // throughout that period.  Birth certificates and astrology charts from
-  // 1996–2006 record times in UTC+5:30, not the government-mandated
-  // offset.  To match traditional practice we hard-code UTC+5:30 for all
-  // Sri Lankan and Indian births regardless of the historical civil offset.
+  // ── Sri Lanka / India — resolve from IANA history (no API needed) ──
+  // Birth certificates record CIVIL (wall-clock) time. Sri Lanka ran
+  // UTC+6:30 (1996-05-25 → 1996-10-26) and UTC+6:00 (→ 2006-04-15); a
+  // certificate time from that decade must be interpreted in the offset
+  // that was actually in force, or the computed instant — and therefore
+  // the whole chart — is 30–60 min wrong (lagna lands in the wrong sign
+  // ~25% of the time). Node's Intl carries the full Asia/Colombo history,
+  // so we read the real historical offset instead of hard-coding +5:30.
+  // India has been a stable +5:30 for all modern births; the same path
+  // confirms it without a network call.
   if (_isSriLankaOrIndia(lat, lng)) {
+    const zoneName = _ianaFromCoords(lat, lng) || 'Asia/Colombo';
+    const ianaOffset = _offsetFromIana(zoneName, date);
+    if (ianaOffset !== null) {
+      _setCache(cacheKey, ianaOffset);
+      if (ianaOffset !== 19800) {
+        console.log(
+          `[timezone] ${zoneName} historical offset at ${date.toISOString()} → ` +
+          `UTC${ianaOffset >= 0 ? '+' : ''}${(ianaOffset / 3600).toFixed(2)} ` +
+          `(non-standard civil offset — 1996–2006 SL window)`
+        );
+      }
+      return {
+        offsetSeconds: ianaOffset,
+        zoneName,
+        source: 'iana_history',
+        assumedOffset: false,
+      };
+    }
+    // Intl unavailable — fall back to fixed IST rather than failing.
     const sltOffset = 19800; // UTC+5:30
     _setCache(cacheKey, sltOffset);
     return {
       offsetSeconds: sltOffset,
-      zoneName: _ianaFromCoords(lat, lng) || 'Asia/Colombo',
-      source: 'traditional_slt',
-      assumedOffset: false,
+      zoneName,
+      source: 'fixed_ist_fallback',
+      assumedOffset: true,
     };
   }
 
@@ -310,6 +333,26 @@ function _parseOffsetString(str) {
   if (!m) return 19800; // default SLT
   const sign = m[1] === '+' ? 1 : -1;
   return sign * (parseInt(m[2], 10) * 3600 + parseInt(m[3], 10) * 60);
+}
+
+/**
+ * Resolve the historical UTC offset (seconds) for an IANA zone at `date`
+ * using Node's Intl, which is backed by the full ICU tzdata and IS
+ * historical-transition aware (contrary to the old comment in this file).
+ * Returns null if Intl cannot resolve the zone.
+ */
+function _offsetFromIana(zoneName, date) {
+  try {
+    const fmt = new Intl.DateTimeFormat('en', {
+      timeZone: zoneName,
+      timeZoneName: 'longOffset',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    });
+    const part = fmt.formatToParts(date).find(p => p.type === 'timeZoneName');
+    if (part && /[+-]\d/.test(part.value)) return _parseOffsetString(part.value);
+  } catch (_) { /* fall through */ }
+  return null;
 }
 
 module.exports = { resolveUtcOffset, resolveTimezoneInfo, parseBirthDateTime, parseBirthDateTimeWithContext };

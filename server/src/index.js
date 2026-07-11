@@ -52,7 +52,7 @@ const userRoutes = require('./routes/user');
 const authRoutes = require('./routes/auth');
 const rectificationRoutes = require('./routes/rectification');
 const predictionRoutes = require('./routes/predictions');
-const tokensRoutes = require('./routes/tokens');
+const entitlementRoutes = require('./routes/entitlements');
 const notificationRoutes = require('./routes/notifications');
 const revenuecatRoutes = require('./routes/revenuecat');
 const pricingRoutes = require('./routes/pricing');
@@ -61,8 +61,11 @@ const readingRoutes = require('./routes/reading');
 const enhancedRoutes = require('./routes/enhanced');
 const jyotishRoutes = require('./routes/jyotish');
 const geocodeRoutes = require('./routes/geocode');
+const previewRoutes = require('./routes/preview');
 const manifestRoutes = require('./routes/manifest');
 const marketingRoutes = require('./routes/marketing');
+const analyticsRoutes = require('./routes/analytics');
+const babyRoutes = require('./routes/baby');
 const { phoneAuth, requireSubscription } = require('./middleware/subscription');
 const { requestAlertMiddleware, startMemoryMonitor } = require('./services/alerting');
 
@@ -112,27 +115,73 @@ app.use(globalLimiter);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
+  let firestore = null;
+  let ephemeris = null;
+  try { firestore = require('./services/firestoreCircuit').getState(); } catch (_) {}
+  try { ephemeris = require('./engine/astrology').getEphemerisFallbackStats(); } catch (_) {}
+  // Degrade the reported status when the DB breaker is open so external
+  // health checks / dashboards can see a real problem without parsing logs.
+  const degraded = firestore && firestore.state === 'open';
+  res.status(degraded ? 503 : 200).json({
+    status: degraded ? 'degraded' : 'ok',
     app: 'Grahachara',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
+    firestore,
+    ephemeris,
   });
 });
 
 var paidAccess = [phoneAuth, requireSubscription];
 
+/**
+ * paidAccess with explicit route exemptions. Exempted paths skip the
+ * mount-level subscription gate; their OWN route-level middleware governs
+ * access instead (requireSubscriptionOrCredit for one-time-product routes,
+ * optionalAuth for free-funnel and user-owned-artifact routes). req.path
+ * here is relative to the mount point.
+ */
+function paidAccessExcept(exemptPrefixes) {
+  return [phoneAuth, function (req, res, next) {
+    var p = req.path;
+    for (var i = 0; i < exemptPrefixes.length; i++) {
+      var ex = exemptPrefixes[i];
+      if (p === ex || p.indexOf(ex + '/') === 0) return next();
+    }
+    return requireSubscription(req, res, next);
+  }];
+}
+
 // Routes — with per-route rate limits
 app.use('/api/nakath', paidAccess, nakathRoutes);
-app.use('/api/porondam', paidAccess, porondamRoutes);
+// Porondam: /check + /report admit one-time credit buyers (route-level
+// requireSubscriptionOrCredit); history/saved are the buyer's own artifacts.
+app.use('/api/porondam', paidAccessExcept([
+  '/check',        // route-gated: subscription OR porondam credit
+  '/report',       // route-gated: subscription OR porondam credit (also /report/health — pre-payment check)
+  '/my-history',   // user's own saved results (optionalAuth, uid-scoped)
+  '/saved',        // user's own saved result by id
+  '/history',      // delete own history entry (phoneAuth in route)
+]), porondamRoutes);
 app.use('/api/chat', chatLimiter, paidAccess, chatRoutes);
-app.use('/api/horoscope', paidAccess, horoscopeRoutes);
+// Horoscope: onboarding reveal is the FREE funnel hook (must work logged-out);
+// full-report flow admits one-time credit buyers; my-reports/saved-report are
+// the buyer's own purchased artifacts.
+app.use('/api/horoscope', paidAccessExcept([
+  '/onboarding-reveal', // free funnel — the identity reveal + future-window cards
+  '/birth-chart',       // POST route-gated: subscription OR report credit. GET /birth-chart/data is subscription-only (Home basic chart)
+  '/full-report-ai',    // route-gated: subscription OR report credit
+  '/report-progress',   // polling own generation (phoneAuth in route)
+  '/my-reports',        // own saved reports list
+  '/saved-report',      // own saved report content (+ delete)
+  '/report-feedback',   // feedback on own report
+]), horoscopeRoutes);
 app.use('/api/share', userDataLimiter, paidAccess, shareRoutes);
 app.use('/api/user', userDataLimiter, userRoutes);
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/rectification', aiLimiter, paidAccess, rectificationRoutes);
 app.use('/api/predictions', aiLimiter, paidAccess, predictionRoutes);
-app.use('/api/tokens', userDataLimiter, tokensRoutes);
+app.use('/api/entitlements', userDataLimiter, entitlementRoutes);
 app.use('/api/notifications', userDataLimiter, notificationRoutes);
 app.use('/api/revenuecat', revenuecatRoutes);
 app.use('/api/pricing', userDataLimiter, pricingRoutes);
@@ -141,8 +190,14 @@ app.use('/api/reading', aiLimiter, paidAccess, readingRoutes);
 app.use('/api/enhanced', userDataLimiter, paidAccess, enhancedRoutes);
 app.use('/api/jyotish', userDataLimiter, paidAccess, jyotishRoutes);
 app.use('/api/geocode', geocodeRoutes);
+// Public teasers (no subscription) — free kendara preview feeds the funnel
+app.use('/api/preview', userDataLimiter, previewRoutes);
 app.use('/api/manifest', aiLimiter, paidAccess, manifestRoutes);
+// Baby Kendara: /compose admits one-time baby_kendara credit buyers (route-gated).
+app.use('/api/baby', userDataLimiter, paidAccessExcept(['/compose']), babyRoutes);
 app.use('/api/marketing', marketingRoutes);
+// Analytics — public (paywall funnel events fire for free/logged-out users)
+app.use('/api/analytics', userDataLimiter, analyticsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

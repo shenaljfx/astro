@@ -7,16 +7,100 @@
 
 const { getPanchanga, getDailyNakath, getNakshatra, getRashi, getLagna, toSidereal, getMoonLongitude, getSunLongitude, generateFullReport, buildHouseChart, buildNavamshaChart, getAllPlanetPositions, calculateDrishtis, detectYogas, getPlanetStrengths, calculateAshtakavarga, calculateVimshottariDetailed, buildJaiminiRashiDrishti, RASHIS } = require('./astrology');
 const { generateAdvancedAnalysis } = require('./advanced');
-const { formatLocalDateTime } = require('./calculationSettings');
+const { formatLocalDateTime, resolveCalculationSettings } = require('./calculationSettings');
 const { buildHealthPromptPayload, buildHealthPromptPolicyBlock, buildSectionPromptPayload, buildSectionPromptPolicyBlock } = require('./promptClaimBuilder');
 const { PROMPT_VERSION, buildPromptRunMetadata, buildSectionGenerationMetadata, buildUnsupportedTermAnalytics } = require('./promptObservability');
 const { extractGeminiUsage, createTokenTracker, recordUsage, finalizeTracker, formatCostLog } = require('../utils/tokenCalculator');
 const { createProgressRecord, updateProgressRecord, getProgressRecord, archiveProgressRecord } = require('../services/reportProgressStore');
+const firestoreCircuit = require('../services/firestoreCircuit');
 
 // ══════════════════════════════════════════════════════════════
 // REPORT PROGRESS TRACKER — allows mobile to poll generation status
 // ══════════════════════════════════════════════════════════════
 const _reportProgress = new Map(); // reportId → { stage, sectionsDone, sectionsTotal, currentSection, startedAt, completedSections }
+
+// ══════════════════════════════════════════════════════════════
+// REPORT SECTION ORDER — single source of truth for section keys.
+// Consolidated sections — removed duplicates/overlaps:
+// - 'employment' / 'business' merged into 'career'
+// - marriedLife = post-marriage daily life (separate from marriage timing)
+// - next12Months = deterministic dated convergence calendar (Phase 2)
+// jobWorker + routes derive sectionsTotal from this array — never hardcode.
+// ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// SLIM RAW DATA — the curated subset of engine data persisted with each
+// narrative section. The FULL rawData used to be embedded per section,
+// pushing Sinhala reports toward Firestore's 1 MiB document limit and
+// forcing the mobile app to fire a second heavy /full-report call just
+// for scores. This whitelist is exactly what the mobile SectionCard
+// (extractSectionScore / extractKeyStats) and the PDF (extractScore)
+// actually read — extend it when the UI grows, never dump whole sections.
+// ══════════════════════════════════════════════════════════════
+const SLIM_RAW_PATHS = {
+  marriage: ['seventhHouse.strengthScore', 'seventhHouse.strength', 'marriageAfflictions.likelihood', 'marriageAfflictions.severity', 'marriageAfflictions.severityScore', 'marriageAfflictions.isMarriageDenied', 'marriageTimingPrediction.bestWindow', 'marriageTimingPrediction.currentAge', 'navamshaAnalysis.marriageStrength', 'secondMarriage'],
+  marriedLife: ['seventhHouse.strengthScore', 'navamshaAnalysis.marriageStrength', 'secondMarriage'],
+  career: ['tenthHouse.strengthScore', 'careerPlanetRanking', 'nadiCareer.careerType', 'nadiCareer.serviceStrength', 'nadiCareer.businessStrength'],
+  health: ['sixthHouse.strengthScore', 'eighthHouse.strengthScore', 'firstHouse.strengthScore', 'overallVitality', 'nadiHealth.longevityEstimate.estimatedYears', 'nadiHealth.longevityStrength'],
+  financial: ['income.secondHouse.strengthScore', 'income.eleventhHouse.strengthScore', 'secondHouse.strengthScore'],
+  children: ['fifthHouse.strengthScore', 'estimatedChildren.count', 'estimatedChildren.genderTendency', 'nadiChildren.strength'],
+  education: ['fourthHouse.strengthScore', 'fifthHouse.strengthScore', 'nadiEducation.overallGrade', 'eduPlanetPool'],
+  foreignTravel: ['ninthHouse.strengthScore', 'twelfthHouse.strengthScore', 'nadiForeignTravel.strength'],
+  luck: ['ninthHouse.strengthScore', 'nadiLuck.windfallStrength', 'nadiLuck.wealthStrength'],
+  realEstate: ['fourthHouse.strengthScore'],
+  surpriseInsights: ['secondMarriage', 'famePotential.level'],
+  next12Months: ['windows', 'summary', 'asOf', 'horizonMonths'],
+};
+const SLIM_ARRAY_LIMIT = { careerPlanetRanking: 3, eduPlanetPool: 3, windows: 8 };
+
+function buildSlimRawData(sectionKey, data) {
+  if (!data || typeof data !== 'object') return null;
+  const paths = SLIM_RAW_PATHS[sectionKey];
+  if (!paths) return null;
+  const out = {};
+  for (const path of paths) {
+    const keys = path.split('.');
+    let src = data;
+    for (const k of keys) { src = src?.[k]; if (src === undefined || src === null) break; }
+    if (src === undefined || src === null) continue;
+    if (Array.isArray(src) && SLIM_ARRAY_LIMIT[keys[keys.length - 1]]) {
+      src = src.slice(0, SLIM_ARRAY_LIMIT[keys[keys.length - 1]]);
+    }
+    let target = out;
+    for (let i = 0; i < keys.length - 1; i++) {
+      target = target[keys[i]] = target[keys[i]] || {};
+    }
+    target[keys[keys.length - 1]] = src;
+  }
+  // next12Months keeps a slimmed month grid so the mobile timeline can render
+  // without the drivers/active bulk (those live in the narrative).
+  if (sectionKey === 'next12Months' && Array.isArray(data.months)) {
+    out.months = data.months.map(m => ({ month: m.month, label: m.label, scores: m.scores, eclipses: m.eclipses || [] }));
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+const REPORT_SECTION_ORDER = [
+  'yogaAnalysis',
+  'lifePredictions',
+  'career',
+  'marriage',
+  'marriedLife',
+  'financial',
+  'children',
+  'familyPortrait',
+  'health',
+  'physicalProfile',
+  'attractionProfile',
+  'foreignTravel',
+  'education',
+  'luck',
+  'legal',
+  'realEstate',
+  'transits',
+  'next12Months',
+  'surpriseInsights',
+  'remedies',
+];
 const PROGRESS_TTL = 15 * 60 * 1000; // 15 minutes — must outlive longest generation + client recovery window
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 const DEFAULT_GEMINI_HERO_MODEL = 'gemini-3.1-pro-preview';
@@ -36,7 +120,12 @@ function createReportProgress(reportId, totalSections, ownerUid = null, metadata
     ...metadata,
   };
   _reportProgress.set(reportId, progress);
-  createProgressRecord(reportId, progress).catch(err => console.warn('[ReportProgress] create failed:', err.message));
+  // Durable copy is best-effort. In-memory (_reportProgress) is the source of
+  // truth within the process, so skip the Firestore write when the DB breaker
+  // is open rather than queuing ~20 doomed writes + log lines per report.
+  if (!firestoreCircuit.isOpen()) {
+    createProgressRecord(reportId, progress).catch(err => { firestoreCircuit.recordError(err); });
+  }
   // Auto-cleanup after TTL
   setTimeout(() => _reportProgress.delete(reportId), PROGRESS_TTL);
 }
@@ -44,7 +133,9 @@ function createReportProgress(reportId, totalSections, ownerUid = null, metadata
 function updateReportProgress(reportId, update) {
   const prog = _reportProgress.get(reportId);
   if (prog) Object.assign(prog, update);
-  updateProgressRecord(reportId, update).catch(err => console.warn('[ReportProgress] update failed:', err.message));
+  if (!firestoreCircuit.isOpen()) {
+    updateProgressRecord(reportId, update).catch(err => { firestoreCircuit.recordError(err); });
+  }
 }
 
 function getReportProgress(reportId) {
@@ -1128,6 +1219,7 @@ function buildSectionPrompt(sectionKey, sectionData, birthData, allSections, lan
     legal: '⚖️ නීතිමය, සතුරු හා ආරක්ෂාව',
     realEstate: '🏠 ගෙවල්, ඉඩකඩම් සහ වත්කම්',
     transits: '🌍 දැන් මොකද වෙන්නේ',
+    next12Months: '📅 ඉදිරි මාස 12 — දින සහිත කාල රාමු',
     surpriseInsights: '🤯 ඔයා ගැන පුදුම දේවල්',
     familyPortrait: '👨‍👩‍👧‍👦 ගැඹුරු පවුලේ කතාව — දෙමව්පියන්, සහෝදරයෝ සහ පවුල් කර්මය',
     remedies: '💎 ඔයාගේ බල මෙවලම් කට්ටලය',
@@ -2149,6 +2241,55 @@ OUTPUT INSTRUCTIONS — cover ONLY what the data supports:
 Write AT LEAST 6-8 detailed paragraphs (each 3-6 sentences). For income, describe earning potential across different life periods. For risk periods, give specific years and what to avoid. For investments, give actionable practical advice.`,
     },
 
+    next12Months: {
+      title: '📅 Your Next 12 Months — Dated Windows',
+      prompt: `
+╔═══════════════════════════════════════════════════════════════╗
+║  SECTION: NEXT 12 MONTHS — DETERMINISTIC CONVERGENCE CALENDAR ║
+╚═══════════════════════════════════════════════════════════════╝
+
+SECTION IDENTITY: The report's falsifiable-forecast section. Every window below
+was computed by a deterministic engine (period ladder × slow-planet movement ×
+eclipse triggers × luck-carrier periods). Your job is to NARRATE these dated
+windows vividly — NEVER to invent, move, widen, or add windows.
+
+⛔ ABSOLUTE RULES FOR THIS SECTION:
+1. Use ONLY the months, date ranges, scores, and tiers given below. Zero new dates.
+2. Frame every window as a chart-supported energy window, never a guaranteed event
+   ("this is the strongest career window of your year" ✓ / "you WILL get promoted in March" ✗).
+3. ★★★ windows get a full paragraph each. ★★ get 2-3 sentences. ★ get one sentence.
+4. Caution windows are as valuable as opportunities — frame them as "consolidate,
+   don't launch" months, with the specific driver explained in real-life terms.
+5. Translate driver phrases into everyday language (banned-terms list applies —
+   no "dasha", "gochara", "Rahu" as sentence subjects).
+6. If an eclipse turning-point month exists, give it its own short paragraph with
+   the exact date — this is the single most precise timing signal in the report.
+7. End with the "best month" and "toughest month" from the summary — one sentence each.
+
+━━━ CONVERGENCE CALENDAR DATA ━━━
+As of: ${sectionData?.asOf || 'N/A'} · Horizon: ${sectionData?.horizonMonths || 12} months
+Basis: ${sectionData?.basis || 'N/A'}
+
+TOP WINDOWS (already ranked — narrate in this order):
+${(sectionData?.windows || []).map((w, i) => `${i + 1}. [${w.type.toUpperCase()}] ${w.tier} ${w.domain} — ${w.startLabel}${w.endLabel !== w.startLabel ? ' to ' + w.endLabel : ''} (peak ${w.peakLabel}, score ${w.score}/100)
+   Period lords: ${w.active?.md || '?'} → ${w.active?.ad || '?'} → ${w.active?.pd || '?'}
+   Drivers: ${(w.drivers || []).map(d => d.text).join('; ') || 'N/A'}`).join('\n') || 'No strong windows this year — a neutral consolidation year.'}
+
+MONTH-BY-MONTH SCORES (career / love / money / health / travel / family):
+${(sectionData?.months || []).map(m => `${m.label}: ${m.scores.career}/${m.scores.love}/${m.scores.money}/${m.scores.health}/${m.scores.travel}/${m.scores.family}${m.eclipses?.length ? ' ⚠ eclipse ' + m.eclipses.map(e => e.date).join(', ') : ''}`).join('\n')}
+
+SUMMARY:
+- Best month: ${sectionData?.summary?.bestMonth ? `${sectionData.summary.bestMonth.label} (${sectionData.summary.bestMonth.domain}, ${sectionData.summary.bestMonth.score}/100)` : 'N/A'}
+- Toughest month: ${sectionData?.summary?.toughestMonth ? `${sectionData.summary.toughestMonth.label} (${sectionData.summary.toughestMonth.domain}, ${sectionData.summary.toughestMonth.score}/100)` : 'N/A'}
+
+OUTPUT INSTRUCTIONS:
+Write 6-10 paragraphs: open with the single strongest window as a hook (name the
+months and what to DO in them), then each ranked window, then eclipse turning
+points, then the caution windows with "what to avoid", then close with best/toughest
+month lines. Month names stay in the output language's natural form with the year
+(e.g. "2026 නොවැම්බර්" in Sinhala). Give every window ONE concrete action step.`,
+    },
+
     remedies: {
       title: '💎 Your Personal Power Toolkit',
       prompt: `
@@ -2171,6 +2312,8 @@ ANTI-GENERIC MUTATIONS FOR REMEDIES:
 ✗ BANNED: "Exercise regularly" → ✓ USE: "Your [weakest planet at X%] needs [specific activity type] — aim for [frequency]. This directly addresses your [specific organ risk] vulnerability."
 
 Translate the following remedies data into practical recommendations. State gemstones, colors, days, and weak planet remedies directly from the data.
+
+${extraContext?.userReligion || rashiContext?.userReligion ? `CULTURAL TEXTURE (secular rule still absolute): This person's faith background is ${extraContext?.userReligion || rashiContext?.userReligion}. Do NOT recommend any worship, ritual, or religious practice — but you MAY anchor secular habits to their cultural rhythm so advice feels native (e.g. for a Buddhist: "the full-moon holiday is a natural monthly reset point for journaling"; for a Christian: "Sunday morning quiet time suits your reflection habit"; for a Muslim: "the pre-dawn hours you already keep are your best deep-work window"; for a Hindu: "Friday evenings suit your family reset"). Frame around their existing calendar, never around belief or practice.` : ''}
 
 REMINDER: Be clear and honest. If Sinhala (si), use 100% pure Sinhala with no English or Tamil (දෙමළ) words mixed in.
 
@@ -3459,7 +3602,7 @@ async function generateSectionNarrative(sectionKey, sectionData, birthData, allS
 
   const langInstructions = {
     en: 'Write in English. Warm, personal, wise tone. Do NOT use ANY Sinhala, Sanskrit, Pali, Hindi, or Tamil words. Everything must be in plain English that anyone can understand.',
-    si: 'ඔබ ලියන සෑම වචනයක්ම, සෑම වාක්‍යයක්ම, සෑම මාතෘකාවක්ම 100% පිරිසිදු සිංහලෙන් ලියන්න. ඉංග්‍රීසි වචනයක්වත් mix කරන්න එපා — "chart", "career", "life", "love", "personality", "power", "energy", "strong", "weak", "confidence", "relationship", "marriage delay", "partner" වැනි ඉංග්‍රීසි වචන සිංහල වාක්‍ය වලට දාන්න එපා. ජ්‍යෝතිෂ්‍ය තාක්ෂණික වචන ("ලග්නය", "රාශිය", "නක්ෂත්‍ර", "දශාව", "දෝෂ", "යෝග") පාවිච්චි කරන්න එපා — ඒ වෙනුවට සාමාන්‍ය සිංහලෙන් කියන්න. 15 හැවිරිදි ළමයෙකුට තේරෙන සරල, උණුසුම් සිංහලෙන් ලියන්න. యాලුවෙක් කතා කරනවා වගේ ලියන්න.',
+    si: 'ඔබ ලියන සෑම වචනයක්ම, සෑම වාක්‍යයක්ම, සෑම මාතෘකාවක්ම 100% පිරිසිදු සිංහලෙන් ලියන්න. ඉංග්‍රීසි වචනයක්වත් mix කරන්න එපා — "chart", "career", "life", "love", "personality", "power", "energy", "strong", "weak", "confidence", "relationship", "marriage delay", "partner" වැනි ඉංග්‍රීසි වචන සිංහල වාක්‍ය වලට දාන්න එපා. ජ්‍යෝතිෂ්‍ය තාක්ෂණික වචන ("ලග්නය", "රාශිය", "නක්ෂත්‍ර", "දශාව", "දෝෂ", "යෝග") පාවිච්චි කරන්න එපා — ඒ වෙනුවට සාමාන්‍ය සිංහලෙන් කියන්න. 15 හැවිරිදි ළමයෙකුට තේරෙන සරල, උණුසුම් සිංහලෙන් ලියන්න. යාලුවෙක් කතා කරනවා වගේ ලියන්න.',
     ta: 'எல்லாவற்றையும் முழுமையான தமிழில் எழுதுங்கள். ஆங்கிலம் அல்லது சிங்களம் கலக்க வேண்டாம். ஜோதிட சொற்களை பயன்படுத்த வேண்டாம் — அன்றாட தமிழில் விளக்குங்கள். 15 வயது பிள்ளை புரிந்துகொள்ளக்கூடிய எளிய தமிழில் எழுதுங்கள்.',
     singlish: 'Write in Singlish (Sinhala typed in English). Casual, friendly, relatable tone. Do not use astrology terms — describe everything as human experiences.',
   };
@@ -3596,12 +3739,14 @@ Identify any cases where:
 For each contradiction: resolve it by choosing the signal with MORE supporting evidence, then note the tension briefly in your output.
 
 STEP 1D: UNIQUENESS EXTRACTION
-Identify the 3-5 features in THIS specific data that make it statistically unusual:
+Identify the 3-5 features in THIS specific data that make it statistically unusual.
+DO NOT guess how rare something is — the data block includes a "MEASURED RARITY"
+panel with REAL prevalence figures (share of charts that have each feature). Use it.
+- Prefer features the rarity panel marks "rare"/"very rare"/"extremely rare" (<12%)
 - Extreme scores (above 85 or below 25)
-- Rare combinations (multiple planets in one area, planetary wars, combustion)
 - Unusual contradictions (strong career + weak wealth, or vice versa)
-- Features that fewer than 15% of charts would have
-These become your "psychic moments" — save them for maximum impact.
+These become your "psychic moments" — save them for maximum impact. Never state a
+rarity percentage that is not in the MEASURED RARITY panel.
 
 STEP 1E: TEMPORAL MAPPING
 Map every prediction to the person's actual life timeline:
@@ -3638,12 +3783,15 @@ REPLACEMENT PROTOCOL for generic sentences:
 - Generic: "Career will be good" → Specific: "Your chart points to [specific field from data] with earning power concentrated in [year range from timing data]"
 - Generic: "Health needs attention" → Specific: "[Organ from data] shows elevated vulnerability starting around age [X] — annual [specific test] from age [Y] is critical"
 
-STEP 2C: DATA SATURATION CHECK
-Before finalizing, verify:
-- Every data field with a real value has been referenced (minimum 1-2 sentences per data point)
-- Every cross-reference field has been woven into the narrative (minimum 1 sentence each)
-- Total sentence count ≥ total data points with values
-- No data field was silently skipped
+STEP 2C: CLAIM SELECTION (quality over saturation)
+Do NOT narrate every data field. A weak, single-source sub-score dragged into prose
+is exactly what makes a reading feel padded and generic. Instead:
+- RANK findings by the confidence map from Phase 1 (convergent ★★★ first).
+- SPEND the section on the strongest, most convergent, most chart-specific findings.
+- A field that is weak AND single-source AND uncorroborated may be OMITTED entirely —
+  silence is better than a confident sentence about noise.
+- Better to say five things the data truly supports than fifteen things it merely permits.
+- Depth = following one real finding through all 4 layers, not touching more fields.
 
 STEP 2D: CONFIDENCE CALIBRATION
 Tag each major claim in your output with an internal confidence tier:
@@ -3813,8 +3961,11 @@ HERO sections (lifePredictions, career, marriage, marriedLife, health, children,
 STANDARD sections (financial, luck, legal, foreignTravel, realEstate, remedies, yogaAnalysis, transits):
 → AT LEAST 5-10 paragraphs. Target 800-1500 words.
 
-LENGTH FORMULA: Count data fields with real values → that's your MINIMUM sentence count.
-Every data field = 1-2 sentences minimum. Zero data points left behind.
+LENGTH GUIDANCE: Let the strength of the data set the length, not a field count.
+A chart dense with convergent, high-confidence signals earns the upper range; a
+sparse or weakly-supported chart should land shorter rather than padded to hit a
+target. Never invent or inflate a claim just to reach a word count. Depth comes
+from developing real findings fully, not from mentioning every field.
 
 FORMAT: Markdown for readability:
 - **bold** for critical findings, dates, scores
@@ -4043,11 +4194,62 @@ FORMAT: Markdown for readability:
     } catch (e) { return ''; }
   })();
 
+  // ── UNKNOWN BIRTH TIME GUARD ────────────────────────────────────
+  // When the birth time is unknown the ascendant is a noon-default guess.
+  // Every rising-sign / physical-appearance / house-cusp claim becomes
+  // unreliable, so we reframe the reading around the Moon sign (the classical
+  // fallback) and force hedged language for lagna-driven sections.
+  const timeUnknownBlock = (() => {
+    if (!birthData?._timeUnknown) return '';
+    const moon = birthData?.chandraLagna?.rashiEnglish || birthData?.moonSign?.english || birthData?.moonSign?.name || 'the Moon sign';
+    const LAGNA_SENSITIVE = new Set(['physicalProfile', 'attractionProfile', 'personality', 'health', 'career', 'marriage', 'lifePredictions']);
+    const strong = LAGNA_SENSITIVE.has(sectionKey);
+    const lines = [
+      '',
+      '',
+      '══ BIRTH TIME UNKNOWN — MOON-CHART MODE ══',
+      `The exact birth time was NOT provided. The rising sign is therefore a placeholder (noon default) and CANNOT be trusted. Anchor this reading to the Moon sign (${moon}) — the classical reading used when the hour is unknown.`,
+      'HARD RULES for this report:',
+      '  • Do NOT describe physical appearance, body type, face, or height as fact — these come from the rising sign, which is unknown. If mentioned at all, hedge heavily ("if born in the morning hours, …").',
+      '  • Do NOT state the rising-sign personality as fact. Lead with Moon-sign (emotional/mental) and Sun-sign (core) traits instead.',
+      '  • Do NOT give exact house-based timing that depends on the ascendant without hedging.',
+      '  • It is honest and trust-building to note ONCE, gently, that a precise birth time would sharpen these predictions — then invite them to add it.',
+    ];
+    if (strong) {
+      lines.push(`  • This section ("${sectionKey}") is highly lagna-dependent — keep EVERY claim in hedged, possibility language ("tends to", "often", "may").`);
+    }
+    lines.push('══════════════════════════════════════════');
+    return '\n' + lines.join('\n');
+  })();
+
+  // ── MEASURED RARITY BLOCK ───────────────────────────────────────
+  // Real prevalence for this chart's most unusual placements, computed from a
+  // base-rate table over thousands of sampled charts. The model MUST use these
+  // figures instead of guessing rarity (its Phase-1 "uniqueness extraction").
+  const rarityBlock = (() => {
+    const insights = birthData?._rarityInsights;
+    if (!Array.isArray(insights) || insights.length === 0) return '';
+    const lines = [
+      '', '',
+      '══ MEASURED RARITY (real base rates — use instead of guessing) ══',
+      'These placements are genuinely uncommon for THIS chart. Prevalence is the',
+      'measured share of charts that have the feature. Weave the 1–2 rarest into',
+      'the "psychic moment" naturally — cite the human meaning, not the number as jargon.',
+    ];
+    for (const it of insights) {
+      lines.push(`  • ${it.text} — ${it.prevalence}% of charts (${it.label})`);
+    }
+    lines.push('Do NOT invent rarity figures beyond these. If none fits this section, skip rarity.');
+    lines.push('══════════════════════════════════════════');
+    return '\n' + lines.join('\n');
+  })();
+
   const promptClaimsPayload = buildSectionPromptPayload(sectionKey, sectionData, allSections, birthData);
   const provenanceBlock = buildCalculationProvenanceBlock(sectionKey, birthData);
   const sectionClaimPolicyBlock = buildSectionPromptPolicyBlock(sectionKey, sectionData, allSections);
 
-  const userPrompt = sectionPromptData.prompt + sectionClaimPolicyBlock + rashiBlock + provenanceBlock + coherenceBlock + jyotishEnrichBlock + chalitBlock + vargaBlock + devGuardBlock + accuracyBlock;
+  const knownFactsBlock = rashiContext?.knownFactsBlock || '';
+  const userPrompt = sectionPromptData.prompt + sectionClaimPolicyBlock + rashiBlock + provenanceBlock + coherenceBlock + knownFactsBlock + jyotishEnrichBlock + chalitBlock + vargaBlock + devGuardBlock + accuracyBlock + timeUnknownBlock + rarityBlock;
 
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -4460,6 +4662,24 @@ async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612,
     if (reportId) updateReportProgress(reportId, { stage, ...extra });
   };
 
+  // ── KNOWN FACTS → rectification events ─────────────────────────
+  // Life-event years from the intake feed the birth-time rectification loop
+  // (2+ events required). A confirmed marriage year counts as an event too.
+  const lifeEvents = Array.isArray(cleanMarriageOpts.lifeEvents) ? cleanMarriageOpts.lifeEvents : [];
+  const rectificationEvents = [];
+  for (const ev of lifeEvents) {
+    const year = parseInt(ev?.year, 10);
+    if (!ev?.type || isNaN(year) || year < 1930 || year > new Date().getFullYear()) continue;
+    rectificationEvents.push({ type: ev.type, date: ev.date || `${year}-06-15` });
+  }
+  const confirmedMarriageYear = cleanMarriageOpts.maritalStatus === 'married' ? parseInt(cleanMarriageOpts.marriageYear, 10) : NaN;
+  if (!isNaN(confirmedMarriageYear) && !rectificationEvents.some(e => e.type === 'marriage')) {
+    rectificationEvents.push({ type: 'marriage', date: `${confirmedMarriageYear}-06-15` });
+  }
+  if (rectificationEvents.length >= 2 && !cleanMarriageOpts.rectificationEvents) {
+    cleanMarriageOpts.rectificationEvents = rectificationEvents;
+  }
+
   progress('engine');
   const rawReport = generateFullReport(birthDate, lat, lng, cleanMarriageOpts);
   const birthData = rawReport.birthData;
@@ -4469,6 +4689,13 @@ async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612,
   if (rawReport.rectificationApplied) birthData._rectificationApplied = rawReport.rectificationApplied;
   if (rawReport.developmentalStage) birthData._developmentalStage = rawReport.developmentalStage;
   if (rawReport.calculationMetadata) birthData._calculationMetadata = rawReport.calculationMetadata;
+  // ── Measured rarity: real base rates for this chart's unusual placements ──
+  // Replaces the LLM guessing which features are "statistically unusual".
+  try {
+    const rarity = require('./rarity');
+    const insights = rarity.buildRarityInsights(new Date(birthDate), lat, lng, 6);
+    if (insights && insights.length) birthData._rarityInsights = insights;
+  } catch (e) { /* base-rate table absent — omit rarity annotations */ }
   const sections = rawReport.sections;
   progress('charts');
 
@@ -4477,12 +4704,22 @@ async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612,
 
   // ── Build Rashi Chart Context ──────────────────────────────────
   const date = new Date(birthDate);
-  const houseChart = buildHouseChart(date, lat, lng);
-  const navamshaChart = buildNavamshaChart(date, lat, lng);
+  const houseChart = buildHouseChart(date, lat, lng, cleanMarriageOpts);
+  const navamshaChart = buildNavamshaChart(date, lat, lng, cleanMarriageOpts);
   const drishtis = calculateDrishtis(houseChart.houses);
   const yogas = detectYogas(date, lat, lng);
   const planetStrengths = getPlanetStrengths(date, lat, lng, cleanMarriageOpts);
-  const moonSidereal = toSidereal(getMoonLongitude(date), date);
+  // Settings-aware Moon position so the dasha timeline in the prompt header
+  // uses the SAME ayanamsha as the section data (custom-settings charts were
+  // previously mixing zodiacs between header and sections).
+  const contextSettings = resolveCalculationSettings(cleanMarriageOpts);
+  const moonSidereal = (() => {
+    try {
+      const positions = getAllPlanetPositions(date, lat, lng, contextSettings);
+      if (positions?.moon && Number.isFinite(positions.moon.sidereal)) return positions.moon.sidereal;
+    } catch (_) { /* fall through to default-ayanamsha path */ }
+    return toSidereal(getMoonLongitude(date), date);
+  })();
   const dasaPeriods = calculateVimshottariDetailed(moonSidereal, date);
   const panchanga = getPanchanga(date, lat, lng, cleanMarriageOpts);
 
@@ -4684,6 +4921,9 @@ ${svbSummary}`;
   }
 
   // ── Tier 3-5 Engine Data for Report ──────────────────────────
+  // "Current" is asOfDate-aware so previews and cached-key semantics agree
+  // with the accuracy engine instead of silently using server-now.
+  const asOf = cleanMarriageOpts.asOfDate ? new Date(cleanMarriageOpts.asOfDate) : new Date();
   let tier35Block = '';
   try {
     const reportEngineStart = Date.now();
@@ -4694,14 +4934,14 @@ ${svbSummary}`;
       try {
         const yoginiDasha = dashaEngine.calculateYoginiDasha(moonSidereal, date);
         const charaDasha = dashaEngine.calculateCharaDasha(date, lat, lng);
-        const crossVal = dashaEngine.crossValidateDashas(birthDate, lat, lng, new Date(), dasaPeriods);
+        const crossVal = dashaEngine.crossValidateDashas(birthDate, lat, lng, asOf, dasaPeriods);
         const activeYogini = yoginiDasha.dashas.find(d => {
           const s = new Date(d.start), e = new Date(d.end);
-          return new Date() >= s && new Date() < e;
+          return asOf >= s && asOf < e;
         });
         const activeChara = charaDasha.dashas.find(d => {
           const s = new Date(d.start), e = new Date(d.end);
-          return new Date() >= s && new Date() < e;
+          return asOf >= s && asOf < e;
         });
         pieces.push(`═══ MULTI-DASHA CROSS-VALIDATION ═══
 Current Yogini Dasha: ${activeYogini ? activeYogini.lord + ' (' + activeYogini.years + ' years)' : 'N/A'}
@@ -4731,7 +4971,7 @@ ${kpResults.map(r => `${r.event}: ${r.prediction} (${r.confidence}% confidence)$
     // Varshphal Annual Forecast
     if (varshphalEngine) {
       try {
-        const currentYear = new Date().getFullYear();
+        const currentYear = asOf.getFullYear();
         const annual = varshphalEngine.getAnnualForecast(birthDate, currentYear, lat, lng);
         pieces.push(`═══ ANNUAL FORECAST ${currentYear} (VARSHPHAL/TAJAKA) ═══
 Year Score: ${annual.yearScore}/100 — ${annual.yearOutlook}
@@ -4742,15 +4982,18 @@ Mudda Dasha: ${annual.muddaDasha?.slice(0, 3).map(d => d.lord + ' (' + d.days + 
       } catch (e) { console.warn('[AI Report] Varshphal failed:', e.message); }
     }
 
-    // Confidence Scores for key events
+    // Confidence Scores for key events.
+    // NOTE: calculateAllConfidences takes POSITIONAL args. Birth-time quality
+    // is derived, not hardcoded: unknown time → 'unknown' (heavy hedging),
+    // rectified against life events → 'rectified', otherwise 'approximate'.
     if (confidenceEngine) {
       try {
-        const confAll = confidenceEngine.calculateAllConfidences({
-          birthDate: birthDate, lat, lng, birthTimeQuality: 'approximate',
-        });
+        const rectified = rawReport.rectificationApplied && rawReport.rectificationApplied.applied !== false && rawReport.rectificationApplied.rectifiedTime;
+        const birthTimeQuality = cleanMarriageOpts.timeUnknown === true ? 'unknown' : rectified ? 'rectified' : 'approximate';
+        const confAll = confidenceEngine.calculateAllConfidences(date, lat, lng, birthTimeQuality);
         const confEntries = Object.entries(confAll).slice(0, 6);
         if (confEntries.length > 0) {
-          pieces.push(`═══ PREDICTION CONFIDENCE SCORES ═══
+          pieces.push(`═══ PREDICTION CONFIDENCE SCORES (birth-time quality: ${birthTimeQuality}) ═══
 ${confEntries.map(([ev, c]) => `${ev}: ${c.confidenceScore}% (${c.label})`).join('\n')}`);
         }
       } catch (e) { console.warn('[AI Report] Confidence scoring failed:', e.message); }
@@ -4759,7 +5002,7 @@ ${confEntries.map(([ev, c]) => `${ev}: ${c.confidenceScore}% (${c.label})`).join
     // Enhanced Transits with Ashtakavarga Scoring
     if (transitEngine && transitEngine.getEnhancedTransits) {
       try {
-        const enhanced = transitEngine.getEnhancedTransits(null, birthDate, lat, lng);
+        const enhanced = transitEngine.getEnhancedTransits(asOf, birthDate, lat, lng);
         const planetTransits = Object.entries(enhanced.planets || {}).slice(0, 5);
         pieces.push(`═══ ASHTAKAVARGA-WEIGHTED TRANSITS ═══
 Composite Transit Score: ${enhanced.compositeAshtakavargaScore || '--'} — ${enhanced.compositeLabel || 'Mixed'}
@@ -5005,6 +5248,31 @@ REFERENCE: Use this calendar when writing about "key upcoming events" or "life t
     })(),
     // ── Religion for faith-aware remedies ──
     userReligion: userReligion || null,
+    // ── KNOWN FACTS (Phase 1 intake) — validation mode, never prediction ──
+    knownFactsBlock: (() => {
+      const facts = [];
+      if (cleanMarriageOpts.maritalStatus) {
+        facts.push(`- Marital status: ${cleanMarriageOpts.maritalStatus}${!isNaN(confirmedMarriageYear) ? ` (married in ${confirmedMarriageYear})` : ''}`);
+      }
+      if (cleanMarriageOpts.careerField) {
+        facts.push(`- Current field of work: ${cleanMarriageOpts.careerField}`);
+      }
+      for (const ev of lifeEvents) {
+        if (ev?.type && ev?.year) facts.push(`- Life event confirmed by them: ${ev.type} in ${ev.year}`);
+      }
+      if (facts.length === 0) return '';
+      return `
+
+═══ KNOWN FACTS FROM THIS PERSON — VALIDATE, NEVER PREDICT ═══
+${facts.join('\n')}
+
+HARD RULES FOR KNOWN FACTS:
+1. NEVER predict something they already told us. "You will marry" to a married person, or "you are suited to ${cleanMarriageOpts.careerField || 'their own field'}" as a discovery, destroys credibility instantly.
+2. VALIDATION MODE: explain how the known event/choice aligns with the chart's periods — "your ${!isNaN(confirmedMarriageYear) ? confirmedMarriageYear + ' marriage' : 'marriage'} fell inside [the matching window], which is why that period pushed partnership forward."
+3. TRAJECTORY MODE for career: since the field is known, do NOT guess professions. Analyse how their chart performs INSIDE that field, when their next promotion/switch window opens (dated from period data), and what specific role-shape fits.
+4. These facts are private context — never write "you told us" or "as you mentioned"; write as if the chart itself confirms what you see.
+═══════════════════════════════════════════════════════════`;
+    })(),
   };
 
   // ── Build Age Context for Reality-Checked Predictions ──────────
@@ -5026,32 +5294,7 @@ REFERENCE: Use this calendar when writing about "key upcoming events" or "life t
   console.log(`[AI Report] Rashi chart context built — ${houseChart.houses.length} houses, ${Object.keys(houseChart.planets).length} planets`);
   // ──────────────────────────────────────────────────────────────
 
-  // Consolidated sections — removed duplicates/overlaps:
-  // - 'employment' merged into 'career' (was repeating career paths/promotions)
-  // - 'business' merged into 'career' (was repeating career data)
-  // marriedLife = post-marriage daily life (separate from marriage timing/partner)
-  // EXPANDED: health (from ~35 lines to ~100+ lines)
-  const sectionOrder = [
-    'yogaAnalysis',
-    'lifePredictions',
-    'career',
-    'marriage',
-    'marriedLife',
-    'financial',
-    'children',
-    'familyPortrait',
-    'health',
-    'physicalProfile',
-    'attractionProfile',
-    'foreignTravel',
-    'education',
-    'luck',
-    'legal',
-    'realEstate',
-    'transits',
-    'surpriseInsights',
-    'remedies',
-  ];
+  const sectionOrder = REPORT_SECTION_ORDER;
 
   // ══════════════════════════════════════════════════════════════
   // PASS 1: Generate "Core Themes" summary for cross-section coherence
@@ -5166,7 +5409,7 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
     const themesResult = await callGemini([
       { role: 'system', content: 'You output ONLY valid JSON. No markdown code fences. No extra text. Be specific with years and numbers.' },
       { role: 'user', content: themesPrompt },
-    ], 8192, 0.65);
+    ], 8192, 0.3); // strict-JSON task — low temp prevents malformed output cascading into all sections
 
     // Record coherence pass token usage
     if (themesResult.usage) {
@@ -5262,9 +5505,11 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
       progress('sections', { sectionsDone: _sectionsDone, currentSection: key });
       return Promise.resolve({ title: key, narrative: null });
     }
-    // Stagger start by 300ms per section to further reduce burst
-    return limitConcurrency(async () => {
+    // Stagger start by 300ms per section to reduce burst. The sleep happens
+    // BEFORE entering the limiter so it never occupies one of the 4 slots.
+    return (async () => {
       if (idx > 0) await new Promise(r => setTimeout(r, Math.min(idx * 300, 2000)));
+      return limitConcurrency(async () => {
       const result = await generateSectionNarrative(key, sectionData, birthData, sections, language, rashiContext, ageContext, userName, userGender, userReligion, {});
       _sectionsDone++;
       progress('sections', {
@@ -5273,7 +5518,8 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
         completedSections: [...(_reportProgress.get(reportId)?.completedSections || []), key],
       });
       return result;
-    });
+      });
+    })();
   });
 
   const narrativeResults = await Promise.all(narrativePromises);
@@ -5319,7 +5565,9 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
         narrativeSections[key] = {
           title: result.title,
           narrative: result.narrative,
-          rawData: sections[key],
+          // Curated UI subset only — full section data stays in rawSections
+          // (response-only, never persisted). marriedLife reads marriage data.
+          rawData: buildSlimRawData(key, sections[key === 'marriedLife' ? 'marriage' : key]),
           validation: result.validation || null,
           model: result.model || null,
           promptMetadata: result.promptMetadata || null,
@@ -5368,7 +5616,7 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
             narrativeSections[failed.key] = {
               title: retryResult.title,
               narrative: retryResult.narrative,
-              rawData: sections[failed.key],
+              rawData: buildSlimRawData(failed.key, sections[failed.key === 'marriedLife' ? 'marriage' : failed.key]),
               validation: retryResult.validation || null,
               model: retryResult.model || null,
               promptMetadata: retryResult.promptMetadata || null,
@@ -5477,6 +5725,46 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
   const promptMetadata = validationMetadata.promptRun;
   const promptAnalytics = buildUnsupportedTermAnalytics(validationMetadata, promptMetadata);
 
+  // ── PREDICTION LEDGER (Phase 3) ────────────────────────────────
+  // Every dated, falsifiable claim in this report as a structured record.
+  // Saved with the report so the app can ask "did this happen?" when a
+  // window closes, and calibration tooling can score rules over time.
+  const predictions = (() => {
+    const list = [];
+    const cal = sections.next12Months;
+    for (const w of cal?.windows || []) {
+      list.push({
+        id: `cc:${w.domain}:${w.start}`,
+        source: 'convergenceCalendar',
+        domain: w.domain,
+        type: w.type,
+        tier: w.tier,
+        score: w.score,
+        windowStart: `${w.start}-01`,
+        windowEnd: `${w.end}-28`,
+        peakMonth: w.peakMonth,
+        drivers: (w.drivers || []).map(d => d.signal),
+        claim: `${w.type === 'opportunity' ? 'Strong' : 'Fragile'} ${w.domain} window ${w.startLabel}${w.endLabel !== w.startLabel ? ' – ' + w.endLabel : ''}`,
+      });
+    }
+    const bw = sections.marriage?.marriageTimingPrediction?.bestWindow;
+    if (bw?.dateRange && (bw.status === 'ACTIVE_NOW' || bw.status === 'UPCOMING')) {
+      list.push({
+        id: `marriage:${bw.period || bw.dateRange}`,
+        source: 'marriageTiming',
+        domain: 'love',
+        type: 'opportunity',
+        tier: bw.confidence === 'HIGH' ? '★★★' : bw.confidence === 'MODERATE' ? '★★' : '★',
+        score: bw.score || null,
+        windowStart: null,
+        windowEnd: null,
+        dateRange: bw.dateRange,
+        claim: `Marriage-supportive window ${bw.dateRange} (age ${bw.ageRange || '?'})`,
+      });
+    }
+    return list;
+  })();
+
   return {
     generatedAt: new Date().toISOString(),
     language,
@@ -5492,6 +5780,8 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
     },
     narrativeSections,
     rawSections: sections,
+    sectionScores: sections._sectionScores || null,
+    predictions,
     coreThemes: coreThemes || null,
     validationMetadata,
     tokenUsage,
@@ -5793,6 +6083,7 @@ module.exports = {
   generateAINarrativeReport,
   translateAdvancedForDisplay,
   explainChartSimple,
+  REPORT_SECTION_ORDER,
   // Progress tracking for report generation
   createReportProgress,
   updateReportProgress,

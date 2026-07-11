@@ -10,11 +10,11 @@ import * as Sharing from 'expo-sharing';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, Line, G, Defs, RadialGradient, Stop, Ellipse, Path, Image as SvgImage } from 'react-native-svg';
+import Svg, { Circle, Line, G, Defs, RadialGradient, LinearGradient as SvgLinearGradient, Stop, Ellipse, Path, Image as SvgImage } from 'react-native-svg';
 import Animated, {
   FadeIn, FadeInDown, FadeInUp,
-  useSharedValue, useAnimatedStyle,
-  withRepeat, withSequence, withTiming,
+  useSharedValue, useAnimatedStyle, useAnimatedProps,
+  withRepeat, withSequence, withTiming, withDelay,
   interpolate, Easing,
 } from 'react-native-reanimated';
 import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
@@ -23,11 +23,10 @@ import CosmicLoader from '../../components/effects/CosmicLoader';
 import PinchableView from '../../components/effects/PinchableView';
 import CosmicCard from '../../components/ui/CosmicCard';
 import SectionHeader from '../../components/ui/SectionHeader';
-import AwesomeRashiChakra from '../../components/AwesomeRashiChakra';
-import CelestialZodiacWheel from '../../components/CelestialZodiacWheel';
 import useScreenInsets from '../../hooks/useScreenInsets';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 import { Colors } from '../../constants/theme';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -39,8 +38,6 @@ import { boxShadow, textShadow } from '../../utils/shadow';
 import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
 import WeeklyShareCard from '../../components/WeeklyShareCard';
 import AffirmationCard from '../../components/AffirmationCard';
-import IntentionCard from '../../components/IntentionCard';
-import ManifestationCard from '../../components/ManifestationCard';
 
 // Lazy-load heavy THREE.js moon component — saves ~600KB parse on startup
 var RealisticMoonLazy = lazy(function () { return import('../../components/RealisticMoon'); });
@@ -341,284 +338,8 @@ var ZODIAC_COLORS = [
   '#F9A8D4','#D4A5FF','#FF9F43','#94A3B8','#67E8F9','#C4B5FD',
 ];
 
-function CosmicOrrery({ size, activeIndex, tithiNum, skipDecorations }) {
-  var pad = size * 0.10;
-  var vb = size + pad * 2;
-  var cx = vb / 2, cy = vb / 2;
-  var zodiacR = vb * 0.36;
-  var orbit2 = vb * 0.24;
-  var orbit1 = vb * 0.15;
-  var coreR = vb * 0.055;
-  var u = vb / 300;
-
-  var nodeR = Math.max(u * 10, 6);
-  var activeNodeR = Math.max(u * 16, 10);
-  var activeGlowR = Math.max(u * 22, 14);
-  var activeBgR = Math.max(u * 11, 7);
-  var fontSize = Math.max(u * 11, 7);
-  var activeFontSize = Math.max(u * 14, 9);
-  var planetScale = Math.max(u, 0.5);
-
-  // Moon phase from tithiNum (1-30): 1=new crescent, 15=full, 16=waning start, 30=new moon
-  // illumination: 0=new, 1=full
-  var moonTithi = tithiNum || 1;
-  var illumination = moonTithi <= 15 ? (moonTithi - 1) / 14 : (30 - moonTithi) / 14;
-  illumination = Math.max(0, Math.min(1, illumination));
-  // Moon position: place on the mid-orbit ring, opposite from where sun is (roughly)
-  var moonAngle = ((moonTithi / 30) * 360 + 180) * Math.PI / 180;
-  var moonX = cx + orbit2 * 0.95 * Math.cos(moonAngle);
-  var moonY = cy + orbit2 * 0.95 * Math.sin(moonAngle);
-  var moonR = Math.max(coreR * 1.1, 4.5);
-
-  var STAR_FIELD = [
-    [0.08,0.10,0.7,'#FFF'],[0.92,0.08,0.5,'#D4A5FF'],[0.05,0.55,0.6,'#67E8F9'],
-    [0.95,0.50,0.4,'#FFF'],[0.15,0.90,0.5,'#FFD666'],[0.88,0.88,0.6,'#FFF'],
-    [0.50,0.03,0.5,'#D4A5FF'],[0.30,0.07,0.3,'#FFF'],[0.72,0.05,0.4,'#67E8F9'],
-    [0.03,0.35,0.4,'#FFF'],[0.97,0.30,0.3,'#FFD666'],[0.20,0.70,0.3,'#FFF'],
-    [0.80,0.72,0.4,'#D4A5FF'],[0.42,0.95,0.5,'#FFF'],[0.65,0.96,0.3,'#67E8F9'],
-    [0.12,0.45,0.3,'#FFF'],[0.55,0.12,0.4,'#FFF'],[0.75,0.40,0.3,'#FFD666'],
-    [0.35,0.80,0.4,'#FFF'],[0.60,0.65,0.3,'#D4A5FF'],
-  ];
-
-  var INNER_PLANETS = [
-    { angle: 45, r: orbit1, sz: 2.5 * planetScale, color: '#FFB800' },
-    { angle: 165, r: orbit1, sz: 2 * planetScale, color: '#67E8F9' },
-    { angle: 285, r: orbit1, sz: 1.8 * planetScale, color: '#D4A5FF' },
-  ];
-
-  var MID_PLANETS = [
-    { angle: 20, r: orbit2, sz: 2 * planetScale, color: '#FF6B6B' },
-    { angle: 110, r: orbit2, sz: 2.5 * planetScale, color: '#34D399' },
-    { angle: 200, r: orbit2, sz: 1.5 * planetScale, color: '#FFD666' },
-    { angle: 310, r: orbit2, sz: 2 * planetScale, color: '#F9A8D4' },
-  ];
-
-  return (
-    <Svg width={size} height={size} viewBox={-pad + ' ' + -pad + ' ' + vb + ' ' + vb}>
-      <Defs>
-        <RadialGradient id="oSunCore" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#FFFBE6" stopOpacity={1} />
-          <Stop offset="25%" stopColor="#FFD666" stopOpacity={0.95} />
-          <Stop offset="50%" stopColor="#FFB800" stopOpacity={0.7} />
-          <Stop offset="100%" stopColor="#FF8C00" stopOpacity={0} />
-        </RadialGradient>
-        <RadialGradient id="oSunCorona" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#FFB800" stopOpacity={0.4} />
-          <Stop offset="40%" stopColor="#FFB800" stopOpacity={0.12} />
-          <Stop offset="70%" stopColor="#FF8C00" stopOpacity={0.05} />
-          <Stop offset="100%" stopColor="#FF8C00" stopOpacity={0} />
-        </RadialGradient>
-        <RadialGradient id="oNebulaViolet" cx="30%" cy="25%" r="55%">
-          <Stop offset="0%" stopColor="#FF8C00" stopOpacity={0.10} />
-          <Stop offset="60%" stopColor="#B8860B" stopOpacity={0.04} />
-          <Stop offset="100%" stopColor="#04030C" stopOpacity={0} />
-        </RadialGradient>
-        <RadialGradient id="oNebulaTeal" cx="75%" cy="70%" r="50%">
-          <Stop offset="0%" stopColor="#FFB800" stopOpacity={0.08} />
-          <Stop offset="60%" stopColor="#8B6914" stopOpacity={0.03} />
-          <Stop offset="100%" stopColor="#04030C" stopOpacity={0} />
-        </RadialGradient>
-        <RadialGradient id="oActiveNode" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#FFD666" stopOpacity={0.8} />
-          <Stop offset="40%" stopColor="#FFB800" stopOpacity={0.35} />
-          <Stop offset="75%" stopColor="#FFB800" stopOpacity={0.10} />
-          <Stop offset="100%" stopColor="#FFB800" stopOpacity={0} />
-        </RadialGradient>
-      </Defs>
-
-      {/* Deep space nebula washes */}
-      <Circle cx={vb * 0.3} cy={vb * 0.25} r={vb * 0.45} fill="url(#oNebulaViolet)" />
-      <Circle cx={vb * 0.75} cy={vb * 0.7} r={vb * 0.40} fill="url(#oNebulaTeal)" />
-
-      {/* Star field */}
-      {STAR_FIELD.map(function (st, i) {
-        var sr = Math.max(st[2] * u, 0.3);
-        return (
-          <G key={'sf' + i}>
-            <Circle cx={st[0] * vb} cy={st[1] * vb} r={sr + 1} fill={st[3]} opacity={0.08} />
-            <Circle cx={st[0] * vb} cy={st[1] * vb} r={sr} fill={st[3]} opacity={0.7} />
-          </G>
-        );
-      })}
-
-      {/* Orbital rings */}
-      <Circle cx={cx} cy={cy} r={orbit1} stroke="rgba(255,184,0,0.08)" strokeWidth={0.6} fill="none" />
-      <Circle cx={cx} cy={cy} r={orbit2} stroke="rgba(255,140,0,0.07)" strokeWidth={0.5} fill="none" />
-      <Circle cx={cx} cy={cy} r={orbit2} stroke="rgba(255,140,0,0.03)" strokeWidth={3 * u} fill="none" />
-      <Circle cx={cx} cy={cy} r={zodiacR} stroke="rgba(255,140,0,0.10)" strokeWidth={0.7} fill="none" strokeDasharray="2,8" />
-      <Circle cx={cx} cy={cy} r={zodiacR} stroke="rgba(255,140,0,0.03)" strokeWidth={4 * u} fill="none" />
-
-      {/* Dodecagon edges */}
-      {ZODIAC_SIGNS.map(function (_, i) {
-        var a1 = (i * 30 - 90) * Math.PI / 180;
-        var a2 = ((i + 1) * 30 - 90) * Math.PI / 180;
-        var isAdj = i === activeIndex || (i + 1) % 12 === activeIndex;
-        return (
-          <Line key={'edge' + i}
-            x1={cx + zodiacR * Math.cos(a1)} y1={cy + zodiacR * Math.sin(a1)}
-            x2={cx + zodiacR * Math.cos(a2)} y2={cy + zodiacR * Math.sin(a2)}
-            stroke={isAdj ? 'rgba(255,214,102,0.18)' : 'rgba(255,140,0,0.06)'}
-            strokeWidth={isAdj ? 0.8 : 0.4}
-          />
-        );
-      })}
-
-      {/* Spoke lines */}
-      {ZODIAC_SIGNS.map(function (_, i) {
-        var angle = (i * 30 - 90) * Math.PI / 180;
-        var isAct = i === activeIndex;
-        return (
-          <Line key={'spoke' + i}
-            x1={cx + orbit1 * 0.8 * Math.cos(angle)} y1={cy + orbit1 * 0.8 * Math.sin(angle)}
-            x2={cx + zodiacR * Math.cos(angle)} y2={cy + zodiacR * Math.sin(angle)}
-            stroke={isAct ? 'rgba(255,214,102,0.15)' : 'rgba(255,140,0,0.025)'}
-            strokeWidth={isAct ? 0.6 : 0.3}
-            strokeDasharray={isAct ? 'none' : '1,4'}
-          />
-        );
-      })}
-
-      {/* Inner planets */}
-      {INNER_PLANETS.map(function (p, i) {
-        var a = (p.angle - 90) * Math.PI / 180;
-        var px = cx + p.r * Math.cos(a);
-        var py = cy + p.r * Math.sin(a);
-        return (
-          <G key={'ip' + i}>
-            <Circle cx={px} cy={py} r={p.sz + 2 * u} fill={p.color} opacity={0.10} />
-            <Circle cx={px} cy={py} r={p.sz} fill={p.color} opacity={0.85} />
-          </G>
-        );
-      })}
-
-      {/* Mid planets */}
-      {MID_PLANETS.map(function (p, i) {
-        var a = (p.angle - 90) * Math.PI / 180;
-        var px = cx + p.r * Math.cos(a);
-        var py = cy + p.r * Math.sin(a);
-        return (
-          <G key={'mp' + i}>
-            <Circle cx={px} cy={py} r={p.sz + 1.5 * u} fill={p.color} opacity={0.08} />
-            <Circle cx={px} cy={py} r={p.sz} fill={p.color} opacity={0.70} />
-          </G>
-        );
-      })}
-
-      {/* Sun */}
-      <Circle cx={cx} cy={cy} r={coreR * 3.5} fill="url(#oSunCorona)" />
-      <Circle cx={cx} cy={cy} r={coreR * 1.6} fill="url(#oSunCore)" />
-      <Circle cx={cx} cy={cy} r={coreR} fill="#FFD666" opacity={0.95} />
-      <Circle cx={cx} cy={cy} r={coreR * 0.5} fill="#FFFBE6" opacity={0.8} />
-
-      {/* Moon — phase based on current tithi */}
-      {(() => {
-        // Moon glow
-        var elements = [
-          <Circle key="mglow" cx={moonX} cy={moonY} r={moonR + 3 * u} fill="#93C5FD" opacity={0.12} />,
-          <Circle key="mglow2" cx={moonX} cy={moonY} r={moonR + 6 * u} fill="#93C5FD" opacity={0.05} />,
-        ];
-        // Dark base (the "unlit" side)
-        elements.push(<Circle key="mbase" cx={moonX} cy={moonY} r={moonR} fill="#1E1E3A" />);
-        // Lit portion
-        if (illumination > 0.02) {
-          elements.push(<Circle key="mlit" cx={moonX} cy={moonY} r={moonR * 0.98} fill="#D4D4E8" opacity={Math.min(illumination * 1.1, 1)} />);
-        }
-        // Shadow overlay to create phase shape
-        if (illumination < 0.97 && illumination > 0.03) {
-          // For waxing (Shukla, tithi 1-15): shadow comes from left
-          // For waning (Krishna, tithi 16-30): shadow comes from right
-          var isWaxing = moonTithi <= 15;
-          var shadowShift = isWaxing
-            ? moonR * (1 - illumination * 2)
-            : moonR * (illumination * 2 - 1);
-          elements.push(
-            <Ellipse key="mshadow"
-              cx={moonX + shadowShift * 0.6}
-              cy={moonY}
-              rx={moonR * Math.abs(1 - illumination * 2) * 0.95 + 0.5}
-              ry={moonR * 0.98}
-              fill="#1E1E3A"
-              opacity={0.92}
-            />
-          );
-        }
-        // Subtle crater texture dots
-        if (illumination > 0.2) {
-          elements.push(
-            <Circle key="mc1" cx={moonX - moonR * 0.25} cy={moonY - moonR * 0.15} r={moonR * 0.12} fill="#B8B8D0" opacity={0.25} />,
-            <Circle key="mc2" cx={moonX + moonR * 0.2} cy={moonY + moonR * 0.25} r={moonR * 0.09} fill="#B8B8D0" opacity={0.2} />,
-          );
-        }
-        // Outer ring
-        elements.push(<Circle key="mring" cx={moonX} cy={moonY} r={moonR} fill="none" stroke="#93C5FD" strokeWidth={0.6} opacity={0.4} />);
-        return elements;
-      })()}
-
-      {/* Zodiac sign nodes — all sizes proportional */}
-      {ZODIAC_SIGNS.map(function (sign, i) {
-        var angle = (i * 30 - 90) * Math.PI / 180;
-        var x = cx + zodiacR * Math.cos(angle);
-        var y = cy + zodiacR * Math.sin(angle);
-        var isActive = i === activeIndex;
-        var col = ZODIAC_COLORS[i];
-        var imgSize = isActive ? activeNodeR * 2.2 : nodeR * 2.4;
-
-        if (isActive) {
-          return (
-            <G key={'z' + i}>
-              <Circle cx={x} cy={y} r={activeGlowR} fill="url(#oActiveNode)" />
-              <Circle cx={x} cy={y} r={activeNodeR} fill="rgba(255,184,0,0.10)" stroke="rgba(255,214,102,0.50)" strokeWidth={1.2} />
-              <SvgImage
-                x={x - imgSize / 2} y={y - imgSize / 2}
-                width={imgSize} height={imgSize}
-                href={ZODIAC_IMAGES[i].uri}
-                opacity={1}
-              />
-            </G>
-          );
-        }
-
-        return (
-          <G key={'z' + i}>
-            <Circle cx={x} cy={y} r={nodeR + 2 * u} fill={col} opacity={0.06} />
-            <Circle cx={x} cy={y} r={nodeR} fill="rgba(10,7,4,0.75)" stroke={col + '40'} strokeWidth={0.7} />
-            <SvgImage
-              x={x - imgSize / 2} y={y - imgSize / 2}
-              width={imgSize} height={imgSize}
-              href={ZODIAC_IMAGES[i].uri}
-              opacity={0.88}
-            />
-          </G>
-        );
-      })}
-
-      {/* Dust particles — skip on low-end devices */}
-      {!skipDecorations && Array.from({ length: 24 }).map(function (_, i) {
-        var band = i < 8 ? orbit1 : i < 16 ? orbit2 : zodiacR;
-        var jitter = (i % 5 - 2) * 2 * u;
-        var angle = (i * 15 + i * 7) * Math.PI / 180;
-        var dx = cx + (band + jitter) * Math.cos(angle);
-        var dy = cy + (band + jitter) * Math.sin(angle);
-        return <Circle key={'d' + i} cx={dx} cy={dy} r={0.4 * u + (i % 3) * 0.2 * u} fill="rgba(255,255,255,1)" opacity={0.15 + (i % 4) * 0.05} />;
-      })}
-    </Svg>
-  );
-}
-
-/* ── Stat Mini ── */
-function StatMini({ icon, label, value, color }) {
-  var { colors: _c } = useTheme();
-  return (
-    <View style={s.statMini}>
-      <View style={[s.statMiniIcon, { borderColor: color + '30', backgroundColor: color + '08' }]}>
-        <Ionicons name={icon} size={18} color={color} />
-      </View>
-      <Text style={[s.statMiniValue, { color: _c.text }]}>{value}</Text>
-      <Text style={[s.statMiniLabel, { color: _c.textMuted }]}>{label}</Text>
-    </View>
-  );
-}
-
+// (removed in v3 viral redesign)
+// (removed in v3 viral redesign)
 function chooseText(language, en, si) {
   return language === 'si' ? si : en;
 }
@@ -1025,9 +746,1359 @@ function buildTodayOracle(options) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+//  FUTURE WINDOWS BAIT — free users' locked timeline cards from onboarding
+//  (the second half of the onboarding soft-wall: their real, dated dasha
+//   windows persist at the top of Home; tapping opens the paywall)
+// ═══════════════════════════════════════════════════════════════════════
+
+var REVEAL_STORAGE_KEY = 'grahachara_onboarding_reveal';
+
+function FutureWindowsBait() {
+  var { user, showPaywall } = useAuth();
+  var { language } = useLanguage();
+  var [cards, setCards] = useState(null);
+
+  var isFree = user && user.isSubscribed !== true;
+
+  useEffect(function () {
+    if (!isFree) { setCards(null); return; }
+    var mounted = true;
+    AsyncStorage.getItem(REVEAL_STORAGE_KEY).then(function (raw) {
+      if (!mounted || !raw) return;
+      try {
+        var payload = JSON.parse(raw);
+        var fc = payload && payload.reveal && payload.reveal.futureCards;
+        if (fc) fc = fc.filter(function (c) { return c.locked !== false; });
+        if (fc && fc.length) setCards(fc.slice(0, 3));
+      } catch (e) { /* corrupt cache — ignore */ }
+    }).catch(function () {});
+    return function () { mounted = false; };
+  }, [isFree]);
+
+  if (!isFree || !cards) return null;
+
+  var heading = language === 'si' ? 'ඔයාගේ අගුළු දැමූ කවුළු' : 'YOUR LOCKED WINDOWS';
+  var cta = language === 'si' ? 'කාලරේඛාව විවෘත කරන්න' : 'Unlock timeline';
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={function () { Promise.resolve(showPaywall('home_future_windows')).catch(function () {}); }}
+      style={{ marginBottom: 16, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,184,0,0.20)', backgroundColor: 'rgba(255,184,0,0.045)' }}
+    >
+      <View style={{ paddingVertical: 13, paddingHorizontal: 15 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
+          <Text style={{ fontSize: 10, fontWeight: '900', color: '#FFB800', letterSpacing: 1.6 }}>{heading}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 10, backgroundColor: 'rgba(255,184,0,0.14)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)' }}>
+            <Ionicons name="lock-open-outline" size={11} color="#FFD666" />
+            <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#FFD666' }}>{cta}</Text>
+          </View>
+        </View>
+        {cards.map(function (card) {
+          return (
+            <View key={card.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 6 }}>
+              <Ionicons name={card.icon || 'sparkles-outline'} size={15} color={card.color || '#FFB800'} />
+              <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: '700', color: 'rgba(255,255,255,0.75)', flex: 1 }}>
+                {card.title} — <Text style={{ color: card.color || '#FFB800' }}>{card.window}</Text>
+              </Text>
+              <Ionicons name="lock-closed" size={11} color="rgba(255,184,0,0.5)" />
+            </View>
+          );
+        })}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  CONVERGENCE TIMELINE — the 12-month dated-window forecast (retention).
+//  Free: intensity strip (dots) + locked window headers → paywall.
+//  Pro:  full windows with the driver reason behind each.
+// ═══════════════════════════════════════════════════════════════════════
+var CONV_DOMAINS = {
+  career: { en: 'Career', si: 'රැකියාව',  icon: 'briefcase-outline', color: '#B7A6F0' },
+  love:   { en: 'Love',   si: 'ආදරය',    icon: 'heart-outline',     color: '#F5A9C7' },
+  money:  { en: 'Money',  si: 'මුදල්',   icon: 'wallet-outline',    color: '#E8C56A' },
+  health: { en: 'Health', si: 'සෞඛ්‍යය', icon: 'fitness-outline',   color: '#F0968A' },
+  travel: { en: 'Travel', si: 'ගමන්',    icon: 'navigate-outline',  color: '#8AB4F0' },
+  family: { en: 'Family', si: 'පවුල',    icon: 'people-outline',    color: '#F0A9B8' },
+};
+
+function convIntensityColor(v) {
+  if (v >= 70) return '#86EFAC';
+  if (v >= 55) return '#E8C56A';
+  if (v >= 40) return 'rgba(255,255,255,0.32)';
+  return '#FCA5A5';
+}
+
+// Normalize either the free preview slice or the full Pro calendar into one
+// shape the component renders: { locked, strip:[{label,intensity}],
+// windows:[{domain,type,tier,range,driver?}] }.
+function normalizeConvergence(raw, isFree) {
+  if (!raw) return null;
+  var range = function (a, b) { return a === b ? a : (a + ' – ' + b); };
+  if (isFree) {
+    return {
+      locked: true,
+      strip: (raw.strip || []).map(function (m) { return { label: m.label, intensity: m.intensity }; }),
+      windows: (raw.lockedWindows || []).map(function (w) {
+        return { domain: w.domain, type: w.type, tier: w.tier, range: range(w.startLabel, w.endLabel) };
+      }),
+    };
+  }
+  return {
+    locked: false,
+    strip: (raw.months || []).map(function (m) {
+      var vals = Object.keys(m.scores || {}).map(function (k) { return m.scores[k]; });
+      var avg = vals.length ? Math.round(vals.reduce(function (a, b) { return a + b; }, 0) / vals.length) : 50;
+      return { label: m.label, intensity: avg };
+    }),
+    windows: (raw.windows || []).map(function (w) {
+      return {
+        domain: w.domain, type: w.type, tier: w.tier, range: range(w.startLabel, w.endLabel),
+        driver: (w.drivers && w.drivers[0] && w.drivers[0].text) || null,
+      };
+    }),
+  };
+}
+
+var ConvergenceTimeline = React.memo(function ConvergenceTimeline({ data, language, onUnlock }) {
+  if (!data || !data.strip || !data.strip.length) return null;
+  var si = language === 'si';
+  var locked = data.locked;
+  var maxWin = locked ? 4 : 5;
+  return (
+    <Animated.View entering={FadeInDown.delay(280).springify()}>
+      <View style={conv.card}>
+        <LinearGradient colors={['#141019', '#0F0B15', '#0A0710']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <SectionHeader
+          title={si ? 'ඔබේ ඉදිරි මාස 12' : 'Your Next 12 Months'}
+          subtitle={si ? 'දශාව හා ග්‍රහ ගමන අනුව දින සහිත කාල' : "Dated windows from your dasha & transits"}
+          iconName="calendar-outline" iconColor="#A78BFA" delay={280}
+        />
+        <View style={conv.strip}>
+          {data.strip.map(function (m, i) {
+            var clamped = Math.max(5, Math.min(98, m.intensity));
+            var h = 10 + Math.round((clamped / 98) * 34);
+            return (
+              <View key={i} style={conv.stripCol}>
+                <View style={conv.stripBarWrap}>
+                  <View style={{ height: h, width: '78%', borderRadius: 3, backgroundColor: convIntensityColor(m.intensity), opacity: locked ? 0.72 : 1 }} />
+                </View>
+                <Text style={conv.stripLabel}>{String(m.label || '').slice(0, 1)}</Text>
+              </View>
+            );
+          })}
+        </View>
+        <View style={conv.winList}>
+          {data.windows.slice(0, maxWin).map(function (w, i) {
+            var meta = CONV_DOMAINS[w.domain] || { en: w.domain, si: w.domain, icon: 'sparkles-outline', color: '#FFB800' };
+            var isOpp = w.type === 'opportunity';
+            return (
+              <View key={i} style={conv.winRow}>
+                <View style={[conv.winIcon, { backgroundColor: meta.color + '1e', borderColor: meta.color + '40' }]}>
+                  <Ionicons name={meta.icon} size={13} color={meta.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={conv.winTop}>
+                    <Text style={conv.winArea}>{si ? meta.si : meta.en}</Text>
+                    <Ionicons name={isOpp ? 'trending-up' : 'alert-circle-outline'} size={11} color={isOpp ? '#86EFAC' : '#FCA5A5'} />
+                    <Text style={[conv.winRange, { color: meta.color }]} numberOfLines={1}>{w.range}</Text>
+                  </View>
+                  {(!locked && w.driver) ? <Text style={conv.winDriver} numberOfLines={1}>{w.driver}</Text> : null}
+                </View>
+                {locked
+                  ? <Ionicons name="lock-closed" size={12} color="rgba(167,139,250,0.6)" />
+                  : <Text style={conv.winTier}>{w.tier}</Text>}
+              </View>
+            );
+          })}
+        </View>
+        {locked ? (
+          <TouchableOpacity activeOpacity={0.85} onPress={onUnlock} style={conv.cta}>
+            <Ionicons name="lock-open-outline" size={13} color="#160E28" />
+            <Text style={conv.ctaText}>{si ? 'හේතුව සහ කළ යුතු දේ විවෘත කරන්න' : 'Unlock why & what to do'}</Text>
+            <Ionicons name="arrow-forward" size={14} color="#160E28" />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    </Animated.View>
+  );
+});
+
+var conv = StyleSheet.create({
+  card: { borderRadius: 20, overflow: 'hidden', padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(167,139,250,0.18)' },
+  strip: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 12, paddingHorizontal: 2 },
+  stripCol: { flex: 1, alignItems: 'center', gap: 4 },
+  stripBarWrap: { height: 44, width: '100%', alignItems: 'center', justifyContent: 'flex-end' },
+  stripLabel: { fontSize: 8, color: 'rgba(255,255,255,0.35)', fontWeight: '700' },
+  winList: { marginTop: 12 },
+  winRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+  winIcon: { width: 26, height: 26, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  winTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  winArea: { fontSize: 13, fontWeight: '800', color: 'rgba(255,255,255,0.9)' },
+  winRange: { fontSize: 11.5, fontWeight: '700', flexShrink: 1 },
+  winDriver: { fontSize: 10.5, color: 'rgba(255,255,255,0.45)', marginTop: 1 },
+  winTier: { fontSize: 11, color: '#E8C56A', fontWeight: '800', letterSpacing: 1 },
+  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, paddingVertical: 11, borderRadius: 12, backgroundColor: '#A78BFA' },
+  ctaText: { fontSize: 12.5, fontWeight: '800', color: '#160E28', letterSpacing: 0.2 },
+});
+
+/**
+ * ToolsRow — two life-event entry cards on Home that route to the Subha Nakath
+ * planner and the Baby Kendara pack. Acquisition surfaces: they open a free
+ * tease, then paywall. Kept lightweight so they read like part of the flow.
+ */
+var TOOLS = [
+  {
+    key: 'nakath', route: '/nakath',
+    icon: 'time', accent: '#E8C56A', bg: 'rgba(232,197,106,0.10)', border: 'rgba(232,197,106,0.22)',
+    title: { en: 'Subha Nakath', si: 'සුබ නැකැත්' },
+    sub: { en: 'Best time for exams, jobs, weddings', si: 'විභාග, රැකියා, විවාහ සඳහා සුබ මොහොත' },
+  },
+  {
+    key: 'baby', route: '/baby',
+    icon: 'happy', accent: '#F472B6', bg: 'rgba(244,114,182,0.10)', border: 'rgba(244,114,182,0.22)',
+    title: { en: 'Baby Kendara', si: 'බිලිඳු කේන්දරය' },
+    sub: { en: 'Naming letters, doshas, ceremony dates', si: 'නාම අකුරු, දෝෂ, නම් තැබීමේ නැකැත්' },
+  },
+];
+
+var ToolsRow = React.memo(function ToolsRow({ router, language }) {
+  var si = language === 'si';
+  return (
+    <View style={tools.wrap}>
+      {TOOLS.map(function (tool) {
+        return (
+          <TouchableOpacity
+            key={tool.key}
+            activeOpacity={0.85}
+            onPress={function () { router.push(tool.route); }}
+            style={[tools.card, { backgroundColor: tool.bg, borderColor: tool.border }]}
+          >
+            <View style={[tools.iconWrap, { borderColor: tool.border }]}>
+              <Ionicons name={tool.icon} size={18} color={tool.accent} />
+            </View>
+            <Text style={tools.title} numberOfLines={1}>{si ? tool.title.si : tool.title.en}</Text>
+            <Text style={tools.sub} numberOfLines={2}>{si ? tool.sub.si : tool.sub.en}</Text>
+            <View style={tools.footer}>
+              <Text style={[tools.open, { color: tool.accent }]}>{si ? 'විවෘත කරන්න' : 'Open'}</Text>
+              <Ionicons name="arrow-forward" size={12} color={tool.accent} />
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+});
+
+var tools = StyleSheet.create({
+  wrap: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  card: { flex: 1, borderRadius: 18, borderWidth: 1, padding: 14 },
+  iconWrap: { width: 34, height: 34, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  title: { fontSize: 14, fontWeight: '800', color: 'rgba(255,255,255,0.95)' },
+  sub: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 3, lineHeight: 15, minHeight: 30 },
+  footer: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10 },
+  open: { fontSize: 11.5, fontWeight: '800', letterSpacing: 0.2 },
+});
+
+/**
+ * PredictionCheckins — asks "did our prediction come true?" for a dated window
+ * that has opened/closed. One card at a time (least friction). Yes/Partly/No
+ * posts an outcome and reveals the next due prediction. Retention + trust +
+ * calibration data in one surface. Pro-only (free users have no ledger).
+ */
+var CK_DOMAIN = {
+  love:      { en: 'Love & marriage', si: 'ආදරය සහ විවාහය', icon: 'heart', color: '#F472B6' },
+  career:    { en: 'Career', si: 'රැකියාව', icon: 'briefcase', color: '#93C5FD' },
+  wealth:    { en: 'Wealth', si: 'ධනය', icon: 'cash', color: '#34D399' },
+  finance:   { en: 'Wealth', si: 'ධනය', icon: 'cash', color: '#34D399' },
+  health:    { en: 'Health', si: 'සෞඛ්‍යය', icon: 'fitness', color: '#FCA5A5' },
+  education: { en: 'Education', si: 'අධ්‍යාපනය', icon: 'school', color: '#C4B5FD' },
+  family:    { en: 'Family', si: 'පවුල', icon: 'home', color: '#FBBF24' },
+};
+var CK_MONTHS = {
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  si: ['ජන', 'පෙබ', 'මාර්', 'අප්‍රේ', 'මැයි', 'ජූනි', 'ජූලි', 'අගෝ', 'සැප්', 'ඔක්', 'නොවැ', 'දෙසැ'],
+};
+function ckMonth(iso, lang) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  return CK_MONTHS[lang === 'si' ? 'si' : 'en'][d.getMonth()] + ' ' + d.getFullYear();
+}
+
+var PredictionCheckins = React.memo(function PredictionCheckins({ items, language, onAnswer }) {
+  if (!items || !items.length) return null;
+  var si = language === 'si';
+  var item = items[0];
+  var dom = CK_DOMAIN[item.domain] || { en: 'This', si: 'මෙය', icon: 'sparkles', color: '#E8C56A' };
+  var win = ckMonth(item.windowStart, language);
+  var winEnd = ckMonth(item.windowEnd, language);
+  var range = win && winEnd && win !== winEnd ? (win + ' – ' + winEnd) : (win || winEnd);
+  var opts = [
+    { key: 'yes', label: si ? 'ඔව්' : 'Yes', icon: 'checkmark-circle', color: '#34D399' },
+    { key: 'partial', label: si ? 'ටිකක්' : 'Partly', icon: 'remove-circle', color: '#FBBF24' },
+    { key: 'no', label: si ? 'නැහැ' : 'No', icon: 'close-circle', color: '#FCA5A5' },
+  ];
+  return (
+    <Animated.View entering={FadeIn.duration(400)} style={ck.card}>
+      <LinearGradient colors={['rgba(232,197,106,0.10)', 'rgba(232,197,106,0.02)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <View style={ck.head}>
+        <View style={[ck.domChip, { borderColor: dom.color + '55', backgroundColor: dom.color + '18' }]}>
+          <Ionicons name={dom.icon} size={12} color={dom.color} />
+          <Text style={[ck.domText, { color: dom.color }]}>{si ? dom.si : dom.en}</Text>
+        </View>
+        {range ? <Text style={ck.range}>{range}</Text> : null}
+      </View>
+      <Text style={ck.q}>{si ? 'අපේ අනාවැකිය හරි උනාද?' : 'Did our prediction come true?'}</Text>
+      {item.claim ? <Text style={ck.claim} numberOfLines={3}>{item.claim}</Text> : null}
+      <View style={ck.opts}>
+        {opts.map(function (o) {
+          return (
+            <TouchableOpacity key={o.key} activeOpacity={0.8} onPress={function () { onAnswer(item, o.key); }}
+              style={[ck.opt, { borderColor: o.color + '44' }]}>
+              <Ionicons name={o.icon} size={15} color={o.color} />
+              <Text style={[ck.optText, { color: o.color }]}>{o.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={ck.foot}>{si ? 'ඔබේ පිළිතුරු අපේ අනාවැකි වඩාත් නිවැරදි කරයි.' : 'Your answers make your future readings sharper.'}</Text>
+    </Animated.View>
+  );
+});
+
+var ck = StyleSheet.create({
+  card: { borderRadius: 20, overflow: 'hidden', padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(232,197,106,0.22)' },
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  domChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, borderWidth: 1 },
+  domText: { fontSize: 11, fontWeight: '800' },
+  range: { fontSize: 11.5, fontWeight: '700', color: 'rgba(255,255,255,0.55)' },
+  q: { fontSize: 15.5, fontWeight: '800', color: 'rgba(255,255,255,0.95)' },
+  claim: { fontSize: 12.5, color: 'rgba(255,255,255,0.6)', marginTop: 5, lineHeight: 17 },
+  opts: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  opt: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 11, borderRadius: 12, borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.03)' },
+  optText: { fontSize: 12.5, fontWeight: '800' },
+  foot: { fontSize: 10.5, color: 'rgba(255,255,255,0.4)', marginTop: 11, textAlign: 'center' },
+});
+
+/**
+ * WinBackBanner — shown only to lapsed subscribers (was Pro, now free). Warm,
+ * loss-framed reminder that their saved reports/calendar/chat are paused, not
+ * gone. One tap opens the win-back paywall. Dismissable for the session.
+ */
+var WinBackBanner = React.memo(function WinBackBanner({ language, onReactivate, onDismiss }) {
+  var si = language === 'si';
+  return (
+    <Animated.View entering={FadeIn.duration(400)} style={wb.card}>
+      <LinearGradient colors={['rgba(255,184,0,0.14)', 'rgba(255,140,0,0.04)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <TouchableOpacity onPress={onDismiss} style={wb.close} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
+        <Ionicons name="close" size={16} color="rgba(255,255,255,0.4)" />
+      </TouchableOpacity>
+      <View style={wb.row}>
+        <View style={wb.icon}>
+          <Ionicons name="sparkles" size={20} color="#FFB800" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={wb.title}>{si ? 'ආයුබෝවන්, ආපහු 🌙' : 'Welcome back 🌙'}</Text>
+          <Text style={wb.sub}>{si
+            ? 'ඔබේ වාර්තා, දින දර්ශනය සහ chat මඟපෙන්වීම නතර වෙලා විතරයි — නැති වෙලා නෑ.'
+            : 'Your reports, calendar and chat guide are paused — not gone.'}</Text>
+        </View>
+      </View>
+      <TouchableOpacity activeOpacity={0.85} onPress={onReactivate} style={wb.cta}>
+        <Ionicons name="lock-open-outline" size={14} color="#160E28" />
+        <Text style={wb.ctaText}>{si ? 'මගේ ප්‍රවේශය නැවත සක්‍රිය කරන්න' : 'Reactivate my access'}</Text>
+        <Ionicons name="arrow-forward" size={14} color="#160E28" />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+});
+
+var wb = StyleSheet.create({
+  card: { borderRadius: 20, overflow: 'hidden', padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,184,0,0.28)' },
+  close: { position: 'absolute', top: 10, right: 10, zIndex: 2, padding: 2 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingRight: 20 },
+  icon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,184,0,0.14)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.30)' },
+  title: { fontSize: 15, fontWeight: '800', color: 'rgba(255,255,255,0.96)' },
+  sub: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 3, lineHeight: 16 },
+  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, paddingVertical: 12, borderRadius: 12, backgroundColor: '#FFB800' },
+  ctaText: { fontSize: 13, fontWeight: '800', color: '#160E28', letterSpacing: 0.2 },
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SLT day helpers — one true "today" boundary (Sri Lanka, UTC+5:30)
+//  Fixes the old bug where ratings used device-local date, the mantra used
+//  UTC (rolled at 05:30 SLT), and IntentionCard used ISO/UTC — three
+//  different "todays" on one screen.
+// ═══════════════════════════════════════════════════════════════════════
+var SLT_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+function sltDayIndex(nowMs) {
+  // Whole days since epoch, measured on the Sri Lanka clock.
+  return Math.floor(((nowMs != null ? nowMs : Date.now()) + SLT_OFFSET_MS) / 86400000);
+}
+function fmtHM(ms, t) {
+  if (ms == null || isNaN(ms)) return '--:--';
+  var slt = new Date(ms + SLT_OFFSET_MS);
+  var h = slt.getUTCHours(), m = slt.getUTCMinutes();
+  var ampm = h >= 12 ? 'pm' : 'am';
+  var h12 = h % 12 || 12;
+  return h12 + ':' + String(m).padStart(2, '0') + ' ' + (t ? t(ampm) : ampm.toUpperCase());
+}
+function parseMs(v) {
+  if (!v) return NaN;
+  if (typeof v === 'object' && v.iso) return new Date(v.iso).getTime();
+  var d = new Date(v);
+  return d.getTime();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  REAL life-area scores — replaces the old fake genScore() that was
+//  identical for every user. Derived from the user's lagna + today's real
+//  jyotish signals (Tara Balam, Chandrashtama) + panchanga, so it genuinely
+//  varies per user and per day. (A server-side transit engine is the ideal
+//  upgrade; this is the honest on-device version.)
+// ═══════════════════════════════════════════════════════════════════════
+var LIFE_AREAS = [
+  { key: 'love',   en: 'Love',    si: 'ආදරය',   icon: 'heart-outline',      color: '#F5A9C7', w: 11 },
+  { key: 'work',   en: 'Work',    si: 'රැකියාව', icon: 'briefcase-outline',  color: '#B7A6F0', w: 29 },
+  { key: 'family', en: 'Family',  si: 'පවුල',    icon: 'people-outline',     color: '#F0A9B8', w: 17 },
+  { key: 'money',  en: 'Money',   si: 'මුදල්',   icon: 'wallet-outline',     color: '#E8C56A', w: 23 },
+  { key: 'health', en: 'Health',  si: 'සෞඛ්‍යය', icon: 'fitness-outline',    color: '#F0968A', w: 7  },
+  { key: 'travel', en: 'Travel',  si: 'ගමන්',    icon: 'navigate-outline',   color: '#8AB4F0', w: 13 },
+];
+// Words beat numbers: instant-read verdicts for scores (never negative — care, not doom)
+function energyWord(pct, language) {
+  if (pct >= 85) return language === 'si' ? 'ඉතා සුබයි' : 'Radiant';
+  if (pct >= 70) return language === 'si' ? 'සුබයි' : 'Strong';
+  if (pct >= 55) return language === 'si' ? 'සමබරයි' : 'Balanced';
+  if (pct >= 40) return language === 'si' ? 'මධ්‍යමයි' : 'Gentle';
+  return language === 'si' ? 'ප්‍රවේශමෙන්' : 'Careful';
+}
+function energyPhrase(pct, language) {
+  if (pct >= 70) return language === 'si' ? 'ග්‍රහ බලය ඔබ පැත්තේ' : 'The planets lean your way';
+  if (pct >= 50) return language === 'si' ? 'සමබර ශක්තියක් — හොඳින් යොදාගන්න' : 'Steady energy — use it well';
+  return language === 'si' ? 'අද හෙමින්, සිහියෙන් යන්න' : 'Move gently today';
+}
+function areaWord(score, language) {
+  if (score >= 75) return language === 'si' ? 'ඉහළයි' : 'High';
+  if (score >= 60) return language === 'si' ? 'හොඳයි' : 'Good';
+  if (score >= 45) return language === 'si' ? 'මධ්‍යමයි' : 'Fair';
+  return language === 'si' ? 'ප්‍රවේශමෙන්' : 'Care';
+}
+
+function computeLifeScores(chartData, jyotishToday, data, language) {
+  var lagnaId = chartData && chartData.lagna ? (chartData.lagna.rashiId || chartData.lagna.id || 1) : 1;
+  var tb = jyotishToday && jyotishToday.taraBalam;
+  var ch = jyotishToday && jyotishToday.chandrashtama;
+  var personal = tb && typeof tb.score === 'number' ? tb.score : 62;
+  var chPenalty = ch && ch.isActive ? 16 : 0;
+  var tithi = data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number ? data.panchanga.tithi.number : 8;
+  var nak = data && data.panchanga && data.panchanga.nakshatra && data.panchanga.nakshatra.number ? data.panchanga.nakshatra.number : 5;
+  var total = 0;
+  var scores = LIFE_AREAS.map(function (a, i) {
+    // real-derived, bounded per-area modulation (deterministic for the day)
+    var swing = ((lagnaId * 7 + tithi * 3 + nak * 5 + a.w) % 34) - 15;
+    var s = Math.round(personal + swing - chPenalty);
+    s = Math.max(34, Math.min(95, s));
+    total += s;
+    return {
+      key: a.key,
+      label: language === 'si' ? a.si : a.en,
+      score: s,
+      color: a.color,
+      icon: a.icon,
+    };
+  });
+  return {
+    scores: scores,
+    overall: Math.round(total / LIFE_AREAS.length),
+    personalized: !!(tb && typeof tb.score === 'number' && chartData && chartData.lagna),
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  AURA — radial petal chart for the six life areas (signature visual)
+// ═══════════════════════════════════════════════════════════════════════
+function auraPetalPath(cx, cy, angle, inner, len, halfW) {
+  var tipX = cx + Math.cos(angle) * len, tipY = cy + Math.sin(angle) * len;
+  var b1X = cx + Math.cos(angle - halfW) * inner, b1Y = cy + Math.sin(angle - halfW) * inner;
+  var b2X = cx + Math.cos(angle + halfW) * inner, b2Y = cy + Math.sin(angle + halfW) * inner;
+  var c1X = cx + Math.cos(angle - halfW * 0.5) * len * 0.72, c1Y = cy + Math.sin(angle - halfW * 0.5) * len * 0.72;
+  var c2X = cx + Math.cos(angle + halfW * 0.5) * len * 0.72, c2Y = cy + Math.sin(angle + halfW * 0.5) * len * 0.72;
+  return 'M' + b1X.toFixed(1) + ' ' + b1Y.toFixed(1) +
+    ' Q' + c1X.toFixed(1) + ' ' + c1Y.toFixed(1) + ' ' + tipX.toFixed(1) + ' ' + tipY.toFixed(1) +
+    ' Q' + c2X.toFixed(1) + ' ' + c2Y.toFixed(1) + ' ' + b2X.toFixed(1) + ' ' + b2Y.toFixed(1) + ' Z';
+}
+var AuraScores = React.memo(function AuraScores({ result, language, locked, onUnlock }) {
+  var realScores = result.scores;
+  // When locked (free users), the petals render at a uniform teaser length so
+  // the per-area breakdown — the actual answer — never leaks. The overall
+  // number stays real: that's the hook ("your day is X — but where?").
+  var scores = locked
+    ? realScores.map(function (a) { return Object.assign({}, a, { score: 52 }); })
+    : realScores;
+  var C = 83, inner = 24, maxR = 72;
+  var overallColor = result.overall >= 70 ? '#86EFAC' : result.overall >= 50 ? '#E8C56A' : '#FCA5A5';
+  return (
+    <Animated.View entering={FadeInDown.delay(300).springify()}>
+      <View style={aur.card}>
+        <LinearGradient colors={['#181022', '#120B1C', '#0C0714']} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <LinearGradient colors={['rgba(232,197,106,0.09)', 'transparent']} style={aur.topVeil} pointerEvents="none" />
+        <SectionHeader
+          title={language === 'si' ? 'අද ඔබේ දවස' : 'Your Day, Scored'}
+          subtitle={language === 'si' ? 'ඔබේ කේන්දරයට හා අද ග්‍රහ ගමනට අනුව' : "Tuned to your chart & today's transits"}
+          iconName="sparkles-outline" iconColor="#E8C56A" delay={300}
+        />
+        <View style={aur.row}>
+          <View style={aur.chartWrap}>
+            <Svg width={130} height={130} viewBox="0 0 166 166">
+              <Defs>
+                <RadialGradient id="auraHalo" cx="50%" cy="50%" r="50%">
+                  <Stop offset="0" stopColor="#E8C56A" stopOpacity="0.15" />
+                  <Stop offset="0.55" stopColor="#7B49CF" stopOpacity="0.10" />
+                  <Stop offset="1" stopColor="#7B49CF" stopOpacity="0" />
+                </RadialGradient>
+                <RadialGradient id="auraCore" cx="44%" cy="38%" r="62%">
+                  <Stop offset="0" stopColor="#2C2240" />
+                  <Stop offset="1" stopColor="#110B1D" />
+                </RadialGradient>
+                {scores.map(function (a) {
+                  return (
+                    <RadialGradient key={'pg' + a.key} id={'petal' + a.key} cx="50%" cy="50%" r="50%">
+                      <Stop offset="0.18" stopColor={a.color} stopOpacity="0.04" />
+                      <Stop offset="0.72" stopColor={a.color} stopOpacity="0.48" />
+                      <Stop offset="1" stopColor={a.color} stopOpacity="0.95" />
+                    </RadialGradient>
+                  );
+                })}
+              </Defs>
+              <Circle cx={C} cy={C} r={82} fill="url(#auraHalo)" />
+              <Circle cx={C} cy={C} r={76} stroke="rgba(232,197,106,0.15)" strokeWidth="1" strokeDasharray="2 5" fill="none" />
+              {[1, 2, 3].map(function (r) {
+                return <Circle key={'rg' + r} cx={C} cy={C} r={inner + (maxR - inner) * r / 3} stroke="rgba(255,255,255,0.045)" strokeWidth="1" fill="none" />;
+              })}
+              {scores.map(function (a, i) {
+                var ang = (i / scores.length) * Math.PI * 2 - Math.PI / 2;
+                return (
+                  <Line key={'sp' + a.key}
+                    x1={C + Math.cos(ang) * 76} y1={C + Math.sin(ang) * 76}
+                    x2={C + Math.cos(ang) * 80} y2={C + Math.sin(ang) * 80}
+                    stroke={a.color + '66'} strokeWidth="1.5" strokeLinecap="round" />
+                );
+              })}
+              {scores.map(function (a, i) {
+                var ang = (i / scores.length) * Math.PI * 2 - Math.PI / 2;
+                var len = inner + (a.score / 100) * (maxR - inner);
+                return <Path key={'pt' + a.key} d={auraPetalPath(C, C, ang, inner, len, 0.42)} fill={'url(#petal' + a.key + ')'} stroke={a.color + 'AA'} strokeWidth="1.2" />;
+              })}
+              {scores.map(function (a, i) {
+                var ang = (i / scores.length) * Math.PI * 2 - Math.PI / 2;
+                var len = inner + (a.score / 100) * (maxR - inner);
+                var tx = C + Math.cos(ang) * len, ty = C + Math.sin(ang) * len;
+                return (
+                  <G key={'gl' + a.key}>
+                    <Circle cx={tx} cy={ty} r={3.6} stroke={a.color + '77'} strokeWidth="1" fill="none" />
+                    <Circle cx={tx} cy={ty} r={1.7} fill="#FFF8E7" opacity="0.95" />
+                  </G>
+                );
+              })}
+              <Circle cx={C} cy={C} r={inner - 2} fill="url(#auraCore)" stroke={overallColor + '66'} strokeWidth="1.2" />
+            </Svg>
+            <View style={aur.centerOverlay} pointerEvents="none">
+              <Text style={[aur.overallWord, { color: overallColor }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{energyWord(result.overall, language)}</Text>
+              <Text style={aur.overallLbl}>{language === 'si' ? 'සමස්ත' : 'OVERALL'}</Text>
+            </View>
+          </View>
+          <View style={aur.legend}>
+            {scores.map(function (a, i) {
+              return (
+                <Animated.View key={a.key} entering={FadeInUp.delay(360 + i * 45).springify()} style={aur.legRow}>
+                  <View style={[aur.legIcon, { backgroundColor: a.color + '1c', borderColor: a.color + '40' }]}>
+                    <Ionicons name={a.icon} size={12} color={a.color} />
+                  </View>
+                  <Text style={aur.legName} numberOfLines={1}>{a.label}</Text>
+                  <View style={aur.legBarTrack}>
+                    {locked
+                      ? <View style={[aur.legBarFill, { width: '38%', backgroundColor: 'rgba(255,255,255,0.14)' }]} />
+                      : <LinearGradient colors={[a.color + '55', a.color]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[aur.legBarFill, { width: a.score + '%' }]} />}
+                  </View>
+                  {locked
+                    ? <View style={[aur.legScorePill, { backgroundColor: 'rgba(255,184,0,0.10)', borderColor: 'rgba(255,184,0,0.28)' }]}>
+                        <Ionicons name="lock-closed" size={10} color="#E8C56A" />
+                      </View>
+                    : <View style={[aur.legScorePill, { backgroundColor: a.color + '14', borderColor: a.color + '30' }]}>
+                        <Text style={[aur.legScore, { color: a.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{areaWord(a.score, language)}</Text>
+                      </View>}
+                </Animated.View>
+              );
+            })}
+          </View>
+        </View>
+        {locked
+          ? (
+            <TouchableOpacity activeOpacity={0.85} onPress={onUnlock} style={aur.unlockCta}>
+              <Ionicons name="lock-open-outline" size={13} color="#2A1707" />
+              <Text style={aur.unlockCtaText}>
+                {language === 'si' ? 'ආදරය, මුදල්, රැකියාව — අංශ 6 විවෘත කරන්න' : 'Unlock all six — love, money, work & more'}
+              </Text>
+              <Ionicons name="arrow-forward" size={14} color="#2A1707" />
+            </TouchableOpacity>
+          )
+          : (
+            <View style={aur.note}>
+              <Ionicons name={result.personalized ? 'shield-checkmark-outline' : 'information-circle-outline'} size={12} color="rgba(244,238,223,0.4)" />
+              <Text style={aur.noteText}>
+                {result.personalized
+                  ? (language === 'si'
+                      ? 'ඔබේ තාරා බලය, චන්ද්‍රාෂ්ඨම හා චන්ද්‍ර ගමන අනුව ගණනය කර ඇත.'
+                      : "Derived from your Tara Balam, Chandrashtama & Moon transit.")
+                  : (language === 'si'
+                      ? 'අද දවසේ පංචාංගය අනුව. පෞද්ගලික ලකුණු සඳහා උපන් විස්තර එක් කරන්න.'
+                      : "Based on today's panchanga. Add birth details for scores tuned to you.")}
+              </Text>
+            </View>
+          )}
+        <View style={aur.innerFrame} pointerEvents="none" />
+      </View>
+    </Animated.View>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DAY SKY CLOCK — the signature. A live sun-arc from sunrise to sunset
+//  with an animated "now" marker, auspicious windows (gold) and Rahu
+//  Kalaya (red) plotted as real time bands. Merges the old Rahu card +
+//  Auspicious card + sunrise/sunset into one immersive graphic.
+// ═══════════════════════════════════════════════════════════════════════
+function skyArcPoint(f) {
+  // viewBox 0..360 x 0..170; ellipse cx180 cy150 rx165 ry118, angle PI..0
+  var a = Math.PI * (1 - Math.max(0, Math.min(1, f)));
+  return { x: 180 + 165 * Math.cos(a), y: 150 - 118 * Math.sin(a) };
+}
+function skyBandPath(f0, f1) {
+  var N = 20, d = '';
+  for (var i = 0; i <= N; i++) {
+    var p = skyArcPoint(f0 + (f1 - f0) * i / N);
+    d += (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1) + ' ';
+  }
+  return d.trim();
+}
+// Star dust for the sky scene (viewBox coords: x, y, radius, opacity)
+var SKY_STARS = [
+  [22, 18, 1.3, 0.55], [48, 44, 0.8, 0.35], [76, 12, 1.0, 0.45], [104, 38, 0.7, 0.30],
+  [132, 16, 1.2, 0.50], [163, 40, 0.8, 0.32], [196, 14, 1.0, 0.42], [226, 42, 0.7, 0.30],
+  [252, 20, 1.3, 0.55], [282, 46, 0.8, 0.34], [310, 16, 1.0, 0.45], [338, 36, 0.7, 0.30],
+  [60, 66, 0.9, 0.26], [150, 62, 0.7, 0.22], [240, 64, 0.9, 0.26], [320, 60, 0.7, 0.22],
+  [90, 90, 0.6, 0.18], [200, 84, 0.6, 0.18], [300, 92, 0.6, 0.18],
+];
+var SUN_RAY_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
+var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy }) {
+  var nowMs = Date.now();
+  var sunrise = parseMs(data && data.sunrise);
+  var sunset = parseMs(data && data.sunset);
+  if (isNaN(sunrise) || isNaN(sunset) || sunset <= sunrise) {
+    var base = new Date(nowMs + SLT_OFFSET_MS); base.setUTCHours(0, 0, 0, 0);
+    sunrise = base.getTime() + 6 * 3600000 - SLT_OFFSET_MS;
+    sunset = base.getTime() + 18 * 3600000 - SLT_OFFSET_MS;
+  }
+  var span = sunset - sunrise;
+  var fr = function (ms) { return (ms - sunrise) / span; };
+
+  var rk = data && data.rahuKalaya;
+  var rkStart = rk ? parseMs(rk.start) : NaN;
+  var rkEnd = rk ? parseMs(rk.end) : NaN;
+  var ap = data && data.auspiciousPeriods && data.auspiciousPeriods[0];
+  var apStart = ap ? parseMs(ap.start) : NaN;
+  var apEnd = ap ? parseMs(ap.end) : NaN;
+
+  var fNow = Math.max(0, Math.min(1, fr(nowMs)));
+  var nowPt = skyArcPoint(fNow);
+  var isNight = nowMs < sunrise || nowMs > sunset;
+  var dayPct = Math.round(fNow * 100);
+
+  var rahuActive = !isNaN(rkStart) && !isNaN(rkEnd) && nowMs >= rkStart && nowMs <= rkEnd;
+  var cd = '';
+  if (!isNaN(rkStart) && !isNaN(rkEnd)) {
+    var diff = rahuActive ? rkEnd - nowMs : (nowMs < rkStart ? rkStart - nowMs : 0);
+    if (diff > 0) {
+      var mins = Math.floor(diff / 60000), hrs = Math.floor(mins / 60), rm = mins % 60;
+      cd = hrs > 0 ? hrs + 'h ' + rm + 'm' : rm + 'm';
+    }
+  }
+
+  var pulse = useSharedValue(0);
+  useEffect(function () {
+    if (skipHeavy) { pulse.value = 0.5; return; }
+    pulse.value = withRepeat(withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, [skipHeavy]);
+  var haloStyle = useAnimatedStyle(function () {
+    return { transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.9]) }], opacity: interpolate(pulse.value, [0, 1], [0.45, 0.04]) };
+  });
+
+  var showAusp = !isNaN(apStart) && !isNaN(apEnd) && fr(apEnd) > 0.02 && fr(apStart) < 0.98;
+  var showRahu = !isNaN(rkStart) && !isNaN(rkEnd);
+  // time-aware states: windows dim once they pass, glow while active
+  var rahuOver = showRahu && nowMs > rkEnd;
+  var auspOver = !isNaN(apEnd) && nowMs > apEnd;
+  var auspActive = !isNaN(apStart) && !isNaN(apEnd) && nowMs >= apStart && nowMs <= apEnd;
+  var auspD = showAusp ? skyBandPath(Math.max(0, fr(apStart)), Math.min(1, fr(apEnd))) : null;
+  var rahuD = showRahu ? skyBandPath(Math.max(0, Math.min(1, fr(rkStart))), Math.max(0, Math.min(1, fr(rkEnd)))) : null;
+
+  return (
+    <Animated.View entering={FadeInDown.delay(120).springify()}>
+      <View style={sky.card}>
+        {/* deep space fading into a warm horizon */}
+        <LinearGradient colors={['#06040E', '#110A24', '#221233', '#38203A']} locations={[0, 0.40, 0.72, 1]} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
+        <LinearGradient colors={['transparent', 'rgba(240,140,74,0.18)']} style={sky.horizonVeil} pointerEvents="none" />
+
+        <View style={sky.topRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+            <View style={sky.icBox}><Ionicons name={isNight ? 'moon' : 'sunny'} size={16} color="#FFD983" /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={sky.kicker}>{language === 'si' ? 'අහස් ඔරලෝසුව' : 'SKY CLOCK'}</Text>
+              <Text style={sky.title}>{language === 'si' ? 'අද හිරු ගමන් මග' : "Today's Sun Path"}</Text>
+              <Text style={sky.sub}>{(language === 'si' ? 'උදාව ' : 'Sunrise ') + fmtHM(sunrise, t) + '  ·  ' + (language === 'si' ? 'අස්තය ' : 'Sunset ') + fmtHM(sunset, t)}</Text>
+            </View>
+          </View>
+          {cd ? (
+            <View style={[sky.cdPill, rahuActive && sky.cdPillActive]}>
+              <Text style={sky.cdLabel}>{rahuActive ? (language === 'si' ? 'රාහු අවසන්' : 'RAHU ENDS') : (language === 'si' ? 'රාහු කාලයට' : 'RAHU IN')}</Text>
+              <Text style={sky.cdValue}>{cd}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={sky.arcWrap}>
+          <Svg width="100%" height="100%" viewBox="0 0 360 170" preserveAspectRatio="none">
+            <Defs>
+              <SvgLinearGradient id="skyArcGrad" gradientUnits="userSpaceOnUse" x1="15" y1="0" x2="345" y2="0">
+                <Stop offset="0" stopColor="#F5B45C" stopOpacity="0.95" />
+                <Stop offset="0.5" stopColor="#FFE9A8" stopOpacity="1" />
+                <Stop offset="1" stopColor="#E76F51" stopOpacity="0.9" />
+              </SvgLinearGradient>
+              <RadialGradient id="skyHorizonGlow" cx="50%" cy="100%" r="62%">
+                <Stop offset="0" stopColor="#F5B45C" stopOpacity="0.32" />
+                <Stop offset="0.6" stopColor="#E76F51" stopOpacity="0.10" />
+                <Stop offset="1" stopColor="#E76F51" stopOpacity="0" />
+              </RadialGradient>
+            </Defs>
+            {SKY_STARS.map(function (st, si) {
+              return <Circle key={'sk' + si} cx={st[0]} cy={st[1]} r={st[2]} fill="#F4E4BC" opacity={st[3]} />;
+            })}
+            <Ellipse cx="180" cy="152" rx="210" ry="58" fill="url(#skyHorizonGlow)" />
+            {/* the day still to come — faint dashed track */}
+            <Path d={skyBandPath(0, 1)} fill="none" stroke="rgba(255,236,190,0.15)" strokeWidth="1.6" strokeDasharray="3 5" />
+            {/* elapsed day — soft glow + gradient core */}
+            <Path d={skyBandPath(0, fNow)} fill="none" stroke="rgba(245,197,88,0.22)" strokeWidth="8" strokeLinecap="round" />
+            <Path d={skyBandPath(0, fNow)} fill="none" stroke="url(#skyArcGrad)" strokeWidth="2.6" strokeLinecap="round" />
+            {/* quarter-day ticks */}
+            {[0.25, 0.5, 0.75].map(function (f) {
+              var a = Math.PI * (1 - f);
+              var cosA = Math.cos(a), sinA = Math.sin(a);
+              return (
+                <Line key={'tk' + f}
+                  x1={180 + 157 * cosA} y1={150 - 110 * sinA}
+                  x2={180 + 165 * cosA} y2={150 - 118 * sinA}
+                  stroke="rgba(255,236,190,0.28)" strokeWidth="1.2" />
+              );
+            })}
+            {/* auspicious window — golden light (dims after it passes, glows while live) */}
+            {auspD ? (
+              auspOver ? (
+                <Path d={auspD} fill="none" stroke="rgba(255,233,168,0.14)" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="2 5" />
+              ) : (
+                <G>
+                  <Path d={auspD} fill="none" stroke={auspActive ? 'rgba(255,225,150,0.40)' : 'rgba(255,217,131,0.26)'} strokeWidth={auspActive ? 14 : 12} strokeLinecap="round" />
+                  <Path d={auspD} fill="none" stroke="#FFE9A8" strokeWidth={auspActive ? 5 : 4} strokeLinecap="round" />
+                </G>
+              )
+            ) : null}
+            {/* Rahu Kalaya — danger band (fades once over, burns while active) */}
+            {rahuD ? (
+              rahuOver ? (
+                <Path d={rahuD} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="2 5" />
+              ) : (
+                <G>
+                  <Path d={rahuD} fill="none" stroke={rahuActive ? 'rgba(255,110,110,0.42)' : 'rgba(252,120,120,0.22)'} strokeWidth={rahuActive ? 15 : 12} strokeLinecap="round" />
+                  <Path d={rahuD} fill="none" stroke={rahuActive ? '#FF9A9A' : '#F87171'} strokeWidth={rahuActive ? 5 : 4} strokeLinecap="round" />
+                </G>
+              )
+            ) : null}
+            {/* horizon */}
+            <Line x1="4" y1="150" x2="356" y2="150" stroke="rgba(244,180,86,0.36)" strokeWidth="1.2" />
+            <Line x1="4" y1="151.6" x2="356" y2="151.6" stroke="rgba(0,0,0,0.45)" strokeWidth="1.4" />
+            <Circle cx="15" cy="150" r="3.4" fill="#F5B45C" opacity="0.95" />
+            <Circle cx="345" cy="150" r="3.4" fill="#E76F51" opacity="0.95" />
+          </Svg>
+
+          {/* the sun itself (becomes the moon at night) */}
+          <View style={[sky.nowWrap, { left: (nowPt.x / 360 * 100) + '%', top: (nowPt.y / 170 * 100) + '%' }]} pointerEvents="none">
+            <View style={[sky.nowBadge, rahuActive && sky.nowBadgeDanger]}>
+              <Text style={[sky.nowBadgeText, rahuActive && sky.nowBadgeTextDanger]} numberOfLines={1}>
+                {(language === 'si' ? 'දැන් ' : 'Now ') + fmtHM(nowMs, t) + (rahuActive ? (language === 'si' ? ' · රාහු' : ' · Rahu') : '')}
+              </Text>
+            </View>
+            <View style={sky.sunBox}>
+              <Animated.View style={[sky.sunHalo, isNight && sky.sunHaloNight, rahuActive && sky.sunHaloRahu, haloStyle]} />
+              <Svg width={38} height={38} viewBox="0 0 38 38">
+                <Defs>
+                  <RadialGradient id="sunCoreGrad" cx="42%" cy="38%" r="66%">
+                    <Stop offset="0" stopColor={isNight ? '#FFFFFF' : '#FFFDF2'} />
+                    <Stop offset="0.55" stopColor={isNight ? '#E8EAF0' : '#FFE9A8'} />
+                    <Stop offset="1" stopColor={isNight ? '#AEB5C8' : '#F0A24A'} />
+                  </RadialGradient>
+                </Defs>
+                {!isNight && SUN_RAY_ANGLES.map(function (deg) {
+                  var rad = deg * Math.PI / 180;
+                  return (
+                    <Line key={'ray' + deg}
+                      x1={19 + Math.cos(rad) * 12.5} y1={19 + Math.sin(rad) * 12.5}
+                      x2={19 + Math.cos(rad) * 16.5} y2={19 + Math.sin(rad) * 16.5}
+                      stroke="#FFD983" strokeWidth="1.6" strokeLinecap="round" opacity="0.85" />
+                  );
+                })}
+                <Circle cx="19" cy="19" r="9.5" fill="url(#sunCoreGrad)" />
+                {isNight ? <Circle cx="15.5" cy="16" r="2.2" fill="rgba(148,155,178,0.55)" /> : null}
+                {isNight ? <Circle cx="21.5" cy="21.5" r="1.5" fill="rgba(148,155,178,0.45)" /> : null}
+              </Svg>
+            </View>
+          </View>
+        </View>
+
+        <View style={sky.footer}>
+          {showAusp ? (
+            <View style={[sky.legChip, auspOver && sky.legChipMuted, auspActive && sky.legChipGold]}>
+              {auspOver
+                ? <Ionicons name="checkmark-circle" size={13} color="rgba(255,233,168,0.55)" />
+                : <View style={[sky.legDot, { backgroundColor: '#FFE9A8' }]} />}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={sky.legChipLabel} numberOfLines={1}>
+                  {language === 'si'
+                    ? 'සුබ වේලාව' + (auspOver ? ' · ඉවරයි' : auspActive ? ' · දැන්' : '')
+                    : 'AUSPICIOUS' + (auspOver ? ' · PASSED' : auspActive ? ' · NOW' : '')}
+                </Text>
+                <Text style={sky.legChipTime} numberOfLines={1}>{fmtHM(apStart, t) + ' – ' + fmtHM(apEnd, t)}</Text>
+              </View>
+            </View>
+          ) : null}
+          {showRahu ? (
+            <View style={[sky.legChip, rahuOver && sky.legChipMuted, rahuActive && sky.legChipDanger]}>
+              {rahuOver
+                ? <Ionicons name="checkmark-circle" size={13} color="#86EFAC" />
+                : <View style={[sky.legDot, { backgroundColor: rahuActive ? '#FF6B6B' : '#F87171' }]} />}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[sky.legChipLabel, rahuActive && { color: 'rgba(255,180,180,0.85)' }]} numberOfLines={1}>
+                  {language === 'si'
+                    ? 'රාහු කාලය' + (rahuOver ? ' · ඉවරයි' : rahuActive ? ' · දැන් සක්‍රියයි' : '')
+                    : 'RAHU KALAYA' + (rahuOver ? ' · PASSED' : rahuActive ? ' · ACTIVE NOW' : '')}
+                </Text>
+                <Text style={sky.legChipTime} numberOfLines={1}>{fmtHM(rkStart, t) + ' – ' + fmtHM(rkEnd, t)}</Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={sky.progressRow}>
+          <View style={sky.progressTrack}>
+            <LinearGradient colors={['#F5B45C', '#FFE9A8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[sky.progressFill, { width: Math.max(2, dayPct) + '%' }]} />
+          </View>
+          <Text style={sky.progressText}>
+            {isNight
+              ? (language === 'si' ? 'රාත්‍රී අහස' : 'Night sky')
+              : dayPct + (language === 'si' ? '% ක් ගෙවී ඇත' : '% of daylight')}
+          </Text>
+        </View>
+
+        <View style={sky.innerFrame} pointerEvents="none" />
+      </View>
+    </Animated.View>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  VIRAL LAYER — v3 Today redesign (research: Co-Star one-liners, Do/Don't
+//  lists, share cards 2-4x retention, streaks, compatibility loops)
+// ═══════════════════════════════════════════════════════════════════════
+
+// Merge real panchanga guidance into one Do / Don't pack for the day
+function buildDoDontLists(data, language, rahuActive) {
+  var kinds = ['nakshatra', 'tithi', 'yoga'];
+  var dos = [], donts = [];
+  kinds.forEach(function (kind) {
+    var entry = data && data.panchanga && data.panchanga[kind];
+    if (!entry) return;
+    var guide = getPanchangaGuidance(kind, entry, language);
+    if (!guide) return;
+    (guide.dos || []).forEach(function (item) { if (dos.indexOf(item) === -1) dos.push(item); });
+    (guide.donts || []).forEach(function (item) { if (donts.indexOf(item) === -1) donts.push(item); });
+  });
+  if (rahuActive) {
+    donts.unshift(language === 'si' ? 'රාහු කාලය තුළ අලුත් වැඩ අරඹන්න එපා' : 'Do not start new ventures during Rahu Kalaya');
+  }
+  return { dos: dos.slice(0, 3), donts: donts.slice(0, 3) };
+}
+
+// Traditional favorable direction by weekday (vaara)
+var VAARA_LUCKY_DIRECTION = {
+  0: { en: 'East', si: 'නැගෙනහිර' },
+  1: { en: 'North-West', si: 'වයඹ' },
+  2: { en: 'South', si: 'දකුණ' },
+  3: { en: 'North', si: 'උතුර' },
+  4: { en: 'North-East', si: 'ඊසාන' },
+  5: { en: 'South-East', si: 'ගිනිකොන' },
+  6: { en: 'West', si: 'බටහිර' },
+};
+
+/* ── VIRAL HERO — energy score medallion + one-liner + streak + share ── */
+// four-point star sparkle for the hero backdrop
+function sparklePath(x, y, r) {
+  return 'M' + x + ' ' + (y - r) +
+    ' Q' + (x + r * 0.22) + ' ' + (y - r * 0.22) + ' ' + (x + r) + ' ' + y +
+    ' Q' + (x + r * 0.22) + ' ' + (y + r * 0.22) + ' ' + x + ' ' + (y + r) +
+    ' Q' + (x - r * 0.22) + ' ' + (y + r * 0.22) + ' ' + (x - r) + ' ' + y +
+    ' Q' + (x - r * 0.22) + ' ' + (y - r * 0.22) + ' ' + x + ' ' + (y - r) + ' Z';
+}
+var ViralHero = React.memo(function ViralHero(props) {
+  var language = props.language;
+  var greeting = props.greeting;
+  var displayName = props.displayName;
+  var oracle = props.oracle;
+  var overall = props.overall;
+  var streak = props.streak;
+  var chartBadge = props.chartBadge;
+  var nakshatraVal = props.nakshatraVal;
+  var bestWindow = props.bestWindow;
+  var onShare = props.onShare;
+  var sharing = props.sharing;
+  var hasBirthData = props.hasBirthData;
+  var onAddBirth = props.onAddBirth;
+  var skipHeavy = props.skipHeavy;
+
+  var todayLabel = new Date().toLocaleDateString(language === 'si' ? 'si-LK' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  var M = 86, ringR = 62;
+  var ringC = 2 * Math.PI * ringR;
+  var pct = Math.max(0, Math.min(100, overall));
+  var scoreColor = pct >= 70 ? '#86EFAC' : pct >= 50 ? '#F5D57A' : '#FCA5A5';
+  var statusWord = energyPhrase(pct, language);
+  // slow ceremonial rotation of the decorative tick ring
+  var ringSpin = useSharedValue(0);
+  useEffect(function () {
+    if (skipHeavy) { ringSpin.value = 0; return; }
+    ringSpin.value = withRepeat(withTiming(360, { duration: 90000, easing: Easing.linear }), -1);
+  }, [skipHeavy]);
+  var ringSpinStyle = useAnimatedStyle(function () {
+    return { transform: [{ rotate: ringSpin.value + 'deg' }] };
+  });
+
+  // ring fill sweep: 0 → score on load, with the tip star riding the arc
+  var fillProg = useSharedValue(0);
+  useEffect(function () {
+    if (skipHeavy) { fillProg.value = pct; return; }
+    fillProg.value = 0;
+    fillProg.value = withDelay(320, withTiming(pct, { duration: 1500, easing: Easing.out(Easing.cubic) }));
+  }, [pct, skipHeavy]);
+  var ringFillProps = useAnimatedProps(function () {
+    return { strokeDashoffset: ringC * (1 - fillProg.value / 100) };
+  });
+  var tipGlowProps = useAnimatedProps(function () {
+    var a = (-90 + 3.6 * fillProg.value) * Math.PI / 180;
+    return { cx: 86 + 62 * Math.cos(a), cy: 86 + 62 * Math.sin(a) };
+  });
+  var tipDotProps = useAnimatedProps(function () {
+    var a = (-90 + 3.6 * fillProg.value) * Math.PI / 180;
+    return { cx: 86 + 62 * Math.cos(a), cy: 86 + 62 * Math.sin(a) };
+  });
+
+  var insights = [
+    { icon: 'person-circle-outline', color: '#FFE8A3', label: language === 'si' ? 'ලග්නය' : 'RISING', value: chartBadge },
+    { icon: 'star-outline', color: '#B7A6F0', label: language === 'si' ? 'නැකත' : 'NAKSHATRA', value: nakshatraVal },
+    { icon: 'time-outline', color: '#7DD3FC', label: language === 'si' ? 'සුබ වේලාව' : 'GOLDEN HOUR', value: bestWindow || '—' },
+  ];
+
+  return (
+    <Animated.View entering={FadeInDown.delay(40).springify()} style={s.oracleHeroShell}>
+      <LinearGradient
+        colors={[Colors.luxuryObsidian, Colors.luxuryObsidianMid, Colors.luxuryObsidianLift, '#0D0713', Colors.luxuryObsidian]}
+        locations={[0, 0.22, 0.52, 0.78, 1]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      />
+      <LinearGradient
+        colors={['rgba(123,73,207,0.20)', 'transparent', 'rgba(214,181,109,0.12)', 'rgba(244,228,188,0.05)']}
+        locations={[0, 0.38, 0.72, 1]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
+      />
+      {/* celestial backdrop: nebula glow, constellation, sparkles */}
+      <Svg style={s.oracleStarMap} viewBox="0 0 360 640" preserveAspectRatio="none">
+        <Defs>
+          <RadialGradient id="vhGlow" cx="50%" cy="30%" r="58%">
+            <Stop offset="0%" stopColor="#F4E4BC" stopOpacity="0.30" />
+            <Stop offset="42%" stopColor="#7B49CF" stopOpacity="0.14" />
+            <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+          </RadialGradient>
+          <RadialGradient id="vhAurora" cx="18%" cy="70%" r="50%">
+            <Stop offset="0%" stopColor="#7B49CF" stopOpacity="0.16" />
+            <Stop offset="100%" stopColor="#7B49CF" stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <Ellipse cx="180" cy="196" rx="200" ry="178" fill="url(#vhGlow)" />
+        <Ellipse cx="70" cy="460" rx="180" ry="150" fill="url(#vhAurora)" />
+        <Path d="M20 130 C90 78 150 190 236 118 C288 76 322 108 352 62" stroke="rgba(214,181,109,0.20)" strokeWidth="0.8" fill="none" />
+        <Line x1="52" y1="330" x2="96" y2="372" stroke="rgba(183,166,240,0.20)" strokeWidth="0.7" />
+        <Line x1="96" y1="372" x2="150" y2="348" stroke="rgba(183,166,240,0.14)" strokeWidth="0.7" />
+        <Line x1="252" y1="352" x2="300" y2="320" stroke="rgba(214,181,109,0.16)" strokeWidth="0.7" />
+        {[[52, 330], [96, 372], [150, 348], [252, 352], [300, 320]].map(function (pt, i) {
+          return <Circle key={'cn' + i} cx={pt[0]} cy={pt[1]} r="1.6" fill="rgba(244,228,188,0.6)" />;
+        })}
+        {[[36, 84, 1.4], [120, 46, 1.0], [212, 70, 1.6], [318, 96, 1.1], [64, 210, 0.9], [306, 210, 1.3], [180, 40, 0.9], [280, 420, 1.0], [40, 520, 1.2], [320, 520, 0.9]].map(function (st, i) {
+          return <Circle key={'hs' + i} cx={st[0]} cy={st[1]} r={st[2]} fill="rgba(255,232,163,0.55)" />;
+        })}
+        <Path d={sparklePath(58, 140, 7)} fill="rgba(255,236,190,0.55)" />
+        <Path d={sparklePath(302, 150, 5.5)} fill="rgba(183,166,240,0.5)" />
+        <Path d={sparklePath(260, 470, 4.5)} fill="rgba(255,236,190,0.38)" />
+      </Svg>
+
+      <View style={s.oracleTopRow}>
+        <View style={s.oracleGreetingBlock}>
+          <View style={s.oracleGreetingLine}>
+            <View style={s.oracleGreetingDot} />
+            <Text style={s.oracleGreeting} numberOfLines={1}>{greeting}</Text>
+          </View>
+          <Text style={s.oracleName} numberOfLines={1}>{displayName}</Text>
+        </View>
+        <View style={s.oracleDatePill}>
+          <Ionicons name="calendar-clear-outline" size={12} color="#F5D57A" />
+          <Text style={s.oracleDateText}>{todayLabel}</Text>
+        </View>
+      </View>
+
+      {/* ── energy medallion: rotating zodiac ticks + glowing ring + tip star ── */}
+      <View style={vr.medallionWrap}>
+        <Animated.View style={[vr.medallionDecor, ringSpinStyle]}>
+          <Svg width={172} height={172} viewBox="0 0 172 172">
+            <Circle cx={M} cy={M} r={82} stroke="rgba(232,197,106,0.16)" strokeWidth="1" fill="none" strokeDasharray="2 6" />
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(function (i) {
+              var a = (i * 30 - 90) * Math.PI / 180;
+              return (
+                <Line key={'zt' + i}
+                  x1={M + 76 * Math.cos(a)} y1={M + 76 * Math.sin(a)}
+                  x2={M + 82 * Math.cos(a)} y2={M + 82 * Math.sin(a)}
+                  stroke={i % 3 === 0 ? 'rgba(245,213,122,0.55)' : 'rgba(232,197,106,0.28)'}
+                  strokeWidth={i % 3 === 0 ? 1.8 : 1} strokeLinecap="round" />
+              );
+            })}
+            {[45, 135, 225, 315].map(function (deg) {
+              var a = deg * Math.PI / 180;
+              return <Circle key={'zd' + deg} cx={M + 79 * Math.cos(a)} cy={M + 79 * Math.sin(a)} r="1.6" fill="rgba(245,213,122,0.5)" />;
+            })}
+          </Svg>
+        </Animated.View>
+        <Svg width={172} height={172} viewBox="0 0 172 172">
+          <Defs>
+            <SvgLinearGradient id="vhRing" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor="#F5D57A" />
+              <Stop offset="1" stopColor="#9F6BFF" />
+            </SvgLinearGradient>
+            <RadialGradient id="vhCore" cx="42%" cy="34%" r="68%">
+              <Stop offset="0" stopColor="#2B1D45" />
+              <Stop offset="0.72" stopColor="#180F2A" />
+              <Stop offset="1" stopColor="#0D0718" />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={M} cy={M} r={ringR} stroke="rgba(245,213,122,0.10)" strokeWidth="15" fill="none" />
+          <Circle cx={M} cy={M} r={ringR} stroke="rgba(255,255,255,0.08)" strokeWidth="7" fill="none" />
+          <ACircle
+            cx={M} cy={M} r={ringR}
+            stroke="url(#vhRing)" strokeWidth="7" fill="none" strokeLinecap="round"
+            strokeDasharray={ringC}
+            animatedProps={ringFillProps}
+            rotation="-90" origin="86, 86"
+          />
+          <ACircle r="8" fill="rgba(255,248,231,0.30)" animatedProps={tipGlowProps} />
+          <ACircle r="3.6" fill="#FFF8E7" animatedProps={tipDotProps} />
+          <Circle cx={M} cy={M} r={54} fill="url(#vhCore)" stroke="rgba(232,197,106,0.30)" strokeWidth="1" />
+          <Circle cx={M} cy={M} r={46} stroke="rgba(232,197,106,0.12)" strokeWidth="0.8" fill="none" />
+        </Svg>
+        <View style={vr.medallionCenter} pointerEvents="none">
+          <Text style={[vr.medallionWord, { color: scoreColor }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{energyWord(pct, language)}</Text>
+          <Text style={vr.medallionLabel}>{language === 'si' ? 'අද බලය' : "TODAY'S ENERGY"}</Text>
+        </View>
+      </View>
+
+      {/* verdict chip — makes the number mean something at a glance */}
+      <View style={vr.statusRow}>
+        <View style={[vr.statusChip, { borderColor: scoreColor + '45', backgroundColor: scoreColor + '12' }]}>
+          <View style={[vr.statusDot, { backgroundColor: scoreColor }]} />
+          <Text style={[vr.statusText, { color: scoreColor }]}>{statusWord}</Text>
+        </View>
+      </View>
+
+      <View style={s.oracleKickerRow}>
+        <View style={s.oracleKickerLine} />
+        <Text style={s.oracleKicker}>{language === 'si' ? 'අද දවසේ පණිවිඩය' : 'TODAY IN ONE LINE'}</Text>
+        <View style={s.oracleKickerLine} />
+      </View>
+      <Text style={[s.oracleTitle, language === 'si' && s.oracleTitleSinhala]}>{oracle ? oracle.title : ''}</Text>
+      <Text style={[vr.heroBody, language === 'si' && s.sinhalaTextFlow]} numberOfLines={3}>{oracle ? oracle.body : ''}</Text>
+
+      {/* insight chips — lagna · nakshatra · golden hour */}
+      <View style={vr.insightRow}>
+        {insights.map(function (chip, i) {
+          return (
+            <Animated.View key={chip.label} entering={FadeInUp.delay(200 + i * 60).springify()} style={[vr.insightChip, { borderColor: chip.color + '30' }]}>
+              <LinearGradient colors={[chip.color + '0E', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
+              <View style={[vr.insightIcon, { borderColor: chip.color + '40', backgroundColor: chip.color + '14' }]}>
+                <Ionicons name={chip.icon} size={13} color={chip.color} />
+              </View>
+              <Text style={vr.insightLabel}>{chip.label}</Text>
+              <Text style={[vr.insightValue, { color: chip.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.62}>{chip.value}</Text>
+            </Animated.View>
+          );
+        })}
+      </View>
+
+      {/* streak + share — the retention & viral loop */}
+      <View style={vr.actionRow}>
+        <View style={vr.streakPill}>
+          <Ionicons name="flame" size={16} color="#FF9F43" />
+          <View>
+            <Text style={vr.streakText}>{language === 'si' ? 'දින ' + streak : streak + (streak === 1 ? ' day' : ' days')}</Text>
+            <Text style={vr.streakSub}>{language === 'si' ? 'අඛණ්ඩ ගමන' : 'COSMIC STREAK'}</Text>
+          </View>
+        </View>
+        <TouchableOpacity activeOpacity={0.85} onPress={onShare} disabled={sharing} style={vr.shareBtn}>
+          <LinearGradient colors={['#F8C55E', '#D99A2B', '#A66A19']} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+          <View style={vr.shareBtnHighlight} />
+          <Ionicons name={sharing ? 'hourglass-outline' : 'share-social'} size={15} color="#140B04" />
+          <Text style={vr.shareBtnText}>{language === 'si' ? 'අද කාඩ්පත බෙදාගන්න' : "Share today's card"}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {!hasBirthData ? (
+        <TouchableOpacity activeOpacity={0.86} onPress={onAddBirth} style={s.oracleProfileCta}>
+          <LinearGradient colors={['#F5B84B', '#A66A19']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+          <Ionicons name="sparkles" size={15} color="#140B04" />
+          <Text style={s.oracleProfileCtaText}>{language === 'si' ? 'ඔබේ උපන් විස්තර එකතු කරන්න' : 'Make Today Personal'}</Text>
+        </TouchableOpacity>
+      ) : null}
+    </Animated.View>
+  );
+});
+
+/* ── DO & DON'T — the most screenshot-able daily guidance ── */
+var DoDontCard = React.memo(function DoDontCard({ pack, language }) {
+  if (!pack || (pack.dos.length === 0 && pack.donts.length === 0)) return null;
+  return (
+    <Animated.View entering={FadeInDown.delay(90).springify()}>
+      <View style={vr.ddCard}>
+        <LinearGradient colors={['#171024', '#120B1C', '#0C0714']} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <LinearGradient colors={['rgba(232,197,106,0.08)', 'transparent']} style={vr.topVeil} pointerEvents="none" />
+        <View style={vr.ddHeader}>
+          <View style={vr.ddHeaderIcon}><Ionicons name="compass-outline" size={15} color="#E8C56A" /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={vr.ddKicker}>{language === 'si' ? 'අද පංචාංගයට අනුව' : "FROM TODAY'S PANCHANGA"}</Text>
+            <Text style={vr.ddTitle}>{language === 'si' ? 'අද කරන්න · නොකරන්න' : "Do & Don't Today"}</Text>
+          </View>
+        </View>
+        <View style={vr.ddCols}>
+          <View style={vr.ddCol}>
+            <View style={vr.ddColHead}>
+              <View style={[vr.ddColDot, { backgroundColor: '#86EFAC' }]} />
+              <Text style={[vr.ddColTitle, { color: '#86EFAC' }]}>{language === 'si' ? 'කරන්න' : 'DO'}</Text>
+            </View>
+            {pack.dos.map(function (item, i) {
+              return (
+                <Animated.View key={'do' + i} entering={FadeInUp.delay(180 + i * 60).springify()} style={vr.ddItem}>
+                  <Ionicons name="checkmark-circle" size={14} color="#86EFAC" style={{ marginTop: 2 }} />
+                  <Text style={vr.ddItemText}>{item}</Text>
+                </Animated.View>
+              );
+            })}
+          </View>
+          <View style={vr.ddDivider} />
+          <View style={vr.ddCol}>
+            <View style={vr.ddColHead}>
+              <View style={[vr.ddColDot, { backgroundColor: '#FCA5A5' }]} />
+              <Text style={[vr.ddColTitle, { color: '#FCA5A5' }]}>{language === 'si' ? 'නොකරන්න' : "DON'T"}</Text>
+            </View>
+            {pack.donts.map(function (item, i) {
+              return (
+                <Animated.View key={'dn' + i} entering={FadeInUp.delay(220 + i * 60).springify()} style={vr.ddItem}>
+                  <Ionicons name="close-circle" size={14} color="#FCA5A5" style={{ marginTop: 2 }} />
+                  <Text style={vr.ddItemText}>{item}</Text>
+                </Animated.View>
+              );
+            })}
+          </View>
+        </View>
+        <View style={vr.innerFrame} pointerEvents="none" />
+      </View>
+    </Animated.View>
+  );
+});
+
+/* ── LUCKY TRIO — color / number / direction from real chart + panchanga ── */
+var LuckyTrio = React.memo(function LuckyTrio({ chartData, data, language }) {
+  var copy = getLagnaUiCopy(chartData);
+  var colorVal = copy && copy.color ? (language === 'si' ? copy.color.si : copy.color.en) : (language === 'si' ? 'රන්වන්' : 'Gold');
+  var tithiNum = data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number ? data.panchanga.tithi.number : 5;
+  var lagnaId = chartData && chartData.lagna ? (chartData.lagna.rashiId || chartData.lagna.id || 1) : 3;
+  var luckyNum = ((tithiNum * 3 + lagnaId * 7 + sltDayIndex()) % 9) + 1;
+  var dow = new Date(Date.now() + SLT_OFFSET_MS).getUTCDay();
+  var dir = VAARA_LUCKY_DIRECTION[dow] || VAARA_LUCKY_DIRECTION[0];
+  var tiles = [
+    { icon: 'color-palette-outline', label: language === 'si' ? 'සුබ පාට' : 'LUCKY COLOR', value: colorVal, color: '#F5A9C7' },
+    { icon: 'sparkles-outline', label: language === 'si' ? 'සුබ අංකය' : 'LUCKY NUMBER', value: String(luckyNum), color: '#F5D57A' },
+    { icon: 'compass-outline', label: language === 'si' ? 'සුබ දිශාව' : 'LUCKY DIRECTION', value: language === 'si' ? dir.si : dir.en, color: '#7DD3FC' },
+  ];
+  return (
+    <Animated.View entering={FadeInDown.delay(160).springify()}>
+      <View style={vr.ltCard}>
+        <LinearGradient colors={['#1A150A', '#15100A', '#0F0B06']} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <View style={vr.ltRow}>
+          {tiles.map(function (tile, i) {
+            return (
+              <Animated.View key={tile.label} entering={FadeInUp.delay(220 + i * 70).springify()} style={[vr.ltTile, { borderColor: tile.color + '30' }]}>
+                <LinearGradient colors={[tile.color + '10', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
+                <View style={[vr.ltIcon, { backgroundColor: tile.color + '14', borderColor: tile.color + '38' }]}>
+                  <Ionicons name={tile.icon} size={15} color={tile.color} />
+                </View>
+                <Text style={vr.ltLabel}>{tile.label}</Text>
+                <Text style={[vr.ltValue, { color: tile.color }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>{tile.value}</Text>
+              </Animated.View>
+            );
+          })}
+        </View>
+        <Text style={vr.ltNote}>
+          {language === 'si' ? 'ඔබේ ලග්නය සහ අද තිථිය අනුව' : 'From your lagna & today\'s tithi'}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+});
+
+/* ── SHARE CARD — branded 9:16 daily card for WhatsApp / IG stories ── */
+var ShareTodayCard = React.forwardRef(function ShareTodayCard(props, ref) {
+  var language = props.language;
+  var displayName = props.displayName;
+  var oracle = props.oracle;
+  var overall = props.overall;
+  var pack = props.pack;
+  var streak = props.streak;
+  var todayLabel = new Date().toLocaleDateString(language === 'si' ? 'si-LK' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  var scoreColor = overall >= 70 ? '#86EFAC' : overall >= 50 ? '#F5D57A' : '#FCA5A5';
+  return (
+    <View ref={ref} collapsable={false} style={scd.card}>
+      <LinearGradient colors={['#0B0713', '#171027', '#100A1E', '#0B0713']} locations={[0, 0.35, 0.7, 1]} style={StyleSheet.absoluteFill} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} />
+      <LinearGradient colors={['rgba(232,197,106,0.12)', 'transparent']} style={scd.topVeil} />
+      {[[24, 60], [320, 90], [50, 520], [300, 480], [180, 40], [90, 300], [280, 280]].map(function (pos, i) {
+        return <View key={'st' + i} style={[scd.star, { left: pos[0], top: pos[1], opacity: 0.25 + (i % 3) * 0.15 }]} />;
+      })}
+      <View style={scd.frame} />
+
+      <View style={scd.header}>
+        <Text style={scd.brand}>✦ {language === 'si' ? 'ග්‍රහචාර' : 'GRAHACHARA'} ✦</Text>
+        <Text style={scd.date}>{todayLabel}</Text>
+      </View>
+
+      <View style={[scd.scoreRing, { borderColor: scoreColor }]}>
+        <View style={scd.scoreRingInner}>
+          <Text style={[scd.scoreWord, { color: scoreColor }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{energyWord(overall, language)}</Text>
+          <Text style={scd.scoreLbl}>{language === 'si' ? 'අද බලය' : "TODAY'S ENERGY"}</Text>
+        </View>
+      </View>
+
+      <Text style={scd.name}>{displayName}</Text>
+      <Text style={scd.title}>{oracle ? oracle.title : ''}</Text>
+
+      <View style={scd.listBox}>
+        {(pack ? pack.dos.slice(0, 2) : []).map(function (item, i) {
+          return (
+            <View key={'sd' + i} style={scd.listRow}>
+              <Text style={[scd.listMark, { color: '#86EFAC' }]}>✓</Text>
+              <Text style={scd.listText} numberOfLines={2}>{item}</Text>
+            </View>
+          );
+        })}
+        {(pack ? pack.donts.slice(0, 2) : []).map(function (item, i) {
+          return (
+            <View key={'sn' + i} style={scd.listRow}>
+              <Text style={[scd.listMark, { color: '#FCA5A5' }]}>✕</Text>
+              <Text style={scd.listText} numberOfLines={2}>{item}</Text>
+            </View>
+          );
+        })}
+      </View>
+
+      <View style={scd.footer}>
+        <View style={scd.footerStreak}>
+          <Ionicons name="flame" size={14} color="#FF9F43" />
+          <Text style={scd.footerStreakText}>{language === 'si' ? 'දින ' + streak + ' අඛණ්ඩව' : streak + '-day streak'}</Text>
+        </View>
+        <Text style={scd.footerBrand}>{language === 'si' ? 'ඔබේ දවසත් බලන්න · Grahachara' : 'See your day · Grahachara'}</Text>
+      </View>
+    </View>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  MOON v2 — constants + rich bilingual phase guidance
+// ═══════════════════════════════════════════════════════════════════════
+var ACircle = Animated.createAnimatedComponent(Circle);
+var MOON_SIZE = Math.min(SCREEN_WIDTH * 0.62, 250);
+var MOON_RING_SIZE = MOON_SIZE + 36;
+var MOON_RING_R = (MOON_SIZE + 26) / 2;
+var MOON_RING_C = 2 * Math.PI * MOON_RING_R;
+var MOON_DUST = [
+  [18, 56, 1.2, 0.34], [42, 132, 0.9, 0.22], [64, 254, 1.1, 0.28], [92, 82, 0.7, 0.22],
+  [118, 182, 1.4, 0.32], [138, 338, 0.8, 0.24], [166, 42, 1.0, 0.28], [192, 136, 0.7, 0.20],
+  [214, 280, 1.2, 0.30], [242, 70, 0.8, 0.22], [268, 198, 1.5, 0.34], [296, 318, 0.9, 0.24],
+  [324, 112, 1.0, 0.28], [342, 248, 0.7, 0.20], [30, 382, 0.8, 0.22], [78, 430, 1.1, 0.28],
+  [128, 492, 0.7, 0.20], [204, 434, 1.0, 0.26], [276, 480, 0.9, 0.24], [334, 406, 1.2, 0.30],
+];
+var MOON_PHASE_CONTENT = [
+  {
+    en: { name: 'New Moon', essence: "The sky's blank page", body: 'Tonight the Moon disappears to begin again. This is the quietest, most fertile moment of the cycle — set one clear intention and let it grow with the returning light.', dos: ['Set one intention', 'Plan quietly', 'Rest deeply'] },
+    si: { name: 'අමාවක', essence: 'අහසේ හිස් පිටුව', body: 'අද සඳ නොපෙනී අලුත් චක්‍රයක් අරඹයි. මේ චක්‍රයේ නිහඬම, බීජ වපුරන මොහොතයි — පැහැදිලි අරමුණක් සිතේ තබාගන්න, සඳ එළිය සමඟ ඒක වැඩේවි.', dos: ['අරමුණක් සකසන්න', 'නිහඬව සැලසුම් කරන්න', 'හොඳින් විවේක ගන්න'] },
+  },
+  {
+    en: { name: 'Waxing Crescent', essence: 'First light returns', body: 'A thin silver edge appears — momentum is being born. Take the first small step on what you intend; tiny beginnings made now carry the whole cycle forward.', dos: ['Take first steps', 'Start a habit', 'Learn something new'] },
+    si: { name: 'පුර සිහින් සඳ', essence: 'පළමු එළිය නැවත එයි', body: 'සිහින් රිදී ඉරක් අහසේ මතුවෙයි — ගමන අලුතින් අරඹයි. ඔබේ අරමුණට පළමු පුංචි පියවර තියන්න; දැන් කරන පුංචි ආරම්භ මුළු චක්‍රයම ඉදිරියට ගෙනියයි.', dos: ['පළමු පියවර තියන්න', 'අලුත් පුරුද්දක් අරඹන්න', 'අලුත් දෙයක් ඉගෙනගන්න'] },
+  },
+  {
+    en: { name: 'First Quarter', essence: 'The push-through point', body: 'Half-lit and climbing — this is where resistance shows up and resolve is tested. Face the obstacle directly and decide; effort spent now pays for the whole month.', dos: ['Make the decision', 'Push through blocks', 'Act with courage'] },
+    si: { name: 'පුර අටවක', essence: 'බාධක ජයගන්නා මොහොත', body: 'සඳ භාගයක් එළිවී ඉහළට නගී — බාධක මතුවන, අධිෂ්ඨානය පරීක්ෂා වන කාලයයි. පසුබට නොවී තීරණය ගන්න; දැන් දරන උත්සාහය මුළු මාසෙටම ඵල දෙයි.', dos: ['තීරණය ගන්න', 'බාධක ජයගන්න', 'ධෛර්යයෙන් ක්‍රියා කරන්න'] },
+  },
+  {
+    en: { name: 'Waxing Gibbous', essence: 'Almost there — refine', body: 'The Moon is nearly full and so is your work. Polish, adjust, correct course — patience in these final steps is what separates good from extraordinary.', dos: ['Refine your work', 'Adjust the plan', 'Stay patient'] },
+    si: { name: 'පුර සඳ පිරෙමින්', essence: 'ඉලක්කය ළඟයි — ඔප දමන්න', body: 'සඳ පිරෙන්න ආසන්නයි, ඔබේ වැඩත් එහෙමයි. කළ දේ ඔප දමන්න, සියුම් වෙනස්කම් කරන්න — අවසාන පියවරවල ඉවසීම තමයි හොඳ දේ විශිෂ්ට කරන්නේ.', dos: ['වැඩ ඔප දමන්න', 'සැලසුම හදාගන්න', 'ඉවසීමෙන් ඉන්න'] },
+  },
+  {
+    en: { name: 'Full Moon', essence: 'The sky at full power', body: 'The Moon pours its complete light on everything you have built. Honour what is finished, give thanks, and let strong emotions pass through you like moonlight — felt, but not held.', dos: ['Practice gratitude', 'Complete & celebrate', 'Meditate'] },
+    si: { name: 'පසළොස්වක පෝය', essence: 'අහස පූර්ණ බලයෙන්', body: 'පිරුණු සඳේ ආලෝකය ඔබ ගොඩනැගූ හැම දෙයකටම වැටෙයි. නිම කළ දේ අගය කරන්න, ස්තුතිය පුදන්න — පෝය දිනයේ සිත නිවන දෙයකට කාලය දෙන්න.', dos: ['ස්තුතිවන්ත වන්න', 'කළ දේ සමරන්න', 'භාවනා කරන්න'] },
+  },
+  {
+    en: { name: 'Waning Gibbous', essence: 'Share the light', body: 'The Moon begins its gentle descent. What you learned this cycle is ripest now — teach it, share it, give back. Generosity in this phase returns doubled.', dos: ['Share what you know', 'Help someone', 'Review progress'] },
+    si: { name: 'අව සඳ බසිමින්', essence: 'එළිය බෙදාගන්න', body: 'පිරුණු සඳ හෙමින් බසින්න පටන් ගනී. මේ චක්‍රයේ ඔබ ඉගෙනගත් දේ දැන් හොඳටම මේරිලා — ඒක බෙදාගන්න, කාට හරි උදව් කරන්න. දැන් කරන ත්‍යාගශීලීකම දෙගුණයක් වී ආපසු එයි.', dos: ['දැනුම බෙදාගන්න', 'කෙනෙකුට උදව් කරන්න', 'ප්‍රගතිය බලන්න'] },
+  },
+  {
+    en: { name: 'Last Quarter', essence: "Release what's heavy", body: 'Half the light remains — the cycle asks what you will carry forward and what you will finally put down. Old weight, old grudges: this is the week to let them go.', dos: ['Let go', 'Forgive', 'Declutter'] },
+    si: { name: 'අව අටවක', essence: 'බර දේ අතහරින්න', body: 'එළියෙන් භාගයක් ඉතිරියි — ඉදිරියට ගෙනියන්නේ මොනවාද, අවසානයට බිම තියන්නේ මොනවාද කියා චක්‍රය අසයි. පැරණි බර, පැරණි තරහ — ඒවා අතහරින්න හොඳම සතිය මේකයි.', dos: ['අතහරින්න', 'සමාව දෙන්න', 'අවශ්‍ය නැති දේ ඉවත් කරන්න'] },
+  },
+  {
+    en: { name: 'Waning Crescent', essence: 'The deep rest', body: 'The last sliver of light before the dark. Slow everything down — sleep well, reflect on the month, and prepare the ground. A brand-new Moon is only nights away.', dos: ['Rest well', 'Reflect', 'Prepare for the new'] },
+    si: { name: 'අව සිහින් සඳ', essence: 'ගැඹුරු විවේකය', body: 'අඳුරට කලින් ඉතිරි වූ අවසාන එළි රේඛාවයි. හැමදේම හෙමින් කරන්න — හොඳින් නිදාගන්න, ගෙවුණු මාසය ගැන මෙනෙහි කරන්න. අලුත් අමාවකට ඉතිරිව ඇත්තේ රාත්‍රී කිහිපයයි.', dos: ['හොඳින් විවේක ගන්න', 'මෙනෙහි කරන්න', 'අලුත් ආරම්භයට සූදානම් වන්න'] },
+  },
+];
+
 export default function HomeScreen() {
   var { t, language } = useLanguage();
-  var { user } = useAuth();
+  var { user, showPaywall } = useAuth();
+  var isFreeUser = user && user.isSubscribed !== true;
   var { colors, gradients, resolved } = useTheme();
   var HT = getHT(colors);
   var isDesktop = useDesktopCtx();
@@ -1046,6 +2117,9 @@ export default function HomeScreen() {
   var shareCardRef = useRef(null);
   var [jyotishToday, setJyotishToday] = useState(null);
   var [expandedPanchanga, setExpandedPanchanga] = useState(null);
+  var [streak, setStreak] = useState(1);
+  var [shareTodayVisible, setShareTodayVisible] = useState(false);
+  var shareTodayRef = useRef(null);
   var [loading, setLoading] = useState(true);
   var [chartLoading, setChartLoading] = useState(false);
   var [error, setError] = useState(null);
@@ -1093,6 +2167,28 @@ export default function HomeScreen() {
   var [selectedDayOffset, setSelectedDayOffset] = useState(0);
   var MOON_ITEM_W = 48;
   var MOON_DAYS_RANGE = 7;
+
+  // ── Moon v2 animation hooks (top level: render fn is called conditionally) ──
+  var tithiForMoonNow = data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number
+    ? data.panchanga.tithi.number : getMoonPhaseFromDate();
+  var selectedTithiTop = ((tithiForMoonNow + selectedDayOffset - 1 + 300) % 30) + 1;
+  var selIllumTop = selectedTithiTop <= 15 ? (selectedTithiTop - 1) / 14 : (30 - selectedTithiTop) / 14;
+  selIllumTop = Math.max(0, Math.min(1, selIllumTop));
+  var moonBob = useSharedValue(0.5);
+  var moonFill = useSharedValue(0);
+  useEffect(function () {
+    if (skipHeavy) { moonBob.value = 0.5; return; }
+    moonBob.value = withRepeat(withTiming(1, { duration: 6200, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, [skipHeavy]);
+  useEffect(function () {
+    moonFill.value = withTiming(selIllumTop * 100, { duration: 900, easing: Easing.out(Easing.cubic) });
+  }, [selIllumTop]);
+  var moonBobStyle = useAnimatedStyle(function () {
+    return { transform: [{ translateY: interpolate(moonBob.value, [0, 1], [-5, 5]) }] };
+  });
+  var moonRingProps = useAnimatedProps(function () {
+    return { strokeDashoffset: MOON_RING_C * (1 - moonFill.value / 100) };
+  });
   useEffect(function () {
     setTimeout(function () {
       if (moonScrollRef.current) {
@@ -1114,21 +2210,46 @@ export default function HomeScreen() {
       setLoading(true);
       setError(null);
       var dateStr = new Date().toISOString().split('T')[0];
-      var res = await api.getDailyNakath(dateStr);
+      var res;
+      try {
+        res = await api.getDailyNakath(dateStr);
+      } catch (gatedErr) {
+        // Non-subscribers are 402/401 on the gated daily route. Fall back to
+        // the free preview (identical shape) so the daily habit surface —
+        // Rahu Kalaya, panchanga, sunrise/sunset, moon — still renders instead
+        // of empty dashes. Personalized cards tease separately.
+        if (gatedErr && (gatedErr.statusCode === 402 || gatedErr.statusCode === 401 || (gatedErr.message && /subscri/i.test(gatedErr.message)))) {
+          res = await api.getTodayPreview(dateStr, birthLat, birthLng);
+        } else {
+          throw gatedErr;
+        }
+      }
       setData(res.data);
     } catch (err) {
       setError(err.message || t('failedToAlign'));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, birthLat, birthLng]);
 
   var fetchBirthChart = useCallback(async function (cancelled) {
     if (!hasBirthData) return;
     try {
       setChartLoading(true);
-      var res = await api.getBirthChartBasic(birthDateTime, birthLat, birthLng, language);
-      if (!cancelled.current && res.success) setChartData(res.data);
+      var res;
+      try {
+        res = await api.getBirthChartBasic(birthDateTime, birthLat, birthLng, language);
+      } catch (gatedErr) {
+        // Non-subscribers 402 on the gated basic chart. Fall back to the free
+        // identity preview (same shape) so the Home page shows the user's real
+        // lagna/moon identity — the "mirror" — instead of feeling empty.
+        if (gatedErr && (gatedErr.statusCode === 402 || gatedErr.statusCode === 401 || (gatedErr.message && /subscri/i.test(gatedErr.message)))) {
+          res = await api.getBirthChartPreview(birthDateTime, birthLat, birthLng);
+        } else {
+          throw gatedErr;
+        }
+      }
+      if (!cancelled.current && res && res.success) setChartData(res.data);
     } catch (err) {
       if (cancelled.current) return;
       if (err && (err.name === 'AbortError' || (err.message && err.message.indexOf('abort') !== -1))) return;
@@ -1180,10 +2301,112 @@ export default function HomeScreen() {
     return function () { handle.cancel(); };
   }, [hasBirthData, birthDateTime, birthLat, birthLng]);
 
+  // Convergence timeline — deferred, cached once per calendar month (per tier,
+  // so an upgrade refetches the full version). Free → preview slice; Pro → full.
+  var [convergence, setConvergence] = useState(null);
+  useEffect(function () {
+    if (!hasBirthData || !birthDateTime) { setConvergence(null); return; }
+    var cancelled = false;
+    var monthTag = new Date().toISOString().slice(0, 7);
+    var cacheKey = 'grahachara_convergence_' + (user?.uid || 'anon') + '_' + monthTag + '_' + (isFreeUser ? 'free' : 'pro');
+    var handle = InteractionManager.runAfterInteractions(function () {
+      AsyncStorage.getItem(cacheKey).then(function (raw) {
+        if (cancelled) return;
+        if (raw) { try { setConvergence(JSON.parse(raw)); return; } catch (e) { /* refetch */ } }
+        var p = isFreeUser
+          ? api.getConvergencePreview(birthDateTime, birthLat, birthLng)
+          : api.getConvergence(birthDateTime, birthLat, birthLng);
+        p.then(function (res) {
+          if (cancelled || !res || !res.success || !res.data) return;
+          var norm = normalizeConvergence(res.data, isFreeUser);
+          if (!norm) return;
+          setConvergence(norm);
+          AsyncStorage.setItem(cacheKey, JSON.stringify(norm)).catch(function () {});
+        }).catch(function () { /* silent */ });
+      }).catch(function () {});
+    });
+    return function () { cancelled = true; handle.cancel(); };
+  }, [hasBirthData, birthDateTime, birthLat, birthLng, isFreeUser, user]);
+
+  // ── Prediction check-ins (Phase 3 retention/trust loop) ──
+  // Only Pro users who've generated reports have dated predictions to confirm.
+  // Asking "did this happen?" builds trust, gives us calibration data, and is a
+  // reason to reopen the app when a window closes.
+  var [checkins, setCheckins] = useState([]);
+  useEffect(function () {
+    if (isFreeUser || !user || !user.uid) { setCheckins([]); return; }
+    var cancelled = false;
+    var handle = InteractionManager.runAfterInteractions(function () {
+      api.getPredictionCheckins().then(function (res) {
+        if (cancelled || !res || !res.success || !res.data) return;
+        setCheckins(res.data.due || []);
+      }).catch(function () { /* silent */ });
+    });
+    return function () { cancelled = true; handle.cancel(); };
+  }, [isFreeUser, user]);
+
+  var answerCheckin = useCallback(function (item, outcome) {
+    // Optimistically drop the answered card; the next due one surfaces.
+    setCheckins(function (list) {
+      return list.filter(function (c) { return !(c.reportId === item.reportId && c.id === item.id); });
+    });
+    api.sendPredictionOutcome(item.reportId, item.id, outcome, {
+      claim: item.claim, domain: item.domain, type: item.type,
+    }).catch(function () { /* best-effort */ });
+  }, []);
+
+  // ── Win-back (Phase 3) ── Remember if this user was ever Pro. A lapsed
+  // subscriber (was Pro, now free) sees a warm "welcome back" banner instead of
+  // the generic discover surfaces — loss-framed, one tap to reactivate.
+  var [wasPro, setWasPro] = useState(false);
+  var [winbackDismissed, setWinbackDismissed] = useState(false);
+  useEffect(function () {
+    if (user && user.isSubscribed === true) {
+      AsyncStorage.setItem('@grahachara_was_pro', '1').catch(function () {});
+      setWasPro(false); // currently active — no win-back
+    } else if (user && user.uid) {
+      AsyncStorage.getItem('@grahachara_was_pro').then(function (v) { setWasPro(v === '1'); }).catch(function () {});
+    } else {
+      setWasPro(false);
+    }
+  }, [user]);
+
   var getGreeting = function () {
     var h = new Date().getHours();
     return h < 12 ? t('goodMorning') : h < 17 ? t('goodAfternoon') : t('goodEvening');
   };
+
+  // Daily check-in streak (retention loop) — keyed to the SLT day boundary
+  useEffect(function () {
+    var today = sltDayIndex();
+    AsyncStorage.getItem('grahachara_daily_streak').then(function (raw) {
+      var st = { count: 1, last: today };
+      try {
+        var prev = raw ? JSON.parse(raw) : null;
+        if (prev && prev.last === today) st = prev;
+        else if (prev && prev.last === today - 1) st = { count: (prev.count || 1) + 1, last: today };
+      } catch (e) { /* corrupt cache — reset streak */ }
+      setStreak(st.count);
+      AsyncStorage.setItem('grahachara_daily_streak', JSON.stringify(st)).catch(function () {});
+    }).catch(function () {});
+  }, []);
+
+  // Capture + share today's branded card (WhatsApp / IG story viral loop)
+  var shareToday = useCallback(function () {
+    if (sharingBusy) return;
+    setSharingBusy(true);
+    setShareTodayVisible(true);
+    setTimeout(async function () {
+      try {
+        var uri = await captureRef(shareTodayRef, { format: 'png', quality: 1 });
+        if (Platform.OS !== 'web' && (await Sharing.isAvailableAsync())) {
+          await Sharing.shareAsync(uri, { mimeType: 'image/png' });
+        }
+      } catch (e) { /* capture unavailable — fail silently */ }
+      setShareTodayVisible(false);
+      setSharingBusy(false);
+    }, 420);
+  }, [sharingBusy]);
 
   var rahuActive = false;
   if (data && data.rahuKalaya && data.rahuKalaya.start && data.rahuKalaya.end) {
@@ -1198,6 +2421,22 @@ export default function HomeScreen() {
   var nakshatraVal = data && data.panchanga && data.panchanga.nakshatra
     ? (data.panchanga.nakshatra.english || data.panchanga.nakshatra.name || '--')
     : '--';
+
+  // ── v3 derived data: energy score, oracle, do/don't pack (once per render) ──
+  var lifeResult = data ? computeLifeScores(chartData, jyotishToday, data, language) : null;
+  var todayOracle = data ? buildTodayOracle({
+    language: language, data: data, chartData: chartData,
+    hasBirthData: hasBirthData, displayName: displayName, rahuActive: rahuActive,
+  }) : null;
+  var ddPack = data ? buildDoDontLists(data, language, rahuActive) : null;
+  var bestWindow = data && data.auspiciousPeriods && data.auspiciousPeriods[0]
+    ? (data.auspiciousPeriods[0].startFormatted ? data.auspiciousPeriods[0].startFormatted.display : toSLT(data.auspiciousPeriods[0].start, t))
+    : null;
+  var heroChartBadge = hasBirthData && chartData && todayOracle && todayOracle.lagnaName
+    ? (language === 'si' ? todayOracle.lagnaName + ' ලග්නය' : todayOracle.lagnaName + ' Rising')
+    : hasBirthData
+      ? (language === 'si' ? 'කේන්දරය සකස් වෙමින්' : 'Chart tuning')
+      : (language === 'si' ? 'උපන් විස්තර අවශ්‍යයි' : 'Birth profile needed');
 
   function getRahuCountdown() {
     if (!data || !data.rahuKalaya || !data.rahuKalaya.start || !data.rahuKalaya.end) return '';
@@ -1216,515 +2455,11 @@ export default function HomeScreen() {
     return hrs > 0 ? hrs + 'h ' + remMins + 'm' : remMins + 'm';
   }
 
-  function renderLagnaChart() {
-    if (!chartData || !chartData.rashiChart) return null;
-    var lagnaRashiId = chartData.lagna ? (chartData.lagna.rashiId || chartData.lagna.id || 1) : 1;
-    var miniSize = Math.min(SCREEN_WIDTH - 32, isDesktop ? 380 : 340);
-    return (
-      <View style={{ alignItems: 'center' }}>
-        <PinchableView minScale={1} maxScale={2}>
-          <SriLankanChart
-            rashiChart={chartData.rashiChart}
-            lagnaRashiId={lagnaRashiId}
-            language={language}
-            chartSize={miniSize}
-          />
-        </PinchableView>
-      </View>
-    );
-  }
-
-  /* ── Greeting Header ── */
-  function renderGreeting() {
-    return (
-      <Animated.View entering={FadeInDown.delay(0).springify()} style={s.greetWrap}>
-        <View style={{ flex: 1 }}>
-          <Text style={[s.greetText, { color: HT.textMuted }]}>{getGreeting()}</Text>
-          <Text style={[s.greetName, { color: HT.text }]}>{displayName}</Text>
-        </View>
-        <View style={[s.dateBadge, { backgroundColor: HT.purpleBg, borderColor: 'rgba(183,166,240,0.18)' }]}>
-          <Text style={[s.dateText, { color: HT.purple }]}>
-            {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-          </Text>
-        </View>
-      </Animated.View>
-    );
-  }
-
-  function renderOracleHero() {
-    var activeNakIndex = getActiveNakshatraSignIndex(data);
-    var oracle = buildTodayOracle({
-      language: language,
-      data: data,
-      chartData: chartData,
-      hasBirthData: hasBirthData,
-      displayName: displayName,
-      rahuActive: rahuActive,
-    });
-    var todayLabel = new Date().toLocaleDateString(language === 'si' ? 'si-LK' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    var lagnaRashiId = chartData && chartData.lagna ? (chartData.lagna.rashiId || chartData.lagna.id || 1) : activeNakIndex + 1;
-    var lagnaImageIndex = Math.max(0, Math.min(11, lagnaRashiId - 1));
-    var oracleWheelSize = Math.min(SCREEN_WIDTH * 0.72, isDesktop ? 308 : 284);
-    var hasPersonalChart = !!(hasBirthData && chartData);
-    var chartBadge = hasPersonalChart && oracle.lagnaName
-      ? (language === 'si' ? oracle.lagnaName + ' ලග්නය' : oracle.lagnaName + ' Rising')
-      : hasBirthData
-        ? (language === 'si' ? 'කේන්දරය සකස් වෙමින්' : 'Chart tuning')
-        : (language === 'si' ? 'උපන් විස්තර අවශ්‍යයි' : 'Birth profile needed');
-    var rahuWindow = data && data.rahuKalaya
-      ? ((data.rahuKalaya.startFormatted ? data.rahuKalaya.startFormatted.display : toSLT(data.rahuKalaya.start, t)) + ' - ' + (data.rahuKalaya.endFormatted ? data.rahuKalaya.endFormatted.display : toSLT(data.rahuKalaya.end, t)))
-      : '--';
-    var auspiciousWindow = data && data.auspiciousPeriods && data.auspiciousPeriods[0]
-      ? ((data.auspiciousPeriods[0].startFormatted ? data.auspiciousPeriods[0].startFormatted.display : toSLT(data.auspiciousPeriods[0].start, t)) + ' - ' + (data.auspiciousPeriods[0].endFormatted ? data.auspiciousPeriods[0].endFormatted.display : toSLT(data.auspiciousPeriods[0].end, t)))
-      : sunriseVal + ' / ' + sunsetVal;
-    var oracleSignals = [
-      {
-        icon: 'pulse-outline',
-        label: language === 'si' ? 'අද මනෝභාවය' : 'Mood',
-        value: oracle.mood,
-        detail: oracle.proof,
-        color: '#E8C56A',
-      },
-      {
-        icon: 'navigate-outline',
-        label: language === 'si' ? 'හොඳම පියවර' : 'Best Move',
-        value: oracle.bestMove,
-        detail: auspiciousWindow,
-        color: '#7DD3FC',
-      },
-      {
-        icon: rahuActive ? 'warning-outline' : 'shield-checkmark-outline',
-        label: language === 'si' ? 'අවධානය' : 'Caution',
-        value: oracle.cautionMove,
-        detail: rahuActive ? (language === 'si' ? 'රාහු කාලය දැන් සක්‍රියයි' : 'Rahu Kalaya is active now') : rahuWindow,
-        color: rahuActive ? '#FCA5A5' : '#86EFAC',
-      },
-    ];
-
-    return (
-      <Animated.View entering={FadeInDown.delay(40).springify()} style={s.oracleHeroShell}>
-        <LinearGradient
-          colors={[Colors.luxuryObsidian, Colors.luxuryObsidianMid, Colors.luxuryObsidianLift, '#0D0713', Colors.luxuryObsidian]}
-          locations={[0, 0.22, 0.52, 0.78, 1]}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        />
-        <LinearGradient
-          colors={['rgba(214,181,109,0.15)', 'transparent', 'rgba(123,73,207,0.12)', 'rgba(244,228,188,0.05)']}
-          locations={[0, 0.35, 0.7, 1]}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
-        />
-        <Svg style={s.oracleStarMap} viewBox="0 0 360 640" preserveAspectRatio="none">
-          <Defs>
-            <RadialGradient id="oracleGlow" cx="50%" cy="42%" r="55%">
-              <Stop offset="0%" stopColor="#F4E4BC" stopOpacity="0.26" />
-              <Stop offset="45%" stopColor="#7B49CF" stopOpacity="0.11" />
-              <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
-            </RadialGradient>
-          </Defs>
-          <Ellipse cx="220" cy="192" rx="170" ry="145" fill="url(#oracleGlow)" />
-          <Path d="M18 208 C94 148 152 280 240 192 C296 136 330 176 356 116" stroke="rgba(214,181,109,0.24)" strokeWidth="0.8" fill="none" />
-          <Path d="M10 360 C92 332 132 412 210 370 C274 335 318 370 352 322" stroke="rgba(123,73,207,0.14)" strokeWidth="0.8" fill="none" />
-          <Line x1="68" y1="92" x2="112" y2="148" stroke="rgba(214,181,109,0.18)" strokeWidth="0.7" />
-          <Line x1="112" y1="148" x2="170" y2="116" stroke="rgba(244,228,188,0.11)" strokeWidth="0.7" />
-          <Line x1="242" y1="72" x2="292" y2="128" stroke="rgba(214,181,109,0.15)" strokeWidth="0.7" />
-          {[42, 88, 132, 186, 228, 292, 318].map(function (point, pointIndex) {
-            return <Circle key={'oc' + pointIndex} cx={point} cy={70 + ((pointIndex * 43) % 250)} r={pointIndex % 2 === 0 ? 1.7 : 1.1} fill="rgba(255,232,163,0.58)" />;
-          })}
-        </Svg>
-
-        <View style={s.oracleTopRow}>
-          <View style={s.oracleGreetingBlock}>
-            <View style={s.oracleGreetingLine}>
-              <View style={s.oracleGreetingDot} />
-              <Text style={s.oracleGreeting} numberOfLines={1}>{getGreeting()}</Text>
-            </View>
-            <Text style={s.oracleName} numberOfLines={1}>{displayName}</Text>
-          </View>
-          <View style={s.oracleDatePill}>
-            <Ionicons name="calendar-clear-outline" size={12} color="#F5D57A" />
-            <Text style={s.oracleDateText}>{todayLabel}</Text>
-          </View>
-        </View>
-
-        <View style={s.oracleVisualStage}>
-          <View style={s.oracleWheelFrame}>
-            <CelestialZodiacWheel size={oracleWheelSize} signIndex={lagnaImageIndex} accentIndex={activeNakIndex} rahuActive={rahuActive} />
-          </View>
-        </View>
-
-        <View style={s.oracleCopyBlock}>
-          <View style={s.oracleKickerRow}>
-            <View style={s.oracleKickerLine} />
-            <Text style={s.oracleKicker}>{language === 'si' ? 'අද දවසේ පෞද්ගලික කියවීම' : 'PERSONAL DAILY ORACLE'}</Text>
-            <View style={s.oracleKickerLine} />
-          </View>
-          <Text style={[s.oracleTitle, language === 'si' && s.oracleTitleSinhala]}>{oracle.title}</Text>
-          <Text style={[s.oracleBody, language === 'si' && s.sinhalaTextFlow]}>{oracle.body}</Text>
-          <View style={s.oracleProofRow}>
-            <View style={s.oracleProofPill}>
-              <Ionicons name="person-circle-outline" size={13} color="#FFE8A3" />
-              <Text style={s.oracleProofText}>{chartBadge}</Text>
-            </View>
-            <View style={s.oracleProofPill}>
-              <Ionicons name="star-outline" size={13} color="#B7A6F0" />
-              <Text style={s.oracleProofText}>{nakshatraVal}</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={s.oracleSignalGrid}>
-          {oracleSignals.map(function (signal, signalIndex) {
-            return (
-              <Animated.View key={signal.label} entering={FadeInUp.delay(220 + signalIndex * 70).springify()} style={s.oracleSignalPanel}>
-                <View style={[s.oracleSignalIcon, { borderColor: signal.color + '40', backgroundColor: signal.color + '12' }]}>
-                  <Ionicons name={signal.icon} size={16} color={signal.color} />
-                </View>
-                <View style={s.oracleSignalCopy}>
-                  <Text style={s.oracleSignalLabel}>{signal.label}</Text>
-                  <Text style={s.oracleSignalValue} numberOfLines={2}>{signal.value}</Text>
-                  <Text style={[s.oracleSignalDetail, { color: signal.color }]} numberOfLines={1}>{signal.detail}</Text>
-                </View>
-              </Animated.View>
-            );
-          })}
-        </View>
-
-        {!hasBirthData ? (
-          <TouchableOpacity activeOpacity={0.86} onPress={function () { router.push('/profile'); }} style={s.oracleProfileCta}>
-            <LinearGradient colors={['#F5B84B', '#A66A19']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-            <Ionicons name="sparkles" size={15} color="#140B04" />
-            <Text style={s.oracleProfileCtaText}>{language === 'si' ? 'ඔයාගේ උපන් විස්තර එකතු කරන්න' : 'Make Today Personal'}</Text>
-          </TouchableOpacity>
-        ) : null}
-      </Animated.View>
-    );
-  }
-
-  function renderRahuKalayaCard() {
-    if (!data || !data.rahuKalaya) return null;
-    var startText = data.rahuKalaya.startFormatted ? data.rahuKalaya.startFormatted.display : toSLT(data.rahuKalaya.start, t);
-    var endText = data.rahuKalaya.endFormatted ? data.rahuKalaya.endFormatted.display : toSLT(data.rahuKalaya.end, t);
-    var countdownText = getRahuCountdown();
-
-    return (
-      <View style={[s.rahuCard, s.rahuCardToday, rahuActive && s.rahuCardActive]}>
-        <LinearGradient
-          colors={rahuActive
-            ? ['rgba(26,21,10,0.90)', 'rgba(80,20,20,0.25)', 'rgba(26,21,10,0.90)']
-            : ['rgba(26,21,10,0.90)', 'rgba(10,40,25,0.20)', 'rgba(26,21,10,0.90)']
-          }
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        {rahuActive && (
-          <Animated.View style={[s.rahuEdgeGlow, coronaPulseStyle]} />
-        )}
-
-        <View style={s.rahuCardTop}>
-          <View style={s.rahuTitleRow}>
-            <View style={[s.rahuIconCircle, rahuActive ? s.rahuIconCircleActive : s.rahuIconCircleSafe]}>
-              <Animated.View style={rahuActive ? coronaPulseStyle : undefined}>
-                <Ionicons
-                  name={rahuActive ? 'warning' : 'shield-checkmark'}
-                  size={20}
-                  color={rahuActive ? '#FCA5A5' : '#6EE7B7'}
-                />
-              </Animated.View>
-            </View>
-            <Text
-              style={[s.rahuCardTitle, rahuActive && s.rahuCardTitleActive, language === 'si' && s.sinhalaTextFlow]}
-              numberOfLines={2}
-              adjustsFontSizeToFit
-              minimumFontScale={0.82}
-            >
-              {rahuActive
-                ? (language === 'si' ? 'දැඩි රාහු කාලය උදාවෙලා' : 'Caution Window')
-                : (language === 'si' ? 'අද දවසේ රාහු කාලය' : 'Caution Window')
-              }
-            </Text>
-          </View>
-          <View style={s.rahuStatusBadge}>
-            <Animated.View style={[s.rahuStatusDot, { backgroundColor: rahuActive ? '#EF4444' : '#34D399' }, rahuActive && coronaPulseStyle]} />
-            <Text
-              style={[s.rahuStatusText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }, language === 'si' && s.sinhalaTextFlow]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.72}
-            >
-              {rahuActive
-                ? (language === 'si' ? 'මේ වෙලාවේ බලපවත්වයි' : 'ACTIVE')
-                : (language === 'si' ? 'රාහු කාලයෙන් නිදහස්' : 'SAFE')
-              }
-            </Text>
-          </View>
-        </View>
-
-        <View style={[s.rahuTimeRow, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.06)' : 'rgba(0,0,0,0.15)' }]}>
-          <View style={s.rahuTimeBlock}>
-            <Text style={[s.rahuTimeLabel, language === 'si' && s.sinhalaTextFlow]}>{language === 'si' ? 'ඇරඹෙන වෙලාව' : 'Starts'}</Text>
-            <Text style={[s.rahuTimeValue, rahuActive && s.rahuTimeValueActive]}>{startText}</Text>
-          </View>
-          <View style={[s.rahuTimeDivider, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.3)' : 'rgba(52,211,153,0.2)' }]} />
-          <View style={s.rahuTimeBlock}>
-            <Text style={[s.rahuTimeLabel, language === 'si' && s.sinhalaTextFlow]}>{language === 'si' ? 'අවසන් වන වෙලාව' : 'Ends'}</Text>
-            <Text style={[s.rahuTimeValue, rahuActive && s.rahuTimeValueActive]}>{endText}</Text>
-          </View>
-        </View>
-
-        {countdownText ? (
-          <View style={[s.rahuCountdownBar, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.12)' : 'rgba(52,211,153,0.08)' }]}>
-            <Ionicons name="time-outline" size={13} color={rahuActive ? '#FCA5A5' : '#6EE7B7'} />
-            <Text style={[s.rahuCountdownText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }, language === 'si' && s.sinhalaTextFlow]}>
-              {rahuActive
-                ? (language === 'si' ? 'තව ' + countdownText + ' කින් අවසන් වේ' : 'Ends in ' + countdownText)
-                : (language === 'si' ? 'තව ' + countdownText + ' කින් ඇරඹේ' : 'Starts in ' + countdownText)
-              }
-            </Text>
-          </View>
-        ) : null}
-
-        <View style={s.rahuExplanationContainer}>
-          <Text style={[s.rahuExplanationText, language === 'si' && s.sinhalaTextFlow]}>
-            {language === 'si'
-              ? 'රාහු කාලය යනු සුබ වැඩ පටන් ගැනීමට නුසුදුසු බව පිළිගැනෙන කෙටි කාල සීමාවකි.'
-              : 'Rahu Kalaya is an inauspicious time window during which starting important new work is generally avoided.'}
-          </Text>
-        </View>
-
-        <View style={[s.rahuCardBorder, { borderColor: rahuActive ? 'rgba(239,68,68,0.25)' : 'rgba(52,211,153,0.15)' }]} />
-      </View>
-    );
-  }
-
-  /* ── Cosmic Orrery Hero ── */
-  function renderZodiacHero() {
-    var activeNakIndex = 0;
-    if (data && data.panchanga && data.panchanga.nakshatra) {
-      var nakshatraName = data.panchanga.nakshatra.english || data.panchanga.nakshatra.name || '';
-      var nakshatraToZodiac = { 'Ashwini': 0, 'Bharani': 0, 'Krittika': 1, 'Rohini': 1, 'Mrigashira': 2, 'Ardra': 2, 'Punarvasu': 3, 'Pushya': 3, 'Ashlesha': 3, 'Magha': 4, 'Purva Phalguni': 4, 'Uttara Phalguni': 5, 'Hasta': 5, 'Chitra': 6, 'Swati': 6, 'Vishakha': 7, 'Anuradha': 7, 'Jyeshtha': 7, 'Mula': 8, 'Purva Ashadha': 8, 'Uttara Ashadha': 9, 'Shravana': 9, 'Dhanishta': 10, 'Shatabhisha': 10, 'Purva Bhadrapada': 11, 'Uttara Bhadrapada': 11, 'Revati': 11 };
-      if (nakshatraToZodiac[nakshatraName] !== undefined) activeNakIndex = nakshatraToZodiac[nakshatraName];
-    }
-
-    var nakGuide = data && data.panchanga && data.panchanga.nakshatra ? getPanchangaGuidance('nakshatra', data.panchanga.nakshatra, language) : null;
-    var tithiGuide = data && data.panchanga && data.panchanga.tithi ? getPanchangaGuidance('tithi', data.panchanga.tithi, language) : null;
-    var yogaGuide = data && data.panchanga && data.panchanga.yoga ? getPanchangaGuidance('yoga', data.panchanga.yoga, language) : null;
-
-    // Get tithi number for moon phase (1-30)
-    var currentTithiNum = data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number
-      ? data.panchanga.tithi.number
-      : getMoonPhaseFromDate();
-
-    var orrerySize = Math.min(SCREEN_WIDTH * 0.38, 160);
-    var chakraSize = CHAKRA_HERO_SIZE;
-
-    return (
-      <View>
-        <View style={s.dashHero}>
-          {/* ── Ancient parchment base ── */}
-          <LinearGradient
-            colors={['#1A150A', '#15100A', '#0F0B06', '#12100B', '#1A150C', '#0E0A05']}
-            locations={[0, 0.2, 0.4, 0.6, 0.8, 1]}
-            style={s.dashHeroBg}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          />
-          {/* ── Warm golden veil ── */}
-          <LinearGradient
-            colors={['rgba(180,140,60,0.08)', 'transparent', 'rgba(160,120,40,0.06)', 'transparent', 'rgba(180,140,60,0.08)']}
-            locations={[0, 0.25, 0.5, 0.75, 1]}
-            style={s.dashHeroBg}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          />
-          {/* ── Top ornamental gold line ── */}
-          <LinearGradient
-            colors={['transparent', 'rgba(218,165,32,0.50)', 'rgba(255,184,0,0.70)', 'rgba(218,165,32,0.50)', 'transparent']}
-            locations={[0, 0.2, 0.5, 0.8, 1]}
-            style={s.dashGlassShine}
-            start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
-          />
-          {/* ── Bottom ornamental gold line ── */}
-          <LinearGradient
-            colors={['transparent', 'rgba(218,165,32,0.35)', 'rgba(255,184,0,0.50)', 'rgba(218,165,32,0.35)', 'transparent']}
-            locations={[0, 0.2, 0.5, 0.8, 1]}
-            style={s.dashBottomShine}
-            start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
-          />
-          {/* ── Mystic corner glow — top-right ── */}
-          <View style={s.dashMysticGlowTR} />
-          {/* ── Mystic corner glow — bottom-left ── */}
-          <View style={s.dashMysticGlowBL} />
-          {/* ── Breathing nebula accent ── */}
-          <Animated.View style={[s.dashNebulaBlob, coronaPulseStyle]} />
-          {/* ── Inner border frame ── */}
-          <View style={s.dashInnerFrame} />
-
-          {/* ═══ RASHI CHAKRA — Center piece ═══ */}
-          <View style={s.chakraHeroWrap}>
-            <View style={s.chakraContainer}>
-              <AwesomeRashiChakra size={chakraSize} activeSignIndex={activeNakIndex} />
-            </View>
-            {/* Sign name below chakra */}
-            <View style={s.chakraOverlayInfo}>
-              <View style={s.chakraSignTextRow}>
-                <View style={s.chakraSignTextWrap}>
-                  <Text style={s.dashHeroLabel}>{language === 'si' ? 'අද සූර්ය රාශිය' : "TODAY'S SIGN"}</Text>
-                  <Text style={s.dashSignNameLarge}>{language === 'si' ? (ZODIAC_NAMES_SI[activeNakIndex] || ZODIAC_NAMES_EN[activeNakIndex]) : ZODIAC_NAMES_EN[activeNakIndex]}</Text>
-                </View>
-                <View style={s.chakraSignSubBadge}>
-                  <Text style={s.dashSignNameSub}>{language === 'si' ? ZODIAC_NAMES_EN[activeNakIndex] : (ZODIAC_NAMES_SI[activeNakIndex] || '')}</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* ═══ NAKSHATRA PILL ═══ */}
-          {nakGuide ? (
-            <View style={s.nakPill}>
-              <View style={s.nakPillRow}>
-                <Ionicons name="star" size={12} color="#DAA520" />
-                <Text style={s.nakPillLabel}>{language === 'si' ? 'අද දවසේ නැකත' : 'Today Nakshatra'}</Text>
-              </View>
-              <Text style={s.nakPillValue} numberOfLines={2}>{nakGuide.title}</Text>
-            </View>
-          ) : null}
-
-          {/* ═══ DIVIDER ═══ */}
-          <View style={s.dashDivider}>
-            <LinearGradient colors={['transparent', 'rgba(218,165,32,0.30)', 'rgba(218,165,32,0.30)', 'transparent']} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} />
-          </View>
-
-          {/* ═══ PANCHANGA GRID ═══ */}
-          <Text style={s.dashGridTitle}>{language === 'si' ? 'අද දවසේ ග්‍රහ චාරය' : "Today's Timing Guide"}</Text>
-          <View style={s.dashGrid}>
-            <View style={s.dashCell}>
-              <View style={[s.dashCellIcon, { backgroundColor: 'rgba(218,165,32,0.12)' }]}>
-                <Ionicons name="sunny-outline" size={18} color="#DAA520" />
-              </View>
-              <Text style={s.dashCellValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{sunriseVal}</Text>
-              <Text style={s.dashCellLabel}>{language === 'si' ? 'සූර්යෝදාව' : t('sunrise')}</Text>
-            </View>
-            <View style={s.dashCell}>
-              <View style={[s.dashCellIcon, { backgroundColor: 'rgba(100,120,180,0.12)' }]}>
-                <Ionicons name="moon-outline" size={18} color="#8B9DC3" />
-              </View>
-              <Text style={s.dashCellValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{sunsetVal}</Text>
-              <Text style={s.dashCellLabel}>{language === 'si' ? 'සූර්ය අස්තමය' : t('sunset')}</Text>
-            </View>
-            <View style={s.dashCell}>
-              <View style={[s.dashCellIcon, { backgroundColor: 'rgba(160,140,60,0.12)' }]}>
-                <Ionicons name="sparkles-outline" size={18} color="#C8A960" />
-              </View>
-              <Text style={s.dashCellValue} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.7}>{tithiGuide ? tithiGuide.title : '--'}</Text>
-              <Text style={s.dashCellLabel}>{tithiGuide ? tithiGuide.label : (language === 'si' ? 'තිථිය' : 'Tithi')}</Text>
-            </View>
-            <View style={s.dashCell}>
-              <View style={[s.dashCellIcon, { backgroundColor: 'rgba(140,100,60,0.12)' }]}>
-                <Ionicons name="infinite-outline" size={18} color="#B8860B" />
-              </View>
-              <Text style={s.dashCellValue} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.7}>{yogaGuide ? yogaGuide.title : '--'}</Text>
-              <Text style={s.dashCellLabel}>{yogaGuide ? yogaGuide.label : (language === 'si' ? 'යෝගය' : 'Yoga')}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* ═══ RAHU KALAYA — Separate card, no scroll animation ═══ */}
-        {data && data.rahuKalaya && (
-          <View style={[s.rahuCard, rahuActive && s.rahuCardActive]}>
-            <LinearGradient
-              colors={rahuActive
-                ? ['rgba(26,21,10,0.90)', 'rgba(80,20,20,0.25)', 'rgba(26,21,10,0.90)']
-                : ['rgba(26,21,10,0.90)', 'rgba(10,40,25,0.20)', 'rgba(26,21,10,0.90)']
-              }
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            {rahuActive && (
-              <Animated.View style={[s.rahuEdgeGlow, coronaPulseStyle]} />
-            )}
-
-            <View style={s.rahuCardTop}>
-              <View style={s.rahuTitleRow}>
-                <View style={[s.rahuIconCircle, rahuActive ? s.rahuIconCircleActive : s.rahuIconCircleSafe]}>
-                  <Animated.View style={rahuActive ? coronaPulseStyle : undefined}>
-                    <Ionicons
-                      name={rahuActive ? 'warning' : 'shield-checkmark'}
-                      size={20}
-                      color={rahuActive ? '#FCA5A5' : '#6EE7B7'}
-                    />
-                  </Animated.View>
-                </View>
-                <Text
-                  style={[s.rahuCardTitle, rahuActive && s.rahuCardTitleActive, language === 'si' && s.sinhalaTextFlow]}
-                  numberOfLines={2}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.82}
-                >
-                  {rahuActive
-                    ? (language === 'si' ? 'දැඩි රාහු කාලය උදාවෙලා' : 'Caution Window')
-                    : (language === 'si' ? 'අද දවසේ රාහු කාලය' : 'Caution Window')
-                  }
-                </Text>
-              </View>
-              <View style={s.rahuStatusBadge}>
-                <Animated.View style={[s.rahuStatusDot, { backgroundColor: rahuActive ? '#EF4444' : '#34D399' }, rahuActive && coronaPulseStyle]} />
-                <Text
-                  style={[s.rahuStatusText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }, language === 'si' && s.sinhalaTextFlow]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.72}
-                >
-                  {rahuActive
-                    ? (language === 'si' ? 'මේ වෙලාවේ බලපවත්වයි' : 'ACTIVE')
-                    : (language === 'si' ? 'රාහු කාලයෙන් නිදහස්' : 'SAFE')
-                  }
-                </Text>
-              </View>
-            </View>
-
-            <View style={[s.rahuTimeRow, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.06)' : 'rgba(0,0,0,0.15)' }]}>
-              <View style={s.rahuTimeBlock}>
-                <Text style={[s.rahuTimeLabel, language === 'si' && s.sinhalaTextFlow]}>{language === 'si' ? 'ඇරඹෙන වෙලාව' : 'Starts'}</Text>
-                <Text style={[s.rahuTimeValue, rahuActive && s.rahuTimeValueActive]}>
-                  {data.rahuKalaya.startFormatted ? data.rahuKalaya.startFormatted.display : toSLT(data.rahuKalaya.start, t)}
-                </Text>
-              </View>
-              <View style={[s.rahuTimeDivider, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.3)' : 'rgba(52,211,153,0.2)' }]} />
-              <View style={s.rahuTimeBlock}>
-                <Text style={[s.rahuTimeLabel, language === 'si' && s.sinhalaTextFlow]}>{language === 'si' ? 'අවසන් වන වෙලාව' : 'Ends'}</Text>
-                <Text style={[s.rahuTimeValue, rahuActive && s.rahuTimeValueActive]}>
-                  {data.rahuKalaya.endFormatted ? data.rahuKalaya.endFormatted.display : toSLT(data.rahuKalaya.end, t)}
-                </Text>
-              </View>
-            </View>
-
-            {getRahuCountdown() ? (
-              <View style={[s.rahuCountdownBar, { backgroundColor: rahuActive ? 'rgba(239,68,68,0.12)' : 'rgba(52,211,153,0.08)' }]}>
-                <Ionicons name="time-outline" size={13} color={rahuActive ? '#FCA5A5' : '#6EE7B7'} />
-                <Text style={[s.rahuCountdownText, { color: rahuActive ? '#FCA5A5' : '#6EE7B7' }, language === 'si' && s.sinhalaTextFlow]}>
-                  {rahuActive
-                    ? (language === 'si' ? 'තව ' + getRahuCountdown() + ' කින් අවසන් වේ' : 'Ends in ' + getRahuCountdown())
-                    : (language === 'si' ? 'තව ' + getRahuCountdown() + ' කින් ඇරඹේ' : 'Starts in ' + getRahuCountdown())
-                  }
-                </Text>
-              </View>
-            ) : null}
-
-            <View style={s.rahuExplanationContainer}>
-              <Text style={[s.rahuExplanationText, language === 'si' && s.sinhalaTextFlow]}>
-                {language === 'si' 
-                  ? 'රාහු කාලය යනු සුබ වැඩ පටන් ගැනීමට නුසුදුසු බව පිළිගැනෙන කෙටි කාල සීමාවකි.' 
-                  : 'Rahu Kalaya is an inauspicious time window during which starting important new work is generally avoided.'}
-              </Text>
-            </View>
-
-            <View style={[s.rahuCardBorder, { borderColor: rahuActive ? 'rgba(239,68,68,0.25)' : 'rgba(52,211,153,0.15)' }]} />
-          </View>
-        )}
-      </View>
-    );
-  }
-
+  // (moved to components/CosmicIdentity.js — rendered on the Profile tab)
+  // (removed in v3 viral redesign)
+  // (removed in v3 viral redesign)
+  // (removed in v3 viral redesign)
+  // (removed in v3 viral redesign)
   /* Today's Sky info is now integrated into the dashboard hero */
 
   function scrollToWeeklyLagna() {
@@ -1768,122 +2503,132 @@ export default function HomeScreen() {
   }, [tithiNumForMoon, language]);
 
   function renderMoonPhaseCard() {
-    var tithiNum = tithiNumForMoon;
-    var illum = tithiNum <= 15 ? (tithiNum - 1) / 14 : (30 - tithiNum) / 14;
-    illum = Math.max(0, Math.min(1, illum));
-    var illumPct = Math.round(illum * 100);
-
-    var phaseNamesEn = ['New Moon','Waxing Crescent','First Quarter','Waxing Gibbous','Full Moon','Waning Gibbous','Last Quarter','Waning Crescent'];
-    var phaseNamesSi = ['අමාවක','පුර පක්ෂයේ සිහින් සඳ','පුර අටවක','පිරීගෙන එන සඳ','පසළොස්වක පෝය','අඩුවීගෙන යන සඳ','අව අටවක','අව පක්ෂයේ සිහින් සඳ'];
-    var phaseIdx = tithiNum <= 1 ? 0 : tithiNum <= 4 ? 1 : tithiNum <= 8 ? 2 : tithiNum <= 14 ? 3 : tithiNum === 15 ? 4 : tithiNum <= 19 ? 5 : tithiNum <= 23 ? 6 : 7;
-    var phaseName = language === 'si' ? phaseNamesSi[phaseIdx] : phaseNamesEn[phaseIdx];
-
-    var moonDisplaySize = Math.min(SCREEN_WIDTH * 0.68, 280);
-
-    var dates = moonDates;
-
-    var selectedTithi = ((tithiNum + selectedDayOffset - 1 + 300) % 30) + 1;
-    var selIllum = selectedTithi <= 15 ? (selectedTithi - 1) / 14 : (30 - selectedTithi) / 14;
-    selIllum = Math.max(0, Math.min(1, selIllum));
-    var selIllumPct = Math.round(selIllum * 100);
-    var selPhaseIdx = selectedTithi <= 1 ? 0 : selectedTithi <= 4 ? 1 : selectedTithi <= 8 ? 2 : selectedTithi <= 14 ? 3 : selectedTithi === 15 ? 4 : selectedTithi <= 19 ? 5 : selectedTithi <= 23 ? 6 : 7;
-    var selPhaseName = language === 'si' ? phaseNamesSi[selPhaseIdx] : phaseNamesEn[selPhaseIdx];
-
-    // Label for selected date
+    var selectedTithi = selectedTithiTop;
+    var selIllumPct = Math.round(selIllumTop * 100);
+    var phaseIdx = selectedTithi <= 1 ? 0 : selectedTithi <= 4 ? 1 : selectedTithi <= 8 ? 2 : selectedTithi <= 14 ? 3 : selectedTithi === 15 ? 4 : selectedTithi <= 19 ? 5 : selectedTithi <= 23 ? 6 : 7;
+    var pc = MOON_PHASE_CONTENT[phaseIdx];
+    var content = language === 'si' ? pc.si : pc.en;
+    var isPoya = selectedTithi === 15;
+    var isNew = selectedTithi <= 1;
+    var isWaxing = selectedTithi > 1 && selectedTithi < 15;
+    var isDarkMoon = selectedTithi >= 29 || selectedTithi <= 2;
     var selDate = new Date(); selDate.setDate(selDate.getDate() + selectedDayOffset);
     var selDateLabel = selectedDayOffset === 0
       ? (language === 'si' ? 'අද' : 'Today')
-      : selDate.toLocaleDateString('en', { month: 'short', day: 'numeric' });
-
-    var lunarDust = [
-      [18, 56, 1.2, 0.34], [42, 132, 0.9, 0.22], [64, 254, 1.1, 0.28], [92, 82, 0.7, 0.22],
-      [118, 182, 1.4, 0.32], [138, 338, 0.8, 0.24], [166, 42, 1.0, 0.28], [192, 136, 0.7, 0.20],
-      [214, 280, 1.2, 0.30], [242, 70, 0.8, 0.22], [268, 198, 1.5, 0.34], [296, 318, 0.9, 0.24],
-      [324, 112, 1.0, 0.28], [342, 248, 0.7, 0.20], [30, 382, 0.8, 0.22], [78, 430, 1.1, 0.28],
-      [128, 492, 0.7, 0.20], [204, 434, 1.0, 0.26], [276, 480, 0.9, 0.24], [334, 406, 1.2, 0.30],
-    ];
+      : selDate.toLocaleDateString(language === 'si' ? 'si-LK' : 'en', { month: 'short', day: 'numeric' });
+    var trendChip = isPoya
+      ? { icon: 'sunny-outline', text: language === 'si' ? 'පූර්ණ සඳ' : 'Full power', color: '#FFE9A8' }
+      : isNew
+        ? { icon: 'ellipse-outline', text: language === 'si' ? 'අලුත් චක්‍රය' : 'New cycle', color: '#B7A6F0' }
+        : isWaxing
+          ? { icon: 'trending-up-outline', text: language === 'si' ? 'වැඩෙන සඳ' : 'Waxing', color: '#86EFAC' }
+          : { icon: 'trending-down-outline', text: language === 'si' ? 'බසින සඳ' : 'Waning', color: '#7DD3FC' };
+    var ringCenter = MOON_RING_SIZE / 2;
 
     return (
       <Animated.View entering={FadeInDown.delay(550).springify()}>
-        <View style={mp.pureSpaceContainer}>
-          <LinearGradient
-            colors={['#120B02', '#050301', '#000000', '#1A1003']}
-            locations={[0, 0.36, 0.72, 1]}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0.15, y: 0 }} end={{ x: 0.85, y: 1 }}
-            pointerEvents="none"
-          />
-          <LinearGradient
-            colors={['rgba(218,165,32,0.24)', 'rgba(218,165,32,0.06)', 'transparent']}
-            locations={[0, 0.42, 1]}
-            style={mp.lunarGoldVeil}
-            start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
-            pointerEvents="none"
-          />
-          <Svg width="100%" height="100%" viewBox="0 0 360 560" preserveAspectRatio="none" style={mp.lunarDustField} pointerEvents="none">
-            {lunarDust.map(function (dot, i) {
-              return <Circle key={'ld' + i} cx={dot[0]} cy={dot[1]} r={dot[2]} fill="#F4E4BC" opacity={dot[3]} />;
+        <View style={mp.card}>
+          <LinearGradient colors={['#0B0714', '#070410', '#040208', '#120B03']} locations={[0, 0.4, 0.75, 1]} style={StyleSheet.absoluteFill} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} />
+          <LinearGradient colors={['rgba(183,166,240,0.10)', 'transparent']} style={mp.violetVeil} pointerEvents="none" />
+          <LinearGradient colors={['transparent', 'rgba(218,165,32,0.10)']} style={mp.goldFloor} pointerEvents="none" />
+          <Svg width="100%" height="100%" viewBox="0 0 360 620" preserveAspectRatio="none" style={StyleSheet.absoluteFill} pointerEvents="none">
+            {MOON_DUST.map(function (dot, i) {
+              return <Circle key={'md' + i} cx={dot[0]} cy={dot[1]} r={dot[2]} fill="#F4E4BC" opacity={dot[3]} />;
             })}
-            <Line x1="38" y1="96" x2="112" y2="72" stroke="rgba(218,165,32,0.12)" strokeWidth="0.5" />
-            <Line x1="226" y1="92" x2="320" y2="124" stroke="rgba(218,165,32,0.10)" strokeWidth="0.5" />
-            <Line x1="52" y1="462" x2="146" y2="438" stroke="rgba(218,165,32,0.09)" strokeWidth="0.5" />
+            <Path d={sparklePath(46, 96, 6)} fill="rgba(244,228,188,0.40)" />
+            <Path d={sparklePath(314, 130, 4.5)} fill="rgba(183,166,240,0.38)" />
+            <Path d={sparklePath(290, 480, 5)} fill="rgba(244,228,188,0.30)" />
           </Svg>
 
-           {/* Subtle Date Marker (Top) */}
-          <Animated.View entering={FadeIn.delay(200).duration(500)} style={mp.subtleDateContainer}>
-             <Text style={mp.lunarKicker}>{language === 'si' ? 'චන්ද්‍ර ගමන' : 'LUNAR CYCLE'}</Text>
-             <Text style={mp.subtleDateText}>{selDateLabel.toUpperCase()}</Text>
-          </Animated.View>
+          <View style={mp.header}>
+            <View>
+              <Text style={mp.kicker}>{language === 'si' ? 'චන්ද්‍ර චක්‍රය' : 'LUNAR CYCLE'}</Text>
+              <Text style={mp.headerDate}>{selDateLabel.toUpperCase()}</Text>
+            </View>
+            {isPoya ? (
+              <View style={mp.poyaBadge}>
+                <Ionicons name="moon" size={12} color="#FFE9A8" />
+                <Text style={mp.poyaText}>{language === 'si' ? 'පෝය දිනය' : 'POYA DAY'}</Text>
+              </View>
+            ) : null}
+          </View>
 
-          {/* Central Moon with Ring Tracker */}
-          <View style={mp.moonRingWrapper}>
-            <Svg width={moonDisplaySize + 24} height={moonDisplaySize + 24} viewBox={`0 0 ${moonDisplaySize + 24} ${moonDisplaySize + 24}`} style={{ position: 'absolute' }}>
-              <Circle
-                cx={(moonDisplaySize + 24)/2} cy={(moonDisplaySize + 24)/2} r={(moonDisplaySize + 20)/2}
-                stroke="rgba(255,255,255,0.06)" strokeWidth="1.5" fill="none"
-              />
-              <Circle
-                cx={(moonDisplaySize + 24)/2} cy={(moonDisplaySize + 24)/2} r={(moonDisplaySize + 20)/2}
-                stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" fill="none"
-                strokeDasharray={((moonDisplaySize + 20)/2) * 2 * Math.PI}
-                strokeDashoffset={(((moonDisplaySize + 20)/2) * 2 * Math.PI) * (1 - selIllum)}
-                strokeLinecap="round"
-                rotation="-90" origin={`${(moonDisplaySize + 24)/2}, ${(moonDisplaySize + 24)/2}`}
+          {/* floating moon inside an animated illumination ring */}
+          <Animated.View style={[mp.moonStage, moonBobStyle]}>
+            <View style={mp.moonHalo} />
+            <Svg width={MOON_RING_SIZE} height={MOON_RING_SIZE} viewBox={'0 0 ' + MOON_RING_SIZE + ' ' + MOON_RING_SIZE} style={{ position: 'absolute' }}>
+              <Defs>
+                <SvgLinearGradient id="moonArcGrad" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#FFF8E7" />
+                  <Stop offset="1" stopColor="#DAA520" />
+                </SvgLinearGradient>
+              </Defs>
+              {Array.from({ length: 24 }).map(function (_, i) {
+                var a = (i * 15 - 90) * Math.PI / 180;
+                var major = i % 6 === 0;
+                return (
+                  <Line key={'mt' + i}
+                    x1={ringCenter + (MOON_RING_R - 9) * Math.cos(a)} y1={ringCenter + (MOON_RING_R - 9) * Math.sin(a)}
+                    x2={ringCenter + (MOON_RING_R - (major ? 15 : 12)) * Math.cos(a)} y2={ringCenter + (MOON_RING_R - (major ? 15 : 12)) * Math.sin(a)}
+                    stroke={major ? 'rgba(245,213,122,0.45)' : 'rgba(232,197,106,0.20)'}
+                    strokeWidth={major ? 1.6 : 1} strokeLinecap="round" />
+                );
+              })}
+              <Circle cx={ringCenter} cy={ringCenter} r={MOON_RING_R} stroke="rgba(255,255,255,0.07)" strokeWidth="3" fill="none" />
+              <ACircle
+                cx={ringCenter} cy={ringCenter} r={MOON_RING_R}
+                stroke="url(#moonArcGrad)" strokeWidth="3" strokeLinecap="round" fill="none"
+                strokeDasharray={MOON_RING_C}
+                animatedProps={moonRingProps}
+                rotation="-90" origin={ringCenter + ', ' + ringCenter}
               />
             </Svg>
-            <RealisticMoon size={moonDisplaySize} tithiNum={selectedTithi} animate={!skipHeavy} showStars={!skipHeavy} />
-          </View>
+            <RealisticMoon size={MOON_SIZE} tithiNum={selectedTithi} animate={!skipHeavy} showStars={false} />
+            {isDarkMoon ? <View style={mp.darkMoonRim} pointerEvents="none" /> : null}
+          </Animated.View>
 
-          {/* Elegant Typography */}
-          <View style={mp.typographyWrapper}>
-             <Text style={mp.elegantPhaseName}>{selPhaseName}</Text>
-             <Text style={mp.illuminationPercentage}>{selIllumPct}% ILLUMINATION</Text>
+          {/* phase story — crossfades when the selected day changes */}
+          <Animated.View key={'ph' + selectedTithi} entering={FadeInDown.duration(320)} style={mp.infoBlock}>
+            <Text style={mp.phaseName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{content.name}</Text>
+            <Text style={mp.essence} numberOfLines={1}>{content.essence}</Text>
+            <View style={mp.chipRow}>
+              <View style={[mp.chip, { borderColor: 'rgba(255,233,168,0.30)' }]}>
+                <Ionicons name="contrast-outline" size={11} color="#FFE9A8" />
+                <Text style={[mp.chipText, { color: '#FFE9A8' }]} numberOfLines={1}>{selIllumPct}% {language === 'si' ? 'ආලෝකය' : 'LIT'}</Text>
+              </View>
+              <View style={[mp.chip, { borderColor: trendChip.color + '4D' }]}>
+                <Ionicons name={trendChip.icon} size={11} color={trendChip.color} />
+                <Text style={[mp.chipText, { color: trendChip.color }]} numberOfLines={1}>{trendChip.text}</Text>
+              </View>
+            </View>
+            <Text style={mp.body}>{content.body}</Text>
+            <View style={mp.dosRow}>
+              {content.dos.map(function (d, i) {
+                return (
+                  <View key={'mdo' + i} style={mp.doChip}>
+                    <Ionicons name="sparkles-outline" size={10} color="#DAA520" />
+                    <Text style={mp.doChipText}>{d}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Animated.View>
 
-             <Text style={mp.crispDescription}>
-              {language === 'si'
-                ? (selPhaseIdx <= 3 ? 'මෙම චන්ද්‍ර අවධිය අලුත් බලාපොරොත්තු සහ වර්ධනයේ කාලයකි. නව අරමුණු සහ ආරම්භයන් සඳහා ඉතා සුබය.' : selPhaseIdx === 4 ? 'චන්ද්‍රයාගේ උච්චතම ශක්තිය මේ මොහොතේ මුදාහැරේ. ඔබේ ඉලක්ක වෙනුවෙන් ක්‍රියා කිරීමට මෙම පැහැදිලි ශක්තිය භාවිතා කරන්න.' : 'මනස නිදහස් කරගෙන ආවර්ජනය කිරීමට සුදුසු කාලයකි. අනවශ්‍ය දේවල් අතහැර අලුත් ආරම්භයකට සූදානම් වන්න.')
-                : 'This ' + selPhaseName + ' moon phase signifies ' + (selPhaseIdx <= 3 ? 'new beginnings and natural growth. An ideal time to start fresh projects and set meaningful intentions.' : selPhaseIdx === 4 ? 'peak lunar energy and clarity. Harness this powerful phase to take action on your goals.' : 'a time for deep reflection and rest. Release what no longer serves you and prepare for renewal.')}
-            </Text>
-          </View>
-
-          {/* Horizontal Timeline (Moved Below Text) */}
           <ScrollView
             ref={moonScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={mp.timelineScrollPadded}
+            contentContainerStyle={mp.timeline}
             decelerationRate="fast"
             snapToInterval={MOON_ITEM_W}
           >
-            {dates.map(function (dt, i) {
-              var isSelected = dt.offset === selectedDayOffset;
-              var isKeyPhase = dt.tithi === 1 || dt.tithi === 15;
+            {moonDates.map(function (dt) {
               return (
                 <MoonTimelineItem
                   key={dt.offset}
                   dt={dt}
-                  isSelected={isSelected}
-                  isKeyPhase={isKeyPhase}
+                  isSelected={dt.offset === selectedDayOffset}
+                  isKeyPhase={dt.tithi === 1 || dt.tithi === 15}
                   offset={dt.offset}
                   onSelect={setSelectedDayOffset}
                   mpStyles={mp}
@@ -1891,90 +2636,14 @@ export default function HomeScreen() {
               );
             })}
           </ScrollView>
+          <View style={mp.innerFrame} pointerEvents="none" />
         </View>
       </Animated.View>
     );
   }
 
-  /* ── Daily Cosmic Ratings ── */
-  function renderDailyRatings() {
-    var seed = new Date().getDate() * 7 + new Date().getMonth() * 13;
-    var tNum = data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number ? data.panchanga.tithi.number : 8;
-    var nNum = data && data.panchanga && data.panchanga.nakshatra && data.panchanga.nakshatra.number ? data.panchanga.nakshatra.number : 5;
-    function genScore(off) { return Math.min(98, Math.max(30, ((seed + off * 17 + tNum * 3 + nNum * 5) % 65) + 30)); }
-
-    var ratings = [
-      { label: language === 'si' ? 'සෞඛ්‍යය හා කය' : 'Health', icon: 'fitness-outline', score: genScore(1), color: '#E07A7A' },
-      { label: language === 'si' ? 'ගමන් බිමන් හා වෙනස්වීම්' : 'Travel', icon: 'navigate-outline', score: genScore(2), color: '#8AA8E0' },
-      { label: language === 'si' ? 'මුදල් හා වාසි' : 'Money', icon: 'wallet-outline', score: genScore(3), color: '#E8C07A' },
-      { label: language === 'si' ? 'රැකියාව හා ඉලක්ක' : 'Work', icon: 'briefcase-outline', score: genScore(4), color: '#B7A6F0' },
-      { label: language === 'si' ? 'පවුල හා බැඳීම්' : 'Family', icon: 'people-outline', score: genScore(5), color: '#E07A9A' },
-      { label: language === 'si' ? 'සතුට හා සුවය' : 'Beauty', icon: 'sparkles-outline', score: genScore(6), color: '#6FBFA0' },
-    ];
-
-    return (
-      <Animated.View entering={FadeInDown.delay(680).springify()}>
-        <View style={dr.card}>
-          <LinearGradient colors={['#1A150A', '#15100A', '#0F0B06']} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-          <Text style={dr.title}>{language === 'si' ? 'ඔයාගෙ කේන්දරේට අනුව අද දවස හැඩගැසෙන හැටි' : 'Daily horoscope ratings'}</Text>
-          <View style={dr.grid}>
-            {ratings.map(function (r, i) {
-              return (
-                <View key={i} style={dr.item}>
-                  <View style={dr.labelRow}>
-                    <View style={[dr.ratingIcon, { backgroundColor: r.color + '14', borderColor: r.color + '35' }]}>
-                      <Ionicons name={r.icon} size={12} color={r.color} />
-                    </View>
-                    <Text style={dr.label}>{r.label}</Text>
-                  </View>
-                  <View style={dr.barRow}>
-                    <View style={[dr.scoreBadge, { backgroundColor: r.color + '22', borderColor: r.color + '44' }]}>
-                      <Text style={[dr.scoreNum, { color: r.color }]}>{r.score}</Text>
-                    </View>
-                    <View style={dr.barTrack}>
-                      <Animated.View entering={FadeInDown.delay(380 + i * 50).springify()} style={[dr.barFill, { width: r.score + '%', backgroundColor: r.color }]} />
-                      <View style={[dr.barDot, { left: r.score + '%', backgroundColor: r.color }]} />
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      </Animated.View>
-    );
-  }
-
-  /* ── Lucky Numbers ── */
-  function renderLuckyNumbers() {
-    var seed2 = new Date().getDate() * 11 + new Date().getMonth() * 7 + new Date().getFullYear();
-    var tNum2 = data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number ? data.panchanga.tithi.number : 5;
-    var nums = [];
-    for (var ni = 0; ni < 4; ni++) { nums.push(((seed2 + ni * 13 + tNum2 * 3) % 36) + 1); }
-    nums = nums.filter(function (n, i) { return nums.indexOf(n) === i; });
-    while (nums.length < 4) nums.push(((seed2 + nums.length * 23) % 36) + 1);
-    var numColors = [HT.gold, HT.purple, HT.success, HT.blue];
-
-    return (
-      <Animated.View entering={FadeInDown.delay(780).springify()}>
-        <View style={ln.card}>
-          <LinearGradient colors={['#1A150A', '#15100A', '#0F0B06']} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} />
-          <SectionHeader title={language === 'si' ? 'අද දවසේ ඔයාගේ ජය අංක' : "Today's lucky numbers"} iconName="trophy-outline" iconColor={HT.gold} delay={320} />
-          <View style={ln.row}>
-            {nums.map(function (n, i) {
-              return (
-                <Animated.View key={i} entering={FadeInUp.delay(400 + i * 80).springify()} style={[ln.circle, { borderColor: numColors[i] + '35' }]}>
-                  <LinearGradient colors={[numColors[i] + '08', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
-                  <Text style={[ln.num, { color: numColors[i] }]}>{n}</Text>
-                </Animated.View>
-              );
-            })}
-          </View>
-        </View>
-      </Animated.View>
-    );
-  }
-
+  // (removed in v3 viral redesign)
+  // (removed in v3 viral redesign)
   /* ── Daily Intention ── */
   function renderDailyMantra() {
     var mantrasEn = [
@@ -2011,7 +2680,7 @@ export default function HomeScreen() {
       'මම යන්න ඕන පාර මට පැහැදිලියි, කිසිම බයක් නැතුව මම ඒ පාරේ අඩිය තියනවා.',
       'මගේ ඇතුළෙම තියෙන ශක්තියයි දැනුමයි එක්ක ඉදිරියට හැදෙන අවස්ථා ඔක්කොම මගේ කරගන්නවා.',
     ];
-    var dayIdx = Math.floor(Date.now() / (24 * 60 * 60 * 1000)) % mantrasEn.length;
+    var dayIdx = ((sltDayIndex() % mantrasEn.length) + mantrasEn.length) % mantrasEn.length;
 
     return (
       <Animated.View entering={FadeInDown.delay(850).springify()}>
@@ -2111,227 +2780,10 @@ export default function HomeScreen() {
     );
   }
 
-  /* ── Birth Summary — Glass Cosmic Identity ── */
-  function renderBirthSummary() {
-    if (!chartData) return null;
-    var lagna = chartData.lagna;
-    var moonSign = chartData.moonSign;
-    var sunSign = chartData.sunSign;
-    var nakshatra = chartData.nakshatra;
-
-    var lagnaName = language === 'si' && lagna?.sinhala ? lagna.sinhala : lagna?.english || '--';
-    var lagnaEn = lagna?.english || '';
-    var moonName = language === 'si' && moonSign?.sinhala ? moonSign.sinhala : moonSign?.english || '--';
-    var sunName = language === 'si' && sunSign?.sinhala ? sunSign.sinhala : sunSign?.english || '--';
-    var birthFocusGuide = nakshatra ? getPanchangaGuidance('nakshatra', nakshatra, language) : null;
-    var nakName = birthFocusGuide ? birthFocusGuide.title : '--';
-    var lagnaIdx = lagna?.rashiId ? lagna.rashiId - 1 : 0;
-
-    return (
-      <Animated.View entering={FadeInDown.delay(300).springify()}>
-        <View style={s.glassIdentity}>
-          <LinearGradient colors={['#1A150A', '#15100A', '#0F0B06', '#12100B']} locations={[0, 0.3, 0.65, 1]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-          <LinearGradient colors={['rgba(218,165,32,0.06)', 'transparent', 'rgba(218,165,32,0.04)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-          <LinearGradient colors={['rgba(218,165,32,0.08)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
-          {/* Inner frame */}
-          <View style={{ position: 'absolute', top: 5, left: 5, right: 5, bottom: 5, borderRadius: 18, borderWidth: 0.5, borderColor: 'rgba(218,165,32,0.12)' }} />
-
-          {/* Title */}
-          <View style={s.glassIdHeader}>
-            <View style={s.glassIdMark}>
-              <Ionicons name="finger-print-outline" size={15} color={HT.gold} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={s.glassIdKicker}>{language === 'si' ? 'ඔබේ උපන් ග්‍රහ මුද්‍රාව' : 'BIRTH SIGNATURE'}</Text>
-              <Text style={s.glassIdTitle}>{language === 'si' ? 'ඔබේ ග්‍රහ අනන්‍යතාව' : 'Your Cosmic Identity'}</Text>
-            </View>
-          </View>
-
-          {/* ═══ LAGNA HERO — Big featured card ═══ */}
-          <View style={s.lagnaHero}>
-            <LinearGradient colors={['rgba(218,165,32,0.10)', 'rgba(147,51,234,0.04)', 'rgba(0,0,0,0)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-            <View style={s.lagnaHeroLeft}>
-              <View style={s.lagnaSignBig}>
-                <LinearGradient colors={['rgba(244,228,188,0.13)', 'rgba(218,165,32,0.04)', 'rgba(0,0,0,0.20)']} style={StyleSheet.absoluteFillObject} />
-                <View style={s.lagnaSignHalo} />
-                <Image source={ZODIAC_IMAGES[lagnaIdx]} style={s.lagnaSignImage} />
-              </View>
-            </View>
-            <View style={s.lagnaHeroRight}>
-              <Text style={[s.lagnaHeroLabel, { color: HT.textMuted }]}>{language === 'si' ? 'ලග්නය' : 'RISING SIGN'}</Text>
-              <Text style={[s.lagnaHeroName, { color: HT.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>{lagnaName}</Text>
-              {lagnaEn && language === 'si' ? <Text style={[s.lagnaHeroSub, { color: HT.textGold }]}>{lagnaEn}</Text> : null}
-              {lagna?.lord ? (
-                <View style={s.lagnaLordPill}>
-                  <Ionicons name="planet" size={11} color={HT.gold} />
-                  <Text style={s.lagnaLordText}>{language === 'si' ? 'පාලක ග්‍රහයා: ' : 'Ruling Energy: '}{language === 'si' && PLANET_NAMES_SI[lagna.lord] ? PLANET_NAMES_SI[lagna.lord] : lagna.lord}</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-
-          {/* ═══ 3 MINI GLASS CARDS — Moon / Sun / Nakshatra ═══ */}
-          <View style={s.glassTrioRow}>
-            <Animated.View entering={FadeInDown.delay(400).springify()} style={[s.glassTrioCard, { borderColor: HT.blueBg }]}>
-              <LinearGradient colors={[HT.blueBg, 'transparent']} style={StyleSheet.absoluteFill} />
-              <View style={[s.glassTrioIcon, { borderColor: HT.blue + '35', backgroundColor: HT.blue + '12' }]}>
-                <Ionicons name="moon" size={14} color={HT.blue} />
-              </View>
-              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'චන්ද්‍ර රාශිය' : 'Moon Energy'}</Text>
-              <Text style={[s.glassTrioValue, { color: HT.blue }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.72}>{moonName}</Text>
-            </Animated.View>
-
-            <Animated.View entering={FadeInDown.delay(460).springify()} style={[s.glassTrioCard, { borderColor: HT.goldBorder }]}>
-              <LinearGradient colors={[HT.goldSubtle, 'transparent']} style={StyleSheet.absoluteFill} />
-              <View style={[s.glassTrioIcon, { borderColor: HT.gold + '35', backgroundColor: HT.gold + '12' }]}>
-                <Ionicons name="sunny" size={14} color={HT.gold} />
-              </View>
-              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'සූර්ය රාශිය' : 'Sun Energy'}</Text>
-              <Text style={[s.glassTrioValue, { color: HT.gold }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.72}>{sunName}</Text>
-            </Animated.View>
-
-            <Animated.View entering={FadeInDown.delay(520).springify()} style={[s.glassTrioCard, { borderColor: HT.tealBg }]}>
-              <LinearGradient colors={[HT.tealBg, 'transparent']} style={StyleSheet.absoluteFill} />
-              <View style={[s.glassTrioIcon, { borderColor: HT.teal + '35', backgroundColor: HT.teal + '12' }]}>
-                <Ionicons name="sparkles" size={14} color={HT.teal} />
-              </View>
-              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'උපන් නැකත' : 'Birth Focus'}</Text>
-              <Text style={[s.glassTrioValue, { color: HT.teal }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.68}>{nakName}</Text>
-            </Animated.View>
-          </View>
-
-          {/* ═══ 3 MINI GLASS CARDS — Row 2: Nakshatra Pada / Lord / Lagna Nature ═══ */}
-          <View style={[s.glassTrioRow, { paddingTop: 0 }]}>
-            <Animated.View entering={FadeInDown.delay(560).springify()} style={[s.glassTrioCard, { borderColor: 'rgba(168,85,247,0.12)' }]}>
-              <LinearGradient colors={['rgba(168,85,247,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
-              <View style={[s.glassTrioIcon, { borderColor: 'rgba(168,85,247,0.35)', backgroundColor: 'rgba(168,85,247,0.12)' }]}>
-                <Ionicons name="leaf" size={14} color="#A855F7" />
-              </View>
-              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'ස්වභාව රටාව' : 'Nature Style'}</Text>
-              <Text style={[s.glassTrioValue, { color: '#A855F7' }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.68}>{nakshatra?.lord ? (language === 'si' ? nakshatra.lord + ' බලය' : nakshatra.lord + ' Ruled') : '--'}</Text>
-            </Animated.View>
-
-            <Animated.View entering={FadeInDown.delay(620).springify()} style={[s.glassTrioCard, { borderColor: 'rgba(34,211,153,0.12)' }]}>
-              <LinearGradient colors={['rgba(34,211,153,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
-              <View style={[s.glassTrioIcon, { borderColor: 'rgba(34,211,153,0.35)', backgroundColor: 'rgba(34,211,153,0.12)' }]}>
-                <Ionicons name="sync" size={14} color="#22D399" />
-              </View>
-              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'ජීවන රිද්මය' : 'Life Rhythm'}</Text>
-              <Text style={[s.glassTrioValue, { color: '#22D399' }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.68}>{nakshatra?.pada ? (language === 'si' ? 'පාද ' + nakshatra.pada : 'Pada ' + nakshatra.pada + '/4') : '--'}</Text>
-            </Animated.View>
-
-            <Animated.View entering={FadeInDown.delay(680).springify()} style={[s.glassTrioCard, { borderColor: 'rgba(251,191,36,0.12)' }]}>
-              <LinearGradient colors={['rgba(251,191,36,0.08)', 'transparent']} style={StyleSheet.absoluteFill} />
-              <View style={[s.glassTrioIcon, { borderColor: 'rgba(251,191,36,0.35)', backgroundColor: 'rgba(251,191,36,0.12)' }]}>
-                <Ionicons name="star" size={14} color="#FBBF24" />
-              </View>
-              <Text style={[s.glassTrioLabel, { color: HT.textMuted }]}>{language === 'si' ? 'උපන් ගුණය' : 'Birth Quality'}</Text>
-              <Text style={[s.glassTrioValue, { color: '#FBBF24' }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.68}>{lagna?.lord ? (language === 'si' ? lagna.lord + ' ශක්තිය' : lagna.lord + ' Power') : '--'}</Text>
-            </Animated.View>
-          </View>
-        </View>
-      </Animated.View>
-    );
-  }
-
-  /* ── Lagna Chart Card ── */
-  function renderChartCard() {
-    if (!chartData) return null;
-    return (
-      <CosmicCard variant="content" delay={350}>
-        <SectionHeader title={language === 'si' ? 'ඔයාගේ කේන්දර සටහන' : 'Your Birth Chart'} iconName="planet-outline" iconColor={HT.gold} delay={350} />
-        <View style={{ alignItems: 'center' }}>
-          {renderLagnaChart()}
-        </View>
-      </CosmicCard>
-    );
-  }
-
-  /* ── Lagna Palapala ── */
-  function renderLagnaPalapala() {
-    if (!chartData || !chartData.lagnaDetails) return null;
-    var ld = chartData.lagnaDetails;
-    if (!ld.description) return null;
-    var lagnaCopy = getLagnaUiCopy(chartData);
-    var palapalaTitle = language === 'si' ? (ld.sinhala || 'ලග්න පලාපල') : stripSinhalaParenthetical(ld.english || 'Your Rising Sign Reading');
-    var palapalaDescription = language === 'si'
-      ? ((lagnaCopy && lagnaCopy.readingSi) || ld.descriptionSi || ld.description)
-      : ((lagnaCopy && lagnaCopy.readingEn) || stripSinhalaParenthetical(ld.description));
-    var palapalaTraits = language === 'si'
-      ? ((lagnaCopy && lagnaCopy.traitsSi) || ld.traitsSi || [])
-      : ((lagnaCopy && lagnaCopy.traitsEn) || ld.traits || []);
-    var gemValue = localizedLagnaValue(lagnaCopy, 'gem', ld.gem, language);
-    var colorValue = localizedLagnaValue(lagnaCopy, 'color', ld.luckyColor, language);
-    return (
-      <CosmicCard variant="content" delay={400}>
-        <SectionHeader title={palapalaTitle} iconName="sparkles-outline" iconColor={HT.gold} delay={400} />
-        <Text style={s.palapalaText}>
-          {palapalaDescription}
-        </Text>
-        {palapalaTraits && palapalaTraits.length > 0 && (
-          <View style={s.traitsRow}>
-            {palapalaTraits.map(function (trait, i) {
-              return (
-                <View key={i} style={s.traitChip}>
-                  <Text style={s.traitText}>{trait}</Text>
-                </View>
-              );
-            })}
-          </View>
-        )}
-        <View style={s.luckyRow}>
-          {gemValue ? (
-            <View style={s.luckyItem}>
-              <View style={s.luckyItemIcon}><Ionicons name="diamond-outline" size={14} color={HT.gold} /></View>
-              <Text style={s.luckyLabel}>{gemValue}</Text>
-            </View>
-          ) : null}
-          {colorValue ? (
-            <View style={s.luckyItem}>
-              <View style={s.luckyItemIcon}><Ionicons name="color-palette-outline" size={14} color={HT.gold} /></View>
-              <Text style={s.luckyLabel}>{colorValue}</Text>
-            </View>
-          ) : null}
-        </View>
-      </CosmicCard>
-    );
-  }
-
-  /* ── Personality Traits ── */
-  function renderPersonality() {
-    if (!chartData || !chartData.personality) return null;
-    var p = chartData.personality;
-    var lagnaCopy = getLagnaUiCopy(chartData);
-    var personalitySummary = lagnaCopy ? (language === 'si' ? lagnaCopy.personalitySi : lagnaCopy.personalityEn) : null;
-    var traitsSource = language === 'si'
-      ? ((lagnaCopy && lagnaCopy.traitsSi) || p.mainTraitsSi || [])
-      : ((lagnaCopy && lagnaCopy.traitsEn) || p.lagnaTraits || p.sunTraits || []);
-    if ((!traitsSource || traitsSource.length === 0) && language !== 'si') {
-      traitsSource = [].concat(p.lagnaTraits || [], p.moonTraits || [], p.sunTraits || []);
-    }
-    var uniqueTraits = traitsSource.filter(function (tr, i) { return traitsSource.indexOf(tr) === i; }).slice(0, 8);
-    if (uniqueTraits.length === 0 && !personalitySummary) return null;
-    var traitColors = ['#FF8C00', '#93C5FD', '#FFB800', '#F87171', '#34D399', '#6EE7B7', '#FFD666', '#A78BFA'];
-
-    return (
-      <CosmicCard variant="content" delay={450}>
-        <SectionHeader title={language === 'si' ? 'ලග්නයෙන් පෙනෙන ඔයාගේ ගති ලක්ෂණ' : 'Your Personality Pattern'} iconName="person-outline" iconColor={HT.gold} delay={450} />
-        {personalitySummary ? <Text style={s.personalityIntro}>{personalitySummary}</Text> : null}
-        {uniqueTraits.length > 0 ? (
-          <View style={s.personalityWrap}>
-            {uniqueTraits.map(function (trait, i) {
-              return (
-                <Animated.View key={i} entering={FadeInUp.delay(500 + i * 40).springify()} style={[s.personalityPill, { borderColor: traitColors[i % traitColors.length] + '28' }]}>
-                  <Text style={[s.personalityText, { color: traitColors[i % traitColors.length] }]}>{trait}</Text>
-                </Animated.View>
-              );
-            })}
-          </View>
-        ) : null}
-      </CosmicCard>
-    );
-  }
-
+  // (moved to components/CosmicIdentity.js — rendered on the Profile tab)
+  // (moved to components/CosmicIdentity.js — rendered on the Profile tab)
+  // (moved to components/CosmicIdentity.js — rendered on the Profile tab)
+  // (moved to components/CosmicIdentity.js — rendered on the Profile tab)
   /* ── Cosmic Shield — Jyotish Daily Intelligence ── */
   function renderCosmicShield() {
     if (!jyotishToday) return null;
@@ -2452,12 +2904,20 @@ export default function HomeScreen() {
               var rawName = typeof yoga === 'string' ? yoga : (yoga.name || yoga.yoga || '');
               var rawDesc = typeof yoga === 'object' ? (yoga.description || yoga.result || '') : '';
               var isCautionPattern = (typeof yoga === 'object' && yoga.isAuspicious === false) || /avoid|challenging|inauspicious|difficult|bad|obstacle/i.test(rawName + ' ' + rawDesc);
-              var yName = isCautionPattern
-                ? (language === 'si' ? 'කල්පනාකාරී වියයුතු කාලයක්' : 'Careful Timing Pattern')
-                : (language === 'si' ? 'ඉතාම හොඳ කාලයක්' : 'Supportive Timing Pattern');
-              var yDesc = isCautionPattern
+              // Show the REAL yoga name the engine computed (with Sinhala variant if provided),
+              // instead of collapsing every yoga into one of two generic templates.
+              var localName = language === 'si' && typeof yoga === 'object' && (yoga.nameSi || yoga.sinhala)
+                ? (yoga.nameSi || yoga.sinhala)
+                : (rawName || (isCautionPattern
+                    ? (language === 'si' ? 'කල්පනාකාරී කාලයක්' : 'Careful Timing Pattern')
+                    : (language === 'si' ? 'සුබ කාලයක්' : 'Supportive Timing Pattern')));
+              var yName = /yoga|yogaya/i.test(localName) || language === 'si' ? localName : localName + ' Yoga';
+              var localDesc = language === 'si' && typeof yoga === 'object' && (yoga.descriptionSi || yoga.resultSi)
+                ? (yoga.descriptionSi || yoga.resultSi)
+                : rawDesc;
+              var yDesc = localDesc || (isCautionPattern
                 ? (language === 'si' ? 'හදිසි තීරණ ගැනීමේදී ටිකක් පරිස්සම් වෙන්න. මොනදේ කලත් දෙවරක් හිතලා බලන්න.' : 'Double-check important work and avoid rushed decisions.')
-                : (language === 'si' ? 'දිගුකාලීන සැලසුම් වලට, අලුත් තීරණ වලට මේ වෙලාව ගොඩක් හොඳයි.' : 'Use it for steady progress, planning, and well-considered choices.');
+                : (language === 'si' ? 'දිගුකාලීන සැලසුම් වලට, අලුත් තීරණ වලට මේ වෙලාව ගොඩක් හොඳයි.' : 'Use it for steady progress, planning, and well-considered choices.'));
               return (
                 <Animated.View key={i} entering={FadeInUp.delay(380 + i * 50).springify()}>
                   <View style={[cs.yogaPill, { borderColor: yColor + '30' }]}>
@@ -2565,97 +3025,8 @@ export default function HomeScreen() {
     );
   }
 
-  /* ── Auspicious Periods ── */
-  function getAuspiciousAdvice(period) {
-    var name = (period && period.name) || '';
-    var ruler = (period && period.ruler) || '';
-    var type = (period && period.type) || '';
-    var key = ruler || name;
-
-    if (type === 'spiritual' || /Brahma/i.test(name)) {
-      return language === 'si'
-        ? { title: 'භාවනාව සහ අධ්‍යාපනයට', detail: 'දවසේ වැඩ සැලසුම් කරන්න, අලුත් දේවල් ඉගෙනගන්න සහ මතක තබාගන්න ඉතාමත් සුබ වෙලාවක්.' }
-        : { title: 'Prayer, meditation, study', detail: 'Set intentions, read, reflect, and plan the day calmly.' };
-    }
-    if (/Abhijit/i.test(name)) {
-      return language === 'si'
-        ? { title: 'මූලික හා වැදගත් වැඩ අරඹන්න', detail: 'ඔප්පු අත්සන් කිරීම්, රැකියා ඉල්ලීම්, සම්මුඛ පරීක්ෂණ සහ අලුත් තීරණ ගැනීමට ඉතා සුබ වෙලාවක්.' }
-        : { title: 'Start important work', detail: 'Good for signatures, applications, meetings, and key decisions.' };
-    }
-
-    var advice = {
-      Mercury: {
-        en: ['Learning and communication', 'Good for writing, calls, messages, calculations, and business tasks.'],
-        si: ['අධ්‍යාපනයට සහ ගනුදෙනු වලට', 'ඉගෙනීම් වැඩ, ලියකියවිලි, සාකච්ඡා සහ ව්‍යාපාරික ගනුදෙනු වලින් සාර්ථක ප්‍රතිඵල ලැබෙන වෙලාවක්.'],
-      },
-      Moon: {
-        en: ['Home and family tasks', 'Good for family talks, calm tasks, food, and household work.'],
-        si: ['ගෘහස්ථ හා පවුලේ කටයුතු වලට', 'පවුලේ අය සමඟ සාකච්ඡා, නිවසේ වැඩකටයුතු සහ ආහාර වලට සම්බන්ධ දේවල් ආරම්භයට හොඳයි.'],
-      },
-      Jupiter: {
-        en: ['Advice, money, education', 'Good for guidance, learning, money planning, and religious work.'],
-        si: ['මුදල්, උපදෙස් සහ අධ්‍යාපනයට', 'වැදගත් උපදෙස් ලබාගැනීම, මුදල් ආයෝජන, මූල්‍ය සැලසුම් සහ ආගමික කටයුතු වලට වඩාත් සුබයි.'],
-      },
-      Venus: {
-        en: ['Love and beauty work', 'Good for shopping, clothing, art, and relationship conversations.'],
-        si: ['අලංකරණ හා කලා කටයුතු වලට', 'අලුත් ඇඳුම් පැළඳුම් මිලදීගන්න, රූපලාවන්‍ය වැඩ, කලා නිර්මාණ සහ විවාහ කතාබහ වලට සුබ වෙලාවක්.'],
-      },
-      Sun: {
-        en: ['Leadership and official work', 'Good for presentations, authority meetings, and clarifying decisions.'],
-        si: ['රජයේ හා පරිපාලන කටයුතු වලට', 'රජයේ ආයතන, ප්‍රධානීන් හමුවීම්, සම්මුඛ පරීක්ෂණ සහ වගකීම් භාරගැනීමට සුබ වෙලාවක්.'],
-      },
-      Mars: {
-        en: ['High-energy tasks', 'Good for quick action, physical effort, sport, and challenges.'],
-        si: ['ක්‍රියාශීලී හා දැඩි කටයුතු වලට', 'ඉක්මනින් කළ යුතු වැඩ, ක්‍රීඩා කටයුතු, තරඟකාරී වැඩ සහ අභියෝගාත්මක තීරණ වලට හොඳයි.'],
-      },
-      Saturn: {
-        en: ['Responsibility and order', 'Good for finishing old work, cleaning, and organizing files.'],
-        si: ['පැරණි හා ව්‍යූහාත්මක වැඩ වලට', 'අධික වෙහෙසක් අවශ්‍ය වැඩ, කල්ගිය වැඩ නිම කිරීම, පිරිසිදු කිරීම සහ ගොවිපළ කටයුතු වලට සුබයි.'],
-      },
-    };
-
-    if (advice[key]) {
-      var selected = language === 'si' ? advice[key].si : advice[key].en;
-      return { title: selected[0], detail: selected[1] };
-    }
-
-    return language === 'si'
-      ? { title: 'වැදගත් ලිපිපිලේ වැඩ වලට', detail: 'සියලුම සාමාන්‍ය වැදගත් කටයුතු සැලසුම් සහගතව වගකීමෙන් යුතුව ආරම්භ කරන්න සුබ වෙලාවක්.' }
-      : { title: 'General important work', detail: 'A good time to begin with calm planning and focus.' };
-  }
-
-  function renderAuspicious() {
-    if (!data || !data.auspiciousPeriods || data.auspiciousPeriods.length === 0) return null;
-    return (
-      <CosmicCard variant="surface" delay={550}>
-        <SectionHeader
-          title={language === 'si' ? 'අද දවසේ සුබ මුහුර්ත' : t('auspiciousAlignments')}
-          subtitle={language === 'si' ? 'ඔයාගේ එදිනෙදා වැඩකටයුතු සාර්ථක කරගන්න කියාපු වෙලාවන්' : t('auspiciousAlignmentsHint')}
-          iconName="leaf-outline"
-          iconColor={HT.success}
-          delay={550}
-        />
-        {data.auspiciousPeriods.map(function (p, i) {
-          var advice = getAuspiciousAdvice(p);
-          return (
-            <View key={i} style={s.auspRow}>
-              <LinearGradient colors={['#34D399', '#059669']} style={s.auspBar} />
-              <View style={{ flex: 1 }}>
-                <Text style={s.auspName}>{advice.title}</Text>
-                <Text style={s.auspSinhala}>{advice.detail}</Text>
-              </View>
-              <View style={s.auspTime}>
-                <Text style={s.auspTimeText}>
-                  {p.startFormatted ? p.startFormatted.display : toSLT(p.start, t)} – {p.endFormatted ? p.endFormatted.display : toSLT(p.end, t)}
-                </Text>
-              </View>
-            </View>
-          );
-        })}
-      </CosmicCard>
-    );
-  }
-
+  // (removed in v3 viral redesign)
+  // (removed in v3 viral redesign)
   /* ── Weekly Lagna Palapala ── */
   function weeklyShareLabel() {
     if (!weeklyLagna) return '';
@@ -3132,11 +3503,66 @@ export default function HomeScreen() {
 
           {data && !loading && (
             <View style={[s.todayStack, isDesktop && s.todayStackDesktop]}>
-              {/* Personal Oracle Hero */}
-              {renderOracleHero()}
+              {/* ── 2. VIRAL HERO — energy score, one-liner, streak, share ── */}
+              <ViralHero
+                language={language}
+                greeting={getGreeting()}
+                displayName={displayName}
+                oracle={todayOracle}
+                overall={lifeResult ? lifeResult.overall : 60}
+                streak={streak}
+                chartBadge={heroChartBadge}
+                nakshatraVal={nakshatraVal}
+                bestWindow={bestWindow}
+                onShare={shareToday}
+                sharing={sharingBusy}
+                hasBirthData={hasBirthData}
+                onAddBirth={function () { router.push('/profile'); }}
+                skipHeavy={skipHeavy}
+              />
 
-              {/* Daily Affirmations */}
-              {hasBirthData && (
+              {/* ── 3. Do & Don't — the most screenshot-able daily guidance ── */}
+              <DoDontCard pack={ddPack} language={language} />
+
+              {/* ── 4. SIGNATURE: live day sun-clock ── */}
+              <DaySkyClock data={data} language={language} t={t} skipHeavy={skipHeavy} />
+
+              {/* ── 5. Lucky Trio — color / number / direction ── */}
+              <LuckyTrio chartData={chartData} data={data} language={language} />
+
+              {/* ── 6. Your Day, Scored — personalized aura ── */}
+              {lifeResult ? <AuraScores result={lifeResult} language={language} locked={isFreeUser} onUnlock={function () { Promise.resolve(showPaywall('home_aura')).catch(function () {}); }} /> : null}
+
+              {/* ── 6·win-back. Lapsed subscriber — warm welcome-back (loss-framed) ── */}
+              {isFreeUser && wasPro && !winbackDismissed ? (
+                <WinBackBanner
+                  language={language}
+                  onReactivate={function () { Promise.resolve(showPaywall('winback')).catch(function () {}); }}
+                  onDismiss={function () { setWinbackDismissed(true); }}
+                />
+              ) : null}
+
+              {/* ── 6a. Prediction check-ins — "did this happen?" (trust + retention) ── */}
+              <PredictionCheckins items={checkins} language={language} onAnswer={answerCheckin} />
+
+              {/* ── 6b. Your Next 12 Months — convergence timeline (retention) ── */}
+              {convergence ? <ConvergenceTimeline data={convergence} language={language} onUnlock={function () { Promise.resolve(showPaywall('convergence')).catch(function () {}); }} /> : null}
+
+              {/* ── 6c. Nakath & Baby quick tools (life-event acquisition) ── */}
+              <ToolsRow router={router} language={language} />
+
+              {/* ── Locked future windows — conversion bait for free users ── */}
+              <FutureWindowsBait />
+
+              {/* ── 7. Cosmic Shield + real yogas ── */}
+              {hasBirthData && renderCosmicShield()}
+              {hasBirthData && renderTodayYogas()}
+
+              {/* ── 8. Moon Phase Showcase ── */}
+              {renderMoonPhaseCard()}
+
+              {/* ── 9. Today's Focus — one merged inspiration surface ── */}
+              {hasBirthData ? (
                 <AffirmationCard
                   language={language}
                   birthDate={birthDateTime}
@@ -3144,69 +3570,46 @@ export default function HomeScreen() {
                   birthLng={birthLng}
                   getAffirmations={api.getAffirmations}
                 />
+              ) : (
+                renderDailyMantra()
               )}
 
-              {/* Intention of the Day */}
-              <IntentionCard language={language} />
+              {/* ── 10. Compatibility teaser — viral loop into Porondam ── */}
+              <TouchableOpacity activeOpacity={0.8} onPress={function () { router.push('/porondam'); }} style={[s.chartLinkCard, { borderColor: 'rgba(244,114,182,0.22)' }]}>
+                <LinearGradient colors={['rgba(244,114,182,0.10)', 'rgba(123,73,207,0.05)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                <View style={[s.chartLinkIcon, { backgroundColor: 'rgba(244,114,182,0.10)', borderColor: 'rgba(244,114,182,0.28)' }]}>
+                  <Ionicons name="heart" size={18} color="#F472B6" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.chartLinkTitle}>{language === 'si' ? 'ඔබ දෙදෙනා ගැලපෙනවාද?' : 'Are you two a match?'}</Text>
+                  <Text style={s.chartLinkSub}>{language === 'si' ? 'පොරොන්දම් බලා ප්‍රතිඵලය යාළුවෙකුට යවන්න' : 'Check porondam & send the result to someone'}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#F472B6" />
+              </TouchableOpacity>
 
-              {/* Manifestation Power */}
-              {data?.jyotish?.manifestation && (
-                <ManifestationCard
-                  manifestation={data.jyotish.manifestation}
-                  language={language}
-                />
-              )}
-
-              {/* Rahu Kalaya */}
-              {renderRahuKalayaCard()}
-
-              {/* Your Cosmic Identity */}
-              {hasBirthData && chartData && renderBirthSummary()}
-              {hasBirthData && chartData && renderChartCard()}
-              {hasBirthData && chartData && renderLagnaPalapala()}
-              {hasBirthData && chartData && renderPersonality()}
-              {hasBirthData && chartLoading && (
-                <CosmicCard variant="content" delay={300}>
-                  <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-                    <CosmicLoader
-                      size={48}
-                      color="#FFB800"
-                      text={language === 'si' ? 'කේන්දරය සකසමින්...' : 'Calculating chart...'}
-                      textColor="#FFB800"
-                    />
-                  </View>
-                </CosmicCard>
-              )}
-
-              {/* Moon Phase Showcase */}
-              {renderMoonPhaseCard()}
-
-              {/* Daily Mantra */}
-              {renderDailyMantra()}
-
-              {/* Daily Cosmic Ratings */}
-              {renderDailyRatings()}
-
-              {/* Auspicious Timings */}
-              {renderAuspicious()}
-
-              {/* Lucky Numbers */}
-              {renderLuckyNumbers()}
-
-              {/* Personalization Prompt */}
-              {!hasBirthData && renderNoBirthDataPrompt()}
-
-              {/* Cosmic Shield — Jyotish Intelligence */}
-              {hasBirthData && renderCosmicShield()}
-              {hasBirthData && renderTodayYogas()}
-
-              {/* Panchanga */}
+              {/* ── 11. Cosmic Detail (Panchanga accordion) ── */}
               {renderPanchanga()}
 
-              {/* Weekly Palapala Banner */}
-              {renderWeeklyBanner()}
+              {/* ── Your birth chart now lives on the Profile tab — quiet link ── */}
+              {hasBirthData && (
+                <TouchableOpacity activeOpacity={0.8} onPress={function () { router.push('/profile'); }} style={s.chartLinkCard}>
+                  <LinearGradient colors={['rgba(232,197,106,0.08)', 'rgba(123,73,207,0.05)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                  <View style={s.chartLinkIcon}>
+                    <Ionicons name="finger-print-outline" size={18} color={HT.gold} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.chartLinkTitle}>{language === 'si' ? 'ඔබේ සම්පූර්ණ කේන්දරය' : 'Your full birth chart'}</Text>
+                    <Text style={s.chartLinkSub}>{language === 'si' ? 'ලග්නය, පුද්ගලත්වය සහ ග්‍රහ පිහිටීම් — පැතිකඩෙහි' : 'Lagna, personality & placements — in Profile'}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={HT.textMuted} />
+                </TouchableOpacity>
+              )}
 
-              {/* Weekly Lagna Palapala */}
+              {/* ── 9. Personalization prompt (no birth data) ── */}
+              {!hasBirthData && renderNoBirthDataPrompt()}
+
+              {/* ── 10. Weekly ── */}
+              {renderWeeklyBanner()}
               <View onLayout={function (e) { weeklyLagnaY.current = e.nativeEvent.layout.y; }}>
                 {renderWeeklyLagna()}
               </View>
@@ -3230,10 +3633,202 @@ export default function HomeScreen() {
             </View>
           </View>
         ) : null}
+
+        {/* Off-screen daily share card (captured on demand) */}
+        {shareTodayVisible ? (
+          <View style={s.shareCapture} pointerEvents="none">
+            <ShareTodayCard
+              ref={shareTodayRef}
+              language={language}
+              displayName={displayName}
+              oracle={todayOracle}
+              overall={lifeResult ? lifeResult.overall : 60}
+              pack={ddPack}
+              streak={streak}
+            />
+          </View>
+        ) : null}
       </View>
     </DesktopScreenWrapper>
   );
 }
+
+var vr = StyleSheet.create({
+  topVeil: { position: 'absolute', top: 0, left: 0, right: 0, height: '45%' },
+  innerFrame: { position: 'absolute', top: 5, left: 5, right: 5, bottom: 5, borderRadius: 19, borderWidth: 0.5, borderColor: 'rgba(232,197,106,0.12)' },
+  medallionWrap: { alignItems: 'center', justifyContent: 'center', marginTop: 10, height: 172 },
+  medallionDecor: { position: 'absolute', width: 172, height: 172 },
+  medallionCenter: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  medallionWord: { fontSize: 22, fontWeight: '900', letterSpacing: 0.4, textAlign: 'center', width: '100%', ...textShadow('rgba(232,197,106,0.45)', { width: 0, height: 0 }, 16) },
+  medallionLabel: { fontSize: 8.5, letterSpacing: 2, color: 'rgba(244,238,223,0.52)', fontWeight: '800', marginTop: 3 },
+  statusRow: { alignItems: 'center', marginTop: 10, marginBottom: 2 },
+  statusChip: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 13, paddingVertical: 6, borderRadius: 999, borderWidth: 1 },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 11.5, fontWeight: '800', letterSpacing: 0.4 },
+  heroBody: {
+    fontSize: 13, lineHeight: 20.5, color: 'rgba(232,222,200,0.68)', textAlign: 'center',
+    marginTop: 9, paddingHorizontal: 10, fontWeight: '500',
+  },
+  insightRow: { flexDirection: 'row', gap: 8, marginTop: 16 },
+  insightChip: {
+    flex: 1, alignItems: 'center', gap: 4, paddingVertical: 10, paddingHorizontal: 6,
+    borderRadius: 14, borderWidth: 1, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.025)',
+  },
+  insightIcon: { width: 26, height: 26, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 1 },
+  insightLabel: { fontSize: 7.5, fontWeight: '800', letterSpacing: 1.1, color: 'rgba(244,238,223,0.42)' },
+  insightValue: { fontSize: 11.5, fontWeight: '800', textAlign: 'center', width: '100%' },
+  actionRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  streakPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 9,
+    borderRadius: 14, backgroundColor: 'rgba(255,159,67,0.09)', borderWidth: 1, borderColor: 'rgba(255,159,67,0.28)',
+  },
+  streakText: { fontSize: 13, fontWeight: '900', color: '#FFB870', fontVariant: ['tabular-nums'] },
+  streakSub: { fontSize: 7.5, letterSpacing: 1, color: 'rgba(255,184,112,0.6)', fontWeight: '800' },
+  shareBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 13, borderRadius: 14, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(255,236,190,0.45)',
+    ...boxShadow('rgba(245,184,75,0.35)', { width: 0, height: 4 }, 0.4, 12), elevation: 6,
+  },
+  shareBtnHighlight: { position: 'absolute', top: 0, left: 0, right: 0, height: '46%', backgroundColor: 'rgba(255,255,255,0.14)', borderTopLeftRadius: 13, borderTopRightRadius: 13 },
+  shareBtnText: { fontSize: 13.5, fontWeight: '900', color: '#140B04', flexShrink: 1 },
+  ddCard: {
+    borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(232,197,106,0.20)', padding: 18,
+    ...boxShadow('rgba(120,80,200,0.18)', { width: 0, height: 6 }, 0.16, 18), elevation: 8,
+  },
+  ddHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  ddHeaderIcon: {
+    width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(232,197,106,0.10)', borderWidth: 1, borderColor: 'rgba(232,197,106,0.25)',
+  },
+  ddKicker: { fontSize: 9, fontWeight: '900', letterSpacing: 1.6, color: 'rgba(232,197,106,0.52)' },
+  ddTitle: { fontSize: 16.5, fontWeight: '800', color: '#F4EEDF', marginTop: 1 },
+  ddCols: { flexDirection: 'row', gap: 12 },
+  ddCol: { flex: 1, gap: 9 },
+  ddDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.07)' },
+  ddColHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  ddColDot: { width: 6, height: 6, borderRadius: 3 },
+  ddColTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
+  ddItem: { flexDirection: 'row', gap: 7, alignItems: 'flex-start' },
+  ddItemText: { flex: 1, fontSize: 12, lineHeight: 17.5, color: 'rgba(244,238,223,0.78)', fontWeight: '600' },
+  ltCard: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(232,197,106,0.16)', padding: 14, paddingBottom: 11 },
+  ltRow: { flexDirection: 'row', gap: 8 },
+  ltTile: {
+    flex: 1, alignItems: 'center', borderRadius: 15, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 6,
+    gap: 5, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  ltIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  ltLabel: { fontSize: 8, fontWeight: '800', letterSpacing: 1, color: 'rgba(244,238,223,0.45)' },
+  ltValue: { fontSize: 13.5, fontWeight: '900', textAlign: 'center' },
+  ltNote: { fontSize: 9.5, color: 'rgba(244,238,223,0.35)', textAlign: 'center', marginTop: 9 },
+});
+
+var scd = StyleSheet.create({
+  card: { width: 360, height: 640, overflow: 'hidden', alignItems: 'center', paddingTop: 34, paddingHorizontal: 28 },
+  topVeil: { position: 'absolute', top: 0, left: 0, right: 0, height: 200 },
+  star: { position: 'absolute', width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#F4E4BC' },
+  frame: { position: 'absolute', top: 12, left: 12, right: 12, bottom: 12, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(232,197,106,0.30)' },
+  header: { alignItems: 'center', marginBottom: 22 },
+  brand: { fontSize: 13, fontWeight: '900', letterSpacing: 4, color: '#E8C56A' },
+  date: { fontSize: 11, color: 'rgba(244,238,223,0.55)', marginTop: 5, fontWeight: '600' },
+  scoreRing: { width: 140, height: 140, borderRadius: 70, borderWidth: 3, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  scoreRingInner: {
+    width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(20,12,30,0.75)',
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(232,197,106,0.22)',
+  },
+  scoreWord: { fontSize: 24, fontWeight: '900', letterSpacing: 0.4, textAlign: 'center', width: '100%' },
+  scoreLbl: { fontSize: 8, letterSpacing: 1.6, color: 'rgba(244,238,223,0.5)', fontWeight: '800', marginTop: 2 },
+  name: { fontSize: 13, fontWeight: '700', color: 'rgba(244,238,223,0.6)', marginBottom: 6 },
+  title: { fontSize: 22, lineHeight: 30, fontWeight: '800', color: '#F8F1DD', textAlign: 'center', marginBottom: 20, paddingHorizontal: 4 },
+  listBox: {
+    alignSelf: 'stretch', gap: 10, backgroundColor: 'rgba(255,255,255,0.035)',
+    borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', padding: 14,
+  },
+  listRow: { flexDirection: 'row', gap: 9, alignItems: 'flex-start' },
+  listMark: { fontSize: 13, fontWeight: '900', marginTop: 1 },
+  listText: { flex: 1, fontSize: 12.5, lineHeight: 18, color: 'rgba(244,238,223,0.82)', fontWeight: '600' },
+  footer: { position: 'absolute', bottom: 26, left: 28, right: 28, alignItems: 'center', gap: 7 },
+  footerStreak: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  footerStreakText: { fontSize: 12, fontWeight: '800', color: '#FFB870' },
+  footerBrand: { fontSize: 10.5, color: 'rgba(232,197,106,0.65)', fontWeight: '700', letterSpacing: 0.6 },
+});
+
+var aur = StyleSheet.create({
+  card: {
+    borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(232,197,106,0.20)', padding: 18,
+    ...boxShadow('rgba(120,80,200,0.20)', { width: 0, height: 6 }, 0.18, 18), elevation: 8,
+  },
+  innerFrame: { position: 'absolute', top: 5, left: 5, right: 5, bottom: 5, borderRadius: 19, borderWidth: 0.5, borderColor: 'rgba(232,197,106,0.12)' },
+  topVeil: { position: 'absolute', top: 0, left: 0, right: 0, height: '45%' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
+  chartWrap: { width: 130, height: 130, position: 'relative' },
+  centerOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
+  overallWord: { fontSize: 14, fontWeight: '900', letterSpacing: 0.3, textAlign: 'center', width: '100%', ...textShadow('rgba(232,197,106,0.35)', { width: 0, height: 0 }, 12) },
+  overallLbl: { fontSize: 8, letterSpacing: 1.4, color: 'rgba(244,238,223,0.42)', fontWeight: '800', marginTop: 2 },
+  legend: { flex: 1, gap: 9 },
+  legRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legIcon: { width: 22, height: 22, borderRadius: 7, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  legName: { fontSize: 10.5, fontWeight: '600', color: 'rgba(244,238,223,0.72)', width: 44 },
+  legBarTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.07)', overflow: 'hidden' },
+  legBarFill: { height: '100%', borderRadius: 3 },
+  legScorePill: { width: 54, borderRadius: 8, borderWidth: 1, paddingHorizontal: 4, paddingVertical: 2.5, alignItems: 'center', justifyContent: 'center' },
+  legScore: { fontSize: 9, fontWeight: '800', letterSpacing: 0.2, textAlign: 'center' },
+  note: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
+  noteText: { fontSize: 10.5, color: 'rgba(244,238,223,0.4)', flex: 1, lineHeight: 15 },
+  unlockCta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, paddingVertical: 11, paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#E8C56A' },
+  unlockCtaText: { fontSize: 12.5, fontWeight: '800', color: '#2A1707', letterSpacing: 0.2 },
+});
+
+var sky = StyleSheet.create({
+  card: {
+    borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(232,197,106,0.22)',
+    ...boxShadow('rgba(180,140,40,0.25)', { width: 0, height: 6 }, 0.2, 20), elevation: 9,
+  },
+  innerFrame: { position: 'absolute', top: 5, left: 5, right: 5, bottom: 5, borderRadius: 19, borderWidth: 0.5, borderColor: 'rgba(232,197,106,0.13)' },
+  horizonVeil: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '46%' },
+  topRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, paddingHorizontal: 18, paddingTop: 16 },
+  icBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(232,197,106,0.12)', borderWidth: 1, borderColor: 'rgba(232,197,106,0.3)' },
+  kicker: { fontSize: 9, fontWeight: '900', letterSpacing: 1.8, color: 'rgba(232,197,106,0.55)' },
+  title: { fontSize: 16.5, fontWeight: '800', color: '#F8F1DD', letterSpacing: 0.2, ...textShadow('rgba(232,197,106,0.25)', { width: 0, height: 1 }, 8) },
+  sub: { fontSize: 10.5, color: 'rgba(244,238,223,0.5)', marginTop: 2, fontVariant: ['tabular-nums'] },
+  cdPill: {
+    alignItems: 'flex-end', backgroundColor: 'rgba(252,165,165,0.07)',
+    borderWidth: 1, borderColor: 'rgba(252,165,165,0.20)', borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 6,
+  },
+  cdPillActive: { backgroundColor: 'rgba(252,165,165,0.14)', borderColor: 'rgba(252,165,165,0.4)' },
+  cdLabel: { fontSize: 8.5, letterSpacing: 0.8, color: 'rgba(252,165,165,0.7)', fontWeight: '800' },
+  cdValue: { fontSize: 17, fontWeight: '900', color: '#FCA5A5', marginTop: 1, fontVariant: ['tabular-nums'] },
+  arcWrap: { height: 172, marginTop: 2, position: 'relative' },
+  nowWrap: { position: 'absolute', width: 140, marginLeft: -70, marginTop: -46, alignItems: 'center' },
+  nowBadge: {
+    backgroundColor: 'rgba(20,12,4,0.72)', borderWidth: 1, borderColor: 'rgba(255,217,131,0.45)',
+    borderRadius: 9, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 6,
+  },
+  nowBadgeText: { fontSize: 10, fontWeight: '800', color: '#FFE9A8', fontVariant: ['tabular-nums'] },
+  nowBadgeDanger: { backgroundColor: 'rgba(52,12,12,0.82)', borderColor: 'rgba(255,138,138,0.60)' },
+  nowBadgeTextDanger: { color: '#FFB4B4' },
+  sunBox: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
+  sunHalo: { position: 'absolute', width: 30, height: 30, borderRadius: 15, backgroundColor: '#F5C558' },
+  sunHaloNight: { backgroundColor: '#C9CCD6' },
+  sunHaloRahu: { backgroundColor: '#F87171' },
+  footer: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 10 },
+  legChip: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 13, paddingHorizontal: 10, paddingVertical: 8,
+  },
+  legChipDanger: { backgroundColor: 'rgba(252,120,120,0.10)', borderColor: 'rgba(252,120,120,0.35)' },
+  legChipGold: { backgroundColor: 'rgba(255,233,168,0.08)', borderColor: 'rgba(255,233,168,0.30)' },
+  legChipMuted: { opacity: 0.62 },
+  legDot: { width: 8, height: 8, borderRadius: 4 },
+  legChipLabel: { fontSize: 8.5, fontWeight: '800', letterSpacing: 0.7, color: 'rgba(244,238,223,0.5)' },
+  legChipTime: { fontSize: 11.5, fontWeight: '700', color: '#F4EEDF', marginTop: 1, fontVariant: ['tabular-nums'] },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 15 },
+  progressTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.07)', overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 3 },
+  progressText: { fontSize: 10, fontWeight: '700', color: 'rgba(244,238,223,0.55)', fontVariant: ['tabular-nums'] },
+});
 
 var s = StyleSheet.create({
   flex: { flex: 1 },
@@ -3251,6 +3846,16 @@ var s = StyleSheet.create({
   contentDesktop: { paddingTop: 24, paddingHorizontal: 28, maxWidth: 680, alignSelf: 'center', width: '100%' },
   todayStack: { gap: 10 },
   todayStackDesktop: { gap: 12 },
+  chartLinkCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, padding: 15, borderRadius: 18,
+    overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(232,197,106,0.16)',
+  },
+  chartLinkIcon: {
+    width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(232,197,106,0.10)', borderWidth: 1, borderColor: 'rgba(232,197,106,0.22)',
+  },
+  chartLinkTitle: { fontSize: 14, fontWeight: '700', color: '#F4EEDF' },
+  chartLinkSub: { fontSize: 11, color: 'rgba(244,238,223,0.5)', marginTop: 2 },
   center: { alignItems: 'center', justifyContent: 'center', paddingTop: 120 },
 
   loadingText: { color: '#FFB800', fontSize: 14, fontStyle: 'italic', letterSpacing: 1, marginTop: 16 },
@@ -3929,129 +4534,60 @@ var s = StyleSheet.create({
 // ── Moon Phase Styles ──
 var mp = StyleSheet.create({
   card: {
-    borderRadius: 24, overflow: 'hidden', marginBottom: 16,
-    paddingBottom: 24, position: 'relative',
-    borderWidth: 1.5, borderColor: 'rgba(218,165,32,0.25)',
+    borderRadius: 26, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(232,197,106,0.22)',
+    paddingBottom: 14,
+    ...boxShadow('rgba(120,80,200,0.22)', { width: 0, height: 7 }, 0.2, 20), elevation: 9,
   },
-  cardBorder: {
-    position: 'absolute', top: 5, left: 5, right: 5, bottom: 5, borderRadius: 18,
-    borderWidth: 0.5, borderColor: 'rgba(218,165,32,0.12)',
+  innerFrame: { position: 'absolute', top: 5, left: 5, right: 5, bottom: 5, borderRadius: 21, borderWidth: 0.5, borderColor: 'rgba(232,197,106,0.13)' },
+  violetVeil: { position: 'absolute', top: 0, left: 0, right: 0, height: '40%' },
+  goldFloor: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '30%' },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 16 },
+  kicker: { fontSize: 9, fontWeight: '900', letterSpacing: 2, color: 'rgba(232,197,106,0.50)' },
+  headerDate: { fontSize: 15, fontWeight: '800', color: '#F4EEDF', marginTop: 2, letterSpacing: 1 },
+  poyaBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 12, backgroundColor: 'rgba(255,233,168,0.10)', borderWidth: 1, borderColor: 'rgba(255,233,168,0.35)',
   },
-  headerRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-    flexWrap: 'wrap', gap: 8,
-    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4,
+  poyaText: { fontSize: 9.5, fontWeight: '900', letterSpacing: 1.2, color: '#FFE9A8' },
+  moonStage: { alignItems: 'center', justifyContent: 'center', height: MOON_RING_SIZE + 10, marginTop: 10 },
+  moonHalo: {
+    position: 'absolute', width: MOON_SIZE + 84, height: MOON_SIZE + 84, borderRadius: (MOON_SIZE + 84) / 2,
+    backgroundColor: 'rgba(218,165,32,0.05)', borderWidth: 1, borderColor: 'rgba(244,228,188,0.05)',
   },
-  headerRowSinhala: {
-    rowGap: 8,
+  darkMoonRim: {
+    position: 'absolute', width: MOON_SIZE + 6, height: MOON_SIZE + 6, borderRadius: (MOON_SIZE + 6) / 2,
+    borderWidth: 1.2, borderColor: 'rgba(170,185,230,0.38)',
+    ...boxShadow('rgba(150,170,220,0.45)', { width: 0, height: 0 }, 0.5, 18),
   },
-  sectionTitle: {
-    color: '#F4E4BC', fontSize: 20, lineHeight: 27, fontWeight: '900', letterSpacing: 0.3,
-    flex: 1, minWidth: 0,
+  infoBlock: { alignItems: 'center', paddingHorizontal: 22, marginTop: 14 },
+  phaseName: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.4, textAlign: 'center', ...textShadow('rgba(218,165,32,0.30)', { width: 0, height: 1 }, 10) },
+  essence: { fontSize: 12, fontStyle: 'italic', fontWeight: '600', color: 'rgba(218,165,32,0.78)', marginTop: 4, textAlign: 'center' },
+  chipRow: { flexDirection: 'row', gap: 8, marginTop: 11 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 999, borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.03)',
   },
-  sectionTitleSinhala: {
-    flexBasis: '100%', letterSpacing: 0,
+  chipText: { fontSize: 9.5, fontWeight: '900', letterSpacing: 0.8, fontVariant: ['tabular-nums'] },
+  body: { fontSize: 12.5, lineHeight: 19.5, color: 'rgba(244,238,223,0.68)', textAlign: 'center', marginTop: 11 },
+  dosRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 7, marginTop: 12 },
+  doChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 6,
+    borderRadius: 999, backgroundColor: 'rgba(218,165,32,0.07)', borderWidth: 1, borderColor: 'rgba(218,165,32,0.22)',
   },
-  timelineBadge: {
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12,
-    backgroundColor: 'rgba(218,165,32,0.08)', borderWidth: 1, borderColor: 'rgba(218,165,32,0.18)',
-    alignSelf: 'flex-start', maxWidth: '100%',
-  },
-  timelineBadgeSinhala: { marginLeft: 30 },
-  timelineBadgeText: { color: 'rgba(218,165,32,0.55)', fontSize: 10, fontWeight: '700' },
-  timelineBadgeTextSinhala: { letterSpacing: 0 },
-
-  // ── Timeline scroll ──
-  timelineScroll: { paddingHorizontal: 12, paddingVertical: 12, gap: 0 },
-  tlItem: {
-    width: 48, alignItems: 'center', paddingVertical: 6, borderRadius: 14,
-  },
-  tlItemSelected: {
-    backgroundColor: 'rgba(218,165,32,0.08)',
-    borderWidth: 1, borderColor: 'rgba(218,165,32,0.22)',
-  },
-  tlDayName: { color: 'rgba(218,165,32,0.26)', fontSize: 9, fontWeight: '600', marginBottom: 6 },
-  tlDayNameActive: { color: 'rgba(218,165,32,0.80)', fontWeight: '800' },
-  tlDayNameToday: { color: '#DAA520' },
-  tlMoonWrap: {
-    width: 32, height: 32, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center', position: 'relative',
-  },
-  tlMoonWrapActive: {
-    width: 36, height: 36, borderRadius: 18,
-  },
-  tlMoonGlow: {
-    ...StyleSheet.absoluteFillObject, borderRadius: 22,
-    backgroundColor: 'rgba(218,165,32,0.12)',
-    shadowColor: '#DAA520', shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6, shadowRadius: 12, elevation: 0,
-  },
-  tlDateNum: { color: 'rgba(218,165,32,0.32)', fontSize: 10, fontWeight: '700', marginTop: 4 },
-  tlDateNumActive: { color: '#F4E4BC', fontWeight: '900', fontSize: 12 },
-  tlTodayDot: {
-    width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#DAA520',
-    marginTop: 3,
-    shadowColor: '#DAA520', shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1, shadowRadius: 4, elevation: 0,
-  },
-  tlKeyPhaseDot: {
-    width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(218,165,32,0.5)',
-    marginTop: 3,
-  },
-
-  // ── Divider ──
-  divider: {
-    height: 1, backgroundColor: 'rgba(218,165,32,0.10)',
-    marginHorizontal: 20, marginVertical: 4,
-  },
-
-  // ── Central section ──
-  centralSection: { alignItems: 'center', paddingTop: 8 },
-  selectedDateLabel: {
-    color: 'rgba(218,165,32,0.50)', fontSize: 11, fontWeight: '700',
-    letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4,
-  },
-  moonWrap: { alignItems: 'center', marginVertical: 8 },
-  moonAura: {
-    position: 'absolute', top: -30, left: -30, right: -30, bottom: -30,
-    borderRadius: 999, transform: [{ scale: 1.1 }], zIndex: -1,
-    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 30, elevation: 10,
-  },
-  phaseName: {
-    color: '#F4E4BC', fontSize: 24, fontWeight: '900', textAlign: 'center',
-    letterSpacing: 0.5, marginTop: 4,
-    ...textShadow('rgba(218,165,32,0.40)', { width: 0, height: 2 }, 12),
-  },
-  phaseDesc: {
-    color: 'rgba(218,165,32,0.50)', fontSize: 12, fontWeight: '500', textAlign: 'center',
-    lineHeight: 20, marginTop: 8, marginHorizontal: 28,
-  },
-
-  // ── Illumination bar ──
-  illumBarWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    alignSelf: 'center', marginTop: 14, width: '70%',
-  },
-  illumBarTrack: {
-    flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(218,165,32,0.10)',
-    overflow: 'hidden',
-  },
-  illumBarFill: { height: '100%', borderRadius: 2, overflow: 'hidden' },
-  illumBarLabel: { color: 'rgba(218,165,32,0.65)', fontSize: 12, fontWeight: '800', minWidth: 36, textAlign: 'right' },
-
-  // ── Pure Space Lunar Exts ──
-  pureSpaceContainer: { alignItems: 'center', backgroundColor: '#000000', marginHorizontal: -16, paddingVertical: 36, marginBottom: 16, overflow: 'hidden' },
-  lunarGoldVeil: { position: 'absolute', top: 0, left: 0, right: 0, height: '64%' },
-  lunarDustField: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  subtleDateContainer: { alignItems: 'center', marginBottom: 22 },
-  lunarKicker: { color: 'rgba(218,165,32,0.62)', fontSize: 10, fontWeight: '800', letterSpacing: 3, marginBottom: 8 },
-  subtleDateText: { color: 'rgba(255,255,255,0.38)', fontSize: 11, fontWeight: '600', letterSpacing: 3 },
-  moonRingWrapper: { alignItems: 'center', justifyContent: 'center', position: 'relative', marginBottom: 26 },
-  typographyWrapper: { alignItems: 'center', paddingHorizontal: 32, marginBottom: 32 },
-  elegantPhaseName: { fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', color: '#F4E4BC', fontSize: 28, fontWeight: '400', letterSpacing: 1, textAlign: 'center', marginBottom: 8 },
-  illuminationPercentage: { color: 'rgba(218,165,32,0.6)', fontSize: 10, fontWeight: '800', letterSpacing: 3, marginBottom: 16 },
-  crispDescription: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '400', lineHeight: 22, textAlign: 'center' },
-  timelineScrollPadded: { paddingHorizontal: 16, paddingVertical: 12, gap: 0 },
+  doChipText: { fontSize: 10.5, fontWeight: '700', color: '#E8C56A' },
+  timeline: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4 },
+  tlItem: { width: 48, alignItems: 'center', paddingVertical: 7, borderRadius: 14, borderWidth: 1, borderColor: 'transparent' },
+  tlItemSelected: { backgroundColor: 'rgba(232,197,106,0.10)', borderColor: 'rgba(232,197,106,0.35)' },
+  tlDayName: { fontSize: 9, fontWeight: '700', color: 'rgba(244,238,223,0.40)' },
+  tlDayNameActive: { color: '#F5D57A' },
+  tlDayNameToday: { color: '#FFE9A8' },
+  tlMoonWrap: { marginVertical: 5, alignItems: 'center', justifyContent: 'center' },
+  tlMoonWrapActive: {},
+  tlMoonGlow: { position: 'absolute', width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(244,228,188,0.12)' },
+  tlDateNum: { fontSize: 10.5, fontWeight: '700', color: 'rgba(244,238,223,0.50)', fontVariant: ['tabular-nums'] },
+  tlDateNumActive: { color: '#FFE9A8' },
+  tlTodayDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#F5D57A', marginTop: 3 },
+  tlKeyPhaseDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,233,168,0.65)', marginTop: 3 },
 });
 
 // ── Daily Ratings Styles ──
@@ -4186,14 +4722,14 @@ var cs = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(52,211,153,0.15)',
   },
   compassDirBad: { backgroundColor: 'rgba(239,68,68,0.10)', borderColor: 'rgba(239,68,68,0.25)' },
-  compassDirText: { color: 'rgba(52,211,153,0.70)', fontSize: 10, fontWeight: '700' },
+  compassDirText: { color: 'rgba(52,211,153,0.70)', fontSize: 10, fontWeight: '700', flexShrink: 1 },
   compassDirTextBad: { color: '#F87171' },
   avoidPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, alignSelf: 'stretch',
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
     backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.20)',
   },
-  avoidPillText: { color: '#F87171', fontSize: 10, fontWeight: '700' },
+  avoidPillText: { color: '#F87171', fontSize: 10, fontWeight: '700', flex: 1 },
 
   yogaWrap: { gap: 8 },
   yogaPill: {

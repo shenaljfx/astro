@@ -29,7 +29,12 @@ import { CosmicBackground } from '../../components/CosmicBackground';
 import { TAB_BAR_VISUAL_HEIGHT } from './_layout';
 
 var { width: SW, height: SH } = Dimensions.get('window');
-var DAILY_LIMIT = 5;
+// Fair-use daily cap (mirrors server default CHAT_FAIR_USE_DAILY). The server
+// is the source of truth — this is the fallback + the base for the local cache.
+var DAILY_LIMIT = 30;
+// Only surface the counter when the subscriber is genuinely near the cap, so
+// normal use feels unlimited. Below this many left → gentle heads-up.
+var LOW_REMAINING = 5;
 var STORAGE_KEY_PREFIX = '@grahachara_chat_usage_';
 
 var ORACLE_COSMIC = require('../../assets/oracle/cosmic-guide.png');
@@ -140,6 +145,9 @@ function ChatBubble({ msg, isDesktop }) {
 
 // Limit Card
 function LimitCard({ remaining, t }) {
+  // Hide entirely during normal use — the plan is "unlimited"; only show a
+  // gentle heads-up as the subscriber approaches the fair-use cap.
+  if (remaining > LOW_REMAINING) return null;
   return (
     <Animated.View entering={FadeIn.duration(400)} style={s.limitCard}>
       <LinearGradient
@@ -155,9 +163,9 @@ function LimitCard({ remaining, t }) {
         {remaining > 0 ? remaining + ' ' + t('chatQuestionsLeft') : t('chatNoQuestions')}
       </Text>
       <View style={s.limitDotsRow}>
-        {Array.from({ length: DAILY_LIMIT }).map(function (_, i) {
+        {Array.from({ length: LOW_REMAINING }).map(function (_, i) {
           return (
-            <View key={i} style={[s.limitDot, i < (DAILY_LIMIT - remaining) ? s.dotUsed : s.dotFree]} />
+            <View key={i} style={[s.limitDot, i < (LOW_REMAINING - remaining) ? s.dotUsed : s.dotFree]} />
           );
         })}
       </View>
@@ -417,7 +425,7 @@ var os = StyleSheet.create({
 // MAIN CHAT SCREEN
 export default function ChatScreen() {
   var { t, language } = useLanguage();
-  var { user } = useAuth();
+  var { user, showPaywall } = useAuth();
   var { colors, gradients, resolved } = useTheme();
   var sc = screenColors(colors);
   var insets = useSafeAreaInsets();
@@ -453,7 +461,7 @@ export default function ChatScreen() {
         if (res && typeof res.remaining === 'number') {
           setRemaining(res.remaining);
           var today = new Date().toISOString().slice(0, 10);
-          var used = DAILY_LIMIT - res.remaining;
+          var used = (res.dailyLimit || DAILY_LIMIT) - res.remaining;
           AsyncStorage.setItem(usageKey(user?.uid), JSON.stringify({ date: today, count: used })).catch(function() {});
         }
       })
@@ -477,15 +485,18 @@ export default function ChatScreen() {
     setMsgs(function (p) { return p.concat([{ role: 'user', content: content }]); });
     setMsg('');
     setLoading(true);
-    try {
-      var history = msgs.slice(1).map(function (m) { return { role: m.role, content: m.content }; });
-      var res = await api.askAstrologer(finalContent, {
+
+    var history = msgs.slice(1).map(function (m) { return { role: m.role, content: m.content }; });
+    var ask = function () {
+      return api.askAstrologer(finalContent, {
         language:    language,
         chatHistory: history,
         birthDate:   birthDate,
         birthLat:    birthLat,
         birthLng:    birthLng,
       });
+    };
+    var applyReply = function (res) {
       var reply = (res.data && (res.data.message || res.data.response)) || t('starsClouded');
       setMsgs(function (p) { return p.concat([{ role: 'assistant', content: reply }]); });
       if (typeof res.remaining === 'number') {
@@ -493,11 +504,54 @@ export default function ChatScreen() {
         var today = new Date().toISOString().slice(0, 10);
         var used = DAILY_LIMIT - res.remaining;
         AsyncStorage.setItem(usageKey(user?.uid), JSON.stringify({ date: today, count: used })).catch(function() {});
-      } else {
+      }
+    };
+    var isSubError = function (e) {
+      return !!(e && (e.statusCode === 402 || (e.message && /subscri/i.test(e.message))));
+    };
+
+    try {
+      var res = await ask();
+      applyReply(res);
+      if (typeof res.remaining !== 'number') {
         var usage = await incrementUsage(user?.uid);
         setRemaining(Math.max(0, DAILY_LIMIT - usage.count));
       }
     } catch (e) {
+      // ── Not subscribed: the highest-intent moment in the app. Hold the
+      // question, open the paywall, and auto-ask after purchase. ──
+      if (isSubError(e)) {
+        setLoading(false);
+        setMsgs(function (p) { return p.concat([{ role: 'assistant', content: t('chatHeldAnswer') }]); });
+        try {
+          await showPaywall('chat');
+        } catch (payErr) {
+          return; // cancelled — the held message stays as the re-entry point
+        }
+        setMsgs(function (p) { return p.concat([{ role: 'assistant', content: t('chatUnlocked') }]); });
+        setLoading(true);
+        // The store purchase reaches our server via webhook — allow it a few
+        // seconds to land before giving up.
+        var delays = [1500, 3000, 5000];
+        try {
+          for (var i = 0; i < delays.length; i++) {
+            await new Promise(function (r) { setTimeout(r, delays[i]); });
+            try {
+              var retryRes = await ask();
+              applyReply(retryRes);
+              return;
+            } catch (retryErr) {
+              if (!isSubError(retryErr)) throw retryErr;
+            }
+          }
+          setMsgs(function (p) { return p.concat([{ role: 'assistant', content: t('chatUnlockDelay') }]); });
+        } catch (postErr) {
+          setMsgs(function (p) { return p.concat([{ role: 'assistant', content: t('starsClouded') }]); });
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
       var errMsg;
       if (e && e.name === 'AbortError') {
         errMsg = t('chatTimeout');
@@ -514,7 +568,7 @@ export default function ChatScreen() {
     } finally {
       setLoading(false);
     }
-  }, [msg, language, t, loading, remaining, mode, msgs, birthDate, birthLat, birthLng]);
+  }, [msg, language, t, loading, remaining, mode, msgs, birthDate, birthLat, birthLng, user, showPaywall]);
 
   useEffect(function () {
     var to = setTimeout(function () { if (scroll.current) scroll.current.scrollToEnd({ animated: true }); }, 120);
@@ -590,21 +644,23 @@ export default function ChatScreen() {
               {/* ── Separator ── */}
               <View style={sd.separator} />
 
-              {/* ── Limit bar ── */}
-              <View style={sd.limitBar}>
-                <Ionicons
-                  name={remaining > 0 ? 'chatbubble-ellipses-outline' : 'lock-closed-outline'}
-                  size={13} color={remaining > 0 ? '#FF8C33' : '#FF6B6B'}
-                />
-                <Text style={[sd.limitText, remaining <= 0 && { color: '#FF6B6B' }]}>
-                  {remaining > 0 ? remaining + ' ' + t('chatQuestionsLeft') : t('chatNoQuestions')}
-                </Text>
-                <View style={sd.limitDots}>
-                  {Array.from({ length: DAILY_LIMIT }).map(function (_, i) {
-                    return <View key={i} style={[sd.dot, i < (DAILY_LIMIT - remaining) ? sd.dotUsed : sd.dotFree]} />;
-                  })}
+              {/* ── Fair-use bar — only near the cap, so normal use feels unlimited ── */}
+              {remaining <= LOW_REMAINING ? (
+                <View style={sd.limitBar}>
+                  <Ionicons
+                    name={remaining > 0 ? 'chatbubble-ellipses-outline' : 'lock-closed-outline'}
+                    size={13} color={remaining > 0 ? '#FF8C33' : '#FF6B6B'}
+                  />
+                  <Text style={[sd.limitText, remaining <= 0 && { color: '#FF6B6B' }]}>
+                    {remaining > 0 ? remaining + ' ' + t('chatQuestionsLeft') : t('chatNoQuestions')}
+                  </Text>
+                  <View style={sd.limitDots}>
+                    {Array.from({ length: LOW_REMAINING }).map(function (_, i) {
+                      return <View key={i} style={[sd.dot, i < (LOW_REMAINING - remaining) ? sd.dotUsed : sd.dotFree]} />;
+                    })}
+                  </View>
                 </View>
-              </View>
+              ) : null}
 
               {/* ── Messages + chips + input ── */}
               <KeyboardAvoidingView

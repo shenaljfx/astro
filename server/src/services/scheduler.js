@@ -16,6 +16,23 @@ const { calculateMarakaApala } = require('../engine/maraka');
 const { sendPush, getTokensWithPreference, logNotification } = require('./notifications');
 const { getDb, COLLECTIONS } = require('../config/firebase');
 const { enqueueWeeklyLagnaJob } = require('./jobQueue');
+const firestoreCircuit = require('./firestoreCircuit');
+
+/**
+ * Run a scheduled Firestore task under the circuit breaker: skip the tick
+ * entirely while the breaker is open (DB over quota / unavailable) and feed
+ * any DB error back into the breaker. Prevents the per-minute notification
+ * scans from hammering a dead database and spamming logs.
+ */
+function runScheduled(name, fn) {
+  if (firestoreCircuit.isOpen()) return; // DB down — skip silently until recovery
+  Promise.resolve()
+    .then(fn)
+    .catch(err => {
+      firestoreCircuit.recordError(err);
+      console.error(`[Scheduler] ${name} error:`, err.message);
+    });
+}
 
 const SLT_OFFSET_MS = 19800 * 1000;
 const SRI_LANKA_TIME_CONTEXT = { zoneName: 'Asia/Colombo', offsetSeconds: 19800, source: 'traditional_slt' };
@@ -25,6 +42,8 @@ const DAILY_AFFIRMATION_HOUR = 8;
 const DAILY_AFFIRMATION_MINUTE = 15;
 const DAILY_GUIDANCE_HOUR = 8;
 const DAILY_GUIDANCE_MINUTE = 30;
+const DAILY_CURIOSITY_HOUR = 19;   // 7:00 PM local — evening re-engagement pull
+const DAILY_CURIOSITY_MINUTE = 0;
 const NOTIFICATION_WINDOW_MINUTES = 5;
 
 /**
@@ -587,6 +606,93 @@ async function sendDailyAffirmationNotification() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// DAILY CURIOSITY PUSH — evening re-engagement (Phase 3 retention loop)
+// A warm, evergreen "cliffhanger" that reopens the app. No per-user compute
+// (cheap + DB-light): rotates a fixed pool by day-of-year. Routes to Home.
+// ═══════════════════════════════════════════════════════════════
+const CURIOSITY_HOOKS = {
+  en: [
+    { title: '🌙 Tomorrow is shifting', body: 'The Moon changes your daily luck overnight. Peek at what tomorrow holds before you sleep.' },
+    { title: '✨ Your lucky window is moving', body: 'One of your strong months is getting closer. See where it lands now.' },
+    { title: '🔮 A question is waiting', body: 'Your stars have an answer ready tonight. Ask one thing.' },
+    { title: '💫 You haven\'t read today\'s luck', body: 'Your lucky colour, number and direction for today are still unopened.' },
+    { title: '🪐 Something aligned today', body: 'A quiet planetary shift touched your chart. See what it means for you.' },
+    { title: '❤️ Curious about a match?', body: 'Check your compatibility with someone in under a minute.' },
+    { title: '📿 Your nakath for this week', body: 'The best time for that important task is set. Don\'t let the window pass.' },
+    { title: '🌟 Keep your streak glowing', body: 'Your daily reading streak is alive — tomorrow\'s guidance is already waiting.' },
+  ],
+  si: [
+    { title: '🌙 හෙට වෙනස් වෙනවා', body: 'රෑ ගෙවෙද්දී හඳ ඔයාගේ වාසනාව වෙනස් කරනවා. නිදාගන්න කලින් හෙට දවස බලන්න.' },
+    { title: '✨ ඔයාගේ වාසනා කවුළුව ළං වෙනවා', body: 'ඔයාගේ බලවත් මාසවලින් එකක් ළං වෙමින් තියෙනවා. දැන් ඒක කොහෙද කියලා බලන්න.' },
+    { title: '🔮 ප්‍රශ්නයක් බලාගෙන ඉන්නවා', body: 'ඔයාගේ තරු ළඟ අද රෑ උත්තරයක් තියෙනවා. එක දෙයක් අහන්න.' },
+    { title: '💫 අදේ වාසනාව තාම බැලුවේ නෑ', body: 'අද ඔයාගේ වාසනාවන්ත වර්ණය, අංකය සහ දිශාව තාම විවෘත කරලා නෑ.' },
+    { title: '🪐 අද යමක් හරි ගැහුණා', body: 'නිහඬ ග්‍රහ වෙනසක් අද ඔයාගේ කේන්දරය ස්පර්ශ කළා. ඒක ඔයාට මොකද්ද කියලා බලන්න.' },
+    { title: '❤️ ගැළපීම ගැන කුතුහලද?', body: 'මිනිත්තුවකින් ඔයාට කෙනෙක් එක්ක ග්‍රහ ගැළපීම බලන්න පුළුවන්.' },
+    { title: '📿 මේ සතියේ ඔයාගේ නැකත', body: 'ඒ වැදගත් වැඩේට හොඳම වෙලාව සකසලා. කවුළුව මඟ ඇරෙන්න දෙන්න එපා.' },
+    { title: '🌟 streak එක බබළවගෙන ඉන්න', body: 'ඔයාගේ දිනපතා කියවීමේ streak එක ජීවමානයි — හෙටත් මඟපෙන්වීම සූදානම්.' },
+  ],
+};
+
+function buildCuriosityMessage(date, lang) {
+  const language = lang === 'en' ? 'en' : 'si';
+  const pool = CURIOSITY_HOOKS[language];
+  const idx = getSLTDayOfYear(date) % pool.length;
+  return pool[idx];
+}
+
+async function sendDailyCuriosityNotification() {
+  console.log('[Scheduler] Checking daily curiosity for users in 7:00 PM window...');
+
+  try {
+    const now = new Date();
+    const tokens = await getTokensWithPreference('dailyPalapa');
+
+    let sent = 0;
+    let skipped = 0;
+    let notInWindow = 0;
+
+    for (const token of tokens) {
+      try {
+        const tz = token.timezone || 'Asia/Colombo';
+        if (!isInUserWindow(now, tz, DAILY_CURIOSITY_HOUR, DAILY_CURIOSITY_MINUTE, NOTIFICATION_WINDOW_MINUTES)) {
+          notInWindow++;
+          continue;
+        }
+
+        const todayKey = getUserDateKey(now, tz);
+        if (await hasNotificationForDate(token.uid, 'DAILY_CURIOSITY', todayKey)) {
+          skipped++;
+          continue;
+        }
+
+        const lang = token.language || 'si';
+        const hook = buildCuriosityMessage(now, lang);
+
+        const result = await sendPush(token.pushToken, hook.title, hook.body, {
+          type: 'DAILY_CURIOSITY',
+          date: todayKey,
+          route: '/(tabs)',
+        }, {
+          channelId: 'daily-guidance',
+          priority: 'high',
+        });
+
+        if (result.sent > 0) {
+          await logNotification(token.uid, 'DAILY_CURIOSITY', hook.title, hook.body, { date: todayKey });
+          sent++;
+        }
+      } catch (err) {
+        console.error(`[Scheduler] Curiosity failed for ${token.uid}:`, err.message);
+      }
+    }
+
+    console.log(`[Scheduler] Daily curiosity: sent=${sent}, skipped=${skipped}, not-in-window=${notInWindow}`);
+  } catch (err) {
+    console.error('[Scheduler] Daily curiosity error:', err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // SCHEDULER INIT — Start all notification timers
 // ═══════════════════════════════════════════════════════════════
 let schedulerRunning = false;
@@ -600,32 +706,19 @@ function startScheduler() {
   console.log('[Scheduler] 🕐 Starting notification scheduler...');
 
   // ── Check every 5 minutes for Rahu Kalaya ──
-  setInterval(() => {
-    sendRahuKalayaWarning().catch(err => {
-      console.error('[Scheduler] Rahu Kalaya interval error:', err.message);
-    });
-  }, 5 * 60 * 1000); // 5 minutes
+  setInterval(() => runScheduled('Rahu Kalaya', sendRahuKalayaWarning), 5 * 60 * 1000);
 
   // ── Daily Affirmation — 8:15 AM in each user's timezone ──
-  setInterval(() => {
-    sendDailyAffirmationNotification().catch(err => {
-      console.error('[Scheduler] Daily affirmation interval error:', err.message);
-    });
-  }, 60 * 1000); // every minute
+  setInterval(() => runScheduled('Daily affirmation', sendDailyAffirmationNotification), 60 * 1000);
 
   // ── Daily Guidance — 8:30 AM in each user's timezone ──
-  setInterval(() => {
-    sendDailyGuidanceNotification().catch(err => {
-      console.error('[Scheduler] Daily guidance interval error:', err.message);
-    });
-  }, 60 * 1000); // every minute
+  setInterval(() => runScheduled('Daily guidance', sendDailyGuidanceNotification), 60 * 1000);
+
+  // ── Daily Curiosity — 7:00 PM in each user's timezone (evening re-engagement) ──
+  setInterval(() => runScheduled('Daily curiosity', sendDailyCuriosityNotification), 60 * 1000);
 
   // ── Maraka Apala — 8:00 AM in each user's timezone ──
-  setInterval(() => {
-    checkMarakaApalaForAllUsers().catch(err => {
-      console.error('[Scheduler] Maraka interval error:', err.message);
-    });
-  }, 60 * 1000); // every minute
+  setInterval(() => runScheduled('Maraka', checkMarakaApalaForAllUsers), 60 * 1000);
 
   // ── Weekly Lagna Palapala — Sunday 6:00 AM SLT ──
   // Generates AI-powered weekly predictions for all 12 lagnas
@@ -668,6 +761,7 @@ function startScheduler() {
   console.log('[Scheduler]    ⛔ Maraka Apala at 8:00 AM (user timezone)');
   console.log('[Scheduler]    🌅 Daily affirmation at 8:15 AM (user timezone)');
   console.log('[Scheduler]    🌅 Daily guidance at 8:30 AM (user timezone)');
+  console.log('[Scheduler]    🌆 Daily curiosity at 7:00 PM (user timezone)');
   console.log('[Scheduler]    🔮 Weekly Lagna Palapala — Sunday 6:00 AM SLT');
 }
 

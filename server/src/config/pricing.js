@@ -5,8 +5,13 @@
  * International users: USD pricing via RevenueCat (in-app purchases)
  * 
  * Pricing tiers:
- *   SL:  LKR 280/month subscription, LKR 200 porondam, LKR 499 report
- *   INT: USD 4.99/month subscription, USD 1.99 porondam, USD 5.99 report
+ *   SL:  LKR 490/month subscription, LKR 990 Marriage Pack (porondam), LKR 999 report
+ *   INT: USD 4.99/month subscription, USD 1.99 porondam, USD 3.99 report
+ *
+ * ⚠️ These are DISPLAY prices. The actual charge is the Play Store product
+ * price (via RevenueCat) for the matching productId. When you change a number
+ * here you MUST also change that product's price in Google Play Console, or the
+ * app will show one price and charge another.
  */
 
 // ─── Price Tables ───────────────────────────────────────────────
@@ -17,25 +22,39 @@ const PRICING = {
     currencySymbol: 'LKR',
     country: 'Sri Lanka',
     subscription: {
-      amount: 280,
-      amountFormatted: '280.00',
+      amount: 490,
+      amountFormatted: '490.00',
       period: 'month',
-      label: 'LKR 280/month',
+      label: 'LKR 490/month',
       productId: 'monthly',
     },
+    // Marriage Pack — the porondam compatibility experience rebranded as a
+    // premium bundle (archetype + both charts + full AI report + shareable PDF).
+    // Same product/flow as before; keeps productId 'porondam_check' so the
+    // existing Play Store product just gets retitled + repriced (no ID change,
+    // no broken purchases). A real astrologer's porondam is LKR 1,500–5,000.
     porondam: {
-      amount: 200,
-      amountFormatted: '200.00',
-      label: 'LKR 200',
+      amount: 990,
+      amountFormatted: '990.00',
+      label: 'LKR 990',
       productId: 'porondam_check',
     },
     report: {
-      amount: 499,
-      amountFormatted: '499.00',
-      label: 'LKR 499',
+      amount: 999,
+      amountFormatted: '999.00',
+      label: 'LKR 999',
       productId: 'full_report',
     },
-    topUpPackages: [200, 280, 499, 500],
+    // Baby Kendara Pack — newborn keepsake (naming letters, ganda moola,
+    // ceremony dates, chart PDF). Gift-priced; a real astrologer charges
+    // LKR 3,000–10,000. Also included with Pro. ⚠️ create this product in
+    // Google Play / RevenueCat before selling.
+    babyKendara: {
+      amount: 1490,
+      amountFormatted: '1490.00',
+      label: 'LKR 1,490',
+      productId: 'baby_kendara',
+    },
   },
   USD: {
     currency: 'USD',
@@ -48,10 +67,13 @@ const PRICING = {
       label: '$4.99/month',
       productId: 'monthly',
     },
+    // Was $1.99 — inverted against the LKR 990 (≈$3.30) home price; the
+    // flagship must not be cheaper abroad. ⚠️ Update the porondam_check USD
+    // price in Google Play Console to match, or display and charge diverge.
     porondam: {
-      amount: 1.99,
-      amountFormatted: '1.99',
-      label: '$1.99',
+      amount: 4.99,
+      amountFormatted: '4.99',
+      label: '$4.99',
       productId: 'porondam_check',
     },
     report: {
@@ -60,7 +82,12 @@ const PRICING = {
       label: '$3.99',
       productId: 'full_report',
     },
-    topUpPackages: [2, 5, 6, 10],
+    babyKendara: {
+      amount: 6.99,
+      amountFormatted: '6.99',
+      label: '$6.99',
+      productId: 'baby_kendara',
+    },
   },
 };
 
@@ -105,17 +132,6 @@ function getPricing(currency) {
 }
 
 /**
- * Validate a top-up amount against the allowed packages for a currency.
- * @param {number} amount 
- * @param {'LKR'|'USD'} currency 
- * @returns {boolean}
- */
-function isValidTopUpAmount(amount, currency) {
-  const pricing = getPricing(currency);
-  return pricing.topUpPackages.includes(amount);
-}
-
-/**
  * Get the feature price for a specific feature.
  * @param {'porondam'|'report'|'subscription'} feature 
  * @param {'LKR'|'USD'} currency 
@@ -138,6 +154,5 @@ module.exports = {
   PRICING,
   detectCurrency,
   getPricing,
-  isValidTopUpAmount,
   getFeaturePrice,
 };

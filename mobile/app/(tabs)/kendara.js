@@ -13,6 +13,8 @@ import SriLankanChart from '../../components/SriLankanChart';
 import SpringPressable from '../../components/effects/SpringPressable';
 import CosmicLoader from '../../components/effects/CosmicLoader';
 import PinchableView from '../../components/effects/PinchableView';
+import ViewShot, { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -345,7 +347,7 @@ function PremiumKendaraHero({ chartData, jyotishData, user, language, gradients,
   var birthLine = getKendaraBirthLine(user, language);
   var heroCopy = hasChart
     ? getKendaraLifeStyle(lagna, language)
-    : (language === 'si' ? 'ඔයාගේ උපන් විස්තර එක් කළාම, කේන්දරේ ප්‍රධාන සිතියම මෙතනින් විවෘත වෙනවා.' : 'Your premium chart vault opens here once your birth details are ready.');
+    : (language === 'si' ? 'ඔබේ උපන් විස්තර එක් කළාම, කේන්දරේ ප්‍රධාන සිතියම මෙතනින් විවෘත වෙනවා.' : 'Your premium chart vault opens here once your birth details are ready.');
   var sealBreath = useSharedValue(0);
   var sealOrbit = useSharedValue(0);
   useEffect(function () {
@@ -411,7 +413,7 @@ function PremiumKendaraHero({ chartData, jyotishData, user, language, gradients,
             )}
           </Animated.View>
           <Text style={styles.heroPortalName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.62}>{lagnaName}</Text>
-          <Text style={styles.heroPortalSub}>{language === 'si' ? 'ඔයාගේ ලග්න බලය' : 'Ascendant Power'}</Text>
+          <Text style={styles.heroPortalSub}>{language === 'si' ? 'ඔබේ ලග්න බලය' : 'Ascendant Power'}</Text>
         </Animated.View>
         <View style={styles.heroFloatingChipLeft}>
           <Ionicons name="moon-outline" size={12} color="#C7D2FE" />
@@ -458,7 +460,7 @@ function PremiumInsightRail({ insights, language }) {
       <View style={styles.insightHeaderRow}>
         <View style={styles.insightHeaderTextBlock}>
           <Text style={styles.insightHeaderKicker}>{language === 'si' ? 'අද බලන්න වටින තැන' : 'Worth Checking First'}</Text>
-          <Text style={[styles.insightHeaderTitle, language === 'si' && styles.sinhalaTextFlow]}>{language === 'si' ? 'ඔයාගේ ප්‍රධාන ඉඟි' : 'Your Chart Keys'}</Text>
+          <Text style={[styles.insightHeaderTitle, language === 'si' && styles.sinhalaTextFlow]}>{language === 'si' ? 'ඔබේ ප්‍රධාන ඉඟි' : 'Your Chart Keys'}</Text>
         </View>
         <View style={styles.insightCountPill}>
           <Text style={styles.insightCountText}>{active + 1}/{insights.length}</Text>
@@ -686,9 +688,9 @@ function getKendaraBirthFocus(entry, language) {
     Revati: ['gentle, spiritual closure that helps you perfectly wrap up old chapters for the new', 'පරණ දේවල් හරිම මෘදු විදිහට අත්හැරලා දාලා අලුත් පියවරවල් වලට යන්න පුළුවන් සුන්දර හිතක්'],
   };
   var selected = map[name];
-  if (!selected) return language === 'si' ? 'මේ නැකතේ ඉපදුණු නිසා, තමන්ගේ හිත කියන දේ අහලා, ඒකට අනුව වැඩ කරන එක තමයි ඔයාගේ සාර්ථකත්වයේ ලක්ෂණය.' : 'Being born under this star gives you emotional strength. Trusting your intuition guides your true path.';
+  if (!selected) return language === 'si' ? 'මේ නැකතේ ඉපදුණු නිසා, තමන්ගේ හිත කියන දේ අහලා, ඒකට අනුව වැඩ කරන එක තමයි ඔබේ සාර්ථකත්වයේ ලක්ෂණය.' : 'Being born under this star gives you emotional strength. Trusting your intuition guides your true path.';
   if (language === 'si') {
-    return selected[1] + ' කියන එක තමයි ' + name + ' නැකතේ ඉපදුණු ඔයාගේ සාර්ථකත්වයේ ලක්ෂණය.';
+    return selected[1] + ' කියන එක තමයි ' + name + ' නැකතේ ඉපදුණු ඔබේ සාර්ථකත්වයේ ලක්ෂණය.';
   } else {
     return 'Your birth star ' + name + ' gives you a ' + selected[0].toLowerCase() + ' which constantly guides your true path.';
   }
@@ -698,13 +700,13 @@ function getKendaraMoonRhythm(name, language) {
   var map = {
     Pratipada: ['Fresh start rhythm', 'අලුත් වැඩක් පටන්ගන්න හොඳම වෙලාවක්'], Dvitiya: ['Slow building rhythm', 'දේවල් හිමින් හිමින් ගොඩනගන්න හොඳම වෙලාවක්'], Tritiya: ['Learning by action', 'කරලා බලලා ඉගෙනගන්න හොඳම රිද්මයක්'], Chaturthi: ['Clear the pressure', 'හිතේ බර අඩු කරගෙන අලුත් වැඩක් සැලසුම් කරන්න හොඳ කාලයක්'],
     Panchami: ['Growth and creativity', 'නිර්මාණශීලී වැඩ වලට සහ ඉදිරියට යන්න හොඳම වෙලාවක්'], Shashthi: ['Service and discipline', 'වගකීමෙන් වැඩ කරලා හොඳ ප්‍රතිඵල ගන්න ලේසි කාලයක්'], Saptami: ['Visible progress', 'හොඳ දියුණුවක් ලබන්න ලේසි වෙන චන්ද්‍ර රිද්මයක්'], Ashtami: ['Move carefully', 'කලබල නොවී පරිස්සමෙන් පියවර තබන්න කියන රිද්මයක්'],
-    Navami: ['Focused effort', 'එක ඉලක්කයකට විතරක් හිත යොමු කරන්න හොඳම වෙලාවක්'], Dashami: ['Public results', 'ඔයා කරපු වැඩ වල ප්‍රතිඵල අනිත් අයට පෙන්වන්න හොඳම කාලයක්'], Ekadashi: ['Clear focus', 'හිත සන්සුන් කරගෙන අවධානය එක තැනක තියාගන්න හොඳම රිද්මයක්'], Dwadashi: ['Balance and recovery', 'වෙහෙස නිවාගෙන නැවතත් ශක්තිය ලබාගන්න හොඳම වෙලාවක්'],
+    Navami: ['Focused effort', 'එක ඉලක්කයකට විතරක් හිත යොමු කරන්න හොඳම වෙලාවක්'], Dashami: ['Public results', 'ඔබ කරපු වැඩ වල ප්‍රතිඵල අනිත් අයට පෙන්වන්න හොඳම කාලයක්'], Ekadashi: ['Clear focus', 'හිත සන්සුන් කරගෙන අවධානය එක තැනක තියාගන්න හොඳම රිද්මයක්'], Dwadashi: ['Balance and recovery', 'වෙහෙස නිවාගෙන නැවතත් ශක්තිය ලබාගන්න හොඳම වෙලාවක්'],
     Trayodashi: ['Finish gently', 'ඉවර කරන්න තියෙන වැඩ සන්සුන්ව නිම කරන්න හොඳම වෙලාවක්'], Chaturdashi: ['Let go and reset', 'අනවශ්‍ය බර අතහැරලා අලුත් වෙන්න කියන රිද්මයක්'], Purnima: ['Full moon clarity', 'හිතට හොඳ පැහැදිලි බවක් සහ ශක්තියක් දැනෙන රිද්මයක්'], Amavasya: ['Quiet reset', 'නිහඬව විවේක අරගෙන හිත නැවත හැඩගස්වාගන්න හොඳම කාලයක්'],
   };
   var selected = map[name];
-  if (!selected) return language === 'si' ? 'ඔයා ඉපදෙනකොට සඳුගේ ශක්තිය තිබ්බ විදිහ අනුව තමයි ඔයාගෙ හිතේ නිදහස සහ සතුට රැඳිලා තියෙන්නේ.' : 'The lunar phase at your birth reveals what brings you emotional freedom and real fulfillment.';
+  if (!selected) return language === 'si' ? 'ඔබ ඉපදෙනකොට සඳුගේ ශක්තිය තිබ්බ විදිහ අනුව තමයි ඔබගෙ හිතේ නිදහස සහ සතුට රැඳිලා තියෙන්නේ.' : 'The lunar phase at your birth reveals what brings you emotional freedom and real fulfillment.';
   if (language === 'si') {
-    return name + ' තිථියේ උපන් ඔයාට සඳුගේ බලපෑම ලොකුයි. ඒ නිසා ' + selected[1] + ' කියන එක හැමතිස්සෙම වටිනවා.';
+    return name + ' තිථියේ උපන් ඔබට සඳුගේ බලපෑම ලොකුයි. ඒ නිසා ' + selected[1] + ' කියන එක හැමතිස්සෙම වටිනවා.';
   } else {
     return 'Born on ' + name + ', the Moon\'s rhythm strongly influences you. Finding a balance for ' + selected[0].toLowerCase() + ' is essential.';
   }
@@ -775,16 +777,16 @@ function getKendaraCoreEnergy(planet, language) {
   var alias = { surya: 'sun', chandra: 'moon', mangala: 'mars', budha: 'mercury', guru: 'jupiter', shukra: 'venus', shani: 'saturn', ascendant: 'lagna' };
   key = alias[key] || key;
   var map = {
-    sun: ['Sun - your confidence & true self', 'රවි - ඔයාගේ ආත්ම විශ්වාසය සහ පෞරුෂය'], 
-    moon: ['Moon - your feelings & peace of mind', 'සඳු - ඔයාගේ හැඟීම් සහ හිතේ සැනසිල්ල'], 
-    mars: ['Mars - your courage & drive', 'කුජ - ඔයාගේ ධෛර්යය සහ උත්සාහය'], 
-    mercury: ['Mercury - your mind & communication', 'බුධ - ඔයා හිතන විදිහ සහ කතාබහ'],
-    jupiter: ['Jupiter - your wisdom & luck', 'ගුරු - ඔයාගේ නුවණ සහ ලැබෙන වාසනාව'], 
-    venus: ['Venus - your love & tastes', 'සිකුරු - ඔයාගේ ආදරය සහ රසවින්දනය'], 
-    saturn: ['Saturn - your patience & responsibilities', 'ශනි - ඔයාගේ ඉවසීම සහ වගකීම්'], 
-    rahu: ['Rahu - your ambitions & growth', 'රාහු - ඔයාගේ ලොකු ආශාවන් සහ දියුණුව'], 
-    ketu: ['Ketu - your intuition & letting go', 'කේතු - ඔයාගේ ඉව සහ අත්හරින දේවල්'], 
-    lagna: ['Ascendant - your life path', 'ලග්නය - ඔයාගේ ජීවිතේ යන දිශාව'],
+    sun: ['Sun - your confidence & true self', 'රවි - ඔබේ ආත්ම විශ්වාසය සහ පෞරුෂය'], 
+    moon: ['Moon - your feelings & peace of mind', 'සඳු - ඔබේ හැඟීම් සහ හිතේ සැනසිල්ල'], 
+    mars: ['Mars - your courage & drive', 'කුජ - ඔබේ ධෛර්යය සහ උත්සාහය'], 
+    mercury: ['Mercury - your mind & communication', 'බුධ - ඔබ හිතන විදිහ සහ කතාබහ'],
+    jupiter: ['Jupiter - your wisdom & luck', 'ගුරු - ඔබේ නුවණ සහ ලැබෙන වාසනාව'], 
+    venus: ['Venus - your love & tastes', 'සිකුරු - ඔබේ ආදරය සහ රසවින්දනය'], 
+    saturn: ['Saturn - your patience & responsibilities', 'ශනි - ඔබේ ඉවසීම සහ වගකීම්'], 
+    rahu: ['Rahu - your ambitions & growth', 'රාහු - ඔබේ ලොකු ආශාවන් සහ දියුණුව'], 
+    ketu: ['Ketu - your intuition & letting go', 'කේතු - ඔබේ ඉව සහ අත්හරින දේවල්'], 
+    lagna: ['Ascendant - your life path', 'ලග්නය - ඔබේ ජීවිතේ යන දිශාව'],
   };
   var selected = map[key];
   if (!selected) return language === 'si' ? 'මේ ග්‍රහ ශක්තිය' : 'Your planetary energy';
@@ -1186,7 +1188,7 @@ function getKendaraChallengeCopy(item, language) {
     if (item && item.cancelled) {
       return {
         label: 'මේකෙන් ලොකු බලපෑමක් නෑ',
-        desc: 'ඔයාගේ කේන්දරේ තියෙන අනිත් ශක්තිමත් පිහිටීම් නිසා මේකෙන් එන අභියෝග මගහැරිලා ගිහින්. ඒ නිසා මේ ගැන බයවෙන්න දෙයක් නැහැ.',
+        desc: 'ඔබේ කේන්දරේ තියෙන අනිත් ශක්තිමත් පිහිටීම් නිසා මේකෙන් එන අභියෝග මගහැරිලා ගිහින්. ඒ නිසා මේ ගැන බයවෙන්න දෙයක් නැහැ.',
       };
     }
     if (severity.indexOf('severe') !== -1) {
@@ -1235,7 +1237,7 @@ function getKendaraIssueCopy(item, language) {
   var rawText = [item && item.name, item && item.sinhala, item && item.description, item && item.descriptionSi, item && item.type].filter(Boolean).join(' ').toLowerCase();
   var isSi = language === 'si';
   var issue = isSi
-    ? { name: 'සැලකිලිමත් වෙන්න ඕන තැනක්', meaning: 'මේකෙන් පෙන්වන්නේ ඔයාගේ ජීවිතේ වැඩිපුර හිතලා, පරිස්සමෙන් තීරණ ගන්න ඕන පැත්තක්.' }
+    ? { name: 'සැලකිලිමත් වෙන්න ඕන තැනක්', meaning: 'මේකෙන් පෙන්වන්නේ ඔබේ ජීවිතේ වැඩිපුර හිතලා, පරිස්සමෙන් තීරණ ගන්න ඕන පැත්තක්.' }
     : { name: 'Chart Focus Area', meaning: 'This highlights a specific part of your life where being extra mindful will help you avoid unnecessary stress.' };
 
   if (/mars|mangal|kuja|අංගහරු|කුජ/.test(rawText)) {
@@ -1252,7 +1254,7 @@ function getKendaraIssueCopy(item, language) {
       : { name: 'Saturn Transit - Responsibility & Delay', meaning: 'You might feel extra heavy responsibilities, delays, or mental pressure right now. Staying disciplined and patient is your key to getting through it.' };
   } else if (/family heritage|pitru|පිතෘ|පරම්පරා/.test(rawText)) {
     issue = isSi
-      ? { name: 'පවුල් රටාව - මුල් පවුලෙන් එන බලපෑම', meaning: 'පවුලෙන් එන පරණ පුරුදු, තාත්තා සම්බන්ධ දේවල් සහ වැඩිහිටියන්ගේ වගකීම් ඔයාගේ ජීවිතේ ඉස්සරහට යන්න බලපෑම් කරනවා.' }
+      ? { name: 'පවුල් රටාව - මුල් පවුලෙන් එන බලපෑම', meaning: 'පවුලෙන් එන පරණ පුරුදු, තාත්තා සම්බන්ධ දේවල් සහ වැඩිහිටියන්ගේ වගකීම් ඔබේ ජීවිතේ ඉස්සරහට යන්න බලපෑම් කරනවා.' }
       : { name: 'Family Pattern - Ancestral Influence', meaning: 'Old family dynamics, father-related matters, or generational expectations are actively playing a role in your life choices right now.' };
   } else if (/solar|සූර්ය/.test(rawText)) {
     issue = isSi
@@ -1264,7 +1266,7 @@ function getKendaraIssueCopy(item, language) {
       : { name: 'Moon Sensitivity - Emotional Balance', meaning: 'Your mind and emotional peace need extra protection right now. Prioritize your mental health, good sleep, and inner comfort.' };
   } else if (/moon-saturn|චන්ද්‍ර-ශනි/.test(rawText)) {
     issue = isSi
-      ? { name: 'සඳු-ශනි පීඩනය - හැඟීම් දරාගැනීම', meaning: 'ප්‍රශ්න ආවාම කොතරම් දුක හිතුණත් තනියම ඒවා දරාගෙන ඉන්න ඔයා පුරුදු වෙලා. මේකෙන් හිතට ලොකු බරක් දැනෙනවා.' }
+      ? { name: 'සඳු-ශනි පීඩනය - හැඟීම් දරාගැනීම', meaning: 'ප්‍රශ්න ආවාම කොතරම් දුක හිතුණත් තනියම ඒවා දරාගෙන ඉන්න ඔබ පුරුදු වෙලා. මේකෙන් හිතට ලොකු බරක් දැනෙනවා.' }
       : { name: 'Moon-Saturn Weight - Emotional Heavy Lifting', meaning: 'You tend to carry your emotional burdens silently and alone. It’s important to release this mental heaviness and not isolate yourself.' };
   } else if (/saturn-rahu|ශනි-රාහු/.test(rawText)) {
     issue = isSi
@@ -1289,8 +1291,8 @@ function getKendaraCancellationCopy(item, language) {
   var rawText = [item && item.name, item && item.sinhala, item && item.description, item && item.descriptionSi, reason].filter(Boolean).join(' ').toLowerCase();
   
   if (language === 'si') {
-    if (/mars|mangal|kuja|අංගහරු|කුජ/.test(rawText)) return 'ඔයාගේ කේන්දරේ කුජ බලවත්ව ඉන්න නිසා හරි, ගුරුගේ ආශිර්වාදය තියෙන නිසා හරි සබඳතා වලට එන ප්‍රශ්න ගොඩක් දුරට මගහැරිලා යනවා.';
-    if (/moon-saturn|චන්ද්‍ර-ශනි/.test(rawText)) return 'ගුරුගේ බලපෑම නිසා මේ දෙන්නගේ එකතුවෙන් එන මානසික පීඩනය මෘදු කරලා තියෙනවා. ඒ නිසා ප්‍රශ්න ආවත් ඒවා දරාගන්න තරම් හිතේ හයියක් ඔයාට තියෙනවා.';
+    if (/mars|mangal|kuja|අංගහරු|කුජ/.test(rawText)) return 'ඔබේ කේන්දරේ කුජ බලවත්ව ඉන්න නිසා හරි, ගුරුගේ ආශිර්වාදය තියෙන නිසා හරි සබඳතා වලට එන ප්‍රශ්න ගොඩක් දුරට මගහැරිලා යනවා.';
+    if (/moon-saturn|චන්ද්‍ර-ශනි/.test(rawText)) return 'ගුරුගේ බලපෑම නිසා මේ දෙන්නගේ එකතුවෙන් එන මානසික පීඩනය මෘදු කරලා තියෙනවා. ඒ නිසා ප්‍රශ්න ආවත් ඒවා දරාගන්න තරම් හිතේ හයියක් ඔබට තියෙනවා.';
     return reason ? cleanKendaraExplanation(reason, language) : 'කේන්දරේ තියෙන අනිත් ශක්තිමත් පිහිටීම් නිසා මේකෙන් ලොකු බලපෑමක් වෙන්නේ නැහැ. මේ ගැන බයවෙන්න දෙයක් නැහැ.';
   }
   
@@ -1493,9 +1495,157 @@ function VargaChartDisplay({ division, birthDateTime, lat, lng, language }) {
 // Main Kendara Screen
 // ============================================================
 
+// ── Contextual next-step CTA (turns a passive read into a next action) ──
+function KendaraCTA({ icon, title, sub, color, onPress }) {
+  return (
+    <SpringPressable onPress={onPress} haptic="light" style={{ marginBottom: 10 }}>
+      <View style={[styles.ctaCard, { borderColor: color + '40' }]}>
+        <LinearGradient colors={[color + '1C', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <View style={[styles.ctaIcon, { backgroundColor: color + '18', borderColor: color + '45' }]}>
+          <Ionicons name={icon} size={20} color={color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.ctaTitle}>{title}</Text>
+          <Text style={styles.ctaSub}>{sub}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={color} />
+      </View>
+    </SpringPressable>
+  );
+}
+
+function KendaraNextSteps({ router, language }) {
+  var si = language === 'si';
+  return (
+    <View style={{ marginTop: 26 }}>
+      <View style={styles.headerRow}>
+        <Ionicons name="arrow-forward-circle-outline" size={20} color="#FFB800" />
+        <Text style={styles.sectionTitle}>{si ? 'ඊළඟට' : 'Where to next'}</Text>
+      </View>
+      <KendaraCTA
+        icon="document-text-outline" color="#FF8C00"
+        title={si ? 'ඔබේ සම්පූර්ණ ජීවිත වාර්තාව' : 'Your full life report'}
+        sub={si ? 'රැකියාව, විවාහය, සෞඛ්‍යය සහ තවත් — ගැඹුරු කියවීමක්' : 'Career, marriage, health & more — the deep reading'}
+        onPress={function () { router.push('/(tabs)/report'); }}
+      />
+      <KendaraCTA
+        icon="heart-outline" color="#F472B6"
+        title={si ? 'විවාහ පැකේජය' : 'Marriage Pack'}
+        sub={si ? 'දෙදෙනෙකුගේ කේන්දර ගළපා, ඔබේ ගැළපීම බලන්න' : 'Match two charts — full porondam compatibility'}
+        onPress={function () { router.push('/(tabs)/porondam'); }}
+      />
+      <KendaraCTA
+        icon="chatbubbles-outline" color="#60A5FA"
+        title={si ? 'නැකැත්කරුගෙන් අහන්න' : 'Ask the astrologer'}
+        sub={si ? 'ඔබේ කේන්දරය ගැන ඕනෑම දෙයක් අහන්න' : 'Ask anything about your own chart'}
+        onPress={function () { router.push('/(tabs)/chat'); }}
+      />
+    </View>
+  );
+}
+
+// "What's moving today" — the daily-return hook (real, changes every ~2 days)
+function TransitTodayStrip({ transit, language }) {
+  if (!transit || !transit.moon) return null;
+  var si = language === 'si';
+  var moonArea = getKendaraHouseArea(transit.moon.house, language);
+  var line = si
+    ? 'අද — සඳ ඔබේ ' + moonArea + ' කලාපය ඔස්සේ ගමන් කරනවා.'
+    : 'Today — the Moon is moving through your ' + moonArea + '.';
+  var notable = (transit.notable && transit.notable[0]) || null;
+  var sub = null;
+  if (notable) {
+    var pArea = getKendaraHouseArea(notable.house, language);
+    var pName = getKendaraPlanetName(notable.planet, language);
+    sub = si ? (pName + ' දැනට ඔබේ ' + pArea + ' ශක්තිමත් කරමින්.') : (pName + ' is currently activating your ' + pArea + '.');
+  }
+  return (
+    <View style={styles.transitStrip}>
+      <LinearGradient colors={['rgba(199,210,254,0.14)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <View style={styles.transitIcon}><Ionicons name="planet-outline" size={16} color="#C7D2FE" /></View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.transitEyebrow}>{si ? 'අද අහසේ' : 'TODAY’S SKY'}</Text>
+        <Text style={styles.transitLine}>{line}</Text>
+        {sub ? <Text style={styles.transitSub}>{sub}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
+// Shown to non-subscribers under the free chart teaser — converts curiosity.
+// vaultCounts (from /api/preview/kendara) turns the generic list into named
+// discoveries with real numbers: "3 yogas found — 1 is rare 🔒". Counts are
+// free; the meanings and remedies behind them are Pro.
+function KendaraUpgradeCard({ showPaywall, language, onUpgraded, vaultCounts }) {
+  var si = language === 'si';
+
+  // Count-driven headline rows — only what was actually found in THIS chart.
+  var countRows = [];
+  if (vaultCounts) {
+    if (vaultCounts.yogas > 0) {
+      var rare = vaultCounts.rareYogas || 0;
+      countRows.push({
+        n: vaultCounts.yogas,
+        text: si
+          ? 'යෝග හමු විය' + (rare > 0 ? ' — ' + rare + 'ක් දුර්ලභයි' : '')
+          : (vaultCounts.yogas === 1 ? 'yoga found' : 'yogas found') + (rare > 0 ? ' — ' + rare + ' rare' : ''),
+      });
+    }
+    if (vaultCounts.doshas > 0) {
+      countRows.push({
+        n: vaultCounts.doshas,
+        text: si
+          ? 'දෝෂ හමු විය — පිළියම් සමඟ'
+          : (vaultCounts.doshas === 1 ? 'dosha found' : 'doshas found') + ' — with remedies',
+      });
+    }
+  }
+
+  var locked = si
+    ? ['සම්පූර්ණ ජීවිත වාර්තාව', 'දශා කාල රේඛාව', 'අංශක සිතියම් (D9, D10…)', 'අද අහසේ දෛනික මාරු', 'නැකැත්කරුගෙන් අසන්න']
+    : ['Your full life report', 'Your dasha timeline', 'Divisional charts (D9, D10…)', 'Daily “what changed today”', 'Ask the astrologer'];
+  return (
+    <View style={styles.upgradeCard}>
+      <LinearGradient colors={['rgba(255,140,0,0.16)', 'rgba(147,51,234,0.08)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <View style={styles.upgradeLockRow}>
+        <Ionicons name="lock-closed" size={15} color="#FFB800" />
+        <Text style={styles.upgradeEyebrow}>{si ? 'ඔබේ කේන්දරයේ හමු වූ දේ' : 'FOUND IN YOUR CHART'}</Text>
+      </View>
+      <Text style={styles.upgradeTitle}>{si ? 'ඔබේ සම්පූර්ණ ජීවිත සිතියම විවෘත කරන්න' : 'Unlock your full life map'}</Text>
+      <View style={{ marginTop: 12, marginBottom: 16 }}>
+        {countRows.map(function (row, i) {
+          return (
+            <View key={'c' + i} style={styles.upgradeItem}>
+              <View style={styles.upgradeCountPill}>
+                <Text style={styles.upgradeCountNum}>{row.n}</Text>
+              </View>
+              <Text style={styles.upgradeItemText}>{row.text}</Text>
+              <Ionicons name="lock-closed" size={12} color="rgba(255,184,0,0.6)" />
+            </View>
+          );
+        })}
+        {locked.map(function (item, i) {
+          return (
+            <View key={i} style={styles.upgradeItem}>
+              <Ionicons name="checkmark-circle" size={15} color="#34D399" />
+              <Text style={styles.upgradeItemText}>{item}</Text>
+            </View>
+          );
+        })}
+      </View>
+      <SpringPressable onPress={async function () { try { if (showPaywall) await showPaywall('kendara'); } catch (_) {} if (onUpgraded) onUpgraded(); }} haptic="medium">
+        <LinearGradient colors={['#FFD97A', '#FFB800', '#FF8C00']} style={styles.upgradeBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+          <Text style={styles.upgradeBtnText}>{si ? 'දැන් විවෘත කරන්න' : 'Unlock now'}</Text>
+          <Ionicons name="arrow-forward" size={16} color="#2A1707" />
+        </LinearGradient>
+      </SpringPressable>
+    </View>
+  );
+}
+
 export default function KendaraScreen() {
   const { t, language } = useLanguage();
-  const { user } = useAuth();
+  const { user, showPaywall } = useAuth();
   const { colors, gradients, resolved } = useTheme();
   const sc = screenColors(colors);
   const router = useRouter();
@@ -1515,12 +1665,14 @@ export default function KendaraScreen() {
   const [jyotishData, setJyotishData] = useState(null);
   const [jyotishLoading, setJyotishLoading] = useState(false);
   const [selectedVarga, setSelectedVarga] = useState('d9');
+  const [transit, setTransit] = useState(null);
   const [ritualState, setRitualState] = useState({ dayKey: getKendaraSLTDayKey(), streak: 1, totalViews: 1, viewedToday: false });
   
   const stepTimers = useRef([]);
   const lastFetchedBirth = useRef(null);
   const chartDataRef = useRef(null);
   const fetchingRef = useRef(false);
+  const chartShareRef = useRef(null);
   const langRef = useRef(language);
   langRef.current = language;
 
@@ -1596,6 +1748,23 @@ export default function KendaraScreen() {
       } catch (err) {
         if (cancelled) return;
         if (err && (err.name === 'AbortError' || (err.message && err.message.indexOf('abort') !== -1))) return;
+        // Not subscribed → show the free teaser (real chart + hero + one insight,
+        // premium vaults locked). Never cache the preview, so a later upgrade
+        // fetches the full chart cleanly.
+        if (err && (err.statusCode === 402 || (err.message && /subscri/i.test(err.message)))) {
+          try {
+            clearStepTimers();
+            setLoadingStep(5);
+            var prev = await api.getKendaraPreview(birthDateTime, birthLat, birthLng, langRef.current);
+            if (cancelled) return;
+            if (prev && prev.success && prev.data) {
+              setChartData(prev.data);
+              chartDataRef.current = prev.data;
+              lastFetchedBirth.current = birthDateTime;
+              return;
+            }
+          } catch (_) { /* fall through to the error state */ }
+        }
         setError(err.message || 'Failed to load chart');
       } finally {
         fetchingRef.current = false;
@@ -1690,6 +1859,31 @@ export default function KendaraScreen() {
     return () => { cancelled = true; };
   }, [hasBirthData, birthDateTime, chartData]);
 
+  // Capture the birth chart (with brand watermark) and share it as an image —
+  // the viral loop: a shared kendara pulls new users into the funnel.
+  const shareChart = useCallback(async () => {
+    try {
+      if (!chartShareRef.current) return;
+      const uri = await captureRef(chartShareRef, { format: 'png', quality: 0.95 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: langRef.current === 'si' ? 'මගේ කේන්දරය' : 'My birth chart',
+        });
+      }
+    } catch (_) { /* user cancelled or capture unsupported */ }
+  }, []);
+
+  // Daily transit ("what's moving today") — subscribers only; skip for the teaser.
+  useEffect(() => {
+    if (!hasBirthData || !birthDateTime || !chartData || chartData._preview) { setTransit(null); return; }
+    var cancelled = false;
+    api.getTransitToday(birthDateTime, birthLat, birthLng)
+      .then(function (res) { if (!cancelled && res && res.success) setTransit(res.transit); })
+      .catch(function () { /* transit is a bonus — never block the page */ });
+    return () => { cancelled = true; };
+  }, [hasBirthData, birthDateTime, birthLat, birthLng, chartData]);
+
   // Pull-to-refresh: clear caches and force the effect to re-run
   const onRefresh = useCallback(() => {
     if (fetchingRef.current) return;
@@ -1721,7 +1915,7 @@ export default function KendaraScreen() {
     if (loading && !chartData) {
       const STEPS = language === 'si' ? [
         { icon: 'globe-outline', text: 'සර්වර් එකට සම්බන්ධ වෙනවා...', key: 1 },
-        { icon: 'planet-outline', text: 'ඔයාගේ ග්‍රහ පිහිටීම් කියවනවා...', key: 2 },
+        { icon: 'planet-outline', text: 'ඔබේ ග්‍රහ පිහිටීම් කියවනවා...', key: 2 },
         { icon: 'language-outline', text: 'සිංහලට හරවනවා...', key: 3 },
         { icon: 'sparkles-outline', text: 'ජීවිත සිතියම ලෑස්ති කරනවා...', key: 4 },
         { icon: 'checkmark-circle-outline', text: 'ඔක්කොම ලෑස්තියි!', key: 5 },
@@ -1848,15 +2042,21 @@ export default function KendaraScreen() {
 
     return (
       <View style={styles.chartContainer}>
+        {/* Daily hook stays on top (retention); the rest moves below the chart */}
         <PremiumDailyRitual ritual={dailyRitual} visitState={ritualState} language={language} reduced={reduced || lowEnd} />
-        <PremiumInsightRail insights={insightCards} language={language} />
-        <KendaraMasteryStrip items={masteryItems} language={language} />
+        <TransitTodayStrip transit={transit} language={language} />
 
         <View style={styles.headerRow}>
           <Ionicons name="grid-outline" size={20} color="#FFB800" />
           <Text style={styles.sectionTitle}>
-            {language === 'si' ? 'ඔයාගේ කේන්දර සිතියම' : 'Your Birth Life Map'}
+            {language === 'si' ? 'ඔබේ කේන්දර සිතියම' : 'Your Birth Life Map'}
           </Text>
+          <SpringPressable onPress={shareChart} haptic="light">
+            <View style={styles.sharePill}>
+              <Ionicons name="share-social-outline" size={14} color="#FFB800" />
+              <Text style={styles.sharePillText}>{language === 'si' ? 'බෙදාගන්න' : 'Share'}</Text>
+            </View>
+          </SpringPressable>
         </View>
 
         {/* Yoga badges strip */}
@@ -1866,21 +2066,28 @@ export default function KendaraScreen() {
           </Animated.View>
         )}
 
-        <PinchableView minScale={1} maxScale={2.5}>
-          <ChartGlowAura lagnaColor={lagnaGlowColor} reduced={reduced} lowEnd={lowEnd}>
-            <SriLankanChart
-              rashiChart={chartData.rashiChart}
-              lagnaRashiId={lagnaRashiId}
-              language={language}
-            />
-          </ChartGlowAura>
-        </PinchableView>
+        {/* Wrapped for image capture — the shared card carries the brand */}
+        <ViewShot ref={chartShareRef} options={{ format: 'png', quality: 0.95 }} style={styles.chartShotWrap}>
+          <PinchableView minScale={1} maxScale={2.5}>
+            <ChartGlowAura lagnaColor={lagnaGlowColor} reduced={reduced} lowEnd={lowEnd}>
+              <SriLankanChart
+                rashiChart={chartData.rashiChart}
+                lagnaRashiId={lagnaRashiId}
+                language={language}
+              />
+            </ChartGlowAura>
+          </PinchableView>
+          <Text style={styles.shareWatermark}>✦ Grahachara · grahachara.com</Text>
+        </ViewShot>
+
+        <PremiumInsightRail insights={insightCards} language={language} />
+        <KendaraMasteryStrip items={masteryItems} language={language} />
 
         <View style={styles.detailsCard}>
           <Text style={styles.cardTitle}>{language === 'si' ? 'කේන්දරේ සරලව' : 'Your Chart in Plain Language'}</Text>
           <Text style={styles.cardIntro}>
             {language === 'si'
-              ? 'අමාරු වචන නැතුව, මේ ග්‍රහ පිහිටීම් ඔයාගේ ජීවිතයට බලපාන විදිහ මෙතනින් සරලව තේරුම් ගන්න පුළුවන්.'
+              ? 'අමාරු වචන නැතුව, මේ ග්‍රහ පිහිටීම් ඔබේ ජීවිතයට බලපාන විදිහ මෙතනින් සරලව තේරුම් ගන්න පුළුවන්.'
               : 'A simple read of what the main chart points mean in everyday life.'}
           </Text>
           {chartSummaryItems.map(function (item, i) {
@@ -1904,7 +2111,7 @@ export default function KendaraScreen() {
           </Text>
           <Text style={styles.cardIntro}>
             {language === 'si'
-              ? 'ග්‍රහයන්ගෙන් පෙන්වන්නේ ඔයාගේ ජීවිතේ එක එක කොටස්. එයාලා ඉන්න තැන් අනුව ඒ දේවල් ඔයාගේ ජීවිතේට බලපාන විදිහ මෙතනින් බලාගන්න පුළුවන්.'
+              ? 'ග්‍රහයන්ගෙන් පෙන්වන්නේ ඔබේ ජීවිතේ එක එක කොටස්. ඔවුන් ඉන්න තැන් අනුව ඒ දේවල් ඔබේ ජීවිතේට බලපාන විදිහ මෙතනින් බලාගන්න පුළුවන්.'
               : 'Each planet represents a different part of your personality. Its sign and house show how that energy plays out in your daily life.'}
           </Text>
           {chartData.rashiChart && chartData.rashiChart.map(function(entry) {
@@ -2062,7 +2269,7 @@ export default function KendaraScreen() {
                 color="#FFB800"
                 eyebrow={language === 'si' ? 'ශක්ති භණ්ඩාගාරය' : 'Strength Vault'}
                 title={t('kpYogaTitle') || 'Your Natural Strengths & Talents'}
-                summary={language === 'si' ? 'ඔයාගේ කේන්දරේ වැඩිපුරම දීප්තිමත් වෙන සහජ හැකියා මෙතනින් බලන්න.' : 'The strongest talent patterns and fortunate combinations in your chart.'}
+                summary={language === 'si' ? 'ඔබේ කේන්දරේ වැඩිපුරම දීප්තිමත් වෙන සහජ හැකියා මෙතනින් බලන්න.' : 'The strongest talent patterns and fortunate combinations in your chart.'}
                 count={chartData.advancedAnalysis.tier1.advancedYogas.found}
                 defaultOpen={true}
                 delay={300}
@@ -2118,7 +2325,7 @@ export default function KendaraScreen() {
                       <Text style={styles.jaiminiValue}>{(() => { var p = chartData.advancedAnalysis.tier1.jaimini.atmakaraka.planet || ''; return getKendaraCoreEnergy(p, language); })()}</Text>
                       {chartData.advancedAnalysis.tier1.jaimini.karakas && (
                         <Text style={styles.jaiminiSub}>
-                          {language === 'si' ? 'ඔයාගේ අභ්‍යන්තර අරමුණ, වගකීම්, සහ වැඩ කරන රටාව මේකෙන් සරලව තේරුම් ගන්න පුළුවන්.' : 'This summarizes your inner purpose, responsibilities, and expression style.'}
+                          {language === 'si' ? 'ඔබේ අභ්‍යන්තර අරමුණ, වගකීම්, සහ වැඩ කරන රටාව මේකෙන් සරලව තේරුම් ගන්න පුළුවන්.' : 'This summarizes your inner purpose, responsibilities, and expression style.'}
                         </Text>
                       )}
                     </View>
@@ -2162,14 +2369,14 @@ export default function KendaraScreen() {
                 color="#60A5FA"
                 eyebrow={language === 'si' ? 'ග්‍රහ බල මීටරය' : 'Planet Power'}
                 title={t('kpShadbalaTitle') || 'Your Energy Support Levels'}
-                summary={language === 'si' ? 'කොච්චර ශක්තිමත් ලෙස එක් එක් ග්‍රහ ශක්තිය ඔයාට සහාය දෙනවද කියන මැනීම.' : 'A clean strength meter for how each planet supports real-life progress.'}
+                summary={language === 'si' ? 'කොච්චර ශක්තිමත් ලෙස එක් එක් ග්‍රහ ශක්තිය ඔබට සහාය දෙනවද කියන මැනීම.' : 'A clean strength meter for how each planet supports real-life progress.'}
                 count={Object.values(chartData.advancedAnalysis.tier2.shadbala).length}
                 defaultOpen={false}
                 delay={500}
                 language={language}
               >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
-                  {language === 'si' ? 'ඔයාගේ ජීවිතේ විවිධ පැති වලට මේ ශක්තීන් කොච්චර උදව් වෙනවද කියලා මෙතනින් පෙන්වනවා.' : 'Shows how strongly each part of your birth pattern supports real-life progress.'}
+                  {language === 'si' ? 'ඔබේ ජීවිතේ විවිධ පැති වලට මේ ශක්තීන් කොච්චර උදව් වෙනවද කියලා මෙතනින් පෙන්වනවා.' : 'Shows how strongly each part of your birth pattern supports real-life progress.'}
                 </Text>
                 <View style={styles.advCard}>
                   {Object.values(chartData.advancedAnalysis.tier2.shadbala).map(function(sb, i) {
@@ -2219,7 +2426,7 @@ export default function KendaraScreen() {
                 language={language}
               >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
-                  {language === 'si' ? 'ඔයාගේ වර්ධනයට අවශ්‍ය අවස්ථා සහ ජීවිත අරමුණු වැඩිපුරම ක්‍රියාත්මක වෙන තැන මෙතනින් බලන්න පුළුවන්.' : 'Shows the life area where growth, opportunity, and purpose tend to activate strongly.'}
+                  {language === 'si' ? 'ඔබේ වර්ධනයට අවශ්‍ය අවස්ථා සහ ජීවිත අරමුණු වැඩිපුරම ක්‍රියාත්මක වෙන තැන මෙතනින් බලන්න පුළුවන්.' : 'Shows the life area where growth, opportunity, and purpose tend to activate strongly.'}
                 </Text>
                 <View style={[styles.advCard, { borderColor: 'rgba(255,184,0,0.15)' }]}>
                   <LinearGradient colors={['rgba(255,184,0,0.08)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
@@ -2258,7 +2465,7 @@ export default function KendaraScreen() {
                 language={language}
               >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
-                  {language === 'si' ? 'ඔයාට පුරුදු දේවල් සහ දැන් දියුණු වෙන්න හොඳම දිශාව මෙතනින් පෙන්වනවා.' : 'Shows familiar old patterns and the healthier direction for growth now.'}
+                  {language === 'si' ? 'ඔබට පුරුදු දේවල් සහ දැන් දියුණු වෙන්න හොඳම දිශාව මෙතනින් පෙන්වනවා.' : 'Shows familiar old patterns and the healthier direction for growth now.'}
                 </Text>
                 <View style={[styles.advCard, { borderColor: 'rgba(167,139,250,0.15)' }]}>
                   <LinearGradient colors={['rgba(167,139,250,0.08)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} />
@@ -2325,7 +2532,7 @@ export default function KendaraScreen() {
                 language={language}
               >
                 <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, marginBottom: 12, lineHeight: 20 }}>
-                  {language === 'si' ? 'ඔයාගේ ජීවිතේ එක් එක් කාලයට වැඩිපුරම බලපාන ග්‍රහ ශක්තිය මෙතනින් බලන්න පුළුවන්.' : 'Shows which planet energy is most active in each chapter of your life.'}
+                  {language === 'si' ? 'ඔබේ ජීවිතේ එක් එක් කාලයට වැඩිපුරම බලපාන ග්‍රහ ශක්තිය මෙතනින් බලන්න පුළුවන්.' : 'Shows which planet energy is most active in each chapter of your life.'}
                 </Text>
                 <View style={[styles.advCard, { borderColor: 'rgba(167,139,250,0.18)' }]}>
                   <LinearGradient colors={['rgba(167,139,250,0.08)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
@@ -2597,7 +2804,7 @@ export default function KendaraScreen() {
                 title={language === 'si' ? 'පරිස්සම් වෙන්න ඕන කාල' : 'Sensitive Periods'}
                 summary={marakaLoading && !marakaData ? (language === 'si' ? 'සංවේදී කාල විශ්ලේෂණය තවම ක්‍රියාත්මකයි.' : 'Sensitive period analysis is still loading.') : (marakaData ? (language === 'si' ? (marakaData.statusSi || 'ආරක්ෂාව ගැන කෙටි කියවීමක්.') : (marakaData.statusEn || 'A focused read on timing and caution.')) : '')}
                 count={marakaData ? ((marakaData.activeCount || 0) + ((marakaData.upcomingApala || []).length)) : null}
-                defaultOpen={!!(marakaData && marakaData.status !== 'SAFE')}
+                defaultOpen={false}
                 delay={750}
                 language={language}
               >
@@ -2861,15 +3068,13 @@ export default function KendaraScreen() {
               </PremiumVaultSection>
             )}
 
-            {/* ── ENGINE FOOTER ── */}
-            <Animated.View entering={FadeIn.delay(800).duration(400)}>
-              <Text style={styles.engineFooter}>
-                {chartData.advancedAnalysis.engineVersion} • {chartData.advancedAnalysis.computeTimeMs}ms
-              </Text>
-            </Animated.View>
-
           </View>
         )}
+
+        {/* ── Where to next — contextual actions at the end of the read ── */}
+        {chartData._preview
+          ? <KendaraUpgradeCard showPaywall={showPaywall} language={language} onUpgraded={onRefresh} vaultCounts={chartData.vaultCounts} />
+          : <KendaraNextSteps router={router} language={language} />}
       </View>
     );
   };
@@ -3242,6 +3447,37 @@ const styles = StyleSheet.create({
 
   // Engine footer
   engineFooter: { color: 'rgba(255,255,255,0.12)', fontSize: 10, textAlign: 'center', marginTop: 4, marginBottom: 10 },
+
+  // Share pill (chart header) + captured-card watermark
+  sharePill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)', backgroundColor: 'rgba(255,184,0,0.08)' },
+  sharePillText: { color: '#FFB800', fontSize: 12, fontWeight: '700' },
+  chartShotWrap: { backgroundColor: '#0B0B14', borderRadius: 20, paddingTop: 6, paddingBottom: 10 },
+  shareWatermark: { color: 'rgba(255,214,102,0.45)', fontSize: 11, fontWeight: '700', textAlign: 'center', letterSpacing: 0.5, marginTop: 4 },
+
+  // Contextual next-step CTA cards
+  ctaCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16, borderWidth: 1, backgroundColor: 'rgba(20,18,32,0.6)', overflow: 'hidden' },
+  ctaIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  ctaTitle: { color: '#F8E7B8', fontSize: 14.5, fontWeight: '800' },
+  ctaSub: { color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 16, marginTop: 2 },
+
+  // "Today's sky" transit strip (daily-return hook)
+  transitStrip: { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 13, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(199,210,254,0.22)', backgroundColor: 'rgba(20,22,40,0.55)', overflow: 'hidden', marginBottom: 14 },
+  transitIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(199,210,254,0.12)', borderWidth: 1, borderColor: 'rgba(199,210,254,0.28)' },
+  transitEyebrow: { color: 'rgba(199,210,254,0.75)', fontSize: 9.5, fontWeight: '800', letterSpacing: 1.2 },
+  transitLine: { color: '#EDEAF6', fontSize: 13.5, fontWeight: '700', marginTop: 2, lineHeight: 18 },
+  transitSub: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2, lineHeight: 16 },
+
+  // Free-teaser upgrade card (non-subscribers)
+  upgradeCard: { marginTop: 20, padding: 20, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)', backgroundColor: 'rgba(20,15,8,0.7)', overflow: 'hidden' },
+  upgradeLockRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  upgradeEyebrow: { color: '#FFB800', fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
+  upgradeTitle: { color: '#F8E7B8', fontSize: 19, fontWeight: '900', marginTop: 8, ...textShadow('rgba(255,184,0,0.25)', { width: 0, height: 1 }, 8) },
+  upgradeItem: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 5 },
+  upgradeItemText: { color: 'rgba(255,255,255,0.82)', fontSize: 13.5, fontWeight: '600', flex: 1 },
+  upgradeCountPill: { minWidth: 20, height: 20, borderRadius: 6, paddingHorizontal: 5, backgroundColor: 'rgba(255,184,0,0.18)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.4)', alignItems: 'center', justifyContent: 'center' },
+  upgradeCountNum: { color: '#FFD666', fontSize: 12, fontWeight: '900' },
+  upgradeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14 },
+  upgradeBtnText: { color: '#2A1707', fontSize: 15, fontWeight: '900', letterSpacing: 0.3 },
 
   // AI explanation inline box
   aiExplainBox: {

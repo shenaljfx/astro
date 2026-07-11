@@ -36,7 +36,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 var DesktopCtx = createContext(false);
 export function useDesktopCtx() { return useContext(DesktopCtx); }
 
-export default function DesktopScreenWrapper({ routeName, balance, children }) {
+export default function DesktopScreenWrapper({ routeName, children }) {
   var isDesktop = useIsDesktop();
   var { language } = useLanguage();
 
@@ -52,7 +52,7 @@ export default function DesktopScreenWrapper({ routeName, balance, children }) {
     <DesktopCtx.Provider value={true}>
       <View style={dw.root}>
         {/* Fixed top bar */}
-        <DesktopTopBar routeName={routeName} language={language} balance={balance || null} />
+        <DesktopTopBar routeName={routeName} language={language} />
         {/* Screen content — flex:1, no extra padding */}
         <View style={dw.body}>
           {children}

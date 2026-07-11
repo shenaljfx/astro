@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState, useCallback } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import {
   View, StyleSheet, Platform, Text, Dimensions,
@@ -18,7 +18,6 @@ import Svg, { Path, Circle, Ellipse, Defs, RadialGradient, Stop } from 'react-na
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import api from '../../services/api';
 import { Colors } from '../../constants/theme';
 import DesktopSidebar from '../../components/DesktopLayout';
 import useIsDesktop from '../../hooks/useIsDesktop';
@@ -38,7 +37,7 @@ var TABS = [
 ];
 
 // Profile lives in the header avatar, not the bar
-var HIDDEN_ROUTES = ['profile'];
+var HIDDEN_ROUTES = ['profile', 'nakath', 'baby'];
 
 var CENTER_IDX = 2;
 var ORB_ICON_SZ = 22;
@@ -319,7 +318,7 @@ function ProfileAvatar() {
   );
 }
 
-function DesktopSidebarStandalone({ balance, language, onToggleLanguage, onCollapseChange }) {
+function DesktopSidebarStandalone({ language, onToggleLanguage, onCollapseChange }) {
   var router = useRouter();
   var pathname = usePathname();
   var routeIndex = TABS.findIndex(function (t) {
@@ -333,7 +332,7 @@ function DesktopSidebarStandalone({ balance, language, onToggleLanguage, onColla
     navigate: function (name) { router.push('/' + (name === 'index' ? '' : name)); },
   };
   return (
-    <DesktopSidebar state={fakeState} navigation={fakeNavigation} balance={balance}
+    <DesktopSidebar state={fakeState} navigation={fakeNavigation}
       language={language} onToggleLanguage={onToggleLanguage} onCollapseChange={onCollapseChange} />
   );
 }
@@ -393,26 +392,16 @@ var offBan = StyleSheet.create({
 
 export default function TabLayout() {
   var { t, language, toggleLanguage } = useLanguage();
-  var { user } = useAuth();
   var { colors } = useTheme();
-  var [tokenBalance, setTokenBalance] = useState(null);
   var [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   var isDesktop = useIsDesktop();
-
-  var refreshBalance = useCallback(function () {
-    api.getTokenBalance()
-      .then(function (res) { if (res && res.balance !== undefined) setTokenBalance(res.balance); })
-      .catch(function () {});
-  }, []);
-
-  useEffect(function () { refreshBalance(); }, [user, refreshBalance]);
 
   var TAB_BAR_HEIGHT = BAR_H + ARC_HEIGHT + 10;
 
   if (isDesktop) {
     return (
       <View style={[ds.shell, { backgroundColor: colors.bg }]}>
-        <DesktopSidebarStandalone balance={tokenBalance} language={language}
+        <DesktopSidebarStandalone language={language}
           onToggleLanguage={toggleLanguage} onCollapseChange={setSidebarCollapsed} />
         <View style={[ds.contentCol, { backgroundColor: colors.bg }]}>
           <Tabs tabBar={function () { return null; }} sceneContainerStyle={[ds.sceneContainer, { backgroundColor: colors.bg }]}

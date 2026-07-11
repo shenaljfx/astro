@@ -29,6 +29,7 @@ const { getCurrentTransits, getDailyForecast, getWeeklyForecast, getMonthlyForec
 const { predictEventTiming, predictAllEvents, EVENT_RULES } = require('../engine/timing');
 const { scoreMuhurtha, findMuhurtha, getInauspiciousPeriods, isGoodTimeNow, ACTIVITY_RULES } = require('../engine/muhurtha');
 const { analyzeHealth } = require('../engine/health');
+const { buildConvergenceForBirth } = require('../engine/convergenceCalendar');
 const { optionalAuth } = require('../middleware/auth');
 const { INPUT_LIMITS, sanitizeString } = require('../middleware/security');
 const { parseSLT } = require('../utils/dateUtils');
@@ -42,7 +43,10 @@ function combineDatetime(dateStr, timeStr) {
 
 /** Valid whitelists for enum-like text fields */
 const VALID_EVENT_TYPES = ['career', 'wealth', 'children', 'healthCrisis', 'foreignTravel', 'property', 'education', 'business', 'danger', 'debtClearance', 'marriage', 'spiritual'];
-const VALID_ACTIVITY_TYPES = ['marriage', 'business', 'travel', 'education', 'medical', 'housewarming', 'vehicle', 'naming', 'interview', 'investment', 'religious', 'agriculture'];
+// Must match the ACTIVITY_RULES keys in engine/muhurtha.js (which is also what
+// GET /muhurtha/activities returns to the client) — otherwise the finder
+// rejects the very keys the app was given to pick from.
+const VALID_ACTIVITY_TYPES = ['wedding', 'business', 'vehicle', 'construction', 'travel', 'education', 'nameCeremony', 'movingIn', 'surgery', 'financialTransaction'];
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -594,5 +598,39 @@ router.get('/feedback/pending', optionalAuth, async (req, res) => {
   }
 });
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CONVERGENCE CALENDAR (Pro) — the "why I keep paying" retention surface
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * POST /api/predictions/convergence
+ * Body: { birthDate, birthTime?, lat?, lng? }
+ * Full 12-month dated-window forecast (subscription-gated at mount). Returns
+ * the month grid (per-domain scores + drivers) and the ranked opportunity /
+ * caution windows with the reasons behind each.
+ */
+router.post('/convergence', optionalAuth, async (req, res) => {
+  try {
+    const { birthDate, birthTime, lat, lng, months } = req.body;
+    if (!birthDate) return res.status(400).json({ error: 'birthDate is required' });
+
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+    const combined = combineDatetime(birthDate, birthTime);
+    const bDate = await parseBirthDateTime(combined, latitude, longitude).catch(() => parseSLT(combined));
+    if (!bDate || isNaN(bDate.getTime())) return res.status(400).json({ error: 'Invalid birthDate' });
+
+    const cal = buildConvergenceForBirth(bDate, latitude, longitude, {
+      months: Math.min(24, Math.max(6, parseInt(months, 10) || 12)),
+    });
+    if (!cal) return res.status(422).json({ error: 'Could not build the calendar for this chart' });
+
+    res.json({ success: true, data: cal });
+  } catch (error) {
+    console.error('[predictions/convergence] error:', error.message);
+    res.status(500).json({ error: 'Failed to build convergence calendar', message: error.message });
+  }
+});
 
 module.exports = router;

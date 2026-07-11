@@ -16,7 +16,9 @@
  *   - SUBSCRIBER_ALIAS      — user ID alias created
  *   - PRODUCT_CHANGE        — user changed plan
  *   - UNCANCELLATION        — user re-enabled auto-renew
- *   - NON_RENEWING_PURCHASE — lifetime purchase
+ *   - NON_RENEWING_PURCHASE — 'lifetime' grants Pro; other one-time products
+ *                             (full_report, porondam_check) record a purchase
+ *                             credit (services/purchaseCredits) instead
  */
 
 const express = require('express');
@@ -24,6 +26,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const { getDb, COLLECTIONS } = require('../config/firebase');
 const { notifyAlert } = require('../services/alerting');
+const { addPurchaseCredit } = require('../services/purchaseCredits');
 
 // RevenueCat webhook authorization header (set in dashboard)
 const WEBHOOK_AUTH_KEY = process.env.REVENUECAT_WEBHOOK_AUTH_KEY || '';
@@ -230,20 +233,47 @@ router.post('/webhook', verifyWebhook, async (req, res) => {
         };
         break;
 
-      case 'NON_RENEWING_PURCHASE':
-        // Lifetime purchase — never expires
-        subscriptionUpdate = {
-          isSubscribed: true,
-          'subscription.status': 'active',
-          'subscription.plan': productId,
-          'subscription.store': store,
-          'subscription.isLifetime': true,
-          'subscription.willRenew': false,
-          'subscription.purchasedAt': purchaseDate,
-          'subscription.provider': 'revenuecat',
-          'subscription.updatedAt': new Date().toISOString(),
-        };
-        break;
+      case 'NON_RENEWING_PURCHASE': {
+        // Fires for EVERY one-time product. Only the real 'lifetime' product
+        // may grant permanent Pro access. Consumable products (full_report,
+        // porondam_check, …) record a purchase credit instead — one credit
+        // admits one generation of that product (see services/purchaseCredits).
+        // Previously this branch set isSubscribed+isLifetime for ALL one-time
+        // products, so a LKR 750 report purchase granted lifetime Pro.
+        if (productId === 'lifetime') {
+          subscriptionUpdate = {
+            isSubscribed: true,
+            'subscription.status': 'active',
+            'subscription.plan': productId,
+            'subscription.store': store,
+            'subscription.isLifetime': true,
+            'subscription.willRenew': false,
+            'subscription.purchasedAt': purchaseDate,
+            'subscription.provider': 'revenuecat',
+            'subscription.updatedAt': new Date().toISOString(),
+          };
+          break;
+        }
+
+        const credit = await addPurchaseCredit(appUserId, productId, {
+          eventId: revenueCatEventId,
+          store,
+          purchaseDate,
+          environment,
+        });
+        if (!credit) {
+          console.warn('[RevenueCat Webhook] Unknown one-time product (no credit type):', productId);
+          await markWebhookEvent(db, revenueCatEventId, 'skipped', { reason: 'unknown_one_time_product', productId });
+          return res.status(200).json({ success: true, skipped: true });
+        }
+        await markWebhookEvent(db, revenueCatEventId, 'processed', {
+          processedAt: new Date().toISOString(),
+          creditId: credit.id,
+          creditType: credit.type,
+        });
+        console.log('[RevenueCat Webhook] ✔ One-time purchase → credit for', appUserId, '(', productId, ')');
+        return res.status(200).json({ success: true, credit: credit.type, eventId: revenueCatEventId });
+      }
 
       default:
         console.log('[RevenueCat Webhook] Unhandled event type:', eventType);

@@ -145,15 +145,20 @@ var SECTION_META = {
   spiritual:        { colors: ['#A855F7', '#581C87'], gradient: ['#D8B4FE', '#A855F7'], icon: 'sparkles', scoreKey: 'spiritual' },
   realEstate:       { colors: ['#84CC16', '#365314'], gradient: ['#BEF264', '#84CC16'], icon: 'business', scoreKey: 'property' },
   transits:         { colors: ['#14B8A6', '#134E4A'], gradient: ['#5EEAD4', '#14B8A6'], icon: 'planet', scoreKey: 'transits' },
+  next12Months:     { colors: ['#FFB800', '#7C2D12'], gradient: ['#FDE68A', '#FFB800'], icon: 'calendar', scoreKey: 'next12' },
   surpriseInsights: { colors: ['#F97316', '#9A3412'], gradient: ['#FDBA74', '#F97316'], icon: 'eye', scoreKey: 'surprise' },
   timeline25:       { colors: ['#6366F1', '#312E81'], gradient: ['#A5B4FC', '#6366F1'], icon: 'calendar', scoreKey: 'timeline' },
   remedies:         { colors: ['#FFB800', '#78350F'], gradient: ['#FDE68A', '#FFB800'], icon: 'color-wand', scoreKey: 'remedies' },
 };
 
+// Mirrors REPORT_SECTION_ORDER in server/src/engine/chat.js — keys the AI
+// report actually generates. (Legacy keys personality/mentalHealth/spiritual/
+// timeline25 never arrived from the server and broke the chapter math.)
 var SECTION_KEYS = [
-  'personality', 'yogaAnalysis', 'lifePredictions', 'career', 'marriage', 'marriedLife', 'financial',
-  'children', 'familyPortrait', 'health', 'physicalProfile', 'attractionProfile', 'mentalHealth', 'foreignTravel', 'education', 'luck',
-  'legal', 'spiritual', 'realEstate', 'transits', 'surpriseInsights', 'timeline25', 'remedies',
+  'yogaAnalysis', 'lifePredictions', 'career', 'marriage', 'marriedLife', 'financial',
+  'children', 'familyPortrait', 'health', 'physicalProfile', 'attractionProfile',
+  'foreignTravel', 'education', 'luck', 'legal', 'realEstate', 'transits',
+  'next12Months', 'surpriseInsights', 'remedies',
 ];
 
 var SECTION_TITLES = {
@@ -177,6 +182,7 @@ var SECTION_TITLES = {
   spiritual: 'reportSpiritual',
   realEstate: 'reportRealEstate',
   transits: 'reportTransits',
+  next12Months: 'reportNext12Months',
   surpriseInsights: 'reportSurpriseInsights',
   timeline25: 'reportTimeline',
   remedies: 'reportRemedies',
@@ -516,6 +522,298 @@ var stb = StyleSheet.create({
   textWrap: { flexShrink: 1 },
   label: { fontSize: 9, color: 'rgba(255,214,102,0.45)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   value: { fontSize: 12, color: '#FFE8B0', fontWeight: '700', marginTop: 1 },
+});
+
+// ══════════════════════════════════════════
+// KNOWN FACTS SHEET — 20-second pre-generation intake.
+// Unlocks server-side validation mode (confirmed marriage year) and
+// birth-time rectification (2+ dated life events). Fully skippable.
+// ══════════════════════════════════════════
+function KnownFactsSheet({ visible, isSi, initial, onSkip, onContinue }) {
+  var [married, setMarried] = useState(initial?.maritalStatus === 'married');
+  var [marriageYear, setMarriageYear] = useState(initial?.marriageYear ? String(initial.marriageYear) : '');
+  var [careerField, setCareerField] = useState(initial?.careerField || '');
+  var [firstJobYear, setFirstJobYear] = useState('');
+
+  useEffect(function() {
+    if (visible) {
+      setMarried(initial?.maritalStatus === 'married');
+      setMarriageYear(initial?.marriageYear ? String(initial.marriageYear) : '');
+      setCareerField(initial?.careerField || '');
+      var fj = (initial?.lifeEvents || []).find(function(e) { return e.type === 'firstJob'; });
+      setFirstJobYear(fj ? String(fj.year) : '');
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  var yearValid = function(y) {
+    var n = parseInt(y, 10);
+    return Number.isInteger(n) && n >= 1930 && n <= new Date().getFullYear();
+  };
+
+  var buildFacts = function() {
+    var facts = {};
+    if (married) {
+      facts.maritalStatus = 'married';
+      if (yearValid(marriageYear)) facts.marriageYear = parseInt(marriageYear, 10);
+    } else {
+      facts.maritalStatus = 'single';
+    }
+    var cf = String(careerField || '').trim();
+    if (cf.length >= 2) facts.careerField = cf.slice(0, 60);
+    var events = [];
+    if (married && yearValid(marriageYear)) events.push({ type: 'marriage', year: parseInt(marriageYear, 10) });
+    if (yearValid(firstJobYear)) events.push({ type: 'firstJob', year: parseInt(firstJobYear, 10) });
+    if (events.length > 0) facts.lifeEvents = events;
+    return facts;
+  };
+
+  return (
+    <View style={kfs.overlay}>
+      <TouchableOpacity style={kfs.scrim} activeOpacity={1} onPress={onSkip} />
+      <Animated.View entering={FadeInUp.duration(320)} style={kfs.card}>
+        <LinearGradient colors={['rgba(255,184,0,0.10)', 'rgba(20,16,10,0.0)']} style={kfs.cardGrad} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
+          <View style={kfs.handle} />
+          <Text style={kfs.title}>{isSi ? '✨ තප්පර 20ක් — වාර්තාව ඔයාටම ගැලපෙන්න' : '✨ 20 seconds to make this eerily accurate'}</Text>
+          <Text style={kfs.sub}>{isSi
+            ? 'ඔයා දන්න දේවල් කිව්වොත්, කේන්දරය ඒවා තහවුරු කරලා අනාගතය ගැන වඩා නිවැරදි කාල රාමු දෙනවා. Skip කරන්නත් පුළුවන්.'
+            : 'Anything you confirm lets the chart validate your past — and sharpen every dated prediction ahead. You can skip.'}</Text>
+
+          {/* Married toggle */}
+          <Text style={kfs.qLabel}>{isSi ? 'විවාහ වෙලාද?' : 'Are you married?'}</Text>
+          <View style={kfs.pillRow}>
+            <SpringPressable style={[kfs.pill, !married && kfs.pillActive]} onPress={function() { setMarried(false); }} haptic="light">
+              <Text style={[kfs.pillText, !married && kfs.pillTextActive]}>{isSi ? 'නැහැ' : 'No'}</Text>
+            </SpringPressable>
+            <SpringPressable style={[kfs.pill, married && kfs.pillActive]} onPress={function() { setMarried(true); }} haptic="light">
+              <Text style={[kfs.pillText, married && kfs.pillTextActive]}>{isSi ? 'ඔව්' : 'Yes'}</Text>
+            </SpringPressable>
+            {married && (
+              <TextInput
+                style={kfs.yearInput}
+                value={marriageYear}
+                onChangeText={setMarriageYear}
+                placeholder={isSi ? 'අවුරුද්ද' : 'Year'}
+                placeholderTextColor="rgba(255,232,176,0.35)"
+                keyboardType="number-pad"
+                maxLength={4}
+              />
+            )}
+          </View>
+
+          {/* Career field */}
+          <Text style={kfs.qLabel}>{isSi ? 'ඔයාගේ රැකියා ක්ෂේත්‍රය? (කැමති නම්)' : 'Your field of work? (optional)'}</Text>
+          <TextInput
+            style={kfs.textInput}
+            value={careerField}
+            onChangeText={setCareerField}
+            placeholder={isSi ? 'උදා: ගුරු, IT, ව්‍යාපාර, වෛද්‍ය…' : 'e.g. teaching, IT, business, medicine…'}
+            placeholderTextColor="rgba(255,232,176,0.35)"
+            maxLength={60}
+          />
+
+          {/* First job year */}
+          <Text style={kfs.qLabel}>{isSi ? 'මුල්ම රැකියාව ලැබුණු අවුරුද්ද? (කැමති නම්)' : 'Year of your first job? (optional)'}</Text>
+          <TextInput
+            style={[kfs.textInput, { width: 120 }]}
+            value={firstJobYear}
+            onChangeText={setFirstJobYear}
+            placeholder={isSi ? 'උදා: 2018' : 'e.g. 2018'}
+            placeholderTextColor="rgba(255,232,176,0.35)"
+            keyboardType="number-pad"
+            maxLength={4}
+          />
+
+          <View style={kfs.btnRow}>
+            <SpringPressable style={kfs.skipBtn} onPress={onSkip} haptic="light">
+              <Text style={kfs.skipText}>{isSi ? 'Skip කරන්න' : 'Skip'}</Text>
+            </SpringPressable>
+            <SpringPressable style={kfs.goBtn} onPress={function() { onContinue(buildFacts()); }} haptic="heavy" scalePressed={0.95}>
+              <LinearGradient colors={['#FFB800', '#FF8C00']} style={kfs.goGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                <Text style={kfs.goText}>{isSi ? 'වාර්තාව හදන්න →' : 'Create my report →'}</Text>
+              </LinearGradient>
+            </SpringPressable>
+          </View>
+        </LinearGradient>
+      </Animated.View>
+    </View>
+  );
+}
+var kfs = StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFillObject, zIndex: 999, justifyContent: 'flex-end' },
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.72)' },
+  card: { backgroundColor: '#16120B', borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, borderColor: 'rgba(255,184,0,0.25)', overflow: 'hidden' },
+  cardGrad: { padding: 22, paddingBottom: 34 },
+  handle: { alignSelf: 'center', width: 42, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,184,0,0.35)', marginBottom: 14 },
+  title: { fontSize: 18, fontWeight: '800', color: '#FFE8B0', marginBottom: 6 },
+  sub: { fontSize: 12.5, lineHeight: 18, color: 'rgba(255,232,176,0.62)', marginBottom: 16 },
+  qLabel: { fontSize: 12, fontWeight: '700', color: 'rgba(255,214,102,0.8)', marginBottom: 8, marginTop: 8, textTransform: 'uppercase', letterSpacing: 0.4 },
+  pillRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  pill: { paddingHorizontal: 18, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,184,0,0.25)', backgroundColor: 'rgba(255,184,0,0.05)' },
+  pillActive: { backgroundColor: 'rgba(255,184,0,0.22)', borderColor: '#FFB800' },
+  pillText: { fontSize: 13, fontWeight: '700', color: 'rgba(255,232,176,0.6)' },
+  pillTextActive: { color: '#FFE8B0' },
+  yearInput: { width: 92, borderWidth: 1, borderColor: 'rgba(255,184,0,0.25)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, color: '#FFE8B0', fontSize: 14, fontWeight: '700', backgroundColor: 'rgba(255,184,0,0.05)' },
+  textInput: { borderWidth: 1, borderColor: 'rgba(255,184,0,0.25)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#FFE8B0', fontSize: 14, backgroundColor: 'rgba(255,184,0,0.05)', marginBottom: 4 },
+  btnRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 18 },
+  skipBtn: { paddingHorizontal: 16, paddingVertical: 12 },
+  skipText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,232,176,0.5)' },
+  goBtn: { flex: 1, borderRadius: 14, overflow: 'hidden' },
+  goGrad: { paddingVertical: 14, alignItems: 'center', borderRadius: 14 },
+  goText: { fontSize: 15, fontWeight: '800', color: '#1A1200' },
+});
+
+// ══════════════════════════════════════════
+// NEXT-12-MONTHS TIMELINE — visual strip of the convergence calendar.
+// Bars = the strongest life-domain score each month; chips = dated windows.
+// ══════════════════════════════════════════
+var N12_DOMAIN_META = {
+  career: { icon: '💼', color: '#F59E0B', si: 'රැකියාව', en: 'Career' },
+  love:   { icon: '💗', color: '#EC4899', si: 'ආදරය', en: 'Love' },
+  money:  { icon: '💰', color: '#22C55E', si: 'මුදල්', en: 'Money' },
+  health: { icon: '🫀', color: '#EF4444', si: 'සෞඛ්‍යය', en: 'Health' },
+  travel: { icon: '✈️', color: '#6366F1', si: 'විදේශ', en: 'Travel' },
+  family: { icon: '🏠', color: '#0EA5E9', si: 'පවුල', en: 'Family' },
+};
+function Next12MonthsTimeline({ calendar, isSi }) {
+  if (!calendar || !Array.isArray(calendar.months) || calendar.months.length === 0) return null;
+  var months = calendar.months;
+  var windows = (calendar.windows || []).slice(0, 5);
+
+  return (
+    <Animated.View entering={FadeInDown.delay(200).duration(700)} style={n12.wrap}>
+      <LinearGradient colors={['rgba(255,184,0,0.10)', 'rgba(255,140,0,0.03)']} style={n12.inner} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
+        <View style={n12.headRow}>
+          <Text style={n12.title}>{isSi ? '📅 ඉදිරි මාස 12 — ඔයාගේ කාල සිතියම' : '📅 Your Next 12 Months'}</Text>
+        </View>
+        <Text style={n12.sub}>{isSi ? 'සෑම මාසයකම වැඩිම ශක්තිය තියෙන ජීවිත ක්ෂේත්‍රය' : 'The strongest life area of each month'}</Text>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={n12.barsRow}>
+          {months.map(function(m, i) {
+            var best = null;
+            Object.keys(m.scores || {}).forEach(function(d) {
+              if (!best || m.scores[d] > m.scores[best]) best = d;
+            });
+            var meta = N12_DOMAIN_META[best] || { color: '#FFB800', icon: '✨' };
+            var score = best ? m.scores[best] : 50;
+            var h = 22 + Math.round(((score - 30) / 68) * 58);
+            var hasEclipse = m.eclipses && m.eclipses.length > 0;
+            return (
+              <View key={m.month} style={n12.barCol}>
+                <Text style={n12.barScore}>{score}</Text>
+                <View style={[n12.barTrack, { height: 80 }]}>
+                  <Animated.View entering={FadeInUp.delay(250 + i * 55).duration(450)} style={[n12.barFill, { height: Math.max(14, Math.min(80, h)), backgroundColor: meta.color }]} />
+                </View>
+                <Text style={n12.barEmoji}>{hasEclipse ? '🌘' : meta.icon}</Text>
+                <Text style={n12.barLabel}>{String(m.label || m.month).split(' ')[0]}</Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+
+        {windows.length > 0 && (
+          <View style={n12.chipsWrap}>
+            {windows.map(function(w, i) {
+              var meta = N12_DOMAIN_META[w.domain] || { icon: '✨', color: '#FFB800', si: w.domain, en: w.domain };
+              var isCaution = w.type === 'caution';
+              return (
+                <Animated.View key={w.domain + w.start} entering={FadeInRight.delay(350 + i * 90).duration(400)} style={[n12.chip, isCaution && n12.chipCaution]}>
+                  <Text style={n12.chipIcon}>{isCaution ? '⚠️' : meta.icon}</Text>
+                  <View style={{ flexShrink: 1 }}>
+                    <Text style={[n12.chipTitle, isCaution && { color: '#FCA5A5' }]} numberOfLines={1}>
+                      {(isSi ? meta.si : meta.en)} {w.tier} — {w.startLabel}{w.endLabel !== w.startLabel ? ' → ' + w.endLabel : ''}
+                    </Text>
+                    <Text style={n12.chipSub} numberOfLines={1}>
+                      {isCaution
+                        ? (isSi ? 'පරිස්සමෙන් — ලොකු තීරණ කල් දාන්න' : 'Consolidate — avoid big launches')
+                        : (isSi ? 'උපරිම මාසය: ' + (w.peakLabel || '') : 'Peak: ' + (w.peakLabel || ''))}
+                    </Text>
+                  </View>
+                </Animated.View>
+              );
+            })}
+          </View>
+        )}
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+var n12 = StyleSheet.create({
+  wrap: { borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,184,0,0.22)', overflow: 'hidden', marginBottom: 16 },
+  inner: { padding: 16 },
+  headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  title: { fontSize: 15.5, fontWeight: '800', color: '#FFE8B0' },
+  sub: { fontSize: 11, color: 'rgba(255,232,176,0.55)', marginTop: 3, marginBottom: 12 },
+  barsRow: { alignItems: 'flex-end', paddingRight: 6 },
+  barCol: { alignItems: 'center', width: 40 },
+  barScore: { fontSize: 9, fontWeight: '700', color: 'rgba(255,232,176,0.65)', marginBottom: 3 },
+  barTrack: { width: 14, borderRadius: 7, backgroundColor: 'rgba(255,255,255,0.06)', justifyContent: 'flex-end', overflow: 'hidden' },
+  barFill: { width: 14, borderRadius: 7, opacity: 0.9 },
+  barEmoji: { fontSize: 12, marginTop: 5 },
+  barLabel: { fontSize: 9, color: 'rgba(255,232,176,0.5)', marginTop: 2, fontWeight: '600' },
+  chipsWrap: { marginTop: 14, gap: 8 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,184,0,0.07)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.18)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9 },
+  chipCaution: { backgroundColor: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' },
+  chipIcon: { fontSize: 16 },
+  chipTitle: { fontSize: 12.5, fontWeight: '700', color: '#FFE8B0' },
+  chipSub: { fontSize: 10.5, color: 'rgba(255,232,176,0.5)', marginTop: 1 },
+});
+
+// ══════════════════════════════════════════
+// PREDICTION CHECK-IN — "did this happen?" card (Phase 3 feedback loop)
+// ══════════════════════════════════════════
+function PredictionCheckinCard({ checkin, isSi, onAnswer, onDismiss }) {
+  var [busy, setBusy] = useState(false);
+  if (!checkin) return null;
+  var meta = N12_DOMAIN_META[checkin.domain] || { icon: '🔮', en: checkin.domain, si: checkin.domain };
+
+  var answer = async function(outcome) {
+    if (busy) return;
+    setBusy(true);
+    try { await onAnswer(outcome); } finally { setBusy(false); }
+  };
+
+  return (
+    <Animated.View entering={FadeInDown.duration(500)} style={pcc.wrap}>
+      <LinearGradient colors={['rgba(139,92,246,0.14)', 'rgba(139,92,246,0.04)']} style={pcc.inner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <View style={pcc.headRow}>
+          <Text style={pcc.headIcon}>{meta.icon}</Text>
+          <Text style={pcc.headTitle}>{isSi ? 'අපේ අනාවැකිය හරි ගියාද?' : 'Did our prediction come true?'}</Text>
+          <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close" size={16} color="rgba(255,255,255,0.4)" />
+          </TouchableOpacity>
+        </View>
+        <Text style={pcc.claim}>{checkin.claim || ''}</Text>
+        <View style={pcc.btnRow}>
+          <SpringPressable style={[pcc.btn, pcc.btnYes]} onPress={function() { answer('yes'); }} haptic="medium">
+            <Text style={pcc.btnTextYes}>{isSi ? 'ඔව් 🎯' : 'Yes 🎯'}</Text>
+          </SpringPressable>
+          <SpringPressable style={pcc.btn} onPress={function() { answer('partial'); }} haptic="light">
+            <Text style={pcc.btnText}>{isSi ? 'ටිකක්' : 'Somewhat'}</Text>
+          </SpringPressable>
+          <SpringPressable style={pcc.btn} onPress={function() { answer('no'); }} haptic="light">
+            <Text style={pcc.btnText}>{isSi ? 'නැහැ' : 'No'}</Text>
+          </SpringPressable>
+        </View>
+        <Text style={pcc.foot}>{isSi ? 'ඔයාගේ පිළිතුරු අනාගත අනාවැකි වඩාත් නිවැරදි කරනවා' : 'Your answers make future predictions sharper'}</Text>
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+var pcc = StyleSheet.create({
+  wrap: { borderRadius: 16, borderWidth: 1, borderColor: 'rgba(139,92,246,0.3)', overflow: 'hidden', marginBottom: 14 },
+  inner: { padding: 14 },
+  headRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headIcon: { fontSize: 16 },
+  headTitle: { flex: 1, fontSize: 13, fontWeight: '800', color: '#DDD6FE' },
+  claim: { fontSize: 12.5, color: 'rgba(221,214,254,0.85)', marginTop: 8, lineHeight: 18 },
+  btnRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  btn: { flex: 1, paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(139,92,246,0.35)', alignItems: 'center', backgroundColor: 'rgba(139,92,246,0.08)' },
+  btnYes: { backgroundColor: 'rgba(34,197,94,0.15)', borderColor: 'rgba(34,197,94,0.4)' },
+  btnText: { fontSize: 12, fontWeight: '700', color: 'rgba(221,214,254,0.8)' },
+  btnTextYes: { fontSize: 12, fontWeight: '800', color: '#86EFAC' },
+  foot: { fontSize: 9.5, color: 'rgba(221,214,254,0.4)', marginTop: 9, textAlign: 'center' },
 });
 
 // ══════════════════════════════════════════
@@ -1639,6 +1937,9 @@ export default function ReportScreen() {
             narrativeSections: d.narrativeSections || {},
             rashiChart: d.rashiChart || null,
             birthData: d.birthData || null,
+            sectionScores: d.sectionScores || null,
+            predictions: d.predictions || [],
+            savedReportId: d.id || reportIdToLoad,
           };
           setAiReport(aiReportData);
           // Use rashiChart from server-saved report so the chart renders
@@ -1660,17 +1961,35 @@ export default function ReportScreen() {
 
   // Calculate overview scores for Hero Card (must be at top level, not conditional)
   var overviewScores = useMemo(function() {
-    if (!report) return { average: null, map: {}, count: 0 };
-    var sections = report.sections || {};
     var scores = [];
     var scoreMap = {};
-    SECTION_KEYS.forEach(function(key) {
-      var s = extractSectionScore(key, sections[key] || (aiReport?.rawSections || {})[key]);
-      if (s != null) {
-        scores.push(s);
-        scoreMap[key] = s;
-      }
-    });
+
+    // Preferred: flat post-cross-validation map computed server-side and saved
+    // with the report (replaces the old parallel /full-report engine call).
+    var flat = aiReport && aiReport.sectionScores;
+    if (flat && typeof flat === 'object') {
+      Object.keys(flat).forEach(function(key) {
+        var v = Number(flat[key]);
+        if (Number.isFinite(v)) {
+          var s = Math.min(100, Math.max(0, Math.round(v)));
+          scores.push(s);
+          scoreMap[key] = s;
+        }
+      });
+    }
+
+    // Legacy fallback: extract from raw report sections / embedded rawData.
+    if (scores.length === 0) {
+      var sections = (report && report.sections) || {};
+      SECTION_KEYS.forEach(function(key) {
+        var s2 = extractSectionScore(key, sections[key] || (aiReport?.rawSections || {})[key] || aiReport?.narrativeSections?.[key]?.rawData);
+        if (s2 != null) {
+          scores.push(s2);
+          scoreMap[key] = s2;
+        }
+      });
+    }
+
     var avg = scores.length > 0 ? Math.round(scores.reduce(function(a, b) { return a + b; }, 0) / scores.length) : null;
     return { average: avg, map: scoreMap, count: scores.length };
   }, [report, aiReport]);
@@ -1685,8 +2004,54 @@ export default function ReportScreen() {
   // ── Failed generation state — allows direct retry without re-payment ──
   var [failedGenData, setFailedGenData] = useState(null);
 
+  // ── Known Facts intake (Phase 1) ──────────────────────────────
+  // Persisted per device so returning users see prefilled answers.
+  var [showKnownFacts, setShowKnownFacts] = useState(false);
+  var [savedKnownFacts, setSavedKnownFacts] = useState({});
+  var knownFactsRef = useRef({});
+  useEffect(function() {
+    AsyncStorage.getItem('report_known_facts').then(function(raw) {
+      if (raw) {
+        try {
+          var parsed = JSON.parse(raw);
+          setSavedKnownFacts(parsed || {});
+          knownFactsRef.current = parsed || {};
+        } catch (_) {}
+      }
+    }).catch(function() {});
+  }, []);
+
+  // ── Prediction check-ins (Phase 3 feedback loop) ──────────────
+  var [pendingCheckins, setPendingCheckins] = useState([]);
+  useEffect(function() {
+    if (!user || user.isAnonymous) return;
+    api.getPredictionCheckins().then(function(res) {
+      var due = res && res.data && Array.isArray(res.data.due) ? res.data.due : [];
+      // Only ask about windows that have already closed — answerable now.
+      setPendingCheckins(due.filter(function(d) { return d.windowClosed; }));
+    }).catch(function() {});
+  }, [user && user.uid]);
+
+  var answerCheckin = async function(outcome) {
+    var current = pendingCheckins[0];
+    if (!current) return;
+    try {
+      await api.sendPredictionOutcome(current.reportId, current.id, outcome, {
+        domain: current.domain, type: current.type, tier: current.tier,
+        score: current.score, source: current.source, drivers: current.drivers,
+        windowStart: current.windowStart, windowEnd: current.windowEnd,
+      });
+    } catch (e) {
+      if (__DEV__) console.warn('[Report] prediction outcome failed:', e.message);
+    }
+    setPendingCheckins(function(prev) { return prev.slice(1); });
+  };
+  var dismissCheckin = function() {
+    setPendingCheckins(function(prev) { return prev.slice(1); });
+  };
+
   // ── Core generation function (defined first to avoid stale closures) ──
-  var [genProgress, setGenProgress] = useState({ stage: 'starting', sectionsDone: 0, sectionsTotal: 19, currentSection: null, completedSections: [] });
+  var [genProgress, setGenProgress] = useState({ stage: 'starting', sectionsDone: 0, sectionsTotal: SECTION_KEYS.length, currentSection: null, completedSections: [] });
   var progressPollRef = useRef(null);
   var lastReportIdRef = useRef(null);
   var highWaterMarkRef = useRef({ sectionsDone: 0, stage: 'starting' });
@@ -1726,6 +2091,9 @@ export default function ReportScreen() {
           narrativeSections: rd.narrativeSections || {},
           rashiChart: rd.rashiChart || null,
           birthData: rd.birthData || null,
+          sectionScores: rd.sectionScores || null,
+          predictions: rd.predictions || [],
+          savedReportId: recent.id,
         });
         if (rd.rashiChart) {
           setChartData({ rashiChart: rd.rashiChart, lagna: rd.birthData?.lagna || null });
@@ -1751,7 +2119,7 @@ export default function ReportScreen() {
       }
       var initialStage = generationOptions.recoveryRetry ? 'recovering' : 'starting';
       var initialDone = generationOptions.recoveryRetry ? 19 : 0;
-      setGenProgress({ stage: initialStage, sectionsDone: initialDone, sectionsTotal: 19, currentSection: generationOptions.recoveryRetry ? 'checking_saved_report' : null, completedSections: [] });
+      setGenProgress({ stage: initialStage, sectionsDone: initialDone, sectionsTotal: SECTION_KEYS.length, currentSection: generationOptions.recoveryRetry ? 'checking_saved_report' : null, completedSections: [] });
       highWaterMarkRef.current = { sectionsDone: initialDone, stage: initialStage };
       wasBackgroundedDuringGen.current = false;
 
@@ -1762,29 +2130,34 @@ export default function ReportScreen() {
       // Stage ordering for monotonic progress (never go backwards)
       var STAGE_ORDER = { starting: 0, recovering: 1, engine: 2, charts: 3, coherence: 4, sections: 5, retrying: 6, complete: 7, failed: 8 };
 
-      // ── FIRE-AND-FORGET: launch API calls but DON'T await them ──
+      // ── FIRE-AND-FORGET: launch the AI report call but DON'T await it ──
       // The progress polling loop below is the primary completion mechanism.
-      // This way the UI never "times out" — it keeps polling as long as the server is working.
-      var rawReportPromise = api.getFullReport(dateStr, birthLat, birthLng, reportLang).catch(function(e) {
-        if (__DEV__) console.warn('[Report] Raw report request failed (non-blocking):', e.message);
-        return null;
-      });
+      // The old parallel /full-report call is gone: the AI payload now carries
+      // sectionScores + slim rawData, so the heavy engine no longer runs twice.
+      var kf = generationOptions.knownFacts || knownFactsRef.current || {};
       var aiReportPromise = api.getAIReport(dateStr, birthLat, birthLng, reportLang, birthLocation, userName || null, gender, userReligion || null, reportId, {
         previousReportId: generationOptions.previousReportId || null,
         retryReportId: generationOptions.retryReportId || null,
         recoveryRetry: !!generationOptions.recoveryRetry,
+        // Honor "birth time unknown" from onboarding so the server anchors the
+        // reading to the Moon sign and hedges rising-sign claims.
+        timeUnknown: (user && user.birthData && user.birthData.timeUnknown) || generationOptions.timeUnknown || false,
+        // Known Facts intake → validation mode + birth-time rectification
+        maritalStatus: kf.maritalStatus || null,
+        marriageYear: kf.marriageYear || null,
+        careerField: kf.careerField || null,
+        lifeEvents: kf.lifeEvents || null,
       }).catch(function(e) {
         if (__DEV__) console.warn('[Report] AI report request failed (non-blocking):', e.message);
         return null;
       });
 
-      // Track whether the HTTP responses arrived (they may or may not before polling completes)
-      var httpRawResult = null;
+      // Track whether the HTTP response arrived (it may or may not before polling completes)
+      var httpRawResult = null; // legacy — raw parallel call removed
       var httpAiResult = null;
       var httpDone = false;
-      Promise.allSettled([rawReportPromise, aiReportPromise]).then(function(results) {
-        httpRawResult = results[0];
-        httpAiResult = results[1];
+      Promise.allSettled([aiReportPromise]).then(function(results) {
+        httpAiResult = results[0];
         httpDone = true;
       }).catch(function(e) {
         if (__DEV__) console.warn('[Report] Promise.allSettled wrapper error:', e && e.message);
@@ -1824,6 +2197,9 @@ export default function ReportScreen() {
                     narrativeSections: d.narrativeSections || {},
                     rashiChart: d.rashiChart || null,
                     birthData: d.birthData || null,
+                    sectionScores: d.sectionScores || null,
+                    predictions: d.predictions || [],
+                    savedReportId: prog.savedReportId,
                   });
                   setChartData(d.rashiChart ? { rashiChart: d.rashiChart, lagna: d.birthData?.lagna || null } : chartSnapshot);
                   // Also try to get raw report for extra data
@@ -1889,7 +2265,10 @@ export default function ReportScreen() {
 
           if (validCount >= 5) {
             if (__DEV__) console.log('[Report] ✅ HTTP response arrived with valid report (' + validCount + ' sections)');
-            setAiReport(aiData);
+            setAiReport({
+              ...aiData,
+              savedReportId: httpAiResult.value?.savedReportId || aiData?.savedReportId || null,
+            });
             if (httpRawResult && httpRawResult.status === 'fulfilled' && httpRawResult.value && httpRawResult.value.data) {
               setReport(httpRawResult.value.data);
             }
@@ -2005,6 +2384,27 @@ export default function ReportScreen() {
       return;
     }
     setFieldErrors({});
+    // Known Facts sheet first — 20-second intake that unlocks validation mode
+    // + birth-time rectification server-side. Skippable; then generation runs.
+    setShowKnownFacts(true);
+  };
+
+  var handleKnownFactsContinue = function(facts) {
+    knownFactsRef.current = facts || {};
+    setSavedKnownFacts(facts || {});
+    AsyncStorage.setItem('report_known_facts', JSON.stringify(facts || {})).catch(function() {});
+    setShowKnownFacts(false);
+    proceedWithGeneration();
+  };
+
+  var handleKnownFactsSkip = function() {
+    knownFactsRef.current = {};
+    setShowKnownFacts(false);
+    proceedWithGeneration();
+  };
+
+  var proceedWithGeneration = async function() {
+    if (isGeneratingRef.current || loading) return;
 
     // ── Check for pending entitlement (retry after failed generation) ──
     var isRetry = false;
@@ -2025,7 +2425,10 @@ export default function ReportScreen() {
     }
 
     // Show paywall only if NOT a retry (pending entitlement = free retry)
-    if (!isRetry) {
+    // and NOT an active subscriber — the full report is included with Pro,
+    // so subscribers must never be asked to pay the one-time price again.
+    var isPro = !!(user && user.isSubscribed === true);
+    if (!isRetry && !isPro) {
       // ── Check network connectivity BEFORE showing paywall ──
       if (!isConnected) {
         setError(reportLang === 'si'
@@ -2057,7 +2460,7 @@ export default function ReportScreen() {
     setChartData(null);
     setScreenState('loading');
     setLoading(true);
-    setGenProgress({ stage: 'starting', sectionsDone: 0, sectionsTotal: 19, currentSection: null, completedSections: [] });
+    setGenProgress({ stage: 'starting', sectionsDone: 0, sectionsTotal: SECTION_KEYS.length, currentSection: null, completedSections: [] });
 
     try {
       var dateStr = extractDateOnly(birthDate) + 'T' + birthTime + ':00';
@@ -2131,7 +2534,7 @@ export default function ReportScreen() {
         logoBase64: logoB64,
       });
 
-      var fileName = 'NekathAI_Report_' + (userName || 'Report').replace(/\s+/g, '_') + '_' + birthDate + '.pdf';
+      var fileName = 'Grahachara_Report_' + (userName || 'Report').replace(/\s+/g, '_') + '_' + birthDate + '.pdf';
 
       if (Platform.OS === 'web') {
         var printWindow = window.open('', '_blank');
@@ -2225,7 +2628,7 @@ export default function ReportScreen() {
       try {
         setScreenState('loading');
         setLoading(true);
-        setGenProgress({ stage: 'recovering', sectionsDone: 19, sectionsTotal: 19, currentSection: 'checking_saved_report', completedSections: [] });
+        setGenProgress({ stage: 'recovering', sectionsDone: SECTION_KEYS.length, sectionsTotal: SECTION_KEYS.length, currentSection: 'checking_saved_report', completedSections: [] });
         var prog = await api.getReportProgress(failedGenData.reportId);
         if (prog && prog.stage === 'complete' && prog.savedReportId) {
           if (__DEV__) console.log('[Report] ✅ Previous generation completed! Fetching saved report: ' + prog.savedReportId);
@@ -2275,7 +2678,7 @@ export default function ReportScreen() {
                 var recentRes = await api.getSavedReport(recent.id);
                 if (recentRes && recentRes.data) {
                   var rd = recentRes.data;
-                  setAiReport({ narrativeSections: rd.narrativeSections || {}, rashiChart: rd.rashiChart || null, birthData: rd.birthData || null });
+                  setAiReport({ narrativeSections: rd.narrativeSections || {}, rashiChart: rd.rashiChart || null, birthData: rd.birthData || null, sectionScores: rd.sectionScores || null, predictions: rd.predictions || [], savedReportId: rd.id || null });
                   setChartData(rd.rashiChart ? { rashiChart: rd.rashiChart, lagna: rd.birthData?.lagna || null } : chartData);
                   setFailedGenData(null);
                   setError(null);
@@ -2429,7 +2832,7 @@ export default function ReportScreen() {
       <DesktopScreenWrapper routeName="report">
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <CosmicBackground reduced={reduced} lowEnd={isLowEnd} />
-        <ReadingProgressBar scrollProgress={scrollProgress} sectionCount={SECTION_KEYS.length} currentChapter={currentChapter} reportLang={reportLang} />
+        <ReadingProgressBar scrollProgress={scrollProgress} sectionCount={sectionCount || SECTION_KEYS.length} currentChapter={currentChapter} reportLang={reportLang} />
         <Animated.ScrollView style={s.flex} contentContainerStyle={[s.content, isDesktop && s.contentDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
@@ -2438,8 +2841,9 @@ export default function ReportScreen() {
             var y = e.nativeEvent.contentOffset.y;
             var h = e.nativeEvent.contentSize.height - e.nativeEvent.layoutMeasurement.height;
             if (h > 0) { scrollProgress.value = Math.min(1, Math.max(0, y / h)); }
-            var sectionIdx = Math.floor((y / (h || 1)) * SECTION_KEYS.length) + 1;
-            setCurrentChapter(Math.min(SECTION_KEYS.length, Math.max(1, sectionIdx)));
+            var chapterTotal = sectionCount || SECTION_KEYS.length;
+            var sectionIdx = Math.floor((y / (h || 1)) * chapterTotal) + 1;
+            setCurrentChapter(Math.min(chapterTotal, Math.max(1, sectionIdx)));
           }}
           scrollEventThrottle={isLowEnd ? 32 : 16}
         >
@@ -2676,6 +3080,24 @@ export default function ReportScreen() {
           {/* ═══ COSMIC DNA STRIP ═══ */}
           <CosmicDnaStrip scoreMap={overviewScores.map} isSi={reportLang === 'si'} onOrbPress={function() {}} />
 
+          {/* ═══ PREDICTION CHECK-IN — did our last prediction come true? ═══ */}
+          {pendingCheckins.length > 0 && (
+            <PredictionCheckinCard
+              checkin={pendingCheckins[0]}
+              isSi={reportLang === 'si'}
+              onAnswer={answerCheckin}
+              onDismiss={dismissCheckin}
+            />
+          )}
+
+          {/* ═══ NEXT 12 MONTHS TIMELINE — dated convergence windows ═══ */}
+          {aiReport?.narrativeSections?.next12Months?.rawData && (
+            <Next12MonthsTimeline
+              calendar={aiReport.narrativeSections.next12Months.rawData}
+              isSi={reportLang === 'si'}
+            />
+          )}
+
           {/* ═══ SECTION DIVIDER ═══ */}
           <Animated.View entering={FadeInDown.delay(300).duration(600)}>
             <View style={s.sectionDivider}>
@@ -2691,7 +3113,7 @@ export default function ReportScreen() {
               var aiNarrative = aiReport.narrativeSections[key] || null;
               if (!aiNarrative || !aiNarrative.narrative) return null;
               var rawDataKey = key === 'marriedLife' ? 'marriage' : key;
-              var rawData = (report && report.sections ? report.sections : {})[rawDataKey] || (aiReport.rawSections || {})[rawDataKey] || null;
+              var rawData = (report && report.sections ? report.sections : {})[rawDataKey] || (aiReport.rawSections || {})[rawDataKey] || aiNarrative.rawData || null;
               var EntryAnim = isLowEnd ? View : Animated.View;
               var entryProps = isLowEnd ? {} : { entering: FadeInDown.delay(100 + index * 80).duration(600).springify() };
               return <React.Fragment key={key}>
@@ -2781,7 +3203,7 @@ export default function ReportScreen() {
           pointerEvents="auto"
         >
           <ReportLoadingScreen
-            progress={{ stage: 'starting', sectionsDone: 0, sectionsTotal: 19 }}
+            progress={{ stage: 'starting', sectionsDone: 0, sectionsTotal: SECTION_KEYS.length }}
             userName={userName}
             language={reportLang}
             reduced={reduced}
@@ -2970,6 +3392,15 @@ export default function ReportScreen() {
         <View style={{ height: isDesktop ? 32 : 120 }} />
         </View>
       </ScrollView>
+
+      {/* ═══ KNOWN FACTS SHEET — 20-second intake before generation ═══ */}
+      <KnownFactsSheet
+        visible={showKnownFacts}
+        isSi={reportLang === 'si'}
+        initial={savedKnownFacts}
+        onSkip={handleKnownFactsSkip}
+        onContinue={handleKnownFactsContinue}
+      />
     </View>
     </KeyboardAvoidingView>
     </DesktopScreenWrapper>

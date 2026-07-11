@@ -287,6 +287,33 @@ async function checkPendingEntitlement(uid, type, inputData) {
 }
 
 /**
+ * Check if a user has ANY retryable pending entitlement of a type,
+ * regardless of input hash. Used by requireSubscriptionOrCredit to let a
+ * paid-but-failed generation retry reach the route (where the input-bound
+ * createOrResumeEntitlement does the precise matching).
+ *
+ * @param {string} uid  - Firebase user ID
+ * @param {string} type - 'report' | 'porondam'
+ * @returns {boolean}
+ */
+async function hasPendingEntitlement(uid, type) {
+  const db = getDb();
+  if (!db || !uid) return false;
+
+  const snap = await db.collection(COLLECTION)
+    .where('uid', '==', uid)
+    .where('type', '==', type)
+    .where('status', '==', 'pending')
+    .limit(5)
+    .get();
+
+  return snap.docs.some((doc) => {
+    const data = doc.data();
+    return !isExpired(data) && (data.retryCount || 0) < MAX_RETRIES;
+  });
+}
+
+/**
  * Get all entitlements for a user (for profile/history page).
  *
  * @param {string} uid  - Firebase user ID
@@ -399,6 +426,7 @@ module.exports = {
   recordEntitlementError,
   restoreEntitlementRetry,
   checkPendingEntitlement,
+  hasPendingEntitlement,
   getUserEntitlements,
   cleanupExpiredEntitlements,
   requireEntitlement,

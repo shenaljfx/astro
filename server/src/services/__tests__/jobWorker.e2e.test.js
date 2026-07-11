@@ -90,6 +90,12 @@ jest.mock('../../engine/chat', () => ({
   generateAINarrativeReport: jest.fn(),
   createReportProgress: jest.fn(),
   updateReportProgress: jest.fn(),
+  REPORT_SECTION_ORDER: [
+    'yogaAnalysis', 'lifePredictions', 'career', 'marriage', 'marriedLife', 'financial',
+    'children', 'familyPortrait', 'health', 'physicalProfile', 'attractionProfile',
+    'foreignTravel', 'education', 'luck', 'legal', 'realEstate', 'transits',
+    'next12Months', 'surpriseInsights', 'remedies',
+  ],
 }));
 
 jest.mock('../../middleware/entitlements', () => ({

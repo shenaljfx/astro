@@ -23,10 +23,11 @@ var DEFAULT_PRICING = {
   currency: 'LKR',
   currencySymbol: 'LKR',
   country: 'Sri Lanka',
-  subscription: { amount: 280, amountFormatted: '280.00', label: 'LKR 280/month', period: 'month' },
-  porondam: { amount: 200, amountFormatted: '200.00', label: 'LKR 200' },
-  report: { amount: 499, amountFormatted: '499.00', label: 'LKR 499' },
-  topUpPackages: [200, 280, 499, 500],
+  subscription: { amount: 490, amountFormatted: '490.00', label: 'LKR 490/month', period: 'month' },
+  // Marriage Pack (rebranded porondam) — same productId 'porondam_check'
+  porondam: { amount: 990, amountFormatted: '990.00', label: 'LKR 990' },
+  report: { amount: 999, amountFormatted: '999.00', label: 'LKR 999' },
+  babyKendara: { amount: 1490, amountFormatted: '1490.00', label: 'LKR 1,490' },
 };
 
 // Default USD pricing (international fallback — mirrors server/src/config/pricing.js)
@@ -35,9 +36,9 @@ var DEFAULT_USD_PRICING = {
   currencySymbol: '$',
   country: 'International',
   subscription: { amount: 4.99, amountFormatted: '4.99', label: '$4.99/month', period: 'month' },
-  porondam: { amount: 1.99, amountFormatted: '1.99', label: '$1.99' },
+  porondam: { amount: 4.99, amountFormatted: '4.99', label: '$4.99' },
   report: { amount: 3.99, amountFormatted: '3.99', label: '$3.99' },
-  topUpPackages: [2, 5, 6, 10],
+  babyKendara: { amount: 6.99, amountFormatted: '6.99', label: '$6.99' },
 };
 
 /**

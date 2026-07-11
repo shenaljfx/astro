@@ -1,5 +1,5 @@
 const os = require('os');
-const { generateAINarrativeReport, createReportProgress, updateReportProgress } = require('../engine/chat');
+const { generateAINarrativeReport, createReportProgress, updateReportProgress, REPORT_SECTION_ORDER } = require('../engine/chat');
 const { generateWeeklyLagnaReports } = require('../engine/weeklyLagna');
 const { PROMPT_VERSION } = require('../engine/promptObservability');
 const { getCachedReport, saveReport } = require('../models/firestore');
@@ -8,9 +8,12 @@ const { trackCost } = require('./costTracker');
 const { notifyAlert } = require('./alerting');
 const { claimNextJob, completeJob, failJob } = require('./jobQueue');
 const { sendWeeklyLagnaPushNotification } = require('./scheduler');
+const firestoreCircuit = require('./firestoreCircuit');
 
 const WORKER_POLL_MS = Number(process.env.WORKER_POLL_MS || 5000);
-const REPORT_SECTION_TOTAL = 19;
+const WORKER_IDLE_MAX_MS = Number(process.env.WORKER_IDLE_MAX_MS || 60000);   // idle backoff cap
+const WORKER_ERROR_MAX_MS = Number(process.env.WORKER_ERROR_MAX_MS || 120000); // transient error backoff cap
+const REPORT_SECTION_TOTAL = (REPORT_SECTION_ORDER || []).length || 20; // single source of truth — never hardcode
 const RECOVERY_RECHECKS = 3;
 const RECOVERY_DELAY_MS = 30000;
 
@@ -138,8 +141,11 @@ async function executeAIReportJob(payload, job = {}) {
       {
         maritalStatus: payload.maritalStatus || null,
         marriageYear: payload.marriageYear || null,
+        careerField: payload.careerField || null,
+        lifeEvents: Array.isArray(payload.lifeEvents) ? payload.lifeEvents : [],
         calculationSettings: payload.calculationSettings || {},
         asOfDate: payload.asOfDate || null,
+        timeUnknown: payload.timeUnknown === true,
         timeContext: serializeTimeContext(payload.timeContext),
       },
       reportId
@@ -170,6 +176,8 @@ async function executeAIReportJob(payload, job = {}) {
       sections: report.narrativeSections,
       rashiChart: report.rashiChart,
       birthInfo: report.birthData,
+      sectionScores: report.sectionScores || null,
+      predictions: report.predictions || [],
       promptVersion: report.promptVersion || PROMPT_VERSION,
       cacheKey: payload.cacheKey || null,
       cacheVersion: payload.cacheVersion || null,
@@ -265,16 +273,74 @@ async function runWorkerOnce(workerId, types) {
 function startWorkerLoop(options = {}) {
   const workerId = options.workerId || `${os.hostname()}-${process.pid}`;
   const types = options.types || ['aiReport', 'weeklyLagna'];
+  const basePoll = Number(options.pollMs || WORKER_POLL_MS);
   let stopped = false;
+
+  // Adaptive scheduling state.
+  let idleStreak = 0;    // consecutive empty polls → ramp interval up to IDLE_MAX
+  let errorStreak = 0;   // consecutive transient errors → exponential backoff
+  // Throttled logging: collapse identical repeated errors into a summary.
+  let lastLogKey = null;
+  let lastLogAt = 0;
+  let suppressed = 0;
+
+  const logThrottled = (key, message) => {
+    const now = Date.now();
+    if (key !== lastLogKey || now - lastLogAt > 60000) {
+      const suffix = suppressed > 0 ? ` (…${suppressed} identical suppressed)` : '';
+      console.error(`[JobWorker] ${message}${suffix}`);
+      lastLogKey = key;
+      lastLogAt = now;
+      suppressed = 0;
+    } else {
+      suppressed += 1;
+    }
+  };
 
   async function tick() {
     if (stopped) return;
+    let nextDelay = basePoll;
+
+    // If the DB breaker is open (quota/unavailable), don't even poll — wait it out.
+    if (firestoreCircuit.isOpen()) {
+      const wait = Math.max(5000, firestoreCircuit.msRemaining());
+      logThrottled('circuit_open', `Firestore circuit open — pausing polling ${Math.round(wait / 1000)}s (no data loss; queued jobs resume after cooldown).`);
+      if (!stopped) setTimeout(tick, Math.min(wait, WORKER_IDLE_MAX_MS));
+      return;
+    }
+
     try {
-      await runWorkerOnce(workerId, types);
+      const result = await runWorkerOnce(workerId, types);
+      firestoreCircuit.recordSuccess();
+      errorStreak = 0;
+      if (result) {
+        // Did work → poll again promptly in case more jobs are queued.
+        idleStreak = 0;
+        nextDelay = 250;
+      } else {
+        // Idle → ramp the interval up to reduce steady-state Firestore reads.
+        idleStreak += 1;
+        nextDelay = Math.min(WORKER_IDLE_MAX_MS, basePoll * Math.min(idleStreak, 12));
+      }
     } catch (error) {
-      console.error('[JobWorker] tick failed:', error.message);
+      idleStreak = 0;
+      errorStreak += 1;
+      const cls = firestoreCircuit.recordError(error);
+      if (cls.isQuota) {
+        // Quota resets daily — hammering is pointless. The breaker is now open;
+        // wait out its cooldown instead of retrying every few seconds.
+        nextDelay = Math.max(firestoreCircuit.msRemaining(), 60000);
+        logThrottled('quota', `Firestore quota exceeded — pausing ${Math.round(nextDelay / 60000)} min. Worker idle, jobs stay queued. (${error.message})`);
+      } else if (cls.isUnavailable) {
+        nextDelay = Math.min(WORKER_ERROR_MAX_MS, 1000 * 2 ** Math.min(errorStreak, 7)) + Math.random() * 1000;
+        logThrottled('unavailable', `Firestore unavailable — backoff ${Math.round(nextDelay / 1000)}s. (${error.message})`);
+      } else {
+        // Non-DB error in the poll path — back off modestly, keep going.
+        nextDelay = Math.min(WORKER_ERROR_MAX_MS, 1000 * 2 ** Math.min(errorStreak, 6)) + Math.random() * 1000;
+        logThrottled('tick', `tick failed: ${error.message}`);
+      }
     } finally {
-      if (!stopped) setTimeout(tick, Number(options.pollMs || WORKER_POLL_MS));
+      if (!stopped) setTimeout(tick, nextDelay);
     }
   }
 

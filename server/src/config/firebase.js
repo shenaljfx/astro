@@ -89,6 +89,8 @@ const COLLECTIONS = {
   DAILY_AI_USER_SPEND: 'dailyAiUserSpend',
   AI_COST_EVENTS: 'aiCostEvents',
   REVENUECAT_WEBHOOK_EVENTS: 'revenuecatWebhookEvents',
+  PREDICTION_OUTCOMES: 'predictionOutcomes',
+  PURCHASE_CREDITS: 'purchaseCredits',
 };
 
 module.exports = { initFirebase, getDb, getAuth, COLLECTIONS };

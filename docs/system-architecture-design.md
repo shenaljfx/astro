@@ -239,7 +239,7 @@ The API is mounted under `/api`:
 | `/api/weekly-lagna` | `routes/weeklyLagna.js` | Weekly Lagna reads and admin generation queueing. |
 | `/api/notifications` | `routes/notifications.js` | Push token registration, history, preferences, alert helpers. |
 | `/api/user` | `routes/user.js` | Profile, birth data, preferences, user history. |
-| `/api/tokens` | `routes/tokens.js` | Token balance, top-up placeholders, generation entitlement checks. |
+| `/api/entitlements` | `routes/entitlements.js` | Generation entitlement checks ("pay once, generate until success" retries). |
 | `/api/predictions` | `routes/predictions.js` | Transit, timing, Muhurtha, health, annual, feedback helpers. |
 | `/api/rectification` | `routes/rectification.js` | Birth-time rectification helpers. |
 | `/api/share` | `routes/share.js` | Weekly cards and personality share outputs. |

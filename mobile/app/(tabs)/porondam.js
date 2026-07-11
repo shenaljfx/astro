@@ -36,6 +36,7 @@ import { CosmicBackground } from '../../components/CosmicBackground';
 import { generatePorondamHTML, loadLogoBase64 } from '../../utils/pdfReportGenerator';
 import RadarChart from '../../components/RadarChart';
 import { ZODIAC_IMAGES as ZODIAC_IMAGE_LIST } from '../../components/ZodiacIcons';
+import { deriveArchetype as deriveLagnaArchetype, BANDS as ARCHETYPE_BANDS } from '../../utils/porondamArchetypes';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -48,18 +49,11 @@ var MOBILE_CHART = Math.min(W - 64, 300);
 // Default birth city (Colombo)
 var DEFAULT_CITY = { name: 'Colombo', country: 'Sri Lanka', countryCode: 'LK', lat: 6.9271, lng: 79.8612 };
 
-// Planet name translation helper
-var PLANET_INFO = {
-  Sun: { si: 'à¶‰à¶»' }, Moon: { si: 'à·„à¶³' }, Mars: { si: 'à¶šà·”à¶¢' },
-  Mercury: { si: 'à¶¶à·”à¶°' }, Jupiter: { si: 'à¶œà·”à¶»à·”' }, Venus: { si: 'à·ƒà·’à¶šà·”à¶»à·”' },
-  Saturn: { si: 'à·à¶±à·’' }, Rahu: { si: 'à¶»à·à·„à·”' }, Ketu: { si: 'à¶šà·šà¶­à·”' },
-};
-
 // Rashi name translation helper
 var RASHI_SI = {
-  Aries: 'à¶¸à·šà·‚', Taurus: 'à·€à·˜à·‚à¶·', Gemini: 'à¶¸à·’à¶®à·”à¶±', Cancer: 'à¶šà¶§à¶š',
-  Leo: 'à·ƒà·’à¶‚à·„', Virgo: 'à¶šà¶±à·Šâ€à¶ºà·', Libra: 'à¶­à·”à¶½à·', Scorpio: 'à·€à·˜à·à·Šà¶ à·’à¶š',
-  Sagittarius: 'à¶°à¶±à·”', Capricorn: 'à¶¸à¶šà¶»', Aquarius: 'à¶šà·”à¶¸à·Šà¶·', Pisces: 'à¶¸à·“à¶±',
+  Aries: 'මේෂ', Taurus: 'වෘෂභ', Gemini: 'මිථුන', Cancer: 'කටක',
+  Leo: 'සිංහ', Virgo: 'කන්‍යා', Libra: 'තුලා', Scorpio: 'වෘශ්චික',
+  Sagittarius: 'ධනු', Capricorn: 'මකර', Aquarius: 'කුම්භ', Pisces: 'මීන',
 };
 
 // Zodiac sign images by rashi ID (1=Aries...12=Pisces)
@@ -80,87 +74,6 @@ var ZODIAC_IMAGES = {
 var RASHI_NAMES = ['', 'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
 var RASHI_NAMES_SI = ['', 'මේෂ', 'වෘෂභ', 'මිථුන', 'කටක', 'සිංහ', 'කන්‍යා', 'තුලා', 'වෘශ්චික', 'ධනු', 'මකර', 'කුම්භ', 'මීන'];
 
-// Vedic Lagna-to-Lagna compatibility (house position of partner's lagna from yours)
-// Score: 5=trine (best), 4=kendra, 3=friendly, 2=neutral, 1=difficult
-function getLagnaCompatScore(myRashiId, theirRashiId) {
-  var diff = ((theirRashiId - myRashiId) % 12 + 12) % 12; // 0-11 position
-  // Trine houses (5, 9) = best synergy
-  if (diff === 4 || diff === 8) return { score: 5, tier: 'best' };
-  // Same sign = strong mirror
-  if (diff === 0) return { score: 4, tier: 'best' };
-  // Kendra (4, 7, 10) = powerful attraction
-  if (diff === 3 || diff === 6 || diff === 9) return { score: 4, tier: 'good' };
-  // 2nd and 12th = moderate support
-  if (diff === 1 || diff === 11) return { score: 3, tier: 'neutral' };
-  // 3rd and 11th = friendly
-  if (diff === 2 || diff === 10) return { score: 3, tier: 'neutral' };
-  // 6th and 8th = challenging / karmic
-  if (diff === 5 || diff === 7) return { score: 1, tier: 'avoid' };
-  return { score: 2, tier: 'neutral' };
-}
-
-function getLagnaCompatList(myRashiId) {
-  var results = [];
-  for (var i = 1; i <= 12; i++) {
-    if (i === myRashiId) continue;
-    var compat = getLagnaCompatScore(myRashiId, i);
-    results.push({ rashiId: i, name: RASHI_NAMES[i], nameSi: RASHI_NAMES_SI[i], score: compat.score, tier: compat.tier });
-  }
-  results.sort(function(a, b) { return b.score - a.score; });
-  return results;
-}
-
-var COMPAT_HOOKS_EN = {
-  best: [
-    '{name}, they can\u2019t stop thinking about you',
-    '{name}, this person loses sleep over you',
-    '{name}, they\u2019re already yours \u2014 they just don\u2019t know it yet',
-  ],
-  good: [
-    '{name}, strong pull \u2014 they feel safe around you',
-    '{name}, something about you haunts their mind',
-    '{name}, they\u2019d choose you over anyone',
-  ],
-  neutral: [
-    '{name}, it could go either way \u2014 depends on your next move',
-    '{name}, slow burn \u2014 takes time but can surprise you',
-    '{name}, comfortable but won\u2019t set your soul on fire',
-    '{name}, predictable energy \u2014 no sparks, no danger',
-  ],
-  avoid: [
-    '{name}, this one will drain your energy completely',
-    '{name}, they\u2019ll take everything and leave you empty',
-    '{name}, you\u2019ll lose yourself trying to make this work',
-  ],
-};
-var COMPAT_HOOKS_SI = {
-  best: [
-    '{name}, ඔවුන්ගේ සිතුවිලිවලින් ඔබව ඉවත් කළ නොහැකි වනු ඇත',
-    '{name}, ඔබ නිසා ඔවුන්ට නින්ද පවා අහිමි වීමට ඉඩ ඇත',
-    '{name}, ඔවුන් දැනටමත් ඔබේ ය — ඔවුන් තවමත් එය නොදන්නවා වුවද',
-  ],
-  good: [
-    '{name}, ඔබ වෙත ප්‍රබල ආකර්ෂණයක් ඇත — ඔබ ළඟ ඔවුන්ට ආරක්ෂාව දැනෙයි',
-    '{name}, ඔබේ ස්වභාවය ඔවුන්ගේ මනසේ හොල්මන් කරනු ඇත',
-    '{name}, ඔවුන් ඕනෑම කෙනෙකුට වඩා ඔබව තෝරා ගැනීමට පෙළඹෙයි',
-  ],
-  neutral: [
-    '{name}, මෙය ඔබේ මීළඟ පියවර මත තීරණය වනු ඇත',
-    '{name}, සෙමින් ඇරඹෙන සම්බන්ධයක් — කාලයත් සමග ඔබව පුදුම කරවයි',
-    '{name}, පහසුවක් දැනෙනු ඇතත් හදවත දැවෙන ආශාවක් ඇති නොවනු ඇත',
-    '{name}, අනාවැකි කිව හැකි ශක්තියක් — ලොකු ආකර්ෂණයක් හෝ අනතුරක් නැත',
-  ],
-  avoid: [
-    '{name}, මෙම පුද්ගලයා ඔබේ මානසික ශක්තිය සම්පූර්ණයෙන්ම උරා ගනු ඇත',
-    '{name}, ඔවුන් සියල්ල ලබාගෙන ඔබව හිස් කර දමනු ඇත',
-    '{name}, මෙය සාර්ථක කර ගැනීමට යාමේදී ඔබවම නැති කර ගැනීමට ඉඩ ඇත',
-  ],
-};
-
-// Yoga category/strength Sinhala
-var YOGA_CAT_SI = { 'Raja Yoga': 'à¶»à·à¶¢ à¶ºà·à¶œà¶º', 'Dhana Yoga': 'à¶°à¶± à¶ºà·à¶œà¶º', 'Gnana Yoga': 'à¶¥à·à¶± à¶ºà·à¶œà¶º', 'Pancha Mahapurusha': 'à¶´à¶‚à¶  à¶¸à·„à· à¶´à·”à¶»à·”à·‚', 'Chandra Yoga': 'à¶ à¶±à·Šà¶¯à·Šâ€à¶» à¶ºà·à¶œà¶º', 'Special': 'à·€à·’à·à·šà·‚', 'Arishta': 'à¶…à¶»à·’à·‚à·Šà¶§' };
-var YOGA_STR_SI = { 'Strong': 'à¶´à·Šâ€à¶»à¶¶à¶½', 'Moderate': 'à¶¸à¶°à·Šâ€à¶ºà¶¸', 'Mild': 'à·ƒà·”à·…à·”', 'Very Strong': 'à¶‰à¶­à· à¶´à·Šâ€à¶»à¶¶à¶½', 'Exceptional': 'à·€à·’à·à·’à·‚à·Šà¶§' };
-
 // Glass Card
 function Glass({ children, style, accent }) {
   return (
@@ -177,48 +90,9 @@ function Glass({ children, style, accent }) {
   );
 }
 
-// Binary Star Orbit Animation Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-function BinaryStarOrbit({ pct, color }) {
-  var orbit = useSharedValue(0);
-  var pulse = useSharedValue(0.7);
-  useEffect(function () {
-    orbit.value = withRepeat(withTiming(360, { duration: 6000, easing: Easing.linear }), -1, false);
-    pulse.value = withRepeat(withSequence(withTiming(1, { duration: 1800 }), withTiming(0.7, { duration: 1800 })), -1);
-  }, []);
-  var star1Style = useAnimatedStyle(function () {
-    var rad = orbit.value * Math.PI / 180;
-    return { transform: [{ translateX: Math.cos(rad) * 34 }, { translateY: Math.sin(rad) * 14 }] };
-  });
-  var star2Style = useAnimatedStyle(function () {
-    var rad = (orbit.value + 180) * Math.PI / 180;
-    return { transform: [{ translateX: Math.cos(rad) * 34 }, { translateY: Math.sin(rad) * 14 }] };
-  });
-  var glowStyle = useAnimatedStyle(function () { return { opacity: pulse.value }; });
-
-  return (
-    <View style={{ width: 110, height: 110, alignItems: 'center', justifyContent: 'center' }}>
-      {/* Orbit ring */}
-      <View style={{ position: 'absolute', width: 92, height: 38, borderRadius: 46, borderWidth: 1, borderColor: color + '30', borderStyle: 'dashed' }} />
-      {/* Glow */}
-      <Animated.View style={[{ position: 'absolute', width: 60, height: 60, borderRadius: 30, backgroundColor: color + '18' }, glowStyle]} />
-      {/* Center */}
-      <View style={{ width: 40, height: 40, borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: color + '60' }}>
-        <LinearGradient colors={[color + '40', 'rgba(18,6,12,0.9)']} style={StyleSheet.absoluteFill} />
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: color, fontSize: 13, fontWeight: '900' }}>{pct}<Text style={{ fontSize: 7 }}>%</Text></Text>
-        </View>
-      </View>
-      {/* Bride star */}
-      <Animated.View style={[{ position: 'absolute', width: 14, height: 14, borderRadius: 7, backgroundColor: '#F9A8D4', ...boxShadow('#F9A8D4', { width: 0, height: 0 }, 1, 6), elevation: 4 }, star1Style]} />
-      {/* Groom star */}
-      <Animated.View style={[{ position: 'absolute', width: 14, height: 14, borderRadius: 7, backgroundColor: '#93C5FD', ...boxShadow('#93C5FD', { width: 0, height: 0 }, 1, 6), elevation: 4 }, star2Style]} />
-    </View>
-  );
-}
-
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
 // CACHE CONSTANTS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
 var PORONDAM_CACHE_KEY = '@grahachara_saved_porondam';
 var MAX_SAVED_PORONDAM = 10;
 
@@ -232,22 +106,22 @@ var PORONDAM_LOADING_STAGES = {
     { title: 'Writing your love story', sub: 'Weaving everything into your personalised compatibility report.', icon: 'sparkles' },
   ],
   si: [
-    { title: 'à¶‹à¶´à¶­à·Š à·ƒà·’à¶­à·’à¶ºà¶¸à·Š à¶¯à·™à¶š à·ƒà¶šà·ƒà¶¸à·’à¶±à·Š', sub: 'à¶½à¶œà·Šà¶±à¶º, à¶ à¶±à·Šà¶¯à·Šâ€à¶» à¶»à·à·à·’à¶º, à·ƒà·„ à¶±à·à¶šà¶­ à¶‘à¶šà¶§ à¶´à·™à·…à¶œà·ƒà·Šà·€à¶¸à·’à¶±à·Š.', icon: 'planet-outline' },
-    { title: 'à¶´à·œà¶»à·œà¶±à·Šà¶¯à¶¸à·Š à¶½à¶šà·”à¶«à·” à·„à¶­ à¶šà·’à¶ºà·€à¶¸à·’à¶±à·Š', sub: 'à¶¯à·’à¶±, à¶œà¶«, à¶ºà·à¶±à·’, à¶»à·à·à·’, à·€à·à·Šâ€à¶º, à¶±à·à¶©à·’, à·ƒà·„ à¶¸à·„à·šà¶±à·Šà¶¯à·Šâ€à¶» à¶œà·à·…à¶´à·“à¶¸ à·ƒà·ƒà¶³à¶¸à·’à¶±à·Š.', icon: 'analytics-outline' },
-    { title: 'à·„à·à¶Ÿà·“à¶¸à·Š à¶»à·’à¶¯à·Šà¶¸à¶º à¶¸à·à¶± à¶¶à¶½à¶¸à·’à¶±à·Š', sub: 'à¶¯à·›à¶±à·’à¶š à¶´à·„à·ƒà·”à·€, à¶†à¶šà¶»à·Šà·‚à¶«à¶º, à¶´à·€à·”à¶½à·Š à¶œà¶½à·à¶ºà·‘à¶¸, à·ƒà·„ à¶šà·à¶´à·€à·“à¶¸ à·ƒà¶šà·ƒà¶¸à·’à¶±à·Š.', icon: 'pulse-outline' },
-    { title: 'à¶œà·à¶¹à·”à¶»à·” à¶¶à·à¶³à·“à¶¸ à·€à·’à·à·Šà¶½à·šà·‚à¶«à¶º à¶šà¶»à¶¸à·’à¶±à·Š', sub: 'à¶±à·€à·à¶‚à·à¶š, à¶¢à·“à·€à·’à¶­ à¶…à¶¯à·’à¶ºà¶», à·ƒà·„ à¶¯à·’à¶œà·”à¶šà·à¶½à·“à¶± à·ƒà·„à·à¶º à¶´à·’à¶»à·’à¶´à·„à¶¯à·” à¶šà¶»à¶¸à·’à¶±à·Š.', icon: 'diamond-outline' },
-    { title: 'à¶œà·à·…à¶´à·“à¶¸à·Š à¶šà¶­à·à·€ à·ƒà·–à¶¯à·à¶±à¶¸à·Š à¶šà¶»à¶¸à·’à¶±à·Š', sub: 'à¶…à·€à·ƒà·à¶± à·ƒà¶¶à¶³à¶­à· à¶šà·’à¶ºà·€à·“à¶¸ à¶´à·’à¶»à·’à·ƒà·’à¶¯à·” à¶šà¶»à¶¸à·’à¶±à·Š.', icon: 'sparkles' },
+    { title: 'උපත් සිතියම් දෙක සකසමින්', sub: 'ලග්නය, චන්ද්‍ර රාශිය, සහ නැකත එකට පෙළගස්වමින්.', icon: 'planet-outline' },
+    { title: 'පොරොන්දම් ලකුණු හත කියවමින්', sub: 'දින, ගණ, යෝනි, රාශි, වශ්‍ය, නාඩි, සහ මහේන්ද්‍ර ගැළපීම සසඳමින්.', icon: 'analytics-outline' },
+    { title: 'හැඟීම් රිද්මය මැන බලමින්', sub: 'දෛනික පහසුව, ආකර්ෂණය, පවුල් ගලායෑම, සහ කැපවීම සකසමින්.', icon: 'pulse-outline' },
+    { title: 'ගැඹුරු බැඳීම විශ්ලේෂණය කරමින්', sub: 'නවාංශක, ජීවිත අදියර, සහ දිගුකාලීන සහාය පිරිපහදු කරමින්.', icon: 'diamond-outline' },
+    { title: 'ගැළපීම් කතාව සූදානම් කරමින්', sub: 'අවසාන සබඳතා කියවීම පිරිසිදු කරමින්.', icon: 'sparkles' },
   ],
 };
 
 var PORONDAM_SIGNAL_TRACK = [
-  { en: 'Dina', si: 'à¶¯à·’à¶±', icon: 'sunny-outline', color: '#FBBF24' },
-  { en: 'Gana', si: 'à¶œà¶«', icon: 'people-outline', color: '#A78BFA' },
-  { en: 'Yoni', si: 'à¶ºà·à¶±à·’', icon: 'heart-outline', color: '#F472B6' },
-  { en: 'Rashi', si: 'à¶»à·à·à·’', icon: 'moon-outline', color: '#60A5FA' },
-  { en: 'Vasya', si: 'à·€à·à·Šâ€à¶º', icon: 'magnet-outline', color: '#FB923C' },
-  { en: 'Nadi', si: 'à¶±à·à¶©à·’', icon: 'pulse-outline', color: '#34D399' },
-  { en: 'Mahendra', si: 'à¶¸à·„à·šà¶±à·Šà¶¯à·Šâ€à¶»', icon: 'leaf-outline', color: '#22D3EE' },
+  { en: 'Dina', si: 'දින', icon: 'sunny-outline', color: '#FBBF24' },
+  { en: 'Gana', si: 'ගණ', icon: 'people-outline', color: '#A78BFA' },
+  { en: 'Yoni', si: 'යෝනි', icon: 'heart-outline', color: '#F472B6' },
+  { en: 'Rashi', si: 'රාශි', icon: 'moon-outline', color: '#60A5FA' },
+  { en: 'Vasya', si: 'වශ්‍ය', icon: 'magnet-outline', color: '#FB923C' },
+  { en: 'Nadi', si: 'නාඩි', icon: 'pulse-outline', color: '#34D399' },
+  { en: 'Mahendra', si: 'මහේන්ද්‍ර', icon: 'leaf-outline', color: '#22D3EE' },
 ];
 
 function buildPorondamParticles(count) {
@@ -270,86 +144,117 @@ function buildPorondamParticles(count) {
 
 var PORONDAM_LOADING_PARTICLES = buildPorondamParticles(34);
 
-function getCompatibilityFactorCopy(name, language, score, maxScore) {
+// ── Signal copy — plain language first, the classical name as the credential ──
+// Voice: warm counsel (EN) · elevated ඔබ register, flowing not stiff (SI).
+// Tiers speak of care, never doom: good / mixed / poor → natural / workable / needs attention.
+var TIER_COLORS = { good: '#34D399', mixed: '#E8C97A', poor: '#F59E0B' };
+
+var SIGNAL_COPY = {
+  Dina: {
+    plainName: { en: 'Everyday Life Together', si: 'එකට ගෙවෙන දවස' },
+    techName: { en: 'Dina Porondam', si: 'දින පොරොන්දම' },
+    short: { en: 'Daily', si: 'දවස' },
+    what: { en: 'This checks how easily your daily routines — waking, meals, work, rest — fit together.', si: 'මෙයින් බලන්නේ දෙදෙනාගේ දවසේ රටාව — නැගිටින වෙලාව, කෑම, වැඩ, විවේකය — කොතරම් පහසුවෙන් එකට ගැළපෙනවාද කියායි.' },
+    good: { en: 'Your daily routines match well. Living together should feel easy and comfortable on most days.', si: 'දෙදෙනාගේ දවසේ රටාව හොඳින් ගැළපෙනවා. එකට ජීවත් වෙද්දී බොහෝ දවස්වල පහසුවක් සහ සැහැල්ලුවක් දැනේවි.' },
+    mixed: { en: 'Your routines differ a little. Talk early about sleep, meals and money habits — small agreements make daily life smooth.', si: 'දවසේ රටාවල පොඩි වෙනස්කම් තිබෙනවා. නින්ද, කෑම සහ වියදම් ගැන කලින්ම කතා කරගන්න — පොඩි එකඟතාවලින් එදිනෙදා ජීවිතය පහසු වෙනවා.' },
+    poor: { en: 'You run on quite different daily clocks. This is workable — but talk honestly about routines from the very start, so neither of you quietly gets worn out.', si: 'දෙදෙනාගේ දවසේ රටා සෑහෙන්න වෙනස්. මේක හදාගත හැකි දෙයක් — නමුත් මුල සිටම දවසේ රටාව ගැන අවංකව කතා කරගන්න. එවිට කාටවත් නොදැනී මහන්සිය එකතු වන්නේ නැහැ.' },
+  },
+  Gana: {
+    plainName: { en: 'Temper & Stress Style', si: 'තරහ සහ පීඩනය දරන විදිය' },
+    techName: { en: 'Gana Porondam', si: 'ගණ පොරොන්දම' },
+    short: { en: 'Temper', si: 'ස්වභාවය' },
+    what: { en: 'This checks whether you two react to stress and anger in a similar way.', si: 'මෙයින් බලන්නේ තරහ ගිය විට හෝ පීඩනයක් ආ විට දෙදෙනා හැසිරෙන විදිය සමානද කියායි.' },
+    good: { en: 'You handle stress the same way, so arguments cool down fast instead of growing into big fights.', si: 'දෙදෙනාම පීඩනය දරන විදිය සමානයි. ඒ නිසා අමනාපයක් ආවත් ඉක්මනින් නිවෙනවා — ලොකු රණ්ඩුවක් බවට වැඩෙන්නේ නැහැ.' },
+    mixed: { en: 'You react differently when upset. Learn what upsets each other — then a clash becomes a chance to understand, not a fight.', si: 'තරහ ගිය විට දෙදෙනා හැසිරෙන විදිය වෙනස්. එකිනෙකාව කලබල කරන දේවල් හඳුනාගන්න — එවිට ගැටුමක් රණ්ඩුවක් නොවී, තේරුම් ගැනීමට අවස්ථාවක් වෙනවා.' },
+    poor: { en: 'One of you stays quiet while the other heats up fast. Neither is wrong — just give tempers time to cool, and be patient with each other’s pace.', si: 'එක් අයෙක් නිහඬ වෙද්දී අනෙකා ඉක්මනින් රත් වෙනවා. දෙදෙනාම වැරදි නැහැ — තරහ නිවෙන්න එකිනෙකාට වෙලාව දෙන්න, එකිනෙකාගේ වේගයට ඉවසීමෙන් ඉඩ දෙන්න.' },
+  },
+  Yoni: {
+    plainName: { en: 'Physical Closeness', si: 'ශාරීරික සමීපකම' },
+    techName: { en: 'Yoni Porondam', si: 'යෝනි පොරොන්දම' },
+    short: { en: 'Closeness', si: 'සමීපකම' },
+    what: { en: 'This checks the natural physical attraction between you, and how easily closeness comes.', si: 'මෙයින් බලන්නේ දෙදෙනා අතර ස්වාභාවික ශාරීරික ආකර්ෂණය සහ සමීප වීමේ පහසුව ගැනයි.' },
+    good: { en: 'A strong natural attraction. Physical and emotional closeness come easily for you two.', si: 'ස්වාභාවික ආකර්ෂණය හොඳටම තිබෙනවා. ශාරීරික සහ හිතේ සමීපකම දෙකම ඔබ දෙදෙනාට පහසුවෙන් ලැබෙනවා.' },
+    mixed: { en: 'The attraction is real, but it needs time and care to stay strong. Unhurried time alone together helps a lot.', si: 'ආකර්ෂණය ඇත්තටම තිබෙනවා. නමුත් එය දිගටම තියාගන්න කාලය සහ සැලකිල්ල ඕනෑ. හදිසි නොවී දෙදෙනාම එකට ගත කරන කාලය ලොකු උදව්වක්.' },
+    poor: { en: 'Closeness may not come by itself. Talk openly and kindly about what each of you needs — that honest talk is what builds it.', si: 'සමීපකම ඉබේම නොඑන්න පුළුවන්. එකිනෙකාට අවශ්‍ය දේ ගැන විවෘතව, කරුණාවෙන් කතා කරන්න — ඒ අවංක කතාබහෙන් තමයි එය ගොඩනැගෙන්නේ.' },
+  },
+  Rashi: {
+    plainName: { en: 'Understanding Feelings', si: 'හැඟීම් තේරුම් ගැනීම' },
+    techName: { en: 'Rashi Porondam', si: 'රාශි පොරොන්දම' },
+    short: { en: 'Feelings', si: 'හැඟීම්' },
+    what: { en: 'This checks how easily you understand each other’s feelings and moods.', si: 'මෙයින් බලන්නේ එකිනෙකාගේ හැඟීම් සහ මනෝභාව කොතරම් පහසුවෙන් තේරුම් ගන්නවාද කියායි.' },
+    good: { en: 'You understand each other’s feelings without long explanations. Home will feel calm and safe.', si: 'දිග පැහැදිලි කිරීම් නැතුවම ඔබ එකිනෙකාගේ හැඟීම් තේරුම් ගන්නවා. නිවස සන්සුන්, ආරක්ෂිත තැනක් වගේ දැනේවි.' },
+    mixed: { en: 'You feel things differently. Simply saying “this is how I feel” early stops silent distance from growing.', si: 'දෙදෙනා හැඟීම් විඳින විදිය වෙනස්. “මට දැනෙන්නේ මෙහෙමයි” කියා කලින්ම කීවොත්, නිහඬ දුරස්කමක් වැඩෙන එක නවතිනවා.' },
+    poor: { en: 'Your emotional styles are far apart. Listen patiently instead of guessing — asking “what do you feel?” works far better than assuming.', si: 'දෙදෙනාගේ හැඟීම් රටා තරමක් දුරයි. අනුමාන නොකර ඉවසීමෙන් සවන් දෙන්න — “ඔබට මොකද දැනෙන්නේ?” කියා ඇසීම, හිතාගැනීමට වඩා හොඳින් වැඩ කරනවා.' },
+  },
+  Vasya: {
+    plainName: { en: 'Pull Toward Each Other', si: 'එකිනෙකාට ඇදෙන බව' },
+    techName: { en: 'Vasya Porondam', si: 'වශ්‍ය පොරොන්දම' },
+    short: { en: 'Pull', si: 'ඇදීම' },
+    what: { en: 'This checks the natural pull between you — how willingly you listen to and go along with each other.', si: 'මෙයින් බලන්නේ දෙදෙනා අතර ස්වාභාවික ඇදීම — එකිනෙකාට කැමැත්තෙන් සවන් දෙන, එකඟ වන ගතිය ගැනයි.' },
+    good: { en: 'A strong, willing pull toward each other. You soften each other, and agreeing feels natural.', si: 'එකිනෙකාට කැමැත්තෙන්ම ඇදෙන ප්‍රබල බැඳීමක්. ඔබ එකිනෙකාව මෘදු කරනවා — එකඟ වීම ඉබේම සිදු වෙනවා.' },
+    mixed: { en: 'One of you tends to lead more. Take turns — when both feel heard, respect stays strong.', si: 'එක් අයෙක් වැඩිපුර මූලිකත්වය ගන්නවා. මාරුවෙන් මාරුවට ඉඩ දෙන්න — දෙදෙනාටම ඇහුම්කන් ලැබෙනවා යැයි දැනුණොත් ගෞරවය රැකෙනවා.' },
+    poor: { en: 'The natural pull is quiet here. That’s okay — the bond stays strong when you choose to care for each other on purpose, every day.', si: 'ස්වාභාවික ඇදීම මෙහි අඩුයි. ඒක ප්‍රශ්නයක් නොවේ — දවසින් දවස හිතාමතාම එකිනෙකාට සැලකුවොත් බැඳීම ශක්තිමත්ව තියාගන්න පුළුවන්.' },
+  },
+  Nadi: {
+    plainName: { en: 'Health of Children & Family', si: 'දරුවන්ගේ සහ පවුලේ සෞඛ්‍යය' },
+    techName: { en: 'Nadi Porondam', si: 'නාඩි පොරොන්දම' },
+    short: { en: 'Health', si: 'නාඩි' },
+    what: { en: 'In tradition this is one of the most important checks — it looks at the health of the family line and future children.', si: 'සම්ප්‍රදායේ වැදගත්ම පරීක්ෂාවලින් එකක් මෙයයි — ඉදිරි පරම්පරාවේ, එනම් දරුවන්ගේ සෞඛ්‍යය ගැන බලනවා.' },
+    good: { en: 'This lines up well — traditionally a very good sign for healthy children and a healthy family.', si: 'මෙය හොඳින් ගැළපෙනවා — නිරෝගී දරුවන්ට සහ නිරෝගී පවුලකට ඉතා හොඳ ලකුණක් ලෙසයි සම්ප්‍රදායේ සලකන්නේ.' },
+    mixed: { en: 'A middle result. Good habits and regular medical check-ups keep this side well covered.', si: 'මධ්‍යම ප්‍රතිඵලයක්. හොඳ පුරුදු සහ නියමිත වෛද්‍ය පරීක්ෂණවලින් මේ පැත්ත හොඳින් බලාගන්න පුළුවන්.' },
+    poor: { en: 'Tradition treats this signal seriously. It is worth showing both horoscopes to an experienced astrologer, who can weigh it with everything else.', si: 'මේ ලකුණ සම්ප්‍රදායේ බැරෑරුම්ව සලකනවා. කේන්දර දෙකම පළපුරුදු ජ්‍යෝතිෂවේදියෙකුට පෙන්වා, අනෙක් සියල්ල සමඟ කිරා බලා ගැනීම වටිනවා.' },
+  },
+  Mahendra: {
+    plainName: { en: 'Growing & Doing Well Together', si: 'එකට දියුණු වීම' },
+    techName: { en: 'Mahendra Porondam', si: 'මහේන්ද්‍ර පොරොන්දම' },
+    short: { en: 'Growth', si: 'දියුණුව' },
+    what: { en: 'This checks support for prosperity — income, progress, and the blessing of children.', si: 'මෙයින් බලන්නේ දියුණුවට ඇති සහයෝගයයි — ආදායම, ඉදිරි ගමන සහ දරු භාග්‍යය.' },
+    good: { en: 'Good support for growing together — your efforts tend to add up instead of pulling apart.', si: 'එකට දියුණු වීමට හොඳ සහයක් තිබෙනවා — දෙදෙනාගේ උත්සාහය එකට එකතු වෙනවා මිස, විසිරෙන්නේ නැහැ.' },
+    mixed: { en: 'Progress will come from planning together. Decide your goals as a pair and write them down — it truly helps.', si: 'දියුණුව එන්නේ එකට සැලසුම් කිරීමෙන්. අරමුණු දෙදෙනාම එකතු වී තීරණය කර ලියා තබාගන්න — එය ඇත්තටම උදව් වෙනවා.' },
+    poor: { en: 'Success won’t come on its own here — it comes when you actively support each other’s work and dreams.', si: 'මෙහි සාර්ථකත්වය ඉබේම එන්නේ නැහැ — එකිනෙකාගේ රැකියාවට සහ සිහිනවලට සක්‍රියව උදව් කරන විට තමයි එය එන්නේ.' },
+  },
+  Rajju: {
+    plainName: { en: 'Long Life of the Marriage', si: 'විවාහයේ දිගු පැවැත්ම' },
+    techName: { en: 'Rajju Porondam', si: 'රජ්ජු පොරොන්දම' },
+    short: { en: 'Lasting', si: 'පැවැත්ම' },
+    what: { en: 'Tradition treats this as the most serious check — it reads the long life and stability of the marriage itself.', si: 'සම්ප්‍රදායේ වඩාත්ම බැරෑරුම් පරීක්ෂාව මෙයයි — විවාහයේ දිගු පැවැත්ම සහ ස්ථාවර බව ගැන බලනවා.' },
+    good: { en: 'Your rajju groups are different — traditionally the strongest sign of a long, steady marriage.', si: 'දෙදෙනාගේ රජ්ජු කාණ්ඩ වෙනස් — දිගු, ස්ථාවර විවාහයකට සම්ප්‍රදායේ තිබෙන ප්‍රබලම හොඳ ලකුණ.' },
+    mixed: { en: 'A partial result — worth a closer look from an experienced astrologer.', si: 'අර්ධ ප්‍රතිඵලයක් — පළපුරුදු ජ්‍යෝතිෂවේදියෙකු ලවා සමීපව බලවා ගැනීම වටිනවා.' },
+    poor: { en: 'You share the same rajju group. This is the one signal tradition takes most seriously — families usually show both horoscopes to an experienced astrologer before deciding.', si: 'දෙදෙනාම එකම රජ්ජු කාණ්ඩයේ. සම්ප්‍රදායේ වඩාත්ම බැරෑරුම්ව සලකන ලකුණ මෙයයි — සාමාන්‍යයෙන් පවුල් තීරණයකට පෙර කේන්දර දෙකම පළපුරුදු ජ්‍යෝතිෂවේදියෙකුට පෙන්වනවා.' },
+  },
+  Vedha: {
+    plainName: { en: 'No Blocking Stars', si: 'බාධා නැති බව' },
+    techName: { en: 'Vedha Porondam', si: 'වේධ පොරොන්දම' },
+    short: { en: 'Clear', si: 'බාධා' },
+    what: { en: 'This checks that your two birth stars do not block each other.', si: 'මෙයින් බලන්නේ දෙදෙනාගේ උපන් නැකැත් එකිනෙකාට බාධා නොකරනවාද කියායි.' },
+    good: { en: 'No blocking — your birth stars leave the road clear for each other.', si: 'බාධාවක් නැහැ — දෙදෙනාගේ නැකැත් එකිනෙකාට ඉඩ දී, මග නිදහස්ව තබනවා.' },
+    mixed: { en: 'A small crossing — being aware of it is enough to keep things smooth.', si: 'පොඩි හරස්වීමක් තිබෙනවා — ඒ ගැන දැනුවත්ව සිටීමම ප්‍රමාණවත්.' },
+    poor: { en: 'Your birth stars push against each other — tradition takes this seriously, so an experienced astrologer should weigh it with the full picture.', si: 'දෙදෙනාගේ නැකැත් එකිනෙකාට විරුද්ධව අදිනවා — සම්ප්‍රදායේ මෙය බැරෑරුම් ලකුණක්. සම්පූර්ණ චිත්‍රය සමඟ කිරා බලන්න පළපුරුදු ජ්‍යෝතිෂවේදියෙකු හමුවෙන්න.' },
+  },
+};
+
+function getSignalCopy(name, language, score, maxScore) {
   var pct = maxScore > 0 ? score / maxScore : 0;
   var tier = pct >= 0.75 ? 'good' : pct >= 0.25 ? 'mixed' : 'poor';
-
-  var factors = {
-    Dina: {
-      plainName: { en: 'Daily Life Together', si: '\u0DAF\u0DD2\u0DB1\u0DB4\u0DAD\u0DCF \u0D91\u0D9A\u0DAD\u0DD4\u0DC0' },
-      techName: { en: 'Dina Porondam', si: '\u0DAF\u0DD2\u0DB1 \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8' },
-      good: { en: 'Your everyday rhythms sync naturally \u2014 mornings, meals, and moods will feel easy together.', si: '\u0D94\u0DB6\u0DBD\u0DCF\u0D9C\u0DDA \u0DAF\u0DD2\u0DB1\u0DB4\u0DAD\u0DCF \u0DBB\u0DA7\u0DCF \u0DC3\u0DCA\u0DC0\u0DCF\u0DB7\u0DCF\u0DC0\u0DD2\u0D9A\u0DC0 \u0D9C\u0DD0\u0DBD\u0DB4\u0DDA \u2014 \u0D8B\u0DAF\u0DDA, \u0D86\u0DC4\u0DCF\u0DBB, \u0DB8\u0DB1\u0DD0\u0DC3\u0DCA\u0DAE\u0DD2\u0DAD\u0DD2 \u0DB4\u0DC4\u0DC3\u0DD4\u0DC0\u0DD9\u0DB1\u0DCA \u0DBA\u0DB1\u0DD4.' },
-      mixed: { en: 'Some daily habits may differ \u2014 small compromises around routines will keep things smooth.', si: '\u0DC3\u0DB8\u0DC4\u0DBB \u0DAF\u0DD2\u0DB1\u0DB4\u0DAD\u0DCF \u0DB4\u0DD4\u0DBB\u0DD4\u0DAF\u0DD4 \u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u0DC0\u0DD2\u0DBA \u0DC4\u0DD0\u0D9A \u2014 \u0D9A\u0DD4\u0DA9\u0DCF \u0D86\u0DAF\u0DDA\u0DC1\u0DBA\u0DB1\u0DCA \u0DC3\u0DB8\u0D9F \u0DC3\u0DD4\u0D9C\u0DB8\u0DBA\u0DD2.' },
-      poor: { en: 'Very different daily rhythms \u2014 one of you may feel drained. Talk about expectations early.', si: '\u0DAF\u0DD2\u0DB1\u0DB4\u0DAD\u0DCF \u0DBB\u0DA7\u0DCF \u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u2014 \u0D91\u0D9A\u0DCA \u0D85\u0DBA\u0D9A\u0DD4\u0DA7 \u0DB8\u0DAF\u0DD2 \u0DC0\u0DD2\u0DBA \u0DC4\u0DD0\u0D9A. \u0D89\u0D9A\u0DCA\u0DB8\u0DB1\u0DD2\u0DB1\u0DCA \u0D85\u0DB4\u0DDA\u0D9A\u0DCA\u0DC2\u0DCF \u0D9A\u0DAD\u0DCF \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1.' },
-    },
-    Gana: {
-      plainName: { en: 'How You Handle Conflict', si: '\u0D9C\u0DD0\u0DA7\u0DD4\u0DB8\u0DCA \u0DC4\u0DD0\u0DB1\u0DCA\u0DAF\u0DBD\u0DB1 \u0D86\u0D9A\u0DCF\u0DBB\u0DBA' },
-      techName: { en: 'Gana Porondam', si: '\u0D9C\u0DAB \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8' },
-      good: { en: 'You handle stress and disagreements the same way \u2014 fights resolve quickly.', si: '\u0D94\u0DB6 \u0DAF\u0DD9\u0DAF\u0DD9\u0DB1\u0DCF \u0DB4\u0DD3\u0DA9\u0DB1\u0DBA \u0DC3\u0DB8\u0DCF\u0DB1 \u0D86\u0D9A\u0DCF\u0DBB\u0DBA\u0D9A\u0DD2\u0DB1\u0DCA \u0DC4\u0DD0\u0DC3\u0DD2\u0DBB\u0DDA \u2014 \u0D9C\u0DD0\u0DA7\u0DD4\u0DB8\u0DCA \u0D89\u0D9A\u0DCA\u0DB8\u0DB1\u0DD2\u0DB1\u0DCA \u0DB1\u0DD2\u0DB8\u0DCF\u0DC0\u0DDA.' },
-      mixed: { en: 'You react differently under stress \u2014 understanding each other\u2019s triggers helps.', si: '\u0DB4\u0DD3\u0DA9\u0DB1\u0DBA\u0DA7 \u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u0DB4\u0DCA\u200D\u0DBB\u0DAD\u0DD2\u0D9A\u0DCA\u200D\u0DBB\u0DD2\u0DBA\u0DCF \u0D9A\u0DBB\u0DBA\u0DD2 \u2014 \u0D91\u0D9A\u0DD2\u0DB1\u0DD9\u0D9A\u0DCF\u0D9C\u0DDA \u0DAD\u0DD3\u0DBB\u0DAB \u0DAD\u0DD9\u0DBB\u0DD4\u0DB8\u0DCA\u0D9C\u0DD0\u0DB1\u0DD3\u0DB8 \u0DC0\u0DD0\u0DAF\u0D9C\u0DAD\u0DCA.' },
-      poor: { en: 'Very different temperaments \u2014 one stays calm while the other reacts strongly. Patience is essential.', si: '\u0DC3\u0DCA\u0DC0\u0DB7\u0DCF\u0DC0\u0DBA\u0DB1\u0DCA \u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u2014 \u0D91\u0D9A\u0DCA \u0D85\u0DBA \u0DC3\u0DD2\u0DC4\u0DD2\u0DBA\u0DD9\u0DB1\u0DCA \u0D85\u0DB1\u0DD9\u0D9A\u0DCF \u0DAD\u0DD3\u0DC0\u0DCA\u200D\u0DBB \u0DB4\u0DCA\u200D\u0DBB\u0DAD\u0DD2\u0D9A\u0DCA\u200D\u0DBB\u0DD2\u0DBA\u0DCF \u0D9A\u0DBB\u0DBA\u0DD2. \u0D89\u0DC0\u0DC3\u0DD3\u0DB8 \u0D85\u0DAD\u0DCA\u200D\u0DBA\u0DC0\u0DC1\u0DCA\u200D\u0DBA\u0DBA\u0DD2.' },
-    },
-    Yoni: {
-      plainName: { en: 'Physical & Emotional Chemistry', si: '\u0DC1\u0DCF\u0DBB\u0DD3\u0DBB\u0DD2\u0D9A \u0DC4\u0DCF \u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8' },
-      techName: { en: 'Yoni Porondam', si: '\u0DBA\u0DDD\u0DB1\u0DD2 \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8' },
-      good: { en: 'Strong natural attraction \u2014 physical connection and emotional closeness come easily.', si: '\u0DC3\u0DCA\u0DC0\u0DCF\u0DB7\u0DCF\u0DC0\u0DD2\u0D9A \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD \u2014 \u0DC1\u0DCF\u0DBB\u0DD3\u0DBB\u0DD2\u0D9A \u0DC3\u0DB8\u0DD3\u0DB4\u0DAD\u0DCF\u0DC0 \u0DC4\u0DCF \u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA \u0DB4\u0DC4\u0DC3\u0DD4\u0DC0\u0DD9\u0DB1\u0DCA \u0DBA\u0DB1\u0DD4.' },
-      mixed: { en: 'Moderate chemistry \u2014 attraction is there but needs effort to keep the spark alive over time.', si: '\u0DB8\u0DB0\u0DCA\u200D\u0DBA\u0DB8 \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u2014 \u0D9A\u0DCF\u0DBD\u0DBA\u0DCF \u0DC3\u0DB8\u0D9F \u0DB4\u0DD0\u0DC0\u0DAD\u0DD3\u0DB8\u0DA7 \u0D8B\u0DAD\u0DCA\u0DC3\u0DCF\u0DC4\u0DBA \u0D95\u0DB1\u0DBA.' },
-      poor: { en: 'Low natural chemistry \u2014 intimacy may need open conversations about needs.', si: '\u0DC3\u0DCA\u0DC0\u0DCF\u0DB7\u0DCF\u0DC0\u0DD2\u0D9A \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u0D85\u0DA9\u0DD4 \u2014 \u0D85\u0DC0\u0DC1\u0DCA\u200D\u0DBA\u0DAD\u0DCF \u0D9C\u0DD0\u0DB1 \u0DC0\u0DD2\u0DC0\u0DD8\u0DAD \u0DC3\u0DB1\u0DCA\u0DB1\u0DD2\u0DC0\u0DDA\u0DAF\u0DB1\u0DBA \u0DC0\u0DD0\u0DAF\u0D9C\u0DAD\u0DCA.' },
-    },
-    Rashi: {
-      plainName: { en: 'Emotional Understanding', si: '\u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA \u0DAD\u0DD9\u0DBB\u0DD4\u0DB8\u0DCA \u0D9C\u0DD0\u0DB1\u0DD3\u0DB8' },
-      techName: { en: 'Rashi Porondam', si: '\u0DBB\u0DCF\u0DC1\u0DD2 \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8' },
-      good: { en: 'You understand each other\u2019s emotions intuitively \u2014 home life will feel harmonious.', si: '\u0D94\u0DB6 \u0D91\u0D9A\u0DD2\u0DB1\u0DD9\u0D9A\u0DCF\u0D9C\u0DDA \u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA \u0DC3\u0DCA\u0DC0\u0DCF\u0DB7\u0DCF\u0DC0\u0DD2\u0D9A\u0DC0 \u0DAD\u0DD9\u0DBB\u0DD4\u0DB8\u0DCA \u0D9C\u0DB1\u0DD3 \u2014 \u0D9C\u0DD8\u0DC4 \u0DA2\u0DD3\u0DC0\u0DD2\u0DAD\u0DBA \u0DC3\u0DB8\u0D9C\u0DD2\u0DBA\u0DD2.' },
-      mixed: { en: 'You feel things differently \u2014 give each other space to process emotions their own way.', si: '\u0D94\u0DB6 \u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA \u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u0D85\u0DB1\u0DD4\u0DB7\u0DC0 \u0D9A\u0DBB\u0DBA\u0DD2 \u2014 \u0D91\u0D9A\u0DD2\u0DB1\u0DD9\u0D9A\u0DCF\u0DA7 \u0D89\u0DA9\u0DB8\u0DCA \u0DAF\u0DD9\u0DB1\u0DCA\u0DB1.' },
-      poor: { en: 'Emotional wavelengths are quite different \u2014 misunderstandings likely without effort.', si: '\u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA \u0DAD\u0DBB\u0D82\u0D9C \u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u2014 \u0D8B\u0DAD\u0DCA\u0DC3\u0DCF\u0DC4\u0DBA\u0D9A\u0DD2\u0DB1\u0DCA \u0DAD\u0DDC\u0DBB\u0DC0 \u0DC0\u0DD0\u0DBB\u0DAF\u0DD3 \u0DAD\u0DD3\u0DBB\u0DD4\u0DB8\u0DCA \u0DC0\u0DD2\u0DBA \u0DC4\u0DD0\u0D9A.' },
-    },
-    Vasya: {
-      plainName: { en: 'Natural Pull & Influence', si: '\u0DC3\u0DCA\u0DC0\u0DCF\u0DB7\u0DCF\u0DC0\u0DD2\u0D9A \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA' },
-      techName: { en: 'Vasya Porondam', si: '\u0DC0\u0DCF\u0DC1\u0DCA\u200D\u0DBA \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8' },
-      good: { en: 'Strong mutual pull \u2014 you naturally respond to and influence each other positively.', si: '\u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u2014 \u0D94\u0DB6 \u0DC3\u0DCA\u0DC0\u0DCF\u0DB7\u0DCF\u0DC0\u0DD2\u0D9A\u0DC0 \u0D91\u0D9A\u0DD2\u0DB1\u0DD9\u0D9A\u0DCF\u0DA7 \u0DB7\u0DCF\u0DC0\u0DCF\u0DAD\u0DCA\u0DB8\u0D9A\u0DC0 \u0DB4\u0DCA\u200D\u0DBB\u0DAD\u0DD2\u0D9A\u0DCA\u200D\u0DBB\u0DD2\u0DBA\u0DCF \u0D9A\u0DBB\u0DBA\u0DD2.' },
-      mixed: { en: 'The pull exists but isn\u2019t overwhelming \u2014 neither dominates the other.', si: '\u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u0DAD\u0DD2\u0DB6\u0DD4\u0DAB\u0DAD\u0DCA \u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD \u0DB1\u0DD0\u0DAD \u2014 \u0D9A\u0DD9\u0DB1\u0DD9\u0D9A\u0DD4\u0DAD\u0DCA \u0D85\u0DB1\u0DD9\u0D9A\u0DCF\u0DA7 \u0D86\u0DB0\u0DD2\u0DB4\u0DAD\u0DCA\u200D\u0DBA \u0DB1\u0DDC\u0D9A\u0DBB\u0DBA\u0DD2.' },
-      poor: { en: 'Low natural magnetism \u2014 the bond needs conscious nurturing to stay connected.', si: '\u0DC3\u0DCA\u0DC0\u0DCF\u0DB7\u0DCF\u0DC0\u0DD2\u0D9A \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u0D85\u0DA9\u0DD4 \u2014 \u0DC3\u0DB6\u0DB3\u0DAD\u0DCF\u0DC0 \u0DB4\u0DD0\u0DC0\u0DAD\u0DD3\u0DB8\u0DA7 \u0DC3\u0DD0\u0DBD\u0D9A\u0DD2\u0DBD\u0DCA\u0DBD\u0DC0\u0DAD\u0DCA \u0DB4\u0DDC\u0DC2\u0DAB\u0DBA \u0D95\u0DB1\u0DBA.' },
-    },
-    Nadi: {
-      plainName: { en: 'Long-term Family Health', si: '\u0DAF\u0DD3\u0DBB\u0DCA\u0D9C\u0D9A\u0DCF\u0DBD\u0DD3\u0DB1 \u0DB4\u0DC0\u0DD4\u0DBD\u0DCA \u0DC3\u0DD4\u0DC0\u0DBA' },
-      techName: { en: 'Nadi Porondam', si: '\u0DB1\u0DCF\u0DA9\u0DD2 \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8' },
-      good: { en: 'Excellent health alignment \u2014 your family will thrive with natural vitality.', si: '\u0DC3\u0DD4\u0DC0\u0DBA \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8 \u0D89\u0DAD\u0DCF \u0DC4\u0DDC\u0DB3\u0DBA\u0DD2 \u2014 \u0D94\u0DB6\u0D9C\u0DDA \u0DB4\u0DC0\u0DD4\u0DBD \u0DC3\u0DCA\u0DC0\u0DCF\u0DB7\u0DCF\u0DC0\u0DD2\u0D9A \u0DC3\u0DD4\u0DC0\u0DBA\u0DD9\u0DB1\u0DCA \u0DC0\u0DD0\u0DA9\u0DD2\u0DC0\u0DDA.' },
-      mixed: { en: 'Moderate health alignment \u2014 some care needed around family wellness habits.', si: '\u0DB8\u0DB0\u0DCA\u200D\u0DBA\u0DB8 \u0DC3\u0DD4\u0DC0\u0DBA \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8 \u2014 \u0DB4\u0DC0\u0DD4\u0DBD\u0DDA \u0DC3\u0DD4\u0DC0\u0DBA \u0DB4\u0DD4\u0DBB\u0DD4\u0DAF\u0DD4 \u0D9C\u0DD0\u0DB1 \u0DC3\u0DD0\u0DBD\u0D9A\u0DD2\u0DBD\u0DCA\u0DBD \u0DC0\u0DD3\u0DB8 \u0DC4\u0DDC\u0DB3\u0DBA\u0DD2.' },
-      poor: { en: 'Health patterns don\u2019t align well \u2014 prioritize regular check-ups and discuss family health history.', si: '\u0DC3\u0DD4\u0DC0\u0DBA \u0DBB\u0DA7\u0DCF \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8 \u0D85\u0DA9\u0DD4 \u2014 \u0DB1\u0DD2\u0DBA\u0DB8\u0DD2\u0DAD \u0DC3\u0DD4\u0DC0\u0DBA \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1. \u0DB4\u0DC0\u0DD4\u0DBD\u0DDA \u0DC3\u0DD4\u0DC0\u0DBA \u0D89\u0DAD\u0DD2\u0DC4\u0DCF\u0DC3\u0DBA \u0DC3\u0DCF\u0D9A\u0DA0\u0DCA\u0DA1\u0DCF \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1.' },
-    },
-    Mahendra: {
-      plainName: { en: 'Growth & Prosperity Together', si: '\u0D91\u0D9A\u0DA7 \u0DC0\u0DD0\u0DA9\u0DD3\u0DB8 \u0DC4\u0DCF \u0DC3\u0DB8\u0DD8\u0DAF\u0DCA\u0DB0\u0DD2\u0DBA' },
-      techName: { en: 'Mahendra Porondam', si: '\u0DB8\u0DC4\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8' },
-      good: { en: 'This relationship naturally supports prosperity \u2014 you\u2019ll grow together.', si: '\u0DB8\u0DDA \u0DC3\u0DB6\u0DB3\u0DAD\u0DCF\u0DC0 \u0DC3\u0DB8\u0DD8\u0DAF\u0DCA\u0DB0\u0DD2\u0DBA\u0DA7 \u0DC3\u0DCA\u0DC0\u0DCF\u0DB7\u0DCF\u0DC0\u0DD2\u0D9A\u0DC0 \u0DC3\u0DC4\u0DCF\u0DBA \u0DC0\u0DDA \u2014 \u0D94\u0DB6 \u0D91\u0D9A\u0DA7 \u0DC0\u0DD0\u0DA9\u0DD3.' },
-      mixed: { en: 'Growth support is neutral \u2014 success will come from combined effort.', si: '\u0DC0\u0DD0\u0DA9\u0DD3\u0DB8\u0DDA \u0DC3\u0DC4\u0DCF\u0DBA \u0DB8\u0DB0\u0DCA\u200D\u0DBA\u0DB8 \u2014 \u0DAD\u0DB1\u0DD2 \u0DAD\u0DB1\u0DD2\u0DC0 \u0D8B\u0DAD\u0DCA\u0DC3\u0DCF\u0DC4\u0DBA\u0DD9\u0DB1\u0DCA \u0DC3\u0DCF\u0DBB\u0DCA\u0DAE\u0D9A\u0DAD\u0DCA\u0DC0\u0DBA \u0DBD\u0DD0\u0DB6\u0DDA.' },
-      poor: { en: 'Growth energy doesn\u2019t naturally combine \u2014 actively support each other\u2019s goals.', si: '\u0DC0\u0DD0\u0DA9\u0DD3\u0DB8\u0DDA \u0DC1\u0D9A\u0DCA\u0DAD\u0DD2\u0DBA \u0DC3\u0DCA\u0DC0\u0DCF\u0DB7\u0DCF\u0DC0\u0DD2\u0D9A\u0DC0 \u0D91\u0D9A\u0DAD\u0DD4 \u0DB1\u0DDC\u0DC0\u0DDA \u2014 \u0D91\u0D9A\u0DD2\u0DB1\u0DD9\u0D9A\u0DCF\u0D9C\u0DDA \u0D89\u0DBD\u0D9A\u0DCA\u0D9A \u0DC3\u0D9A\u0DCA\u200D\u0DBB\u0DD2\u0DBA\u0DC0 \u0DC3\u0DC4\u0DCF\u0DBA \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1.' },
-    },
-  };
-
-
-  // Short labels for radar chart
-  var shortNames = {
-    Dina: { en: 'Daily Life', si: '\u0DAF\u0DD2\u0DB1\u0DB4\u0DAD\u0DCF' },
-    Gana: { en: 'Conflict', si: '\u0D9C\u0DD0\u0DA7\u0DD4\u0DB8\u0DCA' },
-    Yoni: { en: 'Attraction', si: '\u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA' },
-    Rashi: { en: 'Emotions', si: '\u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA' },
-    Vasya: { en: 'Influence', si: '\u0DC0\u0DC1\u0DCA\u200D\u0DBA' },
-    Nadi: { en: 'Family Health', si: '\u0DB1\u0DCF\u0DA9\u0DD2' },
-    Mahendra: { en: 'Prosperity', si: '\u0DC3\u0DB8\u0DD8\u0DAF\u0DCA\u0DB0\u0DD2' },
-  };
-  var sn = shortNames[name];
-
-  var fc = factors[name];
-  if (!fc) {
-    return { plainName: name, techName: name + ' Porondam', insight: '', tier: tier };
-  }
   var lang = language === 'si' ? 'si' : 'en';
+  var tierLabel = tier === 'good'
+    ? (lang === 'si' ? 'හොඳින් ගැළපේ' : 'Matches well')
+    : tier === 'mixed'
+      ? (lang === 'si' ? 'මධ්‍යමයි' : 'In between')
+      : (lang === 'si' ? 'අවධානය ඕනෑ' : 'Needs attention');
+  var sc = SIGNAL_COPY[name];
+  if (!sc) {
+    return { plainName: name, techName: name + ' Porondam', shortName: name, what: '', insight: '', tier: tier, tierLabel: tierLabel, color: TIER_COLORS[tier] };
+  }
   return {
-    plainName: fc.plainName[lang],
-    shortName: sn ? sn[lang] : (fc ? fc.plainName[lang] : name),
-    techName: fc.techName[lang],
-    insight: fc[tier][lang],
+    plainName: sc.plainName[lang],
+    techName: sc.techName[lang],
+    shortName: sc.short[lang],
+    what: sc.what[lang],
+    insight: sc[tier][lang],
     tier: tier,
+    tierLabel: tierLabel,
+    color: TIER_COLORS[tier],
   };
 }
 
@@ -360,35 +265,35 @@ function getRelationshipChallengeCopy(item, language) {
   // Map dosha names to plain-language relationship labels + descriptions
   var challengeMap = {
     mangal: {
-      si: { label: 'à¶ à¶»à·Šà¶ºà·à·€ à·„à· à¶šà·à¶´à¶º à¶´à·à¶½à¶±à¶º', desc: 'à¶‘à¶šà·Š à¶…à¶ºà¶šà·”à¶œà·š à¶­à·“à·€à·Šâ€à¶» à·à¶šà·Šà¶­à·’à¶º à¶±à·’à·ƒà· à¶‰à¶šà·Šà¶¸à¶±à·’à¶±à·Š à¶šà·šà¶±à·Šà¶­à·’ à¶œà·à¶±à·“à¶¸ à·„à· à¶†à¶°à·’à¶´à¶­à·Šâ€à¶º à¶´à·à·€à¶»à·“à¶¸ à·€à·’à¶º à·„à·à¶š. à¶‰à·€à·ƒà·“à¶¸à·™à¶±à·Š à¶šà¶­à· à¶šà·’à¶»à·“à¶¸ à·€à·à¶¯à¶œà¶­à·Š.' },
+      si: { label: 'චර්යාව හා කෝපය පාලනය', desc: 'එක් අයකුගේ තීව්‍ර ශක්තිය නිසා ඉක්මනින් කේන්ති ගැනීම හෝ ආධිපත්‍ය පැවරීම විය හැක. ඉවසීමෙන් කතා කිරීම වැදගත්.' },
       en: { label: 'Temperament & Anger Control', desc: 'One partner may have intense energy leading to quick reactions or dominance. Patient communication is key.' },
     },
     kaal: {
-      si: { label: 'à¶¢à·“à·€à·’à¶­à¶ºà·š à·„à¶¯à·’à·ƒà·’ à¶¸à·à¶»à·”', desc: 'à¶¢à·“à·€à·’à¶­à¶ºà·š à¶…à¶±à¶´à·šà¶šà·Šà·‚à·’à¶­ à·€à·™à¶±à·ƒà·Šà¶šà¶¸à·Š à¶‘à¶šà·’à¶±à·Š à¶‘à¶š à¶´à·à¶¸à·’à¶«à·’à¶º à·„à·à¶š. à¶‘à¶šà·’à¶±à·™à¶šà· à·ƒà·€à·’à¶¸à¶­à·Šà·€ à¶»à·à¶³à·“ à·ƒà·’à¶§à·“à¶¸ à·€à·à¶¯à¶œà¶­à·Š.' },
+      si: { label: 'ජීවිතයේ හදිසි මාරු', desc: 'ජීවිතයේ අනපේක්ෂිත වෙනස්කම් එකින් එක පැමිණිය හැක. එකිනෙකා සවිමත්ව රැඳී සිටීම වැදගත්.' },
       en: { label: 'Sudden Life Shifts', desc: 'Life may bring unexpected changes one after another. Staying resilient together is important.' },
     },
     sade: {
-      si: { label: 'à¶¢à·“à·€à·’à¶­à¶ºà·š à¶…à¶·à·’à¶ºà·à¶œà¶šà·à¶»à·“ à¶šà·à¶½ à¶´à¶»à·’à¶ à·Šà¶¡à·šà¶¯à¶º', desc: 'à¶¯à·à¶±à¶§ à¶…à¶·à·’à¶ºà·à¶œà¶šà·à¶»à·“ à¶šà·à¶½à¶ºà¶š à¶œà¶¸à¶±à·Š à¶šà¶»à¶¸à·’à¶±à·Š à·ƒà·’à¶§à·“. à¶…à¶±à·Šâ€à¶ºà·à¶±à·Šâ€à¶º à¶‹à¶¯à·€à·Š à·„à· à¶‰à·€à·ƒà·“à¶¸ à¶‰à¶­à· à·€à·à¶¯à¶œà¶­à·Š.' },
+      si: { label: 'ජීවිතයේ අභියෝගකාරී කාල පරිච්ඡේදය', desc: 'දැනට අභියෝගකාරී කාලයක ගමන් කරමින් සිටී. අන්‍යෝන්‍ය උදව් හා ඉවසීම ඉතා වැදගත්.' },
       en: { label: 'Challenging Life Phase', desc: 'Currently going through a demanding period. Mutual support and patience are crucial.' },
     },
     pitru: {
-      si: { label: 'à¶´à·€à·”à¶½à·Š à¶»à¶§à· à·„à· à¶‹à¶»à·”à¶¸à¶º', desc: 'à¶´à·€à·”à¶½à·š à¶´à¶»à¶¸à·Šà¶´à¶»à·à·€à·™à¶±à·Š à¶† à·ƒà¶¶à¶³à¶­à· à¶»à¶§à· à¶¶à¶½à¶´à·‘à¶¸à·Š à¶šà·… à·„à·à¶š. à¶…à¶½à·”à¶­à·Š à¶´à·”à¶»à·”à¶¯à·” à¶œà·œà¶©à¶±à¶œà· à¶œà·à¶±à·“à¶¸ à·„à·œà¶³à¶ºà·’.' },
+      si: { label: 'පවුල් රටා හා උරුමය', desc: 'පවුලේ පරම්පරාවෙන් ආ සබඳතා රටා බලපෑම් කළ හැක. අලුත් පුරුදු ගොඩනගා ගැනීම හොඳයි.' },
       en: { label: 'Family Patterns & Legacy', desc: 'Inherited family relationship patterns may influence the bond. Building new habits together helps.' },
     },
     grahan: {
-      si: { label: 'à¶¸à·à¶±à·ƒà·’à¶š à¶´à·“à¶©à¶±à¶º à·„à· à¶…à·€à·’à¶±à·’à·à·Šà¶ à·’à¶­à¶·à·à·€à¶º', desc: 'à·ƒà·’à¶­à·š à·€à·Šâ€à¶ºà·à¶šà·–à¶½à¶­à·Šà·€à¶º à·„à· à¶­à·“à¶»à¶« à¶œà·à¶±à·“à¶¸à·š à¶¯à·”à·‚à·Šà¶šà¶»à¶­à· à¶‡à¶­à·’ à·€à·’à¶º à·„à·à¶š. à¶´à·à·„à·à¶¯à·’à¶½à·’ à·ƒà¶±à·Šà¶±à·’à·€à·šà¶¯à¶±à¶º à¶…à¶­à·Šâ€à¶ºà·€à·à·Šâ€à¶ºà¶ºà·’.' },
+      si: { label: 'මානසික පීඩනය හා අවිනිශ්චිතභාවය', desc: 'සිතේ ව්‍යාකූලත්වය හෝ තීරණ ගැනීමේ දුෂ්කරතා ඇති විය හැක. පැහැදිලි සන්නිවේදනය අත්‍යවශ්‍යයි.' },
       en: { label: 'Mental Pressure & Confusion', desc: 'There may be confusion or difficulty making decisions together. Clear communication is essential.' },
     },
     shrapit: {
-      si: { label: 'à¶´à·à¶»à¶«à·’ à·„à·à¶Ÿà·“à¶¸à·Šà¶¸à¶º à¶¶à·à¶¸à·’', desc: 'à¶…à¶­à·“à¶­ à·ƒà¶¶à¶³à¶­à· à¶…à¶­à·Šà¶¯à·à¶šà·“à¶¸à·Š à¶±à·’à·ƒà· à¶´à·à·€à¶»à·™à¶± à¶¶à·’à¶º à·„à· à·€à·’à·à·Šà·€à·à·ƒ à¶œà·à¶§à¶½à·” à·€à·’à¶º à·„à·à¶š. à¶…à¶½à·”à¶­à·Š à¶†à¶»à¶¸à·Šà¶·à¶ºà¶šà·Š à¶œà·œà¶©à¶±à¶œà¶±à·Šà¶±.' },
+      si: { label: 'පැරණි හැඟීම්මය බැමි', desc: 'අතීත සබඳතා අත්දැකීම් නිසා පැවරෙන බිය හෝ විශ්වාස ගැටලු විය හැක. අලුත් ආරම්භයක් ගොඩනගන්න.' },
       en: { label: 'Emotional Baggage from the Past', desc: 'Past relationship experiences may carry fear or trust issues. Focus on building a fresh start.' },
     },
     guru: {
-      si: { label: 'à·€à·’à·€à·šà¶šà¶º à·„à· à¶±à·”à·€à¶« à¶ºà·œà¶¯à· à¶œà·à¶±à·“à¶¸', desc: 'à·ƒà¶¸à·„à¶»à·€à·’à¶§ à¶±à·œà¶¸à·šà¶»à·– à¶­à·“à¶»à¶« à¶œà·à¶±à·“à¶¸à¶§ à¶±à·à¶¹à·”à¶»à·”à·€à¶šà·Š à¶‡à¶­. à·€à·à¶¯à¶œà¶­à·Š à¶šà¶»à·”à¶«à·” à¶œà·à¶± à·„à·’à¶­à·à¶¸à¶­à· à·ƒà·à¶šà¶ à·Šà¶¡à· à¶šà¶»à¶±à·Šà¶±.' },
+      si: { label: 'විවේකය හා නුවණ යොදා ගැනීම', desc: 'සමහරවිට නොමේරූ තීරණ ගැනීමට නැඹුරුවක් ඇත. වැදගත් කරුණු ගැන හිතාමතා සාකච්ඡා කරන්න.' },
       en: { label: 'Wisdom & Judgement', desc: 'There may be a tendency toward impulsive decisions. Important matters need deliberate discussion.' },
     },
     kemdrum: {
-      si: { label: 'à¶­à¶±à·’à¶šà¶¸ à·„à· à·„à·à¶Ÿà·“à¶¸à·Šà¶¸à¶º à·„à·”à¶¯à·™à¶šà¶½à·à·€', desc: 'à¶‘à¶šà·Š à¶´à·à¶»à·Šà·à·€à¶ºà¶šà¶§ à·„à·à¶Ÿà·“à¶¸à·Šà¶¸à¶º à·€à·à¶ºà·™à¶±à·Š à·„à·”à¶¯à·™à¶šà¶½à· à·€à·– à·„à·à¶Ÿà·“à¶¸à¶šà·Š à¶‡à¶­à·’ à·€à·’à¶º à·„à·à¶š. à·ƒà·à¶½à¶šà·’à¶½à·Šà¶½ à¶´à·Šâ€à¶»à¶šà·à· à¶šà·’à¶»à·“à¶¸ à¶…à¶¸à¶­à¶š à¶±à·œà¶šà¶»à¶±à·Šà¶±.' },
+      si: { label: 'තනිකම හා හැඟීම්මය හුදෙකලාව', desc: 'එක් පාර්ශවයකට හැඟීම්මය වශයෙන් හුදෙකලා වූ හැඟීමක් ඇති විය හැක. සැලකිල්ල ප්‍රකාශ කිරීම අමතක නොකරන්න.' },
       en: { label: 'Emotional Isolation', desc: 'One partner may sometimes feel emotionally alone. Regularly expressing care is vital.' },
     },
   };
@@ -400,12 +305,12 @@ function getRelationshipChallengeCopy(item, language) {
   if (item && item.cancelled) {
     if (language === 'si') {
       return {
-        label: mapped ? mapped.si.label + ' â€” à¶±à·’à·€à·à¶»à¶«à¶º à·€à·“ à¶‡à¶­' : 'à·ƒà·à¶½à¶šà·’à¶½à·Šà¶½ à¶…à¶©à·” à·€à·– à¶šà¶»à·”à¶«',
-        desc: 'à¶¸à·š à¶¶à¶½à¶´à·‘à¶¸ à·ƒà·à¶½à¶šà·’à¶º à¶ºà·”à¶­à·” à¶½à·™à·ƒ à¶…à¶©à·” à·€à·“ à¶‡à¶­. à·ƒà·à¶¸à·à¶±à·Šâ€à¶º à·ƒà·à¶½à¶šà·’à¶½à·Šà¶½à·™à¶±à·Š à¶´à·Šâ€à¶»à¶¸à·à¶«à·€à¶­à·Š.',
+        label: mapped ? mapped.si.label + ' — නිවාරණය වී ඇත' : 'සැලකිල්ල අඩු වූ කරුණ',
+        desc: 'මේ බලපෑම සැලකිය යුතු ලෙස අඩු වී ඇත. සාමාන්‍ය සැලකිල්ලෙන් ප්‍රමාණවත්.',
       };
     }
     return {
-      label: mapped ? mapped.en.label + ' â€” Resolved' : 'Reduced Care Point',
+      label: mapped ? mapped.en.label + ' — Resolved' : 'Reduced Care Point',
       desc: 'This influence has been significantly reduced. Normal care is sufficient.',
     };
   }
@@ -417,199 +322,14 @@ function getRelationshipChallengeCopy(item, language) {
   // Fallback for unmapped dosha types
   if (language === 'si') {
     return {
-      label: severity.indexOf('severe') !== -1 ? 'à·€à·à¶©à·’ à·ƒà·à¶½à¶šà·’à¶½à·Šà¶½à¶šà·Š à¶…à·€à·à·Šâ€à¶º à¶šà¶»à·”à¶«' : 'à·ƒà¶¶à¶³à¶­à·à·€à·š à·ƒà·à¶½à¶šà·’à¶½à·’à¶¸à¶­à·Š à¶šà¶»à·”à¶«',
-      desc: 'à¶¸à·šà¶š à·ƒà¶¶à¶³à¶­à·à·€à·š à¶‰à·€à·ƒà·“à¶¸, à·€à·’à·à·Šà·€à·à·ƒà¶º, à·ƒà·„ à¶­à·“à¶»à¶« à¶œà·à¶±à·“à¶¸à·šà¶¯à·“ à·€à·à¶©à·’ à·ƒà·à¶½à¶šà·’à¶½à·Šà¶½à¶šà·Š à¶•à¶±à·š à¶šà·’à¶ºà¶½à· à¶´à·™à¶±à·Šà·€à¶±à·€à·.',
+      label: severity.indexOf('severe') !== -1 ? 'වැඩි සැලකිල්ලක් අවශ්‍ය කරුණ' : 'සබඳතාවේ සැලකිලිමත් කරුණ',
+      desc: 'මෙය සබඳතාවේ ඉවසීම, විශ්වාසය සහ තීරණ ගැනීමේදී වැඩි සැලකිල්ලක් අවශ්‍ය බව පෙන්වනවා.',
     };
   }
   return {
     label: severity.indexOf('severe') !== -1 ? 'High-Care Relationship Point' : 'Relationship Care Point',
     desc: 'This suggests an area where patience, trust, and careful decisions are important for the relationship.',
   };
-}
-
-function getRelationshipStrengthCopy(item, language) {
-  var strength = item && item.strength ? String(item.strength) : '';
-  var name = item && item.name ? String(item.name).toLowerCase() : '';
-  var category = item && item.category ? String(item.category).toLowerCase() : '';
-
-  // Map yoga names/categories to plain-language relationship strengths
-  var strengthMap = {
-    'raja': {
-      si: { label: 'à¶±à·à¶ºà¶šà¶­à·Šà·€ à·à¶šà·Šà¶­à·’à¶º à·„à· à¶¢à·“à·€à·’à¶­ à·ƒà·à¶»à·Šà¶®à¶šà¶­à·Šà·€à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Leadership & Life Success', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'dhana': {
-      si: { label: 'à¶¸à·–à¶½à·Šâ€à¶º à·ƒà·Šà¶®à·à·€à¶»à¶­à·Šà·€à¶º à·„à· à·ƒà¶¸à·˜à¶¯à·Šà¶°à·’à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Financial Stability & Prosperity', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'gaja kesari': {
-      si: { label: 'à¶¶à·”à¶¯à·Šà¶°à·’à¶º, à¶šà·“à¶»à·Šà¶­à·’à¶º à·„à· à·ƒà¶¸à·Šà¶¸à·à¶±à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Wisdom, Fame & Respect', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'neechabhanga': {
-      si: { label: 'à¶…à¶·à·’à¶ºà·à¶œ à¶¶à·€à¶§ à¶´à¶­à·Š à¶šà¶» à¶œà¶­à·Š à·à¶šà·Šà¶­à·’à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Strength Forged from Challenges', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'chandra': {
-      si: { label: 'à·„à·à¶Ÿà·“à¶¸à·Šà¶¸à¶º à·à¶šà·Šà¶­à·’à¶º à·„à· à¶¯à·à¶©à·’ à¶…à¶°à·’à·‚à·Šà¶¨à·à¶±à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Emotional Strength & Determination', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'saraswati': {
-      si: { label: 'à¶¥à·à¶«à¶º, à¶šà¶½à· à¶šà·”à·ƒà¶½à¶­à· à·„à· à¶‰à¶œà·™à¶±à·“à¶¸à·š à·„à·à¶šà·’à¶ºà·à·€', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Knowledge, Creativity & Learning', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'lakshmi': {
-      si: { label: 'à¶·à·žà¶­à·’à¶š à·ƒà¶¸à·˜à¶¯à·Šà¶°à·’à¶º à·„à· à·ƒà·à¶´à·€à¶­à·Š à¶¢à·“à·€à·’à¶­à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Material Abundance & Comfortable Life', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'viparita': {
-      si: { label: 'à¶…à¶´à·„à·ƒà·”à¶­à· à¶¸à·à¶¯ à¶¢à¶ºà¶œà·Šâ€à¶»à·„à¶«à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Victory Through Adversity', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'sunapha': {
-      si: { label: 'à·ƒà·Šà·€à·à¶°à·“à¶±à¶­à·Šà·€à¶º à·„à· à¶¯à¶šà·Šà·‚à¶­à·à·€', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Self-Reliance & Skill', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'anapha': {
-      si: { label: 'à¶†à¶­à·Šà¶¸ à·€à·’à·à·Šà·€à·à·ƒà¶º à·„à· à·ƒà¶¸à·à¶¢ à¶¶à¶½à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Self-Confidence & Social Influence', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'durudhura': {
-      si: { label: 'à·ƒà·‘à¶¸ à¶šà·Šà·‚à·šà¶­à·Šâ€à¶»à¶ºà¶šà¶¸ à·ƒà¶¸à¶¶à¶» à·ƒà·à¶»à·Šà¶®à¶šà¶­à·Šà·€à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Balanced Success in All Areas', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'adhi': {
-      si: { label: 'à·ƒà·Šà·€à¶·à·à·€à·’à¶š à¶±à·à¶ºà¶šà¶­à·Šà·€à¶º à·„à· à¶¶à¶½à¶°à·à¶»à·’à¶­à·Šà·€à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Natural Leadership & Authority', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'amala': {
-      si: { label: 'à¶´à·’à¶»à·’à·ƒà·’à¶¯à·” à¶šà·“à¶»à·Šà¶­à·’à¶º à·„à· à·„à·œà¶³ à¶±à¶¸à¶šà·Š', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Clean Reputation & Good Name', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'chamara': {
-      si: { label: 'à·€à·’à¶¯à·Šâ€à¶ºà·à·€ à·„à· à·ƒà¶¸à·à¶¢ à¶œà·žà¶»à·€à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Education & Social Respect', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'parvata': {
-      si: { label: 'à¶¯à·’à¶œà·”à¶šà·à¶½à·“à¶± à·ƒà·Šà¶®à·à·€à¶»à¶­à·Šà·€à¶º à·„à· à¶†à¶»à¶šà·Šà·‚à·à·€', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Long-term Stability & Security', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'malavya': {
-      si: { label: 'à¶†à¶¯à¶» à·„à·à¶šà·’à¶ºà·à·€ à·„à· à¶šà¶½à·à¶­à·Šà¶¸à¶š à·ƒà¶‚à·€à·šà¶¯à·“à¶­à·à·€', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Capacity for Love & Artistic Sensitivity', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'kahala': {
-      si: { label: 'à¶°à·›à¶»à·Šà¶ºà¶º à·„à· à¶¶à·à¶°à¶š à¶¢à¶º à¶œà·à¶±à·“à¶¸', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Courage & Overcoming Obstacles', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-    'dharma': {
-      si: { label: 'à¶ºà·„à¶´à¶­à·Š à¶¢à·“à·€à¶± à¶¸à·à¶»à·Šà¶œà¶º à·„à· à·€à·˜à¶­à·Šà¶­à·“à¶º à·ƒà·à¶»à·Šà¶®à¶šà¶­à·Šà·€à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') },
-      en: { label: 'Righteous Path & Career Success', meta: 'Influence: ' + (strength || 'Moderate') },
-    },
-  };
-
-  // Find matching strength by key (check name first, then category)
-  var searchStr = name + ' ' + category;
-  var matchedKey = Object.keys(strengthMap).find(function(k) { return searchStr.indexOf(k) !== -1; });
-  var mapped = matchedKey ? strengthMap[matchedKey] : null;
-
-  if (mapped) {
-    return language === 'si' ? mapped.si : mapped.en;
-  }
-
-  // Fallback with category-based differentiation
-  if (category.indexOf('raja') !== -1) {
-    return language === 'si'
-      ? { label: 'à¶±à·à¶ºà¶šà¶­à·Šà·€ à·„à· à¶¶à¶½ à·à¶šà·Šà¶­à·’à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') }
-      : { label: 'Leadership & Power Strength', meta: 'Influence: ' + (strength || 'Moderate') };
-  }
-  if (category.indexOf('dhana') !== -1 || category.indexOf('wealth') !== -1) {
-    return language === 'si'
-      ? { label: 'à¶¸à·–à¶½à·Šâ€à¶º à·„à· à·ƒà¶¸à·Šà¶´à¶­à·Š à·à¶šà·Šà¶­à·’à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') }
-      : { label: 'Financial & Resource Strength', meta: 'Influence: ' + (strength || 'Moderate') };
-  }
-  if (category.indexOf('lunar') !== -1 || category.indexOf('moon') !== -1) {
-    return language === 'si'
-      ? { label: 'à·„à·à¶Ÿà·“à¶¸à·Šà¶¸à¶º à·à¶šà·Šà¶­à·’à¶º à·„à· à¶…à¶±à·”à·€à¶»à·Šà¶­à¶±à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') }
-      : { label: 'Emotional Strength & Adaptability', meta: 'Influence: ' + (strength || 'Moderate') };
-  }
-
-  // Generic fallback
-  if (language === 'si') {
-    return { label: 'à·ƒà¶¶à¶³à¶­à·à·€à¶§ à·ƒà·„à·à¶º à¶¯à·™à¶± à·à¶šà·Šà¶­à·’à¶º', meta: 'à¶¶à¶½à¶´à·‘à¶¸: ' + (strength || 'à·ƒà·à¶¸à·à¶±à·Šâ€à¶º') };
-  }
-  return { label: 'Relationship Support Strength', meta: 'Influence: ' + (strength || 'Moderate') };
-}
-
-function getPlainSupportLevel(score, maxScore, language) {
-  var max = maxScore || 1;
-  var ratio = score / max;
-  if (language === 'si') {
-    if (ratio >= 0.7) return 'à·à¶šà·Šà¶­à·’à¶¸à¶­à·Š à·ƒà·„à·à¶º';
-    if (ratio >= 0.45) return 'à¶¸à·’à·à·Šâ€à¶» à·ƒà·„à·à¶º';
-    return 'à·€à·à¶©à·’ à·ƒà·à¶½à¶šà·’à¶½à·Šà¶½à¶šà·Š à¶…à·€à·à·Šâ€à¶ºà¶ºà·’';
-  }
-  if (ratio >= 0.7) return 'Strong Support';
-  if (ratio >= 0.45) return 'Mixed Support';
-  return 'Needs Extra Care';
-}
-
-function getCoreDriveCopy(planet, language) {
-  var key = String(planet || '').toLowerCase();
-  var map = {
-    sun: ['Confident Direction', 'à·€à·’à·à·Šà·€à·à·ƒà¶¸à¶­à·Š à¶¯à·’à·à·à·€'], moon: ['Care & Emotional Safety', 'à·ƒà·à¶½à¶šà·’à¶½à·Šà¶½ à·ƒà·„ à·„à·à¶Ÿà·“à¶¸à·Š à¶†à¶»à¶šà·Šà·‚à·à·€'],
-    mars: ['Action & Courage', 'à¶šà·Šâ€à¶»à·’à¶ºà·à·à·“à¶½à·“à¶­à·Šà·€à¶º à·ƒà·„ à°§à·›à¶»à·Šà¶ºà¶º'], mercury: ['Communication & Learning', 'à¶šà¶­à·à¶¶à·„ à·ƒà·„ à¶‰à¶œà·™à¶±à·“à¶¸'],
-    jupiter: ['Growth & Wisdom', 'à·€à¶»à·Šà¶°à¶±à¶º à·ƒà·„ à¶¶à·”à¶¯à·Šà¶°à·’à¶º'], venus: ['Harmony & Affection', 'à·ƒà¶¸à¶œà·’à¶º à·ƒà·„ à¶†à¶¯à¶» à·„à·à¶Ÿà·“à¶¸'],
-    saturn: ['Patience & Commitment', 'à¶‰à·€à·ƒà·“à¶¸ à·ƒà·„ à¶šà·à¶´à·€à·“à¶¸'], rahu: ['New Growth Lessons', 'à¶±à·€ à·€à¶»à·Šà¶°à¶± à¶´à·à¶©à¶¸à·Š'], ketu: ['Inner Freedom', 'à¶…à¶·à·Šâ€à¶ºà¶±à·Šà¶­à¶» à¶±à·’à¶¯à·„à·ƒ'],
-  };
-  var selected = map[key];
-  if (!selected) return language === 'si' ? 'à¶´à·”à¶¯à·Šà¶œà¶½à·’à¶š à¶°à·à·€à¶šà¶º' : 'Personal Drive';
-  return language === 'si' ? selected[1] : selected[0];
-}
-
-function getRelationshipStyleCopy(sign, language) {
-  var key = String(sign || '').toLowerCase();
-  var fire = /aries|leo|sagittarius/.test(key);
-  var earth = /taurus|virgo|capricorn/.test(key);
-  var air = /gemini|libra|aquarius/.test(key);
-  var water = /cancer|scorpio|pisces/.test(key);
-  if (language === 'si') {
-    if (fire) return 'à¶±à·’à¶»à·Šà¶·à·“à¶­ à·ƒà·„ à·ƒà·˜à¶¢à·” à¶»à¶§à·à·€';
-    if (earth) return 'à·ƒà·Šà¶®à·’à¶» à·ƒà·„ à¶´à·Šâ€à¶»à·à¶ºà·à¶œà·’à¶š à¶»à¶§à·à·€';
-    if (air) return 'à¶šà¶­à·à¶¶à·„à¶§ à·ƒà·„ à¶…à¶¯à·„à·ƒà·Šà·€à¶½à¶§ à¶œà·à·…à¶´à·™à¶± à¶»à¶§à·à·€';
-    if (water) return 'à·„à·à¶Ÿà·“à¶¸à·Š à·ƒà·„ à·ƒà·à¶½à¶šà·’à¶½à·Šà¶½ à¶´à¶¯à¶±à¶¸à·Š à·€à·– à¶»à¶§à·à·€';
-    return 'à¶´à·”à¶¯à·Šà¶œà¶½à·’à¶š à¶šà·à¶´à·€à·“à¶¸à·Š à¶»à¶§à·à·€';
-  }
-  if (fire) return 'Bold & Direct Style';
-  if (earth) return 'Steady & Practical Style';
-  if (air) return 'Communicative Style';
-  if (water) return 'Emotional & Caring Style';
-  return 'Personal Commitment Style';
-}
-
-function getLifePeriodCopy(period, language) {
-  if (language === 'si') return period && period.isBeneficPeriod ? 'à·ƒà·„à·à¶º à¶¯à·™à¶± à¶¢à·“à·€à·’à¶­ à¶…à¶¯à·’à¶ºà¶»' : 'à·€à·à¶©à·’ à·ƒà·à¶½à¶šà·’à¶½à·Šà¶½à¶šà·Š à¶…à·€à·à·Šâ€à¶º à¶…à¶¯à·’à¶ºà¶»';
-  return period && period.isBeneficPeriod ? 'Supportive Life Period' : 'Careful Life Period';
-}
-
-function getAdvancedSectionDescription(kind, data, language) {
-  var isSi = language === 'si';
-  if (kind === 'lifePhase') {
-    var harmony = String(data && data.harmony || '').toLowerCase();
-    if (harmony === 'harmonious') return isSi ? 'à¶¯à·™à¶¯à·™à¶±à·à¶œà·š à·€à¶»à·Šà¶­à¶¸à·à¶± à¶¢à·“à·€à·’à¶­ à¶…à¶¯à·’à¶ºà¶» à¶‘à¶šà·’à¶±à·™à¶šà·à¶§ à·ƒà·„à·à¶º à¶¯à·™à¶± à¶¶à·€ à¶´à·™à¶±à·Šà·€à¶±à·€à·. à¶­à·“à¶»à¶« à·ƒà·„ à·ƒà·à¶½à·ƒà·”à¶¸à·Š à¶‘à¶šà¶§ à¶šà¶»à¶±à·Šà¶± à·„à·œà¶³à¶ºà·’.' : 'Both current life periods look supportive together. Shared plans and steady decisions are favored.';
-    if (harmony === 'conflicting') return isSi ? 'à·€à¶»à·Šà¶­à¶¸à·à¶± à¶¢à·“à·€à·’à¶­ à¶»à¶§à· à¶§à·’à¶šà¶šà·Š à·€à·™à¶±à·ƒà·Š à·€à·’à¶º à·„à·à¶š. à¶‰à¶šà·Šà¶¸à¶±à·Š à¶­à·“à¶»à¶« à·€à¶½à¶§ à¶´à·™à¶» à¶šà¶­à·à¶¶à·„ à·ƒà·„ à¶‰à·€à·ƒà·“à¶¸ à·€à·à¶¯à¶œà¶­à·Š.' : 'The current life rhythms may feel different. Use patience and clear conversations before major decisions.';
-    return isSi ? 'à¶¸à·š à¶…à¶¯à·’à¶ºà¶» à¶¸à·’à·à·Šâ€à¶» à·ƒà·„à·à¶ºà¶šà·Š à¶´à·™à¶±à·Šà·€à¶±à·€à·. à¶šà·à¶½à¶º, à·€à·à¶© à¶¶à¶», à·ƒà·„ à¶´à·€à·”à¶½à·Š à¶­à·“à¶»à¶« à¶´à·à·„à·à¶¯à·’à¶½à·’à·€ à·ƒà¶šà·ƒà¶±à·Šà¶±.' : 'This period shows mixed support. Keep timing, workload, and family decisions clear.';
-  }
-  if (kind === 'deepBond') {
-    return isSi ? 'à¶¸à·šà¶š à¶¯à·’à¶œà·”à¶šà·à¶½à·“à¶± à¶¶à·à¶³à·“à¶¸, à¶‡à¶­à·”à·…à¶­ à¶´à·„à·ƒà·”à·€, à·ƒà·„ à¶‘à¶šà¶§ à¶¢à·“à·€à¶­à·Š à·€à·“à¶¸à·š à¶»à¶§à·à·€ à¶œà·à¶± à¶´à·Šâ€à¶»à·à¶ºà·à¶œà·’à¶š à¶šà·’à¶ºà·€à·“à¶¸à¶šà·’.' : 'This reads long-term bond, inner comfort, and how the couple may settle into shared life.';
-  }
-  if (kind === 'carePoint') {
-    var severity = String(data && data.severity || '').toLowerCase();
-    if (severity === 'none' || severity === 'cancelled') return isSi ? 'à¶¸à·š à¶šà·œà¶§à·ƒà·’à¶±à·Š à¶¯à·à¶©à·’ à¶´à·“à¶©à¶±à¶ºà¶šà·Š à¶±à·œà¶´à·™à¶±à·š. à·ƒà·à¶¸à·à¶±à·Šâ€à¶º à·ƒà·à¶½à¶šà·’à¶½à·Šà¶½ à·ƒà·„ à·„à·œà¶³ à¶šà¶­à·à¶¶à·„ à¶­à¶¶à·à¶œà¶±à·Šà¶±.' : 'This area does not show strong pressure. Keep normal care and healthy communication.';
-    if (severity === 'mild') return isSi ? 'à¶šà·”à¶©à· à¶œà·à¶§à·”à¶¸à·Š à¶‡à¶­à·’ à·€à·’à¶º à·„à·à¶šà·’ à¶±à·’à·ƒà·, à¶­à·“à¶»à¶« à¶œà·à¶±à·“à¶¸à·šà¶¯à·“ à¶‰à·€à·ƒà·“à¶¸ à·ƒà·„ à¶šà¶­à·à¶¶à·„ à·€à·à¶¯à¶œà¶­à·Š.' : 'Small friction is possible, so patient decisions and open conversations matter.';
-    return isSi ? 'à¶¸à·š à¶šà·œà¶§à·ƒ à·€à·à¶©à·’ à·ƒà·à¶½à¶šà·’à¶½à·Šà¶½à¶šà·Š à¶‰à¶½à·Šà¶½à¶ºà·’. à¶‰à¶šà·Šà¶¸à¶±à·Š à¶­à·“à¶»à¶«, à¶šà·à¶´à¶ºà·™à¶±à·Š à¶šà¶­à· à¶šà·’à¶»à·“à¶¸, à·ƒà·„ à¶¶à¶½à·„à¶­à·Šà¶šà·à¶»à¶ºà·™à¶±à·Š à·€à·™à¶±à·ƒà·Š à¶šà·’à¶»à·“à¶¸à·Š à·€à¶½à·’à¶±à·Š à·€à·à·…à¶šà·™à¶±à·Šà¶±.' : 'This area asks for extra care. Avoid rushed decisions, angry conversations, and forcing change.';
-  }
-  return isSi ? 'à¶¸à·š à¶šà·œà¶§à·ƒ à·ƒà¶¶à¶³à¶­à·à·€à¶ºà·š à¶¯à·’à¶œà·”à¶šà·à¶½à·“à¶± à·ƒà·„à·à¶º à·ƒà·„ à·€à·à¶©à·’ à·ƒà·à¶½à¶šà·’à¶½à·Šà¶½ à¶…à·€à·à·Šâ€à¶º à¶´à·Šâ€à¶»à¶¯à·šà· à¶´à·™à¶±à·Šà·€à¶±à·€à·.' : 'This section shows long-term relationship support and areas that need care.';
 }
 
 function LoadingParticle({ particle, skipAnim }) {
@@ -769,8 +489,8 @@ function PorondamCosmicLoader({ brideName, groomName, language, reduced, lowEnd 
   var activeSignal = Math.min(PORONDAM_SIGNAL_TRACK.length - 1, Math.floor((stageIndex / Math.max(1, stages.length - 1)) * PORONDAM_SIGNAL_TRACK.length));
   var progressPct = ((stageIndex + 1) / stages.length) * 100;
   var stage = stages[stageIndex];
-  var brideLabel = brideName && String(brideName).trim() ? String(brideName).trim() : (lang === 'si' ? 'à¶¸à¶±à·à¶½à·’à¶º' : 'Bride');
-  var groomLabel = groomName && String(groomName).trim() ? String(groomName).trim() : (lang === 'si' ? 'à¶¸à¶±à·à¶½à¶ºà·' : 'Groom');
+  var brideLabel = brideName && String(brideName).trim() ? String(brideName).trim() : (lang === 'si' ? 'මනාලිය' : 'Bride');
+  var groomLabel = groomName && String(groomName).trim() ? String(groomName).trim() : (lang === 'si' ? 'මනාලයා' : 'Groom');
   var particleSet = skipAnim ? PORONDAM_LOADING_PARTICLES.slice(0, 12) : PORONDAM_LOADING_PARTICLES;
   var mandalaLines = [];
   var center = sealSize / 2;
@@ -820,21 +540,21 @@ function PorondamCosmicLoader({ brideName, groomName, language, reduced, lowEnd 
 
       <View style={lsStyles.kickerPill}>
         <Ionicons name="sparkles" size={13} color="#FBBF24" />
-        <Text style={lsStyles.kickerText}>{lang === 'si' ? 'à¶´à·œà¶»à·œà¶±à·Šà¶¯à¶¸à·Š à¶šà·’à¶ºà·€à·“à¶¸' : 'Love Compatibility'}</Text>
+        <Text style={lsStyles.kickerText}>{lang === 'si' ? 'පොරොන්දම් කියවීම' : 'Love Compatibility'}</Text>
       </View>
 
-      <Text style={lsStyles.loadingTitle}>{lang === 'si' ? 'à¶œà·à·…à¶´à·“à¶¸ à·ƒà¶šà·ƒà¶¸à·’à¶±à·Š' : 'Reading Your Stars'}</Text>
+      <Text style={lsStyles.loadingTitle}>{lang === 'si' ? 'ගැළපීම සකසමින්' : 'Reading Your Stars'}</Text>
 
       <View style={lsStyles.nameRail}>
         <View style={[lsStyles.nameCard, { borderColor: 'rgba(249,168,212,0.28)', backgroundColor: 'rgba(249,168,212,0.08)' }]}>
-          <Text style={[lsStyles.nameRole, { color: '#F9A8D4' }]}>{lang === 'si' ? 'à¶¸à¶±à·à¶½à·’à¶º' : 'Bride'}</Text>
+          <Text style={[lsStyles.nameRole, { color: '#F9A8D4' }]}>{lang === 'si' ? 'මනාලිය' : 'Bride'}</Text>
           <Text style={lsStyles.nameText} numberOfLines={1}>{brideLabel}</Text>
         </View>
         <View style={lsStyles.nameBridge}>
           <Ionicons name="heart" size={16} color="#FFB800" />
         </View>
         <View style={[lsStyles.nameCard, { borderColor: 'rgba(147,197,253,0.28)', backgroundColor: 'rgba(147,197,253,0.08)' }]}>
-          <Text style={[lsStyles.nameRole, { color: '#93C5FD' }]}>{lang === 'si' ? 'à¶¸à¶±à·à¶½à¶ºà·' : 'Groom'}</Text>
+          <Text style={[lsStyles.nameRole, { color: '#93C5FD' }]}>{lang === 'si' ? 'මනාලයා' : 'Groom'}</Text>
           <Text style={lsStyles.nameText} numberOfLines={1}>{groomLabel}</Text>
         </View>
       </View>
@@ -873,8 +593,8 @@ function PorondamCosmicLoader({ brideName, groomName, language, reduced, lowEnd 
         })}
 
         <View style={[lsStyles.partnerTrack, { width: sealSize * 0.58, height: sealSize * 0.28, borderRadius: sealSize * 0.14 }]} />
-        <PartnerStar name={brideName} fallback={lang === 'si' ? 'à¶¸à¶±à·à¶½à·’à¶º' : 'Bride'} color="#F9A8D4" accent="#EC4899" orbit={partnerOrbit} side={0} radiusX={partnerRadiusX} radiusY={partnerRadiusY} />
-        <PartnerStar name={groomName} fallback={lang === 'si' ? 'à¶¸à¶±à·à¶½à¶ºà·' : 'Groom'} color="#93C5FD" accent="#3B82F6" orbit={partnerOrbit} side={Math.PI} radiusX={partnerRadiusX} radiusY={partnerRadiusY} />
+        <PartnerStar name={brideName} fallback={lang === 'si' ? 'මනාලිය' : 'Bride'} color="#F9A8D4" accent="#EC4899" orbit={partnerOrbit} side={0} radiusX={partnerRadiusX} radiusY={partnerRadiusY} />
+        <PartnerStar name={groomName} fallback={lang === 'si' ? 'මනාලයා' : 'Groom'} color="#93C5FD" accent="#3B82F6" orbit={partnerOrbit} side={Math.PI} radiusX={partnerRadiusX} radiusY={partnerRadiusY} />
 
         <Animated.View style={[lsStyles.coreSeal, coreStyle]}>
           <LinearGradient colors={['rgba(255,184,0,0.95)', 'rgba(255,140,0,0.82)', 'rgba(124,58,237,0.86)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
@@ -901,7 +621,7 @@ function PorondamCosmicLoader({ brideName, groomName, language, reduced, lowEnd 
 
       <View style={lsStyles.progressRow}>
         <View style={lsStyles.progressHeader}>
-          <Text style={lsStyles.progressLabel}>{lang === 'si' ? 'à¶œà¶«à¶±à¶º à·€à·™à¶¸à·’à¶±à·Š' : 'Analysing'}</Text>
+          <Text style={lsStyles.progressLabel}>{lang === 'si' ? 'ගණනය වෙමින්' : 'Analysing'}</Text>
           <Text style={lsStyles.progressCount}>{stageIndex + 1}/{stages.length}</Text>
         </View>
         <View style={lsStyles.progressBar}>
@@ -909,7 +629,7 @@ function PorondamCosmicLoader({ brideName, groomName, language, reduced, lowEnd 
             style={[lsStyles.progressFill, { width: progressPct + '%' }]}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
         </View>
-        <Text style={lsStyles.progressHint}>{lang === 'si' ? 'à¶­à¶­à·Šà¶´à¶» à¶šà·’à·„à·’à¶´à¶ºà¶šà·Š à¶œà¶­ à·€à·š' : 'Good things take a moment'}</Text>
+        <Text style={lsStyles.progressHint}>{lang === 'si' ? 'තත්පර කිහිපයක් ගත වේ' : 'Good things take a moment'}</Text>
       </View>
     </Animated.View>
   );
@@ -981,1163 +701,1725 @@ var lsStyles = StyleSheet.create({
   progressHint: { color: 'rgba(255,255,255,0.28)', fontSize: 11, fontWeight: '600', textAlign: 'center', marginTop: 9 },
 });
 
-function ScoreGauge({ score, maxScore, rating, ratingEmoji, ratingSinhala, language, onShare, T, brideName, groomName, factors, brideRashiId, groomRashiId }) {
-  var pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-  var color = pct >= 75 ? '#34D399' : pct >= 50 ? '#FFB800' : pct >= 30 ? '#F97316' : '#F87171';
+// ═══════════════════════════════════════════════════════════════
+// REPORT DESIGN SYSTEM — "a wise elder, in a calm room"
+// One verdict, numbered chapters, plain words first, classical
+// names as the credential. Care-amber instead of alarm-red.
+// ═══════════════════════════════════════════════════════════════
+var INK = {
+  title: '#F6E4B8',
+  body: 'rgba(255,241,208,0.84)',
+  dim: 'rgba(255,241,208,0.56)',
+  faint: 'rgba(255,241,208,0.34)',
+  gold: '#E8C97A',
+};
 
-  var cosmicLabel = pct >= 75
-    ? (language === 'si' ? '\u0DAF\u0DD2\u0DC0\u0DCA\u200D\u0DBA \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8' : 'Celestial Union')
-    : pct >= 50
-    ? (language === 'si' ? '\u0DAD\u0DCF\u0DBB\u0D9A\u0DCF \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8' : 'Star-Crossed Harmony')
-    : pct >= 30
-    ? (language === 'si' ? '\u0DB6\u0DCA\u200D\u0DBB\u0DC4\u0DCA\u0DB8\u0DCF\u0DAB\u0DCA\u0DA9 \u0D9C\u0DB8\u0DB1\u0DCF\u0DC0' : 'Cosmic Journey')
-    : (language === 'si' ? '\u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0D85\u0DB7\u0DD2\u0DBA\u0DDD\u0D9C\u0DBA' : 'Galactic Challenge');
+var ns = StyleSheet.create({
+  // Chapter shell
+  shell: {
+    borderRadius: 20, overflow: 'hidden', borderWidth: 1,
+    borderColor: 'rgba(232,201,122,0.10)', padding: WIDE ? 22 : 18, marginBottom: 14,
+  },
+  shellHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
+  shellIndex: {
+    fontSize: 22, fontWeight: '900', color: 'rgba(232,201,122,0.30)',
+    letterSpacing: 0.5, lineHeight: 26, marginTop: 1, fontVariant: ['tabular-nums'],
+  },
+  shellTitle: { fontSize: 16.5, fontWeight: '800', color: INK.title, letterSpacing: 0.2, lineHeight: 22 },
+  shellSub: { fontSize: 12, color: INK.dim, marginTop: 3, lineHeight: 17 },
+  shellRight: { marginLeft: 8 },
 
-  var label = language === 'si' && ratingSinhala ? ratingSinhala : rating;
-  var brideZodiac = ZODIAC_IMAGES[brideRashiId] || ZODIAC_IMAGES[1];
-  var groomZodiac = ZODIAC_IMAGES[groomRashiId] || ZODIAC_IMAGES[1];
-  var brideRashiName = RASHI_NAMES[brideRashiId] || 'Aries';
-  var groomRashiName = RASHI_NAMES[groomRashiId] || 'Aries';
+  // Verdict hero
+  hero: {
+    borderRadius: 24, padding: 22, paddingTop: 26, marginBottom: 16, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(232,201,122,0.18)', alignItems: 'center',
+    ...boxShadow('rgba(0,0,0,0.55)', { width: 0, height: 12 }, 0.7, 24), elevation: 8,
+  },
+  heroEdge: { position: 'absolute', top: 0, left: 0, right: 0, height: 3 },
+  heroKicker: {
+    fontSize: 10.5, fontWeight: '900', letterSpacing: 2.2, textTransform: 'uppercase',
+    color: 'rgba(232,201,122,0.70)', marginBottom: 18, textAlign: 'center',
+  },
+  medalRow: { flexDirection: 'row', alignItems: 'flex-start', alignSelf: 'stretch', justifyContent: 'center', marginBottom: 18 },
+  medal: { alignItems: 'center', width: 96 },
+  medalRing: {
+    width: 74, height: 74, borderRadius: 37, borderWidth: 2, alignItems: 'center',
+    justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.30)', overflow: 'hidden', marginBottom: 8,
+  },
+  medalImg: { width: 50, height: 50 },
+  medalName: { fontSize: 13, fontWeight: '800', textAlign: 'center' },
+  medalSign: { fontSize: 10.5, fontWeight: '600', color: INK.faint, marginTop: 2, textAlign: 'center' },
+  thread: { flex: 1, maxWidth: 72, flexDirection: 'row', alignItems: 'center', marginTop: 36 },
+  threadLine: { flex: 1, height: 1.5, borderRadius: 1 },
+  threadHeart: {
+    width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(232,201,122,0.35)', backgroundColor: 'rgba(12,6,18,0.85)', marginHorizontal: 2,
+  },
+  arcName: { fontSize: 26, fontWeight: '900', color: INK.title, textAlign: 'center', letterSpacing: 0.2, lineHeight: 33 },
+  styleRow: { alignItems: 'center', marginTop: 12 },
+  styleCaption: { fontSize: 9.5, fontWeight: '900', letterSpacing: 1.6, textTransform: 'uppercase', color: 'rgba(255,241,208,0.38)', marginBottom: 3 },
+  styleName: { fontSize: 15, fontWeight: '800', letterSpacing: 0.2 },
+  essence: { fontSize: 14.5, lineHeight: 22, color: 'rgba(255,255,255,0.72)', textAlign: 'center', marginTop: 10, paddingHorizontal: 6 },
+  countRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18 },
+  countChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 13, paddingVertical: 8,
+    borderRadius: 999, borderWidth: 1, borderColor: 'rgba(232,201,122,0.30)', backgroundColor: 'rgba(232,201,122,0.08)',
+  },
+  countText: { fontSize: 12, fontWeight: '700', color: 'rgba(232,201,122,0.90)' },
 
+  // At a glance
+  glanceRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', marginBottom: 14 },
+  glanceIcon: {
+    width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, marginTop: 1,
+  },
+  glanceLabel: { fontSize: 10.5, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase', marginBottom: 3 },
+  glanceText: { fontSize: 13.5, lineHeight: 20, color: INK.body },
+
+  // Strengths & care
+  scHead: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 10, marginTop: 4 },
+  scHeadText: { fontSize: 11, fontWeight: '900', letterSpacing: 1.3, textTransform: 'uppercase' },
+  scRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 11 },
+  scRowArea: { fontSize: 13.5, fontWeight: '800', color: '#F0E0B0' },
+  scRowText: { fontSize: 13, lineHeight: 19.5, color: 'rgba(255,255,255,0.64)', marginTop: 1.5 },
+  scSerious: {
+    backgroundColor: 'rgba(245,158,11,0.07)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.22)',
+    borderRadius: 12, padding: 12, marginBottom: 11,
+  },
+  scSeriousTag: { fontSize: 9.5, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', color: '#F59E0B', marginBottom: 3 },
+  scPath: { fontSize: 12.5, lineHeight: 18, color: 'rgba(232,201,122,0.78)', marginTop: 6, fontStyle: 'italic' },
+
+  // Seven signals
+  radarWrap: { alignItems: 'center', marginBottom: 8, marginTop: 2 },
+  sigItem: { paddingVertical: 13, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)' },
+  sigTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  sigName: { fontSize: 14, fontWeight: '800', color: '#FFE8B0' },
+  sigTech: { fontSize: 11, color: INK.faint, marginTop: 1.5 },
+  sigWhat: { fontSize: 12, lineHeight: 17.5, color: 'rgba(255,241,208,0.48)', marginTop: 8 },
+  sigChip: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  sigChipText: { fontSize: 10.5, fontWeight: '800' },
+  sigScore: { fontSize: 11, fontWeight: '800', color: INK.faint, marginLeft: 8, fontVariant: ['tabular-nums'] },
+  sigTrack: {
+    height: 5, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 5, overflow: 'hidden',
+    marginTop: 9, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)',
+  },
+  sigFill: { height: '100%', borderRadius: 5, overflow: 'hidden' },
+  sigInsight: { fontSize: 12.5, lineHeight: 19, color: 'rgba(255,232,176,0.72)', marginTop: 8 },
+  noteText: { fontSize: 11.5, lineHeight: 17, color: INK.faint, marginTop: 14, textAlign: 'center', fontStyle: 'italic' },
+
+  // Trust strip + form microcopy
+  trustStrip: { marginBottom: 16, paddingVertical: 14 },
+  trustRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 6 },
+  trustIcon: {
+    width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(232,201,122,0.08)', borderWidth: 1, borderColor: 'rgba(232,201,122,0.18)',
+  },
+  trustText: { flex: 1, fontSize: 12.5, lineHeight: 18, color: INK.body, fontWeight: '600' },
+  privacyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 16, paddingHorizontal: 12 },
+  privacyText: { fontSize: 11, color: INK.faint, textAlign: 'center', lineHeight: 16 },
+  ctaNote: { fontSize: 11.5, color: INK.dim, textAlign: 'center', marginTop: 10, marginBottom: 6 },
+
+  // Saved-history rows
+  histRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.045)' },
+  histRing: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  histNames: { fontSize: 13.5, fontWeight: '800', color: '#FFE8B0' },
+  histVerdict: { fontSize: 11.5, fontWeight: '800', marginTop: 2.5 },
+  histMeta: { fontSize: 10.5, color: 'rgba(255,241,208,0.35)', marginTop: 3 },
+  histDelete: { padding: 6 },
+});
+
+// Chapter shell — numbered like a report, quiet header, optional right accessory
+function SectionShell({ index, title, sub, right, children, delay }) {
   return (
-    <View>
-      {/* Avatar circles with zodiac signs */}
-      <Glass accent style={{ marginBottom: 14 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 24, paddingVertical: 16 }}>
-          <View style={{ alignItems: 'center' }}>
-            <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: 'rgba(249,168,212,0.10)', borderWidth: 2, borderColor: 'rgba(249,168,212,0.30)', alignItems: 'center', justifyContent: 'center', marginBottom: 8, overflow: 'hidden' }}>
-              <Image source={brideZodiac} style={{ width: 52, height: 52 }} resizeMode="contain" />
-            </View>
-            <Text style={{ color: '#F9A8D4', fontSize: 13, fontWeight: '800' }}>{brideName || (language === 'si' ? 'à¶¸à¶±à·à¶½à·’à¶º' : 'Bride')}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: '600', marginTop: 2 }}>{language === 'si' ? (RASHI_SI[brideRashiName] || brideRashiName) : brideRashiName}</Text>
-          </View>
-          <View style={{ alignItems: 'center' }}>
-            <View style={{ width: 60, height: 60, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: color + '50', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 22, fontWeight: '900', color: color }}>{pct}<Text style={{ fontSize: 12 }}>%</Text></Text>
-            </View>
-            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: '600', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              {language === 'si' ? 'à¶œà·à·…à¶´à·“à¶¸' : 'Match'}
-            </Text>
-          </View>
-          <View style={{ alignItems: 'center' }}>
-            <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: 'rgba(147,197,253,0.10)', borderWidth: 2, borderColor: 'rgba(147,197,253,0.30)', alignItems: 'center', justifyContent: 'center', marginBottom: 8, overflow: 'hidden' }}>
-              <Image source={groomZodiac} style={{ width: 52, height: 52 }} resizeMode="contain" />
-            </View>
-            <Text style={{ color: '#93C5FD', fontSize: 13, fontWeight: '800' }}>{groomName || (language === 'si' ? 'à¶¸à¶±à·à¶½à¶ºà·' : 'Groom')}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: '600', marginTop: 2 }}>{language === 'si' ? (RASHI_SI[groomRashiName] || groomRashiName) : groomRashiName}</Text>
-          </View>
-        </View>
-        <View style={{ alignItems: 'center', paddingBottom: 12 }}>
-          <Text style={{ color: color, fontSize: 16, fontWeight: '800', marginBottom: 4 }}>
-            {language === 'si' ? 'à¶‘à¶šà·à¶¶à¶¯à·Šà¶° à¶œà·à·…à¶´à·“à¶¸  ~ ' + pct + '%' : 'Overall compatibility  ~ ' + pct + '%'}
-          </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: '600' }}>{cosmicLabel}</Text>
-        </View>
-      </Glass>
-
-      {/* Radar Chart */}
-      {factors && factors.length >= 3 && (
-        <Glass style={{ marginBottom: 14, alignItems: 'center', paddingVertical: 20 }}>
-          <RadarChart
-            factors={factors}
-            size={Math.min(W - 24, 420)}
-            color1="#A78BFA"
-            color2="#FFB800"
-            animated={true}
-            labels={factors.map(function (f) {
-              return getCompatibilityFactorCopy(f.name, language, f.score, f.maxScore).shortName;
-            })}
-          />
-        </Glass>
-      )}
-
-      {/* Rating + Actions */}
-      <Glass accent style={{ overflow: 'hidden' }}>
+    <Animated.View entering={FadeInUp.delay(delay || 0).duration(500)}>
+      <View style={ns.shell}>
         <LinearGradient
-          colors={[color + '08', 'transparent']}
+          colors={['rgba(20,12,28,0.55)', 'rgba(10,6,16,0.50)']}
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 16 }}
         />
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: color + '14', borderWidth: 1.5, borderColor: color + '30', alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name={pct >= 75 ? 'sparkles' : pct >= 50 ? 'star' : pct >= 30 ? 'star-half' : 'cloudy-night'} size={20} color={color} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-                <Text style={{ fontSize: 18, fontWeight: '900', color: color }}>{label}</Text>
-                <View style={{ backgroundColor: color + '15', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: color }}>{score}/{maxScore}</Text>
-                </View>
-              </View>
-              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: '600', marginTop: 3 }}>{T.overall}</Text>
-            </View>
+        <View style={ns.shellHead}>
+          {index ? <Text style={ns.shellIndex}>{index}</Text> : null}
+          <View style={{ flex: 1 }}>
+            <Text style={ns.shellTitle}>{title}</Text>
+            {sub ? <Text style={ns.shellSub}>{sub}</Text> : null}
           </View>
-          <TouchableOpacity style={sty.shareChip} onPress={onShare} activeOpacity={0.7}>
-            <Ionicons name="share-social" size={15} color="#FF8C00" />
-            <Text style={sty.shareChipText}>{T.shareBtn}</Text>
-          </TouchableOpacity>
+          {right ? <View style={ns.shellRight}>{right}</View> : null}
         </View>
-      </Glass>
+        {children}
+      </View>
+    </Animated.View>
+  );
+}
+
+// Small tier/score chip used in chapter headers
+function ScoreChip({ text, color }) {
+  var c = color || INK.gold;
+  return (
+    <View style={[ns.sigChip, { backgroundColor: c + '12', borderColor: c + '30' }]}>
+      <Text style={[ns.sigChipText, { color: c }]}>{text}</Text>
     </View>
   );
 }
 
-// Factor Bar Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-function FactorBar({ f, index, language }) {
-  var pct = f.maxScore > 0 ? f.score / f.maxScore : 0;
-  var copy = getCompatibilityFactorCopy(f.name, language, f.score, f.maxScore);
-  var tier = copy.tier;
-  var iconName = tier === 'good' ? 'checkmark-circle' : tier === 'mixed' ? 'alert-circle' : 'close-circle';
-  var iconColor = tier === 'good' ? '#34D399' : tier === 'mixed' ? '#FFB800' : '#F87171';
-  var barColor = tier === 'good' ? ['#34D399', '#10B981'] : tier === 'mixed' ? ['#FFB800', '#F59E0B'] : ['#F87171', '#EF4444'];
+// The one-line verdict everyone understands — always a full plain phrase,
+// never an archetype name or a bare rating word.
+function getVerdictPhrase(data, si) {
+  var pct = data.percentage != null ? data.percentage
+    : (data.maxPossibleScore > 0 && data.totalScore != null ? Math.round((data.totalScore / data.maxPossibleScore) * 100) : null);
+  if (pct == null) {
+    return { text: si ? (data.ratingSinhala || data.rating || 'ගැළපීමේ ප්‍රතිඵලය') : (data.rating || 'Your match result'), color: '#E8C97A' };
+  }
+  if (pct >= 75) return { text: si ? 'ඉතා හොඳ ගැළපීමක්' : 'A Very Good Match', color: '#34D399' };
+  if (pct >= 55) return { text: si ? 'හොඳ ගැළපීමක්' : 'A Good Match', color: '#FBBF24' };
+  if (pct >= 40) return { text: si ? 'සමබර ගැළපීමක්' : 'A Balanced Match', color: '#A78BFA' };
+  return { text: si ? 'උත්සාහයෙන් වැඩෙන ගැළපීමක්' : 'A Match That Grows with Effort', color: '#F472B6' };
+}
+
+// ── VERDICT HERO ─────────────────────────────────────────────────
+// Two medallions joined by a gold thread under a verdict-coloured
+// aurora; the plain verdict phrase is the headline, the archetype is
+// a small labelled "bond style" line, and the classical X/20 stands
+// by as a quiet gold credential.
+function VerdictHero({ data, reading, brideName, groomName, language, T, onShare }) {
+  var si = language === 'si';
+  var arc = reading && reading.archetype;
+  var verdict = getVerdictPhrase(data, si);
+  var bandColor = verdict.color;
+  var brideRashiId = (data.brideChart && data.brideChart.lagnaRashiId) || (data.bride && data.bride.rashi && data.bride.rashi.id);
+  var groomRashiId = (data.groomChart && data.groomChart.lagnaRashiId) || (data.groom && data.groom.rashi && data.groom.rashi.id);
+  var count = reading && reading.traditionalCount && reading.traditionalCount.score != null
+    ? reading.traditionalCount
+    : { score: data.totalScore, max: data.maxPossibleScore || 20 };
+  var brideSignEn = RASHI_NAMES[brideRashiId] || '';
+  var groomSignEn = RASHI_NAMES[groomRashiId] || '';
+  var brideSign = si ? (RASHI_SI[brideSignEn] || brideSignEn) : brideSignEn;
+  var groomSign = si ? (RASHI_SI[groomSignEn] || groomSignEn) : groomSignEn;
+  var headline = verdict.text;
+  var essence = arc ? arc.essence : (si
+    ? 'ඔබ දෙදෙනාගේ සම්පූර්ණ වාර්තාව පහතින්, පියවරෙන් පියවර සරලව විස්තර වෙනවා.'
+    : 'Your full report unfolds below, step by step, in simple words.');
+
   return (
-    <Animated.View entering={FadeInUp.delay(80 * index).duration(500)} style={sty.factorItem}>
-      <View style={sty.factorTop}>
-        <View style={sty.factorNameRow}>
-          <View style={[sty.factorIconWrap, { backgroundColor: iconColor + '18', borderColor: iconColor + '30' }]}>
-            <Ionicons name={iconName} size={16} color={iconColor} />
+    <Animated.View entering={ZoomIn.springify().damping(13).delay(40)} style={ns.hero}>
+      <LinearGradient
+        colors={[bandColor + '26', 'rgba(232,201,122,0.05)', 'rgba(6,3,12,0.97)']}
+        style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+        start={{ x: 0.2, y: 0 }} end={{ x: 0.9, y: 1 }}
+      />
+      <View style={[ns.heroEdge, { backgroundColor: bandColor }]} />
+
+      <Text style={ns.heroKicker}>{si ? 'ඔබ දෙදෙනාගේ ගැළපීම — සම්පූර්ණ කියවීම' : 'YOUR MATCH, READ AS ONE'}</Text>
+
+      <View style={ns.medalRow}>
+        <View style={ns.medal}>
+          <View style={[ns.medalRing, { borderColor: 'rgba(249,168,212,0.45)' }]}>
+            {ZODIAC_IMAGES[brideRashiId] ? <Image source={ZODIAC_IMAGES[brideRashiId]} style={ns.medalImg} resizeMode="contain" /> : <Ionicons name="person" size={26} color="#F9A8D4" />}
           </View>
-          <View style={{ marginLeft: 10, flex: 1 }}>
-            <Text style={sty.factorName}>{copy.plainName}</Text>
-            {language === 'si' && <Text style={sty.factorTech}>{copy.techName}</Text>}
+          <Text style={[ns.medalName, { color: '#F9A8D4' }]} numberOfLines={1}>{brideName || T.bride}</Text>
+          {brideSign ? <Text style={ns.medalSign}>{brideSign}</Text> : null}
+        </View>
+        <View style={ns.thread}>
+          <LinearGradient colors={['rgba(249,168,212,0.0)', INK.gold]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={ns.threadLine} />
+          <View style={ns.threadHeart}>
+            <Ionicons name="heart" size={13} color={bandColor} />
           </View>
-          <View style={[sty.factorScorePill, { backgroundColor: iconColor + '12', borderColor: iconColor + '28' }]}>
-            <Text style={[sty.factorScoreText, { color: iconColor }]}>{f.score}/{f.maxScore}</Text>
+          <LinearGradient colors={[INK.gold, 'rgba(147,197,253,0.0)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={ns.threadLine} />
+        </View>
+        <View style={ns.medal}>
+          <View style={[ns.medalRing, { borderColor: 'rgba(147,197,253,0.45)' }]}>
+            {ZODIAC_IMAGES[groomRashiId] ? <Image source={ZODIAC_IMAGES[groomRashiId]} style={ns.medalImg} resizeMode="contain" /> : <Ionicons name="person" size={26} color="#93C5FD" />}
           </View>
+          <Text style={[ns.medalName, { color: '#93C5FD' }]} numberOfLines={1}>{groomName || T.groom}</Text>
+          {groomSign ? <Text style={ns.medalSign}>{groomSign}</Text> : null}
         </View>
       </View>
-      <View style={sty.barTrack}>
-        <Animated.View entering={FadeIn.delay(200 + 80 * index).duration(800)} style={[sty.barFill, { width: (pct * 100) + '%' }]}>
-          <LinearGradient colors={barColor} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
+
+      <Text style={ns.arcName}>{headline}</Text>
+      {arc ? (
+        <View style={ns.styleRow}>
+          <Text style={ns.styleCaption}>{si ? 'ඔබේ බැඳීමේ විදිය' : 'YOUR BOND STYLE'}</Text>
+          <Text style={[ns.styleName, { color: bandColor }]}>{arc.name}</Text>
+        </View>
+      ) : null}
+      <Text style={ns.essence}>{essence}</Text>
+
+      <View style={ns.countRow}>
+        {count.score != null ? (
+          <View style={ns.countChip}>
+            <Ionicons name="ribbon-outline" size={13} color={INK.gold} />
+            <Text style={ns.countText}>{T.tradCount}: <Text style={{ fontWeight: '900', color: '#FFD97A' }}>{count.score}/{count.max}</Text></Text>
+          </View>
+        ) : null}
+        <TouchableOpacity style={sty.shareChip} onPress={onShare} activeOpacity={0.7}>
+          <Ionicons name="share-social" size={14} color="#FF8C00" />
+          <Text style={sty.shareChipText}>{T.shareBtn}</Text>
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
+  );
+}
+
+// ── 01 · AT A GLANCE ─────────────────────────────────────────────
+// Three plain-speech takeaways so the verdict lands before any detail.
+function buildGlance(data, reading, language, T) {
+  var rows = [];
+  var factors = (data.factors || []).filter(function (f) { return f.maxScore > 0; });
+
+  if (factors.length > 0) {
+    var best = factors.reduce(function (a, b) { return (b.score / b.maxScore) > (a.score / a.maxScore) ? b : a; });
+    if (best.score / best.maxScore >= 0.6) {
+      var bc = getSignalCopy(best.name, language, best.score, best.maxScore);
+      rows.push({ icon: 'leaf-outline', color: '#34D399', label: T.glanceStrong, text: bc.plainName + ' — ' + bc.insight });
+    }
+  }
+
+  var care = reading && reading.nurture && reading.nurture.length > 0 ? reading.nurture[0] : null;
+  if (care) {
+    rows.push({ icon: 'heart-half-outline', color: '#E8C97A', label: T.glanceCare, text: care.area + ' — ' + care.text });
+  } else if (factors.length > 0) {
+    var low = factors.reduce(function (a, b) { return (b.score / b.maxScore) < (a.score / a.maxScore) ? b : a; });
+    if (low.score / low.maxScore < 0.5) {
+      var lc = getSignalCopy(low.name, language, low.score, low.maxScore);
+      rows.push({ icon: 'heart-half-outline', color: '#E8C97A', label: T.glanceCare, text: lc.plainName + ' — ' + lc.insight });
+    }
+  }
+
+  var windows = data.advancedPorondam && data.advancedPorondam.advanced
+    && data.advancedPorondam.advanced.weddingWindows
+    && data.advancedPorondam.advanced.weddingWindows.favorableWindows;
+  var realWindows = (windows || []).filter(function (w) { return w.end && w.end.length > 0; });
+  if (realWindows.length > 0) {
+    rows.push({
+      icon: 'calendar-outline', color: '#A78BFA', label: T.glanceTiming,
+      text: language === 'si'
+        ? 'ඉදිරි වසර 3 තුළ දෙදෙනාටම හිතකර විවාහ කාල ' + realWindows.length + 'ක් හමු වුණා — විස්තර පහතින්.'
+        : realWindows.length + ' favourable wedding ' + (realWindows.length === 1 ? 'window' : 'windows') + ' found for you both in the next 3 years — details below.',
+    });
+  } else {
+    var harmony = data.advancedPorondam && data.advancedPorondam.advanced
+      && data.advancedPorondam.advanced.dashaCompatibility
+      && data.advancedPorondam.advanced.dashaCompatibility.harmony;
+    if (harmony === 'harmonious') {
+      rows.push({ icon: 'calendar-outline', color: '#A78BFA', label: T.glanceTiming, text: language === 'si' ? 'දෙදෙනාම දැන් ගෙවන්නේ එකිනෙකාට සහාය දෙන ජීවිත කාලයක් — හවුල් තීරණවලට හොඳ මොහොතක්.' : 'You are both moving through supportive life periods right now — a good moment for shared decisions.' });
+    } else if (harmony === 'conflicting') {
+      rows.push({ icon: 'calendar-outline', color: '#A78BFA', label: T.glanceTiming, text: language === 'si' ? 'දෙදෙනාගේ වත්මන් ජීවිත කාල වෙනස් රිද්මවල — ලොකු තීරණ ඉවසීමෙන්, කතා කරමින් ගන්න.' : 'Your current life periods run on different rhythms — take big decisions patiently, and talk them through.' });
+    }
+  }
+
+  return rows;
+}
+
+function GlanceCard({ rows, index, delay, T }) {
+  if (!rows || rows.length === 0) return null;
+  return (
+    <SectionShell index={index} delay={delay} title={T.glanceTitle} sub={T.glanceSub}>
+      {rows.map(function (r, i) {
+        return (
+          <View key={'g' + i} style={[ns.glanceRow, i === rows.length - 1 ? { marginBottom: 2 } : null]}>
+            <View style={[ns.glanceIcon, { backgroundColor: r.color + '10', borderColor: r.color + '28' }]}>
+              <Ionicons name={r.icon} size={16} color={r.color} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[ns.glanceLabel, { color: r.color }]}>{r.label}</Text>
+              <Text style={ns.glanceText}>{r.text}</Text>
+            </View>
+          </View>
+        );
+      })}
+    </SectionShell>
+  );
+}
+
+// ── 02 · STRENGTHS & CARE ────────────────────────────────────────
+// The coupleReading's gifts / nurture / forward paths. Falls back to
+// factor-derived content for readings saved before the archetype era.
+function buildStrengthsCare(data, reading, language) {
+  var si = language === 'si';
+  var gifts = (reading && reading.gifts ? reading.gifts.slice() : []);
+  var nurture = (reading && reading.nurture ? reading.nurture.slice() : []);
+  var paths = (reading && reading.forwardPaths ? reading.forwardPaths.slice() : []);
+
+  if (gifts.length === 0 && nurture.length === 0) {
+    // Legacy fallback — derive from the classical factors + doshas.
+    (data.factors || []).forEach(function (f) {
+      if (!f.maxScore) return;
+      var ratio = f.score / f.maxScore;
+      var copy = getSignalCopy(f.name, language, f.score, f.maxScore);
+      if (ratio >= 0.75) {
+        gifts.push({ area: copy.plainName, text: copy.insight });
+      } else if (ratio < 0.5) {
+        var serious = (f.name === 'Nadi' || f.name === 'Rajju' || f.name === 'Vedha') && ratio < 0.25;
+        nurture.push({ area: copy.plainName, text: copy.insight, severity: serious ? 'significant' : 'gentle' });
+      }
+    });
+    (data.doshas || []).forEach(function (d) {
+      var cc = getRelationshipChallengeCopy(d, language);
+      var sev = String(d.severity || '').toLowerCase().indexOf('severe') !== -1 && !d.cancelled ? 'significant' : 'gentle';
+      nurture.push({ area: cc.label, text: cc.desc, severity: d.cancelled ? 'gentle' : sev });
+    });
+    nurture.sort(function (a, b) { return (a.severity === 'significant' ? -1 : 0) - (b.severity === 'significant' ? -1 : 0); });
+    if (gifts.length > 0 || nurture.length > 0) {
+      paths = [
+        { kind: 'timing', text: si ? 'සුබ මුහුර්තයකින් විවාහය අරඹන්න — හොඳ ආරම්භයක් හැම ගැළපීමකටම උදව්වක්.' : 'Pick an auspicious wedding time — a good start helps every match.' },
+        { kind: 'understanding', text: si ? 'බලාගත යුතු තැන් ගැන කලින්ම එකට කතා කරගන්න — දැනුවත්කම ගැටුම සමීපකමට හරවනවා.' : 'Talk about the tender areas together, early — awareness turns friction into closeness.' },
+      ];
+    }
+  }
+
+  if (gifts.length === 0 && nurture.length === 0) return null;
+  return { gifts: gifts, nurture: nurture, paths: paths };
+}
+
+function StrengthsCareCard({ content, index, delay, T }) {
+  var gifts = content.gifts;
+  var nurture = content.nurture;
+  var paths = content.paths;
+
+  return (
+    <SectionShell index={index} delay={delay} title={T.scTitle} sub={T.scSub}>
+      {gifts.length > 0 ? (
+        <View>
+          <View style={ns.scHead}>
+            <Ionicons name="sunny-outline" size={13} color="#34D399" />
+            <Text style={[ns.scHeadText, { color: '#34D399' }]}>{T.scGifts}</Text>
+          </View>
+          {gifts.map(function (g, i) {
+            return (
+              <View key={'gi' + i} style={ns.scRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#34D399" style={{ marginTop: 1 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={ns.scRowArea}>{g.area}</Text>
+                  <Text style={ns.scRowText}>{g.text}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+
+      {nurture.length > 0 ? (
+        <View style={gifts.length > 0 ? { marginTop: 10 } : null}>
+          <View style={ns.scHead}>
+            <Ionicons name="rose-outline" size={13} color="#E8C97A" />
+            <Text style={[ns.scHeadText, { color: '#E8C97A' }]}>{T.scCare}</Text>
+          </View>
+          {nurture.map(function (n, i) {
+            var serious = n.severity === 'significant';
+            var inner = (
+              <View style={ns.scRow}>
+                <Ionicons name={serious ? 'alert-circle' : 'leaf-outline'} size={16} color={serious ? '#F59E0B' : 'rgba(232,201,122,0.7)'} style={{ marginTop: 1 }} />
+                <View style={{ flex: 1 }}>
+                  {serious ? <Text style={ns.scSeriousTag}>{T.scSignificant}</Text> : null}
+                  <Text style={ns.scRowArea}>{n.area}</Text>
+                  <Text style={ns.scRowText}>{n.text}</Text>
+                  {n.path ? <Text style={ns.scPath}>{n.path}</Text> : null}
+                </View>
+              </View>
+            );
+            return serious
+              ? <View key={'nu' + i} style={ns.scSerious}>{inner}</View>
+              : <View key={'nu' + i}>{inner}</View>;
+          })}
+        </View>
+      ) : null}
+
+      {paths.length > 0 ? (
+        <View style={{ marginTop: 10 }}>
+          <View style={ns.scHead}>
+            <Ionicons name="trail-sign-outline" size={13} color="#FBBF24" />
+            <Text style={[ns.scHeadText, { color: '#FBBF24' }]}>{T.scPaths}</Text>
+          </View>
+          {paths.map(function (p, i) {
+            var icon = p.kind === 'timing' ? 'calendar-outline' : p.kind === 'astrologer' ? 'person-outline' : 'sparkles-outline';
+            return (
+              <View key={'pa' + i} style={ns.scRow}>
+                <Ionicons name={icon} size={15} color="#FBBF24" style={{ marginTop: 2 }} />
+                <Text style={[ns.scRowText, { flex: 1, marginTop: 0 }]}>{p.text}</Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+    </SectionShell>
+  );
+}
+
+// ── 03 · THE SEVEN CLASSICAL SIGNALS ─────────────────────────────
+function FactorBar({ f, order, language }) {
+  var copy = getSignalCopy(f.name, language, f.score, f.maxScore);
+  var pct = f.maxScore > 0 ? f.score / f.maxScore : 0;
+  var c = copy.color;
+  return (
+    <Animated.View entering={FadeInUp.delay(60 * order).duration(450)} style={ns.sigItem}>
+      <View style={ns.sigTop}>
+        <View style={{ flex: 1 }}>
+          <Text style={ns.sigName}>{copy.plainName}</Text>
+          <Text style={ns.sigTech}>{copy.techName}</Text>
+        </View>
+        <View style={[ns.sigChip, { backgroundColor: c + '12', borderColor: c + '30' }]}>
+          <Text style={[ns.sigChipText, { color: c }]}>{copy.tierLabel}</Text>
+        </View>
+        <Text style={ns.sigScore}>{f.score}/{f.maxScore}</Text>
+      </View>
+      {copy.what ? <Text style={ns.sigWhat}>{copy.what}</Text> : null}
+      <View style={ns.sigTrack}>
+        <Animated.View entering={FadeIn.delay(150 + 60 * order).duration(700)} style={[ns.sigFill, { width: Math.max(pct * 100, 3) + '%' }]}>
+          <LinearGradient colors={[c + 'AA', c]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
         </Animated.View>
       </View>
-      {copy.insight ? <Text style={sty.factorInsight}>{copy.insight}</Text> : null}
+      {copy.insight ? <Text style={ns.sigInsight}>{copy.insight}</Text> : null}
     </Animated.View>
   );
 }
-// Labels
+
+function SignalsCard({ data, index, delay, language, T }) {
+  var factors = data.factors || [];
+  if (factors.length === 0) return null;
+  var score = data.totalScore;
+  var max = data.maxPossibleScore || 20;
+  return (
+    <SectionShell
+      index={index} delay={delay} title={T.factors} sub={T.factorsSub}
+      right={score != null ? <ScoreChip text={score + '/' + max} /> : null}
+    >
+      {factors.length >= 3 ? (
+        <View style={ns.radarWrap}>
+          <RadarChart
+            factors={factors}
+            size={Math.min(W - 72, 340)}
+            color1="#A78BFA"
+            color2="#FFB800"
+            animated={true}
+            labels={factors.map(function (f) { return getSignalCopy(f.name, language, f.score, f.maxScore).shortName; })}
+          />
+        </View>
+      ) : null}
+      {factors.map(function (f, i) { return <FactorBar key={f.name + i} f={f} order={i} language={language} />; })}
+      <Text style={ns.noteText}>{T.signalsNote}</Text>
+    </SectionShell>
+  );
+}
+
+// ── Trust strip shown on the input page ──────────────────────────
+function TrustStrip({ T }) {
+  var items = [
+    { icon: 'planet-outline', text: T.trust1 },
+    { icon: 'analytics-outline', text: T.trust2 },
+    { icon: 'document-text-outline', text: T.trust3 },
+  ];
+  return (
+    <Animated.View entering={FadeInDown.delay(140).duration(600)}>
+      <Glass style={ns.trustStrip}>
+        {items.map(function (it, i) {
+          return (
+            <View key={'tr' + i} style={ns.trustRow}>
+              <View style={ns.trustIcon}>
+                <Ionicons name={it.icon} size={15} color={INK.gold} />
+              </View>
+              <Text style={ns.trustText}>{it.text}</Text>
+            </View>
+          );
+        })}
+      </Glass>
+    </Animated.View>
+  );
+}
+
+// ── LAGNA MATCH MAP — tap any sign (your own included) for a simple reading ──
+var LX_BAND_ORDER = ['harmony', 'magnetic', 'balanced', 'growth'];
+
+function LagnaExplorerCard({ myLagnaId, language, userName }) {
+  var si = language === 'si';
+  var lang = si ? 'si' : 'en';
+  var [selected, setSelected] = useState(myLagnaId);
+  var signNames = si ? RASHI_NAMES_SI : RASHI_NAMES;
+  var arcs = {};
+  for (var i = 1; i <= 12; i++) arcs[i] = deriveLagnaArchetype(myLagnaId, i, language);
+  var sel = arcs[selected] || arcs[myLagnaId];
+  var selColor = sel.bandColor;
+
+  return (
+    <Animated.View entering={FadeInDown.delay(200).duration(600).springify().damping(14)} style={lx.card}>
+      <LinearGradient
+        colors={['rgba(26,15,36,0.62)', 'rgba(9,5,15,0.58)']}
+        style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      />
+      <View style={lx.goldEdge} />
+
+      {/* Header — who you are, what this map does */}
+      <View style={lx.headRow}>
+        <View style={lx.headMedal}>
+          <Image source={ZODIAC_IMAGES[myLagnaId]} resizeMode="contain" style={lx.headImg} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={lx.kicker}>{si ? 'ලග්න ගැළපීම් සිතියම' : 'LAGNA MATCH MAP'}</Text>
+          <Text style={lx.title}>
+            {si
+              ? (userName ? userName + ', ඔබේ ලග්නය ' + signNames[myLagnaId] : 'ඔබේ ලග්නය ' + signNames[myLagnaId])
+              : (userName ? userName + ', your lagna is ' + signNames[myLagnaId] : 'Your lagna is ' + signNames[myLagnaId])}
+          </Text>
+          <Text style={lx.sub}>
+            {si
+              ? 'ලග්නයක් ඔබන්න — ඒ ලග්නය සමඟ ඔබේ බැඳීම මොන වගේද කියා සරලව බලන්න.'
+              : 'Tap a sign to see, in simple words, what your bond with it is like.'}
+          </Text>
+        </View>
+      </View>
+
+      {/* The four bond styles */}
+      <View style={lx.legendRow}>
+        {LX_BAND_ORDER.map(function (k) {
+          return (
+            <View key={k} style={lx.legendChip}>
+              <View style={[lx.legendDot, { backgroundColor: ARCHETYPE_BANDS[k].color }]} />
+              <Text style={lx.legendText}>{ARCHETYPE_BANDS[k][lang]}</Text>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* 12-sign grid — 4 per row (3 rows), your own sign included */}
+      <View style={lx.grid}>
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (id) {
+          var arc = arcs[id];
+          var active = id === selected;
+          return (
+            <TouchableOpacity
+              key={id}
+              style={lx.cellWrap}
+              activeOpacity={0.75}
+              onPress={function () {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setSelected(id);
+              }}
+            >
+              <View style={[lx.cell, {
+                borderColor: active ? arc.bandColor : arc.bandColor + '3A',
+                backgroundColor: active ? arc.bandColor + '18' : 'rgba(255,255,255,0.025)',
+              }]}>
+                {arc.isSame ? (
+                  <View style={[lx.sameBadge, { backgroundColor: arc.bandColor }]}>
+                    <Text style={lx.sameBadgeText}>{si ? 'ඔබ' : 'YOU'}</Text>
+                  </View>
+                ) : null}
+                <Image source={ZODIAC_IMAGES[id]} resizeMode="contain" style={lx.cellImg} />
+                <Text style={[lx.cellName, active ? { color: '#FFF1D0' } : null]} numberOfLines={1}>{signNames[id]}</Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* What the selected pairing is like */}
+      <View style={[lx.detail, { borderColor: selColor + '45' }]}>
+        <LinearGradient
+          colors={[selColor + '14', 'rgba(10,6,16,0.0)']}
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+          start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+        />
+        <View style={lx.detailTop}>
+          <View style={[lx.detailBandChip, { borderColor: selColor + '55', backgroundColor: selColor + '14' }]}>
+            <Text style={[lx.detailBandText, { color: selColor }]}>{sel.bandLabel}</Text>
+          </View>
+          <Ionicons name={sel.emblem} size={15} color={selColor} />
+        </View>
+        <Text style={lx.detailName}>{sel.name}</Text>
+        <Text style={lx.detailPair}>
+          {signNames[myLagnaId] + '  +  ' + signNames[selected] + (sel.isSame ? (si ? '  ·  ඔබේම ලග්නය' : '  ·  same as yours') : '')}
+        </Text>
+        <Text style={lx.detailEssence}>{sel.essence}</Text>
+        {sel.detail ? <Text style={lx.detailBody}>{sel.detail}</Text> : null}
+      </View>
+
+      {/* Honesty note + gentle push to the full reading */}
+      <Text style={lx.note}>
+        {si
+          ? 'කිසිම ලග්නයක් “නරක” නැහැ — වෙනස් වෙන්නේ බැඳීමේ විදිය විතරයි. සම්පූර්ණ ඇත්ත දැනගන්න පොරොන්දම් හතම බැලිය යුතුයි.'
+          : 'No sign is a “bad” match — only the style of the bond changes. For the full truth, all the porondam checks are needed.'}
+      </Text>
+      <View style={lx.footerWrap}>
+        <Ionicons name="sparkles" size={13} color="#FBBF24" />
+        <Text style={lx.footer}>
+          {si
+            ? 'සම්පූර්ණ ගැළපීම බලන්න — පහතින් දෙදෙනාගේ විස්තර දෙන්න ✨'
+            : 'For your full reading — enter both sets of details below ✨'}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+var lx = StyleSheet.create({
+  card: { borderRadius: 22, overflow: 'hidden', padding: 18, marginBottom: 20, borderWidth: 1.5, borderColor: 'rgba(232,201,122,0.16)' },
+  goldEdge: { position: 'absolute', top: 0, left: 0, right: 0, height: 2.5, backgroundColor: '#FBBF24', opacity: 0.65 },
+  headRow: { flexDirection: 'row', alignItems: 'center', gap: 13, marginBottom: 14 },
+  headMedal: {
+    width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: 'rgba(251,191,36,0.5)',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  headImg: { width: 36, height: 36 },
+  kicker: { fontSize: 10, fontWeight: '900', letterSpacing: 1.8, color: 'rgba(251,191,36,0.85)', textTransform: 'uppercase' },
+  title: { fontSize: 16.5, fontWeight: '800', color: '#FFF1D0', marginTop: 3, lineHeight: 22 },
+  sub: { fontSize: 12, color: 'rgba(255,241,208,0.55)', marginTop: 3, lineHeight: 17 },
+  legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  legendChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 4,
+    borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.035)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+  },
+  legendDot: { width: 7, height: 7, borderRadius: 4 },
+  legendText: { fontSize: 10, fontWeight: '700', color: 'rgba(255,241,208,0.6)' },
+  // 4 columns at any width: percentage cells + negative-margin gutters, so no
+  // fixed pixel maths can round a row down to three.
+  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, marginBottom: 12 },
+  cellWrap: { width: '25%', padding: 4 },
+  cell: { paddingVertical: 9, paddingHorizontal: 2, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', gap: 5 },
+  cellImg: { width: 28, height: 28 },
+  cellName: { fontSize: 9.5, fontWeight: '700', color: 'rgba(255,241,208,0.6)', maxWidth: '96%' },
+  sameBadge: { position: 'absolute', top: 3, right: 3, paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 5, zIndex: 2 },
+  sameBadgeText: { fontSize: 7, fontWeight: '900', color: '#1A0F24', letterSpacing: 0.3 },
+  detail: { borderRadius: 16, borderWidth: 1, padding: 14, overflow: 'hidden', marginBottom: 12 },
+  detailTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  detailBandChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, borderWidth: 1 },
+  detailBandText: { fontSize: 10, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' },
+  detailName: { fontSize: 18, fontWeight: '900', color: '#F8E7B8' },
+  detailPair: { fontSize: 11.5, fontWeight: '700', color: 'rgba(232,201,122,0.6)', marginTop: 3 },
+  detailEssence: { fontSize: 13, lineHeight: 19.5, color: 'rgba(255,255,255,0.78)', marginTop: 9 },
+  detailBody: { fontSize: 12.5, lineHeight: 19, color: 'rgba(255,241,208,0.60)', marginTop: 8 },
+  note: { fontSize: 11.5, lineHeight: 17, color: 'rgba(255,241,208,0.42)', textAlign: 'center', fontStyle: 'italic', paddingHorizontal: 6 },
+  footerWrap: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10,
+    paddingTop: 11, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  footer: { fontSize: 11.5, color: 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 15 },
+});
+
+// Labels — simple, everyday language; Sinhala in the warm ඔබ register
 var L = {
   en: {
-    title: 'Compatibility', subtitle: 'Marriage Compatibility Check',
+    title: 'Marriage Match', subtitle: 'All the porondam checks — explained in simple words',
     bride: 'Bride', groom: 'Groom',
-    namePh: 'Full name',
+    namePh: 'Name',
     yearPh: 'YYYY', monthPh: 'MM', dayPh: 'DD', hourPh: 'HH', minutePh: 'MM',
-    date: 'Date of Birth', time: 'Time',
-    birthPlace: 'Birth Place',
-    timeHint: '* Check birth certificate for exact time',
-    checkBtn: 'Check Compatibility',
-    brideChart: "Bride's Birth Details", groomChart: "Groom's Birth Details",
-    factors: 'Relationship Signals', factorsSub: '7 Signals \u00B7 20 Points',
-    doshas: 'Challenges', report: 'Detailed Report',
-    reportQ: 'Get detailed analysis in:',
-    si: '\u0DC3\u0DD2\u0D82\u0DC4\u0DBD', en: 'English',
-    generating: 'Writing your report...', shareBtn: 'Share',
-    reportBusy: 'Report service is busy right now. Your retry is saved, so try again in a few minutes without paying again.',
-    reportFailed: 'Failed to generate report. Please try again.',
-    overall: 'Compatibility Score',
-    missing: 'Please enter birth dates for both bride and groom',
-    edit: 'Change Details', calculating: 'Reading relationship signals...',
-    history: 'Previous Checks', historyEmpty: 'No saved checks yet',
-    historyLoading: 'Loading saved checks...', viewReport: 'View Report',
+    date: 'Date of Birth', time: 'Time of Birth',
+    birthPlace: 'Place of Birth',
+    timeHint: 'The exact birth time makes the reading more accurate — you can find it on the birth certificate.',
+    checkBtn: 'Check Our Match',
+    ctaNote: 'Takes about a minute · saved to your account',
+    trust1: 'We build both birth charts from the exact details you give',
+    trust2: 'All seven porondam checks, each one explained simply',
+    trust3: 'You also get a full written report as a PDF to keep',
+    privacyNote: 'Your birth details are used only to build these two charts — nothing else.',
+    langTitle: 'Language of the written report',
+    brideChart: 'Bride’s Birth Chart', groomChart: 'Groom’s Birth Chart',
+    factors: 'The seven porondam checks', factorsSub: 'The traditional 20 points — what each check means, in plain words',
+    signalsNote: 'Scored the traditional way — 20 points across the classical porondam checks, read from both charts.',
+    report: 'The Written Report',
+    reportQ: 'Written report in:',
+    si: 'සිංහල', en: 'English',
+    generating: 'Your report is being written from both charts…', shareBtn: 'Share',
+    reportBusy: 'The report service is busy right now. Your report is reserved — try again in a few minutes. No extra payment.',
+    reportFailed: 'The report could not be written just now. Please try again — your access is saved.',
+    retryReport: 'Write the report again — free',
+    aiDownTitle: 'Report service is busy',
+    aiDownBusy: 'The report-writing service is busy right now, so you have NOT been charged anything. Please try again in about {min} minute(s).',
+    aiDownBudget: 'Today’s report limit has been reached, so you have NOT been charged anything. Please try again tomorrow.',
+    aiDownNetwork: 'We couldn’t reach the service, so you have NOT been charged anything. Check your connection and try again.',
+    overall: 'of the traditional 20',
+    missing: 'Please fill in the birth details for both of you',
+    edit: 'Change Details', calculating: 'Reading both charts…',
+    backToForm: 'Back', resultHeader: 'Compatibility Report',
+    history: 'Past Checks', historyEmpty: 'No saved checks yet',
+    historyChip: 'Saved', historyClose: 'Close',
+    historySub: 'Tap a check to open it again',
+    historyLoading: 'Opening your check…', viewReport: 'Open Report',
     newCheck: '+ New Check',
-    // Porondam+ Advanced
-    advancedTitle: 'Deep Compatibility',
-    advancedSub: 'Beyond the 7 signals',
-    combinedScore: 'Combined Score',
-    dashaTitle: 'Life Phase Match',
-    currentPhase: 'Current Life Period',
-    benefic: 'Supportive',
-    malefic: 'Needs Care',
-    navamshaTitle: 'Deep Relationship Match',
-    mangalaTitle: 'Conflict Care Check',
-    marriageStrTitle: 'Relationship Support Strength',
-    venus: 'Affection Support',
-    lord7: 'Commitment Support',
-    weddingTitle: 'Best Wedding Windows',
-    noWindows: 'No overlapping favorable window found',
+    deleteTitle: 'Delete this check?', deleteMsg: 'Once deleted, it can’t be brought back.',
+    deleteCancel: 'Keep it', deleteConfirm: 'Delete',
+    tradCount: 'Traditional porondams',
+    glanceTitle: 'At a glance', glanceSub: 'The three things to know first',
+    glanceStrong: 'What matches best', glanceCare: 'What needs the most care', glanceTiming: 'About timing',
+    scTitle: 'What’s good & what needs care', scSub: 'Both sides honestly — nothing hidden, nothing scary',
+    scGifts: 'What’s already good', scCare: 'What to look after', scPaths: 'What you can do next',
+    scSignificant: 'An important point — please consider it',
+    attractionTitle: 'Attraction & closeness', attractionSub: 'How strong the pull between you is, and what kind it is',
+    naturesTitle: 'Your two natures',
+    lifeNowTitle: 'Life right now', lifeNowSub: 'What kind of period each of you is going through',
+    deepTitle: 'The deeper bond', deepSub: 'Checks that look at married life itself, beyond the surface',
+    weddingTitle: 'Good wedding dates', weddingSub: 'Time periods that are good in both charts at once',
+    noWindows: 'No shared favourable period was found',
+    starsTitle: 'Your birth stars', starsSub: 'The key details an astrologer would ask for — sign, star, ruler',
+    curioTitle: 'For the curious', curioSub: 'Symbolic readings — fun to explore, not for decisions',
+    readerChapters: 'chapters', readerMin: 'min read',
+    readerSub: 'Written from both charts — read it together, slowly.',
+    methodTitle: 'How this report is made',
+    methodBody: 'First we build both birth charts from the date, time and place you gave. Then we read the seven porondam checks, the navamsha match (the chart for married life), the life periods you are each in now, and the Mars check — the same order a traditional matcher follows, calculated precisely.',
+    guidanceNote: 'This report is here to help you think — it is not a final verdict on your future. The decision, and the relationship, always belong to you two.',
   },
   si: {
-    title: '\u0DC3\u0DB6\u0DB3\u0DAD\u0DCF \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8', subtitle: '\u0DC0\u0DD2\u0DC0\u0DCF\u0DC4 \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8\u0DCA \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF\u0DC0',
-    bride: '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA', groom: '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF',
-    namePh: '\u0DC3\u0DB8\u0DCA\u0DB4\u0DD6\u0DBB\u0DCA\u0DAB \u0DB1\u0DB8',
+    title: 'පොරොන්දම් ගැළපීම', subtitle: 'පොරොන්දම් සියල්ල බලා, සරල බසින් කියන සම්පූර්ණ වාර්තාව',
+    bride: 'මනාලිය', groom: 'මනාලයා',
+    namePh: 'නම',
     yearPh: 'YYYY', monthPh: 'MM', dayPh: 'DD', hourPh: 'HH', minutePh: 'MM',
-    date: '\u0D89\u0DB4\u0DB1\u0DCA \u0DAF\u0DD2\u0DB1\u0DBA', time: '\u0DC0\u0DDA\u0DBD\u0DCF\u0DC0',
-    birthPlace: '\u0D8B\u0DB4\u0DB1\u0DCA \u0DC3\u0DCA\u0DAE\u0DCF\u0DB1\u0DBA',
-    timeHint: '* \u0D89\u0DB4\u0DCA\u0DB4\u0DD0\u0DB1\u0DCA\u0DB1 \u0DB4\u0DAD\u0DCA\u200D\u0DBB\u0DBA\u0DDA \u0DC0\u0DDA\u0DBD\u0DCF\u0DC0 \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1',
-    checkBtn: '\u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1',
-    brideChart: '\u0DB8\u0DB1\u0DCF\u0DBD\u0DD2\u0DBA\u0D9C\u0DDA \u0D8B\u0DB4\u0DB1\u0DCA \u0DC0\u0DD2\u0DC3\u0DCA\u0DAD\u0DBB', groomChart: '\u0DB8\u0DB1\u0DCF\u0DBD\u0DBA\u0DCF\u0D9C\u0DDA \u0D8B\u0DB4\u0DB1\u0DCA \u0DC0\u0DD2\u0DC3\u0DCA\u0DAD\u0DBB',
-    factors: '\u0DC3\u0DB6\u0DB3\u0DAD\u0DCF \u0DBD\u0D9A\u0DD4\u0DAB\u0DD4', factorsSub: '\u0DBD\u0D9A\u0DD4\u0DAB\u0DD4 7 \u00B7 \u0DBD\u0D9A\u0DD4\u0DAB\u0DD4 20',
-    doshas: '\u0D85\u0DB7\u0DD2\u0DBA\u0DDD\u0D9C', report: '\u0DC3\u0DC0\u0DD2\u0DC3\u0DCA\u0DAD\u0DBB \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0',
-    reportQ: '\u0DC3\u0DC0\u0DD2\u0DC3\u0DCA\u0DAD\u0DBB \u0DC0\u0DD2\u0DC1\u0DCA\u0DBD\u0DDA\u0DC2\u0DAB\u0DBA:',
-    si: '\u0DC3\u0DD2\u0D82\u0DC4\u0DBD', en: 'English',
-    generating: '\u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0 \u0DBD\u0DD2\u0DBA\u0DB8\u0DD2\u0DB1\u0DCA...', shareBtn: '\u0DBA\u0DC0\u0DB1\u0DCA\u0DB1',
-    reportBusy: '\u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0 \u0DBD\u0DD2\u0DBA\u0DB1 \u0DC3\u0DDA\u0DC0\u0DCF\u0DC0 \u0DB8\u0DDA \u0DB8\u0DDC\u0DC4\u0DDC\u0DAD\u0DDA \u0D9A\u0DCF\u0DBB\u0DCA\u0DBA\u0DB6\u0DC4\u0DD4\u0DBD\u0DBA\u0DD2. \u0D94\u0DB6\u0DDA \u0DB1\u0DD0\u0DC0\u0DAD \u0D8B\u0DAD\u0DCA\u0DC3\u0DCF\u0DC4\u0DBA \u0DC3\u0DD4\u0DBB\u0D9A\u0DCA\u0DC2\u0DD2\u0DAD\u0DBA\u0DD2. \u0DB8\u0DD2\u0DB1\u0DD2\u0DAD\u0DCA\u0DAD\u0DD4 \u0D9A\u0DD2\u0DC4\u0DD2\u0DB4\u0DBA\u0D9A\u0DD2\u0DB1\u0DCA \u0DB1\u0DD0\u0DC0\u0DAD \u0D8B\u0DAD\u0DCA\u0DC3\u0DCF\u0DC4 \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1.',
-    reportFailed: '\u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0 \u0DC4\u0DAF\u0DB1\u0DCA\u0DB1 \u0DB6\u0DD0\u0DBB\u0DD2 \u0DC0\u0DD4\u0DAB\u0DCF. \u0D9A\u0DBB\u0DD4\u0DAB\u0DCF\u0D9A\u0DBB \u0DB1\u0DD0\u0DC0\u0DAD \u0D8B\u0DAD\u0DCA\u0DC3\u0DCF\u0DC4 \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1.',
-    overall: '\u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8\u0DCA \u0DBD\u0D9A\u0DD4\u0DAB\u0DD4',
-    missing: '\u0DAF\u0DD9\u0DAF\u0DD9\u0DB1\u0DCF\u0D9C\u0DDA\u0DB8 \u0D89\u0DB4\u0DB1\u0DCA \u0DAF\u0DD2\u0DB1\u0DBA \u0DAF\u0DCF\u0DB1\u0DCA\u0DB1',
-    edit: '\u0DC0\u0DD2\u0DC3\u0DCA\u0DAD\u0DBB \u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1', calculating: '\u0DC3\u0DB6\u0DB3\u0DAD\u0DCF \u0DBB\u0DA7\u0DCF \u0D9A\u0DD2\u0DBA\u0DC0\u0DB8\u0DD2\u0DB1\u0DCA...',
-    history: '\u0DB4\u0DD9\u0DBB \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF', historyEmpty: '\u0DC3\u0DD4\u0DBB\u0D9A\u0DD2\u0DB1 \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF \u0DB1\u0DD0\u0DAD',
-    historyLoading: '\u0DC3\u0DD4\u0DBB\u0D9A\u0DD2\u0DB1 \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF \u0DB6\u0DBD\u0DB8\u0DD2\u0DB1\u0DCA...', viewReport: '\u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0 \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1',
-    newCheck: '+ \u0DB1\u0DC0 \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF\u0DC0',
-    // Porondam+ Advanced
-    advancedTitle: '\u0D9C\u0DD0\u0DB9\u0DD4\u0DBB\u0DD4 \u0D9C\u0DD0\u0DBD\u0DB4\u0DD4\u0DB8',
-    advancedSub: '\u0DC3\u0DB6\u0DB3\u0DAD\u0DCF \u0DBB\u0DA7\u0DCF 7 \u0D94\u0DB6\u0DCA\u0DB6\u0DA7',
-    combinedScore: '\u0D91\u0D9A\u0DCF\u0DB6\u0DAF\u0DCA\u0DB0 \u0DBD\u0D9A\u0DD4\u0DAB\u0DD4',
-    dashaTitle: '\u0DA2\u0DD3\u0DC0\u0DD2\u0DAD \u0D85\u0DAF\u0DD2\u0DBA\u0DBB \u0D9C\u0DD0\u0DBD\u0DB4\u0DD4\u0DB8',
-    currentPhase: '\u0DAF\u0DD0\u0DB1\u0DCA \u0D89\u0DB1\u0DCA\u0DB1 \u0DA2\u0DD3\u0DC0\u0DD2\u0DAD \u0D85\u0DAF\u0DD2\u0DBA\u0DBB',
-    benefic: '\u0DC3\u0DC4\u0DCF\u0DBA \u0DAF\u0DD9\u0DBA\u0DD2',
-    malefic: '\u0DC0\u0DD0\u0DA9\u0DD2 \u0DC3\u0DD0\u0DBD\u0D9A\u0DD2\u0DBD\u0DCA\u0DBD\u0D9A\u0DCA \u0D95\u0DB1',
-    navamshaTitle: '\u0D9C\u0DD0\u0DB9\u0DD4\u0DBB\u0DD4 \u0DC3\u0DB6\u0DB3\u0DAD\u0DCF \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8',
-    mangalaTitle: '\u0D9C\u0DD0\u0DA7\u0DD4\u0DB8\u0DCA \u0DC3\u0DD0\u0DBD\u0D9A\u0DD2\u0DBD\u0DCA\u0DBD \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF\u0DC0',
-    marriageStrTitle: '\u0DC3\u0DB6\u0DB3\u0DAD\u0DCF \u0DC3\u0DC4\u0DCF\u0DBA \u0DC1\u0D9A\u0DCA\u0DAD\u0DD2\u0DBA',
-    venus: '\u0D86\u0DAF\u0DBB \u0DC3\u0DC4\u0DCF\u0DBA',
-    lord7: '\u0D9A\u0DD0\u0DB4\u0DC0\u0DD3\u0DB8\u0DCA \u0DC3\u0DC4\u0DCF\u0DBA',
-    weddingTitle: '\u0DC4\u0DDC\u0DB3\u0DB8 \u0DC0\u0DD2\u0DC0\u0DCF\u0DC4 \u0D9A\u0DCF\u0DBD',
-    noWindows: '\u0D9C\u0DD0\u0DBD\u0DB4\u0DD9\u0DB1 \u0DC3\u0DD4\u0DB7 \u0D9A\u0DCF\u0DBD\u0DBA\u0D9A\u0DCA \u0DC4\u0DB8\u0DD4 \u0DB1\u0DDC\u0DC0\u0DD4\u0DBA',
+    date: 'උපන් දිනය', time: 'උපන් වේලාව',
+    birthPlace: 'උපන් ස්ථානය',
+    timeHint: 'උපන් වේලාව හරියටම දුන්නොත් වාර්තාව වඩාත් නිවැරදියි — එය උප්පැන්න සහතිකයේ සඳහන් වෙනවා.',
+    checkBtn: 'ගැළපීම බලන්න',
+    ctaNote: 'මිනිත්තුවක් පමණ යනවා · වාර්තාව ඔබේ ගිණුමට සුරැකෙනවා',
+    trust1: 'ඔබ දෙන විස්තරවලින්ම දෙදෙනාගේ කේන්දර දෙක හදනවා',
+    trust2: 'පොරොන්දම් හතම බලා, එකින් එක සරලව පැහැදිලි කරනවා',
+    trust3: 'තබාගත හැකි සම්පූර්ණ ලිඛිත වාර්තාවක් PDF ලෙසත් ලැබෙනවා',
+    privacyNote: 'උපන් විස්තර පාවිච්චි වන්නේ මේ කේන්දර දෙක හදන්න පමණයි — වෙන කිසි දෙයකට නැහැ.',
+    langTitle: 'ලිඛිත වාර්තාවේ භාෂාව',
+    brideChart: 'මනාලියගේ කේන්දරය', groomChart: 'මනාලයාගේ කේන්දරය',
+    factors: 'පොරොන්දම් හත', factorsSub: 'එක් එක් පොරොන්දම, තේරෙන බසින් — සම්ප්‍රදායික ලකුණු 20',
+    signalsNote: 'ලකුණු ගණන් කරන්නේ පැරණි සම්ප්‍රදායික ක්‍රමයටමයි — කේන්දර දෙකෙන් කියවෙන පොරොන්දම් ලකුණු 20ක් ලෙස.',
+    report: 'ලිඛිත වාර්තාව',
+    reportQ: 'ලිඛිත වාර්තාව ලියැවෙන භාෂාව:',
+    si: 'සිංහල', en: 'English',
+    generating: 'ඔබේ කේන්දර දෙක බලා වාර්තාව ලියැවෙමින් යනවා…', shareBtn: 'බෙදාගන්න',
+    reportBusy: 'වාර්තා ලියන සේවාව මේ වෙලාවේ කාර්යබහුලයි. ඔබේ වාර්තාව වෙන් කර තිබෙනවා — මිනිත්තු කීපයකින් නැවත උත්සාහ කරන්න. අමතර ගෙවීමක් නැහැ.',
+    reportFailed: 'මේ වෙලාවේ වාර්තාව ලියැවුණේ නැහැ. නැවත උත්සාහ කරන්න — ඔබේ අවස්ථාව සුරැකී තිබෙනවා.',
+    retryReport: 'වාර්තාව නැවත ලියන්න — නොමිලේ',
+    aiDownTitle: 'වාර්තා සේවාව කාර්යබහුලයි',
+    aiDownBusy: 'වාර්තා ලියන සේවාව මේ වෙලාවේ කාර්යබහුලයි — ඒ නිසා ඔබෙන් කිසිම ගෙවීමක් අරගෙන නැහැ. මිනිත්තු {min}කින් පමණ නැවත උත්සාහ කරන්න.',
+    aiDownBudget: 'අද දවසේ වාර්තා සීමාව සම්පූර්ණයි — ඒ නිසා ඔබෙන් ගෙවීමක් අරගෙන නැහැ. හෙට නැවත උත්සාහ කරන්න.',
+    aiDownNetwork: 'සේවාවට සම්බන්ධ වෙන්න බැරි වුණා — ඒ නිසා ඔබෙන් ගෙවීමක් අරගෙන නැහැ. සම්බන්ධතාවය බලා නැවත උත්සාහ කරන්න.',
+    overall: 'සම්ප්‍රදායික ලකුණු 20න්',
+    missing: 'දෙදෙනාගේම උපන් විස්තර සම්පූර්ණ කරන්න',
+    edit: 'විස්තර වෙනස් කරන්න', calculating: 'කේන්දර දෙක කියවමින්…',
+    backToForm: 'ආපසු', resultHeader: 'ගැළපීම් වාර්තාව',
+    history: 'කලින් බැලූ ගැළපීම්', historyEmpty: 'තවම සුරැකූ ගැළපීම් නැහැ',
+    historyChip: 'සුරැකූ ඒවා', historyClose: 'වහන්න',
+    historySub: 'නැවත බලන්න ඕනෑ ගැළපීමක් ඔබන්න',
+    historyLoading: 'ඔබේ ගැළපීම විවෘත වෙමින්…', viewReport: 'වාර්තාව බලන්න',
+    newCheck: '+ අලුත් ගැළපීමක්',
+    deleteTitle: 'මෙම ගැළපීම මකන්නද?', deleteMsg: 'මැකූ පසු නැවත ලබාගන්න බැහැ.',
+    deleteCancel: 'තියන්න', deleteConfirm: 'මකන්න',
+    tradCount: 'සම්ප්‍රදායික පොරොන්දම්',
+    glanceTitle: 'එක බැල්මෙන්', glanceSub: 'මුලින්ම දැනගත යුතු කරුණු තුන',
+    glanceStrong: 'හොඳින්ම ගැළපෙන දේ', glanceCare: 'වැඩිපුරම බලාගත යුතු දේ', glanceTiming: 'කාලය ගැන',
+    scTitle: 'ගැළපෙන තැන් සහ හදාගත යුතු තැන්', scSub: 'ඇත්ත ඇති සැටියෙන් — සැඟවීමකුත් නැහැ, බය කිරීමකුත් නැහැ',
+    scGifts: 'දැනටමත් හොඳින් ගැළපෙන තැන්', scCare: 'සැලකිලිමත් විය යුතු තැන්', scPaths: 'ඉදිරියට යන මග',
+    scSignificant: 'වැදගත් කරුණක් — සලකා බලන්න',
+    attractionTitle: 'ආකර්ෂණය සහ සමීපකම', attractionSub: 'දෙදෙනා අතර ඇදීම — කොපමණද, කොහොමද',
+    naturesTitle: 'දෙදෙනාගේ ස්වභාවය',
+    lifeNowTitle: 'මේ දවස්වල ජීවිතය', lifeNowSub: 'දෙදෙනා දැන් ගෙවන්නේ මොන වගේ කාලයක්ද',
+    deepTitle: 'ගැඹුරු බැඳීම', deepSub: 'මතුපිට ලකුණුවලට එහායින් — විවාහ ජීවිතයම ගැන බලන පරීක්ෂා',
+    weddingTitle: 'විවාහයට සුබම කාල', weddingSub: 'කේන්දර දෙකටම එකවර හිතකර කාල වකවානු',
+    noWindows: 'දෙකටම ගැළපෙන සුබ කාලයක් හමු වුණේ නැහැ',
+    starsTitle: 'උපන් නැකැත් සහ රාශි', starsSub: 'ජ්‍යෝතිෂවේදියෙක් මුලින්ම අහන විස්තර — රාශිය, නැකැත, අධිපති ග්‍රහයා',
+    curioTitle: 'රසවත් අමතර කියවීම්', curioSub: 'හිතට රසවත් සංකේත කියවීම් — තීරණවලට නම් නොවේ',
+    readerChapters: 'පරිච්ඡේද', readerMin: 'මිනි. කියවීම',
+    readerSub: 'කේන්දර දෙකම බලා ලියූ වාර්තාව — දෙදෙනාම එකට, හෙමින් කියවන්න.',
+    methodTitle: 'මේ වාර්තාව හැදෙන විදිය',
+    methodBody: 'මුලින්ම, ඔබ දුන් උපන් දිනය, වේලාව සහ ස්ථානය අනුව දෙදෙනාගේ කේන්දර දෙක හදනවා. ඉන්පසු පොරොන්දම් හත, නවාංශක ගැළපීම (විවාහ ජීවිතය ගැනම බලන කේන්දරය), දැන් ගෙවෙන දශා කාල සහ කුජ පරීක්ෂාව — පරම්පරාවෙන් ආ පිළිවෙළටම — නිවැරදිව ගණනය කරනවා.',
+    guidanceNote: 'මේ වාර්තාව තිබෙන්නේ ඔබට හිතන්න උදව්වක් විදියටයි — ඔබේ අනාගතය ගැන අවසාන තීන්දුවක් නොවේ. තීරණයත්, සම්බන්ධයත් හැම විටම ඔබ දෙදෙනාගේමයි.',
   },
 };
+// ═══════════════════════════════════════════════════════════════
+// RESULT CHAPTERS — merged, plain-spoken, tradition as the caption
+// ═══════════════════════════════════════════════════════════════
 
-// ======= STRENGTHS SUMMARY CARD =======
-
-// ======= STAR PROFILES CARD =======
-function StarProfilesCard({ data, language, bName, gName }) {
-  if (!data.bride || !data.groom) return null;
-  var bride = data.bride;
-  var groom = data.groom;
-  var T = language === 'si';
-  return (
-    <Animated.View entering={FadeInUp.delay(300).duration(600)}>
-      <Glass style={sty.section}>
-        <View style={sty.secHeader}>
-          <View>
-            <Text style={sty.secTitle}><Ionicons name="star" size={15} color="#FFE8B0" /> {T ? '\u0DB1\u0DD0\u0D9A\u0DAD\u0DCA \u0DB4\u0DBB\u0DD2\u0DA0\u0DCA\u0DA1\u0DDA\u0DAF' : 'Star Profiles'}</Text>
-            <Text style={sty.secSub}>{T ? '\u0D94\u0DB6\u0D9C\u0DDA \u0DA2\u0DCA\u200D\u0DBA\u0DDD\u0DAD\u0DD2\u0DC2 \u0DC4\u0DD0\u0DB3\u0DD4\u0DB1\u0DD4\u0DB8' : 'Your cosmic identity'}</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <View style={sty.profilePill}>
-            <View style={[sty.profileDot, { backgroundColor: '#F9A8D4' }]} />
-            <Text style={sty.profileName}>{bName || (T ? '\u0DB8\u0DB1\u0DBD\u0DD2' : 'Her')}</Text>
-            <Text style={sty.profileSign}>{bride.rashi ? (T ? bride.rashi.sinhala : bride.rashi.name) : ''}</Text>
-            <Text style={sty.profileStar}>{bride.nakshatra ? (T ? bride.nakshatra.sinhala : bride.nakshatra.name) : ''}{bride.nakshatra && bride.nakshatra.pada ? ' \u00B7 Q' + bride.nakshatra.pada : ''}</Text>
-            <Text style={sty.profileLord}>{T ? '\u0D85\u0DB0\u0DD2\u0DB4\u0DAD\u0DD2: ' : 'Ruled by: '}{bride.nakshatra ? bride.nakshatra.lord : ''}</Text>
-          </View>
-          <View style={sty.profilePill}>
-            <View style={[sty.profileDot, { backgroundColor: '#93C5FD' }]} />
-            <Text style={sty.profileName}>{gName || (T ? '\u0DB8\u0DD4\u0DC4\u0DD4\u0DAB' : 'Him')}</Text>
-            <Text style={sty.profileSign}>{groom.rashi ? (T ? groom.rashi.sinhala : groom.rashi.name) : ''}</Text>
-            <Text style={sty.profileStar}>{groom.nakshatra ? (T ? groom.nakshatra.sinhala : groom.nakshatra.name) : ''}{groom.nakshatra && groom.nakshatra.pada ? ' \u00B7 Q' + groom.nakshatra.pada : ''}</Text>
-            <Text style={sty.profileLord}>{T ? '\u0D85\u0DB0\u0DD2\u0DB4\u0DAD\u0DD2: ' : 'Ruled by: '}{groom.nakshatra ? groom.nakshatra.lord : ''}</Text>
-          </View>
-        </View>
-      </Glass>
-    </Animated.View>
-  );
+var PLANET_SI = {
+  Sun: 'රවි', Moon: 'චන්ද්‍ර', Mars: 'කුජ', Mercury: 'බුධ', Jupiter: 'ගුරු',
+  Venus: 'සිකුරු', Saturn: 'ශනි', Rahu: 'රාහු', Ketu: 'කේතු',
+};
+function planetLabel(name, si) {
+  if (!name) return '';
+  return si ? (PLANET_SI[name] || name) : name;
 }
 
-// ======= ATTRACTION & CHEMISTRY CARD =======
-function AttractionCard({ data, language }) {
+var cd = StyleSheet.create({
+  deepCaption: { fontSize: 10.5, color: 'rgba(255,241,208,0.34)', marginTop: 1.5 },
+  harmonyNote: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 12, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)',
+  },
+  harmonyText: { flex: 1, fontSize: 12.5, lineHeight: 18.5, color: 'rgba(255,241,208,0.66)' },
+
+  natureName: { fontSize: 15, fontWeight: '900', marginTop: 4 },
+
+  curioBlockTitle: {
+    fontSize: 11, fontWeight: '900', letterSpacing: 1.3, textTransform: 'uppercase',
+    color: 'rgba(192,132,252,0.85)', marginBottom: 10, marginTop: 16,
+  },
+
+  weddingRow: { flexDirection: 'row', gap: 11, paddingVertical: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)' },
+  weddingIcon: {
+    width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+  },
+  weddingDates: { fontSize: 13.5, fontWeight: '800' },
+  weddingReason: { fontSize: 12, color: 'rgba(255,241,208,0.55)', marginTop: 3, lineHeight: 17.5 },
+  weddingMeta: { fontSize: 10.5, color: 'rgba(255,241,208,0.30)', marginTop: 3 },
+  bestChip: {
+    backgroundColor: 'rgba(52,211,153,0.12)', paddingHorizontal: 7, paddingVertical: 2,
+    borderRadius: 6, borderWidth: 1, borderColor: 'rgba(52,211,153,0.25)',
+  },
+
+  // Written reading
+  readerCover: {
+    borderRadius: 16, borderWidth: 1, borderColor: 'rgba(232,201,122,0.22)', padding: 16,
+    marginBottom: 12, overflow: 'hidden', alignItems: 'center',
+  },
+  readerKicker: {
+    fontSize: 10.5, fontWeight: '900', letterSpacing: 2, textTransform: 'uppercase',
+    color: 'rgba(232,201,122,0.75)', textAlign: 'center',
+  },
+  readerNames: { fontSize: 16, fontWeight: '800', color: '#F6E4B8', marginTop: 8, textAlign: 'center' },
+  readerMeta: { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' },
+  readerMetaChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+  },
+  readerMetaText: { fontSize: 11, fontWeight: '700', color: 'rgba(255,241,208,0.62)' },
+  readerHint: { fontSize: 11.5, color: 'rgba(255,241,208,0.44)', marginTop: 12, textAlign: 'center', fontStyle: 'italic', lineHeight: 16.5 },
+
+  chapter: {
+    borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.02)', marginBottom: 10, overflow: 'hidden',
+  },
+  chapterHead: { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 13 },
+  chapterGlyph: {
+    width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(232,201,122,0.08)', borderWidth: 1, borderColor: 'rgba(232,201,122,0.18)',
+  },
+  chapterGlyphText: { fontSize: 15 },
+  chapterTitle: { flex: 1, fontSize: 14, fontWeight: '800', color: '#FFE8B0', lineHeight: 19 },
+  chapterBody: { paddingHorizontal: 15, paddingBottom: 15 },
+
+  methodWrap: {
+    borderRadius: 18, borderWidth: 1, borderColor: 'rgba(232,201,122,0.10)',
+    padding: 18, marginTop: 6, marginBottom: 10, overflow: 'hidden',
+  },
+  methodHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  methodTitle: { fontSize: 12.5, fontWeight: '900', color: 'rgba(232,201,122,0.85)', letterSpacing: 0.4 },
+  methodBody: { fontSize: 12.5, lineHeight: 19.5, color: 'rgba(255,241,208,0.55)' },
+  guidancePanel: {
+    flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginTop: 14, paddingTop: 14,
+    borderTopWidth: 1, borderTopColor: 'rgba(232,201,122,0.12)',
+  },
+  guidanceText: { flex: 1, fontSize: 12.5, lineHeight: 19.5, color: 'rgba(255,241,208,0.72)', fontStyle: 'italic' },
+
+  retryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, alignSelf: 'center',
+    marginTop: 14, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12, backgroundColor: '#E8C97A',
+  },
+  retryBtnText: { fontSize: 12.5, fontWeight: '900', color: '#1A0F24', letterSpacing: 0.3 },
+});
+
+// ── 04 · ATTRACTION & CLOSENESS ──────────────────────────────────
+var MAG_LABELS = {
+  'Venus-Mars Spark': { en: 'Physical spark', si: 'කායික ආකර්ෂණය', icon: 'flame', color: '#F97316' },
+  '7th House Resonance': { en: 'Partnership fit', si: 'සහකරු ගැළපීම', icon: 'home', color: '#A78BFA' },
+  'Nakshatra Lord Affinity': { en: 'Star-lord friendship', si: 'තරු අධිපති මිත්‍රත්වය', icon: 'star', color: '#FBBF24' },
+  'Rahu-Ketu Karmic Axis': { en: 'Karmic thread', si: 'කර්ම බැඳීම', icon: 'infinite', color: '#C084FC' },
+  'Moon Emotional Sync': { en: 'Emotional sync', si: 'හැඟීම් සමමුහුර්තය', icon: 'moon', color: '#22D3EE' },
+};
+
+var YONI_META = {
+  Horse: { icon: 'flash', color: '#F97316', si: 'අශ්ව', trait: { en: 'Free-spirited & adventurous', si: 'නිදහස් සිතැති, වේගවත්' } },
+  Elephant: { icon: 'shield', color: '#A78BFA', si: 'ගජ', trait: { en: 'Powerful & protective', si: 'බලවත්, ආරක්ෂාකාරී' } },
+  Goat: { icon: 'leaf', color: '#34D399', si: 'ඡාග', trait: { en: 'Tender & affectionate', si: 'මෘදු, සෙනෙහෙබර' } },
+  Serpent: { icon: 'eye', color: '#C084FC', si: 'සර්ප', trait: { en: 'Intense & magnetic', si: 'තීව්‍ර, ආකර්ෂණීය' } },
+  Dog: { icon: 'heart', color: '#FB923C', si: 'ශ්වාන', trait: { en: 'Devoted & faithful', si: 'පක්ෂපාත, විශ්වාසවන්ත' } },
+  Cat: { icon: 'moon', color: '#F472B6', si: 'මාර්ජාර', trait: { en: 'Graceful & independent', si: 'සියුම්, ස්වාධීන' } },
+  Rat: { icon: 'sparkles', color: '#FBBF24', si: 'මූෂික', trait: { en: 'Quick & adaptable', si: 'චතුර, අනුවර්තී' } },
+  Cow: { icon: 'sunny', color: '#A3E635', si: 'ගව', trait: { en: 'Warm & nurturing', si: 'උණුසුම්, පෝෂණශීලී' } },
+  Buffalo: { icon: 'barbell', color: '#64748B', si: 'මහිෂ', trait: { en: 'Strong & enduring', si: 'ශක්තිමත්, ඉවසිලිවන්ත' } },
+  Tiger: { icon: 'flame', color: '#EF4444', si: 'ව්‍යාඝ්‍ර', trait: { en: 'Fierce & passionate', si: 'නිර්භීත, ආවේගශීලී' } },
+  Deer: { icon: 'flower', color: '#22D3EE', si: 'මෘග', trait: { en: 'Romantic & sensitive', si: 'රොමැන්තික, සංවේදී' } },
+  Monkey: { icon: 'happy', color: '#FB923C', si: 'වානර', trait: { en: 'Playful & curious', si: 'ක්‍රීඩාශීලී, කුතුහලප්‍රිය' } },
+  Mongoose: { icon: 'rocket', color: '#F59E0B', si: 'නකුල', trait: { en: 'Bold & fearless', si: 'නිර්භය, ක්ෂණික' } },
+  Lion: { icon: 'star', color: '#F97316', si: 'සිංහ', trait: { en: 'Commanding & generous', si: 'අභිමානවත්, ත්‍යාගශීලී' } },
+};
+
+function AttractionCard({ data, index, delay, language, T, bName, gName }) {
+  var si = language === 'si';
   var mag = data.magnetism;
-  if (!mag || !mag.totalScore) return null;
-  var T = language === 'si';
-  var score = mag.totalScore;
-  var max = mag.maxScore || 10;
-  var pct = max > 0 ? score / max : 0;
+  var yoniFactor = data.factors && data.factors.find(function (f) { return f.name === 'Yoni'; });
+  var brideYoni = yoniFactor && yoniFactor.brideYoni;
+  var groomYoni = yoniFactor && yoniFactor.groomYoni;
+  var hasMag = mag && mag.totalScore != null && mag.maxScore;
+  if (!hasMag && !brideYoni) return null;
 
-  var getTier = function(val) {
-    if (!val) return { label: T ? '\u0DB8\u0DB0\u0DCA\u200D\u0DBA\u0DB8' : 'Moderate', color: '#FFB800' };
-    var v = String(val).toLowerCase();
-    if (v.indexOf('strong') !== -1 || v.indexOf('excellent') !== -1 || v.indexOf('high') !== -1) return { label: T ? '\u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD' : 'Strong', color: '#34D399' };
-    if (v.indexOf('weak') !== -1 || v.indexOf('low') !== -1 || v.indexOf('none') !== -1) return { label: T ? '\u0D85\u0DA9\u0DD4' : 'Mild', color: '#F87171' };
-    return { label: T ? '\u0DB8\u0DB0\u0DCA\u200D\u0DBA\u0DB8' : 'Moderate', color: '#FFB800' };
-  };
-
-  var passion = getTier(mag.marsVenusConnection);
-  var love = getTier(mag.venusVenusAspect);
-  var emotional = getTier(mag.moonConnection);
+  var magFactors = (hasMag && mag.factors) || [];
+  var yoniScore = yoniFactor ? yoniFactor.score : 0;
+  var yoniNarrative = yoniScore >= 3
+    ? (si ? 'එකම ස්වභාවය — නොවෙහෙසී එකට ගැළපෙනවා.' : 'The same nature — effortlessly in tune.')
+    : yoniScore >= 2
+      ? (si ? 'මිත්‍ර ස්වභාවයන් — ස්වාභාවික ආකර්ෂණයක් තිබෙනවා.' : 'Friendly natures — you simply click.')
+      : (si ? 'වෙනස් ස්වභාවයන් — හිතාමතා එකට කාලය ගත කිරීමෙන් සමීපත්වය වර්ධනය වෙනවා.' : 'Different natures — closeness grows with deliberate time together.');
 
   return (
-    <Animated.View entering={FadeInUp.delay(1000).duration(700)}>
-      <Glass style={sty.section}>
-        <View style={sty.secHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={sty.secTitle}><Ionicons name="magnet" size={15} color="#F472B6" /> {T ? '\u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u0DC4\u0DCF \u0DBB\u0DC3\u0DC0\u0DD2\u0DAF\u0DCA\u200D\u0DBA\u0DCF\u0DC0' : 'Attraction & Chemistry'}</Text>
-            <Text style={sty.secSub}>{T ? '\u0D94\u0DB6 \u0DAF\u0DD9\u0DAF\u0DD9\u0DB1\u0DCF \u0D85\u0DAD\u0DBB \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA' : 'How strongly you\'re drawn together'}</Text>
-          </View>
-          <View style={[sty.factorScorePill, { backgroundColor: 'rgba(244,114,182,0.12)', borderColor: 'rgba(244,114,182,0.28)' }]}>
-            <Text style={[sty.factorScoreText, { color: '#F472B6' }]}>{score}/{max}</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-          <View style={sty.chemPill}>
-            <View style={[sty.chemIcon, { backgroundColor: passion.color + '15', borderColor: passion.color + '30' }]}>
-              <Ionicons name="flame" size={16} color={passion.color} />
+    <SectionShell
+      index={index} delay={delay} title={T.attractionTitle} sub={T.attractionSub}
+      right={hasMag ? <ScoreChip text={mag.totalScore + '/' + mag.maxScore} color="#F472B6" /> : null}
+    >
+      {magFactors.length > 0 ? magFactors.map(function (fac, i) {
+        var meta = MAG_LABELS[fac.nameEn] || { en: fac.nameEn || fac.nameSi || 'Signal', si: fac.nameSi || fac.nameEn || 'සංඥාව', icon: 'ellipse', color: '#FFB800' };
+        var pct = fac.maxScore > 0 ? fac.score / fac.maxScore : 0;
+        var barColor = pct >= 0.7 ? '#34D399' : pct >= 0.4 ? '#E8C97A' : '#F59E0B';
+        return (
+          <View key={'mg' + i} style={sty.magRow}>
+            <View style={[sty.magIcon, { backgroundColor: meta.color + '14', borderColor: meta.color + '30' }]}>
+              <Ionicons name={meta.icon} size={15} color={meta.color} />
             </View>
-            <Text style={sty.chemLabel}>{T ? '\u0D86\u0DC0\u0DDA\u0D9C\u0DBA' : 'Passion'}</Text>
-            <Text style={[sty.chemTier, { color: passion.color }]}>{passion.label}</Text>
-          </View>
-          <View style={sty.chemPill}>
-            <View style={[sty.chemIcon, { backgroundColor: love.color + '15', borderColor: love.color + '30' }]}>
-              <Ionicons name="heart" size={16} color={love.color} />
+            <View style={{ flex: 1 }}>
+              <Text style={sty.magLabel}>{si ? meta.si : meta.en}</Text>
+              <View style={sty.magBarBg}>
+                <View style={[sty.magBarFill, { width: Math.max(pct * 100, 4) + '%', backgroundColor: barColor }]} />
+              </View>
             </View>
-            <Text style={sty.chemLabel}>{T ? '\u0D86\u0DAF\u0DBB\u0DBA' : 'Love'}</Text>
-            <Text style={[sty.chemTier, { color: love.color }]}>{love.label}</Text>
+            <Text style={[sty.magScore, { color: barColor }]}>{fac.score}/{fac.maxScore}</Text>
           </View>
-          <View style={sty.chemPill}>
-            <View style={[sty.chemIcon, { backgroundColor: emotional.color + '15', borderColor: emotional.color + '30' }]}>
-              <Ionicons name="moon" size={16} color={emotional.color} />
+        );
+      }) : null}
+
+      {brideYoni && groomYoni ? (function () {
+        var bm = YONI_META[brideYoni] || { icon: 'help-circle', color: '#FFB800', si: brideYoni, trait: { en: '', si: '' } };
+        var gm = YONI_META[groomYoni] || { icon: 'help-circle', color: '#FFB800', si: groomYoni, trait: { en: '', si: '' } };
+        return (
+          <View style={{ marginTop: magFactors.length > 0 ? 16 : 4 }}>
+            <View style={ns.scHead}>
+              <Ionicons name="paw-outline" size={13} color="#F472B6" />
+              <Text style={[ns.scHeadText, { color: '#F472B6' }]}>{T.naturesTitle}</Text>
             </View>
-            <Text style={sty.chemLabel}>{T ? '\u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA' : 'Emotional'}</Text>
-            <Text style={[sty.chemTier, { color: emotional.color }]}>{emotional.label}</Text>
+            <View style={sty.intimAnimalsSection}>
+              <View style={sty.intimAnimalCardNew}>
+                <LinearGradient colors={[bm.color + '12', 'transparent']} style={sty.intimAnimalGrad} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
+                <View style={[sty.intimAnimalBubble, { borderColor: bm.color + '50', backgroundColor: bm.color + '10' }]}>
+                  <Ionicons name={bm.icon} size={22} color={bm.color} />
+                </View>
+                <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: 8 }}>{bName || T.bride}</Text>
+                <Text style={[cd.natureName, { color: bm.color }]}>{si ? bm.si : brideYoni}</Text>
+                <Text style={sty.intimAnimalDesc}>{si ? bm.trait.si : bm.trait.en}</Text>
+              </View>
+              <View style={sty.intimMatchCenter}>
+                <View style={[sty.intimMatchRing, { borderColor: (yoniScore >= 2 ? '#34D399' : '#E8C97A') + '60' }]}>
+                  <Ionicons name={yoniScore >= 2 ? 'heart' : 'heart-half'} size={16} color={yoniScore >= 2 ? '#34D399' : '#E8C97A'} />
+                </View>
+              </View>
+              <View style={sty.intimAnimalCardNew}>
+                <LinearGradient colors={[gm.color + '12', 'transparent']} style={sty.intimAnimalGrad} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
+                <View style={[sty.intimAnimalBubble, { borderColor: gm.color + '50', backgroundColor: gm.color + '10' }]}>
+                  <Ionicons name={gm.icon} size={22} color={gm.color} />
+                </View>
+                <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: 8 }}>{gName || T.groom}</Text>
+                <Text style={[cd.natureName, { color: gm.color }]}>{si ? gm.si : groomYoni}</Text>
+                <Text style={sty.intimAnimalDesc}>{si ? gm.trait.si : gm.trait.en}</Text>
+              </View>
+            </View>
+            <View style={sty.intimNarrativeBox}>
+              <Ionicons name="sparkles" size={12} color="rgba(255,184,0,0.5)" />
+              <Text style={sty.intimNarrativeText}>{yoniNarrative}</Text>
+            </View>
           </View>
-        </View>
-        {mag.category && (
-          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 12, textAlign: 'center', fontStyle: 'italic' }}>
-            {T ? mag.description || mag.category : mag.description || mag.category}
-          </Text>
-        )}
-      </Glass>
-    </Animated.View>
+        );
+      })() : null}
+
+      {hasMag && mag.summary ? (
+        <Text style={ns.noteText}>{si ? (mag.summary.si || mag.summary.en) : (mag.summary.en || mag.summary.si)}</Text>
+      ) : null}
+    </SectionShell>
   );
 }
 
-// ======= DEEPER CONNECTION CARD =======
-function DeeperConnectionCard({ data, language }) {
+// ── 05 · LIFE RIGHT NOW ──────────────────────────────────────────
+function LifeNowCard({ data, index, delay, language, T, bName, gName }) {
+  var si = language === 'si';
   var adv = data.advancedPorondam && data.advancedPorondam.advanced;
-  if (!adv) return null;
-  var T = language === 'si';
+  var dc = adv && adv.dashaCompatibility;
+  var jm = data.jyotishMatching;
+  var bSS = jm && jm.brideSadeSati && jm.brideSadeSati.status;
+  var gSS = jm && jm.groomSadeSati && jm.groomSadeSati.status;
+  if (!dc && !bSS && !gSS) return null;
+
+  var rows = [];
+  function dashaRow(person, name) {
+    if (!person || !person.currentDasha) return;
+    var benefic = person.isBeneficPeriod === true;
+    var color = benefic ? '#34D399' : '#E8C97A';
+    rows.push({
+      icon: benefic ? 'sunny-outline' : 'cloud-outline', color: color,
+      label: benefic ? (si ? 'හොඳ කාලයක්' : 'A good period') : (si ? 'ටිකක් බර කාලයක්' : 'A heavier period'),
+      caption: si ? planetLabel(person.currentDasha, true) + ' මහදශාව' : planetLabel(person.currentDasha, false) + ' major period',
+      name: name,
+    });
+  }
+  if (dc) {
+    dashaRow(dc.bride, bName || T.bride);
+    dashaRow(dc.groom, gName || T.groom);
+  }
+  if (bSS) {
+    rows.push({
+      icon: 'hourglass-outline', color: '#E8C97A', name: bName || T.bride,
+      label: si ? 'තව බර කාලයක් ගෙවෙනවා' : 'Also in a heavier Saturn period',
+      caption: si ? 'සාඩේ සති කාලය — කලකින් පහව යනවා' : 'Sade Sati — it passes with time',
+    });
+  }
+  if (gSS) {
+    rows.push({
+      icon: 'hourglass-outline', color: '#E8C97A', name: gName || T.groom,
+      label: si ? 'තව බර කාලයක් ගෙවෙනවා' : 'Also in a heavier Saturn period',
+      caption: si ? 'සාඩේ සති කාලය — කලකින් පහව යනවා' : 'Sade Sati — it passes with time',
+    });
+  }
+  if (rows.length === 0) return null;
+
+  var harmony = dc && dc.harmony;
+  var harmonyText = harmony === 'harmonious'
+    ? (si ? 'දෙදෙනා දැන් ගෙවන කාල එකිනෙකාට උදව් වෙනවා — එකට ලොකු තීරණ ගන්න හොඳ වෙලාවක්.' : 'The periods you are both in now help each other — a good time for big decisions together.')
+    : harmony === 'conflicting'
+      ? (si ? 'දැන් දෙදෙනා ගෙවන කාල දෙක වෙනස් රිද්මවල. ලොකු තීරණ හදිසියේ නොගෙන, කතා කර ඉවසීමෙන් ගන්න.' : 'Right now your two periods run on different rhythms. Don’t rush big decisions — talk them through patiently.')
+      : (si ? 'කාල මිශ්‍රයි — ලොකු තීරණ හෙමින්, දෙදෙනාම එකඟ වී ගන්න.' : 'The timing is mixed — take big decisions slowly, and only together.');
+
+  return (
+    <SectionShell index={index} delay={delay} title={T.lifeNowTitle} sub={T.lifeNowSub}>
+      {rows.map(function (r, i) {
+        return (
+          <View key={'ln' + i} style={sty.deepRow}>
+            <View style={sty.deepLeft}>
+              <View style={[sty.deepIcon, { backgroundColor: r.color + '12', borderColor: r.color + '25' }]}>
+                <Ionicons name={r.icon} size={16} color={r.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={sty.deepTitle}>{r.name}</Text>
+                <Text style={cd.deepCaption}>{r.caption}</Text>
+              </View>
+            </View>
+            <View style={[sty.deepBadge, { backgroundColor: r.color + '12', borderColor: r.color + '28' }]}>
+              <Text style={[sty.deepBadgeText, { color: r.color, fontSize: 10.5 }]}>{r.label}</Text>
+            </View>
+          </View>
+        );
+      })}
+      {dc ? (
+        <View style={cd.harmonyNote}>
+          <Ionicons name="people-outline" size={14} color="rgba(232,201,122,0.7)" style={{ marginTop: 2 }} />
+          <Text style={cd.harmonyText}>{harmonyText}</Text>
+        </View>
+      ) : null}
+    </SectionShell>
+  );
+}
+
+// ── 06 · THE DEEPER BOND ─────────────────────────────────────────
+function DeeperBondCard({ data, index, delay, language, T, bName, gName }) {
+  var si = language === 'si';
+  var adv = data.advancedPorondam && data.advancedPorondam.advanced;
+  var nc = adv && adv.navamshaCompatibility;
+  var mp = adv && adv.marriagePlanetStrength;
+  var md = adv && adv.mangalaDosha;
+  var jm = data.jyotishMatching;
+  var jb = jm && jm.brideMangalDosha;
+  var jg = jm && jm.groomMangalDosha;
+  if (!nc && !mp && !md && !jb && !jg) return null;
 
   var rows = [];
 
-  // Life Phase Sync (Dasha)
-  if (adv.dashaCompatibility) {
-    var dc = adv.dashaCompatibility;
-    var harmony = dc.harmony || 'mixed';
-    var hColor = harmony === 'harmonious' ? '#34D399' : harmony === 'conflicting' ? '#F87171' : '#FFB800';
-    var hLabel = harmony === 'harmonious' ? (T ? '\u0D9C\u0DD0\u0DBD\u0DB4\u0DDA' : 'Aligned') : harmony === 'conflicting' ? (T ? '\u0D9C\u0DD0\u0DA7\u0DD4\u0DB8\u0DCA' : 'Conflicting') : (T ? '\u0DB8\u0DB0\u0DCA\u200D\u0DBA\u0DB8' : 'Mixed');
-    var hDesc = dc.description || (harmony === 'harmonious' ? (T ? '\u0DAF\u0DD9\u0DAF\u0DD9\u0DB1\u0DCF\u0DB8 \u0DC3\u0DC4\u0DCF\u0DBA\u0D9A \u0DA2\u0DD3\u0DC0\u0DD2\u0DAD \u0D85\u0DAF\u0DD2\u0DBA\u0DBB\u0DC0\u0DBD' : 'Both in supportive life phases right now') : harmony === 'conflicting' ? (T ? '\u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u0DA2\u0DD3\u0DC0\u0DD2\u0DAD \u0D85\u0DAF\u0DD2\u0DBA\u0DBB \u2014 \u0D9A\u0DCF\u0DBD\u0DBA\u0DB8 \u0DC3\u0DD4\u0D9C\u0DB8 \u0DC0\u0DDA' : 'Different life phases — timing will improve gradually') : (T ? '\u0DC3\u0DB8\u0DC4\u0DBB \u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u0DB1\u0DB8\u0DD4\u0DAD\u0DCA \u0DC3\u0DC4\u0DCF\u0DBA\u0D9A' : 'Partly different but workable'));
-    rows.push({ icon: 'time', title: T ? '\u0DA2\u0DD3\u0DC0\u0DD2\u0DAD \u0D85\u0DAF\u0DD2\u0DBA\u0DBB' : 'Life Phase Sync', badge: hLabel, badgeColor: hColor, desc: hDesc });
-  }
-
-  // Soul Bond (Navamsha)
-  if (adv.navamshaCompatibility) {
-    var nc = adv.navamshaCompatibility;
+  if (nc) {
     var nScore = nc.score || 0;
     var nMax = nc.maxScore || 8;
     var nPct = nMax > 0 ? nScore / nMax : 0;
-    var nColor = nPct >= 0.7 ? '#34D399' : nPct >= 0.4 ? '#FFB800' : '#F87171';
-    var nDesc = nc.description || (nc.insights && nc.insights.length > 0 ? nc.insights[0] : (T ? '\u0D9C\u0DD0\u0DB9\u0DD4\u0DBB\u0DD4 \u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA \u0DB6\u0DB3\u0DB1\u0DBA' : 'Deep emotional bond level'));
-    rows.push({ icon: 'heart-circle', title: T ? '\u0D86\u0DAD\u0DCA\u0DB8 \u0DB6\u0DB3\u0DB1\u0DBA' : 'Soul Bond', badge: nScore + '/' + nMax, badgeColor: nColor, desc: nDesc });
+    var nColor = nPct >= 0.7 ? '#34D399' : nPct >= 0.4 ? '#E8C97A' : '#F59E0B';
+    var nDesc = (si ? (nc.descriptionSi || (nc.insightsSi && nc.insightsSi[0])) : null)
+      || nc.description || (nc.insights && nc.insights[0])
+      || (si ? 'මතුපිට ලකුණුවලට අමතරව, විවාහ ජීවිතය ගැනම බලන ගැඹුරු ගැළපීමයි මේ.' : 'Beyond the surface points, this is the deeper match for married life itself.');
+    rows.push({
+      icon: 'heart-circle-outline', color: nColor, badge: nScore + '/' + nMax,
+      title: si ? 'ඇතුළතම ගැළපීම' : 'Soul-level match',
+      caption: si ? 'නවාංශක (D9) — විවාහ ජීවිතය ගැනම බලන කේන්දරය' : 'Navamsha (D9) — the chart that looks at married life itself',
+      desc: nDesc,
+    });
   }
 
-  // Marriage Support (Marriage Planet Strength)
-  if (adv.marriagePlanetStrength) {
-    var mp = adv.marriagePlanetStrength;
+  if (mp) {
     var mScore = mp.score || 0;
-    var mMax = mp.maxScore || 5;
+    var mMax = mp.maxScore || 3;
     var mPct = mMax > 0 ? mScore / mMax : 0;
-    var mColor = mPct >= 0.7 ? '#34D399' : mPct >= 0.4 ? '#FFB800' : '#F87171';
-    var mLabel = mPct >= 0.7 ? (T ? '\u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD' : 'Strong') : mPct >= 0.4 ? (T ? '\u0DB8\u0DB0\u0DCA\u200D\u0DBA\u0DB8' : 'Moderate') : (T ? '\u0D85\u0DA9\u0DD4' : 'Weak');
-    var mDesc = mp.assessment || (T ? '\u0DC0\u0DD2\u0DC0\u0DCF\u0DC4\u0DBA\u0DA7 \u0DC3\u0DC4\u0DCF\u0DBA \u0DC0\u0DB1 \u0D9C\u0DCA\u200D\u0DBB\u0DC4 \u0DB6\u0DBD\u0DBA' : 'How strong love planets are for both');
-    rows.push({ icon: 'shield-checkmark', title: T ? '\u0DC0\u0DD2\u0DC0\u0DCF\u0DC4 \u0DC3\u0DC4\u0DCF\u0DBA' : 'Marriage Support', badge: mLabel, badgeColor: mColor, desc: mDesc });
+    var mColor = mPct >= 0.7 ? '#34D399' : mPct >= 0.4 ? '#E8C97A' : '#F59E0B';
+    var mLabel = mPct >= 0.7 ? (si ? 'ප්‍රබලයි' : 'Strong') : mPct >= 0.4 ? (si ? 'මධ්‍යමයි' : 'Steady') : (si ? 'මෘදුයි' : 'Gentle');
+    var mDesc = (si ? mp.assessmentSi : null) || mp.assessment
+      || (si ? 'ආදරයටත් කැපවීමටත් උදව් කරන ග්‍රහයෝ දෙදෙනාගේ කේන්දරවල කොතරම් ශක්තිමත්ද කියායි මේ බලන්නේ.' : 'This looks at how strong the planets of love and commitment are in both charts.');
+    rows.push({
+      icon: 'shield-checkmark-outline', color: mColor, badge: mLabel,
+      title: si ? 'කැපවීමේ ශක්තිය' : 'Capacity for commitment',
+      caption: si ? 'සිකුරු සහ 7 වැනි ගෙයි අධිපති — ආදරය පෙන්වන ග්‍රහයෝ' : 'Venus & the 7th-house lord — the love planets',
+      desc: mDesc,
+    });
+  }
+
+  // Mars balance — the honest, calm version of the old "Red Flag Check"
+  var bHas = md && md.bride ? !!md.bride.hasDosha : (jb ? !!jb.hasDosha : null);
+  var gHas = md && md.groom ? !!md.groom.hasDosha : (jg ? !!jg.hasDosha : null);
+  var bCancelled = md && md.bride && md.bride.cancelled;
+  var gCancelled = md && md.groom && md.groom.cancelled;
+  if (bHas !== null || gHas !== null) {
+    var bEff = bHas && !bCancelled;
+    var gEff = gHas && !gCancelled;
+    var marsRow;
+    if (!bEff && !gEff) {
+      var wasCancelled = (bHas && bCancelled) || (gHas && gCancelled);
+      marsRow = {
+        icon: 'flame-outline', color: '#34D399', badge: si ? 'සමතුලිතයි' : 'Balanced',
+        title: si ? 'කුජ සමතුලිතය' : 'Mars balance',
+        caption: si ? 'කුජ (මංගල) දෝෂ පරීක්ෂාව' : 'The mangal (Mars) check',
+        desc: wasCancelled
+          ? (si ? 'කුජ බලපෑමක් තිබුණත්, කේන්දරයේම වෙනත් හේතු නිසා එය නැති වී ඇති බවයි සම්ප්‍රදාය කියන්නේ.' : 'There is a Mars influence, but tradition reads it as cancelled out by other parts of the chart itself.')
+          : (si ? 'දෙදෙනාගේම කුජ පිහිටීම සන්සුන්යි — මෙතැන බය වෙන්න දෙයක් නැහැ.' : 'Both Mars placements are calm — nothing to worry about here.'),
+      };
+    } else if (bEff && gEff) {
+      marsRow = {
+        icon: 'flame-outline', color: '#34D399', badge: si ? 'ගැළපී සමනයි' : 'Matched',
+        title: si ? 'කුජ සමතුලිතය' : 'Mars balance',
+        caption: si ? 'කුජ (මංගල) දෝෂ පරීක්ෂාව' : 'The mangal (Mars) check',
+        desc: si ? 'දෙදෙනා තුළම සමාන කුජ ශක්තියක් තිබෙනවා — සම්ප්‍රදායට අනුව එය එකිනෙක සමනය වෙනවා; ප්‍රශ්නයක් නොවේ.' : 'You both carry the same Mars energy — tradition reads this as balancing out. Not a problem.',
+      };
+    } else {
+      var carrier = bEff ? (bName || T.bride) : (gName || T.groom);
+      marsRow = {
+        icon: 'flame-outline', color: '#F59E0B', badge: si ? 'සැලකිල්ල ඕනෑ' : 'Needs care',
+        title: si ? 'කුජ සමතුලිතය' : 'Mars balance',
+        caption: si ? 'කුජ (මංගල) දෝෂ පරීක්ෂාව' : 'The mangal (Mars) check',
+        desc: si
+          ? carrier + 'ගේ කේන්දරයේ කුජ බලය තීව්‍රයි — තරහ ඉක්මනින් ආ හැකියි. ඉවසීමෙන් කතා කිරීම මෙතැන යතුරයි; බැරෑරුම් කියවීමකට පළපුරුදු ජ්‍යෝතිෂවේදියෙකු හමුවීම හොඳයි.'
+          : carrier + '’s chart carries strong Mars energy — tempers can rise quickly. Patient talk is the key here; for a serious reading, meeting an experienced astrologer is wise.',
+      };
+    }
+    rows.push(marsRow);
   }
 
   if (rows.length === 0) return null;
 
   return (
-    <Animated.View entering={FadeInUp.delay(1100).duration(700)}>
-      <Glass style={sty.section}>
-        <View style={sty.secHeader}>
-          <View>
-            <Text style={sty.secTitle}><Ionicons name="layers" size={15} color="#A78BFA" /> {T ? '\u0D9C\u0DD0\u0DB9\u0DD4\u0DBB\u0DD4 \u0DC3\u0DB6\u0DB3\u0DAD\u0DCF\u0DC0' : 'Deeper Connection'}</Text>
-            <Text style={sty.secSub}>{T ? '\u0DB4\u0DD0\u0DBD\u0DB8\u0DD4\u0DB1\u0DD2\u0DA7\u0DB8 \u0DB4\u0DD2\u0DA7\u0DD4\u0DB4\u0DC3\u0DD9\u0DB1\u0DCA' : 'Beyond the surface match'}</Text>
-          </View>
-        </View>
-        {rows.map(function(r, i) {
-          return (
-            <View key={i} style={sty.deepRow}>
-              <View style={sty.deepLeft}>
-                <View style={[sty.deepIcon, { backgroundColor: r.badgeColor + '12', borderColor: r.badgeColor + '25' }]}>
-                  <Ionicons name={r.icon} size={16} color={r.badgeColor} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={sty.deepTitle}>{r.title}</Text>
-                  <Text style={sty.deepDesc} numberOfLines={2}>{r.desc}</Text>
-                </View>
-              </View>
-              <View style={[sty.deepBadge, { backgroundColor: r.badgeColor + '12', borderColor: r.badgeColor + '28' }]}>
-                <Text style={[sty.deepBadgeText, { color: r.badgeColor }]}>{r.badge}</Text>
-              </View>
-            </View>
-          );
-        })}
-      </Glass>
-    </Animated.View>
-  );
-}
-
-// ======= YOUR ELEMENTS CARD =======
-function ElementsCard({ data, language }) {
-  var be = data.brideEnhanced && data.brideEnhanced.tattvaBalance;
-  var ge = data.groomEnhanced && data.groomEnhanced.tattvaBalance;
-  if (!be || !ge) return null;
-  var T = language === 'si';
-
-  var ELEM = {
-    Fire: { icon: 'flame', color: '#F97316', si: '\u0D85\u0D9C\u0DCA\u0DB1\u0DD2' },
-    Earth: { icon: 'globe', color: '#A3E635', si: '\u0DB4\u0DD8\u0DAD\u0DD2\u0DC0\u0DD2' },
-    Air: { icon: 'cloudy', color: '#60A5FA', si: '\u0DC0\u0DCF\u0DBA\u0DD4' },
-    Water: { icon: 'water', color: '#22D3EE', si: '\u0DA2\u0DBD' },
-    Ether: { icon: 'sparkles', color: '#C084FC', si: '\u0D86\u0D9A\u0DCF\u0DC1' },
-  };
-
-  var brideEl = ELEM[be.dominant] || ELEM.Fire;
-  var groomEl = ELEM[ge.dominant] || ELEM.Fire;
-
-  // Generate interaction metaphor
-  var getMetaphor = function(b, g) {
-    var pair = b + '+' + g;
-    var metaphors = {
-      'Fire+Water': T ? '\u0DC4\u0DB8\u0DD4\u0DC0\u0DB1 \u0DC0\u0DD2\u0DA7 \u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD' : 'Steam when you meet \u2014 intense and transformative',
-      'Fire+Fire': T ? '\u0DAF\u0DD9\u0DAF\u0DD9\u0DB1\u0DCF\u0DB8 \u0D85\u0D9C\u0DCA\u0DB1\u0DD2' : 'Double fire \u2014 passionate but watch for burnout',
-      'Fire+Earth': T ? '\u0DB4\u0DD8\u0DAD\u0DD2\u0DC0\u0DD2\u0DBA \u0D8B\u0DC2\u0DCA\u0DAB \u0D9A\u0DBB\u0DBA\u0DD2' : 'Fire warms earth \u2014 you bring each other to life',
-      'Fire+Air': T ? '\u0DC0\u0DCF\u0DBA\u0DD4\u0DC0 \u0D85\u0D9C\u0DCA\u0DB1\u0DD2\u0DBA \u0DAF\u0DD2\u0DBB\u0DD2 \u0D9A\u0DBB\u0DBA\u0DD2' : 'Air fans the flames \u2014 exciting and ever-growing',
-      'Water+Water': T ? '\u0D9C\u0DD0\u0DB9\u0DD4\u0DBB\u0DD4 \u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA' : 'Deep ocean together \u2014 emotionally boundless',
-      'Water+Earth': T ? '\u0DB4\u0DD8\u0DAD\u0DD2\u0DC0\u0DD2\u0DBA \u0DC3\u0DB8\u0DD8\u0DAF\u0DCA\u0DB0' : 'Water nourishes earth \u2014 naturally fertile bond',
-      'Water+Air': T ? '\u0DC0\u0DD0\u0DC3\u0DCA\u0DC3 \u0DC4\u0DCF \u0DC0\u0DCF\u0DBA\u0DD4' : 'Mist and breeze \u2014 dreamy but needs grounding',
-      'Earth+Earth': T ? '\u0DC3\u0DCA\u0DAD\u0DD2\u0DBB \u0DB6\u0DD2\u0DB8' : 'Solid bedrock \u2014 stable and unshakeable',
-      'Earth+Air': T ? '\u0DB4\u0DD8\u0DAD\u0DD2\u0DC0\u0DD2 \u0DC4\u0DCF \u0DC0\u0DCF\u0DBA\u0DD4' : 'Mountains meet wind \u2014 steady yet free',
-      'Air+Air': T ? '\u0DC0\u0DCF\u0DBA\u0DD4 \u0DAF\u0DD9\u0D9A\u0D9A\u0DCA' : 'Two winds \u2014 intellectual spark, needs anchoring',
-    };
-    return metaphors[pair] || metaphors[g + '+' + b] || (T ? '\u0DC0\u0DD2\u0DC1\u0DD2\u0DC2\u0DCA\u0DA7 \u0DB8\u0DD2\u0DC1\u0DCA\u200D\u0DBB\u0DAB\u0DBA\u0D9A\u0DCA' : 'A unique elemental mix \u2014 intriguing chemistry');
-  };
-
-  var metaphor = getMetaphor(be.dominant, ge.dominant);
-
-  return (
-    <Animated.View entering={FadeInUp.delay(350).duration(600)}>
-      <Glass style={sty.section}>
-        <View style={sty.secHeader}>
-          <View>
-            <Text style={sty.secTitle}><Ionicons name="prism" size={15} color="#A3E635" /> {T ? '\u0DB8\u0DD6\u0DBD\u0DB0\u0DCF\u0DAD\u0DD4' : 'Your Elements'}</Text>
-            <Text style={sty.secSub}>{T ? '\u0D94\u0DB6\u0D9C\u0DDA \u0DB8\u0DD6\u0DBD\u0DB0\u0DCF\u0DAD\u0DD4 \u0DC4\u0DB8\u0DD4\u0DC0\u0DB1 \u0DC0\u0DD2\u0DA7' : 'When your elements collide'}</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
-          <View style={sty.elemCard}>
-            <View style={[sty.elemCircle, { backgroundColor: brideEl.color + '18', borderColor: brideEl.color + '40' }]}>
-              <Ionicons name={brideEl.icon} size={24} color={brideEl.color} />
-            </View>
-            <Text style={[sty.elemName, { color: brideEl.color }]}>{T ? brideEl.si : be.dominant}</Text>
-            <Text style={sty.elemWho}>{T ? '\u0D94\u0DB6' : 'Her'}</Text>
-          </View>
-          <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 8 }}>
-            <Ionicons name="flash" size={20} color="rgba(255,184,0,0.6)" />
-          </View>
-          <View style={sty.elemCard}>
-            <View style={[sty.elemCircle, { backgroundColor: groomEl.color + '18', borderColor: groomEl.color + '40' }]}>
-              <Ionicons name={groomEl.icon} size={24} color={groomEl.color} />
-            </View>
-            <Text style={[sty.elemName, { color: groomEl.color }]}>{T ? groomEl.si : ge.dominant}</Text>
-            <Text style={sty.elemWho}>{T ? '\u0D94\u0DC4\u0DD4' : 'Him'}</Text>
-          </View>
-        </View>
-        <Text style={sty.elemMetaphor}>{metaphor}</Text>
-      </Glass>
-    </Animated.View>
-  );
-}
-
-// ======= MAGNETISM 5-FACTOR CARD =======
-function MagnetismCard({ data, language }) {
-  var mag = data.magnetism;
-  if (!mag || !mag.totalScore) return null;
-  var T = language === 'si';
-  var score = mag.totalScore;
-  var max = mag.maxScore || 10;
-
-  var FACTOR_META = {
-    'Venus-Mars Spark': { icon: 'flame', color: '#F97316', label: T ? '\u0DC0\u0DD2\u0DC2\u0DBA \u0D86\u0DC0\u0DDA\u0D9C\u0DBA' : 'Physical Spark' },
-    '7th House Resonance': { icon: 'home', color: '#A78BFA', label: T ? '\u0DC4\u0DCF\u0DAD\u0DCA\u0DB4\u0DAD\u0DD2 \u0DC4\u0DD0\u0D9F\u0DD3\u0DB8' : 'Partnership Fit' },
-    'Nakshatra Lord Affinity': { icon: 'star', color: '#FBBF24', label: T ? '\u0DB1\u0DD0\u0D9A\u0DAD\u0DCA \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8' : 'Star Alignment' },
-    'Rahu-Ketu Karmic Axis': { icon: 'infinite', color: '#C084FC', label: T ? '\u0D9A\u0DBB\u0DCA\u0DB8 \u0DB6\u0DB3\u0DB1\u0DBA' : 'Fated Connection' },
-    'Moon Emotional Sync': { icon: 'moon', color: '#22D3EE', label: T ? '\u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA \u0DC3\u0DB8\u0DB1\u0DCA\u0DC0\u0DBA' : 'Emotional Sync' },
-  };
-
-  var factors = mag.factors || [];
-
-  return (
-    <Animated.View entering={FadeInUp.delay(800).duration(700)}>
-      <Glass style={sty.section}>
-        <View style={sty.secHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={sty.secTitle}><Ionicons name="magnet" size={15} color="#F472B6" /> {T ? '\u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA' : 'Magnetism'}</Text>
-            <Text style={sty.secSub}>{T ? '\u0D94\u0DB6 \u0DAF\u0DD9\u0DAF\u0DD9\u0DB1\u0DCF \u0D85\u0DAD\u0DBB \u0DC0\u0DD2\u0DAF\u0DCA\u0DBA\u0DD4\u0DAD\u0DCA \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA' : '5 forces pulling you together'}</Text>
-          </View>
-          <View style={[sty.factorScorePill, { backgroundColor: 'rgba(244,114,182,0.12)', borderColor: 'rgba(244,114,182,0.28)' }]}>
-            <Text style={[sty.factorScoreText, { color: '#F472B6' }]}>{score}/{max}</Text>
-          </View>
-        </View>
-        {factors.length > 0 ? factors.map(function(fac, i) {
-          var meta = FACTOR_META[fac.nameEn] || { icon: 'ellipse', color: '#FFB800', label: fac.nameEn || fac.nameSi || 'Factor' };
-          var pct = fac.maxScore > 0 ? fac.score / fac.maxScore : 0;
-          var barColor = pct >= 0.7 ? '#34D399' : pct >= 0.4 ? '#FFB800' : '#F87171';
-          return (
-            <View key={i} style={sty.magRow}>
-              <View style={[sty.magIcon, { backgroundColor: meta.color + '14', borderColor: meta.color + '30' }]}>
-                <Ionicons name={meta.icon} size={15} color={meta.color} />
+    <SectionShell index={index} delay={delay} title={T.deepTitle} sub={T.deepSub}>
+      {rows.map(function (r, i) {
+        return (
+          <View key={'db' + i} style={[sty.deepRow, i === rows.length - 1 ? { borderBottomWidth: 0 } : null]}>
+            <View style={sty.deepLeft}>
+              <View style={[sty.deepIcon, { backgroundColor: r.color + '12', borderColor: r.color + '25' }]}>
+                <Ionicons name={r.icon} size={16} color={r.color} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={sty.magLabel}>{T ? (fac.nameSi || meta.label) : meta.label}</Text>
-                <View style={sty.magBarBg}>
-                  <View style={[sty.magBarFill, { width: (pct * 100) + '%', backgroundColor: barColor }]} />
-                </View>
+                <Text style={sty.deepTitle}>{r.title}</Text>
+                <Text style={cd.deepCaption}>{r.caption}</Text>
+                <Text style={[sty.deepDesc, { marginTop: 4 }]}>{r.desc}</Text>
               </View>
-              <Text style={[sty.magScore, { color: barColor }]}>{fac.score}/{fac.maxScore}</Text>
             </View>
-          );
-        }) : (
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
-            <View style={sty.chemPill}>
-              <Ionicons name="flame" size={16} color="#F97316" />
-              <Text style={sty.chemLabel}>{T ? '\u0D86\u0DC0\u0DDA\u0D9C\u0DBA' : 'Passion'}</Text>
-            </View>
-            <View style={sty.chemPill}>
-              <Ionicons name="heart" size={16} color="#34D399" />
-              <Text style={sty.chemLabel}>{T ? '\u0D86\u0DAF\u0DBB\u0DBA' : 'Love'}</Text>
-            </View>
-            <View style={sty.chemPill}>
-              <Ionicons name="moon" size={16} color="#60A5FA" />
-              <Text style={sty.chemLabel}>{T ? '\u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA' : 'Emotional'}</Text>
+            <View style={[sty.deepBadge, { backgroundColor: r.color + '12', borderColor: r.color + '28' }]}>
+              <Text style={[sty.deepBadgeText, { color: r.color, fontSize: 10.5 }]}>{r.badge}</Text>
             </View>
           </View>
-        )}
-        {mag.summary && (
-          <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, marginTop: 10, textAlign: 'center', fontStyle: 'italic', lineHeight: 16 }}>
-            {T ? (mag.summary.si || mag.summary.en) : mag.summary.en}
-          </Text>
-        )}
-      </Glass>
-    </Animated.View>
+        );
+      })}
+    </SectionShell>
   );
 }
 
-// ======= SOUL BLUEPRINT CARD =======
-function SoulBlueprintCard({ data, language, bName, gName }) {
+// ── 07 · AUSPICIOUS WEDDING WINDOWS ──────────────────────────────
+function WeddingWindowsCard({ data, index, delay, language, T }) {
+  var si = language === 'si';
+  var windows = data.advancedPorondam && data.advancedPorondam.advanced
+    && data.advancedPorondam.advanced.weddingWindows
+    && data.advancedPorondam.advanced.weddingWindows.favorableWindows;
+  if (!windows || windows.length === 0) return null;
+
+  return (
+    <SectionShell index={index} delay={delay} title={T.weddingTitle} sub={T.weddingSub}>
+      {windows.map(function (w, i) {
+        var hasDate = w.end && w.end.length > 0;
+        var isBest = w.best === true;
+        var color = isBest ? '#34D399' : 'rgba(255,255,255,0.4)';
+        return (
+          <View key={'ww' + i} style={[cd.weddingRow, i === 0 ? { borderTopWidth: 0, paddingTop: 2 } : null]}>
+            <View style={[cd.weddingIcon, { backgroundColor: isBest ? 'rgba(52,211,153,0.14)' : 'rgba(255,255,255,0.04)', borderColor: isBest ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.06)' }]}>
+              <Ionicons name={isBest ? 'star' : 'calendar-outline'} size={16} color={color} />
+            </View>
+            <View style={{ flex: 1 }}>
+              {hasDate ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Text style={[cd.weddingDates, { color: isBest ? '#34D399' : '#FFE8B0' }]}>{w.start}  →  {w.end}</Text>
+                  {isBest ? (
+                    <View style={cd.bestChip}>
+                      <Text style={{ fontSize: 9, fontWeight: '900', color: '#34D399' }}>{si ? 'හොඳම' : 'BEST'}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : (
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{si ? (w.startSi || T.noWindows) : T.noWindows}</Text>
+              )}
+              <Text style={cd.weddingReason}>{si ? (w.reasonSi || w.reason) : w.reason}</Text>
+              {w.durationDays > 0 ? <Text style={cd.weddingMeta}>{w.durationDays} {si ? 'දින' : 'days'}</Text> : null}
+            </View>
+          </View>
+        );
+      })}
+    </SectionShell>
+  );
+}
+
+// ── 08 · YOUR BIRTH STARS ────────────────────────────────────────
+var ELEM_META = {
+  Fire: { icon: 'flame', color: '#F97316', si: 'අග්නි' },
+  Earth: { icon: 'globe', color: '#A3E635', si: 'පෘථිවි' },
+  Air: { icon: 'cloudy', color: '#60A5FA', si: 'වායු' },
+  Water: { icon: 'water', color: '#22D3EE', si: 'ජල' },
+  Ether: { icon: 'sparkles', color: '#C084FC', si: 'ආකාශ' },
+};
+
+var ELEM_METAPHORS = {
+  'Fire+Water': { en: 'Steam when you meet — intense and transformative.', si: 'ගින්දරයි දියයි හමු වූ විට හුමාලයක් — තීව්‍රයි, පරිවර්තනීයයි.' },
+  'Fire+Fire': { en: 'Two flames — passionate; just mind the pace so neither burns out.', si: 'ගිනිදැල් දෙකක් — ආවේගශීලීයි; දෙදෙනාම නොදැවෙන වේගයක් සොයාගන්න.' },
+  'Fire+Earth': { en: 'Fire warms earth — you bring each other to life.', si: 'ගින්දර පොළොව උණුසුම් කරනවා — ඔබ එකිනෙකාට ජීවය දෙනවා.' },
+  'Fire+Air': { en: 'Air fans the flame — lively, and always growing.', si: 'සුළඟ ගින්දර අවුළුවනවා — උද්‍යෝගී, නොනවතින වර්ධනයක්.' },
+  'Water+Water': { en: 'A deep ocean together — emotionally boundless.', si: 'එකට ගැඹුරු සාගරයක් — හැඟීම්වලට සීමා නැහැ.' },
+  'Water+Earth': { en: 'Water nourishes earth — a naturally fertile bond.', si: 'දිය පොළොව පෝෂණය කරනවා — ස්වාභාවිකවම සරුසාර බැඳීමක්.' },
+  'Water+Air': { en: 'Mist and breeze — dreamy; a little grounding helps.', si: 'මීදුමයි සුළඟයි — සිහිනමය බැඳීමක්; පොළොවේ පය තැබීම වැදගත්.' },
+  'Earth+Earth': { en: 'Solid bedrock — stable and unshakeable.', si: 'ස්ථිර පර්වතයක් — නොසැලෙන, විශ්වාසදායක බැඳීමක්.' },
+  'Earth+Air': { en: 'Mountain and wind — steady yet free.', si: 'කන්දයි සුළඟයි — ස්ථාවරත්වයයි නිදහසයි එකට.' },
+  'Air+Air': { en: 'Two winds — sparkling conversation; an anchor helps.', si: 'සුළං දෙකක් — අදහස්වල දිලිසීමක්; නැංගුරමක් උපකාරී වෙනවා.' },
+};
+
+function BirthStarsCard({ data, index, delay, language, T, bName, gName }) {
+  var si = language === 'si';
+  if (!data.bride || !data.groom) return null;
+  var bride = data.bride;
+  var groom = data.groom;
+  var be = data.brideEnhanced && data.brideEnhanced.tattvaBalance;
+  var ge = data.groomEnhanced && data.groomEnhanced.tattvaBalance;
+
+  function pill(person, name, dotColor) {
+    return (
+      <View style={sty.profilePill}>
+        <View style={[sty.profileDot, { backgroundColor: dotColor }]} />
+        <Text style={sty.profileName}>{name}</Text>
+        <Text style={sty.profileSign}>{person.rashi ? (si ? person.rashi.sinhala : person.rashi.name) : ''}</Text>
+        <Text style={sty.profileStar}>
+          {person.nakshatra ? (si ? person.nakshatra.sinhala : person.nakshatra.name) : ''}
+          {person.nakshatra && person.nakshatra.pada ? (si ? ' · පාද ' + person.nakshatra.pada : ' · Pada ' + person.nakshatra.pada) : ''}
+        </Text>
+        <Text style={sty.profileLord}>{si ? 'අධිපති ග්‍රහයා: ' : 'Ruled by '}{person.nakshatra ? planetLabel(person.nakshatra.lord, si) : ''}</Text>
+      </View>
+    );
+  }
+
+  var metaphor = null;
+  if (be && ge && be.dominant && ge.dominant) {
+    metaphor = ELEM_METAPHORS[be.dominant + '+' + ge.dominant] || ELEM_METAPHORS[ge.dominant + '+' + be.dominant]
+      || { en: 'A rare elemental mix — a chemistry of its own.', si: 'දුර්ලභ මූලධාතු සංයෝගයක් — එයටම ආවේණික රසායනයක්.' };
+  }
+
+  return (
+    <SectionShell index={index} delay={delay} title={T.starsTitle} sub={T.starsSub}>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        {pill(bride, bName || T.bride, '#F9A8D4')}
+        {pill(groom, gName || T.groom, '#93C5FD')}
+      </View>
+      {be && ge && be.dominant && ge.dominant ? (function () {
+        var bEl = ELEM_META[be.dominant] || ELEM_META.Fire;
+        var gEl = ELEM_META[ge.dominant] || ELEM_META.Fire;
+        return (
+          <View style={{ marginTop: 14 }}>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={sty.elemCard}>
+                <View style={[sty.elemCircle, { backgroundColor: bEl.color + '18', borderColor: bEl.color + '40' }]}>
+                  <Ionicons name={bEl.icon} size={22} color={bEl.color} />
+                </View>
+                <Text style={[sty.elemName, { color: bEl.color }]}>{si ? bEl.si : be.dominant}</Text>
+                <Text style={sty.elemWho}>{bName || T.bride}</Text>
+              </View>
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="flash" size={18} color="rgba(232,201,122,0.55)" />
+              </View>
+              <View style={sty.elemCard}>
+                <View style={[sty.elemCircle, { backgroundColor: gEl.color + '18', borderColor: gEl.color + '40' }]}>
+                  <Ionicons name={gEl.icon} size={22} color={gEl.color} />
+                </View>
+                <Text style={[sty.elemName, { color: gEl.color }]}>{si ? gEl.si : ge.dominant}</Text>
+                <Text style={sty.elemWho}>{gName || T.groom}</Text>
+              </View>
+            </View>
+            {metaphor ? <Text style={sty.elemMetaphor}>{si ? metaphor.si : metaphor.en}</Text> : null}
+          </View>
+        );
+      })() : null}
+    </SectionShell>
+  );
+}
+
+// ── 09 · FOR THE CURIOUS (collapsed by default) ──────────────────
+var PLANET_DRIVE = {
+  Sun: { icon: 'sunny', color: '#F97316', en: 'Leadership & recognition', si: 'නායකත්වය සහ පිළිගැනීම' },
+  Moon: { icon: 'moon', color: '#93C5FD', en: 'Emotional security & nurturing', si: 'හැඟීම් සුරක්ෂිතභාවය සහ රැකවරණය' },
+  Mars: { icon: 'flame', color: '#EF4444', en: 'Courage & achievement', si: 'ධෛර්යය සහ ජයග්‍රහණය' },
+  Mercury: { icon: 'chatbubbles', color: '#34D399', en: 'Intellect & communication', si: 'බුද්ධිය සහ සන්නිවේදනය' },
+  Jupiter: { icon: 'globe', color: '#FBBF24', en: 'Freedom & expansion', si: 'නිදහස සහ ප්‍රසාරණය' },
+  Venus: { icon: 'heart', color: '#F472B6', en: 'Love & beauty', si: 'ආදරය සහ සුන්දරත්වය' },
+  Saturn: { icon: 'shield', color: '#A78BFA', en: 'Stability & discipline', si: 'ස්ථාවරත්වය සහ විනය' },
+  Rahu: { icon: 'rocket', color: '#FB923C', en: 'Transformation & ambition', si: 'පරිවර්තනය සහ අභිලාෂය' },
+  Ketu: { icon: 'eye', color: '#22D3EE', en: 'Inner freedom', si: 'අභ්‍යන්තර නිදහස' },
+};
+
+var PASTLIFE_META = {
+  healer: { icon: 'medkit', color: '#34D399', en: 'Healer', si: 'සුවකරු' },
+  warrior: { icon: 'shield', color: '#EF4444', en: 'Warrior', si: 'රණශූර' },
+  teacher: { icon: 'book', color: '#FBBF24', en: 'Teacher', si: 'ගුරුවර' },
+  artist: { icon: 'color-palette', color: '#F472B6', en: 'Artist', si: 'කලාකරු' },
+  leader: { icon: 'flag', color: '#F97316', en: 'Leader', si: 'නායක' },
+  mystic: { icon: 'eye', color: '#C084FC', en: 'Mystic', si: 'රහස්වාදී' },
+  merchant: { icon: 'cash', color: '#A3E635', en: 'Merchant', si: 'වෙළෙන්දා' },
+  scholar: { icon: 'library', color: '#60A5FA', en: 'Scholar', si: 'විද්වතා' },
+  caretaker: { icon: 'heart', color: '#FB923C', en: 'Caretaker', si: 'රැකවරණකරු' },
+  explorer: { icon: 'compass', color: '#22D3EE', en: 'Explorer', si: 'ගවේෂක' },
+  pioneer: { icon: 'rocket', color: '#F97316', en: 'Pioneer', si: 'පුරෝගාමී' },
+  king: { icon: 'trophy', color: '#FBBF24', en: 'Ruler', si: 'පාලක' },
+  administrator: { icon: 'briefcase', color: '#64748B', en: 'Administrator', si: 'පරිපාලක' },
+  monk: { icon: 'moon', color: '#C084FC', en: 'Monk', si: 'තවුසා' },
+  hermit: { icon: 'moon', color: '#A78BFA', en: 'Hermit', si: 'තාපස' },
+  seeker: { icon: 'search', color: '#22D3EE', en: 'Seeker', si: 'සොයන්නා' },
+  philosopher: { icon: 'bulb', color: '#FBBF24', en: 'Philosopher', si: 'දාර්ශනික' },
+  pilgrim: { icon: 'walk', color: '#34D399', en: 'Pilgrim', si: 'වන්දනාකරු' },
+  writer: { icon: 'create', color: '#60A5FA', en: 'Writer', si: 'ලේඛක' },
+  messenger: { icon: 'chatbubble', color: '#22D3EE', en: 'Messenger', si: 'පණිවිඩකරු' },
+  soldier: { icon: 'shield', color: '#EF4444', en: 'Soldier', si: 'සෙබළ' },
+  farmer: { icon: 'leaf', color: '#A3E635', en: 'Farmer', si: 'ගොවි' },
+  landowner: { icon: 'home', color: '#FB923C', en: 'Landowner', si: 'ඉඩම් හිමි' },
+  priest: { icon: 'star', color: '#FBBF24', en: 'Priest', si: 'පූජක' },
+  performer: { icon: 'musical-notes', color: '#F472B6', en: 'Performer', si: 'රංගන ශිල්පී' },
+  servant: { icon: 'hand-left', color: '#64748B', en: 'Helper', si: 'සේවක' },
+  partner: { icon: 'people', color: '#F472B6', en: 'Partner', si: 'හවුල්කරු' },
+  diplomat: { icon: 'globe', color: '#60A5FA', en: 'Diplomat', si: 'තානාපති' },
+  researcher: { icon: 'flask', color: '#C084FC', en: 'Researcher', si: 'පර්යේෂක' },
+  alchemist: { icon: 'flask', color: '#A78BFA', en: 'Alchemist', si: 'රසවාදී' },
+  trader: { icon: 'swap-horizontal', color: '#A3E635', en: 'Trader', si: 'වෙළඳ' },
+  banker: { icon: 'wallet', color: '#FBBF24', en: 'Banker', si: 'බැංකුකරු' },
+  networker: { icon: 'git-network', color: '#22D3EE', en: 'Networker', si: 'ජාලකරු' },
+  elder: { icon: 'person', color: '#FB923C', en: 'Elder', si: 'වැඩිහිටි' },
+  mediator: { icon: 'git-merge', color: '#34D399', en: 'Mediator', si: 'මධ්‍යස්ථ' },
+};
+
+function CuriositiesCard({ data, index, delay, language, T, bName, gName }) {
+  var si = language === 'si';
+  var [open, setOpen] = useState(false);
+
   var bj = data.brideAdvanced && data.brideAdvanced.tier1 && data.brideAdvanced.tier1.jaimini;
   var gj = data.groomAdvanced && data.groomAdvanced.tier1 && data.groomAdvanced.tier1.jaimini;
-  if (!bj || !gj || !bj.atmakaraka || !gj.atmakaraka) return null;
-  var T = language === 'si';
-
-  var PLANET_DRIVE = {
-    Sun: { drive: T ? '\u0DB1\u0DCF\u0DBA\u0D9A\u0DAD\u0DCA\u0DC0\u0DBA' : 'Leadership & recognition', icon: 'sunny', color: '#F97316' },
-    Moon: { drive: T ? '\u0DC4\u0DD0\u0D9F\u0DD3\u0DB8\u0DCA \u0DC3\u0DD4\u0DBB\u0D9A\u0DCA\u0DC2\u0DD2\u0DAD\u0DAD\u0DCF\u0DC0' : 'Emotional security & nurturing', icon: 'moon', color: '#93C5FD' },
-    Mars: { drive: T ? '\u0DC0\u0DD3\u0DBB\u0DAD\u0DCA\u0DC0\u0DBA \u0DC4\u0DCF \u0DA2\u0DBA\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DAB\u0DBA' : 'Courage & conquest', icon: 'flame', color: '#EF4444' },
-    Mercury: { drive: T ? '\u0DB6\u0DD4\u0DAF\u0DCA\u0DB0\u0DD2\u0DBA \u0DC4\u0DCF \u0DC3\u0DB1\u0DCA\u0DB1\u0DD2\u0DC0\u0DDA\u0DAF\u0DB1\u0DBA' : 'Intellect & communication', icon: 'chatbubbles', color: '#34D399' },
-    Jupiter: { drive: T ? '\u0DB1\u0DD2\u0DAF\u0DC4\u0DC3 \u0DC4\u0DCF \u0DC0\u0DD2\u0DC3\u0DCA\u0DAD\u0DBB\u0DAB\u0DBA' : 'Freedom & expansion', icon: 'globe', color: '#FBBF24' },
-    Venus: { drive: T ? '\u0D86\u0DAF\u0DBB\u0DBA \u0DC4\u0DCF \u0DC3\u0DD4\u0DB1\u0DCA\u0DAF\u0DBB\u0DBA' : 'Love & beauty', icon: 'heart', color: '#F472B6' },
-    Saturn: { drive: T ? '\u0DC3\u0DCA\u0DAD\u0DD2\u0DBB\u0DAD\u0DCF\u0DC0 \u0DC4\u0DCF \u0DC0\u0DD2\u0DB1\u0DBA' : 'Stability & discipline', icon: 'shield', color: '#A78BFA' },
-    Rahu: { drive: T ? '\u0DB4\u0DBB\u0DD2\u0DC0\u0DBB\u0DCA\u0DAD\u0DB1\u0DBA \u0DC4\u0DCF \u0D85\u0DB1\u0DCF\u0D9C\u0DAD\u0DBA' : 'Transformation & ambition', icon: 'rocket', color: '#FB923C' },
-    Ketu: { drive: T ? '\u0D86\u0DB0\u0DCA\u200D\u0DBA\u0DCF\u0DAD\u0DCA\u0DB8\u0DD2\u0D9A \u0DB8\u0DD4\u0D9A\u0DCA\u0DAD\u0DD2\u0DBA' : 'Spiritual liberation', icon: 'eye', color: '#22D3EE' },
-  };
-
-  var bKey = typeof bj.atmakaraka === 'string' ? bj.atmakaraka : (bj.atmakaraka && bj.atmakaraka.planet) || 'Sun';
-  var gKey = typeof gj.atmakaraka === 'string' ? gj.atmakaraka : (gj.atmakaraka && gj.atmakaraka.planet) || 'Sun';
-  var bp = PLANET_DRIVE[bKey] || { drive: bKey, icon: 'star', color: '#FFB800' };
-  var gp = PLANET_DRIVE[gKey] || { drive: gKey, icon: 'star', color: '#FFB800' };
-
-  return (
-    <Animated.View entering={FadeInUp.delay(950).duration(700)}>
-      <Glass style={sty.section}>
-        <View style={sty.secHeader}>
-          <View>
-            <Text style={sty.secTitle}><Ionicons name="finger-print" size={15} color="#C084FC" /> {T ? '\u0D86\u0DAD\u0DCA\u0DB8 \u0DB1\u0DD2\u0DBB\u0DD4\u0DB4\u0DAB\u0DBA' : 'Soul Blueprint'}</Text>
-            <Text style={sty.secSub}>{T ? '\u0D94\u0DB6\u0D9C\u0DDA \u0D86\u0DAD\u0DCA\u0DB8\u0DBA\u0DB1\u0DCA \u0D9A\u0DD2\u0DBA \u0DC3\u0DD0\u0DB6\u0DD0\u0DC0\u0DD2\u0DB1\u0DCA \u0D9A\u0DD0\u0DB8\u0DAD\u0DD2\u0DBA\u0DD2' : 'What each soul truly craves'}</Text>
-          </View>
-        </View>
-        <View style={{ gap: 12, marginTop: 4 }}>
-          <View style={sty.soulRow}>
-            <View style={[sty.soulIcon, { backgroundColor: bp.color + '15', borderColor: bp.color + '35' }]}>
-              <Ionicons name={bp.icon} size={18} color={bp.color} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={sty.soulWho}>{bName || (T ? '\u0D94\u0DB6' : 'Her')}</Text>
-              <Text style={sty.soulDrive}>{bp.drive}</Text>
-            </View>
-            <Text style={[sty.soulPlanet, { color: bp.color }]}>{bKey}</Text>
-          </View>
-          <View style={sty.soulRow}>
-            <View style={[sty.soulIcon, { backgroundColor: gp.color + '15', borderColor: gp.color + '35' }]}>
-              <Ionicons name={gp.icon} size={18} color={gp.color} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={sty.soulWho}>{gName || (T ? '\u0D94\u0DC4\u0DD4' : 'Him')}</Text>
-              <Text style={sty.soulDrive}>{gp.drive}</Text>
-            </View>
-            <Text style={[sty.soulPlanet, { color: gp.color }]}>{gKey}</Text>
-          </View>
-        </View>
-        {bj.atmakaraka !== gj.atmakaraka && (
-          <View style={sty.soulSynth}>
-            <Ionicons name="git-merge" size={14} color="rgba(255,184,0,0.7)" />
-            <Text style={sty.soulSynthText}>
-              {T ? '\u0D94\u0DB6\u0D9C\u0DDA \u0D86\u0DAD\u0DCA\u0DB8\u0DBA\u0DB1\u0DCA \u0D91\u0D9A\u0DB8\u0DD9\u0D9A\u0DA7 \u0DC3\u0DB8\u0DAD\u0DD4\u0DBD\u0DD2\u0DAD \u0D9A\u0DBB\u0DBA\u0DD2' 
-                : (typeof bp.drive === 'string' ? bp.drive.split(' & ')[0] : 'One drive') + ' meets ' + (typeof gp.drive === 'string' ? gp.drive.split(' & ')[0].toLowerCase() : 'another') + ' \u2014 you balance what the other lacks'}
-            </Text>
-          </View>
-        )}
-      </Glass>
-    </Animated.View>
-  );
-}
-
-// ======= PAST LIVES CARD =======
-function PastLivesCard({ data, language, bName, gName }) {
+  var bKey = bj && (typeof bj.atmakaraka === 'string' ? bj.atmakaraka : (bj.atmakaraka && bj.atmakaraka.planet));
+  var gKey = gj && (typeof gj.atmakaraka === 'string' ? gj.atmakaraka : (gj.atmakaraka && gj.atmakaraka.planet));
   var bpl = data.brideAdvanced && data.brideAdvanced.tier3 && data.brideAdvanced.tier3.pastLife;
   var gpl = data.groomAdvanced && data.groomAdvanced.tier3 && data.groomAdvanced.tier3.pastLife;
-  if (!bpl || !gpl) return null;
-  var T = language === 'si';
 
-  var ARCHETYPE_META = {
-    healer: { icon: 'medkit', color: '#34D399', en: 'Healer', si: '\u0DC4\u0DD3\u0DBD\u0DBB\u0DCA' },
-    warrior: { icon: 'shield', color: '#EF4444', en: 'Warrior', si: '\u0DBA\u0DD4\u0DAF\u0DCA\u0DB0\u0DBA\u0DCF' },
-    teacher: { icon: 'book', color: '#FBBF24', en: 'Teacher', si: '\u0D9C\u0DD4\u0DBB\u0DD4' },
-    artist: { icon: 'color-palette', color: '#F472B6', en: 'Artist', si: '\u0D9A\u0DBD\u0DCF\u0D9A\u0DBB\u0DD4' },
-    leader: { icon: 'flag', color: '#F97316', en: 'Leader', si: '\u0DB1\u0DCF\u0DBA\u0D9A' },
-    mystic: { icon: 'eye', color: '#C084FC', en: 'Mystic', si: '\u0DB8\u0DCA\u0DBA\u0DC3\u0DCA\u0DA7\u0DD2\u0D9A\u0DCA' },
-    merchant: { icon: 'cash', color: '#A3E635', en: 'Merchant', si: '\u0DC0\u0DCA\u200D\u0DBA\u0DCF\u0DB4\u0DCF\u0DBB\u0DD2' },
-    scholar: { icon: 'library', color: '#60A5FA', en: 'Scholar', si: '\u0DC0\u0DD2\u0DAF\u0DCA\u0DC0\u0DAD\u0DCF' },
-    caretaker: { icon: 'heart', color: '#FB923C', en: 'Caretaker', si: '\u0DBB\u0D9A\u0DCA\u0DC2\u0D9A' },
-    explorer: { icon: 'compass', color: '#22D3EE', en: 'Explorer', si: '\u0D9C\u0DC0\u0DDA\u0DC2\u0D9A' },
-    pioneer: { icon: 'rocket', color: '#F97316', en: 'Pioneer', si: '\u0DB4\u0DD4\u0DBB\u0DDD\u0D9C\u0DCF\u0DB8\u0DD3' },
-    king: { icon: 'trophy', color: '#FBBF24', en: 'Ruler', si: '\u0DBB\u0DA2' },
-    administrator: { icon: 'briefcase', color: '#64748B', en: 'Administrator', si: '\u0DB4\u0DBB\u0DD2\u0DB4\u0DCF\u0DBD\u0D9A' },
-    monk: { icon: 'moon', color: '#C084FC', en: 'Monk', si: '\u0DC3\u0DB1\u0DCA\u0DB1\u0DCF\u0DC3\u0DD3' },
-    hermit: { icon: 'moon', color: '#A78BFA', en: 'Hermit', si: '\u0DAD\u0DCF\u0DB4\u0DC3' },
-    seeker: { icon: 'search', color: '#22D3EE', en: 'Seeker', si: '\u0DC3\u0DD9\u0DC0\u0DD4\u0DB8\u0DCA\u0D9A\u0DBB\u0DD4' },
-    philosopher: { icon: 'bulb', color: '#FBBF24', en: 'Philosopher', si: '\u0DAF\u0DCF\u0DBB\u0DCA\u0DC1\u0DB1\u0DD2\u0D9A' },
-    pilgrim: { icon: 'walk', color: '#34D399', en: 'Pilgrim', si: '\u0DC0\u0DB1\u0DCA\u0DAF\u0DB1\u0DCF' },
-    writer: { icon: 'create', color: '#60A5FA', en: 'Writer', si: '\u0DBD\u0DDA\u0D9B\u0D9A' },
-    messenger: { icon: 'chatbubble', color: '#22D3EE', en: 'Messenger', si: '\u0DB4\u0DAB\u0DD2\u0DC0\u0DD2\u0DA9\u0D9A\u0DBB\u0DD4' },
-    soldier: { icon: 'shield', color: '#EF4444', en: 'Soldier', si: '\u0DC3\u0DD9\u0DB6\u0DBD\u0DCF' },
-    farmer: { icon: 'leaf', color: '#A3E635', en: 'Farmer', si: '\u0D9C\u0DD9\u0DC0\u0DD2\u0DBA\u0DCF' },
-    landowner: { icon: 'home', color: '#FB923C', en: 'Landowner', si: '\u0D89\u0DA9\u0DB8\u0DCA \u0DC4\u0DD2\u0DB8\u0DD2' },
-    priest: { icon: 'star', color: '#FBBF24', en: 'Priest', si: '\u0DB4\u0DD6\u0DA2\u0D9A' },
-    performer: { icon: 'musical-notes', color: '#F472B6', en: 'Performer', si: '\u0DBB\u0D82\u0D9C\u0DB1 \u0DC1\u0DD2\u0DBD\u0DCA\u0DB4\u0DD3' },
-    servant: { icon: 'hand-left', color: '#64748B', en: 'Servant', si: '\u0DC3\u0DDA\u0DC0\u0D9A' },
-    partner: { icon: 'people', color: '#F472B6', en: 'Partner', si: '\u0DC4\u0DC0\u0DD4\u0DBD\u0DCA\u0D9A\u0DBB\u0DD4' },
-    diplomat: { icon: 'globe', color: '#60A5FA', en: 'Diplomat', si: '\u0DBB\u0DCF\u0DA2\u0DCA\u200D\u0DBA \u0DAD\u0DCF\u0DB1\u0DCA\u0DAD\u0DCA\u200D\u0DBB\u0DD2\u0D9A' },
-    researcher: { icon: 'flask', color: '#C084FC', en: 'Researcher', si: '\u0DB4\u0DBB\u0DCA\u0DBA\u0DDA\u0DC2\u0D9A' },
-    alchemist: { icon: 'flask', color: '#A78BFA', en: 'Alchemist', si: '\u0DBB\u0DC3\u0DC0\u0DD2\u0DAF\u0DCA\u200D\u0DBA\u0DCF\u0DC0\u0DDA\u0DAF\u0DD3' },
-    trader: { icon: 'swap-horizontal', color: '#A3E635', en: 'Trader', si: '\u0DC0\u0DCA\u200D\u0DBA\u0DCF\u0DB4\u0DCF\u0DBB\u0DD2' },
-    banker: { icon: 'wallet', color: '#FBBF24', en: 'Banker', si: '\u0DB6\u0DD0\u0D82\u0D9A\u0DD4\u0D9A\u0DBB\u0DD4' },
-    networker: { icon: 'git-network', color: '#22D3EE', en: 'Networker', si: '\u0DA2\u0DCF\u0DBD\u0D9A\u0DBB\u0DD4' },
-    elder: { icon: 'person', color: '#FB923C', en: 'Elder', si: '\u0DC0\u0DD0\u0DA9\u0DD2\u0DC4\u0DD2\u0DA7\u0DD2\u0DBA\u0DCF' },
-    mediator: { icon: 'git-merge', color: '#34D399', en: 'Mediator', si: '\u0DB8\u0DB0\u0DCA\u200D\u0DBA\u0DC3\u0DCA\u0DAD' },
-  };
+  var hasDrives = !!(bKey && gKey);
+  var hasPast = !!(bpl && gpl);
+  if (!hasDrives && !hasPast) return null;
 
-  var getArch = function(pl) {
-    if (!pl || !pl.ketuThemes) return { icon: 'help-circle', color: '#FFB800', en: 'Unknown', si: '\u0D85\u0DB1\u0DAD\u0DD2\u0DAD' };
-    var raw = (pl.ketuThemes.archetype || '').toLowerCase();
-    // Server returns compound archetypes like 'leader/warrior/pioneer' — match any part
-    var parts = raw.split('/');
+  function getPastMeta(pl) {
+    var themes = pl && (pl.ketuThemes || (pl.pastLife && pl.pastLife.ketuThemes));
+    if (!themes || !themes.archetype) return null;
+    var parts = String(themes.archetype).toLowerCase().split('/');
     for (var p = 0; p < parts.length; p++) {
-      var trimmed = parts[p].trim();
-      if (ARCHETYPE_META[trimmed]) return ARCHETYPE_META[trimmed];
+      var key = parts[p].trim();
+      if (PASTLIFE_META[key]) return PASTLIFE_META[key];
     }
-    // Fallback: use first part as display name
-    var displayName = parts[0] ? parts[0].trim() : 'Seeker';
-    displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
-    return { icon: 'star', color: '#FFB800', en: displayName, si: pl.ketuThemes.archetypeSi ? pl.ketuThemes.archetypeSi.split('/')[0].trim() : displayName };
-  };
-
-  var ba = getArch(bpl);
-  var ga = getArch(gpl);
-
-  // Generate narrative
-  var narrative = T
-    ? ba.si + ' \u0DC4\u0DCF ' + ga.si + ' \u0DB1\u0DD0\u0DC0\u0DAD \u0DC4\u0DB8\u0DD4\u0DC0\u0DD3\u0DB8'
-    : 'A ' + ba.en.toLowerCase() + ' and a ' + ga.en.toLowerCase() + ' reunited \u2014 picking up where past lives left off';
-
-  var karmaNote = '';
-  if (bpl.karmaBalance && gpl.karmaBalance) {
-    var bk = String(bpl.karmaBalance).toLowerCase();
-    var gk = String(gpl.karmaBalance).toLowerCase();
-    if (bk.indexOf('positive') !== -1 && gk.indexOf('positive') !== -1) {
-      karmaNote = T ? '\u0DAF\u0DD9\u0DAF\u0DD9\u0DB1\u0DCF\u0DB8 \u0DC1\u0DD4\u0DB7 \u0D9A\u0DBB\u0DCA\u0DB8' : 'Both carry positive karma into this connection';
-    } else if (bk.indexOf('negative') !== -1 || gk.indexOf('negative') !== -1) {
-      karmaNote = T ? '\u0DB4\u0DD2\u0DBB\u0DD2\u0DC3\u0DD2\u0DAF\u0DD4 \u0D9A\u0DBB\u0DB1\u0DD4 \u0DBD\u0DB6\u0DB1 \u0D9A\u0DBB\u0DCA\u0DB8' : 'Unresolved karma to work through \u2014 growth awaits';
-    } else {
-      karmaNote = T ? '\u0DB8\u0DD2\u0DC1\u0DCA\u200D\u0DBB \u0D9A\u0DBB\u0DCA\u0DB8' : 'Mixed karma \u2014 some lessons, some gifts';
-    }
+    var name = parts[0] ? parts[0].trim() : '';
+    if (!name) return null;
+    return { icon: 'star', color: '#FFB800', en: name.charAt(0).toUpperCase() + name.slice(1), si: themes.archetypeSi ? String(themes.archetypeSi).split('/')[0].trim() : name };
   }
 
-  return (
-    <Animated.View entering={FadeInUp.delay(1050).duration(700)}>
-      <Glass style={sty.section}>
-        <View style={sty.secHeader}>
-          <View>
-            <Text style={sty.secTitle}><Ionicons name="time" size={15} color="#C084FC" /> {T ? '\u0DB4\u0DD6\u0DBB\u0DCA\u0DC0 \u0DA2\u0DD3\u0DC0\u0DD2\u0DAD' : 'Past Lives'}</Text>
-            <Text style={sty.secSub}>{T ? '\u0D94\u0DB6\u0D9C\u0DDA \u0D86\u0DAD\u0DCA\u0DB8\u0DBA\u0DB1\u0DCA \u0DB4\u0DD6\u0DBB\u0DCA\u0DC0\u0DBA\u0DD9\u0DB1\u0DCA \u0DAF\u0DB1\u0DD3' : 'Your souls have met before'}</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
-          <View style={sty.pastCard}>
-            <View style={[sty.pastIcon, { backgroundColor: ba.color + '15', borderColor: ba.color + '35' }]}>
-              <Ionicons name={ba.icon} size={20} color={ba.color} />
-            </View>
-            <Text style={sty.pastWho}>{bName || (T ? '\u0D94\u0DB6' : 'Her')}</Text>
-            <Text style={[sty.pastArch, { color: ba.color }]}>{T ? ba.si : ba.en}</Text>
-          </View>
-          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="infinite" size={22} color="rgba(192,132,252,0.6)" />
-          </View>
-          <View style={sty.pastCard}>
-            <View style={[sty.pastIcon, { backgroundColor: ga.color + '15', borderColor: ga.color + '35' }]}>
-              <Ionicons name={ga.icon} size={20} color={ga.color} />
-            </View>
-            <Text style={sty.pastWho}>{gName || (T ? '\u0D94\u0DC4\u0DD4' : 'Him')}</Text>
-            <Text style={[sty.pastArch, { color: ga.color }]}>{T ? ga.si : ga.en}</Text>
-          </View>
-        </View>
-        <Text style={sty.pastNarrative}>{narrative}</Text>
-        {karmaNote.length > 0 && (
-          <View style={sty.pastKarma}>
-            <Ionicons name="leaf" size={12} color="rgba(255,184,0,0.6)" />
-            <Text style={sty.pastKarmaText}>{karmaNote}</Text>
-          </View>
-        )}
-      </Glass>
-    </Animated.View>
-  );
-}
-
-// ======= RED FLAG CHECK CARD =======
-function RedFlagCard({ data, language, bName, gName }) {
-  var jm = data.jyotishMatching;
-  if (!jm) return null;
-  var bMangal = jm.brideMangalDosha;
-  var gMangal = jm.groomMangalDosha;
-  if (!bMangal && !gMangal) return null;
-  var T = language === 'si';
-
-  var getFlag = function(dosha) {
-    if (!dosha || !dosha.hasDosha) return { status: 'clear', icon: 'checkmark-circle', color: '#34D399', label: T ? '\u0DB4\u0DD2\u0DBB\u0DD2\u0DC3\u0DD2\u0DAF\u0DD4\u0DBA\u0DD2' : 'Clear' };
-    if (dosha.isHigh) return { status: 'high', icon: 'alert-circle', color: '#F87171', label: T ? '\u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD' : 'Present' };
-    return { status: 'mild', icon: 'alert-circle', color: '#FFB800', label: T ? '\u0DC3\u0DD4\u0DBD\u0DD4' : 'Mild' };
-  };
-
-  var bf = getFlag(bMangal);
-  var gf = getFlag(gMangal);
-  var bothClear = bf.status === 'clear' && gf.status === 'clear';
-  var bothHave = bf.status !== 'clear' && gf.status !== 'clear';
-
-  var verdict = bothClear
-    ? (T ? '\u0D9A\u0DD2\u0DC3\u0DD2\u0DAF\u0DD4 \u0DBB\u0DAD\u0DD4 \u0D9A\u0DAB\u0DCA\u0DA9\u0DD4\u0DC0\u0D9A\u0DCA \u0DB1\u0DD0\u0DAD' : 'No red flags detected \u2014 smooth sailing')
-    : bothHave
-    ? (T ? '\u0DAF\u0DD9\u0DAF\u0DD9\u0DB1\u0DCF\u0DB8 \u0D85\u0DB7\u0DD2\u0DBA\u0DDD\u0D9C \u0DAD\u0DD2\u0DB6\u0DD9 \u2014 \u0DC3\u0DB8\u0DAD\u0DD4\u0DBD\u0DD2\u0DAD \u0DC0\u0DDA' : 'Both carry the same tension marker \u2014 these cancel each other out')
-    : (T ? '\u0D91\u0D9A\u0DCA \u0D9A\u0DD9\u0DB1\u0D9A\u0DD4\u0DA7 \u0D85\u0DB7\u0DD2\u0DBA\u0DDD\u0D9C \u0DAD\u0DD2\u0DB6\u0DD9' : 'One person carries a tension marker \u2014 awareness is key');
+  var ba = hasPast ? getPastMeta(bpl) : null;
+  var ga = hasPast ? getPastMeta(gpl) : null;
 
   return (
-    <Animated.View entering={FadeInUp.delay(1150).duration(700)}>
-      <Glass style={sty.section}>
-        <View style={sty.secHeader}>
-          <View>
-            <Text style={sty.secTitle}><Ionicons name="flag" size={15} color={bothClear ? '#34D399' : '#F87171'} /> {T ? '\u0DBB\u0DAD\u0DD4 \u0D9A\u0DAB\u0DCA\u0DA9\u0DD4 \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF\u0DC0' : 'Red Flag Check'}</Text>
-            <Text style={sty.secSub}>{T ? '\u0DC3\u0DB8\u0DCA\u0DB4\u0DCA\u200D\u0DBB\u0DAF\u0DCF\u0DBA\u0DD2\u0D9A \u0DC0\u0DD2\u0DC0\u0DCF\u0DC4 \u0D85\u0DB7\u0DD2\u0DBA\u0DDD\u0D9C' : 'Traditional marriage tension markers'}</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 12, marginTop: 6 }}>
-          <View style={sty.flagPerson}>
-            <Ionicons name={bf.icon} size={22} color={bf.color} />
-            <Text style={sty.flagName}>{bName || (T ? '\u0D94\u0DB6' : 'Her')}</Text>
-            <Text style={[sty.flagLabel, { color: bf.color }]}>{bf.label}</Text>
-          </View>
-          <View style={sty.flagPerson}>
-            <Ionicons name={gf.icon} size={22} color={gf.color} />
-            <Text style={sty.flagName}>{gName || (T ? '\u0D94\u0DC4\u0DD4' : 'Him')}</Text>
-            <Text style={[sty.flagLabel, { color: gf.color }]}>{gf.label}</Text>
-          </View>
-        </View>
-        <Text style={sty.flagVerdict}>{verdict}</Text>
-      </Glass>
-    </Animated.View>
-  );
-}
-
-// ======= TIMING & PRESSURE CARD =======
-function TimingCard({ data, language, bName, gName }) {
-  var jm = data.jyotishMatching;
-  if (!jm) return null;
-  var bss = jm.brideSadeSati;
-  var gss = jm.groomSadeSati;
-  if (!bss && !gss) return null;
-  var T = language === 'si';
-
-  var getStatus = function(ss) {
-    if (!ss || !ss.status) return null;
-    var s = String(ss.status).toLowerCase();
-    if (s.indexOf('active') !== -1 || s.indexOf('yes') !== -1 || s === 'true') return { active: true, icon: 'thunderstorm', color: '#F97316', label: T ? '\u0DC3\u0D9A\u0DCA\u200D\u0DBB\u0DD2\u0DBA' : 'In Pressure Phase' };
-    return { active: false, icon: 'sunny', color: '#34D399', label: T ? '\u0DB4\u0DD2\u0DBB\u0DD2\u0DC3\u0DD2\u0DAF\u0DD4\u0DBA\u0DD2' : 'Clear Skies' };
-  };
-
-  var bs = getStatus(bss);
-  var gs = getStatus(gss);
-  if (!bs && !gs) return null;
-
-  var bothClear = bs && gs && !bs.active && !gs.active;
-  var anyPressure = (bs && bs.active) || (gs && gs.active);
-
-  var advice = bothClear
-    ? (T ? '\u0DAF\u0DD9\u0DAF\u0DD9\u0DB1\u0DCF\u0DB8 \u0DC4\u0DCF\u0DB1\u0DD2 \u0D9A\u0DCF\u0DBD\u0DBA\u0D9A' : 'Both in a clear period \u2014 great timing for big decisions')
-    : anyPressure
-    ? (T ? '\u0DB4\u0DD3\u0DA9\u0DB1\u0DBA \u0DAD\u0DCF\u0DC0\u0D9A\u0DCF\u0DBD\u0DD2\u0D9A\u0DBA\u0DD2 \u2014 \u0D89\u0DC0\u0DC3\u0DD3\u0DB8 \u0DC0\u0DD0\u0DA9\u0DD2\u0DBA' : 'Pressure is temporary \u2014 extra patience and support make all the difference')
-    : '';
-
-  return (
-    <Animated.View entering={FadeInUp.delay(1200).duration(700)}>
-      <Glass style={sty.section}>
-        <View style={sty.secHeader}>
-          <View>
-            <Text style={sty.secTitle}><Ionicons name="hourglass" size={15} color="#FB923C" /> {T ? '\u0D9A\u0DCF\u0DBD\u0DBA \u0DC4\u0DCF \u0DB4\u0DD3\u0DA9\u0DB1\u0DBA' : 'Timing & Pressure'}</Text>
-            <Text style={sty.secSub}>{T ? '\u0DAD\u0DCF\u0DC0\u0D9A\u0DCF\u0DBD\u0DD2\u0D9A \u0DA2\u0DD3\u0DC0\u0DD2\u0DAD \u0DB4\u0DD3\u0DA9\u0DB1' : 'Life pressure that affects relationships'}</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 12, marginTop: 6 }}>
-          {bs && (
-            <View style={sty.timingPerson}>
-              <View style={[sty.timingBadge, { backgroundColor: bs.color + '12', borderColor: bs.color + '30' }]}>
-                <Ionicons name={bs.icon} size={20} color={bs.color} />
-              </View>
-              <Text style={sty.timingName}>{bName || (T ? '\u0D94\u0DB6' : 'Her')}</Text>
-              <Text style={[sty.timingLabel, { color: bs.color }]}>{bs.label}</Text>
-            </View>
-          )}
-          {gs && (
-            <View style={sty.timingPerson}>
-              <View style={[sty.timingBadge, { backgroundColor: gs.color + '12', borderColor: gs.color + '30' }]}>
-                <Ionicons name={gs.icon} size={20} color={gs.color} />
-              </View>
-              <Text style={sty.timingName}>{gName || (T ? '\u0D94\u0DC4\u0DD4' : 'Him')}</Text>
-              <Text style={[sty.timingLabel, { color: gs.color }]}>{gs.label}</Text>
-            </View>
-          )}
-        </View>
-        {advice.length > 0 && (
-          <Text style={sty.timingAdvice}>{advice}</Text>
-        )}
-      </Glass>
-    </Animated.View>
-  );
-}
-
-
-// ======= INTIMATE CHEMISTRY CARD =======
-function IntimateChemistryCard({ data, language, bName, gName }) {
-  var T = language === 'si';
-  
-  // Get Yoni data from factors
-  var yoniFactor = data.factors && data.factors.find(function(fac) { return fac.name === 'Yoni'; });
-  var brideYoni = yoniFactor && yoniFactor.brideYoni;
-  var groomYoni = yoniFactor && yoniFactor.groomYoni;
-  var yoniScore = yoniFactor ? yoniFactor.score : 0;
-  var yoniMax = yoniFactor ? yoniFactor.maxScore : 3;
-
-  // Venus strength from marriage planet data
-  var mp = data.advancedPorondam && data.advancedPorondam.advanced && data.advancedPorondam.advanced.marriagePlanetStrength;
-  var brideVenus = mp && mp.bride ? mp.bride.venusStrength : null;
-  var groomVenus = mp && mp.groom ? mp.groom.venusStrength : null;
-
-  // Venus-Mars spark from magnetism factors
-  var mag = data.magnetism;
-  var sparkFactor = mag && mag.factors && mag.factors.find(function(fac) { return fac.nameEn === 'Venus-Mars Spark'; });
-  var sparkScore = sparkFactor ? sparkFactor.score : 0;
-  var sparkMax = sparkFactor ? sparkFactor.maxScore : 25;
-  var sparkDetails = sparkFactor && sparkFactor.details ? sparkFactor.details : [];
-
-  if (!brideYoni && !groomYoni && !sparkFactor) return null;
-
-  // Animal icon mapping
-  var YONI_META = {
-    Horse: { icon: 'flash', color: '#F97316', trait: T ? '\u0DC0\u0DDA\u0D9C\u0DC0\u0DAD\u0DCA \u0DC4\u0DCF \u0DC3\u0DCA\u0DC0\u0DAD\u0DB1\u0DCA\u0DAD\u0DCA\u0DBB' : 'Free-spirited & adventurous' },
-    Elephant: { icon: 'shield', color: '#A78BFA', trait: T ? '\u0DB6\u0DBD\u0DC0\u0DAD\u0DCA \u0DC4\u0DCF \u0DC3\u0DCA\u0DAD\u0DD2\u0DBB' : 'Powerful & protective' },
-    Goat: { icon: 'leaf', color: '#34D399', trait: T ? '\u0DB8\u0DD8\u0DAF\u0DD4 \u0DC4\u0DCF \u0DC3\u0DD0\u0DBD\u0D9A\u0DD2\u0DBD\u0DD2' : 'Tender & affectionate' },
-    Serpent: { icon: 'eye', color: '#C084FC', trait: T ? '\u0DAD\u0DD3\u0DC0\u0DCA\u200D\u0DBB \u0DC4\u0DCF \u0DBB\u0DC4\u0DC3\u0DCA\u0DB8\u0DBA' : 'Intense & magnetic' },
-    Dog: { icon: 'heart', color: '#FB923C', trait: T ? '\u0DB4\u0DCF\u0DBB\u0DCA\u0DC1\u0DCA\u0DC0\u0DD2\u0D9A \u0DC4\u0DCF \u0DC0\u0DD2\u0DC1\u0DCA\u0DC0\u0DCF\u0DC3\u0DBA' : 'Devoted & faithful' },
-    Cat: { icon: 'moon', color: '#F472B6', trait: T ? '\u0DC3\u0DD2\u0DBD\u0DD4\u0DB8\u0DD2\u0DB1\u0DD2 \u0DC4\u0DCF \u0DC3\u0DCA\u0DC0\u0DAD\u0DB1\u0DCA\u0DAD\u0DCA\u0DBB' : 'Sensual & independent' },
-    Rat: { icon: 'sparkles', color: '#FBBF24', trait: T ? '\u0DA0\u0DAD\u0DD4\u0DBB \u0DC4\u0DCF \u0D85\u0DB1\u0DD4\u0D9A\u0DD6\u0DBD' : 'Quick & adaptable' },
-    Cow: { icon: 'sunny', color: '#A3E635', trait: T ? '\u0DC3\u0DCF\u0DB8\u0DBA \u0DC4\u0DCF \u0DB4\u0DD2\u0DBB\u0DD2\u0DB1\u0DB8\u0DCA' : 'Warm & nurturing' },
-    Buffalo: { icon: 'barbell', color: '#64748B', trait: T ? '\u0DB6\u0DBD\u0DC0\u0DAD\u0DCA \u0DC4\u0DCF \u0D89\u0DC0\u0DC3\u0DD3\u0DB8' : 'Strong & enduring' },
-    Tiger: { icon: 'flame', color: '#EF4444', trait: T ? '\u0DAD\u0DD3\u0DC0\u0DCA\u200D\u0DBB \u0DC4\u0DCF \u0DB4\u0DCA\u200D\u0DBB\u0DB7\u0DCF\u0DC0\u0DC1\u0DCF\u0DBD\u0DD3' : 'Fierce & passionate' },
-    Deer: { icon: 'flower', color: '#22D3EE', trait: T ? '\u0DB8\u0DD8\u0DAF\u0DD4 \u0DC4\u0DCF \u0DBB\u0DD4\u0DC0\u0D9A\u0DCA' : 'Romantic & sensitive' },
-    Monkey: { icon: 'happy', color: '#FB923C', trait: T ? '\u0D9A\u0DCA\u200D\u0DBB\u0DD3\u0DA9\u0DCF\u0DC1\u0DD3\u0DBD\u0DD3 \u0DC4\u0DCF \u0DC3\u0DD0\u0DBD\u0D9A\u0DD2' : 'Playful & experimental' },
-    Mongoose: { icon: 'rocket', color: '#F59E0B', trait: T ? '\u0D89\u0DC4\u0DBD \u0DC0\u0DDA\u0D9C\u0DC0\u0DAD\u0DCA \u0DC4\u0DCF \u0DB1\u0DD2\u0DBB\u0DCA\u0DB7\u0DD3\u0DAD' : 'Bold & fearless' },
-    Lion: { icon: 'star', color: '#F97316', trait: T ? '\u0DB4\u0DCA\u200D\u0DBB\u0DB7\u0DCF\u0DC0\u0DC1\u0DCF\u0DBD\u0DD3 \u0DC4\u0DCF \u0D86\u0DAB\u0DCA\u0DA9\u0DD4\u0D9A\u0DBB' : 'Commanding & generous' },
-  };
-
-  var bm = YONI_META[brideYoni] || { icon: 'help-circle', color: '#FFB800', trait: '' };
-  var gm = YONI_META[groomYoni] || { icon: 'help-circle', color: '#FFB800', trait: '' };
-
-  // Yoni chemistry narrative
-  var yoniNarrative = yoniScore >= 3 
-    ? (T ? '\u0D91\u0D9A\u0DB8 \u0DBA\u0DDD\u0DB1\u0DD2 \u2014 \u0DC3\u0DCA\u0DC0\u0DCF\u0DB7\u0DCF\u0DC0\u0DD2\u0D9A \u0DC4\u0DCF \u0DAD\u0DD3\u0DC0\u0DCA\u200D\u0DBB' : 'Perfect match \u2014 effortlessly in sync')
-    : yoniScore >= 2
-    ? (T ? '\u0D9C\u0DD0\u0DBD\u0DB4\u0DDA\u0DB1 \u0DBA\u0DDD\u0DB1\u0DD2 \u2014 \u0DC3\u0DCA\u0DC0\u0DCF\u0DB7\u0DCF\u0DC0\u0DD2\u0D9A \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA' : 'Natural attraction \u2014 you just click')
-    : (T ? '\u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u0DBA\u0DDD\u0DB1\u0DD2 \u2014 \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA\u0DA7 \u0DB4\u0DCA\u200D\u0DBB\u0DBA\u0DAD\u0DCA\u0DB1\u0DBA \u0D85\u0DC0\u0DC1\u0DCA\u200D\u0DBA\u0DBA\u0DD2' : 'Electric tension \u2014 opposites that attract');
-
-  // Venus strength tier
-  var getVenusTier = function(score) {
-    if (!score && score !== 0) return null;
-    if (score >= 70) return { label: T ? '\u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD' : 'Radiant', color: '#F472B6', emoji: 'High' };
-    if (score >= 40) return { label: T ? '\u0DB8\u0DB0\u0DCA\u200D\u0DBA\u0DB8' : 'Warm', color: '#FFB800', emoji: 'Med' };
-    return { label: T ? '\u0DC3\u0DD4\u0DBD\u0DD4' : 'Reserved', color: '#93C5FD', emoji: 'Low' };
-  };
-
-  var bvt = getVenusTier(brideVenus);
-  var gvt = getVenusTier(groomVenus);
-
-  // Spark intensity
-  var sparkPct = sparkMax > 0 ? sparkScore / sparkMax : 0;
-  var sparkColor = sparkPct >= 0.7 ? '#EF4444' : sparkPct >= 0.4 ? '#FB923C' : '#FFB800';
-  var sparkLabel = sparkPct >= 0.7 ? (T ? '\u0DAD\u0DD3\u0DC0\u0DCA\u200D\u0DBB' : 'On Fire') : sparkPct >= 0.4 ? (T ? '\u0D8B\u0DC2\u0DCA\u0DAB' : 'Heating Up') : (T ? '\u0DB8\u0DD8\u0DAF\u0DD4' : 'Slow Burn');
-
-  return (
-    <Animated.View entering={FadeInUp.delay(850).duration(700)}>
-      <Glass style={sty.section}>
-        {/* Header with heat meter */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-          <View style={[sty.intimHeatBadge, { backgroundColor: sparkColor + '12', borderColor: sparkColor + '30' }]}>
-            <Ionicons name="flame" size={18} color={sparkColor} />
-          </View>
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={{ fontSize: 16, fontWeight: '900', color: '#fff' }}>{T ? '\u0D86\u0DAD\u0DCA\u0DB8\u0DD3\u0DBA \u0DBB\u0DC3\u0DC0\u0DD2\u0DAF\u0DCA\u200D\u0DBA\u0DCF\u0DC0' : 'Intimate Chemistry'}</Text>
-            <View style={sty.intimHeatBar}>
-              <View style={[sty.intimHeatFill, { width: (sparkPct * 100) + '%', backgroundColor: sparkColor }]} />
-            </View>
-          </View>
-          <View style={[sty.intimHeatLabel, { backgroundColor: sparkColor + '18', borderColor: sparkColor + '35' }]}>
-            <Text style={{ fontSize: 11, fontWeight: '900', color: sparkColor }}>{sparkLabel}</Text>
-          </View>
-        </View>
-
-        {/* Spirit Animals — the fun part */}
-        {brideYoni && groomYoni && (
-          <View style={sty.intimAnimalsSection}>
-            <View style={sty.intimAnimalCardNew}>
-              <LinearGradient colors={[bm.color + '12', 'transparent']} style={sty.intimAnimalGrad} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
-              <View style={[sty.intimAnimalBubble, { borderColor: bm.color + '50', backgroundColor: bm.color + '10' }]}>
-                <Ionicons name={bm.icon} size={22} color={bm.color} />
-              </View>
-              <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: 8 }}>{bName || (T ? '\u0D94\u0DB6' : 'Her')}</Text>
-              <Text style={[sty.intimAnimalLabel, { color: bm.color }]}>{brideYoni}</Text>
-              <Text style={sty.intimAnimalDesc}>{bm.trait}</Text>
-            </View>
-
-            <View style={sty.intimMatchCenter}>
-              <View style={[sty.intimMatchRing, { borderColor: yoniScore >= 2 ? '#34D399' + '60' : yoniScore >= 1 ? '#FFB800' + '60' : '#F87171' + '50' }]}>
-                <Ionicons name={yoniScore >= 2 ? 'heart' : yoniScore >= 1 ? 'heart-half' : 'heart-dislike'} size={16} color={yoniScore >= 2 ? '#34D399' : yoniScore >= 1 ? '#FFB800' : '#F87171'} />
-              </View>
-              <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 4, fontWeight: '700' }}>{yoniScore}/{yoniMax}</Text>
-            </View>
-
-            <View style={sty.intimAnimalCardNew}>
-              <LinearGradient colors={[gm.color + '12', 'transparent']} style={sty.intimAnimalGrad} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
-              <View style={[sty.intimAnimalBubble, { borderColor: gm.color + '50', backgroundColor: gm.color + '10' }]}>
-                <Ionicons name={gm.icon} size={22} color={gm.color} />
-              </View>
-              <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: 8 }}>{gName || (T ? '\u0D94\u0DC4\u0DD4' : 'Him')}</Text>
-              <Text style={[sty.intimAnimalLabel, { color: gm.color }]}>{groomYoni}</Text>
-              <Text style={sty.intimAnimalDesc}>{gm.trait}</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Narrative */}
-        {brideYoni && groomYoni && (
-          <View style={sty.intimNarrativeBox}>
-            <Ionicons name="sparkles" size={12} color="rgba(255,184,0,0.5)" />
-            <Text style={sty.intimNarrativeText}>{yoniNarrative}</Text>
-          </View>
-        )}
-
-        {/* Venus Desire Meters */}
-        {(bvt || gvt) && (
-          <View style={sty.intimDesireSection}>
-            <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: 10 }}>{T ? '\u0D86\u0DC3\u0DCF \u0DB4\u0DCA\u200D\u0DBB\u0D9A\u0DCF\u0DC1\u0DB1\u0DBA' : 'How You Express Desire'}</Text>
-            {bvt && (
-              <View style={sty.intimDesireRow}>
-                <Text style={sty.intimDesireName}>{bName || (T ? '\u0D94\u0DB6' : 'Her')}</Text>
-                <View style={sty.intimDesireTrack}>
-                  <LinearGradient colors={[bvt.color + '60', bvt.color]} style={[sty.intimDesireFill, { width: Math.max(brideVenus || 0, 8) + '%' }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-                </View>
-                <View style={[sty.intimDesireBadge, { backgroundColor: bvt.color + '15', borderColor: bvt.color + '30' }]}>
-                  <Text style={{ fontSize: 10, fontWeight: '900', color: bvt.color }}>{bvt.label}</Text>
-                </View>
-              </View>
-            )}
-            {gvt && (
-              <View style={sty.intimDesireRow}>
-                <Text style={sty.intimDesireName}>{gName || (T ? '\u0D94\u0DC4\u0DD4' : 'Him')}</Text>
-                <View style={sty.intimDesireTrack}>
-                  <LinearGradient colors={[gvt.color + '60', gvt.color]} style={[sty.intimDesireFill, { width: Math.max(groomVenus || 0, 8) + '%' }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-                </View>
-                <View style={[sty.intimDesireBadge, { backgroundColor: gvt.color + '15', borderColor: gvt.color + '30' }]}>
-                  <Text style={{ fontSize: 10, fontWeight: '900', color: gvt.color }}>{gvt.label}</Text>
-                </View>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Spark Triggers — what ignites them */}
-        {sparkDetails.length > 0 && (
-          <View style={sty.intimSparkSection}>
-            <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>{T ? '\u0D86\u0DC0\u0DDA\u0D9C \u0DC3\u0D82\u0D9A\u0DDA\u0DAD' : 'What Ignites You'}</Text>
-            {sparkDetails.slice(0, 3).map(function(d, i) {
-              return (
-                <View key={i} style={sty.intimSparkItem}>
-                  <View style={sty.intimSparkIcon}>
-                    <Ionicons name={i === 0 ? 'flame' : i === 1 ? 'heart' : 'flash'} size={12} color={i === 0 ? '#EF4444' : i === 1 ? '#F472B6' : '#FFB800'} />
+    <SectionShell
+      index={index} delay={delay} title={T.curioTitle} sub={T.curioSub}
+      right={(
+        <TouchableOpacity
+          onPress={function () { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setOpen(!open); }}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} activeOpacity={0.7}
+        >
+          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.45)" />
+        </TouchableOpacity>
+      )}
+    >
+      {!open ? (
+        <TouchableOpacity
+          onPress={function () { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setOpen(true); }}
+          activeOpacity={0.7} style={{ paddingVertical: 2 }}
+        >
+          <Text style={{ fontSize: 12.5, color: 'rgba(255,241,208,0.45)', lineHeight: 18 }}>
+            {si ? 'හදවතේ ආශාවන් සහ පෙර භව සංකේත බලන්න…' : 'Open the heart-wish and past-life symbols…'}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <View>
+          {hasDrives ? (
+            <View>
+              <Text style={cd.curioBlockTitle}>{si ? 'හදවතින්ම ඕනෑ දේ' : 'What each of you deeply wants'}</Text>
+              {[{ key: bKey, name: bName || T.bride }, { key: gKey, name: gName || T.groom }].map(function (p, i) {
+                var drive = PLANET_DRIVE[p.key] || { icon: 'star', color: '#FFB800', en: p.key, si: p.key };
+                return (
+                  <View key={'sd' + i} style={sty.soulRow}>
+                    <View style={[sty.soulIcon, { backgroundColor: drive.color + '15', borderColor: drive.color + '35' }]}>
+                      <Ionicons name={drive.icon} size={18} color={drive.color} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={sty.soulWho}>{p.name}</Text>
+                      <Text style={sty.soulDrive}>{si ? drive.si : drive.en}</Text>
+                    </View>
+                    <Text style={[sty.soulPlanet, { color: drive.color }]}>{planetLabel(p.key, si)}</Text>
                   </View>
-                  <Text style={sty.intimSparkItemText}>{T ? (d.si || d.en) : d.en}</Text>
+                );
+              })}
+            </View>
+          ) : null}
+
+          {hasPast && ba && ga ? (
+            <View>
+              <Text style={cd.curioBlockTitle}>{si ? 'පෙර භව දෝංකාර' : 'Past-life echoes'}</Text>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={sty.pastCard}>
+                  <View style={[sty.pastIcon, { backgroundColor: ba.color + '15', borderColor: ba.color + '35' }]}>
+                    <Ionicons name={ba.icon} size={20} color={ba.color} />
+                  </View>
+                  <Text style={sty.pastWho}>{bName || T.bride}</Text>
+                  <Text style={[sty.pastArch, { color: ba.color }]}>{si ? ba.si : ba.en}</Text>
                 </View>
-              );
-            })}
+                <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="infinite" size={20} color="rgba(192,132,252,0.55)" />
+                </View>
+                <View style={sty.pastCard}>
+                  <View style={[sty.pastIcon, { backgroundColor: ga.color + '15', borderColor: ga.color + '35' }]}>
+                    <Ionicons name={ga.icon} size={20} color={ga.color} />
+                  </View>
+                  <Text style={sty.pastWho}>{gName || T.groom}</Text>
+                  <Text style={[sty.pastArch, { color: ga.color }]}>{si ? ga.si : ga.en}</Text>
+                </View>
+              </View>
+              <Text style={sty.pastNarrative}>
+                {si
+                  ? ba.si + ' කෙනෙක් සහ ' + ga.si + ' කෙනෙක් — කලින් හඳුනනවා වගේ දැනෙන බැඳීමක්.'
+                  : 'A ' + ba.en.toLowerCase() + ' and a ' + ga.en.toLowerCase() + ' — a bond that feels like you already know each other.'}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      )}
+    </SectionShell>
+  );
+}
+
+// ── THE WRITTEN READING — a chaptered reader, not a wall of text ──
+function splitReportSections(md) {
+  if (!md || typeof md !== 'string') return null;
+  var lines = md.replace(/\r\n/g, '\n').split('\n');
+  var intro = [];
+  var sections = [];
+  var current = null;
+  for (var i = 0; i < lines.length; i++) {
+    var m = lines[i].match(/^#{1,2}\s+(.+?)\s*$/);
+    if (m) {
+      if (current) sections.push(current);
+      current = { title: m[1].trim(), body: [] };
+    } else if (current) {
+      current.body.push(lines[i]);
+    } else {
+      intro.push(lines[i]);
+    }
+  }
+  if (current) sections.push(current);
+  if (sections.length < 2) return null;
+
+  // Pull a leading emoji/symbol cluster off the title to use as the chapter
+  // glyph. Avoids surrogate-pair regex: take everything before the first
+  // letter/digit, and only treat it as a glyph if it holds a symbol-range char.
+  function splitGlyph(title) {
+    var m = title.match(/^([^A-Za-z0-9඀-෿ऀ-ॿ]+)(.+)$/);
+    if (!m) return { glyph: null, title: title };
+    var lead = m[1].trim();
+    var rest = m[2].trim();
+    var hasSymbol = false;
+    for (var c = 0; c < lead.length; c++) {
+      if (lead.charCodeAt(c) >= 0x2190) { hasSymbol = true; break; }
+    }
+    if (!hasSymbol || !rest) return { glyph: null, title: title };
+    return { glyph: lead, title: rest };
+  }
+
+  var parsed = sections.map(function (s) {
+    var g = splitGlyph(s.title);
+    return {
+      glyph: g.glyph,
+      title: g.title,
+      body: s.body.join('\n').trim(),
+    };
+  }).filter(function (s) { return s.body.length > 0 || s.title.length > 0; });
+
+  return { intro: intro.join('\n').trim(), sections: parsed };
+}
+
+function ReportReader({ report, reportLoading, language, T, brideName, groomName, onRetry }) {
+  var si = language === 'si';
+  var [openMap, setOpenMap] = useState({ 0: true });
+
+  var names = [brideName, groomName].filter(Boolean).join(si ? ' සහ ' : ' & ');
+
+  var isNotice = report === T.reportBusy || report === T.reportFailed;
+
+  var body = null;
+  if (reportLoading) {
+    body = (
+      <View style={sty.reportLoadRow}>
+        <CosmicLoader size={24} color="#FF8C00" />
+        <Text style={sty.reportLoadText}>{T.generating}</Text>
+      </View>
+    );
+  } else if (isNotice) {
+    body = (
+      <View>
+        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+          <Ionicons name="time-outline" size={16} color="#E8C97A" style={{ marginTop: 2 }} />
+          <Text style={{ flex: 1, fontSize: 13, lineHeight: 20, color: 'rgba(255,241,208,0.72)' }}>{report}</Text>
+        </View>
+        {onRetry ? (
+          <TouchableOpacity style={cd.retryBtn} onPress={onRetry} activeOpacity={0.85}>
+            <Ionicons name="refresh" size={14} color="#1A0F24" />
+            <Text style={cd.retryBtnText}>{T.retryReport}</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
+  } else if (!report) {
+    body = (
+      <View>
+        <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12.5, fontStyle: 'italic' }}>
+          {si ? 'ලිඛිත වාර්තාව මේ වෙලාවේ නැහැ — පහත බොත්තමෙන් නොමිලේ ලියාගන්න පුළුවන්.' : 'The written report isn’t here right now — you can have it written below, free.'}
+        </Text>
+        {onRetry ? (
+          <TouchableOpacity style={cd.retryBtn} onPress={onRetry} activeOpacity={0.85}>
+            <Ionicons name="refresh" size={14} color="#1A0F24" />
+            <Text style={cd.retryBtnText}>{T.retryReport}</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
+  } else {
+    var parsed = splitReportSections(report);
+    var words = String(report).trim().split(/\s+/).length;
+    var mins = Math.max(1, Math.round(words / 170));
+    var cover = (
+      <View style={cd.readerCover}>
+        <LinearGradient
+          colors={['rgba(232,201,122,0.10)', 'rgba(12,6,18,0.0)']}
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+          start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+        />
+        <Text style={cd.readerKicker}>{T.report}</Text>
+        {names ? <Text style={cd.readerNames}>{names}</Text> : null}
+        <View style={cd.readerMeta}>
+          {parsed ? (
+            <View style={cd.readerMetaChip}>
+              <Ionicons name="book-outline" size={12} color="rgba(232,201,122,0.8)" />
+              <Text style={cd.readerMetaText}>{parsed.sections.length} {T.readerChapters}</Text>
+            </View>
+          ) : null}
+          <View style={cd.readerMetaChip}>
+            <Ionicons name="time-outline" size={12} color="rgba(232,201,122,0.8)" />
+            <Text style={cd.readerMetaText}>~{mins} {T.readerMin}</Text>
           </View>
-        )}
-      </Glass>
+        </View>
+        <Text style={cd.readerHint}>{T.readerSub}</Text>
+      </View>
+    );
+
+    if (!parsed) {
+      body = (
+        <View>
+          {cover}
+          <MarkdownText variant="readable">{report}</MarkdownText>
+        </View>
+      );
+    } else {
+      body = (
+        <View>
+          {cover}
+          {parsed.intro ? (
+            <View style={{ marginBottom: 12, paddingHorizontal: 2 }}>
+              <MarkdownText variant="readable">{parsed.intro}</MarkdownText>
+            </View>
+          ) : null}
+          {parsed.sections.map(function (s, i) {
+            var isOpen = !!openMap[i];
+            return (
+              <View key={'ch' + i} style={cd.chapter}>
+                <TouchableOpacity
+                  style={cd.chapterHead}
+                  activeOpacity={0.7}
+                  onPress={function () {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setOpenMap(function (prev) {
+                      var next = { ...prev };
+                      next[i] = !prev[i];
+                      return next;
+                    });
+                  }}
+                >
+                  <View style={cd.chapterGlyph}>
+                    {s.glyph
+                      ? <Text style={cd.chapterGlyphText}>{s.glyph}</Text>
+                      : <Ionicons name="bookmark-outline" size={15} color="rgba(232,201,122,0.8)" />}
+                  </View>
+                  <Text style={cd.chapterTitle}>{s.title}</Text>
+                  <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={16} color="rgba(255,255,255,0.35)" />
+                </TouchableOpacity>
+                {isOpen ? (
+                  <View style={cd.chapterBody}>
+                    <MarkdownText variant="readable">{s.body}</MarkdownText>
+                  </View>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
+      );
+    }
+  }
+
+  return (
+    <Animated.View entering={FadeInUp.delay(120).duration(600)}>
+      <View style={ns.shell}>
+        <LinearGradient
+          colors={['rgba(20,12,28,0.55)', 'rgba(10,6,16,0.50)']}
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        />
+        {body}
+      </View>
     </Animated.View>
   );
 }
 
-function StrengthsCard({ data, language, bName, gName }) {
-  var strengths = [];
-  // Collect good factors
-  if (data.factors) {
-    data.factors.forEach(function(fac) {
-      var pct = fac.maxScore > 0 ? fac.score / fac.maxScore : 0;
-      if (pct >= 0.75) {
-        var copy = getCompatibilityFactorCopy(fac.name, language, fac.score, fac.maxScore);
-        strengths.push({ icon: 'checkmark-circle', color: '#34D399', text: copy.plainName + ' \u2014 ' + copy.insight });
-      }
-    });
-  }
-  // Yoga highlights
-  var brideYogas = data.brideAdvanced?.tier1?.advancedYogas?.items || [];
-  var groomYogas = data.groomAdvanced?.tier1?.advancedYogas?.items || [];
-  var topYogas = brideYogas.concat(groomYogas).filter(function(y) { return y.strength === 'Very Strong' || y.strength === 'Strong'; }).slice(0, 3);
-  var seenLabels = strengths.map(function(s) { return s.text; });
-  topYogas.forEach(function(y) {
-    var yCopy = getRelationshipStrengthCopy(y, language);
-    if (seenLabels.indexOf(yCopy.label) === -1) {
-      seenLabels.push(yCopy.label);
-      strengths.push({ icon: 'flash', color: '#FFB800', text: yCopy.label + (yCopy.meta ? ' \u2014 ' + yCopy.meta : '') });
-    }
-  });
-  // Good dasha harmony
-  if (data.advancedPorondam?.advanced?.dashaCompatibility?.harmony === 'harmonious') {
-    strengths.push({ icon: 'time', color: '#60a5fa', text: language === 'si' ? '\u0DAF\u0DD9\u0DAF\u0DD9\u0DB1\u0DCF\u0D9C\u0DDA\u0DB8 \u0DA2\u0DD3\u0DC0\u0DD2\u0DAD \u0D85\u0DAF\u0DD2\u0DBA\u0DBB \u0D9C\u0DD0\u0DBD\u0DB4\u0DDA' : 'Both in supportive life phases right now' });
-  }
-  // Strong navamsha
-  if (data.advancedPorondam?.advanced?.navamshaCompatibility?.score >= 5) {
-    strengths.push({ icon: 'heart', color: '#f9a8d4', text: language === 'si' ? '\u0D9C\u0DD0\u0DB9\u0DD4\u0DBB\u0DD4 \u0DC3\u0DB6\u0DB3\u0DAD\u0DCF \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8 \u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD' : 'Deep emotional bond is naturally strong' });
-  }
-  // Good magnetism
-  if (data.magnetism && data.magnetism.score >= 7) {
-    strengths.push({ icon: 'magnet', color: '#a78bfa', text: language === 'si' ? '\u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD' : 'Strong natural attraction between you' });
-  }
-  // Marriage planet strength
-  if (data.advancedPorondam?.advanced?.marriagePlanetStrength?.score >= 3) {
-    strengths.push({ icon: 'shield-checkmark', color: '#34d399', text: language === 'si' ? '\u0DC3\u0DB6\u0DB3\u0DAD\u0DCF \u0DC3\u0DC4\u0DCF\u0DBA \u0D9C\u0DCA\u200D\u0DBB\u0DC4 \u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD' : 'Planets strongly support this relationship' });
-  }
-
-  if (strengths.length === 0) return null;
+// ── METHOD + GUIDANCE FOOTER — the quiet trust anchor ────────────
+function MethodFooter({ T }) {
   return (
-    <Animated.View entering={FadeInUp.delay(850).duration(700)}>
-      <Glass style={sty.section}>
-        <View style={sty.secHeader}>
-          <View>
-            <Text style={sty.secTitle}><Ionicons name="sunny" size={16} color="#34D399" /> {language === 'si' ? '\u0D94\u0DB6\u0D9C\u0DDA \u0DC1\u0D9A\u0DCA\u0DAD\u0DD2' : 'Your Strengths'}</Text>
-            <Text style={sty.secSub}>{language === 'si' ? '\u0DB8\u0DDA \u0DC3\u0DB6\u0DB3\u0DAD\u0DCF\u0DC0\u0DDA \u0DC4\u0DDC\u0DB3\u0DB8 \u0D9A\u0DDC\u0DA7\u0DC3\u0DCA' : 'The best parts of your connection'}</Text>
-          </View>
+    <Animated.View entering={FadeInUp.delay(160).duration(600)}>
+      <View style={cd.methodWrap}>
+        <LinearGradient
+          colors={['rgba(16,10,22,0.50)', 'rgba(8,5,14,0.45)']}
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        />
+        <View style={cd.methodHead}>
+          <Ionicons name="planet-outline" size={15} color="rgba(232,201,122,0.8)" />
+          <Text style={cd.methodTitle}>{T.methodTitle}</Text>
         </View>
-        {strengths.slice(0, 6).map(function(s, i) {
-          return (
-            <View key={i} style={{ flexDirection: 'row', gap: 12, marginBottom: 14, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12, backgroundColor: 'rgba(52,211,153,0.03)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.06)' }}>
-              <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: s.color + '12', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: s.color + '25' }}>
-                <Ionicons name={s.icon} size={15} color={s.color} />
-              </View>
-              <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, flex: 1, lineHeight: 20, alignSelf: 'center', fontWeight: '500' }}>{s.text}</Text>
-            </View>
-          );
-        })}
-      </Glass>
-    </Animated.View>
-  );
-}
-
-// ======= CHALLENGES SUMMARY CARD =======
-function ChallengesCard({ data, language, bName, gName }) {
-  var challenges = [];
-  // Collect poor factors
-  if (data.factors) {
-    data.factors.forEach(function(fac) {
-      var pct = fac.maxScore > 0 ? fac.score / fac.maxScore : 0;
-      if (pct < 0.25) {
-        var copy = getCompatibilityFactorCopy(fac.name, language, fac.score, fac.maxScore);
-        challenges.push({ icon: 'alert-circle', color: '#F87171', text: copy.plainName + ' \u2014 ' + copy.insight });
-      }
-    });
-  }
-  // Doshas
-  if (data.doshas && data.doshas.length > 0) {
-    data.doshas.forEach(function(d) {
-      var challengeCopy = getRelationshipChallengeCopy(d, language);
-      challenges.push({ icon: 'warning', color: '#f59e0b', text: challengeCopy.label + (challengeCopy.desc ? ' \u2014 ' + challengeCopy.desc : '') });
-    });
-  }
-  // Mangala dosha (if severe/moderate)
-  if (data.advancedPorondam?.advanced?.mangalaDosha?.severity === 'severe' || data.advancedPorondam?.advanced?.mangalaDosha?.severity === 'moderate') {
-    var cancelled = data.advancedPorondam.advanced.mangalaDosha.bride?.cancelled && data.advancedPorondam.advanced.mangalaDosha.groom?.cancelled;
-    if (!cancelled) {
-      challenges.push({
-        icon: 'flame',
-        color: '#f87171',
-        text: language === 'si' ? '\u0D9C\u0DD0\u0DA7\u0DD4\u0DB8\u0DCA \u0DC3\u0DD0\u0DBD\u0D9A\u0DD2\u0DBD\u0DCA\u0DBD \u0D9A\u0DBB\u0DD4\u0DAB\u0DD4 \u2014 \u0D89\u0DC0\u0DC3\u0DD3\u0DB8 \u0DC4\u0DCF \u0DC3\u0DB1\u0DCA\u0DB1\u0DD2\u0DC0\u0DDA\u0DAF\u0DB1\u0DBA \u0DC0\u0DD0\u0DAF\u0D9C\u0DAD\u0DCA' : 'Conflict care point present \u2014 patience and communication are essential',
-      });
-    }
-  }
-  // Conflicting dasha
-  if (data.advancedPorondam?.advanced?.dashaCompatibility?.harmony === 'conflicting') {
-    challenges.push({
-      icon: 'time',
-      color: '#f59e0b',
-      text: language === 'si' ? '\u0DA2\u0DD3\u0DC0\u0DD2\u0DAD \u0D85\u0DAF\u0DD2\u0DBA\u0DBB \u0DC0\u0DD9\u0DB1\u0DC3\u0DCA \u2014 \u0DAD\u0DD0\u0DB1\u0DCA \u0D9A\u0DCF\u0DBD\u0DBA \u0D9A\u0DCA\u200D\u0DBB\u0DB8\u0DBA\u0DD9\u0DB1\u0DCA \u0DC3\u0DD4\u0D9C\u0DB8 \u0DC0\u0DDA' : 'Different life phases right now \u2014 timing will improve gradually',
-    });
-  }
-
-  if (challenges.length === 0) return null;
-  return (
-    <Animated.View entering={FadeInUp.delay(900).duration(700)}>
-      <Glass style={sty.section}>
-        <View style={sty.secHeader}>
-          <View>
-            <Text style={sty.secTitle}><Ionicons name="eye" size={16} color="#f59e0b" /> {language === 'si' ? '\u0DC3\u0DD0\u0DBD\u0D9A\u0DD2\u0DBD\u0DCA\u0DBD \u0DC0\u0DD3\u0DB8' : 'Watch Out For'}</Text>
-            <Text style={sty.secSub}>{language === 'si' ? '\u0DB8\u0DDA\u0DC0\u0DCF\u0DA7 \u0DC3\u0DD0\u0DBD\u0D9A\u0DD2\u0DBD\u0DCA\u0DBD \u0DC0\u0DD3\u0DB8 \u0DC4\u0DDC\u0DB3\u0DBA\u0DD2' : 'Areas that need a little more care'}</Text>
-          </View>
+        <Text style={cd.methodBody}>{T.methodBody}</Text>
+        <View style={cd.guidancePanel}>
+          <Ionicons name="people-outline" size={16} color="rgba(232,201,122,0.75)" style={{ marginTop: 1 }} />
+          <Text style={cd.guidanceText}>{T.guidanceNote}</Text>
         </View>
-        {challenges.slice(0, 6).map(function(c, i) {
-          return (
-            <View key={i} style={{ flexDirection: 'row', gap: 12, marginBottom: 14, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12, backgroundColor: 'rgba(248,113,113,0.02)', borderWidth: 1, borderColor: 'rgba(248,113,113,0.06)' }}>
-              <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: c.color + '12', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: c.color + '25' }}>
-                <Ionicons name={c.icon} size={15} color={c.color} />
-              </View>
-              <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, flex: 1, lineHeight: 20, alignSelf: 'center', fontWeight: '500' }}>{c.text}</Text>
-            </View>
-          );
-        })}
-      </Glass>
+      </View>
     </Animated.View>
   );
 }
@@ -2150,10 +2432,14 @@ function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTim
   var nameError = errors && errors[nameField];
   var dateError = errors && errors[dateField];
   var cityError = errors && errors[cityField];
+  var accent = fieldPrefix === 'bride' ? '#F9A8D4' : '#93C5FD';
   return (
     <Glass style={sty.personCard}>
-      <Text style={sty.personLabel}>{label}</Text>
-      <Text style={sty.fieldTag}>{lang === 'si' ? 'à¶±à¶¸ *' : 'Name *'}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: accent, ...boxShadow(accent, { width: 0, height: 0 }, 0.9, 6) }} />
+        <Text style={[sty.personLabel, { marginBottom: 0 }]}>{label}</Text>
+      </View>
+      <Text style={sty.fieldTag}>{lang === 'si' ? 'නම *' : 'Name *'}</Text>
       <TextInput
         style={[sty.nameInput, nameError ? sty.inputError : {}, { marginBottom: nameError ? 6 : 12 }]}
         value={name}
@@ -2183,6 +2469,110 @@ function PersonCard({ label, name, setName, dateStr, setDateStr, timeStr, setTim
     </Glass>
   );
 }
+
+// Locked-vault labels for the couple tease (what "See our full match" reveals).
+var TEASE_VAULT_LABELS = {
+  en: {
+    score: 'Your 20-point match score', allPorondam: 'All 7 porondam, explained',
+    magnetism: 'Attraction & chemistry', weddingWindows: 'Best wedding dates',
+    bothCharts: 'Both birth charts', aiReport: 'Full written report', pdf: 'Shareable PDF for family',
+  },
+  si: {
+    score: 'ලකුණු 20න් ඔබේ ගැලපීම', allPorondam: 'පොරොන්දම් 7ම, පැහැදිලිව',
+    magnetism: 'ආකර්ෂණය සහ රසායනය', weddingWindows: 'විවාහයට හොඳම දින',
+    bothCharts: 'දෙදෙනාගේම කේන්දර', aiReport: 'සම්පූර්ණ ලිඛිත වාර්තාව', pdf: 'පවුලට බෙදාගත හැකි PDF',
+  },
+};
+
+// The warm couple tease shown BEFORE the paywall: the archetype (verdict-
+// shaped hook), one real gift, and named locked vaults — never the score.
+function PorondamTeaseOverlay({ tease, language, onClose, onProceed }) {
+  var si = language === 'si';
+  var slice = (si ? tease.si : tease.en) || tease.en || {};
+  var arc = slice.archetype || {};
+  var counts = slice.counts || {};
+  var vaultLabels = si ? TEASE_VAULT_LABELS.si : TEASE_VAULT_LABELS.en;
+  var vaults = (tease.lockedVaults || []).map(function (k) { return vaultLabels[k] || k; });
+
+  return (
+    <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={teaseSt.overlay}>
+      <LinearGradient colors={['#1A0A1E', '#120818', '#08040F']} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
+      <ScrollView contentContainerStyle={teaseSt.scroll} showsVerticalScrollIndicator={false}>
+        <TouchableOpacity onPress={onClose} style={teaseSt.close} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Ionicons name="close" size={22} color="rgba(255,255,255,0.7)" />
+        </TouchableOpacity>
+
+        <Text style={teaseSt.eyebrow}>{si ? 'ඔබ දෙදෙනා' : 'YOU TWO ARE'}</Text>
+        <Animated.Text entering={ZoomIn.delay(120).springify()} style={teaseSt.archetype}>{arc.name}</Animated.Text>
+        {arc.bandLabel ? (
+          <View style={teaseSt.bandPill}><Text style={teaseSt.bandText}>{arc.bandLabel}</Text></View>
+        ) : null}
+        {arc.essence ? <Text style={teaseSt.essence}>{arc.essence}</Text> : null}
+
+        {slice.topGift ? (
+          <View style={teaseSt.giftCard}>
+            <Ionicons name="sparkles" size={15} color="#F9D77E" />
+            <View style={{ flex: 1 }}>
+              <Text style={teaseSt.giftArea}>{slice.topGift.area}</Text>
+              <Text style={teaseSt.giftText}>{slice.topGift.text}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {(counts.gifts > 0 || counts.growthEdges > 0) ? (
+          <Text style={teaseSt.countLine}>
+            {si
+              ? ('තව ශක්ති ' + (counts.gifts || 0) + 'ක් සහ බලාගත යුතු තැන් ' + (counts.growthEdges || 0) + 'ක් හමු විය 🔒')
+              : (counts.gifts + ' strengths and ' + counts.growthEdges + ' growth areas found 🔒')}
+          </Text>
+        ) : null}
+
+        <View style={teaseSt.vaultBox}>
+          <Text style={teaseSt.vaultHead}>{si ? 'විවෘත වන දේ' : 'UNLOCK TO SEE'}</Text>
+          {vaults.map(function (label, i) {
+            return (
+              <View key={i} style={teaseSt.vaultRow}>
+                <Ionicons name="lock-closed" size={12} color="rgba(244,114,182,0.75)" />
+                <Text style={teaseSt.vaultText}>{label}</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        <TouchableOpacity activeOpacity={0.88} onPress={onProceed} style={teaseSt.cta}>
+          <LinearGradient colors={['#F472B6', '#EC4899', '#DB2777']} style={teaseSt.ctaGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+            <Text style={teaseSt.ctaText}>{si ? 'අපේ සම්පූර්ණ ගැලපීම බලන්න' : 'See our full match'}</Text>
+            <Ionicons name="arrow-forward" size={16} color="#fff" />
+          </LinearGradient>
+        </TouchableOpacity>
+        <Text style={teaseSt.reassure}>{si ? 'ලකුණු, දින සහ වාර්තාව ඊළඟට' : 'Score, dates & full report next'}</Text>
+      </ScrollView>
+    </Animated.View>
+  );
+}
+
+var teaseSt = StyleSheet.create({
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 },
+  scroll: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 26, paddingVertical: 60 },
+  close: { position: 'absolute', top: 46, right: 22, width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)' },
+  eyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 2, color: 'rgba(244,114,182,0.85)', marginBottom: 8 },
+  archetype: { fontSize: 30, fontWeight: '900', color: '#FFF1F8', textAlign: 'center', lineHeight: 36 },
+  bandPill: { marginTop: 12, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 12, backgroundColor: 'rgba(244,114,182,0.14)', borderWidth: 1, borderColor: 'rgba(244,114,182,0.35)' },
+  bandText: { fontSize: 12, fontWeight: '800', color: '#F9A8D4', letterSpacing: 0.4 },
+  essence: { fontSize: 14.5, color: 'rgba(255,255,255,0.78)', textAlign: 'center', lineHeight: 21, marginTop: 14, paddingHorizontal: 6 },
+  giftCard: { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 20, padding: 14, borderRadius: 14, backgroundColor: 'rgba(249,215,126,0.08)', borderWidth: 1, borderColor: 'rgba(249,215,126,0.22)', alignSelf: 'stretch' },
+  giftArea: { fontSize: 11, fontWeight: '800', color: '#F9D77E', letterSpacing: 0.4, marginBottom: 2 },
+  giftText: { fontSize: 13, color: 'rgba(255,255,255,0.82)', lineHeight: 18 },
+  countLine: { fontSize: 12.5, fontWeight: '700', color: 'rgba(255,255,255,0.6)', marginTop: 16, textAlign: 'center' },
+  vaultBox: { alignSelf: 'stretch', marginTop: 20, padding: 16, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.035)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  vaultHead: { fontSize: 10, fontWeight: '900', letterSpacing: 1.6, color: 'rgba(244,114,182,0.7)', marginBottom: 10 },
+  vaultRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 5 },
+  vaultText: { fontSize: 13, color: 'rgba(255,255,255,0.74)', fontWeight: '600' },
+  cta: { alignSelf: 'stretch', marginTop: 24, borderRadius: 15, overflow: 'hidden' },
+  ctaGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, paddingVertical: 15 },
+  ctaText: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: 0.3 },
+  reassure: { fontSize: 11.5, color: 'rgba(255,255,255,0.45)', marginTop: 12 },
+});
 
 // ======= MAIN SCREEN =======
 export default function PorondamScreen() {
@@ -2218,11 +2608,41 @@ export default function PorondamScreen() {
   var [porondamId, setPorondamId] = useState(null);
   var [savedChecks, setSavedChecks] = useState([]);
   var [showHistory, setShowHistory] = useState(false);
-  var [chartsExpanded, setChartsExpanded] = useState(false);
+  var [chartsExpanded, setChartsExpanded] = useState(true);
+  var [vibeBusy, setVibeBusy] = useState(false);
 
   // User's own lagna for compatibility section
   var [myLagnaId, setMyLagnaId] = useState(null);
   var [myLagnaName, setMyLagnaName] = useState('');
+
+  // Free couple tease shown before the paywall (archetype + 1 gift + counts).
+  var [teaseData, setTeaseData] = useState(null);
+  var teaseResolverRef = useRef(null);
+
+  // Fetch the tease and open the modal. Resolves true when the user taps
+  // "See our full match" (→ paywall), false if they dismiss. On any preview
+  // failure it resolves true so the normal paid flow is never blocked.
+  var showPorondamTease = useCallback(function(brideData, groomData) {
+    return api.getPorondamPreview(brideData, groomData)
+      .then(function(prev) {
+        if (!prev || !prev.success || !prev.data) return true;
+        return new Promise(function(resolve) {
+          teaseResolverRef.current = resolve;
+          setTeaseData(prev.data);
+        });
+      })
+      .catch(function(e) {
+        if (__DEV__) console.warn('[Porondam] Tease preview failed (non-critical):', e && e.message);
+        return true;
+      });
+  }, []);
+
+  var resolveTease = useCallback(function(proceed) {
+    setTeaseData(null);
+    var r = teaseResolverRef.current;
+    teaseResolverRef.current = null;
+    if (r) r(proceed);
+  }, []);
 
   useEffect(function() {
     if (!user || !user.birthData || !user.birthData.dateTime) return;
@@ -2238,7 +2658,7 @@ export default function PorondamScreen() {
     })();
   }, [user, language]);
 
-  // â”€â”€ Load saved porondam: server-first, AsyncStorage fallback â”€â”€
+  // ── Load saved porondam: server-first, AsyncStorage fallback ──
   useEffect(function() {
     (async function() {
       // Try server first
@@ -2257,7 +2677,7 @@ export default function PorondamScreen() {
                 groomDate: r.groom?.birthDate || '',
                 groomTime: '',
                 groomCity: null,
-                reportLang: r.reportLanguage || 'en',
+                reportLang: r.reportLanguage || null,
                 percentage: r.percentage || 0,
                 score: r.score || 0,
                 maxScore: r.maxScore || 20,
@@ -2352,7 +2772,9 @@ export default function PorondamScreen() {
           setGDate(d.groom?.birthDate || entry.groomDate || '1998-06-20');
           setGTime(entry.groomTime || '10:00');
           setGCity(entry.groomCity || null);
-          setReportLang(d.reportLanguage || entry.reportLang || 'en');
+          // A failed-report record stores no language — fall back to the APP
+          // language, never English, so a free retry writes the right one.
+          setReportLang(d.reportLanguage || entry.reportLang || language || 'en');
           setData(d);
           setReport(d.report || null);
           setPorondamId(d.id || entry.id);
@@ -2368,7 +2790,7 @@ export default function PorondamScreen() {
         setLoadingCheck(false);
       }
     } else {
-      // Local cached â€” load directly
+      // Local cached — load directly
       setBName(entry.brideName || 'Bride');
       setGName(entry.groomName || 'Groom');
       setBDate(entry.brideDate || '1998-01-15');
@@ -2377,7 +2799,7 @@ export default function PorondamScreen() {
       setGDate(entry.groomDate || '1998-06-20');
       setGTime(entry.groomTime || '10:00');
       setGCity(entry.groomCity || null);
-      setReportLang(entry.reportLang || 'en');
+      setReportLang(entry.reportLang || language || 'en');
       setData(entry.data);
       setReport(entry.report || null);
       setPorondamId(entry.porondamId || null);
@@ -2385,7 +2807,7 @@ export default function PorondamScreen() {
       setShowHistory(false);
       setError(null);
     }
-  }, []);
+  }, [language]);
 
   // Sync report language when app language changes (only when no data yet)
   useEffect(function() {
@@ -2410,22 +2832,22 @@ export default function PorondamScreen() {
     var brideName = String(bName || '').trim();
     var groomName = String(gName || '').trim();
     if (brideName.length < 2) {
-      nextErrors.brideName = language === 'si' ? 'à¶¸à¶±à·à¶½à·’à¶ºà¶œà·š à¶±à¶¸ à¶…à¶šà·”à¶»à·” 2à¶šà¶§ à·€à¶©à· à¶‡à¶­à·”à·…à¶­à·Š à¶šà¶»à¶±à·Šà¶±.' : 'Enter the bride name, at least 2 characters.';
+      nextErrors.brideName = language === 'si' ? 'මනාලියගේ නම අකුරු 2කට වඩා ඇතුළත් කරන්න.' : 'Enter the bride name, at least 2 characters.';
     }
     if (groomName.length < 2) {
-      nextErrors.groomName = language === 'si' ? 'à¶¸à¶±à·à¶½à¶ºà·à¶œà·š à¶±à¶¸ à¶…à¶šà·”à¶»à·” 2à¶šà¶§ à·€à¶©à· à¶‡à¶­à·”à·…à¶­à·Š à¶šà¶»à¶±à·Šà¶±.' : 'Enter the groom name, at least 2 characters.';
+      nextErrors.groomName = language === 'si' ? 'මනාලයාගේ නම අකුරු 2කට වඩා ඇතුළත් කරන්න.' : 'Enter the groom name, at least 2 characters.';
     }
     if (!bDate) {
-      nextErrors.brideDate = language === 'si' ? 'à¶¸à¶±à·à¶½à·’à¶ºà¶œà·š à¶‹à¶´à¶±à·Š à¶¯à·’à¶±à¶º à¶­à·à¶»à¶±à·Šà¶±.' : 'Select the bride birth date.';
+      nextErrors.brideDate = language === 'si' ? 'මනාලියගේ උපන් දිනය තෝරන්න.' : 'Select the bride birth date.';
     }
     if (!gDate) {
-      nextErrors.groomDate = language === 'si' ? 'à¶¸à¶±à·à¶½à¶ºà·à¶œà·š à¶‹à¶´à¶±à·Š à¶¯à·’à¶±à¶º à¶­à·à¶»à¶±à·Šà¶±.' : 'Select the groom birth date.';
+      nextErrors.groomDate = language === 'si' ? 'මනාලයාගේ උපන් දිනය තෝරන්න.' : 'Select the groom birth date.';
     }
     if (!bCity || bCity.lat === null || bCity.lat === undefined || bCity.lng === null || bCity.lng === undefined) {
-      nextErrors.brideCity = language === 'si' ? 'à¶¸à¶±à·à¶½à·’à¶ºà¶œà·š à¶‹à¶´à¶±à·Š à·ƒà·Šà¶®à·à¶±à¶º à¶­à·à¶»à¶±à·Šà¶±.' : 'Select the bride birth place.';
+      nextErrors.brideCity = language === 'si' ? 'මනාලියගේ උපන් ස්ථානය තෝරන්න.' : 'Select the bride birth place.';
     }
     if (!gCity || gCity.lat === null || gCity.lat === undefined || gCity.lng === null || gCity.lng === undefined) {
-      nextErrors.groomCity = language === 'si' ? 'à¶¸à¶±à·à¶½à¶ºà·à¶œà·š à¶‹à¶´à¶±à·Š à·ƒà·Šà¶®à·à¶±à¶º à¶­à·à¶»à¶±à·Šà¶±.' : 'Select the groom birth place.';
+      nextErrors.groomCity = language === 'si' ? 'මනාලයාගේ උපන් ස්ථානය තෝරන්න.' : 'Select the groom birth place.';
     }
     setFieldErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -2451,30 +2873,70 @@ export default function PorondamScreen() {
       language: reportLang,
     };
 
-    // â”€â”€ Check for pending entitlement (retry after failed generation) â”€â”€
+    // ── Check for pending entitlement (retry after failed generation) ──
     var isRetry = false;
     try {
       var entCheck = await api.checkEntitlement('porondam', entitlementInput);
       if (entCheck && entCheck.hasPending) {
         isRetry = true;
-        if (__DEV__) console.log('[Porondam] â™»ï¸ Resuming failed generation â€” no payment needed (' + entCheck.entitlement.retriesLeft + ' retries left)');
+        if (__DEV__) console.log('[Porondam] ♻️ Resuming failed generation — no payment needed (' + entCheck.entitlement.retriesLeft + ' retries left)');
       }
     } catch (entErr) {
-      // Non-critical â€” proceed with normal payment flow
+      // Non-critical — proceed with normal payment flow
       if (__DEV__) console.warn('[Porondam] Entitlement check failed (non-critical):', entErr.message);
     }
 
-    // Show paywall only if NOT a retry (pending entitlement = free retry)
+    // ── Warm tease before the wall ──────────────────────────────────────
+    // Non-subscribers (non-retry) meet their couple-archetype + one gift +
+    // locked counts BEFORE the paywall — a cold wall converts worse than a
+    // warm one. Awaits the tease modal: "See our full match" → continue,
+    // close → abort. If the preview can't load we fall straight through.
+    var isProUser = !!(user && user.isSubscribed === true);
+    if (!isRetry && !isProUser) {
+      var proceed = await showPorondamTease(brideData, groomData);
+      if (!proceed) return;
+    }
+
+    // ── Pre-payment gate: never take money when the report writer is down ──
+    // Asks the server (circuit + daily AI budget) BEFORE the paywall opens.
     if (!isRetry) {
+      try {
+        var health = await api.getPorondamAiHealth();
+        if (health && health.available === false) {
+          var waitMin = Math.max(1, Math.ceil((health.retryInSeconds || 120) / 60));
+          Alert.alert(
+            T.aiDownTitle,
+            (health.reason === 'budget' ? T.aiDownBudget : T.aiDownBusy).replace('{min}', String(waitMin))
+          );
+          return;
+        }
+      } catch (healthErr) {
+        var hStatus = healthErr && healthErr.statusCode;
+        if (hStatus === 404 || hStatus === 401 || hStatus === 403) {
+          // Older server or auth edge — the gate can't answer here; proceed as before.
+          if (__DEV__) console.warn('[Porondam] Health gate unavailable (' + hStatus + '), proceeding');
+        } else {
+          // Our server is unreachable — the check itself would fail. Don't charge blind.
+          Alert.alert(T.aiDownTitle, T.aiDownNetwork);
+          return;
+        }
+      }
+    }
+
+    // Show paywall only if NOT a retry (pending entitlement = free retry)
+    // and NOT an active subscriber — porondam is included with Pro, so
+    // subscribers must never be asked to pay the one-time price again.
+    var isPro = !!(user && user.isSubscribed === true);
+    if (!isRetry && !isPro) {
       try {
         await showPaywall('porondam');
       } catch (e) {
-        // User cancelled payment â€” do not proceed
+        // User cancelled payment — do not proceed
         return;
       }
     }
 
-    // Payment succeeded â€” now run the compatibility check
+    // Payment succeeded — now run the compatibility check
     try {
       setLoading(true); setError(null); setData(null); setReport(null); setPorondamId(null);
 
@@ -2536,10 +2998,37 @@ export default function PorondamScreen() {
     } finally {
       setLoading(false);
     }
-  }, [bDate, bTime, gDate, gTime, bCity, gCity, bName, gName, T, language, reportLang]);
+  }, [bDate, bTime, gDate, gTime, bCity, gCity, bName, gName, T, language, reportLang, user, showPaywall, showPorondamTease]);
+
+  // ── Free in-place report retry — the check result stays; only the writing
+  // reruns. The saved entitlement (or active subscription) covers it, so the
+  // user is never asked to pay again.
+  var retryReport = useCallback(async function() {
+    if (!data || reportLoading) return;
+    setReportLoading(true);
+    try {
+      var entitlementInput = {
+        brideBirthDate: buildDateISO(bDate, bTime),
+        brideLat: bCity ? bCity.lat : undefined,
+        brideLng: bCity ? bCity.lng : undefined,
+        groomBirthDate: buildDateISO(gDate, gTime),
+        groomLat: gCity ? gCity.lat : undefined,
+        groomLng: gCity ? gCity.lng : undefined,
+        language: reportLang,
+      };
+      var res = await api.getPorondamReport(data, reportLang, bName, gName, porondamId || undefined, entitlementInput);
+      setReport(res.report);
+      if (res.porondamId) setPorondamId(res.porondamId);
+    } catch (e) {
+      var busy = e.code === 'AI_PROVIDER_RATE_LIMIT' || e.code === 'AI_PROVIDER_UNAVAILABLE' || e.statusCode === 429 || e.statusCode === 503;
+      setReport(busy ? T.reportBusy : T.reportFailed);
+    } finally {
+      setReportLoading(false);
+    }
+  }, [data, reportLoading, bDate, bTime, gDate, gTime, bCity, gCity, bName, gName, reportLang, porondamId, T]);
 
   
-  // Ã¢â€â‚¬Ã¢â€â‚¬ DOWNLOAD PORONDAM AS PDF Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // â”€â”€ DOWNLOAD PORONDAM AS PDF â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var handleDownloadPDF = async function() {
     if (!data) return;
     try {
@@ -2601,14 +3090,52 @@ export default function PorondamScreen() {
 
   var shareResult = async function() {
     try {
-      var msg = language === 'si'
-        ? '\u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) \u2014 ' + (data.ratingSinhala || data.rating) + '\n\nGrahachara'
-        : 'Compatibility: ' + data.totalScore + '/' + data.maxPossibleScore + ' (' + data.percentage + '%) \u2014 ' + data.rating + '\n\nGrahachara';
+      var si = language === 'si';
+      var cr = data.coupleReading && (data.coupleReading[si ? 'si' : 'en'] || data.coupleReading.en);
+      var arc = cr && cr.archetype;
+      var names = [bName, gName].filter(Boolean).join(si ? ' \u0DC3\u0DC4 ' : ' & ');
+      var verdict = getVerdictPhrase(data, si);
+      // The plain verdict phrase leads; the archetype is a secondary "bond style" line.
+      var msg = (names ? names + ' \u2014 ' : '') + verdict.text + '\n';
+      if (arc) {
+        msg += (si ? '\u0DB6\u0DD0\u0DB3\u0DD3\u0DB8\u0DDA \u0DC0\u0DD2\u0DAF\u0DD2\u0DBA: ' : 'Bond style: ') + arc.name + '\n' + arc.essence + '\n';
+      }
+      msg += '\n' + (si ? '\u0DC3\u0DB8\u0DCA\u0DB4\u0DCA\u200D\u0DBB\u0DAF\u0DCF\u0DBA\u0DD2\u0D9A \u0DB4\u0DDC\u0DBB\u0DDC\u0DB1\u0DCA\u0DAF\u0DB8\u0DCA: ' : 'Traditional porondams: ') + data.totalScore + '/' + data.maxPossibleScore
+        + '\n\nGrahachara';
       await Share.share({ message: msg });
     } catch (e) {}
   };
 
-  // â”€â”€ FULL SCREEN LOADING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // \u2500\u2500 Viral "Vibe Check" \u2014 mint a 7-day link seeded with the first person's
+  // birth details. The recipient opens it, adds their own details, and sees the
+  // match instantly \u2014 pulling a brand-new user into the app. Growth loop.
+  var sendVibeCheck = async function() {
+    if (vibeBusy) return;
+    var si = language === 'si';
+    try {
+      setVibeBusy(true);
+      var senderName = (bName || '').trim() || (si ? '\u0DB8\u0DB8' : 'Me');
+      var senderBirth = buildDateISO(bDate, bTime);
+      var lat = bCity ? bCity.lat : undefined;
+      var lng = bCity ? bCity.lng : undefined;
+      var res = await api.createVibeLink(senderName, senderBirth, lat, lng);
+      var link = res && res.data;
+      if (!link || !link.shareUrl) throw new Error('no link');
+      var invite = si
+        ? senderName + ' \u0D94\u0DB6\u0DDA \u0D9C\u0DCA\u200D\u0DBB\u0DC4 \u0D9C\u0DD0\u0DC5\u0DB4\u0DD3\u0DB8 \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1 \u0D9A\u0DD0\u0DB8\u0DAD\u0DD2\u0DBA\u0DD2 \u2728\n\n\u0D94\u0DB6\u0DDA \u0D8B\u0DB4\u0DB1\u0DCA \u0DC0\u0DD2\u0DC3\u0DCA\u0DAD\u0DBB \u0DAF\u0DCF\u0DBD\u0DCF \u0D9A\u0DCA\u0DC2\u0DAB\u0DD2\u0D9A\u0DC0 \u0D9C\u0DD0\u0DC5\u0DB4\u0DD3\u0DB8 \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1:\n' + link.shareUrl + '\n\nGrahachara \uD83E\uDE90'
+        : senderName + ' wants to check your star compatibility \u2728\n\nTap, add your birth details, and see your match instantly:\n' + link.shareUrl + '\n\nGrahachara \uD83E\uDE90';
+      await Share.share({ message: invite, url: link.shareUrl });
+    } catch (e) {
+      Alert.alert(
+        si ? '\u0DAF\u0DDD\u0DC2\u0DBA\u0D9A\u0DD2' : 'Something went wrong',
+        si ? 'Vibe Check \u0DC3\u0DB6\u0DD0\u0DB3\u0DD2\u0DBA \u0DC3\u0DD1\u0DAF\u0DD2\u0DBA \u0DB1\u0DDC\u0DC4\u0DD0\u0D9A\u0DD2 \u0DC0\u0DD2\u0DBA. \u0DB1\u0DD0\u0DC0\u0DAD \u0D8B\u0DAD\u0DCA\u0DC3\u0DCF\u0DC4 \u0D9A\u0DBB\u0DB1\u0DCA\u0DB1.' : "Couldn't create the Vibe Check link. Please try again."
+      );
+    } finally {
+      setVibeBusy(false);
+    }
+  };
+
+  // ── FULL SCREEN LOADING ─────────────────────────────────
   if (loading) {
     return (
       <DesktopScreenWrapper routeName="porondam">
@@ -2624,6 +3151,217 @@ export default function PorondamScreen() {
           </ScrollView>
         </View>
       </DesktopScreenWrapper>
+    );
+  }
+
+
+  // ── FULL RESULT SCREEN — the report lives on its OWN page, never under the
+  //    input form. Reached once a check produces data + collapsed.
+  if (data && collapsed) {
+    return (
+    <DesktopScreenWrapper routeName="porondam">
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <CosmicBackground reduced={reduced} lowEnd={lowEnd} />
+      <ScrollView ref={scrollRef} style={sty.flex} contentContainerStyle={[sty.scroll, isDesktop && sty.scrollDesktop, !isDesktop && { paddingTop: insets.contentTop, paddingBottom: insets.contentBottom }]} showsVerticalScrollIndicator={false}>
+        <View style={[sty.scrollInner, isDesktop && sty.scrollInnerDesktop]}>
+
+          {/* Back to the input form */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <TouchableOpacity onPress={function () { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setCollapsed(false); }} style={sty.resultBack} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
+              <Ionicons name="chevron-back" size={20} color={sc.iconAccent} />
+              <Text style={[sty.resultBackText, { color: sc.iconAccent }]}>{T.backToForm}</Text>
+            </TouchableOpacity>
+            {savedChecks.length > 0 ? (
+              <TouchableOpacity onPress={function () { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setShowHistory(true); setCollapsed(false); setData(null); setReport(null); setPorondamId(null); }} style={sty.resultBack} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
+                <Ionicons name="time-outline" size={16} color={sc.iconAccent} />
+                <Text style={[sty.resultBackText, { color: sc.iconAccent, fontSize: 12 }]}>{savedChecks.length}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {error && <Glass><Text style={sty.errorText}>{error}</Text></Glass>}
+
+        {data && !loading && (function () {
+          var cr = data.coupleReading && (data.coupleReading[language === 'si' ? 'si' : 'en'] || data.coupleReading.en);
+          // Older saved results carry no coupleReading — derive the archetype on
+          // the device (same lagna-first rule as the server) so the verdict is
+          // never a bare one-word rating.
+          if (!cr || !cr.archetype) {
+            var fbBride = (data.brideChart && data.brideChart.lagnaRashiId) || (data.bride && data.bride.rashi && data.bride.rashi.id);
+            var fbGroom = (data.groomChart && data.groomChart.lagnaRashiId) || (data.groom && data.groom.rashi && data.groom.rashi.id);
+            if (fbBride && fbGroom) {
+              cr = {
+                archetype: deriveLagnaArchetype(fbBride, fbGroom, language),
+                gifts: (cr && cr.gifts) || [],
+                nurture: (cr && cr.nurture) || [],
+                forwardPaths: (cr && cr.forwardPaths) || [],
+                traditionalCount: { score: data.totalScore != null ? data.totalScore : null, max: data.maxPossibleScore || 20 },
+              };
+            }
+          }
+          var glanceRows = buildGlance(data, cr, language, T);
+          var scContent = buildStrengthsCare(data, cr, language);
+          var adv = data.advancedPorondam && data.advancedPorondam.advanced;
+          var jm = data.jyotishMatching;
+          var yoniF = (data.factors || []).find(function (f) { return f.name === 'Yoni'; });
+          var dcG = adv && adv.dashaCompatibility;
+          var bjG = data.brideAdvanced && data.brideAdvanced.tier1 && data.brideAdvanced.tier1.jaimini;
+          var gjG = data.groomAdvanced && data.groomAdvanced.tier1 && data.groomAdvanced.tier1.jaimini;
+          var bplG = data.brideAdvanced && data.brideAdvanced.tier3 && data.brideAdvanced.tier3.pastLife;
+          var gplG = data.groomAdvanced && data.groomAdvanced.tier3 && data.groomAdvanced.tier3.pastLife;
+
+          // Chapters render in reading order and are numbered like a report.
+          // Guards mirror each card's own availability check so numbers never skip.
+          var chapters = [];
+          if (glanceRows.length > 0) {
+            chapters.push(function (ix, d) { return <GlanceCard key="glance" index={ix} delay={d} rows={glanceRows} T={T} />; });
+          }
+          if (scContent) {
+            chapters.push(function (ix, d) { return <StrengthsCareCard key="sc" index={ix} delay={d} content={scContent} T={T} />; });
+          }
+          if ((data.factors || []).length > 0) {
+            chapters.push(function (ix, d) { return <SignalsCard key="signals" index={ix} delay={d} data={data} language={language} T={T} />; });
+          }
+          if ((data.magnetism && data.magnetism.totalScore != null && data.magnetism.maxScore) || (yoniF && yoniF.brideYoni)) {
+            chapters.push(function (ix, d) { return <AttractionCard key="attraction" index={ix} delay={d} data={data} language={language} T={T} bName={bName} gName={gName} />; });
+          }
+          if ((dcG && ((dcG.bride && dcG.bride.currentDasha) || (dcG.groom && dcG.groom.currentDasha)))
+            || (jm && ((jm.brideSadeSati && jm.brideSadeSati.status) || (jm.groomSadeSati && jm.groomSadeSati.status)))) {
+            chapters.push(function (ix, d) { return <LifeNowCard key="lifenow" index={ix} delay={d} data={data} language={language} T={T} bName={bName} gName={gName} />; });
+          }
+          if ((adv && (adv.navamshaCompatibility || adv.marriagePlanetStrength || adv.mangalaDosha))
+            || (jm && (jm.brideMangalDosha || jm.groomMangalDosha))) {
+            chapters.push(function (ix, d) { return <DeeperBondCard key="deeper" index={ix} delay={d} data={data} language={language} T={T} bName={bName} gName={gName} />; });
+          }
+          if (adv && adv.weddingWindows && adv.weddingWindows.favorableWindows && adv.weddingWindows.favorableWindows.length > 0) {
+            chapters.push(function (ix, d) { return <WeddingWindowsCard key="wedding" index={ix} delay={d} data={data} language={language} T={T} />; });
+          }
+          if (data.bride && data.groom) {
+            chapters.push(function (ix, d) { return <BirthStarsCard key="stars" index={ix} delay={d} data={data} language={language} T={T} bName={bName} gName={gName} />; });
+          }
+          if ((bjG && gjG && bjG.atmakaraka && gjG.atmakaraka) || (bplG && gplG)) {
+            chapters.push(function (ix, d) { return <CuriositiesCard key="curio" index={ix} delay={d} data={data} language={language} T={T} bName={bName} gName={gName} />; });
+          }
+
+          return (
+            <View>
+              {/* The verdict — couple archetype leads, the X/20 stands by as a quiet credential */}
+              <VerdictHero data={data} reading={cr} brideName={bName} groomName={gName} language={language} T={T} onShare={shareResult} />
+
+              {/* Actions */}
+              <Animated.View entering={FadeIn.delay(200).duration(400)}>
+                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 18 }}>
+                  <TouchableOpacity
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 13, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,140,0,0.20)', backgroundColor: 'rgba(255,140,0,0.05)' }}
+                    activeOpacity={0.7}
+                    onPress={function () {
+                      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                      setCollapsed(false); setData(null); setReport(null); setPorondamId(null); setError(null); setShowHistory(false);
+                    }}>
+                    <Ionicons name="refresh" size={15} color="#FF8C00" style={{ marginRight: 6 }} />
+                    <Text style={{ color: '#FF8C00', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'අලුත් ගැළපීමක්' : 'New Check'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 13, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,184,0,0.35)', backgroundColor: 'rgba(255,184,0,0.08)' }}
+                    activeOpacity={0.7}
+                    onPress={handleDownloadPDF}>
+                    <Ionicons name="download-outline" size={15} color="#FFB800" style={{ marginRight: 6 }} />
+                    <Text style={{ color: '#FFB800', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'PDF බාගන්න' : 'Download PDF'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
+
+              {/* Viral Vibe Check invite — a partner opens the link, enters their own
+                  birth details, sees the match, and becomes a new user. Growth loop. */}
+              <Animated.View entering={FadeIn.delay(260).duration(400)}>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={sendVibeCheck}
+                  disabled={vibeBusy}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(37,211,102,0.28)', backgroundColor: 'rgba(37,211,102,0.07)', marginBottom: 18, opacity: vibeBusy ? 0.6 : 1 }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(37,211,102,0.14)', borderWidth: 1, borderColor: 'rgba(37,211,102,0.30)' }}>
+                    <Ionicons name={vibeBusy ? 'hourglass-outline' : 'heart-circle'} size={22} color="#25D366" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.95)', fontSize: 13.5, fontWeight: '800' }}>{language === 'si' ? 'තව කෙනෙක් සමඟ ගැළපීම බලන්නද?' : 'Check your vibe with someone else?'}</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11.5, marginTop: 2, lineHeight: 15 }}>{language === 'si' ? 'WhatsApp සබැඳියක් යවන්න — ඔවුන් උපන් විස්තර දැම්මාම ක්ෂණිකව ගැළපීම පෙනේ.' : 'Send a WhatsApp link — they add their details and see the match instantly.'}</Text>
+                  </View>
+                  <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+                </TouchableOpacity>
+              </Animated.View>
+
+              {/* The two birth charts — shown first, the traditional way */}
+              <TouchableOpacity onPress={function () { setChartsExpanded(!chartsExpanded); LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); }} activeOpacity={0.7} style={sty.chartsToggle}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={sty.chartsToggleIcon}><Ionicons name="grid" size={13} color="#FF8C00" /></View>
+                  <Text style={sty.chartsToggleText}>{language === 'si' ? 'උපන් කේන්දර දෙක' : 'The Two Birth Charts'}</Text>
+                </View>
+                <Ionicons name={chartsExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.4)" />
+              </TouchableOpacity>
+              {chartsExpanded && <View style={[sty.charts, WIDE && sty.chartsWide]}>
+                {data.brideChart && data.brideChart.rashiChart && (
+                  <Animated.View entering={FadeInUp.delay(200).duration(600).springify()} style={WIDE ? sty.chartCol : undefined}>
+                    <Glass style={sty.chartCard}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F9A8D4' }} />
+                        <Text style={sty.chartTitle}>{T.brideChart}</Text>
+                      </View>
+                      <View style={{ alignItems: 'center' }}>
+                        <SriLankanChart rashiChart={data.brideChart.rashiChart} lagnaRashiId={data.brideChart.lagnaRashiId} language={language}
+                          chartSize={WIDE ? Math.min(320, (W - 140) / 2) : MOBILE_CHART} />
+                      </View>
+                    </Glass>
+                  </Animated.View>
+                )}
+                {WIDE && (
+                  <Animated.View entering={ZoomIn.delay(500).duration(700)} style={[sty.heartBridge, sty.heartBridgeWide]}>
+                    <Ionicons name="heart" size={22} color="#F472B6" />
+                  </Animated.View>
+                )}
+                {!WIDE && data.brideChart && data.groomChart && (
+                  <Animated.View entering={ZoomIn.delay(400).duration(500)} style={{ alignItems: 'center', paddingVertical: 6 }}>
+                    <View style={{ width: 1, height: 20, backgroundColor: 'rgba(255,140,0,0.15)' }} />
+                    <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(244,114,182,0.12)', alignItems: 'center', justifyContent: 'center', marginVertical: 4, borderWidth: 1, borderColor: 'rgba(244,114,182,0.25)' }}>
+                      <Ionicons name="heart" size={16} color="#F472B6" />
+                    </View>
+                    <View style={{ width: 1, height: 20, backgroundColor: 'rgba(255,140,0,0.15)' }} />
+                  </Animated.View>
+                )}
+                {data.groomChart && data.groomChart.rashiChart && (
+                  <Animated.View entering={FadeInUp.delay(400).duration(600).springify()} style={WIDE ? sty.chartCol : undefined}>
+                    <Glass style={sty.chartCard}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#93C5FD' }} />
+                        <Text style={sty.chartTitle}>{T.groomChart}</Text>
+                      </View>
+                      <View style={{ alignItems: 'center' }}>
+                        <SriLankanChart rashiChart={data.groomChart.rashiChart} lagnaRashiId={data.groomChart.lagnaRashiId} language={language}
+                          chartSize={WIDE ? Math.min(320, (W - 140) / 2) : MOBILE_CHART} />
+                      </View>
+                    </Glass>
+                  </Animated.View>
+                )}
+              </View>}
+
+              {/* Numbered chapters */}
+              {chapters.map(function (renderChapter, i) {
+                return renderChapter((i + 1 < 10 ? '0' : '') + (i + 1), 120 + i * 50);
+              })}
+
+              {/* The written reading — a chaptered reader, not a wall of text */}
+              <ReportReader report={report} reportLoading={reportLoading} language={language} T={T} brideName={bName} groomName={gName} onRetry={retryReport} />
+
+              {/* How it's made + whose decision it is */}
+              <MethodFooter T={T} />
+            </View>
+          );
+        })()}
+
+          <View style={{ height: isDesktop ? 32 : 120 }} />
+        </View>
+      </ScrollView>
+    </View>
+    </DesktopScreenWrapper>
     );
   }
 
@@ -2645,172 +3383,99 @@ export default function PorondamScreen() {
             </View>
             {savedChecks.length > 0 && !collapsed && (
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.accentMuted, borderWidth: 1, borderColor: colors.borderAccent, marginTop: 4 }}
-                onPress={function() { setShowHistory(!showHistory); }} activeOpacity={0.7}>
-                <Ionicons name={showHistory ? 'close-outline' : 'time-outline'} size={14} color={sc.iconAccent} />
-                <Text style={{ color: sc.iconAccent, fontSize: 11, fontWeight: '700' }}>{savedChecks.length}</Text>
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: showHistory ? 'rgba(248,113,113,0.10)' : colors.accentMuted, borderWidth: 1, borderColor: showHistory ? 'rgba(248,113,113,0.35)' : colors.borderAccent, marginTop: 4 }}
+                onPress={function() {
+                  var next = !showHistory;
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                  setShowHistory(next);
+                  if (next && scrollRef.current) setTimeout(function() { scrollRef.current && scrollRef.current.scrollTo({ y: 0, animated: true }); }, 60);
+                }} activeOpacity={0.7}>
+                <Ionicons name={showHistory ? 'close' : 'time-outline'} size={14} color={showHistory ? '#F87171' : sc.iconAccent} />
+                <Text style={{ color: showHistory ? '#F87171' : sc.iconAccent, fontSize: 11.5, fontWeight: '800' }}>
+                  {showHistory ? T.historyClose : (T.historyChip + ' · ' + savedChecks.length)}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
         </Animated.View>
 
-        {/* YOUR LAGNA COMPATIBILITY */}
-        {myLagnaId && !collapsed ? (function() {
-          var compatList = getLagnaCompatList(myLagnaId);
-          var hooks = language === 'si' ? COMPAT_HOOKS_SI : COMPAT_HOOKS_EN;
-          var userName = (user && user.displayName) ? user.displayName.split(' ')[0] : '';
-          var fillHook = function(text) { return text.replace('{name}', userName || (language === 'si' ? '\u0D94\u0DB6' : 'you')); };
+        {/* LAGNA MATCH MAP — interactive 12-sign explorer (incl. same-lagna).
+            Hidden while the saved list is open so the list sits right under
+            the header instead of far below this tall card. */}
+        {myLagnaId && !collapsed && !showHistory ? (
+          <LagnaExplorerCard
+            myLagnaId={myLagnaId}
+            language={language}
+            userName={(user && user.displayName) ? user.displayName.split(' ')[0] : ''}
+          />
+        ) : null}
 
-          // Group by tier
-          var groups = [
-            { tier: 'best', items: compatList.filter(function(c) { return c.tier === 'best'; }), color: '#34D399', gradient: ['#34D399', '#10B981'], label: language === 'si' ? '\u0D94\u0DB6\u0DA7 \u0DC3\u0DCF\u0DBB\u0DCA\u0DAE\u0D9A\u0DB8' : 'THEY\u2019RE ALREADY YOURS' },
-            { tier: 'good', items: compatList.filter(function(c) { return c.tier === 'good'; }), color: '#FBBF24', gradient: ['#FBBF24', '#F59E0B'], label: language === 'si' ? '\u0DB4\u0DCA\u200D\u0DBB\u0DB6\u0DBD \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA' : 'STRONG PULL TOWARD YOU' },
-            { tier: 'neutral', items: compatList.filter(function(c) { return c.tier === 'neutral'; }), color: '#94A3B8', gradient: ['#94A3B8', '#64748B'], label: language === 'si' ? '\u0DC3\u0DB8\u0DAD\u0DD4\u0DBD\u0DD2\u0DAD' : 'COULD GO EITHER WAY' },
-            { tier: 'avoid', items: compatList.filter(function(c) { return c.tier === 'avoid'; }), color: '#FF6B9D', gradient: ['#FF6B9D', '#EC4899'], label: language === 'si' ? '\u0D94\u0DB6\u0DDA \u0DC1\u0D9A\u0DCA\u0DAD\u0DD2\u0DBA \u0DB6\u0DD3\u0DB8 \u0DC0\u0DD2\u0DBA' : 'WILL DRAIN YOUR ENERGY' },
-          ];
-
-          var rowIndex = 0;
-
-          return (
-            <Animated.View entering={FadeInDown.delay(200).duration(600).springify().damping(14)} style={cSty.compatCard}>
-              <LinearGradient
-                colors={['rgba(147,51,234,0.18)', 'rgba(251,191,36,0.06)', 'rgba(5,3,12,0.96)']}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              />
-              <View style={cSty.compatGoldEdge} />
-              <View style={cSty.compatGlow} />
-
-              {/* Urgency pulse */}
-              <Animated.View entering={FadeIn.delay(600).duration(800)} style={cSty.compatUrgency}>
-                <View style={cSty.compatUrgencyDot} />
-                <Text style={cSty.compatUrgencyText}>
-                  {language === 'si' ? '\u0D94\u0DB6\u0DDA \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB \u0D9A\u0DC0\u0DD4\u0DC5\u0DD4\u0DC0 \u0DAF\u0DD1\u0DB1\u0DCA \u0DC4\u0DD4\u0DBB\u0DAD\u0DCA \u0DC0\u0DD2\u0DC0\u0DD8\u0DAD\u0DBA\u0DD2' : 'Your attraction window is open right now'}
-                </Text>
-              </Animated.View>
-
-              {/* Hero */}
-              <Animated.View entering={FadeIn.delay(300).duration(500)} style={cSty.compatHero}>
-                <View style={cSty.compatHeroRing}>
-                  <View style={cSty.compatHeroInner}>
-                    <Image source={ZODIAC_IMAGES[myLagnaId]} resizeMode="contain" style={cSty.compatHeroImg} />
-                  </View>
-                </View>
-              </Animated.View>
-
-              <View style={cSty.compatHeader}>
-                <Text style={cSty.compatKicker}>
-                  {language === 'si' ? '\u0DB8\u0DD9\u0DB8 \u0DB4\u0DD0\u0DBA\u0DDA\u0DB8 \u0D9A\u0DD9\u0DB1\u0DD9\u0D9A\u0DCA \u0D94\u0DB6 \u0D9C\u0DD1\u0DB1 \u0DC4\u0DD2\u0DAD\u0DB1\u0DC0\u0DCF' : 'SOMEONE IS THINKING ABOUT YOU RIGHT NOW'}
-                </Text>
-                <Text style={cSty.compatTitle}>
-                  {userName
-                    ? (language === 'si'
-                      ? userName + ', \u0D94\u0DB6\u0DA7 \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u0D9A\u0DBB\u0DB1 \u0D9A\u0DD9\u0DB1\u0DCF \u0D9A\u0DC0\u0DD4\u0DAF\u0DCF\u0D9A\u0DD2\u0DBA\u0DBD\u0DD2 \u0DAF\u0DD0\u0DB1\u0D9C\u0DB1\u0DCA\u0DB1'
-                      : userName + ', find out who can\u2019t get you out of their head')
-                    : (language === 'si'
-                      ? '\u0D94\u0DB6\u0DA7 \u0D86\u0D9A\u0DBB\u0DCA\u0DC2\u0DAB\u0DBA \u0D9A\u0DBB\u0DB1 \u0D9A\u0DD9\u0DB1\u0DCF \u0D9A\u0DC0\u0DD4\u0DAF\u0DCF\u0D9A\u0DD2\u0DBA\u0DBD\u0DD2 \u0DAF\u0DD0\u0DB1\u0D9C\u0DB1\u0DCA\u0DB1'
-                      : 'Find out who can\u2019t get you out of their head')}
-                </Text>
-              </View>
-
-              {/* All 4 tiers */}
-              {groups.map(function(group) {
-                if (group.items.length === 0) return null;
-                return (
-                  <View key={group.tier} style={[cSty.compatSection, group.tier !== 'best' ? { marginTop: 16 } : null]}>
-                    <View style={cSty.compatSectionHeader}>
-                      <LinearGradient colors={group.gradient} style={cSty.compatDotGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-                      <Text style={[cSty.compatSectionTitle, { color: group.color }]}>{group.label}</Text>
-                    </View>
-                    {group.items.map(function(match, i) {
-                      rowIndex++;
-                      var hookArr = hooks[group.tier] || hooks.neutral;
-                      var hookText = fillHook(hookArr[i % hookArr.length]);
-                      var hookColor = group.tier === 'avoid' ? 'rgba(255,107,157,0.75)'
-                        : group.tier === 'neutral' ? 'rgba(148,163,184,0.7)'
-                        : group.tier === 'good' ? 'rgba(251,191,36,0.7)'
-                        : 'rgba(52,211,153,0.75)';
-                      return (
-                        <Animated.View key={match.rashiId} entering={FadeInDown.delay(300 + rowIndex * 80).duration(400).springify()} style={cSty.compatRow}>
-                          <View style={[cSty.compatImgWrap, { borderColor: group.color + '60' }]}>
-                            <Image source={ZODIAC_IMAGES[match.rashiId]} resizeMode="contain" style={cSty.compatImg} />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={cSty.compatName}>{language === 'si' ? match.nameSi : match.name}</Text>
-                            <Text style={[cSty.compatHook, { color: hookColor }]}>{hookText}</Text>
-                          </View>
-                          <View style={cSty.compatScoreWrap}>
-                            <View style={cSty.compatScoreBar}>
-                              <LinearGradient colors={group.gradient} style={[cSty.compatScoreFill, { width: (match.score / 5 * 100) + '%' }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-                            </View>
-                          </View>
-                        </Animated.View>
-                      );
-                    })}
-                  </View>
-                );
-              })}
-
-              <View style={cSty.compatFooterWrap}>
-                <Ionicons name="sparkles" size={13} color="#FBBF24" />
-                <Text style={cSty.compatFooter}>
-                  {language === 'si'
-                    ? '\u0D94\u0DB6\u0DDA \u0DC3\u0DB8\u0DCA\u0DB4\u0DD6\u0DBB\u0DCA\u0DAB \u0D9C\u0DD1\u0DC5\u0DD0\u0DB4\u0DD3\u0DB8 \u0DB6\u0DBD\u0DB1\u0DCA\u0DB1 \u2014 \u0D89\u0DC4\u0DA7 \u0DB4\u0DD6\u0DBB\u0DC0\u0DB1\u0DCA\u0DB1 \u2728'
-                    : 'See your full match \u2014 enter their details above \u2728'}
-                </Text>
-              </View>
-            </Animated.View>
-          );
-        })() : null}
-
-        {/* â”€â”€ SAVED HISTORY â”€â”€ */}
+        {/* ── SAVED HISTORY — verdict-first rows, confirm-to-delete ── */}
         {showHistory && savedChecks.length > 0 && !collapsed && (
           <Animated.View entering={FadeInDown.duration(400)}>
-            <Glass style={{ marginBottom: 14 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="time-outline" size={16} color="#FF8C00" />
-                  <Text style={{ color: '#FFE8B0', fontSize: 14, fontWeight: '800' }}>{T.history}</Text>
+            <View style={[ns.shell, { marginBottom: 14 }]}>
+              <LinearGradient
+                colors={['rgba(20,12,28,0.55)', 'rgba(10,6,16,0.50)']}
+                style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              />
+              <View style={ns.shellHead}>
+                <View style={{ flex: 1 }}>
+                  <Text style={ns.shellTitle}>{T.history}</Text>
+                  <Text style={ns.shellSub}>{T.historySub}</Text>
                 </View>
-                <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11 }}>{savedChecks.length} {language === 'si' ? 'à·ƒà·”à¶»à¶šà·’à¶± à¶½à¶¯' : 'saved'}</Text>
+                <ScoreChip text={String(savedChecks.length)} />
               </View>
-              <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+              {loadingCheck ? (
+                <View style={sty.reportLoadRow}>
+                  <CosmicLoader size={20} color="#FF8C00" />
+                  <Text style={sty.reportLoadText}>{T.historyLoading}</Text>
+                </View>
+              ) : null}
+              {/* No nested ScrollView — rows flow into the page scroll, so the
+                  last row is never clipped mid-text. */}
+              <View>
                 {savedChecks.map(function(entry, idx) {
-                  var pct = entry.isServerRecord
-                    ? (entry.percentage || (entry.maxScore > 0 ? Math.round((entry.score || 0) / entry.maxScore * 100) : 0))
-                    : (entry.data?.maxPossibleScore > 0 ? Math.round((entry.data?.totalScore || 0) / entry.data.maxPossibleScore * 100) : 0);
-                  var pctColor = pct >= 75 ? '#34D399' : pct >= 50 ? '#FFB800' : pct >= 30 ? '#F97316' : '#F87171';
+                  var score = entry.isServerRecord ? (entry.score || 0) : ((entry.data && entry.data.totalScore) || 0);
+                  var max = entry.isServerRecord ? (entry.maxScore || 20) : ((entry.data && entry.data.maxPossibleScore) || 20);
+                  var pct = entry.isServerRecord && entry.percentage
+                    ? entry.percentage
+                    : (max > 0 ? Math.round(score / max * 100) : null);
+                  var verdict = getVerdictPhrase({ percentage: pct, totalScore: score, maxPossibleScore: max }, language === 'si');
+                  var names = (entry.brideName || T.bride) + (language === 'si' ? ' සහ ' : ' & ') + (entry.groomName || T.groom);
                   var dateLabel = entry.savedAt ? new Date(entry.savedAt).toLocaleDateString() : '';
                   return (
-                    <Animated.View key={entry.id} entering={FadeInDown.delay(idx * 60).duration(300)}>
+                    <Animated.View key={entry.id} entering={FadeInDown.delay(Math.min(idx, 6) * 50).duration(300)}>
                       <TouchableOpacity
-                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: idx < savedChecks.length - 1 ? 1 : 0, borderBottomColor: 'rgba(255,255,255,0.04)' }}
-                        onPress={function() { loadSavedCheck(entry); }} activeOpacity={0.7}>
-                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: pctColor + '15', alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: pctColor + '30' }}>
-                          <Text style={{ color: pctColor, fontSize: 14, fontWeight: '900' }}>{pct}%</Text>
+                        style={[ns.histRow, idx === 0 ? { borderTopWidth: 0 } : null, loadingCheck ? { opacity: 0.5 } : null]}
+                        onPress={function() { loadSavedCheck(entry); }} activeOpacity={0.7} disabled={loadingCheck}>
+                        <View style={[ns.histRing, { borderColor: verdict.color + '55', backgroundColor: verdict.color + '10' }]}>
+                          <Ionicons name="heart" size={16} color={verdict.color} />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={{ color: '#FFE8B0', fontSize: 13, fontWeight: '700' }}>
-                            {(entry.brideName || 'Bride') + '  \u00D7  ' + (entry.groomName || 'Groom')}
-                          </Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>{entry.isServerRecord ? (entry.score || 0) : (entry.data?.totalScore || 0)}/{entry.isServerRecord ? (entry.maxScore || 20) : (entry.data?.maxPossibleScore || 20)}</Text>
-                            <Text style={{ color: 'rgba(255,255,255,0.15)', fontSize: 9 }}>â€¢</Text>
-                            <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10 }}>{dateLabel}</Text>
-                          </View>
+                          <Text style={ns.histNames} numberOfLines={1}>{names}</Text>
+                          <Text style={[ns.histVerdict, { color: verdict.color }]}>{verdict.text}</Text>
+                          <Text style={ns.histMeta}>{T.tradCount} {score}/{max}{dateLabel ? '  ·  ' + dateLabel : ''}</Text>
                         </View>
                         <TouchableOpacity
-                          style={{ padding: 8 }}
-                          onPress={function(e) { e.stopPropagation && e.stopPropagation(); deleteSavedCheck(entry.id); }}
+                          style={ns.histDelete}
+                          onPress={function(e) {
+                            if (e && e.stopPropagation) e.stopPropagation();
+                            Alert.alert(T.deleteTitle, T.deleteMsg, [
+                              { text: T.deleteCancel, style: 'cancel' },
+                              { text: T.deleteConfirm, style: 'destructive', onPress: function() { deleteSavedCheck(entry.id); } },
+                            ]);
+                          }}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                          <Ionicons name="trash-outline" size={14} color="rgba(248,113,113,0.5)" />
+                          <Ionicons name="trash-outline" size={15} color="rgba(248,113,113,0.55)" />
                         </TouchableOpacity>
+                        <Ionicons name="chevron-forward" size={15} color="rgba(255,255,255,0.25)" />
                       </TouchableOpacity>
                     </Animated.View>
                   );
                 })}
-              </ScrollView>
-            </Glass>
+              </View>
+            </View>
           </Animated.View>
         )}
 
@@ -2821,12 +3486,13 @@ export default function PorondamScreen() {
                 <Glass style={sty.validationSummary}>
                   <Ionicons name="alert-circle-outline" size={18} color="#FCA5A5" />
                   <View style={{ flex: 1 }}>
-                    <Text style={sty.validationTitle}>{language === 'si' ? 'à¶šà¶»à·”à¶«à·à¶šà¶» à¶¸à·š à·€à·’à·ƒà·Šà¶­à¶» à·ƒà¶¸à·Šà¶´à·–à¶»à·Šà¶« à¶šà¶»à¶±à·Šà¶±' : 'Complete these details'}</Text>
+                    <Text style={sty.validationTitle}>{language === 'si' ? 'කරුණාකර මේ විස්තර සම්පූර්ණ කරන්න' : 'Complete these details'}</Text>
                     <Text style={sty.validationText}>{validationItems.join(' ')}</Text>
                   </View>
                 </Glass>
               </Animated.View>
             ) : null}
+            <TrustStrip T={T} />
             <View style={WIDE ? sty.formRow : undefined}>
               <Animated.View entering={FadeInDown.delay(100).duration(600)} exiting={FadeOut.duration(300)} style={WIDE ? sty.formCol : undefined}>
                 <PersonCard label={T.bride} name={bName} setName={setBName}
@@ -2847,7 +3513,7 @@ export default function PorondamScreen() {
             <Animated.View entering={FadeInDown.delay(220).duration(600)}>
               <Glass style={{ marginBottom: 14 }}>
                 <Text style={{ color: 'rgba(255,140,0,0.7)', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>
-                  {language === 'si' ? '\u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0\u0DDA \u0DB7\u0DCF\u0DC2\u0DCF\u0DC0' : 'REPORT LANGUAGE'}
+                  {T.langTitle}
                 </Text>
                 <View style={sty.langRow}>
                   <TouchableOpacity style={[sty.langChip, reportLang === 'si' && sty.langChipActive]} onPress={function() { setReportLang('si'); }} activeOpacity={0.7}>
@@ -2868,435 +3534,34 @@ export default function PorondamScreen() {
                 <LinearGradient colors={['rgba(255,255,255,0.20)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '55%', borderTopLeftRadius: 16, borderTopRightRadius: 16 }} />
                 {loading ? <CosmicLoader size={28} color="#fff" /> : <Text style={sty.ctaText}>{T.checkBtn}</Text>}
               </SpringPressable>
+              <Text style={ns.ctaNote}>{T.ctaNote}</Text>
+              <View style={ns.privacyRow}>
+                <Ionicons name="lock-closed-outline" size={11} color="rgba(255,241,208,0.34)" />
+                <Text style={ns.privacyText}>{T.privacyNote}</Text>
+              </View>
             </Animated.View>
           </View>
-        )}
-
-        {collapsed && !loading && (
-          <Animated.View entering={FadeIn.delay(200).duration(400)}>
-            <SpringPressable style={sty.editBtn} haptic="light"
-              onPress={function() { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setCollapsed(false); }}>
-              <Ionicons name="pencil" size={14} color="#FF8C00" />
-              <Text style={sty.editText}>{T.edit}</Text>
-            </SpringPressable>
-          </Animated.View>
         )}
 
         {error && <Glass><Text style={sty.errorText}>{error}</Text></Glass>}
-
-        {data && !loading && (
-          <View>
-            <Animated.View entering={ZoomIn.springify().damping(12).delay(50)}>
-              <ScoreGauge score={data.totalScore} maxScore={data.maxPossibleScore}
-                rating={data.rating} ratingEmoji={data.ratingEmoji}
-                ratingSinhala={data.ratingSinhala} language={language}
-                onShare={shareResult} T={T}
-                brideName={bName} groomName={gName} factors={data.factors}
-                brideRashiId={data.brideChart && data.brideChart.lagnaRashiId}
-                groomRashiId={data.groomChart && data.groomChart.lagnaRashiId} />
-            </Animated.View>
-
-            {/* Action buttons row */}
-            <Animated.View entering={FadeIn.delay(200).duration(400)}>
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-                <TouchableOpacity
-                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 13, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,140,0,0.20)', backgroundColor: 'rgba(255,140,0,0.05)' }}
-                  activeOpacity={0.7}
-                  onPress={function() {
-                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                    setCollapsed(false); setData(null); setReport(null); setPorondamId(null); setError(null); setShowHistory(false);
-                  }}>
-                  <Ionicons name="refresh" size={15} color="#FF8C00" style={{ marginRight: 6 }} />
-                  <Text style={{ color: '#FF8C00', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? '\u0D85\u0DBD\u0DD4\u0DAD\u0DCA \u0DB4\u0DBB\u0DD3\u0D9A\u0DCA\u0DC2\u0DCF\u0DC0' : 'New Check'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,184,0,0.35)', backgroundColor: 'rgba(255,184,0,0.08)' }}
-                  activeOpacity={0.7}
-                  onPress={handleDownloadPDF}>
-                  <Ionicons name="download-outline" size={15} color="#FFB800" style={{ marginRight: 6 }} />
-                  <Text style={{ color: '#FFB800', fontSize: 13, fontWeight: '700' }}>{language === 'si' ? 'PDF \u0DB6\u0DCF\u0D9C\u0DB1\u0DCA\u0DB1' : 'Download PDF'}</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-
-            {/* Premium Section Divider */}
-            <View style={sty.premiumDivider}>
-              <View style={sty.dividerLine} />
-              <View style={sty.dividerGem}><Ionicons name="diamond" size={10} color="rgba(255,184,0,0.5)" /></View>
-              <View style={sty.dividerLine} />
-            </View>
-
-            {/* Star Profiles */}
-            <StarProfilesCard data={data} language={language} bName={bName} gName={gName} />
-
-            {/* Your Elements */}
-            <ElementsCard data={data} language={language} />
-
-            {data.factors && data.factors.length > 0 && (
-              <Animated.View entering={FadeInUp.delay(600).duration(700)}>
-                <Glass style={sty.section}>
-                  <View style={sty.secHeader}>
-                    <View>
-                      <Text style={sty.secTitle}>{T.factors}</Text>
-                      <Text style={sty.secSub}>{T.factorsSub}</Text>
-                    </View>
-                  </View>
-                  {data.factors.map(function(f, i) { return <FactorBar key={i} f={f} index={i} language={language} />; })}
-                </Glass>
-              </Animated.View>
-            )}
-
-
-            
-            {/* Magnetism */}
-            <MagnetismCard data={data} language={language} />
-
-            {/* Intimate Chemistry */}
-            <IntimateChemistryCard data={data} language={language} bName={bName} gName={gName} />
-
-            {/* Your Strengths */}
-            <StrengthsCard data={data} language={language} bName={bName} gName={gName} />
-
-            {/* Soul Blueprint */}
-            <SoulBlueprintCard data={data} language={language} bName={bName} gName={gName} />
-
-            {/* Past Lives */}
-            <PastLivesCard data={data} language={language} bName={bName} gName={gName} />
-
-            {/* Watch Out For */}
-            <ChallengesCard data={data} language={language} bName={bName} gName={gName} />
-
-
-            {/* Red Flag Check */}
-            <RedFlagCard data={data} language={language} bName={bName} gName={gName} />
-
-            {/* Timing & Pressure */}
-            <TimingCard data={data} language={language} bName={bName} gName={gName} />
-
-            {/* Deeper Connection */}
-            <DeeperConnectionCard data={data} language={language} />
-            {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â BEST WEDDING WINDOWS Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
-            <View style={sty.premiumDivider}>
-              <View style={sty.dividerLine} />
-              <View style={sty.dividerGem}><Ionicons name="diamond" size={10} color="rgba(255,184,0,0.5)" /></View>
-              <View style={sty.dividerLine} />
-            </View>
-
-            {data.advancedPorondam?.advanced?.weddingWindows?.favorableWindows?.length > 0 && (
-              <Animated.View entering={FadeInUp.delay(1250).duration(700)}>
-                <Glass style={sty.section}>
-                  <View style={sty.secHeader}>
-                    <View>
-                      <Text style={sty.secTitle}><Ionicons name="calendar" size={15} color="#34D399" /> {T.weddingTitle}</Text>
-                      <Text style={sty.secSub}>{language === 'si' ? '\u0d89\u0daf\u0dd2\u0dbb\u0dd2 \u0dc0\u0dc3\u0dbb 3 \u0dad\u0dd4\u0dc5 \u0dc4\u0ddc\u0daf\u0db8 \u0d9a\u0dcf\u0dbd\u0dba' : 'Best windows in the next 3 years'}</Text>
-                    </View>
-                  </View>
-                  {data.advancedPorondam.advanced.weddingWindows.favorableWindows.map(function(w, i) {
-                    var hasDate = w.end && w.end.length > 0;
-                    var isBest = w.best === true;
-                    return (
-                      <View key={i} style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, borderBottomWidth: i < data.advancedPorondam.advanced.weddingWindows.favorableWindows.length - 1 ? 1 : 0, borderBottomColor: 'rgba(255,255,255,0.04)' }}>
-                        <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: isBest ? 'rgba(52,211,153,0.15)' : 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: isBest ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' }}>
-                          <Ionicons name={isBest ? 'star' : 'calendar-outline'} size={16} color={isBest ? '#34D399' : 'rgba(255,255,255,0.4)'} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          {hasDate ? (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <Text style={{ color: isBest ? '#34D399' : '#FFE8B0', fontSize: 13, fontWeight: '800' }}>
-                                {w.start} \u2192 {w.end}
-                              </Text>
-                              {isBest && <View style={{ backgroundColor: 'rgba(52,211,153,0.12)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(52,211,153,0.25)' }}><Text style={{ fontSize: 9, fontWeight: '900', color: '#34D399' }}>{language === 'si' ? '\u0dc4\u0ddc\u0daf\u0db8' : 'BEST'}</Text></View>}
-                            </View>
-                          ) : (
-                            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{language === 'si' ? (w.startSi || T.noWindows) : T.noWindows}</Text>
-                          )}
-                          <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 3, lineHeight: 16 }}>{language === 'si' ? (w.reasonSi || w.reason) : w.reason}</Text>
-                          {w.durationDays > 0 && <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, marginTop: 2 }}>{w.durationDays} {language === 'si' ? '\u0daf\u0dd2\u0db1' : 'days'}</Text>}
-                        </View>
-                      </View>
-                    );
-                  })}
-                </Glass>
-              </Animated.View>
-            )}
-
-
-            <TouchableOpacity onPress={function() { setChartsExpanded(!chartsExpanded); LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); }} activeOpacity={0.7} style={sty.chartsToggle}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><View style={sty.chartsToggleIcon}><Ionicons name="grid" size={13} color="#FF8C00" /></View><Text style={sty.chartsToggleText}>{language === 'si' ? '\u0DA2\u0DCF\u0DAD\u0D9A \u0DA0\u0D9A\u0DCA\u200D\u0DBB' : 'Birth Charts'}</Text></View>
-              <Ionicons name={chartsExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.4)" />
-            </TouchableOpacity>
-            {chartsExpanded && <View style={[sty.charts, WIDE && sty.chartsWide]}>
-              {data.brideChart && data.brideChart.rashiChart && (
-                <Animated.View entering={FadeInUp.delay(200).duration(600).springify()} style={WIDE ? sty.chartCol : undefined}>
-                  <Glass style={sty.chartCard}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F9A8D4' }} />
-                      <Text style={sty.chartTitle}>{T.brideChart}</Text>
-                    </View>
-                    <View style={{ alignItems: 'center' }}>
-                      <SriLankanChart rashiChart={data.brideChart.rashiChart} lagnaRashiId={data.brideChart.lagnaRashiId} language={language}
-                        chartSize={WIDE ? Math.min(320, (W - 140) / 2) : MOBILE_CHART} />
-                    </View>
-                  </Glass>
-                </Animated.View>
-              )}
-              {WIDE && (
-                <Animated.View entering={ZoomIn.delay(500).duration(700)} style={[sty.heartBridge, sty.heartBridgeWide]}>
-                  <Ionicons name="heart" size={22} color="#F472B6" />
-                </Animated.View>
-              )}
-              {!WIDE && data.brideChart && data.groomChart && (
-                <Animated.View entering={ZoomIn.delay(400).duration(500)} style={{ alignItems: 'center', paddingVertical: 6 }}>
-                  <View style={{ width: 1, height: 20, backgroundColor: 'rgba(255,140,0,0.15)' }} />
-                  <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(244,114,182,0.12)', alignItems: 'center', justifyContent: 'center', marginVertical: 4, borderWidth: 1, borderColor: 'rgba(244,114,182,0.25)' }}>
-                    <Ionicons name="heart" size={16} color="#F472B6" />
-                  </View>
-                  <View style={{ width: 1, height: 20, backgroundColor: 'rgba(255,140,0,0.15)' }} />
-                </Animated.View>
-              )}
-              {data.groomChart && data.groomChart.rashiChart && (
-                <Animated.View entering={FadeInUp.delay(400).duration(600).springify()} style={WIDE ? sty.chartCol : undefined}>
-                  <Glass style={sty.chartCard}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#93C5FD' }} />
-                      <Text style={sty.chartTitle}>{T.groomChart}</Text>
-                    </View>
-                    <View style={{ alignItems: 'center' }}>
-                      <SriLankanChart rashiChart={data.groomChart.rashiChart} lagnaRashiId={data.groomChart.lagnaRashiId} language={language}
-                        chartSize={WIDE ? Math.min(320, (W - 140) / 2) : MOBILE_CHART} />
-                    </View>
-                  </Glass>
-                </Animated.View>
-              )}
-            </View>}
-            <Animated.View entering={FadeInUp.delay(1300).duration(700)}>
-              <Glass style={sty.section}>
-                <View style={sty.secHeader}>
-                  <View>
-                    <Text style={sty.secTitle}><Ionicons name="eye" size={16} color="#FFE8B0" /> {T.report}</Text>
-                  </View>
-                </View>
-                {reportLoading && (
-                  <View style={sty.reportLoadRow}>
-                    <CosmicLoader size={24} color="#FF8C00" />
-                    <Text style={sty.reportLoadText}>{T.generating}</Text>
-                  </View>
-                )}
-                {report && !reportLoading && (
-                  <Animated.View entering={FadeIn.duration(500)}>
-                    <View style={sty.reportBody}>
-                      <MarkdownText>{report}</MarkdownText>
-                    </View>
-                  </Animated.View>
-                )}
-                {!report && !reportLoading && (
-                  <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, fontStyle: 'italic' }}>
-                    {language === 'si' ? 'à·€à·à¶»à·Šà¶­à·à·€ à¶½à¶¶à· à¶œà¶­ à¶±à·œà·„à·à¶šà·’ à·€à·’à¶º.' : 'Report not available.'}
-                  </Text>
-                )}
-              </Glass>
-            </Animated.View>
-          </View>
-        )}
 
         <View style={{ height: isDesktop ? 32 : 120 }} />
         </View>
       </ScrollView>
 
-
     </View>
     </KeyboardAvoidingView>
+    {teaseData ? (
+      <PorondamTeaseOverlay
+        tease={teaseData}
+        language={language}
+        onClose={function () { resolveTease(false); }}
+        onProceed={function () { resolveTease(true); }}
+      />
+    ) : null}
     </DesktopScreenWrapper>
   );
 }
-
-// ======= COMPAT STYLES =======
-var cSty = StyleSheet.create({
-  compatCard: {
-    borderRadius: 22,
-    overflow: 'hidden',
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(147,51,234,0.3)',
-    position: 'relative',
-  },
-  compatGoldEdge: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 2.5,
-    backgroundColor: '#FBBF24',
-    opacity: 0.7,
-  },
-  compatGlow: {
-    position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(147,51,234,0.12)',
-  },
-  compatUrgency: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginBottom: 12,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: 'rgba(251,191,36,0.08)',
-    alignSelf: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(251,191,36,0.15)',
-  },
-  compatUrgencyDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#34D399',
-  },
-  compatUrgencyText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: 'rgba(251,191,36,0.85)',
-    letterSpacing: 0.3,
-  },
-  compatHero: {
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  compatHeroRing: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    borderWidth: 2,
-    borderColor: 'rgba(251,191,36,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(147,51,234,0.08)',
-  },
-  compatHeroInner: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  compatHeroImg: {
-    width: 36,
-    height: 36,
-  },
-  compatHeader: {
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  compatKicker: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.8,
-    color: 'rgba(251,191,36,0.9)',
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  compatTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    lineHeight: 22,
-    textAlign: 'center',
-  },
-  compatSection: {
-    marginTop: 6,
-  },
-  compatSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    marginBottom: 12,
-  },
-  compatDotGrad: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  compatSectionTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.4,
-  },
-  compatRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
-  },
-  compatImgWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
-  compatImg: {
-    width: 26,
-    height: 26,
-  },
-  compatName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  compatHook: {
-    fontSize: 11,
-    color: 'rgba(52,211,153,0.75)',
-    fontStyle: 'italic',
-    lineHeight: 15,
-  },
-  compatScoreWrap: {
-    alignItems: 'flex-end',
-  },
-  compatScoreBar: {
-    width: 44,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
-  },
-  compatScoreFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  compatFooterWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-  },
-  compatFooter: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.4)',
-    textAlign: 'center',
-    lineHeight: 15,
-  },
-});
 
 // ======= STYLES =======
 var sty = StyleSheet.create({
@@ -3306,7 +3571,7 @@ var sty = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 100 : 80,
   },
   scrollDesktop: { paddingTop: 24, paddingHorizontal: 0 },
-  // Inner centring wrapper â€” applied on desktop inside the scroll
+  // Inner centring wrapper — applied on desktop inside the scroll
   scrollInner: { width: '100%' },
   scrollInnerDesktop: { maxWidth: 960, alignSelf: 'center', paddingHorizontal: 32 },
   title: {
@@ -3336,43 +3601,16 @@ var sty = StyleSheet.create({
   validationTitle: { color: '#FECACA', fontSize: 12.5, lineHeight: 17, fontWeight: '900', marginBottom: 2 },
   validationText: { color: 'rgba(254,202,202,0.78)', fontSize: 11.5, lineHeight: 17, fontWeight: '600' },
   fieldTag: { fontSize: 10, fontWeight: '700', color: 'rgba(255,140,0,0.7)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6, marginTop: 4 },
-  fieldRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  numInput: {
-    backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 10,
-    paddingHorizontal: 10, paddingVertical: Platform.OS === 'ios' ? 11 : 8,
-    color: '#FFF1D0', fontSize: 14, fontWeight: '600',
-    borderWidth: 1, borderColor: 'rgba(255,140,0,0.18)', textAlign: 'center', minWidth: 0,
-  },
-  sep: { color: 'rgba(255,255,255,0.2)', fontSize: 16, fontWeight: '300' },
-  timeSep: { color: 'rgba(255,140,0,0.6)', fontSize: 20, fontWeight: '700' },
   timeHint: { fontSize: 11, color: 'rgba(255,255,255,0.28)', marginBottom: 16, fontStyle: 'italic', textAlign: 'center' },
 
   cta: { borderRadius: 16, paddingVertical: 17, alignItems: 'center', overflow: 'hidden', marginBottom: 8, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 18) },
   ctaText: { color: '#FFF1D0', fontWeight: '800', fontSize: 16, letterSpacing: 0.8 },
 
-  editBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 12, marginBottom: 14, borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(255,140,0,0.18)', backgroundColor: 'rgba(255,140,0,0.06)',
-  },
-  editText: { color: '#FF8C00', fontWeight: '600', fontSize: 13 },
-
-  loadCenter: { alignItems: 'center', marginVertical: 30 },
-  loadCard: { alignItems: 'center', paddingVertical: 44, paddingHorizontal: 40, borderColor: 'rgba(255,140,0,0.2)' },
-  loadRing: { width: 90, height: 90, borderRadius: 45, opacity: 0.22, position: 'absolute', top: 34 },
-  loadInner: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(18,6,12,0.9)',
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,140,0,0.3)',
-  },
-  loadText: { color: '#FF8C00', fontSize: 15, fontWeight: '700', marginTop: 22, letterSpacing: 0.5 },
+  resultBack: { flexDirection: 'row', alignItems: 'center', gap: 3, alignSelf: 'flex-start', paddingVertical: 8, paddingRight: 12, marginBottom: 6 },
+  resultBackText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.2 },
   errorText: { color: '#F87171', fontSize: 14, textAlign: 'center' },
 
-  // Score Gauge â€” binary star orbit
-  gaugeRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  gaugeInfo: { flex: 1 },
-  gaugeCosmicLabel: { fontSize: 14, fontWeight: '800', marginBottom: 3, letterSpacing: 0.3 },
-  gaugeRating: { fontSize: 16, fontWeight: '700', color: '#FFE8B0', marginBottom: 3 },
-  gaugeScoreText: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '600', marginBottom: 12 },
+  // Score Gauge — binary star orbit
   shareChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
     paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12,
@@ -3388,30 +3626,6 @@ var sty = StyleSheet.create({
   heartBridge: { alignItems: 'center', marginVertical: -6, zIndex: 10 },
   heartBridgeWide: { marginVertical: 0, marginHorizontal: -10 },
 
-  section: { marginBottom: 16, borderColor: 'rgba(255,184,0,0.06)' },
-  secHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  secTitle: { fontSize: 16, fontWeight: '800', color: '#FFE8B0', letterSpacing: 0.2, ...textShadow('rgba(255,184,0,0.18)', { width: 0, height: 1 }, 5) },
-  secSub: { fontSize: 12, color: 'rgba(255,140,0,0.6)', fontWeight: '500', marginTop: 2 },
-
-  factorItem: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' },
-  factorTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  factorNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  factorDot: { width: 8, height: 8, borderRadius: 4 },
-  factorName: { fontSize: 14, color: '#FFE8B0', fontWeight: '700' },
-  factorSinhala: { fontSize: 12, color: 'rgba(255,140,0,0.5)', fontWeight: '500' },
-  factorBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
-  factorBadgeText: { fontSize: 12, fontWeight: '800' },
-  barTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 6, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' },
-  barFill: { height: '100%', borderRadius: 6, overflow: 'hidden' },
-  factorDesc: { fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 6, lineHeight: 18 },
-  factorTech: { color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 2 },
-  factorInsight: { color: 'rgba(255,232,176,0.75)', fontSize: 12, lineHeight: 18, marginTop: 8, paddingLeft: 44, fontStyle: 'italic' },
-
-  doshaItem: { flexDirection: 'row', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
-  doshaIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(248,113,113,0.1)', alignItems: 'center', justifyContent: 'center' },
-  doshaName: { fontSize: 14, color: '#FCA5A5', fontWeight: '700', marginBottom: 3 },
-  doshaDesc: { fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 },
-
   langRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   langChip: {
     flex: 1, paddingVertical: 11, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center',
@@ -3422,20 +3636,8 @@ var sty = StyleSheet.create({
   langChipTextActive: { color: '#E879F9' },
   reportLoadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
   reportLoadText: { color: '#FF8C00', fontSize: 13 },
-  reportBody: {
-    backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)',
-  },
-  reportText: { color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 24 },
 
   // ─── Premium UI Styles ───────────────────────────────────────────
-  premiumDivider: { flexDirection: 'row', alignItems: 'center', marginVertical: 20, paddingHorizontal: 20 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,184,0,0.12)' },
-  dividerGem: { marginHorizontal: 12, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,184,0,0.06)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)', alignItems: 'center', justifyContent: 'center' },
-
-  factorIconWrap: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  factorScorePill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1 },
-  factorScoreText: { fontSize: 12, fontWeight: '900' },
 
   chartsToggle: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -3455,10 +3657,6 @@ var sty = StyleSheet.create({
   profileLord: { fontSize: 10, color: 'rgba(255,140,0,0.6)', marginTop: 4 },
 
   // ─── Attraction Chemistry pills ───
-  chemPill: { flex: 1, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', padding: 12, alignItems: 'center', gap: 6 },
-  chemIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  chemLabel: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '600' },
-  chemTier: { fontSize: 13, fontWeight: '900' },
 
   // ─── Deeper Connection rows ───
   deepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' },
@@ -3490,8 +3688,6 @@ var sty = StyleSheet.create({
   soulWho: { fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: '700' },
   soulDrive: { fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: '600', marginTop: 2 },
   soulPlanet: { fontSize: 10, fontWeight: '900', opacity: 0.7 },
-  soulSynth: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,184,0,0.12)' },
-  soulSynthText: { flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', lineHeight: 17 },
 
   // ─── Past Lives ───
   pastCard: { flex: 1, alignItems: 'center', gap: 6, backgroundColor: 'rgba(192,132,252,0.04)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(192,132,252,0.12)' },
@@ -3499,46 +3695,20 @@ var sty = StyleSheet.create({
   pastWho: { fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '700' },
   pastArch: { fontSize: 14, fontWeight: '900' },
   pastNarrative: { fontSize: 12, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 14, fontStyle: 'italic', lineHeight: 18 },
-  pastKarma: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,184,0,0.08)' },
-  pastKarmaText: { flex: 1, fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 15 },
 
   // ─── Red Flag ───
-  flagPerson: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 12, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  flagName: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '700' },
-  flagLabel: { fontSize: 13, fontWeight: '900' },
-  flagVerdict: { fontSize: 12, color: 'rgba(255,255,255,0.55)', textAlign: 'center', marginTop: 12, fontStyle: 'italic', lineHeight: 17 },
 
   // ─── Timing & Pressure ───
-  timingPerson: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 12, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  timingBadge: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  timingName: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '700' },
-  timingLabel: { fontSize: 12, fontWeight: '800' },
-  timingAdvice: { fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 12, fontStyle: 'italic', lineHeight: 17 },
 
   // ─── Intimate Chemistry ───
   // ─── Intimate Chemistry (redesigned) ───
-  intimHeatBadge: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  intimHeatBar: { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.06)', marginTop: 6, overflow: 'hidden' },
-  intimHeatFill: { height: 4, borderRadius: 2 },
-  intimHeatLabel: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
   intimAnimalsSection: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   intimAnimalCardNew: { flex: 1, alignItems: 'center', paddingVertical: 16, paddingHorizontal: 8, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden', position: 'relative' },
   intimAnimalGrad: { position: 'absolute', top: 0, left: 0, right: 0, height: 50, borderTopLeftRadius: 14, borderTopRightRadius: 14 },
   intimAnimalBubble: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
-  intimAnimalLabel: { fontSize: 14, fontWeight: '900', marginTop: 4 },
   intimAnimalDesc: { fontSize: 9, color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 3, lineHeight: 13 },
   intimMatchCenter: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   intimMatchRing: { width: 34, height: 34, borderRadius: 17, borderWidth: 2, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.02)' },
   intimNarrativeBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, backgroundColor: 'rgba(255,184,0,0.04)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.10)' },
   intimNarrativeText: { flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', lineHeight: 17 },
-  intimDesireSection: { marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)' },
-  intimDesireRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  intimDesireName: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '700', width: 44 },
-  intimDesireTrack: { flex: 1, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
-  intimDesireFill: { height: 8, borderRadius: 4 },
-  intimDesireBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1 },
-  intimSparkSection: { marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)' },
-  intimSparkItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 8 },
-  intimSparkIcon: { width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(239,68,68,0.08)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(239,68,68,0.15)' },
-  intimSparkItemText: { flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 17 },
 });

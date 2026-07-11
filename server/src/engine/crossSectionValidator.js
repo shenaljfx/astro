@@ -33,6 +33,10 @@
 // "in your 30s", "32-year-old", "between 28 and 32".
 const AGE_RANGE_RX = /\b(?:age|aged|by age|around age|at age|between ages?)\s+(\d{1,2})(?:\s*(?:[-–to]+|\s*and\s*)\s*(\d{1,2}))?/gi;
 const AGE_DECADE_RX = /\bin (?:your|her|his) (early |mid |late )?(\d{1,2})s\b/gi;
+// Sinhala age windows: "වයස 28දී", "වයස අවුරුදු 28-32", "අවුරුදු 28ත් 32ත් අතර",
+// "28 වියේදී". Without these, Sinhala reports got ZERO cross-section checking.
+const AGE_RANGE_SI_RX = /(?:වයස\s*(?:අවුරුදු\s*)?|අවුරුදු\s*)(\d{1,2})(?!\d)(?:\s*(?:[-–]|ත්|සිට|සහ|හා)\s*(\d{1,2})(?!\d)(?:ත්)?(?:\s*(?:අතර|දක්වා))?)?/g;
+const AGE_VIYE_SI_RX = /(?<!\d)(\d{1,2})\s*විය(?:ේ|ේදී|ෙදි)/g;
 
 function _extractAgeWindows(narrative) {
   const windows = [];
@@ -56,6 +60,16 @@ function _extractAgeWindows(narrative) {
     else if (qual === 'mid') { start = decade + 3; end = decade + 6; }
     else if (qual === 'late') start = decade + 6;
     windows.push({ start, end, raw: m[0] });
+  }
+  for (const rx of [AGE_RANGE_SI_RX, AGE_VIYE_SI_RX]) {
+    rx.lastIndex = 0;
+    while ((m = rx.exec(narrative)) !== null) {
+      const a = parseInt(m[1], 10);
+      const b = m[2] ? parseInt(m[2], 10) : a;
+      if (a >= 5 && a <= 100 && b >= 5 && b <= 110) {
+        windows.push({ start: Math.min(a, b), end: Math.max(a, b), raw: m[0] });
+      }
+    }
   }
   return windows;
 }
@@ -116,12 +130,19 @@ function findCrossSectionDiscrepancies(narrativeSections) {
   const get = (k) => narrativeSections[k]?.narrative || null;
   const discrepancies = [];
 
+  // Event keyword filters — English AND Sinhala so the comparison works for
+  // both output languages (previously Sinhala paragraphs never matched and
+  // the whole cross-section pass silently skipped).
+  const MARRIAGE_KW = /marriage|spouse|wedding|married|wife|husband|විවාහ|මංගල|සහකරු|සහකාරිය|සැමිය|බිරිඳ|බැඳීම/i;
+  const CAREER_KW = /career|job|profession|work|promotion|business|රැකියා|රස්සාව|වෘත්තිය|උසස්වීම|ව්‍යාපාර/i;
+  const CHILDREN_KW = /child|baby|son|daughter|kids|fatherhood|motherhood|pregnancy|දරුව|දරුවන්|දරුවෙක්|පුතා|දුව|ගැබ්/i;
+
   // Marriage age — marriage section is authoritative
   if (get('marriage')) {
     for (const other of ['lifePredictions', 'surpriseInsights', 'marriedLife', 'familyPortrait']) {
       if (get(other)) {
         // Restrict to paragraphs that mention marriage
-        const otherParas = get(other).split(/\n\n+/).filter((p) => /marriage|spouse|wedding|married|wife|husband/i.test(p)).join('\n\n');
+        const otherParas = get(other).split(/\n\n+/).filter((p) => MARRIAGE_KW.test(p)).join('\n\n');
         if (!otherParas) continue;
         const d = _compareEventClaim('marriage_age', get('marriage'), otherParas, 'marriage', other);
         if (d) discrepancies.push(d);
@@ -133,7 +154,7 @@ function findCrossSectionDiscrepancies(narrativeSections) {
   if (get('career')) {
     for (const other of ['lifePredictions', 'surpriseInsights', 'financial']) {
       if (get(other)) {
-        const otherParas = get(other).split(/\n\n+/).filter((p) => /career|job|profession|work|promotion|business/i.test(p)).join('\n\n');
+        const otherParas = get(other).split(/\n\n+/).filter((p) => CAREER_KW.test(p)).join('\n\n');
         if (!otherParas) continue;
         const d = _compareEventClaim('career_peak', get('career'), otherParas, 'career', other);
         if (d) discrepancies.push(d);
@@ -145,7 +166,7 @@ function findCrossSectionDiscrepancies(narrativeSections) {
   if (get('children')) {
     for (const other of ['lifePredictions', 'familyPortrait', 'surpriseInsights']) {
       if (get(other)) {
-        const otherParas = get(other).split(/\n\n+/).filter((p) => /child|baby|son|daughter|kids|fatherhood|motherhood|pregnancy/i.test(p)).join('\n\n');
+        const otherParas = get(other).split(/\n\n+/).filter((p) => CHILDREN_KW.test(p)).join('\n\n');
         if (!otherParas) continue;
         const d = _compareEventClaim('first_child', get('children'), otherParas, 'children', other);
         if (d) discrepancies.push(d);

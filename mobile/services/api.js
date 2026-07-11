@@ -184,11 +184,133 @@ export var getBirthChartBasic = function(birthDate, lat, lng, language) {
   return request('/api/horoscope/birth-chart/data?date=' + encodeURIComponent(birthDate) + '&lat=' + lat + '&lng=' + lng + '&language=' + (language || 'en') + '&basic=true');
 };
 
+export var getOnboardingReveal = function(birthDate, lat, lng, name, language) {
+  return request('/api/horoscope/onboarding-reveal?date=' + encodeURIComponent(birthDate) + '&lat=' + lat + '&lng=' + lng + '&name=' + encodeURIComponent(name || '') + '&language=' + (language || 'en'));
+};
+
 export var getBirthChart = function(birthDate, lat, lng, language) {
   return request('/api/horoscope/birth-chart', {
     method: 'POST',
     body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en' }),
     _timeout: 35000, // Increased timeout to 35s for slow responses
+  });
+};
+
+// "What's moving today" — cheap daily transit line for the kendara page.
+export var getTransitToday = function(birthDate, lat, lng) {
+  return request('/api/horoscope/transit-today?date=' + encodeURIComponent(birthDate) + '&lat=' + (lat || 6.9271) + '&lng=' + (lng || 79.8612));
+};
+
+// ─── Subha Nakath planner (Phase 4) ──────────────────────────────────────────
+
+// Supported activities (wedding, business, travel, education, …) — public list.
+export var getMuhurthaActivities = function() {
+  return request('/api/predictions/muhurtha/activities');
+};
+
+// Free tease: best DAY in the range (no exact time).
+export var getNakathPreview = function(activity, startDate, endDate, lat, lng) {
+  return request('/api/preview/nakath', {
+    method: 'POST',
+    body: JSON.stringify({ activity: activity, startDate: startDate, endDate: endDate, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    _timeout: 30000,
+  });
+};
+
+// Pro: full time windows, chart-tuned.
+export var findMuhurtha = function(activityType, startDate, endDate, birthDate, lat, lng) {
+  return request('/api/predictions/muhurtha/find', {
+    method: 'POST',
+    body: JSON.stringify({ activityType: activityType, startDate: startDate, endDate: endDate, birthDate: birthDate || null, lat: lat || 6.9271, lng: lng || 79.8612, maxResults: 5 }),
+    _timeout: 40000,
+  });
+};
+
+// Pro: "when will it happen" life-event timing across all domains.
+export var getLifeEventTiming = function(birthDate, birthTime, lat, lng) {
+  return request('/api/predictions/timing/all', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, birthTime: birthTime || null, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    _timeout: 40000,
+  });
+};
+
+// ─── Baby Kendara Pack (Phase 4) ─────────────────────────────────────────────
+
+// Free tease: lagna + nakshatra + naming-letter count + ganda-moola checked.
+export var getBabyPreview = function(birthDate, lat, lng) {
+  return request('/api/preview/baby', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    _timeout: 30000,
+  });
+};
+
+// Pro / one-time: the full baby pack (names, ganda moola result, ceremony dates).
+export var composeBabyKendara = function(birthDate, lat, lng) {
+  return request('/api/baby/compose', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    _timeout: 40000,
+  });
+};
+
+// Free kendara teaser (chart + hero + one insight + vault counts) for non-subscribers.
+export var getKendaraPreview = function(birthDate, lat, lng, language) {
+  return request('/api/preview/kendara', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en' }),
+    _timeout: 20000,
+  });
+};
+
+// Free basic chart identity (lagna, moon/sun, nakshatra, D1) — same shape as
+// getBirthChartBasic so the Home screen renders it unchanged. Fallback for
+// non-subscribers whose gated /birth-chart/data call 402s.
+export var getBirthChartPreview = function(birthDate, lat, lng) {
+  return request('/api/preview/birth-chart', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    _timeout: 20000,
+  });
+};
+
+// Free daily habit surface (Rahu Kalaya, panchanga, sunrise/sunset, moon) —
+// same shape as /nakath/daily so the Home screen renders it unchanged. Used as
+// the fallback for non-subscribers, whose gated /nakath/daily call 401/402s.
+export var getTodayPreview = function(date, lat, lng) {
+  var d = date || new Date().toISOString().split('T')[0];
+  return request('/api/preview/today?date=' + encodeURIComponent(d) + '&lat=' + (lat || 6.9271) + '&lng=' + (lng || 79.8612), {
+    _timeout: 20000,
+  });
+};
+
+// Free porondam tease (archetype + 1 gift + counts, never the score) shown
+// before the paywall.
+export var getPorondamPreview = function(bride, groom) {
+  return request('/api/preview/porondam', {
+    method: 'POST',
+    body: JSON.stringify({ bride: bride, groom: groom }),
+    _timeout: 20000,
+  });
+};
+
+// Convergence calendar — the 12-month dated-window timeline.
+// Full (Pro): months + windows + drivers. Preview (free): intensity strip +
+// locked window headers only.
+export var getConvergence = function(birthDate, lat, lng) {
+  return request('/api/predictions/convergence', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    _timeout: 30000,
+  });
+};
+
+export var getConvergencePreview = function(birthDate, lat, lng) {
+  return request('/api/preview/convergence', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    _timeout: 30000,
   });
 };
 
@@ -215,6 +337,15 @@ export var getPorondamReport = function(porondamData, language, brideName, groom
   });
 };
 
+// Pre-payment gate: asks the server whether the report writer is available
+// BEFORE the paywall is shown, so users are never charged into an outage.
+export var getPorondamAiHealth = function() {
+  return request('/api/porondam/report/health', {
+    _timeout: 8000,
+    _maxRetries: 0,
+  });
+};
+
 export var askAstrologer = function(message, options) {
   if (!options) options = {};
   return request('/api/chat/ask', {
@@ -231,10 +362,11 @@ export var askAstrologer = function(message, options) {
   });
 };
 
-export var createVibeLink = function(name, birthDate) {
+export var createVibeLink = function(name, birthDate, lat, lng) {
   return request('/api/porondam/vibe-link', {
     method: 'POST',
-    body: JSON.stringify({ senderName: name, senderBirthDate: birthDate }),
+    body: JSON.stringify({ senderName: name, senderBirthDate: birthDate, senderLat: lat, senderLng: lng }),
+    _timeout: 15000,
   });
 };
 
@@ -250,9 +382,34 @@ export var getAIReport = function(birthDate, lat, lng, language, birthLocation, 
   if (!options) options = {};
   return request('/api/horoscope/full-report-ai', {
     method: 'POST',
-    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en', birthLocation: birthLocation || null, userName: userName || null, userGender: userGender || null, userReligion: userReligion || null, reportId: reportId || null, previousReportId: options.previousReportId || null, retryReportId: options.retryReportId || null, recoveryRetry: !!options.recoveryRetry }),
+    body: JSON.stringify({
+      birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en',
+      birthLocation: birthLocation || null, userName: userName || null, userGender: userGender || null,
+      userReligion: userReligion || null, reportId: reportId || null,
+      previousReportId: options.previousReportId || null, retryReportId: options.retryReportId || null,
+      recoveryRetry: !!options.recoveryRetry, timeUnknown: !!options.timeUnknown,
+      // Known Facts intake — unlocks server-side validation mode + birth-time
+      // rectification. All optional; omitted when the user skips the sheet.
+      maritalStatus: options.maritalStatus || null,
+      marriageYear: options.marriageYear || null,
+      careerField: options.careerField || null,
+      lifeEvents: Array.isArray(options.lifeEvents) && options.lifeEvents.length > 0 ? options.lifeEvents : null,
+    }),
     _timeout: 600000,
     _maxRetries: 0,
+  });
+};
+
+// ─── Prediction ledger (Phase 3) ────────────────────────────────
+export var getPredictionCheckins = function() {
+  return request('/api/horoscope/prediction-checkins', { method: 'GET', _timeout: 10000 });
+};
+
+export var sendPredictionOutcome = function(reportId, predictionId, outcome, prediction) {
+  return request('/api/horoscope/prediction-outcome', {
+    method: 'POST',
+    body: JSON.stringify({ reportId: reportId, predictionId: predictionId, outcome: outcome, prediction: prediction || null }),
+    _timeout: 10000,
   });
 };
 
@@ -474,10 +631,6 @@ export var isGoodTimeNow = function(lat, lng) {
   return request('/api/predictions/muhurtha/now?lat=' + (lat || 6.9271) + '&lng=' + (lng || 79.8612));
 };
 
-export var getMuhurthaActivities = function() {
-  return request('/api/predictions/muhurtha/activities');
-};
-
 export var analyzeHealth = function(birthDate, birthTime, lat, lng) {
   return request('/api/predictions/health/analyze', {
     method: 'POST',
@@ -486,40 +639,44 @@ export var analyzeHealth = function(birthDate, birthTime, lat, lng) {
   });
 };
 
-// ─── Token / Micro-transaction API ──────────────────────────────────────────
-
-export var getTokenBalance = function() {
-  return request('/api/tokens/balance');
-};
-
-export var topUpTokens = function(amount) {
-  return request('/api/tokens/topup', {
-    method: 'POST',
-    body: JSON.stringify({ amount: amount }),
-  });
-};
-
-export var getTokenHistory = function() {
-  return request('/api/tokens/history');
-};
-
 // ─── Entitlements (retry failed generations without re-payment) ─────────────
 
 export var checkEntitlement = function(type, inputData) {
-  return request('/api/tokens/entitlement/check', {
+  return request('/api/entitlements/check', {
     method: 'POST',
     body: JSON.stringify({ type: type, inputData: inputData }),
   });
 };
 
 export var getEntitlements = function(type) {
-  return request('/api/tokens/entitlements' + (type ? '?type=' + type : ''));
+  return request('/api/entitlements' + (type ? '?type=' + type : ''));
 };
 
 // ─── Chat Quota API ──────────────────────────────────────────────────────────
 
 export var getChatQuota = function() {
   return request('/api/chat/quota');
+};
+
+// ─── Analytics (best-effort, never throws) ───────────────────────────────────
+
+// Records a paywall funnel event (shown | purchased | dismissed). Fire-and-
+// forget: swallows all errors so analytics never affects the user flow.
+export var logPaywallEvent = function(event, meta) {
+  try {
+    return request('/api/analytics/paywall', {
+      method: 'POST',
+      body: JSON.stringify({
+        event: event,
+        source: meta && meta.source,
+        plan: meta && meta.plan,
+        currency: meta && meta.currency,
+      }),
+      _timeout: 8000,
+    }).catch(function() {});
+  } catch (e) {
+    return Promise.resolve();
+  }
 };
 
 // ─── Notification API ────────────────────────────────────────────────────────
@@ -756,10 +913,23 @@ export default {
   getDailyNakath: getDailyNakath,
   getDailyHoroscope: getDailyHoroscope,
   getBirthChart: getBirthChart,
+  getTransitToday: getTransitToday,
+  getKendaraPreview: getKendaraPreview,
+  getBirthChartPreview: getBirthChartPreview,
+  getTodayPreview: getTodayPreview,
+  getPorondamPreview: getPorondamPreview,
+  getConvergence: getConvergence,
+  getConvergencePreview: getConvergencePreview,
+  getNakathPreview: getNakathPreview,
+  findMuhurtha: findMuhurtha,
+  getLifeEventTiming: getLifeEventTiming,
+  getBabyPreview: getBabyPreview,
+  composeBabyKendara: composeBabyKendara,
   getBirthChartBasic: getBirthChartBasic,
   getBirthChartData: getBirthChartData,
   checkPorondam: checkPorondam,
   getPorondamReport: getPorondamReport,
+  getPorondamAiHealth: getPorondamAiHealth,
   askAstrologer: askAstrologer,
   createVibeLink: createVibeLink,
   getFullReport: getFullReport,
@@ -818,13 +988,11 @@ export default {
   // Predictions — Feedback
   recordFeedback: recordFeedback,
   getPendingFeedback: getPendingFeedback,
-  // Tokens / Micro-transactions
-  getTokenBalance: getTokenBalance,
-  topUpTokens: topUpTokens,
-  getTokenHistory: getTokenHistory,
   // Entitlements (retry failed generations)
   checkEntitlement: checkEntitlement,
   getEntitlements: getEntitlements,
+  // Analytics
+  logPaywallEvent: logPaywallEvent,
   // Chat quota
   getChatQuota: getChatQuota,
   // Notifications

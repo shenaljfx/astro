@@ -37,9 +37,14 @@ function calculateYoginiDasha(moonSidereal, birthDate) {
   const degreesInNak = moonSidereal % (360 / 27);
   const fractionRemaining = 1 - degreesInNak / (360 / 27);
 
-  // Yogini starting index: (nakshatra_number + 3) mod 8
-  // nakshatra_number is 1-based in traditional texts
-  const yoginiStartIdx = (nakIndex + 1 + 3) % 8;
+  // Yogini at birth: r = (nakshatra_number + 3) mod 8, where nakshatra_number
+  // is 1-based. The classical mapping is r=1→Mangala, r=2→Pingala, … r=0→Sankata
+  // (the 8th). YOGINI_LORDS is 0-based [Mangala..Sankata], so index = r-1, and
+  // r=0 maps to index 7. The previous code used r directly as a 0-based index,
+  // which returned the NEXT yogini for every birth (e.g. Ashwini → Bhadrika
+  // instead of the correct Bhramari).
+  const remainder = (nakIndex + 1 + 3) % 8;
+  const yoginiStartIdx = (remainder + 7) % 8; // r-1, with r=0 → 7
 
   const dashas = [];
   let currentDate = new Date(birthDate);
@@ -110,22 +115,41 @@ function isOddSign(rashiId) {
   return rashiId % 2 === 1;
 }
 
+// Exaltation / debilitation signs (rashiId 1-12) for the ±1-year adjustment.
+const CHARA_EXALT_SIGN = { mars: 10, venus: 12, mercury: 6, moon: 2, sun: 1, jupiter: 4, saturn: 7 };
+const CHARA_DEBIL_SIGN = { mars: 4, venus: 6, mercury: 12, moon: 8, sun: 7, jupiter: 10, saturn: 1 };
+
 function charaDashaDuration(rashiId, planets) {
-  const lordKey = SIGN_LORDS[rashiId];
-  const lord = planets[lordKey];
-  if (!lord) return 12;
+  // Jaimini Chara duration = (count from the sign to its lord's sign) − 1,
+  // counted zodiacally for odd signs and anti-zodiacally for even signs;
+  // 12 years when the lord occupies its own sign. Scorpio (8) and Aquarius
+  // (11) have dual lords — the planetary lord plus a co-node (Ketu / Rahu);
+  // the classical tie-break takes whichever gives the greater count.
+  const candidates = [];
+  const primary = SIGN_LORDS[rashiId];
+  if (planets[primary]) candidates.push(planets[primary]);
+  if (rashiId === 8 && planets.ketu) candidates.push(planets.ketu);
+  if (rashiId === 11 && planets.rahu) candidates.push(planets.rahu);
+  if (candidates.length === 0) return 12;
 
-  // Duration = distance of the lord from its sign (in whole signs)
-  const lordRashiId = lord.rashiId;
-  let distance;
-  if (isOddSign(rashiId)) {
-    distance = ((lordRashiId - rashiId) % 12 + 12) % 12;
-  } else {
-    distance = ((rashiId - lordRashiId) % 12 + 12) % 12;
+  const countFor = (lord) => {
+    const lordRashiId = lord.rashiId;
+    const dist = isOddSign(rashiId)
+      ? ((lordRashiId - rashiId) % 12 + 12) % 12
+      : ((rashiId - lordRashiId) % 12 + 12) % 12;
+    return dist === 0 ? 12 : dist;
+  };
+
+  let years = Math.max(...candidates.map(countFor));
+
+  // Exaltation of the primary lord lengthens the period by 1 year;
+  // debilitation shortens it by 1 (floored at 1).
+  const lord = planets[primary];
+  if (lord) {
+    if (CHARA_EXALT_SIGN[primary] === lord.rashiId) years += 1;
+    else if (CHARA_DEBIL_SIGN[primary] === lord.rashiId) years = Math.max(1, years - 1);
   }
-
-  // If lord is in own sign, duration = 12 years
-  return distance === 0 ? 12 : distance;
+  return years;
 }
 
 function calculateCharaDasha(birthDate, lat, lng) {

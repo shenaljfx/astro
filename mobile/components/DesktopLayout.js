@@ -160,11 +160,6 @@ function NavItem({ item, focused, collapsed, language, onPress }) {
   );
 }
 
-// ── Balance chip (hidden — removed per user request) ──────────────
-function BalanceChip({ balance, collapsed }) {
-  return null;
-}
-
 // ── Language toggle ────────────────────────────────────────────────
 function LangToggle({ language, onToggle, collapsed }) {
   var isEn = language === 'en';
@@ -185,7 +180,7 @@ function LangToggle({ language, onToggle, collapsed }) {
 }
 
 // ── Top bar (exported, used inside each tab screen on desktop) ─────
-export function DesktopTopBar({ routeName, language, balance, onToggleLanguage }) {
+export function DesktopTopBar({ routeName, language, onToggleLanguage }) {
   var activeItem = NAV_ITEMS.find(function (n) { return n.name === routeName; });
   var [timeStr, setTimeStr] = useState('');
   useEffect(function () {
@@ -241,7 +236,7 @@ export function DesktopTopBar({ routeName, language, balance, onToggleLanguage }
 }
 
 // ── MAIN: Sidebar panel (used as tabBar prop in Tabs) ──────────────
-export default function DesktopSidebar({ state, navigation, balance, language, onToggleLanguage, onCollapseChange }) {
+export default function DesktopSidebar({ state, navigation, language, onToggleLanguage, onCollapseChange }) {
   var [collapsed, setCollapsed] = useState(false);
   var sideW = useSharedValue(SIDEBAR_W_EXPANDED);
   useEffect(function () {
@@ -296,7 +291,6 @@ export default function DesktopSidebar({ state, navigation, balance, language, o
       </ScrollView>
       <View style={sb.bottomSection}>
         <View style={sb.divider} />
-        <BalanceChip balance={balance} collapsed={collapsed} />
         <LangToggle language={language} onToggle={onToggleLanguage} collapsed={collapsed} />
         {!collapsed && <Text style={sb.versionText}>Grahachara \u00b7 v2.0</Text>}
       </View>
@@ -360,11 +354,6 @@ var sb = StyleSheet.create({
   navDesc:  { fontSize: 9.5, color: 'rgba(255,255,255,0.26)', marginTop: 2, letterSpacing: 0.2 },
   activeDot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
   bottomSection: { paddingHorizontal: 8, paddingBottom: 18, gap: 8 },
-  balanceChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 9, marginHorizontal: 4,
-  },
-  balanceText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
   langBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, overflow: 'hidden', borderRadius: 11,
@@ -403,12 +392,6 @@ var top = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
   },
   clockText:  { fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: '600', letterSpacing: 0.5 },
-  balancePill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(251,191,36,0.07)',
-    borderWidth: 1, borderColor: 'rgba(251,191,36,0.28)',
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
-  },
   langToggle: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(255,255,255,0.04)',
@@ -416,5 +399,4 @@ var top = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
   },
   langToggleText: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '700', letterSpacing: 0.5 },
-  balanceVal: { fontSize: 11, fontWeight: '700', color: '#FBBF24', letterSpacing: 0.3 },
 });

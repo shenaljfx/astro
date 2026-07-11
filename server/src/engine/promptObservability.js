@@ -1,6 +1,9 @@
 const { PROMPT_POLICY_VERSION, TIMING_PROMPT_POLICY } = require('./promptPolicies');
 
-const PROMPT_VERSION = 'grahachara-report-prompt-v8';
+// v9: real per-user confidence scores (positional-call fix), Known Facts
+// validation mode, next12Months convergence section, Sinhala validator parity,
+// fixed Sinhala style directive. Bump invalidates caches with junk confidence.
+const PROMPT_VERSION = 'grahachara-report-prompt-v9';
 const PROMPT_OBSERVABILITY_VERSION = 'prompt-observability-v1';
 const CLAIM_BUILDER_VERSION = 'prompt-claim-builder-v4';
 
