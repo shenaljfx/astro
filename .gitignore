@@ -12,6 +12,9 @@ __pycache__/
 .env.production
 .env.staging
 
+# Local backup artifacts (may copy secrets — never commit)
+*.claude-backup
+
 # Firebase service account (secret)
 server/firebase-service-account.json
 
