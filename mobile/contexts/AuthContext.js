@@ -523,6 +523,7 @@ export function AuthProvider({ children }) {
           if (prev && JSON.stringify(prev.birthData) === JSON.stringify(merged.birthData) &&
               prev.onboardingComplete === merged.onboardingComplete &&
               prev.displayName === merged.displayName &&
+              prev.photoURL === merged.photoURL &&
               JSON.stringify(prev.subscription) === JSON.stringify(merged.subscription)) {
             return prev; // Same reference = no re-render
           }
@@ -936,12 +937,30 @@ export function AuthProvider({ children }) {
     }
   }, [token]);
 
-  // Update profile
+  // Merge a fresh server user into local state + storage without dropping
+  // client-only fields (subscription/isSubscribed live in local state and may
+  // be ahead of the server profile document).
+  var mergeServerUser = useCallback(function(serverUser) {
+    if (!serverUser) return;
+    setUser(function(prev) {
+      var merged = {
+        ...prev,
+        ...serverUser,
+        subscription: prev?.subscription !== undefined ? prev.subscription : serverUser.subscription,
+        isSubscribed: prev?.isSubscribed !== undefined ? prev.isSubscribed : serverUser.isSubscribed,
+      };
+      AsyncStorage.setItem(STORAGE_USER, JSON.stringify(merged));
+      return merged;
+    });
+  }, []);
+
+  // Update editable profile fields (displayName, photoURL). Uses PATCH so it
+  // never clobbers birthData / location / preferences.
   var updateProfile = useCallback(async function(data) {
     if (!token) return;
     try {
       var res = await fetch(getBaseUrl() + '/api/user/profile', {
-        method: 'POST',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + token,
@@ -949,16 +968,51 @@ export function AuthProvider({ children }) {
         body: JSON.stringify(data),
       });
       var json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to update profile');
+      }
       if (json.success && json.user) {
-        setUser(json.user);
-        await AsyncStorage.setItem(STORAGE_USER, JSON.stringify(json.user));
+        mergeServerUser(json.user);
       }
       return json;
     } catch (err) {
       if (__DEV__) console.error('Update profile error:', err);
       throw err;
     }
-  }, [token]);
+  }, [token, mergeServerUser]);
+
+  // Upload a new avatar (base64 image → Firebase Storage) and persist photoURL.
+  var uploadAvatar = useCallback(async function(base64, mime) {
+    if (!token) return;
+    try {
+      var res = await fetch(getBaseUrl() + '/api/user/avatar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token,
+        },
+        body: JSON.stringify({ image: base64, mime: mime || 'image/jpeg' }),
+      });
+      var json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to upload profile picture');
+      }
+      if (json.user) {
+        mergeServerUser(json.user);
+      } else if (json.photoURL) {
+        setUser(function(prev) {
+          if (!prev) return prev;
+          var updated = { ...prev, photoURL: json.photoURL };
+          AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
+          return updated;
+        });
+      }
+      return json;
+    } catch (err) {
+      if (__DEV__) console.error('Upload avatar error:', err);
+      throw err;
+    }
+  }, [token, mergeServerUser]);
 
   // Get auth token for API calls
   var getAuthToken = useCallback(async function() {
@@ -978,6 +1032,19 @@ export function AuthProvider({ children }) {
               'Authorization': 'Bearer ' + storedToken,
             },
           });
+          // Server-side sign-out: invalidate this JWT (bumps tokenVersion) so a
+          // leaked/stolen copy can't be reused before its 30-day expiry.
+          try {
+            await fetch(getBaseUrl() + '/api/auth/logout', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + storedToken,
+              },
+            });
+          } catch (logoutErr) {
+            if (__DEV__) console.warn('[Auth] Server logout failed (non-fatal):', logoutErr && logoutErr.message);
+          }
         }
       } catch (notifErr) {
         if (__DEV__) console.warn('[Auth] Push unregister failed (non-fatal):', notifErr && notifErr.message);
@@ -1056,6 +1123,7 @@ export function AuthProvider({ children }) {
     },
     saveBirthData: saveBirthData,
     updateProfile: updateProfile,
+    uploadAvatar: uploadAvatar,
     signOut: signOut,
   };
 

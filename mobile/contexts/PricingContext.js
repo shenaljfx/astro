@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as Localization from 'expo-localization';
 import api from '../services/api';
 import { setDetectedCountry } from '../services/api';
+import { useLanguage } from './LanguageContext';
 
 /**
  * PricingContext — provides geo-aware pricing throughout the app.
@@ -50,8 +51,11 @@ function detectCountryCode() {
     // expo-localization v3+
     if (Localization.getLocales) {
       var locales = Localization.getLocales();
-      if (locales && locales.length > 0 && locales[0].regionCode) {
-        return locales[0].regionCode;
+      if (locales && locales.length > 0) {
+        // Sinhala device language ⇒ Sri Lankan user ⇒ LKR, even if the device
+        // REGION is set elsewhere (common on emulators / imported phones).
+        if (locales[0].languageCode === 'si') return 'LK';
+        if (locales[0].regionCode) return locales[0].regionCode;
       }
     }
     // Fallback: check locale string (e.g. "en-LK", "si-LK", "en-US")
@@ -67,12 +71,20 @@ function detectCountryCode() {
 }
 
 export function PricingProvider({ children }) {
+  var langCtx = useLanguage();
+  // Sinhala-language users are Sri Lankan → always priced in LKR, regardless of
+  // device region or store-account currency (emulators, imported phones and
+  // sandbox/test accounts otherwise leak USD). English users keep geo/store
+  // detection so genuine international users still see their local currency.
+  // The app defaults to Sinhala, so LKR is the default for everyone.
+  var forceLkr = !!(langCtx && langCtx.language === 'si');
+
   var [pricing, setPricing] = useState(DEFAULT_PRICING);
   var [countryCode, setCountryCode] = useState('LK');
   var [loaded, setLoaded] = useState(false);
 
   useEffect(function() {
-    var code = detectCountryCode();
+    var code = forceLkr ? 'LK' : detectCountryCode();
     setCountryCode(code);
     setDetectedCountry(code); // Set in API headers for all requests
 
@@ -89,9 +101,13 @@ export function PricingProvider({ children }) {
       .finally(function() {
         setLoaded(true);
       });
-  }, []);
+  }, [forceLkr]);
 
-  var isInternational = pricing.currency === 'USD';
+  // Sinhala users always resolve to LKR even if a prior detection or store-
+  // currency sync set USD — override the EXPOSED pricing without fighting the
+  // setters. English users see whatever was detected/synced.
+  var effectivePricing = (forceLkr && pricing.currency !== 'LKR') ? DEFAULT_PRICING : pricing;
+  var isInternational = effectivePricing.currency === 'USD';
 
   /**
    * Update pricing based on a new country code.
@@ -123,6 +139,9 @@ export function PricingProvider({ children }) {
    */
   var syncFromStoreCurrency = function(rcCurrencyCode) {
     if (!rcCurrencyCode) return;
+    // Sinhala (Sri Lankan) users always stay on LKR — never flip to USD from a
+    // store-account currency (test/sandbox accounts commonly report USD).
+    if (forceLkr) return;
     var code = String(rcCurrencyCode).toUpperCase();
     var nextCountry = code === 'LKR' ? 'LK' : 'INTL';
     if (nextCountry === countryCode) return;
@@ -145,9 +164,9 @@ export function PricingProvider({ children }) {
   * @returns {string} e.g. "LKR 200" or "$2"
    */
   var priceLabel = function(feature) {
-    var feat = pricing[feature];
+    var feat = effectivePricing[feature];
     if (!feat) return '';
-    return feat.label || (pricing.currencySymbol + ' ' + feat.amount);
+    return feat.label || (effectivePricing.currencySymbol + ' ' + feat.amount);
   };
 
   /**
@@ -156,7 +175,7 @@ export function PricingProvider({ children }) {
    * @returns {number}
    */
   var priceAmount = function(feature) {
-    var feat = pricing[feature];
+    var feat = effectivePricing[feature];
     return feat ? feat.amount : 0;
   };
 
@@ -165,16 +184,17 @@ export function PricingProvider({ children }) {
    * @returns {string} e.g. "LKR 280/month" or "$4.99/month"
    */
   var subscriptionLabel = function() {
-    var sub = pricing.subscription;
+    var sub = effectivePricing.subscription;
     if (!sub) return '';
-    return sub.label || (pricing.currencySymbol + ' ' + sub.amount + '/' + (sub.period || 'month'));
+    return sub.label || (effectivePricing.currencySymbol + ' ' + sub.amount + '/' + (sub.period || 'month'));
   };
 
   var value = {
-    pricing: pricing,
-    currency: pricing.currency,
-    currencySymbol: pricing.currencySymbol,
+    pricing: effectivePricing,
+    currency: effectivePricing.currency,
+    currencySymbol: effectivePricing.currencySymbol,
     isInternational: isInternational,
+    isSriLankan: forceLkr || countryCode === 'LK',
     countryCode: countryCode,
     loaded: loaded,
     priceLabel: priceLabel,

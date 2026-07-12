@@ -99,7 +99,7 @@ var CONTENT = {
           desc: 'ඔයාගේ කේන්දරයේ සැඟවුණු ප්‍රබල යෝග, ලග්නය, නවාංශකය සහ භාව 12ම.' },
         { icon: 'alert-circle-outline', text: 'මාරක සහ අපල කාල ඇඟවීම්',
           desc: 'ඉදිරියට එන කරදර සහ ධන හානි මාස ගණනකට පෙරම දැනගන්න, අවදානම් වලින් බේරෙන්න.' },
-        { icon: 'chatbubble-ellipses-outline', text: 'ඔයාගේම පෞද්ගලික AI ජ්‍යෝතිෂී',
+        { icon: 'chatbubble-ellipses-outline', text: 'ඔයාගේම පෞද්ගලික ජ්‍යෝතිෂී — 24/7',
           desc: '"මට මේ රස්සාව ලැබෙයිද?" "ඔහු මට කවදා හමුවෙයිද?" — ඔයාගේ කේන්දරය මත පදනම් වූ නිවැරදි පිළිතුරු.' },
         { icon: 'diamond-outline', text: 'ධනය, විවාහය සහ දියුණුව ලැබෙන කාල',
           desc: 'විවාහය සහ දියුණුවට අදාල හැම දශාවම සහ අතුරු දශාවම නිවැරදිවම මැනගන්න.' },
@@ -219,7 +219,7 @@ var CONTENT = {
       ctaSub: 'One-time payment · Instant calculation · 100% private',
     },
     si: {
-      badge: '♥ පොරොන්දම් පරීක්ෂාව · සම්ප්‍රදායික + AI',
+      badge: '♥ පොරොන්දම් පරීක්ෂාව · සම්ප්‍රදායික ක්‍රමයට',
       hook: 'විවාහයක් කියන්නේ ජීවිතයේ ලොකුම තීරණයයි. තීරණයක් ගන්න කලින් තාරකා කියන ඇත්ත දැනගන්න.',
       title: 'ඔවුන් ඔයාටම\nහිමි කෙනාද?',
       subtitle: 'වසර 2,000ක් පැරණි සාම්ප්‍රදායික පරීක්ෂාව යොදාගෙන කොයිතරම් දුරට ඔයා දෙදෙනා ගැලපෙනවද කියලා තත්පර 30කින් හරියටම දකින්න.',
@@ -337,7 +337,7 @@ CONTENT.convergence = {
       { icon: 'compass-outline', text: 'What To Do In Each Period',
         desc: 'When to push, when to wait, when to protect — practical guidance tuned to your chart.' },
       { icon: 'telescope-outline', text: 'Plus Everything in Pro',
-        desc: 'Full kendara analysis, daily guidance, ask-the-astrologer chat, and your 47-page life report.' },
+        desc: 'Full kendara analysis, daily guidance, ask-the-astrologer chat, and your weekly predictions.' },
     ],
     valueLine: 'A year-ahead reading from an astrologer: LKR 3,000+',
     testimonial: '"It marked October as my money window. I signed the deal that month. I don\'t make big moves without checking this now."',
@@ -364,7 +364,7 @@ CONTENT.convergence = {
       { icon: 'compass-outline', text: 'එක් එක් කාලයේ කළ යුත්ත',
         desc: 'කවදා ඉදිරියට යනවද, කවදා රැඳී ඉන්නවද, කවදා රැක ගන්නවද — ඔබේ කේන්දරයට ගැලපෙන මඟපෙන්වීම.' },
       { icon: 'telescope-outline', text: 'Pro හි සියල්ලද සමඟ',
-        desc: 'සම්පූර්ණ කේන්දර විග්‍රහය, දෛනික මඟපෙන්වීම, නැකැත්කරුගෙන් අසන්න සහ ඔබේ ජීවිත වාර්තාව.' },
+        desc: 'සම්පූර්ණ කේන්දර විග්‍රහය, දෛනික මඟපෙන්වීම, නැකැත්කරුගෙන් අසන්න සහ සතිපතා පලාපල.' },
     ],
     valueLine: 'ජ්‍යෝතිෂියෙකුගෙන් වසරක පලාපල: රු. 3,000+',
     testimonial: '"ඔක්තෝබර් මගේ මුදල් කාලය කියලා පෙන්නුවා. ඒ මාසෙදිම ගනුදෙනුව අත්සන් කළා. දැන් මේක බලන්නෙ නැතුව ලොකු තීරණ ගන්නෙ නැහැ."',
@@ -433,61 +433,66 @@ CONTENT.nakath = {
   },
 };
 
-// baby = ONE-TIME Baby Kendara Pack (a gift SKU, also included with Pro).
+// baby = ONE-TIME Baby Kendara Pack (a gift SKU, purchased on its own —
+// a subscription does not include it).
 CONTENT.baby = {
   en: {
     badge: '👶 THE NEWBORN KEEPSAKE',
-    hook: "Your baby's first chart — the auspicious name letters, the doshas checked, and the naming-ceremony dates.",
+    hook: "Your baby's first chart — a complete life-story reading, the auspicious name letters, doshas checked, and naming-ceremony dates.",
     title: "Your Baby's\nFirst Kendara",
     subtitle: 'A real astrologer charges LKR 3,000+ for a newborn reading. Yours instantly, to keep and share with family.',
     stats: [
-      { value: '1', label: 'lifetime keepsake' },
-      { value: '✓', label: 'dosha checked' },
-      { value: '30s', label: 'instant' },
+      { value: '5', label: 'life-story chapters' },
+      { value: '2', label: 'doshas + remedies' },
+      { value: '∞', label: 'keep forever' },
     ],
     features: [
-      { icon: 'text-outline', text: 'Auspicious Naming Letters',
-        desc: "The exact starting sounds for your baby's name, from their birth star (nakshatra pada)." },
-      { icon: 'shield-checkmark-outline', text: 'Ganda Moola Dosha Check',
-        desc: 'The #1 thing families worry about for a newborn — checked, with clear guidance.' },
-      { icon: 'calendar-outline', text: 'Naming Ceremony Dates',
-        desc: 'The most auspicious upcoming dates for the naming (nam thebeema), tuned to the baby.' },
-      { icon: 'document-text-outline', text: 'A Keepsake to Share',
-        desc: "The baby's chart identity, beautifully laid out — perfect for the family group." },
+      { icon: 'sparkles-outline', text: 'A Complete Life-Story Reading',
+        desc: 'Character, talents & vocation, education, family bonds, and fortune — read from the chart for your child.' },
+      { icon: 'people-outline', text: 'Reads You, the Parents',
+        desc: "The family chapter surfaces the parents' own professions and the sibling picture — verifiable today." },
+      { icon: 'grid-outline', text: 'The Full Birth Chart',
+        desc: 'Traditional Sri Lankan kendara with all 9 planet positions, naming letters + Sinhala name ideas.' },
+      { icon: 'shield-checkmark-outline', text: 'Dosha Checks + Vitality',
+        desc: 'Ganda Moola AND Gandanta with remedies, plus a gentle constitution note.' },
+      { icon: 'calendar-outline', text: 'Ceremony Dates, Chart-Tuned',
+        desc: 'Naming (nam thebeema) and first-feeding dates scored for this baby specifically.' },
     ],
     valueLine: 'A printed newborn astrologer reading: LKR 3,000+',
     testimonial: '"We named our daughter using this and shared the pack with both families. Everyone loved it."',
     testimonialAuthor: '— Sanduni & Kasun, Matara',
     urgency: '👶 Their first blessing — yours to keep forever',
     cta: 'Get the Baby Pack',
-    ctaSub: 'One-time payment · Yours instantly · Included with Pro',
+    ctaSub: 'One-time payment · Yours instantly · Keep forever',
   },
   si: {
     badge: '👶 බිලිඳු කේන්දර තෑග්ග',
-    hook: 'ඔබේ බිලිඳාගේ පළමු කේන්දරය — සුබ නාම අකුරු, දෝෂ පරීක්ෂාව සහ නම් තැබීමේ නැකැත්.',
+    hook: 'ඔබේ බිලිඳාගේ පළමු කේන්දරය — සම්පූර්ණ ජීවිත කතා විග්‍රහය, සුබ නාම අකුරු, දෝෂ පරීක්ෂාව සහ නම් තැබීමේ නැකැත්.',
     title: 'ඔබේ බිලිඳාගේ\nපළමු කේන්දරය',
     subtitle: 'ප්‍රවීණ ජ්‍යෝතිෂියෙක් බිලිඳු කේන්දරයකට රු. 3,000+ ගනී. ඔබට ක්ෂණිකව — තබාගන්න, පවුලට බෙදාගන්න.',
     stats: [
-      { value: '1', label: 'ජීවිත තෑග්ග' },
-      { value: '✓', label: 'දෝෂ පරීක්ෂාව' },
-      { value: '30s', label: 'ක්ෂණික' },
+      { value: '5', label: 'ජීවිත කතා පරිච්ඡේද' },
+      { value: '2', label: 'දෝෂ + පිළියම්' },
+      { value: '∞', label: 'සදහටම' },
     ],
     features: [
-      { icon: 'text-outline', text: 'සුබ නාම අකුරු',
-        desc: 'බිලිඳාගේ නම සඳහා නක්ෂත්‍ර පාදයට අනුව හරියටම මුල් අකුරු.' },
-      { icon: 'shield-checkmark-outline', text: 'ගණ්ඩ මූල දෝෂ පරීක්ෂාව',
-        desc: 'බිලිඳෙකු ගැන පවුල් වඩාත්ම බිය වන දේ — පරීක්ෂා කර, පැහැදිලි මඟපෙන්වීමක් සමඟ.' },
-      { icon: 'calendar-outline', text: 'නම් තැබීමේ නැකැත්',
-        desc: 'නම් තැබීම (නම් තෙබීම) සඳහා ඉදිරි වඩාත්ම සුබ දින, බිලිඳාට අනුව.' },
-      { icon: 'document-text-outline', text: 'බෙදාගත හැකි තෑග්ගක්',
-        desc: 'බිලිඳාගේ කේන්දර අනන්‍යතාව ලස්සනට — පවුලේ සමූහයට කදිමයි.' },
+      { icon: 'sparkles-outline', text: 'සම්පූර්ණ ජීවිත කතා විග්‍රහය',
+        desc: 'චරිතය, දක්ෂතා හා වෘත්තිය, අධ්‍යාපනය, පවුල් බැඳීම් සහ වාසනාව — නැකත් පත්‍රයෙන් ඔබේ දරුවාට.' },
+      { icon: 'people-outline', text: 'දෙමාපියන් ගැනද කියයි',
+        desc: 'පවුල් පරිච්ඡේදය දෙමාපියන්ගේ වෘත්තීන් සහ සහෝදර තොරතුරු පෙන්වයි — අදම තහවුරු කළ හැකියි.' },
+      { icon: 'grid-outline', text: 'සම්පූර්ණ කේන්දර සටහන',
+        desc: 'සාම්ප්‍රදායික ලංකා කේන්දරය, ග්‍රහ 9ම, නාම අකුරු + සිංහල නම් අදහස්.' },
+      { icon: 'shield-checkmark-outline', text: 'දෝෂ පරීක්ෂා + ශරීර ස්වභාවය',
+        desc: 'ගණ්ඩ මූල සහ ගණ්ඩාන්ත පිළියම් සමඟ, මෘදු ශරීර ස්වභාව සටහනක්ද.' },
+      { icon: 'calendar-outline', text: 'කේන්දරයට ගැළපූ නැකැත් දින',
+        desc: 'නම් තැබීම සහ ඉඳුල් කට ගෑම — මේ බිලිඳාටම ලකුණු කළ සුබ දින.' },
     ],
     valueLine: 'මුද්‍රිත බිලිඳු කේන්දර කියවීමක්: රු. 3,000+',
     testimonial: '"අපේ දුවට නම තිබ්බේ මේකෙන්. පැකේජය පවුල් දෙකටම බෙදාගත්තා. හැමෝම කැමතියි."',
     testimonialAuthor: '— සඳුනි සහ කසුන්, මාතර',
     urgency: '👶 ඔවුන්ගේ පළමු ආශිර්වාදය — සදහටම තබාගන්න',
     cta: 'බිලිඳු පැකේජය ගන්න',
-    ctaSub: 'එක් වරක් · ක්ෂණිකව ලැබේ · Pro සමඟ ඇතුළත්',
+    ctaSub: 'එක් වරක් · ක්ෂණිකව ලැබේ · සදහටම ඔබ සතුයි',
   },
 };
 
@@ -545,6 +550,74 @@ CONTENT.winback = {
   },
 };
 
+// kendara = subscription sell from the Kendara chart page. Shown when a free
+// user taps any of the locked chart sections (source: kendara_d9, kendara_dasha,
+// kendara_doshas, …). The chart-vault framing mirrors the page they came from.
+CONTENT.kendara = {
+  en: {
+    badge: '✦ YOUR COMPLETE CHART',
+    hook: 'You can see your chart. Unlock what it actually says — the readings, the timing, the marriage chart.',
+    title: 'Your Whole\nChart, Unlocked',
+    subtitle: 'The yogas, the care points with remedies, your dasha timeline, the D9 marriage chart and 5 more life-area charts — all read for your exact birth time.',
+    stats: [
+      { value: '9', label: 'planets read' },
+      { value: '6', label: 'life-area charts' },
+      { value: '4.8★', label: '2,341 reviews' },
+    ],
+    features: [
+      { icon: 'sparkles-outline', text: 'Every Yoga & Strength Explained',
+        desc: 'The lucky combinations hidden in your chart — what each one means for your money, work and relationships.' },
+      { icon: 'shield-checkmark-outline', text: 'Your Care Points — With Remedies',
+        desc: 'The doshas found in your chart, whether they\'re softened, and the simple remedies for each.' },
+      { icon: 'git-branch-outline', text: 'Your Dasha Timeline & Current Chapter',
+        desc: 'Which planetary period you\'re living now, how long it lasts, and what it asks of you.' },
+      { icon: 'heart-outline', text: 'Your D9 Marriage Chart',
+        desc: 'The navamsa — where Venus sits, how your bonds are shaped, and what your partner life holds.' },
+      { icon: 'shield-outline', text: 'Sensitive-Period Alerts',
+        desc: 'The months ahead to take extra care with health and decisions — dated, with guidance.' },
+      { icon: 'time-outline', text: 'Plus Rectification & Ask-the-Astrologer',
+        desc: 'Not sure of your exact birth time? Pro includes the rectification tool — and chat to ask anything about your chart.' },
+    ],
+    valueLine: 'A full chart reading from an astrologer: LKR 3,000+',
+    testimonial: '"It found a Raja Yoga I never knew I had — and told me my Saturn period ends next year. Everything clicked."',
+    testimonialAuthor: '— Kasun, Gampaha',
+    urgency: '✦ Your chart is calculated — unlock to read all of it',
+    cta: 'Unlock My Full Chart',
+    ctaSub: 'Cancel anytime · No hidden charges · Protected by Google Play',
+  },
+  si: {
+    badge: '✦ ඔබේ සම්පූර්ණ කේන්දරය',
+    hook: 'කේන්දරය ඔබට පේනවා. ඒක ඇත්තටම කියන දේ — කියවීම්, කාලය, විවාහ කේන්දරය — විවෘත කරන්න.',
+    title: 'ඔබේ මුළු කේන්දරයම\nවිවෘතව',
+    subtitle: 'යෝග, පිළියම් සහිත අවවාද තැන්, ඔබේ දශා කාල රේඛාව, D9 විවාහ කේන්දරය සහ තවත් ජීවිත අංශ සිතියම් 5ක් — ඔබේ නිශ්චිත උපන් වේලාවට කියවා.',
+    stats: [
+      { value: '9', label: 'ග්‍රහයෝ' },
+      { value: '6', label: 'අංශ සිතියම්' },
+      { value: '4.8★', label: 'සමාලෝචන 2,341' },
+    ],
+    features: [
+      { icon: 'sparkles-outline', text: 'හැම යෝගයක්ම, ශක්තියක්ම පැහැදිලිව',
+        desc: 'ඔබේ කේන්දරයේ සැඟවුණු වාසනාවන්ත යෝග — ඒවා ධනය, රැකියාව සහ සබඳතා වලට කියන දේ.' },
+      { icon: 'shield-checkmark-outline', text: 'අවවාද තැන් — පිළියම් සමඟ',
+        desc: 'කේන්දරයේ හමු වූ දෝෂ, ඒවා අඩුද, එක් එක් එකට සරල පිළියම් මොනවද කියා.' },
+      { icon: 'git-branch-outline', text: 'දශා කාල රේඛාව සහ දැන් කාලය',
+        desc: 'ඔබ දැන් ඉන්නේ කුමන ග්‍රහ කාලයේද, එය කොපමණ කල් තිබේද, ඔබෙන් ඉල්ලන්නේ මොනවද.' },
+      { icon: 'heart-outline', text: 'ඔබේ D9 විවාහ කේන්දරය',
+        desc: 'නවාංශකය — සිකුරු ඉන්න තැන, බැඳීම් හැඩගැහෙන විදිහ සහ විවාහ ජීවිතය.' },
+      { icon: 'shield-outline', text: 'සංවේදී කාල ඇඟවීම්',
+        desc: 'සෞඛ්‍යය සහ තීරණ ගැන පරිස්සම් විය යුතු ඉදිරි මාස — දින සහ මඟපෙන්වීම් සමඟ.' },
+      { icon: 'time-outline', text: 'උපන් වේලා නිවැරදි කිරීම සහ නැකැත්කරුගෙන් අසන්න ද',
+        desc: 'උපන් වේලාව හරියටම දන්නේ නැද්ද? Pro හි උපන් වේලා නිවැරදි කිරීමේ මෙවලම — සහ කේන්දරය ගැන ඕනෑම දෙයක් අසන්න chat ද ඇතුළත්.' },
+    ],
+    valueLine: 'ජ්‍යෝතිෂියෙකුගෙන් සම්පූර්ණ කේන්දර කියවීමක්: රු. 3,000+',
+    testimonial: '"මට තිබුණ රාජ යෝගයක් හොයාගත්තා — සෙනසුරු කාලය ලබන අවුරුද්දේ ඉවරයි කිව්වා. හැම දේම ගැලපුණා."',
+    testimonialAuthor: '— කසුන්, ගම්පහ',
+    urgency: '✦ ඔබේ කේන්දරය ගණනය කරලා — ඔක්කොම කියවන්න විවෘත කරන්න',
+    cta: 'මගේ සම්පූර්ණ කේන්දරය විවෘත කරන්න',
+    ctaSub: 'ඕනෑම වෙලාවක නවතන්න · Google Play හරහා ආරක්ෂිතයි',
+  },
+};
+
 var ACCENTS = {
   onboarding: { primary: '#FFB800', secondary: '#FF8C00', gradient: ['#FFD700', '#FFB800', '#FF8C00'] },
   report:     { primary: '#34D399', secondary: '#10B981', gradient: ['#34D399', '#10B981', '#059669'] },
@@ -554,6 +627,7 @@ var ACCENTS = {
   nakath:     { primary: '#FFB800', secondary: '#FF8C00', gradient: ['#FFD97A', '#FFB800', '#FF8C00'] },
   baby:       { primary: '#F472B6', secondary: '#EC4899', gradient: ['#F9A8D4', '#F472B6', '#EC4899'] },
   winback:    { primary: '#FFB800', secondary: '#FF8C00', gradient: ['#FFD700', '#FFB800', '#FF8C00'] },
+  kendara:    { primary: '#FFB800', secondary: '#FF8C00', gradient: ['#FFD97A', '#FFB800', '#FF8C00'] },
 };
 
 var SHARED = {
@@ -651,9 +725,13 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
   var { pricing, priceLabel, priceAmount, isInternational, syncFromStoreCurrency } = usePricing();
 
   var src = source || 'onboarding';
-  var content = CONTENT[src] ? CONTENT[src][lang] : CONTENT.onboarding[lang];
+  // Per-section sources (e.g. kendara_d9, kendara_dasha) share one pitch but log
+  // a distinct funnel source. Fall back to the prefix before '_' for content/
+  // accent lookup; `src` itself stays granular for analytics.
+  var baseSrc = CONTENT[src] ? src : (src.indexOf('_') !== -1 ? src.split('_')[0] : src);
+  var content = CONTENT[baseSrc] ? CONTENT[baseSrc][lang] : CONTENT.onboarding[lang];
   var shared = SHARED[lang];
-  var accent = ACCENTS[src] || ACCENTS.onboarding;
+  var accent = ACCENTS[baseSrc] || ACCENTS.onboarding;
   // One-time (non-subscription) sources → their store product + pricing key.
   var ONE_TIME_PRODUCT = { report: PRODUCT_IDS.full_report, porondam: PRODUCT_IDS.porondam_check, baby: PRODUCT_IDS.baby_kendara };
   var ONE_TIME_PRICING_KEY = { report: 'report', porondam: 'porondam', baby: 'babyKendara' };
@@ -805,18 +883,21 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
   }, [offerings]);
 
   var getDisplayPrice = function () {
-    // Prefer RevenueCat's priceString — it reflects the user's actual
-    // Google Play / App Store account country & currency (the price they
-    // will actually be charged), which is more reliable than device locale.
+    // International users see RevenueCat's priceString — it reflects their actual
+    // Play/App Store account currency (the price they'll be charged). Sri Lankan
+    // / LKR users ALWAYS see LKR from our own pricing, never the store priceString
+    // (sandbox/test accounts leak USD), so LKR is guaranteed for SL users.
     if (isOneTime) {
-      var oneTimeProductId = ONE_TIME_PRODUCT[src];
-      var oneTimePkg = getPackageByProductId(oneTimeProductId);
-      if (oneTimePkg && oneTimePkg.product && oneTimePkg.product.priceString) {
-        return oneTimePkg.product.priceString;
+      if (isInternational) {
+        var oneTimeProductId = ONE_TIME_PRODUCT[src];
+        var oneTimePkg = getPackageByProductId(oneTimeProductId);
+        if (oneTimePkg && oneTimePkg.product && oneTimePkg.product.priceString) {
+          return oneTimePkg.product.priceString;
+        }
       }
       return priceLabel(ONE_TIME_PRICING_KEY[src]);
     }
-    if (offerings && offerings.current) {
+    if (isInternational && offerings && offerings.current) {
       var monthly = getMonthlyPackage();
       if (monthly && monthly.product) return monthly.product.priceString;
     }

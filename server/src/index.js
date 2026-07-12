@@ -24,6 +24,20 @@ if (IS_PROD) {
   }
 }
 
+// ─── Misconfiguration guard: prod secrets but not NODE_ENV=production ─────────
+// Nearly every fail-closed protection above (JWT length, webhook auth, admin
+// secret, CORS restriction, Firebase-down handling) branches on NODE_ENV. If
+// this host is clearly a production deployment (real RevenueCat webhook key
+// present) but NODE_ENV isn't 'production', those protections silently turn
+// OFF. Fail fast so a dev .env can't be shipped to prod unnoticed.
+if (!IS_PROD && process.env.REVENUECAT_WEBHOOK_AUTH_KEY && process.env.MOCK_PAYMENTS !== 'true') {
+  throw new Error(
+    `FATAL: REVENUECAT_WEBHOOK_AUTH_KEY is set but NODE_ENV="${process.env.NODE_ENV || '(unset)'}". ` +
+    'Production hosts must set NODE_ENV=production so security guards engage. ' +
+    'If this is genuinely a dev/staging box, unset the webhook key or set MOCK_PAYMENTS=true.'
+  );
+}
+
 // Firebase initialization
 const { initFirebase } = require('./config/firebase');
 initFirebase();
@@ -37,11 +51,13 @@ const {
   chatLimiter,
   aiUserLimiter,
   userDataLimiter,
+  previewLimiter,
   requireAdmin,
   sanitizeInputs,
   corsOptions,
   hppProtection,
 } = require('./middleware/security');
+const { enforceTokenNotRevoked } = require('./services/tokenRevocation');
 
 const nakathRoutes = require('./routes/nakath');
 const porondamRoutes = require('./routes/porondam');
@@ -71,6 +87,19 @@ const { requestAlertMiddleware, startMemoryMonitor } = require('./services/alert
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ─── Trust proxy (opt-in) ───────────────────────────────────────
+// IP-based rate limiting relies on req.ip being the REAL client. Behind a
+// reverse proxy / load balancer, req.ip is the proxy unless we trust the
+// X-Forwarded-For chain — so all clients would share one rate-limit bucket.
+// Set TRUST_PROXY to the number of proxy hops in front of the app (e.g. 1 for
+// a single nginx/LB). Leave it UNSET when the app is exposed directly, because
+// blindly trusting XFF then lets clients spoof their IP to dodge rate limits.
+if (process.env.TRUST_PROXY !== undefined && process.env.TRUST_PROXY !== '') {
+  const hops = Number(process.env.TRUST_PROXY);
+  app.set('trust proxy', Number.isFinite(hops) ? hops : process.env.TRUST_PROXY);
+  console.log(`   🔗 trust proxy set to: ${process.env.TRUST_PROXY}`);
+}
 
 // ─── Security Middleware (order matters) ────────────────────────
 
@@ -132,7 +161,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-var paidAccess = [phoneAuth, requireSubscription];
+var paidAccess = [phoneAuth, enforceTokenNotRevoked, requireSubscription];
 
 /**
  * paidAccess with explicit route exemptions. Exempted paths skip the
@@ -142,7 +171,7 @@ var paidAccess = [phoneAuth, requireSubscription];
  * here is relative to the mount point.
  */
 function paidAccessExcept(exemptPrefixes) {
-  return [phoneAuth, function (req, res, next) {
+  return [phoneAuth, enforceTokenNotRevoked, function (req, res, next) {
     var p = req.path;
     for (var i = 0; i < exemptPrefixes.length; i++) {
       var ex = exemptPrefixes[i];
@@ -190,11 +219,13 @@ app.use('/api/reading', aiLimiter, paidAccess, readingRoutes);
 app.use('/api/enhanced', userDataLimiter, paidAccess, enhancedRoutes);
 app.use('/api/jyotish', userDataLimiter, paidAccess, jyotishRoutes);
 app.use('/api/geocode', geocodeRoutes);
-// Public teasers (no subscription) — free kendara preview feeds the funnel
-app.use('/api/preview', userDataLimiter, previewRoutes);
+// Public teasers (no subscription) — free kendara preview feeds the funnel.
+// previewLimiter (20/min/IP) is tighter than userDataLimiter because these
+// routes run unauthenticated Swiss-Ephemeris-heavy calculations.
+app.use('/api/preview', previewLimiter, previewRoutes);
 app.use('/api/manifest', aiLimiter, paidAccess, manifestRoutes);
-// Baby Kendara: /compose admits one-time baby_kendara credit buyers (route-gated).
-app.use('/api/baby', userDataLimiter, paidAccessExcept(['/compose']), babyRoutes);
+// Baby Kendara: /compose + /generate admit one-time baby_kendara credit buyers (route-gated).
+app.use('/api/baby', userDataLimiter, paidAccessExcept(['/compose', '/generate']), babyRoutes);
 app.use('/api/marketing', marketingRoutes);
 // Analytics — public (paywall funnel events fire for free/logged-out users)
 app.use('/api/analytics', userDataLimiter, analyticsRoutes);

@@ -16,6 +16,7 @@ const express = require('express');
 const router = express.Router();
 const { optionalAuth } = require('../middleware/auth');
 const { getDb } = require('../config/firebase');
+const { toTtlTimestamp } = require('../utils/firestoreTtl');
 
 const VALID_EVENTS = ['shown', 'purchased', 'dismissed'];
 
@@ -37,6 +38,8 @@ router.post('/paywall', optionalAuth, async (req, res) => {
         uid: req.user && req.user.uid ? req.user.uid : null,
         platform: (req.headers['x-platform'] || '').slice(0, 16) || null,
         createdAt: new Date().toISOString(),
+        // Timestamp TTL (fix F3) — funnel events are only useful short-term.
+        ttlExpireAt: toTtlTimestamp(Date.now() + Number(process.env.PAYWALL_EVENT_TTL_MS || 180 * 24 * 60 * 60 * 1000)),
       }).catch((e) => console.warn('[analytics/paywall] write failed (non-fatal):', e.message));
     }
 

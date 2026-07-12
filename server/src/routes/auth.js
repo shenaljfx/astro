@@ -17,6 +17,7 @@ const { OAuth2Client } = require('google-auth-library');
 const { getDb, getAuth, COLLECTIONS } = require('../config/firebase');
 const { getPricing } = require('../config/pricing');
 const { INPUT_LIMITS, sanitizeString } = require('../middleware/security');
+const { revokeUserTokens } = require('../services/tokenRevocation');
 
 // Google OAuth web client ID — MUST be set via env var; no fallback in production (boot guard enforces this)
 const GOOGLE_WEB_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -36,9 +37,9 @@ const JWT_EXPIRES = '30d'; // Token valid for 30 days
 
 // ─── Helper: Generate JWT for authenticated users ───────────────
 
-function generateToken(uid, email) {
+function generateToken(uid, email, tokenVersion) {
   return jwt.sign(
-    { uid, email, type: 'google-auth' },
+    { uid, email, type: 'google-auth', tokenVersion: Number(tokenVersion || 0) },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES }
   );
@@ -102,6 +103,7 @@ async function createGoogleUser(uid, profile) {
       provider: null,
     },
     onboardingComplete: false,
+    tokenVersion: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     reportCount: 0,
@@ -219,8 +221,9 @@ router.post('/google', async (req, res) => {
       console.log(`🆕 New Google user created: ${email || uid}`);
     }
 
-    // Generate our JWT token
-    const token = generateToken(uid, email);
+    // Generate our JWT token — stamp it with the user's current token version
+    // so a later logout (which bumps the version) invalidates it server-side.
+    const token = generateToken(uid, email, user.tokenVersion);
 
     res.json({
       success: true,
@@ -241,6 +244,30 @@ router.post('/google', async (req, res) => {
   } catch (err) {
     console.error('Google auth error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/auth/logout
+ * Server-side sign-out: bumps the user's tokenVersion so every JWT issued
+ * before now is immediately rejected by enforceTokenNotRevoked. The client
+ * still clears its local token; this makes a leaked/stolen token unusable
+ * without waiting for the 30-day expiry. Idempotent and best-effort — a
+ * failure here must never block the client's local sign-out.
+ */
+router.post('/logout', async (req, res) => {
+  try {
+    const decoded = extractUser(req);
+    if (!decoded || !decoded.uid) {
+      // No valid token — nothing to revoke; treat as success so sign-out is smooth.
+      return res.json({ success: true });
+    }
+    await revokeUserTokens(decoded.uid);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Logout error:', err);
+    // Don't surface an error — the device will clear local state regardless.
+    res.json({ success: true });
   }
 });
 

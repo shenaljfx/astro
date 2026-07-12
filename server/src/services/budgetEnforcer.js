@@ -1,8 +1,23 @@
 const crypto = require('crypto');
 const { getDb, COLLECTIONS } = require('../config/firebase');
+const { toTtlTimestamp } = require('../utils/firestoreTtl');
 
+// Per-event cost docs (fix F6): rare/expensive features are always logged in
+// full; cheap high-frequency ones (chat, chart helpers) only when a single call
+// is costly enough to be worth its own document. The daily increment counters
+// below are ALWAYS written, so aggregate spend stays exact regardless.
+const ALWAYS_LOG_EVENT = new Set(['fullReport', 'weeklyLagna', 'reading', 'porondamReport']);
+const AI_COST_EVENT_MIN_LKR = Number(process.env.AI_COST_EVENT_MIN_LKR || 2);
+
+// NOTE: these are pre-flight budget RESERVATIONS (gate whether a call is
+// allowed), so they should reflect the real measured cost of a feature — see
+// server/benchmark/LIVE_AI_COST_REPORT.md. A full report was under-reserved at
+// 250 while its true cost is ~370 LKR; corrected below. Post-2026-07 cost
+// optimisations (reduced hero-model use, lower thinking budgets, prompt-prefix
+// caching) bring the real figure back down, so 300 is a safe reservation that
+// still covers a worst-case all-Pro report.
 const DEFAULT_ESTIMATES = {
-  fullReport: 250,
+  fullReport: 300,
   aiAnalysis: 35,
   chartTranslation: 15,
   chartExplanation: 20,
@@ -85,8 +100,10 @@ async function recordAICostEvent(feature, uid, cost = {}) {
   const outputTokens = Number(cost.outputTokens || 0);
   const thinkingTokens = Number(cost.thinkingTokens || 0);
   const globalRef = db.collection(COLLECTIONS.DAILY_AI_SPEND).doc(dateKey);
-  const eventRef = db.collection(COLLECTIONS.AI_COST_EVENTS).doc();
-  const expiresAt = new Date(Date.now() + Number(process.env.AI_COST_EVENT_TTL_MS || 90 * 24 * 60 * 60 * 1000)).toISOString();
+  const ttlMs = Number(process.env.AI_COST_EVENT_TTL_MS || 90 * 24 * 60 * 60 * 1000);
+  const expiresAtMs = Date.now() + ttlMs;
+  const expiresAt = new Date(expiresAtMs).toISOString();
+  const ttlExpireAt = toTtlTimestamp(expiresAtMs); // Timestamp TTL (fix F3)
 
   const writes = [
     globalRef.set({
@@ -96,8 +113,14 @@ async function recordAICostEvent(feature, uid, cost = {}) {
       totalTokens: admin.firestore.FieldValue.increment(totalTokens),
       updatedAt: now,
       expiresAt,
+      ttlExpireAt,
     }, { merge: true }),
-    eventRef.set({
+  ];
+
+  // Per-event document (fix F6): sample cheap/frequent features out.
+  if (ALWAYS_LOG_EVENT.has(feature) || costLKR >= AI_COST_EVENT_MIN_LKR) {
+    const eventRef = db.collection(COLLECTIONS.AI_COST_EVENTS).doc();
+    writes.push(eventRef.set({
       feature,
       uid: uid || null,
       costLKR,
@@ -109,8 +132,9 @@ async function recordAICostEvent(feature, uid, cost = {}) {
       model: cost.model || null,
       createdAt: now,
       expiresAt,
-    }),
-  ];
+      ttlExpireAt,
+    }));
+  }
 
   if (uid) {
     const userRef = db.collection(COLLECTIONS.DAILY_AI_USER_SPEND).doc(buildUserSpendId(dateKey, uid));
@@ -122,6 +146,7 @@ async function recordAICostEvent(feature, uid, cost = {}) {
       totalTokens: admin.firestore.FieldValue.increment(totalTokens),
       updatedAt: now,
       expiresAt,
+      ttlExpireAt,
     }, { merge: true }));
   }
 

@@ -40,7 +40,7 @@ export var NAV_ITEMS = [
   { name: 'chat',     title: 'Guide',  titleSi: '\u0db8\u0dcf\u0dbb\u0dca\u0d9c\u0dba',
     icon: 'sparkles-outline',      iconFocused: 'sparkles',
     gradient: ['#FFB800','#FF8C00'],
-    description: 'AI astrology guide',       descriptionSi: 'AI \u0db8\u0dcf\u0dbb\u0dca\u0d9c\u0ddc\u0db4\u0daf\u0dda\u0dc1\u0dba' },
+    description: 'Personal astrology guide',       descriptionSi: '\u0db4\u0dde\u0daf\u0dca\u0d9c\u0dbd\u0dd2\u0d9a \u0da2\u0dca\u200d\u0dba\u0ddd\u0dad\u0dd2\u0dc2 \u0db8\u0d9f\u0db4\u0dd9\u0db1\u0dca\u0dc0\u0dd3\u0db8' },
   { name: 'porondam', title: 'Match',  titleSi: '\u0db4\u0ddc\u0dbb\u0ddc\u0db1\u0dca\u0daf\u0db8',
     icon: 'heart-circle-outline',  iconFocused: 'heart-circle',
     gradient: ['#F472B6','#DB2777'],
@@ -101,7 +101,7 @@ function SidebarLogo({ collapsed }) {
       {!collapsed && (
         <View style={{ marginLeft: 12, flex: 1, minWidth: 0 }}>
           <Text style={sb.logoTitle}>GRAHACHARA</Text>
-          <Text style={sb.logoSubtitle}>AI · Vedic Guide</Text>
+          <Text style={sb.logoSubtitle}>Vedic Astrology Guide</Text>
         </View>
       )}
     </View>

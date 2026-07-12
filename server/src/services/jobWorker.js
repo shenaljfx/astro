@@ -42,7 +42,12 @@ async function executeAIReportJob(payload, job = {}) {
   const reportLng = Number(payload.lng || 79.8612);
   const language = payload.language || 'en';
 
-  createReportProgress(reportId, REPORT_SECTION_TOTAL, uid, {
+  // A section subset (e.g. Baby Kendara's 5 narrative sections) narrows the
+  // progress total; absent → the full report's section count.
+  const sectionSubset = Array.isArray(payload.sections) && payload.sections.length ? payload.sections : null;
+  const sectionTotal = sectionSubset ? sectionSubset.length : REPORT_SECTION_TOTAL;
+
+  createReportProgress(reportId, sectionTotal, uid, {
     jobId: job.id || payload.jobId || null,
     stage: payload.recoveryRetry ? 'recovering' : 'engine',
     currentSection: payload.recoveryRetry ? 'checking_saved_report' : null,
@@ -147,6 +152,7 @@ async function executeAIReportJob(payload, job = {}) {
         asOfDate: payload.asOfDate || null,
         timeUnknown: payload.timeUnknown === true,
         timeContext: serializeTimeContext(payload.timeContext),
+        sections: sectionSubset, // null → full report; array → curated subset (Baby Kendara)
       },
       reportId
     );
@@ -172,7 +178,7 @@ async function executeAIReportJob(payload, job = {}) {
       lat: reportLat,
       lng: reportLng,
       language,
-      type: 'ai-narrative',
+      type: payload.reportType === 'baby' ? 'baby-narrative' : 'ai-narrative',
       sections: report.narrativeSections,
       rashiChart: report.rashiChart,
       birthInfo: report.birthData,

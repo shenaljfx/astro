@@ -11,20 +11,28 @@
  * - GET  /api/user/porondam     — Get porondam history
  */
 
+const crypto = require('crypto');
 const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const { requireSubscription } = require('../middleware/subscription');
 const { INPUT_LIMITS, sanitizeString } = require('../middleware/security');
+const { getBucket } = require('../config/firebase');
 const {
   upsertUser,
   getUser,
+  updateUserProfile,
   updateBirthData,
   updatePreferences,
   getUserReports,
   getUserChats,
   getUserPorondamHistory,
 } = require('../models/firestore');
+
+// Avatar upload limits — the client resizes to a small square before sending,
+// so anything larger than this is almost certainly abuse or a client bug.
+const AVATAR_MAX_BYTES = 400 * 1024; // 400 KB decoded (stays under the 500 KB body limit)
+const AVATAR_MIME_EXT = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
 const BIRTH_TIME_EDIT_LIMIT = 2;
 const SRI_LANKA_OFFSET_MINUTES = 330;
@@ -113,6 +121,96 @@ router.get('/profile', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Profile fetch error:', err);
     res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+/**
+ * PATCH /api/user/profile
+ * Partial update of editable profile fields (displayName, photoURL).
+ * Safe for name-only edits: never touches birthData / location / preferences.
+ */
+router.patch('/profile', requireAuth, async (req, res) => {
+  try {
+    const updates = {};
+
+    if (req.body.displayName !== undefined) {
+      const safeName = sanitizeString(req.body.displayName, INPUT_LIMITS.name);
+      if (!safeName) {
+        return res.status(400).json({ error: 'Name cannot be empty' });
+      }
+      updates.displayName = safeName;
+    }
+
+    if (req.body.photoURL !== undefined) {
+      updates.photoURL = sanitizeString(req.body.photoURL, 500) || null;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    const user = await updateUserProfile(req.user.uid, updates);
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error('Profile info update error:', err);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+/**
+ * POST /api/user/avatar
+ * Upload a profile picture. Body: { image: <base64>, mime: 'image/jpeg' }.
+ * The client resizes/compresses to a small square first. We store it in
+ * Firebase Storage under avatars/<uid>/ with a download token so the public
+ * URL works even under uniform bucket-level access, then persist it as photoURL.
+ */
+router.post('/avatar', requireAuth, async (req, res) => {
+  try {
+    const bucket = getBucket();
+    if (!bucket) {
+      return res.status(503).json({ error: 'Image storage is not available' });
+    }
+
+    const { image, mime } = req.body || {};
+    const ext = AVATAR_MIME_EXT[mime];
+    if (!image || typeof image !== 'string' || !ext) {
+      return res.status(400).json({ error: 'A valid JPEG, PNG or WebP image is required' });
+    }
+
+    // Strip a data-URI prefix if the client sent one.
+    const base64 = image.replace(/^data:[^;]+;base64,/, '');
+    let buffer;
+    try {
+      buffer = Buffer.from(base64, 'base64');
+    } catch (decodeErr) {
+      return res.status(400).json({ error: 'Image could not be decoded' });
+    }
+    if (!buffer || buffer.length === 0) {
+      return res.status(400).json({ error: 'Image is empty' });
+    }
+    if (buffer.length > AVATAR_MAX_BYTES) {
+      return res.status(413).json({ error: 'Image is too large. Please choose a smaller photo.' });
+    }
+
+    const token = crypto.randomUUID();
+    const objectPath = `avatars/${req.user.uid}/${Date.now()}.${ext}`;
+    const file = bucket.file(objectPath);
+    await file.save(buffer, {
+      resumable: false,
+      contentType: mime,
+      metadata: {
+        contentType: mime,
+        cacheControl: 'public, max-age=31536000',
+        metadata: { firebaseStorageDownloadTokens: token },
+      },
+    });
+
+    const photoURL = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(objectPath)}?alt=media&token=${token}`;
+    const user = await updateUserProfile(req.user.uid, { photoURL });
+    res.json({ success: true, photoURL, user });
+  } catch (err) {
+    console.error('Avatar upload error:', err);
+    res.status(500).json({ error: 'Failed to upload profile picture' });
   }
 });
 

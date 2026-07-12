@@ -209,15 +209,17 @@ describe('requireSubscriptionOrCredit middleware', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  test('passes subscribers with accessVia=subscription', async () => {
+  test('reports are purchase-only: a subscription alone does NOT grant access', async () => {
     seedUser('sub1', { isSubscribed: true, subscription: { status: 'active' } });
     const mw = requireSubscriptionOrCredit('report', 'full_report');
     const req = mockReq({ user: { uid: 'sub1', authType: 'google' } });
     const res = mockRes();
     const next = jest.fn();
     await mw(req, res, next);
-    expect(next).toHaveBeenCalled();
-    expect(req.accessVia).toBe('subscription');
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(402);
+    expect(res.body.purchaseRequired).toBe(true);
+    expect(res.body.oneTime.productId).toBe('full_report');
   });
 
   test('passes credit holders with accessVia=credit and attaches the credit', async () => {
@@ -251,7 +253,7 @@ describe('requireSubscriptionOrCredit middleware', () => {
     expect(req.accessVia).toBe('entitlement-retry');
   });
 
-  test('returns 402 with one-time pricing when there is no subscription and no credit', async () => {
+  test('returns 402 with one-time pricing when there is no credit', async () => {
     seedUser('free1', { isSubscribed: false });
     const mw = requireSubscriptionOrCredit('porondam', 'porondam_check');
     const req = mockReq({ user: { uid: 'free1', authType: 'google' } });
@@ -259,7 +261,7 @@ describe('requireSubscriptionOrCredit middleware', () => {
     const next = jest.fn();
     await mw(req, res, next);
     expect(res.statusCode).toBe(402);
-    expect(res.body.subscriptionRequired).toBe(true);
+    expect(res.body.purchaseRequired).toBe(true);
     expect(res.body.oneTime.productId).toBe('porondam_check');
     expect(next).not.toHaveBeenCalled();
   });
@@ -285,7 +287,7 @@ describe('requireSubscriptionOrCredit middleware', () => {
     const next = jest.fn();
     await mw(req, res, next);
     expect(next).toHaveBeenCalled();
-    expect(req.accessVia).toBe('subscription');
+    expect(req.accessVia).toBe('mock');
   });
 });
 
@@ -309,17 +311,26 @@ describe('leak-fix wiring', () => {
     expect(subIndex).toBeGreaterThan(guardIndex);
   });
 
-  test('porondam /check and /report accept subscription OR credit', () => {
+  test('porondam /check and /report require a one-time purchase credit', () => {
     const source = read('../porondam.js');
     expect(source).toMatch(/router\.post\('\/check',[^\n]*requireSubscriptionOrCredit\('porondam'/);
     expect(source).toMatch(/router\.post\('\/report',[^\n]*requireSubscriptionOrCredit\('porondam'/);
   });
 
-  test('horoscope report-generation routes accept subscription OR credit', () => {
+  test('AI report generator (/full-report-ai) is purchase-only', () => {
     const source = read('../horoscope.js');
-    // POST routes are part of the paid report flow → creditable.
+    // The AI *report* is purchase-only: a subscription does NOT unlock it.
     expect(source).toMatch(/router\.post\('\/full-report-ai',[^\n]*requireSubscriptionOrCredit\('report'/);
-    expect(source).toMatch(/router\.post\('\/birth-chart',[^\n]*requireSubscriptionOrCredit\('report'/);
+  });
+
+  test('/birth-chart (kendara chart) unlocks with subscription OR report credit', () => {
+    const source = read('../horoscope.js');
+    // The kendara chart (D1/D9 + advancedAnalysis) is a SUBSCRIPTION feature,
+    // but the same endpoint also serves the paid report flow → subscription OR
+    // report credit. It must NOT use the purchase-only gate (that would lock
+    // paying subscribers out of the kendara page).
+    expect(source).toMatch(/router\.post\('\/birth-chart',[^\n]*requireSubscriptionOrReportCredit\('report'/);
+    expect(source).not.toMatch(/router\.post\('\/birth-chart',[^\n]*requireSubscriptionOrCredit\('report'/);
   });
 
   test('GET /birth-chart/data (Home basic chart) is subscription-only, not creditable', () => {

@@ -157,7 +157,7 @@ router.get('/maraka-apala', requireAuth, requireSubscription, async (req, res) =
     });
   } catch (err) {
     console.error('Maraka Apala error:', err);
-    res.status(500).json({ error: 'Failed to calculate Maraka Apala', details: err.message });
+    res.status(500).json({ error: 'Failed to calculate Maraka Apala', details: process.env.NODE_ENV === 'development' ? err.message : undefined });
   }
 });
 
@@ -190,7 +190,7 @@ router.post('/maraka-apala/full', requireAuth, requireSubscription, async (req, 
     res.json({ success: true, data: result });
   } catch (err) {
     console.error('Full Maraka Apala error:', err);
-    res.status(500).json({ error: 'Failed to calculate', details: err.message });
+    res.status(500).json({ error: 'Failed to calculate', details: process.env.NODE_ENV === 'development' ? err.message : undefined });
   }
 });
 

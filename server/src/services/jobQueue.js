@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { getDb, COLLECTIONS } = require('../config/firebase');
+const { toTtlTimestamp } = require('../utils/firestoreTtl');
 
 const DEFAULT_JOB_TTL_MS = Number(process.env.JOB_TTL_MS || 7 * 24 * 60 * 60 * 1000);
 const DEFAULT_LOCK_MS = Number(process.env.JOB_LOCK_MS || 10 * 60 * 1000);
@@ -55,6 +56,8 @@ async function enqueueJob(type, payload = {}, options = {}) {
     createdAt: now,
     updatedAt: now,
     expiresAt: new Date(Date.now() + ttlMs).toISOString(),
+    // Timestamp TTL (fix F3) — completed/expired jobs self-clean.
+    ttlExpireAt: toTtlTimestamp(Date.now() + ttlMs),
   };
 
   return getDb().runTransaction(async (tx) => {

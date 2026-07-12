@@ -14,7 +14,11 @@ const fs = require('fs');
 
 let db = null;
 let auth = null;
+let storageBucket = null;
 let initialized = false;
+
+// Storage bucket name — must match the mobile app's EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET.
+const STORAGE_BUCKET_NAME = process.env.FIREBASE_STORAGE_BUCKET || 'nakathai-6c5b7.firebasestorage.app';
 
 function initFirebase() {
   if (initialized) return { db, auth };
@@ -28,6 +32,7 @@ function initFirebase() {
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
+        storageBucket: STORAGE_BUCKET_NAME,
       });
       console.log('   🔥 Firebase initialized from environment variable');
     } else if (fs.existsSync(serviceAccountPath)) {
@@ -35,6 +40,7 @@ function initFirebase() {
       const serviceAccount = require(serviceAccountPath);
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
+        storageBucket: STORAGE_BUCKET_NAME,
       });
       console.log('   🔥 Firebase initialized from service account file');
     } else {
@@ -47,6 +53,12 @@ function initFirebase() {
 
     db = admin.firestore();
     auth = admin.auth();
+    try {
+      storageBucket = admin.storage().bucket();
+    } catch (storageErr) {
+      console.warn('   ⚠️  Firebase Storage bucket unavailable:', storageErr.message);
+      storageBucket = null;
+    }
     initialized = true;
 
     // Firestore settings
@@ -71,6 +83,15 @@ function getAuth() {
   return auth;
 }
 
+/**
+ * Returns the default Firebase Storage bucket, or null if unavailable.
+ * Used for user avatar uploads.
+ */
+function getBucket() {
+  if (!initialized) initFirebase();
+  return storageBucket;
+}
+
 // ─── Firestore Collections ─────────────────────────────────────
 const COLLECTIONS = {
   USERS: 'users',
@@ -93,4 +114,4 @@ const COLLECTIONS = {
   PURCHASE_CREDITS: 'purchaseCredits',
 };
 
-module.exports = { initFirebase, getDb, getAuth, COLLECTIONS };
+module.exports = { initFirebase, getDb, getAuth, getBucket, COLLECTIONS };

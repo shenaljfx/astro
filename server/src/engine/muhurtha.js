@@ -309,6 +309,23 @@ const ACTIVITY_RULES = {
     needsTarabala: true,
     needsChandrabala: true,
   },
+  firstFeeding: {
+    name: 'First Feeding (Indul Katha Gaema)',
+    sinhala: 'ඉඳුල් කට ගෑම',
+    icon: '🍚',
+    goodNakshatras: ['Ashwini', 'Rohini', 'Mrigashira', 'Punarvasu', 'Pushya', 'Uttara Phalguni', 'Hasta', 'Chitra', 'Swati', 'Anuradha', 'Uttara Ashadha', 'Shravana', 'Dhanishtha', 'Shatabhisha', 'Uttara Bhadrapada', 'Revati'],
+    badNakshatras: ['Bharani', 'Krittika', 'Ardra', 'Ashlesha', 'Magha', 'Jyeshtha', 'Mula', 'Purva Phalguni', 'Purva Ashadha', 'Purva Bhadrapada'],
+    goodTithis: [2, 3, 5, 7, 10, 11, 13, 15],
+    badTithis: [4, 8, 9, 14, 30],
+    goodWeekdays: [1, 3, 4, 5], // Mon, Wed, Thu, Fri
+    badWeekdays: [2, 6],
+    avoidRahuKala: true,
+    avoidGulikaKala: true,
+    avoidYamaghanta: true,
+    lagnaCheck: false,
+    needsTarabala: true,
+    needsChandrabala: true,
+  },
   movingIn: {
     name: 'Moving Into New House',
     sinhala: 'නව නිවසට ඇතුළුවීම',

@@ -11,10 +11,11 @@ const express = require('express');
 const router = express.Router();
 const { optionalAuth } = require('../middleware/auth');
 const {
-  buildHouseChart, buildNavamshaChart, getLagna, getNakshatra, getRashi,
+  buildHouseChart, getLagna, getNakshatra, getRashi,
   toSidereal, getMoonLongitude, getSunLongitude, getPanchanga, RASHIS,
+  calculateVimshottari,
 } = require('../engine/astrology');
-const { detectDoshas, detectAdvancedYogas } = require('../engine/advanced');
+const { detectDoshas, detectAdvancedYogas, calculateShadbala } = require('../engine/advanced');
 const { calculatePorondam } = require('../engine/porondam');
 const { buildCoupleReading } = require('../engine/porondamArchetype');
 const { buildConvergenceForBirth, previewSliceConvergence } = require('../engine/convergenceCalendar');
@@ -46,7 +47,6 @@ router.post('/kendara', optionalAuth, async (req, res) => {
 
     const lagna = getLagna(date, plat, plng);
     const houseChart = buildHouseChart(date, plat, plng);
-    const navamsha = buildNavamshaChart(date, plat, plng);
     const moonSidereal = toSidereal(getMoonLongitude(date), date);
     const sunSidereal = toSidereal(getSunLongitude(date), date);
     const moonNakshatra = getNakshatra(moonSidereal);
@@ -76,12 +76,64 @@ router.post('/kendara', optionalAuth, async (req, res) => {
     // ── Vault counts — cheap signals that name the locked depth without
     // revealing it. "3 yogas found — 1 is rare 🔒" converts far better than
     // a generic "unlock more". Counts are free; meanings/remedies are Pro.
+    //
+    // Extended (Phase A): each locked kendara section renders a real number
+    // from THIS chart — the top yoga's name, the current dasha planet + how
+    // far through it the user is, the strongest planet + %, and which checks
+    // (Mars/Saturn) ran. All best-effort and independently guarded so one
+    // failed calc never blanks the rest of the teaser.
     let vaultCounts = null;
     try {
       const doshas = detectDoshas(date, plat, plng);
       const yogas = detectAdvancedYogas(date, plat, plng);
       const rajaYogas = yogas.filter(y => y.category === 'Raja Yoga');
       const dhanaYogas = yogas.filter(y => y.category === 'Dhana Yoga');
+
+      // One representative strong yoga — a NAMED thing you can't read yet
+      // converts better than a bare count. Prefer a strong Raja/Dhana yoga.
+      const strongYogas = yogas.filter(y => y.strength === 'Very Strong' || y.strength === 'Strong');
+      const pickFrom = strongYogas.length ? strongYogas : yogas;
+      const topYoga = pickFrom[0] ? { name: pickFrom[0].name, category: pickFrom[0].category || null } : null;
+
+      // Current life chapter (mahadasha) + progress — the strongest recurring
+      // hook. The free ladder shows planet names + year spans (looks like a
+      // life map); the reading behind it stays Pro.
+      let currentDasha = null;
+      let dashaLadder = [];
+      try {
+        const periods = calculateVimshottari(moonSidereal, date);
+        const now = Date.now();
+        dashaLadder = (periods || []).map(p => {
+          const s = new Date(p.start).getTime();
+          const e = new Date(p.endDate).getTime();
+          const isCurrent = now >= s && now <= e;
+          return {
+            planet: p.lord,
+            startYear: new Date(p.start).getFullYear(),
+            endYear: new Date(p.endDate).getFullYear(),
+            years: Math.round(p.years),
+            isCurrent,
+            isPast: now > e,
+            progress: isCurrent && e > s ? Math.round(((now - s) / (e - s)) * 100) : (now > e ? 100 : 0),
+          };
+        });
+        const cur = dashaLadder.find(p => p.isCurrent) || null;
+        if (cur) currentDasha = { planet: cur.planet, endYear: cur.endYear, progress: cur.progress };
+      } catch (de) { console.warn('[preview/kendara] dasha teaser failed (non-fatal):', de.message); }
+
+      // Strongest supporting planet — reveal the winner free, lock the rest.
+      let strongest = null;
+      let shadbalaCount = 0;
+      try {
+        const sb = calculateShadbala(date, plat, plng);
+        const arr = Object.values(sb || {});
+        shadbalaCount = arr.length;
+        if (arr.length) {
+          arr.sort((a, b) => (b.percentage || 0) - (a.percentage || 0));
+          strongest = { planet: arr[0].name, percentage: arr[0].percentage };
+        }
+      } catch (se) { console.warn('[preview/kendara] shadbala teaser failed (non-fatal):', se.message); }
+
       vaultCounts = {
         yogas: yogas.length,
         rajaYogas: rajaYogas.length,
@@ -90,9 +142,21 @@ router.post('/kendara', optionalAuth, async (req, res) => {
         doshas: doshas.length,
         hasDosha: doshas.length > 0,
         dashaTimeline: true, // the full dasha ladder is a premium vault
+        // ── extended teaser signals ──
+        topYoga,            // { name, category } | null — one free badge, rest locked
+        currentDasha,       // { planet, endYear, progress } | null
+        dashaLadder,        // [{ planet, startYear, endYear, years, isCurrent, isPast, progress }]
+        strongest,          // { planet, percentage } | null — the free reveal
+        shadbala: shadbalaCount, // count of planet-power meters behind the lock
+        mangalChecked: true,     // Mars-in-relationships was computed (verdict is Pro)
+        sadeSatiChecked: true,   // Saturn-pressure was computed (verdict is Pro)
+        varga: 6,                // divisional life-area charts available (D9,D10,D7,D4,D24,D20)
       };
     } catch (e) { console.warn('[preview/kendara] vault counts failed (non-fatal):', e.message); }
 
+    // NOTE: navamsha (D9) is deliberately NOT returned. The marriage chart is
+    // the highest-desire tease on the page and is drawn as a locked placeholder
+    // on the client — sending the real grid here would let it be scraped free.
     res.json({
       success: true,
       data: {
@@ -102,8 +166,6 @@ router.post('/kendara', optionalAuth, async (req, res) => {
         sunSign: { ...sunRashi, degree: sunSidereal % 30 },
         nakshatra: moonNakshatra,
         rashiChart: d1Chart,
-        navamshaChart: navamsha.houses,
-        navamshaLagna: navamsha.lagna,
         panchanga,
         vaultCounts,
       },
@@ -269,6 +331,19 @@ router.post('/nakath', optionalAuth, async (req, res) => {
     }
 
     const best = full.bestDate;
+
+    // Day-level "why this day" facts — panchanga names only (weekday, tithi,
+    // nakshatra, yoga) so the pick is justified, without leaking the Pro
+    // value: the exact hour, numeric scores, and chart-tuned tara/chandra
+    // factors stay locked.
+    const b = best && best.breakdown ? best.breakdown : null;
+    const why = b ? [
+      b.weekday && b.weekday.day ? { key: 'weekday', name: b.weekday.day, good: (b.weekday.score || 0) >= 8 } : null,
+      b.tithi && b.tithi.name ? { key: 'tithi', name: b.tithi.name, good: (b.tithi.score || 0) >= 15 } : null,
+      b.nakshatra && b.nakshatra.name ? { key: 'nakshatra', name: b.nakshatra.name, good: (b.nakshatra.score || 0) >= 15 } : null,
+      b.yoga && b.yoga.name ? { key: 'yoga', name: b.yoga.name, good: (b.yoga.score || 0) >= 10 } : null,
+    ].filter(Boolean) : [];
+
     res.json({
       success: true,
       data: {
@@ -279,8 +354,8 @@ router.post('/nakath', optionalAuth, async (req, res) => {
         searchRange: full.searchRange,
         candidatesFound: full.candidatesFound,
         noGoodDate: full.noGoodDate,
-        // Best DAY only — no exact time, no breakdown.
-        bestDay: best ? { date: best.dateTime.split('T')[0], quality: best.quality, score: best.score } : null,
+        // Best DAY only — no exact time, no numeric breakdown.
+        bestDay: best ? { date: best.dateTime.split('T')[0], quality: best.quality, score: best.score, why: why } : null,
         lockedWindowCount: (full.results || []).length,
       },
     });

@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { mkdir } from 'fs/promises';
 import path from 'path';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+// Only allow safe, single-token values for anything that reaches the spawned
+// process or the output filename. Prevents shell/argument injection and path
+// traversal even though this tool is meant to run on localhost.
+const SAFE_TOKEN = /^[A-Za-z0-9_-]+$/;
+function safeToken(value: unknown, fallback: string): string {
+  const s = String(value ?? '');
+  return SAFE_TOKEN.test(s) ? s : fallback;
+}
 
 /**
  * Video rendering endpoint.
@@ -22,22 +31,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // compositionId is passed to a spawned process — reject anything unsafe
+    // rather than sanitizing, so an unexpected value never runs.
+    if (!SAFE_TOKEN.test(String(compositionId))) {
+      return NextResponse.json({ error: 'Invalid compositionId' }, { status: 400 });
+    }
+    const ext = safeToken(outputFormat, 'mp4');
+    const signPart = safeToken(inputProps.sign, 'general');
+    const durationPart = safeToken(inputProps.duration, '0');
+
     // Output directory
     const outputDir = path.join(process.cwd(), 'output', new Date().toISOString().split('T')[0]);
     await mkdir(outputDir, { recursive: true });
 
     const outputFile = path.join(
       outputDir,
-      `${inputProps.sign || 'general'}_${inputProps.duration}_${Date.now()}.${outputFormat}`
+      `${signPart}_${durationPart}_${Date.now()}.${ext}`
     );
 
-    // Spawn Remotion render as a separate process via the render script
+    // Spawn Remotion render WITHOUT a shell — args are passed as an array so
+    // no value can break out into shell metacharacters.
     const propsB64 = Buffer.from(JSON.stringify(inputProps)).toString('base64');
-    const cmd = `node scripts/render.js --composition="${compositionId}" --output="${outputFile}" --props="${propsB64}"`;
-
-    const { stdout, stderr } = await execAsync(cmd, {
+    const { stdout, stderr } = await execFileAsync('node', [
+      'scripts/render.js',
+      '--composition', String(compositionId),
+      '--output', outputFile,
+      '--props', propsB64,
+    ], {
       cwd: process.cwd(),
       timeout: 180000, // 3 min max
+      maxBuffer: 10 * 1024 * 1024,
       env: { ...process.env, NODE_OPTIONS: '' },
     });
 

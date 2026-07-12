@@ -1,4 +1,5 @@
 const { getDb, COLLECTIONS } = require('../config/firebase');
+const { toTtlTimestamp } = require('../utils/firestoreTtl');
 
 const DEFAULT_PROGRESS_TTL_MS = Number(process.env.REPORT_PROGRESS_TTL_MS || 24 * 60 * 60 * 1000);
 
@@ -31,6 +32,8 @@ async function createProgressRecord(reportId, data = {}) {
     createdAt: data.createdAt || now,
     updatedAt: now,
     expiresAt: data.expiresAt || buildExpiresAt(data.ttlMs),
+    // Timestamp TTL (fix F3) so progress records self-clean.
+    ttlExpireAt: toTtlTimestamp(data.expiresAt || (Date.now() + Number(data.ttlMs || DEFAULT_PROGRESS_TTL_MS))),
   };
   await ref.set(record, { merge: true });
   return record;

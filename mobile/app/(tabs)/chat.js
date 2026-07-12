@@ -13,6 +13,7 @@ import Animated, {
   withSequence, withTiming, withDelay, withSpring, interpolate, Easing,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
 import DesktopScreenWrapper, { useDesktopCtx } from '../../components/DesktopScreenWrapper';
 import SpringPressable from '../../components/effects/SpringPressable';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -438,6 +439,15 @@ export default function ChatScreen() {
   var [selectedMode, setSelectedMode] = useState(null);
   var [inputFocused, setInputFocused] = useState(false);
   var scroll = useRef(null);
+
+  // Deep-link prefill: other screens (e.g. the kendara chart sections) can open
+  // chat with ?prefill=... to pre-type a question. We only fill the box — the
+  // user reviews and taps send — so nothing is asked on their behalf silently.
+  var params = useLocalSearchParams();
+  var prefillParam = params && params.prefill ? String(params.prefill) : '';
+  useEffect(function () {
+    if (prefillParam) setMsg(prefillParam);
+  }, [prefillParam]);
 
   // Derive birth data from user profile
   var birthData   = user?.birthData   || null;

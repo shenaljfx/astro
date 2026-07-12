@@ -249,6 +249,30 @@ async function getUser(uid) {
 }
 
 /**
+ * Partial update of editable profile fields (displayName, photoURL).
+ * Unlike upsertUser, this ONLY writes the fields provided, so it can never
+ * clobber birthData / location / preferences when the client sends a partial
+ * update (e.g. renaming or setting an avatar).
+ */
+async function updateUserProfile(uid, fields) {
+  const db = getDb();
+  if (!db) return null;
+
+  const ALLOWED = ['displayName', 'photoURL'];
+  const updates = {};
+  for (const key of ALLOWED) {
+    if (fields[key] !== undefined) updates[key] = fields[key];
+  }
+  if (Object.keys(updates).length === 0) return getUser(uid);
+
+  updates.updatedAt = new Date().toISOString();
+  await db.collection(COLLECTIONS.USERS).doc(uid).update(updates);
+
+  const doc = await db.collection(COLLECTIONS.USERS).doc(uid).get();
+  return doc.exists ? { uid: doc.id, ...doc.data() } : null;
+}
+
+/**
  * Update user birth data
  */
 async function updateBirthData(uid, birthData, extraUpdates = {}) {
@@ -1058,6 +1082,7 @@ module.exports = {
   buildReportCacheKey,
   upsertUser,
   getUser,
+  updateUserProfile,
   updateBirthData,
   updatePreferences,
   saveReport,

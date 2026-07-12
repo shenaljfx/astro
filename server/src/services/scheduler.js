@@ -13,10 +13,16 @@
 
 const { calculateRahuKalaya, getPanchanga, getDailyNakath } = require('../engine/astrology');
 const { calculateMarakaApala } = require('../engine/maraka');
-const { sendPush, getTokensWithPreference, logNotification } = require('./notifications');
-const { getDb, COLLECTIONS } = require('../config/firebase');
+const {
+  sendPush,
+  getTokensWithPreference,
+  logNotification,
+  hasNotificationForDate,
+  markNotificationForDate,
+} = require('./notifications');
 const { enqueueWeeklyLagnaJob } = require('./jobQueue');
 const firestoreCircuit = require('./firestoreCircuit');
+const { startLeadership, isLeader } = require('./schedulerLock');
 
 /**
  * Run a scheduled Firestore task under the circuit breaker: skip the tick
@@ -25,6 +31,7 @@ const firestoreCircuit = require('./firestoreCircuit');
  * scans from hammering a dead database and spamming logs.
  */
 function runScheduled(name, fn) {
+  if (!isLeader()) return; // fix F2 — only the elected leader instance runs ticks
   if (firestoreCircuit.isOpen()) return; // DB down — skip silently until recovery
   Promise.resolve()
     .then(fn)
@@ -135,19 +142,8 @@ function getSLTDayOfYear(date) {
   return Math.floor((current - start) / 86400000) + 1;
 }
 
-async function hasNotificationForDate(uid, type, dateKey) {
-  const db = getDb();
-  if (!db) return false;
-
-  const existing = await db.collection(COLLECTIONS.NOTIFICATIONS)
-    .where('uid', '==', uid)
-    .where('type', '==', type)
-    .where('data.date', '==', dateKey)
-    .limit(1)
-    .get();
-
-  return !existing.empty;
-}
+// hasNotificationForDate now lives in ./notifications as a deterministic
+// get-by-id (fix F5). Sends are recorded via markNotificationForDate(...).
 
 const DAILY_GUIDANCE_COPY = {
   en: {
@@ -295,6 +291,7 @@ async function sendDailyGuidanceNotification() {
 
         if (result.sent > 0) {
           await logNotification(token.uid, 'DAILY_GUIDANCE', guidance.title, guidance.body, data);
+          await markNotificationForDate(token.uid, 'DAILY_GUIDANCE', todayKey);
           sent++;
         }
       } catch (err) {
@@ -402,8 +399,10 @@ async function checkMarakaApalaForAllUsers() {
 
         const apala = calculateMarakaApala(bDate, lat, lng, { yearsAhead: 1 });
 
-        // Check for newly active periods or upcoming ones (within 7 days)
-        const now = new Date();
+        // Check for newly active periods or upcoming ones (within 7 days).
+        // Reuse the function-level `now` — a local `const now` here shadowed it
+        // and put the earlier isInUserWindow(now, …) call in the temporal dead
+        // zone ("Cannot access 'now' before initialization").
         const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
         const urgent = apala.allApala.filter(a => {
@@ -450,6 +449,7 @@ async function checkMarakaApalaForAllUsers() {
           date: todayStr,
           severity: worst.severity,
         });
+        await markNotificationForDate(token.uid, 'MARAKA_APALA', todayStr);
 
         notified++;
       } catch (err) {
@@ -592,6 +592,7 @@ async function sendDailyAffirmationNotification() {
 
         if (result.sent > 0) {
           await logNotification(token.uid, 'DAILY_AFFIRMATION', affirmation.title, body, { date: todayKey });
+          await markNotificationForDate(token.uid, 'DAILY_AFFIRMATION', todayKey);
           sent++;
         }
       } catch (err) {
@@ -679,6 +680,7 @@ async function sendDailyCuriosityNotification() {
 
         if (result.sent > 0) {
           await logNotification(token.uid, 'DAILY_CURIOSITY', hook.title, hook.body, { date: todayKey });
+          await markNotificationForDate(token.uid, 'DAILY_CURIOSITY', todayKey);
           sent++;
         }
       } catch (err) {
@@ -705,6 +707,10 @@ function startScheduler() {
   schedulerRunning = true;
   console.log('[Scheduler] 🕐 Starting notification scheduler...');
 
+  // fix F2 — begin leader election. Only the elected instance's ticks act
+  // (runScheduled + the weekly timer both gate on isLeader()).
+  startLeadership();
+
   // ── Check every 5 minutes for Rahu Kalaya ──
   setInterval(() => runScheduled('Rahu Kalaya', sendRahuKalayaWarning), 5 * 60 * 1000);
 
@@ -725,6 +731,7 @@ function startScheduler() {
   // Then sends push notification to all users
   let weeklyLagnaGenerated = false;
   setInterval(() => {
+    if (!isLeader()) return; // fix F2 — leader-only
     const now = new Date();
     const slt = toSLTDate(now);
     const sltDay = slt.getUTCDay(); // 0 = Sunday

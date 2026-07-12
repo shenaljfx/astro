@@ -163,6 +163,10 @@ router.post('/ask', phoneAuth, requireSubscription, aiUserLimiter, distributedAi
       language: language || 'en',
       chatHistory: chatHistory || [],
       maxTokens: 4096,
+      // A single chat Q&A does not need 4096 reasoning tokens (which bill as
+      // output). 1024 keeps answer quality for date/muhurtha questions while
+      // cutting per-message thinking cost ~75%. Tune via env.
+      thinkingBudget: Number(process.env.GEMINI_CHAT_THINKING_BUDGET) || 1024,
     });
 
     // Increment quota AFTER successful response

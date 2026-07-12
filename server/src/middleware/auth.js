@@ -35,6 +35,7 @@ function tryAppJwt(token) {
         email: decoded.email || null,
         phone: decoded.phone || null,
         authType: decoded.type === 'google-auth' ? 'google' : 'phone',
+        tokenVersion: decoded.tokenVersion,
         anonymous: false,
       };
     }
@@ -76,9 +77,11 @@ function requireAuth(req, res, next) {
   const appUser = tryAppJwt(idToken);
   if (appUser) {
     req.user = appUser;
-    return next();
+    // Reject tokens invalidated by a server-side logout (tokenVersion bump).
+    const { enforceTokenNotRevoked } = require('../services/tokenRevocation');
+    return enforceTokenNotRevoked(req, res, next);
   }
-  
+
   // If we couldn't verify it as an app JWT, check if it actually looks like one before passing to Firebase
   const jwtHelper = require('jsonwebtoken');
   const decodedUnverified = jwtHelper.decode(idToken);

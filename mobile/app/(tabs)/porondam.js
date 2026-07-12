@@ -2647,14 +2647,26 @@ export default function PorondamScreen() {
   useEffect(function() {
     if (!user || !user.birthData || !user.birthData.dateTime) return;
     (async function() {
-      try {
-        var res = await api.getBirthChartBasic(user.birthData.dateTime, user.birthData.lat, user.birthData.lng, language);
-        if (res && res.success && res.data && res.data.lagna) {
+      var applyLagna = function(res) {
+        if (res && res.success && res.data && res.data.lagna && res.data.lagna.rashiId) {
           setMyLagnaId(res.data.lagna.rashiId);
           var name = language === 'si' ? (res.data.lagna.sinhala || res.data.lagna.english) : (res.data.lagna.english || res.data.lagna.name);
           setMyLagnaName(name);
+          return true;
         }
-      } catch (e) { /* silent */ }
+        return false;
+      };
+      try {
+        // Pro path — the full birth-chart data (subscription-gated).
+        var res = await api.getBirthChartBasic(user.birthData.dateTime, user.birthData.lat, user.birthData.lng, language);
+        if (applyLagna(res)) return;
+      } catch (e) { /* fall through to the free preview */ }
+      try {
+        // Free path — the lagna identity is free (preview route), so the
+        // lagna-compatibility explorer works for everyone.
+        var pv = await api.getBirthChartPreview(user.birthData.dateTime, user.birthData.lat, user.birthData.lng);
+        applyLagna(pv);
+      } catch (e2) { /* silent — explorer simply stays hidden */ }
     })();
   }, [user, language]);
 
@@ -2887,12 +2899,11 @@ export default function PorondamScreen() {
     }
 
     // ── Warm tease before the wall ──────────────────────────────────────
-    // Non-subscribers (non-retry) meet their couple-archetype + one gift +
+    // Everyone (non-retry) meets their couple-archetype + one gift +
     // locked counts BEFORE the paywall — a cold wall converts worse than a
     // warm one. Awaits the tease modal: "See our full match" → continue,
     // close → abort. If the preview can't load we fall straight through.
-    var isProUser = !!(user && user.isSubscribed === true);
-    if (!isRetry && !isProUser) {
+    if (!isRetry) {
       var proceed = await showPorondamTease(brideData, groomData);
       if (!proceed) return;
     }
@@ -2923,11 +2934,10 @@ export default function PorondamScreen() {
       }
     }
 
-    // Show paywall only if NOT a retry (pending entitlement = free retry)
-    // and NOT an active subscriber — porondam is included with Pro, so
-    // subscribers must never be asked to pay the one-time price again.
-    var isPro = !!(user && user.isSubscribed === true);
-    if (!isRetry && !isPro) {
+    // Show paywall unless this is a retry (pending entitlement = free retry).
+    // Porondam is a one-time purchase — a subscription does NOT include it,
+    // so every user (subscriber or not) buys each check individually.
+    if (!isRetry) {
       try {
         await showPaywall('porondam');
       } catch (e) {

@@ -173,19 +173,19 @@ var RASHI_LOOKUP = {
 var LAGNA_UI_COPY = {
   Mesha: {
     readingEn: 'Aries Rising gives you a direct, brave, action-first nature. You usually move before others are ready, and your chart shows strength when you take the lead with discipline instead of impatience.',
-    readingSi: 'මේෂ ලග්නයෙන් ඉපදුණු ඔයාට තියෙන්නේ නිර්භීත, ක්‍රියාශීලී, නායකත්ව ලක්ෂණ පිරුණු ස්වභාවයක්. අනිත් අයට කලින් ඉස්සරහට යන්න ඔයාට පුළුවන්. හැබැයි ඉක්මන් වෙන එක පොඩ්ඩක් පාලනය කරලා වැඩ කළොත්, ජීවිතේ ලොකු ජයග්‍රහණ ගන්න එක ඔයාට ගේමක් නැහැ.',
+    readingSi: 'මේෂ ලග්නෙන් ඉපදුණු ඔයාට තියෙන්නේ බය නැති, මාරම ඇක්ටිව්, නායකත්ව ගතිගුණ තියන ස්වභාවයක්. අනිත් අයට කලින් ඉස්සරහට යන්න ඔයාට පුළුවන්. හැබැයි ඉක්මන් වෙන එක පොඩ්ඩක් පාලනය කරලා වැඩ කළොත්, ජීවිතේ ලොකු ජයග්‍රහණ ගන්න එක ඔයාට ගේමක්ම නැහැ.',
     personalityEn: 'Your strongest pattern is courage in motion, you learn by doing and win when your energy has a clear direction.',
-    personalitySi: 'ඔයාගේ ලොකුම ප්ලස් පොයින්ට් එක තමයි වැඩක් කරන්න බය නැතුව ඉස්සරහට යන එක. ඔයාගේ සහජ හැකියාවෙන් පැහැදිලි අරමුණක් තියාගෙන වැඩ කළොත්, ඉක්මනින් සාර්ථක ප්‍රතිඵල ගන්න ඔයාට පුළුවන්.',
+    personalitySi: 'ඔයාගේ ලොකුම ප්ලස් පොයින්ට් එක තමයි වැඩක් කරන්න බය නැතුව ඉස්සරහට පනින එක. පැහැදිලි අරමුණක් තියාගෙන වැඩ කළොත්, මාරම ස්පීඩ් එකකින් සාර්ථක ප්‍රතිඵල ගන්න ඔයාට පුළුවන්.',
     traitsEn: ['Brave', 'Fast starter', 'Independent', 'Protective'],
-    traitsSi: ['නිර්භීතයි', 'ඉක්මන් ආරම්භය', 'ස්වාධීනයි', 'ආරක්ෂාකාරීයි'],
+    traitsSi: ['බය නැහැ', 'ඉක්මන් ආරම්භයක්', 'ස්වාධීනයි', 'රැකබලා ගන්නවා'],
     gem: { en: 'Red Coral', si: 'රතු පබළු' },
     color: { en: 'Red, Orange', si: 'රතු, තැඹිලි' },
   },
   Vrishabha: {
     readingEn: 'Taurus Rising gives you a steady, tasteful, and dependable personality. You build life patiently, value comfort and loyalty, and do best when your plans are practical and financially grounded.',
-    readingSi: 'වෘෂභ ලග්නයෙන් ඉපදුණු ඔයා කැමති ස්ථාවර, කලබල නැති, නිදහස් ජීවිතේකට. වැඩක් පටන් ගත්තොත් බොහොම ඉවසීමෙන් ඒක ගොඩනගනවා. සල්ලි ගැනත්, ජීවිතේ ගැනත් ප්‍රායෝගිකව හිතලා වැඩ කරන නිසා ඔයාට ලොකු සාර්ථකත්වයකට යන්න පුළුවන්.',
+    readingSi: 'වෘෂභ ලග්නෙන් ඉපදුණු ඔයා කැමති ස්ථාවර, කලබල නැති, නිදහස් ජීවිතේකට. වැඩක් පටන් ගත්තොත් බොහොම ඉවසීමෙන් ඒක ගොඩනගනවා. සල්ලි ගැන වගේම ජීවිතේ ගැනත් ප්‍රායෝගිකව හිතන නිසා ඔයාට ලොකු ගමනක් යන්න පුළුවන්.',
     personalityEn: 'Your strength is consistency, you move slowly when needed but rarely give up on something that truly matters.',
-    personalitySi: 'ඔයාගේ ලොකුම ශක්තිය තමයි මේ නොසැලෙන ස්ථාවරත්වය. වෙලාවකට වැඩ ටිකක් හිමින් කළත්, අත්‍යවශ්‍ය දේවල් කොහොම හරි අත්නාරින එක තමයි ඔයාගේ විශේෂත්වය.',
+    personalitySi: 'ඔයාගේ ලොකුම ශක්තිය තමයි මේ නොසැලෙන ස්ථාවරත්වය. වෙලාවකට වැඩ ටිකක් හිමින් කළත්, ඇත්තටම වටින දේවල් කොහොම හරි අත්නාරින එක තමයි ඔයාගේ විශේෂත්වය.',
     traitsEn: ['Steady', 'Loyal', 'Tasteful', 'Determined'],
     traitsSi: ['ස්ථාවරයි', 'විශ්වාසවන්තයි', 'රසකාමීයි', 'අධිෂ්ඨානශීලීයි'],
     gem: { en: 'Diamond', si: 'දියමන්ති' },
@@ -193,49 +193,49 @@ var LAGNA_UI_COPY = {
   },
   Mithuna: {
     readingEn: 'Gemini Rising gives you a quick mind, flexible thinking, and a natural gift for words. You understand people through conversation and often succeed where ideas, learning, trade, or communication are important.',
-    readingSi: 'මිථුන ලග්නයෙන් ඉපදුණු ඔයාට තියෙන්නේ මාර තියුණු මොළයක්. ඕනෙම තත්ත්වෙකට හැඩගැහෙන්න ඔයාට පුළුවන්. අලුත් අදහස් හොයන්න, කතාබහ කරන්න ඔයාට තියෙන්නේ උපන් දක්ෂතාවයක්. මේ නිසා ඔයාට ඉක්මනින් ඉස්සරහට යන්න පුළුවන්.',
+    readingSi: 'මිථුන ලග්නෙන් ඉපදුණු ඔයාට තියෙන්නේ මාරම තියුණු මොළයක්. ඕනෙම තත්ත්වෙකට හැඩගැහෙන්න ඔයාට පුළුවන්. අලුත් අදහස් හොයන්න වගේම කතාබහ කරන්න ඔයාට තියෙන්නේ උපන් දක්ෂතාවයක්. ඒ නිසා හැමෝම එක්ක ලේසියෙන් ෆිට් වෙන්න ඔයාට පුළුවන්.',
     personalityEn: 'Your chart shows a mind that connects patterns quickly, but your best results come when you finish one clear path before chasing the next idea.',
-    personalitySi: 'ඔයාගේ මනස මාර ස්පීඩ් එකට දේවල් ග්‍රහණය කරගන්නවා. හැබැයි අලුත් දෙයක් පස්සේ යන්න කලින්, පටන් ගත්ත දේ ඉවරයක් කරනවා නම් ඔයාට මාරම රිසල්ට් එකක් ගන්න පුළුවන්.',
+    personalitySi: 'ඔයාගේ මනස මාර ස්පීඩ් එකට දේවල් අල්ලගන්නවා. හැබැයි අලුත් දේවල් පස්සේ දුවන්න කලින්, පටන් ගත්ත වැඩේ ඉවරයක් කරලා දැම්මොත් ඔයාට මාරම සුපිරි රිසල්ට් එකක් ගන්න පුළුවන්.',
     traitsEn: ['Quick-minded', 'Communicative', 'Adaptable', 'Curious'],
-    traitsSi: ['බුද්ධිමත්', 'කතාබහට දක්ෂයි', 'හැඩගැසෙනසුළුයි', 'කුතුහලයෙන් පිරිලා'],
+    traitsSi: ['මොළකාරයෙක්', 'කතාවට දක්ෂයි', 'හැඩගැසෙනසුළුයි', 'කුතුහලයෙන් පිරිලා'],
     gem: { en: 'Emerald', si: 'මරකත' },
     color: { en: 'Green, Light Yellow', si: 'කොළ, ලා කහ' },
   },
   Kataka: {
     readingEn: 'Cancer Rising gives you emotional depth, intuition, and a protective heart. Home, family, memory, and belonging shape many of your choices, and you often sensitive to what others feel before they say it.',
-    readingSi: 'කටක ලග්නයෙන් ඉපදුණු ඔයා හරිම සංවේදී, හැඟීම්බර කෙනෙක්. අනිත් අයව ආදරෙන් බලාගන්න ඔයාට තියෙන්නේ මාර හදවතක්. පවුලේ අය, නිවස ගැන ඔයා හුඟක් හිතනවා. අනිත් අයගේ හැඟීම් කල්තියා තේරුම් ගන්න එක ඔයාට සහජයෙන්ම පිහිටලා තියෙනවා.',
+    readingSi: 'කටක ලග්නෙන් ඉපදුණු ඔයා හරිම සංවේදී, හැඟීම්බර කෙනෙක්. අනිත් අයව ආදරෙන් බලාගන්න ඔයාට තියෙන්නේ මාර ලස්සන හදවතක්. පවුලේ අය, ගෙදර දොර ගැන ඔයා හුඟක් හිතනවා. අනිත් අයගේ හිතේ තියන දේ කට ඇරලා කියන්න කලින්ම අල්ලගන්න ඔයාට පුළුවන්.',
     personalityEn: 'Your sensitivity is not weakness, it is your way of reading the room and protecting what matters.',
-    personalitySi: 'ඔයාගේ සංවේදීකම තියෙන්නේ දුර්වලකමකට නෙවෙයි, අනිත් අයව තේරුම් අරන් ඔයාට වටින දේවල් ආරක්ෂා කරගන්න තමයි ඒක පිහිටලා තියෙන්නේ.',
+    personalitySi: 'ඔයාගේ මේ සංවේදීකම දුර්වලකමක් නෙවෙයි. වටපිටාවේ වෙන දේවල් ඉක්මනට තේරුම් අරන්, ඔයාට වටින දේවල් ආරක්ෂා කරගන්න ලැබුණු අපූර්ව හැකියාවක්.',
     traitsEn: ['Intuitive', 'Caring', 'Protective', 'Family-minded'],
-    traitsSi: ['සංවේදී', 'කරුණාවන්තයි', 'පවුලට ලැදියි', 'ආරක්ෂාකාරීයි'],
+    traitsSi: ['ඉවක් තියනවා', 'කරුණාවන්තයි', 'පවුලට ලැදියි', 'රැකබලා ගන්නවා'],
     gem: { en: 'Pearl', si: 'මුතු' },
     color: { en: 'White, Silver', si: 'සුදු, රිදී' },
   },
   Simha: {
     readingEn: 'Leo Rising gives you presence, pride, and a natural wish to create something meaningful. You are noticed easily, and your life opens when confidence is guided by generosity and responsibility.',
-    readingSi: 'සිංහ ලග්නයෙන් ඉපදුණු ඔයා පෙනුමෙන් වගේම වැඩෙනුත් කැපී පේන කෙනෙක්. සහජ නායකයෙක් විදිහට ඉස්සරහට යන්න ඔයාට පුළුවන්. ආත්ම විශ්වාසය, කරුණාව එකතු කරලා වගකීමෙන් වැඩ කළොත්, හැමෝම ආදරය කරන ජනප්‍රිය චරිතයක් වෙන්න ඔයාට අමාරු නැහැ.',
+    readingSi: 'සිංහ ලග්නෙන් ඉපදුණු ඔයා පෙනුමෙන් වගේම වැඩවලිනුත් හැමෝම අතරේ කැපී පේන කෙනෙක්. සහජ නායකයෙක් විදිහට ඉස්සරහට යන්න ඔයාට පුළුවන්. ආත්ම විශ්වාසයයි කරුණාවයි එකතු කරලා වැඩ කළොත්, හැමෝම ආදරේ කරන කැපී පෙනෙන චරිතයක් වෙන්න පුළුවන්.',
     personalityEn: 'Your personality carries warmth and authority, people respond when you lead with heart rather than ego.',
-    personalitySi: 'ඔයා ළඟ තියෙන උණුසුම් හදවත සහ අන් අයට උදව් කරන්න තියෙන උනන්දුව නිසා ඔයාට ලොකු පිළිගැනීමක් ලැබෙනවා. හැබැයි පොඩියට තියෙන ආඩම්බරකම පාලනය කරගන්න එක වැදගත්.',
+    personalitySi: 'ඔයා ළඟ තියෙන උණුසුම් හදවත සහ අන් අයට උදව් කරන්න තියන ලැදියාව නිසා ලොකු පිළිගැනීමක් ලැබෙනවා. හැබැයි පොඩ්ඩක් තියන ආඩම්බර ගතිය පාලනය කරගත්තොත් වැඩේ තවත් ලස්සන වෙයි.',
     traitsEn: ['Confident', 'Warm-hearted', 'Commanding', 'Creative'],
-    traitsSi: ['නායකත්වය', 'කැපී පෙනෙනවා', 'ආකර්ෂණීයයි', 'නිර්භීතයි'],
+    traitsSi: ['විශ්වාසවන්තයි', 'කැපී පෙනෙනවා', 'ආකර්ෂණීයයි', 'නිර්භීතයි'],
     gem: { en: 'Ruby', si: 'මාණික්‍ය' },
     color: { en: 'Gold, Orange, Red', si: 'රන්, තැඹිලි, රතු' },
   },
   Kanya: {
     readingEn: 'Virgo Rising gives you a careful mind, practical judgement, and a strong eye for detail. You improve whatever you touch, but your peace grows when perfection becomes a guide rather than pressure.',
-    readingSi: 'කන්‍යා ලග්නයෙන් ඉපදුණු ඔයා හරිම ප්‍රායෝගිකව, පිළිවෙළට වැඩ කරන කෙනෙක්. පුංචි පුංචි දේවල් ගැන පවා ඔයා ගොඩක් හිතනවා. සේවය කිරීම, සෞඛ්‍යය වගේ දේවල් ගැන ඔයා දක්වන උනන්දුව නිසා අනිත් අයට ඔයාව ලොකු සහනයක් වෙනවා.',
+    readingSi: 'කන්‍යා ලග්නෙන් ඉපදුණු ඔයා හරිම ප්‍රායෝගිකව, පිළිවෙළට වැඩ කරන කෙනෙක්. පුංචි පුංචි දේවල් ගැන පවා ඔයා ගොඩක් හිතනවා. අනිත් අයට උදව් කරන්න වගේම හැමදේම ලස්සනට තියාගන්න ඔයා මාරම උනන්දුයි.',
     personalityEn: 'Your chart shows a refined problem-solver, someone who notices what others miss and turns small corrections into real progress.',
-    personalitySi: 'ඕනෙම ප්‍රශ්නයක් ලේසියෙන් විසඳගන්න හැකියාව ඔයාට තියෙනවා. හැමදේම පර්ෆෙක්ට් වෙන්න ඕනේ කියලා හිතලා ඔයා නිකන් ස්ට්‍රෙස් වෙන්න එපා.',
+    personalitySi: 'ඕනෙම ප්‍රශ්නයක් ලේසියෙන් විසඳගන්න හැකියාව ඔයාට තියනවා. හැමදේම 100%ක්ම පර්ෆෙක්ට් වෙන්න ඕනේ කියලා හිතලා ඔයා නිකන් ස්ට්‍රෙස් වෙන්න එපා.',
     traitsEn: ['Analytical', 'Practical', 'Organized', 'Helpful'],
-    traitsSi: ['විශ්ලේෂණාත්මකයි', 'පිළිවෙළයි', 'සේවාකාමීයී', 'ප්‍රායෝගිකයි'],
+    traitsSi: ['විශ්ලේෂණාත්මකයි', 'පිළිවෙළයි', 'උදව් කරනවා', 'ප්‍රායෝගිකයි'],
     gem: { en: 'Emerald', si: 'මරකත' },
     color: { en: 'Green, Earth tones', si: 'කොළ, පස් වර්ණ' },
   },
   Tula: {
     readingEn: 'Libra Rising gives you charm, balance, and a strong sense of fairness. Relationships, beauty, negotiation, and social harmony become important life themes, and you succeed by choosing peace without losing your own voice.',
-    readingSi: 'තුලා ලග්නයෙන් ඉපදුණු ඔයා සාමයට, සමානාත්මතාවයට මාරම ලැදියි. ප්‍රශ්නයක් වුණාම පැති දෙකම බලලා සාධාරණව තීරණ ගන්න ඔයාට පුළුවන්. ලස්සන, කලාව වගේ දේවල් වලටත් ඔයා සහජයෙන් කැමතියි.',
+    readingSi: 'තුලා ලග්නෙන් ඉපදුණු ඔයා සාමයට, සාධාරණත්වයට මාරම ලැදියි. ප්‍රශ්නයක් වුණාම පැති දෙකම බලලා සාධාරණව තීරණ ගන්න ඔයාට පුළුවන්. ලස්සන දේවල්, කලාව වගේ දේවල් වලටත් ඔයා සහජයෙන්ම කැමතියි.',
     personalityEn: 'Your gift is reading both sides of a situation, but your growth comes from making clear choices when balance becomes delay.',
-    personalitySi: 'වෙන අයත් එක්ක එකතුවෙලා වැඩ කරන්න තියෙන හැකියාව (Partnerships) තමයි ඔයාගේ ලොකුම ශක්තිය. තීරණ ගන්න ටිකක් පමා වුණත්, ගන්න තීරණය ගොඩක් වෙලාවට හරිම එක වෙනවා.',
+    personalitySi: 'වෙන අයත් එක්ක එකතුවෙලා වැඩ කරන්න තියන හැකියාව තමයි ඔයාගේ ලොකුම ශක්තිය. තීරණ ගන්න ටිකක් කල් ගියත්, ගන්න තීරණය ගොඩක් වෙලාවට හරිම එක වෙනවා.',
     traitsEn: ['Diplomatic', 'Charming', 'Fair-minded', 'Artistic'],
     traitsSi: ['සාමකාමීයි', 'සාධාරණයි', 'කලාකාමීයි', 'සමබරයි'],
     gem: { en: 'Diamond', si: 'දියමන්ති' },
@@ -243,9 +243,9 @@ var LAGNA_UI_COPY = {
   },
   Vrischika: {
     readingEn: 'Scorpio Rising gives you an intense, private, and deeply observant nature. Mars adds courage under pressure, so you often transform through difficult moments and notice hidden motives before others do.',
-    readingSi: 'වෘශ්චික ලග්නයෙන් ඉපදුණු ඔයාට තියෙන්නේ ගැඹුරුම හැඟීම් දාමයක්. යමක් කරන්න හිතුවොත් ඒකෙ අගමුල හොයනකම්ම අතාරින්නේ නැහැ. ඔයාගේ මානසික ශක්තිය මාරම ප්‍රබලයි.',
+    readingSi: 'වෘශ්චික ලග්නෙන් ඉපදුණු ඔයාට තියෙන්නේ ගැඹුරු හැඟීම් දාමයක්. යමක් කරන්න හිතුවොත් ඒකෙ අගමුල හොයනකම්ම අතාරින්නේ නැහැ. ඔයාගේ මානසික ශක්තිය මාරම ප්‍රබලයි.',
     personalityEn: 'Your power is emotional depth with control, you are strongest when you use intensity for healing, research, and focused action.',
-    personalitySi: 'අභියෝග වලට මුහුණ දීලා, අළු ගසලා නැගිටින එක ඔයාට සහජයෙන්ම පිහිටලා තියෙනවා. අනිත් අයගේ හිතේ තියෙන දේ ඉක්මනින්ම තේරුම් ගන්න පුළුවන් එකත් ඔයාගේ විශේෂත්වයක්.',
+    personalitySi: 'ඕනෙම අභියෝගයකදී වැටෙන්නේ නැතුව, අළු ගසලා නැගිටින එක ඔයාට නිකන්ම පිහිටලා තියනවා. අනිත් අයගේ හිතේ තියන දේ ඉක්මනින්ම තේරුම් ගන්න එකත් ඔයාගේ විශේෂත්වයක්.',
     traitsEn: ['Intense willpower', 'Magnetic', 'Deep thinker', 'Resilient'],
     traitsSi: ['රහස්‍යයි', 'අධිෂ්ඨානශීලීයි', 'ගැඹුරුයි', 'මානසික ශක්තිය'],
     gem: { en: 'Red Coral', si: 'රතු පබළු' },
@@ -253,19 +253,19 @@ var LAGNA_UI_COPY = {
   },
   Dhanus: {
     readingEn: 'Sagittarius Rising gives you optimism, faith, and a love of truth. You grow through learning, travel, teaching, and big ideas, especially when freedom is balanced with responsibility.',
-    readingSi: 'ධනු ලග්නයෙන් ඉපදුණු ඔයා පට්ට නිදහස් කාමියෙක්. හැමදෙයක් දිහාම සුබවාදීව බලන ඔයා, සංචාරය කරන්න, අලුත් දේවල් ඉගෙනගන්න හරිම කැමතියි. ජීවිතේ යථාර්තය හොයන එක ඔයාගේ හැඩයක්.',
+    readingSi: 'ධනු ලග්නෙන් ඉපදුණු ඔයා පට්ට නිදහස් කාමියෙක්. හැමදෙයක් දිහාම සුබවාදීව බලන ඔයා, සංචාරය කරන්න, අලුත් දේවල් ඉගෙනගන්න හරිම කැමතියි. ජීවිතේ යථාර්ථය හොයන එක ඔයාගේ හැටියක්.',
     personalityEn: 'Your chart points to a seeker, someone who needs meaning, movement, and a horizon to aim toward.',
-    personalitySi: 'ඔයාගේ අවංකකම, කෙළින් කතා කරන ගතිය සමහර වෙලාවට අනිත් අයට රිදෙන්නත් පුළුවන්. හැබැයි ඔයා අනාගතය ගැන ගොඩක් දුර හිතලා තීරණ ගන්න කෙනෙක්.',
+    personalitySi: 'ඔයාගේ අවංකකම, කෙළින් කතා කරන ගතිය නිසා සමහර වෙලාවට අනිත් අයට රිදෙන්නත් පුළුවන්. හැබැයි ඔයා අනාගතය ගැන ගොඩක් දුර හිතලා තීරණ ගන්න කෙනෙක්.',
     traitsEn: ['Optimistic', 'Wise', 'Adventurous', 'Straightforward'],
-    traitsSi: ['නිදහස්කාමීයි', 'සුබවාදීයි', 'අවංකයි', 'දර්ශනිකයි'],
+    traitsSi: ['නිදහස්කාමීයි', 'සුබවාදීයි', 'අවංකයි', 'දාර්ශනිකයි'],
     gem: { en: 'Yellow Sapphire', si: 'පුෂ්පරාග' },
     color: { en: 'Yellow, Gold', si: 'කහ, රන්' },
   },
   Makara: {
     readingEn: 'Capricorn Rising gives you patience, discipline, and a serious approach to achievement. Your success usually comes step by step, through structure, endurance, and practical decisions.',
-    readingSi: 'මකර ලග්නයෙන් ඉපදුණු ඔයා කියන්නේ මාරම විනයක්, කැපවීමක් තියෙන කෙනෙක්. ජීවිතේ ලොකු ඉලක්ක තියාගෙන, ඒවාට හිමින් සැරේ, ස්ථාවරව ගමන් කරන එක තමයි ඔයාගේ ක්‍රමය. මහන්සි වෙලා වැඩ කරන්න ඔයාට තියෙන්නේ ලොකු ශක්තියක්.',
+    readingSi: 'මකර ලග්නෙන් ඉපදුණු ඔයා කියන්නේ මාරම විනයක්, කැපවීමක් තියන කෙනෙක්. ජීවිතේ ලොකු ඉලක්ක තියාගෙන, ඒවාට හිමින් සැරේ, ස්ථාවරව යන එක තමයි ඔයාගේ ක්‍රමය. මහන්සි වෙලා වැඩ කරන්න ඔයාට තියෙන්නේ ලොකු හයියක්.',
     personalityEn: 'Your strength is long-term focus, you may start quietly but you can outlast people who move faster at the beginning.',
-    personalitySi: 'වගකීම් අරගන්න බය නැති ඔයා, අමාරු කාලවලදීත් වැටෙන්නේ නැතුව ඉස්සරහට යනවා. පවුලේ අය වෙනුවෙනුත් ඔයා ලොකු වගකීමක් දරන කෙනෙක්.',
+    personalitySi: 'වගකීම් අරගන්න බය නැති ඔයා, අමාරු කාලවලදීත් වැටෙන්නේ නැතුව ඉස්සරහටම යනවා. පවුලේ අය වෙනුවෙනුත් ඔයා ලොකු වගකීමක් දරන කෙනෙක්.',
     traitsEn: ['Disciplined', 'Responsible', 'Patient', 'Strategic'],
     traitsSi: ['විනයගරුකයි', 'අරමුණු සහගතයි', 'වගකීම් දරනවා', 'කැපවෙනවා'],
     gem: { en: 'Blue Sapphire', si: 'නිල් මැණික්' },
@@ -273,9 +273,9 @@ var LAGNA_UI_COPY = {
   },
   Kumbha: {
     readingEn: 'Aquarius Rising gives you originality, independence, and a mind that looks beyond the usual path. You are drawn to systems, communities, technology, and ideas that can improve life for many people.',
-    readingSi: 'කුම්භ ලග්නයෙන් ඉපදුණු ඔයා හැමතිස්සෙම අලුත් විදිහට හිතන, අනාගතය දකින කෙනෙක්. සමාජයට, යහළුවන්ට ගොඩක් ළැදියි. සම්ප්‍රදායික රාමු වලින් පිටතට ගිහින් අලුත් දේවල් හොයන්න ඔයා හරිම දක්ෂයි.',
+    readingSi: 'කුම්භ ලග්නෙන් ඉපදුණු ඔයා හැමතිස්සෙම අලුත් විදිහට හිතන, අනාගතය දකින කෙනෙක්. යාළුවන්ට, සමාජයට ගොඩක් ළැදියි. සම්ප්‍රදායික රාමුවලින් පිටතට ගිහින් අලුත් දේවල් හොයන්න ඔයා හරිම දක්ෂයි.',
     personalityEn: 'Your personality carries distance and vision, you often understand where things are going before others are ready to accept it.',
-    personalitySi: 'ඔයා අනිත් හැමෝටම සමානව සලකනවා. හැඟීම් වලට වඩා බුද්ධියට තැන දීලා වැඩ කරන නිසා, සමහර වෙලාවට ඔයා ටිකක් හුදෙකලා වෙලා ඉන්න හැදුවත්, ඇතුළින් ඔයා ගොඩක් මානුෂීයයි.',
+    personalitySi: 'ඔයා අනිත් හැමෝටම සමානව සලකන කෙනෙක්. හැඟීම්වලට වඩා බුද්ධියට තැන දීලා වැඩ කරන නිසා, සමහර වෙලාවට ඔයා ටිකක් තනියම ඉන්න හැදුවත්, ඇතුළින් ඔයා ගොඩක් මානුෂීයයි.',
     traitsEn: ['Original', 'Independent', 'Humanitarian', 'Forward-looking'],
     traitsSi: ['අලුත් විදිහට හිතනවා', 'මිත්‍රශීලීයි', 'මානුෂීයයි', 'ස්වාධීනයි'],
     gem: { en: 'Blue Sapphire', si: 'නිල් මැණික්' },
@@ -283,9 +283,9 @@ var LAGNA_UI_COPY = {
   },
   Meena: {
     readingEn: 'Pisces Rising gives you compassion, imagination, and a deeply receptive heart. You absorb moods easily and do best when creativity, faith, and service have healthy boundaries.',
-    readingSi: 'මීන ලග්නයෙන් ඉපදුණු ඔයා මාරම සංවේදී, අනිත් අය ගැන ගොඩක් දුක් වෙන කෙනෙක්. කලාත්මක හැකියාවන් සහ ගැඹුරු ආධ්‍යාත්මික ගතිගුණ ඔයාට ජන්මයෙන්ම පිහිටලා තියෙනවා.',
+    readingSi: 'මීන ලග්නෙන් ඉපදුණු ඔයා මාරම සංවේදී, අනිත් අය වෙනුවෙන් හදවතින්ම හිතන කෙනෙක්. කලාත්මක හැකියාවන් සහ ගැඹුරු ආධ්‍යාත්මික ගතිගුණ ඔයාට උපතින්ම පිහිටලා තියනවා.',
     personalityEn: 'Your gift is emotional imagination, you can comfort, create, and understand what cannot always be explained in words.',
-    personalitySi: 'අනිත් අයගේ ප්‍රශ්න වලදිත් ඔයාට ගොඩක් දුක හිතෙනවා. හිතින් ලෝක මවන්න ඔයා දක්ෂයි වගේම, හැම වෙලේම අනිත් අයට උදව් කරන්න තමයි ඔයාගේ හිත කියන්නේ.',
+    personalitySi: 'අනිත් අයගේ ප්‍රශ්නවලදී ඔයාටත් ඒ දුක ඒ විදිහටම දැනෙනවා. හිතින් ලස්සන ලෝක මවන්න ඔයා දක්ෂයි වගේම, හැම වෙලාවටම අනිත් අයට උදව් කරන්න තමයි ඔයාගේ හිත කියන්නේ.',
     traitsEn: ['Compassionate', 'Imaginative', 'Intuitive', 'Gentle'],
     traitsSi: ['සංවේදීයි', 'පරිකල්පනය', 'ආධ්‍යාත්මිකයි', 'ත්‍යාගශීලීයි'],
     gem: { en: 'Yellow Sapphire', si: 'පුෂ්පරාග' },
@@ -1102,9 +1102,9 @@ var WinBackBanner = React.memo(function WinBackBanner({ language, onReactivate, 
           <Ionicons name="sparkles" size={20} color="#FFB800" />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={wb.title}>{si ? 'ආයුබෝවන්, ආපහු 🌙' : 'Welcome back 🌙'}</Text>
+          <Text style={wb.title}>{si ? 'ආයුබෝවන්,' : 'Welcome back 🌙'}</Text>
           <Text style={wb.sub}>{si
-            ? 'ඔබේ වාර්තා, දින දර්ශනය සහ chat මඟපෙන්වීම නතර වෙලා විතරයි — නැති වෙලා නෑ.'
+            ? 'ඔයාගේ රිපෝට්, කැලැන්ඩර්, චැට්ස් නැති වෙලා නැහැ, පොඩ්ඩකට නවතිලා විතරයි'
             : 'Your reports, calendar and chat guide are paused — not gone.'}</Text>
         </View>
       </View>
@@ -1395,6 +1395,19 @@ var SKY_STARS = [
   [90, 90, 0.6, 0.18], [200, 84, 0.6, 0.18], [300, 92, 0.6, 0.18],
 ];
 var SUN_RAY_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
+// Moon route — a slightly lower, silver arc (the night road).
+function moonArcPoint(f) {
+  var a = Math.PI * (1 - Math.max(0, Math.min(1, f)));
+  return { x: 180 + 150 * Math.cos(a), y: 150 - 104 * Math.sin(a) };
+}
+function moonBandPath(f0, f1) {
+  var N = 20, d = '';
+  for (var i = 0; i <= N; i++) {
+    var p = moonArcPoint(f0 + (f1 - f0) * i / N);
+    d += (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1) + ' ';
+  }
+  return d.trim();
+}
 var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy }) {
   var nowMs = Date.now();
   var sunrise = parseMs(data && data.sunrise);
@@ -1419,6 +1432,18 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
   var isNight = nowMs < sunrise || nowMs > sunset;
   var dayPct = Math.round(fNow * 100);
 
+  // ── Moon route (panchanga approximation: the moon rises ~48 min later
+  // per tithi; new moon rides with the sun, full moon rises at sunset).
+  // Honest day-level realism — the route is a guide, not an ephemeris.
+  var tithiNum = (data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number) || null;
+  var MOON_UP_MS = 12.4 * 3600000;
+  var moonrise = tithiNum ? sunrise + ((tithiNum - 1) % 30) * 48 * 60000 : NaN;
+  // if tonight's moon already set, show the previous lunation window
+  if (!isNaN(moonrise) && nowMs < moonrise - 24 * 3600000 + MOON_UP_MS) moonrise -= 24 * 3600000;
+  var moonFrac = !isNaN(moonrise) ? (nowMs - moonrise) / MOON_UP_MS : NaN;
+  var moonUp = !isNaN(moonFrac) && moonFrac >= 0 && moonFrac <= 1;
+  var moonPt = moonUp ? moonArcPoint(moonFrac) : null;
+
   var rahuActive = !isNaN(rkStart) && !isNaN(rkEnd) && nowMs >= rkStart && nowMs <= rkEnd;
   var cd = '';
   if (!isNaN(rkStart) && !isNaN(rkEnd)) {
@@ -1429,23 +1454,53 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
     }
   }
 
+  // ── living-sky animations (all quiet when skipHeavy / reduced motion) ──
   var pulse = useSharedValue(0);
+  var twinkle = useSharedValue(0);
+  var shoot = useSharedValue(0);
+  var raySpin = useSharedValue(0);
   useEffect(function () {
-    if (skipHeavy) { pulse.value = 0.5; return; }
+    if (skipHeavy) { pulse.value = 0.5; twinkle.value = 0.5; shoot.value = 0; raySpin.value = 0; return; }
     pulse.value = withRepeat(withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.sin) }), -1, true);
+    twinkle.value = withRepeat(withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.sin) }), -1, true);
+    shoot.value = withRepeat(withTiming(1, { duration: 9000, easing: Easing.linear }), -1, false);
+    raySpin.value = withRepeat(withTiming(360, { duration: 60000, easing: Easing.linear }), -1, false);
   }, [skipHeavy]);
   var haloStyle = useAnimatedStyle(function () {
     return { transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.9]) }], opacity: interpolate(pulse.value, [0, 1], [0.45, 0.04]) };
   });
+  var moonHaloStyle = useAnimatedStyle(function () {
+    return { transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.6]) }], opacity: interpolate(pulse.value, [0, 1], [0.35, 0.05]) };
+  });
+  var tw1 = useAnimatedStyle(function () { return { opacity: interpolate(twinkle.value, [0, 1], [0.15, 0.85]) }; });
+  var tw2 = useAnimatedStyle(function () { return { opacity: interpolate(twinkle.value, [0, 1], [0.8, 0.2]) }; });
+  var tw3 = useAnimatedStyle(function () { return { opacity: interpolate(twinkle.value, [0, 0.5, 1], [0.25, 0.9, 0.25]) }; });
+  var shootStyle = useAnimatedStyle(function () {
+    var p = shoot.value;
+    return {
+      opacity: interpolate(p, [0, 0.015, 0.075, 0.105, 1], [0, 0.95, 0.75, 0, 0]),
+      transform: [
+        { translateX: interpolate(p, [0, 0.105, 1], [-40, 310, 310]) },
+        { translateY: interpolate(p, [0, 0.105, 1], [18, 74, 74]) },
+        { rotate: '11deg' },
+      ],
+    };
+  });
+  var rayStyle = useAnimatedStyle(function () { return { transform: [{ rotate: raySpin.value + 'deg' }] }; });
 
   var showAusp = !isNaN(apStart) && !isNaN(apEnd) && fr(apEnd) > 0.02 && fr(apStart) < 0.98;
   var showRahu = !isNaN(rkStart) && !isNaN(rkEnd);
-  // time-aware states: windows dim once they pass, glow while active
   var rahuOver = showRahu && nowMs > rkEnd;
   var auspOver = !isNaN(apEnd) && nowMs > apEnd;
   var auspActive = !isNaN(apStart) && !isNaN(apEnd) && nowMs >= apStart && nowMs <= apEnd;
   var auspD = showAusp ? skyBandPath(Math.max(0, fr(apStart)), Math.min(1, fr(apEnd))) : null;
   var rahuD = showRahu ? skyBandPath(Math.max(0, Math.min(1, fr(rkStart))), Math.max(0, Math.min(1, fr(rkEnd)))) : null;
+
+  // "Now" badge follows the moon at night, the sun by day — and is clamped
+  // to the card so it can never clip at the edges (the marker stays exact).
+  var badgePt = (isNight && moonPt) ? moonPt : nowPt;
+  var badgeLeftPct = Math.max(16, Math.min(84, badgePt.x / 360 * 100));
+  var badgeTopPct = Math.max(6, badgePt.y / 170 * 100 - 26);
 
   return (
     <Animated.View entering={FadeInDown.delay(120).springify()}>
@@ -1459,13 +1514,15 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
             <View style={sky.icBox}><Ionicons name={isNight ? 'moon' : 'sunny'} size={16} color="#FFD983" /></View>
             <View style={{ flex: 1 }}>
               <Text style={sky.kicker}>{language === 'si' ? 'අහස් ඔරලෝසුව' : 'SKY CLOCK'}</Text>
-              <Text style={sky.title}>{language === 'si' ? 'අද හිරු ගමන් මග' : "Today's Sun Path"}</Text>
-              <Text style={sky.sub}>{(language === 'si' ? 'උදාව ' : 'Sunrise ') + fmtHM(sunrise, t) + '  ·  ' + (language === 'si' ? 'අස්තය ' : 'Sunset ') + fmtHM(sunset, t)}</Text>
+              <Text style={sky.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+                {language === 'si' ? 'අද හිරු සහ සඳ ගමන' : "Today's Sun & Moon"}
+              </Text>
+              <Text style={sky.sub} numberOfLines={1}>{(language === 'si' ? 'උදාව ' : 'Sunrise ') + fmtHM(sunrise, t) + '  ·  ' + (language === 'si' ? 'අස්තය ' : 'Sunset ') + fmtHM(sunset, t)}</Text>
             </View>
           </View>
           {cd ? (
             <View style={[sky.cdPill, rahuActive && sky.cdPillActive]}>
-              <Text style={sky.cdLabel}>{rahuActive ? (language === 'si' ? 'රාහු අවසන්' : 'RAHU ENDS') : (language === 'si' ? 'රාහු කාලයට' : 'RAHU IN')}</Text>
+              <Text style={sky.cdLabel} numberOfLines={1}>{rahuActive ? (language === 'si' ? 'රාහු අවසන්' : 'RAHU ENDS') : (language === 'si' ? 'රාහු කාලයට' : 'RAHU IN')}</Text>
               <Text style={sky.cdValue}>{cd}</Text>
             </View>
           ) : null}
@@ -1484,6 +1541,11 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
                 <Stop offset="0.6" stopColor="#E76F51" stopOpacity="0.10" />
                 <Stop offset="1" stopColor="#E76F51" stopOpacity="0" />
               </RadialGradient>
+              <SvgLinearGradient id="moonRouteGrad" gradientUnits="userSpaceOnUse" x1="30" y1="0" x2="330" y2="0">
+                <Stop offset="0" stopColor="#8E97B8" stopOpacity="0.65" />
+                <Stop offset="0.5" stopColor="#DDE4F5" stopOpacity="0.9" />
+                <Stop offset="1" stopColor="#8E97B8" stopOpacity="0.65" />
+              </SvgLinearGradient>
             </Defs>
             {SKY_STARS.map(function (st, si) {
               return <Circle key={'sk' + si} cx={st[0]} cy={st[1]} r={st[2]} fill="#F4E4BC" opacity={st[3]} />;
@@ -1491,6 +1553,14 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
             <Ellipse cx="180" cy="152" rx="210" ry="58" fill="url(#skyHorizonGlow)" />
             {/* the day still to come — faint dashed track */}
             <Path d={skyBandPath(0, 1)} fill="none" stroke="rgba(255,236,190,0.15)" strokeWidth="1.6" strokeDasharray="3 5" />
+            {/* the moon's road — a lower silver route across the same sky */}
+            {moonUp ? (
+              <G>
+                <Path d={moonBandPath(0, 1)} fill="none" stroke="rgba(200,210,235,0.14)" strokeWidth="1.4" strokeDasharray="2 6" />
+                <Path d={moonBandPath(0, moonFrac)} fill="none" stroke="rgba(200,214,240,0.16)" strokeWidth="6" strokeLinecap="round" />
+                <Path d={moonBandPath(0, moonFrac)} fill="none" stroke="url(#moonRouteGrad)" strokeWidth="1.8" strokeLinecap="round" />
+              </G>
+            ) : null}
             {/* elapsed day — soft glow + gradient core */}
             <Path d={skyBandPath(0, fNow)} fill="none" stroke="rgba(245,197,88,0.22)" strokeWidth="8" strokeLinecap="round" />
             <Path d={skyBandPath(0, fNow)} fill="none" stroke="url(#skyArcGrad)" strokeWidth="2.6" strokeLinecap="round" />
@@ -1534,38 +1604,88 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
             <Circle cx="345" cy="150" r="3.4" fill="#E76F51" opacity="0.95" />
           </Svg>
 
-          {/* the sun itself (becomes the moon at night) */}
-          <View style={[sky.nowWrap, { left: (nowPt.x / 360 * 100) + '%', top: (nowPt.y / 170 * 100) + '%' }]} pointerEvents="none">
+          {/* twinkling stars — three live points over the static field */}
+          {!skipHeavy ? (
+            <View style={StyleSheet.absoluteFill} pointerEvents="none">
+              <Animated.View style={[skyx.twinkle, { left: '18%', top: '11%' }, tw1]} />
+              <Animated.View style={[skyx.twinkle, { left: '52%', top: '7%', width: 3, height: 3, borderRadius: 1.5 }, tw2]} />
+              <Animated.View style={[skyx.twinkle, { left: '81%', top: '15%' }, tw3]} />
+              {/* a shooting star crosses the upper sky every ~9s */}
+              <Animated.View style={[skyx.shootWrap, shootStyle]}>
+                <LinearGradient colors={['rgba(255,255,255,0)', 'rgba(255,244,214,0.9)', 'rgba(255,255,255,0)']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={skyx.shootTail} />
+                <View style={skyx.shootHead} />
+              </Animated.View>
+            </View>
+          ) : null}
+
+          {/* the sun — exact position on its arc, rays turning slowly */}
+          {!isNight ? (
+            <View style={[sky.nowWrap, { marginTop: -19, left: (nowPt.x / 360 * 100) + '%', top: (nowPt.y / 170 * 100) + '%' }]} pointerEvents="none">
+              <View style={sky.sunBox}>
+                <Animated.View style={[sky.sunHalo, rahuActive && sky.sunHaloRahu, haloStyle]} />
+                <Animated.View style={rayStyle}>
+                  <Svg width={38} height={38} viewBox="0 0 38 38">
+                    <Defs>
+                      <RadialGradient id="sunCoreGrad" cx="42%" cy="38%" r="66%">
+                        <Stop offset="0" stopColor="#FFFDF2" />
+                        <Stop offset="0.55" stopColor="#FFE9A8" />
+                        <Stop offset="1" stopColor="#F0A24A" />
+                      </RadialGradient>
+                    </Defs>
+                    {SUN_RAY_ANGLES.map(function (deg) {
+                      var rad = deg * Math.PI / 180;
+                      return (
+                        <Line key={'ray' + deg}
+                          x1={19 + Math.cos(rad) * 12.5} y1={19 + Math.sin(rad) * 12.5}
+                          x2={19 + Math.cos(rad) * 16.5} y2={19 + Math.sin(rad) * 16.5}
+                          stroke="#FFD983" strokeWidth="1.6" strokeLinecap="round" opacity="0.85" />
+                      );
+                    })}
+                    <Circle cx="19" cy="19" r="9.5" fill="url(#sunCoreGrad)" />
+                  </Svg>
+                </Animated.View>
+              </View>
+            </View>
+          ) : null}
+
+          {/* the moon — rides its own silver route, day or night */}
+          {moonPt ? (
+            <View style={[skyx.moonWrap, { left: (moonPt.x / 360 * 100) + '%', top: (moonPt.y / 170 * 100) + '%' }]} pointerEvents="none">
+              <Animated.View style={[skyx.moonHalo, moonHaloStyle]} />
+              <Svg width={isNight ? 30 : 22} height={isNight ? 30 : 22} viewBox="0 0 30 30">
+                <Defs>
+                  <RadialGradient id="moonCoreGrad" cx="40%" cy="36%" r="68%">
+                    <Stop offset="0" stopColor="#FFFFFF" />
+                    <Stop offset="0.55" stopColor="#E8EAF2" />
+                    <Stop offset="1" stopColor="#A9B1C6" />
+                  </RadialGradient>
+                </Defs>
+                <Circle cx="15" cy="15" r="9" fill="url(#moonCoreGrad)" />
+                <Circle cx="12" cy="12.5" r="1.9" fill="rgba(148,155,178,0.55)" />
+                <Circle cx="17.5" cy="17" r="1.3" fill="rgba(148,155,178,0.45)" />
+                <Circle cx="16" cy="11" r="0.9" fill="rgba(148,155,178,0.38)" />
+              </Svg>
+            </View>
+          ) : null}
+
+          {/* "now" badge — follows the active body, clamped inside the card */}
+          <View style={[skyx.badgeWrap, { left: badgeLeftPct + '%', top: badgeTopPct + '%' }]} pointerEvents="none">
             <View style={[sky.nowBadge, rahuActive && sky.nowBadgeDanger]}>
               <Text style={[sky.nowBadgeText, rahuActive && sky.nowBadgeTextDanger]} numberOfLines={1}>
                 {(language === 'si' ? 'දැන් ' : 'Now ') + fmtHM(nowMs, t) + (rahuActive ? (language === 'si' ? ' · රාහු' : ' · Rahu') : '')}
               </Text>
             </View>
-            <View style={sky.sunBox}>
-              <Animated.View style={[sky.sunHalo, isNight && sky.sunHaloNight, rahuActive && sky.sunHaloRahu, haloStyle]} />
-              <Svg width={38} height={38} viewBox="0 0 38 38">
-                <Defs>
-                  <RadialGradient id="sunCoreGrad" cx="42%" cy="38%" r="66%">
-                    <Stop offset="0" stopColor={isNight ? '#FFFFFF' : '#FFFDF2'} />
-                    <Stop offset="0.55" stopColor={isNight ? '#E8EAF0' : '#FFE9A8'} />
-                    <Stop offset="1" stopColor={isNight ? '#AEB5C8' : '#F0A24A'} />
-                  </RadialGradient>
-                </Defs>
-                {!isNight && SUN_RAY_ANGLES.map(function (deg) {
-                  var rad = deg * Math.PI / 180;
-                  return (
-                    <Line key={'ray' + deg}
-                      x1={19 + Math.cos(rad) * 12.5} y1={19 + Math.sin(rad) * 12.5}
-                      x2={19 + Math.cos(rad) * 16.5} y2={19 + Math.sin(rad) * 16.5}
-                      stroke="#FFD983" strokeWidth="1.6" strokeLinecap="round" opacity="0.85" />
-                  );
-                })}
-                <Circle cx="19" cy="19" r="9.5" fill="url(#sunCoreGrad)" />
-                {isNight ? <Circle cx="15.5" cy="16" r="2.2" fill="rgba(148,155,178,0.55)" /> : null}
-                {isNight ? <Circle cx="21.5" cy="21.5" r="1.5" fill="rgba(148,155,178,0.45)" /> : null}
-              </Svg>
-            </View>
           </View>
+
+          {/* moonrise chip — quiet silver, only while the moon is up */}
+          {moonUp ? (
+            <View style={skyx.moonChip} pointerEvents="none">
+              <Ionicons name="moon" size={9} color="#C9D2E8" />
+              <Text style={skyx.moonChipText} numberOfLines={1}>
+                {(language === 'si' ? 'සඳ උදාව ' : 'Moonrise ') + fmtHM(moonrise, t)}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={sky.footer}>
@@ -1605,9 +1725,11 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
           <View style={sky.progressTrack}>
             <LinearGradient colors={['#F5B45C', '#FFE9A8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[sky.progressFill, { width: Math.max(2, dayPct) + '%' }]} />
           </View>
-          <Text style={sky.progressText}>
+          <Text style={sky.progressText} numberOfLines={1}>
             {isNight
-              ? (language === 'si' ? 'රාත්‍රී අහස' : 'Night sky')
+              ? (moonUp
+                  ? (language === 'si' ? 'රාත්‍රී අහස · සඳ අහසේ' : 'Night sky · moon is up')
+                  : (language === 'si' ? 'රාත්‍රී අහස' : 'Night sky'))
               : dayPct + (language === 'si' ? '% ක් ගෙවී ඇත' : '% of daylight')}
           </Text>
         </View>
@@ -1616,6 +1738,23 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
       </View>
     </Animated.View>
   );
+});
+
+// styles for the living-sky layer (moon route, badge, effects)
+var skyx = StyleSheet.create({
+  moonWrap: { position: 'absolute', width: 30, height: 30, marginLeft: -15, marginTop: -15, alignItems: 'center', justifyContent: 'center' },
+  moonHalo: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: '#C9D2E8' },
+  badgeWrap: { position: 'absolute', width: 140, marginLeft: -70, alignItems: 'center' },
+  moonChip: {
+    position: 'absolute', top: 8, left: 12, flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(18,20,34,0.62)', borderWidth: 1, borderColor: 'rgba(201,210,232,0.28)',
+    borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, maxWidth: 150,
+  },
+  moonChipText: { fontSize: 9, fontWeight: '800', color: '#C9D2E8', fontVariant: ['tabular-nums'] },
+  twinkle: { position: 'absolute', width: 2.4, height: 2.4, borderRadius: 1.2, backgroundColor: '#FFF6DC' },
+  shootWrap: { position: 'absolute', left: 0, top: 0, flexDirection: 'row', alignItems: 'center' },
+  shootTail: { width: 46, height: 1.6, borderRadius: 1 },
+  shootHead: { width: 2.6, height: 2.6, borderRadius: 1.3, backgroundColor: '#FFFDF2', marginLeft: -1 },
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1843,7 +1982,7 @@ var ViralHero = React.memo(function ViralHero(props) {
         <View style={s.oracleKickerLine} />
       </View>
       <Text style={[s.oracleTitle, language === 'si' && s.oracleTitleSinhala]}>{oracle ? oracle.title : ''}</Text>
-      <Text style={[vr.heroBody, language === 'si' && s.sinhalaTextFlow]} numberOfLines={3}>{oracle ? oracle.body : ''}</Text>
+      <Text style={[vr.heroBody, language === 'si' && s.sinhalaTextFlow]}>{oracle ? oracle.body : ''}</Text>
 
       {/* insight chips — lagna · nakshatra · golden hour */}
       <View style={vr.insightRow}>
@@ -2701,6 +2840,9 @@ export default function HomeScreen() {
 
   /* ── Weekly Palapala Banner ── */
   function renderWeeklyBanner() {
+    // Weekly lagna palapala is a Pro feature — free users get the locked teaser
+    // in renderWeeklyLagna instead, so skip the "jump to forecast" banner.
+    if (isFreeUser) return null;
     if (!weeklyLagna || !weeklyLagna.reports || weeklyLagna.reports.length === 0) return null;
 
     var weekStart = weeklyLagna.weekStart ? new Date(weeklyLagna.weekStart).toLocaleDateString(language === 'si' ? 'si-LK' : 'en-US', { month: 'short', day: 'numeric' }) : '';
@@ -3138,6 +3280,39 @@ export default function HomeScreen() {
   }
 
   function renderWeeklyLagna() {
+    // Weekly lagna palapala is a Pro feature (the subscription's "weekly
+    // readings"). Free users get a locked teaser → paywall, never the actual
+    // forecasts — defense-in-depth on top of the server's subscription gate,
+    // so it stays locked even if the data somehow reaches the client.
+    if (isFreeUser) {
+      return (
+        <Animated.View entering={FadeInDown.delay(300).springify()}>
+          <CosmicCard variant="surface" delay={300}>
+            <View style={s.wlHeader}>
+              <View style={s.wlHeaderLeft}>
+                <View style={s.wlHeaderIcon}>
+                  <Ionicons name="telescope-outline" size={18} color={HT.gold} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.wlTitle}>{language === 'si' ? 'මේ සතියේ ඔයාගේ ලග්න පලාපල' : 'Weekly Forecast'}</Text>
+                  <Text style={s.wlWeekLabel}>{language === 'si' ? 'ලග්න 12ටම සතිපතා පලාපල' : 'Weekly readings for all 12 lagnas'}</Text>
+                </View>
+                <Ionicons name="lock-closed" size={16} color={HT.gold} />
+              </View>
+            </View>
+            <Text style={s.wlLockTease}>
+              {language === 'si'
+                ? 'අලුත් සතියට ග්‍රහ කිරණ ඔයාගේ ලග්නයට බලපාන හැටි — හැම සතියෙම අලුත් කියවීමක්.'
+                : 'How the week ahead plays out for your rising sign — a fresh reading every week.'}
+            </Text>
+            <TouchableOpacity activeOpacity={0.85} onPress={function () { Promise.resolve(showPaywall('weekly_lagna')).catch(function () {}); }} style={s.wlUnlockCta}>
+              <Ionicons name="lock-open-outline" size={14} color="#2A1707" />
+              <Text style={s.wlUnlockCtaText}>{language === 'si' ? 'සතිපතා පලාපල විවෘත කරන්න' : 'Unlock weekly forecasts'}</Text>
+            </TouchableOpacity>
+          </CosmicCard>
+        </Animated.View>
+      );
+    }
     if (!weeklyLagna || !weeklyLagna.reports || weeklyLagna.reports.length === 0) return null;
 
     var reports = weeklyLagna.reports;
@@ -3867,7 +4042,11 @@ var s = StyleSheet.create({
     backgroundColor: 'rgba(255,184,0,0.08)',
   },
   retryText: { color: '#FFB800', fontWeight: '700', fontSize: 14, letterSpacing: 1 },
-  sinhalaTextFlow: { letterSpacing: 0, textTransform: 'none' },
+  // Sinhala glyphs stack vowel signs above and pillam/descenders below the
+  // Latin line box, so a tight lineHeight clips them — especially the top of
+  // line 1 and bottom of the last line when numberOfLines caps the height.
+  // Give them extra vertical room and keep Android's font padding.
+  sinhalaTextFlow: { letterSpacing: 0, textTransform: 'none', lineHeight: 24, includeFontPadding: true },
 
   // Personal Oracle Hero
   oracleHeroShell: {
@@ -3925,7 +4104,7 @@ var s = StyleSheet.create({
     fontWeight: '900', textAlign: 'center', letterSpacing: 0,
     ...textShadow('rgba(255,184,0,0.40)', { width: 0, height: 2 }, 14),
   },
-  oracleTitleSinhala: { fontSize: 24, lineHeight: 34, letterSpacing: 0 },
+  oracleTitleSinhala: { fontSize: 24, lineHeight: 38, letterSpacing: 0, includeFontPadding: true, paddingVertical: 2 },
   oracleBody: {
     color: 'rgba(255,244,215,0.72)', fontSize: 15, lineHeight: 24,
     fontWeight: '500', textAlign: 'center', marginTop: 12, paddingHorizontal: 4,
@@ -4423,6 +4602,9 @@ var s = StyleSheet.create({
   },
   wlTitle: { color: '#F4E4BC', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
   wlWeekLabel: { color: 'rgba(218,165,32,0.45)', fontSize: 11, fontWeight: '600', marginTop: 1 },
+  wlLockTease: { color: 'rgba(244,228,188,0.62)', fontSize: 13, lineHeight: 19, fontWeight: '500', marginTop: 10 },
+  wlUnlockCta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, paddingVertical: 11, paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#E8C56A' },
+  wlUnlockCtaText: { fontSize: 12.5, fontWeight: '800', color: '#2A1707', letterSpacing: 0.2 },
   wlGrid: { gap: 8 },
   wlCard: {
     borderRadius: 16, overflow: 'hidden',

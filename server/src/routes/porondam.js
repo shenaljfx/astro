@@ -27,8 +27,7 @@ const { distributedAiUserLimiter } = require('../services/distributedRateLimit')
 const { saveVibeLink, getVibeLink, markVibeLinkUsed } = require('../services/vibeLinkStore');
 const { savePorondamResult, updatePorondamReport } = require('../models/firestore');
 const { getDb, COLLECTIONS } = require('../config/firebase');
-const { createOrResumeEntitlement, fulfillEntitlement, recordEntitlementError, restoreEntitlementRetry, checkPendingEntitlement } = require('../middleware/entitlements');
-const { getMonthlyUse, recordMonthlyUse, fairUseMessage } = require('../services/fairUse');
+const { createOrResumeEntitlement, fulfillEntitlement, recordEntitlementError, restoreEntitlementRetry } = require('../middleware/entitlements');
 
 // Enhanced engine (graceful — null if unavailable)
 let enhancedEngine = null;
@@ -315,23 +314,6 @@ router.post('/report', aiLimiter, phoneAuth, requireSubscriptionOrCredit('porond
       try {
         const inputData = buildPorondamEntitlementInput(entitlementInput, porondamData, language);
 
-        // Pro fair-use: subscribers get generous monthly generation included.
-        // Enforce only for a genuinely NEW generation — a retry reuses the
-        // pending entitlement and must never be blocked or counted.
-        if (req.accessVia === 'subscription') {
-          const pending = await checkPendingEntitlement(req.user.uid, 'porondam', inputData);
-          if (!pending) {
-            const fu = await getMonthlyUse(req.user.uid, 'porondam');
-            if (fu.remaining <= 0) {
-              return res.status(429).json({
-                error: fairUseMessage('porondam', language),
-                code: 'FAIR_USE_LIMIT_MONTHLY',
-                limit: fu.limit,
-              });
-            }
-          }
-        }
-
         const ent = await createOrResumeEntitlement(req.user.uid, 'porondam', inputData);
         entitlementId = ent.id;
         entitlementWasRetry = !!ent.isRetry;
@@ -339,12 +321,25 @@ router.post('/report', aiLimiter, phoneAuth, requireSubscriptionOrCredit('porond
           console.log(`[Porondam Report] ♻️ Retry — entitlement ${ent.id} (${ent.retriesLeft} retries left)`);
         } else if (req.accessVia === 'credit' && req.purchaseCredit) {
           // One-time Marriage Pack buyer starting a NEW generation — spend the
-          // credit. Retries of this entitlement stay free.
-          await consumeCredit(req.purchaseCredit.id, ent.id).catch((cErr) =>
-            console.warn('[Porondam Report] Credit consume failed (non-critical):', cErr.message));
-        } else if (req.accessVia === 'subscription') {
-          // New subscriber generation — count it toward the monthly fair-use cap.
-          await recordMonthlyUse(req.user.uid, 'porondam');
+          // credit. Retries of this entitlement stay free. consumeCredit is
+          // transactional: a definitive `false` means the credit was already
+          // used (race/double-submit) → reject so one credit can't yield two
+          // reports. A thrown error is transient (credit stays available; the
+          // pending entitlement keeps the retry free) → proceed.
+          let consumed = false;
+          let consumeErrored = false;
+          try {
+            consumed = await consumeCredit(req.purchaseCredit.id, ent.id);
+          } catch (cErr) {
+            consumeErrored = true;
+            console.warn('[Porondam Report] Credit consume error (treating as transient):', cErr.message);
+          }
+          if (!consumed && !consumeErrored) {
+            return res.status(409).json({
+              error: 'This purchase has already been used. If you were charged and have no report, please contact support.',
+              code: 'CREDIT_ALREADY_USED',
+            });
+          }
         }
       } catch (entErr) {
         if (entErr.code === 'ENTITLEMENT_EXHAUSTED') {

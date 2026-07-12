@@ -261,13 +261,15 @@ function trimKendaraBhriguPersonalDetail(point, language) {
   return trimKendaraCopy(getKendaraBhriguPersonalDetail(point, language), 190);
 }
 
-function buildKendaraMasteryItems(chartData, jyotishData, marakaData, selectedVarga, language) {
+function buildKendaraMasteryItems(chartData, jyotishData, marakaData, selectedVarga, language, isPreview) {
+  // For free users (isPreview) only the chart is genuinely open; the rest are
+  // locked, so we never mark them "done" — the strip stays honest ("1 of 5").
   return [
     { done: !!(chartData && chartData.rashiChart), label: language === 'si' ? 'මූලික සිතියම' : 'Chart' },
-    { done: !!(chartData && chartData.advancedAnalysis && chartData.advancedAnalysis.tier1 && chartData.advancedAnalysis.tier1.advancedYogas), label: language === 'si' ? 'ශක්තීන්' : 'Strengths' },
-    { done: !!(jyotishData && jyotishData.dasha), label: language === 'si' ? 'කාලය' : 'Timeline' },
-    { done: !!selectedVarga, label: language === 'si' ? 'ජීවිත කොටස්' : 'Life Areas' },
-    { done: !!marakaData, label: language === 'si' ? 'ආරක්ෂාව' : 'Care' },
+    { done: !isPreview && !!(chartData && chartData.advancedAnalysis && chartData.advancedAnalysis.tier1 && chartData.advancedAnalysis.tier1.advancedYogas), label: language === 'si' ? 'ශක්තීන්' : 'Strengths' },
+    { done: !isPreview && !!(jyotishData && jyotishData.dasha), label: language === 'si' ? 'කාලය' : 'Timeline' },
+    { done: !isPreview && !!selectedVarga, label: language === 'si' ? 'ජීවිත කොටස්' : 'Life Areas' },
+    { done: !isPreview && !!marakaData, label: language === 'si' ? 'ආරක්ෂාව' : 'Care' },
   ];
 }
 
@@ -486,17 +488,27 @@ function PremiumInsightRail({ insights, language }) {
   );
 }
 
-function KendaraMasteryStrip({ items, language }) {
+function KendaraMasteryStrip({ items, language, isPreview, onUnlock }) {
   if (!items || items.length === 0) return null;
   var doneCount = items.filter(function (item) { return item.done; }).length;
   var progress = Math.round((doneCount / items.length) * 100);
+  var si = language === 'si';
+  // Honest sub copy: for free users the locked layers open with Pro, not "as
+  // data loads" (they never will without a subscription).
+  var subText = isPreview
+    ? (si ? doneCount + ' / ' + items.length + ' ස්ථර විවෘතයි — ඉතිරිය Pro වලින්' : doneCount + ' of ' + items.length + ' layers open — Pro unlocks the rest')
+    : (si ? 'ඉහළ විස්තර ටික එකින් එක විවෘත වෙනවා' : 'Your deeper layers open as data loads');
+  var Wrapper = isPreview ? SpringPressable : View;
+  var wrapperProps = isPreview ? { haptic: 'light', onPress: onUnlock } : {};
   return (
+    <Wrapper {...wrapperProps}>
     <Animated.View entering={FadeInDown.delay(140).duration(520)} style={styles.masteryWrap}>
       <View style={styles.masteryTopRow}>
-        <View>
-          <Text style={styles.masteryLabel}>{language === 'si' ? 'කේන්දර අධ්‍යයන මට්ටම' : 'Chart Mastery'}</Text>
-          <Text style={styles.masterySub}>{language === 'si' ? 'ඉහළ විස්තර ටික එකින් එක විවෘත වෙනවා' : 'Your deeper layers open as data loads'}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.masteryLabel}>{si ? 'කේන්දර අධ්‍යයන මට්ටම' : 'Chart Mastery'}</Text>
+          <Text style={styles.masterySub}>{subText}</Text>
         </View>
+        {isPreview ? <Ionicons name="lock-closed" size={13} color="rgba(255,184,0,0.7)" style={{ marginRight: 6 }} /> : null}
         <Text style={styles.masteryPercent}>{progress}%</Text>
       </View>
       <View style={styles.masteryTrack}>
@@ -515,6 +527,7 @@ function KendaraMasteryStrip({ items, language }) {
         })}
       </View>
     </Animated.View>
+    </Wrapper>
   );
 }
 
@@ -1514,6 +1527,20 @@ function KendaraCTA({ icon, title, sub, color, onPress }) {
   );
 }
 
+// Inline "Ask the astrologer about this" link — turns a Pro section into a
+// conversation starter (deep-links to chat with a prefilled question). Ties the
+// two biggest Pro features together and makes each section feel less like a dead end.
+function KendaraAskLink({ router, language, prefill, label }) {
+  var si = language === 'si';
+  return (
+    <SpringPressable haptic="light" onPress={function () { router.push({ pathname: '/(tabs)/chat', params: { prefill: prefill } }); }} style={styles.askLinkRow}>
+      <Ionicons name="chatbubble-ellipses-outline" size={13} color="#60A5FA" />
+      <Text style={styles.askLinkText}>{label || (si ? 'මේ ගැන නැකැත්කරුගෙන් අහන්න' : 'Ask the astrologer about this')}</Text>
+      <Ionicons name="arrow-forward" size={12} color="#60A5FA" />
+    </SpringPressable>
+  );
+}
+
 function KendaraNextSteps({ router, language }) {
   var si = language === 'si';
   return (
@@ -1538,16 +1565,32 @@ function KendaraNextSteps({ router, language }) {
         icon="chatbubbles-outline" color="#60A5FA"
         title={si ? 'නැකැත්කරුගෙන් අහන්න' : 'Ask the astrologer'}
         sub={si ? 'ඔබේ කේන්දරය ගැන ඕනෑම දෙයක් අහන්න' : 'Ask anything about your own chart'}
-        onPress={function () { router.push('/(tabs)/chat'); }}
+        onPress={function () { router.push({ pathname: '/(tabs)/chat', params: { prefill: si ? 'මගේ කේන්දරය ගැන වැඩිදුර කියන්න.' : 'Tell me more about my birth chart.' } }); }}
       />
     </View>
   );
 }
 
-// "What's moving today" — the daily-return hook (real, changes every ~2 days)
-function TransitTodayStrip({ transit, language }) {
-  if (!transit || !transit.moon) return null;
+// "What's moving today" — the daily-return hook (real, changes every ~2 days).
+// For free users (locked) it renders masked, so the lock itself refreshes every
+// couple of days — a self-renewing tease that pulls them back to the paywall.
+function TransitTodayStrip({ transit, language, locked, onUnlock }) {
   var si = language === 'si';
+  if (locked && (!transit || !transit.moon)) {
+    return (
+      <SpringPressable haptic="light" onPress={onUnlock} style={styles.transitStrip}>
+        <LinearGradient colors={['rgba(199,210,254,0.14)', 'transparent']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <View style={styles.transitIcon}><Ionicons name="planet-outline" size={16} color="#C7D2FE" /></View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.transitEyebrow}>{si ? 'අද අහසේ' : 'TODAY’S SKY'}</Text>
+          <Text style={styles.transitLine}>{si ? 'අද — සඳ ඔබේ ▓▓▓▓▓ කලාපය ඔස්සේ ගමන් කරනවා.' : 'Today — the Moon is moving through your ▓▓▓▓▓.'}</Text>
+          <Text style={styles.transitSub}>{si ? 'අද ඔබට වැඩිපුරම බලපාන ග්‍රහ ගමන විවෘත කරන්න' : 'Unlock what’s moving in your sky today'}</Text>
+        </View>
+        <Ionicons name="lock-closed" size={13} color="rgba(199,210,254,0.7)" />
+      </SpringPressable>
+    );
+  }
+  if (!transit || !transit.moon) return null;
   var moonArea = getKendaraHouseArea(transit.moon.house, language);
   var line = si
     ? 'අද — සඳ ඔබේ ' + moonArea + ' කලාපය ඔස්සේ ගමන් කරනවා.'
@@ -1643,9 +1686,160 @@ function KendaraUpgradeCard({ showPaywall, language, onUpgraded, vaultCounts }) 
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  LOCKED (free-user) TEASERS — the conversion wall
+//  Rendered in place of the Pro vaults for non-subscribers. Each one carries
+//  a REAL number from the user's own chart (yoga count, current dasha planet,
+//  strongest planet %…) so the lock names what's inside instead of hiding it.
+//  Every tap logs a distinct paywall source so we can learn which section sells.
+// ══════════════════════════════════════════════════════════════════════
+
+// A single locked Pro-section header. Looks like PremiumVaultSection so the wall
+// feels native, but the body is a one-line tease + a lock chip → paywall.
+function LockedVaultTeaser({ icon, color, eyebrow, title, tease, count, countSuffix, source, showPaywall, onUnlocked, language, delay, children }) {
+  var accent = color || '#FFB800';
+  var si = language === 'si';
+  var onPress = async function () {
+    try { if (showPaywall) await showPaywall(source || 'kendara'); } catch (_) {}
+    if (onUnlocked) onUnlocked();
+  };
+  return (
+    <Animated.View entering={FadeInDown.delay(delay || 0).duration(480)} style={styles.vaultSectionWrap}>
+      <SpringPressable haptic="light" scalePressed={0.985} onPress={onPress} style={[styles.lockVaultHeader, { borderColor: accent + '33' }]}>
+        <LinearGradient colors={[accent + '16', 'rgba(255,255,255,0.03)', 'rgba(8,5,3,0.66)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <View style={[styles.vaultIconWrap, { backgroundColor: accent + '14', borderColor: accent + '36' }]}>
+          <Ionicons name={icon} size={18} color={accent} />
+        </View>
+        <View style={styles.vaultHeaderText}>
+          <Text style={[styles.vaultEyebrow, { color: accent }]} numberOfLines={1}>{eyebrow}</Text>
+          <Text style={[styles.vaultTitle, si && styles.sinhalaTextFlow]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.82}>{title}</Text>
+          <Text style={[styles.lockTease, si && styles.sinhalaTextFlow]} numberOfLines={3}>{tease}</Text>
+          {children}
+        </View>
+        <View style={styles.vaultActionStack}>
+          {count != null ? (
+            <View style={[styles.lockCountPill, { borderColor: accent + '55', backgroundColor: accent + '18' }]}>
+              <Text style={[styles.lockCountNum, { color: accent }]}>{count}{countSuffix || ''}</Text>
+            </View>
+          ) : null}
+          <View style={[styles.lockChip, { backgroundColor: accent + '18', borderColor: accent + '44' }]}>
+            <Ionicons name="lock-closed" size={12} color={accent} />
+          </View>
+        </View>
+      </SpringPressable>
+    </Animated.View>
+  );
+}
+
+// Locked chart placeholder (used for the D9 marriage chart). Draws an obscured
+// frosted lattice — NEVER the real grid, which isn't even sent to free clients —
+// with a lock overlay and CTA. The highest-desire tease on the page.
+function LockedChartPanel({ title, tease, source, showPaywall, onUnlocked, language, accent, icon }) {
+  var si = language === 'si';
+  var col = accent || '#A78BFA';
+  var onPress = async function () {
+    try { if (showPaywall) await showPaywall(source || 'kendara'); } catch (_) {}
+    if (onUnlocked) onUnlocked();
+  };
+  return (
+    <View style={{ marginTop: 20 }}>
+      <View style={styles.headerRow}>
+        <Ionicons name={icon || 'apps-outline'} size={20} color="#FFB800" />
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
+      <SpringPressable haptic="medium" onPress={onPress} style={[styles.lockChartWrap, { borderColor: col + '44' }]}>
+        <LinearGradient colors={[col + '1C', 'rgba(8,5,3,0.72)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <View style={styles.lockChartGrid} pointerEvents="none">
+          {Array.from({ length: 16 }).map(function (_, i) {
+            return <View key={i} style={[styles.lockChartCell, { borderColor: col + '22' }]} />;
+          })}
+        </View>
+        <View style={styles.lockChartOverlay}>
+          <View style={[styles.lockChartOrb, { borderColor: col + '55', backgroundColor: col + '1F' }]}>
+            <Ionicons name="lock-closed" size={22} color={col} />
+          </View>
+          <Text style={[styles.lockChartTease, si && styles.sinhalaTextFlow]}>{tease}</Text>
+          <View style={[styles.lockChartCta, { backgroundColor: col + '24', borderColor: col + '55' }]}>
+            <Text style={[styles.lockChartCtaText, { color: col }]}>{si ? 'විවෘත කරන්න' : 'Unlock'}</Text>
+            <Ionicons name="arrow-forward" size={13} color={col} />
+          </View>
+        </View>
+      </SpringPressable>
+    </View>
+  );
+}
+
+// Inline "value is locked" chip — replaces a single reading value (a plain-
+// language row, a planet's personal note) while keeping its label visible.
+function LockedValueChip({ language, onPress, label }) {
+  var si = language === 'si';
+  return (
+    <SpringPressable haptic="light" onPress={onPress} style={styles.lockValueChip}>
+      <Ionicons name="lock-closed" size={11} color="#FFB800" />
+      <Text style={styles.lockValueChipText}>{label || (si ? 'විවෘත කර කියවන්න' : 'Unlock to read')}</Text>
+    </SpringPressable>
+  );
+}
+
+// Free-user dasha ladder: planet names + year spans (looks like a life map),
+// current chapter highlighted with a progress bar. The reading, sub-periods and
+// dates behind it stay Pro — the whole card taps through to the paywall.
+function LockedDashaSkeleton({ ladder, current, source, showPaywall, onUnlocked, language, delay }) {
+  var si = language === 'si';
+  var rows = Array.isArray(ladder) ? ladder : [];
+  var onPress = async function () {
+    try { if (showPaywall) await showPaywall(source || 'kendara_dasha'); } catch (_) {}
+    if (onUnlocked) onUnlocked();
+  };
+  var curPlanet = current ? getKendaraPlanetName(current.planet, language) : null;
+  return (
+    <Animated.View entering={FadeInDown.delay(delay || 0).duration(480)} style={styles.vaultSectionWrap}>
+      <SpringPressable haptic="light" scalePressed={0.99} onPress={onPress} style={[styles.lockVaultHeader, { borderColor: 'rgba(167,139,250,0.33)', flexDirection: 'column', alignItems: 'stretch' }]}>
+        <LinearGradient colors={['rgba(167,139,250,0.16)', 'rgba(255,255,255,0.03)', 'rgba(8,5,3,0.66)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={[styles.vaultIconWrap, { backgroundColor: 'rgba(167,139,250,0.14)', borderColor: 'rgba(167,139,250,0.36)' }]}>
+            <Ionicons name="git-branch-outline" size={18} color="#A78BFA" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.vaultEyebrow, { color: '#A78BFA' }]} numberOfLines={1}>{si ? 'ජීවිත කාල රේඛාව' : 'Your Life Timeline'}</Text>
+            <Text style={[styles.vaultTitle, si && styles.sinhalaTextFlow]} numberOfLines={2}>{si ? 'ඔබ දැන් ඉන්න ජීවිත කාලය' : 'The chapter you\'re living now'}</Text>
+          </View>
+          <View style={[styles.lockChip, { backgroundColor: 'rgba(167,139,250,0.18)', borderColor: 'rgba(167,139,250,0.44)' }]}>
+            <Ionicons name="lock-closed" size={12} color="#A78BFA" />
+          </View>
+        </View>
+
+        <View style={styles.lockDashaLadder}>
+          {rows.map(function (p, i) {
+            var barColor = p.isCurrent ? '#FFB800' : p.isPast ? 'rgba(255,255,255,0.14)' : 'rgba(167,139,250,0.45)';
+            var op = p.isPast ? 0.4 : 1;
+            return (
+              <View key={i} style={[styles.lockDashaRow, p.isCurrent && styles.lockDashaRowCurrent]}>
+                <Text style={[styles.lockDashaPlanet, { opacity: op, color: p.isCurrent ? '#FFB800' : '#E8DCC0' }]} numberOfLines={1}>{getKendaraPlanetName(p.planet, language)}</Text>
+                <View style={styles.lockDashaBarTrack}>
+                  <View style={[styles.lockDashaBarFill, { width: (p.isCurrent ? p.progress : p.isPast ? 100 : 0) + '%', backgroundColor: barColor }]} />
+                </View>
+                <Text style={[styles.lockDashaYears, { opacity: op }]}>{p.startYear}–{p.endYear}</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        <Text style={[styles.lockTease, si && styles.sinhalaTextFlow, { marginTop: 10 }]}>
+          {current
+            ? (si
+              ? 'ඔබ දැන් ' + curPlanet + ' කාලයේ ' + (current.progress || 0) + '%ක් ගෙවලා. මේ කාලය ඔබෙන් ඉල්ලන දේ සහ ඉදිරි අතුරු කාල විවෘත කරන්න.'
+              : 'You\'re ' + (current.progress || 0) + '% through your ' + curPlanet + ' chapter. Unlock what it asks of you — and the sub-periods ahead.')
+            : (si ? 'ඔබේ දශා කාල රේඛාවේ සම්පූර්ණ කියවීම විවෘත කරන්න.' : 'Unlock the full reading of your dasha timeline.')}
+        </Text>
+      </SpringPressable>
+    </Animated.View>
+  );
+}
+
 export default function KendaraScreen() {
   const { t, language } = useLanguage();
-  const { user, showPaywall } = useAuth();
+  const { user, showPaywall, isSubscribed } = useAuth();
   const { colors, gradients, resolved } = useTheme();
   const sc = screenColors(colors);
   const router = useRouter();
@@ -1700,7 +1894,14 @@ export default function KendaraScreen() {
         var raw = await AsyncStorage.getItem(CHART_CACHE_KEY);
         if (raw) {
           var cached = JSON.parse(raw);
-          if (cached && cached.birthDateTime === birthDateTime && cached.data) {
+          // Lapsed-subscriber guard: the cache only ever holds the FULL chart
+          // (previews are never cached). If it has full analysis but the user is
+          // no longer subscribed, drop it and fall through to the fetch — which
+          // 402s → preview, so the paywall reappears instead of the old full read.
+          var cachedIsFull = !!(cached && cached.data && cached.data.advancedAnalysis);
+          if (cachedIsFull && !isSubscribed) {
+            await AsyncStorage.removeItem(CHART_CACHE_KEY).catch(function () {});
+          } else if (cached && cached.birthDateTime === birthDateTime && cached.data) {
             if (!cancelled) {
               setChartData(cached.data);
               chartDataRef.current = cached.data;
@@ -1776,7 +1977,7 @@ export default function KendaraScreen() {
     })();
 
     return () => { cancelled = true; clearStepTimers(); };
-  }, [hasBirthData, birthDateTime, birthLat, birthLng, clearStepTimers, refreshKey]);
+  }, [hasBirthData, birthDateTime, birthLat, birthLng, clearStepTimers, refreshKey, isSubscribed]);
 
   // Fetch Maraka Apala data when birth data is available
   useEffect(() => {
@@ -1897,6 +2098,25 @@ export default function KendaraScreen() {
     setError(null);
     setRefreshKey(function (k) { return k + 1; });
   }, []);
+
+  // Non-subscribers get the preview payload (chartData._preview === true), where
+  // jyotishData is gated (null). Synthesize a minimal dasha from the preview's
+  // vaultCounts so the hero + daily ritual can still name the current chapter
+  // ("you're in your Moon period") — the deep timeline/reading stays Pro and is
+  // shown as a locked teaser further down.
+  const isPreview = !!(chartData && chartData._preview);
+  var effectiveJyotish = jyotishData;
+  if (isPreview && !jyotishData && chartData.vaultCounts && chartData.vaultCounts.currentDasha) {
+    var _vc = chartData.vaultCounts;
+    effectiveJyotish = {
+      dasha: {
+        currentMahadasha: { planet: _vc.currentDasha.planet },
+        mahadashas: (_vc.dashaLadder || []).map(function (p) {
+          return { planet: p.planet, start: p.startYear + '-01-01', endTime: p.endYear + '-01-01', durationYears: p.years };
+        }),
+      },
+    };
+  }
 
   const renderContent = () => {
     if (!hasBirthData) {
@@ -2037,14 +2257,18 @@ export default function KendaraScreen() {
       },
     ];
     var insightCards = buildKendaraInsightCards(chartData, jyotishData, topYogas, language);
-    var masteryItems = buildKendaraMasteryItems(chartData, jyotishData, marakaData, selectedVarga, language);
-    var dailyRitual = buildKendaraDailyRitual(insightCards, chartData, jyotishData, marakaData, ritualState, language);
+    var masteryItems = buildKendaraMasteryItems(chartData, jyotishData, marakaData, selectedVarga, language, isPreview);
+    // Ritual uses effectiveJyotish so free users see their real current chapter.
+    var dailyRitual = buildKendaraDailyRitual(insightCards, chartData, effectiveJyotish, marakaData, ritualState, language);
+    // Free-user yoga tease: one named badge + "+N locked" (real counts).
+    var previewTopYoga = isPreview && chartData.vaultCounts ? chartData.vaultCounts.topYoga : null;
+    var previewYogaTotal = isPreview && chartData.vaultCounts ? (chartData.vaultCounts.yogas || 0) : 0;
 
     return (
       <View style={styles.chartContainer}>
         {/* Daily hook stays on top (retention); the rest moves below the chart */}
         <PremiumDailyRitual ritual={dailyRitual} visitState={ritualState} language={language} reduced={reduced || lowEnd} />
-        <TransitTodayStrip transit={transit} language={language} />
+        <TransitTodayStrip transit={transit} language={language} locked={isPreview} onUnlock={async function () { try { if (showPaywall) await showPaywall('kendara_transit'); } catch (_) {} onRefresh(); }} />
 
         <View style={styles.headerRow}>
           <Ionicons name="grid-outline" size={20} color="#FFB800" />
@@ -2059,12 +2283,22 @@ export default function KendaraScreen() {
           </SpringPressable>
         </View>
 
-        {/* Yoga badges strip */}
-        {topYogas.length > 0 && (
+        {/* Yoga badges — Pro shows all; free shows ONE named badge + "+N locked". */}
+        {topYogas.length > 0 ? (
           <Animated.View entering={FadeIn.duration(600)} style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
             {topYogas.map(function (y, i) { return <YogaBadge key={i} name={y.name} category={y.category} language={language} />; })}
           </Animated.View>
-        )}
+        ) : (isPreview && previewTopYoga) ? (
+          <Animated.View entering={FadeIn.duration(600)} style={styles.lockYogaRow}>
+            <YogaBadge name={previewTopYoga.name} category={previewTopYoga.category} language={language} />
+            {previewYogaTotal > 1 ? (
+              <SpringPressable haptic="light" onPress={async function () { try { if (showPaywall) await showPaywall('kendara_yogas'); } catch (_) {} onRefresh(); }} style={styles.lockYogaMore}>
+                <Ionicons name="lock-closed" size={11} color="#FFD666" />
+                <Text style={styles.lockYogaMoreText}>{language === 'si' ? '+' + (previewYogaTotal - 1) + ' තව යෝග' : '+' + (previewYogaTotal - 1) + ' more'}</Text>
+              </SpringPressable>
+            ) : null}
+          </Animated.View>
+        ) : null}
 
         {/* Wrapped for image capture — the shared card carries the brand */}
         <ViewShot ref={chartShareRef} options={{ format: 'png', quality: 0.95 }} style={styles.chartShotWrap}>
@@ -2081,7 +2315,7 @@ export default function KendaraScreen() {
         </ViewShot>
 
         <PremiumInsightRail insights={insightCards} language={language} />
-        <KendaraMasteryStrip items={masteryItems} language={language} />
+        <KendaraMasteryStrip items={masteryItems} language={language} isPreview={isPreview} onUnlock={async function () { try { if (showPaywall) await showPaywall('kendara_mastery'); } catch (_) {} onRefresh(); }} />
 
         <View style={styles.detailsCard}>
           <Text style={styles.cardTitle}>{language === 'si' ? 'කේන්දරේ සරලව' : 'Your Chart in Plain Language'}</Text>
@@ -2098,11 +2332,18 @@ export default function KendaraScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.summaryLabel}>{item.label}</Text>
-                  <Text style={styles.summaryValue}>{item.value}</Text>
+                  {isPreview && i > 0
+                    ? <LockedValueChip language={language} onPress={async function () { try { if (showPaywall) await showPaywall('kendara_reading'); } catch (_) {} onRefresh(); }} />
+                    : <Text style={styles.summaryValue}>{item.value}</Text>}
                 </View>
               </View>
             );
           })}
+          {isPreview ? (
+            <Text style={styles.lockReadingHint}>
+              {language === 'si' ? '🔒 මුල් පේළිය නොමිලේ — ඉතිරි කියවීම් Pro වලින් විවෘත වේ' : '🔒 First line is free — unlock the rest with Pro'}
+            </Text>
+          ) : null}
         </View>
 
         <View style={[styles.detailsCard, { marginTop: 14 }]}>
@@ -2137,7 +2378,9 @@ export default function KendaraScreen() {
                         <Text style={styles.planetDegree}>{formatDegree(p.degree)}</Text>
                       </View>
                       <Text style={styles.planetRashi}>{placement}</Text>
-                      <Text style={styles.planetPersonalNote}>{placementDetail}</Text>
+                      {isPreview && p.name !== 'Sun' && p.name !== 'Moon' && p.name !== 'Surya' && p.name !== 'Chandra'
+                        ? <LockedValueChip language={language} label={language === 'si' ? 'මේ ග්‍රහයා ඔබට කියන දේ' : 'What this means for you'} onPress={async function () { try { if (showPaywall) await showPaywall('kendara_placements'); } catch (_) {} onRefresh(); }} />
+                        : <Text style={styles.planetPersonalNote}>{placementDetail}</Text>}
                       <View style={styles.planetBarTrack}>
                         <View style={[styles.planetBarFill, { backgroundColor: pColor, width: (30 + ((p.degree != null ? p.degree : 15) / 30) * 60) + '%' }]} />
                       </View>
@@ -2148,7 +2391,20 @@ export default function KendaraScreen() {
           })}
         </View>
 
-        {(chartData.navamsaChart || chartData.navamshaChart) ? (
+        {isPreview ? (
+          <LockedChartPanel
+            title={t('kpNavamsaChart') || 'Relationship & Inner Self Chart'}
+            icon="heart-outline"
+            accent="#F472B6"
+            tease={language === 'si'
+              ? 'ඔබේ විවාහ කේන්දරය (නවාංශකය) සූදානම් — සිකුරු ඉන්න තැන සහ බැඳීම් හැඩගැහෙන විදිහ ඇතුළත.'
+              : 'Your marriage chart (navamsa) is ready — see where Venus sits and how your bonds are shaped.'}
+            source="kendara_d9"
+            showPaywall={showPaywall}
+            onUnlocked={onRefresh}
+            language={language}
+          />
+        ) : (chartData.navamsaChart || chartData.navamshaChart) ? (
           <View style={{ marginTop: 20 }}>
             <View style={styles.headerRow}>
               <Ionicons name="apps-outline" size={20} color="#FFB800" />
@@ -2590,6 +2846,11 @@ export default function KendaraScreen() {
                     );
                   })}
                 </View>
+                <KendaraAskLink router={router} language={language}
+                  label={language === 'si' ? 'මේ දශා කාලය ගැන අහන්න' : 'Ask about this period'}
+                  prefill={language === 'si'
+                    ? ('මම දැන් ' + (jyotishData.dasha.currentMahadasha ? (PLANET_INFO[jyotishData.dasha.currentMahadasha.planet]?.si || jyotishData.dasha.currentMahadasha.planet) : '') + ' දශාවේ ඉන්නවා. මේ කාලය මට කියන්නේ මොකක්ද?')
+                    : ('I\'m in my ' + (jyotishData.dasha.currentMahadasha ? jyotishData.dasha.currentMahadasha.planet : '') + ' dasha period now. What does this chapter mean for me?')} />
               </PremiumVaultSection>
             )}
 
@@ -3071,6 +3332,119 @@ export default function KendaraScreen() {
           </View>
         )}
 
+        {/* ═══ LOCKED DEPTH (free users) — the conversion wall ═══
+            Every Pro vault is rendered as a named, counted lock instead of being
+            hidden. Each taps to the paywall with its own analytics source so we
+            can learn which section actually sells the subscription. */}
+        {isPreview && chartData.vaultCounts && (() => {
+          var vc = chartData.vaultCounts;
+          var si = language === 'si';
+          return (
+            <View style={{ marginTop: 10 }}>
+              <View style={styles.lockSectionIntro}>
+                <Ionicons name="lock-closed" size={14} color="#FFB800" />
+                <Text style={styles.lockSectionIntroText}>
+                  {si ? 'ඔබේ කේන්දරයේ ගැඹුරු විශ්ලේෂණය — Pro වලින් විවෘත වේ' : 'The deep analysis of your chart — unlock with Pro'}
+                </Text>
+              </View>
+
+              <LockedVaultTeaser icon="sparkles-outline" color="#FF8C00"
+                eyebrow={si ? 'ප්‍රධාන කියවීම' : 'Primary Reading'}
+                title={si ? 'ඔබේ පෞද්ගලික කේන්දර කියවීම' : 'Your personal chart reading'}
+                tease={si ? 'ඔබේ නිශ්චිත උපන් වේලාවට ලියූ සම්පූර්ණ කේන්දර සාරාංශය.' : 'A full chart summary written for your exact birth time.'}
+                source="kendara_summary" showPaywall={showPaywall} onUnlocked={onRefresh} language={language} delay={120} />
+
+              {vc.yogas > 0 && (
+                <LockedVaultTeaser icon="star-outline" color="#FFB800"
+                  eyebrow={si ? 'ශක්ති භණ්ඩාගාරය' : 'Strength Vault'}
+                  title={si ? 'ඔබේ සහජ ශක්ති සහ දක්ෂතා' : 'Your natural strengths & talents'}
+                  tease={vc.rareYogas > 0
+                    ? (si ? vc.yogas + ' යෝග හමු විය — ' + vc.rareYogas + 'ක් දුර්ලභයි. සම්පූර්ණ කියවීම විවෘත කරන්න.' : vc.yogas + ' yogas found — ' + vc.rareYogas + ' rare. Unlock the full reading.')
+                    : (si ? vc.yogas + ' යෝග හමු විය. ඒවායේ අර්ථය විවෘත කරන්න.' : vc.yogas + ' yogas found. Unlock what they mean.')}
+                  count={vc.yogas} source="kendara_yogas" showPaywall={showPaywall} onUnlocked={onRefresh} language={language} delay={160} />
+              )}
+
+              {vc.doshas > 0 && (
+                <LockedVaultTeaser icon="alert-circle-outline" color="#F87171"
+                  eyebrow={si ? 'ආරක්ෂිත කියවීම' : 'Care Reading'}
+                  title={si ? 'අවධානය දෙන්න ඕන තැන් — පිළියම් සමඟ' : 'Care points to review — with remedies'}
+                  tease={si ? vc.doshas + ' තැනක් හමු විය. ඒවා මොනවද, බලපෑම අඩුද, පිළියම් මොනවද කියා විවෘත කරන්න.' : vc.doshas + ' care points found. Unlock what they are, whether they\'re softened, and the remedies.'}
+                  count={vc.doshas} source="kendara_doshas" showPaywall={showPaywall} onUnlocked={onRefresh} language={language} delay={200} />
+              )}
+
+              {Array.isArray(vc.dashaLadder) && vc.dashaLadder.length > 0 && (
+                <LockedDashaSkeleton ladder={vc.dashaLadder} current={vc.currentDasha}
+                  source="kendara_dasha" showPaywall={showPaywall} onUnlocked={onRefresh} language={language} delay={240} />
+              )}
+
+              {vc.strongest && (
+                <LockedVaultTeaser icon="bar-chart-outline" color="#60A5FA"
+                  eyebrow={si ? 'ග්‍රහ බල මීටරය' : 'Planet Power'}
+                  title={(si ? 'ශක්තිමත්ම සහාය: ' : 'Strongest support: ') + getKendaraPlanetName(vc.strongest.planet, language) + ' ' + vc.strongest.percentage + '%'}
+                  tease={si ? 'ඔබේ ශක්තිමත්ම ග්‍රහයා නොමිලේ. ඉතිරි ග්‍රහයන්ගේ බල මට්ටම් විවෘත කරන්න.' : 'Your strongest planet is free. Unlock the power levels of the other ' + Math.max(1, (vc.shadbala || 7) - 1) + '.'}
+                  count={vc.strongest.percentage} countSuffix="%" source="kendara_shadbala" showPaywall={showPaywall} onUnlocked={onRefresh} language={language} delay={280} />
+              )}
+
+              {vc.mangalChecked && (
+                <LockedVaultTeaser icon="flame-outline" color="#F472B6"
+                  eyebrow={si ? 'සබඳතා පරීක්ෂාව' : 'Relationship Check'}
+                  title={si ? 'කුජ දෝෂය පරීක්ෂා කළා — ප්‍රතිඵලය අගුළු දමා' : 'Mars (Mangal) checked — result locked'}
+                  tease={si ? 'විවාහයට කුජගෙන් එන බලපෑම ගණනය කළා. ප්‍රතිඵලය සහ අර්ථය විවෘත කරන්න.' : 'We calculated Mars’ influence on marriage. Unlock the verdict and what it means.'}
+                  source="kendara_mangal" showPaywall={showPaywall} onUnlocked={onRefresh} language={language} delay={320} />
+              )}
+
+              {vc.sadeSatiChecked && (
+                <LockedVaultTeaser icon="planet-outline" color="#F59E0B"
+                  eyebrow={si ? 'සෙනසුරු තත්ත්වය' : 'Saturn Weather'}
+                  title={si ? 'සෙනසුරු පීඩනය පරීක්ෂා කළා — ප්‍රතිඵලය අගුළු දමා' : 'Sade Sati checked — result locked'}
+                  tease={si ? 'දැනට සෙනසුරු ගමනේ බලපෑම ක්‍රියාත්මකද කියා ගණනය කළා. ප්‍රතිඵලය විවෘත කරන්න.' : 'We checked whether Saturn’s pressure cycle is active for you now. Unlock the result.'}
+                  source="kendara_sadesati" showPaywall={showPaywall} onUnlocked={onRefresh} language={language} delay={360} />
+              )}
+
+              <LockedVaultTeaser icon="compass-outline" color="#FF8C00"
+                eyebrow={si ? 'අරමුණු කියවීම' : 'Purpose Reading'}
+                title={si ? 'ඔබේ ජීවිත දිශාව' : 'Your life direction'}
+                tease={si ? 'අභ්‍යන්තර අරමුණ, අන් අයට පෙනෙන විදිහ සහ බැඳීම් රටාව.' : 'Your inner purpose, public image, and commitment pattern.'}
+                source="kendara_jaimini" showPaywall={showPaywall} onUnlocked={onRefresh} language={language} delay={400} />
+
+              <LockedVaultTeaser icon="locate-outline" color="#06B6D4"
+                eyebrow={si ? 'දෛව ලක්ෂ්‍යය' : 'Destiny Marker'}
+                title={si ? 'ඔබේ දෛව ලක්ෂ්‍යය' : 'Your destiny point'}
+                tease={si ? 'වර්ධනය සහ අවස්ථා වැඩිපුරම ක්‍රියාත්මක වන ජීවිත ක්ෂේත්‍රය.' : 'The life area where growth and opportunity activate most strongly.'}
+                source="kendara_bhrigu" showPaywall={showPaywall} onUnlocked={onRefresh} language={language} delay={440} />
+
+              <LockedVaultTeaser icon="time-outline" color="#A78BFA"
+                eyebrow={si ? 'ගැඹුරු රටා' : 'Deep Patterns'}
+                title={si ? 'ඔබේ ගැඹුරු රටා' : 'Your deeper patterns'}
+                tease={si ? 'පුරුදු රටා, වර්ධන දිශාව සහ ස්වාභාවික ශක්ති.' : 'Old tendencies, growth direction, and natural strengths.'}
+                source="kendara_pastlife" showPaywall={showPaywall} onUnlocked={onRefresh} language={language} delay={480} />
+
+              <LockedVaultTeaser icon="layers-outline" color="#06B6D4"
+                eyebrow={si ? 'ජීවිත අංශ සිතියම්' : 'Life Area Charts'}
+                title={si ? 'ජීවිතේ කොටස් 6ක් වෙන වෙනම' : '6 focused life-area charts'}
+                tease={si ? 'විවාහය, රැකියාව, දරුවන්, දේපළ, ඉගෙනීම සහ ඇතුළත වර්ධනය — වෙන වෙනම කියවන්න.' : 'Marriage, career, children, property, learning and inner growth — read each one on its own.'}
+                count={vc.varga || 6} source="kendara_varga" showPaywall={showPaywall} onUnlocked={onRefresh} language={language} delay={520}>
+                <View style={styles.lockVargaChips}>
+                  {['D9', 'D10', 'D7', 'D4', 'D24', 'D20'].map(function (d) {
+                    return (
+                      <View key={d} style={styles.lockVargaChip}>
+                        <Text style={styles.lockVargaChipText}>{d}</Text>
+                        <Ionicons name="lock-closed" size={9} color="rgba(6,182,212,0.7)" />
+                      </View>
+                    );
+                  })}
+                </View>
+              </LockedVaultTeaser>
+
+              <LockedVaultTeaser icon="shield-outline" color="#F87171"
+                eyebrow={si ? 'ආරක්ෂිත දිනදර්ශනය' : 'Care Calendar'}
+                title={si ? 'පරිස්සම් වෙන්න ඕන කාල' : 'Your sensitive periods'}
+                tease={si ? 'ඉදිරි මාස 12 තුළ සෞඛ්‍යය සහ තීරණ ගැන පරිස්සම් විය යුතු කාල — දින සහ මඟපෙන්වීම් සමඟ.' : 'The months ahead to take extra care with health and decisions — with dates and guidance.'}
+                source="kendara_maraka" showPaywall={showPaywall} onUnlocked={onRefresh} language={language} delay={560} />
+            </View>
+          );
+        })()}
+
         {/* ── Where to next — contextual actions at the end of the read ── */}
         {chartData._preview
           ? <KendaraUpgradeCard showPaywall={showPaywall} language={language} onUpgraded={onRefresh} vaultCounts={chartData.vaultCounts} />
@@ -3085,7 +3459,7 @@ export default function KendaraScreen() {
       <CosmicBackground reduced={reduced} lowEnd={lowEnd} variant="golden" />
       <ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={sc.iconAccent} />}>
         <View style={[styles.content, isDesktop && styles.contentDesktop, !isDesktop && { paddingTop: insets.contentTop }]}>
-          <PremiumKendaraHero chartData={chartData} jyotishData={jyotishData} user={user} language={language} gradients={gradients} reduced={reduced} lowEnd={lowEnd} />
+          <PremiumKendaraHero chartData={chartData} jyotishData={effectiveJyotish} user={user} language={language} gradients={gradients} reduced={reduced} lowEnd={lowEnd} />
           {renderContent()}
         </View>
         <View style={{ height: isDesktop ? 32 : insets.contentBottom }} />
@@ -3550,7 +3924,79 @@ const styles = StyleSheet.create({
   marakaRemedyBullet: { color: 'rgba(16,185,129,0.6)', fontSize: 12, fontWeight: '700' },
   marakaRemedyText: { color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 18, flex: 1 },
   marakaTapHint: { color: 'rgba(255,255,255,0.2)', fontSize: 10, marginTop: 6, fontStyle: 'italic' },
-  
+
+  // ── Locked (free-user) teaser styles ──
+  lockVaultHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 18, padding: 15, overflow: 'hidden', borderWidth: 1,
+  },
+  lockTease: { color: 'rgba(255,214,102,0.62)', fontSize: 12.5, lineHeight: 18, marginTop: 4, fontWeight: '500' },
+  lockCountPill: { minWidth: 30, height: 24, borderRadius: 8, paddingHorizontal: 7, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  lockCountNum: { fontSize: 13, fontWeight: '900' },
+  lockChip: { width: 26, height: 26, borderRadius: 13, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+
+  // Locked chart panel (D9)
+  lockChartWrap: {
+    height: 250, borderRadius: 20, overflow: 'hidden', borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  lockChartGrid: {
+    position: 'absolute', width: 200, height: 200, flexDirection: 'row', flexWrap: 'wrap',
+    opacity: 0.5, transform: [{ rotate: '45deg' }],
+  },
+  lockChartCell: { width: 50, height: 50, borderWidth: 1 },
+  lockChartOverlay: { alignItems: 'center', paddingHorizontal: 28, gap: 10 },
+  lockChartOrb: { width: 52, height: 52, borderRadius: 26, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  lockChartTease: { color: '#F3E7C8', fontSize: 14, lineHeight: 20, fontWeight: '700', textAlign: 'center' },
+  lockChartCta: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1, marginTop: 2 },
+  lockChartCtaText: { fontSize: 13, fontWeight: '800' },
+
+  // Inline locked value chip
+  lockValueChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,184,0,0.10)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: 'rgba(255,184,0,0.28)', marginTop: 3,
+  },
+  lockValueChipText: { color: '#FFD666', fontSize: 11.5, fontWeight: '700' },
+
+  // Free dasha skeleton
+  lockDashaLadder: { marginTop: 12, gap: 3 },
+  lockDashaRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 4 },
+  lockDashaRowCurrent: { backgroundColor: 'rgba(255,184,0,0.05)', borderRadius: 8, marginHorizontal: -4, paddingHorizontal: 4 },
+  lockDashaPlanet: { width: 62, fontSize: 12, fontWeight: '800' },
+  lockDashaBarTrack: { flex: 1, height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
+  lockDashaBarFill: { height: 6, borderRadius: 3 },
+  lockDashaYears: { width: 74, textAlign: 'right', color: 'rgba(255,214,102,0.42)', fontSize: 10, fontWeight: '600', fontVariant: ['tabular-nums'] },
+
+  // Free yoga badge row
+  lockYogaRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 12 },
+  lockYogaMore: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(255,184,0,0.10)', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6,
+    borderWidth: 1, borderColor: 'rgba(255,184,0,0.30)',
+  },
+  lockYogaMoreText: { color: '#FFD666', fontSize: 12, fontWeight: '800' },
+
+  // Locked-depth section
+  lockSectionIntro: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 10, paddingHorizontal: 2 },
+  lockSectionIntroText: { color: 'rgba(255,214,102,0.7)', fontSize: 12, fontWeight: '700', letterSpacing: 0.3, flex: 1 },
+  lockReadingHint: { color: 'rgba(255,184,0,0.6)', fontSize: 11.5, fontWeight: '600', marginTop: 8, fontStyle: 'italic' },
+  lockVargaChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  lockVargaChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(6,182,212,0.08)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
+    borderWidth: 1, borderColor: 'rgba(6,182,212,0.22)',
+  },
+  lockVargaChipText: { color: '#06B6D4', fontSize: 11, fontWeight: '800' },
+
+  // Ask-the-astrologer deep-link (Pro sections)
+  askLinkRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 12,
+    backgroundColor: 'rgba(96,165,250,0.10)', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7,
+    borderWidth: 1, borderColor: 'rgba(96,165,250,0.28)',
+  },
+  askLinkText: { color: '#60A5FA', fontSize: 12.5, fontWeight: '700' },
+
 });
 
 // ── Kendara Jyotish Styles ──

@@ -27,6 +27,7 @@ const crypto = require('crypto');
 const { getDb, COLLECTIONS } = require('../config/firebase');
 const { notifyAlert } = require('../services/alerting');
 const { addPurchaseCredit } = require('../services/purchaseCredits');
+const { toTtlTimestamp } = require('../utils/firestoreTtl');
 
 // RevenueCat webhook authorization header (set in dashboard)
 const WEBHOOK_AUTH_KEY = process.env.REVENUECAT_WEBHOOK_AUTH_KEY || '';
@@ -72,6 +73,7 @@ async function claimWebhookEvent(db, eventId, metadata) {
     const doc = await tx.get(ref);
     if (doc.exists) return { duplicate: true, record: doc.data() };
     const now = new Date().toISOString();
+    const expiresAtMs = Date.now() + Number(process.env.REVENUECAT_WEBHOOK_EVENT_TTL_MS || 90 * 24 * 60 * 60 * 1000);
     tx.set(ref, {
       eventId,
       status: 'received',
@@ -79,7 +81,9 @@ async function claimWebhookEvent(db, eventId, metadata) {
       appUserId: metadata.appUserId || null,
       receivedAt: now,
       updatedAt: now,
-      expiresAt: new Date(Date.now() + Number(process.env.REVENUECAT_WEBHOOK_EVENT_TTL_MS || 90 * 24 * 60 * 60 * 1000)).toISOString(),
+      expiresAt: new Date(expiresAtMs).toISOString(),
+      // Timestamp TTL (fix F3) so processed webhook records self-clean.
+      ttlExpireAt: toTtlTimestamp(expiresAtMs),
     });
     return { duplicate: false };
   });

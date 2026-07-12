@@ -40,6 +40,7 @@ function phoneAuth(req, res, next) {
         email: decoded.email || null,
         phone: decoded.phone || null,
         authType: decoded.type === 'google-auth' ? 'google' : 'phone',
+        tokenVersion: decoded.tokenVersion,
       };
       return next();
     }
@@ -149,38 +150,30 @@ function requireSubscription(req, res, next) {
 }
 
 /**
- * Resolve the isSubscribed flag from a user document, deriving from
- * subscription.status for pre-migration documents (mirrors the lazy
- * migration in requireSubscription, without the backfill write).
- */
-function resolveIsSubscribed(user) {
-  if (!user) return false;
-  if (user.isSubscribed !== undefined) return user.isSubscribed === true;
-  return !!(user.subscription && user.subscription.status === 'active');
-}
-
-/**
- * Require an active subscription OR a purchase credit for a one-time product.
+ * Require a one-time purchase credit for a purchasable report product.
  *
- * Used on the generation routes that one-time SKUs pay for (full report,
- * porondam). Grants access when the user:
- *   1. has an active subscription                    → req.accessVia = 'subscription'
- *   2. has a retryable pending generation entitlement → req.accessVia = 'entitlement-retry'
+ * Reports are purchase-only: a subscription does NOT unlock them. Every
+ * report (full report, porondam, baby kendara) is bought individually, and
+ * the ongoing subscription covers only the recurring features. Grants access
+ * when the user:
+ *   1. has a retryable pending generation entitlement → req.accessVia = 'entitlement-retry'
  *      (they already paid; generation failed; retries are free)
- *   3. has an unconsumed purchase credit              → req.accessVia = 'credit'
+ *   2. has an unconsumed purchase credit              → req.accessVia = 'credit'
  *      (req.purchaseCredit is attached; the route consumes it when it
  *       creates a NEW entitlement — see consumeCredit)
- * Otherwise → 402 with both subscription and one-time pricing.
+ * Otherwise → 402 with the one-time price for this product.
  *
- * @param {'report'|'porondam'} creditType - credit/entitlement type vocabulary
- * @param {'full_report'|'porondam_check'} productKey - pricing config key for the 402 payload
+ * NOTE: the export name is kept for route/wiring stability; despite the
+ * historical name, an active subscription no longer grants access here.
+ *
+ * @param {'report'|'porondam'|'babyKendara'} creditType - credit/entitlement type vocabulary
+ * @param {'full_report'|'porondam_check'|'baby_kendara'} productKey - pricing config key for the 402 payload
  */
 function requireSubscriptionOrCredit(creditType, productKey) {
   return async function (req, res, next) {
-    // Mock payments bypass — mirror requireSubscription
+    // Mock payments bypass — skip the purchase check in dev.
     if (process.env.MOCK_PAYMENTS === 'true') {
-      req.subscription = { status: 'active', plan: 'mock_pro', store: 'mock' };
-      req.accessVia = 'subscription';
+      req.accessVia = 'mock';
       return next();
     }
 
@@ -191,25 +184,13 @@ function requireSubscriptionOrCredit(creditType, productKey) {
     const db = getDb();
     if (!db) {
       if (process.env.NODE_ENV === 'production') {
-        return res.status(503).json({ error: 'Subscription service unavailable' });
+        return res.status(503).json({ error: 'Purchase service unavailable' });
       }
       req.accessVia = 'dev';
       return next();
     }
 
     try {
-      const doc = await db.collection(COLLECTIONS.USERS).doc(req.user.uid).get();
-      if (!doc.exists) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      const user = doc.data();
-
-      if (resolveIsSubscribed(user)) {
-        req.subscription = user.subscription || { status: 'active' };
-        req.accessVia = 'subscription';
-        return next();
-      }
-
       // Paid, generation failed earlier → free retry (input-bound matching
       // happens in the route via createOrResumeEntitlement).
       const { hasPendingEntitlement } = require('./entitlements');
@@ -231,22 +212,75 @@ function requireSubscriptionOrCredit(creditType, productKey) {
       // Map the store product id → its pricing config key for the 402 payload.
       const PRODUCT_PRICING_KEY = { full_report: 'report', porondam_check: 'porondam', baby_kendara: 'babyKendara' };
       const pricingKey = PRODUCT_PRICING_KEY[productKey];
+      const lang = (req.body && req.body.language === 'si') ? 'si' : 'en';
+      const message = lang === 'si'
+        ? 'මෙම වාර්තාව බැලීමට එක් වරක් මිලදී ගන්න.'
+        : 'Purchase this report once to access it.';
       return res.status(402).json({
-        error: 'Subscription required',
-        message: 'Subscribe, or purchase this item once, to access this feature.',
-        subscriptionRequired: true,
-        pricing: pricing.subscription,
+        error: 'Purchase required',
+        message,
+        purchaseRequired: true,
         oneTime: pricingKey && pricing[pricingKey]
           ? { productId: productKey, ...pricing[pricingKey] }
           : null,
       });
     } catch (err) {
-      console.error('Subscription/credit check error:', err);
+      console.error('Purchase/credit check error:', err);
       return res.status(503).json({
-        error: 'Subscription verification temporarily unavailable',
+        error: 'Purchase verification temporarily unavailable',
         message: 'Please try again in a moment.',
       });
     }
+  };
+}
+
+/**
+ * Access for the birth-chart / kendara data endpoint: an ACTIVE SUBSCRIPTION
+ * OR a one-time report credit.
+ *
+ * The kendara chart (D1/D9 + advancedAnalysis) is a SUBSCRIPTION feature, but it
+ * is served by the same POST /birth-chart the paid report flow uses to build its
+ * chart. So this gate honors BOTH: a subscriber gets it as part of Pro; a report
+ * buyer gets it for their report. Only the AI *report* generator (/full-report-ai)
+ * stays strictly purchase-only (plain requireSubscriptionOrCredit).
+ *
+ * Subscription is checked first; on a miss it delegates to the purchase-only gate,
+ * so the credit / pending-retry / 402 paths are reused verbatim. Access here never
+ * consumes a credit (the /birth-chart route doesn't consume — only /full-report-ai
+ * does), so a report buyer can view their chart without burning the credit.
+ */
+function requireSubscriptionOrReportCredit(creditType, productKey) {
+  const purchaseGate = requireSubscriptionOrCredit(creditType, productKey);
+  return function (req, res, next) {
+    if (process.env.MOCK_PAYMENTS === 'true') {
+      req.subscription = { status: 'active', plan: 'mock_pro', store: 'mock' };
+      req.accessVia = 'subscription';
+      return next();
+    }
+    if (!req.user || !req.user.uid || req.user.authType === 'anonymous') {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const db = getDb();
+    if (!db) {
+      // No DB — let the purchase gate apply the one dev/no-db policy.
+      return purchaseGate(req, res, next);
+    }
+    db.collection(COLLECTIONS.USERS).doc(req.user.uid).get()
+      .then(doc => {
+        if (doc.exists) {
+          const user = doc.data();
+          const isSubscribed = user.isSubscribed === true ||
+            (user.isSubscribed === undefined && !!(user.subscription && user.subscription.status === 'active'));
+          if (isSubscribed) {
+            req.subscription = user.subscription || { status: 'active' };
+            req.accessVia = 'subscription';
+            return next();
+          }
+        }
+        // Not subscribed (or no user doc) → fall back to the purchase-only gate.
+        return purchaseGate(req, res, next);
+      })
+      .catch(() => purchaseGate(req, res, next));
   };
 }
 
@@ -284,5 +318,6 @@ module.exports = {
   phoneAuth,
   requireSubscription,
   requireSubscriptionOrCredit,
+  requireSubscriptionOrReportCredit,
   optionalSubscription,
 };

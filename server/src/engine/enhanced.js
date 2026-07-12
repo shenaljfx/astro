@@ -84,6 +84,11 @@ try {
 //  HELPER: Convert our chart data to astrology-insights format
 // ═══════════════════════════════════════════════════════════════════════════
 
+// astrology-insights spells a few nakshatras differently from our engine —
+// its lookups are silent on a miss, so translate before crossing the boundary.
+const AI_NAKSHATRA_NAMES = { 'Mula': 'Moola' };
+function toAINakshatraName(name) { return AI_NAKSHATRA_NAMES[name] || name; }
+
 function _toAIPlanetArray(date, lat, lng) {
   const positions = getAllPlanetPositions(date, lat, lng);
   const lagna = getLagna(date, lat, lng);
@@ -100,11 +105,17 @@ function _toAIPlanetArray(date, lat, lng) {
     const sidLong = p.sidereal;
     const signNumber = Math.floor(sidLong / 30) + 1;
     const degreeInSign = sidLong % 30;
+    // The dosha module reads nakshatra/nakshatraPada straight off the planet
+    // (it does NOT derive them from longitude) — omitting them made
+    // analyzeGandaMoola report "no dosha" for every chart.
+    const nak = getNakshatra(sidLong);
     return {
       name: planetMap[key] || p.name,
       longitude: sidLong,
       signNumber,
       degreeInSign,
+      nakshatra: toAINakshatraName(nak.name),
+      nakshatraPada: nak.pada,
       speed: p.speed || 0,
       retrograde: p.retrograde || false,
       house: 0, // filled below
@@ -422,7 +433,9 @@ function getBabyNameSuggestions(date, lat, lng) {
     const pada = nakshatra.pada;
     const nakshatraName = nakshatra.name;
 
-    const result = aiNames.getNameSuggestions(nakshatraName, pada);
+    // The library keys its syllable table by ITS spellings ('Moola') and
+    // returns [] on a miss — translate ours before the lookup.
+    const result = aiNames.getNameSuggestions(toAINakshatraName(nakshatraName), pada);
 
     return {
       nakshatra: nakshatraName,

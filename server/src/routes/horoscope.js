@@ -13,7 +13,7 @@ const { composeReveal } = require('../content/onboardingReveal');
 const { generateAdvancedAnalysis } = require('../engine/advanced');
 const { chat, translateAdvancedForDisplay, explainChartSimple, createReportProgress, updateReportProgress, getReportProgressDurable, REPORT_SECTION_ORDER } = require('../engine/chat');
 const { optionalAuth } = require('../middleware/auth');
-const { phoneAuth, requireSubscription, requireSubscriptionOrCredit } = require('../middleware/subscription');
+const { phoneAuth, requireSubscription, requireSubscriptionOrCredit, requireSubscriptionOrReportCredit } = require('../middleware/subscription');
 const { consumeCredit } = require('../services/purchaseCredits');
 const { reportLimiter, aiLimiter, aiUserLimiter, reportUserLimiter, validateBirthData, requireAdmin, INPUT_LIMITS, sanitizeString } = require('../middleware/security');
 
@@ -30,8 +30,7 @@ const { budgetGuard } = require('../services/budgetEnforcer');
 const { distributedReportUserLimiter } = require('../services/distributedRateLimit');
 const { enqueueReportJob } = require('../services/jobQueue');
 const firestoreCircuit = require('../services/firestoreCircuit');
-const { createOrResumeEntitlement, recordEntitlementError, checkPendingEntitlement } = require('../middleware/entitlements');
-const { getMonthlyUse, recordMonthlyUse, fairUseMessage } = require('../services/fairUse');
+const { createOrResumeEntitlement, recordEntitlementError } = require('../middleware/entitlements');
 const { getCachedReport, buildReportCacheKey, saveChartExplanation, getCachedChartExplanation, saveTranslationCache, getCachedTranslation, getUserReports, saveBirthChartCache, getCachedBirthChart, saveReportFeedback, getPromptAnalyticsSummary, savePredictionOutcome, getUserPredictionOutcomes } = require('../models/firestore');
 const { PROMPT_VERSION } = require('../engine/promptObservability');
 const { parseSLT } = require('../utils/dateUtils');
@@ -332,9 +331,11 @@ router.get('/daily/:sign', (req, res) => {
  *   lng: 79.8612
  * }
  */
-// Subscription or report-credit gated at ROUTE level (the mount exempts this
-// path so one-time report buyers can reach it during their paid generation).
-router.post('/birth-chart', phoneAuth, requireSubscriptionOrCredit('report', 'full_report'), async (req, res) => {
+// Subscription OR report-credit gated at ROUTE level (the mount exempts this
+// path). The kendara chart is a subscription feature, so subscribers get it
+// here; one-time report buyers also reach it during their paid generation.
+// (The AI *report* generator, /full-report-ai below, stays purchase-only.)
+router.post('/birth-chart', phoneAuth, requireSubscriptionOrReportCredit('report', 'full_report'), async (req, res) => {
   const reqStart = Date.now();
   try {
     const { birthDate, lat, lng, language } = req.body;
@@ -742,6 +743,9 @@ CRITICAL RULES:
       birthLng: birthLng,
       language: language,
       provider: 'gemini',
+      // Single-shot daily analysis — modest thinking budget is plenty and keeps
+      // this high-frequency call cheap (thinking bills as output).
+      thinkingBudget: Number(process.env.GEMINI_CHAT_THINKING_BUDGET) || 1024,
     });
 
     trackAIUsage('aiAnalysis', req.user?.uid || null, aiResponse);
@@ -1285,23 +1289,6 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscriptionOrCr
       try {
         const inputData = { birthDate, lat: reportLat, lng: reportLng, language };
 
-        // Pro fair-use: subscribers get generous monthly reports included.
-        // Enforce only for a genuinely NEW generation — a retry reuses the
-        // pending entitlement and must never be blocked or counted.
-        if (req.accessVia === 'subscription') {
-          const pending = await checkPendingEntitlement(req.user.uid, 'report', inputData);
-          if (!pending) {
-            const fu = await getMonthlyUse(req.user.uid, 'report');
-            if (fu.remaining <= 0) {
-              return res.status(429).json({
-                error: fairUseMessage('report', language),
-                code: 'FAIR_USE_LIMIT_MONTHLY',
-                limit: fu.limit,
-              });
-            }
-          }
-        }
-
         const ent = await createOrResumeEntitlement(req.user.uid, 'report', inputData);
         entitlement = ent;
         entitlementId = ent.id;
@@ -1310,11 +1297,26 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscriptionOrCr
         } else if (req.accessVia === 'credit' && req.purchaseCredit) {
           // One-time buyer starting a NEW generation — spend their credit.
           // Retries of this entitlement stay free (pay once, generate until success).
-          await consumeCredit(req.purchaseCredit.id, ent.id).catch((cErr) =>
-            console.warn('[AI Report] Credit consume failed (non-critical):', cErr.message));
-        } else if (req.accessVia === 'subscription') {
-          // New subscriber report — count it toward the monthly fair-use cap.
-          await recordMonthlyUse(req.user.uid, 'report');
+          // consumeCredit is transactional: with concurrent requests exactly one
+          // wins. A definitive `false` means the credit was already consumed
+          // (double-submit / race) — reject so a single credit can't yield two
+          // reports. A THROWN error is treated as transient: the credit stays
+          // 'available' and the pending entitlement makes the retry free, so we
+          // don't punish a paying user for a blip.
+          let consumed = false;
+          let consumeErrored = false;
+          try {
+            consumed = await consumeCredit(req.purchaseCredit.id, ent.id);
+          } catch (cErr) {
+            consumeErrored = true;
+            console.warn('[AI Report] Credit consume error (treating as transient):', cErr.message);
+          }
+          if (!consumed && !consumeErrored) {
+            return res.status(409).json({
+              error: 'This purchase has already been used to generate a report. If you were charged and have no report, please contact support.',
+              code: 'CREDIT_ALREADY_USED',
+            });
+          }
         }
       } catch (entErr) {
         if (entErr.code === 'ENTITLEMENT_EXHAUSTED') {

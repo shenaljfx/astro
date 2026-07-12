@@ -35,7 +35,34 @@ describe('Firestore security rules', () => {
     expect(block).toContain('allow write: if false;');
   });
 
-  test.each(['jobs', 'rateLimits', 'dailyAiSpend', 'dailyAiUserSpend', 'aiCostEvents', 'revenuecatWebhookEvents'])('%s is server-only', (collection) => {
+  test.each(['predictionOutcomes', 'purchaseCredits', 'notifications'])('%s reads require uid ownership and writes are server-only', (collection) => {
+    const block = matchBlock(collection);
+    expect(block).toContain('allow read: if ownsExistingDoc();');
+    expect(block).toContain('allow write: if false;');
+  });
+
+  test('weeklyLagnaReports is readable only by signed-in clients (not world-readable)', () => {
+    const block = matchBlock('weeklyLagnaReports');
+    expect(block).toContain('allow read: if signedIn();');
+    expect(block).not.toContain('allow read: if true;');
+    expect(block).toContain('allow write: if false;');
+  });
+
+  test.each([
+    'jobs',
+    'rateLimits',
+    'dailyAiSpend',
+    'dailyAiUserSpend',
+    'aiCostEvents',
+    'revenuecatWebhookEvents',
+    'promptAnalytics',
+    'pushTokens',
+    'chatQuota',
+    'proFairUse',
+    'paywallEvents',
+    'dailyCosts',
+    'schedulerLocks',
+  ])('%s is server-only', (collection) => {
     const block = matchBlock(collection);
     expect(block).toContain('allow read, write: if false;');
   });

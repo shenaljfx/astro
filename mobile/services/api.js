@@ -247,10 +247,22 @@ export var getBabyPreview = function(birthDate, lat, lng) {
 };
 
 // Pro / one-time: the full baby pack (names, ganda moola result, ceremony dates).
-export var composeBabyKendara = function(birthDate, lat, lng) {
+export var composeBabyKendara = function(birthDate, lat, lng, language) {
   return request('/api/baby/compose', {
     method: 'POST',
-    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en' }),
+    _timeout: 40000,
+  });
+};
+
+// Full Baby Kendara pack (two-phase). Returns the deterministic keepsake in
+// data immediately, plus data.narrative = { stage, reportId?, sections? }.
+// Poll getReportProgress(reportId) and getSavedReport for the AI life-story.
+// gender is MANDATORY (male | female).
+export var generateBabyKendara = function(birthDate, lat, lng, language, gender) {
+  return request('/api/baby/generate', {
+    method: 'POST',
+    body: JSON.stringify({ birthDate: birthDate, lat: lat || 6.9271, lng: lng || 79.8612, language: language || 'en', gender: gender }),
     _timeout: 40000,
   });
 };
@@ -437,9 +449,20 @@ export var getUserProfile = function() {
 };
 
 export var updateUserProfile = function(data) {
+  // PATCH only writes the fields provided (displayName / photoURL) — it never
+  // clobbers birthData or location the way the POST upsert does.
   return request('/api/user/profile', {
-    method: 'POST',
+    method: 'PATCH',
     body: JSON.stringify(data),
+  });
+};
+
+// Upload a base64-encoded avatar. `mime` must be image/jpeg, image/png or image/webp.
+export var uploadAvatar = function(base64, mime) {
+  return request('/api/user/avatar', {
+    method: 'POST',
+    body: JSON.stringify({ image: base64, mime: mime || 'image/jpeg' }),
+    _timeout: 30000,
   });
 };
 
@@ -925,6 +948,7 @@ export default {
   getLifeEventTiming: getLifeEventTiming,
   getBabyPreview: getBabyPreview,
   composeBabyKendara: composeBabyKendara,
+  generateBabyKendara: generateBabyKendara,
   getBirthChartBasic: getBirthChartBasic,
   getBirthChartData: getBirthChartData,
   checkPorondam: checkPorondam,

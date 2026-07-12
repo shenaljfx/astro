@@ -3580,7 +3580,7 @@ function buildCalculationProvenanceBlock(sectionKey, birthData) {
 /**
  * Generate AI narrative for a single section
  */
-async function generateSectionNarrative(sectionKey, sectionData, birthData, allSections, language = 'en', rashiContext = null, ageContext = null, userName = null, userGender = null, userReligion = null, familyInfo = {}) {
+async function generateSectionNarrative(sectionKey, sectionData, birthData, allSections, language = 'en', rashiContext = null, ageContext = null, userName = null, userGender = null, userReligion = null, familyInfo = {}, genOptions = {}) {
   // ── PRE-CLASSIFICATION VALIDATION ──────────────────────────────
   // Sanitize engine data BEFORE the AI sees it. Lifespan caps,
   // numeric clamps, required-field flags. Cheap, deterministic.
@@ -3706,7 +3706,7 @@ IDENTITY: You are a professional human astrologer. NEVER mention AI, algorithms,
 ${nameGreeting}
 ${genderContext}
 ${religionContext}
-Section: "${sectionPromptData.title}" of their personal life report.
+You are writing ONE section of their personal life report; the exact section and its data are given in the user message below.
 ${ageBlock}
 
 ═══════════════════════════════════════════════════════════════
@@ -4249,7 +4249,25 @@ FORMAT: Markdown for readability:
   const sectionClaimPolicyBlock = buildSectionPromptPolicyBlock(sectionKey, sectionData, allSections);
 
   const knownFactsBlock = rashiContext?.knownFactsBlock || '';
-  const userPrompt = sectionPromptData.prompt + sectionClaimPolicyBlock + rashiBlock + provenanceBlock + coherenceBlock + knownFactsBlock + jyotishEnrichBlock + chalitBlock + vargaBlock + devGuardBlock + accuracyBlock + timeUnknownBlock + rarityBlock;
+
+  // ── Implicit-caching layout ────────────────────────────────────────
+  // Gemini 2.5/3.x automatically reuse a byte-identical request PREFIX at a
+  // ~75% input discount. All 20 sections of a report share the same chart
+  // context (rashiBlock), coherence themes and known facts — but the OLD layout
+  // put the section-specific prompt FIRST, so the shared block never sat at a
+  // stable prefix and the cache never fired. We now emit the shared context
+  // first (identical across sections → cache hit after the first call), then
+  // the section-specific task last. This is also the recommended
+  // "context first, question last" ordering for long-context quality.
+  const sharedContextPrefix = rashiBlock + coherenceBlock + knownFactsBlock;
+  const sectionTask =
+    `\n\n═══════════════════════════════════════════════════════════════\n` +
+    `  YOUR TASK — WRITE THIS SECTION: "${sectionPromptData.title}"\n` +
+    `═══════════════════════════════════════════════════════════════\n` +
+    sectionPromptData.prompt + sectionClaimPolicyBlock + provenanceBlock +
+    jyotishEnrichBlock + chalitBlock + vargaBlock + devGuardBlock +
+    accuracyBlock + timeUnknownBlock + rarityBlock;
+  const userPrompt = sharedContextPrefix + sectionTask;
 
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -4265,10 +4283,20 @@ FORMAT: Markdown for readability:
   // Hero sections → Gemini 3.1 Pro (temp 0.72 — structured thinking + vivid output)
   // Data-heavy sections → Gemini 2.5 Flash (temp 0.45 — precision-first, minimal drift)
   // Standard sections → Gemini 2.5 Flash (temp 0.58 — balanced)
-  const HERO_SECTIONS = ['lifePredictions', 'surpriseInsights', 'marriage', 'career', 'marriedLife', 'familyPortrait', 'children', 'education', 'physicalProfile', 'attractionProfile'];
+  // Gemini 3.1 Pro Preview costs 6-8x Flash ($2/$12 vs $0.30/$2.50 per 1M) and
+  // was ~81% of full-report AI spend. Restricted to the four sections where the
+  // Pro model's extra depth is most visible to the reader; every other section
+  // runs on Flash with no meaningful quality loss. Override via GEMINI_HERO_SECTIONS
+  // (comma-separated) to A/B more/fewer Pro sections without a code change.
+  const HERO_SECTIONS = (process.env.GEMINI_HERO_SECTIONS
+    ? process.env.GEMINI_HERO_SECTIONS.split(',').map(s => s.trim()).filter(Boolean)
+    : ['lifePredictions', 'surpriseInsights', 'marriage', 'career']);
   const DATA_HEAVY_SECTIONS = ['yogaAnalysis', 'financial', 'transits', 'realEstate', 'legal', 'health'];
   
-  const isHero = HERO_SECTIONS.includes(sectionKey);
+  // On retry (genOptions.forceFlash) we downgrade hero sections to Flash: the
+  // first attempt already failed, and a retry on the 6-8x cheaper model is both
+  // more cost-safe and typically more reliable for a straightforward re-run.
+  const isHero = HERO_SECTIONS.includes(sectionKey) && !genOptions.forceFlash;
   const isDataHeavy = DATA_HEAVY_SECTIONS.includes(sectionKey);
   const sectionTemperature = sectionKey === 'health' ? 0.35 : isHero ? 0.72 : isDataHeavy ? 0.45 : 0.58;
   // ─────────────────────────────────────────────────────────────
@@ -4397,7 +4425,10 @@ async function callGeminiLong(messages, sectionTemperature = 0.55) {
             temperature: sectionTemperature,
             topP: 0.90,
             thinkingConfig: {
-              thinkingBudget: 4096,
+              // Thinking tokens bill as OUTPUT. A single narrative section does
+              // not need 4k reasoning tokens; 1024 keeps analysis quality while
+              // roughly quartering the thinking cost. Tune via env if needed.
+              thinkingBudget: Number(process.env.GEMINI_SECTION_THINKING_BUDGET) || 1024,
             },
           },
         }),
@@ -4488,7 +4519,10 @@ async function callGeminiHero(messages, sectionTemperature = 0.55) {
           temperature: sectionTemperature,
           topP: 0.90,
           thinkingConfig: {
-            thinkingBudget: 8192,
+            // Halved from 8192. On the Pro model thinking bills at $12/1M, so
+            // this was the single largest output-cost line. 4096 still gives the
+            // hero sections deep multi-step reasoning. Tune via env if needed.
+            thinkingBudget: Number(process.env.GEMINI_HERO_THINKING_BUDGET) || 4096,
           },
         },
       };
@@ -5294,7 +5328,11 @@ HARD RULES FOR KNOWN FACTS:
   console.log(`[AI Report] Rashi chart context built — ${houseChart.houses.length} houses, ${Object.keys(houseChart.planets).length} planets`);
   // ──────────────────────────────────────────────────────────────
 
-  const sectionOrder = REPORT_SECTION_ORDER;
+  // Optional section allow-list (e.g. the Baby Kendara pack narrates only a
+  // curated subset). Absent → full report, byte-for-byte the previous behavior.
+  const sectionOrder = (Array.isArray(cleanMarriageOpts.sections) && cleanMarriageOpts.sections.length)
+    ? REPORT_SECTION_ORDER.filter(k => cleanMarriageOpts.sections.includes(k))
+    : REPORT_SECTION_ORDER;
 
   // ══════════════════════════════════════════════════════════════
   // PASS 1: Generate "Core Themes" summary for cross-section coherence
@@ -5409,7 +5447,7 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
     const themesResult = await callGemini([
       { role: 'system', content: 'You output ONLY valid JSON. No markdown code fences. No extra text. Be specific with years and numbers.' },
       { role: 'user', content: themesPrompt },
-    ], 8192, 0.3); // strict-JSON task — low temp prevents malformed output cascading into all sections
+    ], 8192, 0.3, { thinkingBudget: Number(process.env.GEMINI_COHERENCE_THINKING_BUDGET) || 2048 }); // strict-JSON task — low temp prevents malformed output cascading into all sections
 
     // Record coherence pass token usage
     if (themesResult.usage) {
@@ -5602,8 +5640,8 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
       try {
         // Small delay between retries to be gentle on the API
         await new Promise(r => setTimeout(r, 2000));
-        console.log(`[AI Report] Retrying section '${failed.key}'...`);
-        const retryResult = await generateSectionNarrative(failed.key, sectionData, birthData, sections, language, rashiContext, ageContext, userName, userGender, userReligion, {});
+        console.log(`[AI Report] Retrying section '${failed.key}' (on Flash)...`);
+        const retryResult = await generateSectionNarrative(failed.key, sectionData, birthData, sections, language, rashiContext, ageContext, userName, userGender, userReligion, {}, { forceFlash: true });
 
         if (retryResult && retryResult.narrative) {
           const narrativeLower = retryResult.narrative.toLowerCase().trim();

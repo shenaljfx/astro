@@ -15,6 +15,7 @@
 
 const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
+const crypto = require('crypto');
 
 // ─── XSS Sanitizer ─────────────────────────────────────────────
 // Strips dangerous HTML/script tags from string values recursively
@@ -227,8 +228,11 @@ const corsOptions = {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  // Auth is a Bearer token in the Authorization header — never cookies — so we
+  // don't need credentialed CORS. Keeping this false avoids pairing
+  // Access-Control-Allow-Credentials:true with permissive origins.
+  credentials: false,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-App-Country'],
   maxAge: 86400, // Cache preflight for 24 hours
 };
@@ -368,6 +372,21 @@ const userDataLimiter = rateLimit({
 });
 
 /**
+ * Preview limiter — 20 req/min per IP for the PUBLIC (unauthenticated)
+ * /api/preview/* teasers. These run Swiss-Ephemeris–heavy calculations
+ * (shadbala, advanced yogas, convergence calendar, full Vimshottari) with no
+ * auth, so a flood can exhaust CPU on a small container. Tight enough to blunt
+ * abuse, generous enough for a real user tapping through the funnel.
+ */
+const previewLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  handler: rateLimitHandler,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
  * Admin-only middleware — checks ADMIN_SECRET header for internal/scheduler endpoints
  */
 function requireAdmin(req, res, next) {
@@ -383,10 +402,21 @@ function requireAdmin(req, res, next) {
     return res.status(503).json({ error: 'Admin endpoint not configured' });
   }
 
-  if (!provided || provided !== secret) {
+  if (!provided || !timingSafeEqualString(provided, secret)) {
     return res.status(403).json({ error: 'Forbidden — admin access required' });
   }
   next();
+}
+
+/**
+ * Constant-time string comparison — avoids leaking secret length/content via
+ * response-timing side channels. Returns false on any length mismatch.
+ */
+function timingSafeEqualString(actual, expected) {
+  const a = Buffer.from(String(actual == null ? '' : actual), 'utf8');
+  const b = Buffer.from(String(expected == null ? '' : expected), 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 // ─── Export ─────────────────────────────────────────────────────
@@ -401,6 +431,7 @@ module.exports = {
   aiUserLimiter,
   reportUserLimiter,
   userDataLimiter,
+  previewLimiter,
   requireAdmin,
   sanitizeInputs,
   corsOptions,

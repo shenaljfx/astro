@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Firebase Storage security rules.
+//
+// Architecture note: no client (mobile or web) uses the Storage SDK. All
+// uploads go through the backend API (POST /api/user/avatar) using the
+// Firebase Admin SDK, which BYPASSES these rules entirely. Avatars are then
+// served via tokenized download URLs (…?alt=media&token=<uuid>), which are
+// authorized by the download token — NOT by these rules. So denying all
+// rule-mediated access below does not break uploads or avatar display; it
+// simply closes the client SDK surface as defense-in-depth.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Avatars live under avatars/<uid>/… and are written only by the server.
+    // Public reads happen via tokenized URLs, so no read rule is needed here.
+    match /avatars/{userId}/{fileName} {
+      allow read, write: if false;
+    }
+
+    // Deny everything else.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// ── Alternative: owner-scoped client access ──────────────────────────────
+// If you ever move avatar uploads to the client SDK (uploadBytes) instead of
+// the server API, replace the avatars block above with the following so an
+// authenticated user can manage only their own folder. Keep size/type limits
+// since client uploads are untrusted:
+//
+//   match /avatars/{userId}/{fileName} {
+//     allow read: if true; // or: if request.auth != null;
+//     allow write: if request.auth != null
+//                  && request.auth.uid == userId
+//                  && request.resource.size < 2 * 1024 * 1024
+//                  && request.resource.contentType.matches('image/(jpeg|png|webp)');
+//   }

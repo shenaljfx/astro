@@ -1,4 +1,5 @@
 const { getDb, COLLECTIONS } = require('../config/firebase');
+const { toTtlTimestamp } = require('../utils/firestoreTtl');
 
 const VIBE_LINK_TTL_MS = Number(process.env.VIBE_LINK_TTL_MS || 7 * 24 * 60 * 60 * 1000);
 
@@ -25,6 +26,8 @@ async function saveVibeLink(linkId, data = {}) {
     createdAt: now,
     updatedAt: now,
     expiresAt,
+    // Timestamp TTL (fix F3) so expired share links self-clean.
+    ttlExpireAt: toTtlTimestamp(expiresAt),
   };
   if (!links) return record;
   await links.doc(String(linkId)).set(record, { merge: false });

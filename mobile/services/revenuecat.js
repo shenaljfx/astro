@@ -39,8 +39,12 @@ if (!IS_WEB) {
 var API_KEY = 'goog_PejQORDlHxpiMNuGwhLLnwavkEy';
 var ENTITLEMENT_ID = 'Grahachara Pro';
 
-// Mock payments — bypass RevenueCat when EXPO_PUBLIC_MOCK_PAYMENTS=true
-var MOCK_PAYMENTS = process.env.EXPO_PUBLIC_MOCK_PAYMENTS === 'true';
+// Mock payments — bypass RevenueCat when EXPO_PUBLIC_MOCK_PAYMENTS=true.
+// Hard-gated behind __DEV__ so a release build can NEVER ship with payments
+// bypassed, even if a stray EXPO_PUBLIC_MOCK_PAYMENTS=true is inlined at build
+// time (e.g. a local `eas build --local` that picks up .env). In production
+// (__DEV__ === false) this is always false regardless of the env value.
+var MOCK_PAYMENTS = __DEV__ && process.env.EXPO_PUBLIC_MOCK_PAYMENTS === 'true';
 
 // Product identifiers (must match RevenueCat dashboard & Google Play Console)
 var PRODUCT_IDS = {

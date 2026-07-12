@@ -46,6 +46,8 @@ import useLowEndDevice from '../../hooks/useLowEndDevice';
 import useReducedMotion from '../../hooks/useReducedMotion';
 import { CosmicBackground } from '../../components/CosmicBackground';
 import ReportLoadingScreen from '../../components/ReportLoadingScreen';
+import NakathPlanner from '../../components/readings/NakathPlanner';
+import BabyKendara from '../../components/readings/BabyKendara';
 import { checkServerReachable } from '../../services/api';
 var REPORTS_CACHE_KEY = '@grahachara_saved_reports';
 var MAX_SAVED_REPORTS = 20;
@@ -396,56 +398,56 @@ function extractKeyStats(sectionKey, rawData, reportLang) {
   var isSi = reportLang === 'si';
   switch (sectionKey) {
     case 'marriage':
-      if (rawData.marriageTimingPrediction?.bestWindow?.dateRange) stats.push({ label: isSi ? 'හොඳම කාලය' : 'Best Window', value: rawData.marriageTimingPrediction.bestWindow.dateRange, icon: '💫' });
-      if (rawData.marriageAfflictions?.likelihood) stats.push({ label: isSi ? 'සම්භාවිතාව' : 'Likelihood', value: rawData.marriageAfflictions.likelihood, icon: '📊' });
-      if (rawData.secondMarriage?.divorceRisk) stats.push({ label: isSi ? 'දික්කසාද අවදානම' : 'Divorce Risk', value: rawData.secondMarriage.divorceRisk.split('—')[0].trim(), icon: '⚠️' });
+      if (rawData.marriageTimingPrediction?.bestWindow?.dateRange) stats.push({ label: isSi ? 'හොඳම කාලය' : 'Best Window', value: rawData.marriageTimingPrediction.bestWindow.dateRange, icon: 'calendar-outline' });
+      if (rawData.marriageAfflictions?.likelihood) stats.push({ label: isSi ? 'සම්භාවිතාව' : 'Likelihood', value: rawData.marriageAfflictions.likelihood, icon: 'stats-chart-outline' });
+      if (rawData.secondMarriage?.divorceRisk) stats.push({ label: isSi ? 'දික්කසාද අවදානම' : 'Divorce Risk', value: rawData.secondMarriage.divorceRisk.split('—')[0].trim(), icon: 'alert-circle-outline' });
       break;
     case 'marriedLife':
-      if (rawData.navamshaAnalysis?.marriageStrength) stats.push({ label: isSi ? 'විවාහ ශක්තිය' : 'Marriage Quality', value: rawData.navamshaAnalysis.marriageStrength, icon: '💍' });
-      if (rawData.secondMarriage?.probability) stats.push({ label: isSi ? 'දෙවන විවාහය' : '2nd Marriage', value: rawData.secondMarriage.probability.split('—')[0].trim(), icon: '💔' });
-      if (rawData.secondMarriage?.divorceRisk) stats.push({ label: isSi ? 'දික්කසාද අවදානම' : 'Divorce Risk', value: rawData.secondMarriage.divorceRisk.split('—')[0].trim(), icon: '⚠️' });
+      if (rawData.navamshaAnalysis?.marriageStrength) stats.push({ label: isSi ? 'විවාහ ශක්තිය' : 'Marriage Quality', value: rawData.navamshaAnalysis.marriageStrength, icon: 'heart-circle-outline' });
+      if (rawData.secondMarriage?.probability) stats.push({ label: isSi ? 'දෙවන විවාහය' : '2nd Marriage', value: rawData.secondMarriage.probability.split('—')[0].trim(), icon: 'heart-dislike-outline' });
+      if (rawData.secondMarriage?.divorceRisk) stats.push({ label: isSi ? 'දික්කසාද අවදානම' : 'Divorce Risk', value: rawData.secondMarriage.divorceRisk.split('—')[0].trim(), icon: 'alert-circle-outline' });
       break;
     case 'career':
       if (rawData.careerPlanetRanking?.length) {
         var topPlanet = typeof rawData.careerPlanetRanking[0] === 'object' ? rawData.careerPlanetRanking[0].planet : rawData.careerPlanetRanking[0];
-        stats.push({ label: isSi ? 'ප්‍රධාන ග්‍රහයා' : 'Top Planet', value: topPlanet, icon: '🎯' });
+        stats.push({ label: isSi ? 'ප්‍රධාන ග්‍රහයා' : 'Top Planet', value: topPlanet, icon: 'planet-outline' });
       }
       if (rawData.nadiCareer?.careerType) {
         var careerType = typeof rawData.nadiCareer.careerType === 'object' ? rawData.nadiCareer.careerType.type : rawData.nadiCareer.careerType;
-        stats.push({ label: isSi ? 'වර්ගය' : 'Type', value: careerType, icon: '💼' });
+        stats.push({ label: isSi ? 'වර්ගය' : 'Type', value: careerType, icon: 'briefcase-outline' });
       }
       if (rawData.nadiCareer?.serviceStrength || rawData.nadiCareer?.businessStrength) {
         var svc = rawData.nadiCareer.serviceStrength || '';
         var biz = rawData.nadiCareer.businessStrength || '';
-        stats.push({ label: isSi ? 'ව්‍යාපාර/සේවය' : 'Biz/Service', value: biz + '/' + svc, icon: '📈' });
+        stats.push({ label: isSi ? 'ව්‍යාපාර/සේවය' : 'Biz/Service', value: biz + '/' + svc, icon: 'trending-up-outline' });
       }
       break;
     case 'health':
-      if (rawData.nadiHealth?.longevityEstimate?.estimatedYears) stats.push({ label: isSi ? 'ආයුෂ' : 'Longevity', value: rawData.nadiHealth.longevityEstimate.estimatedYears + (isSi ? ' වසර' : ' yrs'), icon: '❤️' });
-      if (rawData.nadiHealth?.longevityStrength) stats.push({ label: isSi ? 'ශක්තිය' : 'Vitality', value: rawData.nadiHealth.longevityStrength, icon: '💪' });
+      if (rawData.nadiHealth?.longevityEstimate?.estimatedYears) stats.push({ label: isSi ? 'ආයුෂ' : 'Longevity', value: rawData.nadiHealth.longevityEstimate.estimatedYears + (isSi ? ' වසර' : ' yrs'), icon: 'heart-outline' });
+      if (rawData.nadiHealth?.longevityStrength) stats.push({ label: isSi ? 'ශක්තිය' : 'Vitality', value: rawData.nadiHealth.longevityStrength, icon: 'fitness-outline' });
       break;
     case 'children':
-      if (rawData.estimatedChildren?.count != null) stats.push({ label: isSi ? 'දරු සංඛ්‍යාව' : 'Children', value: String(rawData.estimatedChildren.count), icon: '👶' });
-      if (rawData.nadiChildren?.strength) stats.push({ label: isSi ? 'පවුල් ගලායෑම' : 'Family Flow', value: rawData.nadiChildren.strength, icon: '🔮' });
+      if (rawData.estimatedChildren?.count != null) stats.push({ label: isSi ? 'දරු සංඛ්‍යාව' : 'Children', value: String(rawData.estimatedChildren.count), icon: 'happy-outline' });
+      if (rawData.nadiChildren?.strength) stats.push({ label: isSi ? 'පවුල් ගලායෑම' : 'Family Flow', value: rawData.nadiChildren.strength, icon: 'sparkles-outline' });
       break;
     case 'education':
-      if (rawData.nadiEducation?.overallGrade) stats.push({ label: isSi ? 'ශ්‍රේණිය' : 'Grade', value: rawData.nadiEducation.overallGrade, icon: '📚' });
+      if (rawData.nadiEducation?.overallGrade) stats.push({ label: isSi ? 'ශ්‍රේණිය' : 'Grade', value: rawData.nadiEducation.overallGrade, icon: 'book-outline' });
       if (rawData.eduPlanetPool?.length) {
         var topEduPlanet = rawData.eduPlanetPool[0].planet;
-        stats.push({ label: isSi ? 'ප්‍රධාන ග්‍රහයා' : 'Top Planet', value: topEduPlanet, icon: '🎯' });
+        stats.push({ label: isSi ? 'ප්‍රධාන ග්‍රහයා' : 'Top Planet', value: topEduPlanet, icon: 'planet-outline' });
       }
       break;
     case 'foreignTravel':
-      if (rawData.nadiForeignTravel?.strength) stats.push({ label: isSi ? 'සම්භාවිතාව' : 'Chance', value: rawData.nadiForeignTravel.strength, icon: '✈️' });
+      if (rawData.nadiForeignTravel?.strength) stats.push({ label: isSi ? 'සම්භාවිතාව' : 'Chance', value: rawData.nadiForeignTravel.strength, icon: 'airplane-outline' });
       break;
     case 'luck':
-      if (rawData.nadiLuck?.windfallStrength) stats.push({ label: isSi ? 'වාසනාව' : 'Windfall', value: rawData.nadiLuck.windfallStrength, icon: '🍀' });
-      if (rawData.nadiLuck?.wealthStrength) stats.push({ label: isSi ? 'සම්පත' : 'Wealth', value: rawData.nadiLuck.wealthStrength, icon: '💎' });
+      if (rawData.nadiLuck?.windfallStrength) stats.push({ label: isSi ? 'වාසනාව' : 'Windfall', value: rawData.nadiLuck.windfallStrength, icon: 'leaf-outline' });
+      if (rawData.nadiLuck?.wealthStrength) stats.push({ label: isSi ? 'සම්පත' : 'Wealth', value: rawData.nadiLuck.wealthStrength, icon: 'diamond-outline' });
       break;
     case 'surpriseInsights':
-      if (rawData.secondMarriage?.probability) stats.push({ label: isSi ? 'දෙවන විවාහය' : '2nd Marriage', value: rawData.secondMarriage.probability.split('—')[0].trim(), icon: '💔' });
-      if (rawData.secondMarriage?.divorceRisk) stats.push({ label: isSi ? 'දික්කසාද' : 'Divorce', value: rawData.secondMarriage.divorceRisk.split('—')[0].trim(), icon: '⚠️' });
-      if (rawData.famePotential?.level) stats.push({ label: isSi ? 'ප්‍රසිද්ධිය' : 'Fame', value: rawData.famePotential.level, icon: '⭐' });
+      if (rawData.secondMarriage?.probability) stats.push({ label: isSi ? 'දෙවන විවාහය' : '2nd Marriage', value: rawData.secondMarriage.probability.split('—')[0].trim(), icon: 'heart-dislike-outline' });
+      if (rawData.secondMarriage?.divorceRisk) stats.push({ label: isSi ? 'දික්කසාද' : 'Divorce', value: rawData.secondMarriage.divorceRisk.split('—')[0].trim(), icon: 'alert-circle-outline' });
+      if (rawData.famePotential?.level) stats.push({ label: isSi ? 'ප්‍රසිද්ධිය' : 'Fame', value: rawData.famePotential.level, icon: 'star-outline' });
       break;
     default:
       break;
@@ -474,7 +476,7 @@ function ScoreRing({ score, size, color, delay: delayMs }) {
     return '#EF4444';
   };
   var scoreColor = color || getColor(score);
-  var label = score >= 80 ? '🔥' : score >= 60 ? '✨' : score >= 40 ? '💫' : '⚡';
+  var label = score >= 80 ? 'HIGH' : score >= 60 ? 'GOOD' : score >= 40 ? 'FAIR' : 'LOW';
 
   return (
     <Animated.View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, ringStyle]}>
@@ -506,7 +508,7 @@ function StatBadge({ stat, index }) {
         style={stb.inner}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       >
-        <Text style={stb.icon}>{stat.icon}</Text>
+        <Ionicons name={stat.icon} size={13} color="#F6C66F" style={{ marginRight: 6 }} />
         <View style={stb.textWrap}>
           <Text style={stb.label} numberOfLines={1}>{stat.label}</Text>
           <Text style={stb.value} numberOfLines={1}>{stat.value}</Text>
@@ -575,7 +577,7 @@ function KnownFactsSheet({ visible, isSi, initial, onSkip, onContinue }) {
       <Animated.View entering={FadeInUp.duration(320)} style={kfs.card}>
         <LinearGradient colors={['rgba(255,184,0,0.10)', 'rgba(20,16,10,0.0)']} style={kfs.cardGrad} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
           <View style={kfs.handle} />
-          <Text style={kfs.title}>{isSi ? '✨ තප්පර 20ක් — වාර්තාව ඔයාටම ගැලපෙන්න' : '✨ 20 seconds to make this eerily accurate'}</Text>
+          <Text style={kfs.title}>{isSi ? 'තප්පර 20ක් — වාර්තාව ඔයාටම ගැලපෙන්න' : '20 seconds to make this eerily accurate'}</Text>
           <Text style={kfs.sub}>{isSi
             ? 'ඔයා දන්න දේවල් කිව්වොත්, කේන්දරය ඒවා තහවුරු කරලා අනාගතය ගැන වඩා නිවැරදි කාල රාමු දෙනවා. Skip කරන්නත් පුළුවන්.'
             : 'Anything you confirm lets the chart validate your past — and sharpen every dated prediction ahead. You can skip.'}</Text>
@@ -669,12 +671,12 @@ var kfs = StyleSheet.create({
 // Bars = the strongest life-domain score each month; chips = dated windows.
 // ══════════════════════════════════════════
 var N12_DOMAIN_META = {
-  career: { icon: '💼', color: '#F59E0B', si: 'රැකියාව', en: 'Career' },
-  love:   { icon: '💗', color: '#EC4899', si: 'ආදරය', en: 'Love' },
-  money:  { icon: '💰', color: '#22C55E', si: 'මුදල්', en: 'Money' },
-  health: { icon: '🫀', color: '#EF4444', si: 'සෞඛ්‍යය', en: 'Health' },
-  travel: { icon: '✈️', color: '#6366F1', si: 'විදේශ', en: 'Travel' },
-  family: { icon: '🏠', color: '#0EA5E9', si: 'පවුල', en: 'Family' },
+  career: { icon: 'briefcase-outline', color: '#F59E0B', si: 'රැකියාව', en: 'Career' },
+  love:   { icon: 'heart-outline', color: '#EC4899', si: 'ආදරය', en: 'Love' },
+  money:  { icon: 'cash-outline', color: '#22C55E', si: 'මුදල්', en: 'Money' },
+  health: { icon: 'pulse-outline', color: '#EF4444', si: 'සෞඛ්‍යය', en: 'Health' },
+  travel: { icon: 'airplane-outline', color: '#6366F1', si: 'විදේශ', en: 'Travel' },
+  family: { icon: 'home-outline', color: '#0EA5E9', si: 'පවුල', en: 'Family' },
 };
 function Next12MonthsTimeline({ calendar, isSi }) {
   if (!calendar || !Array.isArray(calendar.months) || calendar.months.length === 0) return null;
@@ -685,7 +687,7 @@ function Next12MonthsTimeline({ calendar, isSi }) {
     <Animated.View entering={FadeInDown.delay(200).duration(700)} style={n12.wrap}>
       <LinearGradient colors={['rgba(255,184,0,0.10)', 'rgba(255,140,0,0.03)']} style={n12.inner} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
         <View style={n12.headRow}>
-          <Text style={n12.title}>{isSi ? '📅 ඉදිරි මාස 12 — ඔයාගේ කාල සිතියම' : '📅 Your Next 12 Months'}</Text>
+          <Text style={n12.title}>{isSi ? 'ඉදිරි මාස 12 — ඔයාගේ කාල සිතියම' : 'Your Next 12 Months'}</Text>
         </View>
         <Text style={n12.sub}>{isSi ? 'සෑම මාසයකම වැඩිම ශක්තිය තියෙන ජීවිත ක්ෂේත්‍රය' : 'The strongest life area of each month'}</Text>
 
@@ -695,7 +697,7 @@ function Next12MonthsTimeline({ calendar, isSi }) {
             Object.keys(m.scores || {}).forEach(function(d) {
               if (!best || m.scores[d] > m.scores[best]) best = d;
             });
-            var meta = N12_DOMAIN_META[best] || { color: '#FFB800', icon: '✨' };
+            var meta = N12_DOMAIN_META[best] || { color: '#FFB800', icon: 'sparkles-outline' };
             var score = best ? m.scores[best] : 50;
             var h = 22 + Math.round(((score - 30) / 68) * 58);
             var hasEclipse = m.eclipses && m.eclipses.length > 0;
@@ -705,7 +707,7 @@ function Next12MonthsTimeline({ calendar, isSi }) {
                 <View style={[n12.barTrack, { height: 80 }]}>
                   <Animated.View entering={FadeInUp.delay(250 + i * 55).duration(450)} style={[n12.barFill, { height: Math.max(14, Math.min(80, h)), backgroundColor: meta.color }]} />
                 </View>
-                <Text style={n12.barEmoji}>{hasEclipse ? '🌘' : meta.icon}</Text>
+                <Ionicons name={hasEclipse ? 'moon-outline' : meta.icon} size={11} color={meta.color} style={{ marginTop: 5 }} />
                 <Text style={n12.barLabel}>{String(m.label || m.month).split(' ')[0]}</Text>
               </View>
             );
@@ -715,11 +717,11 @@ function Next12MonthsTimeline({ calendar, isSi }) {
         {windows.length > 0 && (
           <View style={n12.chipsWrap}>
             {windows.map(function(w, i) {
-              var meta = N12_DOMAIN_META[w.domain] || { icon: '✨', color: '#FFB800', si: w.domain, en: w.domain };
+              var meta = N12_DOMAIN_META[w.domain] || { icon: 'sparkles-outline', color: '#FFB800', si: w.domain, en: w.domain };
               var isCaution = w.type === 'caution';
               return (
                 <Animated.View key={w.domain + w.start} entering={FadeInRight.delay(350 + i * 90).duration(400)} style={[n12.chip, isCaution && n12.chipCaution]}>
-                  <Text style={n12.chipIcon}>{isCaution ? '⚠️' : meta.icon}</Text>
+                  <Ionicons name={isCaution ? 'alert-circle-outline' : meta.icon} size={15} color={isCaution ? '#FCA5A5' : meta.color} />
                   <View style={{ flexShrink: 1 }}>
                     <Text style={[n12.chipTitle, isCaution && { color: '#FCA5A5' }]} numberOfLines={1}>
                       {(isSi ? meta.si : meta.en)} {w.tier} — {w.startLabel}{w.endLabel !== w.startLabel ? ' → ' + w.endLabel : ''}
@@ -766,7 +768,7 @@ var n12 = StyleSheet.create({
 function PredictionCheckinCard({ checkin, isSi, onAnswer, onDismiss }) {
   var [busy, setBusy] = useState(false);
   if (!checkin) return null;
-  var meta = N12_DOMAIN_META[checkin.domain] || { icon: '🔮', en: checkin.domain, si: checkin.domain };
+  var meta = N12_DOMAIN_META[checkin.domain] || { icon: 'sparkles-outline', en: checkin.domain, si: checkin.domain };
 
   var answer = async function(outcome) {
     if (busy) return;
@@ -778,7 +780,7 @@ function PredictionCheckinCard({ checkin, isSi, onAnswer, onDismiss }) {
     <Animated.View entering={FadeInDown.duration(500)} style={pcc.wrap}>
       <LinearGradient colors={['rgba(139,92,246,0.14)', 'rgba(139,92,246,0.04)']} style={pcc.inner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <View style={pcc.headRow}>
-          <Text style={pcc.headIcon}>{meta.icon}</Text>
+          <Ionicons name={meta.icon} size={15} color="#C4B5FD" />
           <Text style={pcc.headTitle}>{isSi ? 'අපේ අනාවැකිය හරි ගියාද?' : 'Did our prediction come true?'}</Text>
           <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={16} color="rgba(255,255,255,0.4)" />
@@ -787,7 +789,7 @@ function PredictionCheckinCard({ checkin, isSi, onAnswer, onDismiss }) {
         <Text style={pcc.claim}>{checkin.claim || ''}</Text>
         <View style={pcc.btnRow}>
           <SpringPressable style={[pcc.btn, pcc.btnYes]} onPress={function() { answer('yes'); }} haptic="medium">
-            <Text style={pcc.btnTextYes}>{isSi ? 'ඔව් 🎯' : 'Yes 🎯'}</Text>
+            <Text style={pcc.btnTextYes}>{isSi ? 'ඔව්' : 'Yes'}</Text>
           </SpringPressable>
           <SpringPressable style={pcc.btn} onPress={function() { answer('partial'); }} haptic="light">
             <Text style={pcc.btnText}>{isSi ? 'ටිකක්' : 'Somewhat'}</Text>
@@ -1070,7 +1072,7 @@ function GeneratedReportsPanel({ displayReports, reportsLoading, reportsLoadErro
 
         {!reportsLoading && !hasReports && (
           <View style={s.generatedStateBox}>
-            <Text style={s.generatedEmptyIcon}>📜</Text>
+            <Ionicons name="document-text-outline" size={28} color="rgba(246,198,111,0.75)" style={{ marginBottom: 8 }} />
             <Text style={s.generatedEmptyTitle}>{isSi ? 'තවම වාර්තා නැහැ' : 'No generated reports yet'}</Text>
             <Text style={s.generatedEmptyText}>{isSi ? 'පළමු වාර්තාව සාදන්න. ඉන්පසු එය මෙතන ලැයිස්තුවේ පෙනේ.' : 'Generate your first report. After it finishes, it will stay visible in this list.'}</Text>
           </View>
@@ -1102,7 +1104,7 @@ function GeneratedReportsPanel({ displayReports, reportsLoading, reportsLoadErro
                   disabled={loadingReport}
                 >
                   <View style={s.generatedScrollIcon}>
-                    <Text style={{ fontSize: 18 }}>📜</Text>
+                    <Ionicons name="document-text-outline" size={18} color="#F6C66F" />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={s.generatedName} numberOfLines={1}>
@@ -1364,23 +1366,23 @@ var cdv = StyleSheet.create({
 // ══════════════════════════════════════════
 var LOADING_STAGES = {
   en: {
-    starting: { text: '🌌 Reading Your Birth Moment...', sub: 'Your exact birth minute helps reveal your natural personality, timing, and life direction.' },
-    engine: { text: '🪐 Checking Current Sky Movement...', sub: 'We are turning the technical calculations into practical guidance for your life.' },
-    charts: { text: '✨ Building Your Life Map...', sub: 'Connecting your birth details to love, work, family, money, health, and growth patterns.' },
-    coherence: { text: '🔮 Finding Your Strength Patterns...', sub: 'Looking for hidden talents, support areas, and places where extra care is useful.' },
-    sections: { text: '📜 Writing Your Personal Story...', sub: 'Preparing clear explanations for love, career, timing, family, and choices.' },
-    retrying: { text: '🔄 Refining the Reading...', sub: 'Taking an extra moment to make the guidance clearer and more useful.' },
-    complete: { text: '🎉 Your Cosmic Blueprint is Ready!', sub: 'Unveiling your personalized path to success and true happiness.' },
+    starting: { text: 'Reading Your Birth Moment...', sub: 'Your exact birth minute helps reveal your natural personality, timing, and life direction.' },
+    engine: { text: 'Checking Current Sky Movement...', sub: 'We are turning the technical calculations into practical guidance for your life.' },
+    charts: { text: 'Building Your Life Map...', sub: 'Connecting your birth details to love, work, family, money, health, and growth patterns.' },
+    coherence: { text: 'Finding Your Strength Patterns...', sub: 'Looking for hidden talents, support areas, and places where extra care is useful.' },
+    sections: { text: 'Writing Your Personal Story...', sub: 'Preparing clear explanations for love, career, timing, family, and choices.' },
+    retrying: { text: 'Refining the Reading...', sub: 'Taking an extra moment to make the guidance clearer and more useful.' },
+    complete: { text: 'Your Cosmic Blueprint is Ready!', sub: 'Unveiling your personalized path to success and true happiness.' },
     failed: { text: '⚠️ A Ripple in the Continuum...', sub: 'The stars paused. Please try again (You won\'t be charged again for this).' },
   },
   si: {
-    starting: { text: '🌌 උපන් මොහොත කියවමින්...', sub: 'ඔයා උපන් නිවැරදි මොහොතෙන් ඔයාගේ ස්වභාවය, කාලය, සහ ජීවිත දිශාව පැහැදිලි වෙනවා.' },
-    engine: { text: '🪐 අද අහසේ ගමන පරීක්ෂා කරමින්...', sub: 'තාක්ෂණික ගණනය කිරීම් ඔයාට තේරෙන ප්‍රායෝගික මගපෙන්වීමක් බවට පත් කරමින්.' },
-    charts: { text: '✨ ඔයාගේ ජීවිත සිතියම සකසමින්...', sub: 'ආදරය, රැකියාව, පවුල, මුදල්, සෞඛ්‍යය, සහ වර්ධනය ගැන රටා සම්බන්ධ කරමින්.' },
-    coherence: { text: '🔮 ඔයාගේ ශක්ති රටා සොයමින්...', sub: 'සැඟවුණු හැකියාවන්, සහාය ලැබෙන ප්‍රදේශ, සහ පරිස්සම් වෙන්න ඕනේ තැන් සොයමින්.' },
-    sections: { text: '📜 ඔයාගේ පුද්ගලික කතාව ලියමින්...', sub: 'ආදරය, රැකියාව, කාලය, පවුල, සහ තේරීම් ගැන පැහැදිලි විස්තර සකසමින්.' },
-    retrying: { text: '🔄 කියවීම තවත් පැහැදිලි කරමින්...', sub: 'උපදෙස් වඩාත් තේරුම් ගත හැකි සහ ප්‍රයෝජනවත් කිරීමට තව සුළු මොහොතක්.' },
-    complete: { text: '🎉 ඔයාගේ කේන්දර වාර්තාව සූදානම්!', sub: 'සාර්ථකත්වය හා සතුට කරා යන ඔයාගේ ගමන පෙන්වන විශ්ව රහස් දැන් විවෘතයි.' },
+    starting: { text: 'උපන් මොහොත කියවමින්...', sub: 'ඔයා උපන් නිවැරදි මොහොතෙන් ඔයාගේ ස්වභාවය, කාලය, සහ ජීවිත දිශාව පැහැදිලි වෙනවා.' },
+    engine: { text: 'අද අහසේ ගමන පරීක්ෂා කරමින්...', sub: 'තාක්ෂණික ගණනය කිරීම් ඔයාට තේරෙන ප්‍රායෝගික මගපෙන්වීමක් බවට පත් කරමින්.' },
+    charts: { text: 'ඔයාගේ ජීවිත සිතියම සකසමින්...', sub: 'ආදරය, රැකියාව, පවුල, මුදල්, සෞඛ්‍යය, සහ වර්ධනය ගැන රටා සම්බන්ධ කරමින්.' },
+    coherence: { text: 'ඔයාගේ ශක්ති රටා සොයමින්...', sub: 'සැඟවුණු හැකියාවන්, සහාය ලැබෙන ප්‍රදේශ, සහ පරිස්සම් වෙන්න ඕනේ තැන් සොයමින්.' },
+    sections: { text: 'ඔයාගේ පුද්ගලික කතාව ලියමින්...', sub: 'ආදරය, රැකියාව, කාලය, පවුල, සහ තේරීම් ගැන පැහැදිලි විස්තර සකසමින්.' },
+    retrying: { text: 'කියවීම තවත් පැහැදිලි කරමින්...', sub: 'උපදෙස් වඩාත් තේරුම් ගත හැකි සහ ප්‍රයෝජනවත් කිරීමට තව සුළු මොහොතක්.' },
+    complete: { text: 'ඔයාගේ කේන්දර වාර්තාව සූදානම්!', sub: 'සාර්ථකත්වය හා සතුට කරා යන ඔයාගේ ගමන පෙන්වන විශ්ව රහස් දැන් විවෘතයි.' },
     failed: { text: '⚠️ ග්‍රහ ශක්තීන්ගේ බාධාවක්', sub: 'තරු නැවතුණාක් වගේ. කරුණාකර නැවත උත්සාහ කරන්න (ඔයාට නැවත මුදල් ගෙවන්න ඕනේ නැහැ).' },
   },
 };
@@ -1496,8 +1498,8 @@ function CosmicLoader({ progress, userName, language, colors: themeColors }) {
   }
 
   var personalMsg = lang === 'si'
-    ? (userName ? 'පොඩ්ඩක් ඉන්න ' + userName + '! ✨' : 'ඔයාගේ ජීවිත කතාව ලියමින්... ✨')
-    : (userName ? 'Hold tight, ' + userName + '! ✨' : 'Your life story is being written... ✨');
+    ? (userName ? 'පොඩ්ඩක් ඉන්න ' + userName + '!' : 'ඔයාගේ ජීවිත කතාව ලියමින්...')
+    : (userName ? 'Hold tight, ' + userName + '!' : 'Your life story is being written...');
 
   var currentSectionLabel = currentSection ? (sectionLabels[currentSection] || currentSection) : null;
 
@@ -1517,13 +1519,13 @@ function CosmicLoader({ progress, userName, language, colors: themeColors }) {
         <View style={[cl.orbitRing, { width: 140, height: 140 }]} />
         <View style={[cl.orbitRing, { width: 180, height: 180 }]} />
         <Animated.View style={[cl.planet, cl.planet1, orbit1Style]}>
-          <Text style={{ fontSize: 16 }}>🪐</Text>
+          <Ionicons name='planet' size={15} color='#E8C56A' />
         </Animated.View>
         <Animated.View style={[cl.planet, cl.planet2, orbit2Style]}>
-          <Text style={{ fontSize: 14 }}>🌙</Text>
+          <Ionicons name='moon' size={13} color='#C9CCD6' />
         </Animated.View>
         <Animated.View style={[cl.planet, cl.planet3, orbit3Style]}>
-          <Text style={{ fontSize: 12 }}>⭐</Text>
+          <Ionicons name='star' size={11} color='#F6C66F' />
         </Animated.View>
       </View>
 
@@ -1668,6 +1670,80 @@ function normalizeChartForDisplay(chartData) {
 // ══════════════════════════════════════════
 // MAIN REPORT SCREEN
 // ══════════════════════════════════════════
+/**
+ * ReadingsSwitcher — "what are we reading today?" segmented strip at the
+ * top of the Reports tab. All three readings live INSIDE this tab: tapping
+ * a card switches the view below (no navigation away). The selected card
+ * glows in its own accent; the others sit quiet until chosen.
+ */
+var READINGS = [
+  {
+    key: 'full', icon: 'planet',
+    accent: '#34D399', bg: 'rgba(52,211,153,0.10)', border: 'rgba(52,211,153,0.32)',
+    title: { en: 'Full Report', si: 'සම්පූර්ණ වාර්තාව' },
+    sub: { en: 'Your whole life, mapped', si: 'ඔයාගේ මුළු ජීවිතය' },
+  },
+  {
+    key: 'baby', icon: 'happy',
+    accent: '#F472B6', bg: 'rgba(244,114,182,0.10)', border: 'rgba(244,114,182,0.32)',
+    title: { en: 'Baby Kendara', si: 'බිලිඳු කේන්දරය' },
+    sub: { en: 'Newborn keepsake pack', si: 'අලුත උපන් තෑග්ග' },
+  },
+  {
+    key: 'nakath', icon: 'time',
+    accent: '#E8C56A', bg: 'rgba(232,197,106,0.10)', border: 'rgba(232,197,106,0.32)',
+    title: { en: 'Subha Nakath', si: 'සුබ නැකැත්' },
+    sub: { en: 'Best time for anything', si: 'ඕනම දේට හොඳම වෙලාව' },
+  },
+];
+
+var ReadingsSwitcher = React.memo(function ReadingsSwitcher({ active, onSelect, lang }) {
+  var si = lang === 'si';
+  return (
+    <Animated.View entering={FadeInDown.delay(150).duration(700)}>
+      <Text style={rsw.label}>{si ? 'අද මොනවද බලන්නේ?' : 'WHAT ARE WE READING TODAY?'}</Text>
+      <View style={rsw.row}>
+        {READINGS.map(function (r) {
+          var on = active === r.key;
+          return (
+            <TouchableOpacity
+              key={r.key}
+              activeOpacity={0.82}
+              onPress={function () { onSelect(r.key); }}
+              style={[rsw.card, on ? [rsw.cardActive, { borderColor: r.border, backgroundColor: r.bg }] : null]}
+            >
+              <View style={[rsw.orb, { backgroundColor: r.bg, borderColor: r.border }]}>
+                <Ionicons name={r.icon} size={17} color={r.accent} />
+              </View>
+              <Text style={rsw.title} numberOfLines={2}>{si ? r.title.si : r.title.en}</Text>
+              <Text style={rsw.sub} numberOfLines={2}>{si ? r.sub.si : r.sub.en}</Text>
+              <View style={[rsw.chip, on ? { borderColor: r.border, backgroundColor: r.bg } : null]}>
+                {on ? <View style={[rsw.dot, { backgroundColor: r.accent }]} /> : null}
+                <Text style={[rsw.chipText, { color: on ? r.accent : 'rgba(255,255,255,0.45)' }]} numberOfLines={1}>
+                  {on ? (si ? 'දැන් බලමින්' : 'Now viewing') : (si ? 'බලන්න' : 'View')}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </Animated.View>
+  );
+});
+
+var rsw = StyleSheet.create({
+  label: { fontSize: 10.5, fontWeight: '800', letterSpacing: 1.4, color: 'rgba(255,214,102,0.55)', marginBottom: 10 },
+  row: { flexDirection: 'row', gap: 9, marginBottom: 20 },
+  card: { flex: 1, borderRadius: 16, borderWidth: 1, padding: 11, backgroundColor: 'rgba(255,255,255,0.025)' },
+  cardActive: { borderWidth: 1.4 },
+  orb: { width: 32, height: 32, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  title: { fontSize: 12, fontWeight: '800', color: 'rgba(255,255,255,0.95)', lineHeight: 15.5, minHeight: 31 },
+  sub: { fontSize: 9.5, color: 'rgba(255,255,255,0.48)', marginTop: 2, lineHeight: 13, minHeight: 26 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 7, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: 'transparent' },
+  dot: { width: 5, height: 5, borderRadius: 3 },
+  chipText: { fontSize: 9.5, fontWeight: '800', letterSpacing: 0.2 },
+});
+
 export default function ReportScreen() {
   var { t, language } = useLanguage();
   var { user, showPaywall } = useAuth();
@@ -1708,6 +1784,8 @@ export default function ReportScreen() {
   var [fieldErrors, setFieldErrors] = useState({});
   // Flow states: 'form' -> 'loading' -> 'report'
   var [screenState, setScreenState] = useState('form');
+  // Which reading is on screen: 'full' (this tab's own flow) | 'baby' | 'nakath'
+  var [activeReading, setActiveReading] = useState('full');
   var [savedReports, setSavedReports] = useState([]);
   var [reportsLoading, setReportsLoading] = useState(true);
   var [reportsLoadError, setReportsLoadError] = useState(null);
@@ -2424,11 +2502,10 @@ export default function ReportScreen() {
       if (__DEV__) console.warn('[Report] Entitlement check failed (non-critical):', entErr.message);
     }
 
-    // Show paywall only if NOT a retry (pending entitlement = free retry)
-    // and NOT an active subscriber — the full report is included with Pro,
-    // so subscribers must never be asked to pay the one-time price again.
-    var isPro = !!(user && user.isSubscribed === true);
-    if (!isRetry && !isPro) {
+    // Show paywall unless this is a retry (pending entitlement = free retry).
+    // The full report is a one-time purchase — a subscription does NOT include
+    // it, so every user (subscriber or not) buys each report individually.
+    if (!isRetry) {
       // ── Check network connectivity BEFORE showing paywall ──
       if (!isConnected) {
         setError(reportLang === 'si'
@@ -2746,7 +2823,7 @@ export default function ReportScreen() {
         <CosmicBackground reduced={reduced} lowEnd={isLowEnd} />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
           <AuraBox style={{ borderColor: 'rgba(239,68,68,0.3)', alignItems: 'center', paddingVertical: 28, paddingHorizontal: 20, width: '100%', maxWidth: 400 }}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>😔</Text>
+            <Ionicons name='cloud-offline-outline' size={44} color='#FCA5A5' style={{ marginBottom: 12 }} />
             <Text style={{ color: '#FCA5A5', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 8 }}>
               {reportLang === 'si' ? 'වාර්තාව සෑදීම අසාර්ථක විය' : 'Report Generation Failed'}
             </Text>
@@ -2755,8 +2832,8 @@ export default function ReportScreen() {
             </Text>
             <Text style={{ color: 'rgba(255,214,102,0.35)', fontSize: 11, textAlign: 'center', marginBottom: 20 }}>
               {reportLang === 'si'
-                ? '🔒 ඔයාට නැවත මුදල් ගෙවන්න ඕනේ නැහැ'
-                : '🔒 You will not be charged again'}
+                ? 'ඔයාට නැවත මුදල් ගෙවන්න ඕනේ නැහැ'
+                : 'You will not be charged again'}
             </Text>
 
             <SpringPressable
@@ -2914,12 +2991,12 @@ export default function ReportScreen() {
                     </View>
                     <Text style={s.heroScoreDesc}>
                       {overviewScores.average >= 75
-                        ? (reportLang === 'si' ? '🔥 ඔයාගේ උපන් සිතියම අතිශයින්ම ශක්තිමත්!' : '🔥 Your birth chart is exceptionally powerful!')
+                        ? (reportLang === 'si' ? 'ඔයාගේ උපන් සිතියම අතිශයින්ම ශක්තිමත්!' : 'Your birth chart is exceptionally powerful!')
                         : overviewScores.average >= 55
-                        ? (reportLang === 'si' ? '✨ ඔයාගේ ජන්ම පත්‍රයේ හොඳ ශක්තියක් තිබෙනවා' : '✨ Your chart carries strong positive energy')
+                        ? (reportLang === 'si' ? 'ඔයාගේ ජන්ම පත්‍රයේ හොඳ ශක්තියක් තිබෙනවා' : 'Your chart carries strong positive energy')
                         : overviewScores.average >= 35
-                        ? (reportLang === 'si' ? '💫 ඔයාගේ ජීවිතයේ විශේෂ මිශ්‍ර ශක්තියක්' : '💫 Your life has a unique mix of energies')
-                        : (reportLang === 'si' ? '⚡ ඔයාගේ සිතියමේ තීව්‍ර ශක්තින් තිබෙනවා' : '⚡ Your chart has intense transformative energy')
+                        ? (reportLang === 'si' ? 'ඔයාගේ ජීවිතයේ විශේෂ මිශ්‍ර ශක්තියක්' : 'Your life has a unique mix of energies')
+                        : (reportLang === 'si' ? 'ඔයාගේ සිතියමේ තීව්‍ර ශක්තින් තිබෙනවා' : 'Your chart has intense transformative energy')
                       }
                     </Text>
                   </View>
@@ -2927,17 +3004,17 @@ export default function ReportScreen() {
                   {/* Quick score bars */}
                   <View style={s.heroScoreBars}>
                     {[
-                      { key: 'career', label: reportLang === 'si' ? 'රැකියාව' : 'Career', icon: '💼' },
-                      { key: 'marriage', label: reportLang === 'si' ? 'ආදරය' : 'Love', icon: '💍' },
-                      { key: 'health', label: reportLang === 'si' ? 'සෞඛ්‍යය' : 'Health', icon: '❤️' },
-                      { key: 'financial', label: reportLang === 'si' ? 'මුදල්' : 'Wealth', icon: '💰' },
-                      { key: 'luck', label: reportLang === 'si' ? 'වාසනාව' : 'Luck', icon: '🍀' },
+                      { key: 'career', label: reportLang === 'si' ? 'රැකියාව' : 'Career', icon: 'briefcase-outline' },
+                      { key: 'marriage', label: reportLang === 'si' ? 'ආදරය' : 'Love', icon: 'heart-circle-outline' },
+                      { key: 'health', label: reportLang === 'si' ? 'සෞඛ්‍යය' : 'Health', icon: 'heart-outline' },
+                      { key: 'financial', label: reportLang === 'si' ? 'මුදල්' : 'Wealth', icon: 'cash-outline' },
+                      { key: 'luck', label: reportLang === 'si' ? 'වාසනාව' : 'Luck', icon: 'leaf-outline' },
                     ].map(function(item, i) {
                       var val = overviewScores.map[item.key];
                       if (val == null) return null;
                       return (
                         <View key={item.key} style={s.heroBarItem}>
-                          <Text style={s.heroBarIcon}>{item.icon}</Text>
+                          <Ionicons name={item.icon} size={13} color='rgba(255,232,176,0.8)' style={{ width: 18 }} />
                           <View style={s.heroBarTrack}>
                             <Animated.View entering={FadeInRight.delay(600 + i * 150).duration(800)} style={[s.heroBarFill, { width: val + '%', backgroundColor: val >= 70 ? '#10B981' : val >= 45 ? '#FBBF24' : '#EF4444' }]} />
                           </View>
@@ -3064,7 +3141,7 @@ export default function ReportScreen() {
               <Animated.View entering={FadeInDown.delay(250).duration(700)}>
                 <AuraBox style={{ borderColor: 'rgba(255,140,0,0.2)' }}>
                   <View style={s.chartHeader}>
-                    <Text style={s.chartTitle}>{reportLang === 'si' ? '🏛️ ඔයාගේ උපන් සිතියම' : '🏛️ Your Birth Map'}</Text>
+                    <Text style={s.chartTitle}>{reportLang === 'si' ? 'ඔයාගේ උපන් සිතියම' : 'Your Birth Map'}</Text>
                     <Text style={s.chartSub}>{reportLang === 'si' ? 'ඔයා ඉපදුන මොහොතේ අහස පෙනුන හැටි' : 'How the sky looked the moment you were born'}</Text>
                   </View>
                   <SriLankanChart
@@ -3102,7 +3179,7 @@ export default function ReportScreen() {
           <Animated.View entering={FadeInDown.delay(300).duration(600)}>
             <View style={s.sectionDivider}>
               <View style={s.sectionDividerLine} />
-              <Text style={s.sectionDividerText}>{reportLang === 'si' ? '📖 විස්තරාත්මක විශ්ලේෂණය' : '📖 Detailed Analysis'}</Text>
+              <Text style={s.sectionDividerText}>{reportLang === 'si' ? 'විස්තරාත්මක විශ්ලේෂණය' : 'Detailed Analysis'}</Text>
               <View style={s.sectionDividerLine} />
             </View>
           </Animated.View>
@@ -3162,7 +3239,7 @@ export default function ReportScreen() {
           {/* ═══ END CARD ═══ */}
           <Animated.View entering={FadeInDown.delay(400).duration(600)}>
             <AuraBox style={{ borderColor: 'rgba(255,184,0,0.15)', alignItems: 'center', paddingVertical: 24 }}>
-              <Text style={{ fontSize: 32 }}>✨</Text>
+              <Ionicons name='sparkles' size={28} color='#FFB800' />
               <Text style={{ color: '#FFE8B0', fontSize: 16, fontWeight: '800', marginTop: 8, textAlign: 'center' }}>
                 {reportLang === 'si' ? 'ඔයාගේ ජීවිත කතාව සම්පූර්ණයි' : 'Your Life Story is Complete'}
               </Text>
@@ -3225,6 +3302,12 @@ export default function ReportScreen() {
           <Text style={[s.subtitle, { color: sc.labelColor }]}>{t('reportSubtitle')}</Text>
         </Animated.View>
 
+        {/* Reading picker — Full Report · Baby Kendara · Subha Nakath.
+            Switches the view INLINE; the user never leaves this tab. */}
+        <ReadingsSwitcher active={activeReading} onSelect={setActiveReading} lang={reportLang} />
+
+        {activeReading === 'full' ? (
+        <>
         {/* Input Form */}
         <Animated.View entering={FadeInDown.delay(200).duration(800)}>
           <AuraBox>
@@ -3261,7 +3344,7 @@ export default function ReportScreen() {
                 onPress={function() { setUserGender('male'); clearFieldError('userGender'); if (error) setError(null); }}
                 activeOpacity={0.8}
               >
-                <Text style={s.genderIcon}>♂️</Text>
+                <Ionicons name='male' size={15} color='#7DD3FC' style={{ marginRight: 6 }} />
                 <Text style={[s.genderText, userGender === 'male' && s.genderTextActive]}>
                   {reportLang === 'si' ? 'පුරුෂ' : 'Male'}
                 </Text>
@@ -3271,7 +3354,7 @@ export default function ReportScreen() {
                 onPress={function() { setUserGender('female'); clearFieldError('userGender'); if (error) setError(null); }}
                 activeOpacity={0.8}
               >
-                <Text style={s.genderIcon}>♀️</Text>
+                <Ionicons name='female' size={15} color='#F9A8D4' style={{ marginRight: 6 }} />
                 <Text style={[s.genderText, userGender === 'female' && s.genderTextActive]}>
                   {reportLang === 'si' ? 'ස්ත්‍රී' : 'Female'}
                 </Text>
@@ -3283,11 +3366,11 @@ export default function ReportScreen() {
             <Text style={s.inputHint}>{reportLang === 'si' ? 'ආගම (අත්‍යවශ්‍ය නොවේ)' : 'RELIGION (OPTIONAL)'}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 16, marginTop: 6 }}>
               {[
-                { key: 'buddhist', label: reportLang === 'si' ? 'බෞද්ධ' : 'Buddhist', icon: '☸️' },
-                { key: 'hindu', label: reportLang === 'si' ? 'හින්දු' : 'Hindu', icon: '🕉️' },
-                { key: 'muslim', label: reportLang === 'si' ? 'ඉස්ලාම්' : 'Muslim', icon: '☪️' },
-                { key: 'christian', label: reportLang === 'si' ? 'ක්‍රිස්තියානි' : 'Christian', icon: '✝️' },
-                { key: 'catholic', label: reportLang === 'si' ? 'කතෝලික' : 'Catholic', icon: '⛪' },
+                { key: 'buddhist', label: reportLang === 'si' ? 'බෞද්ධ' : 'Buddhist' },
+                { key: 'hindu', label: reportLang === 'si' ? 'හින්දු' : 'Hindu' },
+                { key: 'muslim', label: reportLang === 'si' ? 'ඉස්ලාම්' : 'Muslim' },
+                { key: 'christian', label: reportLang === 'si' ? 'ක්‍රිස්තියානි' : 'Christian' },
+                { key: 'catholic', label: reportLang === 'si' ? 'කතෝලික' : 'Catholic' },
               ].map(function(r) {
                 var isActive = userReligion === r.key;
                 return (
@@ -3298,7 +3381,7 @@ export default function ReportScreen() {
                     activeOpacity={0.8}
                   >
                     <Text style={[s.locationChipText, isActive && s.locationChipTextActive]}>
-                      {r.icon + ' ' + r.label}
+                      {r.label}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -3337,7 +3420,7 @@ export default function ReportScreen() {
                 onPress={function() { setReportLang('en'); }}
                 activeOpacity={0.8}
               >
-                <Text style={s.langFlag}>🇬🇧</Text>
+                <Ionicons name='globe-outline' size={13} color='#93C5FD' style={{ marginRight: 6 }} />
                 <Text style={[s.langText, reportLang === 'en' && s.langTextActive]}>English</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -3345,7 +3428,7 @@ export default function ReportScreen() {
                 onPress={function() { setReportLang('si'); }}
                 activeOpacity={0.8}
               >
-                <Text style={s.langFlag}>🇱🇰</Text>
+                <Ionicons name='language-outline' size={13} color='#F6C66F' style={{ marginRight: 6 }} />
                 <Text style={[s.langText, reportLang === 'si' && s.langTextActive]}>සිංහල</Text>
               </TouchableOpacity>
             </View>
@@ -3387,6 +3470,12 @@ export default function ReportScreen() {
               </TouchableOpacity>
             </AuraBox>
           </Animated.View>
+        )}
+        </>
+        ) : activeReading === 'baby' ? (
+          <BabyKendara />
+        ) : (
+          <NakathPlanner />
         )}
 
         <View style={{ height: isDesktop ? 32 : 120 }} />

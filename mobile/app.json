@@ -72,6 +72,12 @@
       ],
       "@react-native-google-signin/google-signin",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Grahachara to access your photos so you can set a profile picture."
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

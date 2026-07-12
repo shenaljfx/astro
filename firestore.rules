@@ -58,11 +58,33 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /weeklyLagnaReports/{weekId} {
-      allow read: if true;
+    // User-owned data. Currently only read server-side via the Admin SDK,
+    // but keyed on `uid` so an owner-read rule is safe if a client read is
+    // ever added. Writes stay server-only.
+    match /predictionOutcomes/{outcomeId} {
+      allow read: if ownsExistingDoc();
       allow write: if false;
     }
 
+    match /purchaseCredits/{creditId} {
+      allow read: if ownsExistingDoc();
+      allow write: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if ownsExistingDoc();
+      allow write: if false;
+    }
+
+    // Shared weekly horoscopes (no user PII). Readable by any signed-in
+    // client; previously world-readable via `if true`.
+    match /weeklyLagnaReports/{weekId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Server-only: internal ops, analytics, quotas, and device tokens.
+    // No client ever touches these; listed explicitly for intent.
     match /jobs/{jobId} {
       allow read, write: if false;
     }
@@ -84,6 +106,34 @@ service cloud.firestore {
     }
 
     match /revenuecatWebhookEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /promptAnalytics/{reportId} {
+      allow read, write: if false;
+    }
+
+    match /pushTokens/{uid} {
+      allow read, write: if false;
+    }
+
+    match /chatQuota/{uid} {
+      allow read, write: if false;
+    }
+
+    match /proFairUse/{docId} {
+      allow read, write: if false;
+    }
+
+    match /paywallEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /dailyCosts/{docId} {
+      allow read, write: if false;
+    }
+
+    match /schedulerLocks/{lockId} {
       allow read, write: if false;
     }
 
