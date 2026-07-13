@@ -8,9 +8,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { boxShadow, textShadow } from '../../utils/shadow';
+import { getDockHidden, subscribeDockHidden } from '../../utils/dockVisibility';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming,
-  withSequence, withRepeat, interpolate, Easing,
+  withSequence, withRepeat, interpolate, interpolateColor, Easing,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -28,14 +29,16 @@ import { APP_LOGO_IMAGE } from '../../assets/logo-inline';
 var { width: SW } = Dimensions.get('window');
 var LOGO = APP_LOGO_IMAGE;
 
-// 5 visible tabs in orbital nav bar
+// 5 visible tabs in orbital nav bar — each page carries its own celestial
+// accent; the gliding halo morphs between them as it travels.
 var TABS = [
-  { name: 'kendara',  titleKey: 'tabKendara',  label: 'Chart' },
-  { name: 'report',   titleKey: 'tabReport',   label: 'Starbase' },
-  { name: 'index',    titleKey: 'tabHome',     label: 'Today' },
-  { name: 'porondam', titleKey: 'tabPorondam', label: 'Match' },
-  { name: 'chat',     titleKey: 'tabChat',     label: 'Guide' },
+  { name: 'kendara',  titleKey: 'tabKendara',  label: 'Chart',    color: '#A78BFA' }, // violet — the mystic chart
+  { name: 'report',   titleKey: 'tabReport',   label: 'Starbase', color: '#7DD3FC' }, // sky blue — the observatory
+  { name: 'index',    titleKey: 'tabHome',     label: 'Today',    color: '#FFD983' }, // gold — the sun
+  { name: 'porondam', titleKey: 'tabPorondam', label: 'Match',    color: '#F5A9C7' }, // rose — the union
+  { name: 'chat',     titleKey: 'tabChat',     label: 'Guide',    color: '#86EFAC' }, // jade — the living oracle
 ];
+var TAB_ACCENTS = TABS.map(function (tb) { return tb.color; });
 
 // Profile lives in the header avatar, not the bar
 var HIDDEN_ROUTES = ['profile', 'nakath', 'baby'];
@@ -81,8 +84,9 @@ function DockNode({ tabConfig, focused, onPress, label }) {
   });
 
   var IconComponent = TAB_ICON_MAP[tabConfig.name];
-  var iconColor = focused ? Colors.luxuryPearl : 'rgba(220,207,170,0.44)';
-  var labelColor = focused ? 'rgba(244,228,188,0.98)' : 'rgba(220,207,170,0.40)';
+  var accent = tabConfig.color || Colors.luxuryPearl;
+  var iconColor = focused ? accent : 'rgba(220,207,170,0.44)';
+  var labelColor = focused ? accent : 'rgba(220,207,170,0.40)';
 
   return (
     <TouchableOpacity
@@ -185,6 +189,27 @@ function OrbitalNavBar({ state, navigation }) {
     return function () { subs.forEach(function (s) { s.remove(); }); };
   }, []);
 
+  // Screens can ask the dock to step aside for a full-bleed view (chat room).
+  var [dockHidden, setDockHiddenState] = useState(getDockHidden());
+  useEffect(function () { return subscribeDockHidden(setDockHiddenState); }, []);
+
+  // The dock no longer unmounts — it glides: exits drop fast, returns spring
+  // back up. Covers both keyboard-hide and the chat room's full-bleed mode.
+  var hiddenNow = keyboardVisible || dockHidden;
+  var slide = useSharedValue(hiddenNow ? 1 : 0);
+  useEffect(function () {
+    if (reduced) { slide.value = hiddenNow ? 1 : 0; return; }
+    slide.value = hiddenNow
+      ? withTiming(1, { duration: 190, easing: Easing.in(Easing.cubic) })
+      : withSpring(0, { damping: 16, stiffness: 170, mass: 0.75 });
+  }, [hiddenNow, reduced]);
+  var slideStyle = useAnimatedStyle(function () {
+    return {
+      transform: [{ translateY: slide.value * (TAB_BAR_VISUAL_HEIGHT + 50) }],
+      opacity: interpolate(slide.value, [0, 0.65, 1], [1, 0.35, 0]),
+    };
+  });
+
   // Which TABS index is focused (routes include hidden ones, so map by name)
   var focusedRoute = state.routes[state.index];
   var activeIdx = TABS.findIndex(function (tb) { return tb.name === (focusedRoute && focusedRoute.name); });
@@ -206,10 +231,18 @@ function OrbitalNavBar({ state, navigation }) {
     };
   });
 
-  if (keyboardVisible) return null;
+  // Active page accent — the halo's tick crossfades between tab colors as it
+  // glides (interpolateColor over the same spring that moves it).
+  var activeAccent = (TABS[safeIdx] && TABS[safeIdx].color) || '#F4E4BC';
+  var tickColorStyle = useAnimatedStyle(function () {
+    return { backgroundColor: interpolateColor(glide.value, [0, 1, 2, 3, 4], TAB_ACCENTS) };
+  });
 
   return (
-    <View style={[dock.outerWrap, { paddingBottom: bottomPad }]} pointerEvents="box-none">
+    <Animated.View
+      style={[dock.outerWrap, { paddingBottom: bottomPad }, slideStyle]}
+      pointerEvents={hiddenNow ? 'none' : 'box-none'}
+    >
       <View
         style={dock.pill}
         onLayout={function (e) { setDockW(e.nativeEvent.layout.width); }}
@@ -234,14 +267,14 @@ function OrbitalNavBar({ state, navigation }) {
             style={dock.innerLight}
             start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
           />
-          {/* the gliding gold halo */}
+          {/* the gliding halo — tinted to the active page's accent */}
           <Animated.View style={[dock.halo, haloStyle]} pointerEvents="none">
             <LinearGradient
-              colors={['rgba(255,217,131,0.22)', 'rgba(214,181,109,0.05)', 'rgba(214,181,109,0)']}
+              colors={[activeAccent + '3D', activeAccent + '0F', activeAccent + '00']}
               style={dock.haloGlow}
               start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
             />
-            <View style={dock.haloTick} />
+            <Animated.View style={[dock.haloTick, { ...boxShadow(activeAccent, { width: 0, height: 1 }, 0.9, 6) }, tickColorStyle]} />
           </Animated.View>
         </View>
 
@@ -266,7 +299,7 @@ function OrbitalNavBar({ state, navigation }) {
           })}
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

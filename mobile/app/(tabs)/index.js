@@ -2049,6 +2049,232 @@ function sparklePath(x, y, r) {
     ' Q' + (x - r * 0.22) + ' ' + (y + r * 0.22) + ' ' + (x - r) + ' ' + y +
     ' Q' + (x - r * 0.22) + ' ' + (y - r * 0.22) + ' ' + x + ' ' + (y - r) + ' Z';
 }
+// ═══════════════════════════════════════════════════════════════════════
+//  HERO LIVING SKY — the onboarding night follows the user home.
+//  Lean port of onboarding.js's ambient systems (nebula dust, 4-point
+//  sparkles, rising embers, shooting star, constellation that draws itself)
+//  tuned for a card on a busy screen: ~12 animated views, transform/opacity
+//  only, and the whole living layer is gated behind !skipHeavy.
+// ═══════════════════════════════════════════════════════════════════════
+
+var AHeroPath = Animated.createAnimatedComponent(Path);
+var AHeroCircle = Animated.createAnimatedComponent(Circle);
+
+// ink stroke that draws itself in (codex style, from onboarding)
+function HeroDrawStroke({ d, len, delay, duration, stroke, strokeWidth, skipHeavy }) {
+  var t = useSharedValue(skipHeavy ? 1 : 0);
+  useEffect(function () {
+    if (skipHeavy) { t.value = 1; return; }
+    t.value = 0;
+    t.value = withDelay(delay || 0, withTiming(1, { duration: duration || 900, easing: Easing.bezier(0.45, 0.05, 0.35, 0.95) }));
+  }, [skipHeavy]);
+  var props = useAnimatedProps(function () { return { strokeDashoffset: len * (1 - t.value) }; });
+  return <AHeroPath d={d} fill="none" stroke={stroke} strokeWidth={strokeWidth || 0.8} strokeLinecap="round" strokeDasharray={[len, len]} animatedProps={props} />;
+}
+
+// constellation star — bloom halo + core pops in, then twinkles forever
+function HeroConstStar({ cx, cy, r, delay, period, skipHeavy }) {
+  var t = useSharedValue(skipHeavy ? 1 : 0);
+  useEffect(function () {
+    if (skipHeavy) { t.value = 1; return; }
+    t.value = 0;
+    t.value = withDelay(delay, withSequence(
+      withTiming(1.4, { duration: 320, easing: Easing.bezier(0.16, 1, 0.3, 1) }),
+      withRepeat(withTiming(0.55, { duration: period, easing: Easing.inOut(Easing.sin) }), -1, true)
+    ));
+  }, [skipHeavy]);
+  var haloProps = useAnimatedProps(function () { return { opacity: Math.min(t.value, 1) * 0.9 }; });
+  var coreProps = useAnimatedProps(function () { return { opacity: Math.min(t.value + 0.15, 1), r: r * Math.min(Math.max(t.value, 0.001), 1.3) }; });
+  return (
+    <>
+      <AHeroCircle cx={cx} cy={cy} r={r * 3.6} fill="url(#heroBloom)" animatedProps={haloProps} />
+      <AHeroCircle cx={cx} cy={cy} fill="#FFE9B8" animatedProps={coreProps} />
+    </>
+  );
+}
+
+// drifting nebula dust / chamber glow — a soft color cloud that breathes
+function HeroGlowCloud({ pos, size, color, drift, period, op, gid }) {
+  var t = useSharedValue(0);
+  useEffect(function () {
+    t.value = withRepeat(withTiming(1, { duration: period, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+  var style = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(t.value, [0, 1], [op * 0.6, op * 1.3]),
+      transform: [
+        { translateX: interpolate(t.value, [0, 1], [0, drift]) },
+        { scale: interpolate(t.value, [0, 1], [1, 1.14]) },
+      ],
+    };
+  });
+  return (
+    <Animated.View style={[{ position: 'absolute', width: size, height: size }, pos, style]} pointerEvents="none">
+      <Svg width={size} height={size}>
+        <Defs>
+          <RadialGradient id={gid} cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor={color} stopOpacity="0.55" />
+            <Stop offset="55%" stopColor={color} stopOpacity="0.18" />
+            <Stop offset="100%" stopColor={color} stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={size / 2} cy={size / 2} r={size / 2} fill={'url(#' + gid + ')'} />
+      </Svg>
+    </Animated.View>
+  );
+}
+
+// breathing 4-point sparkle star (onboarding SparkleStar)
+function HeroSparkle({ x, y, size, delay, period, color }) {
+  var t = useSharedValue(0);
+  useEffect(function () {
+    t.value = withDelay(delay, withRepeat(withTiming(1, { duration: period, easing: Easing.inOut(Easing.sin) }), -1, true));
+  }, []);
+  var style = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(t.value, [0, 1], [0.12, 0.9]),
+      transform: [
+        { scale: interpolate(t.value, [0, 1], [0.55, 1]) },
+        { rotate: interpolate(t.value, [0, 1], [0, 30]) + 'deg' },
+      ],
+    };
+  });
+  return (
+    <Animated.View style={[{ position: 'absolute', left: x + '%', top: y + '%', width: size, height: size }, style]} pointerEvents="none">
+      <Svg width="100%" height="100%" viewBox="0 0 24 24">
+        <Path d="M12 0 L13.6 10.4 L24 12 L13.6 13.6 L12 24 L10.4 13.6 L0 12 L10.4 10.4 Z" fill={color} opacity="0.92" />
+      </Svg>
+    </Animated.View>
+  );
+}
+
+// gold specks rising like incense sparks (onboarding EmberField, lean)
+var HERO_EMBERS = [
+  { x: 14, size: 2.6, rise: 120, period: 8200, delay: 0, sway: 14 },
+  { x: 30, size: 2.0, rise: 96, period: 10400, delay: 2600, sway: -12 },
+  { x: 52, size: 2.8, rise: 140, period: 9000, delay: 5200, sway: 16 },
+  { x: 71, size: 2.2, rise: 104, period: 11600, delay: 1400, sway: -10 },
+  { x: 86, size: 2.5, rise: 128, period: 9800, delay: 3800, sway: 12 },
+];
+function HeroEmber({ e }) {
+  var t = useSharedValue(0);
+  useEffect(function () {
+    t.value = withDelay(e.delay, withRepeat(withTiming(1, { duration: e.period, easing: Easing.linear }), -1, false));
+  }, []);
+  var style = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(t.value, [0, 0.12, 0.7, 1], [0, 0.8, 0.35, 0]),
+      transform: [
+        { translateY: interpolate(t.value, [0, 1], [0, -e.rise]) },
+        { translateX: interpolate(t.value, [0, 0.5, 1], [0, e.sway, -e.sway * 0.4]) },
+      ],
+    };
+  });
+  return (
+    <Animated.View
+      style={[{
+        position: 'absolute', left: e.x + '%', bottom: '5%',
+        width: e.size, height: e.size, borderRadius: e.size / 2,
+        backgroundColor: '#F2D48E',
+        ...boxShadow('#E0B45C', { width: 0, height: 0 }, 0.9, 6),
+      }, style]}
+      pointerEvents="none"
+    />
+  );
+}
+
+// one slow golden streak across the upper sky (onboarding ShootingStar)
+function HeroShooting() {
+  var t = useSharedValue(0);
+  useEffect(function () {
+    t.value = withDelay(4000, withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1100, easing: Easing.out(Easing.quad) }),
+        withTiming(1, { duration: 9000 }) // long dormancy between streaks
+      ), -1, false));
+  }, []);
+  var style = useAnimatedStyle(function () {
+    var p = t.value;
+    return {
+      opacity: p <= 0.001 ? 0 : interpolate(p, [0, 0.15, 0.75, 1], [0, 0.9, 0.4, 0]),
+      transform: [
+        { translateX: interpolate(p, [0, 1], [0, 430]) },
+        { translateY: interpolate(p, [0, 1], [0, 180]) },
+        { rotate: '24deg' },
+      ],
+    };
+  });
+  return (
+    <Animated.View style={[{ position: 'absolute', top: '10%', left: '-16%', width: 70, height: 1.6, borderRadius: 1 }, style]} pointerEvents="none">
+      <LinearGradient colors={['transparent', 'rgba(248,231,184,0.85)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, borderRadius: 1 }} />
+    </Animated.View>
+  );
+}
+
+// the composed layer: static base sky + the living systems above it
+function HeroLivingSky({ skipHeavy }) {
+  return (
+    <View style={s.oracleStarMap} pointerEvents="none">
+      <Svg width="100%" height="100%" viewBox="0 0 360 640" preserveAspectRatio="none">
+        <Defs>
+          <RadialGradient id="vhGlow" cx="50%" cy="30%" r="58%">
+            <Stop offset="0%" stopColor="#F4E4BC" stopOpacity="0.30" />
+            <Stop offset="42%" stopColor="#7B49CF" stopOpacity="0.14" />
+            <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+          </RadialGradient>
+          <RadialGradient id="vhAurora" cx="18%" cy="70%" r="50%">
+            <Stop offset="0%" stopColor="#7B49CF" stopOpacity="0.16" />
+            <Stop offset="100%" stopColor="#7B49CF" stopOpacity="0" />
+          </RadialGradient>
+          <RadialGradient id="heroBloom" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor="#F5DFA8" stopOpacity="0.72" />
+            <Stop offset="42%" stopColor="#E0C070" stopOpacity="0.22" />
+            <Stop offset="100%" stopColor="#E0C070" stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <Ellipse cx="180" cy="196" rx="200" ry="178" fill="url(#vhGlow)" />
+        <Ellipse cx="70" cy="460" rx="180" ry="150" fill="url(#vhAurora)" />
+        {/* the codex arc writes itself across the sky */}
+        <HeroDrawStroke d="M20 130 C90 78 150 190 236 118 C288 76 322 108 352 62" len={400} delay={500} duration={1400} stroke="rgba(214,181,109,0.26)" strokeWidth={0.8} skipHeavy={skipHeavy} />
+        {/* the constellation draws in — then its stars twinkle forever */}
+        <HeroDrawStroke d="M52 330 L96 372" len={62} delay={950} duration={420} stroke="rgba(183,166,240,0.30)" strokeWidth={0.7} skipHeavy={skipHeavy} />
+        <HeroDrawStroke d="M96 372 L150 348" len={61} delay={1200} duration={420} stroke="rgba(183,166,240,0.22)" strokeWidth={0.7} skipHeavy={skipHeavy} />
+        <HeroDrawStroke d="M252 352 L300 320" len={59} delay={1450} duration={420} stroke="rgba(214,181,109,0.24)" strokeWidth={0.7} skipHeavy={skipHeavy} />
+        {[[52, 330], [96, 372], [150, 348], [252, 352], [300, 320]].map(function (pt, i) {
+          return <HeroConstStar key={'cs' + i} cx={pt[0]} cy={pt[1]} r={1.8} delay={850 + i * 220} period={2200 + i * 260} skipHeavy={skipHeavy} />;
+        })}
+        {/* static micro star field */}
+        {[[36, 84, 1.4], [120, 46, 1.0], [212, 70, 1.6], [318, 96, 1.1], [64, 210, 0.9], [306, 210, 1.3], [180, 40, 0.9], [280, 420, 1.0], [40, 520, 1.2], [320, 520, 0.9]].map(function (st, i) {
+          return <Circle key={'hs' + i} cx={st[0]} cy={st[1]} r={st[2]} fill="rgba(255,232,163,0.55)" />;
+        })}
+        {/* quiet sky (low-end / reduced motion): static sparkles instead of live ones */}
+        {skipHeavy ? (
+          <>
+            <Path d={sparklePath(58, 140, 7)} fill="rgba(255,236,190,0.55)" />
+            <Path d={sparklePath(302, 150, 5.5)} fill="rgba(183,166,240,0.5)" />
+            <Path d={sparklePath(260, 470, 4.5)} fill="rgba(255,236,190,0.38)" />
+          </>
+        ) : null}
+      </Svg>
+      {!skipHeavy ? (
+        <>
+          {/* nebula dust + the candle-lit chamber glow, drifting slowly */}
+          <HeroGlowCloud pos={{ left: '-18%', top: '-8%' }} size={230} color="#7B49CF" drift={16} period={11000} op={0.34} gid="hgc1" />
+          <HeroGlowCloud pos={{ right: '-20%', top: '30%' }} size={260} color="#D6B56D" drift={-14} period={14000} op={0.20} gid="hgc2" />
+          <HeroGlowCloud pos={{ left: '-10%', bottom: '-16%' }} size={280} color="#4A3480" drift={10} period={9000} op={0.42} gid="hgc3" />
+          {/* breathing 4-point sparkles */}
+          <HeroSparkle x={13} y={18} size={13} delay={600} period={2600} color="#F5DFA8" />
+          <HeroSparkle x={82} y={20} size={10} delay={1500} period={3200} color="#B7A6F0" />
+          <HeroSparkle x={70} y={72} size={9} delay={2400} period={2900} color="#F5DFA8" />
+          {/* incense embers rising off the bottom edge */}
+          {HERO_EMBERS.map(function (e, i) { return <HeroEmber key={'em' + i} e={e} />; })}
+          <HeroShooting />
+        </>
+      ) : null}
+    </View>
+  );
+}
+
 var ViralHero = React.memo(function ViralHero(props) {
   var language = props.language;
   var greeting = props.greeting;
@@ -2108,8 +2334,9 @@ var ViralHero = React.memo(function ViralHero(props) {
 
   return (
     <Animated.View entering={FadeInDown.delay(40).springify()} style={s.oracleHeroShell}>
+      {/* the onboarding night — same indigo family the story funnel lives in */}
       <LinearGradient
-        colors={[Colors.luxuryObsidian, Colors.luxuryObsidianMid, Colors.luxuryObsidianLift, '#0D0713', Colors.luxuryObsidian]}
+        colors={['#0B0A20', '#14102E', '#1A1440', '#100C2A', '#0B0A20']}
         locations={[0, 0.22, 0.52, 0.78, 1]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -2120,35 +2347,9 @@ var ViralHero = React.memo(function ViralHero(props) {
         style={StyleSheet.absoluteFill}
         start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
       />
-      {/* celestial backdrop: nebula glow, constellation, sparkles */}
-      <Svg style={s.oracleStarMap} viewBox="0 0 360 640" preserveAspectRatio="none">
-        <Defs>
-          <RadialGradient id="vhGlow" cx="50%" cy="30%" r="58%">
-            <Stop offset="0%" stopColor="#F4E4BC" stopOpacity="0.30" />
-            <Stop offset="42%" stopColor="#7B49CF" stopOpacity="0.14" />
-            <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
-          </RadialGradient>
-          <RadialGradient id="vhAurora" cx="18%" cy="70%" r="50%">
-            <Stop offset="0%" stopColor="#7B49CF" stopOpacity="0.16" />
-            <Stop offset="100%" stopColor="#7B49CF" stopOpacity="0" />
-          </RadialGradient>
-        </Defs>
-        <Ellipse cx="180" cy="196" rx="200" ry="178" fill="url(#vhGlow)" />
-        <Ellipse cx="70" cy="460" rx="180" ry="150" fill="url(#vhAurora)" />
-        <Path d="M20 130 C90 78 150 190 236 118 C288 76 322 108 352 62" stroke="rgba(214,181,109,0.20)" strokeWidth="0.8" fill="none" />
-        <Line x1="52" y1="330" x2="96" y2="372" stroke="rgba(183,166,240,0.20)" strokeWidth="0.7" />
-        <Line x1="96" y1="372" x2="150" y2="348" stroke="rgba(183,166,240,0.14)" strokeWidth="0.7" />
-        <Line x1="252" y1="352" x2="300" y2="320" stroke="rgba(214,181,109,0.16)" strokeWidth="0.7" />
-        {[[52, 330], [96, 372], [150, 348], [252, 352], [300, 320]].map(function (pt, i) {
-          return <Circle key={'cn' + i} cx={pt[0]} cy={pt[1]} r="1.6" fill="rgba(244,228,188,0.6)" />;
-        })}
-        {[[36, 84, 1.4], [120, 46, 1.0], [212, 70, 1.6], [318, 96, 1.1], [64, 210, 0.9], [306, 210, 1.3], [180, 40, 0.9], [280, 420, 1.0], [40, 520, 1.2], [320, 520, 0.9]].map(function (st, i) {
-          return <Circle key={'hs' + i} cx={st[0]} cy={st[1]} r={st[2]} fill="rgba(255,232,163,0.55)" />;
-        })}
-        <Path d={sparklePath(58, 140, 7)} fill="rgba(255,236,190,0.55)" />
-        <Path d={sparklePath(302, 150, 5.5)} fill="rgba(183,166,240,0.5)" />
-        <Path d={sparklePath(260, 470, 4.5)} fill="rgba(255,236,190,0.38)" />
-      </Svg>
+      {/* living celestial backdrop — nebula dust, embers, sparkles, and a
+          constellation that draws itself (see HeroLivingSky above) */}
+      <HeroLivingSky skipHeavy={skipHeavy} />
 
       <View style={s.oracleTopRow}>
         <View style={s.oracleGreetingBlock}>

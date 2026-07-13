@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform, StyleSheet, Dimensions,
-  Image, LayoutAnimation,
+  Image, LayoutAnimation, Keyboard, BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +21,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import useKeyboard from '../../hooks/useKeyboard';
+import { setDockHidden } from '../../utils/dockVisibility';
 import { useTheme } from '../../contexts/ThemeContext';
 import { screenColors } from '../../constants/theme';
 import useReducedMotion from '../../hooks/useReducedMotion';
@@ -40,6 +41,42 @@ var STORAGE_KEY_PREFIX = '@grahachara_chat_usage_';
 
 var ORACLE_COSMIC = require('../../assets/oracle/cosmic-guide.png');
 var ORACLE_DREAM = require('../../assets/oracle/dream-oracle.png');
+
+// ── Mode themes — the card chosen on the gateway follows the user into the
+// room. Chat = the violet Cosmic Guide; Dream = the amber Dream Oracle.
+// Both are the app's celestial accents (the old orange is gone).
+var MODE_THEME = {
+  chat: {
+    accent: '#A78BFA',
+    accentText: '#C4B5FD',
+    bubbleGrad: ['#6D28D9', '#5B21B6', '#4C1D95'],
+    bubbleText: '#F3EDFF',
+    btnGrad: ['#8B5CF6', '#6D28D9'],
+    chipBg: ['rgba(124,58,237,0.14)', 'rgba(167,139,250,0.06)'],
+    chipBorder: 'rgba(167,139,250,0.28)',
+    ring: 'rgba(167,139,250,0.5)',
+    hairline: 'rgba(167,139,250,0.22)',
+    glowSoft: ['rgba(124,58,237,0.08)', 'rgba(167,139,250,0.03)', 'transparent'],
+    portrait: ORACLE_COSMIC,
+    icon: 'sparkles',
+    think: ['#A78BFA', '#C4B5FD', '#E8C56A'],
+  },
+  dream: {
+    accent: '#E8C56A',
+    accentText: '#FFD97A',
+    bubbleGrad: ['#B45309', '#92400E', '#78350F'],
+    bubbleText: '#FFF7E0',
+    btnGrad: ['#E8C56A', '#C99A3C'],
+    chipBg: ['rgba(232,197,106,0.12)', 'rgba(255,184,0,0.05)'],
+    chipBorder: 'rgba(232,197,106,0.28)',
+    ring: 'rgba(232,197,106,0.5)',
+    hairline: 'rgba(232,197,106,0.22)',
+    glowSoft: ['rgba(232,197,106,0.07)', 'rgba(255,184,0,0.03)', 'transparent'],
+    portrait: ORACLE_DREAM,
+    icon: 'moon',
+    think: ['#E8C56A', '#FFD97A', '#A78BFA'],
+  },
+};
 
 // Returns per-user storage key (falls back to 'guest' when not logged in)
 function usageKey(uid) {
@@ -69,10 +106,8 @@ async function incrementUsage(uid) {
   return newUsage;
 }
 
-// Thinking Dots — cosmic orbiting particles indicator
+// Thinking Dots — three mode-accent particles breathing in sequence
 // Each dot is its own component so hooks aren't called inside a loop (Rules of Hooks)
-var THINK_COLORS = ['#FF8C00', '#FF6D00', '#FFB800', '#E65100', '#34D399'];
-
 function ThinkDot({ color, index }) {
   var v = useSharedValue(0);
   useEffect(function () {
@@ -103,38 +138,49 @@ function ThinkDot({ color, index }) {
   );
 }
 
-function ThinkingDots() {
+function ThinkingDots({ colors }) {
+  var dots = colors || MODE_THEME.chat.think;
   return (
     <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 14 }}>
-      {THINK_COLORS.map(function (c, i) {
+      {dots.map(function (c, i) {
         return <ThinkDot key={i} color={c} index={i} />;
       })}
     </View>
   );
 }
 
-// Chat Bubble
-function ChatBubble({ msg, isDesktop }) {
+// The oracle's face \u2014 the art the user chose on the gateway, in miniature.
+function OraclePortrait({ theme, size }) {
+  return (
+    <View style={{
+      width: size, height: size, borderRadius: size / 2, overflow: 'hidden',
+      borderWidth: 1, borderColor: theme.hairline, backgroundColor: '#0A0618',
+    }}>
+      <Image source={theme.portrait} resizeMode="cover" style={{ width: '100%', height: '100%' }} fadeDuration={0} />
+    </View>
+  );
+}
+
+// Chat Bubble \u2014 the oracle speaks from its portrait; the user in the mode color
+function ChatBubble({ msg, isDesktop, theme }) {
+  var th = theme || MODE_THEME.chat;
   var isAi = msg.role === 'assistant';
   if (!isAi) {
     return (
       <Animated.View entering={FadeInUp.duration(250).springify()} style={[s.userWrap, isDesktop && sd.userWrapD]}>
-        <LinearGradient colors={['#FF8C00', '#FF6D00', '#E65100']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.userBubble}>
+        <LinearGradient colors={th.bubbleGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.userBubble}>
           <LinearGradient colors={['rgba(255,255,255,0.12)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: 20, borderTopRightRadius: 20 }} />
-          <Text style={[s.userText, isDesktop && { fontSize: 15 }]}>{msg.content}</Text>
+          <Text style={[s.userText, { color: th.bubbleText }, isDesktop && { fontSize: 15 }]}>{msg.content}</Text>
         </LinearGradient>
       </Animated.View>
     );
   }
   return (
     <Animated.View entering={FadeInUp.duration(300).springify()} style={[s.aiWrap, isDesktop && sd.aiWrapD]}>
-      <View style={s.aiDot}>
-        <LinearGradient colors={['#FF8C00', '#FF6D00', '#E65100']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-        <Text style={{ fontSize: 10 }}>{'\u2726'}</Text>
-      </View>
-      <View style={[s.aiBubble, isDesktop && sd.aiBubbleD]}>
+      <View style={{ marginTop: 2 }}><OraclePortrait theme={th} size={24} /></View>
+      <View style={[s.aiBubble, { borderColor: th.hairline }, isDesktop && sd.aiBubbleD]}>
         <LinearGradient
-          colors={['rgba(147,51,234,0.06)', 'rgba(255,107,0,0.03)', 'transparent']}
+          colors={th.glowSoft}
           style={StyleSheet.absoluteFill}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         />
@@ -145,60 +191,33 @@ function ChatBubble({ msg, isDesktop }) {
 }
 
 // Limit Card
-function LimitCard({ remaining, t }) {
+function LimitCard({ remaining, t, theme }) {
+  var th = theme || MODE_THEME.chat;
   // Hide entirely during normal use — the plan is "unlimited"; only show a
   // gentle heads-up as the subscriber approaches the fair-use cap.
   if (remaining > LOW_REMAINING) return null;
   return (
-    <Animated.View entering={FadeIn.duration(400)} style={s.limitCard}>
+    <Animated.View entering={FadeIn.duration(400)} style={[s.limitCard, { borderColor: th.hairline }]}>
       <LinearGradient
-        colors={remaining > 0 ? ['rgba(255,107,0,0.08)', 'rgba(224,64,251,0.05)'] : ['rgba(255,50,50,0.1)', 'rgba(255,50,50,0.03)']}
+        colors={remaining > 0 ? th.chipBg : ['rgba(255,50,50,0.1)', 'rgba(255,50,50,0.03)']}
         style={StyleSheet.absoluteFill}
       />
       <Ionicons
         name={remaining > 0 ? 'chatbubble-ellipses-outline' : 'lock-closed-outline'}
         size={14}
-        color={remaining > 0 ? '#FF8C33' : '#FF6B6B'}
+        color={remaining > 0 ? th.accent : '#FF6B6B'}
       />
-      <Text style={[s.limitText, remaining <= 0 && { color: '#FF6B6B' }]}>
+      <Text style={[s.limitText, { color: th.accentText }, remaining <= 0 && { color: '#FF6B6B' }]}>
         {remaining > 0 ? remaining + ' ' + t('chatQuestionsLeft') : t('chatNoQuestions')}
       </Text>
       <View style={s.limitDotsRow}>
         {Array.from({ length: LOW_REMAINING }).map(function (_, i) {
           return (
-            <View key={i} style={[s.limitDot, i < (LOW_REMAINING - remaining) ? s.dotUsed : s.dotFree]} />
+            <View key={i} style={[s.limitDot, i < (LOW_REMAINING - remaining) ? s.dotUsed : { backgroundColor: th.accent }]} />
           );
         })}
       </View>
     </Animated.View>
-  );
-}
-
-// Mode Toggle (Chat vs Dream)
-function ModeToggle({ mode, setMode, t }) {
-  return (
-    <View style={s.modeRow}>
-      <TouchableOpacity onPress={function () { setMode('chat'); }} activeOpacity={0.7} style={s.modeBtn}>
-        <LinearGradient
-          colors={mode === 'chat' ? ['#FF8C00', '#FF6D00'] : ['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.04)']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={s.modeBtnBg}
-        >
-          <Ionicons name="chatbubble-ellipses" size={14} color={mode === 'chat' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
-          <Text style={[s.modeBtnText, mode === 'chat' && { color: '#FFF1D0' }]}>{t('chatModeChat')}</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={function () { setMode('dream'); }} activeOpacity={0.7} style={s.modeBtn}>
-        <LinearGradient
-          colors={mode === 'dream' ? ['#FF8C00', '#E65100'] : ['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.04)']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={s.modeBtnBg}
-        >
-          <Ionicons name="moon" size={14} color={mode === 'dream' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
-          <Text style={[s.modeBtnText, mode === 'dream' && { color: '#FFF1D0' }]}>{t('chatModeDream')}</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    </View>
   );
 }
 
@@ -241,19 +260,15 @@ function QuickChips({ onSelect, language, mode }) {
       ];
 
   var chips = mode === 'dream' ? dreamChips : chatChips;
-  var chipColors = mode === 'dream'
-    ? ['rgba(124,58,237,0.15)', 'rgba(224,64,251,0.08)']
-    : ['rgba(255,107,0,0.12)', 'rgba(224,64,251,0.06)'];
-  var chipBorder = mode === 'dream' ? 'rgba(124,58,237,0.25)' : 'rgba(255,107,0,0.18)';
-  var chipIconColor = mode === 'dream' ? '#FF8C00' : '#FF8C33';
+  var th = MODE_THEME[mode] || MODE_THEME.chat;
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipsRow}>
       {chips.map(function (ch, i) {
         return (
           <SpringPressable key={i} onPress={function () { onSelect(ch.label); }} haptic="light" scalePressed={0.92}>
-            <LinearGradient colors={chipColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.chip, { borderColor: chipBorder }]}>
-              <Ionicons name={ch.icon} size={14} color={chipIconColor} />
+            <LinearGradient colors={th.chipBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.chip, { borderColor: th.chipBorder }]}>
+              <Ionicons name={ch.icon} size={14} color={th.accent} />
               <Text style={s.chipLabel}>{ch.label}</Text>
             </LinearGradient>
           </SpringPressable>
@@ -306,7 +321,11 @@ function OracleSelection({ onSelect, t }) {
       >
       {/* Title */}
       <View style={os.titleWrap}>
-        <Text style={os.eyebrow}>{'✦ ' + (t('chatOracleTitle') || 'Choose Your Oracle') + ' ✦'}</Text>
+        <View style={os.eyebrowRow}>
+          <Ionicons name="sparkles" size={13} color="#E8C56A" />
+          <Text style={os.eyebrow}>{t('chatOracleTitle') || 'Choose Your Oracle'}</Text>
+          <Ionicons name="sparkles" size={13} color="#E8C56A" />
+        </View>
         <Text style={os.subtitle}>{t('chatOracleSub')}</Text>
       </View>
 
@@ -363,9 +382,11 @@ function OracleSelection({ onSelect, t }) {
 
       {/* Bottom hint */}
       <View style={os.hintWrap}>
+        <Ionicons name="star-outline" size={10} color="rgba(255,255,255,0.22)" />
         <Text style={os.hintText}>
-          {t('chatQuestionsLeft') ? '✧ ' + DAILY_LIMIT + ' ' + t('chatQuestionsLeft') + ' ✧' : '✧ Tap a card to begin ✧'}
+          {t('chatQuestionsLeft') ? DAILY_LIMIT + ' ' + t('chatQuestionsLeft') : 'Tap a card to begin'}
         </Text>
+        <Ionicons name="star-outline" size={10} color="rgba(255,255,255,0.22)" />
       </View>
       </ScrollView>
     </View>
@@ -376,6 +397,7 @@ var os = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
   titleWrap: { alignItems: 'center', marginBottom: 32, paddingHorizontal: 24 },
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   eyebrow: {
     fontSize: 18, fontWeight: '900', color: '#E8D5B5',
     letterSpacing: 2, textAlign: 'center', textTransform: 'uppercase',
@@ -416,7 +438,7 @@ var os = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     borderRadius: 18, borderWidth: 1.5,
   },
-  hintWrap: { marginTop: 28, alignItems: 'center' },
+  hintWrap: { marginTop: 28, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
   hintText: {
     fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.22)',
     letterSpacing: 2, textTransform: 'uppercase',
@@ -427,7 +449,7 @@ var os = StyleSheet.create({
 export default function ChatScreen() {
   var { t, language } = useLanguage();
   var { user, showPaywall } = useAuth();
-  var { colors, gradients, resolved } = useTheme();
+  var { colors } = useTheme();
   var sc = screenColors(colors);
   var insets = useSafeAreaInsets();
   var isDesktop = useDesktopCtx();
@@ -439,6 +461,45 @@ export default function ChatScreen() {
   var [selectedMode, setSelectedMode] = useState(null);
   var [inputFocused, setInputFocused] = useState(false);
   var scroll = useRef(null);
+  var reduced = useReducedMotion();
+  var lowEnd = useLowEndDevice();
+  // The chosen oracle's theme colors everything in the room.
+  var theme = MODE_THEME[mode] || MODE_THEME.chat;
+
+  // One LayoutAnimation per keyboard transition — the tab bar, chips, limit
+  // card and composer margin all collapse/return in a single smooth pass
+  // instead of four independent jumps. Configured in the listener so it lands
+  // before the same-event re-renders commit.
+  useEffect(function () {
+    if (Platform.OS === 'web') return;
+    var cfg = function () {
+      LayoutAnimation.configureNext(LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
+    };
+    var subs = [
+      Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', cfg),
+      Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', cfg),
+    ];
+    return function () { subs.forEach(function (sub) { sub && sub.remove && sub.remove(); }); };
+  }, []);
+
+  // The room is full-bleed: the observatory dock steps aside while a
+  // conversation is open and returns on the way out (or on unmount).
+  useEffect(function () {
+    setDockHidden(!!selectedMode && !isDesktop);
+    return function () { setDockHidden(false); };
+  }, [selectedMode, isDesktop]);
+
+  // With the dock hidden, Android hardware back must exit the room —
+  // mirrors the header back button exactly.
+  useEffect(function () {
+    if (Platform.OS === 'web' || !selectedMode) return;
+    var sub = BackHandler.addEventListener('hardwareBackPress', function () {
+      setSelectedMode(null);
+      setMsgs([]);
+      return true;
+    });
+    return function () { sub.remove(); };
+  }, [selectedMode]);
 
   // Deep-link prefill: other screens (e.g. the kendara chart sections) can open
   // chat with ?prefill=... to pre-type a question. We only fill the box — the
@@ -609,14 +670,13 @@ export default function ChatScreen() {
               {/* ── Panel header ── */}
               <View style={sd.panelHeader}>
                 <View style={sd.panelHeaderLeft}>
-                  <View style={[sd.avatarLg, { borderColor: mode === 'dream' ? 'rgba(255,140,0,0.5)' : 'rgba(255,107,0,0.5)' }]}>
-                    <LinearGradient colors={mode === 'dream' ? ['#FF8C00', '#E65100'] : ['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} />
-                    <Ionicons name={mode === 'dream' ? 'moon' : 'sparkles'} size={22} color="#FFF" />
+                  <View style={[sd.avatarLg, { borderColor: theme.ring }]}>
+                    <Image source={theme.portrait} resizeMode="cover" style={{ width: '100%', height: '100%' }} fadeDuration={0} />
                   </View>
                   <View>
                     <Text style={sd.panelTitle}>{mode === 'dream' ? t('chatDreamTitle') : t('chatTitle')}</Text>
                     <View style={sd.statusRow}>
-                      <View style={[sd.statusDot, { backgroundColor: loading ? '#FFB800' : '#34D399' }]} />
+                      <View style={[sd.statusDot, { backgroundColor: loading ? theme.accent : '#34D399' }]} />
                       <Text style={sd.statusText}>{loading ? t('consultingCosmos') : t('askUniverse')}</Text>
                     </View>
                   </View>
@@ -632,20 +692,20 @@ export default function ChatScreen() {
                     <TouchableOpacity onPress={function () { setMode('chat'); }} activeOpacity={0.7}
                       style={[sd.modeChip, mode === 'chat' && sd.modeChipActive]}>
                       <LinearGradient
-                        colors={mode === 'chat' ? ['#FF8C00', '#FF6D00'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.06)']}
+                        colors={mode === 'chat' ? MODE_THEME.chat.btnGrad : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.06)']}
                         style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                       />
                       <Ionicons name="chatbubble-ellipses" size={13} color={mode === 'chat' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
-                      <Text style={[sd.modeChipText, mode === 'chat' && { color: '#FFF1D0' }]}>{t('chatModeChat')}</Text>
+                      <Text style={[sd.modeChipText, mode === 'chat' && { color: '#F3EDFF' }]}>{t('chatModeChat')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={function () { setMode('dream'); }} activeOpacity={0.7}
                       style={[sd.modeChip, mode === 'dream' && sd.modeChipActive]}>
                       <LinearGradient
-                        colors={mode === 'dream' ? ['#FF8C00', '#E65100'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.06)']}
+                        colors={mode === 'dream' ? MODE_THEME.dream.btnGrad : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.06)']}
                         style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                       />
-                      <Ionicons name="moon" size={13} color={mode === 'dream' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
-                      <Text style={[sd.modeChipText, mode === 'dream' && { color: '#FFF1D0' }]}>{t('chatModeDream')}</Text>
+                      <Ionicons name="moon" size={13} color={mode === 'dream' ? '#2A1707' : 'rgba(255,255,255,0.4)'} />
+                      <Text style={[sd.modeChipText, mode === 'dream' && { color: '#2A1707' }]}>{t('chatModeDream')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -659,14 +719,14 @@ export default function ChatScreen() {
                 <View style={sd.limitBar}>
                   <Ionicons
                     name={remaining > 0 ? 'chatbubble-ellipses-outline' : 'lock-closed-outline'}
-                    size={13} color={remaining > 0 ? '#FF8C33' : '#FF6B6B'}
+                    size={13} color={remaining > 0 ? theme.accent : '#FF6B6B'}
                   />
-                  <Text style={[sd.limitText, remaining <= 0 && { color: '#FF6B6B' }]}>
+                  <Text style={[sd.limitText, { color: theme.accentText }, remaining <= 0 && { color: '#FF6B6B' }]}>
                     {remaining > 0 ? remaining + ' ' + t('chatQuestionsLeft') : t('chatNoQuestions')}
                   </Text>
                   <View style={sd.limitDots}>
                     {Array.from({ length: LOW_REMAINING }).map(function (_, i) {
-                      return <View key={i} style={[sd.dot, i < (LOW_REMAINING - remaining) ? sd.dotUsed : sd.dotFree]} />;
+                      return <View key={i} style={[sd.dot, i < (LOW_REMAINING - remaining) ? sd.dotUsed : { backgroundColor: theme.accent }]} />;
                     })}
                   </View>
                 </View>
@@ -687,14 +747,11 @@ export default function ChatScreen() {
                   keyboardShouldPersistTaps="handled"
                   keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
                 >
-                  {msgs.map(function (m, i) { return <ChatBubble key={i} msg={m} isDesktop />; })}
+                  {msgs.map(function (m, i) { return <ChatBubble key={i} msg={m} isDesktop theme={theme} />; })}
                   {loading && (
                     <Animated.View entering={FadeInUp.duration(200)} style={sd.thinkRow}>
-                      <View style={sd.aiDotSm}>
-                        <LinearGradient colors={['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} />
-                        <Text style={{ fontSize: 10 }}>{'\u2726'}</Text>
-                      </View>
-                      <View style={sd.thinkBubble}><ThinkingDots /></View>
+                      <OraclePortrait theme={theme} size={26} />
+                      <View style={sd.thinkBubble}><ThinkingDots colors={theme.think} /></View>
                     </Animated.View>
                   )}
                   <View style={{ height: 16 }} />
@@ -715,11 +772,18 @@ export default function ChatScreen() {
                       multiline
                       maxLength={250}
                       editable={remaining > 0}
-                      selectionColor="#FF6B00"
+                      selectionColor={theme.accent}
                       textAlignVertical="top"
                       underlineColorAndroid="transparent"
-                      blurOnSubmit={false}
-                      onSubmitEditing={function () { send(); }}
+                      onKeyPress={Platform.OS === 'web' ? function (e) {
+                        // Enter sends; Shift+Enter makes a newline (multiline
+                        // inputs never fire onSubmitEditing on web).
+                        var ne = e && e.nativeEvent;
+                        if (ne && ne.key === 'Enter' && !ne.shiftKey) {
+                          if (e.preventDefault) e.preventDefault();
+                          send();
+                        }
+                      } : undefined}
                     />
                     <TouchableOpacity
                       onPress={function () { send(); }}
@@ -727,7 +791,7 @@ export default function ChatScreen() {
                       activeOpacity={0.7}
                       style={[sd.sendBtn, (!msg.trim() || loading || remaining <= 0) && { opacity: 0.3 }]}
                     >
-                      <LinearGradient colors={loading ? ['#333', '#444'] : ['#FF8C00', '#FF6D00']}
+                      <LinearGradient colors={loading ? ['#333', '#444'] : theme.btnGrad}
                         style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                       <Ionicons name={loading ? 'hourglass' : 'send'} size={17} color="#FFF" />
                     </TouchableOpacity>
@@ -763,19 +827,27 @@ export default function ChatScreen() {
     );
   }
 
-  // WhatsApp-style keyboard offset: account for header + status bar
-  // Header = topPad + ~48px content + 8px paddingBottom
-  var headerTotalHeight = topPad + 56;
-  var kavOffset = Platform.OS === 'ios' ? headerTotalHeight : 0;
+  // Composer geometry: the dock steps aside for the whole room (full-bleed),
+  // so the composer only needs the safe-area pad at the bottom.
   var composerSafePad = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 6);
-  // With softwareKeyboardLayoutMode='pan' + custom tab bar hiding on keyboard,
-  // the tab-bar margin should collapse when keyboard is open (tab bar is gone).
-  var composerLift = kb.isOpen ? 0 : TAB_BAR_VISUAL_HEIGHT;
 
   return (
     <DesktopScreenWrapper routeName="chat">
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Fixed header — outside KAV so offset calculation is simpler */}
+    <View style={{ flex: 1, backgroundColor: '#04030C' }}>
+      {/* the oracle's chamber — the same living night as the gateway */}
+      <CosmicBackground reduced={reduced} lowEnd={lowEnd} />
+
+      {/* ONE KeyboardAvoidingView wraps the whole screen (header included):
+          iOS 'padding' with zero offset — nothing to guess, the header stays
+          put while the list shrinks. Android is disabled — the OS-level pan
+          (softwareKeyboardLayoutMode) does its one job alone, exactly like
+          every other screen in this app. No double-compensation. */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        enabled={Platform.OS === 'ios'}
+      >
+      {/* header — the chosen oracle presides over the room */}
       <View style={[s.header, { paddingTop: topPad }]}>
         <TouchableOpacity
           onPress={function () { setSelectedMode(null); setMsgs([]); }}
@@ -787,14 +859,11 @@ export default function ChatScreen() {
         >
           <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.6)" />
         </TouchableOpacity>
-        <View style={s.avatar}>
-          <LinearGradient colors={gradients.orangeButton} style={StyleSheet.absoluteFill} />
-          <Ionicons name={mode === 'dream' ? 'moon' : 'sparkles'} size={18} color="#FFF" />
-        </View>
+        <OraclePortrait theme={theme} size={40} />
         <View style={{ flex: 1 }}>
           <Text style={[s.title, { color: sc.sectionTitle }]}>{mode === 'dream' ? t('chatDreamTitle') : t('chatTitle')}</Text>
           <View style={s.statusRow}>
-            <View style={[s.statusDot, { backgroundColor: loading ? '#FFB800' : '#34D399' }]} />
+            <View style={[s.statusDot, { backgroundColor: loading ? theme.accent : '#34D399' }]} />
             <Text style={s.statusText}>{loading ? t('consultingCosmos') : t('askUniverse')}</Text>
           </View>
         </View>
@@ -806,16 +875,15 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      {/* Limit card — always rendered but collapsed when keyboard open to avoid layout jump */}
-      {!kb.isOpen && <LimitCard remaining={remaining} t={t} />}
+      <LinearGradient
+        colors={['transparent', theme.hairline, 'transparent']}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={s.headerHairline}
+      />
 
-      {/* KeyboardAvoidingView wraps messages + input */}
-      <KeyboardAvoidingView
-        style={{ flex: 1, minHeight: 0 }}
-        behavior="padding"
-        keyboardVerticalOffset={kavOffset}
-        enabled={true}
-      >
+      {/* Fair-use heads-up — collapses with the keyboard (animated by the
+          LayoutAnimation configured in the keyboard listeners) */}
+      {!kb.isOpen && <LimitCard remaining={remaining} t={t} theme={theme} />}
         <ScrollView
           ref={scroll}
           style={{ flex: 1 }}
@@ -826,16 +894,12 @@ export default function ChatScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           automaticallyAdjustKeyboardInsets={false}
-          maintainVisibleContentPosition={Platform.OS === 'ios' ? { minIndexForVisible: 0 } : undefined}
         >
-          {msgs.map(function (m, i) { return <ChatBubble key={i} msg={m} />; })}
+          {msgs.map(function (m, i) { return <ChatBubble key={i} msg={m} theme={theme} />; })}
           {loading && (
             <Animated.View entering={FadeInUp.duration(200)} style={s.thinkRow}>
-              <View style={s.aiDot}>
-                <LinearGradient colors={['#FF8C00', '#FF6D00']} style={StyleSheet.absoluteFill} />
-                <Text style={{ fontSize: 10 }}>{'\u2726'}</Text>
-              </View>
-              <View style={s.thinkBubble}><ThinkingDots /></View>
+              <View style={{ marginTop: 2 }}><OraclePortrait theme={theme} size={24} /></View>
+              <View style={[s.thinkBubble, { borderColor: theme.hairline }]}><ThinkingDots colors={theme.think} /></View>
             </Animated.View>
           )}
           <View style={{ height: 8 }} />
@@ -845,15 +909,19 @@ export default function ChatScreen() {
           <QuickChips onSelect={send} language={language} mode={mode} />
         )}
 
-        {/* Input bar — sits directly above keyboard (WhatsApp style) */}
-        <View style={[s.inputBar, { paddingBottom: composerSafePad, marginBottom: composerLift }]}>
+        {/* Composer — glass capsule with a live focus ring, directly above
+            the keyboard (WhatsApp placement) */}
+        <View style={[s.inputBar, { paddingBottom: composerSafePad }]}>
           <LinearGradient
-            colors={['rgba(255,107,0,0.06)', 'rgba(147,51,234,0.04)', 'transparent']}
-            start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }}
+            colors={['transparent', theme.hairline, 'transparent']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
             style={s.inputBarGlow}
           />
+          {msg.length >= 200 ? (
+            <Text style={[s.charCount, msg.length >= 240 && { color: '#FCA5A5' }]}>{msg.length + '/250'}</Text>
+          ) : null}
           <View style={s.inputRow}>
-            <View style={s.inputFieldWrap}>
+            <View style={[s.inputFieldWrap, inputFocused && { borderColor: theme.ring }]}>
               <TextInput
                 style={s.input}
                 value={msg}
@@ -863,21 +931,11 @@ export default function ChatScreen() {
                 multiline
                 maxLength={250}
                 editable={remaining > 0}
-                selectionColor="#FF6B00"
+                selectionColor={theme.accent}
                 textAlignVertical="top"
                 underlineColorAndroid="transparent"
-                blurOnSubmit={false}
-                onFocus={function () {
-                  LayoutAnimation.configureNext(LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
-                  setInputFocused(true);
-                  setTimeout(function () {
-                    if (scroll.current) scroll.current.scrollToEnd({ animated: true });
-                  }, 300);
-                }}
-                onBlur={function () {
-                  LayoutAnimation.configureNext(LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
-                  setInputFocused(false);
-                }}
+                onFocus={function () { setInputFocused(true); }}
+                onBlur={function () { setInputFocused(false); }}
               />
             </View>
             <SpringPressable
@@ -887,7 +945,7 @@ export default function ChatScreen() {
               scalePressed={0.88}
               style={[s.sendBtn, (!msg.trim() || loading || remaining <= 0) && { opacity: 0.3 }]}
             >
-              <LinearGradient colors={loading ? ['#333', '#444'] : ['#FF8C00', '#FF6D00', '#E65100']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+              <LinearGradient colors={loading ? ['#333', '#444'] : theme.btnGrad} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
               <Ionicons name={loading ? 'hourglass' : 'arrow-up'} size={18} color="#FFF" />
             </SpringPressable>
           </View>
@@ -901,8 +959,8 @@ export default function ChatScreen() {
 // STYLES
 var s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingBottom: 8 },
+  headerHairline: { height: 1, marginBottom: 2 },
   backBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
-  avatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,107,0,0.4)' },
   title: { fontSize: 18, fontWeight: '800', color: '#FFF1D0', letterSpacing: 0.3 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
@@ -910,25 +968,18 @@ var s = StyleSheet.create({
   birthBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10, borderWidth: 1 },
   birthBadgeText: { fontSize: 10, fontWeight: '700' },
 
-  modeRow: { flexDirection: 'row', gap: 8, marginHorizontal: 18, marginBottom: 6 },
-  modeBtn: { flex: 1 },
-  modeBtnBg: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  modeBtnText: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.35)' },
-
-  limitCard: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 18, marginBottom: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,107,0,0.12)' },
-  limitText: { fontSize: 11, color: '#FF8C33', fontWeight: '600', flex: 1 },
+  limitCard: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 18, marginBottom: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  limitText: { fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: '600', flex: 1 },
   limitDotsRow: { flexDirection: 'row', gap: 3 },
   limitDot: { width: 6, height: 6, borderRadius: 3 },
   dotUsed: { backgroundColor: 'rgba(255,255,255,0.1)' },
-  dotFree: { backgroundColor: '#FF6B00' },
 
   msgList: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 10 },
   userWrap: { alignSelf: 'flex-end', maxWidth: '78%', marginBottom: 8 },
   userBubble: { borderRadius: 18, borderBottomRightRadius: 4, paddingHorizontal: 14, paddingVertical: 10 },
   userText: { fontSize: 14, lineHeight: 20, color: '#FFF1D0', fontWeight: '500' },
   aiWrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, maxWidth: '85%', marginBottom: 8, alignSelf: 'flex-start' },
-  aiDot: { width: 22, height: 22, borderRadius: 11, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 2, borderWidth: 1, borderColor: 'rgba(255,107,0,0.3)' },
-  aiBubble: { flex: 1, borderRadius: 18, borderBottomLeftRadius: 4, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 13, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  aiBubble: { flex: 1, borderRadius: 18, borderBottomLeftRadius: 4, backgroundColor: 'rgba(10,8,24,0.55)', paddingHorizontal: 13, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
   aiText: { fontSize: 14, lineHeight: 21, color: 'rgba(255,255,255,0.88)' },
   thinkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, alignSelf: 'flex-start', marginBottom: 8 },
   thinkBubble: { borderRadius: 18, borderBottomLeftRadius: 4, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
@@ -937,12 +988,13 @@ var s = StyleSheet.create({
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1 },
   chipLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '600' },
 
-  inputBar: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,140,0,0.08)', backgroundColor: 'rgba(8,5,22,0.92)', overflow: 'hidden' },
+  inputBar: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderTopWidth: 0, backgroundColor: 'rgba(8,5,22,0.92)', overflow: 'hidden' },
   inputBarGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 1.5 },
+  charCount: { alignSelf: 'flex-end', fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.4)', marginBottom: 4, fontVariant: ['tabular-nums'] },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
-  inputFieldWrap: { flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 24, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 4 : 2, borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.15)', ...boxShadow('rgba(255,107,0,0.15)', { width: 0, height: 0 }, 0.5, 8) },
+  inputFieldWrap: { flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 24, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 4 : 2, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.10)' },
   input: { flex: 1, minHeight: 38, maxHeight: 100, color: '#FFF1D0', fontSize: 15, paddingTop: 9, paddingBottom: 9, includeFontPadding: false, lineHeight: 21 },
-  sendBtn: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 1, ...boxShadow('#FF6B00', { width: 0, height: 2 }, 0.35, 8) },
+  sendBtn: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 1, ...boxShadow('#000', { width: 0, height: 2 }, 0.3, 8) },
 });
 
 // ── DESKTOP CHAT STYLES ──────────────────────────────────────────────
@@ -1009,11 +1061,10 @@ var sd = StyleSheet.create({
     backgroundColor: 'rgba(255,107,0,0.03)',
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
   },
-  limitText: { fontSize: 11, color: '#FF8C33', fontWeight: '600', flex: 1 },
+  limitText: { fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: '600', flex: 1 },
   limitDots: { flexDirection: 'row', gap: 3 },
   dot: { width: 7, height: 7, borderRadius: 3.5 },
   dotUsed: { backgroundColor: 'rgba(255,255,255,0.1)' },
-  dotFree: { backgroundColor: '#FF6B00' },
   // Messages list padding
   msgList: { paddingHorizontal: 28, paddingTop: 20, paddingBottom: 12 },
   // Desktop bubble overrides — constrained to readable width
@@ -1022,7 +1073,6 @@ var sd = StyleSheet.create({
   aiBubbleD: { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.08)' },
   // Thinking row
   thinkRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 10, alignSelf: 'flex-start', marginBottom: 8 },
-  aiDotSm:   { width: 26, height: 26, borderRadius: 13, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,107,0,0.3)' },
   thinkBubble: { borderRadius: 18, borderBottomLeftRadius: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
   // Input area
   inputArea: {
@@ -1037,7 +1087,7 @@ var sd = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-end', gap: 10,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 16, paddingHorizontal: 16, paddingVertical: 6,
-    borderWidth: 1, borderColor: 'rgba(255,107,0,0.15)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)',
   },
   input: { flex: 1, minHeight: 40, maxHeight: 120, color: '#FFF1D0', fontSize: 14.5, paddingTop: 8, paddingBottom: 8 },
   sendBtn: {
