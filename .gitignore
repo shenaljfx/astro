@@ -54,3 +54,9 @@ mobile/dist/
 
 # EAS
 mobile/.npmrc.bak
+
+# Test / tooling artifacts (temp, never commit)
+.playwright-mcp/
+screenshots/
+test-shot.png
+*.png.tmp

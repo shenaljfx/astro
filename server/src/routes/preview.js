@@ -339,8 +339,8 @@ router.post('/nakath', optionalAuth, async (req, res) => {
     const b = best && best.breakdown ? best.breakdown : null;
     const why = b ? [
       b.weekday && b.weekday.day ? { key: 'weekday', name: b.weekday.day, good: (b.weekday.score || 0) >= 8 } : null,
-      b.tithi && b.tithi.name ? { key: 'tithi', name: b.tithi.name, good: (b.tithi.score || 0) >= 15 } : null,
-      b.nakshatra && b.nakshatra.name ? { key: 'nakshatra', name: b.nakshatra.name, good: (b.nakshatra.score || 0) >= 15 } : null,
+      b.tithi && b.tithi.name ? { key: 'tithi', name: b.tithi.name, number: b.tithi.number || null, good: (b.tithi.score || 0) >= 15 } : null,
+      b.nakshatra && b.nakshatra.name ? { key: 'nakshatra', name: b.nakshatra.name, sinhala: b.nakshatra.sinhala || null, good: (b.nakshatra.score || 0) >= 15 } : null,
       b.yoga && b.yoga.name ? { key: 'yoga', name: b.yoga.name, good: (b.yoga.score || 0) >= 10 } : null,
     ].filter(Boolean) : [];
 

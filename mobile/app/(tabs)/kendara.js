@@ -419,11 +419,11 @@ function PremiumKendaraHero({ chartData, jyotishData, user, language, gradients,
         </Animated.View>
         <View style={styles.heroFloatingChipLeft}>
           <Ionicons name="moon-outline" size={12} color="#C7D2FE" />
-          <Text style={styles.heroFloatingChipText} numberOfLines={1}>{moonName}</Text>
+          <Text style={styles.heroFloatingChipText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{moonName}</Text>
         </View>
         <View style={styles.heroFloatingChipRight}>
           <Ionicons name="sparkles-outline" size={12} color="#FFB800" />
-          <Text style={styles.heroFloatingChipText} numberOfLines={1}>{chapterName}</Text>
+          <Text style={styles.heroFloatingChipText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{chapterName}</Text>
         </View>
       </View>
 

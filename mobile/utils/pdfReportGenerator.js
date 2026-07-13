@@ -745,7 +745,7 @@ function generateReportHTML(opts) {
     +'<div class="ct"><span class="ctg">'+(isSi?'සම්පූර්ණ ජීවිත වාර්තාව':'Complete Life Report')+'</span></div>'
     +'<div class="cs">'+(isSi?'ප්‍රායෝගික ජීවිත මගපෙන්වීම':'Practical Life Guidance')+'</div>'
     +'<div class="cd"></div>'
-    +'<div class="cn">'+(opts.userName||(isSi?'ඔයා':'You'))+'</div>'
+    +'<div class="cn">'+(opts.userName||(isSi?'ඔබ':'You'))+'</div>'
     +'<div class="cdt">'
     +(opts.birthLocation?'<strong>'+(isSi?'ස්ථානය':'Location')+':</strong> '+opts.birthLocation+'<br/>':'')
     +(opts.birthDate?'<strong>'+(isSi?'උපන් දිනය':'Born')+':</strong> '+opts.birthDate+(opts.birthTime?' &bull; '+opts.birthTime:'')+'<br/>':'')
@@ -852,7 +852,7 @@ function generateReportHTML(opts) {
   if (heroScores.length > 0) {
     var avg = Math.round(heroScores.reduce(function(a,b){return a+b.score;},0)/heroScores.length);
     heroHTML = '<div class="hero-scores"><div class="hero-title">'+(isSi?'ජීවිත ලකුණු දළ දැක්ම':'Life Score Overview')+'</div>'
-      +'<div class="hero-sub">'+(isSi?'ඔයාගේ උපන් රටාවෙන් ලැබෙන ජීවිත ක්ෂේත්‍ර ලකුණු':'Scores derived from your birth pattern')+'</div>'
+      +'<div class="hero-sub">'+(isSi?'ඔබේ උපන් රටාවෙන් ලැබෙන ජීවිත ක්ෂේත්‍ර ලකුණු':'Scores derived from your birth pattern')+'</div>'
       +'<div class="hero-overall">'+svgScoreGauge(avg,120,null,isSi?'සමස්ත':'Overall')
       +'<div class="ho-label">'+scoreVerdict(avg,isSi)+'</div>'
       +'<div class="ho-sub">'+heroScores.length+(isSi?' ක්ෂේත්‍ර විශ්ලේෂණය':' areas analyzed')+'</div></div>'
@@ -908,7 +908,7 @@ function generateReportHTML(opts) {
   // End page
   var endLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'" style="width:64px;height:64px;border-radius:16px;object-fit:cover;"/>' : '<div class="ep-icon">☸</div>';
   var endHTML = '<div class="ep">'+endLogoTag+'<div class="ep-brand" style="margin-top:12px;">ග්‍රහචාර</div><div class="ep-line"></div>'
-    +'<div class="ep-tag">'+(isSi?'ඔයාගේ ජීවිතයේ තරු බලන්න':'Read the Stars of Your Life')+'</div>'
+    +'<div class="ep-tag">'+(isSi?'ඔබේ ජීවිතයේ තරු බලන්න':'Read the Stars of Your Life')+'</div>'
     +'<div class="ep-cta">'+(isSi?'📱 යෙදුම බාගන්න':'📱 Download the App')+'</div>'
     +'<div class="ep-features"><span class="ep-feat">🔮 '+(isSi?'සතිපතා නැකැත්':'Weekly Nakath')+'</span>'
     +'<span class="ep-feat">💬 '+(isSi?'AI ජ්‍යෝතිෂ chat':'AI Astro Chat')+'</span>'
@@ -1869,7 +1869,7 @@ function generatePorondamHTML(opts) {
   var pEndLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,' + opts.logoBase64 + '" style="width:64px;height:64px;border-radius:16px;object-fit:cover;"/>' : '<div class="ep-icon">💍</div>';
   var endHTML = '<div class="ep ep-porondam">'
     + pEndLogoTag + '<div class="ep-brand" style="margin-top:12px;">ග්‍රහචාර</div><div class="ep-line"></div>'
-    + '<div class="ep-tag">' + (isSi ? 'ඔයාගේ ජීවිතයේ තරු බලන්න' : 'Read the Stars of Your Life') + '</div>'
+    + '<div class="ep-tag">' + (isSi ? 'ඔබේ ජීවිතයේ තරු බලන්න' : 'Read the Stars of Your Life') + '</div>'
     + '<div class="ep-cta">' + (isSi ? '📱 යෙදුම බාගන්න' : '📱 Download the App') + '</div>'
     + '<div class="ep-features"><span class="ep-feat">🔮 ' + (isSi ? 'සතිපතා නැකැත්' : 'Weekly Nakath') + '</span>'
     + '<span class="ep-feat">📊 ' + (isSi ? 'සම්පූර්ණ වාර්තා' : 'Full Reports') + '</span>'

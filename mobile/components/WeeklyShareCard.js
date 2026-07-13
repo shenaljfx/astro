@@ -87,7 +87,7 @@ function FooterCTA(props) {
   return (
     <View style={c.footer}>
       <View style={c.footerDivider} />
-      <Text style={c.footerCta}>{props.si ? 'ඔයාගේ සම්පූර්ණ පලාපල නොමිලේ' : 'Get your full reading — free'}</Text>
+      <Text style={c.footerCta}>{props.si ? 'ඔබේ සම්පූර්ණ පලාපල නොමිලේ' : 'Get your full reading — free'}</Text>
       <View style={c.footerHandleRow}>
         <Ionicons name="sparkles" size={12} color="#FBBF24" />
         <Text style={c.footerHandle}>grahachara.com</Text>

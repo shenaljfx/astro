@@ -39,6 +39,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
 import useScreenInsets from '../../hooks/useScreenInsets';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { setDockHidden } from '../../utils/dockVisibility';
 import { useTheme } from '../../contexts/ThemeContext';
 import { screenColors } from '../../constants/theme';
 import useNetworkStatus from '../../hooks/useNetworkStatus';
@@ -532,6 +534,7 @@ var stb = StyleSheet.create({
 // birth-time rectification (2+ dated life events). Fully skippable.
 // ══════════════════════════════════════════
 function KnownFactsSheet({ visible, isSi, initial, onSkip, onContinue }) {
+  var insets = useSafeAreaInsets();
   var [married, setMarried] = useState(initial?.maritalStatus === 'married');
   var [marriageYear, setMarriageYear] = useState(initial?.marriageYear ? String(initial.marriageYear) : '');
   var [careerField, setCareerField] = useState(initial?.careerField || '');
@@ -545,6 +548,15 @@ function KnownFactsSheet({ visible, isSi, initial, onSkip, onContinue }) {
       var fj = (initial?.lifeEvents || []).find(function(e) { return e.type === 'firstJob'; });
       setFirstJobYear(fj ? String(fj.year) : '');
     }
+  }, [visible]);
+
+  // This sheet is an in-scene overlay, but the floating tab dock renders above
+  // it and would cover the action buttons. Ask the dock to step aside while the
+  // sheet is open; the cleanup restores it on skip / continue / unmount.
+  useEffect(function() {
+    if (!visible) return undefined;
+    setDockHidden(true);
+    return function() { setDockHidden(false); };
   }, [visible]);
 
   if (!visible) return null;
@@ -575,15 +587,15 @@ function KnownFactsSheet({ visible, isSi, initial, onSkip, onContinue }) {
     <View style={kfs.overlay}>
       <TouchableOpacity style={kfs.scrim} activeOpacity={1} onPress={onSkip} />
       <Animated.View entering={FadeInUp.duration(320)} style={kfs.card}>
-        <LinearGradient colors={['rgba(255,184,0,0.10)', 'rgba(20,16,10,0.0)']} style={kfs.cardGrad} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
+        <LinearGradient colors={['rgba(255,184,0,0.10)', 'rgba(20,16,10,0.0)']} style={[kfs.cardGrad, { paddingBottom: 34 + insets.bottom }]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
           <View style={kfs.handle} />
-          <Text style={kfs.title}>{isSi ? 'තප්පර 20ක් — වාර්තාව ඔයාටම ගැලපෙන්න' : '20 seconds to make this eerily accurate'}</Text>
+          <Text style={kfs.title}>{isSi ? 'තත්පර 20ක් දෙන්න — වාර්තාව ඔබටම ගැලපේවි' : '20 seconds to make this eerily accurate'}</Text>
           <Text style={kfs.sub}>{isSi
-            ? 'ඔයා දන්න දේවල් කිව්වොත්, කේන්දරය ඒවා තහවුරු කරලා අනාගතය ගැන වඩා නිවැරදි කාල රාමු දෙනවා. Skip කරන්නත් පුළුවන්.'
+            ? 'ඔබේ ජීවිතයේ දැනටමත් සිදු වූ දේවල් ටිකක් කියන්න — ඒවා කේන්දරයත් එක්ක ගැලපෙනවාද බලා, ඉදිරි අනාවැකි වඩාත් නිවැරදි කරනවා. කැමති නැත්නම් මඟ හරින්න.'
             : 'Anything you confirm lets the chart validate your past — and sharpen every dated prediction ahead. You can skip.'}</Text>
 
           {/* Married toggle */}
-          <Text style={kfs.qLabel}>{isSi ? 'විවාහ වෙලාද?' : 'Are you married?'}</Text>
+          <Text style={kfs.qLabel}>{isSi ? 'ඔබ විවාහකද?' : 'Are you married?'}</Text>
           <View style={kfs.pillRow}>
             <SpringPressable style={[kfs.pill, !married && kfs.pillActive]} onPress={function() { setMarried(false); }} haptic="light">
               <Text style={[kfs.pillText, !married && kfs.pillTextActive]}>{isSi ? 'නැහැ' : 'No'}</Text>
@@ -605,7 +617,7 @@ function KnownFactsSheet({ visible, isSi, initial, onSkip, onContinue }) {
           </View>
 
           {/* Career field */}
-          <Text style={kfs.qLabel}>{isSi ? 'ඔයාගේ රැකියා ක්ෂේත්‍රය? (කැමති නම්)' : 'Your field of work? (optional)'}</Text>
+          <Text style={kfs.qLabel}>{isSi ? 'ඔබේ රැකියාව කුමක්ද? (අත්‍යවශ්‍ය නොවේ)' : 'Your field of work? (optional)'}</Text>
           <TextInput
             style={kfs.textInput}
             value={careerField}
@@ -616,7 +628,7 @@ function KnownFactsSheet({ visible, isSi, initial, onSkip, onContinue }) {
           />
 
           {/* First job year */}
-          <Text style={kfs.qLabel}>{isSi ? 'මුල්ම රැකියාව ලැබුණු අවුරුද්ද? (කැමති නම්)' : 'Year of your first job? (optional)'}</Text>
+          <Text style={kfs.qLabel}>{isSi ? 'මුල්ම රැකියාව ලැබුණේ කවදාද? (අත්‍යවශ්‍ය නොවේ)' : 'Year of your first job? (optional)'}</Text>
           <TextInput
             style={[kfs.textInput, { width: 120 }]}
             value={firstJobYear}
@@ -629,7 +641,7 @@ function KnownFactsSheet({ visible, isSi, initial, onSkip, onContinue }) {
 
           <View style={kfs.btnRow}>
             <SpringPressable style={kfs.skipBtn} onPress={onSkip} haptic="light">
-              <Text style={kfs.skipText}>{isSi ? 'Skip කරන්න' : 'Skip'}</Text>
+              <Text style={kfs.skipText}>{isSi ? 'මඟ හරින්න' : 'Skip'}</Text>
             </SpringPressable>
             <SpringPressable style={kfs.goBtn} onPress={function() { onContinue(buildFacts()); }} haptic="heavy" scalePressed={0.95}>
               <LinearGradient colors={['#FFB800', '#FF8C00']} style={kfs.goGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
@@ -687,7 +699,7 @@ function Next12MonthsTimeline({ calendar, isSi }) {
     <Animated.View entering={FadeInDown.delay(200).duration(700)} style={n12.wrap}>
       <LinearGradient colors={['rgba(255,184,0,0.10)', 'rgba(255,140,0,0.03)']} style={n12.inner} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
         <View style={n12.headRow}>
-          <Text style={n12.title}>{isSi ? 'ඉදිරි මාස 12 — ඔයාගේ කාල සිතියම' : 'Your Next 12 Months'}</Text>
+          <Text style={n12.title}>{isSi ? 'ඉදිරි මාස 12 — ඔබේ කාල සිතියම' : 'Your Next 12 Months'}</Text>
         </View>
         <Text style={n12.sub}>{isSi ? 'සෑම මාසයකම වැඩිම ශක්තිය තියෙන ජීවිත ක්ෂේත්‍රය' : 'The strongest life area of each month'}</Text>
 
@@ -723,7 +735,7 @@ function Next12MonthsTimeline({ calendar, isSi }) {
                 <Animated.View key={w.domain + w.start} entering={FadeInRight.delay(350 + i * 90).duration(400)} style={[n12.chip, isCaution && n12.chipCaution]}>
                   <Ionicons name={isCaution ? 'alert-circle-outline' : meta.icon} size={15} color={isCaution ? '#FCA5A5' : meta.color} />
                   <View style={{ flexShrink: 1 }}>
-                    <Text style={[n12.chipTitle, isCaution && { color: '#FCA5A5' }]} numberOfLines={1}>
+                    <Text style={[n12.chipTitle, isCaution && { color: '#FCA5A5' }]} numberOfLines={2}>
                       {(isSi ? meta.si : meta.en)} {w.tier} — {w.startLabel}{w.endLabel !== w.startLabel ? ' → ' + w.endLabel : ''}
                     </Text>
                     <Text style={n12.chipSub} numberOfLines={1}>
@@ -798,7 +810,7 @@ function PredictionCheckinCard({ checkin, isSi, onAnswer, onDismiss }) {
             <Text style={pcc.btnText}>{isSi ? 'නැහැ' : 'No'}</Text>
           </SpringPressable>
         </View>
-        <Text style={pcc.foot}>{isSi ? 'ඔයාගේ පිළිතුරු අනාගත අනාවැකි වඩාත් නිවැරදි කරනවා' : 'Your answers make future predictions sharper'}</Text>
+        <Text style={pcc.foot}>{isSi ? 'ඔබේ පිළිතුරු අනාගත අනාවැකි වඩාත් නිවැරදි කරනවා' : 'Your answers make future predictions sharper'}</Text>
       </LinearGradient>
     </Animated.View>
   );
@@ -1055,7 +1067,7 @@ function GeneratedReportsPanel({ displayReports, reportsLoading, reportsLoadErro
             <Text style={s.generatedSubtitle}>
               {hasReports
                 ? (isSi ? 'ඕනෑම පැරණි වාර්තාවක් මෙතනින් විවෘත කරන්න' : 'Open any report you already generated')
-                : (isSi ? 'ඔයාගේ වාර්තා මෙතන පෙන්වනු ලැබේ' : 'Your generated reports will appear here')}
+                : (isSi ? 'ඔබේ වාර්තා මෙතන පෙන්වනු ලැබේ' : 'Your generated reports will appear here')}
             </Text>
           </View>
           <View style={s.generatedCountPill}>
@@ -1376,14 +1388,14 @@ var LOADING_STAGES = {
     failed: { text: '⚠️ A Ripple in the Continuum...', sub: 'The stars paused. Please try again (You won\'t be charged again for this).' },
   },
   si: {
-    starting: { text: 'උපන් මොහොත කියවමින්...', sub: 'ඔයා උපන් නිවැරදි මොහොතෙන් ඔයාගේ ස්වභාවය, කාලය, සහ ජීවිත දිශාව පැහැදිලි වෙනවා.' },
-    engine: { text: 'අද අහසේ ගමන පරීක්ෂා කරමින්...', sub: 'තාක්ෂණික ගණනය කිරීම් ඔයාට තේරෙන ප්‍රායෝගික මගපෙන්වීමක් බවට පත් කරමින්.' },
-    charts: { text: 'ඔයාගේ ජීවිත සිතියම සකසමින්...', sub: 'ආදරය, රැකියාව, පවුල, මුදල්, සෞඛ්‍යය, සහ වර්ධනය ගැන රටා සම්බන්ධ කරමින්.' },
-    coherence: { text: 'ඔයාගේ ශක්ති රටා සොයමින්...', sub: 'සැඟවුණු හැකියාවන්, සහාය ලැබෙන ප්‍රදේශ, සහ පරිස්සම් වෙන්න ඕනේ තැන් සොයමින්.' },
-    sections: { text: 'ඔයාගේ පුද්ගලික කතාව ලියමින්...', sub: 'ආදරය, රැකියාව, කාලය, පවුල, සහ තේරීම් ගැන පැහැදිලි විස්තර සකසමින්.' },
+    starting: { text: 'උපන් මොහොත කියවමින්...', sub: 'ඔබ උපන් නිවැරදි මොහොතෙන් ඔබේ ස්වභාවය, කාලය, සහ ජීවිත දිශාව පැහැදිලි වෙනවා.' },
+    engine: { text: 'අද අහසේ ගමන පරීක්ෂා කරමින්...', sub: 'තාක්ෂණික ගණනය කිරීම් ඔබට තේරෙන ප්‍රායෝගික මගපෙන්වීමක් බවට පත් කරමින්.' },
+    charts: { text: 'ඔබේ ජීවිත සිතියම සකසමින්...', sub: 'ආදරය, රැකියාව, පවුල, මුදල්, සෞඛ්‍යය, සහ වර්ධනය ගැන රටා සම්බන්ධ කරමින්.' },
+    coherence: { text: 'ඔබේ ශක්ති රටා සොයමින්...', sub: 'සැඟවුණු හැකියාවන්, සහාය ලැබෙන ප්‍රදේශ, සහ පරිස්සම් වෙන්න ඕනේ තැන් සොයමින්.' },
+    sections: { text: 'ඔබේ පුද්ගලික කතාව ලියමින්...', sub: 'ආදරය, රැකියාව, කාලය, පවුල, සහ තේරීම් ගැන පැහැදිලි විස්තර සකසමින්.' },
     retrying: { text: 'කියවීම තවත් පැහැදිලි කරමින්...', sub: 'උපදෙස් වඩාත් තේරුම් ගත හැකි සහ ප්‍රයෝජනවත් කිරීමට තව සුළු මොහොතක්.' },
-    complete: { text: 'ඔයාගේ කේන්දර වාර්තාව සූදානම්!', sub: 'සාර්ථකත්වය හා සතුට කරා යන ඔයාගේ ගමන පෙන්වන විශ්ව රහස් දැන් විවෘතයි.' },
-    failed: { text: '⚠️ ග්‍රහ ශක්තීන්ගේ බාධාවක්', sub: 'තරු නැවතුණාක් වගේ. කරුණාකර නැවත උත්සාහ කරන්න (ඔයාට නැවත මුදල් ගෙවන්න ඕනේ නැහැ).' },
+    complete: { text: 'ඔබේ කේන්දර වාර්තාව සූදානම්!', sub: 'සාර්ථකත්වය හා සතුට කරා යන ඔබේ ගමන පෙන්වන විශ්ව රහස් දැන් විවෘතයි.' },
+    failed: { text: '⚠️ ග්‍රහ ශක්තීන්ගේ බාධාවක්', sub: 'තරු නැවතුණාක් වගේ. කරුණාකර නැවත උත්සාහ කරන්න (ඔබට නැවත මුදල් ගෙවන්න ඕනේ නැහැ).' },
   },
 };
 
@@ -1498,7 +1510,7 @@ function CosmicLoader({ progress, userName, language, colors: themeColors }) {
   }
 
   var personalMsg = lang === 'si'
-    ? (userName ? 'පොඩ්ඩක් ඉන්න ' + userName + '!' : 'ඔයාගේ ජීවිත කතාව ලියමින්...')
+    ? (userName ? 'පොඩ්ඩක් ඉන්න ' + userName + '!' : 'ඔබේ ජීවිත කතාව ලියමින්...')
     : (userName ? 'Hold tight, ' + userName + '!' : 'Your life story is being written...');
 
   var currentSectionLabel = currentSection ? (sectionLabels[currentSection] || currentSection) : null;
@@ -1681,7 +1693,7 @@ var READINGS = [
     key: 'full', icon: 'planet',
     accent: '#34D399', bg: 'rgba(52,211,153,0.10)', border: 'rgba(52,211,153,0.32)',
     title: { en: 'Full Report', si: 'සම්පූර්ණ වාර්තාව' },
-    sub: { en: 'Your whole life, mapped', si: 'ඔයාගේ මුළු ජීවිතය' },
+    sub: { en: 'Your whole life, mapped', si: 'ඔබේ මුළු ජීවිතය' },
   },
   {
     key: 'baby', icon: 'happy',
@@ -1738,7 +1750,7 @@ var rsw = StyleSheet.create({
   cardActive: { borderWidth: 1.4 },
   orb: { width: 32, height: 32, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   title: { fontSize: 12, fontWeight: '800', color: 'rgba(255,255,255,0.95)', lineHeight: 15.5, minHeight: 31 },
-  sub: { fontSize: 9.5, color: 'rgba(255,255,255,0.48)', marginTop: 2, lineHeight: 13, minHeight: 26 },
+  sub: { fontSize: 10.5, color: 'rgba(255,255,255,0.52)', marginTop: 2, lineHeight: 15, minHeight: 30 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 7, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: 'transparent' },
   dot: { width: 5, height: 5, borderRadius: 3 },
   chipText: { fontSize: 9.5, fontWeight: '800', letterSpacing: 0.2 },
@@ -2442,7 +2454,7 @@ export default function ReportScreen() {
   function validateReportForm() {
     var nextErrors = {};
     if (!userName || typeof userName !== 'string' || !userName.trim()) {
-      nextErrors.userName = reportLang === 'si' ? 'ඔයාගේ නම ඇතුළත් කරන්න.' : 'Enter your name.';
+      nextErrors.userName = reportLang === 'si' ? 'ඔබේ නම ඇතුළත් කරන්න.' : 'Enter your name.';
     }
     if (!userGender) {
       nextErrors.userGender = reportLang === 'si' ? 'ස්ත්‍රී / පුරුෂ භාවය තෝරන්න.' : 'Select your gender.';
@@ -2832,7 +2844,7 @@ export default function ReportScreen() {
             </Text>
             <Text style={{ color: 'rgba(255,214,102,0.35)', fontSize: 11, textAlign: 'center', marginBottom: 20 }}>
               {reportLang === 'si'
-                ? 'ඔයාට නැවත මුදල් ගෙවන්න ඕනේ නැහැ'
+                ? 'ඔබට නැවත මුදල් ගෙවන්න ඕනේ නැහැ'
                 : 'You will not be charged again'}
             </Text>
 
@@ -2931,7 +2943,7 @@ export default function ReportScreen() {
             <View style={s.heroTitleWrap}>
               <Text style={s.title}>{
                 reportLang === 'si'
-                  ? (userName ? userName + 'ගේ ජීවිත කතාව' : 'ඔයාගේ ජීවිත කතාව')
+                  ? (userName ? userName + 'ගේ ජීවිත කතාව' : 'ඔබේ ජීවිත කතාව')
                   : (userName ? userName + '\'s Life Story' : 'Your Life Story')
               }</Text>
               <Text style={s.subtitle}>{birthLocation} • {formatBirthDateDisplay(birthDate, reportLang)} • {formatBirthTimeDisplay(birthTime)}</Text>
@@ -2991,12 +3003,12 @@ export default function ReportScreen() {
                     </View>
                     <Text style={s.heroScoreDesc}>
                       {overviewScores.average >= 75
-                        ? (reportLang === 'si' ? 'ඔයාගේ උපන් සිතියම අතිශයින්ම ශක්තිමත්!' : 'Your birth chart is exceptionally powerful!')
+                        ? (reportLang === 'si' ? 'ඔබේ උපන් සිතියම අතිශයින්ම ශක්තිමත්!' : 'Your birth chart is exceptionally powerful!')
                         : overviewScores.average >= 55
-                        ? (reportLang === 'si' ? 'ඔයාගේ ජන්ම පත්‍රයේ හොඳ ශක්තියක් තිබෙනවා' : 'Your chart carries strong positive energy')
+                        ? (reportLang === 'si' ? 'ඔබේ ජන්ම පත්‍රයේ හොඳ ශක්තියක් තිබෙනවා' : 'Your chart carries strong positive energy')
                         : overviewScores.average >= 35
-                        ? (reportLang === 'si' ? 'ඔයාගේ ජීවිතයේ විශේෂ මිශ්‍ර ශක්තියක්' : 'Your life has a unique mix of energies')
-                        : (reportLang === 'si' ? 'ඔයාගේ සිතියමේ තීව්‍ර ශක්තින් තිබෙනවා' : 'Your chart has intense transformative energy')
+                        ? (reportLang === 'si' ? 'ඔබේ ජීවිතයේ විශේෂ මිශ්‍ර ශක්තියක්' : 'Your life has a unique mix of energies')
+                        : (reportLang === 'si' ? 'ඔබේ සිතියමේ තීව්‍ර ශක්තින් තිබෙනවා' : 'Your chart has intense transformative energy')
                       }
                     </Text>
                   </View>
@@ -3141,8 +3153,8 @@ export default function ReportScreen() {
               <Animated.View entering={FadeInDown.delay(250).duration(700)}>
                 <AuraBox style={{ borderColor: 'rgba(255,140,0,0.2)' }}>
                   <View style={s.chartHeader}>
-                    <Text style={s.chartTitle}>{reportLang === 'si' ? 'ඔයාගේ උපන් සිතියම' : 'Your Birth Map'}</Text>
-                    <Text style={s.chartSub}>{reportLang === 'si' ? 'ඔයා ඉපදුන මොහොතේ අහස පෙනුන හැටි' : 'How the sky looked the moment you were born'}</Text>
+                    <Text style={s.chartTitle}>{reportLang === 'si' ? 'ඔබේ උපන් සිතියම' : 'Your Birth Map'}</Text>
+                    <Text style={s.chartSub}>{reportLang === 'si' ? 'ඔබ ඉපදුණු මොහොතේ අහස පෙනුණු හැටි' : 'How the sky looked the moment you were born'}</Text>
                   </View>
                   <SriLankanChart
                     rashiChart={normalized.rashiChart}
@@ -3223,7 +3235,7 @@ export default function ReportScreen() {
                 </Text>
                 <Text style={{ color: 'rgba(252,165,165,0.6)', fontSize: 13, marginTop: 6, textAlign: 'center', paddingHorizontal: 16 }}>
                   {reportLang === 'si'
-                    ? 'කරුණාකර නැවත උත්සාහ කරන්න. ඔයාට නැවත මුදල් ගෙවන්න ඕනේ නැහැ.'
+                    ? 'කරුණාකර නැවත උත්සාහ කරන්න. ඔබට නැවත මුදල් ගෙවන්න ඕනේ නැහැ.'
                     : 'Please try again. You will not be charged again.'}
                 </Text>
                 <SpringPressable style={[s.newReportBtn, { marginTop: 16, borderColor: 'rgba(239,68,68,0.4)' }]} onPress={handleNewReport} haptic="medium">
@@ -3241,7 +3253,7 @@ export default function ReportScreen() {
             <AuraBox style={{ borderColor: 'rgba(255,184,0,0.15)', alignItems: 'center', paddingVertical: 24 }}>
               <Ionicons name='sparkles' size={28} color='#FFB800' />
               <Text style={{ color: '#FFE8B0', fontSize: 16, fontWeight: '800', marginTop: 8, textAlign: 'center' }}>
-                {reportLang === 'si' ? 'ඔයාගේ ජීවිත කතාව සම්පූර්ණයි' : 'Your Life Story is Complete'}
+                {reportLang === 'si' ? 'ඔබේ ජීවිත කතාව සම්පූර්ණයි' : 'Your Life Story is Complete'}
               </Text>
               <Text style={{ color: 'rgba(255,214,102,0.45)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
                 {reportLang === 'si' ? 'වෙනත් අයෙකුගේ කතාවක් අනාවරණය කරන්න' : 'Unlock another person\'s story'}
@@ -3323,12 +3335,12 @@ export default function ReportScreen() {
             ) : null}
 
             {/* Name Input */}
-            <Text style={s.inputHint}>{reportLang === 'si' ? 'ඔයාගේ නම *' : 'YOUR NAME *'}</Text>
+            <Text style={s.inputHint}>{reportLang === 'si' ? 'ඔබේ නම *' : 'YOUR NAME *'}</Text>
             <TextInput
               style={[s.input, fieldErrors.userName ? s.inputError : {}, { marginBottom: fieldErrors.userName ? 6 : 16 }]}
               value={userName}
               onChangeText={function(val) { setUserName(val); if (val.trim()) clearFieldError('userName'); if (error) setError(null); }}
-              placeholder={reportLang === 'si' ? 'ඔයාගේ නම ඇතුලත් කරන්න' : 'Enter your name'}
+              placeholder={reportLang === 'si' ? 'ඔබේ නම ඇතුළත් කරන්න' : 'Enter your name'}
               placeholderTextColor="#475569"
               autoCorrect={false}
               returnKeyType="next"

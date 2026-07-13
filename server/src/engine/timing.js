@@ -474,6 +474,7 @@ function predictAllEvents(birthInfo, lat, lng, opts = {}) {
         timeline.push({
           eventType,
           eventName: result.eventName,
+          eventSinhala: result.eventSinhala || null,
           icon: result.icon,
           isDanger: result.isDangerEvent,
           start: w.start,

@@ -1,6 +1,6 @@
 {
   "name": "grahachara",
-  "version": "1.9.5",
+  "version": "1.9.6",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",

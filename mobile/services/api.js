@@ -226,10 +226,10 @@ export var getNakathPreview = function(activity, startDate, endDate, lat, lng) {
 };
 
 // Pro: full time windows, chart-tuned.
-export var findMuhurtha = function(activityType, startDate, endDate, birthDate, lat, lng) {
+export var findMuhurtha = function(activityType, startDate, endDate, birthDate, lat, lng, partnerBirthDate) {
   return request('/api/predictions/muhurtha/find', {
     method: 'POST',
-    body: JSON.stringify({ activityType: activityType, startDate: startDate, endDate: endDate, birthDate: birthDate || null, lat: lat || 6.9271, lng: lng || 79.8612, maxResults: 5 }),
+    body: JSON.stringify({ activityType: activityType, startDate: startDate, endDate: endDate, birthDate: birthDate || null, partnerBirthDate: partnerBirthDate || null, lat: lat || 6.9271, lng: lng || 79.8612, maxResults: 5 }),
     _timeout: 40000,
   });
 };

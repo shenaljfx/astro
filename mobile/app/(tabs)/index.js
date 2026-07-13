@@ -174,9 +174,9 @@ var RASHI_LOOKUP = {
 var LAGNA_UI_COPY = {
   Mesha: {
     readingEn: 'Aries Rising gives you a direct, brave, action-first nature. You usually move before others are ready, and your chart shows strength when you take the lead with discipline instead of impatience.',
-    readingSi: 'මේෂ ලග්නෙන් ඉපදුණු ඔයාට තියෙන්නේ බය නැති, මාරම ඇක්ටිව්, නායකත්ව ගතිගුණ තියන ස්වභාවයක්. අනිත් අයට කලින් ඉස්සරහට යන්න ඔයාට පුළුවන්. හැබැයි ඉක්මන් වෙන එක පොඩ්ඩක් පාලනය කරලා වැඩ කළොත්, ජීවිතේ ලොකු ජයග්‍රහණ ගන්න එක ඔයාට ගේමක්ම නැහැ.',
+    readingSi: 'මේෂ ලග්නෙන් ඉපදුණු ඔබට තියෙන්නේ බය නැති, මාරම ඇක්ටිව්, නායකත්ව ගතිගුණ තියන ස්වභාවයක්. අනිත් අයට කලින් ඉස්සරහට යන්න ඔබට පුළුවන්. හැබැයි ඉක්මන් වෙන එක පොඩ්ඩක් පාලනය කරලා වැඩ කළොත්, ජීවිතේ ලොකු ජයග්‍රහණ ගන්න එක ඔබට ගේමක්ම නැහැ.',
     personalityEn: 'Your strongest pattern is courage in motion, you learn by doing and win when your energy has a clear direction.',
-    personalitySi: 'ඔයාගේ ලොකුම ප්ලස් පොයින්ට් එක තමයි වැඩක් කරන්න බය නැතුව ඉස්සරහට පනින එක. පැහැදිලි අරමුණක් තියාගෙන වැඩ කළොත්, මාරම ස්පීඩ් එකකින් සාර්ථක ප්‍රතිඵල ගන්න ඔයාට පුළුවන්.',
+    personalitySi: 'ඔබේ ලොකුම ප්ලස් පොයින්ට් එක තමයි වැඩක් කරන්න බය නැතුව ඉස්සරහට පනින එක. පැහැදිලි අරමුණක් තියාගෙන වැඩ කළොත්, මාරම ස්පීඩ් එකකින් සාර්ථක ප්‍රතිඵල ගන්න ඔබට පුළුවන්.',
     traitsEn: ['Brave', 'Fast starter', 'Independent', 'Protective'],
     traitsSi: ['බය නැහැ', 'ඉක්මන් ආරම්භයක්', 'ස්වාධීනයි', 'රැකබලා ගන්නවා'],
     gem: { en: 'Red Coral', si: 'රතු පබළු' },
@@ -184,9 +184,9 @@ var LAGNA_UI_COPY = {
   },
   Vrishabha: {
     readingEn: 'Taurus Rising gives you a steady, tasteful, and dependable personality. You build life patiently, value comfort and loyalty, and do best when your plans are practical and financially grounded.',
-    readingSi: 'වෘෂභ ලග්නෙන් ඉපදුණු ඔයා කැමති ස්ථාවර, කලබල නැති, නිදහස් ජීවිතේකට. වැඩක් පටන් ගත්තොත් බොහොම ඉවසීමෙන් ඒක ගොඩනගනවා. සල්ලි ගැන වගේම ජීවිතේ ගැනත් ප්‍රායෝගිකව හිතන නිසා ඔයාට ලොකු ගමනක් යන්න පුළුවන්.',
+    readingSi: 'වෘෂභ ලග්නෙන් ඉපදුණු ඔබ කැමති ස්ථාවර, කලබල නැති, නිදහස් ජීවිතේකට. වැඩක් පටන් ගත්තොත් බොහොම ඉවසීමෙන් ඒක ගොඩනගනවා. සල්ලි ගැන වගේම ජීවිතේ ගැනත් ප්‍රායෝගිකව හිතන නිසා ඔබට ලොකු ගමනක් යන්න පුළුවන්.',
     personalityEn: 'Your strength is consistency, you move slowly when needed but rarely give up on something that truly matters.',
-    personalitySi: 'ඔයාගේ ලොකුම ශක්තිය තමයි මේ නොසැලෙන ස්ථාවරත්වය. වෙලාවකට වැඩ ටිකක් හිමින් කළත්, ඇත්තටම වටින දේවල් කොහොම හරි අත්නාරින එක තමයි ඔයාගේ විශේෂත්වය.',
+    personalitySi: 'ඔබේ ලොකුම ශක්තිය තමයි මේ නොසැලෙන ස්ථාවරත්වය. වෙලාවකට වැඩ ටිකක් හිමින් කළත්, ඇත්තටම වටින දේවල් කොහොම හරි අත්නාරින එක තමයි ඔබේ විශේෂත්වය.',
     traitsEn: ['Steady', 'Loyal', 'Tasteful', 'Determined'],
     traitsSi: ['ස්ථාවරයි', 'විශ්වාසවන්තයි', 'රසකාමීයි', 'අධිෂ්ඨානශීලීයි'],
     gem: { en: 'Diamond', si: 'දියමන්ති' },
@@ -194,9 +194,9 @@ var LAGNA_UI_COPY = {
   },
   Mithuna: {
     readingEn: 'Gemini Rising gives you a quick mind, flexible thinking, and a natural gift for words. You understand people through conversation and often succeed where ideas, learning, trade, or communication are important.',
-    readingSi: 'මිථුන ලග්නෙන් ඉපදුණු ඔයාට තියෙන්නේ මාරම තියුණු මොළයක්. ඕනෙම තත්ත්වෙකට හැඩගැහෙන්න ඔයාට පුළුවන්. අලුත් අදහස් හොයන්න වගේම කතාබහ කරන්න ඔයාට තියෙන්නේ උපන් දක්ෂතාවයක්. ඒ නිසා හැමෝම එක්ක ලේසියෙන් ෆිට් වෙන්න ඔයාට පුළුවන්.',
+    readingSi: 'මිථුන ලග්නෙන් ඉපදුණු ඔබට තියෙන්නේ මාරම තියුණු මොළයක්. ඕනෙම තත්ත්වෙකට හැඩගැහෙන්න ඔබට පුළුවන්. අලුත් අදහස් හොයන්න වගේම කතාබහ කරන්න ඔබට තියෙන්නේ උපන් දක්ෂතාවයක්. ඒ නිසා හැමෝම එක්ක ලේසියෙන් ෆිට් වෙන්න ඔබට පුළුවන්.',
     personalityEn: 'Your chart shows a mind that connects patterns quickly, but your best results come when you finish one clear path before chasing the next idea.',
-    personalitySi: 'ඔයාගේ මනස මාර ස්පීඩ් එකට දේවල් අල්ලගන්නවා. හැබැයි අලුත් දේවල් පස්සේ දුවන්න කලින්, පටන් ගත්ත වැඩේ ඉවරයක් කරලා දැම්මොත් ඔයාට මාරම සුපිරි රිසල්ට් එකක් ගන්න පුළුවන්.',
+    personalitySi: 'ඔබේ මනස මාර ස්පීඩ් එකට දේවල් අල්ලගන්නවා. හැබැයි අලුත් දේවල් පස්සේ දුවන්න කලින්, පටන් ගත්ත වැඩේ ඉවරයක් කරලා දැම්මොත් ඔබට මාරම සුපිරි රිසල්ට් එකක් ගන්න පුළුවන්.',
     traitsEn: ['Quick-minded', 'Communicative', 'Adaptable', 'Curious'],
     traitsSi: ['මොළකාරයෙක්', 'කතාවට දක්ෂයි', 'හැඩගැසෙනසුළුයි', 'කුතුහලයෙන් පිරිලා'],
     gem: { en: 'Emerald', si: 'මරකත' },
@@ -204,9 +204,9 @@ var LAGNA_UI_COPY = {
   },
   Kataka: {
     readingEn: 'Cancer Rising gives you emotional depth, intuition, and a protective heart. Home, family, memory, and belonging shape many of your choices, and you often sensitive to what others feel before they say it.',
-    readingSi: 'කටක ලග්නෙන් ඉපදුණු ඔයා හරිම සංවේදී, හැඟීම්බර කෙනෙක්. අනිත් අයව ආදරෙන් බලාගන්න ඔයාට තියෙන්නේ මාර ලස්සන හදවතක්. පවුලේ අය, ගෙදර දොර ගැන ඔයා හුඟක් හිතනවා. අනිත් අයගේ හිතේ තියන දේ කට ඇරලා කියන්න කලින්ම අල්ලගන්න ඔයාට පුළුවන්.',
+    readingSi: 'කටක ලග්නෙන් ඉපදුණු ඔබ හරිම සංවේදී, හැඟීම්බර කෙනෙක්. අනිත් අයව ආදරෙන් බලාගන්න ඔබට තියෙන්නේ මාර ලස්සන හදවතක්. පවුලේ අය, ගෙදර දොර ගැන ඔබ හුඟක් හිතනවා. අනිත් අයගේ හිතේ තියන දේ කට ඇරලා කියන්න කලින්ම අල්ලගන්න ඔබට පුළුවන්.',
     personalityEn: 'Your sensitivity is not weakness, it is your way of reading the room and protecting what matters.',
-    personalitySi: 'ඔයාගේ මේ සංවේදීකම දුර්වලකමක් නෙවෙයි. වටපිටාවේ වෙන දේවල් ඉක්මනට තේරුම් අරන්, ඔයාට වටින දේවල් ආරක්ෂා කරගන්න ලැබුණු අපූර්ව හැකියාවක්.',
+    personalitySi: 'ඔබේ මේ සංවේදීකම දුර්වලකමක් නෙවෙයි. වටපිටාවේ වෙන දේවල් ඉක්මනට තේරුම් අරන්, ඔබට වටින දේවල් ආරක්ෂා කරගන්න ලැබුණු අපූර්ව හැකියාවක්.',
     traitsEn: ['Intuitive', 'Caring', 'Protective', 'Family-minded'],
     traitsSi: ['ඉවක් තියනවා', 'කරුණාවන්තයි', 'පවුලට ලැදියි', 'රැකබලා ගන්නවා'],
     gem: { en: 'Pearl', si: 'මුතු' },
@@ -214,9 +214,9 @@ var LAGNA_UI_COPY = {
   },
   Simha: {
     readingEn: 'Leo Rising gives you presence, pride, and a natural wish to create something meaningful. You are noticed easily, and your life opens when confidence is guided by generosity and responsibility.',
-    readingSi: 'සිංහ ලග්නෙන් ඉපදුණු ඔයා පෙනුමෙන් වගේම වැඩවලිනුත් හැමෝම අතරේ කැපී පේන කෙනෙක්. සහජ නායකයෙක් විදිහට ඉස්සරහට යන්න ඔයාට පුළුවන්. ආත්ම විශ්වාසයයි කරුණාවයි එකතු කරලා වැඩ කළොත්, හැමෝම ආදරේ කරන කැපී පෙනෙන චරිතයක් වෙන්න පුළුවන්.',
+    readingSi: 'සිංහ ලග්නෙන් ඉපදුණු ඔබ පෙනුමෙන් වගේම වැඩවලිනුත් හැමෝම අතරේ කැපී පේන කෙනෙක්. සහජ නායකයෙක් විදිහට ඉස්සරහට යන්න ඔබට පුළුවන්. ආත්ම විශ්වාසයයි කරුණාවයි එකතු කරලා වැඩ කළොත්, හැමෝම ආදරේ කරන කැපී පෙනෙන චරිතයක් වෙන්න පුළුවන්.',
     personalityEn: 'Your personality carries warmth and authority, people respond when you lead with heart rather than ego.',
-    personalitySi: 'ඔයා ළඟ තියෙන උණුසුම් හදවත සහ අන් අයට උදව් කරන්න තියන ලැදියාව නිසා ලොකු පිළිගැනීමක් ලැබෙනවා. හැබැයි පොඩ්ඩක් තියන ආඩම්බර ගතිය පාලනය කරගත්තොත් වැඩේ තවත් ලස්සන වෙයි.',
+    personalitySi: 'ඔබ ළඟ තියෙන උණුසුම් හදවත සහ අන් අයට උදව් කරන්න තියන ලැදියාව නිසා ලොකු පිළිගැනීමක් ලැබෙනවා. හැබැයි පොඩ්ඩක් තියන ආඩම්බර ගතිය පාලනය කරගත්තොත් වැඩේ තවත් ලස්සන වෙයි.',
     traitsEn: ['Confident', 'Warm-hearted', 'Commanding', 'Creative'],
     traitsSi: ['විශ්වාසවන්තයි', 'කැපී පෙනෙනවා', 'ආකර්ෂණීයයි', 'නිර්භීතයි'],
     gem: { en: 'Ruby', si: 'මාණික්‍ය' },
@@ -224,9 +224,9 @@ var LAGNA_UI_COPY = {
   },
   Kanya: {
     readingEn: 'Virgo Rising gives you a careful mind, practical judgement, and a strong eye for detail. You improve whatever you touch, but your peace grows when perfection becomes a guide rather than pressure.',
-    readingSi: 'කන්‍යා ලග්නෙන් ඉපදුණු ඔයා හරිම ප්‍රායෝගිකව, පිළිවෙළට වැඩ කරන කෙනෙක්. පුංචි පුංචි දේවල් ගැන පවා ඔයා ගොඩක් හිතනවා. අනිත් අයට උදව් කරන්න වගේම හැමදේම ලස්සනට තියාගන්න ඔයා මාරම උනන්දුයි.',
+    readingSi: 'කන්‍යා ලග්නෙන් ඉපදුණු ඔබ හරිම ප්‍රායෝගිකව, පිළිවෙළට වැඩ කරන කෙනෙක්. පුංචි පුංචි දේවල් ගැන පවා ඔබ ගොඩක් හිතනවා. අනිත් අයට උදව් කරන්න වගේම හැමදේම ලස්සනට තියාගන්න ඔබ මාරම උනන්දුයි.',
     personalityEn: 'Your chart shows a refined problem-solver, someone who notices what others miss and turns small corrections into real progress.',
-    personalitySi: 'ඕනෙම ප්‍රශ්නයක් ලේසියෙන් විසඳගන්න හැකියාව ඔයාට තියනවා. හැමදේම 100%ක්ම පර්ෆෙක්ට් වෙන්න ඕනේ කියලා හිතලා ඔයා නිකන් ස්ට්‍රෙස් වෙන්න එපා.',
+    personalitySi: 'ඕනෙම ප්‍රශ්නයක් ලේසියෙන් විසඳගන්න හැකියාව ඔබට තියනවා. හැමදේම 100%ක්ම පර්ෆෙක්ට් වෙන්න ඕනේ කියලා හිතලා ඔබ නිකන් ස්ට්‍රෙස් වෙන්න එපා.',
     traitsEn: ['Analytical', 'Practical', 'Organized', 'Helpful'],
     traitsSi: ['විශ්ලේෂණාත්මකයි', 'පිළිවෙළයි', 'උදව් කරනවා', 'ප්‍රායෝගිකයි'],
     gem: { en: 'Emerald', si: 'මරකත' },
@@ -234,9 +234,9 @@ var LAGNA_UI_COPY = {
   },
   Tula: {
     readingEn: 'Libra Rising gives you charm, balance, and a strong sense of fairness. Relationships, beauty, negotiation, and social harmony become important life themes, and you succeed by choosing peace without losing your own voice.',
-    readingSi: 'තුලා ලග්නෙන් ඉපදුණු ඔයා සාමයට, සාධාරණත්වයට මාරම ලැදියි. ප්‍රශ්නයක් වුණාම පැති දෙකම බලලා සාධාරණව තීරණ ගන්න ඔයාට පුළුවන්. ලස්සන දේවල්, කලාව වගේ දේවල් වලටත් ඔයා සහජයෙන්ම කැමතියි.',
+    readingSi: 'තුලා ලග්නෙන් ඉපදුණු ඔබ සාමයට, සාධාරණත්වයට මාරම ලැදියි. ප්‍රශ්නයක් වුණාම පැති දෙකම බලලා සාධාරණව තීරණ ගන්න ඔබට පුළුවන්. ලස්සන දේවල්, කලාව වගේ දේවල් වලටත් ඔබ සහජයෙන්ම කැමතියි.',
     personalityEn: 'Your gift is reading both sides of a situation, but your growth comes from making clear choices when balance becomes delay.',
-    personalitySi: 'වෙන අයත් එක්ක එකතුවෙලා වැඩ කරන්න තියන හැකියාව තමයි ඔයාගේ ලොකුම ශක්තිය. තීරණ ගන්න ටිකක් කල් ගියත්, ගන්න තීරණය ගොඩක් වෙලාවට හරිම එක වෙනවා.',
+    personalitySi: 'වෙන අයත් එක්ක එකතුවෙලා වැඩ කරන්න තියන හැකියාව තමයි ඔබේ ලොකුම ශක්තිය. තීරණ ගන්න ටිකක් කල් ගියත්, ගන්න තීරණය ගොඩක් වෙලාවට හරිම එක වෙනවා.',
     traitsEn: ['Diplomatic', 'Charming', 'Fair-minded', 'Artistic'],
     traitsSi: ['සාමකාමීයි', 'සාධාරණයි', 'කලාකාමීයි', 'සමබරයි'],
     gem: { en: 'Diamond', si: 'දියමන්ති' },
@@ -244,9 +244,9 @@ var LAGNA_UI_COPY = {
   },
   Vrischika: {
     readingEn: 'Scorpio Rising gives you an intense, private, and deeply observant nature. Mars adds courage under pressure, so you often transform through difficult moments and notice hidden motives before others do.',
-    readingSi: 'වෘශ්චික ලග්නෙන් ඉපදුණු ඔයාට තියෙන්නේ ගැඹුරු හැඟීම් දාමයක්. යමක් කරන්න හිතුවොත් ඒකෙ අගමුල හොයනකම්ම අතාරින්නේ නැහැ. ඔයාගේ මානසික ශක්තිය මාරම ප්‍රබලයි.',
+    readingSi: 'වෘශ්චික ලග්නෙන් ඉපදුණු ඔබට තියෙන්නේ ගැඹුරු හැඟීම් දාමයක්. යමක් කරන්න හිතුවොත් ඒකෙ අගමුල හොයනකම්ම අතාරින්නේ නැහැ. ඔබේ මානසික ශක්තිය මාරම ප්‍රබලයි.',
     personalityEn: 'Your power is emotional depth with control, you are strongest when you use intensity for healing, research, and focused action.',
-    personalitySi: 'ඕනෙම අභියෝගයකදී වැටෙන්නේ නැතුව, අළු ගසලා නැගිටින එක ඔයාට නිකන්ම පිහිටලා තියනවා. අනිත් අයගේ හිතේ තියන දේ ඉක්මනින්ම තේරුම් ගන්න එකත් ඔයාගේ විශේෂත්වයක්.',
+    personalitySi: 'ඕනෙම අභියෝගයකදී වැටෙන්නේ නැතුව, අළු ගසලා නැගිටින එක ඔබට නිකන්ම පිහිටලා තියනවා. අනිත් අයගේ හිතේ තියන දේ ඉක්මනින්ම තේරුම් ගන්න එකත් ඔබේ විශේෂත්වයක්.',
     traitsEn: ['Intense willpower', 'Magnetic', 'Deep thinker', 'Resilient'],
     traitsSi: ['රහස්‍යයි', 'අධිෂ්ඨානශීලීයි', 'ගැඹුරුයි', 'මානසික ශක්තිය'],
     gem: { en: 'Red Coral', si: 'රතු පබළු' },
@@ -254,9 +254,9 @@ var LAGNA_UI_COPY = {
   },
   Dhanus: {
     readingEn: 'Sagittarius Rising gives you optimism, faith, and a love of truth. You grow through learning, travel, teaching, and big ideas, especially when freedom is balanced with responsibility.',
-    readingSi: 'ධනු ලග්නෙන් ඉපදුණු ඔයා පට්ට නිදහස් කාමියෙක්. හැමදෙයක් දිහාම සුබවාදීව බලන ඔයා, සංචාරය කරන්න, අලුත් දේවල් ඉගෙනගන්න හරිම කැමතියි. ජීවිතේ යථාර්ථය හොයන එක ඔයාගේ හැටියක්.',
+    readingSi: 'ධනු ලග්නෙන් ඉපදුණු ඔබ පට්ට නිදහස් කාමියෙක්. හැමදෙයක් දිහාම සුබවාදීව බලන ඔබ, සංචාරය කරන්න, අලුත් දේවල් ඉගෙනගන්න හරිම කැමතියි. ජීවිතේ යථාර්ථය හොයන එක ඔබේ හැටියක්.',
     personalityEn: 'Your chart points to a seeker, someone who needs meaning, movement, and a horizon to aim toward.',
-    personalitySi: 'ඔයාගේ අවංකකම, කෙළින් කතා කරන ගතිය නිසා සමහර වෙලාවට අනිත් අයට රිදෙන්නත් පුළුවන්. හැබැයි ඔයා අනාගතය ගැන ගොඩක් දුර හිතලා තීරණ ගන්න කෙනෙක්.',
+    personalitySi: 'ඔබේ අවංකකම, කෙළින් කතා කරන ගතිය නිසා සමහර වෙලාවට අනිත් අයට රිදෙන්නත් පුළුවන්. හැබැයි ඔබ අනාගතය ගැන ගොඩක් දුර හිතලා තීරණ ගන්න කෙනෙක්.',
     traitsEn: ['Optimistic', 'Wise', 'Adventurous', 'Straightforward'],
     traitsSi: ['නිදහස්කාමීයි', 'සුබවාදීයි', 'අවංකයි', 'දාර්ශනිකයි'],
     gem: { en: 'Yellow Sapphire', si: 'පුෂ්පරාග' },
@@ -264,9 +264,9 @@ var LAGNA_UI_COPY = {
   },
   Makara: {
     readingEn: 'Capricorn Rising gives you patience, discipline, and a serious approach to achievement. Your success usually comes step by step, through structure, endurance, and practical decisions.',
-    readingSi: 'මකර ලග්නෙන් ඉපදුණු ඔයා කියන්නේ මාරම විනයක්, කැපවීමක් තියන කෙනෙක්. ජීවිතේ ලොකු ඉලක්ක තියාගෙන, ඒවාට හිමින් සැරේ, ස්ථාවරව යන එක තමයි ඔයාගේ ක්‍රමය. මහන්සි වෙලා වැඩ කරන්න ඔයාට තියෙන්නේ ලොකු හයියක්.',
+    readingSi: 'මකර ලග්නෙන් ඉපදුණු ඔබ කියන්නේ මාරම විනයක්, කැපවීමක් තියන කෙනෙක්. ජීවිතේ ලොකු ඉලක්ක තියාගෙන, ඒවාට හිමින් සැරේ, ස්ථාවරව යන එක තමයි ඔබේ ක්‍රමය. මහන්සි වෙලා වැඩ කරන්න ඔබට තියෙන්නේ ලොකු හයියක්.',
     personalityEn: 'Your strength is long-term focus, you may start quietly but you can outlast people who move faster at the beginning.',
-    personalitySi: 'වගකීම් අරගන්න බය නැති ඔයා, අමාරු කාලවලදීත් වැටෙන්නේ නැතුව ඉස්සරහටම යනවා. පවුලේ අය වෙනුවෙනුත් ඔයා ලොකු වගකීමක් දරන කෙනෙක්.',
+    personalitySi: 'වගකීම් අරගන්න බය නැති ඔබ, අමාරු කාලවලදීත් වැටෙන්නේ නැතුව ඉස්සරහටම යනවා. පවුලේ අය වෙනුවෙනුත් ඔබ ලොකු වගකීමක් දරන කෙනෙක්.',
     traitsEn: ['Disciplined', 'Responsible', 'Patient', 'Strategic'],
     traitsSi: ['විනයගරුකයි', 'අරමුණු සහගතයි', 'වගකීම් දරනවා', 'කැපවෙනවා'],
     gem: { en: 'Blue Sapphire', si: 'නිල් මැණික්' },
@@ -274,9 +274,9 @@ var LAGNA_UI_COPY = {
   },
   Kumbha: {
     readingEn: 'Aquarius Rising gives you originality, independence, and a mind that looks beyond the usual path. You are drawn to systems, communities, technology, and ideas that can improve life for many people.',
-    readingSi: 'කුම්භ ලග්නෙන් ඉපදුණු ඔයා හැමතිස්සෙම අලුත් විදිහට හිතන, අනාගතය දකින කෙනෙක්. යාළුවන්ට, සමාජයට ගොඩක් ළැදියි. සම්ප්‍රදායික රාමුවලින් පිටතට ගිහින් අලුත් දේවල් හොයන්න ඔයා හරිම දක්ෂයි.',
+    readingSi: 'කුම්භ ලග්නෙන් ඉපදුණු ඔබ හැමතිස්සෙම අලුත් විදිහට හිතන, අනාගතය දකින කෙනෙක්. යාළුවන්ට, සමාජයට ගොඩක් ළැදියි. සම්ප්‍රදායික රාමුවලින් පිටතට ගිහින් අලුත් දේවල් හොයන්න ඔබ හරිම දක්ෂයි.',
     personalityEn: 'Your personality carries distance and vision, you often understand where things are going before others are ready to accept it.',
-    personalitySi: 'ඔයා අනිත් හැමෝටම සමානව සලකන කෙනෙක්. හැඟීම්වලට වඩා බුද්ධියට තැන දීලා වැඩ කරන නිසා, සමහර වෙලාවට ඔයා ටිකක් තනියම ඉන්න හැදුවත්, ඇතුළින් ඔයා ගොඩක් මානුෂීයයි.',
+    personalitySi: 'ඔබ අනිත් හැමෝටම සමානව සලකන කෙනෙක්. හැඟීම්වලට වඩා බුද්ධියට තැන දීලා වැඩ කරන නිසා, සමහර වෙලාවට ඔබ ටිකක් තනියම ඉන්න හැදුවත්, ඇතුළින් ඔබ ගොඩක් මානුෂීයයි.',
     traitsEn: ['Original', 'Independent', 'Humanitarian', 'Forward-looking'],
     traitsSi: ['අලුත් විදිහට හිතනවා', 'මිත්‍රශීලීයි', 'මානුෂීයයි', 'ස්වාධීනයි'],
     gem: { en: 'Blue Sapphire', si: 'නිල් මැණික්' },
@@ -284,9 +284,9 @@ var LAGNA_UI_COPY = {
   },
   Meena: {
     readingEn: 'Pisces Rising gives you compassion, imagination, and a deeply receptive heart. You absorb moods easily and do best when creativity, faith, and service have healthy boundaries.',
-    readingSi: 'මීන ලග්නෙන් ඉපදුණු ඔයා මාරම සංවේදී, අනිත් අය වෙනුවෙන් හදවතින්ම හිතන කෙනෙක්. කලාත්මක හැකියාවන් සහ ගැඹුරු ආධ්‍යාත්මික ගතිගුණ ඔයාට උපතින්ම පිහිටලා තියනවා.',
+    readingSi: 'මීන ලග්නෙන් ඉපදුණු ඔබ මාරම සංවේදී, අනිත් අය වෙනුවෙන් හදවතින්ම හිතන කෙනෙක්. කලාත්මක හැකියාවන් සහ ගැඹුරු ආධ්‍යාත්මික ගතිගුණ ඔබට උපතින්ම පිහිටලා තියනවා.',
     personalityEn: 'Your gift is emotional imagination, you can comfort, create, and understand what cannot always be explained in words.',
-    personalitySi: 'අනිත් අයගේ ප්‍රශ්නවලදී ඔයාටත් ඒ දුක ඒ විදිහටම දැනෙනවා. හිතින් ලස්සන ලෝක මවන්න ඔයා දක්ෂයි වගේම, හැම වෙලාවටම අනිත් අයට උදව් කරන්න තමයි ඔයාගේ හිත කියන්නේ.',
+    personalitySi: 'අනිත් අයගේ ප්‍රශ්නවලදී ඔබටත් ඒ දුක ඒ විදිහටම දැනෙනවා. හිතින් ලස්සන ලෝක මවන්න ඔබ දක්ෂයි වගේම, හැම වෙලාවටම අනිත් අයට උදව් කරන්න තමයි ඔබේ හිත කියන්නේ.',
     traitsEn: ['Compassionate', 'Imaginative', 'Intuitive', 'Gentle'],
     traitsSi: ['සංවේදීයි', 'පරිකල්පනය', 'ආධ්‍යාත්මිකයි', 'ත්‍යාගශීලීයි'],
     gem: { en: 'Yellow Sapphire', si: 'පුෂ්පරාග' },
@@ -354,15 +354,15 @@ function getAstroEntryName(entry) {
 var PRACTICAL_TONES = {
   start: {
     effectEn: 'The universe is handing you a fresh spark today. Even the smallest first step will magically click into place.',
-    effectSi: 'විශ්වයෙන් අද ඔයාට අලුත් ආරම්භයක රහස් ගිනිපුපුරක් දෙනවා. පුංචිම පියවරක් තිබ්බත් ඒක හරි ලස්සනට ගැලපෙයි.',
-    dosEn: ['Start that one tiny thing', 'Trust your morning instinct'], dosSi: ['ඔයාගේ හිතේ තිබ්බ ඒ පුංචි දේ අද පටන්ගන්න', 'උදේම හිතට දැනෙන අදහස විශ්වාස කරන්න'],
+    effectSi: 'විශ්වයෙන් අද ඔබට අලුත් ආරම්භයක රහස් ගිනිපුපුරක් දෙනවා. පුංචිම පියවරක් තිබ්බත් ඒක හරි ලස්සනට ගැලපෙයි.',
+    dosEn: ['Start that one tiny thing', 'Trust your morning instinct'], dosSi: ['ඔබේ හිතේ තිබ්බ ඒ පුංචි දේ අද පටන්ගන්න', 'උදේම හිතට දැනෙන අදහස විශ්වාස කරන්න'],
     dontsEn: ['Overpromise everything', 'Scatter this precious energy'], dontsSi: ['ඔක්කොම කරන්නම් කියලා පොරොන්දු වෙන්න එපා', 'අද ලැබෙන විශේෂ ශක්තිය නිකරුණේ නාස්ති කරන්න එපා'],
   },
   build: {
     effectEn: 'Today holds a steady, grounding energy. Whatever you build or continue today is getting a secret protective blessing.',
-    effectSi: 'හරිම ස්ථාවර, ආරක්ෂිත ශක්තියක් අද දවසේ හැංගිලා තියෙනවා. අද ඔයා එකතු කරන හෝ ගොඩනගන හැමදේකටම රහස් ආශිර්වාදයක් ලැබෙනවා.',
-    dosEn: ['Continue what you love', 'Add a simple brick to your goals'], dosSi: ['ඔයා ආදරය කරන වැඩේ දිගටම කරගෙන යන්න', 'ඔයාගේ අරමුණ වෙනුවෙන් පුංචි හරි දෙයක් අදත් එකතු කරන්න'],
-    dontsEn: ['Rush for magic results', 'Skip the little loving details'], dontsSi: ['ඉක්මනින් මැජික් ප්‍රතිඵල බලාපොරොත්තු වෙන්න එපා', 'ඔයාගේ ආදරණීය පුංචි විස්තර මඟහරින්න එපා'],
+    effectSi: 'හරිම ස්ථාවර, ආරක්ෂිත ශක්තියක් අද දවසේ හැංගිලා තියෙනවා. අද ඔබ එකතු කරන හෝ ගොඩනගන හැමදේකටම රහස් ආශිර්වාදයක් ලැබෙනවා.',
+    dosEn: ['Continue what you love', 'Add a simple brick to your goals'], dosSi: ['ඔබ ආදරය කරන වැඩේ දිගටම කරගෙන යන්න', 'ඔබේ අරමුණ වෙනුවෙන් පුංචි හරි දෙයක් අදත් එකතු කරන්න'],
+    dontsEn: ['Rush for magic results', 'Skip the little loving details'], dontsSi: ['ඉක්මනින් මැජික් ප්‍රතිඵල බලාපොරොත්තු වෙන්න එපා', 'ඔබේ ආදරණීය පුංචි විස්තර මඟහරින්න එපා'],
   },
   relationship: {
     effectEn: 'People matter more today. Kind words and cooperation can open doors.',
@@ -379,7 +379,7 @@ var PRACTICAL_TONES = {
   clear: {
     effectEn: 'Small blockers may show up so you can remove them. Patience turns friction into progress.',
     effectSi: 'පොඩි පොඩි බාධා මතු වෙන්න පුළුවන්, හැබැයි ඒ ඉස්සරහට යන්න පාර හදාගන්නයි. ඉවසීමෙන් හිටියොත් ඒ බාධාම ජයග්‍රහණයක් වෙයි.',
-    dosEn: ['Fix one problem first', 'Double-check plans'], dosSi: ['කලබල වෙන්නේ නැතුව එක ප්‍රශ්නයක් ඉස්සෙල්ලා විසඳගන්න', 'ඔයාගේ සැලසුම් දෙපාරක් චෙක් කරන්න'],
+    dosEn: ['Fix one problem first', 'Double-check plans'], dosSi: ['කලබල වෙන්නේ නැතුව එක ප්‍රශ්නයක් ඉස්සෙල්ලා විසඳගන්න', 'ඔබේ සැලසුම් දෙපාරක් චෙක් කරන්න'],
     dontsEn: ['Rush launches', 'React emotionally'], dontsSi: ['අලුත් දේවල් කලබලෙන් පටන්ගන්න එපා', 'ප්‍රශ්න ආවම හැඟීම් වලට වහල් වෙන්න එපා'],
   },
   heal: {
@@ -396,7 +396,7 @@ var PRACTICAL_TONES = {
   },
   action: {
     effectEn: 'Courage and movement are supported. Use the energy for useful action, not conflict.',
-    effectSi: 'ඔයාගේ නිර්භීතකමට විශ්වයෙන් අද ලොකු ශක්තියක් ලැබෙනවා. ඒ ගැම්ම රණ්ඩු ඇතිකරගන්න නෙවෙයි, ජීවිතේ ඉස්සරහට යන්න පාවිච්චි කරන්න.',
+    effectSi: 'ඔබේ නිර්භීතකමට විශ්වයෙන් අද ලොකු ශක්තියක් ලැබෙනවා. ඒ ගැම්ම රණ්ඩු ඇතිකරගන්න නෙවෙයි, ජීවිතේ ඉස්සරහට යන්න පාවිච්චි කරන්න.',
     dosEn: ['Take a measured step', 'Use physical energy well'], dosSi: ['හොඳින් හිතලා ධෛර්යවන්ත පියවරක් ගන්න', 'මහන්සි වෙලා කරන වැඩක් අදම ඉවර කරන්න'],
     dontsEn: ['Pick fights', 'Make impulsive promises'], dontsSi: ['නොවැදගත් දේවලට ගැටුම් ඇතිකරගන්න එපා', 'ගැම්මට අවාසිදායක පොරොන්දු දෙන්න යන්න එපා'],
   },
@@ -408,7 +408,7 @@ var PRACTICAL_TONES = {
   },
   social: {
     effectEn: 'Teamwork and shared plans are easier. A helpful person may make the day lighter.',
-    effectSi: 'අනිත් අයත් එක්ක එකතු වෙලා වැඩ කරන්න අද හරිම ලේසි දවසක්. ඔයාට උදව් කරන කෙනෙක් නිසා අද දවස ගොඩක් සැහැල්ලු වෙයි.',
+    effectSi: 'අනිත් අයත් එක්ක එකතු වෙලා වැඩ කරන්න අද හරිම ලේසි දවසක්. ඔබට උදව් කරන කෙනෙක් නිසා අද දවස ගොඩක් සැහැල්ලු වෙයි.',
     dosEn: ['Coordinate early', 'Share credit'], dosSi: ['කලින්ම කතා කරගෙන වැඩ ටික ප්ලෑන් කරගන්න', 'ලැබෙන ගෞරවය අනිත් අයත් එක්ක බෙදාගන්න'],
     dontsEn: ['Carry everything alone', 'Create mixed messages'], dontsSi: ['ඔක්කොම බර තනියම කරගහගන්න යන්න එපා', 'අනිත් අයට තේරුම්ගන්න අමාරු විදිහට කතා කරන්න එපා'],
   },
@@ -426,7 +426,7 @@ var PRACTICAL_TONES = {
   },
   rest: {
     effectEn: 'The day supports softer pacing. Reflection can be more valuable than pressure.',
-    effectSi: 'අද දවස ඉල්ලන්නේම සැහැල්ලුව. බලෙන් වැඩක් ඉවර කරනවට වඩා, නිදහසේ හිතන්න දෙන කාලය අද ඔයාට ගොඩක් වටිනවා.',
+    effectSi: 'අද දවස ඉල්ලන්නේම සැහැල්ලුව. බලෙන් වැඩක් ඉවර කරනවට වඩා, නිදහසේ හිතන්න දෙන කාලය අද ඔබට ගොඩක් වටිනවා.',
     dosEn: ['Pause before choosing', 'Make space for quiet'], dosSi: ['ඕනම දෙයක් තෝරගන්න කලින් පොඩ්ඩක් ඉන්න', 'නිදහසේ හුස්මගන්න පුළුවන් නිහඬ වෙලාවක් හදාගන්න'],
     dontsEn: ['Overload the schedule', 'Ignore emotional tiredness'], dontsSi: ['කරන්න බැරි තරම් වැඩ ගොඩක් දාගෙන හිරවෙන්න එපා', 'හිතේ තියෙන මහන්සිය ගණන් ගන්නේ නැතුව ඉන්න එපා'],
   },
@@ -456,13 +456,13 @@ var PRACTICAL_TONES = {
   },
   confidence: {
     effectEn: 'Visibility is supported. Lead with warmth and confidence, not pride.',
-    effectSi: 'අද ඔයාව අනිත් අයට හොඳට කැපිලා පේනවා. අහංකාරකමෙන් නැතුව, ආදරෙන් සහ විශ්වාසයෙන් යුතුව නායකත්වය ගන්න හොඳම දවසක්.',
-    dosEn: ['Present your idea', 'Act generously'], dosSi: ['ඔයාගේ හිතේ තියෙන අදහස බය නැතුව ඉදිරිපත් කරන්න', 'අනිත් අය වෙනුවෙන් හොඳ හිතින් මැදිහත් වෙන්න'],
-    dontsEn: ['Dominate others', 'Make it all about you'], dontsSi: ['බලෙන් අනිත් අයව පාලනය කරන්න යන්න එපා', 'හැමදේටම ඔයාම විතරයි කියන තැන ඉඳලා කතා කරන්න එපා'],
+    effectSi: 'අද ඔබව අනිත් අයට හොඳට කැපිලා පේනවා. අහංකාරකමෙන් නැතුව, ආදරෙන් සහ විශ්වාසයෙන් යුතුව නායකත්වය ගන්න හොඳම දවසක්.',
+    dosEn: ['Present your idea', 'Act generously'], dosSi: ['ඔබේ හිතේ තියෙන අදහස බය නැතුව ඉදිරිපත් කරන්න', 'අනිත් අය වෙනුවෙන් හොඳ හිතින් මැදිහත් වෙන්න'],
+    dontsEn: ['Dominate others', 'Make it all about you'], dontsSi: ['බලෙන් අනිත් අයව පාලනය කරන්න යන්න එපා', 'හැමදේටම ඔබම විතරයි කියන තැන ඉඳලා කතා කරන්න එපා'],
   },
   listen: {
     effectEn: 'Listening brings better answers than speaking first. Details arrive through patience.',
-    effectSi: 'අද කතා කරනවට වඩා අහගෙන ඉන්න එකෙන් ඔයාට ලොකු රහස් පිළිතුරු ටිකක් හොයාගන්න පුළුවන්. ඉවසීමෙන් හිටියොත් ඔක්කොම විස්තර ඔයා ගාවටම එයි.',
+    effectSi: 'අද කතා කරනවට වඩා අහගෙන ඉන්න එකෙන් ඔබට ලොකු රහස් පිළිතුරු ටිකක් හොයාගන්න පුළුවන්. ඉවසීමෙන් හිටියොත් ඔක්කොම විස්තර ඔබ ගාවටම එයි.',
     dosEn: ['Listen fully', 'Ask one good question'], dosSi: ['අනිත් අය කියන දේ සම්පූර්ණයෙන්ම අහගන්න', 'වැදගත්ම එක හොඳ ප්‍රශ්නයක් අහන්න'],
     dontsEn: ['Interrupt too soon', 'Miss quiet signals'], dontsSi: ['අනිත් අයට කතා කරන්න නොදී පනින්න එපා', 'වචන නැතුව දෙන සිග්නල් මඟහැරගන්න එපා'],
   },
@@ -475,13 +475,13 @@ var PRACTICAL_TONES = {
   steady: {
     effectEn: 'This is a grounded day for normal duties. Simple, reliable action works best.',
     effectSi: 'දෛනික වැඩ ටික කරගෙන යන්න නියම, නිදහස් දවසක්. හරිම සරල විදිහට, විශ්වාසයෙන් වැඩ කරන එක අදට ගොඩක් හොඳයි.',
-    dosEn: ['Keep the basics strong', 'Work steadily'], dosSi: ['ඔයාගේ මූලික දේවල් හරියටම තියාගන්න', 'කලබලයක් නැතුව පාඩුවේ වැඩ ටික කරන්න'],
+    dosEn: ['Keep the basics strong', 'Work steadily'], dosSi: ['ඔබේ මූලික දේවල් හරියටම තියාගන්න', 'කලබලයක් නැතුව පාඩුවේ වැඩ ටික කරන්න'],
     dontsEn: ['Create drama', 'Change plans without reason'], dontsSi: ['නැති ප්‍රශ්න මවලා ලොකු කරගන්න යන්න එපා', 'හේතුවක් නැතුව එකපාරට සැලසුම් වෙනස් කරන්න එපා'],
   },
   release: {
     effectEn: 'Letting go is supported. Remove clutter, old tension, or a habit that drains you.',
-    effectSi: 'අත්හැරීම තමයි අද දවසේ තේමාව. ඔයාගේ හිතට වද දෙන, ඔයාව වෙහෙස කරන දේවල් හරි පුද්ගලයින්ව හරි අතහැරලා දාන්න.',
-    dosEn: ['Clear a space', 'End a stale loop'], dosSi: ['ඔයාගේ වටපිටාවයි හිතයි පිරිසිදු කරගන්න', 'කිසිම තේරුමක් නැති පුරුද්දකට තිත තියන්න'],
+    effectSi: 'අත්හැරීම තමයි අද දවසේ තේමාව. ඔබේ හිතට වද දෙන, ඔබව වෙහෙස කරන දේවල් හරි පුද්ගලයින්ව හරි අතහැරලා දාන්න.',
+    dosEn: ['Clear a space', 'End a stale loop'], dosSi: ['ඔබේ වටපිටාවයි හිතයි පිරිසිදු කරගන්න', 'කිසිම තේරුමක් නැති පුරුද්දකට තිත තියන්න'],
     dontsEn: ['Hold grudges', 'Restart old conflict'], dontsSi: ['තරහවල් හිතේ තියාගෙන තැවෙන්න එපා', 'ඉවර වෙච්ච පරණ ප්‍රශ්න ආයේ අදින්න යන්න එපා'],
   },
 };
@@ -563,7 +563,7 @@ function getPanchangaGuidance(kind, entry, language) {
   var label = chooseText(language, labels[0], labels[1]);
   var hint = chooseText(language, labels[2], labels[1]);
   var meaning = language === 'si'
-    ? label + ': ' + title + '. මේ දේවල් අද දවස සාර්ථක කරගන්න ඔයාට ගොඩක් උදව් වෙයි.'
+    ? label + ': ' + title + '. මේ දේවල් අද දවස සාර්ථක කරගන්න ඔබට ගොඩක් උදව් වෙයි.'
     : label + ': ' + String(title).toLowerCase() + '. This is the practical signal for how to use today well.';
   return {
     label: label,
@@ -724,13 +724,13 @@ function buildTodayOracle(options) {
     body = chooseText(
       language,
       firstName + ', your chart is still coming into focus. Use the daily timing below while we tune the personal layer.',
-      firstName + ', ඔයාගේ කේන්දරය තවම සකස් වෙමින් තියෙනවා. ඒ අතරතුර අද කාල බලය පහළින් බලන්න.'
+      firstName + ', ඔබේ කේන්දරය තවම සකස් වෙමින් තියෙනවා. ඒ අතරතුර අද කාල බලය පහළින් බලන්න.'
     );
   } else {
     body = chooseText(
       language,
       firstName + ', the sky can guide your timing. Add birth details to make this page speak directly to your chart.',
-      firstName + ', අද අහසෙන් කාලය ගැන මඟපෙන්වීමක් ලැබෙනවා. උපන් විස්තර දුන්නොත් මේ පිටුව ඔයාගේම කේන්දරයට ගැලපෙයි.'
+      firstName + ', අද අහසෙන් කාලය ගැන මඟපෙන්වීමක් ලැබෙනවා. උපන් විස්තර දුන්නොත් මේ පිටුව ඔබේම කේන්දරයට ගැලපෙයි.'
     );
   }
   return {
@@ -779,7 +779,7 @@ function FutureWindowsBait() {
 
   if (!isFree || !cards) return null;
 
-  var heading = language === 'si' ? 'ඔයාගේ අගුළු දැමූ කවුළු' : 'YOUR LOCKED WINDOWS';
+  var heading = language === 'si' ? 'ඔබේ අගුළු දැමූ කවුළු' : 'YOUR LOCKED WINDOWS';
   var cta = language === 'si' ? 'කාලරේඛාව විවෘත කරන්න' : 'Unlock timeline';
 
   return (
@@ -1105,7 +1105,7 @@ var WinBackBanner = React.memo(function WinBackBanner({ language, onReactivate, 
         <View style={{ flex: 1 }}>
           <Text style={wb.title}>{si ? 'ආයුබෝවන්,' : 'Welcome back 🌙'}</Text>
           <Text style={wb.sub}>{si
-            ? 'ඔයාගේ රිපෝට්, කැලැන්ඩර්, චැට්ස් නැති වෙලා නැහැ, පොඩ්ඩකට නවතිලා විතරයි'
+            ? 'ඔබේ රිපෝට්, කැලැන්ඩර්, චැට්ස් නැති වෙලා නැහැ, පොඩ්ඩකට නවතිලා විතරයි'
             : 'Your reports, calendar and chat guide are paused — not gone.'}</Text>
         </View>
       </View>
@@ -1562,6 +1562,15 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
   var moonPt = moonUp ? moonArcPoint(fNow) : null;                // moon rides the clock at 'now'
   var fMoonRise = !isNaN(moonrise) && !isNaN(dayStart) ? frC(moonrise) : NaN;
   var fMoonSet = !isNaN(moonset) && !isNaN(dayStart) ? frC(moonset) : NaN;
+  // when the moon is below the horizon, say so — and show it sunk under the
+  // horizon line at the current hour instead of vanishing from the dial
+  var moonDown = isToday && !isNaN(moonrise) && !moonUp;
+  var moonStatus = '';
+  if (isToday && !isNaN(moonrise)) {
+    if (moonUp) moonStatus = si ? ' · දැන්' : ' · UP';
+    else if (nowMs > moonset) moonStatus = si ? ' · බැස ගියා' : ' · SET';
+    else if (nowMs < moonrise) moonStatus = si ? ' · ඉදිරියට' : ' · AHEAD';
+  }
 
   var rahuActive = isToday && !isNaN(rkStart) && !isNaN(rkEnd) && nowMs >= rkStart && nowMs <= rkEnd;
 
@@ -1741,7 +1750,7 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
             {/* the moon's road — silver, mapped to its clock rise → set on the inner arc */}
             {fMoonSet > fMoonRise ? (
               <G>
-                <Path d={moonBandPath(fMoonRise, fMoonSet)} fill="none" stroke="rgba(200,210,235,0.14)" strokeWidth="1.4" strokeDasharray="2 6" />
+                <Path d={moonBandPath(fMoonRise, fMoonSet)} fill="none" stroke="rgba(200,210,235,0.20)" strokeWidth="1.6" strokeDasharray="2 6" />
                 {isToday && moonUp ? <Path d={moonBandPath(fMoonRise, fNow)} fill="none" stroke="url(#moonRouteGrad)" strokeWidth="1.8" strokeLinecap="round" /> : null}
               </G>
             ) : null}
@@ -1848,6 +1857,14 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
             </View>
           ) : null}
 
+          {/* below the horizon: the moon doesn't vanish — it sits half-sunk
+              under the horizon line at the current hour, dimmed */}
+          {moonDown ? (
+            <View style={[skyx.moonWrap, { left: (nowPt.x / 360 * 100) + '%', top: '94%', opacity: 0.55 }]} pointerEvents="none">
+              <PhaseMoon size={20} tithiNum={tithiNum} />
+            </View>
+          ) : null}
+
           {/* "now" badge — follows the active body, clamped inside the card */}
           {isToday ? (
             <View style={[skyx.badgeWrap, { left: badgeLeftPct + '%', top: badgeTopPct + '%' }]} pointerEvents="none">
@@ -1911,7 +1928,7 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
             <Ionicons name="moon-outline" size={12} color="#C9D2E8" />
             <Text style={skyx.moonLegLabel} numberOfLines={1}>{si ? 'සඳ අහසේ සිටින කාලය' : 'MOON IN SKY'}</Text>
             <Text style={skyx.moonLegTime} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-              {fmtHM(moonrise, t) + ' – ' + fmtHM(moonset, t) + (moonUp ? (si ? ' · දැන්' : ' · UP') : '')}
+              {fmtHM(moonrise, t) + ' – ' + fmtHM(moonset, t) + moonStatus}
             </Text>
           </View>
         ) : null}
@@ -3337,7 +3354,7 @@ export default function HomeScreen() {
                   <Ionicons name="telescope-outline" size={22} color="#DAA520" />
                 </View>
                 <View style={s.wbTextCol}>
-                  <Text style={s.wbTitle}>{language === 'si' ? 'මේ සතියේ ඔයාගේ ලග්න පලාපල' : 'Weekly Forecast'}</Text>
+                  <Text style={s.wbTitle}>{language === 'si' ? 'මේ සතියේ ඔබේ ලග්න පලාපල' : 'Weekly Forecast'}</Text>
                   {weekLabel ? <Text style={s.wbWeek}>{weekLabel}</Text> : null}
                   {userReport ? (
                     <View style={s.wbTeaser}>
@@ -3348,7 +3365,7 @@ export default function HomeScreen() {
                       />
                       <Text style={s.wbTeaserText}>
                         {language === 'si'
-                          ? 'ඔයාගේ ' + userReport.nameSi + ' ලග්නය — ' + (userReport.outlook === 'favorable' ? 'මේ සතිය ගොඩක් හොඳයි' : userReport.outlook === 'challenging' ? 'මේ සතියේ පරිස්සම් වෙන්න' : 'මේ සතිය මිශ්‍රයි')
+                          ? 'ඔබේ ' + userReport.nameSi + ' ලග්නය — ' + (userReport.outlook === 'favorable' ? 'මේ සතිය ගොඩක් හොඳයි' : userReport.outlook === 'challenging' ? 'මේ සතියේ පරිස්සම් වෙන්න' : 'මේ සතිය මිශ්‍රයි')
                           : 'Your ' + userReport.nameEn + ' — ' + (userReport.outlook || 'mixed')
                         }
                       </Text>
@@ -3418,12 +3435,12 @@ export default function HomeScreen() {
               <Text style={[cs.alertTitle, chActive && cs.alertTitleDanger]}>
                 {chActive
                   ? (language === 'si' ? 'තීරණ ගැනීමේදී දෙවරක් සිතන්න' : 'Extra Care Today')
-                  : (language === 'si' ? 'අද දවස ඔයාට සාමකාමීයි' : 'Support Looks Good')}
+                  : (language === 'si' ? 'අද දවස ඔබට සාමකාමීයි' : 'Support Looks Good')}
               </Text>
               <Text style={[cs.alertDesc, chActive && cs.alertDescDanger]}>
                 {chActive
                   ? (language === 'si' ? 'චන්ද්‍රාෂ්ඨම දිනයක් බැවින් අද දවසේ අලුත් වැඩ ආරම්භයට සහ වැදගත් තීරණ වලට එතරම් සුබ නැත.' : 'Avoid major decisions today')
-                  : (language === 'si' ? 'ග්‍රහලෝක වල ගමන්මග ඔයාට හිතකර නිසා අද දවස කරදර නැතුව ගෙවිලා යයි.' : 'Moon transit is favorable today')}
+                  : (language === 'si' ? 'ග්‍රහලෝක වල ගමන්මග ඔබට හිතකර නිසා අද දවස කරදර නැතුව ගෙවිලා යයි.' : 'Moon transit is favorable today')}
               </Text>
             </View>
             <View style={[cs.alertDot, { backgroundColor: chActive ? '#EF4444' : '#34D399' }]} />
@@ -3590,7 +3607,7 @@ export default function HomeScreen() {
                     <View style={[s.pExplainAccent, { backgroundColor: color }]} />
                     <Text style={s.pGuideTitle}>{guide.meaning}</Text>
                     <View style={s.pGuideBlock}>
-                      <Text style={s.pGuideKicker}>{language === 'si' ? 'ඔයාට බලපාන විදිහ' : 'How it affects you'}</Text>
+                      <Text style={s.pGuideKicker}>{language === 'si' ? 'ඔබට බලපාන විදිහ' : 'How it affects you'}</Text>
                       <Text style={s.pExplainText}>{guide.effect}</Text>
                     </View>
                     <View style={s.pGuideColumns}>
@@ -3744,7 +3761,7 @@ export default function HomeScreen() {
                   <Ionicons name="telescope-outline" size={18} color={HT.gold} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.wlTitle}>{language === 'si' ? 'මේ සතියේ ඔයාගේ ලග්න පලාපල' : 'Weekly Forecast'}</Text>
+                  <Text style={s.wlTitle}>{language === 'si' ? 'මේ සතියේ ඔබේ ලග්න පලාපල' : 'Weekly Forecast'}</Text>
                   <Text style={s.wlWeekLabel}>{language === 'si' ? 'ලග්න 12ටම සතිපතා පලාපල' : 'Weekly readings for all 12 lagnas'}</Text>
                 </View>
                 <Ionicons name="lock-closed" size={16} color={HT.gold} />
@@ -3752,7 +3769,7 @@ export default function HomeScreen() {
             </View>
             <Text style={s.wlLockTease}>
               {language === 'si'
-                ? 'අලුත් සතියට ග්‍රහ කිරණ ඔයාගේ ලග්නයට බලපාන හැටි — හැම සතියෙම අලුත් කියවීමක්.'
+                ? 'අලුත් සතියට ග්‍රහ කිරණ ඔබේ ලග්නයට බලපාන හැටි — හැම සතියෙම අලුත් කියවීමක්.'
                 : 'How the week ahead plays out for your rising sign — a fresh reading every week.'}
             </Text>
             <TouchableOpacity activeOpacity={0.85} onPress={function () { Promise.resolve(showPaywall('weekly_lagna')).catch(function () {}); }} style={s.wlUnlockCta}>
@@ -3789,7 +3806,7 @@ export default function HomeScreen() {
                 <Ionicons name="telescope-outline" size={18} color={HT.gold} />
               </View>
               <View>
-                <Text style={s.wlTitle}>{language === 'si' ? 'මේ සතියේ ඔයාගේ ලග්න පලාපල' : 'Weekly Forecast'}</Text>
+                <Text style={s.wlTitle}>{language === 'si' ? 'මේ සතියේ ඔබේ ලග්න පලාපල' : 'Weekly Forecast'}</Text>
                 {weekLabel ? <Text style={s.wlWeekLabel}>{weekLabel}</Text> : null}
               </View>
             </View>
@@ -3831,7 +3848,7 @@ export default function HomeScreen() {
                             </Text>
                             {isUserLagna && (
                               <View style={s.wlYouBadge}>
-                                <Text style={s.wlYouText}>{language === 'si' ? 'ඔයා' : 'YOU'}</Text>
+                                <Text style={s.wlYouText}>{language === 'si' ? 'ඔබ' : 'YOU'}</Text>
                               </View>
                             )}
                           </View>
@@ -4070,11 +4087,11 @@ export default function HomeScreen() {
             <Ionicons name="planet-outline" size={32} color="#FFF4D7" />
           </Animated.View>
           <Text style={s.noBirthTitle}>
-            {language === 'si' ? 'ඔයාගෙම කේන්දරේ පැටිකිරිය' : 'Unlock Your Cosmic Blueprint'}
+            {language === 'si' ? 'ඔබගෙම කේන්දරේ පැටිකිරිය' : 'Unlock Your Cosmic Blueprint'}
           </Text>
           <Text style={s.noBirthBody}>
             {language === 'si'
-              ? 'ඔයාගේ උපන් විස්තර ටික දීලා කේන්දරේ, අද දවසට ගැලපෙන උපදෙස් සහ සතිපතා පලාපල ටික බලාගන්න.'
+              ? 'ඔබේ උපන් විස්තර ටික දීලා කේන්දරේ, අද දවසට ගැලපෙන උපදෙස් සහ සතිපතා පලාපල ටික බලාගන්න.'
               : 'Add your birth details in Profile to unlock your personalised chart, daily guidance, and weekly readings.'}
           </Text>
           <TouchableOpacity onPress={function () { router.push('/profile'); }} style={s.noBirthCta}>
@@ -5113,7 +5130,7 @@ var s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(218,165,32,0.10)',
   },
   wlLordLabel: { color: 'rgba(218,165,32,0.40)', fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
-  wlLordValue: { color: '#F4E4BC', fontSize: 11, fontWeight: '800', marginTop: 2, textAlign: 'center', numberOfLines: 1 },
+  wlLordValue: { color: '#F4E4BC', fontSize: 11, fontWeight: '800', marginTop: 2, textAlign: 'center' },
   wlOverallBox: {
     backgroundColor: 'rgba(218,165,32,0.04)', borderRadius: 12,
     padding: 12, gap: 6,

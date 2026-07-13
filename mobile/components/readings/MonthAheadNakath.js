@@ -52,7 +52,7 @@ function DayRow({ day, si, isToday, index, onUnlock }) {
           <View style={mn.winCol}>
             <View style={mn.lockPill}>
               <Ionicons name="lock-closed" size={12} color="rgba(255,217,131,0.75)" />
-              <Text style={mn.lockText} numberOfLines={1}>
+              <Text style={mn.lockText} numberOfLines={2}>
                 {si ? 'හොඳම වේලාව සහ රාහු කාලය' : 'Best time & Rahu Kalaya'}
               </Text>
               <View style={mn.proBadge}><Text style={mn.proBadgeText}>PRO</Text></View>

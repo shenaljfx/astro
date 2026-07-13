@@ -303,7 +303,7 @@ router.post('/muhurtha/score', optionalAuth, async (req, res) => {
  */
 router.post('/muhurtha/find', optionalAuth, async (req, res) => {
   try {
-    const { activityType, startDate, endDate, birthDate, lat, lng, maxResults } = req.body;
+    const { activityType, startDate, endDate, birthDate, partnerBirthDate, lat, lng, maxResults } = req.body;
     if (!activityType || !startDate || !endDate) {
       return res.status(400).json({ error: 'activityType, startDate, and endDate are required' });
     }
@@ -313,11 +313,12 @@ router.post('/muhurtha/find', optionalAuth, async (req, res) => {
     }
 
     const bDate = birthDate ? new Date(birthDate) : null;
+    const pDate = partnerBirthDate ? new Date(partnerBirthDate) : null;
     const latitude = lat || 6.9271;
     const longitude = lng || 79.8612;
     const limit = maxResults || 5;
 
-    const result = findMuhurtha(safeActivity, startDate, endDate, bDate, latitude, longitude, limit);
+    const result = findMuhurtha(safeActivity, startDate, endDate, bDate, latitude, longitude, limit, pDate);
     res.json({ success: true, data: result });
   } catch (error) {
     console.error('Muhurtha find error:', error);

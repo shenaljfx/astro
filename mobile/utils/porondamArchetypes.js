@@ -12,7 +12,7 @@
  * the explorer's detail panel. Same-sign pairs are fully supported.
  *
  * Voice: simple, warm, everyday Sinhala in the respectful ඔබ register
- * (never ඔයා). Short sentences a reader understands instantly.
+ * (never ඔබ). Short sentences a reader understands instantly.
  */
 
 var ELEMENT = {

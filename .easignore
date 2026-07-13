@@ -1,0 +1,43 @@
+# EAS Build upload ignore (git root).
+# EAS archives from the git root in this monorepo, so this file — not
+# mobile/.easignore — controls what gets uploaded. When present, it REPLACES
+# .gitignore for the upload, so every exclude must be listed explicitly.
+#
+# The Android build only needs the mobile/ app, so we drop every sibling
+# project and all dependency/build output.
+
+# --- Sibling projects the mobile build doesn't need ---
+/.claude
+/server
+/website
+/admin
+/.agents
+/temp-icons
+/docs
+/data
+/.github
+/vm-deploy.sh
+
+# --- Dependencies & build output anywhere in the tree ---
+# A bare directory name matches at every depth in gitignore syntax.
+node_modules/
+mobile/node_modules/
+.expo/
+dist/
+build/
+web-build/
+.gradle/
+
+# --- Mobile local backups / scratch (not needed for the build) ---
+mobile/_backups/
+mobile/.env.claude-backup
+
+# --- Logs & OS cruft ---
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+
+# NOTE: mobile/.env and mobile/google-services.json are intentionally kept —
+# the production build reads EXPO_PUBLIC_* vars and Firebase config from them.

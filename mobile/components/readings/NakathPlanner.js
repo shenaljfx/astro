@@ -20,10 +20,11 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, LayoutAnim
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { DatePickerField } from '../CosmicDateTimePicker';
+import { DatePickerField, TimePickerField } from '../CosmicDateTimePicker';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
+import { plainLines, summaryLine, mapWarning, freeWhyLine, qualityWord, dayNameSi, directionLines } from '../../utils/muhurthaPlain';
 
 // Activity type → premium Ionicon (server sends emoji; we ignore it).
 var ACTIVITY_ICONS = {
@@ -77,6 +78,17 @@ var FACTOR_LABELS = {
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function plusDaysISO(n) { return new Date(Date.now() + n * 86400000).toISOString().slice(0, 10); }
+// Split a stored ISO birth moment into the date + HH:MM the pickers expect.
+function splitDateTime(iso) {
+  if (!iso || typeof iso !== 'string') return { d: '', t: '' };
+  var parts = iso.split('T');
+  return { d: parts[0] || '', t: (parts[1] || '').slice(0, 5) };
+}
+// Recombine a date + HH:MM into an ISO string the muhurtha engine can read.
+function joinDateTime(d, t) {
+  if (!d) return null;
+  return d + 'T' + (t && /^\d{2}:\d{2}$/.test(t) ? t : '08:00') + ':00';
+}
 function fmtDay(dateStr, si) {
   try {
     var d = new Date(dateStr + 'T00:00:00');
@@ -119,6 +131,16 @@ export default function NakathPlanner() {
   var [result, setResult] = useState(null);
   var [error, setError] = useState(null);
 
+  // ── Birth details (personalization). Prefilled from the saved profile but
+  // editable per search, so a Pro user is never silently scored generic. ──
+  var bInit = splitDateTime(birth && birth.dateTime);
+  var [birthDate, setBirthDate] = useState(bInit.d);
+  var [birthTime, setBirthTime] = useState(bInit.t || '08:00');
+  // Second partner — only used for weddings (two charts must both clear).
+  var [partnerDate, setPartnerDate] = useState('');
+  var [partnerTime, setPartnerTime] = useState('08:00');
+  var isWedding = activity === 'wedding';
+
   useEffect(function () {
     api.getMuhurthaActivities()
       .then(function (res) {
@@ -132,10 +154,19 @@ export default function NakathPlanner() {
   }, []);
 
   var find = useCallback(async function () {
+    // Guard the date range up front — an end-before-start range used to come
+    // back as a misleading "no good date". Tell the user what to fix instead.
+    if (endDate < startDate) {
+      setError(si ? 'අවසන් දිනය ආරම්භක දිනයට පෙර විය නොහැක.' : 'The end date can’t be before the start date.');
+      return;
+    }
     setLoading(true); setError(null); setResult(null);
     try {
       if (isPro) {
-        var res = await api.findMuhurtha(activity, startDate, endDate, birth && birth.dateTime, bLat, bLng);
+        // Personalize from the (editable) birth fields; weddings weigh both charts.
+        var myBirth = joinDateTime(birthDate, birthTime);
+        var partnerBirth = isWedding ? joinDateTime(partnerDate, partnerTime) : null;
+        var res = await api.findMuhurtha(activity, startDate, endDate, myBirth, bLat, bLng, partnerBirth);
         setResult({ pro: true, data: res.data });
       } else {
         var pv = await api.getNakathPreview(activity, startDate, endDate, bLat, bLng);
@@ -146,7 +177,7 @@ export default function NakathPlanner() {
     } finally {
       setLoading(false);
     }
-  }, [isPro, activity, startDate, endDate, birth, bLat, bLng, si]);
+  }, [isPro, activity, startDate, endDate, birthDate, birthTime, isWedding, partnerDate, partnerTime, bLat, bLng, si]);
 
   var unlock = function () { Promise.resolve(showPaywall('nakath')).catch(function () {}); };
 
@@ -164,7 +195,7 @@ export default function NakathPlanner() {
               <TouchableOpacity key={a.type} activeOpacity={0.85} onPress={function () { setActivity(a.type); setResult(null); }}
                 style={[st.actChip, on ? st.actChipOn : null]}>
                 <Ionicons name={actIcon(a.type)} size={19} color={on ? '#FFD97A' : 'rgba(255,255,255,0.55)'} />
-                <Text style={[st.actName, on ? { color: '#FFD97A' } : null]} numberOfLines={1}>{si ? a.sinhala : a.name}</Text>
+                <Text style={[st.actName, on ? { color: '#FFD97A' } : null]} numberOfLines={2}>{si ? a.sinhala : a.name}</Text>
               </TouchableOpacity>
             );
           })}
@@ -184,6 +215,51 @@ export default function NakathPlanner() {
             <DatePickerField value={endDate} onChange={setEndDate} />
           </View>
         </View>
+      </Animated.View>
+
+      {/* Birth details — personalization (Pro) or an upgrade teaser (free). */}
+      <Animated.View entering={FadeInDown.delay(120).duration(400)} style={st.card}>
+        <View style={st.birthHead}>
+          <Text style={st.label}>{si
+            ? (isWedding ? '3. යුවළගේ උපන් විස්තර' : '3. ඔබේ උපන් විස්තර')
+            : (isWedding ? '3. Both partners’ birth details' : '3. Your birth details')}</Text>
+          {isPro && birthDate && (!isWedding || partnerDate) ? (
+            <View style={st.tunedBadge}>
+              <Ionicons name="checkmark-circle" size={12} color="#86EFAC" />
+              <Text style={st.tunedText}>{si ? 'කේන්දරයට ගැළපේ' : 'Chart-tuned'}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {isPro ? (
+          <>
+            {isWedding ? <Text style={[st.miniLabel, { marginTop: 8 }]}>{si ? 'පළමු අය' : 'First partner'}</Text> : null}
+            <View style={st.birthRow}>
+              <View style={{ flex: 1.35 }}><DatePickerField value={birthDate} onChange={setBirthDate} lang={language} /></View>
+              <View style={{ flex: 1 }}><TimePickerField value={birthTime} onChange={setBirthTime} lang={language} /></View>
+            </View>
+            {isWedding ? (
+              <>
+                <Text style={[st.miniLabel, { marginTop: 12 }]}>{si ? 'දෙවන අය' : 'Second partner'}</Text>
+                <View style={st.birthRow}>
+                  <View style={{ flex: 1.35 }}><DatePickerField value={partnerDate} onChange={setPartnerDate} lang={language} /></View>
+                  <View style={{ flex: 1 }}><TimePickerField value={partnerTime} onChange={setPartnerTime} lang={language} /></View>
+                </View>
+                <Text style={st.helpLine}>{si ? 'දෙදෙනාගේම උපන් නැකතට ගැළපෙන දවසක් තෝරා දෙනවා.' : 'We find a day that suits both charts.'}</Text>
+              </>
+            ) : (
+              <Text style={st.helpLine}>{si ? 'ඔබේ උපන් නැකතට ගැළපෙන වේලාවන් ලැබේ.' : 'Times are tuned to your birth star.'}</Text>
+            )}
+          </>
+        ) : (
+          <TouchableOpacity activeOpacity={0.85} onPress={unlock} style={st.birthLock}>
+            <Ionicons name="sparkles" size={15} color="#FFD97A" />
+            <Text style={st.birthLockText}>{si
+              ? (isWedding ? 'දෙදෙනාගේම උපන් නැකතට ගැළපූ පෞද්ගලික වේලාවන්' : 'ඔබේ උපන් නැකතට ගැළපූ පෞද්ගලික වේලාවන්')
+              : (isWedding ? 'Times tuned to both birth charts' : 'Times tuned to your birth chart')}</Text>
+            <Ionicons name="lock-closed" size={12} color="rgba(255,214,102,0.7)" />
+          </TouchableOpacity>
+        )}
       </Animated.View>
 
       {/* Find button */}
@@ -207,7 +283,7 @@ export default function NakathPlanner() {
             <View style={st.resultOrb}>
               <Ionicons name={actIcon(activity)} size={17} color="#FFD97A" />
             </View>
-            <Text style={st.resultTitle} numberOfLines={1}>{si ? activeMeta.sinhala : activeMeta.name}</Text>
+            <Text style={st.resultTitle} numberOfLines={2}>{si ? activeMeta.sinhala : activeMeta.name}</Text>
           </View>
 
           {result.pro ? <ProResults data={result.data} si={si} /> : <FreeResult data={result.data} si={si} onUnlock={unlock} />}
@@ -227,7 +303,8 @@ export default function NakathPlanner() {
               <View key={e.key} style={st.eventChip}>
                 <Ionicons name={e.icon} size={14} color="#B7A6F0" />
                 <Text style={st.eventName} numberOfLines={1}>{si ? e.si : e.en}</Text>
-                <Ionicons name="lock-closed" size={11} color="rgba(167,139,250,0.6)" />
+                {/* Lock only for free users — Pro chips are unlocked. */}
+                {!isPro ? <Ionicons name="lock-closed" size={11} color="rgba(167,139,250,0.6)" /> : null}
               </View>
             );
           })}
@@ -238,7 +315,7 @@ export default function NakathPlanner() {
             <Text style={st.eventCtaText}>{si ? 'ඔබේ ජීවිත කාල සටහන විවෘත කරන්න' : 'Unlock your life timeline'}</Text>
           </TouchableOpacity>
         ) : (
-          <ProLifeEvents birth={birth} bLat={bLat} bLng={bLng} si={si} />
+          <ProLifeEvents birthDateTime={joinDateTime(birthDate, birthTime) || (birth && birth.dateTime) || null} bLat={bLat} bLng={bLng} si={si} />
         )}
       </Animated.View>
     </View>
@@ -259,23 +336,22 @@ function WhyChips({ why, si }) {
         <Ionicons name="help-circle-outline" size={13} color="rgba(255,214,102,0.75)" />
         <Text style={st.whyTitle}>{si ? 'ඇයි මේ දවස?' : 'Why this day?'}</Text>
       </View>
+      {/* Plain-language first — the technical names are only the reference row. */}
+      <Text style={st.whyLine}>{freeWhyLine(why, si)}</Text>
+      <Text style={st.techLabel}>{si ? 'තාක්ෂණික සටහන' : 'Technical note'}</Text>
       <View style={st.whyRow}>
         {why.map(function (w, i) {
           var label = FACTOR_LABELS[w.key] ? (si ? FACTOR_LABELS[w.key].si : FACTOR_LABELS[w.key].en) : w.key;
+          var value = si && w.key === 'nakshatra' && w.sinhala ? w.sinhala : si && w.key === 'weekday' ? dayNameSi(w.name) : w.name;
           return (
             <View key={i} style={[st.whyChip, w.good ? st.whyChipGood : null]}>
               <Ionicons name={w.good ? 'checkmark-circle' : 'ellipse-outline'} size={11} color={w.good ? '#86EFAC' : 'rgba(255,255,255,0.4)'} />
               <Text style={st.whyChipLabel} numberOfLines={1}>{label}</Text>
-              <Text style={st.whyChipName} numberOfLines={1}>{w.name}</Text>
+              <Text style={st.whyChipName} numberOfLines={1}>{value}</Text>
             </View>
           );
         })}
       </View>
-      <Text style={st.whyLine}>
-        {si
-          ? 'මේ සාධක එකට ගැළපෙන දවස මෙයයි — ඒ නිසයි මේ දවස තෝරාගත්තේ.'
-          : 'These factors align on this day — that is why it was chosen.'}
-      </Text>
     </View>
   );
 }
@@ -285,7 +361,7 @@ function WhyChips({ why, si }) {
  * each scored factor (colored by how strongly it contributes) plus any
  * engine warnings. This is the "astrologer's working" behind the score.
  */
-function BreakdownDetail({ bd, warnings, si }) {
+function BreakdownDetail({ bd, warnings, si, direction }) {
   if (!bd) return null;
   var chips = [];
   var push = function (key, name, score, max) {
@@ -294,16 +370,81 @@ function BreakdownDetail({ bd, warnings, si }) {
     chips.push({ label: label, name: String(name), ratio: max ? (score || 0) / max : 1 });
   };
   if (bd.tithi) push('tithi', bd.tithi.name, bd.tithi.score, bd.tithi.max);
-  if (bd.nakshatra) push('nakshatra', bd.nakshatra.name, bd.nakshatra.score, bd.nakshatra.max);
-  if (bd.weekday) push('weekday', bd.weekday.day, bd.weekday.score, bd.weekday.max);
+  if (bd.nakshatra) push('nakshatra', (si && bd.nakshatra.sinhala) || bd.nakshatra.name, bd.nakshatra.score, bd.nakshatra.max);
+  if (bd.weekday) push('weekday', si ? dayNameSi(bd.weekday.day) : bd.weekday.day, bd.weekday.score, bd.weekday.max);
   if (bd.yoga) push('yoga', bd.yoga.name, bd.yoga.score, bd.yoga.max);
-  if (bd.tarabala) push('tarabala', bd.tarabala.name + (bd.tarabala.quality ? ' (' + bd.tarabala.quality + ')' : ''), bd.tarabala.score, bd.tarabala.max);
-  if (bd.chandrabala) push('chandrabala', (si ? bd.chandrabala.house + ' වන භාවය' : 'house ' + bd.chandrabala.house) + (bd.chandrabala.quality ? ' (' + bd.chandrabala.quality + ')' : ''), bd.chandrabala.score, bd.chandrabala.max);
-  if (bd.lagnaStrength && bd.lagnaStrength.lagna) push('lagna', bd.lagnaStrength.lagna, bd.lagnaStrength.score, bd.lagnaStrength.max);
+  if (bd.tarabala) {
+    // Dual = wedding (both partners). Show both stars, colored by the pair's
+    // combined score; the warnings list names whichever side is weak.
+    var tName = bd.tarabala.dual
+      ? bd.tarabala.name + ' / ' + bd.tarabala.partnerName
+      : bd.tarabala.name + (bd.tarabala.quality ? ' (' + bd.tarabala.quality + ')' : '');
+    push('tarabala', tName, bd.tarabala.dual ? bd.tarabala.combined : bd.tarabala.score, bd.tarabala.max);
+  }
+  if (bd.chandrabala) {
+    var cName = bd.chandrabala.dual
+      ? (si ? bd.chandrabala.house + '/' + bd.chandrabala.partnerHouse + ' භාව' : 'houses ' + bd.chandrabala.house + '/' + bd.chandrabala.partnerHouse)
+      : (si ? bd.chandrabala.house + ' වන භාවය' : 'house ' + bd.chandrabala.house) + (bd.chandrabala.quality ? ' (' + bd.chandrabala.quality + ')' : '');
+    push('chandrabala', cName, bd.chandrabala.dual ? bd.chandrabala.combined : bd.chandrabala.score, bd.chandrabala.max);
+  }
+  if (bd.lagnaStrength && bd.lagnaStrength.lagna) push('lagna', (si && bd.lagnaStrength.lagnaSinhala) || bd.lagnaStrength.lagna, bd.lagnaStrength.score, bd.lagnaStrength.max);
+
+  // Plain-language sentences derived from the same breakdown — these lead;
+  // the raw technical chips become a quiet reference row underneath.
+  var lines = plainLines(bd, si);
+  var toneColor = { good: '#86EFAC', ok: '#E8C56A', bad: '#FCA5A5' };
 
   return (
     <View style={st.bdWrap}>
       <Text style={st.whyTitle}>{si ? 'ඇයි මේ වේලාව?' : 'Why this time?'}</Text>
+      {lines.length ? <Text style={st.plainSummary}>{summaryLine(lines, si)}</Text> : null}
+      <View style={{ marginTop: 6, gap: 5 }}>
+        {lines.map(function (l, i) {
+          return (
+            <View key={i} style={st.plainRow}>
+              <View style={[st.bdDot, { backgroundColor: toneColor[l.tone] || '#E8C56A', marginTop: 5 }]} />
+              <Text style={st.plainText}>{l.text}</Text>
+            </View>
+          );
+        })}
+      </View>
+      {/* Direction of the day — going out & coming in (Disha Shoola). */}
+      {direction && direction.best ? (
+        <View style={st.dirWrap}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="compass-outline" size={13} color="#7DD3FC" />
+            <Text style={st.dirTitle}>{si ? 'දවසේ සුබ දිශාව' : 'Direction of the day'}</Text>
+          </View>
+          <View style={{ marginTop: 5, gap: 4 }}>
+            {directionLines(direction, si).map(function (l, i) {
+              return (
+                <View key={i} style={st.plainRow}>
+                  <Ionicons
+                    name={l.tone === 'bad' ? 'close-circle' : 'checkmark-circle'}
+                    size={12}
+                    color={l.tone === 'bad' ? '#FCA5A5' : '#86EFAC'}
+                    style={{ marginTop: 2.5 }}
+                  />
+                  <Text style={st.plainText}>{l.text}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
+      {Array.isArray(warnings) && warnings.length ? (
+        <View style={{ marginTop: 8, gap: 4 }}>
+          {warnings.slice(0, 3).map(function (w, i) {
+            return (
+              <View key={i} style={st.warnRow}>
+                <Ionicons name="alert-circle-outline" size={12} color="#FCA5A5" />
+                <Text style={st.warnText}>{mapWarning(w, si)}</Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+      <Text style={st.techLabel}>{si ? 'තාක්ෂණික සටහන' : 'Technical note'}</Text>
       <View style={st.whyRow}>
         {chips.map(function (c, i) {
           var col = ratioColor(c.ratio);
@@ -316,18 +457,6 @@ function BreakdownDetail({ bd, warnings, si }) {
           );
         })}
       </View>
-      {Array.isArray(warnings) && warnings.length ? (
-        <View style={{ marginTop: 8, gap: 4 }}>
-          {warnings.slice(0, 3).map(function (w, i) {
-            return (
-              <View key={i} style={st.warnRow}>
-                <Ionicons name="alert-circle-outline" size={12} color="#FCA5A5" />
-                <Text style={st.warnText}>{w}</Text>
-              </View>
-            );
-          })}
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -341,7 +470,7 @@ function FreeResult({ data, si, onUnlock }) {
       <Text style={st.bestLabel}>{si ? 'හොඳම දවස' : 'Best day'}</Text>
       <Text style={st.bestDate}>{fmtDay(data.bestDay.date, si)}</Text>
       <View style={st.qualityRow}>
-        <View style={st.qualityPill}><Text style={st.qualityText}>{data.bestDay.quality}</Text></View>
+        <View style={st.qualityPill}><Text style={st.qualityText}>{qualityWord(data.bestDay.quality, si)}</Text></View>
         <Text style={st.candidates} numberOfLines={1}>{(si ? 'තවත් හොඳ දින ' : '') + (data.lockedWindowCount || 0) + (si ? 'ක්' : ' good days')}</Text>
       </View>
 
@@ -351,7 +480,7 @@ function FreeResult({ data, si, onUnlock }) {
       {/* Locked exact time */}
       <TouchableOpacity activeOpacity={0.85} onPress={onUnlock} style={st.lockedTime}>
         <Ionicons name="time-outline" size={15} color="#FFD666" />
-        <Text style={st.lockedTimeText}>{si ? 'හරියටම සුබ වේලාව' : 'Exact auspicious time'}</Text>
+        <Text style={st.lockedTimeText}>{si ? 'හරියටම සුබ වේලාව + යන එන සුබ දිශාව' : 'Exact time + best direction to set out'}</Text>
         <Ionicons name="lock-closed" size={12} color="rgba(255,214,102,0.7)" />
       </TouchableOpacity>
       <TouchableOpacity activeOpacity={0.85} onPress={onUnlock} style={st.unlockCta}>
@@ -387,11 +516,11 @@ function ProResults({ data, si }) {
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={st.winDate} numberOfLines={1}>{fmtDay(r.dateTime.slice(0, 10), si)}</Text>
-                <Text style={st.winTime} numberOfLines={1}>{fmtTime(r.dateTime)} · {r.quality}</Text>
+                <Text style={st.winTime} numberOfLines={1}>{fmtTime(r.dateTime)} · {qualityWord(r.quality, si)}</Text>
               </View>
               <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={15} color="rgba(255,255,255,0.4)" />
             </TouchableOpacity>
-            {open ? <BreakdownDetail bd={r.breakdown} warnings={r.warnings} si={si} /> : null}
+            {open ? <BreakdownDetail bd={r.breakdown} warnings={r.warnings} si={si} direction={r.direction} /> : null}
           </View>
         );
       })}
@@ -400,36 +529,44 @@ function ProResults({ data, si }) {
   );
 }
 
-function ProLifeEvents({ birth, bLat, bLng, si }) {
+function ProLifeEvents({ birthDateTime, bLat, bLng, si }) {
   var [state, setState] = useState({ loading: false, data: null, err: null });
   useEffect(function () {
-    if (!birth || !birth.dateTime) { setState({ loading: false, data: null, err: 'nobirth' }); return; }
+    if (!birthDateTime) { setState({ loading: false, data: null, err: 'nobirth' }); return; }
     var cancelled = false;
     setState({ loading: true, data: null, err: null });
-    api.getLifeEventTiming(birth.dateTime, null, bLat, bLng)
+    api.getLifeEventTiming(birthDateTime, null, bLat, bLng)
       .then(function (res) { if (!cancelled) setState({ loading: false, data: res.data, err: null }); })
       .catch(function (e) { if (!cancelled) setState({ loading: false, data: null, err: (e && e.message) || 'err' }); });
     return function () { cancelled = true; };
-  }, [birth, bLat, bLng]);
+  }, [birthDateTime, bLat, bLng]);
 
-  if (state.err === 'nobirth') return <Text style={[st.miniLabel, { marginTop: 10 }]}>{si ? 'ජීවිත කාලය සඳහා පැතිකඩෙහි උපන් විස්තර එක් කරන්න.' : 'Add birth details in your profile for life-event timing.'}</Text>;
+  if (state.err === 'nobirth') return <Text style={[st.miniLabel, { marginTop: 10 }]}>{si ? 'උඩ "උපන් විස්තර" කොටසේ ඔබේ උපන් දිනය පුරවන්න — එවිට ඔබේ ජීවිත සිදුවීම් කාල මෙතැන පෙනේවි.' : 'Fill your birth details above to see your life-event timing here.'}</Text>;
   if (state.loading) return <ActivityIndicator color="#A78BFA" style={{ marginTop: 12 }} />;
   if (!state.data) return null;
 
-  var events = state.data.events || state.data.timeline || state.data.predictions || [];
-  if (!Array.isArray(events) || !events.length) {
-    return <Text style={[st.miniLabel, { marginTop: 10 }]}>{si ? 'ජීවිත කාල දත්ත ලබා ගත නොහැක.' : 'Life-event timing unavailable right now.'}</Text>;
+  // The server sends { events: <object by type>, timeline: <array> } — the
+  // timeline is the renderable list. (The old `events || timeline` check hit
+  // the truthy OBJECT first and made Pro users see "unavailable" forever.)
+  var events = Array.isArray(state.data.timeline) ? state.data.timeline
+    : Array.isArray(state.data.events) ? state.data.events
+    : Array.isArray(state.data.predictions) ? state.data.predictions : [];
+  if (!events.length) {
+    return <Text style={[st.miniLabel, { marginTop: 10 }]}>{si ? 'ඉදිරි වසර 10 තුළ ප්‍රබල කාල රාමු හමු නොවුණා.' : 'No strong windows found in the next 10 years.'}</Text>;
   }
   return (
     <View style={{ marginTop: 10 }}>
       {events.slice(0, 6).map(function (ev, i) {
-        var label = ev.name || ev.event || ev.type || '';
-        var when = ev.window || ev.timing || ev.period || ev.ageRange || ev.year || '';
+        var label = (si ? (ev.eventSinhala || ev.eventName) : ev.eventName) || ev.name || ev.event || ev.type || '';
+        // Year range reads plainly: "2027–2029" (single year stays single).
+        var y1 = ev.start ? String(ev.start).slice(0, 4) : '';
+        var y2 = ev.end ? String(ev.end).slice(0, 4) : '';
+        var when = y1 ? (y2 && y2 !== y1 ? y1 + '–' + y2 : y1) : String(ev.window || ev.timing || ev.ageRange || '');
         return (
           <View key={i} style={st.evRow}>
-            <Ionicons name="ellipse" size={7} color="#A78BFA" />
-            <Text style={st.evLabel} numberOfLines={1}>{label}</Text>
-            <Text style={st.evWhen} numberOfLines={1}>{typeof when === 'object' ? (when.start || when.from || '') : String(when)}</Text>
+            <Ionicons name="ellipse" size={7} color={ev.isDanger ? '#FCA5A5' : '#A78BFA'} />
+            <Text style={st.evLabel} numberOfLines={2}>{label}</Text>
+            <Text style={st.evWhen} numberOfLines={1}>{when}</Text>
           </View>
         );
       })}
@@ -445,7 +582,18 @@ var st = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   actChip: { width: '31%', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   actChipOn: { borderColor: '#FFB800', backgroundColor: 'rgba(255,184,0,0.12)' },
-  actName: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.8)', marginTop: 6, maxWidth: '100%' },
+  // Two centered lines with reserved height — server Sinhala names run long
+  // ("ශල්‍ය කර්මය / වෛද්‍ය ක්‍රියාමාර්ග") and one line cropped them to "…".
+  // Fixed height keeps every chip in the 3-col grid the same size.
+  actName: { fontSize: 10.5, lineHeight: 14, height: 28, fontWeight: '700', color: 'rgba(255,255,255,0.8)', marginTop: 6, maxWidth: '100%', textAlign: 'center', textAlignVertical: 'center' },
+  // Birth-details card
+  birthHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  birthRow: { flexDirection: 'row', gap: 10, marginTop: 6 },
+  tunedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9, backgroundColor: 'rgba(134,239,172,0.12)', borderWidth: 1, borderColor: 'rgba(134,239,172,0.35)' },
+  tunedText: { fontSize: 10, fontWeight: '800', color: '#86EFAC', letterSpacing: 0.2 },
+  helpLine: { fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 9, lineHeight: 16 },
+  birthLock: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 10, paddingVertical: 12, paddingHorizontal: 13, borderRadius: 12, backgroundColor: 'rgba(255,214,102,0.07)', borderWidth: 1, borderColor: 'rgba(255,214,102,0.22)' },
+  birthLockText: { flex: 1, fontSize: 12.5, fontWeight: '700', color: 'rgba(255,240,208,0.9)' },
   findBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 15, borderRadius: 14 },
   findBtnText: { fontSize: 15, fontWeight: '900', color: '#2A1707', letterSpacing: 0.3 },
   err: { color: '#FCA5A5', fontSize: 13, textAlign: 'center', marginVertical: 8 },
@@ -468,7 +616,15 @@ var st = StyleSheet.create({
   whyChipGood: { borderColor: 'rgba(134,239,172,0.35)', backgroundColor: 'rgba(134,239,172,0.06)' },
   whyChipLabel: { fontSize: 9.5, fontWeight: '700', color: 'rgba(255,255,255,0.45)', flexShrink: 1 },
   whyChipName: { fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.88)', flexShrink: 1 },
-  whyLine: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 9, lineHeight: 16 },
+  whyLine: { fontSize: 12, color: 'rgba(255,255,255,0.72)', marginTop: 8, lineHeight: 18 },
+  // Plain-language explanation rows (lead content; tech chips follow)
+  plainSummary: { fontSize: 12, fontWeight: '700', color: 'rgba(255,240,208,0.9)', marginTop: 7, lineHeight: 17 },
+  plainRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
+  plainText: { flex: 1, fontSize: 11.5, color: 'rgba(255,255,255,0.7)', lineHeight: 17 },
+  techLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(255,255,255,0.32)', marginTop: 11 },
+  // Direction-of-the-day block (Disha Shoola)
+  dirWrap: { marginTop: 10, padding: 10, borderRadius: 10, backgroundColor: 'rgba(125,211,252,0.05)', borderWidth: 1, borderColor: 'rgba(125,211,252,0.18)' },
+  dirTitle: { fontSize: 11.5, fontWeight: '800', letterSpacing: 0.3, color: 'rgba(125,211,252,0.9)' },
 
   // Pro per-window breakdown
   bdWrap: { marginLeft: 52, marginBottom: 8, padding: 10, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.025)', borderWidth: 1, borderColor: 'rgba(255,214,102,0.1)' },

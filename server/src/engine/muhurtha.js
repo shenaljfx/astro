@@ -147,6 +147,40 @@ function calculateDurmuhurtha(date, lat = 6.9271, lng = 79.8612) {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  DISHA SHOOLA — travel direction of the day
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Disha Shoola (දිශා ශූලය) — the classical weekday rule: one cardinal
+ * direction is "blocked" each day; SETTING OUT toward it is inauspicious.
+ * The opposite direction is the day's best for departures, and the same
+ * facing is used when entering/receiving (ගෙට ඇතුළු වීම).
+ *
+ *   Mon & Sat → East blocked   ·   Sun & Fri → West blocked
+ *   Tue & Wed → North blocked  ·   Thu       → South blocked
+ */
+const DISHA_SHOOLA = {
+  0: 'West', 1: 'East', 2: 'North', 3: 'North', 4: 'South', 5: 'West', 6: 'East',
+};
+const DIRECTION_SI = { East: 'නැගෙනහිර', West: 'බටහිර', North: 'උතුර', South: 'දකුණ' };
+const OPPOSITE_DIRECTION = { East: 'West', West: 'East', North: 'South', South: 'North' };
+
+/**
+ * Direction guidance for a given datetime (weekday-based).
+ * @returns {{ best: {en,si}, avoid: {en,si}, rule: string }}
+ */
+function getTravelDirections(dateTime) {
+  const avoid = DISHA_SHOOLA[new Date(dateTime).getDay()];
+  const best = OPPOSITE_DIRECTION[avoid];
+  return {
+    best: { en: best, si: DIRECTION_SI[best] },
+    avoid: { en: avoid, si: DIRECTION_SI[avoid] },
+    rule: 'Disha Shoola',
+  };
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  TARABALA & CHANDRABALA
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -392,9 +426,12 @@ const ACTIVITY_RULES = {
  * @param {Date} [birthDate] — user's birth date (for Tarabala/Chandrabala)
  * @param {number} [lat] — latitude
  * @param {number} [lng] — longitude
+ * @param {Date} [partnerBirthDate] — partner's birth date. For two-person
+ *   events (weddings) the day must clear Tarabala/Chandrabala for BOTH people;
+ *   the personalized factors then score the pair, warning if either is weak.
  * @returns {Object} score breakdown
  */
-function scoreMuhurtha(dateTime, activityType, birthDate, lat = 6.9271, lng = 79.8612) {
+function scoreMuhurtha(dateTime, activityType, birthDate, lat = 6.9271, lng = 79.8612, partnerBirthDate = null) {
   const rules = ACTIVITY_RULES[activityType];
   if (!rules) {
     throw new Error(`Unknown activity: ${activityType}. Valid: ${Object.keys(ACTIVITY_RULES).join(', ')}`);
@@ -414,7 +451,7 @@ function scoreMuhurtha(dateTime, activityType, birthDate, lat = 6.9271, lng = 79
   if (rules.goodTithis.includes(tithiNum)) tithiScore = 15;
   else if (rules.badTithis.includes(tithiNum)) { tithiScore = 0; warnings.push(`Tithi ${panchanga.tithi?.name} is inauspicious for ${rules.name}`); }
   else if (RIKTA_TITHIS.includes(tithiNum)) { tithiScore = 2; warnings.push('Rikta Tithi — generally weak energy'); }
-  breakdown.tithi = { name: panchanga.tithi?.name, number: tithiNum, score: tithiScore, max: 15 };
+  breakdown.tithi = { name: panchanga.tithi?.name, number: tithiNum, paksha: panchanga.tithi?.paksha || null, score: tithiScore, max: 15 };
   totalScore += tithiScore;
 
   // ── Nakshatra Score (0-15) ──
@@ -424,7 +461,7 @@ function scoreMuhurtha(dateTime, activityType, birthDate, lat = 6.9271, lng = 79
   else if (rules.badNakshatras.includes(nakName)) { nakScore = 0; warnings.push(`${nakName} Nakshatra is not suitable for ${rules.name}`); }
   else if (GENERALLY_AUSPICIOUS.includes(nakName)) nakScore = 10;
   else if (INAUSPICIOUS_NAKSHATRAS.includes(nakName)) nakScore = 3;
-  breakdown.nakshatra = { name: nakName, score: nakScore, max: 15 };
+  breakdown.nakshatra = { name: nakName, sinhala: panchanga.nakshatra?.sinhala || null, score: nakScore, max: 15 };
   totalScore += nakScore;
 
   // ── Yoga Score (0-10) ──
@@ -501,30 +538,60 @@ function scoreMuhurtha(dateTime, activityType, birthDate, lat = 6.9271, lng = 79
   // 3. PERSONALIZED CHECKS (require birth date)
 
   if (birthDate) {
-    const bDate = new Date(birthDate);
-    const natalMoonSid = toSidereal(getMoonLongitude(bDate), bDate);
-    const natalNakIdx = Math.floor(natalMoonSid / (360 / 27));
-    const natalMoonRashiId = Math.floor(natalMoonSid / 30) + 1;
-
-    // Current Moon position
+    // Transit Moon depends only on the chosen datetime — compute once, then
+    // score each person's natal Moon against it.
     const transitMoonSid = toSidereal(getMoonLongitude(dt), dt);
     const transitNakIdx = Math.floor(transitMoonSid / (360 / 27));
     const transitMoonRashiId = Math.floor(transitMoonSid / 30) + 1;
 
-    // ── Tarabala (0-10) ──
+    const natalOf = (bd) => {
+      const sid = toSidereal(getMoonLongitude(bd), bd);
+      return { nakIdx: Math.floor(sid / (360 / 27)), rashiId: Math.floor(sid / 30) + 1 };
+    };
+    const primary = natalOf(new Date(birthDate));
+    const partner = partnerBirthDate ? natalOf(new Date(partnerBirthDate)) : null;
+
+    // ── Tarabala (0-10) ── with a partner, both stars are scored and the
+    // day carries the average; a weak star on either side raises a warning.
     if (rules.needsTarabala) {
-      const tara = calculateTarabala(transitNakIdx, natalNakIdx);
-      breakdown.tarabala = { name: tara.name, quality: tara.quality, score: tara.score, max: 10 };
-      totalScore += tara.score;
-      if (tara.quality === 'bad') warnings.push(`${tara.name} Tara — not ideal for your birth star`);
+      const taraA = calculateTarabala(transitNakIdx, primary.nakIdx);
+      if (partner) {
+        const taraB = calculateTarabala(transitNakIdx, partner.nakIdx);
+        const combined = Math.round((taraA.score + taraB.score) / 2);
+        breakdown.tarabala = {
+          dual: true, max: 10, combined,
+          name: taraA.name, quality: taraA.quality, score: taraA.score,
+          partnerName: taraB.name, partnerQuality: taraB.quality, partnerScore: taraB.score,
+        };
+        totalScore += combined;
+        if (taraA.quality === 'bad') warnings.push(`${taraA.name} Tara — weak for the first partner's birth star`);
+        if (taraB.quality === 'bad') warnings.push(`${taraB.name} Tara — weak for the second partner's birth star`);
+      } else {
+        breakdown.tarabala = { name: taraA.name, quality: taraA.quality, score: taraA.score, max: 10 };
+        totalScore += taraA.score;
+        if (taraA.quality === 'bad') warnings.push(`${taraA.name} Tara — not ideal for your birth star`);
+      }
     }
 
-    // ── Chandrabala (0-10) ──
+    // ── Chandrabala (0-10) ── same pairing logic for the Moon's house.
     if (rules.needsChandrabala) {
-      const chandra = calculateChandrabala(transitMoonRashiId, natalMoonRashiId);
-      breakdown.chandrabala = { house: chandra.house, quality: chandra.quality, score: chandra.score, max: 10 };
-      totalScore += chandra.score;
-      if (chandra.quality === 'bad') warnings.push(`Moon in house ${chandra.house} from your natal Moon — weak Chandrabala`);
+      const chandraA = calculateChandrabala(transitMoonRashiId, primary.rashiId);
+      if (partner) {
+        const chandraB = calculateChandrabala(transitMoonRashiId, partner.rashiId);
+        const combined = Math.round((chandraA.score + chandraB.score) / 2);
+        breakdown.chandrabala = {
+          dual: true, max: 10, combined,
+          house: chandraA.house, quality: chandraA.quality, score: chandraA.score,
+          partnerHouse: chandraB.house, partnerQuality: chandraB.quality, partnerScore: chandraB.score,
+        };
+        totalScore += combined;
+        if (chandraA.quality === 'bad') warnings.push(`Weak Chandrabala for the first partner (Moon in house ${chandraA.house})`);
+        if (chandraB.quality === 'bad') warnings.push(`Weak Chandrabala for the second partner (Moon in house ${chandraB.house})`);
+      } else {
+        breakdown.chandrabala = { house: chandraA.house, quality: chandraA.quality, score: chandraA.score, max: 10 };
+        totalScore += chandraA.score;
+        if (chandraA.quality === 'bad') warnings.push(`Moon in house ${chandraA.house} from your natal Moon — weak Chandrabala`);
+      }
     }
   }
 
@@ -554,7 +621,7 @@ function scoreMuhurtha(dateTime, activityType, birthDate, lat = 6.9271, lng = 79
         lagnaScore = Math.max(0, lagnaScore - 5);
         warnings.push('Malefic planet in Lagna at the chosen time — not ideal');
       }
-      breakdown.lagnaStrength = { lagna: lagna.rashi.english, lord: lagnaLord, score: lagnaScore, max: 10 };
+      breakdown.lagnaStrength = { lagna: lagna.rashi.english, lagnaSinhala: lagna.rashi.sinhala || null, lord: lagnaLord, score: lagnaScore, max: 10 };
       totalScore += lagnaScore;
     } catch (e) {
       breakdown.lagnaStrength = { score: 5, max: 10 };
@@ -583,6 +650,7 @@ function scoreMuhurtha(dateTime, activityType, birthDate, lat = 6.9271, lng = 79
     score: normalizedScore,
     quality,
     breakdown,
+    direction: getTravelDirections(dt),
     warnings,
     specialRule: rules.specialRule || null,
     recommendation: normalizedScore >= 65
@@ -607,9 +675,10 @@ function scoreMuhurtha(dateTime, activityType, birthDate, lat = 6.9271, lng = 79
  * @param {number} [lat] — latitude (default: Colombo)
  * @param {number} [lng] — longitude (default: Colombo)
  * @param {number} [maxResults] — maximum results to return (default: 5)
+ * @param {Date|string} [partnerBirthDate] — partner's birth date (weddings)
  * @returns {Object} ranked list of best dates/times
  */
-function findMuhurtha(activityType, startDate, endDate, birthDate, lat = 6.9271, lng = 79.8612, maxResults = 5) {
+function findMuhurtha(activityType, startDate, endDate, birthDate, lat = 6.9271, lng = 79.8612, maxResults = 5, partnerBirthDate = null) {
   const rules = ACTIVITY_RULES[activityType];
   if (!rules) {
     throw new Error(`Unknown activity: ${activityType}. Valid: ${Object.keys(ACTIVITY_RULES).join(', ')}`);
@@ -618,6 +687,7 @@ function findMuhurtha(activityType, startDate, endDate, birthDate, lat = 6.9271,
   const start = new Date(startDate);
   const end = new Date(endDate);
   const bDate = birthDate ? new Date(birthDate) : null;
+  const pDate = partnerBirthDate ? new Date(partnerBirthDate) : null;
 
   // Limit range to 90 days max for performance
   const maxDays = 90;
@@ -652,7 +722,7 @@ function findMuhurtha(activityType, startDate, endDate, birthDate, lat = 6.9271,
 
     for (const ct of checkTimes) {
       try {
-        const result = scoreMuhurtha(ct, activityType, bDate, lat, lng);
+        const result = scoreMuhurtha(ct, activityType, bDate, lat, lng, pDate);
         if (result.score >= 40) { // Only include candidates above minimum threshold
           candidates.push(result);
         }
@@ -849,6 +919,9 @@ module.exports = {
   // Personalized calculations
   calculateTarabala,
   calculateChandrabala,
+
+  // Direction of the day (Disha Shoola)
+  getTravelDirections,
 
   // Quick checks
   isGoodTimeNow,

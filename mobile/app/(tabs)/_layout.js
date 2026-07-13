@@ -101,7 +101,7 @@ function DockNode({ tabConfig, focused, onPress, label }) {
       <Animated.View style={[dock.nodeIcon, liftStyle]}>
         {IconComponent ? <IconComponent size={23} color={iconColor} focused={focused} /> : null}
       </Animated.View>
-      <Text numberOfLines={1} style={[dock.label, { color: labelColor }, focused && dock.labelOn]}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={[dock.label, { color: labelColor }, focused && dock.labelOn]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -154,7 +154,7 @@ function CenterMedallion({ focused, onPress, label, reduced }) {
         {/* orbit hairline around the medallion */}
         <View style={[dock.medOrbit, focused && { borderColor: 'rgba(244,228,188,0.55)' }]} pointerEvents="none" />
       </Animated.View>
-      <Text numberOfLines={1} style={[dock.label, dock.medLabel, focused && dock.labelOn]}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={[dock.label, dock.medLabel, focused && dock.labelOn]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -331,7 +331,7 @@ var dock = StyleSheet.create({
   },
   slot: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   nodeIcon: { height: 26, alignItems: 'center', justifyContent: 'center' },
-  label: { fontSize: 9, fontWeight: '600', marginTop: 4, letterSpacing: 0.4, textAlign: 'center', maxWidth: '96%' },
+  label: { fontSize: 10, lineHeight: 13, fontWeight: '600', marginTop: 4, letterSpacing: 0.3, textAlign: 'center', maxWidth: '98%' },
   labelOn: { fontWeight: '800', letterSpacing: 0.5 },
   // — the sun medallion —
   medWrap: { marginTop: -MEDALLION_LIFT, alignItems: 'center', justifyContent: 'center' },
@@ -529,7 +529,12 @@ export default function TabLayout() {
           options={Object.assign({ title: t(tab.titleKey) }, extraOpts)} />;
       })}
       {HIDDEN_ROUTES.map(function (name) {
-        return <Tabs.Screen key={name} name={name} options={{ href: null, title: t('tabProfile') }} />;
+        var opts = { href: null, title: t('tabProfile') };
+        // nakath & baby draw their own in-page headers (back button + title);
+        // the navigator's floating header would double up on top of them and
+        // show the wrong title ("අද") since they have no tab title of their own.
+        if (name === 'nakath' || name === 'baby') opts.headerShown = false;
+        return <Tabs.Screen key={name} name={name} options={opts} />;
       })}
     </Tabs>
     <TabCrossfade />
