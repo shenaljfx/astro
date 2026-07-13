@@ -211,6 +211,17 @@ if (process.env.NODE_ENV !== 'production') {
   );
 }
 
+// Extra trusted origins from env (comma-separated), allowed in ALL environments.
+// Lets a local Expo dev server (e.g. http://localhost:8081) talk to a
+// production-mode API without relaxing NODE_ENV globally.
+//   EXTRA_CORS_ORIGINS=http://localhost:8081,http://localhost:19006
+if (process.env.EXTRA_CORS_ORIGINS) {
+  process.env.EXTRA_CORS_ORIGINS.split(',').forEach((o) => {
+    const trimmed = o.trim();
+    if (trimmed) ALLOWED_ORIGINS.push(trimmed);
+  });
+}
+
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, curl, server-to-server)
