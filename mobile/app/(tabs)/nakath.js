@@ -11,6 +11,7 @@ import { CosmicBackground } from '../../components/CosmicBackground';
 import useScreenInsets from '../../hooks/useScreenInsets';
 import { useLanguage } from '../../contexts/LanguageContext';
 import NakathPlanner from '../../components/readings/NakathPlanner';
+import MonthAheadNakath from '../../components/readings/MonthAheadNakath';
 
 export default function NakathScreen() {
   var { language } = useLanguage();
@@ -34,6 +35,7 @@ export default function NakathScreen() {
             <Ionicons name="time" size={18} color="#FFD97A" />
           </View>
         </View>
+        <MonthAheadNakath />
         <NakathPlanner />
       </ScrollView>
     </View>

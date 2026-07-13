@@ -172,6 +172,14 @@ export var getDailyNakath = function(date) {
   return request('/api/nakath/daily?date=' + date);
 };
 
+// Next N days at a glance — each day's Rahu Kalaya + best time (Abhijit) +
+// sun/moon rise-set. Generic date math, free. Location-aware (birth lat/lng).
+export var getMonthAheadNakath = function(days, lat, lng) {
+  var q = '/api/nakath/month-ahead?days=' + (days || 30)
+    + '&lat=' + (lat || 6.9271) + '&lng=' + (lng || 79.8612);
+  return request(q, { _timeout: 30000 });
+};
+
 export var getDailyHoroscope = function(sign) {
   return request('/api/horoscope/daily/' + sign);
 };
@@ -934,6 +942,7 @@ export var getJyotishSpecialYogas = function() {
 
 export default {
   getDailyNakath: getDailyNakath,
+  getMonthAheadNakath: getMonthAheadNakath,
   getDailyHoroscope: getDailyHoroscope,
   getBirthChart: getBirthChart,
   getTransitToday: getTransitToday,

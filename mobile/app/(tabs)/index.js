@@ -2,6 +2,7 @@
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
   StyleSheet, Platform, Dimensions, Image, InteractionManager, Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import * as htmlToImage from 'html-to-image';
@@ -10,7 +11,7 @@ import * as Sharing from 'expo-sharing';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, Line, G, Defs, RadialGradient, LinearGradient as SvgLinearGradient, Stop, Ellipse, Path, Image as SvgImage } from 'react-native-svg';
+import Svg, { Circle, Line, G, Defs, RadialGradient, LinearGradient as SvgLinearGradient, Stop, Ellipse, Path, Image as SvgImage, ClipPath } from 'react-native-svg';
 import Animated, {
   FadeIn, FadeInDown, FadeInUp,
   useSharedValue, useAnimatedStyle, useAnimatedProps,
@@ -1395,10 +1396,12 @@ var SKY_STARS = [
   [90, 90, 0.6, 0.18], [200, 84, 0.6, 0.18], [300, 92, 0.6, 0.18],
 ];
 var SUN_RAY_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
-// Moon route — a slightly lower, silver arc (the night road).
+// The 24 interior hour marks (midnight endpoints are drawn as horizon dots).
+var CLOCK_HOURS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
+// Moon route — a lower, silver arc so the moon never collides with the sun.
 function moonArcPoint(f) {
   var a = Math.PI * (1 - Math.max(0, Math.min(1, f)));
-  return { x: 180 + 150 * Math.cos(a), y: 150 - 104 * Math.sin(a) };
+  return { x: 180 + 142 * Math.cos(a), y: 150 - 84 * Math.sin(a) };
 }
 function moonBandPath(f0, f1) {
   var N = 20, d = '';
@@ -1408,50 +1411,204 @@ function moonBandPath(f0, f1) {
   }
   return d.trim();
 }
+// Phase-correct moon disc — the shadow slides off the lit limb with the tithi,
+// so a waning crescent LOOKS like a waning crescent (and a daytime moon
+// explains itself). Two-circle classic: lit disc + ink shadow clipped to it.
+function PhaseMoon({ size, tithiNum }) {
+  var ph = ((((tithiNum || 15) - 1) % 30) + 30) % 30 / 30;     // 0 new → 0.5 full → 1 new
+  var illum = (1 - Math.cos(ph * 2 * Math.PI)) / 2;            // lit fraction 0..1
+  var waxing = ph <= 0.5;
+  var off = 18.8 * illum;                                      // shadow slide (2r + rim)
+  var dx = waxing ? -off : off;                                // lit limb: right waxing, left waning
+  return (
+    <Svg width={size} height={size} viewBox="0 0 30 30">
+      <Defs>
+        <RadialGradient id="pmCore" cx="40%" cy="36%" r="68%">
+          <Stop offset="0" stopColor="#FFFFFF" />
+          <Stop offset="0.55" stopColor="#E8EAF2" />
+          <Stop offset="1" stopColor="#A9B1C6" />
+        </RadialGradient>
+        <ClipPath id="pmClip"><Circle cx="15" cy="15" r="9" /></ClipPath>
+      </Defs>
+      <Circle cx="15" cy="15" r="9" fill="url(#pmCore)" />
+      <Circle cx="12" cy="12.5" r="1.9" fill="rgba(148,155,178,0.5)" />
+      <Circle cx="17.5" cy="17" r="1.3" fill="rgba(148,155,178,0.4)" />
+      <Circle cx="16" cy="11" r="0.9" fill="rgba(148,155,178,0.34)" />
+      <G clipPath="url(#pmClip)">
+        <Circle cx={15 + dx} cy="15" r="9.4" fill="rgba(9,6,20,0.93)" />
+      </G>
+      <Circle cx="15" cy="15" r="9" fill="none" stroke="rgba(201,210,232,0.35)" strokeWidth="0.6" />
+    </Svg>
+  );
+}
+// Calendar names for the sky clock's day navigation (SLT calendar).
+var SKY_WD_SHORT_SI = ['ඉරි', 'සඳු', 'අඟ', 'බදා', 'බ්‍රහ', 'සිකු', 'සෙන'];
+var SKY_WD_SHORT_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+var SKY_WD_FULL_SI = ['ඉරිදා', 'සඳුදා', 'අඟහරුවාදා', 'බදාදා', 'බ්‍රහස්පතින්දා', 'සිකුරාදා', 'සෙනසුරාදා'];
+var SKY_WD_FULL_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+var SKY_MON_SI = ['ජන', 'පෙබ', 'මාර්තු', 'අප්‍රේල්', 'මැයි', 'ජූනි', 'ජූලි', 'අගෝ', 'සැප්', 'ඔක්', 'නොවැ', 'දෙසැ'];
+var SKY_MON_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy }) {
-  var nowMs = Date.now();
-  var sunrise = parseMs(data && data.sunrise);
-  var sunset = parseMs(data && data.sunset);
-  if (isNaN(sunrise) || isNaN(sunset) || sunset <= sunrise) {
-    var base = new Date(nowMs + SLT_OFFSET_MS); base.setUTCHours(0, 0, 0, 0);
-    sunrise = base.getTime() + 6 * 3600000 - SLT_OFFSET_MS;
-    sunset = base.getTime() + 18 * 3600000 - SLT_OFFSET_MS;
-  }
-  var span = sunset - sunrise;
-  var fr = function (ms) { return (ms - sunrise) / span; };
+  var si = language === 'si';
+  var router = useRouter();
 
-  var rk = data && data.rahuKalaya;
-  var rkStart = rk ? parseMs(rk.start) : NaN;
-  var rkEnd = rk ? parseMs(rk.end) : NaN;
-  var ap = data && data.auspiciousPeriods && data.auspiciousPeriods[0];
-  var apStart = ap ? parseMs(ap.start) : NaN;
-  var apEnd = ap ? parseMs(ap.end) : NaN;
+  // minute heartbeat — keeps the sun, badge and countdown honest while open
+  var [, setTick] = useState(0);
+  useEffect(function () {
+    var id = setInterval(function () { setTick(function (x) { return x + 1; }); }, 60000);
+    return function () { clearInterval(id); };
+  }, []);
 
-  var fNow = Math.max(0, Math.min(1, fr(nowMs)));
-  var nowPt = skyArcPoint(fNow);
-  var isNight = nowMs < sunrise || nowMs > sunset;
-  var dayPct = Math.round(fNow * 100);
-
-  // ── Moon route (panchanga approximation: the moon rises ~48 min later
-  // per tithi; new moon rides with the sun, full moon rises at sunset).
-  // Honest day-level realism — the route is a guide, not an ephemeris.
-  var tithiNum = (data && data.panchanga && data.panchanga.tithi && data.panchanga.tithi.number) || null;
-  var MOON_UP_MS = 12.4 * 3600000;
-  var moonrise = tithiNum ? sunrise + ((tithiNum - 1) % 30) * 48 * 60000 : NaN;
-  // if tonight's moon already set, show the previous lunation window
-  if (!isNaN(moonrise) && nowMs < moonrise - 24 * 3600000 + MOON_UP_MS) moonrise -= 24 * 3600000;
-  var moonFrac = !isNaN(moonrise) ? (nowMs - moonrise) / MOON_UP_MS : NaN;
-  var moonUp = !isNaN(moonFrac) && moonFrac >= 0 && moonFrac <= 1;
-  var moonPt = moonUp ? moonArcPoint(moonFrac) : null;
-
-  var rahuActive = !isNaN(rkStart) && !isNaN(rkEnd) && nowMs >= rkStart && nowMs <= rkEnd;
-  var cd = '';
-  if (!isNaN(rkStart) && !isNaN(rkEnd)) {
-    var diff = rahuActive ? rkEnd - nowMs : (nowMs < rkStart ? rkStart - nowMs : 0);
-    if (diff > 0) {
-      var mins = Math.floor(diff / 60000), hrs = Math.floor(mins / 60), rm = mins % 60;
-      cd = hrs > 0 ? hrs + 'h ' + rm + 'm' : rm + 'm';
+  // ── day navigation: 0 = today (live dial); 1..6 = static day maps from the
+  // free /month-ahead endpoint (lazy-fetched once, 7 days).
+  var [dayIdx, setDayIdx] = useState(0);
+  var [monthDays, setMonthDays] = useState(null);
+  var [monthLoading, setMonthLoading] = useState(false);
+  var loc = data && data.location;
+  var selectDay = useCallback(function (i) {
+    setDayIdx(i);
+    if (i > 0 && !monthDays && !monthLoading) {
+      setMonthLoading(true);
+      api.getMonthAheadNakath(7, loc && loc.lat, loc && loc.lng)
+        .then(function (res) {
+          if (res && res.success && res.data && Array.isArray(res.data.days)) setMonthDays(res.data.days);
+          else setDayIdx(0);
+        })
+        .catch(function () { setDayIdx(0); })
+        .finally(function () { setMonthLoading(false); });
     }
+  }, [monthDays, monthLoading, loc]);
+  var isToday = dayIdx === 0;
+  var future = !isToday && monthDays ? monthDays[dayIdx] : null;
+  var selLoading = !isToday && !future;
+
+  var nowMs = Date.now();
+  var DAY_MS = 86400000;
+
+  // ── 24-hour clock. The arc is one whole day: f = 0 at midnight (left tip),
+  // 0.5 at noon (top), 1 at the next midnight (right tip). Every marker sits at
+  // its true clock position on the app clock (Sri Lanka, +5:30). The model below
+  // is normalized so today (live data) and future days (month-ahead) render
+  // through the exact same geometry.
+  var sunrise, sunset, dayStart, rkStart, rkEnd, apStart, apEnd, apNameSi, apNameEn, tithiNum, moonrise, moonset;
+  apNameSi = null; apNameEn = null; tithiNum = null; moonrise = NaN; moonset = NaN;
+  if (isToday) {
+    sunrise = parseMs(data && data.sunrise);
+    sunset = parseMs(data && data.sunset);
+    if (isNaN(sunrise) || isNaN(sunset) || sunset <= sunrise) {
+      var base = new Date(nowMs + SLT_OFFSET_MS); base.setUTCHours(0, 0, 0, 0);
+      sunrise = base.getTime() + 6 * 3600000 - SLT_OFFSET_MS;
+      sunset = base.getTime() + 18 * 3600000 - SLT_OFFSET_MS;
+    }
+    dayStart = Math.floor((nowMs + SLT_OFFSET_MS) / DAY_MS) * DAY_MS - SLT_OFFSET_MS; // SLT midnight, in UTC ms
+    var rk = data && data.rahuKalaya;
+    rkStart = rk ? parseMs(rk.start) : NaN;
+    rkEnd = rk ? parseMs(rk.end) : NaN;
+    // prefer the midday Abhijit window (the day's headline), else the first period
+    var aps = (data && data.auspiciousPeriods) || [];
+    var ap = null;
+    for (var ai = 0; ai < aps.length; ai++) { if (aps[ai] && aps[ai].name === 'Abhijit Muhurtha') { ap = aps[ai]; break; } }
+    if (!ap) ap = aps[0] || null;
+    apStart = ap ? parseMs(ap.start) : NaN;
+    apEnd = ap ? parseMs(ap.end) : NaN;
+    apNameSi = ap ? ap.sinhala : null;
+    apNameEn = ap ? ap.name : null;
+    // Moon window: the engine's REAL moonrise/moonset (near full moon it rises
+    // around sunset, near new moon around sunrise — that is the real sky);
+    // tithi approximation only if the server didn't send them.
+    var pj = data && data.panchanga;
+    var realRise = pj ? parseMs(pj.moonrise) : NaN;
+    var realSet = pj ? parseMs(pj.moonset) : NaN;
+    tithiNum = (pj && pj.tithi && pj.tithi.number) || null;
+    if (!isNaN(realRise) && !isNaN(realSet)) {
+      moonrise = realRise; moonset = realSet;
+      if (moonset <= moonrise) moonset += DAY_MS;                   // moon sets after midnight
+    } else if (tithiNum) {
+      moonrise = sunrise + ((tithiNum - 1) % 30) * 48 * 60000;
+      moonrise += Math.floor((nowMs - moonrise) / DAY_MS) * DAY_MS; // most recent rise at/ before now
+      moonset = moonrise + 12.4 * 3600000;
+    }
+  } else if (future) {
+    var cp = (future.civilDate || '').split('-');
+    dayStart = cp.length === 3 ? Date.UTC(+cp[0], +cp[1] - 1, +cp[2]) - SLT_OFFSET_MS : NaN;
+    sunrise = parseMs(future.sunrise);
+    sunset = parseMs(future.sunset);
+    rkStart = future.rahuKalaya ? parseMs(future.rahuKalaya.start) : NaN;
+    rkEnd = future.rahuKalaya ? parseMs(future.rahuKalaya.end) : NaN;
+    apStart = future.bestTime ? parseMs(future.bestTime.start) : NaN;
+    apEnd = future.bestTime ? parseMs(future.bestTime.end) : NaN;
+    apNameSi = future.bestTime ? future.bestTime.sinhala : null;
+    apNameEn = future.bestTime ? future.bestTime.name : null;
+    tithiNum = (future.tithi && future.tithi.number) || null;
+    moonrise = parseMs(future.moonrise);
+    moonset = parseMs(future.moonset);
+    if (!isNaN(moonrise) && !isNaN(moonset) && moonset <= moonrise) moonset += DAY_MS;
+  } else {
+    sunrise = NaN; sunset = NaN; dayStart = NaN; rkStart = NaN; rkEnd = NaN; apStart = NaN; apEnd = NaN;
+  }
+  var fr = function (ms) { return (ms - dayStart) / DAY_MS; };
+  var frC = function (ms) { return Math.max(0, Math.min(1, fr(ms))); };
+  var span = sunset - sunrise;
+  var fSunrise = !isNaN(dayStart) ? frC(sunrise) : 0;
+  var fSunset = !isNaN(dayStart) ? frC(sunset) : 0;
+
+  var fNow = isToday ? frC(nowMs) : 0;
+  var nowPt = skyArcPoint(fNow);
+  var isNight = isToday && (nowMs < sunrise || nowMs > sunset);
+  // progress bar tracks daylight elapsed (sunrise → sunset)
+  var dayPct = span > 0 ? Math.round(Math.max(0, Math.min(1, (nowMs - sunrise) / span)) * 100) : 0;
+
+  var moonUp = isToday && !isNaN(moonrise) && nowMs >= moonrise && nowMs <= moonset;
+  var moonPt = moonUp ? moonArcPoint(fNow) : null;                // moon rides the clock at 'now'
+  var fMoonRise = !isNaN(moonrise) && !isNaN(dayStart) ? frC(moonrise) : NaN;
+  var fMoonSet = !isNaN(moonset) && !isNaN(dayStart) ? frC(moonset) : NaN;
+
+  var rahuActive = isToday && !isNaN(rkStart) && !isNaN(rkEnd) && nowMs >= rkStart && nowMs <= rkEnd;
+
+  // ── next sky event — the pill always counts toward SOMETHING (sunset, Rahu,
+  // best time, moonrise…), so there is always a reason to come back.
+  var nextEvt = null;
+  if (isToday) {
+    var fmtCd = function (diff) {
+      var mins = Math.floor(diff / 60000), hrs = Math.floor(mins / 60), rm = mins % 60;
+      return hrs > 0 ? hrs + 'h ' + rm + 'm' : rm + 'm';
+    };
+    if (rahuActive && rkEnd > nowMs) {
+      nextEvt = { label: si ? 'රාහු අවසන්' : 'RAHU ENDS', kind: 'danger', cd: fmtCd(rkEnd - nowMs) };
+    } else {
+      var evts = [
+        [apStart, si ? 'සුබ වේලාවට' : 'BEST TIME IN', 'gold'],
+        [apEnd, si ? 'සුබ අවසන්' : 'BEST ENDS', 'gold'],
+        [rkStart, si ? 'රාහු කාලයට' : 'RAHU IN', 'danger'],
+        [rkEnd, si ? 'රාහු අවසන්' : 'RAHU ENDS', 'danger'],
+        [sunrise, si ? 'හිරු උදාවට' : 'SUNRISE IN', 'gold'],
+        [sunset, si ? 'හිරු අස්තයට' : 'SUNSET IN', 'gold'],
+        [moonrise, si ? 'සඳ උදාවට' : 'MOONRISE IN', 'silver'],
+        [moonset, si ? 'සඳ අස්තයට' : 'MOONSET IN', 'silver'],
+      ];
+      var bestAt = Infinity, bi = -1;
+      for (var ei = 0; ei < evts.length; ei++) {
+        if (!isNaN(evts[ei][0]) && evts[ei][0] > nowMs && evts[ei][0] < bestAt) { bestAt = evts[ei][0]; bi = ei; }
+      }
+      if (bi >= 0) nextEvt = { label: evts[bi][1], kind: evts[bi][2], cd: fmtCd(bestAt - nowMs) };
+    }
+  }
+
+  // day pills (SLT calendar) + the selected future day's dial label
+  var dayPills = [];
+  for (var di = 0; di < 7; di++) {
+    var pd = new Date(nowMs + SLT_OFFSET_MS + di * DAY_MS);
+    dayPills.push({ wd: (si ? SKY_WD_SHORT_SI : SKY_WD_SHORT_EN)[pd.getUTCDay()], num: pd.getUTCDate() });
+  }
+  var dialWd = '', dialDate = '', dialTithi = null;
+  if (future) {
+    var fcp = (future.civilDate || '').split('-');
+    if (fcp.length === 3) {
+      var fd = new Date(Date.UTC(+fcp[0], +fcp[1] - 1, +fcp[2]));
+      dialWd = dayIdx === 1 ? (si ? 'හෙට' : 'Tomorrow') : (si ? SKY_WD_FULL_SI : SKY_WD_FULL_EN)[fd.getUTCDay()];
+      dialDate = (si ? SKY_MON_SI : SKY_MON_EN)[fd.getUTCMonth()] + ' ' + fd.getUTCDate();
+    }
+    if (future.tithi) dialTithi = (si ? (future.tithi.sinhala || future.tithi.name) : future.tithi.name) || null;
   }
 
   // ── living-sky animations (all quiet when skipHeavy / reduced motion) ──
@@ -1488,13 +1645,15 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
   });
   var rayStyle = useAnimatedStyle(function () { return { transform: [{ rotate: raySpin.value + 'deg' }] }; });
 
-  var showAusp = !isNaN(apStart) && !isNaN(apEnd) && fr(apEnd) > 0.02 && fr(apStart) < 0.98;
-  var showRahu = !isNaN(rkStart) && !isNaN(rkEnd);
-  var rahuOver = showRahu && nowMs > rkEnd;
-  var auspOver = !isNaN(apEnd) && nowMs > apEnd;
-  var auspActive = !isNaN(apStart) && !isNaN(apEnd) && nowMs >= apStart && nowMs <= apEnd;
-  var auspD = showAusp ? skyBandPath(Math.max(0, fr(apStart)), Math.min(1, fr(apEnd))) : null;
-  var rahuD = showRahu ? skyBandPath(Math.max(0, Math.min(1, fr(rkStart))), Math.max(0, Math.min(1, fr(rkEnd)))) : null;
+  var showAusp = !isNaN(apStart) && !isNaN(apEnd) && !isNaN(dayStart);
+  var showRahu = !isNaN(rkStart) && !isNaN(rkEnd) && !isNaN(dayStart);
+  // passed/active states only mean something on the live (today) dial
+  var rahuOver = isToday && showRahu && nowMs > rkEnd;
+  var auspOver = isToday && showAusp && nowMs > apEnd;
+  var auspActive = isToday && showAusp && nowMs >= apStart && nowMs <= apEnd;
+  var auspD = showAusp ? skyBandPath(frC(apStart), frC(apEnd)) : null;
+  var rahuD = showRahu ? skyBandPath(frC(rkStart), frC(rkEnd)) : null;
+  var apName = si ? (apNameSi || 'සුබ වේලාව') : ((apNameEn || 'Auspicious')).toUpperCase();
 
   // "Now" badge follows the moon at night, the sun by day — and is clamped
   // to the card so it can never clip at the edges (the marker stays exact).
@@ -1511,19 +1670,33 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
 
         <View style={sky.topRow}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-            <View style={sky.icBox}><Ionicons name={isNight ? 'moon' : 'sunny'} size={16} color="#FFD983" /></View>
+            <View style={sky.icBox}><Ionicons name={isToday ? (isNight ? 'moon' : 'sunny') : 'calendar-outline'} size={16} color="#FFD983" /></View>
             <View style={{ flex: 1 }}>
-              <Text style={sky.kicker}>{language === 'si' ? 'අහස් ඔරලෝසුව' : 'SKY CLOCK'}</Text>
+              <Text style={sky.kicker}>{si ? 'අහස් ඔරලෝසුව' : 'SKY CLOCK'}</Text>
               <Text style={sky.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
-                {language === 'si' ? 'අද හිරු සහ සඳ ගමන' : "Today's Sun & Moon"}
+                {isToday ? (si ? 'අද හිරු සහ සඳ ගමන' : "Today's Sun & Moon") : (si ? 'හිරු සහ සඳ ගමන' : 'Sun & Moon')}
               </Text>
-              <Text style={sky.sub} numberOfLines={1}>{(language === 'si' ? 'උදාව ' : 'Sunrise ') + fmtHM(sunrise, t) + '  ·  ' + (language === 'si' ? 'අස්තය ' : 'Sunset ') + fmtHM(sunset, t)}</Text>
+              <Text style={sky.sub} numberOfLines={1}>{(si ? 'උදාව ' : 'Sunrise ') + fmtHM(sunrise, t) + '  ·  ' + (si ? 'අස්තය ' : 'Sunset ') + fmtHM(sunset, t)}</Text>
             </View>
           </View>
-          {cd ? (
-            <View style={[sky.cdPill, rahuActive && sky.cdPillActive]}>
-              <Text style={sky.cdLabel} numberOfLines={1}>{rahuActive ? (language === 'si' ? 'රාහු අවසන්' : 'RAHU ENDS') : (language === 'si' ? 'රාහු කාලයට' : 'RAHU IN')}</Text>
-              <Text style={sky.cdValue}>{cd}</Text>
+          {nextEvt ? (
+            <View style={[
+              sky.cdPill,
+              skyx.cdPillClamp,
+              nextEvt.kind === 'gold' && skyx.cdGold,
+              nextEvt.kind === 'silver' && skyx.cdSilver,
+              rahuActive && sky.cdPillActive,
+            ]}>
+              <Text style={[
+                sky.cdLabel,
+                nextEvt.kind === 'gold' && skyx.cdLabelGold,
+                nextEvt.kind === 'silver' && skyx.cdLabelSilver,
+              ]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{nextEvt.label}</Text>
+              <Text style={[
+                sky.cdValue,
+                nextEvt.kind === 'gold' && skyx.cdValueGold,
+                nextEvt.kind === 'silver' && skyx.cdValueSilver,
+              ]}>{nextEvt.cd}</Text>
             </View>
           ) : null}
         </View>
@@ -1551,28 +1724,39 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
               return <Circle key={'sk' + si} cx={st[0]} cy={st[1]} r={st[2]} fill="#F4E4BC" opacity={st[3]} />;
             })}
             <Ellipse cx="180" cy="152" rx="210" ry="58" fill="url(#skyHorizonGlow)" />
-            {/* the day still to come — faint dashed track */}
-            <Path d={skyBandPath(0, 1)} fill="none" stroke="rgba(255,236,190,0.15)" strokeWidth="1.6" strokeDasharray="3 5" />
-            {/* the moon's road — a lower silver route across the same sky */}
-            {moonUp ? (
+            {/* full 24-hour track — faint dashed base (midnight → midnight) */}
+            <Path d={skyBandPath(0, 1)} fill="none" stroke="rgba(255,236,190,0.13)" strokeWidth="1.4" strokeDasharray="3 5" />
+            {/* night zones — a cool indigo wash before sunrise and after sunset,
+                so day vs night reads instantly on the dial */}
+            {fSunrise > 0.02 ? <Path d={skyBandPath(0, fSunrise)} fill="none" stroke="rgba(147,165,220,0.09)" strokeWidth="8" strokeLinecap="round" /> : null}
+            {fSunset > fSunrise && fSunset < 0.98 ? <Path d={skyBandPath(fSunset, 1)} fill="none" stroke="rgba(147,165,220,0.09)" strokeWidth="8" strokeLinecap="round" /> : null}
+            {/* daylight hours — a soft golden band from sunrise to sunset */}
+            {fSunset > fSunrise ? (
+              <Path d={skyBandPath(fSunrise, fSunset)} fill="none" stroke="rgba(245,197,88,0.16)" strokeWidth="8" strokeLinecap="round" />
+            ) : null}
+            {/* daylight elapsed so far — glowing gradient core (live dial only) */}
+            {isToday && nowMs > sunrise ? (
+              <Path d={skyBandPath(fSunrise, Math.min(fNow, fSunset))} fill="none" stroke="url(#skyArcGrad)" strokeWidth="2.6" strokeLinecap="round" />
+            ) : null}
+            {/* the moon's road — silver, mapped to its clock rise → set on the inner arc */}
+            {fMoonSet > fMoonRise ? (
               <G>
-                <Path d={moonBandPath(0, 1)} fill="none" stroke="rgba(200,210,235,0.14)" strokeWidth="1.4" strokeDasharray="2 6" />
-                <Path d={moonBandPath(0, moonFrac)} fill="none" stroke="rgba(200,214,240,0.16)" strokeWidth="6" strokeLinecap="round" />
-                <Path d={moonBandPath(0, moonFrac)} fill="none" stroke="url(#moonRouteGrad)" strokeWidth="1.8" strokeLinecap="round" />
+                <Path d={moonBandPath(fMoonRise, fMoonSet)} fill="none" stroke="rgba(200,210,235,0.14)" strokeWidth="1.4" strokeDasharray="2 6" />
+                {isToday && moonUp ? <Path d={moonBandPath(fMoonRise, fNow)} fill="none" stroke="url(#moonRouteGrad)" strokeWidth="1.8" strokeLinecap="round" /> : null}
               </G>
             ) : null}
-            {/* elapsed day — soft glow + gradient core */}
-            <Path d={skyBandPath(0, fNow)} fill="none" stroke="rgba(245,197,88,0.22)" strokeWidth="8" strokeLinecap="round" />
-            <Path d={skyBandPath(0, fNow)} fill="none" stroke="url(#skyArcGrad)" strokeWidth="2.6" strokeLinecap="round" />
-            {/* quarter-day ticks */}
-            {[0.25, 0.5, 0.75].map(function (f) {
-              var a = Math.PI * (1 - f);
+            {/* hour ticks — one per hour, taller at 6am / noon / 6pm */}
+            {CLOCK_HOURS.map(function (h) {
+              var a = Math.PI * (1 - h / 24);
               var cosA = Math.cos(a), sinA = Math.sin(a);
+              var major = (h % 6 === 0);
+              var ir = major ? 152 : 158, iry = major ? 106 : 111;
+              var or = major ? 168 : 165, ory = major ? 120 : 118;
               return (
-                <Line key={'tk' + f}
-                  x1={180 + 157 * cosA} y1={150 - 110 * sinA}
-                  x2={180 + 165 * cosA} y2={150 - 118 * sinA}
-                  stroke="rgba(255,236,190,0.28)" strokeWidth="1.2" />
+                <Line key={'hr' + h}
+                  x1={180 + ir * cosA} y1={150 - iry * sinA}
+                  x2={180 + or * cosA} y2={150 - ory * sinA}
+                  stroke={major ? 'rgba(255,236,190,0.5)' : 'rgba(255,236,190,0.22)'} strokeWidth={major ? 1.4 : 1} />
               );
             })}
             {/* auspicious window — golden light (dims after it passes, glows while live) */}
@@ -1600,9 +1784,17 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
             {/* horizon */}
             <Line x1="4" y1="150" x2="356" y2="150" stroke="rgba(244,180,86,0.36)" strokeWidth="1.2" />
             <Line x1="4" y1="151.6" x2="356" y2="151.6" stroke="rgba(0,0,0,0.45)" strokeWidth="1.4" />
-            <Circle cx="15" cy="150" r="3.4" fill="#F5B45C" opacity="0.95" />
-            <Circle cx="345" cy="150" r="3.4" fill="#E76F51" opacity="0.95" />
+            {/* both arc tips are midnight on the 24-hour clock */}
+            <Circle cx="15" cy="150" r="3" fill="rgba(200,210,235,0.7)" />
+            <Circle cx="345" cy="150" r="3" fill="rgba(200,210,235,0.7)" />
           </Svg>
+
+          {/* hour labels — RN overlay, so the stretched SVG can't distort or clip them */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <Text style={[skyx.hourLbl, { left: '14.6%', top: '29.5%' }]}>{si ? 'උදේ 6' : '6 AM'}</Text>
+            <Text style={[skyx.hourLbl, { left: '50%', top: '6.5%' }]}>{si ? 'දවල් 12' : '12 PM'}</Text>
+            <Text style={[skyx.hourLbl, { left: '85.4%', top: '29.5%' }]}>{si ? 'හවස 6' : '6 PM'}</Text>
+          </View>
 
           {/* twinkling stars — three live points over the static field */}
           {!skipHeavy ? (
@@ -1618,8 +1810,8 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
             </View>
           ) : null}
 
-          {/* the sun — exact position on its arc, rays turning slowly */}
-          {!isNight ? (
+          {/* the sun — exact position on its arc, rays turning slowly (live dial) */}
+          {isToday && !isNight ? (
             <View style={[sky.nowWrap, { marginTop: -19, left: (nowPt.x / 360 * 100) + '%', top: (nowPt.y / 170 * 100) + '%' }]} pointerEvents="none">
               <View style={sky.sunBox}>
                 <Animated.View style={[sky.sunHalo, rahuActive && sky.sunHaloRahu, haloStyle]} />
@@ -1648,43 +1840,36 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
             </View>
           ) : null}
 
-          {/* the moon — rides its own silver route, day or night */}
-          {moonPt ? (
+          {/* the moon — phase-correct disc riding its silver route at 'now' */}
+          {isToday && moonPt ? (
             <View style={[skyx.moonWrap, { left: (moonPt.x / 360 * 100) + '%', top: (moonPt.y / 170 * 100) + '%' }]} pointerEvents="none">
               <Animated.View style={[skyx.moonHalo, moonHaloStyle]} />
-              <Svg width={isNight ? 30 : 22} height={isNight ? 30 : 22} viewBox="0 0 30 30">
-                <Defs>
-                  <RadialGradient id="moonCoreGrad" cx="40%" cy="36%" r="68%">
-                    <Stop offset="0" stopColor="#FFFFFF" />
-                    <Stop offset="0.55" stopColor="#E8EAF2" />
-                    <Stop offset="1" stopColor="#A9B1C6" />
-                  </RadialGradient>
-                </Defs>
-                <Circle cx="15" cy="15" r="9" fill="url(#moonCoreGrad)" />
-                <Circle cx="12" cy="12.5" r="1.9" fill="rgba(148,155,178,0.55)" />
-                <Circle cx="17.5" cy="17" r="1.3" fill="rgba(148,155,178,0.45)" />
-                <Circle cx="16" cy="11" r="0.9" fill="rgba(148,155,178,0.38)" />
-              </Svg>
+              <PhaseMoon size={isNight ? 30 : 22} tithiNum={tithiNum} />
             </View>
           ) : null}
 
           {/* "now" badge — follows the active body, clamped inside the card */}
-          <View style={[skyx.badgeWrap, { left: badgeLeftPct + '%', top: badgeTopPct + '%' }]} pointerEvents="none">
-            <View style={[sky.nowBadge, rahuActive && sky.nowBadgeDanger]}>
-              <Text style={[sky.nowBadgeText, rahuActive && sky.nowBadgeTextDanger]} numberOfLines={1}>
-                {(language === 'si' ? 'දැන් ' : 'Now ') + fmtHM(nowMs, t) + (rahuActive ? (language === 'si' ? ' · රාහු' : ' · Rahu') : '')}
-              </Text>
+          {isToday ? (
+            <View style={[skyx.badgeWrap, { left: badgeLeftPct + '%', top: badgeTopPct + '%' }]} pointerEvents="none">
+              <View style={[sky.nowBadge, rahuActive && sky.nowBadgeDanger]}>
+                <Text style={[sky.nowBadgeText, rahuActive && sky.nowBadgeTextDanger]} numberOfLines={1}>
+                  {(si ? 'දැන් ' : 'Now ') + fmtHM(nowMs, t) + (rahuActive ? (si ? ' · රාහු' : ' · Rahu') : '')}
+                </Text>
+              </View>
             </View>
-          </View>
+          ) : null}
 
-          {/* moonrise chip — quiet silver, only while the moon is up */}
-          {moonUp ? (
-            <View style={skyx.moonChip} pointerEvents="none">
-              <Ionicons name="moon" size={9} color="#C9D2E8" />
-              <Text style={skyx.moonChipText} numberOfLines={1}>
-                {(language === 'si' ? 'සඳ උදාව ' : 'Moonrise ') + fmtHM(moonrise, t)}
-              </Text>
-            </View>
+          {/* future day — the dial becomes that day's map, dated at its center */}
+          {!isToday ? (
+            selLoading ? (
+              <View style={skyx.dialCenter} pointerEvents="none"><ActivityIndicator color="#FFD97A" /></View>
+            ) : (
+              <Animated.View key={'dial' + dayIdx} entering={FadeIn.duration(220)} style={skyx.dialCenter} pointerEvents="none">
+                <Text style={skyx.dialWd} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{dialWd}</Text>
+                <Text style={skyx.dialDate} numberOfLines={1}>{dialDate}</Text>
+                {dialTithi ? <Text style={skyx.dialTithi} numberOfLines={1}>{dialTithi}</Text> : null}
+              </Animated.View>
+            )
           ) : null}
         </View>
 
@@ -1696,11 +1881,9 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
                 : <View style={[sky.legDot, { backgroundColor: '#FFE9A8' }]} />}
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={sky.legChipLabel} numberOfLines={1}>
-                  {language === 'si'
-                    ? 'සුබ වේලාව' + (auspOver ? ' · ඉවරයි' : auspActive ? ' · දැන්' : '')
-                    : 'AUSPICIOUS' + (auspOver ? ' · PASSED' : auspActive ? ' · NOW' : '')}
+                  {apName + (auspOver ? (si ? ' · ඉවරයි' : ' · PASSED') : auspActive ? (si ? ' · දැන්' : ' · NOW') : '')}
                 </Text>
-                <Text style={sky.legChipTime} numberOfLines={1}>{fmtHM(apStart, t) + ' – ' + fmtHM(apEnd, t)}</Text>
+                <Text style={sky.legChipTime} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{fmtHM(apStart, t) + ' – ' + fmtHM(apEnd, t)}</Text>
               </View>
             </View>
           ) : null}
@@ -1711,28 +1894,63 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
                 : <View style={[sky.legDot, { backgroundColor: rahuActive ? '#FF6B6B' : '#F87171' }]} />}
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={[sky.legChipLabel, rahuActive && { color: 'rgba(255,180,180,0.85)' }]} numberOfLines={1}>
-                  {language === 'si'
+                  {si
                     ? 'රාහු කාලය' + (rahuOver ? ' · ඉවරයි' : rahuActive ? ' · දැන් සක්‍රියයි' : '')
                     : 'RAHU KALAYA' + (rahuOver ? ' · PASSED' : rahuActive ? ' · ACTIVE NOW' : '')}
                 </Text>
-                <Text style={sky.legChipTime} numberOfLines={1}>{fmtHM(rkStart, t) + ' – ' + fmtHM(rkEnd, t)}</Text>
+                <Text style={sky.legChipTime} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{fmtHM(rkStart, t) + ' – ' + fmtHM(rkEnd, t)}</Text>
               </View>
             </View>
           ) : null}
         </View>
 
-        <View style={sky.progressRow}>
-          <View style={sky.progressTrack}>
-            <LinearGradient colors={['#F5B45C', '#FFE9A8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[sky.progressFill, { width: Math.max(2, dayPct) + '%' }]} />
+        {/* the moon's window — rise → set as one honest span, so a pre-dawn
+            moonrise reads as "the moon's hours", never as an error */}
+        {!isNaN(moonrise) && !isNaN(moonset) && !selLoading ? (
+          <View style={skyx.moonLeg}>
+            <Ionicons name="moon-outline" size={12} color="#C9D2E8" />
+            <Text style={skyx.moonLegLabel} numberOfLines={1}>{si ? 'සඳ අහසේ සිටින කාලය' : 'MOON IN SKY'}</Text>
+            <Text style={skyx.moonLegTime} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+              {fmtHM(moonrise, t) + ' – ' + fmtHM(moonset, t) + (moonUp ? (si ? ' · දැන්' : ' · UP') : '')}
+            </Text>
           </View>
-          <Text style={sky.progressText} numberOfLines={1}>
-            {isNight
-              ? (moonUp
-                  ? (language === 'si' ? 'රාත්‍රී අහස · සඳ අහසේ' : 'Night sky · moon is up')
-                  : (language === 'si' ? 'රාත්‍රී අහස' : 'Night sky'))
-              : dayPct + (language === 'si' ? '% ක් ගෙවී ඇත' : '% of daylight')}
-          </Text>
+        ) : null}
+
+        {/* day navigation — this week at a tap, the month one tap further */}
+        <View style={skyx.dayStripWrap}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={skyx.dayStrip}>
+            {dayPills.map(function (p, i) {
+              var on = i === dayIdx;
+              return (
+                <TouchableOpacity key={'dp' + i} activeOpacity={0.8} onPress={function () { selectDay(i); }} style={[skyx.dayPill, on && skyx.dayPillOn]}>
+                  <Text style={[skyx.dayPillWd, on && skyx.dayPillWdOn]} numberOfLines={1}>{i === 0 ? (si ? 'අද' : 'Today') : p.wd}</Text>
+                  <Text style={[skyx.dayPillNum, on && skyx.dayPillNumOn]}>{p.num}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity activeOpacity={0.8} onPress={function () { router.push('/nakath'); }} style={[skyx.dayPill, skyx.monthPill]}>
+              <Ionicons name="calendar" size={15} color="#FFD97A" />
+              <Text style={[skyx.dayPillWd, { color: 'rgba(255,217,131,0.9)' }]} numberOfLines={1}>{si ? 'මාසය' : 'Month'}</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
+
+        {isToday ? (
+          <View style={sky.progressRow}>
+            <View style={sky.progressTrack}>
+              <LinearGradient colors={['#F5B45C', '#FFE9A8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[sky.progressFill, { width: Math.max(2, dayPct) + '%' }]} />
+            </View>
+            <Text style={sky.progressText} numberOfLines={1}>
+              {isNight
+                ? (moonUp
+                    ? (si ? 'රාත්‍රී අහස · සඳ අහසේ' : 'Night sky · moon is up')
+                    : (si ? 'රාත්‍රී අහස' : 'Night sky'))
+                : dayPct + (si ? '% ක් ගෙවී ඇත' : '% of daylight')}
+            </Text>
+          </View>
+        ) : (
+          <View style={{ height: 15 }} />
+        )}
 
         <View style={sky.innerFrame} pointerEvents="none" />
       </View>
@@ -1740,21 +1958,52 @@ var DaySkyClock = React.memo(function DaySkyClock({ data, language, t, skipHeavy
   );
 });
 
-// styles for the living-sky layer (moon route, badge, effects)
+// styles for the living-sky layer (moon route, badge, day pills, effects)
 var skyx = StyleSheet.create({
   moonWrap: { position: 'absolute', width: 30, height: 30, marginLeft: -15, marginTop: -15, alignItems: 'center', justifyContent: 'center' },
   moonHalo: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: '#C9D2E8' },
   badgeWrap: { position: 'absolute', width: 140, marginLeft: -70, alignItems: 'center' },
-  moonChip: {
-    position: 'absolute', top: 8, left: 12, flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(18,20,34,0.62)', borderWidth: 1, borderColor: 'rgba(201,210,232,0.28)',
-    borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, maxWidth: 150,
-  },
-  moonChipText: { fontSize: 9, fontWeight: '800', color: '#C9D2E8', fontVariant: ['tabular-nums'] },
   twinkle: { position: 'absolute', width: 2.4, height: 2.4, borderRadius: 1.2, backgroundColor: '#FFF6DC' },
   shootWrap: { position: 'absolute', left: 0, top: 0, flexDirection: 'row', alignItems: 'center' },
   shootTail: { width: 46, height: 1.6, borderRadius: 1 },
   shootHead: { width: 2.6, height: 2.6, borderRadius: 1.3, backgroundColor: '#FFFDF2', marginLeft: -1 },
+  // hour labels — RN overlay over the dial (never stretched or clipped)
+  hourLbl: { position: 'absolute', width: 64, marginLeft: -32, textAlign: 'center', fontSize: 8, fontWeight: '700', color: 'rgba(255,236,190,0.6)', letterSpacing: 0.3 },
+  // next-event pill variants (danger styling lives in sky.cdPill*)
+  cdPillClamp: { maxWidth: 138, flexShrink: 1 },
+  cdGold: { backgroundColor: 'rgba(255,217,131,0.07)', borderColor: 'rgba(255,217,131,0.25)' },
+  cdSilver: { backgroundColor: 'rgba(201,210,232,0.07)', borderColor: 'rgba(201,210,232,0.25)' },
+  cdLabelGold: { color: 'rgba(255,217,131,0.75)' },
+  cdValueGold: { color: '#FFE9A8' },
+  cdLabelSilver: { color: 'rgba(201,210,232,0.75)' },
+  cdValueSilver: { color: '#DDE4F5' },
+  // future-day dial center label
+  dialCenter: { position: 'absolute', left: 0, right: 0, top: '32%', alignItems: 'center', gap: 2 },
+  dialWd: { fontSize: 17, fontWeight: '900', color: '#F8F1DD', letterSpacing: 0.4, ...textShadow('rgba(232,197,106,0.25)', { width: 0, height: 1 }, 8) },
+  dialDate: { fontSize: 11, fontWeight: '800', color: 'rgba(255,217,131,0.8)', fontVariant: ['tabular-nums'] },
+  dialTithi: { fontSize: 10, fontWeight: '700', color: 'rgba(201,210,232,0.75)', marginTop: 2 },
+  // the moon's rise → set window (footer)
+  moonLeg: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginTop: 8,
+    paddingHorizontal: 10, paddingVertical: 7, borderRadius: 11,
+    backgroundColor: 'rgba(201,210,232,0.05)', borderWidth: 1, borderColor: 'rgba(201,210,232,0.16)',
+  },
+  moonLegLabel: { flexShrink: 1, fontSize: 8.5, fontWeight: '800', letterSpacing: 0.7, color: 'rgba(201,210,232,0.7)' },
+  moonLegTime: { flex: 1, textAlign: 'right', fontSize: 11.5, fontWeight: '700', color: '#DDE4F5', fontVariant: ['tabular-nums'] },
+  // day navigation strip
+  dayStripWrap: { marginTop: 10 },
+  dayStrip: { flexDirection: 'row', gap: 6, paddingHorizontal: 16 },
+  dayPill: {
+    minWidth: 44, minHeight: 46, alignItems: 'center', justifyContent: 'center', gap: 1,
+    paddingVertical: 6, paddingHorizontal: 6, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.035)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+  },
+  dayPillOn: { backgroundColor: 'rgba(255,217,131,0.10)', borderColor: 'rgba(255,217,131,0.5)' },
+  dayPillWd: { fontSize: 8.5, fontWeight: '800', letterSpacing: 0.5, color: 'rgba(244,238,223,0.5)' },
+  dayPillWdOn: { color: 'rgba(255,217,131,0.9)' },
+  dayPillNum: { fontSize: 15, fontWeight: '900', color: '#F4EEDF', fontVariant: ['tabular-nums'] },
+  dayPillNumOn: { color: '#FFE9A8' },
+  monthPill: { backgroundColor: 'rgba(255,184,0,0.07)', borderColor: 'rgba(255,184,0,0.25)' },
 });
 
 // ═══════════════════════════════════════════════════════════════════════

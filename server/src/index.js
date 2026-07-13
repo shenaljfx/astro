@@ -182,7 +182,11 @@ function paidAccessExcept(exemptPrefixes) {
 }
 
 // Routes — with per-route rate limits
-app.use('/api/nakath', paidAccess, nakathRoutes);
+// /month-ahead skips the mount gate but self-gates: first 10 days free
+// (generic Rahu Kalaya + best-time date math), days beyond that return as
+// locked stubs unless subscribed. The rest of /api/nakath stays
+// subscription-gated; the chart-tuned activity finder remains the Pro upsell.
+app.use('/api/nakath', paidAccessExcept(['/month-ahead']), nakathRoutes);
 // Porondam: /check + /report admit one-time credit buyers (route-level
 // requireSubscriptionOrCredit); history/saved are the buyer's own artifacts.
 app.use('/api/porondam', paidAccessExcept([
