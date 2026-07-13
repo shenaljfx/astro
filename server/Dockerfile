@@ -35,6 +35,8 @@ COPY --from=builder /app/node_modules ./node_modules
 
 # Copy application source
 COPY src/ ./src/
+# Worker entrypoint (node scripts/worker.js) lives here — required by the worker container
+COPY scripts/ ./scripts/
 COPY package.json ./
 
 # Firebase service account (optional — mounted at runtime via secret or volume)
