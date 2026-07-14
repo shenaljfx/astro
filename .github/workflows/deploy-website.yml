@@ -1,0 +1,44 @@
+name: Deploy Website
+
+# Auto-deploy the static marketing site (website/) to the VM whenever it changes on main.
+# Reuses the same VM secrets as the server pipeline: VM_HOST, VM_USER, VM_SSH_KEY.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - '.github/workflows/deploy-website.yml'
+  workflow_dispatch: {}   # allow manual runs from the Actions tab
+
+concurrency:
+  group: deploy-website
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Rsync static site to VM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.VM_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Rsync website/ -> /var/www/grahachara
+        run: |
+          rsync -rlvz --delete \
+            --chmod=D755,F644 \
+            --chown=www-data:www-data \
+            --exclude 'sitemap.zip' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
+            --rsync-path="sudo rsync" \
+            ./website/ \
+            "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/var/www/grahachara/"
+
+      - name: Clean up key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
