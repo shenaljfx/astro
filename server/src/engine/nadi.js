@@ -978,16 +978,20 @@ function determineCareerType(significatorTable) {
  * Returns only the sector classification — AI interprets details.
  */
 function getCareerSectorByPlanet(planetName) {
+  // Each planet maps to a DISTINCT sector. Previously Jupiter/Mercury/Venus all
+  // collapsed to "Corporate" and Rahu/Ketu/Saturn all to "Small Business", so
+  // the top-3 career planets of almost every chart produced the same two or
+  // three labels — making the career section read identically across users.
   const SECTORS = {
-    Sun: 'Government',
-    Moon: 'Government',
-    Mars: 'Uniform/Defence',
-    Jupiter: 'Corporate',
-    Mercury: 'Corporate',
-    Venus: 'Corporate',
-    Rahu: 'Small Business',
-    Ketu: 'Small Business',
-    Saturn: 'Small Business',
+    Sun: 'Government / administration / leadership',
+    Moon: 'Public service / hospitality / care',
+    Mars: 'Uniform / defence / engineering / trades',
+    Jupiter: 'Law / education / finance / advisory',
+    Mercury: 'Commerce / IT / communication / accounts',
+    Venus: 'Arts / design / luxury / media',
+    Rahu: 'Foreign / technology / enterprise / speculation',
+    Ketu: 'Research / spiritual / niche / investigation',
+    Saturn: 'Trade / labour / manufacturing / long-tenure service',
   };
   return { sector: SECTORS[planetName] || 'General' };
 }

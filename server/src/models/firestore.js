@@ -47,6 +47,8 @@ function buildReportCacheKey(input = {}) {
     maritalStatus: input.maritalStatus || null,
     marriageYear: input.marriageYear || null,
     careerField: input.careerField || null,
+    motherOccupation: input.motherOccupation || null,
+    fatherOccupation: input.fatherOccupation || null,
     lifeEvents: Array.isArray(input.lifeEvents) && input.lifeEvents.length > 0
       ? input.lifeEvents.map(e => ({ type: e?.type || null, year: e?.year || null }))
       : null,
@@ -348,6 +350,8 @@ async function saveReport(uid, reportData) {
     type: reportData.type || 'ai-narrative',
     sections: reportData.sections || [],
     rashiChart: reportData.rashiChart || null,
+    navamshaChart: reportData.navamshaChart || null,
+    navamshaLagna: reportData.navamshaLagna || null,
     birthInfo: normalizeReportBirthInfo(reportData.birthInfo),
     sectionScores: reportData.sectionScores || null,
     predictions: reportData.predictions || [],

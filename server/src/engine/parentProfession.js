@@ -79,11 +79,11 @@ const PLANET_DOMAINS = {
     { occupation: 'Hospitality / luxury / entertainment', weight: 0.7 },
     { occupation: 'Design / interior / decoration', weight: 0.75 },
     { occupation: 'Vehicles / transport (esp. private)', weight: 0.6 },
-    // Small-business retail of physical comforts — Venus governs comfort,
-    // home-fittings, lifestyle goods. Critical SME category in SL/IN.
-    { occupation: 'Furniture / wood trade / home-furnishings retail', weight: 0.7 },
-    { occupation: 'Textile / clothing / saree retail', weight: 0.7 },
-    { occupation: 'Jewellery / gold / silver retail', weight: 0.65 },
+    // NOTE: SME-retail blends (furniture, textile, jewellery) are intentionally
+    // NOT seeded here. Adding them to Venus's base list gave every Venus-career
+    // chart a permanent lift toward furniture/textile/jewellery, which is what
+    // made "wood work career" surface for nearly everyone. These domains are
+    // now reachable ONLY via the conjunction-gated, capped PAIR_AMPLIFIERS below.
   ],
   Saturn: [
     { occupation: 'Manual labour / construction / mining', weight: 1.0 },
@@ -92,9 +92,9 @@ const PLANET_DOMAINS = {
     { occupation: 'Government clerical / civil service', weight: 0.8 },
     { occupation: 'Iron / steel / leather / waste / sanitation', weight: 0.6 },
     { occupation: 'Long-tenure technical or scientific work', weight: 0.65 },
-    // Saturn rules wood, timber, slow-built physical goods. Combined with
-    // Venus aspects/co-occurrence, it strongly indicates furniture/timber SME.
-    { occupation: 'Timber / sawmill / carpentry / furniture-making', weight: 0.7 },
+    // NOTE: 'Timber / sawmill / carpentry / furniture-making' is intentionally
+    // NOT seeded in Saturn's base list — same reason as Venus above. Timber is
+    // reachable only when Saturn is ACTUALLY conjunct Venus, via PAIR_AMPLIFIERS.
   ],
   Rahu: [
     { occupation: 'Foreign country / immigration / overseas work', weight: 1.0 },
@@ -295,30 +295,19 @@ function rankParentProfessions(evidence, options = {}) {
 
   // Signal 7: Planet-pair amplifiers — Vedic SME profession patterns
   // ────────────────────────────────────────────────────────────────
-  // When two planets co-occur (lord OR in career house OR aspecting),
-  // the COMBINATION points to a specific small-business category that
-  // neither planet alone would surface. These are the cases users say
-  // "no astrologer ever picked this up before".
-  const presentPlanets = new Set();
-  if (evidence.careerLord) presentPlanets.add(evidence.careerLord);
-  if (Array.isArray(evidence.careerHousePlanets)) {
-    evidence.careerHousePlanets.forEach(p => presentPlanets.add(p));
-  }
-  if (evidence.parentKaraka) presentPlanets.add(evidence.parentKaraka);
+  // When two planets are ACTUALLY CONJUNCT (share a house), the combination
+  // points to a specific small-business category that neither planet alone
+  // would surface. NOTE: the trigger is genuine conjunction, not "both planets
+  // exist somewhere in the chart" — see the conjunction gate further down.
+  //
   // Whole-parent-chart context: planets in the parent's body (1st),
   // wealth (2nd), effort/enterprise (3rd), and business/partnership (7th)
-  // houses ALSO carry strong career signal in classical jyotish — they
-  // describe what the parent USES, OWNS, EFFORTS WITH, and TRADES.
-  // Without these, a Saturn+Venus furniture-business signature sitting
-  // in the parent's 1st house would be invisible to pair amplifiers.
+  // houses ALSO carry career signal in classical jyotish — they describe what
+  // the parent USES, OWNS, EFFORTS WITH, and TRADES.
   const parentBodyPlanets = Array.isArray(evidence.parentBodyPlanets) ? evidence.parentBodyPlanets : [];
   const parentWealthPlanets = Array.isArray(evidence.parentWealthPlanets) ? evidence.parentWealthPlanets : [];
   const parentEffortPlanets = Array.isArray(evidence.parentEffortPlanets) ? evidence.parentEffortPlanets : [];
   const parentBusinessPlanets = Array.isArray(evidence.parentBusinessPlanets) ? evidence.parentBusinessPlanets : [];
-  parentBodyPlanets.forEach(p => presentPlanets.add(p));
-  parentWealthPlanets.forEach(p => presentPlanets.add(p));
-  parentEffortPlanets.forEach(p => presentPlanets.add(p));
-  parentBusinessPlanets.forEach(p => presentPlanets.add(p));
 
   // Wealth-house planets specifically reinforce TRADE/RETAIL/COMMODITY
   // domains — that's literally what the 2nd house signifies (stored
@@ -330,14 +319,16 @@ function rankParentProfessions(evidence, options = {}) {
       8,
       `Planets in parent's 2nd house (${parentWealthPlanets.join(', ')}) — wealth/trade signature`,
     );
-    // Each wealth-house planet also adds its own domains at 60% weight
+    // Each wealth-house planet also adds its own domains — kept as a
+    // secondary tie-breaker weight (well below the 35-pt primary career-lord
+    // signal) so a 2nd-house planet can nudge ranking but never dominate it.
     parentWealthPlanets.forEach(p =>
-      _applyPlanetDomains(map, p, 12, `Planet ${p} in parent's 2nd house (wealth/inventory)`));
+      _applyPlanetDomains(map, p, 6, `Planet ${p} in parent's 2nd house (wealth/inventory)`));
   }
   // 7th-house planets reinforce business/partnership/trade
   if (parentBusinessPlanets.length > 0) {
     parentBusinessPlanets.forEach(p =>
-      _applyPlanetDomains(map, p, 10, `Planet ${p} in parent's 7th house (business/partnership)`));
+      _applyPlanetDomains(map, p, 5, `Planet ${p} in parent's 7th house (business/partnership)`));
     _applyKeywordBoost(
       map,
       ['business', 'trade', 'retail', 'partnership', 'shop', 'wholesale'],
@@ -348,14 +339,14 @@ function rankParentProfessions(evidence, options = {}) {
   // 3rd-house planets reinforce hands-on enterprise / effort-based work
   if (parentEffortPlanets.length > 0) {
     parentEffortPlanets.forEach(p =>
-      _applyPlanetDomains(map, p, 8, `Planet ${p} in parent's 3rd house (effort/enterprise)`));
+      _applyPlanetDomains(map, p, 4, `Planet ${p} in parent's 3rd house (effort/enterprise)`));
   }
   // 1st-house planets describe the parent's identity and primary mode of
   // work expression — Saturn here = labour-intensive trade, Venus = comfort
   // goods retail, Mars = mechanical/physical work, Mercury = trade/talk.
   if (parentBodyPlanets.length > 0) {
     parentBodyPlanets.forEach(p =>
-      _applyPlanetDomains(map, p, 14, `Planet ${p} in parent's 1st house (identity/expression)`));
+      _applyPlanetDomains(map, p, 8, `Planet ${p} in parent's 1st house (identity/expression)`));
   }
 
   const PAIR_AMPLIFIERS = [
@@ -383,26 +374,32 @@ function rankParentProfessions(evidence, options = {}) {
     { planets: ['Jupiter', 'Mercury'], boost: 10, occupation: 'Teaching (esp. mathematics, language)',
       reason: 'Jupiter (wisdom) + Mercury (communication) — teacher/tutor profession' },
   ];
+  // Conjunction gate — a pair amplifier fires ONLY when its two planets are
+  // ACTUALLY conjunct (share one house). Planets appearing together in any one
+  // of the parent's per-house arrays are conjunct in that house. This replaces
+  // the old test (`both planets exist anywhere in a 5–6-house net`), which was
+  // true for the majority of charts and is exactly why "furniture / wood work"
+  // surfaced for nearly everyone.
+  const conjunctionGroups = [
+    Array.isArray(evidence.careerHousePlanets) ? evidence.careerHousePlanets : [],
+    parentBodyPlanets,
+    parentWealthPlanets,
+    parentEffortPlanets,
+    parentBusinessPlanets,
+  ].filter(g => Array.isArray(g) && g.length >= 2);
+  const areConjunct = (a, b) =>
+    conjunctionGroups.some(g => g.includes(a) && g.includes(b));
+
+  // Total amplifier contribution is capped so a blend can re-order genuine
+  // near-ties but can NEVER override the primary career-lord signal (≤35 pts).
+  const AMPLIFIER_CAP = 15;
+  let amplifierBudget = AMPLIFIER_CAP;
   for (const pa of PAIR_AMPLIFIERS) {
-    if (pa.planets.every(p => presentPlanets.has(p))) {
-      // Base amplifier
-      _addCandidate(map, pa.occupation, pa.boost, pa.reason);
-      // Strong-context bonus: if BOTH planets of the pair sit in the
-      // parent's own 1st/2nd/3rd/7th houses (their direct life axes),
-      // this is a much higher-conviction signature — double the boost.
-      const inParentAxes = (planet) =>
-        parentBodyPlanets.includes(planet) ||
-        parentWealthPlanets.includes(planet) ||
-        parentEffortPlanets.includes(planet) ||
-        parentBusinessPlanets.includes(planet);
-      if (pa.planets.every(p => inParentAxes(p))) {
-        _addCandidate(
-          map,
-          pa.occupation,
-          pa.boost * 1.2,
-          `Strong-context: both ${pa.planets.join(' + ')} sit in parent's own body/wealth/effort/business axes`,
-        );
-      }
+    if (amplifierBudget <= 0) break;
+    if (areConjunct(pa.planets[0], pa.planets[1])) {
+      const applied = Math.min(pa.boost, amplifierBudget);
+      _addCandidate(map, pa.occupation, applied, `${pa.reason} (conjunct)`);
+      amplifierBudget -= applied;
     }
   }
 
@@ -488,16 +485,22 @@ function rankParentProfessions(evidence, options = {}) {
   // BOTH as a blend ("a role that combines authority + analysis").
   const blended = top.length >= 2 && top[1].score >= top[0].score * 0.85;
 
-  // Era-aware specific titles per top-3 domains
+  // Era-aware specific titles per top-3 domains.
+  // Gate on confidence: expanding a 'low'-confidence domain into named titles
+  // ("furniture-shop owner", "timber merchant") manufactures false precision on
+  // charts that don't actually separate. For low confidence we hand back the
+  // domain family only and let the report frame it softly.
   let specificCandidates = [];
-  try {
-    const { expandToSpecificTitles } = require('./occupationCatalog');
-    specificCandidates = expandToSpecificTitles(
-      top.map(c => ({ occupation: c.occupation, score: c.score })),
-      { nativeBirthYear, region }
-    );
-  } catch (_) {
-    // Catalog optional; absence shouldn't break the ranker
+  if (confidence !== 'low') {
+    try {
+      const { expandToSpecificTitles } = require('./occupationCatalog');
+      specificCandidates = expandToSpecificTitles(
+        top.map(c => ({ occupation: c.occupation, score: c.score })),
+        { nativeBirthYear, region }
+      );
+    } catch (_) {
+      // Catalog optional; absence shouldn't break the ranker
+    }
   }
 
   // A natural-language summary so the prompt can echo it

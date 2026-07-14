@@ -234,6 +234,16 @@ export var findMuhurtha = function(activityType, startDate, endDate, birthDate, 
   });
 };
 
+// Pro: the date is already fixed — 2–3 auspicious windows for that one day
+// (Rahu Kalaya always avoided). Weddings send groom + bride birth data.
+export var getMuhurthaDayWindows = function(activityType, date, birthDate, lat, lng, partnerBirthDate) {
+  return request('/api/predictions/muhurtha/day-windows', {
+    method: 'POST',
+    body: JSON.stringify({ activityType: activityType, date: date, birthDate: birthDate || null, partnerBirthDate: partnerBirthDate || null, lat: lat || 6.9271, lng: lng || 79.8612 }),
+    _timeout: 30000,
+  });
+};
+
 // Pro: "when will it happen" life-event timing across all domains.
 export var getLifeEventTiming = function(birthDate, birthTime, lat, lng) {
   return request('/api/predictions/timing/all', {
@@ -413,6 +423,8 @@ export var getAIReport = function(birthDate, lat, lng, language, birthLocation, 
       maritalStatus: options.maritalStatus || null,
       marriageYear: options.marriageYear || null,
       careerField: options.careerField || null,
+      motherOccupation: options.motherOccupation || null,
+      fatherOccupation: options.fatherOccupation || null,
       lifeEvents: Array.isArray(options.lifeEvents) && options.lifeEvents.length > 0 ? options.lifeEvents : null,
     }),
     _timeout: 600000,
@@ -425,10 +437,10 @@ export var getPredictionCheckins = function() {
   return request('/api/horoscope/prediction-checkins', { method: 'GET', _timeout: 10000 });
 };
 
-export var sendPredictionOutcome = function(reportId, predictionId, outcome, prediction) {
+export var sendPredictionOutcome = function(reportId, predictionId, outcome, prediction, note) {
   return request('/api/horoscope/prediction-outcome', {
     method: 'POST',
-    body: JSON.stringify({ reportId: reportId, predictionId: predictionId, outcome: outcome, prediction: prediction || null }),
+    body: JSON.stringify({ reportId: reportId, predictionId: predictionId, outcome: outcome, prediction: prediction || null, note: note || null }),
     _timeout: 10000,
   });
 };
@@ -954,6 +966,7 @@ export default {
   getConvergencePreview: getConvergencePreview,
   getNakathPreview: getNakathPreview,
   findMuhurtha: findMuhurtha,
+  getMuhurthaDayWindows: getMuhurthaDayWindows,
   getLifeEventTiming: getLifeEventTiming,
   getBabyPreview: getBabyPreview,
   composeBabyKendara: composeBabyKendara,

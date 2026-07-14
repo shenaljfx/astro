@@ -113,8 +113,11 @@ const SPECIFIC_CATALOG = {
 
   // ── MARS domain ───────────────────────────────────────────────
   'Engineering / mechanical / technical trades': {
-    LK: { traditional: ['Mechanic', 'Carpenter', 'Mason', 'Welder', 'Lorry driver'], modern: ['Engineer (civil / mechanical / electrical)', 'Vehicle mechanic', 'Factory technician', 'CEB / SLT field engineer'] },
-    default: { traditional: ['Mechanic', 'Carpenter', 'Welder'], modern: ['Engineer', 'Technician', 'Mechanic'] },
+    // 'Carpenter' intentionally excluded — wood-work belongs to the dedicated
+    // furniture/timber domains, not to the generic engineering domain (it was
+    // leaking "carpenter/wood" into charts whose real signal was mechanical).
+    LK: { traditional: ['Mechanic', 'Mason', 'Welder', 'Lorry driver'], modern: ['Engineer (civil / mechanical / electrical)', 'Vehicle mechanic', 'Factory technician', 'CEB / SLT field engineer'] },
+    default: { traditional: ['Mechanic', 'Welder', 'Fitter'], modern: ['Engineer', 'Technician', 'Mechanic'] },
   },
   'Military / police / security': {
     LK: { traditional: ['Army / navy / air force soldier', 'Police constable', 'Special Task Force', 'Civil Defence Force'], modern: ['Tri-forces officer or soldier', 'Police officer', 'Private security officer', 'Veteran (post-2009 retiree)'] },
@@ -195,8 +198,10 @@ const SPECIFIC_CATALOG = {
     default: { traditional: ['Hotel staff', 'Caterer'], modern: ['Hotel manager', 'Event organiser', 'Tourism staff'] },
   },
   'Design / interior / decoration': {
-    LK: { traditional: ['Painter / artist', 'Wood carver', 'Sign painter'], modern: ['Interior designer', 'Architect', 'Graphic designer', 'Floral / event decorator'] },
-    default: { traditional: ['Painter', 'Wood carver'], modern: ['Interior designer', 'Architect', 'Graphic designer'] },
+    // 'Wood carver' intentionally excluded here (same reason as engineering) —
+    // it belongs to the furniture/timber domains, not generic Venus design.
+    LK: { traditional: ['Painter / artist', 'Sign painter', 'Sculptor'], modern: ['Interior designer', 'Architect', 'Graphic designer', 'Floral / event decorator'] },
+    default: { traditional: ['Painter', 'Sign painter'], modern: ['Interior designer', 'Architect', 'Graphic designer'] },
   },
   'Vehicles / transport (esp. private)': {
     LK: { traditional: ['Bus / lorry driver', 'Bullock-cart owner', 'Taxi driver'], modern: ['Driver (own vehicle / chauffeur)', 'Vehicle dealer / showroom owner', 'Three-wheel owner-operator', 'Logistics / shipping staff'] },

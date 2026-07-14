@@ -1004,7 +1004,11 @@ function buildNavamshaChart(date, lat, lng, opts = {}) {
           key,
           name: p.name,
           sinhala: p.sinhala,
-          degree: p.degreeInSign 
+          // No degree in the D9 grid: a planet's D1 degree-in-sign is
+          // meaningless once mapped into the navamsha, and traditional D9
+          // charts show sign placement only. null → the chart renderers
+          // (SriLankanChart + PDF) omit the number instead of misleading.
+          degree: null,
         });
       }
     }
@@ -9514,9 +9518,12 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
       return dangers;
     })(),
     // ── Spirit Animal — technical data ────────────────────────
-    spiritAnimal: { lagnaSign: lagnaName, lagnaElement },
+    // moonNakshatra + pada added so this isn't identical for everyone sharing a
+    // rising sign — lagna alone gives only 12 possible outputs; nakshatra pada
+    // widens it to 108, letting the AI differentiate.
+    spiritAnimal: { lagnaSign: lagnaName, lagnaElement, moonNakshatra: moonNakshatra.name, nakshatraPada: moonNakshatra.pada, moonSign: moonRashi.name },
     // ── Celebrity Chart Twin — technical data ──────────────────
-    celebrityTwin: { lagnaSign: lagnaName, moonSign: moonRashi.name },
+    celebrityTwin: { lagnaSign: lagnaName, moonSign: moonRashi.name, moonNakshatra: moonNakshatra.name, sunSign: sunRashi?.name || null },
     // ── "What Your Ex Would Say" — technical data ─────────────
     exWouldSay: (() => {
       const venH = getPlanetHouse('Venus');

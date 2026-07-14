@@ -1156,7 +1156,7 @@ router.get('/report-progress/:reportId', phoneAuth, async (req, res) => {
 router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscriptionOrCredit('report', 'full_report'), reportUserLimiter, distributedReportUserLimiter, budgetGuard('fullReport'), async (req, res) => {
   let entitlementId = null;
   try {
-    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation: rawLocation = null, userName: rawName = null, userGender: rawGender = null, userReligion: rawReligion = null, maritalStatus: rawMarital = null, marriageYear = null, careerField: rawCareerField = null, lifeEvents: rawLifeEvents = null, reportId: clientReportId = null, previousReportId = null, retryReportId = null, recoveryRetry = false, calculationSettings = null, settings = null, asOfDate = null, forceRegenerate = false, timeUnknown: rawTimeUnknown = false } = req.body;
+    const { birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation: rawLocation = null, userName: rawName = null, userGender: rawGender = null, userReligion: rawReligion = null, maritalStatus: rawMarital = null, marriageYear = null, careerField: rawCareerField = null, motherOccupation: rawMotherOcc = null, fatherOccupation: rawFatherOcc = null, lifeEvents: rawLifeEvents = null, reportId: clientReportId = null, previousReportId = null, retryReportId = null, recoveryRetry = false, calculationSettings = null, settings = null, asOfDate = null, forceRegenerate = false, timeUnknown: rawTimeUnknown = false } = req.body;
 
     // Birth time unknown → the ascendant is a noon-default coin-flip, so the
     // report must anchor to the Moon sign and hedge lagna-derived claims.
@@ -1171,6 +1171,10 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscriptionOrCr
     const userReligion = sanitizeString(rawReligion, 30);
     const maritalStatus = sanitizeString(rawMarital, 30);
     const careerField = sanitizeString(rawCareerField, 60);
+    // Known Facts (optional): parents' occupations — turns the family-portrait
+    // profession guess into validation mode (100% accurate by construction).
+    const motherOccupation = sanitizeString(rawMotherOcc, 60);
+    const fatherOccupation = sanitizeString(rawFatherOcc, 60);
 
     // Known Facts life events: fixed type vocabulary + plausible years only.
     // Must match EVENT_SIGNATURES in engine/rectification.js
@@ -1235,6 +1239,8 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscriptionOrCr
       maritalStatus,
       marriageYear,
       careerField,
+      motherOccupation,
+      fatherOccupation,
       lifeEvents,
       calculationSettings: normalizedSettings,
       asOfDate,
@@ -1263,6 +1269,8 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscriptionOrCr
               language: cached.language,
               birthData: cached.birthInfo,
               rashiChart: cached.rashiChart,
+              navamshaChart: cached.navamshaChart || null,
+              navamshaLagna: cached.navamshaLagna || null,
               narrativeSections: cached.sections,
               sectionScores: cached.sectionScores || null,
               predictions: cached.predictions || [],
@@ -1346,6 +1354,8 @@ router.post('/full-report-ai', reportLimiter, phoneAuth, requireSubscriptionOrCr
       maritalStatus,
       marriageYear,
       careerField,
+      motherOccupation,
+      fatherOccupation,
       lifeEvents,
       calculationSettings: normalizedSettings,
       asOfDate,
@@ -1511,6 +1521,8 @@ router.get('/saved-report/:id', optionalAuth, async (req, res) => {
         birthDate: data.birthDate || null,
         birthData: data.birthInfo,
         rashiChart: data.rashiChart,
+        navamshaChart: data.navamshaChart || null,
+        navamshaLagna: data.navamshaLagna || null,
         narrativeSections: data.sections,
         sectionScores: data.sectionScores || null,
         predictions: data.predictions || [],
@@ -1603,8 +1615,12 @@ router.get('/prediction-checkins', phoneAuth, async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
     const reports = await getUserReports(req.user.uid);
-    const answered = new Set(
-      (await getUserPredictionOutcomes(req.user.uid)).map(o => `${o.reportId}:${o.predictionId}`)
+    const outcomes = await getUserPredictionOutcomes(req.user.uid);
+    const answered = new Set(outcomes.map(o => `${o.reportId}:${o.predictionId}`));
+    // Fact check-ins (e.g. fact:motherProfession) are about a stable real-world
+    // fact, not a dated window — once answered on ANY report, never re-ask.
+    const answeredFacts = new Set(
+      outcomes.filter(o => String(o.predictionId || '').startsWith('fact:')).map(o => o.predictionId)
     );
 
     const now = new Date();
@@ -1614,6 +1630,7 @@ router.get('/prediction-checkins', phoneAuth, async (req, res) => {
       for (const p of r.predictions || []) {
         if (!p?.id) continue;
         if (answered.has(`${r.id}:${p.id}`)) continue;
+        if (String(p.id).startsWith('fact:') && answeredFacts.has(p.id)) continue;
         const start = p.windowStart ? new Date(p.windowStart) : null;
         const end = p.windowEnd ? new Date(p.windowEnd) : null;
         if (!start || !end || isNaN(start) || isNaN(end)) continue;

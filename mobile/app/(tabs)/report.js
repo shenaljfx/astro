@@ -38,6 +38,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { boxShadow, textShadow } from '../../utils/shadow';
+import { monthLabelSi } from '../../utils/convergenceCopy';
 import useScreenInsets from '../../hooks/useScreenInsets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { setDockHidden } from '../../utils/dockVisibility';
@@ -538,6 +539,8 @@ function KnownFactsSheet({ visible, isSi, initial, onSkip, onContinue }) {
   var [married, setMarried] = useState(initial?.maritalStatus === 'married');
   var [marriageYear, setMarriageYear] = useState(initial?.marriageYear ? String(initial.marriageYear) : '');
   var [careerField, setCareerField] = useState(initial?.careerField || '');
+  var [motherOcc, setMotherOcc] = useState(initial?.motherOccupation || '');
+  var [fatherOcc, setFatherOcc] = useState(initial?.fatherOccupation || '');
   var [firstJobYear, setFirstJobYear] = useState('');
 
   useEffect(function() {
@@ -545,6 +548,8 @@ function KnownFactsSheet({ visible, isSi, initial, onSkip, onContinue }) {
       setMarried(initial?.maritalStatus === 'married');
       setMarriageYear(initial?.marriageYear ? String(initial.marriageYear) : '');
       setCareerField(initial?.careerField || '');
+      setMotherOcc(initial?.motherOccupation || '');
+      setFatherOcc(initial?.fatherOccupation || '');
       var fj = (initial?.lifeEvents || []).find(function(e) { return e.type === 'firstJob'; });
       setFirstJobYear(fj ? String(fj.year) : '');
     }
@@ -576,6 +581,10 @@ function KnownFactsSheet({ visible, isSi, initial, onSkip, onContinue }) {
     }
     var cf = String(careerField || '').trim();
     if (cf.length >= 2) facts.careerField = cf.slice(0, 60);
+    var mo = String(motherOcc || '').trim();
+    if (mo.length >= 2) facts.motherOccupation = mo.slice(0, 60);
+    var fo = String(fatherOcc || '').trim();
+    if (fo.length >= 2) facts.fatherOccupation = fo.slice(0, 60);
     var events = [];
     if (married && yearValid(marriageYear)) events.push({ type: 'marriage', year: parseInt(marriageYear, 10) });
     if (yearValid(firstJobYear)) events.push({ type: 'firstJob', year: parseInt(firstJobYear, 10) });
@@ -626,6 +635,27 @@ function KnownFactsSheet({ visible, isSi, initial, onSkip, onContinue }) {
             placeholderTextColor="rgba(255,232,176,0.35)"
             maxLength={60}
           />
+
+          {/* Parents' occupations — unlocks validation mode for the family portrait */}
+          <Text style={kfs.qLabel}>{isSi ? 'දෙමාපියන්ගේ රැකියා? (අත්‍යවශ්‍ය නොවේ)' : "Your parents' work? (optional)"}</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TextInput
+              style={[kfs.textInput, { flex: 1 }]}
+              value={motherOcc}
+              onChangeText={setMotherOcc}
+              placeholder={isSi ? 'මව — උදා: ගුරු' : 'Mother — e.g. teacher'}
+              placeholderTextColor="rgba(255,232,176,0.35)"
+              maxLength={60}
+            />
+            <TextInput
+              style={[kfs.textInput, { flex: 1 }]}
+              value={fatherOcc}
+              onChangeText={setFatherOcc}
+              placeholder={isSi ? 'පියා — උදා: ගොවි' : 'Father — e.g. farmer'}
+              placeholderTextColor="rgba(255,232,176,0.35)"
+              maxLength={60}
+            />
+          </View>
 
           {/* First job year */}
           <Text style={kfs.qLabel}>{isSi ? 'මුල්ම රැකියාව ලැබුණේ කවදාද? (අත්‍යවශ්‍ය නොවේ)' : 'Year of your first job? (optional)'}</Text>
@@ -720,7 +750,7 @@ function Next12MonthsTimeline({ calendar, isSi }) {
                   <Animated.View entering={FadeInUp.delay(250 + i * 55).duration(450)} style={[n12.barFill, { height: Math.max(14, Math.min(80, h)), backgroundColor: meta.color }]} />
                 </View>
                 <Ionicons name={hasEclipse ? 'moon-outline' : meta.icon} size={11} color={meta.color} style={{ marginTop: 5 }} />
-                <Text style={n12.barLabel}>{String(m.label || m.month).split(' ')[0]}</Text>
+                <Text style={n12.barLabel}>{monthLabelSi(String(m.label || m.month), isSi).split(' ')[0]}</Text>
               </View>
             );
           })}
@@ -736,12 +766,12 @@ function Next12MonthsTimeline({ calendar, isSi }) {
                   <Ionicons name={isCaution ? 'alert-circle-outline' : meta.icon} size={15} color={isCaution ? '#FCA5A5' : meta.color} />
                   <View style={{ flexShrink: 1 }}>
                     <Text style={[n12.chipTitle, isCaution && { color: '#FCA5A5' }]} numberOfLines={2}>
-                      {(isSi ? meta.si : meta.en)} {w.tier} — {w.startLabel}{w.endLabel !== w.startLabel ? ' → ' + w.endLabel : ''}
+                      {(isSi ? meta.si : meta.en)} {w.tier} — {monthLabelSi(w.startLabel, isSi)}{w.endLabel !== w.startLabel ? ' → ' + monthLabelSi(w.endLabel, isSi) : ''}
                     </Text>
                     <Text style={n12.chipSub} numberOfLines={1}>
                       {isCaution
                         ? (isSi ? 'පරිස්සමෙන් — ලොකු තීරණ කල් දාන්න' : 'Consolidate — avoid big launches')
-                        : (isSi ? 'උපරිම මාසය: ' + (w.peakLabel || '') : 'Peak: ' + (w.peakLabel || ''))}
+                        : (isSi ? 'උපරිම මාසය: ' + monthLabelSi(w.peakLabel || '', isSi) : 'Peak: ' + (w.peakLabel || ''))}
                     </Text>
                   </View>
                 </Animated.View>
@@ -779,37 +809,72 @@ var n12 = StyleSheet.create({
 // ══════════════════════════════════════════
 function PredictionCheckinCard({ checkin, isSi, onAnswer, onDismiss }) {
   var [busy, setBusy] = useState(false);
+  // Fact check-ins ("did we read your mother's work right?") collect the real
+  // answer on "No" — the correction is the most valuable calibration data.
+  var [correcting, setCorrecting] = useState(false);
+  var [correction, setCorrection] = useState('');
   if (!checkin) return null;
+  var isFact = checkin.type === 'fact';
   var meta = N12_DOMAIN_META[checkin.domain] || { icon: 'sparkles-outline', en: checkin.domain, si: checkin.domain };
 
-  var answer = async function(outcome) {
+  var answer = async function(outcome, note) {
     if (busy) return;
     setBusy(true);
-    try { await onAnswer(outcome); } finally { setBusy(false); }
+    try { await onAnswer(outcome, note || null); } finally { setBusy(false); setCorrecting(false); setCorrection(''); }
   };
+
+  var factClaim = isFact
+    ? (isSi
+        ? (checkin.parent === 'mother' ? 'ඔබේ මවගේ රැකියා ක්ෂේත්‍රය අපි මෙහෙම කියෙව්වා: ' : 'ඔබේ පියාගේ රැකියා ක්ෂේත්‍රය අපි මෙහෙම කියෙව්වා: ') + (checkin.predictedDomain || '')
+        : checkin.claim)
+    : null;
 
   return (
     <Animated.View entering={FadeInDown.duration(500)} style={pcc.wrap}>
       <LinearGradient colors={['rgba(139,92,246,0.14)', 'rgba(139,92,246,0.04)']} style={pcc.inner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <View style={pcc.headRow}>
           <Ionicons name={meta.icon} size={15} color="#C4B5FD" />
-          <Text style={pcc.headTitle}>{isSi ? 'අපේ අනාවැකිය හරි ගියාද?' : 'Did our prediction come true?'}</Text>
+          <Text style={pcc.headTitle}>{isFact
+            ? (isSi ? 'අපි මේක හරියට කියෙව්වද?' : 'Did we read this right?')
+            : (isSi ? 'අපේ අනාවැකිය හරි ගියාද?' : 'Did our prediction come true?')}</Text>
           <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={16} color="rgba(255,255,255,0.4)" />
           </TouchableOpacity>
         </View>
-        <Text style={pcc.claim}>{checkin.claim || ''}</Text>
-        <View style={pcc.btnRow}>
-          <SpringPressable style={[pcc.btn, pcc.btnYes]} onPress={function() { answer('yes'); }} haptic="medium">
-            <Text style={pcc.btnTextYes}>{isSi ? 'ඔව්' : 'Yes'}</Text>
-          </SpringPressable>
-          <SpringPressable style={pcc.btn} onPress={function() { answer('partial'); }} haptic="light">
-            <Text style={pcc.btnText}>{isSi ? 'ටිකක්' : 'Somewhat'}</Text>
-          </SpringPressable>
-          <SpringPressable style={pcc.btn} onPress={function() { answer('no'); }} haptic="light">
-            <Text style={pcc.btnText}>{isSi ? 'නැහැ' : 'No'}</Text>
-          </SpringPressable>
-        </View>
+        <Text style={pcc.claim}>{isFact ? factClaim : (checkin.claim || '')}</Text>
+        {correcting ? (
+          <View>
+            <TextInput
+              style={pcc.correctionInput}
+              value={correction}
+              onChangeText={setCorrection}
+              placeholder={isSi ? 'ඇත්තටම කළේ මොකක්ද? (අත්‍යවශ්‍ය නොවේ)' : 'What was it actually? (optional)'}
+              placeholderTextColor="rgba(221,214,254,0.35)"
+              maxLength={60}
+              autoFocus
+            />
+            <View style={pcc.btnRow}>
+              <SpringPressable style={pcc.btn} onPress={function() { answer('no'); }} haptic="light">
+                <Text style={pcc.btnText}>{isSi ? 'මඟ හරින්න' : 'Skip'}</Text>
+              </SpringPressable>
+              <SpringPressable style={[pcc.btn, pcc.btnYes]} onPress={function() { answer('no', String(correction || '').trim().slice(0, 60) || null); }} haptic="medium">
+                <Text style={pcc.btnTextYes}>{isSi ? 'යවන්න' : 'Send'}</Text>
+              </SpringPressable>
+            </View>
+          </View>
+        ) : (
+          <View style={pcc.btnRow}>
+            <SpringPressable style={[pcc.btn, pcc.btnYes]} onPress={function() { answer('yes'); }} haptic="medium">
+              <Text style={pcc.btnTextYes}>{isSi ? 'ඔව්' : 'Yes'}</Text>
+            </SpringPressable>
+            <SpringPressable style={pcc.btn} onPress={function() { answer('partial'); }} haptic="light">
+              <Text style={pcc.btnText}>{isSi ? 'ටිකක්' : 'Somewhat'}</Text>
+            </SpringPressable>
+            <SpringPressable style={pcc.btn} onPress={function() { isFact ? setCorrecting(true) : answer('no'); }} haptic="light">
+              <Text style={pcc.btnText}>{isSi ? 'නැහැ' : 'No'}</Text>
+            </SpringPressable>
+          </View>
+        )}
         <Text style={pcc.foot}>{isSi ? 'ඔබේ පිළිතුරු අනාගත අනාවැකි වඩාත් නිවැරදි කරනවා' : 'Your answers make future predictions sharper'}</Text>
       </LinearGradient>
     </Animated.View>
@@ -828,6 +893,7 @@ var pcc = StyleSheet.create({
   btnText: { fontSize: 12, fontWeight: '700', color: 'rgba(221,214,254,0.8)' },
   btnTextYes: { fontSize: 12, fontWeight: '800', color: '#86EFAC' },
   foot: { fontSize: 9.5, color: 'rgba(221,214,254,0.4)', marginTop: 9, textAlign: 'center' },
+  correctionInput: { marginTop: 10, borderWidth: 1, borderColor: 'rgba(139,92,246,0.35)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 12.5, color: '#EDE9FE', backgroundColor: 'rgba(139,92,246,0.08)' },
 });
 
 // ══════════════════════════════════════════
@@ -1676,7 +1742,25 @@ function normalizeChartForDisplay(chartData) {
 
   if (!rashiChart) return null;
 
-  return { rashiChart: rashiChart, lagnaRashiId: lagnaRashiId };
+  // ── Navamsha (D9) — saved reports carry it as { houses, lagna } (same
+  // object form as rashiChart). Optional: older reports won't have it. ──
+  var navamshaChart = null;
+  var navamshaLagnaRashiId = lagnaRashiId; // fallback keeps chart from mis-orienting
+  var rawNav = chartData.navamshaChart;
+  if (Array.isArray(rawNav)) {
+    navamshaChart = rawNav;
+  } else if (rawNav && typeof rawNav === 'object' && Array.isArray(rawNav.houses)) {
+    navamshaChart = rawNav.houses;
+  }
+  var navLagna = (rawNav && rawNav.lagna) || chartData.navamshaLagna || null;
+  if (navLagna) {
+    if (navLagna.rashi && navLagna.rashi.id) navamshaLagnaRashiId = navLagna.rashi.id;
+    else if (navLagna.rashiId) navamshaLagnaRashiId = navLagna.rashiId;
+    else if (navLagna.id) navamshaLagnaRashiId = navLagna.id;
+    else if (navLagna.rashi && navLagna.rashi.english) navamshaLagnaRashiId = RASHI_NAME_TO_ID[navLagna.rashi.english] || navamshaLagnaRashiId;
+  }
+
+  return { rashiChart: rashiChart, lagnaRashiId: lagnaRashiId, navamshaChart: navamshaChart, navamshaLagnaRashiId: navamshaLagnaRashiId };
 }
 
 // ══════════════════════════════════════════
@@ -2033,7 +2117,7 @@ export default function ReportScreen() {
           };
           setAiReport(aiReportData);
           // Use rashiChart from server-saved report so the chart renders
-          setChartData(d.rashiChart && typeof d.rashiChart === 'object' ? { rashiChart: d.rashiChart, lagna: d.birthData?.lagna || null } : null);
+          setChartData(d.rashiChart && typeof d.rashiChart === 'object' ? { rashiChart: d.rashiChart, lagna: d.birthData?.lagna || null, navamshaChart: d.navamshaChart || null, navamshaLagna: d.navamshaLagna || null } : null);
           setScreenState('report');
         } else {
           setError(t('failedLoadReport') || 'Failed to load report from server');
@@ -2117,12 +2201,13 @@ export default function ReportScreen() {
     if (!user || user.isAnonymous) return;
     api.getPredictionCheckins().then(function(res) {
       var due = res && res.data && Array.isArray(res.data.due) ? res.data.due : [];
-      // Only ask about windows that have already closed — answerable now.
-      setPendingCheckins(due.filter(function(d) { return d.windowClosed; }));
+      // Dated windows are only answerable once closed; fact check-ins
+      // ("did we read your mother's work right?") are answerable immediately.
+      setPendingCheckins(due.filter(function(d) { return d.windowClosed || d.type === 'fact'; }));
     }).catch(function() {});
   }, [user && user.uid]);
 
-  var answerCheckin = async function(outcome) {
+  var answerCheckin = async function(outcome, note) {
     var current = pendingCheckins[0];
     if (!current) return;
     try {
@@ -2130,7 +2215,11 @@ export default function ReportScreen() {
         domain: current.domain, type: current.type, tier: current.tier,
         score: current.score, source: current.source, drivers: current.drivers,
         windowStart: current.windowStart, windowEnd: current.windowEnd,
-      });
+        // Fact check-in context — which parent + what the engine predicted,
+        // so outcomes are analyzable without re-loading the report.
+        kind: current.kind, parent: current.parent,
+        predictedDomain: current.predictedDomain, confidence: current.confidence,
+      }, note || null);
     } catch (e) {
       if (__DEV__) console.warn('[Report] prediction outcome failed:', e.message);
     }
@@ -2186,7 +2275,7 @@ export default function ReportScreen() {
           savedReportId: recent.id,
         });
         if (rd.rashiChart) {
-          setChartData({ rashiChart: rd.rashiChart, lagna: rd.birthData?.lagna || null });
+          setChartData({ rashiChart: rd.rashiChart, lagna: rd.birthData?.lagna || null, navamshaChart: rd.navamshaChart || null, navamshaLagna: rd.navamshaLagna || null });
         } else {
           setChartData(chartSnapshot);
         }
@@ -2236,6 +2325,8 @@ export default function ReportScreen() {
         maritalStatus: kf.maritalStatus || null,
         marriageYear: kf.marriageYear || null,
         careerField: kf.careerField || null,
+        motherOccupation: kf.motherOccupation || null,
+        fatherOccupation: kf.fatherOccupation || null,
         lifeEvents: kf.lifeEvents || null,
       }).catch(function(e) {
         if (__DEV__) console.warn('[Report] AI report request failed (non-blocking):', e.message);
@@ -2291,7 +2382,7 @@ export default function ReportScreen() {
                     predictions: d.predictions || [],
                     savedReportId: prog.savedReportId,
                   });
-                  setChartData(d.rashiChart ? { rashiChart: d.rashiChart, lagna: d.birthData?.lagna || null } : chartSnapshot);
+                  setChartData(d.rashiChart ? { rashiChart: d.rashiChart, lagna: d.birthData?.lagna || null, navamshaChart: d.navamshaChart || null, navamshaLagna: d.navamshaLagna || null } : chartSnapshot);
                   // Also try to get raw report for extra data
                   if (httpRawResult && httpRawResult.status === 'fulfilled' && httpRawResult.value && httpRawResult.value.data) {
                     setReport(httpRawResult.value.data);
@@ -2655,6 +2746,7 @@ export default function ReportScreen() {
           var fallback = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Report</title>'
             + '<style>body{font-family:sans-serif;padding:24px;color:#222;line-height:1.6;}h1{color:#7C3AED;}h2{margin-top:18px;color:#5B21B6;}p{margin:6px 0;}</style>'
             + '</head><body>'
+            + (logoB64 ? '<img src="data:image/png;base64,' + logoB64 + '" width="56" height="56" style="border-radius:12px;"/>' : '')
             + '<h1>' + (isSi ? '\u0D9C\u0DCA\u200D\u0DBB\u0DC4\u0DA0\u0DCF\u0DBB \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0' : 'Grahachara Report') + '</h1>'
             + '<p><b>' + (userName || '') + '</b></p>'
             + '<p>' + (birthDate || '') + ' ' + (birthTime || '') + '</p>'
@@ -2730,7 +2822,7 @@ export default function ReportScreen() {
               birthData: d.birthData || null,
             };
             setAiReport(recoveredAiReport);
-            setChartData(d.rashiChart ? { rashiChart: d.rashiChart, lagna: d.birthData?.lagna || null } : chartData);
+            setChartData(d.rashiChart ? { rashiChart: d.rashiChart, lagna: d.birthData?.lagna || null, navamshaChart: d.navamshaChart || null, navamshaLagna: d.navamshaLagna || null } : chartData);
             setFailedGenData(null);
             setError(null);
             setScreenState('report');
@@ -2768,7 +2860,7 @@ export default function ReportScreen() {
                 if (recentRes && recentRes.data) {
                   var rd = recentRes.data;
                   setAiReport({ narrativeSections: rd.narrativeSections || {}, rashiChart: rd.rashiChart || null, birthData: rd.birthData || null, sectionScores: rd.sectionScores || null, predictions: rd.predictions || [], savedReportId: rd.id || null });
-                  setChartData(rd.rashiChart ? { rashiChart: rd.rashiChart, lagna: rd.birthData?.lagna || null } : chartData);
+                  setChartData(rd.rashiChart ? { rashiChart: rd.rashiChart, lagna: rd.birthData?.lagna || null, navamshaChart: rd.navamshaChart || null, navamshaLagna: rd.navamshaLagna || null } : chartData);
                   setFailedGenData(null);
                   setError(null);
                   setScreenState('report');
@@ -3162,6 +3254,19 @@ export default function ReportScreen() {
                     language={reportLang === 'si' ? 'si' : 'en'}
                   />
                 </AuraBox>
+                {normalized.navamshaChart && (
+                  <AuraBox style={{ borderColor: 'rgba(167,139,250,0.28)', marginTop: 14 }}>
+                    <View style={s.chartHeader}>
+                      <Text style={s.chartTitle}>{reportLang === 'si' ? 'නවාංශකය (D9)' : 'Navamsha (D9)'}</Text>
+                      <Text style={s.chartSub}>{reportLang === 'si' ? 'විවාහ ජීවිතය සහ ඔබේ ඇතුළාන්තය ගැඹුරින් පෙන්වන කේන්දරය' : 'The deeper chart — marriage life and your inner self'}</Text>
+                    </View>
+                    <SriLankanChart
+                      rashiChart={normalized.navamshaChart}
+                      lagnaRashiId={normalized.navamshaLagnaRashiId}
+                      language={reportLang === 'si' ? 'si' : 'en'}
+                    />
+                  </AuraBox>
+                )}
               </Animated.View>
             );
           })()}

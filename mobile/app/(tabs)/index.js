@@ -36,6 +36,7 @@ import useReducedMotion from '../../hooks/useReducedMotion';
 import useLowEndDevice from '../../hooks/useLowEndDevice';
 import { CosmicBackground } from '../../components/CosmicBackground';
 import { boxShadow, textShadow } from '../../utils/shadow';
+import { driverToSi, monthRangeSi, monthLabelSi, monthNumberFromLabel } from '../../utils/convergenceCopy';
 import { ZODIAC_IMAGES } from '../../components/ZodiacIcons';
 import WeeklyShareCard from '../../components/WeeklyShareCard';
 import AffirmationCard from '../../components/AffirmationCard';
@@ -844,7 +845,8 @@ function normalizeConvergence(raw, isFree) {
       locked: true,
       strip: (raw.strip || []).map(function (m) { return { label: m.label, intensity: m.intensity }; }),
       windows: (raw.lockedWindows || []).map(function (w) {
-        return { domain: w.domain, type: w.type, tier: w.tier, range: range(w.startLabel, w.endLabel) };
+        // Keep raw month labels so the row can localize; `range` is the English fallback.
+        return { domain: w.domain, type: w.type, tier: w.tier, range: range(w.startLabel, w.endLabel), startLabel: w.startLabel, endLabel: w.endLabel };
       }),
     };
   }
@@ -856,9 +858,12 @@ function normalizeConvergence(raw, isFree) {
       return { label: m.label, intensity: avg };
     }),
     windows: (raw.windows || []).map(function (w) {
+      var d0 = w.drivers && w.drivers[0];
       return {
-        domain: w.domain, type: w.type, tier: w.tier, range: range(w.startLabel, w.endLabel),
-        driver: (w.drivers && w.drivers[0] && w.drivers[0].text) || null,
+        domain: w.domain, type: w.type, tier: w.tier,
+        range: range(w.startLabel, w.endLabel), startLabel: w.startLabel, endLabel: w.endLabel,
+        driver: (d0 && d0.text) || null,       // English fallback
+        driverObj: d0 || null,                  // { signal, text } → localized at render
       };
     }),
   };
@@ -882,16 +887,29 @@ var ConvergenceTimeline = React.memo(function ConvergenceTimeline({ data, langua
           {data.strip.map(function (m, i) {
             var clamped = Math.max(5, Math.min(98, m.intensity));
             var h = 10 + Math.round((clamped / 98) * 34);
+            // Single letters (J A S O N D…) were ambiguous — J is Jul, Jan
+            // AND Jun — and Latin letters mean nothing in Sinhala. Sinhala
+            // reads months by number ("7 මාසේ" = ජූලි); English gets the
+            // 3-letter name. The first column is "now", marked in gold.
+            var isNow = i === 0;
+            var colLabel = isNow
+              ? (si ? 'දැන්' : 'Now')
+              : (si ? String(monthNumberFromLabel(m.label) || '') : String(m.label || '').split(' ')[0]);
             return (
               <View key={i} style={conv.stripCol}>
                 <View style={conv.stripBarWrap}>
                   <View style={{ height: h, width: '78%', borderRadius: 3, backgroundColor: convIntensityColor(m.intensity), opacity: locked ? 0.72 : 1 }} />
                 </View>
-                <Text style={conv.stripLabel}>{String(m.label || '').slice(0, 1)}</Text>
+                <Text style={[conv.stripLabel, isNow && conv.stripLabelNow]} numberOfLines={1}>{colLabel}</Text>
               </View>
             );
           })}
         </View>
+        {data.strip.length > 1 ? (
+          <Text style={conv.stripRange}>
+            {monthLabelSi(data.strip[0].label, si) + '  →  ' + monthLabelSi(data.strip[data.strip.length - 1].label, si)}
+          </Text>
+        ) : null}
         <View style={conv.winList}>
           {data.windows.slice(0, maxWin).map(function (w, i) {
             var meta = CONV_DOMAINS[w.domain] || { en: w.domain, si: w.domain, icon: 'sparkles-outline', color: '#FFB800' };
@@ -905,9 +923,9 @@ var ConvergenceTimeline = React.memo(function ConvergenceTimeline({ data, langua
                   <View style={conv.winTop}>
                     <Text style={conv.winArea}>{si ? meta.si : meta.en}</Text>
                     <Ionicons name={isOpp ? 'trending-up' : 'alert-circle-outline'} size={11} color={isOpp ? '#86EFAC' : '#FCA5A5'} />
-                    <Text style={[conv.winRange, { color: meta.color }]} numberOfLines={1}>{w.range}</Text>
+                    <Text style={[conv.winRange, { color: meta.color }]} numberOfLines={1}>{w.startLabel ? monthRangeSi(w.startLabel, w.endLabel, si) : w.range}</Text>
                   </View>
-                  {(!locked && w.driver) ? <Text style={conv.winDriver} numberOfLines={1}>{w.driver}</Text> : null}
+                  {(!locked && (w.driverObj || w.driver)) ? <Text style={conv.winDriver} numberOfLines={2}>{w.driverObj ? driverToSi(w.driverObj, si) : w.driver}</Text> : null}
                 </View>
                 {locked
                   ? <Ionicons name="lock-closed" size={12} color="rgba(167,139,250,0.6)" />
@@ -933,7 +951,9 @@ var conv = StyleSheet.create({
   strip: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 12, paddingHorizontal: 2 },
   stripCol: { flex: 1, alignItems: 'center', gap: 4 },
   stripBarWrap: { height: 44, width: '100%', alignItems: 'center', justifyContent: 'flex-end' },
-  stripLabel: { fontSize: 8, color: 'rgba(255,255,255,0.35)', fontWeight: '700' },
+  stripLabel: { fontSize: 8.5, color: 'rgba(255,255,255,0.4)', fontWeight: '700', fontVariant: ['tabular-nums'], maxWidth: '100%' },
+  stripLabelNow: { color: '#FFD983', fontWeight: '900' },
+  stripRange: { fontSize: 9.5, color: 'rgba(255,255,255,0.42)', textAlign: 'center', marginTop: 6, fontWeight: '600', letterSpacing: 0.3 },
   winList: { marginTop: 12 },
   winRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
   winIcon: { width: 26, height: 26, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
@@ -1035,8 +1055,9 @@ var PredictionCheckins = React.memo(function PredictionCheckins({ items, languag
   var si = language === 'si';
   var item = items[0];
   var dom = CK_DOMAIN[item.domain] || { en: 'This', si: 'මෙය', icon: 'sparkles', color: '#E8C56A' };
-  var win = ckMonth(item.windowStart, language);
-  var winEnd = ckMonth(item.windowEnd, language);
+  // Fact check-ins have a synthetic ask-window — a date range would mislead.
+  var win = item.type === 'fact' ? '' : ckMonth(item.windowStart, language);
+  var winEnd = item.type === 'fact' ? '' : ckMonth(item.windowEnd, language);
   var range = win && winEnd && win !== winEnd ? (win + ' – ' + winEnd) : (win || winEnd);
   var opts = [
     { key: 'yes', label: si ? 'ඔව්' : 'Yes', icon: 'checkmark-circle', color: '#34D399' },
@@ -1053,8 +1074,12 @@ var PredictionCheckins = React.memo(function PredictionCheckins({ items, languag
         </View>
         {range ? <Text style={ck.range}>{range}</Text> : null}
       </View>
-      <Text style={ck.q}>{si ? 'අපේ අනාවැකිය හරි උනාද?' : 'Did our prediction come true?'}</Text>
-      {item.claim ? <Text style={ck.claim} numberOfLines={3}>{item.claim}</Text> : null}
+      <Text style={ck.q}>{item.type === 'fact'
+        ? (si ? 'අපි මේක හරියට කියෙව්වද?' : 'Did we read this right?')
+        : (si ? 'අපේ අනාවැකිය හරි උනාද?' : 'Did our prediction come true?')}</Text>
+      {item.type === 'fact' && si && item.predictedDomain
+        ? <Text style={ck.claim} numberOfLines={3}>{(item.parent === 'mother' ? 'ඔබේ මවගේ රැකියා ක්ෂේත්‍රය: ' : 'ඔබේ පියාගේ රැකියා ක්ෂේත්‍රය: ') + item.predictedDomain}</Text>
+        : item.claim ? <Text style={ck.claim} numberOfLines={3}>{item.claim}</Text> : null}
       <View style={ck.opts}>
         {opts.map(function (o) {
           return (
@@ -2914,7 +2939,7 @@ export default function HomeScreen() {
     if (!hasBirthData || !birthDateTime) { setConvergence(null); return; }
     var cancelled = false;
     var monthTag = new Date().toISOString().slice(0, 7);
-    var cacheKey = 'grahachara_convergence_' + (user?.uid || 'anon') + '_' + monthTag + '_' + (isFreeUser ? 'free' : 'pro');
+    var cacheKey = 'grahachara_convergence_v2_' + (user?.uid || 'anon') + '_' + monthTag + '_' + (isFreeUser ? 'free' : 'pro');
     var handle = InteractionManager.runAfterInteractions(function () {
       AsyncStorage.getItem(cacheKey).then(function (raw) {
         if (cancelled) return;
@@ -2958,6 +2983,8 @@ export default function HomeScreen() {
     });
     api.sendPredictionOutcome(item.reportId, item.id, outcome, {
       claim: item.claim, domain: item.domain, type: item.type,
+      kind: item.kind, parent: item.parent,
+      predictedDomain: item.predictedDomain, confidence: item.confidence,
     }).catch(function () { /* best-effort */ });
   }, []);
 

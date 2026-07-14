@@ -147,6 +147,8 @@ async function executeAIReportJob(payload, job = {}) {
         maritalStatus: payload.maritalStatus || null,
         marriageYear: payload.marriageYear || null,
         careerField: payload.careerField || null,
+        motherOccupation: payload.motherOccupation || null,
+        fatherOccupation: payload.fatherOccupation || null,
         lifeEvents: Array.isArray(payload.lifeEvents) ? payload.lifeEvents : [],
         calculationSettings: payload.calculationSettings || {},
         asOfDate: payload.asOfDate || null,
@@ -181,6 +183,8 @@ async function executeAIReportJob(payload, job = {}) {
       type: payload.reportType === 'baby' ? 'baby-narrative' : 'ai-narrative',
       sections: report.narrativeSections,
       rashiChart: report.rashiChart,
+      navamshaChart: report.navamshaChart || null,
+      navamshaLagna: (report.navamshaChart && report.navamshaChart.lagna) || null,
       birthInfo: report.birthData,
       sectionScores: report.sectionScores || null,
       predictions: report.predictions || [],
@@ -204,7 +208,9 @@ async function executeAIReportJob(payload, job = {}) {
     updateReportProgress(reportId, { stage: 'complete', savedReportId, sectionsDone: sectionCount, currentSection: null });
 
     if (payload.entitlementId) {
-      try { await fulfillEntitlement(payload.entitlementId); }
+      // Store the saved report id on the entitlement — entitlement-view access
+      // can then serve the exact owned report even after a cache-version bump.
+      try { await fulfillEntitlement(payload.entitlementId, { reportId: savedReportId }); }
       catch (e) { console.warn('[JobWorker] Entitlement fulfill failed:', e.message); }
     }
 

@@ -1917,11 +1917,11 @@ Children through marriage are UNLIKELY but not impossible. Write about:
 5. **Alternative paths** — mention mentoring, creative expression as 5th house alternatives
 Be honest about the marriage obstacles affecting children prospects.` :
 `Write AT LEAST 12-16 rich, detailed paragraphs (each 3-6 sentences) covering ONLY what the data supports. This is a HERO section — dedicate a full paragraph to each point:
-1. **Estimated number of children** — state the count and gender tendency from the data with confidence. Explain what this means for their family life.
+1. **Estimated number of children** — present the count as a RANGE around the estimate ("the chart pattern gathers around two children, possibly three") with the gender tendency as a lean, never a promise. Users instantly falsify an exact number; a well-framed range that lands feels just as precise. Explain what this means for their family life.
 2. **Birth year windows** — For EACH predicted child, state: "Your chart's strongest [1st/2nd/3rd] child-related timing gathers around [peak year], when you are approximately [age]." Treat this as timing symbolism, not a promise. Use the peak year for precision, but keep it humane and non-guaranteed.
 3. **Children's nature** — from the significator data, describe children's likely temperament, talents, and personality. Paint a vivid picture of what these children will be like.
 4. 🔥 **Children's education & career** — What subjects should their children study? What careers suit them? State the suggested fields clearly. Describe the learning style — how do their children learn best? Are they quick learners or late bloomers? Will they study abroad? This is EXTREMELY valuable for parents planning their children's future.
-5. 🔥 **Academic potential** — Will their children excel academically? Top of the class or average? Will they pursue higher education, postgraduate studies, or practical vocational training? State the academic level with confidence.
+5. 🔥 **Academic potential** — Will their children excel academically? Frame the academic level as the chart's TENDENCY ("the pattern leans strongly toward higher education") matched to the data's strength score — assertive when the score is strong, softer when moderate. Never promise ranks or degrees.
 6. **Fertility assessment** — from the strength data, describe fertility symbolism carefully. If weak, say the chart shows challenges or delays; do not diagnose infertility or guarantee outcomes.
 7. **Relationship with children** — from the sector strength data + childhood trauma cross-reference. How will they bond with their children?
 8. **Impact of marriage dynamics** — if marriage affliction data shows severity, note the effect on family
@@ -2900,9 +2900,9 @@ ANALYZE the following prediction data deeply. Do NOT just list each field — TH
 
 ACCURACY RULES FOR THIS SECTION:
 1. Body marks: ONLY state locations from the data — these are verifiable, so accuracy matters most here
-2. Sibling count: State the EXACT number from the data. If the data says 3 siblings, say 3. Do NOT round or hedge.
+2. Sibling count: The data is a multi-factor ESTIMATE, not a census. Present it as a tight range around the estimated number with the elder/younger split as the anchor ("the chart gathers around two siblings — quite possibly one elder"). A range that lands feels precise; an exact number that misses by one destroys trust in everything else.
 3. Parent profiles: The engine text is already analyzed — translate faithfully, do NOT reinterpret
-4. Partner letter: The TOP 3 letters are weighted by 6 methods — present them with confidence
+4. Partner letter: The TOP 3 letters are weighted by 6 methods — present them as the "strongest name-sounds" for a partner (plural, e.g. "S, N and K"), never as one guaranteed letter
 5. Life shift moments: These are AGE-SPECIFIC — the reader will check these against their real life. Only include ages that the data provides.
 6. For appearance, sleep, food, handedness — these are verifiable facts. Be specific, not vague.
 7. CROSS-CHECK: If the attachment style says "anxious" but the social battery says "introvert" — think about what that COMBINATION means. Write about the combination, not just each field separately.
@@ -2946,8 +2946,8 @@ ${allSections?.mentalHealth?.childhoodTrauma?.indicators?.length ? '- Childhood 
 
 ━━━ HOW TO USE THIS DATA (NO GUESSING ALLOWED) ━━━
 - Body marks → state only locations given in the data
-- Partner letter → TOP 3 letters go FIRST; present all possible letters as secondary options. ${allSections?.marriage?.marriageAfflictions?.isMarriageDenied ? 'NOTE: Marriage is denied, so frame partner letter as "if you were to meet someone, their name would likely start with..."' : 'State with confidence.'}
-- Sibling count → state clearly from the data, don't hedge
+- Partner letter → TOP 3 letters go FIRST as the "strongest name-sounds" (plural — "S, N and K"); present all possible letters as secondary options. ${allSections?.marriage?.marriageAfflictions?.isMarriageDenied ? 'NOTE: Marriage is denied, so frame partner letter as "if you were to meet someone, their name would likely start with..."' : 'Never promise one single letter.'}
+- Sibling count → present as a tight range around the estimate with the elder/younger split as the anchor — never as an exact census
 - Father/Mother profile → translate the engine text faithfully
 - Sleep pattern → only if present in the data above
 - Soul purpose → from the soul purpose field when present
@@ -2959,7 +2959,7 @@ ${sectionData?.partnerFirstLetter?.topLetters ? `⭐ TOP 3 LETTERS: ${sectionDat
 ${(sectionData?.partnerFirstLetter?.letterDetails || []).map(d => `  ${d.letter}: score ${d.score} (from: ${d.sources.join(' + ')})`).join('\n')}
 ${sectionData?.partnerFirstLetter?.allPossibleLetters?.length > 3 ? `Secondary letters: ${sectionData.partnerFirstLetter.allPossibleLetters.slice(3).join(', ')}` : ''}
 
-SIBLING COUNT: ${sectionData?.numberOfSiblings ? `Total: ${sectionData.numberOfSiblings.count}, Elder: ${sectionData.numberOfSiblings.elder}, Younger: ${sectionData.numberOfSiblings.younger}` : 'N/A'} — based on multi-factor scoring (3rd house planets, aspects, lord strength, lord placement). Present this with confidence.
+SIBLING COUNT: ${sectionData?.numberOfSiblings ? `Total: ${sectionData.numberOfSiblings.count}, Elder: ${sectionData.numberOfSiblings.elder}, Younger: ${sectionData.numberOfSiblings.younger}` : 'N/A'} — multi-factor ESTIMATE (3rd house planets, aspects, lord strength, lord placement). Present as a tight range ("around two, quite possibly one elder"), never as an exact census — a range that lands feels precise; an exact miss by one destroys trust.
 
 FATHER PROFILE: ${sectionData?.fatherProfile ? `Sun H${sectionData.fatherProfile.sunHouse} (score ${sectionData.fatherProfile.sunScore}, ${sectionData.fatherProfile.sunDignity}), 9th lord ${sectionData.fatherProfile.lord9} in H${sectionData.fatherProfile.lord9House}, H9 strength: ${sectionData.fatherProfile.h9Strength}${sectionData.fatherProfile.hasNeechabhanga ? ', Neechabhanga' : ''}` : 'N/A'} — based on multi-factor analysis. Be detailed about the father.
 
@@ -3184,30 +3184,35 @@ ${(() => {
     if (!h) continue;
     lines.push(`  • Mother-${label}: sign=${h.rashi}, lord=${h.rashiLord}${h.planets?.length ? ', planets=[' + h.planets.join(',') + ']' : ', empty'}`);
   }
-  lines.push(`  • Moon (matrukaraka): H${m?.moonPosition?.house || '?'} ${m?.moonPosition?.rashiEnglish || ''} — dignity=${m?.matrukaraka?.planet ? '' : ''}`);
+  lines.push(`  • Moon (matrukaraka): H${m?.moonPosition?.house || '?'} ${m?.moonPosition?.rashiEnglish || ''} — strength ${m?.moonShadbala?.percentage || '?'}%${m?.moonShadbala?.strength ? ` (${m.moonShadbala.strength})` : ''}`);
   lines.push(`  • Mother career-axis lord: ${m?.motherCareer?.motherCareerLord || '?'} in H${m?.motherCareer?.motherCareerLordHouse || '?'} (dignity ${m?.motherCareer?.motherCareerLordDignity || '?'}, shadbala ${m?.motherCareer?.motherCareerLordShadbala || '?'}%)`);
-  // Engine's ranked candidates as a HINT only
+  // Engine's ranked candidates — the PRIMARY, auditable signal
   const r = m?.motherProfessionRanking;
   if (r?.top?.length) {
-    lines.push('  • Engine\'s tentative ranked domains (HINT ONLY, NOT a closed list — feel free to name a more specific profession that fits the raw evidence above): ' +
-      r.top.slice(0, 6).map(c => `${c.occupation} (${Math.round(c.score)})`).join(' · '));
-    if (r.blended) lines.push('    ↳ engine flags BLENDED — top 2 domains nearly tied, real role likely combines or transcends both');
+    lines.push(`  • ENGINE RANKED DOMAINS — confidence: ${(r.confidence || 'unknown').toUpperCase()}${r.blended ? ' · BLENDED (top 2 nearly tied — real role likely combines both)' : ''}: ` +
+      r.top.slice(0, 5).map(c => `${c.occupation} (${Math.round(c.score)})`).join(' · '));
+    if (r.specificCandidates?.length) {
+      lines.push('  • ERA-APPROPRIATE TITLES per domain (any named profession MUST come from these): ' +
+        r.specificCandidates.map(sc => `${sc.domain} → ${(sc.specificTitles || []).join(' / ') || '—'}`).join(' | '));
+    } else {
+      lines.push('  • NO era-specific titles supplied (confidence too low) — do NOT name any concrete job title for her; describe the nature of her work only.');
+    }
   }
   return lines.join('\n');
 })()}
-  SYMBOL DICTIONARY (use to translate raw planet/sign/house data into a concrete profession — combine multiple symbols):
-   • Sun → authority, government, gold, leadership, medicine, civil-service          • Moon → public, food, hospitality, caregiving, water, dairy, retail-public-facing
-   • Mars → engineering, surgery, military, metal/iron, sports, mechanical, fire     • Mercury → trade, accounts, writing, IT, sales, brokerage, shop-keeping, communication
-   • Jupiter → law, teaching, finance, religion, advisory, wisdom, paediatric medicine • Venus → comfort goods, textiles, jewellery, vehicles, design, FURNITURE, beauty, music, hospitality
-   • Saturn → labour, durable/heavy goods, TIMBER & WOOD, oil/coal, civil-service-clerical, long-tenure technical, hardware, sanitation, agriculture
-   • Rahu → foreign work, technology, aviation, pharma, unconventional       • Ketu → spiritual/occult, research, forensics, mathematics, abstract
-   PAIR PATTERNS (when two planets occupy parent's body/wealth/effort/business/career axes together): Saturn+Venus → FURNITURE / WOOD-TRADE / HOME-FURNISHINGS RETAIL · Mercury+Venus → TEXTILE / SAREE / GARMENT RETAIL · Mars+Saturn → HARDWARE / BUILDING-MATERIALS / TOOLS · Mercury+Saturn → SHOPKEEPER / SME PROPRIETOR · Sun+Venus → JEWELLERY / GOLD-TRADE · Moon+Venus → RESTAURANT / CATERING · Jupiter+Mercury → TUTOR / EDUCATIONAL-PUBLISHER
-  RULE — write the mother's profession this way:
-   1. SYNTHESISE from the raw evidence above. Combine planet symbols + parent-house placements + sign keywords + pair patterns into ONE specific profession description.
-   2. You are NOT restricted to the engine's tentative ranked list — that list misses small-business / trade / family-business signatures that often live in H1/H2/H3/H7. If the raw evidence points to FURNITURE / TEXTILES / HARDWARE / RESTAURANT / etc. and that fits better than the engine's #1 domain, name it.
-   3. State the profession with confidence ("the chart points strongly to [profession]"), then give 2-3 era-appropriate alternative titles in case the exact one differs.
-   4. NEVER claim mystical specificity ("she was definitely a nurse"). NEVER invent details (employer name, exact title) you can't derive.
-   5. End with a soft confirmation: "if that doesn't ring true, the next-most-likely from this chart pattern is [alternative]".
+  SYMBOL DICTIONARY (for describing the NATURE of her work — not for inventing job titles beyond the engine's list):
+   • Sun → authority, government, leadership, civil-service          • Moon → public, food, hospitality, caregiving, water, retail-public-facing
+   • Mars → engineering, technical, military, metal, sports, mechanical     • Mercury → trade, accounts, writing, IT, sales, shop-keeping, communication
+   • Jupiter → law, teaching, finance, religion, advisory • Venus → comfort goods, textiles, design, beauty, music, hospitality
+   • Saturn → labour, durable goods, long-tenure clerical/technical, agriculture
+   • Rahu → foreign work, technology, unconventional       • Ketu → spiritual, research, mathematics, abstract
+   PAIR PATTERNS — apply ONLY when the two planets sit together in the SAME house of her derived chart (true conjunction; both merely existing somewhere in the chart does NOT count): Saturn+Venus → furniture/wood-trade · Mercury+Venus → textile/garment retail · Mars+Saturn → hardware/building materials · Mercury+Saturn → shopkeeper/SME · Sun+Venus → jewellery/gold trade · Moon+Venus → restaurant/catering · Jupiter+Mercury → tutor/educational publishing
+  RULE — CONFIDENCE LADDER (the engine confidence above decides how specific you may be):
+   1. ALWAYS lead with 2-3 verifiable work-style TRAITS from the evidence ("worked with her hands", "one workplace for decades", "dealt with the public daily") BEFORE any occupation word — traits are what the chart truly encodes; a job title is only an inference from them.
+   2. HIGH confidence and not blended → name the #1 domain plainly ("her chart points strongly to teaching work"), offer the 2-3 era-appropriate titles above as its likely concrete forms, and close softly: "if that doesn't ring true, the next-most-likely from this pattern is [#2 domain]".
+   3. MEDIUM confidence → name the domain FAMILY only ("a service-and-care signature", "a trade-and-commerce signature") and list the era titles as possibilities — never single one out as THE answer.
+   4. LOW confidence or BLENDED → describe ONLY the nature of her work (hands-on vs desk, public-facing vs solitary, authority vs service, own-business vs employed). NO job titles at all.
+   5. The engine's ranked domains + era titles are the BOUNDARY of what you may name. NEVER assert one title as fact ("she was definitely a nurse"). NEVER invent employers or exact titles.
 - Mother DERIVED CHART (4th house = mother's lagna — read ALL 12 houses from her perspective):
 ${sectionData?.mother?.derivedChart ? Object.entries(sectionData.mother.derivedChart).map(([h, d]) => `  Mother-H${h} = Native-H${d.nativeHouse} ${d.rashi} lord=${d.rashiLord}${d.planets?.length ? ' [' + d.planets.join(',') + ']' : ''}`).join('\n') : 'N/A'}
   KEY: Mother-H10 = her career, Mother-H2 = her wealth, Mother-H7 = her marriage, Mother-H6 = her enemies/service
@@ -3250,25 +3255,30 @@ ${(() => {
   lines.push(`  • Father career-axis lord: ${f?.fatherCareer?.fatherCareerLord || '?'} in H${f?.fatherCareer?.fatherCareerLordHouse || '?'} (dignity ${f?.fatherCareer?.fatherCareerLordDignity || '?'}, shadbala ${f?.fatherCareer?.fatherCareerLordShadbala || '?'}%)`);
   const r = f?.fatherProfessionRanking;
   if (r?.top?.length) {
-    lines.push('  • Engine\'s tentative ranked domains (HINT ONLY, NOT a closed list — feel free to name a more specific profession that fits the raw evidence above): ' +
-      r.top.slice(0, 6).map(c => `${c.occupation} (${Math.round(c.score)})`).join(' · '));
-    if (r.blended) lines.push('    ↳ engine flags BLENDED — top 2 domains nearly tied, real role likely combines or transcends both');
+    lines.push(`  • ENGINE RANKED DOMAINS — confidence: ${(r.confidence || 'unknown').toUpperCase()}${r.blended ? ' · BLENDED (top 2 nearly tied — real role likely combines both)' : ''}: ` +
+      r.top.slice(0, 5).map(c => `${c.occupation} (${Math.round(c.score)})`).join(' · '));
+    if (r.specificCandidates?.length) {
+      lines.push('  • ERA-APPROPRIATE TITLES per domain (any named profession MUST come from these): ' +
+        r.specificCandidates.map(sc => `${sc.domain} → ${(sc.specificTitles || []).join(' / ') || '—'}`).join(' | '));
+    } else {
+      lines.push('  • NO era-specific titles supplied (confidence too low) — do NOT name any concrete job title for him; describe the nature of his work only.');
+    }
   }
   return lines.join('\n');
 })()}
-  SYMBOL DICTIONARY (use to translate raw planet/sign/house data into a concrete profession — combine multiple symbols):
-   • Sun → authority, government, gold, leadership, medicine, civil-service          • Moon → public, food, hospitality, caregiving, water, dairy, retail-public-facing
-   • Mars → engineering, surgery, military, metal/iron, sports, mechanical, fire     • Mercury → trade, accounts, writing, IT, sales, brokerage, shop-keeping, communication
-   • Jupiter → law, teaching, finance, religion, advisory, wisdom, paediatric medicine • Venus → comfort goods, textiles, jewellery, vehicles, design, FURNITURE, beauty, music, hospitality
-   • Saturn → labour, durable/heavy goods, TIMBER & WOOD, oil/coal, civil-service-clerical, long-tenure technical, hardware, sanitation, agriculture
-   • Rahu → foreign work, technology, aviation, pharma, unconventional       • Ketu → spiritual/occult, research, forensics, mathematics, abstract
-   PAIR PATTERNS (when two planets occupy parent's body/wealth/effort/business/career axes together): Saturn+Venus → FURNITURE / WOOD-TRADE / HOME-FURNISHINGS RETAIL · Mercury+Venus → TEXTILE / SAREE / GARMENT RETAIL · Mars+Saturn → HARDWARE / BUILDING-MATERIALS / TOOLS · Mercury+Saturn → SHOPKEEPER / SME PROPRIETOR · Sun+Venus → JEWELLERY / GOLD-TRADE · Moon+Venus → RESTAURANT / CATERING · Jupiter+Mercury → TUTOR / EDUCATIONAL-PUBLISHER
-  RULE — write the father's profession this way:
-   1. SYNTHESISE from the raw evidence above. Combine planet symbols + parent-house placements + sign keywords + pair patterns into ONE specific profession description.
-   2. You are NOT restricted to the engine's tentative ranked list — that list misses small-business / trade / family-business signatures that often live in H1/H2/H3/H7. If the raw evidence points to FURNITURE / TEXTILES / HARDWARE / RESTAURANT / etc. and that fits better than the engine's #1 domain, name it.
-   3. State the profession with confidence ("the chart points strongly to [profession]"), then give 2-3 era-appropriate alternative titles in case the exact one differs.
-   4. NEVER claim mystical specificity ("he was definitely a soldier"). NEVER invent details (employer name, exact title) you can't derive.
-   5. End with a soft confirmation: "if that doesn't ring true, the next-most-likely from this chart pattern is [alternative]".
+  SYMBOL DICTIONARY (for describing the NATURE of his work — not for inventing job titles beyond the engine's list):
+   • Sun → authority, government, leadership, civil-service          • Moon → public, food, hospitality, caregiving, water, retail-public-facing
+   • Mars → engineering, technical, military, metal, sports, mechanical     • Mercury → trade, accounts, writing, IT, sales, shop-keeping, communication
+   • Jupiter → law, teaching, finance, religion, advisory • Venus → comfort goods, textiles, design, beauty, music, hospitality
+   • Saturn → labour, durable goods, long-tenure clerical/technical, agriculture
+   • Rahu → foreign work, technology, unconventional       • Ketu → spiritual, research, mathematics, abstract
+   PAIR PATTERNS — apply ONLY when the two planets sit together in the SAME house of his derived chart (true conjunction; both merely existing somewhere in the chart does NOT count): Saturn+Venus → furniture/wood-trade · Mercury+Venus → textile/garment retail · Mars+Saturn → hardware/building materials · Mercury+Saturn → shopkeeper/SME · Sun+Venus → jewellery/gold trade · Moon+Venus → restaurant/catering · Jupiter+Mercury → tutor/educational publishing
+  RULE — CONFIDENCE LADDER (the engine confidence above decides how specific you may be):
+   1. ALWAYS lead with 2-3 verifiable work-style TRAITS from the evidence ("worked outdoors", "one employer for decades", "handled money daily") BEFORE any occupation word — traits are what the chart truly encodes; a job title is only an inference from them.
+   2. HIGH confidence and not blended → name the #1 domain plainly ("his chart points strongly to government service"), offer the 2-3 era-appropriate titles above as its likely concrete forms, and close softly: "if that doesn't ring true, the next-most-likely from this pattern is [#2 domain]".
+   3. MEDIUM confidence → name the domain FAMILY only ("an authority-and-administration signature", "a trade-and-commerce signature") and list the era titles as possibilities — never single one out as THE answer.
+   4. LOW confidence or BLENDED → describe ONLY the nature of his work (hands-on vs desk, public-facing vs solitary, authority vs service, own-business vs employed). NO job titles at all.
+   5. The engine's ranked domains + era titles are the BOUNDARY of what you may name. NEVER assert one title as fact ("he was definitely a soldier"). NEVER invent employers or exact titles.
 - Father DERIVED CHART (9th house = father's lagna — read ALL 12 houses from his perspective):
 ${sectionData?.father?.derivedChart ? Object.entries(sectionData.father.derivedChart).map(([h, d]) => `  Father-H${h} = Native-H${d.nativeHouse} ${d.rashi} lord=${d.rashiLord}${d.planets?.length ? ' [' + d.planets.join(',') + ']' : ''}`).join('\n') : 'N/A'}
   KEY: Father-H10 = his career, Father-H2 = his wealth, Father-H7 = his marriage, Father-H6 = his enemies/service
@@ -5291,6 +5301,12 @@ REFERENCE: Use this calendar when writing about "key upcoming events" or "life t
       if (cleanMarriageOpts.careerField) {
         facts.push(`- Current field of work: ${cleanMarriageOpts.careerField}`);
       }
+      if (cleanMarriageOpts.motherOccupation) {
+        facts.push(`- Mother's occupation (confirmed): ${cleanMarriageOpts.motherOccupation}`);
+      }
+      if (cleanMarriageOpts.fatherOccupation) {
+        facts.push(`- Father's occupation (confirmed): ${cleanMarriageOpts.fatherOccupation}`);
+      }
       for (const ev of lifeEvents) {
         if (ev?.type && ev?.year) facts.push(`- Life event confirmed by them: ${ev.type} in ${ev.year}`);
       }
@@ -5304,7 +5320,8 @@ HARD RULES FOR KNOWN FACTS:
 1. NEVER predict something they already told us. "You will marry" to a married person, or "you are suited to ${cleanMarriageOpts.careerField || 'their own field'}" as a discovery, destroys credibility instantly.
 2. VALIDATION MODE: explain how the known event/choice aligns with the chart's periods — "your ${!isNaN(confirmedMarriageYear) ? confirmedMarriageYear + ' marriage' : 'marriage'} fell inside [the matching window], which is why that period pushed partnership forward."
 3. TRAJECTORY MODE for career: since the field is known, do NOT guess professions. Analyse how their chart performs INSIDE that field, when their next promotion/switch window opens (dated from period data), and what specific role-shape fits.
-4. These facts are private context — never write "you told us" or "as you mentioned"; write as if the chart itself confirms what you see.
+4. PARENT VALIDATION MODE: if a parent's occupation is confirmed above, the family-portrait section must NOT guess that parent's profession — IGNORE the confidence ladder for that parent. Instead, show how the chart's parent-career evidence matches the confirmed occupation ("her Moon-anchored service signature is exactly the pattern of her nursing work") and deepen it: her working style, what the work cost or gave her, and her strongest years. A correct explanation of a known fact reads as far more impressive than a guess.
+5. These facts are private context — never write "you told us" or "as you mentioned"; write as if the chart itself confirms what you see.
 ═══════════════════════════════════════════════════════════`;
     })(),
   };
@@ -5800,6 +5817,42 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
         claim: `Marriage-supportive window ${bw.dateRange} (age ${bw.ageRange || '?'})`,
       });
     }
+    // ── FACT CHECK-INS — parent professions (accuracy telemetry loop) ──
+    // Immediately answerable (window = today → +90d) so the check-in surface
+    // shows them right after the user reads the report. Skipped when:
+    //   (a) the user already confirmed the occupation via Known Facts — the
+    //       report VALIDATED it, there is nothing to verify; or
+    //   (b) engine confidence was 'low' — the report only described the nature
+    //       of the work, so there is no concrete claim to check.
+    // A 'no' outcome carries the real occupation in `note`, which is gold for
+    // held-out engine tuning (the diversity harness covers spread; this covers
+    // real-world hit rate).
+    const fpSection = sections.familyPortrait || {};
+    const parentFactInputs = [
+      ['mother', fpSection.mother?.motherProfessionRanking, cleanMarriageOpts.motherOccupation],
+      ['father', fpSection.father?.fatherProfessionRanking, cleanMarriageOpts.fatherOccupation],
+    ];
+    const factNow = new Date();
+    const factDay = (d) => d.toISOString().slice(0, 10);
+    for (const [parent, ranking, knownOccupation] of parentFactInputs) {
+      if (knownOccupation) continue;
+      const top1 = ranking?.top?.[0]?.occupation;
+      if (!top1 || ranking.confidence === 'low') continue;
+      list.push({
+        id: `fact:${parent}Profession`,
+        source: 'parentProfession',
+        domain: 'family',
+        type: 'fact',
+        kind: `${parent}Profession`,
+        parent,
+        predictedDomain: top1,
+        confidence: ranking.confidence,
+        blended: !!ranking.blended,
+        windowStart: factDay(factNow),
+        windowEnd: factDay(new Date(factNow.getTime() + 90 * 86400000)),
+        claim: `We read your ${parent}'s work as: ${top1}`,
+      });
+    }
     return list;
   })();
 
@@ -5815,6 +5868,13 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
       houses: houseChart.houses,
       lagna: houseChart.lagna,
       planets: planetPositions,
+    },
+    // D9 (Navamsha) chart — same {houses, lagna} shape as rashiChart so the
+    // client can render it with the same SriLankanChart normalizer. Built above
+    // for the AI prompt; here we expose the structured houses for display.
+    navamshaChart: {
+      houses: navamshaChart.houses,
+      lagna: navamshaChart.lagna,
     },
     narrativeSections,
     rawSections: sections,
