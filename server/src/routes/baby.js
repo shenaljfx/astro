@@ -24,6 +24,7 @@ const router = express.Router();
 const { requireSubscriptionOrCredit } = require('../middleware/subscription');
 const { consumeCredit } = require('../services/purchaseCredits');
 const { buildBasicChartData } = require('./horoscope');
+const { buildNavamshaChart } = require('../engine/astrology');
 const { findMuhurtha } = require('../engine/muhurtha');
 const { buildBabyReport } = require('../engine/babyReport');
 const { parseSLT } = require('../utils/dateUtils');
@@ -51,6 +52,20 @@ try { enhanced = require('../engine/enhanced'); } catch (e) { console.warn('[bab
 
 function normGender(g) { return g === 'male' || g === 'female' ? g : null; }
 
+// Attach the D9 (Navamsha) grid to a keepsake identity. For a newborn we frame
+// it (client-side) as inner nature / life-strength — dharma & destiny — not
+// marriage. Best-effort: a D9 failure must never break the deterministic
+// keepsake, so we swallow errors and simply omit the chart.
+function attachNavamsha(identity, date, lat, lng) {
+  if (!identity) return identity;
+  try {
+    const nav = buildNavamshaChart(date, lat, lng);
+    identity.navamshaChart = nav.houses;
+    identity.navamshaLagna = nav.lagna;
+  } catch (e) { console.warn('[baby] navamsha build failed (non-fatal):', e.message); }
+  return identity;
+}
+
 router.post('/compose', requireSubscriptionOrCredit('babyKendara', 'baby_kendara'), async (req, res) => {
   try {
     const { birthDate, lat, lng, gender } = req.body || {};
@@ -62,7 +77,7 @@ router.post('/compose', requireSubscriptionOrCredit('babyKendara', 'baby_kendara
     try { date = await parseBirthDateTime(birthDate, plat, plng); } catch (_) { date = parseSLT(birthDate); }
     if (!date || isNaN(date.getTime())) return res.status(400).json({ error: 'Invalid birthDate' });
 
-    const identity = buildBasicChartData(date, plat, plng);
+    const identity = attachNavamsha(buildBasicChartData(date, plat, plng), date, plat, plng);
 
     // The full report — every section is individually fault-tolerant inside.
     let report = null;
@@ -145,7 +160,7 @@ router.post('/generate', requireSubscriptionOrCredit('babyKendara', 'baby_kendar
     if (!date || isNaN(date.getTime())) return res.status(400).json({ error: 'Invalid birthDate' });
 
     // ── Phase 1: deterministic keepsake (always delivered) ──────────────────
-    const identity = buildBasicChartData(date, plat, plng);
+    const identity = attachNavamsha(buildBasicChartData(date, plat, plng), date, plat, plng);
     let report = null;
     try { report = buildBabyReport(date, plat, plng, identity, g); } catch (e) { console.warn('[baby/generate] report build failed:', e.message); }
     const core = { identity, report };
@@ -174,6 +189,29 @@ router.post('/generate', requireSubscriptionOrCredit('babyKendara', 'baby_kendar
         });
       }
     } catch (e) { console.warn('[baby/generate] cache check failed:', e.message); }
+
+    // ── Entitlement-view (already paid & generated, cache missed — e.g. a
+    // cache-version bump): serve the exact saved report the buyer owns. ──────
+    if (req.accessVia === 'entitlement-view' && req.fulfilledEntitlement && req.fulfilledEntitlement.reportId) {
+      try {
+        const { getDb, COLLECTIONS } = require('../config/firebase');
+        const db = getDb();
+        if (db) {
+          const doc = await db.collection(COLLECTIONS.REPORTS).doc(req.fulfilledEntitlement.reportId).get();
+          if (doc.exists && doc.data().uid === uid) {
+            const saved = doc.data();
+            const sections = saved.sections || saved.narrativeSections || null;
+            if (sections && Object.keys(sections).length) {
+              return res.json({
+                success: true, cached: true,
+                data: { ...core, narrative: { stage: 'complete', savedReportId: doc.id, sections } },
+              });
+            }
+          }
+        }
+      } catch (e) { console.warn('[baby/generate] entitlement-view lookup failed:', e.message); }
+      // Fall through: regenerate free (the buyer is owed a report).
+    }
 
     // ── Entitlement: create/resume (free retries), consume credit once ──────
     let entitlement = null;

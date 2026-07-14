@@ -1,24 +1,30 @@
 /**
- * Spectacular PDF Report & Porondam Generator — ග්‍රහචාර
- * 
- * Premium branded HTML → PDF engine with:
- * ─ Full-bleed gradient cover page with zodiac ring
- * ─ Inline SVG Sri Lankan Rashi Kendara charts
- * ─ Circular SVG score gauges with colour coding
- * ─ Section verdict banners (strength bars + emoji rating)
- * ─ Table of contents with coloured dots
- * ─ Birth-data card with Nakshatra/Lagna detail
- * ─ Ornamental corner borders + diagonal watermark
- * ─ Branded header/footer on every page
- * ─ Marketing end-page with app CTA
- * ─ Porondam: mirrors the in-app report — verdict-first archetype hero,
- *   numbered plain-language chapters, dual charts, chaptered written
- *   reading, method + guidance footer
- * 
+ * PDF Report & Porondam Generator — ග්‍රහචාර
+ *
+ * Premium branded HTML → PDF engine.
+ *
+ * FULL LIFE REPORT — "Celestial Almanac" dark keepsake theme:
+ * ─ Night-sky ground with deterministic starfield + gold hairline
+ *   frame, corner ticks and folios repeated on every page
+ * ─ Engraved zodiac-wheel cover with logo medallion + birth record
+ * ─ Contents page, Celestial Identity page (lagna/nakshatra/moon
+ *   medallions, dotted-leader birth record, dark D1 + D9 kendara)
+ * ─ Life Balance dashboard (arc gauge + jewel-toned area cards)
+ * ─ Next 12 Months sky calendar (convergence skyline + key windows)
+ * ─ Numbered chapters with ghost serif numerals, score arcs, drop
+ *   caps (EN), gold small-caps run-in headers, framed quotes
+ * ─ Colophon end page (seal, features, document Nº, disclaimer)
+ * No external assets: system fonts + inline SVG only, so
+ * ExpoPrint.printToFileAsync never touches the network.
+ *
+ * PORONDAM — light theme, mirrors the in-app report: verdict-first
+ * archetype hero, numbered plain-language chapters, dual charts,
+ * chaptered written reading, method + guidance footer.
+ *
  * Exports:
- *   generateReportHTML(opts)  – Full Life Report PDF
- *   generatePorondamHTML(opts) – Marriage Compatibility PDF
- *   loadLogoBase64()          – Load app logo as base64 for PDF embedding
+ *   generateReportHTML(opts)   – Full Life Report PDF (dark almanac)
+ *   generatePorondamHTML(opts) – Marriage Compatibility PDF (light)
+ *   loadLogoBase64()           – App logo as base64 for embedding
  *   SECTION_COLORS
  */
 
@@ -35,7 +41,12 @@ var _logoBase64Cache = null;
 // ════════════════════════════════════════════════
 async function loadLogoBase64() {
   if (_logoBase64Cache) return _logoBase64Cache;
-  _logoBase64Cache = APP_LOGO_BASE64;
+  // Defensive normalisation: stray whitespace/newlines (from asset
+  // regeneration) or an accidental data-URI prefix inside the base64
+  // payload silently breaks url(data:...) in the print WebView — the
+  // classic "logo missing from the PDF" failure.
+  var raw = String(APP_LOGO_BASE64 || '').replace(/\s+/g, '');
+  _logoBase64Cache = raw.replace(/^data:image\/[a-z+.-]+;base64,/i, '');
   return _logoBase64Cache;
 }
 
@@ -300,149 +311,433 @@ function sharedCSS(accentHue) {
     +'@media print{.cover{page-break-after:always;}.toc{page-break-after:always;}.rs,.factor-row,.care-card,.chart-wrap{page-break-inside:avoid;}.ep{page-break-before:always;}}';
 }
 
-function legacySharedCSS(accentHue) {
-  var ac = accentHue === 'pink'
-    ? { h:'#EC4899',bg1:'#831843',bg2:'#BE185D',bg3:'#EC4899',bg4:'#F9A8D4',wa:'rgba(236,72,153,0.03)',co:'rgba(236,72,153,0.12)',hc:'rgba(236,72,153,0.5)',fc:'rgba(236,72,153,0.3)',fb:'rgba(236,72,153,0.06)' }
-    : { h:'#7C3AED',bg1:'#1E1B4B',bg2:'#312E81',bg3:'#4C1D95',bg4:'#7C3AED',wa:'rgba(124,58,237,0.03)',co:'rgba(124,58,237,0.12)',hc:'rgba(124,58,237,0.5)',fc:'rgba(124,58,237,0.4)',fb:'rgba(124,58,237,0.06)' };
+// ════════════════════════════════════════════════
+// ✦ CELESTIAL ALMANAC — full-report dark theme
+// The Complete Life Report renders as a keepsake
+// night-sky almanac: deep violet ground, gold
+// metalwork, serif numerals, engraved zodiac wheel,
+// jewel-toned kendara charts. Everything below this
+// line is used only by generateReportHTML — the
+// porondam PDF keeps the light theme above.
+// ════════════════════════════════════════════════
 
-  return ''
-    // NOTE: external @import of Google Fonts removed — it caused
-    // ExpoPrint.printToFileAsync to reject on Android when the network was
-    // unavailable or slow at print time. System fonts (Roboto on Android,
-    // San Francisco on iOS) cover Latin; Noto Sans Sinhala ships as a
-    // system font on Android API 23+ and iOS 13+, so Sinhala renders
-    // correctly without a remote fetch.
-    +':root{--ac:'+ac.h+';--gold:#FBBF24;--gold-l:#FDE68A;--txt:#1F2937;}'
-    +'@page{margin:0;size:A4;}*{box-sizing:border-box;margin:0;padding:0;}'
-    +'body{font-family:-apple-system,"Roboto","Noto Sans Sinhala","Iskoola Pota",sans-serif;color:var(--txt);line-height:1.7;font-size:13px;background:#fff;}'
-    // Watermark
-    +'.wm{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);font-size:90px;font-weight:900;color:'+ac.wa+';letter-spacing:16px;white-space:nowrap;z-index:0;pointer-events:none;user-select:none;}'
-    // Corners
-    +'.oc{position:fixed;width:50px;height:50px;z-index:5;}'
-    +'.oc-tl{top:6px;left:6px;border-top:2px solid '+ac.co+';border-left:2px solid '+ac.co+';}'
-    +'.oc-tr{top:6px;right:6px;border-top:2px solid '+ac.co+';border-right:2px solid '+ac.co+';}'
-    +'.oc-bl{bottom:6px;left:6px;border-bottom:2px solid '+ac.co+';border-left:2px solid '+ac.co+';}'
-    +'.oc-br{bottom:6px;right:6px;border-bottom:2px solid '+ac.co+';border-right:2px solid '+ac.co+';}'
-    // Header/Footer
-    +'.ph{position:fixed;top:0;left:0;right:0;height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;font-size:8px;color:'+ac.hc+';letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid '+ac.fb+';z-index:10;}'
-    +'.ph .lm{font-weight:800;color:var(--ac);font-size:9px;}'
-    +'.pf{position:fixed;bottom:0;left:0;right:0;height:32px;display:flex;align-items:center;justify-content:center;font-size:7px;color:'+ac.fc+';letter-spacing:1.5px;border-top:1px solid '+ac.fb+';}'
-    // Cover
-    +'.cover{width:100%;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,'+ac.bg1+' 0%,'+ac.bg2+' 25%,'+ac.bg3+' 50%,'+ac.bg4+' 75%,#9333EA 100%);color:#fff;position:relative;overflow:hidden;page-break-after:always;}'
-    +'.cover::before{content:"";position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 30% 50%,rgba(251,191,36,0.15) 0%,transparent 50%),radial-gradient(ellipse at 70% 30%,rgba(255,255,255,0.06) 0%,transparent 50%);}'
-    +'.zr{position:absolute;width:500px;height:500px;border:2px solid rgba(251,191,36,0.12);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);}'
-    +'.zri{position:absolute;width:400px;height:400px;border:1px solid rgba(255,255,255,0.06);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);}'
-    +'.zs{position:absolute;width:100%;height:100%;top:0;left:0;}.zs span{position:absolute;font-size:18px;color:rgba(251,191,36,0.2);}'
-    +'.cc{position:relative;z-index:2;text-align:center;padding:40px;}'
-    +'.cl{width:100px;height:100px;border-radius:28px;overflow:hidden;margin:0 auto 24px;border:3px solid rgba(251,191,36,0.5);box-shadow:0 0 60px rgba(251,191,36,0.3);display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);}'
-    +'.cl img{width:100%;height:100%;object-fit:cover;}'
-    +'.cb{font-size:14px;font-weight:700;color:rgba(251,191,36,0.9);letter-spacing:8px;text-transform:uppercase;margin-bottom:8px;}'
-    +'.ct{font-size:36px;font-weight:900;line-height:1.2;margin-bottom:6px;text-shadow:0 2px 20px rgba(0,0,0,0.3);}'
-    +'.ctg{background:linear-gradient(135deg,#FBBF24 0%,#F59E0B 50%,#FDE68A 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}'
-    +'.cs{font-size:16px;color:rgba(255,255,255,0.7);margin-bottom:40px;font-weight:300;}'
-    +'.cd{width:120px;height:2px;background:linear-gradient(90deg,transparent,rgba(251,191,36,0.6),transparent);margin:0 auto 32px;}'
-    +'.cn{font-size:28px;font-weight:800;color:#FDE68A;margin-bottom:12px;text-shadow:0 0 30px rgba(251,191,36,0.4);}'
-    +'.cdt{font-size:13px;color:rgba(255,255,255,0.55);line-height:1.9;}.cdt strong{color:rgba(255,255,255,0.85);}'
-    +'.cfb{position:absolute;bottom:30px;left:0;right:0;text-align:center;font-size:9px;color:rgba(255,255,255,0.25);letter-spacing:3px;text-transform:uppercase;}'
-    // Content page
-    +'.cp{padding:52px 48px 44px;position:relative;}'
-    // Score gauge
-    +'.sg{display:inline-flex;align-items:center;justify-content:center;position:relative;}'
-    +'.sg-txt{position:absolute;text-align:center;}'
-    +'.sg-val{font-weight:900;line-height:1;}'
-    +'.sg-lbl{font-size:10px;color:#6B7280;margin-top:2px;}'
-    // Verdict banner
-    +'.verdict{border-radius:14px;padding:18px 22px;margin-bottom:16px;position:relative;overflow:hidden;}'
-    +'.verdict-hdr{display:flex;align-items:center;gap:10px;margin-bottom:8px;}'
-    +'.verdict-emoji{font-size:28px;}'
-    +'.verdict-title{font-size:13px;font-weight:700;color:#fff;flex:1;}'
-    +'.verdict-score{font-size:24px;font-weight:900;color:#fff;}'
-    +'.verdict-bar-wrap{height:6px;background:rgba(255,255,255,0.25);border-radius:3px;overflow:hidden;}'
-    +'.verdict-bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.9);}'
-    +'.verdict-rating{display:inline-block;margin-top:8px;padding:3px 12px;border-radius:20px;background:rgba(255,255,255,0.2);color:#fff;font-size:10px;font-weight:700;letter-spacing:1px;}'
-    // Report section
-    +'.rs{page-break-inside:avoid;margin-bottom:28px;border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,0.06);}'
-    +'.rs-hdr{padding:14px 20px;display:flex;align-items:center;gap:10px;}'
-    +'.rs-hdr .sn{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;}'
-    +'.rs-hdr .se{font-size:20px;}'
-    +'.rs-hdr h2{flex:1;font-size:15px;font-weight:800;color:#fff;margin:0;text-shadow:0 1px 3px rgba(0,0,0,0.2);}'
-    +'.rs-hdr .ss{font-size:13px;font-weight:900;color:#fff;background:rgba(255,255,255,0.2);padding:3px 10px;border-radius:12px;}'
-    +'.rs-body{padding:18px 22px;font-size:12.5px;line-height:1.85;color:#374151;}'
-    +'.rs-body strong{color:#1F2937;}.rs-body em{color:var(--ac);font-style:italic;}'
-    +'.rs-body blockquote{margin:10px 0;padding:10px 16px;border-left:3px solid var(--gold);background:rgba(251,191,36,0.06);border-radius:0 8px 8px 0;font-style:italic;color:#555;}'
-    // Chart
-    +'.chart-wrap{text-align:center;margin:24px auto;padding:20px;background:linear-gradient(135deg,#F5F3FF,#FEF3C7,#F5F3FF);border:1px solid rgba(124,58,237,0.12);border-radius:16px;page-break-inside:avoid;max-width:460px;overflow:visible;}'
-    +'.chart-title{font-size:14px;font-weight:800;color:var(--ac);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;}'
-    // TOC
-    +'.toc{page-break-after:always;}'
-    +'.toc-hdr{text-align:center;margin-bottom:32px;padding-top:20px;}'
-    +'.toc-hdr h2{font-size:22px;font-weight:800;color:var(--ac);letter-spacing:3px;text-transform:uppercase;}'
-    +'.toc-line{width:60px;height:3px;background:linear-gradient(90deg,var(--gold),var(--ac));margin:10px auto 0;border-radius:2px;}'
-    +'.toc-list{list-style:none;padding:0 20px;}'
-    +'.toc-item{display:flex;align-items:center;padding:10px 0;border-bottom:1px dotted rgba(0,0,0,0.06);gap:12px;}'
-    +'.toc-item:last-child{border-bottom:none;}'
-    +'.toc-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}'
-    +'.toc-emoji{font-size:16px;width:24px;text-align:center;flex-shrink:0;}'
-    +'.toc-label{flex:1;font-size:13px;font-weight:600;color:#333;}'
-    // Birth card
-    +'.bc{background:linear-gradient(135deg,#F5F3FF 0%,#FEF3C7 50%,#F5F3FF 100%);border:1px solid rgba(124,58,237,0.15);border-radius:16px;padding:24px 28px;margin-bottom:32px;position:relative;overflow:hidden;}'
-    +'.bc::after{content:"☸";position:absolute;top:-10px;right:-10px;font-size:100px;color:rgba(124,58,237,0.03);pointer-events:none;}'
-    +'.bc h3{font-size:15px;font-weight:800;color:var(--ac);margin-bottom:14px;letter-spacing:1px;text-transform:uppercase;}'
-    +'.bt{width:100%;border-collapse:collapse;}'
-    +'.bt td{padding:7px 10px;font-size:12px;vertical-align:top;}'
-    +'.bt tr:nth-child(odd) td{background:rgba(124,58,237,0.03);}'
-    +'.bt .bl{color:var(--ac);font-weight:700;width:140px;white-space:nowrap;}'
-    +'.bt .bv{color:#333;font-weight:500;}'
-    // Hero scores page
-    +'.hero-scores{page-break-after:always;padding:52px 48px;}'
-    +'.hero-title{text-align:center;font-size:20px;font-weight:900;color:var(--ac);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}'
-    +'.hero-sub{text-align:center;font-size:12px;color:#888;margin-bottom:28px;}'
-    +'.hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;}'
-    +'.hero-cell{text-align:center;padding:14px 8px;border-radius:14px;border:1px solid rgba(0,0,0,0.06);}'
-    +'.hero-cell .hc-emoji{font-size:24px;margin-bottom:4px;}'
-    +'.hero-cell .hc-name{font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}'
-    +'.hero-cell .hc-score{font-size:28px;font-weight:900;line-height:1;}'
-    +'.hero-cell .hc-bar{height:4px;background:rgba(0,0,0,0.06);border-radius:2px;margin-top:8px;overflow:hidden;}'
-    +'.hero-cell .hc-fill{height:4px;border-radius:2px;}'
-    +'.hero-overall{text-align:center;padding:28px;background:linear-gradient(135deg,#F5F3FF,#FEF3C7,#F5F3FF);border-radius:20px;border:1px solid rgba(124,58,237,0.12);}'
-    +'.hero-overall .ho-label{font-size:16px;font-weight:700;color:#555;margin-top:4px;}'
-    +'.hero-overall .ho-sub{font-size:11px;color:#999;margin-top:4px;}'
-    // End page
-    +'.ep{width:100%;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,'+ac.bg1+','+ac.bg3+','+ac.bg4+');color:#fff;text-align:center;page-break-before:always;}'
-    +'.ep .ep-icon{font-size:48px;margin-bottom:8px;}'
-    +'.ep .ep-brand{font-size:11px;letter-spacing:6px;color:rgba(251,191,36,0.7);text-transform:uppercase;font-weight:700;}'
-    +'.ep .ep-line{width:80px;height:2px;background:linear-gradient(90deg,transparent,rgba(251,191,36,0.5),transparent);margin:20px auto;}'
-    +'.ep .ep-tag{font-size:14px;color:rgba(255,255,255,0.5);font-style:italic;}'
-    +'.ep .ep-url{font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:2px;margin-top:20px;}'
-    +'.ep .ep-disc{max-width:400px;font-size:8px;color:rgba(255,255,255,0.2);line-height:1.6;margin-top:30px;}'
-    +'.ep .ep-cta{margin-top:24px;padding:10px 24px;border:1px solid rgba(251,191,36,0.4);border-radius:10px;color:var(--gold);font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;}'
-    +'.ep .ep-features{display:flex;gap:16px;margin-top:16px;}'
-    +'.ep .ep-feat{font-size:9px;color:rgba(255,255,255,0.35);}'
-    +'@media print{.cover{page-break-after:always;}.toc{page-break-after:always;}.rs{page-break-inside:avoid;}.ep{page-break-before:always;}}';
+var RPT_TIERS = [
+  { min: 80, color: '#4EC98F', en: 'Exceptional', si: 'ඉතා ප්‍රබල' },
+  { min: 60, color: '#6FA8FF', en: 'Strong', si: 'ප්‍රබල' },
+  { min: 40, color: '#E8B54D', en: 'Balanced', si: 'සමතුලිත' },
+  { min: 0,  color: '#E8836E', en: 'Needs care', si: 'සැලකිල්ල ඕනෑ' },
+];
+function rptTier(score) {
+  for (var i = 0; i < RPT_TIERS.length; i++) { if (score >= RPT_TIERS[i].min) return RPT_TIERS[i]; }
+  return RPT_TIERS[RPT_TIERS.length - 1];
+}
+
+// Jewel accents tuned for the dark ground — SECTION_COLORS primaries were
+// picked for white paper and sit muddy on near-black.
+var RPT_ACCENTS = {
+  personality: '#7FB2FF', yogaAnalysis: '#C08BFF', lifePredictions: '#B39DFF',
+  career: '#F0B95C', marriage: '#FF8FB8', marriedLife: '#FF9E9E', financial: '#5CD69A',
+  children: '#5FD6B5', familyPortrait: '#6FC6FF', health: '#FF8E7A', physicalProfile: '#E79BF0',
+  attractionProfile: '#FF92A8', mentalHealth: '#6FDCE8', foreignTravel: '#9FA9FF',
+  education: '#B79DFF', luck: '#F2CE6A', legal: '#ADB9CC', spiritual: '#CBA3FF',
+  realEstate: '#B7DB6A', transits: '#63D6C3', next12Months: '#F0B95C',
+  surpriseInsights: '#FFAE70', timeline25: '#9FA9FF', remedies: '#F2CE6A',
+};
+function rptAccent(key) { return RPT_ACCENTS[key] || '#F0D48A'; }
+
+var RPT_PLANET_DARK = {
+  Sun: '#F6C453', Moon: '#C9D4FF', Mars: '#FF8A7A', Mercury: '#63DFA9',
+  Jupiter: '#F4CE6A', Venus: '#FFA9CC', Saturn: '#A3ACFF', Rahu: '#B9C3D0', Ketu: '#D9C6FF',
+  Surya: '#F6C453', Chandra: '#C9D4FF', Mangala: '#FF8A7A', Budha: '#63DFA9',
+  Guru: '#F4CE6A', Shukra: '#FFA9CC', Shani: '#A3ACFF',
+};
+
+var RPT_DOMAINS = {
+  career: { color: '#F0B95C', si: 'රැකියාව', en: 'Career' },
+  love:   { color: '#FF8FB8', si: 'ආදරය', en: 'Love' },
+  money:  { color: '#5CD69A', si: 'මුදල්', en: 'Money' },
+  health: { color: '#FF8E7A', si: 'සෞඛ්‍යය', en: 'Health' },
+  travel: { color: '#9FA9FF', si: 'විදේශ', en: 'Travel' },
+  family: { color: '#6FC6FF', si: 'පවුල', en: 'Family' },
+};
+
+// Canonical short names for the Life Balance dashboard — AI section titles
+// can run long, and some scored areas (e.g. spiritual) have no section.
+var RPT_AREA_NAMES = {
+  career: { si: 'රැකියාව', en: 'Career' },
+  marriage: { si: 'විවාහය', en: 'Marriage' },
+  health: { si: 'සෞඛ්‍යය', en: 'Health' },
+  financial: { si: 'මූල්‍ය', en: 'Finances' },
+  luck: { si: 'වාසනාව', en: 'Luck' },
+  education: { si: 'අධ්‍යාපනය', en: 'Education' },
+  children: { si: 'දරුවන්', en: 'Children' },
+  foreignTravel: { si: 'විදේශ ගමන්', en: 'Foreign Travel' },
+  spiritual: { si: 'අධ්‍යාත්මික ජීවිතය', en: 'Spiritual Life' },
+};
+
+// Deterministic starfield — seeded LCG, so re-exporting the same report
+// produces an identical document.
+function rptStars(w, h, count, seed) {
+  var s = (seed || 7) % 2147483647; if (s <= 0) s += 2147483646;
+  var rnd = function() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+  var out = '';
+  for (var i = 0; i < count; i++) {
+    out += '<circle cx="' + (rnd() * w).toFixed(1) + '" cy="' + (rnd() * h).toFixed(1)
+      + '" r="' + (0.4 + rnd() * 0.9).toFixed(2) + '" fill="#F4E9CF" opacity="' + (0.12 + rnd() * 0.5).toFixed(2) + '"/>';
+  }
+  var sparkles = Math.max(3, Math.round(count / 15));
+  for (var j = 0; j < sparkles; j++) {
+    var sx = rnd() * w, sy = rnd() * h, ss = 2.4 + rnd() * 3;
+    var x0 = sx.toFixed(1), y0 = sy.toFixed(1);
+    out += '<path d="M ' + x0 + ' ' + (sy - ss).toFixed(1)
+      + ' Q ' + x0 + ' ' + y0 + ' ' + (sx + ss).toFixed(1) + ' ' + y0
+      + ' Q ' + x0 + ' ' + y0 + ' ' + x0 + ' ' + (sy + ss).toFixed(1)
+      + ' Q ' + x0 + ' ' + y0 + ' ' + (sx - ss).toFixed(1) + ' ' + y0
+      + ' Q ' + x0 + ' ' + y0 + ' ' + x0 + ' ' + (sy - ss).toFixed(1) + ' Z" fill="#F0D48A" opacity="' + (0.2 + rnd() * 0.35).toFixed(2) + '"/>';
+  }
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;width:100%;height:100%;">' + out + '</svg>';
+}
+
+// Engraved zodiac wheel — the cover signature.
+function rptWheel(size) {
+  var c = size / 2;
+  var rOuter = c - 2, rTick = c - 11, rGlyph = c - 32, rInner = c - 52, rHub = c - 74;
+  var svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" xmlns="http://www.w3.org/2000/svg" style="display:block;">';
+  svg += '<circle cx="' + c + '" cy="' + c + '" r="' + rOuter + '" fill="none" stroke="rgba(212,175,97,0.5)" stroke-width="1"/>';
+  svg += '<circle cx="' + c + '" cy="' + c + '" r="' + (rOuter - 4) + '" fill="none" stroke="rgba(212,175,97,0.2)" stroke-width="0.6"/>';
+  for (var i = 0; i < 72; i++) {
+    var a = (i / 72) * Math.PI * 2;
+    var lg = i % 6 === 0;
+    var r2 = rTick - (lg ? 6.5 : 3);
+    svg += '<line x1="' + (c + Math.cos(a) * rTick).toFixed(1) + '" y1="' + (c + Math.sin(a) * rTick).toFixed(1)
+      + '" x2="' + (c + Math.cos(a) * r2).toFixed(1) + '" y2="' + (c + Math.sin(a) * r2).toFixed(1)
+      + '" stroke="rgba(212,175,97,' + (lg ? '0.55' : '0.26') + ')" stroke-width="' + (lg ? '1' : '0.6') + '"/>';
+  }
+  ZODIAC_SYMBOLS.forEach(function(g, idx) {
+    var a = (idx / 12) * Math.PI * 2 - Math.PI / 2;
+    // ︎ (text-presentation selector) keeps zodiac glyphs engraved
+    // monochrome instead of the colour-emoji form Android/Windows prefer.
+    svg += '<text x="' + (c + Math.cos(a) * rGlyph).toFixed(1) + '" y="' + (c + Math.sin(a) * rGlyph + 4.5).toFixed(1)
+      + '" text-anchor="middle" font-size="14" fill="rgba(240,212,138,0.72)">' + g + '︎</text>';
+  });
+  svg += '<circle cx="' + c + '" cy="' + c + '" r="' + rInner + '" fill="none" stroke="rgba(212,175,97,0.34)" stroke-width="0.7" stroke-dasharray="1 4"/>';
+  svg += '<circle cx="' + c + '" cy="' + c + '" r="' + rHub + '" fill="none" stroke="rgba(212,175,97,0.18)" stroke-width="0.6"/>';
+  for (var k = 0; k < 12; k++) {
+    var ak = (k / 12) * Math.PI * 2 + Math.PI / 12;
+    svg += '<line x1="' + (c + Math.cos(ak) * rHub).toFixed(1) + '" y1="' + (c + Math.sin(ak) * rHub).toFixed(1)
+      + '" x2="' + (c + Math.cos(ak) * rInner).toFixed(1) + '" y2="' + (c + Math.sin(ak) * rInner).toFixed(1)
+      + '" stroke="rgba(212,175,97,0.14)" stroke-width="0.6"/>';
+  }
+  return svg + '</svg>';
+}
+
+// Circular score gauge on the night ground — serif numeral, hairline track.
+function rptArc(score, size, color, label) {
+  if (score == null || isNaN(score)) return '';
+  var pct = Math.min(100, Math.max(0, Math.round(score)));
+  var r = (size - 10) / 2;
+  var circ = 2 * Math.PI * r;
+  var dash = (pct / 100) * circ;
+  var c = size / 2;
+  var numSize = Math.round(size * 0.3);
+  var numY = label ? c + numSize * 0.18 : c + numSize * 0.34;
+  var svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto;">'
+    + '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" fill="none" stroke="rgba(240,233,216,0.1)" stroke-width="4"/>'
+    + '<circle cx="' + c + '" cy="' + c + '" r="' + (r - 6.5) + '" fill="none" stroke="rgba(212,175,97,0.16)" stroke-width="0.7" stroke-dasharray="1 3.5"/>'
+    + '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="4" stroke-linecap="round" stroke-dasharray="' + dash.toFixed(1) + ' ' + (circ - dash).toFixed(1) + '" transform="rotate(-90 ' + c + ' ' + c + ')"/>'
+    + '<text x="' + c + '" y="' + numY.toFixed(1) + '" text-anchor="middle" font-family="Georgia,Noto Serif,serif" font-size="' + numSize + '" font-weight="600" fill="#F4E9CF">' + pct + '</text>';
+  if (label) {
+    svg += '<text x="' + c + '" y="' + (numY + numSize * 0.62).toFixed(1) + '" text-anchor="middle" font-size="' + Math.max(6.5, Math.round(size * 0.052)) + '" letter-spacing="1.6" fill="rgba(212,175,97,0.8)">' + label + '</text>';
+  }
+  return svg + '</svg>';
+}
+
+// Sri Lankan kendara on the night ground. variant: 'd1' gold | 'd9' rose.
+function rptKendara(rashiChart, lagnaRashiId, lang, size, variant) {
+  if (!rashiChart || !lagnaRashiId) return '';
+  var S = size || 216;
+  var C = S / 3;
+  var isSi = lang === 'si';
+  var v = variant === 'd9'
+    ? { line: 'rgba(232,163,191,', bg1: '#20112E', bg2: '#150A20', id: 'kd9' }
+    : { line: 'rgba(212,175,97,', bg1: '#1A1142', bg2: '#110B2A', id: 'kd1' };
+
+  var rashiData = {};
+  for (var i = 1; i <= 12; i++) rashiData[i] = { planets: [], hasLagna: i === lagnaRashiId };
+  if (Array.isArray(rashiChart)) {
+    rashiChart.forEach(function(entry) {
+      var rid = entry.rashiId;
+      if (rid && rashiData[rid] && entry.planets) {
+        entry.planets.forEach(function(p) {
+          var pName = typeof p === 'string' ? p : (p.name || '');
+          if (pName === 'Lagna' || pName === 'Ascendant') rashiData[rid].hasLagna = true;
+          else if (pName) rashiData[rid].planets.push(typeof p === 'string' ? { name: p } : p);
+        });
+      }
+    });
+  }
+  var rashiForHouse = function(h) { return ((lagnaRashiId - 1 + (h - 1)) % 12) + 1; };
+
+  function planetText(houseNum, x, y) {
+    var d = rashiData[rashiForHouse(houseNum)];
+    if (!d || d.planets.length === 0) return '';
+    var lines = '';
+    d.planets.forEach(function(p, idx) {
+      var pName = p.name || '';
+      var lbl = isSi ? (PLANET_SI[pName] || pName.substring(0, 2)) : (PLANET_SHORT[pName] || pName.substring(0, 2));
+      var col = RPT_PLANET_DARK[pName] || '#C9C2B2';
+      var deg = p.degree != null ? '<tspan font-size="6" opacity="0.62"> ' + Math.floor(p.degree) + '°</tspan>' : '';
+      lines += '<text x="' + x + '" y="' + (y + idx * 11.5) + '" fill="' + col + '" font-size="8.4" font-weight="700" text-anchor="middle">' + lbl + deg + '</text>';
+    });
+    return lines;
+  }
+  function hLabel(num, x, y) {
+    return '<text x="' + x + '" y="' + y + '" fill="' + v.line + '0.42)" font-size="6.4" font-family="Georgia,Noto Serif,serif" text-anchor="middle">' + num + '</text>';
+  }
+  function lagnaBadge(x, y) {
+    return '<circle cx="' + x + '" cy="' + (y - 3) + '" r="8" fill="rgba(212,175,97,0.13)" stroke="rgba(212,175,97,0.55)" stroke-width="0.8"/>'
+      + '<text x="' + x + '" y="' + y + '" fill="#F0D48A" font-size="8.6" font-weight="900" text-anchor="middle">ල</text>';
+  }
+
+  var svg = '<svg width="' + S + '" height="' + S + '" viewBox="0 0 ' + S + ' ' + S + '" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto;display:block;margin:0 auto;">'
+    + '<defs><radialGradient id="' + v.id + '" cx="50%" cy="42%" r="75%"><stop offset="0%" stop-color="' + v.bg1 + '"/><stop offset="100%" stop-color="' + v.bg2 + '"/></radialGradient></defs>'
+    + '<rect width="' + S + '" height="' + S + '" fill="url(#' + v.id + ')" rx="7"/>'
+    + '<rect x="0.5" y="0.5" width="' + (S - 1) + '" height="' + (S - 1) + '" fill="none" stroke="' + v.line + '0.55)" stroke-width="1" rx="7"/>'
+    + '<rect x="4" y="4" width="' + (S - 8) + '" height="' + (S - 8) + '" fill="none" stroke="' + v.line + '0.16)" stroke-width="0.7" rx="5"/>'
+    + '<line x1="' + C + '" y1="0" x2="' + C + '" y2="' + S + '" stroke="' + v.line + '0.3)" stroke-width="0.8"/>'
+    + '<line x1="' + (2 * C) + '" y1="0" x2="' + (2 * C) + '" y2="' + S + '" stroke="' + v.line + '0.3)" stroke-width="0.8"/>'
+    + '<line x1="0" y1="' + C + '" x2="' + S + '" y2="' + C + '" stroke="' + v.line + '0.3)" stroke-width="0.8"/>'
+    + '<line x1="0" y1="' + (2 * C) + '" x2="' + S + '" y2="' + (2 * C) + '" stroke="' + v.line + '0.3)" stroke-width="0.8"/>'
+    + '<line x1="0" y1="' + C + '" x2="' + C + '" y2="0" stroke="' + v.line + '0.2)" stroke-width="0.7"/>'
+    + '<line x1="' + (2 * C) + '" y1="0" x2="' + (3 * C) + '" y2="' + C + '" stroke="' + v.line + '0.2)" stroke-width="0.7"/>'
+    + '<line x1="0" y1="' + (2 * C) + '" x2="' + C + '" y2="' + (3 * C) + '" stroke="' + v.line + '0.2)" stroke-width="0.7"/>'
+    + '<line x1="' + (2 * C) + '" y1="' + (3 * C) + '" x2="' + (3 * C) + '" y2="' + (2 * C) + '" stroke="' + v.line + '0.2)" stroke-width="0.7"/>'
+    + '<circle cx="' + (1.5 * C) + '" cy="' + (1.5 * C) + '" r="' + (C * 0.38) + '" fill="none" stroke="' + v.line + '0.22)" stroke-width="0.7"/>'
+    + '<circle cx="' + (1.5 * C) + '" cy="' + (1.5 * C) + '" r="' + (C * 0.28) + '" fill="none" stroke="' + v.line + '0.12)" stroke-width="0.6" stroke-dasharray="1 3"/>'
+    + '<text x="' + (1.5 * C) + '" y="' + (1.5 * C + 4) + '" text-anchor="middle" font-size="11" fill="' + v.line + '0.5)">✦</text>';
+
+  svg += planetText(1, C * 1.5, C * 0.38) + hLabel(1, C * 1.5, C * 0.17) + lagnaBadge(C * 1.5, C * 0.93);
+  svg += planetText(2, C * 0.32, C * 0.3) + hLabel(2, C * 0.14, C * 0.17);
+  svg += planetText(3, C * 0.68, C * 0.76) + hLabel(3, C * 0.86, C * 0.92);
+  svg += planetText(4, C * 0.5, C * 1.38) + hLabel(4, C * 0.5, C * 1.16);
+  svg += planetText(5, C * 0.32, C * 2.28) + hLabel(5, C * 0.14, C * 2.16);
+  svg += planetText(6, C * 0.68, C * 2.76) + hLabel(6, C * 0.86, C * 2.92);
+  svg += planetText(7, C * 1.5, C * 2.4) + hLabel(7, C * 1.5, C * 2.18);
+  svg += planetText(8, C * 2.68, C * 2.76) + hLabel(8, C * 2.86, C * 2.92);
+  svg += planetText(9, C * 2.32, C * 2.28) + hLabel(9, C * 2.14, C * 2.16);
+  svg += planetText(10, C * 2.5, C * 1.38) + hLabel(10, C * 2.5, C * 1.16);
+  svg += planetText(11, C * 2.32, C * 0.76) + hLabel(11, C * 2.14, C * 0.92);
+  svg += planetText(12, C * 2.68, C * 0.3) + hLabel(12, C * 2.86, C * 0.17);
+
+  return svg + '</svg>';
+}
+
+// Twelve-month convergence skyline — one bar per month, coloured by its
+// strongest life domain; small ring above a bar marks an eclipse month.
+function rptSkyline(months, isSi) {
+  if (!Array.isArray(months) || months.length === 0) return '';
+  var W = 488, H = 172, baseY = 134;
+  var n = Math.min(12, months.length);
+  var step = (W - 14) / n;
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">'
+    + '<line x1="5" y1="' + baseY + '" x2="' + (W - 5) + '" y2="' + baseY + '" stroke="rgba(212,175,97,0.3)" stroke-width="0.8"/>';
+  for (var i = 0; i < n; i++) {
+    var m = months[i] || {};
+    var best = null, scores = m.scores || {};
+    Object.keys(scores).forEach(function(d) { if (best == null || scores[d] > scores[best]) best = d; });
+    var meta = RPT_DOMAINS[best] || { color: '#F0D48A' };
+    var score = best != null ? Math.round(scores[best]) : 50;
+    var h = Math.max(16, Math.min(96, 24 + ((score - 30) / 68) * 72));
+    var cx = 7 + step * i + step / 2;
+    var x = cx - 9, y = baseY - h;
+    svg += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="18" height="' + h.toFixed(1) + '" rx="3" fill="' + meta.color + '" opacity="0.88"/>'
+      + '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="18" height="' + Math.min(5, h).toFixed(1) + '" rx="2.5" fill="rgba(255,255,255,0.18)"/>'
+      + '<text x="' + cx.toFixed(1) + '" y="' + (y - 6).toFixed(1) + '" text-anchor="middle" font-family="Georgia,Noto Serif,serif" font-size="8.4" fill="rgba(240,233,216,0.78)">' + score + '</text>'
+      + '<text x="' + cx.toFixed(1) + '" y="' + (baseY + 14) + '" text-anchor="middle" font-size="7' + '" fill="rgba(240,233,216,0.42)">' + escapeHTML(String(m.label || m.month || '').split(' ')[0]) + '</text>';
+    if (m.eclipses && m.eclipses.length) {
+      svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + (y - 17).toFixed(1) + '" r="2.8" fill="none" stroke="#F0D48A" stroke-width="0.9"/>';
+    }
+  }
+  svg += '<text x="' + (W - 5) + '" y="' + (H - 3) + '" text-anchor="end" font-size="6.6" letter-spacing="1.2" fill="rgba(240,233,216,0.3)">' + (isSi ? '◌ = ග්‍රහණ මාසය' : '◌ = ECLIPSE MONTH') + '</text>';
+  return svg + '</svg>';
 }
 
 // ════════════════════════════════════════════════
-// SVG SCORE GAUGE
+// CELESTIAL ALMANAC — print stylesheet
 // ════════════════════════════════════════════════
-function svgScoreGauge(score, size, color, label) {
-  if (score == null || isNaN(score)) return '';
-  var r = (size - 8) / 2;
-  var circ = 2 * Math.PI * r;
-  var pct = Math.min(100, Math.max(0, score));
-  var dash = (pct / 100) * circ;
-  var gap = circ - dash;
-  var sc = color || (pct >= 75 ? '#10B981' : pct >= 55 ? '#3B82F6' : pct >= 35 ? '#F59E0B' : '#EF4444');
-  var emoji = pct >= 80 ? '🔥' : pct >= 60 ? '✨' : pct >= 40 ? '💫' : '⚡';
+function reportPrintCSS(isSi) {
+  var serif = 'Georgia,"Noto Serif","Times New Roman",serif';
+  var sinh = '"Noto Sans Sinhala","Iskoola Pota",-apple-system,Roboto,sans-serif';
+  var disp = isSi ? sinh : serif;
+  var lbl = isSi ? sinh : serif;
+  var bodyF = isSi ? sinh : serif;
+  var up = isSi ? '' : 'text-transform:uppercase;';
+  // Any letter-spacing on Sinhala splits ZWJ conjuncts (rakaransaya,
+  // yansaya) in Blink, so tracked labels are a Latin-only luxury.
+  var trk = function(en) { return 'letter-spacing:' + (isSi ? '0' : en) + ';'; };
 
-  return '<div class="sg" style="width:'+size+'px;height:'+size+'px;">'
-    +'<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'
-    +'<circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="4"/>'
-    +'<circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="none" stroke="'+sc+'" stroke-width="4" stroke-linecap="round" stroke-dasharray="'+dash.toFixed(1)+' '+gap.toFixed(1)+'" transform="rotate(-90 '+(size/2)+' '+(size/2)+')"/>'
-    +'</svg>'
-    +'<div class="sg-txt">'
-    +'<div class="sg-val" style="font-size:'+Math.round(size*0.28)+'px;color:'+sc+';">'+pct+'</div>'
-    +(label ? '<div class="sg-lbl">'+label+'</div>' : '<div class="sg-lbl">'+emoji+'</div>')
-    +'</div></div>';
+  return ''
+    + ':root{--night:#0B0716;--cream:#F4E9CF;--gold:#D4AF61;--gold2:#F0D48A;--hair:rgba(212,175,97,.3);--hair2:rgba(212,175,97,.16);--bodyc:rgba(240,233,216,.92);--faint:rgba(240,233,216,.6);--ghost:rgba(240,233,216,.38);--veil:rgba(244,232,203,.045);}'
+    + '@page{margin:0;size:A4;}*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
+    + 'html,body{min-height:100%;background:#0B0716;}'
+    + 'body{font-family:' + bodyF + ';font-size:' + (isSi ? '12.2px' : '12.6px') + ';line-height:' + (isSi ? '1.95' : '1.78') + ';color:var(--bodyc);}'
+    // Night sky — fixed layers repeat on every printed page
+    + '.bg{position:fixed;top:0;left:0;right:0;bottom:0;z-index:-3;background:linear-gradient(168deg,#0D081C 0%,#0B0716 34%,#0E0A20 62%,#090612 100%);}'
+    + '.bg::before{content:"";position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse 420px 300px at 82% 10%,rgba(88,63,164,.17),transparent 68%),radial-gradient(ellipse 400px 300px at 10% 88%,rgba(23,94,84,.15),transparent 70%),radial-gradient(ellipse 320px 240px at 18% 16%,rgba(212,175,97,.05),transparent 70%);}'
+    + '.wmk{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-32deg);font-family:' + sinh + ';font-size:94px;letter-spacing:18px;font-weight:700;color:rgba(244,233,207,.023);white-space:nowrap;z-index:-1;}'
+    // Hairline frame + corner ticks + folios (hidden under cover/end via z-index)
+    + '.frame{position:fixed;top:15px;left:15px;right:15px;bottom:15px;border:1px solid var(--hair2);z-index:1;}'
+    + '.fc{position:fixed;width:22px;height:22px;z-index:1;}'
+    + '.fc-tl{top:10px;left:10px;border-top:1px solid var(--hair);border-left:1px solid var(--hair);}'
+    + '.fc-tr{top:10px;right:10px;border-top:1px solid var(--hair);border-right:1px solid var(--hair);}'
+    + '.fc-bl{bottom:10px;left:10px;border-bottom:1px solid var(--hair);border-left:1px solid var(--hair);}'
+    + '.fc-br{bottom:10px;right:10px;border-bottom:1px solid var(--hair);border-right:1px solid var(--hair);}'
+    + '.folio-t{position:fixed;top:0;left:0;right:0;height:40px;display:flex;align-items:center;justify-content:center;gap:12px;z-index:1;font-family:' + lbl + ';font-size:7.5px;' + trk('3.2px', '1.6px') + up + 'color:rgba(212,175,97,.66);}'
+    + '.folio-t::before,.folio-t::after{content:"";width:58px;height:1px;background:var(--hair2);}'
+    + '.folio-b{position:fixed;bottom:0;left:0;right:0;height:36px;display:flex;align-items:center;justify-content:center;gap:9px;z-index:1;font-family:' + lbl + ';font-size:6.8px;letter-spacing:2.2px;text-transform:uppercase;color:rgba(240,233,216,.42);}'
+    + '.folio-b b{color:rgba(212,175,97,.6);font-weight:400;}'
+    + '.fb-name{letter-spacing:0;}'
+    // Page scaffold
+    + '.pg{position:relative;padding:74px 52px 66px;page-break-after:always;}'
+    + '.eyebrow{font-family:' + lbl + ';font-size:8.5px;' + trk('3.4px', '1.4px') + up + 'color:var(--gold);margin-bottom:10px;}'
+    + '.pg-title{font-family:' + disp + ';font-size:' + (isSi ? '24px' : '27px') + ';font-weight:' + (isSi ? '800' : '700') + ';color:var(--cream);line-height:1.18;margin-bottom:6px;text-wrap:balance;}'
+    + '.pg-sub{font-size:10.5px;color:var(--faint);margin-bottom:18px;line-height:1.65;max-width:420px;}'
+    + '.rule{display:flex;align-items:center;gap:10px;margin:12px 0 18px;}'
+    + '.rule::before{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--hair));}'
+    + '.rule::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--hair),transparent);}'
+    + '.rule em{font-style:normal;color:var(--gold);font-size:8px;line-height:1;}'
+    // ── Cover ──
+    + '.cov{position:relative;z-index:2;min-height:100vh;background:linear-gradient(172deg,#0F0A20 0%,#0B0716 42%,#0D081A 78%,#080510 100%);overflow:hidden;page-break-after:always;display:flex;flex-direction:column;align-items:center;text-align:center;padding:52px 44px 46px;}'
+    + '.cov::before{content:"";position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse 480px 360px at 50% 28%,rgba(88,63,164,.24),transparent 68%),radial-gradient(ellipse 440px 320px at 50% 106%,rgba(23,94,84,.17),transparent 70%);}'
+    + '.cov>*{position:relative;}'
+    // frame declared AFTER .cov>* so its absolute positioning wins the cascade
+    + '.cov-frame{position:absolute;top:18px;left:18px;right:18px;bottom:18px;border:1px solid rgba(212,175,97,.46);}'
+    + '.cov-frame::before{content:"";position:absolute;top:5px;left:5px;right:5px;bottom:5px;border:1px solid rgba(212,175,97,.18);}'
+    + '.cov-brand{font-family:' + sinh + ';font-size:17.5px;color:var(--gold2);font-weight:700;margin-top:12px;}'
+    + '.cov-est{font-family:' + lbl + ';font-size:6.8px;' + trk('4px', '2px') + up + 'color:rgba(212,175,97,.6);margin-top:8px;}'
+    + '.cov-wheelwrap{position:relative;width:346px;height:346px;margin:22px auto 20px;}'
+    + '.cov-medal{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:82px;height:82px;border-radius:50%;border:1px solid rgba(212,175,97,.65);box-shadow:0 0 0 5px rgba(212,175,97,.08),0 0 46px rgba(212,175,97,.18);overflow:hidden;background:#0B0716;display:flex;align-items:center;justify-content:center;}'
+    + '.logo-bg{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:50%;background-size:cover;background-position:center;background-repeat:no-repeat;background-color:#0B0716;}'
+    + '.cov-medal span{font-size:30px;color:var(--gold2);}'
+    + '.cov-title{font-family:' + disp + ';font-size:' + (isSi ? '29px' : '33px') + ';font-weight:' + (isSi ? '800' : '700') + ';color:var(--cream);line-height:1.16;letter-spacing:' + (isSi ? '0' : '.3px') + ';text-wrap:balance;}'
+    + '.cov-sub{font-family:' + lbl + ';font-size:9.5px;' + trk('2.8px', '.4px') + up + 'color:var(--faint);margin-top:9px;}'
+    + '.cov-kick{font-family:' + lbl + ';font-size:7px;' + trk('3.2px', '1.4px') + up + 'color:rgba(212,175,97,.72);margin-top:20px;}'
+    + '.cov-name{font-family:' + disp + ';font-size:23px;color:var(--gold2);font-weight:' + (isSi ? '800' : '700') + ';margin-top:5px;letter-spacing:.4px;}'
+    + '.rec{margin:14px auto 0;width:302px;text-align:left;border:1px solid var(--hair2);background:rgba(9,6,18,.55);padding:13px 17px;}'
+    + '.rec .rr{display:flex;align-items:baseline;gap:8px;padding:4.5px 0;}'
+    + '.rec .rl{color:rgba(212,175,97,.78);font-family:' + lbl + ';' + trk('1.6px', '.3px') + up + 'font-size:7.4px;white-space:nowrap;}'
+    + '.rec .rd{flex:1;border-bottom:1px dotted rgba(240,233,216,.22);transform:translateY(-2px);min-width:14px;}'
+    + '.rec .rv{color:var(--bodyc);font-weight:600;font-size:9.6px;text-align:right;max-width:186px;line-height:1.5;}'
+    + '.cov-foot{position:absolute;bottom:30px;left:0;right:0;font-family:' + lbl + ';font-size:6.6px;' + trk('3px', '1.2px') + up + 'color:rgba(240,233,216,.36);}'
+    // ── Contents ──
+    + '.toc-list{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:7px 14px;}'
+    + '.toc-it{display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid rgba(240,233,216,.07);background:var(--veil);page-break-inside:avoid;}'
+    + '.toc-no{font-family:' + serif + ';font-size:11.5px;color:var(--gold);min-width:19px;text-align:right;}'
+    + '.toc-gem{width:5px;height:5px;transform:rotate(45deg);flex:none;}'
+    + '.toc-lb{font-size:' + (isSi ? '9.8px' : '10.2px') + ';color:var(--bodyc);font-weight:600;line-height:1.35;}'
+    // ── Celestial identity ──
+    + '.meds{display:flex;gap:11px;margin:2px 0 16px;}'
+    + '.med{flex:1;text-align:center;padding:15px 8px 13px;border:1px solid var(--hair2);background:var(--veil);position:relative;page-break-inside:avoid;}'
+    + '.med::before{content:"";position:absolute;top:4px;left:4px;right:4px;bottom:4px;border:1px solid rgba(212,175,97,.08);}'
+    + '.med-g{width:42px;height:42px;margin:0 auto 8px;border-radius:50%;border:1px solid rgba(212,175,97,.5);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--gold2);box-shadow:0 0 0 4px rgba(212,175,97,.06);position:relative;}'
+    + '.cres{width:15px;height:15px;border-radius:50%;box-shadow:inset 5px -1px 0 0 var(--gold2);transform:rotate(-20deg);}'
+    + '.med-l{font-family:' + lbl + ';font-size:6.8px;' + trk('2.4px', '.8px') + up + 'color:rgba(212,175,97,.75);margin-bottom:4px;}'
+    + '.med-v{font-family:' + disp + ';font-size:12.5px;font-weight:700;color:var(--cream);line-height:1.35;}'
+    + '.idn-rec{width:100%;margin:0 0 16px;}'
+    + '.charts{display:flex;gap:13px;justify-content:center;margin:0 0 11px;page-break-inside:avoid;}'
+    + '.chart-card{flex:1;max-width:238px;text-align:center;padding:12px 10px 10px;border:1px solid var(--hair2);background:var(--veil);page-break-inside:avoid;}'
+    + '.chart-card.d9{border-color:rgba(232,163,191,.24);}'
+    + '.cc-t{font-family:' + lbl + ';font-size:8px;' + trk('2.2px', '.8px') + up + 'color:var(--gold);margin-bottom:3px;}'
+    + '.d9 .cc-t{color:#E8A3BF;}'
+    + '.cc-s{font-size:7.8px;color:var(--ghost);margin-bottom:8px;line-height:1.55;}'
+    + '.keys{margin-top:11px;padding:9px 13px;border:1px solid rgba(240,233,216,.06);background:rgba(9,6,18,.42);text-align:center;font-size:8px;color:var(--faint);line-height:2;page-break-inside:avoid;}'
+    + '.keys b{color:rgba(212,175,97,.85);font-weight:600;letter-spacing:1.6px;text-transform:uppercase;font-size:6.8px;margin-right:7px;font-family:' + lbl + ';}'
+    + '.keys span{white-space:nowrap;margin:0 4px;}'
+    // ── Life balance ──
+    + '.bal-hero{text-align:center;padding:20px 16px 17px;border:1px solid var(--hair2);background:linear-gradient(180deg,rgba(212,175,97,.055),rgba(212,175,97,.012));margin-bottom:13px;page-break-inside:avoid;position:relative;}'
+    + '.bal-hero::before{content:"";position:absolute;top:4px;left:4px;right:4px;bottom:4px;border:1px solid rgba(212,175,97,.07);}'
+    + '.bal-verdict{font-family:' + disp + ';font-size:15px;font-weight:700;color:var(--cream);margin-top:9px;}'
+    + '.bal-count{font-family:' + lbl + ';font-size:7.6px;color:var(--ghost);' + trk('2px', '.5px') + up + 'margin-top:3px;}'
+    + '.bal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}'
+    + '.bal-cell{padding:12px 12px 10px;border:1px solid rgba(240,233,216,.07);background:var(--veil);page-break-inside:avoid;}'
+    + '.bc-name{font-family:' + lbl + ';font-size:' + (isSi ? '8.4px' : '7.4px') + ';' + trk('1.8px', '.3px') + up + 'color:var(--faint);min-height:23px;line-height:1.5;margin-bottom:6px;}'
+    + '.bc-score{font-family:' + serif + ';font-size:25px;color:var(--cream);line-height:1;}'
+    + '.bc-score i{font-style:normal;font-size:9px;color:var(--ghost);margin-left:2px;}'
+    + '.bc-bar{height:3px;background:rgba(240,233,216,.09);margin:8px 0 6px;}'
+    + '.bc-fill{height:3px;}'
+    + '.bc-tier{font-size:7.8px;font-weight:700;' + trk('1.4px', '.3px') + up + 'font-family:' + lbl + ';}'
+    // ── Next 12 months ──
+    + '.sky-plate{border:1px solid var(--hair2);background:var(--veil);padding:15px 13px 8px;page-break-inside:avoid;margin-bottom:13px;}'
+    + '.wins-cap{font-family:' + lbl + ';font-size:8px;' + trk('2.6px', '1px') + up + 'color:var(--gold);margin:15px 0 8px;}'
+    + '.wins{display:flex;flex-direction:column;gap:7px;}'
+    + '.win{display:flex;align-items:center;gap:11px;padding:9px 13px;border:1px solid rgba(240,233,216,.08);background:rgba(9,6,18,.45);page-break-inside:avoid;}'
+    + '.win.caution{border-color:rgba(232,131,110,.38);background:rgba(232,131,110,.055);}'
+    + '.win-gem{width:7px;height:7px;transform:rotate(45deg);flex:none;}'
+    + '.win-t{font-size:10.4px;font-weight:700;color:var(--cream);line-height:1.45;}'
+    + '.win-s{font-size:8.4px;color:var(--ghost);margin-top:1px;}'
+    + '.legend{display:flex;flex-wrap:wrap;gap:5px 15px;justify-content:center;margin-top:12px;font-size:8px;color:var(--faint);}'
+    + '.legend span{display:inline-flex;align-items:center;gap:5px;}'
+    + '.legend b{width:6px;height:6px;border-radius:50%;display:inline-block;}'
+    // ── Chapters ──
+    + '.ch-head{position:relative;margin-bottom:15px;page-break-inside:avoid;page-break-after:avoid;}'
+    + '.ch-ghost{position:absolute;top:-30px;right:-6px;font-family:' + serif + ';font-size:104px;line-height:1;color:rgba(244,233,207,.05);font-weight:700;letter-spacing:-2px;}'
+    + '.ch-title{font-family:' + disp + ';font-size:' + (isSi ? '20px' : '23px') + ';font-weight:' + (isSi ? '800' : '700') + ';color:var(--cream);line-height:1.22;max-width:400px;text-wrap:balance;}'
+    + '.ch-meta{display:flex;align-items:center;gap:14px;margin-top:13px;padding:9px 13px;border:1px solid var(--hair2);background:var(--veil);page-break-inside:avoid;page-break-after:avoid;}'
+    + '.chm-mid{flex:1;}'
+    + '.chm-lbl{font-family:' + lbl + ';font-size:6.8px;' + trk('2.2px', '.8px') + up + 'color:var(--ghost);margin-bottom:5px;}'
+    + '.chm-bar{height:3px;background:rgba(240,233,216,.09);}'
+    + '.chm-fill{height:3px;}'
+    + '.chm-tier{font-family:' + lbl + ';font-size:8.6px;font-weight:700;white-space:nowrap;' + trk('1.4px', '.3px') + up + '}'
+    // Prose
+    + '.prose{max-width:100%;}'
+    + '.body-p{margin:0 0 10px;orphans:3;widows:3;}'
+    + '.md-h2{font-family:' + lbl + ';font-size:' + (isSi ? '11.6px' : '9.8px') + ';' + trk('2.6px', '.6px') + up + 'color:var(--gold);margin:19px 0 9px;display:flex;align-items:center;gap:10px;font-weight:700;page-break-after:avoid;}'
+    + '.md-h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--hair2),transparent);}'
+    + '.md-h3{font-family:' + disp + ';font-size:13.4px;font-weight:700;color:var(--cream);margin:15px 0 7px;page-break-after:avoid;}'
+    + '.md-bullet{display:flex;gap:9px;margin:7px 0;padding:8px 12px;background:rgba(244,233,207,.032);border-left:2px solid rgba(212,175,97,.4);page-break-inside:avoid;}'
+    + '.md-bullet span{color:var(--gold);font-size:9px;}'
+    + '.prose blockquote{margin:13px 14px;padding:11px 16px;position:relative;color:rgba(240,233,216,.82);font-style:italic;border-left:2px solid var(--gold);background:rgba(212,175,97,.05);page-break-inside:avoid;}'
+    + '.prose strong{color:var(--cream);font-weight:700;}'
+    + '.prose em{color:var(--gold2);font-weight:600;}'
+    + (isSi ? '' : '.ch-body .prose>p.body-p:first-child::first-letter{font-family:' + serif + ';float:left;font-size:35px;line-height:.86;padding:3px 8px 0 0;color:var(--gold2);}')
+    // ── Colophon ──
+    + '.end{position:relative;z-index:2;min-height:100vh;background:linear-gradient(188deg,#0E091C,#0B0716 46%,#0A0614);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 50px;overflow:hidden;page-break-before:always;}'
+    + '.end::before{content:"";position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse 420px 320px at 50% 40%,rgba(88,63,164,.18),transparent 70%);}'
+    + '.end>*{position:relative;}'
+    // frame declared AFTER .end>* so its absolute positioning wins the cascade
+    + '.end-frame{position:absolute;top:18px;left:18px;right:18px;bottom:18px;border:1px solid rgba(212,175,97,.42);}'
+    + '.end-medal{position:relative;width:72px;height:72px;border-radius:50%;border:1px solid rgba(212,175,97,.6);box-shadow:0 0 0 5px rgba(212,175,97,.07),0 0 40px rgba(212,175,97,.15);overflow:hidden;background:#0B0716;display:flex;align-items:center;justify-content:center;}'
+    + '.end-medal span{font-size:26px;color:var(--gold2);}'
+    + '.end-brand{font-family:' + sinh + ';font-size:15.5px;color:var(--gold2);font-weight:700;margin-top:15px;}'
+    + '.end-motto{font-family:' + disp + ';font-size:14.5px;color:var(--bodyc);margin-top:13px;' + (isSi ? '' : 'font-style:italic;') + '}'
+    + '.end-rule{display:flex;align-items:center;gap:10px;width:210px;margin:18px 0 0;}'
+    + '.end-rule::before{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--hair));}'
+    + '.end-rule::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--hair),transparent);}'
+    + '.end-rule em{font-style:normal;color:var(--gold);font-size:8px;}'
+    + '.end-feats{display:flex;gap:19px;margin-top:19px;font-family:' + lbl + ';font-size:8.4px;' + trk('2px', '.4px') + up + 'color:var(--faint);}'
+    + '.end-feats i{font-style:normal;color:rgba(212,175,97,.55);}'
+    + '.end-cta{margin-top:23px;padding:9px 27px;border:1px solid rgba(212,175,97,.55);color:var(--gold2);font-family:' + lbl + ';font-size:8.4px;' + trk('2.6px', '.6px') + up + '}'
+    + '.end-url{margin-top:13px;font-family:' + lbl + ';font-size:7.6px;letter-spacing:3px;color:var(--ghost);text-transform:uppercase;}'
+    + '.end-prep{margin-top:25px;font-size:8.6px;color:var(--faint);}'
+    + '.end-ref{margin-top:4px;font-family:' + lbl + ';font-size:6.8px;letter-spacing:2.2px;color:rgba(212,175,97,.5);text-transform:uppercase;}'
+    + '.end-disc{margin-top:17px;max-width:330px;font-size:6.8px;line-height:1.85;color:rgba(240,233,216,.32);}'
+    // Shared note plates, graha table, tier legend, cover motto
+    + '.cov-motto{font-family:' + disp + ';font-size:10.5px;color:var(--faint);margin-top:18px;' + (isSi ? '' : 'font-style:italic;') + '}'
+    + '.note{border:1px solid var(--hair2);background:var(--veil);padding:12px 16px;page-break-inside:avoid;margin-top:14px;}'
+    + '.note-cap{font-family:' + lbl + ';font-size:8px;' + trk('2.6px') + up + 'color:var(--gold);margin-bottom:7px;}'
+    + '.nr{display:flex;gap:9px;padding:4px 0;font-size:9.6px;color:var(--faint);line-height:1.7;}'
+    + '.nr b{color:var(--gold);font-weight:400;min-width:12px;font-family:' + serif + ';}'
+    + '.graha-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 26px;}'
+    + '.gr{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:9.5px;padding:4px 0;border-bottom:1px dotted rgba(240,233,216,.13);}'
+    + '.gr .gp{display:inline-flex;align-items:center;gap:7px;color:var(--bodyc);font-weight:600;}'
+    + '.gr .gp b{width:6px;height:6px;border-radius:50%;}'
+    + '.gr .gv{color:var(--faint);}'
+    + '.tierleg{display:flex;gap:8px;margin-top:12px;}'
+    + '.tl{flex:1;text-align:center;padding:8px 4px;border:1px solid rgba(240,233,216,.07);background:var(--veil);page-break-inside:avoid;}'
+    + '.tl b{display:block;width:18px;height:3px;margin:0 auto 6px;}'
+    + '.tl .t1{font-size:8.4px;font-weight:700;}'
+    + '.tl .t2{font-family:' + lbl + ';font-size:6.4px;' + trk('1px') + up + 'color:var(--ghost);margin-top:2px;}'
+    + '@media print{.pg{page-break-after:always;}.cov{page-break-after:always;}.end{page-break-before:always;}.charts,.chart-card,.med,.bal-cell,.win,.sky-plate,.ch-head,.ch-meta,.md-bullet,.toc-it,.note,.tl{page-break-inside:avoid;}}';
 }
 
 // ════════════════════════════════════════════════
@@ -528,110 +823,8 @@ function svgSriLankanChart(rashiChart, lagnaRashiId, lang, size) {
 }
 
 // ════════════════════════════════════════════════
-// SVG NAVAMSHA (D9) CHART
-// ════════════════════════════════════════════════
-function svgNavamshaChart(navamshaHouses, navamshaLagna, lang, size) {
-  if (!navamshaHouses || !Array.isArray(navamshaHouses)) return '';
-  var S = size || 280;
-  var C = S / 3;
-  var isSi = lang === 'si';
-
-  // Get Navamsha lagna rashiId
-  var navLagnaId = navamshaLagna?.rashiId || navamshaLagna?.rashi?.id || 1;
-
-  // Build planet map by rashiId for Navamsha
-  var rashiData = {};
-  for (var i = 1; i <= 12; i++) rashiData[i] = { planets: [], hasLagna: i === navLagnaId };
-  
-  // Process navamsha houses array - planets are stored by their navamsha rashi
-  navamshaHouses.forEach(function(house) {
-    var rid = house.rashiId;
-    if (rid && rashiData[rid] && house.planets) {
-      house.planets.forEach(function(p) {
-        var pName = typeof p === 'string' ? p : (p.name || '');
-        if (pName === 'Lagna' || pName === 'Ascendant') {
-          rashiData[rid].hasLagna = true;
-        } else if (pName) {
-          rashiData[rid].planets.push(typeof p === 'string' ? { name: p } : p);
-        }
-      });
-    }
-  });
-
-  // Convert rashiId to house number based on Navamsha Lagna
-  var rashiForHouse = function(h) { return ((navLagnaId - 1 + (h - 1)) % 12) + 1; };
-
-  function planetText(houseNum, x, y) {
-    var rid = rashiForHouse(houseNum);
-    var d = rashiData[rid];
-    if (!d || d.planets.length === 0) return '';
-    var lines = '';
-    d.planets.forEach(function(p, idx) {
-      var pName = p.name || '';
-      var lbl = isSi ? (PLANET_SI[pName] || pName.substring(0,2)) : (PLANET_SHORT[pName] || pName.substring(0,2));
-      var col = PLANET_COLORS[pName] || '#666';
-      lines += '<text x="'+x+'" y="'+(y + idx*11)+'" fill="'+col+'" font-size="8" font-weight="700" text-anchor="middle">'+lbl+'</text>';
-    });
-    return lines;
-  }
-
-  function hLabel(num, x, y) {
-    return '<text x="'+x+'" y="'+y+'" fill="rgba(236,72,153,0.35)" font-size="7" font-weight="600" text-anchor="middle">'+num+'</text>';
-  }
-
-  function lagnaM(houseNum, x, y) {
-    var rid = rashiForHouse(houseNum);
-    if (!rashiData[rid].hasLagna) return '';
-    return '<text x="'+x+'" y="'+y+'" fill="#EAB308" font-size="9" font-weight="900" text-anchor="middle">ல</text>';
-  }
-
-  // Navamsha uses pink/rose tones to differentiate from D1
-  var svg = '<svg width="'+S+'" height="'+S+'" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto;display:block;margin:0 auto;">'
-    +'<rect width="'+S+'" height="'+S+'" fill="#fdf2f8" rx="8"/>'
-    +'<rect x="0.5" y="0.5" width="'+(S-1)+'" height="'+(S-1)+'" fill="none" stroke="rgba(236,72,153,0.5)" stroke-width="1.5" rx="8"/>'
-    +'<line x1="'+C+'" y1="0" x2="'+C+'" y2="'+S+'" stroke="rgba(236,72,153,0.4)" stroke-width="1"/>'
-    +'<line x1="'+(2*C)+'" y1="0" x2="'+(2*C)+'" y2="'+S+'" stroke="rgba(236,72,153,0.4)" stroke-width="1"/>'
-    +'<line x1="0" y1="'+C+'" x2="'+S+'" y2="'+C+'" stroke="rgba(236,72,153,0.4)" stroke-width="1"/>'
-    +'<line x1="0" y1="'+(2*C)+'" x2="'+S+'" y2="'+(2*C)+'" stroke="rgba(236,72,153,0.4)" stroke-width="1"/>'
-    // Corner diagonals
-    +'<line x1="0" y1="'+C+'" x2="'+C+'" y2="0" stroke="rgba(236,72,153,0.3)" stroke-width="0.8"/>'
-    +'<line x1="'+(2*C)+'" y1="0" x2="'+(3*C)+'" y2="'+C+'" stroke="rgba(236,72,153,0.3)" stroke-width="0.8"/>'
-    +'<line x1="0" y1="'+(2*C)+'" x2="'+C+'" y2="'+(3*C)+'" stroke="rgba(236,72,153,0.3)" stroke-width="0.8"/>'
-    +'<line x1="'+(2*C)+'" y1="'+(3*C)+'" x2="'+(3*C)+'" y2="'+(2*C)+'" stroke="rgba(236,72,153,0.3)" stroke-width="0.8"/>';
-
-  // House contents - same layout as D1 but with Navamsha data
-  svg += planetText(1, C*1.5, C*0.35) + hLabel(1, C*1.5, C*0.15) + lagnaM(1, C*1.5, C*0.9);
-  svg += planetText(2, C*0.3, C*0.25) + hLabel(2, C*0.15, C*0.15);
-  svg += planetText(3, C*0.7, C*0.75) + hLabel(3, C*0.85, C*0.9);
-  svg += planetText(4, C*0.5, C*1.35) + hLabel(4, C*0.5, C*1.15);
-  svg += planetText(5, C*0.3, C*2.25) + hLabel(5, C*0.15, C*2.15);
-  svg += planetText(6, C*0.7, C*2.75) + hLabel(6, C*0.85, C*2.9);
-  svg += planetText(7, C*1.5, C*2.35) + hLabel(7, C*1.5, C*2.15);
-  svg += planetText(8, C*2.7, C*2.75) + hLabel(8, C*2.85, C*2.9);
-  svg += planetText(9, C*2.3, C*2.25) + hLabel(9, C*2.15, C*2.15);
-  svg += planetText(10, C*2.5, C*1.35) + hLabel(10, C*2.5, C*1.15);
-  svg += planetText(11, C*2.3, C*0.75) + hLabel(11, C*2.15, C*0.9);
-  svg += planetText(12, C*2.7, C*0.25) + hLabel(12, C*2.85, C*0.15);
-
-  svg += '</svg>';
-  return svg;
-}
-
-// ════════════════════════════════════════════════
 // HELPERS
 // ════════════════════════════════════════════════
-function zodiacRingHTML() {
-  var html = '';
-  ZODIAC_SYMBOLS.forEach(function(sym, i) {
-    var angle = (i / 12) * 360;
-    var rad = angle * Math.PI / 180;
-    var cx = 50 + Math.cos(rad) * 42;
-    var cy = 50 + Math.sin(rad) * 42;
-    html += '<span style="left:'+cx+'%;top:'+cy+'%;">'+sym+'</span>';
-  });
-  return html;
-}
-
 function extractScore(sectionKey, rawData) {
   if (!rawData) return null;
   var s = null;
@@ -650,12 +843,6 @@ function extractScore(sectionKey, rawData) {
   return null;
 }
 
-function scoreVerdict(score, isSi) {
-  if (score >= 80) return isSi ? '🔥 ඉතා ප්‍රබල' : '🔥 Excellent';
-  if (score >= 60) return isSi ? '✨ ප්‍රබල' : '✨ Strong';
-  if (score >= 40) return isSi ? '💫 සාමාන්‍ය' : '💫 Moderate';
-  return isSi ? '⚡ දුර්වල' : '⚡ Needs Attention';
-}
 
 function escapeHTML(value) {
   return String(value == null ? '' : value)
@@ -704,9 +891,12 @@ function markdownToHTML(text) {
       return;
     }
 
-    if (trimmed.indexOf('> ') === 0) {
+    // The whole text is escapeHTML()d above, so a markdown quote line
+    // arrives here as "&gt; ..." — match both forms.
+    if (trimmed.indexOf('&gt; ') === 0 || trimmed.indexOf('> ') === 0) {
       flushParagraph();
-      html.push('<blockquote>' + inlineMarkdown(trimmed.slice(2)) + '</blockquote>');
+      var quoteBody = trimmed.indexOf('&gt; ') === 0 ? trimmed.slice(5) : trimmed.slice(2);
+      html.push('<blockquote>' + inlineMarkdown(quoteBody) + '</blockquote>');
       return;
     }
 
@@ -724,216 +914,331 @@ function markdownToHTML(text) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ███ REPORT PDF ███
+// ███ FULL LIFE REPORT PDF — Celestial Almanac ███
+// Cover (zodiac wheel) → Contents → Celestial Identity (birth
+// record + medallions + dual kendara) → Life Balance dashboard →
+// Next 12 Months sky calendar → numbered chapters → colophon.
 // ═══════════════════════════════════════════════════════════════
 function generateReportHTML(opts) {
   var isSi = opts.lang === 'si';
+  var L = function(si, en) { return isSi ? si : en; };
+  var pad2 = function(n) { return (n < 10 ? '0' : '') + n; };
   var sectionKeys = opts.sectionKeys || [];
-  var sectionTitles = sectionKeys.map(function(key, i) { return opts.sectionTitles ? opts.sectionTitles[i] : key; });
+  var sectionTitles = sectionKeys.map(function(key, i) {
+    return (opts.sectionTitles && opts.sectionTitles[i]) || key;
+  });
   var narrativeSections = (opts.aiReport && opts.aiReport.narrativeSections) || {};
   var rawSections = (opts.aiReport && opts.aiReport.rawSections) || {};
   var reportSections = (opts.report && opts.report.sections) || {};
   var bd = (opts.report && opts.report.birthData) || opts.birthData || {};
+  var flatScores = (opts.aiReport && opts.aiReport.sectionScores) || null;
 
-  var logoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'"/>' : '<div style="font-size:44px;">🔮</div>';
+  var name = escapeHTML(opts.userName || L('ඔබ', 'You'));
+  var refRaw = opts.aiReport && opts.aiReport.savedReportId
+    ? String(opts.aiReport.savedReportId).replace(/[^A-Za-z0-9]/g, '').slice(-6).toUpperCase() : '';
+  var refNo = refRaw ? 'GR-' + refRaw : '';
+  var genDate;
+  try {
+    genDate = new Date().toLocaleDateString(isSi ? 'si-LK' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  } catch (e) { genDate = new Date().toLocaleDateString(); }
 
-  // Cover
-  var coverHTML = '<div class="cover cover-report">'
-    +'<div class="zr"></div><div class="zri"></div><div class="zs">'+zodiacRingHTML()+'</div>'
-    +'<div class="cc"><div class="cl">'+logoTag+'</div>'
-    +'<div class="cb">ග්‍රහචාර</div>'
-    +'<div class="ct"><span class="ctg">'+(isSi?'සම්පූර්ණ ජීවිත වාර්තාව':'Complete Life Report')+'</span></div>'
-    +'<div class="cs">'+(isSi?'ප්‍රායෝගික ජීවිත මගපෙන්වීම':'Practical Life Guidance')+'</div>'
-    +'<div class="cd"></div>'
-    +'<div class="cn">'+(opts.userName||(isSi?'ඔබ':'You'))+'</div>'
-    +'<div class="cdt">'
-    +(opts.birthLocation?'<strong>'+(isSi?'ස්ථානය':'Location')+':</strong> '+opts.birthLocation+'<br/>':'')
-    +(opts.birthDate?'<strong>'+(isSi?'උපන් දිනය':'Born')+':</strong> '+opts.birthDate+(opts.birthTime?' &bull; '+opts.birthTime:'')+'<br/>':'')
-    +(opts.lagnaLabel?'<strong>'+(isSi?'ජීවිත දිශාව':'Life Direction')+':</strong> '+opts.lagnaLabel+'<br/>':'')
-    +(opts.nakshatraLabel?'<strong>'+(isSi?'උපන් අවධානය':'Birth Focus')+':</strong> '+opts.nakshatraLabel:'')
-    +'</div></div>'
-    +'<div class="cfb">'+(isSi?'පුද්ගලික ජීවිත කියවීම':'Personal Life Reading')+' &bull; '+new Date().toLocaleDateString()+'</div></div>';
+  function scoreFor(key) {
+    if (flatScores && flatScores[key] != null && isFinite(Number(flatScores[key]))) {
+      return Math.min(100, Math.max(0, Math.round(Number(flatScores[key]))));
+    }
+    var rd = reportSections[key] || rawSections[key] || (narrativeSections[key] && narrativeSections[key].rawData) || {};
+    return extractScore(key, rd);
+  }
 
-  // TOC
-  var tocItems = '';
-  sectionKeys.forEach(function(key,i) {
-    var sc2 = SECTION_COLORS[key] || { primary:'#7C3AED', emoji:'📋' };
-    if (!narrativeSections[key]?.narrative) return;
-    tocItems += '<li class="toc-item"><span class="toc-num" style="background:'+sc2.primary+';">'+(i+1)+'</span><span class="toc-emoji">'+sc2.emoji+'</span><span class="toc-label">'+(sectionTitles[i]||key)+'</span></li>';
-  });
-  var tocHTML = '<div class="toc cp"><div class="toc-hdr"><h2>'+(isSi?'අන්තර්ගතය':'Contents')+'</h2><div class="toc-line"></div></div><ul class="toc-list">'+tocItems+'</ul></div>';
-
-  // Birth card
-  var bRows = '';
-  function addR(l,v){if(v)bRows+='<tr><td class="bl">'+l+'</td><td class="bv">'+v+'</td></tr>';}
-  addR(isSi?'නම':'Name',opts.userName);
-  addR(isSi?'උපන් ස්ථානය':'Birthplace',opts.birthLocation);
-  addR(isSi?'උපන් දිනය සහ වෙනවාලාව':'Date & Time',(opts.birthDate||'')+' '+(opts.birthTime||''));
-  addR(isSi?'ජීවිත දිශාව':'Life Direction',opts.lagnaLabel);
-  addR(isSi?'උපන් අවධානය':'Birth Focus',opts.nakshatraLabel);
-  addR(isSi?'චන්ද්‍ර ශක්තිය':'Moon Energy',isSi?(bd.moonSign?.sinhala||bd.moonSign?.english):(bd.moonSign?.english));
-  addR(isSi?'සූර්ය ශක්තිය':'Sun Energy',isSi?(bd.sunSign?.sinhala||bd.sunSign?.english):(bd.sunSign?.english));
-  var bcHTML = '<div class="bc"><h3>🪐 '+(isSi?'උපන් විස්තර':'Birth Details')+'</h3><table class="bt">'+bRows+'</table></div>';
-
-  // Charts - D1 (Rashi) and D9 (Navamsha) side by side
-  var chartHTML = '';
+  // ── Chart data (shapes vary: /birth-chart array vs report {houses,lagna}) ──
+  var normalizedRC = null, chartLagnaId = null;
   if (opts.chartData && opts.chartData.rashiChart) {
-    // Normalize rashiChart: can be an array (from /birth-chart) or object { houses, lagna } (from AI report)
     var rawRC = opts.chartData.rashiChart;
-    var normalizedRC = Array.isArray(rawRC) ? rawRC : (rawRC && rawRC.houses && Array.isArray(rawRC.houses) ? rawRC.houses : null);
-    // Resolve lagnaRashiId from multiple possible sources
-    var chartLagnaId = opts.chartData.lagnaRashiId
-      || (opts.chartData.lagna && opts.chartData.lagna.rashiId)
-      || (opts.chartData.lagna && opts.chartData.lagna.id)
+    normalizedRC = Array.isArray(rawRC) ? rawRC : (rawRC && Array.isArray(rawRC.houses) ? rawRC.houses : null);
+    chartLagnaId = opts.chartData.lagnaRashiId
+      || (opts.chartData.lagna && (opts.chartData.lagna.rashiId || opts.chartData.lagna.id))
       || (rawRC && rawRC.lagna && rawRC.lagna.rashi && rawRC.lagna.rashi.id)
-      || (normalizedRC && normalizedRC[0] && normalizedRC[0].houseNumber === 1 && normalizedRC[0].rashiId)
       || (normalizedRC && normalizedRC[0] && normalizedRC[0].rashiId)
       || 1;
-    
-    // Start the dual-chart container
-    chartHTML = '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin:24px 0;page-break-inside:avoid;">';
-    
-    // Main birth map
-    chartHTML += '<div class="chart-wrap" style="flex:1;min-width:280px;max-width:360px;">'
-      +'<div class="chart-title">🏛️ '+(isSi?'උපන් ජීවිත සිතියම':'Birth Life Map')+'</div>'
-      +'<div style="font-size:10px;color:#888;margin-bottom:8px;text-align:center;">'+(isSi?'උපන් මොහොතේ ජීවිත රටා':'Life patterns from your birth moment')+'</div>'
-      +svgSriLankanChart(normalizedRC || opts.chartData.rashiChart, chartLagnaId, opts.lang, 300)+'</div>';
-    
-    // D9 Navamsha Chart (Soul Chart)
-    if (opts.chartData.navamshaChart) {
-      var navLagna = opts.chartData.navamshaLagna;
-      chartHTML += '<div class="chart-wrap" style="flex:1;min-width:280px;max-width:360px;background:linear-gradient(135deg,#FDF2F8,#FCE7F3,#FDF2F8);border-color:rgba(236,72,153,0.15);">'
-        +'<div class="chart-title" style="color:#EC4899;">💍 '+(isSi?'ගැඹුරු සබඳතා දැක්ම':'Deep Relationship View')+'</div>'
-        +'<div style="font-size:10px;color:#888;margin-bottom:8px;text-align:center;">'+(isSi?'ඇතුළත සබඳතාව සහ දිගුකාලීන පහසුව':'Inner relationship and long-term comfort')+'</div>'
-        +svgNavamshaChart(opts.chartData.navamshaChart, navLagna, opts.lang, 300)+'</div>';
-    }
-    
-    chartHTML += '</div>';
-    
-    // Chart legend
-    chartHTML += '<div style="text-align:center;font-size:9px;color:#888;margin-top:8px;">'
-      +'<span style="color:#7C3AED;font-weight:600;">'+(isSi?'මූලික දැක්ම':'Main View')+'</span> = '+(isSi?'දිනපතා ජීවිත රටා':'daily life patterns')
-      +' | <span style="color:#EC4899;font-weight:600;">'+(isSi?'ගැඹුරු දැක්ම':'Deep View')+'</span> = '+(isSi?'සබඳතා සහ අභ්‍යන්තර රටා':'relationship and inner patterns')
-      +'</div>';
-    
-    // Planet abbreviation legend
-    chartHTML += '<div style="text-align:center;font-size:8px;color:#999;margin-top:12px;padding:8px;background:rgba(124,58,237,0.03);border-radius:8px;">'
-      +'<div style="margin-bottom:4px;font-weight:600;color:#666;">'+(isSi?'ශක්ති කෙටි නාම':'Energy Key')+':</div>'
-      +'<span style="color:#F59E0B;">Su</span>=Sun '
-      +'<span style="color:#A5B4FC;">Mo</span>=Moon '
-      +'<span style="color:#EF4444;">Ma</span>=Mars '
-      +'<span style="color:#34D399;">Me</span>=Mercury '
-      +'<span style="color:#FBBF24;">Ju</span>=Jupiter '
-      +'<span style="color:#F9A8D4;">Ve</span>=Venus '
-      +'<span style="color:#818CF8;">Sa</span>=Saturn '
-      +'<span style="color:#94A3B8;">Ra</span>=Rahu '
-      +'<span style="color:#C4B5FD;">Ke</span>=Ketu '
-      +'<span style="color:#EAB308;font-weight:700;">ල/ல</span>='+(isSi?'ජීවිත දිශාව':'Life Direction')
-      +'</div>';
+  }
+  var navHouses = null, navLagnaId = null;
+  if (opts.chartData && opts.chartData.navamshaChart) {
+    // Same shape-tolerance as rashiChart: array (/birth-chart) or {houses,lagna}
+    // (saved report). Older reports have no navamsha → the D9 card is omitted.
+    var rawNav = opts.chartData.navamshaChart;
+    navHouses = Array.isArray(rawNav) ? rawNav : (rawNav && Array.isArray(rawNav.houses) ? rawNav.houses : null);
+    var nl = opts.chartData.navamshaLagna || (rawNav && rawNav.lagna) || null;
+    navLagnaId = (nl && (nl.rashiId || (nl.rashi && nl.rashi.id) || nl.id))
+      || chartLagnaId || 1;
   }
 
-  // Hero scores — prefer the server's flat post-cross-validation map, fall
-  // back to extracting from raw section data (legacy reports).
-  var flatScores = (opts.aiReport && opts.aiReport.sectionScores) || null;
-  var heroHTML = '';
-  var heroKeys = ['career','marriage','health','financial','luck','education','children','foreignTravel','spiritual'];
+  // ── Chapters ──
+  var chapters = [];
+  sectionKeys.forEach(function(key, i) {
+    var n = narrativeSections[key];
+    if (!n || !n.narrative) return;
+    chapters.push({
+      key: key, no: chapters.length + 1,
+      title: escapeHTML(sectionTitles[i] || n.title || key),
+      narrative: n.narrative, score: scoreFor(key), accent: rptAccent(key),
+    });
+  });
+
+  // background-image instead of <img> + object-fit: Android WebView's
+  // print rasteriser intermittently drops or half-paints <img> inside
+  // border-radius clips; a background paints in the same pass as the box.
+  var logoMedal = opts.logoBase64
+    ? '<div class="logo-bg" style="background-image:url(data:image/png;base64,' + opts.logoBase64 + ');"></div>'
+    : '<span>✦</span>';
+
+  // ═════ COVER ═════
+  var recRow = function(label, value) {
+    if (!value) return '';
+    return '<div class="rr"><span class="rl">' + label + '</span><span class="rd"></span><span class="rv">' + escapeHTML(value) + '</span></div>';
+  };
+  var coverHTML = '<div class="cov">'
+    + rptStars(595, 842, 150, 41)
+    + '<div class="cov-frame"></div>'
+    + '<div class="cov-brand">ග්‍රහචාර</div>'
+    + '<div class="cov-est">' + L('වේදික ජ්‍යෝතිෂ ශාස්ත්‍රය', 'VEDIC ASTROLOGY OF SRI LANKA') + '</div>'
+    + '<div class="cov-wheelwrap">' + rptWheel(346) + '<div class="cov-medal">' + logoMedal + '</div></div>'
+    + '<div class="cov-title">' + L('සම්පූර්ණ ජීවිත වාර්තාව', 'The Complete Life Reading') + '</div>'
+    + '<div class="cov-sub">' + L('ඔබේ උපන් අහසින් ලැබෙන ප්‍රායෝගික මගපෙන්වීම', 'Practical guidance drawn from your birth sky') + '</div>'
+    + '<div class="cov-kick">' + L('වාර්තා හිමිකරු', 'PREPARED FOR') + '</div>'
+    + '<div class="cov-name">' + name + '</div>'
+    + '<div class="rec">'
+    + recRow(L('උපන් ස්ථානය', 'BIRTHPLACE'), opts.birthLocation)
+    + recRow(L('උපන් දිනය', 'BORN'), (opts.birthDate || '') + (opts.birthTime ? ' · ' + opts.birthTime : ''))
+    + recRow(L('ලග්නය', 'LAGNA'), opts.lagnaLabel)
+    + recRow(L('නැකත', 'NAKSHATRA'), opts.nakshatraLabel)
+    + '</div>'
+    + '<div class="cov-motto">' + L('උපන් මොහොතේ අහස — ජීවිත කාලයටම', 'The sky of your first breath, kept for a lifetime') + '</div>'
+    + '<div class="cov-foot">' + L('පෞද්ගලික වාර්තාව', 'PRIVATE & PERSONAL') + ' — ' + escapeHTML(genDate) + (refNo ? ' — ' + refNo : '') + '</div>'
+    + '</div>';
+
+  // ═════ CONTENTS ═════
+  var tocItems = '';
+  chapters.forEach(function(ch) {
+    tocItems += '<li class="toc-it"><span class="toc-no">' + pad2(ch.no) + '</span>'
+      + '<span class="toc-gem" style="background:' + ch.accent + ';"></span>'
+      + '<span class="toc-lb">' + ch.title + '</span></li>';
+  });
+  var tocHTML = chapters.length === 0 ? '' : '<div class="pg">'
+    + '<div class="eyebrow">' + L('ජීවිත වාර්තාව', 'THE ALMANAC') + '</div>'
+    + '<div class="pg-title">' + L('අන්තර්ගතය', 'Contents') + '</div>'
+    + '<div class="pg-sub">' + L('ඔබේ උපන් අහසින් කියවීම් ' + chapters.length + 'ක්', chapters.length + ' readings from your birth sky') + '</div>'
+    + '<div class="rule"><em>◆</em></div>'
+    + '<ul class="toc-list">' + tocItems + '</ul>'
+    + '<div class="note"><div class="note-cap">' + L('වාර්තාව කියවන ආකාරය', 'HOW TO READ THIS ALMANAC') + '</div>'
+    + '<div class="nr"><b>i</b><span>' + L('සෑම පරිච්ඡේදයක්ම ඔබේ කේන්දරයේ එක් ජීවිත ක්ෂේත්‍රයක් කියවනවා.', 'Each chapter reads one life area of your birth chart.') + '</span></div>'
+    + '<div class="nr"><b>ii</b><span>' + L('ලකුණු 0–100 අතරයි — ඒ ක්ෂේත්‍රයේ උපන් ශක්තියයි. වැඩි ලකුණු, වැඩි ස්වාභාවික පහසුවක්.', 'Scores run 0–100 — the born strength of that area. Higher means more natural ease.') + '</span></div>'
+    + '<div class="nr"><b>iii</b><span>' + L('ඉදිරි මාස 12 පිටුවේ කාල කවුළු — ලොකු තීරණවලට හොඳම කාලයන් පෙන්වනවා.', 'The Next 12 Months page marks the best-timed windows for your bigger decisions.') + '</span></div>'
+    + '</div></div>';
+
+  // ═════ CELESTIAL IDENTITY ═════
+  var moonLabel = bd.moonSign ? (isSi ? (bd.moonSign.sinhala || bd.moonSign.english) : bd.moonSign.english) : '';
+  var sunLabel = bd.sunSign ? (isSi ? (bd.sunSign.sinhala || bd.sunSign.english) : bd.sunSign.english) : '';
+  // ︎ suffix = text-presentation selector (blocks the colour-emoji form)
+  var lagnaGlyph = chartLagnaId && ZODIAC_SYMBOLS[chartLagnaId - 1] ? ZODIAC_SYMBOLS[chartLagnaId - 1] + '︎' : '✦';
+  var medsHTML = '';
+  if (opts.lagnaLabel) {
+    medsHTML += '<div class="med"><div class="med-g">' + lagnaGlyph + '</div><div class="med-l">' + L('ලග්නය', 'LAGNA — RISING') + '</div><div class="med-v">' + escapeHTML(opts.lagnaLabel) + '</div></div>';
+  }
+  if (opts.nakshatraLabel) {
+    medsHTML += '<div class="med"><div class="med-g">✦</div><div class="med-l">' + L('උපන් නැකත', 'NAKSHATRA — BIRTH STAR') + '</div><div class="med-v">' + escapeHTML(opts.nakshatraLabel) + '</div></div>';
+  }
+  if (moonLabel) {
+    medsHTML += '<div class="med"><div class="med-g"><span class="cres"></span></div><div class="med-l">' + L('චන්ද්‍ර රාශිය', 'MOON SIGN') + '</div><div class="med-v">' + escapeHTML(moonLabel) + '</div></div>';
+  }
+
+  var chartsHTML = '';
+  if (normalizedRC) {
+    var d1 = '<div class="chart-card"><div class="cc-t">' + L('උපන් කේන්දරය', 'BIRTH KENDARA — D1') + '</div>'
+      + '<div class="cc-s">' + L('උපන් මොහොතේ ග්‍රහ පිහිටීම — එදිනෙදා ජීවිත රටා', 'The sky at your first breath — daily life patterns') + '</div>'
+      + rptKendara(normalizedRC, chartLagnaId, opts.lang, 216, 'd1') + '</div>';
+    var d9 = '';
+    if (navHouses) {
+      d9 = '<div class="chart-card d9"><div class="cc-t">' + L('නවාංශක කේන්දරය', 'NAVAMSHA — D9') + '</div>'
+        + '<div class="cc-s">' + L('සබඳතා සහ අභ්‍යන්තර ජීවිතයේ ගැඹුරු දැක්ම', 'The inner chart — relationships and the deeper self') + '</div>'
+        + rptKendara(navHouses, navLagnaId, opts.lang, 216, 'd9') + '</div>';
+    }
+    chartsHTML = '<div class="charts">' + d1 + d9 + '</div>';
+
+    var keyParts = [];
+    var keyOrder = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
+    keyOrder.forEach(function(p) {
+      var col = RPT_PLANET_DARK[p];
+      keyParts.push('<span style="color:' + col + ';">' + (isSi ? PLANET_SI[p] : PLANET_SHORT[p] + ' ' + p) + '</span>');
+    });
+    keyParts.push('<span style="color:#F0D48A;">ල = ' + L('ලග්නය', 'Lagna') + '</span>');
+    chartsHTML += '<div class="keys"><b>' + L('සංකේත', 'KEY') + '</b>' + keyParts.join(' · ') + '</div>';
+
+    // Graha positions table — real almanac texture from the chart data
+    var grahaOrder = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
+    var grahaRows = [], seenGraha = {};
+    normalizedRC.forEach(function(entry) {
+      (entry.planets || []).forEach(function(p) {
+        var pn = typeof p === 'string' ? p : (p.name || '');
+        if (!pn || pn === 'Lagna' || pn === 'Ascendant' || seenGraha[pn]) return;
+        seenGraha[pn] = true;
+        grahaRows.push({ name: pn, rashiId: entry.rashiId, degree: (typeof p === 'object' && p.degree != null) ? p.degree : null });
+      });
+    });
+    grahaRows.sort(function(a, b) {
+      var ia = grahaOrder.indexOf(a.name), ib = grahaOrder.indexOf(b.name);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    if (grahaRows.length > 0) {
+      var grahaCells = '';
+      grahaRows.forEach(function(r) {
+        var col = RPT_PLANET_DARK[r.name] || '#C9C2B2';
+        var pname = isSi ? (PLANET_SI[r.name] || r.name) : r.name;
+        var rname = (isSi ? PDF_RASHI_SI : PDF_RASHI_EN)[r.rashiId] || '';
+        var deg = r.degree != null ? ' ' + Math.floor(r.degree) + '°' : '';
+        grahaCells += '<div class="gr"><span class="gp"><b style="background:' + col + ';"></b>' + escapeHTML(pname) + '</span>'
+          + '<span class="gv">' + escapeHTML(rname) + deg + '</span></div>';
+      });
+      chartsHTML += '<div class="note"><div class="note-cap">' + L('ග්‍රහ පිහිටීම්', 'GRAHA POSITIONS') + '</div>'
+        + '<div class="graha-grid">' + grahaCells + '</div></div>';
+    }
+  }
+
+  var identityHTML = '<div class="pg">'
+    + '<div class="eyebrow">' + L('උපන් සටහන', 'THE BIRTH RECORD') + '</div>'
+    + '<div class="pg-title">' + L('ඔබේ ආකාශ අනන්‍යතාව', 'Celestial Identity') + '</div>'
+    + '<div class="pg-sub">' + L('ඔබ උපන් මොහොතේ අහස මෙසේ පිහිටා තිබුණා — මේ වාර්තාවේ සෑම කියවීමක්ම මේ සිතියම මත ගොඩනැගෙනවා.', 'The sky as it stood at the moment you were born — every reading in this almanac is built on this map.') + '</div>'
+    + (medsHTML ? '<div class="meds">' + medsHTML + '</div>' : '')
+    + '<div class="rec idn-rec">'
+    + recRow(L('නම', 'NAME'), opts.userName)
+    + recRow(L('උපන් ස්ථානය', 'BIRTHPLACE'), opts.birthLocation)
+    + recRow(L('උපන් දිනය සහ වේලාව', 'DATE & TIME'), (opts.birthDate || '') + (opts.birthTime ? ' · ' + opts.birthTime : ''))
+    + recRow(L('සූර්ය රාශිය', 'SUN SIGN'), sunLabel)
+    + (refNo ? recRow(L('වාර්තා අංකය', 'DOCUMENT Nº'), refNo) : '')
+    + '</div>'
+    + chartsHTML
+    + '</div>';
+
+  // ═════ LIFE BALANCE ═════
+  var heroKeys = ['career', 'marriage', 'health', 'financial', 'luck', 'education', 'children', 'foreignTravel', 'spiritual'];
   var heroScores = [];
   heroKeys.forEach(function(key) {
-    var s2 = null;
-    if (flatScores && flatScores[key] != null && isFinite(Number(flatScores[key]))) {
-      s2 = Math.min(100, Math.max(0, Math.round(Number(flatScores[key]))));
-    } else {
-      var rd = reportSections[key] || rawSections[key] || {};
-      s2 = extractScore(key, rd);
-    }
-    if (s2 != null) heroScores.push({ key:key, score:s2 });
+    var s = scoreFor(key);
+    if (s != null) heroScores.push({ key: key, score: s });
   });
-
+  var balanceHTML = '';
   if (heroScores.length > 0) {
-    var avg = Math.round(heroScores.reduce(function(a,b){return a+b.score;},0)/heroScores.length);
-    heroHTML = '<div class="hero-scores"><div class="hero-title">'+(isSi?'ජීවිත ලකුණු දළ දැක්ම':'Life Score Overview')+'</div>'
-      +'<div class="hero-sub">'+(isSi?'ඔබේ උපන් රටාවෙන් ලැබෙන ජීවිත ක්ෂේත්‍ර ලකුණු':'Scores derived from your birth pattern')+'</div>'
-      +'<div class="hero-overall">'+svgScoreGauge(avg,120,null,isSi?'සමස්ත':'Overall')
-      +'<div class="ho-label">'+scoreVerdict(avg,isSi)+'</div>'
-      +'<div class="ho-sub">'+heroScores.length+(isSi?' ක්ෂේත්‍ර විශ්ලේෂණය':' areas analyzed')+'</div></div>'
-      +'<div class="hero-grid" style="margin-top:20px;">';
+    var avg = Math.round(heroScores.reduce(function(a, b) { return a + b.score; }, 0) / heroScores.length);
+    var avgTier = rptTier(avg);
+    var cells = '';
     heroScores.forEach(function(hs) {
-      var sc3 = SECTION_COLORS[hs.key]||{primary:'#7C3AED',emoji:'📋',bg:'#F5F3FF'};
-      var sCol = hs.score>=75?'#10B981':hs.score>=55?'#3B82F6':hs.score>=35?'#F59E0B':'#EF4444';
-      heroHTML += '<div class="hero-cell" style="background:'+sc3.bg+';"><div class="hc-emoji">'+sc3.emoji+'</div>'
-        +'<div class="hc-name">'+(sectionTitles[sectionKeys.indexOf(hs.key)]||hs.key)+'</div>'
-        +'<div class="hc-score" style="color:'+sCol+';">'+hs.score+'</div>'
-        +'<div class="hc-bar"><div class="hc-fill" style="width:'+hs.score+'%;background:'+sCol+';"></div></div></div>';
+      var tier = rptTier(hs.score);
+      var canonical = RPT_AREA_NAMES[hs.key];
+      var lbl2 = escapeHTML(canonical ? (isSi ? canonical.si : canonical.en) : hs.key);
+      cells += '<div class="bal-cell"><div class="bc-name">' + lbl2 + '</div>'
+        + '<div class="bc-score">' + hs.score + '<i>/100</i></div>'
+        + '<div class="bc-bar"><div class="bc-fill" style="width:' + hs.score + '%;background:' + tier.color + ';"></div></div>'
+        + '<div class="bc-tier" style="color:' + tier.color + ';">' + (isSi ? tier.si : tier.en) + '</div></div>';
     });
-    heroHTML += '</div></div>';
+    balanceHTML = '<div class="pg">'
+      + '<div class="eyebrow">' + L('මිනුම', 'THE MEASURE') + '</div>'
+      + '<div class="pg-title">' + L('ජීවිත සමතුලනය', 'Life Balance') + '</div>'
+      + '<div class="pg-sub">' + L('ඔබේ උපන් රටාවෙන් කියැවෙන ජීවිත ක්ෂේත්‍රවල සාපේක්ෂ ශක්තිය', 'The relative strength of each life area, read from your birth pattern') + '</div>'
+      + '<div class="bal-hero">' + rptArc(avg, 128, avgTier.color, L('සමස්ත', 'OVERALL'))
+      + '<div class="bal-verdict">' + (isSi ? avgTier.si : avgTier.en) + '</div>'
+      + '<div class="bal-count">' + L('ක්ෂේත්‍ර ' + heroScores.length + 'ක විශ්ලේෂණය', heroScores.length + ' LIFE AREAS ANALYSED') + '</div></div>'
+      + '<div class="bal-grid">' + cells + '</div>'
+      + '<div class="tierleg">' + RPT_TIERS.slice().reverse().map(function(t2, i2, arr2) {
+        var hi = i2 === arr2.length - 1 ? 100 : arr2[i2 + 1].min - 1;
+        return '<div class="tl"><b style="background:' + t2.color + ';"></b><div class="t1" style="color:' + t2.color + ';">' + (isSi ? t2.si : t2.en) + '</div><div class="t2">' + t2.min + '–' + hi + '</div></div>';
+      }).join('') + '</div>'
+      + '</div>';
   }
 
-  // Sections
-  var sectionsHTML = '';
-  sectionKeys.forEach(function(key,index) {
-    var narrative = narrativeSections[key];
-    if (!narrative?.narrative) return;
-    var sc4 = SECTION_COLORS[key]||{primary:'#7C3AED',accent:'#A78BFA',bg:'#F5F3FF',emoji:'📋'};
-    var title = sectionTitles[index]||narrative.title||key;
-    var rawD = reportSections[key]||rawSections[key]||narrative.rawData||{};
-    var sScore = extractScore(key,rawD);
-    if (sScore == null && flatScores && flatScores[key] != null && isFinite(Number(flatScores[key]))) {
-      sScore = Math.min(100, Math.max(0, Math.round(Number(flatScores[key]))));
+  // ═════ NEXT 12 MONTHS ═════
+  var calendar = narrativeSections.next12Months && narrativeSections.next12Months.rawData;
+  var skyHTML = '';
+  if (calendar && Array.isArray(calendar.months) && calendar.months.length > 0) {
+    var winRows = '';
+    (calendar.windows || []).slice(0, 5).forEach(function(w) {
+      var dm = RPT_DOMAINS[w.domain] || { color: '#F0D48A', si: w.domain, en: w.domain };
+      var isCaution = w.type === 'caution';
+      var range = escapeHTML((w.startLabel || '') + (w.endLabel && w.endLabel !== w.startLabel ? ' → ' + w.endLabel : ''));
+      var sub = isCaution
+        ? L('පරිස්සමෙන් — ලොකු තීරණ මේ කාලයේ කල් දාන්න', 'Consolidate — hold big launches for later')
+        : (w.peakLabel ? L('උපරිමය: ', 'Peak: ') + escapeHTML(w.peakLabel) : '');
+      winRows += '<div class="win' + (isCaution ? ' caution' : '') + '">'
+        + '<span class="win-gem" style="background:' + (isCaution ? '#E8836E' : dm.color) + ';"></span>'
+        + '<div><div class="win-t">' + (isSi ? dm.si : dm.en) + (w.tier ? ' · ' + escapeHTML(String(w.tier)) : '') + ' — ' + range + '</div>'
+        + (sub ? '<div class="win-s">' + sub + '</div>' : '') + '</div></div>';
+    });
+    var legend = '';
+    Object.keys(RPT_DOMAINS).forEach(function(d) {
+      legend += '<span><b style="background:' + RPT_DOMAINS[d].color + ';"></b>' + (isSi ? RPT_DOMAINS[d].si : RPT_DOMAINS[d].en) + '</span>';
+    });
+    skyHTML = '<div class="pg">'
+      + '<div class="eyebrow">' + L('ඉදිරි වසර', 'THE YEAR AHEAD') + '</div>'
+      + '<div class="pg-title">' + L('ඉදිරි මාස 12 — කාල සිතියම', 'Your Next 12 Months') + '</div>'
+      + '<div class="pg-sub">' + L('සෑම මාසයකම වැඩිම ශක්තිය ඇති ජීවිත ක්ෂේත්‍රය සහ වැදගත් කාල කවුළු', 'The strongest life area of each month, and the windows that matter most') + '</div>'
+      + '<div class="sky-plate">' + rptSkyline(calendar.months, isSi) + '<div class="legend">' + legend + '</div></div>'
+      + (winRows ? '<div class="wins-cap">' + L('වැදගත් කාල කවුළු', 'KEY WINDOWS') + '</div><div class="wins">' + winRows + '</div>' : '')
+      + '<div class="note"><div class="note-cap">' + L('කවුළු භාවිත කරන ආකාරය', 'USING THESE WINDOWS') + '</div>'
+      + '<div class="nr"><b>✦</b><span>' + L('හොඳ කවුළුවක් = ලොකු පියවරකට හිතකර කාලයක් — අලුත් රැකියාවක්, ආයෝජනයක්, යෝජනාවක්.', 'A favourable window is the right moment for a bigger step — a job move, an investment, a proposal.') + '</span></div>'
+      + '<div class="nr"><b>✦</b><span>' + L('අවවාද කවුළුවලදී ලොකු තීරණ කල් දමා, දැනට තිබෙන දේ ශක්තිමත් කරන්න.', 'In caution windows, hold the big launches and strengthen what you already have.') + '</span></div>'
+      + '</div></div>';
+  }
+
+  // ═════ CHAPTERS ═════
+  var chaptersHTML = '';
+  chapters.forEach(function(ch) {
+    var metaHTML = '';
+    if (ch.score != null) {
+      var tier = rptTier(ch.score);
+      metaHTML = '<div class="ch-meta">' + rptArc(ch.score, 50, tier.color, '')
+        + '<div class="chm-mid"><div class="chm-lbl">' + L('ක්ෂේත්‍ර ශක්තිය', 'AREA STRENGTH') + '</div>'
+        + '<div class="chm-bar"><div class="chm-fill" style="width:' + ch.score + '%;background:' + tier.color + ';"></div></div></div>'
+        + '<span class="chm-tier" style="color:' + tier.color + ';">' + (isSi ? tier.si : tier.en) + '</span></div>';
     }
-
-    var verdictHTML = '';
-    if (sScore != null) {
-      verdictHTML = '<div class="verdict" style="background:linear-gradient(135deg,'+sc4.primary+','+sc4.accent+');">'
-        +'<div class="verdict-hdr"><span class="verdict-emoji">'+sc4.emoji+'</span>'
-        +'<span class="verdict-title">'+(isSi?'ශක්තිය':'Strength')+'</span>'
-        +'<span class="verdict-score">'+sScore+'<span style="font-size:12px;">%</span></span></div>'
-        +'<div class="verdict-bar-wrap"><div class="verdict-bar" style="width:'+sScore+'%;"></div></div>'
-        +'<span class="verdict-rating">'+scoreVerdict(sScore,isSi)+'</span></div>';
-    }
-
-    var bodyText = markdownToHTML(narrative.narrative);
-
-    sectionsHTML += '<div class="rs">'
-      +'<div class="rs-hdr" style="background:linear-gradient(135deg,'+sc4.primary+','+sc4.accent+');">'
-      +'<span class="sn">'+(index+1)+'</span><span class="se">'+sc4.emoji+'</span>'
-      +'<h2>'+title+'</h2>'
-      +(sScore!=null?'<span class="ss">'+sScore+'%</span>':'')
-      +'</div>'
-      +'<div class="rs-body" style="background:'+sc4.bg+';">'
-      +verdictHTML
-        +'<div class="prose">'+bodyText+'</div>'
-      +'</div></div>';
+    chaptersHTML += '<div class="pg"><div class="ch-head">'
+      + '<div class="ch-ghost">' + pad2(ch.no) + '</div>'
+      + '<div class="eyebrow" style="color:' + ch.accent + ';">' + L('පරිච්ඡේදය', 'CHAPTER') + ' ' + pad2(ch.no) + '</div>'
+      + '<div class="ch-title">' + ch.title + '</div>'
+      + metaHTML + '</div>'
+      + '<div class="ch-body"><div class="prose">' + markdownToHTML(ch.narrative) + '</div></div>'
+      + '<div class="rule" style="margin:22px 0 0;"><em>✦</em></div>'
+      + '</div>';
   });
 
-  // End page
-  var endLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'" style="width:64px;height:64px;border-radius:16px;object-fit:cover;"/>' : '<div class="ep-icon">☸</div>';
-  var endHTML = '<div class="ep">'+endLogoTag+'<div class="ep-brand" style="margin-top:12px;">ග්‍රහචාර</div><div class="ep-line"></div>'
-    +'<div class="ep-tag">'+(isSi?'ඔබේ ජීවිතයේ තරු බලන්න':'Read the Stars of Your Life')+'</div>'
-    +'<div class="ep-cta">'+(isSi?'📱 යෙදුම බාගන්න':'📱 Download the App')+'</div>'
-    +'<div class="ep-features"><span class="ep-feat">🔮 '+(isSi?'සතිපතා නැකැත්':'Weekly Nakath')+'</span>'
-    +'<span class="ep-feat">💬 '+(isSi?'AI ජ්‍යෝතිෂ chat':'AI Astro Chat')+'</span>'
-    +'<span class="ep-feat">💍 '+(isSi?'සබඳතා ගැලපීම':'Compatibility')+'</span></div>'
-    +'<div class="ep-url">www.grahachara.com</div>'
-    +'<div class="ep-disc">'+(isSi
-      ?'මේ වාර්තාව සාම්ප්‍රදායික වෛදික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වෙනවා. මේක අත්දැකීම් හා දැනගැනීම් සඳහා පමණි.'
-      :'This report is for informational and reflective guidance only.')
-    +'</div></div>';
+  // ═════ COLOPHON ═════
+  var endHTML = '<div class="end">'
+    + rptStars(595, 842, 120, 97)
+    + '<div class="end-frame"></div>'
+    + '<div class="end-medal">' + logoMedal + '</div>'
+    + '<div class="end-brand">ග්‍රහචාර</div>'
+    + '<div class="end-motto">' + L('ඔබේ ජීවිතයේ තරු බලන්න', 'Read the stars of your life') + '</div>'
+    + '<div class="end-rule"><em>◆</em></div>'
+    + '<div class="end-feats"><span>' + L('සතිපතා නැකැත්', 'WEEKLY NAKATH') + '</span><i>·</i><span>' + L('ජ්‍යෝතිෂ chat', 'ASTRO CHAT') + '</span><i>·</i><span>' + L('පොරොන්දම් ගැලපීම', 'PORONDAM MATCH') + '</span></div>'
+    + '<div class="end-cta">' + L('යෙදුම බාගන්න', 'DOWNLOAD THE APP') + '</div>'
+    + '<div class="end-url">www.grahachara.com</div>'
+    + '<div class="end-prep">' + (isSi ? name + ' සඳහා ' + escapeHTML(genDate) + ' දින සකස් කරන ලදි' : 'Prepared for ' + name + ' on ' + escapeHTML(genDate)) + '</div>'
+    + (refNo ? '<div class="end-ref">' + L('වාර්තා අංකය', 'DOCUMENT Nº') + ' ' + refNo + '</div>' : '')
+    + '<div class="end-disc">' + L(
+      'මේ වාර්තාව සාම්ප්‍රදායික වේදික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වෙනවා. මෙය අත්දැකීම් සහ මගපෙන්වීම් සඳහා පමණයි — වෛද්‍ය, නීතිමය හෝ මූල්‍ය උපදෙස් වෙනුවට භාවිත නොකරන්න.',
+      'This reading is based on traditional Vedic astrology and is offered for reflection and guidance only — not as a substitute for medical, legal or financial advice.')
+    + '</div></div>';
 
-  var headerLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,'+opts.logoBase64+'" style="width:18px;height:18px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;"/>' : '';
-
-  return '<!DOCTYPE html><html lang="'+(isSi?'si':'en')+'"><head>'
-    +'<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>'
-    +'<title>'+(isSi?'ග්‍රහචාර වාර්තාව':'Grahachara Report')+'</title>'
-    +'<style>'+sharedCSS('purple')+'</style></head><body>'
-    +'<div class="wm">ග්‍රහචාර</div>'
-    +'<div class="oc oc-tl"></div><div class="oc oc-tr"></div><div class="oc oc-bl"></div><div class="oc oc-br"></div>'
-    +'<div class="ph"><span class="lm">'+headerLogoTag+'ග්‍රහචාර</span><span>'+(isSi?'සම්පූර්ණ ජීවිත වාර්තාව':'Complete Life Report')+'</span></div>'
-    +'<div class="pf">ග්‍රහචාර &bull; www.grahachara.com &bull; '+new Date().toLocaleDateString()+'</div>'
-    +coverHTML+tocHTML
-    +'<div class="cp">'+bcHTML+chartHTML+'</div>'
-    +heroHTML
-    +'<div class="cp">'+sectionsHTML+'</div>'
-    +endHTML+'</body></html>';
+  // ═════ DOCUMENT ═════
+  return '<!DOCTYPE html><html lang="' + (isSi ? 'si' : 'en') + '"><head>'
+    + '<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>'
+    + '<title>' + L('ග්‍රහචාර — සම්පූර්ණ ජීවිත වාර්තාව', 'Grahachara — Complete Life Reading') + '</title>'
+    + '<style>' + reportPrintCSS(isSi) + '</style></head><body>'
+    + '<div class="bg">' + rptStars(595, 842, 110, 11) + '</div>'
+    + '<div class="wmk">ග්‍රහචාර</div>'
+    + '<div class="frame"></div>'
+    + '<div class="fc fc-tl"></div><div class="fc fc-tr"></div><div class="fc fc-bl"></div><div class="fc fc-br"></div>'
+    + '<div class="folio-t">' + L('ග්‍රහචාර — සම්පූර්ණ ජීවිත වාර්තාව', 'GRAHACHARA — THE COMPLETE LIFE READING') + '</div>'
+    + '<div class="folio-b"><span class="fb-name">' + name + '</span> <b>·</b> GRAHACHARA.COM' + (refNo ? ' <b>·</b> ' + refNo : '') + '</div>'
+    + coverHTML + tocHTML + identityHTML + balanceHTML + skyHTML + chaptersHTML + endHTML
+    + '</body></html>';
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1307,7 +1612,11 @@ function generatePorondamHTML(opts) {
   }
 
   // ── Cover ──────────────────────────────────────────────────────
-  var logoTag = opts.logoBase64 ? '<img src="data:image/png;base64,' + opts.logoBase64 + '"/>' : '<div style="font-size:44px;">💍</div>';
+  // background-image div instead of <img>+object-fit — the print
+  // rasteriser intermittently drops/half-paints <img> in rounded clips.
+  var logoTag = opts.logoBase64
+    ? '<div style="width:100%;height:100%;border-radius:22px;background:#160B22 url(data:image/png;base64,' + opts.logoBase64 + ') center/cover no-repeat;"></div>'
+    : '<div style="font-size:44px;">💍</div>';
   var coverHTML = '<div class="cover cover-porondam">'
     + '<div class="zr" style="border-color:rgba(249,168,212,0.15);"></div><div class="zri" style="border-color:rgba(255,255,255,0.05);"></div>'
     + '<div class="cc"><div class="cl" style="border-color:rgba(249,168,212,0.5);">' + logoTag + '</div>'
@@ -1822,6 +2131,21 @@ function generatePorondamHTML(opts) {
         + svgSriLankanChart(data.groomChart.rashiChart, data.groomChart.lagnaRashiId, opts.lang, 240) + '</div>';
     }
     chartsBody += '</div>';
+    // D9 (Navamsha) — the marriage charts, shown as a second row beneath D1.
+    if ((data.brideChart && data.brideChart.navamshaChart) || (data.groomChart && data.groomChart.navamshaChart)) {
+      var d9Label = isSi ? 'නවාංශකය (D9) — විවාහ ජීවිතයේ කේන්දරය' : 'Navamsha (D9) — the marriage chart';
+      chartsBody += '<div style="text-align:center;margin-top:16px;font-size:11px;font-weight:700;color:#7C3AED;">' + esc(d9Label) + '</div>';
+      chartsBody += '<div style="display:flex;gap:16px;justify-content:center;align-items:flex-start;margin-top:6px;">';
+      if (data.brideChart && data.brideChart.navamshaChart) {
+        chartsBody += '<div class="chart-wrap" style="flex:1;max-width:48%;margin:0;"><div class="chart-title" style="color:#BE185D;">' + esc(PT.brideChart) + '</div>'
+          + svgSriLankanChart(data.brideChart.navamshaChart, data.brideChart.navamshaLagnaId || data.brideChart.lagnaRashiId, opts.lang, 240) + '</div>';
+      }
+      if (data.groomChart && data.groomChart.navamshaChart) {
+        chartsBody += '<div class="chart-wrap" style="flex:1;max-width:48%;margin:0;"><div class="chart-title" style="color:#1D4ED8;">' + esc(PT.groomChart) + '</div>'
+          + svgSriLankanChart(data.groomChart.navamshaChart, data.groomChart.navamshaLagnaId || data.groomChart.lagnaRashiId, opts.lang, 240) + '</div>';
+      }
+      chartsBody += '</div>';
+    }
     chartsHTML = chapterShell('', PT.chartsTitle, '', '', chartsBody);
   }
 
@@ -1866,7 +2190,9 @@ function generatePorondamHTML(opts) {
     + '</div>';
 
   // ── End page ───────────────────────────────────────────────────
-  var pEndLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,' + opts.logoBase64 + '" style="width:64px;height:64px;border-radius:16px;object-fit:cover;"/>' : '<div class="ep-icon">💍</div>';
+  var pEndLogoTag = opts.logoBase64
+    ? '<div style="width:64px;height:64px;border-radius:16px;background:#160B22 url(data:image/png;base64,' + opts.logoBase64 + ') center/cover no-repeat;box-shadow:0 18px 54px rgba(0,0,0,.35);position:relative;z-index:1;"></div>'
+    : '<div class="ep-icon">💍</div>';
   var endHTML = '<div class="ep ep-porondam">'
     + pEndLogoTag + '<div class="ep-brand" style="margin-top:12px;">ග්‍රහචාර</div><div class="ep-line"></div>'
     + '<div class="ep-tag">' + (isSi ? 'ඔබේ ජීවිතයේ තරු බලන්න' : 'Read the Stars of Your Life') + '</div>'
@@ -1879,7 +2205,9 @@ function generatePorondamHTML(opts) {
       ? 'මේ වාර්තාව සාම්ප්‍රදායික ජ්‍යෝතිෂ ශාස්ත්‍රය මත පදනම් වෙනවා. මේක දැනගැනීම් සඳහා පමණි.'
       : 'This report is for informational and reflective guidance only.') + '</div></div>';
 
-  var pHeaderLogoTag = opts.logoBase64 ? '<img src="data:image/png;base64,' + opts.logoBase64 + '" style="width:18px;height:18px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;"/>' : '';
+  var pHeaderLogoTag = opts.logoBase64
+    ? '<span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:url(data:image/png;base64,' + opts.logoBase64 + ') center/cover no-repeat;margin-right:6px;vertical-align:middle;"></span>'
+    : '';
 
   return '<!DOCTYPE html><html lang="' + (isSi ? 'si' : 'en') + '"><head>'
     + '<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>'

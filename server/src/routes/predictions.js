@@ -16,7 +16,8 @@
  *
  *   Muhurtha:
  *     POST /api/predictions/muhurtha/score         → Score a specific date/time
- *     POST /api/predictions/muhurtha/find          → Find best date in range
+ *     POST /api/predictions/muhurtha/find          → Find best date in range (+ time windows per day)
+ *     POST /api/predictions/muhurtha/day-windows   → 2–3 auspicious windows for ONE fixed day
  *     POST /api/predictions/muhurtha/inauspicious  → Inauspicious periods for a day
  *     GET  /api/predictions/muhurtha/now            → Is now a good time?
  *     GET  /api/predictions/muhurtha/activities     → List all supported activities
@@ -27,7 +28,7 @@ const router = express.Router();
 
 const { getCurrentTransits, getDailyForecast, getWeeklyForecast, getMonthlyForecast, getYearlyForecast, getRetrogradePeriods } = require('../engine/transit');
 const { predictEventTiming, predictAllEvents, EVENT_RULES } = require('../engine/timing');
-const { scoreMuhurtha, findMuhurtha, getInauspiciousPeriods, isGoodTimeNow, ACTIVITY_RULES } = require('../engine/muhurtha');
+const { scoreMuhurtha, findMuhurtha, suggestTimeWindows, getInauspiciousPeriods, isGoodTimeNow, ACTIVITY_RULES } = require('../engine/muhurtha');
 const { analyzeHealth } = require('../engine/health');
 const { buildConvergenceForBirth } = require('../engine/convergenceCalendar');
 const { optionalAuth } = require('../middleware/auth');
@@ -318,11 +319,48 @@ router.post('/muhurtha/find', optionalAuth, async (req, res) => {
     const longitude = lng || 79.8612;
     const limit = maxResults || 5;
 
-    const result = findMuhurtha(safeActivity, startDate, endDate, bDate, latitude, longitude, limit, pDate);
+    const result = findMuhurtha(safeActivity, startDate, endDate, bDate, latitude, longitude, limit, pDate, { includeTimeWindows: true });
     res.json({ success: true, data: result });
   } catch (error) {
     console.error('Muhurtha find error:', error);
     res.status(500).json({ error: 'Failed to find muhurtha', message: error.message });
+  }
+});
+
+/**
+ * POST /api/predictions/muhurtha/day-windows
+ * "The date is already fixed (hall booked, poruwa set) — WHEN exactly?"
+ * Returns 2–3 auspicious time windows for that single day, always clear of
+ * Rahu Kalaya (plus Gulika/Yamaghanta per activity), with the day's
+ * inauspicious periods listed so the client can render "avoid" times.
+ * Weddings pass both partners' birth data (groom + bride) for paired scoring.
+ * Body: { date, activityType, birthDate?, partnerBirthDate?, lat?, lng? }
+ */
+router.post('/muhurtha/day-windows', optionalAuth, async (req, res) => {
+  try {
+    const { date, activityType, birthDate, partnerBirthDate, lat, lng } = req.body;
+    if (!date || !activityType) {
+      return res.status(400).json({ error: 'date and activityType are required' });
+    }
+    const safeActivity = sanitizeString(activityType, INPUT_LIMITS.activityType);
+    if (!safeActivity || !VALID_ACTIVITY_TYPES.includes(safeActivity)) {
+      return res.status(400).json({ error: `activityType must be one of: ${VALID_ACTIVITY_TYPES.join(', ')}` });
+    }
+    const d = new Date(date);
+    if (isNaN(d.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format. Use ISO 8601.' });
+    }
+
+    const bDate = birthDate ? new Date(birthDate) : null;
+    const pDate = partnerBirthDate ? new Date(partnerBirthDate) : null;
+    const latitude = parseFloat(lat) || 6.9271;
+    const longitude = parseFloat(lng) || 79.8612;
+
+    const result = suggestTimeWindows(d, safeActivity, bDate, latitude, longitude, pDate);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Muhurtha day-windows error:', error);
+    res.status(500).json({ error: 'Failed to suggest time windows', message: error.message });
   }
 });
 

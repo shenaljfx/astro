@@ -130,14 +130,16 @@ export function plainLines(bd, si) {
   if (bd.tarabala) {
     var tb = bd.tarabala;
     if (tb.dual) {
+      // Dual factors only exist for weddings (both charts weighed) — speak of
+      // the groom (මනාලයා) and bride (මනාලිය), not "first/second partner".
       var mA = TARA_MEANING[tb.name] || {};
       var mB = TARA_MEANING[tb.partnerName] || {};
       var tD = tone(tb.combined, tb.max);
       out.push({
         tone: tD,
         text: si
-          ? 'පළමු අයට ' + (mA.si || tb.name) + '; දෙවන අයට ' + (mB.si || tb.partnerName) + ' (තාරා බලය)'
-          : 'For the first partner: ' + (mA.en || tb.name) + '; for the second: ' + (mB.en || tb.partnerName) + ' (Tara balam)',
+          ? 'මනාලයාට ' + (mA.si || tb.name) + '; මනාලියට ' + (mB.si || tb.partnerName) + ' (තාරා බලය)'
+          : 'For the groom: ' + (mA.en || tb.name) + '; for the bride: ' + (mB.en || tb.partnerName) + ' (Tara balam)',
       });
     } else {
       var m = TARA_MEANING[tb.name] || {};
@@ -159,8 +161,8 @@ export function plainLines(bd, si) {
       out.push({
         tone: tCD,
         text: si
-          ? 'සඳේ පිහිටීම: පළමු අයට ' + (cb.quality === 'good' ? 'හිතකරයි' : 'දුර්වලයි') + ', දෙවන අයට ' + (cb.partnerQuality === 'good' ? 'හිතකරයි' : 'දුර්වලයි') + ' (චන්ද්‍ර බලය)'
-          : 'Moon position: ' + (cb.quality === 'good' ? 'supportive' : 'weak') + ' for the first partner, ' + (cb.partnerQuality === 'good' ? 'supportive' : 'weak') + ' for the second (Chandra balam)',
+          ? 'සඳේ පිහිටීම: මනාලයාට ' + (cb.quality === 'good' ? 'හිතකරයි' : 'දුර්වලයි') + ', මනාලියට ' + (cb.partnerQuality === 'good' ? 'හිතකරයි' : 'දුර්වලයි') + ' (චන්ද්‍ර බලය)'
+          : 'Moon position: ' + (cb.quality === 'good' ? 'supportive' : 'weak') + ' for the groom, ' + (cb.partnerQuality === 'good' ? 'supportive' : 'weak') + ' for the bride (Chandra balam)',
       });
     } else {
       var tC = tone(cb.score, cb.max);
@@ -205,16 +207,25 @@ export function summaryLine(lines, si) {
 // pattern; anything unrecognized falls through in English.
 
 export function mapWarning(w, si) {
-  if (!si || !w) return w;
+  if (!w) return w;
   var m;
+  if (!si) {
+    // English pass-through, except the paired (wedding-only) warnings where
+    // "first/second partner" reads clinical — say groom/bride instead.
+    if ((m = w.match(/^(.+?) Tara — weak for the first partner's birth star/))) return m[1] + " Tara — weak for the groom's birth star";
+    if ((m = w.match(/^(.+?) Tara — weak for the second partner's birth star/))) return m[1] + " Tara — weak for the bride's birth star";
+    if ((m = w.match(/Weak Chandrabala for the first partner \(Moon in house (\d+)\)/))) return 'Weak Chandrabala for the groom (Moon in house ' + m[1] + ')';
+    if ((m = w.match(/Weak Chandrabala for the second partner \(Moon in house (\d+)\)/))) return 'Weak Chandrabala for the bride (Moon in house ' + m[1] + ')';
+    return w;
+  }
   if (/Falls within Rahu Kala/i.test(w)) return 'රාහු කාලයට වැටෙනවා — මේ වේලාව වළකින්න';
   if (/Falls within Gulika/i.test(w)) return 'ගුලික කාලයට වැටෙනවා — අශුභ කාල සීමාවක්';
   if (/Falls within Yamaghanta/i.test(w)) return 'යමඝණ්ට කාලයට වැටෙනවා — වළකින්න';
-  if ((m = w.match(/^(.+?) Tara — weak for the first partner/))) return m[1] + ' තාරාව — පළමු අයගේ උපන් නැකතට දුර්වලයි';
-  if ((m = w.match(/^(.+?) Tara — weak for the second partner/))) return m[1] + ' තාරාව — දෙවන අයගේ උපන් නැකතට දුර්වලයි';
+  if ((m = w.match(/^(.+?) Tara — weak for the first partner/))) return m[1] + ' තාරාව — මනාලයාගේ උපන් නැකතට දුර්වලයි';
+  if ((m = w.match(/^(.+?) Tara — weak for the second partner/))) return m[1] + ' තාරාව — මනාලියගේ උපන් නැකතට දුර්වලයි';
   if ((m = w.match(/^(.+?) Tara — not ideal/))) return m[1] + ' තාරාව — ඔබේ උපන් නැකතට එතරම් හිතකර නැහැ';
-  if ((m = w.match(/Weak Chandrabala for the first partner \(Moon in house (\d+)\)/))) return 'පළමු අයට චන්ද්‍ර බලය දුර්වලයි (සඳ ' + m[1] + ' වන තැනේ)';
-  if ((m = w.match(/Weak Chandrabala for the second partner \(Moon in house (\d+)\)/))) return 'දෙවන අයට චන්ද්‍ර බලය දුර්වලයි (සඳ ' + m[1] + ' වන තැනේ)';
+  if ((m = w.match(/Weak Chandrabala for the first partner \(Moon in house (\d+)\)/))) return 'මනාලයාට චන්ද්‍ර බලය දුර්වලයි (සඳ ' + m[1] + ' වන තැනේ)';
+  if ((m = w.match(/Weak Chandrabala for the second partner \(Moon in house (\d+)\)/))) return 'මනාලියට චන්ද්‍ර බලය දුර්වලයි (සඳ ' + m[1] + ' වන තැනේ)';
   if ((m = w.match(/Moon in house (\d+) from your natal Moon/))) return 'සඳ ඔබේ උපන් සඳෙන් ' + m[1] + ' වන තැනේ — චන්ද්‍ර බලය දුර්වලයි';
   if ((m = w.match(/^Tithi (.+?) is inauspicious/))) return 'සඳේ දවස (' + m[1] + ') මේ වැඩේට අශුභයි';
   if (/Rikta Tithi/i.test(w)) return 'රික්තා තිථියක් — ශක්තිය අඩු දවසක්';

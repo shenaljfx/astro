@@ -676,9 +676,11 @@ function scoreMuhurtha(dateTime, activityType, birthDate, lat = 6.9271, lng = 79
  * @param {number} [lng] — longitude (default: Colombo)
  * @param {number} [maxResults] — maximum results to return (default: 5)
  * @param {Date|string} [partnerBirthDate] — partner's birth date (weddings)
+ * @param {Object} [opts] — { includeTimeWindows: attach 2–3 Rahu-free time
+ *   windows (suggestTimeWindows) to each result day }
  * @returns {Object} ranked list of best dates/times
  */
-function findMuhurtha(activityType, startDate, endDate, birthDate, lat = 6.9271, lng = 79.8612, maxResults = 5, partnerBirthDate = null) {
+function findMuhurtha(activityType, startDate, endDate, birthDate, lat = 6.9271, lng = 79.8612, maxResults = 5, partnerBirthDate = null, opts = {}) {
   const rules = ACTIVITY_RULES[activityType];
   if (!rules) {
     throw new Error(`Unknown activity: ${activityType}. Valid: ${Object.keys(ACTIVITY_RULES).join(', ')}`);
@@ -746,6 +748,20 @@ function findMuhurtha(activityType, startDate, endDate, birthDate, lat = 6.9271,
 
   const topResults = deduplicated.slice(0, maxResults);
 
+  // Optionally attach concrete 2–3 time windows (Rahu Kalaya always dodged)
+  // to each result day, so the client can offer a choice of times instead of
+  // a single instant. Opt-in: the free preview and report pipelines that call
+  // findMuhurtha for day-level answers skip this extra per-day work.
+  if (opts.includeTimeWindows) {
+    for (const r of topResults) {
+      try {
+        const tw = suggestTimeWindows(new Date(r.dateTime), activityType, bDate, lat, lng, pDate, { withDay: false });
+        r.timeWindows = tw.windows;
+        r.avoid = tw.avoid;
+      } catch (e) { /* result stays valid without windows */ }
+    }
+  }
+
   return {
     activity: rules.name,
     activitySinhala: rules.sinhala,
@@ -759,6 +775,219 @@ function findMuhurtha(activityType, startDate, endDate, birthDate, lat = 6.9271,
     noGoodDateAdvice: topResults.length === 0
       ? 'No strongly auspicious date found in this range. Try expanding your date range or consult an astrologer for exceptions.'
       : null,
+  };
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TIME WINDOWS WITHIN A SINGLE DAY — "the date is fixed; WHEN exactly?"
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Chaldean hora order + weekday rulers (same convention as astrology.js).
+const HORA_SEQUENCE = ['Saturn', 'Jupiter', 'Mars', 'Sun', 'Venus', 'Mercury', 'Moon'];
+const DAY_RULERS = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+const HORA_BENEFICS = ['Jupiter', 'Venus', 'Mercury', 'Moon'];
+const HORA_SI = { Sun: 'රවි', Moon: 'සඳු', Mars: 'කුජ', Mercury: 'බුධ', Jupiter: 'ගුරු', Venus: 'සිකුරු', Saturn: 'ශනි' };
+const DAYPARTS = [
+  { key: 'morning', en: 'Morning', si: 'උදේ' },
+  { key: 'midday', en: 'Midday', si: 'දවල්' },
+  { key: 'afternoon', en: 'Afternoon', si: 'හවස' },
+];
+
+function periodsOverlap(aStart, aEnd, bStart, bEnd) {
+  return aStart < bEnd && bStart < aEnd;
+}
+
+/** Day hora (12 divisions sunrise→sunset) ruling a given instant. */
+function dayHoraAt(tMs, sunriseMs, sunsetMs, weekday) {
+  const horaMs = (sunsetMs - sunriseMs) / 12;
+  const idx = Math.min(11, Math.max(0, Math.floor((tMs - sunriseMs) / horaMs)));
+  const startIndex = Math.max(0, HORA_SEQUENCE.indexOf(DAY_RULERS[weekday] || 'Sun'));
+  const ruler = HORA_SEQUENCE[(startIndex + idx) % HORA_SEQUENCE.length];
+  return { ruler, sinhala: HORA_SI[ruler] || ruler, benefic: HORA_BENEFICS.includes(ruler) };
+}
+
+/** Same lagna-quality rules as scoreMuhurtha's block, for one instant. */
+function scoreLagnaAt(dt, activityType, planets, lat, lng) {
+  const lagna = getLagna(dt, lat, lng);
+  const FIXED_SIGNS = [2, 5, 8, 11]; // Taurus, Leo, Scorpio, Aquarius
+  let score = (activityType === 'wedding' || activityType === 'construction' || activityType === 'movingIn')
+    ? (FIXED_SIGNS.includes(lagna.rashi.id) ? 10 : 5)
+    : 7;
+  const warnings = [];
+  const id = lagna.rashi.id;
+  if ((planets.jupiter && planets.jupiter.rashiId === id) || (planets.venus && planets.venus.rashiId === id)) score = 10;
+  if ((planets.mars && planets.mars.rashiId === id) || (planets.saturn && planets.saturn.rashiId === id) || (planets.rahu && planets.rahu.rashiId === id)) {
+    score = Math.max(0, score - 5);
+    warnings.push('Malefic planet in Lagna at the chosen time — not ideal');
+  }
+  return { score, lagna, warnings };
+}
+
+function qualityOf(score) {
+  return score >= 80 ? 'Excellent' : score >= 65 ? 'Good' : score >= 50 ? 'Average' : score >= 35 ? 'Below Average' : 'Poor';
+}
+
+/**
+ * Suggest 2–3 auspicious time WINDOWS within one day for an activity.
+ *
+ * Every window is guaranteed clear of Rahu Kalaya (always) and of Gulika /
+ * Yamaghanta when the activity's rules avoid them. Candidates are one-muhurtha
+ * (48 min) slices of daylight; within the day they are ranked by the rising
+ * lagna quality (for lagna-checked activities such as weddings), a benefic
+ * planetary-hora bonus (Jupiter/Venus/Mercury/Moon), and a small Durmuhurtha
+ * penalty — the day-level panchanga factors are computed once and shared.
+ * The final picks are spread across morning / midday / afternoon so the user
+ * gets genuinely different choices, then returned in chronological order.
+ *
+ * @param {Date|string} date — the civil day to examine
+ * @param {string} activityType — key from ACTIVITY_RULES
+ * @param {Date} [birthDate] — for Tarabala/Chandrabala personalization
+ * @param {number} [lat] @param {number} [lng]
+ * @param {Date} [partnerBirthDate] — weddings: both charts must be weighed
+ * @param {Object} [options] — { windowMinutes=48, maxWindows=3, withDay=true }
+ * @returns {{date, activity, activitySinhala, icon, sunrise, sunset, day, windows, avoid, noWindows}}
+ */
+function suggestTimeWindows(date, activityType, birthDate, lat = 6.9271, lng = 79.8612, partnerBirthDate = null, options = {}) {
+  const rules = ACTIVITY_RULES[activityType];
+  if (!rules) {
+    throw new Error(`Unknown activity: ${activityType}. Valid: ${Object.keys(ACTIVITY_RULES).join(', ')}`);
+  }
+
+  const anchor = new Date(date);
+  const windowMs = (options.windowMinutes || 48) * 60000;
+  const maxWindows = Math.min(Math.max(options.maxWindows || 3, 1), 4);
+  const withDay = options.withDay !== false;
+
+  const { sunrise, sunset } = calculateSunriseSunset(anchor, lat, lng);
+  const sunriseMs = sunrise.getTime();
+  const sunsetMs = sunset.getTime();
+  const weekday = anchor.getDay();
+
+  // ── Inauspicious periods: hard blocks vs display list ──
+  // Rahu Kalaya is ALWAYS a hard block for suggested times; Gulika and
+  // Yamaghanta become hard blocks when the activity's rules avoid them.
+  const hardBlocks = [];
+  const avoid = [];
+  const addPeriod = (name, sinhala, severity, calc, hard) => {
+    try {
+      const p = calc(anchor, lat, lng);
+      avoid.push({
+        name, sinhala, severity,
+        start: p.start.toISOString(), end: p.end.toISOString(),
+        startDisplay: formatTime(p.start), endDisplay: formatTime(p.end),
+      });
+      if (hard) hardBlocks.push({ start: p.start.getTime(), end: p.end.getTime() });
+    } catch (e) { /* period unavailable — skip */ }
+  };
+  addPeriod('Rahu Kalaya', 'රාහු කාලය', 'High', calculateRahuKalaya, true);
+  addPeriod('Gulika Kala', 'ගුලික කාලය', 'High', calculateGulikaKala, rules.avoidGulikaKala === true);
+  addPeriod('Yamaghanta', 'යමඝණ්ට කාලය', 'Medium', calculateYamaghanta, rules.avoidYamaghanta === true);
+  avoid.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+  let durmuhurthas = [];
+  try { durmuhurthas = calculateDurmuhurtha(anchor, lat, lng).map(p => ({ start: p.start.getTime(), end: p.end.getTime() })); }
+  catch (e) { /* soft factor only */ }
+
+  // ── Day-level base score, computed ONCE at solar noon ──
+  // Tithi/nakshatra/yoga/karana/weekday/tara/chandra barely move within a
+  // day; each candidate then swaps in its own lagna + hora. Any Rahu/Gulika/
+  // Yama penalty the noon instant happened to catch is stripped (candidates
+  // are already guaranteed outside those periods).
+  const noon = new Date((sunriseMs + sunsetMs) / 2);
+  const bDate = birthDate ? new Date(birthDate) : null;
+  const pDate = partnerBirthDate ? new Date(partnerBirthDate) : null;
+  const base = scoreMuhurtha(noon, activityType, bDate, lat, lng, pDate);
+  const periodPenalty = (base.breakdown.rahuKala ? base.breakdown.rahuKala.penalty || 0 : 0)
+    + (base.breakdown.gulikaKala ? base.breakdown.gulikaKala.penalty || 0 : 0)
+    + (base.breakdown.yamaghanta ? base.breakdown.yamaghanta.penalty || 0 : 0);
+  const baseLagnaScore = base.breakdown.lagnaStrength ? base.breakdown.lagnaStrength.score || 0 : 0;
+  const baseRawClean = base.rawScore - periodPenalty - baseLagnaScore;
+  const maxScore = base.maxScore + 3; // +3 headroom = benefic-hora bonus
+
+  let planets = null;
+  if (rules.lagnaCheck) {
+    try { planets = getAllPlanetPositions(noon); } catch (e) { planets = null; }
+  }
+
+  // ── Candidate windows: one muhurtha (48 min) sliding every 24 min ──
+  const stepMs = 24 * 60000;
+  const candidates = [];
+  for (let t = sunriseMs + 24 * 60000; t + windowMs <= sunsetMs; t += stepMs) {
+    const end = t + windowMs;
+    if (hardBlocks.some(p => periodsOverlap(t, end, p.start, p.end))) continue;
+
+    const midMs = t + windowMs / 2;
+    const mid = new Date(midMs);
+    let lagnaScore = 0;
+    let lagnaInfo = null;
+    let warnings = [];
+    if (rules.lagnaCheck && planets) {
+      try {
+        const ls = scoreLagnaAt(mid, activityType, planets, lat, lng);
+        lagnaScore = ls.score;
+        lagnaInfo = { name: ls.lagna.rashi.english, sinhala: ls.lagna.rashi.sinhala || null };
+        warnings = ls.warnings;
+      } catch (e) { lagnaScore = baseLagnaScore; }
+    }
+    const hora = dayHoraAt(midMs, sunriseMs, sunsetMs, weekday);
+    const inDurmuhurtha = durmuhurthas.some(p => periodsOverlap(t, end, p.start, p.end));
+    const raw = baseRawClean + lagnaScore + (hora.benefic ? 3 : 0) - (inDurmuhurtha ? 2 : 0);
+    const score = Math.max(0, Math.min(100, Math.round((raw / maxScore) * 100)));
+    candidates.push({ startMs: t, endMs: end, mid, score, hora, lagna: lagnaInfo, warnings });
+  }
+
+  // ── Pick up to maxWindows, spread across the day ──
+  // Best of each daylight third first (morning/midday/afternoon), then fill
+  // by score with a ≥30 min gap so two picks never crowd the same hour.
+  const third = (sunsetMs - sunriseMs) / 3;
+  const partOf = (ms) => (ms < sunriseMs + third ? 0 : ms < sunriseMs + 2 * third ? 1 : 2);
+  const picked = [];
+  for (let p = 0; p < 3; p++) {
+    const inPart = candidates.filter(c => partOf(c.mid.getTime()) === p);
+    if (inPart.length) picked.push(inPart.reduce((a, b) => (b.score > a.score ? b : a)));
+  }
+  const GAP_MS = 30 * 60000;
+  const clashes = (c) => picked.some(p => periodsOverlap(c.startMs - GAP_MS, c.endMs + GAP_MS, p.startMs, p.endMs));
+  for (const c of [...candidates].sort((a, b) => b.score - a.score)) {
+    if (picked.length >= maxWindows) break;
+    if (!picked.includes(c) && !clashes(c)) picked.push(c);
+  }
+  picked.sort((a, b) => a.startMs - b.startMs);
+  const windows = picked.slice(0, maxWindows).map(c => ({
+    start: new Date(c.startMs).toISOString(),
+    end: new Date(c.endMs).toISOString(),
+    startDisplay: formatTime(new Date(c.startMs)),
+    endDisplay: formatTime(new Date(c.endMs)),
+    daypart: DAYPARTS[partOf(c.mid.getTime())],
+    score: c.score,
+    quality: qualityOf(c.score),
+    hora: c.hora,
+    lagna: c.lagna,
+    warnings: c.warnings,
+  }));
+
+  // Day headline: re-score at the best window's midpoint so the numbers the
+  // user sees are clean of the noon instant's accidental period penalties.
+  let day = base;
+  if (withDay && picked.length) {
+    const best = picked.reduce((a, b) => (b.score > a.score ? b : a));
+    try { day = scoreMuhurtha(best.mid, activityType, bDate, lat, lng, pDate); } catch (e) { /* keep base */ }
+  }
+
+  return {
+    date: anchor.toISOString().split('T')[0],
+    activity: rules.name,
+    activitySinhala: rules.sinhala,
+    icon: rules.icon,
+    sunrise: sunrise.toISOString(),
+    sunset: sunset.toISOString(),
+    sunriseDisplay: formatTime(sunrise),
+    sunsetDisplay: formatTime(sunset),
+    day: withDay ? day : null,
+    windows,
+    avoid,
+    noWindows: windows.length === 0,
   };
 }
 
@@ -908,6 +1137,7 @@ module.exports = {
   // Core
   scoreMuhurtha,
   findMuhurtha,
+  suggestTimeWindows,
   ACTIVITY_RULES,
 
   // Inauspicious periods

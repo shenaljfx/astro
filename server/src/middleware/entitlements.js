@@ -314,6 +314,34 @@ async function hasPendingEntitlement(uid, type) {
 }
 
 /**
+ * Most recent FULFILLED entitlement of a type — proof the user already paid
+ * for and received this product. Used by requireSubscriptionOrCredit so a
+ * buyer can re-open their generated report (served from cache / saved report)
+ * instead of hitting 402 "Purchase required" for something they own.
+ *
+ * @param {string} uid  - Firebase user ID
+ * @param {string} type - 'report' | 'porondam' | 'babyKendara'
+ * @returns {Object|null} { id, ...entitlement } or null
+ */
+async function getFulfilledEntitlement(uid, type) {
+  const db = getDb();
+  if (!db || !uid) return null;
+
+  // No orderBy: avoids needing a composite index — pick newest in memory.
+  const snap = await db.collection(COLLECTION)
+    .where('uid', '==', uid)
+    .where('type', '==', type)
+    .where('status', '==', 'fulfilled')
+    .limit(10)
+    .get();
+
+  if (snap.empty) return null;
+  const docs = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  docs.sort((a, b) => String(b.fulfilledAt || '').localeCompare(String(a.fulfilledAt || '')));
+  return docs[0];
+}
+
+/**
  * Get all entitlements for a user (for profile/history page).
  *
  * @param {string} uid  - Firebase user ID
@@ -427,6 +455,7 @@ module.exports = {
   restoreEntitlementRetry,
   checkPendingEntitlement,
   hasPendingEntitlement,
+  getFulfilledEntitlement,
   getUserEntitlements,
   cleanupExpiredEntitlements,
   requireEntitlement,

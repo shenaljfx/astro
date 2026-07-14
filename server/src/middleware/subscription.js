@@ -207,6 +207,19 @@ function requireSubscriptionOrCredit(creditType, productKey) {
         return next();
       }
 
+      // Already paid AND generated → let them back in to VIEW what they own.
+      // Without this, a buyer re-opening their report after the credit was
+      // consumed got 402 "Purchase required" — locked out of a paid product.
+      // Routes serve these requests from the report cache / saved report; no
+      // credit exists to consume (accessVia tells the route which path it is).
+      const { getFulfilledEntitlement } = require('./entitlements');
+      const fulfilled = await getFulfilledEntitlement(req.user.uid, creditType);
+      if (fulfilled) {
+        req.fulfilledEntitlement = fulfilled;
+        req.accessVia = 'entitlement-view';
+        return next();
+      }
+
       const currency = detectCurrency(req);
       const pricing = getPricing(currency);
       // Map the store product id → its pricing config key for the 402 payload.

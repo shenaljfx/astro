@@ -25,7 +25,7 @@ const { budgetGuard, assertBudgetAvailable } = require('../services/budgetEnforc
 const { recordAISuccess, recordAIFailure, getAIHealth } = require('../services/aiHealth');
 const { distributedAiUserLimiter } = require('../services/distributedRateLimit');
 const { saveVibeLink, getVibeLink, markVibeLinkUsed } = require('../services/vibeLinkStore');
-const { savePorondamResult, updatePorondamReport } = require('../models/firestore');
+const { savePorondamResult, updatePorondamReport, getPorondamById, getUserPorondamHistory } = require('../models/firestore');
 const { getDb, COLLECTIONS } = require('../config/firebase');
 const { createOrResumeEntitlement, fulfillEntitlement, recordEntitlementError, restoreEntitlementRetry } = require('../middleware/entitlements');
 
@@ -147,12 +147,20 @@ router.post('/check', aiLimiter, phoneAuth, requireSubscriptionOrCredit('poronda
       const brideHouse = buildHouseChart(brideBirthDate, brideLat, brideLng);
       const brideLagnaId = brideHouse.lagna ? brideHouse.lagna.rashi.id : 1;
       brideChart = { rashiChart: brideHouse.houses, lagnaRashiId: brideLagnaId };
+      // D9 (Navamsha) — the marriage chart. Rendered as a second grid next to
+      // D1 so users can see the chart that the Soul-level match is read from.
+      const brideNav = buildNavamshaChart(brideBirthDate, brideLat, brideLng);
+      brideChart.navamshaChart = brideNav.houses;
+      brideChart.navamshaLagnaId = (brideNav.lagna && brideNav.lagna.rashi && brideNav.lagna.rashi.id) || brideLagnaId;
     } catch (e) { console.error('Bride chart error:', e.message); }
 
     try {
       const groomHouse = buildHouseChart(groomBirthDate, groomLat, groomLng);
       const groomLagnaId = groomHouse.lagna ? groomHouse.lagna.rashi.id : 1;
       groomChart = { rashiChart: groomHouse.houses, lagnaRashiId: groomLagnaId };
+      const groomNav = buildNavamshaChart(groomBirthDate, groomLat, groomLng);
+      groomChart.navamshaChart = groomNav.houses;
+      groomChart.navamshaLagnaId = (groomNav.lagna && groomNav.lagna.rashi && groomNav.lagna.rashi.id) || groomLagnaId;
     } catch (e) { console.error('Groom chart error:', e.message); }
 
     // Advanced analysis for both parties
@@ -348,6 +356,34 @@ router.post('/report', aiLimiter, phoneAuth, requireSubscriptionOrCredit('porond
         // Non-critical — continue without entitlement tracking
         console.warn('[Porondam Report] Entitlement check failed (non-critical):', entErr.message);
       }
+    }
+
+    // ── Entitlement-view (already paid & generated): serve the SAVED report
+    // instead of regenerating — a re-open must not cost another Gemini call. ──
+    if (req.accessVia === 'entitlement-view' && req.user && req.user.uid) {
+      try {
+        let saved = null;
+        const savedId = req.fulfilledEntitlement && req.fulfilledEntitlement.porondamId;
+        if (savedId) {
+          const doc = await getPorondamById(savedId);
+          if (doc && doc.uid === req.user.uid && doc.report) saved = doc;
+        }
+        if (!saved) {
+          const history = await getUserPorondamHistory(req.user.uid, 10);
+          saved = (history || []).find((h) => h && h.report) || null;
+        }
+        if (saved) {
+          return res.json({
+            success: true, cached: true,
+            report: saved.report,
+            language: saved.reportLanguage || language,
+            porondamId: saved.id,
+            tokenUsage: null,
+            entitlementId: entitlementId || null,
+          });
+        }
+        // No saved report found — fall through and regenerate (the buyer is owed one).
+      } catch (e) { console.warn('[Porondam Report] entitlement-view lookup failed:', e.message); }
     }
 
     // Payment handled by RevenueCat subscription — no token deduction needed
@@ -600,8 +636,10 @@ WRITE THE REPORT:
     });
 
     // ── Entitlement: mark as fulfilled (generation succeeded) ──
+    // Store the saved porondam id so entitlement-view re-opens can serve the
+    // exact owned report without another AI call.
     if (entitlementId) {
-      try { await fulfillEntitlement(entitlementId); }
+      try { await fulfillEntitlement(entitlementId, savedPorondamId ? { porondamId: savedPorondamId } : {}); }
       catch (e) { console.warn('[Porondam Report] Entitlement fulfill failed (non-critical):', e.message); }
     }
   } catch (error) {

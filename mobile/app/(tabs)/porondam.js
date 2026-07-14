@@ -3079,6 +3079,7 @@ export default function PorondamScreen() {
           var fallback = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Porondam</title>'
             + '<style>body{font-family:sans-serif;padding:24px;color:#222;line-height:1.6;}h1{color:#7C3AED;}h2{margin-top:18px;}p{margin:6px 0;}</style>'
             + '</head><body>'
+            + (logoB64 ? '<img src="data:image/png;base64,' + logoB64 + '" width="56" height="56" style="border-radius:12px;"/>' : '')
             + '<h1>' + (isSi ? '\u0DC3\u0DB6\u0DB3\u0DAD\u0DCF \u0D9C\u0DD0\u0DBD\u0DB4\u0DD3\u0DB8\u0DCA \u0DC0\u0DCF\u0DBB\u0DCA\u0DAD\u0DCF\u0DC0' : 'Relationship Match Report') + '</h1>'
             + '<p><b>' + (bName || 'Bride') + ' &amp; ' + (gName || 'Groom') + '</b></p>'
             + '<p>' + (isSi ? '\u0DBD\u0D9A\u0DD4\u0DAB\u0DD4' : 'Score') + ': ' + (data.totalScore || 0) + ' / ' + (data.maxPossibleScore || 20) + ' (' + (data.percentage || 0) + '%)</p>'
@@ -3316,10 +3317,21 @@ export default function PorondamScreen() {
                         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F9A8D4' }} />
                         <Text style={sty.chartTitle}>{T.brideChart}</Text>
                       </View>
+                      <Text style={sty.chartSubLabel}>{language === 'si' ? 'උපන් කේන්දරය (D1)' : 'Birth chart (D1)'}</Text>
                       <View style={{ alignItems: 'center' }}>
                         <SriLankanChart rashiChart={data.brideChart.rashiChart} lagnaRashiId={data.brideChart.lagnaRashiId} language={language}
                           chartSize={WIDE ? Math.min(320, (W - 140) / 2) : MOBILE_CHART} />
                       </View>
+                      {data.brideChart.navamshaChart && (
+                        <>
+                          <View style={sty.chartDivider} />
+                          <Text style={sty.chartSubLabel}>{language === 'si' ? 'නවාංශකය (D9) — විවාහ ජීවිතයේ කේන්දරය' : 'Navamsha (D9) — the marriage chart'}</Text>
+                          <View style={{ alignItems: 'center' }}>
+                            <SriLankanChart rashiChart={data.brideChart.navamshaChart} lagnaRashiId={data.brideChart.navamshaLagnaId || data.brideChart.lagnaRashiId} language={language}
+                              chartSize={WIDE ? Math.min(320, (W - 140) / 2) : MOBILE_CHART} />
+                          </View>
+                        </>
+                      )}
                     </Glass>
                   </Animated.View>
                 )}
@@ -3344,10 +3356,21 @@ export default function PorondamScreen() {
                         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#93C5FD' }} />
                         <Text style={sty.chartTitle}>{T.groomChart}</Text>
                       </View>
+                      <Text style={sty.chartSubLabel}>{language === 'si' ? 'උපන් කේන්දරය (D1)' : 'Birth chart (D1)'}</Text>
                       <View style={{ alignItems: 'center' }}>
                         <SriLankanChart rashiChart={data.groomChart.rashiChart} lagnaRashiId={data.groomChart.lagnaRashiId} language={language}
                           chartSize={WIDE ? Math.min(320, (W - 140) / 2) : MOBILE_CHART} />
                       </View>
+                      {data.groomChart.navamshaChart && (
+                        <>
+                          <View style={sty.chartDivider} />
+                          <Text style={sty.chartSubLabel}>{language === 'si' ? 'නවාංශකය (D9) — විවාහ ජීවිතයේ කේන්දරය' : 'Navamsha (D9) — the marriage chart'}</Text>
+                          <View style={{ alignItems: 'center' }}>
+                            <SriLankanChart rashiChart={data.groomChart.navamshaChart} lagnaRashiId={data.groomChart.navamshaLagnaId || data.groomChart.lagnaRashiId} language={language}
+                              chartSize={WIDE ? Math.min(320, (W - 140) / 2) : MOBILE_CHART} />
+                          </View>
+                        </>
+                      )}
                     </Glass>
                   </Animated.View>
                 )}
@@ -3633,6 +3656,8 @@ var sty = StyleSheet.create({
   chartCol: { flex: 1, maxWidth: 440 },
   chartCard: { alignItems: 'center', paddingVertical: WIDE ? 20 : 16 },
   chartTitle: { fontSize: 14, fontWeight: '700', color: '#FF8C00', marginBottom: 12, letterSpacing: 0.3 },
+  chartSubLabel: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.55)', marginBottom: 8, textAlign: 'center', letterSpacing: 0.2 },
+  chartDivider: { width: '70%', height: 1, backgroundColor: 'rgba(255,140,0,0.16)', alignSelf: 'center', marginVertical: 16 },
   heartBridge: { alignItems: 'center', marginVertical: -6, zIndex: 10 },
   heartBridgeWide: { marginVertical: 0, marginHorizontal: -10 },
 

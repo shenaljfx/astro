@@ -28,6 +28,7 @@ import Animated, {
   useSharedValue, useAnimatedStyle,
   withRepeat, withTiming, withSequence, withDelay,
 } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DatePickerField, TimePickerField } from '../CosmicDateTimePicker';
 import CitySearchPicker from '../CitySearchPicker';
 import SriLankanChart from '../SriLankanChart';
@@ -300,11 +301,27 @@ function KeepsakeHero({ identity, report, si }) {
 
 function ChartSection({ identity, si, delay }) {
   if (!identity || !identity.rashiChart || !identity.lagna) return null;
+  // D9 lagna sits under navamshaLagna.rashi.id; fall back to the D1 lagna so the
+  // grid never mis-orients if the field is shaped differently.
+  var navLagnaId = (identity.navamshaLagna && identity.navamshaLagna.rashi && identity.navamshaLagna.rashi.id)
+    || (identity.navamshaLagna && identity.navamshaLagna.rashiId)
+    || identity.lagna.rashiId || identity.lagna.id;
   return (
     <SectionCard icon="grid-outline" title={si ? 'උපන් කේන්දර සටහන' : 'Birth chart'} sub={si ? 'සාම්ප්‍රදායික ලංකා කේන්දර විලාසය' : 'Traditional Sri Lankan style'} delay={delay}>
       <View style={{ alignItems: 'center', marginTop: 6 }}>
         <SriLankanChart rashiChart={identity.rashiChart} lagnaRashiId={identity.lagna.rashiId || identity.lagna.id} language={si ? 'si' : 'en'} chartSize={280} />
       </View>
+      {identity.navamshaChart ? (
+        <View style={{ marginTop: 18 }}>
+          <View style={st.d9Divider} />
+          <Text style={st.d9Title}>{si ? 'නවාංශකය (D9)' : 'Navamsha (D9)'}</Text>
+          <Text style={st.d9Sub}>{si ? 'දරුවාගේ ඇතුළාන්ත ස්වභාවය සහ ජීවිත ශක්තිය පෙන්වන ගැඹුරු කේන්දරය' : "The deeper chart — your baby's inner nature and life-strength"}</Text>
+          <View style={{ alignItems: 'center', marginTop: 8 }}>
+            <SriLankanChart rashiChart={identity.navamshaChart} lagnaRashiId={navLagnaId} language={si ? 'si' : 'en'} chartSize={280} />
+          </View>
+          <Text style={st.d9Note}>{si ? 'පසුකාලීනව මේ කේන්දරයම විවාහ ජීවිතය හා සහකරු බැඳීම් ගැනද කියාපායි.' : 'In later life, this same chart also speaks to marriage and partnership.'}</Text>
+        </View>
+      ) : null}
     </SectionCard>
   );
 }
@@ -914,6 +931,19 @@ export default function BabyKendara() {
   var [narrProgress, setNarrProgress] = useState({ done: 0, total: 5, current: null, completed: [] });
 
   var mountedRef = useRef(true);
+  // ── Local persistence: a paid keepsake must survive leaving the screen.
+  // We save the pack + AI sections (and a pending reportId so an in-flight
+  // narrative can resume polling after a remount) and restore on mount.
+  var BABY_SAVE_KEY = '@grahachara_baby_kendara_v1';
+  var savedRef = useRef(null);
+  var persistBaby = useCallback(function (patch) {
+    try {
+      var next = Object.assign({}, savedRef.current || {}, patch, { savedAt: new Date().toISOString() });
+      savedRef.current = next;
+      AsyncStorage.setItem(BABY_SAVE_KEY, JSON.stringify(next)).catch(function () {});
+    } catch (e) { /* never block the report on persistence */ }
+  }, []);
+
   var pollRef = useRef(null);
   var stopPoll = useCallback(function () {
     if (pollRef.current) { clearTimeout(pollRef.current); pollRef.current = null; }
@@ -953,7 +983,10 @@ export default function BabyKendara() {
             if (!mountedRef.current) return;
             var d = (r && r.data) || r || {};
             var sections = d.narrativeSections || d.sections || null;
-            if (sections && Object.keys(sections).length) { setNarrSections(sections); setNarrStage('complete'); }
+            if (sections && Object.keys(sections).length) {
+              setNarrSections(sections); setNarrStage('complete');
+              persistBaby({ sections: sections, pendingReportId: null });
+            }
             else { setNarrStage('failed'); }
           }).catch(function () { if (mountedRef.current) setNarrStage('failed'); });
           return;
@@ -973,12 +1006,43 @@ export default function BabyKendara() {
   // Route a /generate response's narrative field to the right UI state.
   var handleNarrative = useCallback(function (narr) {
     var n = narr || {};
-    if (n.stage === 'complete' && n.sections) { setNarrSections(n.sections); setNarrStage('complete'); }
+    if (n.stage === 'complete' && n.sections) {
+      setNarrSections(n.sections); setNarrStage('complete');
+      persistBaby({ sections: n.sections, pendingReportId: null });
+    }
     else if (n.stage === 'queued' && n.reportId) {
       setNarrSections(null); setNarrProgress({ done: 0, total: 5, current: null, completed: [] });
       setNarrStage('generating'); pollNarrative(n.reportId);
+      persistBaby({ pendingReportId: n.reportId });
     } else { setNarrStage('unavailable'); }
-  }, [pollNarrative]);
+  }, [pollNarrative, persistBaby]);
+
+  // Restore a previously generated (paid) keepsake on mount — and if the AI
+  // life-story was still generating when the user left, resume polling it.
+  useEffect(function () {
+    AsyncStorage.getItem(BABY_SAVE_KEY).then(function (raw) {
+      if (!mountedRef.current || !raw) return;
+      var saved = null;
+      try { saved = JSON.parse(raw); } catch (e) { return; }
+      if (!saved || !saved.pack) return;
+      savedRef.current = saved;
+      setPack(saved.pack);
+      setTease(null);
+      if (saved.gender === 'male' || saved.gender === 'female') setGender(saved.gender);
+      if (saved.sections && Object.keys(saved.sections).length) {
+        setNarrSections(saved.sections); setNarrStage('complete');
+      } else if (saved.pendingReportId) {
+        // Job may have finished server-side while we were away — poll picks
+        // up the cached result immediately if so.
+        setNarrStage('generating');
+        setNarrProgress({ done: 0, total: 5, current: null, completed: [] });
+        pollNarrative(saved.pendingReportId);
+      } else {
+        setNarrStage('unavailable');
+      }
+    }).catch(function () {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   var unlock = useCallback(async function () {
     // Gender is mandatory for the pack (server enforces it too).
@@ -1016,14 +1080,22 @@ export default function BabyKendara() {
     }
     setPack(apiRes.data);
     setTease(null);
+    // Persist the paid keepsake immediately — losing it on unmount meant a
+    // paying user could never see their report again.
+    persistBaby({ pack: apiRes.data, gender: gender, birthISO: birthISO, sections: null, pendingReportId: null });
     handleNarrative(apiRes.data.narrative);
   }, [gender, showPaywall, birthISO, lat, lng, si, handleNarrative]);
 
   // Free retry (entitlement makes it free) when the life-story stalls/fails.
   var retryNarrative = useCallback(function () {
-    if (gender !== 'male' && gender !== 'female') return;
+    // After a restore the form fields hold defaults, not the baby's birth —
+    // retry with the SAVED birth moment so the free retry matches the paid one.
+    var saved = savedRef.current || {};
+    var g = saved.gender || gender;
+    var iso = saved.birthISO || birthISO;
+    if (g !== 'male' && g !== 'female') return;
     setNarrStage('generating'); setNarrProgress({ done: 0, total: 5, current: null, completed: [] });
-    api.generateBabyKendara(birthISO, lat, lng, si ? 'si' : 'en', gender)
+    api.generateBabyKendara(iso, lat, lng, si ? 'si' : 'en', g)
       .then(function (r) { if (mountedRef.current) handleNarrative(r && r.data && r.data.narrative); })
       .catch(function () { if (mountedRef.current) setNarrStage('failed'); });
   }, [gender, birthISO, lat, lng, si, handleNarrative]);
@@ -1062,6 +1134,8 @@ export default function BabyKendara() {
     stopPoll();
     setPack(null); setTease(null); setError(null);
     setNarrSections(null); setNarrStage('idle');
+    savedRef.current = null;
+    AsyncStorage.removeItem(BABY_SAVE_KEY).catch(function () {});
   }, [stopPoll]);
 
   // ── Staged loading screen (paid compose) ──
@@ -1265,6 +1339,10 @@ var st = StyleSheet.create({
   retroChipText: { fontSize: 9, fontWeight: '800', color: '#FCA5A5' },
   planetRashi: { flex: 1, fontSize: 12.5, fontWeight: '600', color: 'rgba(255,255,255,0.72)' },
   planetDeg: { fontSize: 12, fontWeight: '700', color: 'rgba(249,215,126,0.85)' },
+  d9Divider: { height: 1, backgroundColor: 'rgba(167,139,250,0.2)', marginBottom: 14 },
+  d9Title: { fontSize: 15, fontWeight: '800', color: '#C4B5FD', textAlign: 'center', letterSpacing: 0.3 },
+  d9Sub: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 3, paddingHorizontal: 12, lineHeight: 17 },
+  d9Note: { fontSize: 11.5, fontWeight: '500', fontStyle: 'italic', color: 'rgba(196,181,253,0.72)', textAlign: 'center', marginTop: 12, paddingHorizontal: 14, lineHeight: 16 },
 
   // Star profile
   chipWrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },

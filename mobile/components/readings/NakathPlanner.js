@@ -36,10 +36,28 @@ var ACTIVITY_ICONS = {
   movingIn: 'home',
   construction: 'construct',
   nameCeremony: 'happy',
+  firstFeeding: 'restaurant',
   financialTransaction: 'cash',
   surgery: 'medkit',
 };
 function actIcon(type) { return ACTIVITY_ICONS[type] || 'sparkles'; }
+
+// Each activity carries its own accent — idle chips show a soft tint of it,
+// the selected chip glows fully in it (border, wash, icon, label, shadow).
+var ACTIVITY_ACCENTS = {
+  wedding: '#FB7185',              // rose — the heart
+  business: '#7DD3FC',             // sky — corporate calm
+  vehicle: '#67E8F9',              // cyan — motion
+  construction: '#FDBA74',         // orange — earth & brick
+  travel: '#A5B4FC',               // periwinkle — horizons
+  education: '#86EFAC',            // green — growth
+  nameCeremony: '#FDE68A',         // soft gold — celebration
+  firstFeeding: '#F9A8D4',         // pink — the little one
+  movingIn: '#C4B5FD',             // violet — new home under the stars
+  financialTransaction: '#6EE7B7', // emerald — money
+  surgery: '#FCA5A5',              // red — clinical care
+};
+function actAccent(type) { return ACTIVITY_ACCENTS[type] || '#FFD97A'; }
 
 // Fallback activity list (in engine-key order) if the API list can't load.
 var FALLBACK_ACTIVITIES = [
@@ -78,6 +96,14 @@ var FACTOR_LABELS = {
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function plusDaysISO(n) { return new Date(Date.now() + n * 86400000).toISOString().slice(0, 10); }
+// Shift a YYYY-MM-DD string by n days (UTC-safe).
+function shiftISO(dateStr, n) {
+  try {
+    var d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  } catch (e) { return dateStr; }
+}
 // Split a stored ISO birth moment into the date + HH:MM the pickers expect.
 function splitDateTime(iso) {
   if (!iso || typeof iso !== 'string') return { d: '', t: '' };
@@ -125,6 +151,10 @@ export default function NakathPlanner() {
 
   var [activities, setActivities] = useState(FALLBACK_ACTIVITIES);
   var [activity, setActivity] = useState('wedding');
+  // 'range' = find the best day in a window; 'day' = the date is already
+  // fixed (hall booked, poruwa set) — suggest 2–3 times on THAT day.
+  var [mode, setMode] = useState('range');
+  var [singleDate, setSingleDate] = useState(plusDaysISO(7));
   var [startDate, setStartDate] = useState(todayISO());
   var [endDate, setEndDate] = useState(plusDaysISO(60));
   var [loading, setLoading] = useState(false);
@@ -156,16 +186,26 @@ export default function NakathPlanner() {
   var find = useCallback(async function () {
     // Guard the date range up front — an end-before-start range used to come
     // back as a misleading "no good date". Tell the user what to fix instead.
-    if (endDate < startDate) {
+    if (mode === 'range' && endDate < startDate) {
       setError(si ? 'අවසන් දිනය ආරම්භක දිනයට පෙර විය නොහැක.' : 'The end date can’t be before the start date.');
       return;
     }
     setLoading(true); setError(null); setResult(null);
     try {
-      if (isPro) {
-        // Personalize from the (editable) birth fields; weddings weigh both charts.
-        var myBirth = joinDateTime(birthDate, birthTime);
-        var partnerBirth = isWedding ? joinDateTime(partnerDate, partnerTime) : null;
+      // Personalize from the (editable) birth fields; weddings weigh both charts.
+      var myBirth = joinDateTime(birthDate, birthTime);
+      var partnerBirth = isWedding ? joinDateTime(partnerDate, partnerTime) : null;
+      if (mode === 'day') {
+        if (isPro) {
+          // The date is fixed — fetch 2–3 auspicious windows on it (Rahu Kalaya dodged).
+          var dw = await api.getMuhurthaDayWindows(activity, singleDate, myBirth, bLat, bLng, partnerBirth);
+          setResult({ pro: true, day: true, data: dw.data });
+        } else {
+          // Free tease of the same day: preview scores just that one day.
+          var pv1 = await api.getNakathPreview(activity, singleDate, shiftISO(singleDate, 1), bLat, bLng);
+          setResult({ pro: false, day: true, data: pv1.data });
+        }
+      } else if (isPro) {
         var res = await api.findMuhurtha(activity, startDate, endDate, myBirth, bLat, bLng, partnerBirth);
         setResult({ pro: true, data: res.data });
       } else {
@@ -177,7 +217,7 @@ export default function NakathPlanner() {
     } finally {
       setLoading(false);
     }
-  }, [isPro, activity, startDate, endDate, birthDate, birthTime, isWedding, partnerDate, partnerTime, bLat, bLng, si]);
+  }, [isPro, mode, singleDate, activity, startDate, endDate, birthDate, birthTime, isWedding, partnerDate, partnerTime, bLat, bLng, si]);
 
   var unlock = function () { Promise.resolve(showPaywall('nakath')).catch(function () {}); };
 
@@ -191,38 +231,71 @@ export default function NakathPlanner() {
         <View style={st.grid}>
           {activities.map(function (a) {
             var on = a.type === activity;
+            var accent = actAccent(a.type);
             return (
               <TouchableOpacity key={a.type} activeOpacity={0.85} onPress={function () { setActivity(a.type); setResult(null); }}
-                style={[st.actChip, on ? st.actChipOn : null]}>
-                <Ionicons name={actIcon(a.type)} size={19} color={on ? '#FFD97A' : 'rgba(255,255,255,0.55)'} />
-                <Text style={[st.actName, on ? { color: '#FFD97A' } : null]} numberOfLines={2}>{si ? a.sinhala : a.name}</Text>
+                style={[
+                  st.actChip,
+                  // Idle: a whisper of the chip's own color. Selected: full glow.
+                  on
+                    ? [st.actChipGlow, { borderColor: accent, backgroundColor: accent + '1F', shadowColor: accent }]
+                    : { borderColor: accent + '26' },
+                ]}>
+                <Ionicons name={actIcon(a.type)} size={19} color={on ? accent : accent + '99'} />
+                <Text style={[st.actName, on ? { color: accent } : null]} numberOfLines={2}>{si ? a.sinhala : a.name}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
       </Animated.View>
 
-      {/* Date range */}
+      {/* When — find a day in a range, or the date is fixed and we pick times */}
       <Animated.View entering={FadeInDown.delay(80).duration(400)} style={st.card}>
-        <Text style={st.label}>{si ? '2. කවදා සිට කවදා දක්වා?' : '2. Which date range?'}</Text>
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={st.miniLabel}>{si ? 'සිට' : 'From'}</Text>
-            <DatePickerField value={startDate} onChange={setStartDate} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={st.miniLabel}>{si ? 'දක්වා' : 'To'}</Text>
-            <DatePickerField value={endDate} onChange={setEndDate} />
-          </View>
+        <Text style={st.label}>{si ? '2. කවදාද?' : '2. When?'}</Text>
+        <View style={st.modeRow}>
+          {[
+            { key: 'range', icon: 'calendar-outline', si: 'හොඳම දවස සොයන්න', en: 'Find the best day' },
+            { key: 'day', icon: 'time-outline', si: 'දිනය තියෙනවා — වේලාව', en: 'Date fixed — get times' },
+          ].map(function (m) {
+            var on = mode === m.key;
+            return (
+              <TouchableOpacity key={m.key} activeOpacity={0.85}
+                onPress={function () { setMode(m.key); setResult(null); setError(null); }}
+                style={[st.modeChip, on ? st.modeChipOn : null]}>
+                <Ionicons name={m.icon} size={13} color={on ? '#FFD97A' : 'rgba(255,255,255,0.5)'} />
+                <Text style={[st.modeText, on ? { color: '#FFD97A' } : null]} numberOfLines={2}>{si ? m.si : m.en}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
+        {mode === 'range' ? (
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={st.miniLabel}>{si ? 'සිට' : 'From'}</Text>
+              <DatePickerField value={startDate} onChange={setStartDate} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={st.miniLabel}>{si ? 'දක්වා' : 'To'}</Text>
+              <DatePickerField value={endDate} onChange={setEndDate} />
+            </View>
+          </View>
+        ) : (
+          <View style={{ marginTop: 10 }}>
+            <Text style={st.miniLabel}>{si ? (isWedding ? 'උත්සවයේ දිනය' : 'දිනය') : (isWedding ? 'Ceremony date' : 'Date')}</Text>
+            <DatePickerField value={singleDate} onChange={setSingleDate} />
+            <Text style={st.helpLine}>{si
+              ? 'මේ දවසේ සුබ වේලාවන් 2–3ක් සොයා දෙනවා — රාහු කාලය මග හැරලා.'
+              : 'We suggest 2–3 auspicious windows on this day — Rahu Kalaya avoided.'}</Text>
+          </View>
+        )}
       </Animated.View>
 
       {/* Birth details — personalization (Pro) or an upgrade teaser (free). */}
       <Animated.View entering={FadeInDown.delay(120).duration(400)} style={st.card}>
         <View style={st.birthHead}>
           <Text style={st.label}>{si
-            ? (isWedding ? '3. යුවළගේ උපන් විස්තර' : '3. ඔබේ උපන් විස්තර')
-            : (isWedding ? '3. Both partners’ birth details' : '3. Your birth details')}</Text>
+            ? (isWedding ? '3. මනාල යුවළගේ උපන් විස්තර' : '3. ඔබේ උපන් විස්තර')
+            : (isWedding ? '3. Groom & bride birth details' : '3. Your birth details')}</Text>
           {isPro && birthDate && (!isWedding || partnerDate) ? (
             <View style={st.tunedBadge}>
               <Ionicons name="checkmark-circle" size={12} color="#86EFAC" />
@@ -233,19 +306,19 @@ export default function NakathPlanner() {
 
         {isPro ? (
           <>
-            {isWedding ? <Text style={[st.miniLabel, { marginTop: 8 }]}>{si ? 'පළමු අය' : 'First partner'}</Text> : null}
+            {isWedding ? <Text style={[st.miniLabel, { marginTop: 8 }]}>{si ? 'මනාලයා — උපන් දිනය සහ වේලාව' : 'Groom — birth date & time'}</Text> : null}
             <View style={st.birthRow}>
               <View style={{ flex: 1.35 }}><DatePickerField value={birthDate} onChange={setBirthDate} lang={language} /></View>
               <View style={{ flex: 1 }}><TimePickerField value={birthTime} onChange={setBirthTime} lang={language} /></View>
             </View>
             {isWedding ? (
               <>
-                <Text style={[st.miniLabel, { marginTop: 12 }]}>{si ? 'දෙවන අය' : 'Second partner'}</Text>
+                <Text style={[st.miniLabel, { marginTop: 12 }]}>{si ? 'මනාලිය — උපන් දිනය සහ වේලාව' : 'Bride — birth date & time'}</Text>
                 <View style={st.birthRow}>
                   <View style={{ flex: 1.35 }}><DatePickerField value={partnerDate} onChange={setPartnerDate} lang={language} /></View>
                   <View style={{ flex: 1 }}><TimePickerField value={partnerTime} onChange={setPartnerTime} lang={language} /></View>
                 </View>
-                <Text style={st.helpLine}>{si ? 'දෙදෙනාගේම උපන් නැකතට ගැළපෙන දවසක් තෝරා දෙනවා.' : 'We find a day that suits both charts.'}</Text>
+                <Text style={st.helpLine}>{si ? 'මනාලයා සහ මනාලිය දෙදෙනාගේම කේන්දරයට ගැළපෙන පොරු නැකත සොයා දෙනවා.' : 'We find the Poruwa time that suits both the groom’s and the bride’s charts.'}</Text>
               </>
             ) : (
               <Text style={st.helpLine}>{si ? 'ඔබේ උපන් නැකතට ගැළපෙන වේලාවන් ලැබේ.' : 'Times are tuned to your birth star.'}</Text>
@@ -255,8 +328,8 @@ export default function NakathPlanner() {
           <TouchableOpacity activeOpacity={0.85} onPress={unlock} style={st.birthLock}>
             <Ionicons name="sparkles" size={15} color="#FFD97A" />
             <Text style={st.birthLockText}>{si
-              ? (isWedding ? 'දෙදෙනාගේම උපන් නැකතට ගැළපූ පෞද්ගලික වේලාවන්' : 'ඔබේ උපන් නැකතට ගැළපූ පෞද්ගලික වේලාවන්')
-              : (isWedding ? 'Times tuned to both birth charts' : 'Times tuned to your birth chart')}</Text>
+              ? (isWedding ? 'මනාල යුවළගේ නැකත් දෙකටම ගැළපූ පොරු නැකත් වේලාවන්' : 'ඔබේ උපන් නැකතට ගැළපූ පෞද්ගලික වේලාවන්')
+              : (isWedding ? 'Poruwa times tuned to both the groom’s & bride’s charts' : 'Times tuned to your birth chart')}</Text>
             <Ionicons name="lock-closed" size={12} color="rgba(255,214,102,0.7)" />
           </TouchableOpacity>
         )}
@@ -268,7 +341,9 @@ export default function NakathPlanner() {
           {loading ? <ActivityIndicator color="#2A1707" /> : (
             <>
               <Ionicons name="sparkles" size={16} color="#2A1707" />
-              <Text style={st.findBtnText}>{si ? 'හොඳම නැකැත සොයන්න' : 'Find the best time'}</Text>
+              <Text style={st.findBtnText}>{mode === 'day'
+                ? (si ? 'සුබ වේලාවන් බලන්න' : 'Show auspicious times')
+                : (si ? 'හොඳම නැකැත සොයන්න' : 'Find the best time')}</Text>
             </>
           )}
         </LinearGradient>
@@ -286,7 +361,11 @@ export default function NakathPlanner() {
             <Text style={st.resultTitle} numberOfLines={2}>{si ? activeMeta.sinhala : activeMeta.name}</Text>
           </View>
 
-          {result.pro ? <ProResults data={result.data} si={si} /> : <FreeResult data={result.data} si={si} onUnlock={unlock} />}
+          {result.pro
+            ? (result.day
+              ? <DayWindowsResult data={result.data} si={si} isWedding={isWedding} />
+              : <ProResults data={result.data} si={si} isWedding={isWedding} />)
+            : <FreeResult data={result.data} si={si} onUnlock={unlock} dayMode={!!result.day} />}
         </Animated.View>
       ) : null}
 
@@ -361,7 +440,122 @@ function WhyChips({ why, si }) {
  * each scored factor (colored by how strongly it contributes) plus any
  * engine warnings. This is the "astrologer's working" behind the score.
  */
-function BreakdownDetail({ bd, warnings, si, direction }) {
+/**
+ * WindowsList — the 2–3 suggested time windows of one day, chronological.
+ * Each row: score badge, start–end, daypart · hora (· lagna). The best
+ * window is tagged — "පොරුවට" for weddings (the Poruwa ascent time),
+ * "හොඳම" otherwise.
+ */
+function WindowsList({ windows, si, isWedding }) {
+  if (!Array.isArray(windows) || !windows.length) return null;
+  var bestIdx = 0;
+  windows.forEach(function (w, i) { if ((w.score || 0) > (windows[bestIdx].score || 0)) bestIdx = i; });
+  return (
+    <View style={{ marginTop: 6 }}>
+      {windows.map(function (w, i) {
+        var good = (w.score || 0) >= 80;
+        var meta = (si ? w.daypart.si : w.daypart.en)
+          + ' · ' + (si ? w.hora.sinhala + ' හෝරාව' : w.hora.ruler + ' hora')
+          + (w.lagna ? ' · ' + (si ? ((w.lagna.sinhala || w.lagna.name) + ' ලග්නය') : (w.lagna.name + ' lagna')) : '');
+        return (
+          <View key={i} style={st.twRow}>
+            <View style={[st.twBadge, { backgroundColor: good ? '#86EFAC22' : '#E8C56A22', borderColor: good ? '#86EFAC55' : '#E8C56A55' }]}>
+              <Text style={[st.twBadgeText, { color: good ? '#86EFAC' : '#E8C56A' }]}>{w.score}</Text>
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={st.twTime} numberOfLines={1}>{w.startDisplay + ' – ' + w.endDisplay}</Text>
+              <Text style={st.twMeta} numberOfLines={1}>{meta}</Text>
+            </View>
+            {i === bestIdx ? (
+              <View style={st.bestTag}>
+                <Text style={st.bestTagText}>{isWedding ? (si ? 'පොරුවට' : 'Poruwa') : (si ? 'හොඳම' : 'Best')}</Text>
+              </View>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * AvoidLines — the day's inauspicious periods (Rahu Kalaya first) as red
+ * "don't book this slot" rows, so the suggested windows carry their proof.
+ */
+function AvoidLines({ avoid, si, highOnly }) {
+  var list = Array.isArray(avoid) ? (highOnly ? avoid.filter(function (p) { return p.severity === 'High'; }) : avoid) : [];
+  if (!list.length) return null;
+  return (
+    <View style={st.avoidWrap}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Ionicons name="warning-outline" size={13} color="#FCA5A5" />
+        <Text style={st.avoidTitle}>{si ? 'මේ වේලාවන් වළකින්න' : 'Avoid these times'}</Text>
+      </View>
+      <View style={{ marginTop: 5, gap: 4 }}>
+        {list.map(function (p, i) {
+          var hi = p.severity === 'High';
+          return (
+            <View key={i} style={st.plainRow}>
+              <Ionicons name={hi ? 'close-circle' : 'remove-circle-outline'} size={12}
+                color={hi ? '#FCA5A5' : 'rgba(252,165,165,0.55)'} style={{ marginTop: 2.5 }} />
+              <Text style={[st.plainText, hi ? { color: 'rgba(252,165,165,0.92)' } : null]}>
+                {(si ? p.sinhala : p.name) + ': ' + p.startDisplay + ' – ' + p.endDisplay}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * DayWindowsResult — Pro "the date is fixed" answer: that day's quality,
+ * 2–3 suggested windows (Rahu Kalaya always dodged), the avoid list, and
+ * the expandable astrologer's working for the day.
+ */
+function DayWindowsResult({ data, si, isWedding }) {
+  var [openWhy, setOpenWhy] = useState(false);
+  if (!data) return null;
+  var day = data.day;
+  return (
+    <View>
+      <Text style={st.bestLabel}>{isWedding
+        ? (si ? 'පොරු නැකත — සුබ වේලාවන්' : 'Poruwa — best time windows')
+        : (si ? 'දවසේ සුබ වේලාවන්' : 'Best times this day')}</Text>
+      <Text style={st.bestDate}>{fmtDay(data.date, si)}</Text>
+      {day ? (
+        <View style={st.qualityRow}>
+          <View style={st.qualityPill}><Text style={st.qualityText}>{qualityWord(day.quality, si)}</Text></View>
+          <Text style={st.candidates} numberOfLines={1}>{si ? ('ලකුණු ' + day.score + '/100') : ('Score ' + day.score + '/100')}</Text>
+        </View>
+      ) : null}
+      {data.noWindows ? (
+        <Text style={[st.noGood, { marginTop: 12 }]}>{si
+          ? 'මේ දවසේ අශුභ කාල මග හැරලා පිරිසිදු වේලාවක් හොයාගන්න බැරි වුණා — වෙනත් දිනයක් බලන්න.'
+          : 'No clean window clears this day’s inauspicious periods — try another date.'}</Text>
+      ) : (
+        <WindowsList windows={data.windows} si={si} isWedding={isWedding} />
+      )}
+      <AvoidLines avoid={data.avoid} si={si} />
+      {day ? (
+        <>
+          <TouchableOpacity activeOpacity={0.8} style={st.whyToggle}
+            onPress={function () {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              setOpenWhy(!openWhy);
+            }}>
+            <Text style={st.whyTitle}>{si ? 'ඇයි මේ දවස මෙහෙමද?' : 'Why does this day score so?'}</Text>
+            <Ionicons name={openWhy ? 'chevron-up' : 'chevron-down'} size={14} color="rgba(255,255,255,0.4)" />
+          </TouchableOpacity>
+          {openWhy ? <BreakdownDetail bd={day.breakdown} warnings={day.warnings} si={si} direction={day.direction} flat /> : null}
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+function BreakdownDetail({ bd, warnings, si, direction, flat }) {
   if (!bd) return null;
   var chips = [];
   var push = function (key, name, score, max) {
@@ -395,7 +589,7 @@ function BreakdownDetail({ bd, warnings, si, direction }) {
   var toneColor = { good: '#86EFAC', ok: '#E8C56A', bad: '#FCA5A5' };
 
   return (
-    <View style={st.bdWrap}>
+    <View style={[st.bdWrap, flat ? st.bdWrapFlat : null]}>
       <Text style={st.whyTitle}>{si ? 'ඇයි මේ වේලාව?' : 'Why this time?'}</Text>
       {lines.length ? <Text style={st.plainSummary}>{summaryLine(lines, si)}</Text> : null}
       <View style={{ marginTop: 6, gap: 5 }}>
@@ -461,17 +655,21 @@ function BreakdownDetail({ bd, warnings, si, direction }) {
   );
 }
 
-function FreeResult({ data, si, onUnlock }) {
+function FreeResult({ data, si, onUnlock, dayMode }) {
   if (!data || data.noGoodDate || !data.bestDay) {
-    return <Text style={st.noGood}>{si ? 'මෙම කාලය තුළ හොඳ නැකැතක් හමු නොවීය. පරාසය පුළුල් කරන්න.' : 'No strong day found in this range — try a wider range.'}</Text>;
+    return <Text style={st.noGood}>{dayMode
+      ? (si ? 'මේ දවස මේ කටයුත්තට එතරම් සුබ නැහැ — වෙනත් දිනයක් බලන්න, නැත්නම් "හොඳම දවස සොයන්න" මාදිලියෙන් අවට හොඳම දවස සොයන්න.' : 'This day isn’t strong for this — try another date, or switch to “Find the best day”.')
+      : (si ? 'මෙම කාලය තුළ හොඳ නැකැතක් හමු නොවීය. පරාසය පුළුල් කරන්න.' : 'No strong day found in this range — try a wider range.')}</Text>;
   }
   return (
     <View>
-      <Text style={st.bestLabel}>{si ? 'හොඳම දවස' : 'Best day'}</Text>
+      <Text style={st.bestLabel}>{dayMode ? (si ? 'තෝරාගත් දිනය' : 'Your chosen day') : (si ? 'හොඳම දවස' : 'Best day')}</Text>
       <Text style={st.bestDate}>{fmtDay(data.bestDay.date, si)}</Text>
       <View style={st.qualityRow}>
         <View style={st.qualityPill}><Text style={st.qualityText}>{qualityWord(data.bestDay.quality, si)}</Text></View>
-        <Text style={st.candidates} numberOfLines={1}>{(si ? 'තවත් හොඳ දින ' : '') + (data.lockedWindowCount || 0) + (si ? 'ක්' : ' good days')}</Text>
+        <Text style={st.candidates} numberOfLines={1}>{dayMode
+          ? (si ? 'සුබ වේලාවන් 2–3ක් හමු විය' : '2–3 time windows found')
+          : ((si ? 'තවත් හොඳ දින ' : '') + (data.lockedWindowCount || 0) + (si ? 'ක්' : ' good days'))}</Text>
       </View>
 
       {/* WHY this day — the justification */}
@@ -480,7 +678,7 @@ function FreeResult({ data, si, onUnlock }) {
       {/* Locked exact time */}
       <TouchableOpacity activeOpacity={0.85} onPress={onUnlock} style={st.lockedTime}>
         <Ionicons name="time-outline" size={15} color="#FFD666" />
-        <Text style={st.lockedTimeText}>{si ? 'හරියටම සුබ වේලාව + යන එන සුබ දිශාව' : 'Exact time + best direction to set out'}</Text>
+        <Text style={st.lockedTimeText}>{si ? 'සුබ වේලාවන් 2–3ක් + රාහු කාලයෙන් වැළකීම + සුබ දිශාව' : '2–3 exact windows + Rahu Kalaya avoided + best direction'}</Text>
         <Ionicons name="lock-closed" size={12} color="rgba(255,214,102,0.7)" />
       </TouchableOpacity>
       <TouchableOpacity activeOpacity={0.85} onPress={onUnlock} style={st.unlockCta}>
@@ -491,16 +689,20 @@ function FreeResult({ data, si, onUnlock }) {
   );
 }
 
-function ProResults({ data, si }) {
+function ProResults({ data, si, isWedding }) {
   var [openIdx, setOpenIdx] = useState(0); // first window's working shown by default
   if (!data || data.noGoodDate || !(data.results && data.results.length)) {
     return <Text style={st.noGood}>{si ? 'මෙම කාලය තුළ හොඳ නැකැතක් හමු නොවීය.' : 'No strong window found in this range.'}</Text>;
   }
   return (
     <View>
-      <Text style={st.bestLabel}>{si ? 'හොඳම වේලාවන්' : 'Best time windows'}</Text>
+      <Text style={st.bestLabel}>{si ? 'හොඳම දින සහ වේලාවන්' : 'Best days & times'}</Text>
       {data.results.map(function (r, i) {
         var open = openIdx === i;
+        // Each result day now carries 2–3 concrete windows; the headline shows
+        // the strongest one as a range, falling back to the legacy single time.
+        var tws = Array.isArray(r.timeWindows) && r.timeWindows.length ? r.timeWindows : null;
+        var bestW = tws ? tws.reduce(function (a, b) { return (b.score || 0) > (a.score || 0) ? b : a; }) : null;
         return (
           <View key={i}>
             <TouchableOpacity
@@ -516,15 +718,26 @@ function ProResults({ data, si }) {
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={st.winDate} numberOfLines={1}>{fmtDay(r.dateTime.slice(0, 10), si)}</Text>
-                <Text style={st.winTime} numberOfLines={1}>{fmtTime(r.dateTime)} · {qualityWord(r.quality, si)}</Text>
+                <Text style={st.winTime} numberOfLines={1}>{(bestW ? bestW.startDisplay + ' – ' + bestW.endDisplay : fmtTime(r.dateTime)) + ' · ' + qualityWord(r.quality, si)}</Text>
               </View>
               <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={15} color="rgba(255,255,255,0.4)" />
             </TouchableOpacity>
-            {open ? <BreakdownDetail bd={r.breakdown} warnings={r.warnings} si={si} direction={r.direction} /> : null}
+            {open ? (
+              <View>
+                {tws ? (
+                  <View style={st.twIndent}>
+                    <Text style={st.twHead}>{si ? 'මේ දවසේ සුබ වේලාවන්' : 'Times on this day'}</Text>
+                    <WindowsList windows={tws} si={si} isWedding={isWedding} />
+                    <AvoidLines avoid={r.avoid} si={si} highOnly />
+                  </View>
+                ) : null}
+                <BreakdownDetail bd={r.breakdown} warnings={r.warnings} si={si} direction={r.direction} />
+              </View>
+            ) : null}
           </View>
         );
       })}
-      <Text style={st.tapHint}>{si ? 'හේතුව බලන්න වේලාවක් ඔබන්න' : 'Tap a window to see why it was chosen'}</Text>
+      <Text style={st.tapHint}>{si ? 'හේතුව බලන්න වේලාවක් ඔබන්න' : 'Tap a day to see its times & why'}</Text>
     </View>
   );
 }
@@ -545,11 +758,14 @@ function ProLifeEvents({ birthDateTime, bLat, bLng, si }) {
   if (state.loading) return <ActivityIndicator color="#A78BFA" style={{ marginTop: 12 }} />;
   if (!state.data) return null;
 
-  // The server sends { events: <object by type>, timeline: <array> } — the
-  // timeline is the renderable list. (The old `events || timeline` check hit
-  // the truthy OBJECT first and made Pro users see "unavailable" forever.)
-  var events = Array.isArray(state.data.timeline) ? state.data.timeline
-    : Array.isArray(state.data.events) ? state.data.events
+  // The server (predictAllEvents) sends { events: <object by type>,
+  // timeline10Year: <array> } — the array is the renderable list, and it
+  // lives under `timeline10Year` (NOT `timeline`: that field never existed,
+  // which is why every Pro user saw "no windows found"). `events` is an
+  // object keyed by type, so it can never satisfy Array.isArray; the other
+  // names are kept only as defensive fallbacks.
+  var events = Array.isArray(state.data.timeline10Year) ? state.data.timeline10Year
+    : Array.isArray(state.data.timeline) ? state.data.timeline
     : Array.isArray(state.data.predictions) ? state.data.predictions : [];
   if (!events.length) {
     return <Text style={[st.miniLabel, { marginTop: 10 }]}>{si ? 'ඉදිරි වසර 10 තුළ ප්‍රබල කාල රාමු හමු නොවුණා.' : 'No strong windows found in the next 10 years.'}</Text>;
@@ -581,11 +797,18 @@ var st = StyleSheet.create({
   miniLabel: { fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2, marginBottom: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   actChip: { width: '31%', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  actChipOn: { borderColor: '#FFB800', backgroundColor: 'rgba(255,184,0,0.12)' },
+  // Selected-chip glow — the color itself comes from the activity's accent
+  // (borderColor/backgroundColor/shadowColor are set inline per chip).
+  actChipGlow: { shadowOpacity: 0.55, shadowRadius: 9, shadowOffset: { width: 0, height: 0 }, elevation: 6 },
   // Two centered lines with reserved height — server Sinhala names run long
   // ("ශල්‍ය කර්මය / වෛද්‍ය ක්‍රියාමාර්ග") and one line cropped them to "…".
   // Fixed height keeps every chip in the 3-col grid the same size.
   actName: { fontSize: 10.5, lineHeight: 14, height: 28, fontWeight: '700', color: 'rgba(255,255,255,0.8)', marginTop: 6, maxWidth: '100%', textAlign: 'center', textAlignVertical: 'center' },
+  // Mode toggle — find a day (range) vs date fixed (single day → times)
+  modeRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  modeChip: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, paddingHorizontal: 8, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  modeChipOn: { borderColor: '#FFB800', backgroundColor: 'rgba(255,184,0,0.12)' },
+  modeText: { fontSize: 10.5, lineHeight: 14, fontWeight: '800', color: 'rgba(255,255,255,0.6)', flexShrink: 1, textAlign: 'center' },
   // Birth-details card
   birthHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   birthRow: { flexDirection: 'row', gap: 10, marginTop: 6 },
@@ -626,8 +849,24 @@ var st = StyleSheet.create({
   dirWrap: { marginTop: 10, padding: 10, borderRadius: 10, backgroundColor: 'rgba(125,211,252,0.05)', borderWidth: 1, borderColor: 'rgba(125,211,252,0.18)' },
   dirTitle: { fontSize: 11.5, fontWeight: '800', letterSpacing: 0.3, color: 'rgba(125,211,252,0.9)' },
 
+  // Suggested time-window rows (2–3 per day, Rahu Kalaya dodged)
+  twRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
+  twBadge: { width: 34, height: 34, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  twBadgeText: { fontSize: 13, fontWeight: '900' },
+  twTime: { fontSize: 14.5, fontWeight: '800', color: '#FFF1D0' },
+  twMeta: { fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 1 },
+  bestTag: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(255,184,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.45)' },
+  bestTagText: { fontSize: 10, fontWeight: '900', color: '#FFD97A', letterSpacing: 0.3 },
+  twIndent: { marginLeft: 52, marginBottom: 8 },
+  twHead: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', color: 'rgba(255,214,102,0.75)' },
+  // Avoid-these-times block (Rahu / Gulika / Yamaghanta)
+  avoidWrap: { marginTop: 12, padding: 10, borderRadius: 10, backgroundColor: 'rgba(252,165,165,0.05)', borderWidth: 1, borderColor: 'rgba(252,165,165,0.18)' },
+  avoidTitle: { fontSize: 11.5, fontWeight: '800', letterSpacing: 0.3, color: 'rgba(252,165,165,0.9)' },
+  whyToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingVertical: 6 },
+
   // Pro per-window breakdown
   bdWrap: { marginLeft: 52, marginBottom: 8, padding: 10, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.025)', borderWidth: 1, borderColor: 'rgba(255,214,102,0.1)' },
+  bdWrapFlat: { marginLeft: 0, marginTop: 4 },
   bdChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, maxWidth: '100%' },
   bdDot: { width: 6, height: 6, borderRadius: 3 },
   warnRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
