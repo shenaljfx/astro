@@ -198,6 +198,7 @@ const ALLOWED_ORIGINS = [
   'https://www.grahachara.com',
   'https://api.grahachara.com',
   'https://app.grahachara.com',
+  'https://admin.grahachara.com',
 ];
 
 // Dev-only origins — never included in production

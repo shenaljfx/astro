@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
-const { initFirebase } = require('../src/config/firebase');
+const { initFirebase, getDb } = require('../src/config/firebase');
 const { runWorkerOnce, startWorkerLoop } = require('../src/services/jobWorker');
+const { initLogTee } = require('../src/utils/logTee');
 
 initFirebase();
+initLogTee('worker'); // mirror logs to LOG_DIR/worker.log for the admin dashboard
 
 const once = process.argv.includes('--once');
 const typesArg = process.argv.find(arg => arg.startsWith('--types='));
@@ -23,6 +25,21 @@ if (once) {
     });
 } else {
   console.log(`[Worker] Starting durable job worker ${workerId} for types: ${types.join(', ')}`);
+
+  // Heartbeat for the admin dashboard — proves the worker container is alive.
+  const startedAt = new Date().toISOString();
+  setInterval(() => {
+    const db = getDb();
+    if (!db) return;
+    db.collection('system').doc('workerHeartbeat').set({
+      at: new Date().toISOString(),
+      workerId,
+      types,
+      startedAt,
+      uptimeSec: Math.round(process.uptime()),
+      memoryRssMb: Math.round(process.memoryUsage().rss / 1048576),
+    }).catch(() => { /* heartbeat is best-effort */ });
+  }, 60 * 1000).unref();
 
   // When launched as a dev fork of the API (nodemon), the parent may be
   // force-killed on restart without signalling us. Self-exit if orphaned so

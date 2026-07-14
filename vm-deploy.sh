@@ -66,6 +66,13 @@ else
   warn "firebase-service-account.json not found at $FIREBASE_SA — running without it"
 fi
 
+# Shared log dir — server + worker tee console output here so the admin
+# dashboard (/admin/logs) can tail both containers' logs.
+LOG_HOST_DIR="${LOG_HOST_DIR:-/var/log/grahachara}"
+mkdir -p "$LOG_HOST_DIR"
+chmod 777 "$LOG_HOST_DIR" 2>/dev/null || true
+VOLUME_FLAGS+=(-v "$LOG_HOST_DIR:/app/logs")
+
 # ── Run API server ────────────────────────────────────────────
 info "Starting container: $CONTAINER_NAME ($IMAGE_TAG)"
 docker run \

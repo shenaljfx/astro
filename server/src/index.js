@@ -42,6 +42,10 @@ if (!IS_PROD && process.env.REVENUECAT_WEBHOOK_AUTH_KEY && process.env.MOCK_PAYM
 const { initFirebase } = require('./config/firebase');
 initFirebase();
 
+// Mirror console output to LOG_DIR/server.log for the admin dashboard log tail
+const { initLogTee } = require('./utils/logTee');
+initLogTee('server');
+
 // Security middleware
 const {
   globalLimiter,
@@ -82,6 +86,7 @@ const manifestRoutes = require('./routes/manifest');
 const marketingRoutes = require('./routes/marketing');
 const analyticsRoutes = require('./routes/analytics');
 const babyRoutes = require('./routes/baby');
+const adminRoutes = require('./routes/admin');
 const { phoneAuth, requireSubscription } = require('./middleware/subscription');
 const { requestAlertMiddleware, startMemoryMonitor } = require('./services/alerting');
 
@@ -233,6 +238,10 @@ app.use('/api/baby', userDataLimiter, paidAccessExcept(['/compose', '/generate']
 app.use('/api/marketing', marketingRoutes);
 // Analytics — public (paywall funnel events fire for free/logged-out users)
 app.use('/api/analytics', userDataLimiter, analyticsRoutes);
+
+// God-mode dashboard API (admin.grahachara.com → nginx → /admin/*).
+// Own rate limiter + Firebase-token allowlist auth inside the router.
+app.use('/admin', adminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -54,9 +54,29 @@ function buildBudgetError(message, code = 'AI_BUDGET_EXCEEDED') {
   return err;
 }
 
+// ─── Admin kill switch ──────────────────────────────────────────
+// The god-mode dashboard can pause ALL AI generation instantly by setting
+// config/adminFlags.aiKillSwitch = true. Cached 60s so this adds at most one
+// tiny read per minute to the hot path.
+let killSwitchCache = { value: false, at: 0 };
+async function isKillSwitchOn(db) {
+  if (Date.now() - killSwitchCache.at < 60 * 1000) return killSwitchCache.value;
+  try {
+    const doc = await db.collection('config').doc('adminFlags').get();
+    killSwitchCache = { value: !!(doc.exists && doc.data().aiKillSwitch === true), at: Date.now() };
+  } catch {
+    killSwitchCache.at = Date.now(); // fail open — never block users on a flag read error
+  }
+  return killSwitchCache.value;
+}
+
 async function assertBudgetAvailable(feature, uid, estimateLKR) {
   const db = getDb();
   if (!db) return true;
+
+  if (await isKillSwitchOn(db)) {
+    throw buildBudgetError('AI generation is temporarily paused for maintenance. Please try again soon.', 'AI_KILL_SWITCH');
+  }
 
   const globalLimit = numberEnv('DAILY_GLOBAL_AI_SPEND_LIMIT_LKR', 0);
   const userLimit = numberEnv('DAILY_USER_AI_SPEND_LIMIT_LKR', 0);
