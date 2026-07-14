@@ -167,9 +167,11 @@ router.post('/generate', requireSubscriptionOrCredit('babyKendara', 'baby_kendar
     const coreOnly = (narrative) => res.json({ success: true, data: { ...core, narrative } });
 
     const uid = req.user && req.user.uid && req.user.authType !== 'anonymous' ? req.user.uid : null;
+    console.log(`[baby/generate] ▶ uid=${uid || 'NONE'} lang=${lang} gender=${g} accessVia=${req.accessVia || 'n/a'}`);
 
     // DB unavailable → still hand over the keepsake; narrative deferred, no charge.
     if (!uid || firestoreCircuit.isOpen()) {
+      console.warn(`[baby/generate] ✖ narrative UNAVAILABLE — reason=${!uid ? 'no-authenticated-uid' : 'firestore-circuit-open'} (keepsake still served)`);
       return coreOnly({ stage: 'unavailable', canRetry: true });
     }
 
@@ -183,11 +185,13 @@ router.post('/generate', requireSubscriptionOrCredit('babyKendara', 'baby_kendar
         promptVersion: BABY_PROMPT_VERSION, engineVersion: BABY_ENGINE_VERSION,
       });
       if (cached) {
+        console.log(`[baby/generate] ✔ cache HIT — savedReportId=${cached.id}`);
         return res.json({
           success: true, cached: true,
           data: { ...core, narrative: { stage: 'complete', savedReportId: cached.id, sections: cached.sections } },
         });
       }
+      console.log(`[baby/generate] cache MISS — key=${cacheDescriptor.cacheKey.slice(0, 40)}…`);
     } catch (e) { console.warn('[baby/generate] cache check failed:', e.message); }
 
     // ── Entitlement-view (already paid & generated, cache missed — e.g. a
@@ -250,6 +254,7 @@ router.post('/generate', requireSubscriptionOrCredit('babyKendara', 'baby_kendar
     try {
       await assertBudgetAvailable('babyReport', uid, 8);
     } catch (budgetErr) {
+      console.warn(`[baby/generate] ✖ narrative UNAVAILABLE — reason=budget (${budgetErr.message})`);
       return coreOnly({ stage: 'unavailable', canRetry: true, reason: 'busy' });
     }
 
@@ -276,7 +281,11 @@ router.post('/generate', requireSubscriptionOrCredit('babyKendara', 'baby_kendar
       uniqueKey: `${uid}:${cacheDescriptor.cacheKey}:normal`,
       maxAttempts: 2,
     });
-    if (!job) return coreOnly({ stage: 'unavailable', canRetry: true });
+    if (!job) {
+      console.warn('[baby/generate] ✖ narrative UNAVAILABLE — reason=enqueue-returned-null (job queue/DB down?)');
+      return coreOnly({ stage: 'unavailable', canRetry: true });
+    }
+    console.log(`[baby/generate] ⏳ narrative QUEUED — reportId=${(job.payload && job.payload.reportId) || reportId} jobId=${job.id} deduped=${!!job.deduped} (a worker must be running to pick this up)`);
 
     const queuedReportId = job.payload && job.payload.reportId ? job.payload.reportId : reportId;
     if (!job.deduped) {

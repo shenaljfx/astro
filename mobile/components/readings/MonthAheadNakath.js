@@ -46,7 +46,7 @@ function DayRow({ day, si, isToday, index, onUnlock }) {
         <TouchableOpacity activeOpacity={0.85} onPress={onUnlock} style={[mn.row, mn.rowLocked]}>
           <View style={mn.dateCol}>
             <Text style={mn.weekday}>{wk}</Text>
-            <Text style={[mn.dayNum, { color: 'rgba(255,241,208,0.45)' }]}>{dm.d}</Text>
+            <Text style={[mn.dayNum, { color: 'rgba(255,241,208,0.62)' }]}>{dm.d}</Text>
             <Text style={mn.monTxt}>{dm.m}</Text>
           </View>
           <View style={mn.winCol}>
@@ -198,7 +198,7 @@ var mn = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   headOrb: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,184,0,0.10)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.28)' },
   title: { fontSize: 16, fontWeight: '900', color: '#F5E6C8' },
-  sub: { fontSize: 11.5, color: 'rgba(245,230,200,0.55)', marginTop: 1 },
+  sub: { fontSize: 11.5, color: 'rgba(245,230,200,0.68)', marginTop: 1 },
 
   center: { paddingVertical: 26, alignItems: 'center', gap: 12 },
   err: { color: '#FCA5A5', fontSize: 13, textAlign: 'center' },
@@ -210,9 +210,9 @@ var mn = StyleSheet.create({
   dateCol: { width: 46, alignItems: 'center' },
   weekday: { fontSize: 10.5, fontWeight: '800', color: 'rgba(245,230,200,0.6)', letterSpacing: 0.3 },
   dayNum: { fontSize: 20, fontWeight: '900', color: '#FFF1D0', lineHeight: 23 },
-  monTxt: { fontSize: 9.5, fontWeight: '700', color: 'rgba(245,230,200,0.4)' },
+  monTxt: { fontSize: 10.5, fontWeight: '700', color: 'rgba(245,230,200,0.62)' },
   todayPill: { marginTop: 3, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6, backgroundColor: 'rgba(255,184,0,0.16)' },
-  todayTxt: { fontSize: 8, fontWeight: '900', color: '#FFD97A', letterSpacing: 0.4 },
+  todayTxt: { fontSize: 9.5, fontWeight: '900', color: '#FFD97A', letterSpacing: 0.4 },
 
   winCol: { flex: 1, gap: 6, justifyContent: 'center' },
   winPill: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 9, borderWidth: 1 },
@@ -229,9 +229,9 @@ var mn = StyleSheet.create({
   // locked rows (beyond the free 10-day window)
   rowLocked: { opacity: 0.92 },
   lockPill: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 9, borderWidth: 1, backgroundColor: 'rgba(255,217,131,0.045)', borderColor: 'rgba(255,217,131,0.18)', borderStyle: 'dashed' },
-  lockText: { flex: 1, fontSize: 11.5, fontWeight: '700', color: 'rgba(244,238,223,0.55)' },
+  lockText: { flex: 1, fontSize: 11.5, fontWeight: '700', color: 'rgba(244,238,223,0.68)' },
   proBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(255,184,0,0.16)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.35)' },
-  proBadgeText: { fontSize: 8, fontWeight: '900', letterSpacing: 0.6, color: '#FFD97A' },
+  proBadgeText: { fontSize: 9.5, fontWeight: '900', letterSpacing: 0.6, color: '#FFD97A' },
   unlockBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10, paddingVertical: 12, borderRadius: 12, backgroundColor: '#FFB800' },
   unlockBtnText: { fontSize: 13, fontWeight: '800', color: '#2A1707' },
 });

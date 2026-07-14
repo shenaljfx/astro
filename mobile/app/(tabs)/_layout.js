@@ -85,8 +85,10 @@ function DockNode({ tabConfig, focused, onPress, label }) {
 
   var IconComponent = TAB_ICON_MAP[tabConfig.name];
   var accent = tabConfig.color || Colors.luxuryPearl;
-  var iconColor = focused ? accent : 'rgba(220,207,170,0.44)';
-  var labelColor = focused ? accent : 'rgba(220,207,170,0.40)';
+  // Inactive tabs stay secondary but must remain clearly legible — the old
+  // 0.40–0.44 opacity read as "greyed out / disabled". Lifted to ~0.66.
+  var iconColor = focused ? accent : 'rgba(228,214,178,0.62)';
+  var labelColor = focused ? accent : 'rgba(230,218,186,0.68)';
 
   return (
     <TouchableOpacity
@@ -154,7 +156,7 @@ function CenterMedallion({ focused, onPress, label, reduced }) {
         {/* orbit hairline around the medallion */}
         <View style={[dock.medOrbit, focused && { borderColor: 'rgba(244,228,188,0.55)' }]} pointerEvents="none" />
       </Animated.View>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={[dock.label, dock.medLabel, focused && dock.labelOn]}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={[dock.label, dock.medLabel, { color: focused ? '#FFD983' : 'rgba(244,228,188,0.7)' }, focused && dock.labelOn]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -331,7 +333,7 @@ var dock = StyleSheet.create({
   },
   slot: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   nodeIcon: { height: 26, alignItems: 'center', justifyContent: 'center' },
-  label: { fontSize: 10, lineHeight: 13, fontWeight: '600', marginTop: 4, letterSpacing: 0.3, textAlign: 'center', maxWidth: '98%' },
+  label: { fontSize: 11, lineHeight: 14, fontWeight: '600', marginTop: 4, letterSpacing: 0.3, textAlign: 'center', maxWidth: '98%' },
   labelOn: { fontWeight: '800', letterSpacing: 0.5 },
   // — the sun medallion —
   medWrap: { marginTop: -MEDALLION_LIFT, alignItems: 'center', justifyContent: 'center' },

@@ -260,7 +260,7 @@ var sh = StyleSheet.create({
   row:    { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   iconBox:{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   title:  { fontSize: 13.5, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase' },
-  sub:    { fontSize: 11, color: 'rgba(255,255,255,0.38)', marginTop: 2, lineHeight: 15 },
+  sub:    { fontSize: 11, color: 'rgba(255,255,255,0.62)', marginTop: 2, lineHeight: 15 },
 });
 
 // ─────────────────────────────────────────────────────────────────────
@@ -339,9 +339,9 @@ var lp = StyleSheet.create({
   pillSpec:   { position: 'absolute', top: 0, left: 0, right: 0, height: 20 },
   tag:        { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
   tagActive:  { backgroundColor: 'rgba(232,197,106,0.18)', borderColor: 'rgba(232,197,106,0.45)' },
-  tagText:    { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.45)', letterSpacing: 0.5 },
+  tagText:    { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.62)', letterSpacing: 0.5 },
   tagTextActive: { color: '#F4E4BC' },
-  text:       { fontSize: 14, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
+  text:       { fontSize: 14, color: 'rgba(255,255,255,0.62)', fontWeight: '600' },
   textActive: { color: '#FFF6DF', fontWeight: '800' },
   dot:        { width: 5, height: 5, borderRadius: 3, backgroundColor: '#E8C56A' },
 });
@@ -370,7 +370,7 @@ var sp = StyleSheet.create({
   pill:  { flex: 1, alignItems: 'center', paddingVertical: 13, paddingHorizontal: 6, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.05)' },
   orb:   { width: 28, height: 28, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   value: { fontSize: 19, fontWeight: '900', marginBottom: 1 },
-  label: { fontSize: 9.5, color: 'rgba(255,255,255,0.38)', fontWeight: '700', textAlign: 'center', letterSpacing: 0.4 },
+  label: { fontSize: 10.5, color: 'rgba(255,255,255,0.62)', fontWeight: '700', textAlign: 'center', letterSpacing: 0.4 },
 });
 
 // ─────────────────────────────────────────────────────────────────────
@@ -423,7 +423,7 @@ var af = StyleSheet.create({
   header:    { alignItems: 'center', marginBottom: 22 },
   iconRing:  { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 14, borderWidth: 2, borderColor: 'rgba(196,132,252,0.35)' },
   title:     { fontSize: 22, fontWeight: '900', color: '#FFF1D0', marginBottom: 6 },
-  sub:       { fontSize: 13, color: 'rgba(255,255,255,0.42)', textAlign: 'center', lineHeight: 19 },
+  sub:       { fontSize: 13, color: 'rgba(255,255,255,0.62)', textAlign: 'center', lineHeight: 19 },
   btn:       { borderRadius: 16, paddingVertical: 16, alignItems: 'center', overflow: 'hidden', marginTop: 4, marginBottom: 4 },
   btnText:   { color: '#FFF1D0', fontSize: 16, fontWeight: '800' },
   error:     { color: '#F87171', fontSize: 13, textAlign: 'center', marginBottom: 10 },
@@ -563,9 +563,9 @@ var bf = StyleSheet.create({
   fieldLabel:         { fontSize: 11, color: '#A78BFA', fontWeight: '700', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 },
   row:                { flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginBottom: 16 },
   inputWrap:          { flex: 1, alignItems: 'center' },
-  inputHint:          { fontSize: 9, color: 'rgba(255,255,255,0.28)', fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
+  inputHint:          { fontSize: 10, color: 'rgba(255,255,255,0.55)', fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
   segInput:           { width: '100%', backgroundColor: 'rgba(255,255,255,0.09)', borderRadius: 14, paddingVertical: 13, color: '#FFF1D0', fontSize: 20, fontWeight: '900', textAlign: 'center', borderWidth: 1, borderColor: 'rgba(52,211,153,0.25)' },
-  sep:                { color: 'rgba(255,255,255,0.25)', fontSize: 20, fontWeight: '200', paddingBottom: 12 },
+  sep:                { color: 'rgba(255,255,255,0.55)', fontSize: 20, fontWeight: '200', paddingBottom: 12 },
   saveBtn:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 15, overflow: 'hidden', marginTop: 2, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.6, 14) },
   saveBtnText:        { color: '#FFF1D0', fontSize: 15, fontWeight: '800' },
 });
@@ -1234,7 +1234,7 @@ var s = StyleSheet.create({
   guestOrbWrap:  { width: 100, height: 100, borderRadius: 50, overflow:'hidden', alignItems:'center', justifyContent:'center', marginBottom: 20, borderWidth: 1.5, borderColor: 'rgba(255,140,0,0.25)' },
   guestOrb:      { width: 88, height: 88, borderRadius: 44, overflow:'hidden', alignItems:'center', justifyContent:'center' },
   guestTitle:    { fontSize: 24, fontWeight: '900', color: '#FFF1D0', marginBottom: 8, ...textShadow('rgba(255,140,0,0.5)', {width:0,height:2}, 10) },
-  guestSub:      { fontSize: 13, color: 'rgba(255,255,255,0.38)', textAlign: 'center', lineHeight: 20 },
+  guestSub:      { fontSize: 13, color: 'rgba(255,255,255,0.62)', textAlign: 'center', lineHeight: 20 },
   guestArrow:    { marginTop: 18, width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)', alignItems: 'center', justifyContent: 'center' },
 
   // ── Logged-in hero ─────────────────────────────────────────────────
@@ -1267,7 +1267,7 @@ var s = StyleSheet.create({
     backgroundColor: 'rgba(10,6,17,0.55)', borderWidth: 1, borderColor: 'rgba(232,197,106,0.24)',
   },
   birthChip:      { flex: 1, flexDirection: 'column', alignItems: 'center', gap: 4, overflow: 'hidden', paddingVertical: 11, paddingHorizontal: 6, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.06)' },
-  birthChipLabel: { fontSize: 8.5, color: 'rgba(255,255,255,0.38)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 1, textAlign: 'center' },
+  birthChipLabel: { fontSize: 10, color: 'rgba(255,255,255,0.62)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 1, textAlign: 'center' },
   birthChipValue: { fontSize: 12, color: '#F4C86A', fontWeight: '800', textAlign: 'center' },
 
   // Premium ribbon
@@ -1286,10 +1286,10 @@ var s = StyleSheet.create({
   subStatusHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   subStatusIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   subStatusTitle: { fontSize: 15, fontWeight: '900', letterSpacing: 0.2, marginBottom: 2 },
-  subStatusDetail: { color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 18, fontWeight: '500' },
+  subStatusDetail: { color: 'rgba(255,255,255,0.68)', fontSize: 12, lineHeight: 18, fontWeight: '500' },
   subMetaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   subMetaItem: { flexGrow: 1, flexBasis: '47%', minWidth: 124, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', backgroundColor: 'rgba(0,0,0,0.16)', paddingVertical: 9, paddingHorizontal: 10 },
-  subMetaLabel: { color: 'rgba(255,255,255,0.34)', fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase', marginBottom: 3 },
+  subMetaLabel: { color: 'rgba(255,255,255,0.55)', fontSize: 10, lineHeight: 13, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase', marginBottom: 3 },
   subMetaValue: { color: '#FFF1D0', fontSize: 12, lineHeight: 17, fontWeight: '800' },
   subActiveRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   subActiveText: { color: '#34D399', fontWeight: '700', fontSize: 14 },

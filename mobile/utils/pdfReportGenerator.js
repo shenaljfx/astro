@@ -24,12 +24,23 @@
  * Exports:
  *   generateReportHTML(opts)   – Full Life Report PDF (dark almanac)
  *   generatePorondamHTML(opts) – Marriage Compatibility PDF (light)
+ *   generateBabyHTML(opts)     – Baby Kendara keepsake PDF (dark almanac, rose)
  *   loadLogoBase64()           – App logo as base64 for embedding
  *   SECTION_COLORS
  */
 
 import { APP_LOGO_BASE64 } from '../assets/logo-base64';
 import { deriveArchetype } from './porondamArchetypes';
+// Zodiac sign art (128×128 data-URIs, index 0=Aries … 11=Pisces) — used to
+// show the rising sign in each chart's centre, mirroring the in-app
+// SriLankanChart. module.exports = array, so this is a default import.
+import ZODIAC_IMAGES from '../assets/zodiac/zodiac-base64';
+
+// data:image URI for a rashi's zodiac art, or '' if out of range.
+function rptZodiacUri(rashiId) {
+  var z = ZODIAC_IMAGES && ZODIAC_IMAGES[rashiId - 1];
+  return (z && z.uri) ? z.uri : '';
+}
 
 // In-memory cache so loadLogoBase64() runs at most once per app session.
 // The logo is ~50-100 KB; reading + base64-encoding it is slow enough to
@@ -54,6 +65,7 @@ async function loadLogoBase64() {
 // SECTION COLOUR MAP
 // ════════════════════════════════════════════════
 var SECTION_COLORS = {
+  chartProof:       { primary: '#B45309', accent: '#F59E0B', bg: '#FFFBEB', emoji: '🎯' },
   personality:      { primary: '#3B82F6', accent: '#818CF8', bg: '#EFF6FF', emoji: '✨' },
   yogaAnalysis:     { primary: '#9333EA', accent: '#C084FC', bg: '#F5F3FF', emoji: '⚡' },
   lifePredictions:  { primary: '#8B5CF6', accent: '#A78BFA', bg: '#F5F3FF', emoji: '🔮' },
@@ -335,6 +347,7 @@ function rptTier(score) {
 // Jewel accents tuned for the dark ground — SECTION_COLORS primaries were
 // picked for white paper and sit muddy on near-black.
 var RPT_ACCENTS = {
+  chartProof: '#F2CE6A',
   personality: '#7FB2FF', yogaAnalysis: '#C08BFF', lifePredictions: '#B39DFF',
   career: '#F0B95C', marriage: '#FF8FB8', marriedLife: '#FF9E9E', financial: '#5CD69A',
   children: '#5FD6B5', familyPortrait: '#6FC6FF', health: '#FF8E7A', physicalProfile: '#E79BF0',
@@ -499,8 +512,13 @@ function rptKendara(rashiChart, lagnaRashiId, lang, size, variant) {
       + '<text x="' + x + '" y="' + y + '" fill="#F0D48A" font-size="8.6" font-weight="900" text-anchor="middle">ල</text>';
   }
 
-  var svg = '<svg width="' + S + '" height="' + S + '" viewBox="0 0 ' + S + ' ' + S + '" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto;display:block;margin:0 auto;">'
-    + '<defs><radialGradient id="' + v.id + '" cx="50%" cy="42%" r="75%"><stop offset="0%" stop-color="' + v.bg1 + '"/><stop offset="100%" stop-color="' + v.bg2 + '"/></radialGradient></defs>'
+  var isSiC = lang === 'si';
+  var lagName = escapeHTML((isSiC ? PDF_RASHI_SI : PDF_RASHI_EN)[lagnaRashiId] || '');
+  var zUri = rptZodiacUri(lagnaRashiId);
+
+  var svg = '<svg width="' + S + '" height="' + S + '" viewBox="0 0 ' + S + ' ' + S + '" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="max-width:100%;height:auto;display:block;margin:0 auto;">'
+    + '<defs><radialGradient id="' + v.id + '" cx="50%" cy="42%" r="75%"><stop offset="0%" stop-color="' + v.bg1 + '"/><stop offset="100%" stop-color="' + v.bg2 + '"/></radialGradient>'
+    + '<clipPath id="' + v.id + 'clip"><circle cx="' + (1.5 * C) + '" cy="' + (1.36 * C) + '" r="' + (C * 0.3) + '"/></clipPath></defs>'
     + '<rect width="' + S + '" height="' + S + '" fill="url(#' + v.id + ')" rx="7"/>'
     + '<rect x="0.5" y="0.5" width="' + (S - 1) + '" height="' + (S - 1) + '" fill="none" stroke="' + v.line + '0.55)" stroke-width="1" rx="7"/>'
     + '<rect x="4" y="4" width="' + (S - 8) + '" height="' + (S - 8) + '" fill="none" stroke="' + v.line + '0.16)" stroke-width="0.7" rx="5"/>'
@@ -512,16 +530,25 @@ function rptKendara(rashiChart, lagnaRashiId, lang, size, variant) {
     + '<line x1="' + (2 * C) + '" y1="0" x2="' + (3 * C) + '" y2="' + C + '" stroke="' + v.line + '0.2)" stroke-width="0.7"/>'
     + '<line x1="0" y1="' + (2 * C) + '" x2="' + C + '" y2="' + (3 * C) + '" stroke="' + v.line + '0.2)" stroke-width="0.7"/>'
     + '<line x1="' + (2 * C) + '" y1="' + (3 * C) + '" x2="' + (3 * C) + '" y2="' + (2 * C) + '" stroke="' + v.line + '0.2)" stroke-width="0.7"/>'
-    + '<circle cx="' + (1.5 * C) + '" cy="' + (1.5 * C) + '" r="' + (C * 0.38) + '" fill="none" stroke="' + v.line + '0.22)" stroke-width="0.7"/>'
-    + '<circle cx="' + (1.5 * C) + '" cy="' + (1.5 * C) + '" r="' + (C * 0.28) + '" fill="none" stroke="' + v.line + '0.12)" stroke-width="0.6" stroke-dasharray="1 3"/>'
-    + '<text x="' + (1.5 * C) + '" y="' + (1.5 * C + 4) + '" text-anchor="middle" font-size="11" fill="' + v.line + '0.5)">✦</text>';
+    // Centre = the rising sign (zodiac art + rashi name), like the in-app
+    // SriLankanChart. Falls back to a ✦ glyph if the art is unavailable.
+    + '<circle cx="' + (1.5 * C) + '" cy="' + (1.36 * C) + '" r="' + (C * 0.33) + '" fill="rgba(9,6,18,0.5)" stroke="' + v.line + '0.28)" stroke-width="0.7"/>'
+    + (zUri
+      ? '<image href="' + zUri + '" xlink:href="' + zUri + '" x="' + (1.5 * C - C * 0.3) + '" y="' + (1.36 * C - C * 0.3) + '" width="' + (C * 0.6) + '" height="' + (C * 0.6) + '" clip-path="url(#' + v.id + 'clip)" preserveAspectRatio="xMidYMid meet"/>'
+      : '<text x="' + (1.5 * C) + '" y="' + (1.36 * C + 5) + '" text-anchor="middle" font-size="15" fill="' + v.line + '0.6)">✦</text>')
+    + '<text x="' + (1.5 * C) + '" y="' + (1.85 * C) + '" text-anchor="middle" font-family="Georgia,Noto Serif,serif" font-size="' + (isSiC ? '10' : '11') + '" font-weight="700" fill="#F4E9CF">' + lagName + '</text>'
+    + '<text x="' + (1.5 * C) + '" y="' + (1.98 * C) + '" text-anchor="middle" font-size="5.4" letter-spacing="' + (isSiC ? '0' : '1.3') + '" fill="' + v.line + '0.85)">' + (isSiC ? 'ලග්නය' : 'RISING SIGN') + '</text>';
 
   svg += planetText(1, C * 1.5, C * 0.38) + hLabel(1, C * 1.5, C * 0.17) + lagnaBadge(C * 1.5, C * 0.93);
   svg += planetText(2, C * 0.32, C * 0.3) + hLabel(2, C * 0.14, C * 0.17);
   svg += planetText(3, C * 0.68, C * 0.76) + hLabel(3, C * 0.86, C * 0.92);
   svg += planetText(4, C * 0.5, C * 1.38) + hLabel(4, C * 0.5, C * 1.16);
-  svg += planetText(5, C * 0.32, C * 2.28) + hLabel(5, C * 0.14, C * 2.16);
-  svg += planetText(6, C * 0.68, C * 2.76) + hLabel(6, C * 0.86, C * 2.92);
+  // Bottom-left cell has a "\" diagonal: house 6 → upper-right triangle,
+  // house 5 → lower-left — matching mobile SriLankanChart (mirror of the
+  // top-right cell's H12/H11). Getting these two backwards was the "chart
+  // looks different from the app" bug.
+  svg += planetText(6, C * 0.68, C * 2.3) + hLabel(6, C * 0.86, C * 2.17);
+  svg += planetText(5, C * 0.32, C * 2.76) + hLabel(5, C * 0.14, C * 2.92);
   svg += planetText(7, C * 1.5, C * 2.4) + hLabel(7, C * 1.5, C * 2.18);
   svg += planetText(8, C * 2.68, C * 2.76) + hLabel(8, C * 2.86, C * 2.92);
   svg += planetText(9, C * 2.32, C * 2.28) + hLabel(9, C * 2.14, C * 2.16);
@@ -615,10 +642,17 @@ function reportPrintCSS(isSi) {
     + '.cov-frame::before{content:"";position:absolute;top:5px;left:5px;right:5px;bottom:5px;border:1px solid rgba(212,175,97,.18);}'
     + '.cov-brand{font-family:' + sinh + ';font-size:17.5px;color:var(--gold2);font-weight:700;margin-top:12px;}'
     + '.cov-est{font-family:' + lbl + ';font-size:6.8px;' + trk('4px', '2px') + up + 'color:rgba(212,175,97,.6);margin-top:8px;}'
-    + '.cov-wheelwrap{position:relative;width:346px;height:346px;margin:22px auto 20px;}'
-    + '.cov-medal{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:82px;height:82px;border-radius:50%;border:1px solid rgba(212,175,97,.65);box-shadow:0 0 0 5px rgba(212,175,97,.08),0 0 46px rgba(212,175,97,.18);overflow:hidden;background:#0B0716;display:flex;align-items:center;justify-content:center;}'
-    + '.logo-bg{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:50%;background-size:cover;background-position:center;background-repeat:no-repeat;background-color:#0B0716;}'
-    + '.cov-medal span{font-size:30px;color:var(--gold2);}'
+    // The brand mark is a dome/arch that fills only the top of its canvas;
+    // shown as an arch emblem (never clipped into a circle, which made the
+    // transparent lower half read as a "half-rendered" logo).
+    + '.cov-emblem{width:104px;height:56px;margin:2px auto 0;background-image:var(--logo);background-size:104px auto;background-position:center top;background-repeat:no-repeat;}'
+    + '.cov-wheelwrap{position:relative;width:346px;height:346px;margin:20px auto 20px;}'
+    // Wheel centre = the rising sign (zodiac art + name), like the in-app chart
+    + '.cov-rising{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:112px;height:112px;border-radius:50%;border:1px solid rgba(212,175,97,.6);box-shadow:0 0 0 5px rgba(212,175,97,.08),0 0 50px rgba(212,175,97,.22);background:rgba(9,6,18,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}'
+    + '.cov-rising img{width:50px;height:50px;object-fit:contain;}'
+    + '.cov-rising .crn{font-family:' + disp + ';font-size:15px;font-weight:700;color:#F4E9CF;margin-top:1px;line-height:1.1;}'
+    + '.cov-rising .crl{font-family:' + lbl + ';font-size:6px;' + trk('1.8px') + up + 'color:rgba(212,175,97,.85);margin-top:3px;}'
+    + '.cov-rising span{font-size:30px;color:var(--gold2);}'
     + '.cov-title{font-family:' + disp + ';font-size:' + (isSi ? '29px' : '33px') + ';font-weight:' + (isSi ? '800' : '700') + ';color:var(--cream);line-height:1.16;letter-spacing:' + (isSi ? '0' : '.3px') + ';text-wrap:balance;}'
     + '.cov-sub{font-family:' + lbl + ';font-size:9.5px;' + trk('2.8px', '.4px') + up + 'color:var(--faint);margin-top:9px;}'
     + '.cov-kick{font-family:' + lbl + ';font-size:7px;' + trk('3.2px', '1.4px') + up + 'color:rgba(212,175,97,.72);margin-top:20px;}'
@@ -706,8 +740,9 @@ function reportPrintCSS(isSi) {
     + '.end>*{position:relative;}'
     // frame declared AFTER .end>* so its absolute positioning wins the cascade
     + '.end-frame{position:absolute;top:18px;left:18px;right:18px;bottom:18px;border:1px solid rgba(212,175,97,.42);}'
-    + '.end-medal{position:relative;width:72px;height:72px;border-radius:50%;border:1px solid rgba(212,175,97,.6);box-shadow:0 0 0 5px rgba(212,175,97,.07),0 0 40px rgba(212,175,97,.15);overflow:hidden;background:#0B0716;display:flex;align-items:center;justify-content:center;}'
-    + '.end-medal span{font-size:26px;color:var(--gold2);}'
+    // dome/arch emblem, never circle-clipped (see .cov-emblem note)
+    + '.end-emblem{width:104px;height:56px;margin:0 auto;background-image:var(--logo);background-size:104px auto;background-position:center top;background-repeat:no-repeat;}'
+    + '.end-emblem.fallback{font-size:26px;color:var(--gold2);height:auto;}'
     + '.end-brand{font-family:' + sinh + ';font-size:15.5px;color:var(--gold2);font-weight:700;margin-top:15px;}'
     + '.end-motto{font-family:' + disp + ';font-size:14.5px;color:var(--bodyc);margin-top:13px;' + (isSi ? '' : 'font-style:italic;') + '}'
     + '.end-rule{display:flex;align-items:center;gap:10px;width:210px;margin:18px 0 0;}'
@@ -791,7 +826,11 @@ function svgSriLankanChart(rashiChart, lagnaRashiId, lang, size) {
     return '<text x="'+x+'" y="'+y+'" fill="#EAB308" font-size="10" font-weight="900" text-anchor="middle">ල</text>';
   }
 
-  var svg = '<svg width="'+S+'" height="'+S+'" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto;display:block;margin:0 auto;">'
+  var lagNameP = escapeHTML((isSi ? PDF_RASHI_SI : PDF_RASHI_EN)[lagnaRashiId] || '');
+  var zUriP = rptZodiacUri(lagnaRashiId);
+
+  var svg = '<svg width="'+S+'" height="'+S+'" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="max-width:100%;height:auto;display:block;margin:0 auto;">'
+    +'<defs><clipPath id="pkc'+lagnaRashiId+'"><circle cx="'+(1.5*C)+'" cy="'+(1.36*C)+'" r="'+(C*0.3)+'"/></clipPath></defs>'
     +'<rect width="'+S+'" height="'+S+'" fill="#fefce8" rx="8"/>'
     +'<rect x="0.5" y="0.5" width="'+(S-1)+'" height="'+(S-1)+'" fill="none" stroke="rgba(124,58,237,0.5)" stroke-width="1.5" rx="8"/>'
     +'<line x1="'+C+'" y1="0" x2="'+C+'" y2="'+S+'" stroke="rgba(124,58,237,0.4)" stroke-width="1"/>'
@@ -804,13 +843,24 @@ function svgSriLankanChart(rashiChart, lagnaRashiId, lang, size) {
     +'<line x1="0" y1="'+(2*C)+'" x2="'+C+'" y2="'+(3*C)+'" stroke="rgba(124,58,237,0.3)" stroke-width="0.8"/>'
     +'<line x1="'+(2*C)+'" y1="'+(3*C)+'" x2="'+(3*C)+'" y2="'+(2*C)+'" stroke="rgba(124,58,237,0.3)" stroke-width="0.8"/>';
 
+  // Centre = the rising sign (zodiac art + rashi name), like the in-app chart
+  svg += '<circle cx="'+(1.5*C)+'" cy="'+(1.36*C)+'" r="'+(C*0.33)+'" fill="#fffdf5" stroke="rgba(124,58,237,0.28)" stroke-width="0.8"/>'
+    + (zUriP
+      ? '<image href="'+zUriP+'" xlink:href="'+zUriP+'" x="'+(1.5*C-C*0.3)+'" y="'+(1.36*C-C*0.3)+'" width="'+(C*0.6)+'" height="'+(C*0.6)+'" clip-path="url(#pkc'+lagnaRashiId+')" preserveAspectRatio="xMidYMid meet"/>'
+      : '<text x="'+(1.5*C)+'" y="'+(1.36*C+5)+'" text-anchor="middle" font-size="15" fill="rgba(124,58,237,0.5)">✦</text>')
+    + '<text x="'+(1.5*C)+'" y="'+(1.85*C)+'" text-anchor="middle" font-family="Georgia,Noto Serif,serif" font-size="'+(isSi?'10':'11')+'" font-weight="700" fill="#5B21B6">'+lagNameP+'</text>'
+    + '<text x="'+(1.5*C)+'" y="'+(1.98*C)+'" text-anchor="middle" font-size="5.4" letter-spacing="'+(isSi?'0':'1.3')+'" fill="rgba(124,58,237,0.7)">'+(isSi?'ලග්නය':'RISING SIGN')+'</text>';
+
   // House contents
   svg += planetText(1, C*1.5, C*0.35) + hLabel(1, C*1.5, C*0.15) + lagnaM(1, C*1.5, C*0.9);
   svg += planetText(2, C*0.3, C*0.25) + hLabel(2, C*0.15, C*0.15);
   svg += planetText(3, C*0.7, C*0.75) + hLabel(3, C*0.85, C*0.9);
   svg += planetText(4, C*0.5, C*1.35) + hLabel(4, C*0.5, C*1.15);
-  svg += planetText(5, C*0.3, C*2.25) + hLabel(5, C*0.15, C*2.15);
-  svg += planetText(6, C*0.7, C*2.75) + hLabel(6, C*0.85, C*2.9);
+  // Bottom-left "\" cell: house 6 → upper-right, house 5 → lower-left,
+  // matching mobile SriLankanChart (was swapped — the "chart differs from
+  // the app" bug). Mirrors the top-right H12/H11 placement.
+  svg += planetText(6, C*0.7, C*2.28) + hLabel(6, C*0.85, C*2.15);
+  svg += planetText(5, C*0.3, C*2.78) + hLabel(5, C*0.15, C*2.9);
   svg += planetText(7, C*1.5, C*2.35) + hLabel(7, C*1.5, C*2.15);
   svg += planetText(8, C*2.7, C*2.75) + hLabel(8, C*2.85, C*2.9);
   svg += planetText(9, C*2.3, C*2.25) + hLabel(9, C*2.15, C*2.15);
@@ -984,12 +1034,18 @@ function generateReportHTML(opts) {
     });
   });
 
-  // background-image instead of <img> + object-fit: Android WebView's
-  // print rasteriser intermittently drops or half-paints <img> inside
-  // border-radius clips; a background paints in the same pass as the box.
-  var logoMedal = opts.logoBase64
-    ? '<div class="logo-bg" style="background-image:url(data:image/png;base64,' + opts.logoBase64 + ');"></div>'
-    : '<span>✦</span>';
+  // Brand dome emblem (shown in its natural arch shape, never circle-clipped)
+  var emblem = opts.logoBase64 ? '<div class="cov-emblem"></div>' : '';
+  var endEmblem = opts.logoBase64 ? '<div class="end-emblem"></div>' : '<div class="end-emblem fallback">✦</div>';
+
+  // Wheel centre = the rising sign (zodiac art + name), like the in-app chart.
+  var coverZUri = rptZodiacUri(chartLagnaId);
+  var coverLagName = escapeHTML((isSi ? PDF_RASHI_SI : PDF_RASHI_EN)[chartLagnaId] || opts.lagnaLabel || '');
+  var coverRising = '<div class="cov-rising">'
+    + (coverZUri ? '<img src="' + coverZUri + '"/>' : '<span>✦</span>')
+    + (coverLagName ? '<div class="crn">' + coverLagName + '</div>' : '')
+    + '<div class="crl">' + L('ලග්නය', 'RISING SIGN') + '</div>'
+    + '</div>';
 
   // ═════ COVER ═════
   var recRow = function(label, value) {
@@ -999,9 +1055,10 @@ function generateReportHTML(opts) {
   var coverHTML = '<div class="cov">'
     + rptStars(595, 842, 150, 41)
     + '<div class="cov-frame"></div>'
+    + emblem
     + '<div class="cov-brand">ග්‍රහචාර</div>'
     + '<div class="cov-est">' + L('වේදික ජ්‍යෝතිෂ ශාස්ත්‍රය', 'VEDIC ASTROLOGY OF SRI LANKA') + '</div>'
-    + '<div class="cov-wheelwrap">' + rptWheel(346) + '<div class="cov-medal">' + logoMedal + '</div></div>'
+    + '<div class="cov-wheelwrap">' + rptWheel(346) + coverRising + '</div>'
     + '<div class="cov-title">' + L('සම්පූර්ණ ජීවිත වාර්තාව', 'The Complete Life Reading') + '</div>'
     + '<div class="cov-sub">' + L('ඔබේ උපන් අහසින් ලැබෙන ප්‍රායෝගික මගපෙන්වීම', 'Practical guidance drawn from your birth sky') + '</div>'
     + '<div class="cov-kick">' + L('වාර්තා හිමිකරු', 'PREPARED FOR') + '</div>'
@@ -1212,7 +1269,7 @@ function generateReportHTML(opts) {
   var endHTML = '<div class="end">'
     + rptStars(595, 842, 120, 97)
     + '<div class="end-frame"></div>'
-    + '<div class="end-medal">' + logoMedal + '</div>'
+    + endEmblem
     + '<div class="end-brand">ග්‍රහචාර</div>'
     + '<div class="end-motto">' + L('ඔබේ ජීවිතයේ තරු බලන්න', 'Read the stars of your life') + '</div>'
     + '<div class="end-rule"><em>◆</em></div>'
@@ -1230,7 +1287,8 @@ function generateReportHTML(opts) {
   return '<!DOCTYPE html><html lang="' + (isSi ? 'si' : 'en') + '"><head>'
     + '<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>'
     + '<title>' + L('ග්‍රහචාර — සම්පූර්ණ ජීවිත වාර්තාව', 'Grahachara — Complete Life Reading') + '</title>'
-    + '<style>' + reportPrintCSS(isSi) + '</style></head><body>'
+    + '<style>' + reportPrintCSS(isSi) + '</style></head>'
+    + '<body' + (opts.logoBase64 ? ' style="--logo:url(data:image/png;base64,' + opts.logoBase64 + ')"' : '') + '>'
     + '<div class="bg">' + rptStars(595, 842, 110, 11) + '</div>'
     + '<div class="wmk">ග්‍රහචාර</div>'
     + '<div class="frame"></div>'
@@ -1612,14 +1670,16 @@ function generatePorondamHTML(opts) {
   }
 
   // ── Cover ──────────────────────────────────────────────────────
-  // background-image div instead of <img>+object-fit — the print
-  // rasteriser intermittently drops/half-paints <img> in rounded clips.
-  var logoTag = opts.logoBase64
-    ? '<div style="width:100%;height:100%;border-radius:22px;background:#160B22 url(data:image/png;base64,' + opts.logoBase64 + ') center/cover no-repeat;"></div>'
-    : '<div style="font-size:44px;">💍</div>';
+  // The brand mark is a dome/arch that fills only the top of its canvas.
+  // Shown as an arch emblem (never circle-clipped, which made the transparent
+  // lower half read as a "half-rendered" logo).
+  var pDome = function(w) {
+    if (!opts.logoBase64) return '<div style="font-size:40px;">💍</div>';
+    return '<div style="width:' + w + 'px;height:' + Math.round(w * 0.54) + 'px;margin:0 auto;background-image:url(data:image/png;base64,' + opts.logoBase64 + ');background-size:' + w + 'px auto;background-position:center top;background-repeat:no-repeat;"></div>';
+  };
   var coverHTML = '<div class="cover cover-porondam">'
     + '<div class="zr" style="border-color:rgba(249,168,212,0.15);"></div><div class="zri" style="border-color:rgba(255,255,255,0.05);"></div>'
-    + '<div class="cc"><div class="cl" style="border-color:rgba(249,168,212,0.5);">' + logoTag + '</div>'
+    + '<div class="cc"><div style="margin-bottom:22px;">' + pDome(132) + '</div>'
     + '<div class="cb">ග්‍රහචාර</div>'
     + '<div class="ct"><span class="ctg">' + esc(PT.coverTitle) + '</span></div>'
     + '<div class="cs">' + esc(PT.coverSub) + '</div>'
@@ -2191,7 +2251,7 @@ function generatePorondamHTML(opts) {
 
   // ── End page ───────────────────────────────────────────────────
   var pEndLogoTag = opts.logoBase64
-    ? '<div style="width:64px;height:64px;border-radius:16px;background:#160B22 url(data:image/png;base64,' + opts.logoBase64 + ') center/cover no-repeat;box-shadow:0 18px 54px rgba(0,0,0,.35);position:relative;z-index:1;"></div>'
+    ? '<div style="position:relative;z-index:1;">' + pDome(112) + '</div>'
     : '<div class="ep-icon">💍</div>';
   var endHTML = '<div class="ep ep-porondam">'
     + pEndLogoTag + '<div class="ep-brand" style="margin-top:12px;">ග්‍රහචාර</div><div class="ep-line"></div>'
@@ -2224,4 +2284,491 @@ function generatePorondamHTML(opts) {
     + endHTML + '</body></html>';
 }
 
-module.exports = { generateReportHTML, generatePorondamHTML, loadLogoBase64, SECTION_COLORS };
+// ═══════════════════════════════════════════════════════════════
+// ███ BABY KENDARA PDF — Celestial Almanac, rose keepsake ███
+// Shares the night-sky system of the full report (rptStars/rptWheel/
+// rptKendara/reportPrintCSS) with a rose accent for the newborn:
+// cover → identity (medallions + record + D1/D9) → grahas + elements
+// → nature & lucky → naming letters → doshas → early dashas → rites
+// → 5 life-story chapters → colophon.
+// Data shapes mirror components/readings/BabyKendara.js exactly.
+// ═══════════════════════════════════════════════════════════════
+
+// Mirrors AI_SECTIONS in components/readings/BabyKendara.js — keep in sync.
+var BABY_AI_SECTIONS = [
+  { key: 'yogaAnalysis', si: 'ඔවුන් කවුද — චරිතය හා ශක්තීන්', en: 'Who They Are — Character & Strengths' },
+  { key: 'career', si: 'දක්ෂතා හා වෘත්තීය මාවත', en: 'Talents & Vocation' },
+  { key: 'education', si: 'අධ්‍යාපනය හා ඉගෙනුම', en: 'Education & Learning' },
+  { key: 'familyPortrait', si: 'පවුල හා බැඳීම්', en: 'Family & Bonds' },
+  { key: 'financial', si: 'වාසනාව හා සමෘද්ධිය', en: 'Fortune & Prosperity' },
+];
+
+var BABY_ELEMENT_COLORS = { fire: '#FF8E7A', earth: '#F0B95C', air: '#8FBAFF', water: '#6FDCE8' };
+
+function babyQuality(score, isSi) {
+  if (score >= 80) return { label: isSi ? 'විශිෂ්ට' : 'Excellent', color: '#F2CE6A' };
+  if (score >= 65) return { label: isSi ? 'ඉතා හොඳ' : 'Very good', color: '#4EC98F' };
+  return { label: isSi ? 'හොඳ' : 'Good', color: '#6FA8FF' };
+}
+
+// Rose-accent additions on top of reportPrintCSS.
+function babyPrintCSS(isSi) {
+  var serif = 'Georgia,"Noto Serif","Times New Roman",serif';
+  var sinh = '"Noto Sans Sinhala","Iskoola Pota",-apple-system,Roboto,sans-serif';
+  var lbl = isSi ? sinh : serif;
+  var up = isSi ? '' : 'text-transform:uppercase;';
+  var trk = function(en) { return 'letter-spacing:' + (isSi ? '0' : en) + ';'; };
+  return ''
+    + ':root{--rose:#F5A8C8;--rose2:#FBD3E3;--roseline:rgba(232,163,191,.32);}'
+    // planet table
+    + '.pt{border:1px solid var(--hair2);background:var(--veil);padding:6px 16px;page-break-inside:avoid;}'
+    + '.pt-row{display:flex;align-items:baseline;gap:10px;padding:6.5px 0;border-bottom:1px dotted rgba(240,233,216,.12);font-size:10px;}'
+    + '.pt-row:last-child{border-bottom:0;}'
+    + '.pt-name{display:inline-flex;align-items:center;gap:8px;min-width:118px;color:var(--bodyc);font-weight:700;}'
+    + '.pt-name b{width:6px;height:6px;border-radius:50%;}'
+    + '.pt-retro{font-size:6.6px;font-weight:700;color:#FCD34D;border:1px solid rgba(252,211,77,.45);padding:1px 5px;border-radius:99px;' + trk('1px') + up + '}'
+    + '.pt-rashi{flex:1;color:var(--faint);}'
+    + '.pt-deg{color:var(--ghost);font-family:' + serif + ';}'
+    // chips
+    + '.chips{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 0;}'
+    + '.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border:1px solid var(--roseline);background:rgba(232,163,191,.06);font-size:8.8px;color:var(--bodyc);}'
+    + '.chip b{color:var(--rose);font-weight:400;font-size:7px;' + trk('1.4px') + up + '}'
+    // letter hero + padas + names
+    + '.letter-wrap{display:flex;align-items:center;gap:16px;margin:4px 0 14px;page-break-inside:avoid;}'
+    + '.letter-big{width:74px;height:74px;flex:none;border:1px solid rgba(232,163,191,.55);background:linear-gradient(150deg,rgba(232,163,191,.16),rgba(232,163,191,.04));display:flex;align-items:center;justify-content:center;font-family:' + sinh + ';font-size:34px;font-weight:800;color:var(--rose2);box-shadow:0 0 0 5px rgba(232,163,191,.06);}'
+    + '.letter-roman{font-family:' + serif + ';font-size:15px;color:var(--cream);font-style:italic;}'
+    + '.padas{display:flex;gap:9px;margin:8px 0 2px;}'
+    + '.pada{flex:1;text-align:center;padding:10px 4px 8px;border:1px solid rgba(240,233,216,.08);background:var(--veil);page-break-inside:avoid;}'
+    + '.pada.on{border-color:rgba(232,163,191,.6);background:rgba(232,163,191,.09);}'
+    + '.pada .pl{font-family:' + sinh + ';font-size:19px;font-weight:800;color:var(--cream);}'
+    + '.pada .pn{font-family:' + lbl + ';font-size:6.6px;' + trk('1.6px') + up + 'color:var(--ghost);margin-top:3px;}'
+    + '.pada.on .pn{color:var(--rose);}'
+    + '.names{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}'
+    + '.name{padding:6px 12px;border:1px solid rgba(240,233,216,.1);background:rgba(244,233,207,.035);text-align:center;}'
+    + '.name .ns{font-family:' + sinh + ';font-size:11px;font-weight:700;color:var(--cream);display:block;}'
+    + '.name .nr{font-size:7px;color:var(--ghost);letter-spacing:.8px;text-transform:uppercase;display:block;margin-top:1px;}'
+    // dosha plates
+    + '.dosha{border:1px solid;padding:13px 16px;margin-bottom:11px;page-break-inside:avoid;background:var(--veil);}'
+    + '.dosha.clear{border-color:rgba(78,201,143,.35);}'
+    + '.dosha.present{border-color:rgba(240,185,92,.45);}'
+    + '.dosha-head{display:flex;align-items:center;gap:9px;margin-bottom:7px;}'
+    + '.dosha-title{flex:1;font-family:' + lbl + ';font-size:10.5px;font-weight:700;color:var(--cream);' + trk('1.2px') + up + '}'
+    + '.dosha-pill{font-size:7.4px;font-weight:700;padding:2.5px 9px;border-radius:99px;' + trk('1.2px') + up + '}'
+    + '.dosha.clear .dosha-pill{color:#4EC98F;border:1px solid rgba(78,201,143,.5);}'
+    + '.dosha.present .dosha-pill{color:#F0B95C;border:1px solid rgba(240,185,92,.55);}'
+    + '.dosha p{font-size:9.6px;color:var(--faint);line-height:1.75;margin:0 0 6px;}'
+    + '.dosha .verdict{color:var(--bodyc);font-weight:600;}'
+    // element bars
+    + '.el-row{display:flex;align-items:center;gap:10px;padding:5.5px 0;}'
+    + '.el-name{min-width:74px;font-size:9.4px;color:var(--bodyc);font-weight:700;display:inline-flex;align-items:center;gap:7px;}'
+    + '.el-name b{width:7px;height:7px;border-radius:50%;}'
+    + '.el-track{flex:1;height:4px;background:rgba(240,233,216,.09);}'
+    + '.el-fill{height:4px;}'
+    + '.el-pct{min-width:30px;text-align:right;font-family:' + serif + ';font-size:9.6px;color:var(--faint);}'
+    // lucky grid
+    + '.lucky{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:4px;}'
+    + '.lk{border:1px solid rgba(240,233,216,.08);background:var(--veil);padding:11px 13px;page-break-inside:avoid;}'
+    + '.lk .ll{font-family:' + lbl + ';font-size:6.8px;' + trk('2px') + up + 'color:var(--rose);margin-bottom:4px;}'
+    + '.lk .lv{font-size:10.4px;font-weight:700;color:var(--cream);line-height:1.5;}'
+    // dasha timeline
+    + '.dsh{display:flex;gap:12px;page-break-inside:avoid;}'
+    + '.dsh-rail{width:14px;display:flex;flex-direction:column;align-items:center;}'
+    + '.dsh-dot{width:8px;height:8px;border-radius:50%;background:var(--rose);border:1px solid rgba(232,163,191,.7);margin-top:4px;}'
+    + '.dsh-line{flex:1;width:1px;background:rgba(232,163,191,.25);}'
+    + '.dsh-body{flex:1;padding-bottom:13px;}'
+    + '.dsh-head{display:flex;align-items:center;gap:9px;}'
+    + '.dsh-lord{font-family:' + lbl + ';font-size:11px;font-weight:700;color:var(--cream);}'
+    + '.dsh-age{font-size:7px;font-weight:700;color:var(--rose);border:1px solid var(--roseline);padding:2px 8px;border-radius:99px;' + trk('1.2px') + up + '}'
+    + '.dsh-note{font-size:9.4px;color:var(--faint);line-height:1.75;margin-top:4px;}'
+    // rite date cards
+    + '.rite{display:flex;gap:13px;align-items:flex-start;border:1px solid rgba(240,233,216,.09);background:var(--veil);padding:11px 13px;margin-bottom:9px;page-break-inside:avoid;}'
+    + '.rite.best{border-color:rgba(240,185,92,.5);background:rgba(240,185,92,.05);}'
+    + '.rite-date{width:52px;flex:none;text-align:center;border:1px solid var(--hair2);padding:7px 2px;}'
+    + '.rite-day{font-family:' + serif + ';font-size:19px;color:var(--cream);line-height:1;}'
+    + '.rite-mon{font-size:7px;color:var(--ghost);margin-top:3px;' + trk('1px') + up + '}'
+    + '.rite-main{flex:1;}'
+    + '.rite-week{font-size:10.2px;font-weight:700;color:var(--cream);display:inline-flex;align-items:center;gap:7px;}'
+    + '.rite-best-pill{font-size:6.4px;font-weight:800;color:#2B1B0C;background:#F2CE6A;padding:2px 7px;border-radius:99px;' + trk('1.2px') + up + '}'
+    + '.rite-time{font-size:8.8px;color:var(--faint);margin-top:2px;}'
+    + '.rite-why{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}'
+    + '.rite-why span{font-size:7.6px;color:rgba(78,201,143,.95);border:1px solid rgba(78,201,143,.35);padding:2px 8px;border-radius:99px;}'
+    + '.rite-score{flex:none;text-align:center;min-width:44px;}'
+    + '.rite-score .rs-n{font-family:' + serif + ';font-size:17px;line-height:1;}'
+    + '.rite-score .rs-l{font-size:6.6px;' + trk('1px') + up + 'margin-top:2px;}'
+    // small parent-note plate
+    + '.pnote{border-left:2px solid var(--rose);background:rgba(232,163,191,.055);padding:10px 14px;margin-top:11px;page-break-inside:avoid;}'
+    + '.pnote .pn-cap{font-family:' + lbl + ';font-size:7px;' + trk('2px') + up + 'color:var(--rose);margin-bottom:4px;}'
+    + '.pnote p{font-size:9.6px;color:var(--bodyc);line-height:1.8;margin:0;}';
+}
+
+function generateBabyHTML(opts) {
+  var isSi = opts.lang === 'si';
+  var L = function(si, en) { return isSi ? si : en; };
+  var bi = function(t) { return t ? escapeHTML(isSi ? (t.si || t.en || '') : (t.en || t.si || '')) : ''; };
+  var pad2 = function(n) { return (n < 10 ? '0' : '') + n; };
+
+  var identity = opts.identity || {};
+  var report = opts.report || {};
+  var sections = opts.sections || null;
+  var gender = opts.gender === 'female' ? 'female' : opts.gender === 'male' ? 'male' : null;
+
+  var babyWord = gender === 'female' ? L('අපේ දුව', 'Our Daughter') : gender === 'male' ? L('අපේ පුතා', 'Our Son') : L('අපේ බිලිඳා', 'Our Baby');
+  var bm = report.birthMoment || {};
+  var genDate;
+  try {
+    genDate = new Date().toLocaleDateString(isSi ? 'si-LK' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  } catch (e) { genDate = new Date().toLocaleDateString(); }
+  var refRaw = opts.reportId ? String(opts.reportId).replace(/[^A-Za-z0-9]/g, '').slice(-6).toUpperCase() : '';
+  var refNo = refRaw ? 'BK-' + refRaw : '';
+
+  // Brand dome emblem (natural arch shape, never circle-clipped) + rising-sign
+  // wheel centre (zodiac art + name), matching the full report and the app.
+  var emblem = opts.logoBase64 ? '<div class="cov-emblem"></div>' : '';
+  var endEmblem = opts.logoBase64 ? '<div class="end-emblem"></div>' : '<div class="end-emblem fallback">✦</div>';
+  var lagnaIdCover = (identity.lagna && (identity.lagna.rashiId || identity.lagna.id)) || null;
+  var coverZUri = rptZodiacUri(lagnaIdCover);
+  var coverLagName = escapeHTML((isSi ? PDF_RASHI_SI : PDF_RASHI_EN)[lagnaIdCover] || (identity.lagna && (isSi ? (identity.lagna.sinhala || identity.lagna.english) : identity.lagna.english)) || '');
+  var coverRising = '<div class="cov-rising">'
+    + (coverZUri ? '<img src="' + coverZUri + '"/>' : '<span>✦</span>')
+    + (coverLagName ? '<div class="crn">' + coverLagName + '</div>' : '')
+    + '<div class="crl">' + L('ලග්නය', 'RISING SIGN') + '</div>'
+    + '</div>';
+
+  // labels
+  var lagnaLabel = identity.lagna ? escapeHTML(isSi ? (identity.lagna.sinhala || identity.lagna.english) : identity.lagna.english) : '';
+  var nak = identity.nakshatra || {};
+  var nakLabel = escapeHTML((isSi ? (nak.sinhala || nak.name) : (nak.name || nak.english)) || '');
+  var nakFull = nakLabel + (nak.pada ? (isSi ? ' · ' + nak.pada + ' පාදය' : ' · Pada ' + nak.pada) : '');
+  var moonLabel = identity.moonSign ? escapeHTML(isSi ? (identity.moonSign.sinhala || identity.moonSign.english) : identity.moonSign.english) : '';
+  var bornLine = escapeHTML(((opts.birthDate || bm.localDate || '') + (bm.localTime || opts.birthTime ? ' · ' + (bm.localTime || opts.birthTime) : '')));
+  var weekTithi = [bm.weekday ? bi(bm.weekday) : '', bm.tithi ? escapeHTML(isSi ? (bm.tithi.sinhala || bm.tithi.name || '') : (bm.tithi.name || bm.tithi.sinhala || '')) : ''].filter(Boolean).join(' · ');
+
+  var recRow = function(label, value) {
+    if (!value) return '';
+    return '<div class="rr"><span class="rl">' + label + '</span><span class="rd"></span><span class="rv">' + value + '</span></div>';
+  };
+  var pageOpen = function(eyebrow, title, sub) {
+    return '<div class="pg"><div class="eyebrow" style="color:#F5A8C8;">' + eyebrow + '</div>'
+      + '<div class="pg-title">' + title + '</div>'
+      + (sub ? '<div class="pg-sub">' + sub + '</div>' : '');
+  };
+
+  // ═════ COVER ═════
+  var coverHTML = '<div class="cov">'
+    + rptStars(595, 842, 150, 63)
+    + '<div class="cov-frame"></div>'
+    + emblem
+    + '<div class="cov-brand">ග්‍රහචාර</div>'
+    + '<div class="cov-est">' + L('වේදික ජ්‍යෝතිෂ ශාස්ත්‍රය', 'VEDIC ASTROLOGY OF SRI LANKA') + '</div>'
+    + '<div class="cov-wheelwrap">' + rptWheel(346) + coverRising + '</div>'
+    + '<div class="cov-title">' + L('බිලිඳු කේන්දර වාර්තාව', 'The Baby Kendara') + '</div>'
+    + '<div class="cov-sub">' + L('උපන් මොහොතේ අහසින් ලියැවුණු මතක සටහන', 'A keepsake written from the sky of the birth moment') + '</div>'
+    + '<div class="cov-kick">' + L('උපන් අහස හිමි', 'THE BIRTH SKY OF') + '</div>'
+    + '<div class="cov-name">' + babyWord + '</div>'
+    + '<div class="rec">'
+    + recRow(L('උපන් දිනය', 'BORN'), bornLine)
+    + recRow(L('දිනය · තිථිය', 'DAY · TITHI'), weekTithi)
+    + recRow(L('ලග්නය', 'LAGNA'), lagnaLabel)
+    + recRow(L('නැකත', 'NAKSHATRA'), nakFull)
+    + recRow(L('චන්ද්‍ර රාශිය', 'MOON SIGN'), moonLabel)
+    + '</div>'
+    + '<div class="cov-motto">' + L('ලෝකයට ආ මොහොතේ අහස — ජීවිත කාලයටම', 'The sky that welcomed them, kept for a lifetime') + '</div>'
+    + '<div class="cov-foot">' + L('පෞද්ගලික වාර්තාව', 'PRIVATE & PERSONAL') + ' — ' + escapeHTML(genDate) + (refNo ? ' — ' + refNo : '') + '</div>'
+    + '</div>';
+
+  // ═════ IDENTITY — medallions + record + charts ═════
+  var lagnaId = (identity.lagna && (identity.lagna.rashiId || identity.lagna.id)) || null;
+  var lagnaGlyph = lagnaId && ZODIAC_SYMBOLS[lagnaId - 1] ? ZODIAC_SYMBOLS[lagnaId - 1] + '︎' : '✦';
+  var medsHTML = '';
+  if (lagnaLabel) medsHTML += '<div class="med"><div class="med-g">' + lagnaGlyph + '</div><div class="med-l">' + L('ලග්නය', 'LAGNA — RISING') + '</div><div class="med-v">' + lagnaLabel + '</div></div>';
+  if (nakLabel) medsHTML += '<div class="med"><div class="med-g">✦</div><div class="med-l">' + L('උපන් නැකත', 'NAKSHATRA') + '</div><div class="med-v">' + nakFull + '</div></div>';
+  if (moonLabel) medsHTML += '<div class="med"><div class="med-g"><span class="cres"></span></div><div class="med-l">' + L('චන්ද්‍ර රාශිය', 'MOON SIGN') + '</div><div class="med-v">' + moonLabel + '</div></div>';
+
+  var rawRC = identity.rashiChart;
+  var d1Houses = Array.isArray(rawRC) ? rawRC : (rawRC && Array.isArray(rawRC.houses) ? rawRC.houses : null);
+  var navRaw = identity.navamshaChart;
+  var d9Houses = Array.isArray(navRaw) ? navRaw : (navRaw && Array.isArray(navRaw.houses) ? navRaw.houses : null);
+  var navLagnaId = (identity.navamshaLagna && ((identity.navamshaLagna.rashi && identity.navamshaLagna.rashi.id) || identity.navamshaLagna.rashiId)) || lagnaId || 1;
+
+  var chartsHTML = '';
+  if (d1Houses && lagnaId) {
+    chartsHTML = '<div class="charts">'
+      + '<div class="chart-card"><div class="cc-t">' + L('උපන් කේන්දරය', 'BIRTH KENDARA — D1') + '</div>'
+      + '<div class="cc-s">' + L('උපන් මොහොතේ ග්‍රහ පිහිටීම', 'The sky at the first breath') + '</div>'
+      + rptKendara(d1Houses, lagnaId, opts.lang, 216, 'd1') + '</div>'
+      + (d9Houses
+        ? '<div class="chart-card d9"><div class="cc-t">' + L('නවාංශකය', 'NAVAMSHA — D9') + '</div>'
+        + '<div class="cc-s">' + L('ඇතුළාන්ත ස්වභාවය සහ ජීවිත ශක්තිය', 'Inner nature and life-strength') + '</div>'
+        + rptKendara(d9Houses, navLagnaId, opts.lang, 216, 'd9') + '</div>'
+        : '')
+      + '</div>';
+  }
+
+  var identityHTML = pageOpen(
+    L('උපන් සටහන', 'THE BIRTH RECORD'),
+    L('බිලිඳාගේ ආකාශ අනන්‍යතාව', 'A Celestial Identity'),
+    L('උපන් මොහොතේ අහස මෙසේ පිහිටා තිබුණා — මේ වාර්තාවේ සෑම කියවීමක්ම මේ සිතියම මතයි.', 'The sky as it stood at the moment of birth — every reading in this keepsake is built on this map.'))
+    + (medsHTML ? '<div class="meds">' + medsHTML + '</div>' : '')
+    + '<div class="rec idn-rec">'
+    + recRow(L('බිලිඳා', 'BABY'), babyWord)
+    + recRow(L('උපන් දිනය සහ වේලාව', 'DATE & TIME'), bornLine)
+    + recRow(L('දිනය · තිථිය', 'DAY · TITHI'), weekTithi)
+    + (opts.cityLabel ? recRow(L('උපන් ස්ථානය', 'BIRTHPLACE'), escapeHTML(opts.cityLabel)) : '')
+    + (refNo ? recRow(L('වාර්තා අංකය', 'DOCUMENT Nº'), refNo) : '')
+    + '</div>'
+    + chartsHTML
+    + (d9Houses ? '<div class="pg-sub" style="margin:10px 0 0;text-align:center;max-width:100%;">' + L('නවාංශකය පසුකාලීනව විවාහ ජීවිතය හා සහකරු බැඳීම් ගැනද කියාපායි.', 'In later life the Navamsha also speaks to marriage and partnership.') + '</div>' : '')
+    + '</div>';
+
+  // ═════ GRAHAS + ELEMENTS + VITALITY ═════
+  var planetRows = '';
+  (report.planets || []).forEach(function(p) {
+    var col = RPT_PLANET_DARK[p.name] || RPT_PLANET_DARK[p.key] || '#C9C2B2';
+    planetRows += '<div class="pt-row"><span class="pt-name"><b style="background:' + col + ';"></b>' + escapeHTML(isSi ? (p.sinhala || p.name) : p.name) + '</span>'
+      + (p.retrograde ? '<span class="pt-retro">' + L('වක්‍ර', 'RETRO') + '</span>' : '')
+      + '<span class="pt-rashi">' + escapeHTML(isSi ? (p.rashiSinhala || p.rashi || '') : (p.rashi || '')) + '</span>'
+      + '<span class="pt-deg">' + (p.degree != null ? escapeHTML(String(p.degree)) + '°' : '') + '</span></div>';
+  });
+  var elements = report.elements || {};
+  var elRows = '';
+  (elements.bars || []).forEach(function(b) {
+    var col = BABY_ELEMENT_COLORS[b.key] || '#F5A8C8';
+    elRows += '<div class="el-row"><span class="el-name"><b style="background:' + col + ';"></b>' + bi(b) + '</span>'
+      + '<span class="el-track"><span class="el-fill" style="width:' + Math.max(4, Math.min(100, b.percent || 0)) + '%;background:' + col + ';display:block;"></span></span>'
+      + '<span class="el-pct">' + (b.percent || 0) + '%</span></div>';
+  });
+  var vit = report.vitality || {};
+  var grahaPage = '';
+  if (planetRows || elRows || vit.note) {
+    grahaPage = pageOpen(
+      L('ග්‍රහයෝ නවදෙනා', 'THE NINE GRAHAS'),
+      L('ග්‍රහ පිහිටීම් සහ ධාතු සමතුලනය', 'Planets & Element Balance'),
+      L('උපන් මොහොතේ ග්‍රහයන් 9 සහ ඔවුන් බෙදී ගිය මූලද්‍රව්‍ය.', 'Where each graha stood at birth, and how they spread across the elements.'))
+      + (planetRows ? '<div class="pt">' + planetRows + '</div>' : '')
+      + (elRows ? '<div class="note"><div class="note-cap">' + L('ධාතු සමතුලනය', 'ELEMENT BALANCE') + '</div>' + elRows
+        + (elements.dominant && elements.dominant.babyNote ? '<div class="pnote" style="margin-top:9px;"><div class="pn-cap">' + L('ප්‍රමුඛ ධාතුව', 'DOMINANT ELEMENT') + '</div><p>' + bi(elements.dominant.babyNote) + '</p></div>' : '')
+        + '</div>' : '')
+      + (vit.note ? '<div class="note"><div class="note-cap">' + L('ශරීර ස්වභාවය', 'VITALITY & CONSTITUTION') + '</div>'
+        + '<div class="nr"><b>✦</b><span>' + bi(vit.note) + '</span></div>'
+        + (vit.disclaimer ? '<div class="nr" style="font-size:8px;color:var(--ghost);"><b style="color:var(--ghost);">i</b><span>' + bi(vit.disclaimer) + '</span></div>' : '')
+        + '</div>' : '')
+      + '</div>';
+  }
+
+  // ═════ NATURE + LUCKY ═════
+  var star = report.starProfile || {};
+  var natureChips = '';
+  if (star.gana) natureChips += '<span class="chip"><b>' + L('ගණය', 'GANA') + '</b>' + bi(star.gana) + '</span>';
+  if (star.yoni) natureChips += '<span class="chip"><b>' + L('යෝනිය', 'YONI') + '</b>' + bi(star.yoni) + '</span>';
+  if (star.lord) natureChips += '<span class="chip"><b>' + L('නැකත් අධිපති', 'STAR LORD') + '</b>' + escapeHTML(isSi ? (star.lord.sinhala || star.lord.name) : star.lord.name) + '</span>';
+  if (star.deity) natureChips += '<span class="chip"><b>' + L('අධිදේවතාව', 'DEITY') + '</b>' + bi(star.deity) + '</span>';
+  if (star.symbol) natureChips += '<span class="chip"><b>' + L('සංකේතය', 'SYMBOL') + '</b>' + bi(star.symbol) + '</span>';
+  var lucky = report.lucky || {};
+  var luckyCells = '';
+  var luckyItems = [
+    lucky.color ? [L('සුබ වර්ණ', 'LUCKY COLOURS'), escapeHTML(lucky.color)] : null,
+    lucky.day ? [L('සුබ දවස', 'LUCKY DAY'), escapeHTML(lucky.day)] : null,
+    lucky.gem ? [L('සුබ මැණික', 'GEMSTONE'), escapeHTML(lucky.gem)] : null,
+    lucky.guardianPlanet ? [L('ආරක්ෂක ග්‍රහයා', 'GUARDIAN PLANET'), escapeHTML(isSi ? (lucky.guardianPlanet.sinhala || lucky.guardianPlanet.name) : lucky.guardianPlanet.name)] : null,
+  ].filter(Boolean);
+  luckyItems.forEach(function(it) { luckyCells += '<div class="lk"><div class="ll">' + it[0] + '</div><div class="lv">' + it[1] + '</div></div>'; });
+
+  var naturePage = '';
+  if (star.name || natureChips || luckyCells) {
+    naturePage = pageOpen(
+      L('උපන් නැකත', 'THE BIRTH STAR'),
+      L('බිලිඳාගේ ස්වභාවය', 'Nature & Lucky Picks'),
+      (star.name ? (isSi ? escapeHTML(star.sinhala || star.name) + ' නැකත අනුව' : escapeHTML(star.name) + ' nakshatra profile') : ''))
+      + (star.nature ? '<div class="prose"><p class="body-p">' + bi(star.nature) + '</p></div>' : '')
+      + (natureChips ? '<div class="chips">' + natureChips + '</div>' : '')
+      + (star.gift ? '<div class="pnote"><div class="pn-cap">' + L('උපතින් ලැබුණු තෑග්ග', 'BORN GIFT') + '</div><p>' + bi(star.gift) + '</p></div>' : '')
+      + (star.parentNote ? '<div class="pnote"><div class="pn-cap">' + L('දෙමාපියන්ට', 'FOR THE PARENTS') + '</div><p>' + bi(star.parentNote) + '</p></div>' : '')
+      + (luckyCells ? '<div class="note"><div class="note-cap">' + L('බිලිඳාට සුබ දේ', 'LUCKY PICKS') + '</div><div class="lucky">' + luckyCells + '</div>'
+        + (lucky.note ? '<div class="nr" style="margin-top:8px;"><b>✦</b><span>' + bi(lucky.note) + '</span></div>' : '') + '</div>' : '')
+      + '</div>';
+  }
+
+  // ═════ NAMING ═════
+  var naming = report.naming || {};
+  var namingPage = '';
+  if (naming.padas && naming.padas.length) {
+    var babyPada = null;
+    naming.padas.forEach(function(p) { if (p.isBabyPada) babyPada = p; });
+    babyPada = babyPada || naming.padas[0];
+    var padaChips = '';
+    naming.padas.forEach(function(p) {
+      padaChips += '<div class="pada' + (p.isBabyPada ? ' on' : '') + '"><div class="pl">' + escapeHTML(p.letter || '') + '</div><div class="pn">' + L('පාදය ', 'PADA ') + p.pada + (p.isBabyPada ? ' ✦' : '') + '</div></div>';
+    });
+    var pool = (babyPada && babyPada.names) || { male: [], female: [] };
+    var nameList = gender === 'male' ? pool.male : gender === 'female' ? pool.female : (pool.male || []).concat(pool.female || []);
+    var nameChips = '';
+    (nameList || []).slice(0, 18).forEach(function(n) {
+      nameChips += '<div class="name"><span class="ns">' + escapeHTML(n.si || '') + '</span>' + (n.ro ? '<span class="nr2 nr" style="padding:0;display:block;font-size:7px;color:var(--ghost);">' + escapeHTML(n.ro) + '</span>' : '') + '</div>';
+    });
+    namingPage = pageOpen(
+      L('නම් තැබීම', 'THE NAMING'),
+      L('සුබ නාම අකුරු', 'Auspicious Naming Letters'),
+      isSi ? escapeHTML((naming.nakshatraSinhala || naming.nakshatra || '') + ' නැකතේ ' + (naming.pada || '') + ' වන පාදයට අනුව') : escapeHTML((naming.nakshatra || '') + ' nakshatra, pada ' + (naming.pada || '')))
+      + (naming.letter ? '<div class="letter-wrap"><div class="letter-big">' + escapeHTML(naming.letter.si || '') + '</div>'
+        + '<div><div class="note-cap" style="margin-bottom:3px;">' + L('නමේ මුල් අකුර', 'THE STARTING LETTER') + '</div>'
+        + '<div class="letter-roman">“' + escapeHTML(naming.letter.roman || '') + '”</div>'
+        + '<div class="pg-sub" style="margin:4px 0 0;">' + L('මෙම ශබ්දයෙන් පටන් ගන්නා ඕනෑම නමක් සුබයි', 'Any name starting with this sound is auspicious') + '</div></div></div>' : '')
+      + '<div class="note-cap" style="margin-top:4px;">' + L('නැකතේ පාද හතරේම අකුරු', 'LETTERS OF ALL FOUR PADAS') + '</div>'
+      + '<div class="padas">' + padaChips + '</div>'
+      + (nameChips ? '<div class="note-cap" style="margin-top:14px;">' + L('නම් අදහස්', 'NAME IDEAS') + '</div><div class="names">' + nameChips + '</div>' : '')
+      + (naming.howItWorks ? '<div class="note"><div class="nr"><b>i</b><span>' + bi(naming.howItWorks) + '</span></div></div>' : '')
+      + '</div>';
+  }
+
+  // ═════ DOSHAS ═════
+  var doshas = report.doshas || {};
+  function doshaPlate(d, title) {
+    if (!d || !d.checked) return '';
+    var present = !!d.present;
+    var html = '<div class="dosha ' + (present ? 'present' : 'clear') + '">'
+      + '<div class="dosha-head"><span class="dosha-title">' + title + '</span>'
+      + '<span class="dosha-pill">' + (present ? L('ඇත', 'PRESENT') : L('නැත', 'CLEAR')) + '</span></div>'
+      + (d.meaning ? '<p>' + bi(d.meaning) + '</p>' : '')
+      + (d.verdict ? '<p class="verdict">' + bi(d.verdict) + '</p>' : '')
+      + (present && d.severityLabel ? '<p style="color:#F0B95C;">' + bi(d.severityLabel) + '</p>' : '');
+    if (present && d.remedies && d.remedies.length) {
+      html += '<div class="note-cap" style="margin:8px 0 5px;">' + L('සම්ප්‍රදායික පිළියම්', 'TRADITIONAL REMEDIES') + '</div>';
+      d.remedies.forEach(function(r) {
+        var t = bi(r);
+        if (t) html += '<div class="nr"><b>✦</b><span>' + t + '</span></div>';
+      });
+    }
+    return html + '</div>';
+  }
+  var doshaPage = '';
+  var doshaPlates = doshaPlate(doshas.gandaMoola, L('ගණ්ඩ මූල දෝෂය', 'GANDA MOOLA')) + doshaPlate(doshas.gandanta, L('ගණ්ඩාන්ත දෝෂය', 'GANDANTA'));
+  if (doshaPlates) {
+    doshaPage = pageOpen(
+      L('ආරක්ෂාව', 'THE SAFEGUARDS'),
+      L('දෝෂ පරීක්ෂාව', 'Dosha Checks'),
+      doshas.summary ? bi(doshas.summary) : '')
+      + doshaPlates
+      + '</div>';
+  }
+
+  // ═════ EARLY DASHAS + RITES ═════
+  var dashaRows = '';
+  (report.childhoodDashas || []).forEach(function(d, i, arr) {
+    dashaRows += '<div class="dsh"><div class="dsh-rail"><div class="dsh-dot"></div>' + (i < arr.length - 1 ? '<div class="dsh-line"></div>' : '') + '</div>'
+      + '<div class="dsh-body"><div class="dsh-head"><span class="dsh-lord">' + escapeHTML(isSi ? (d.lordSinhala || d.lord) : d.lord) + (isSi ? ' දශාව' : ' period') + '</span>'
+      + '<span class="dsh-age">' + L('වයස ', 'AGE ') + d.fromAge + '–' + d.toAge + '</span></div>'
+      + (d.note ? '<div class="dsh-note">' + bi(d.note) + '</div>' : '') + '</div></div>';
+  });
+  var dashaPage = '';
+  if (dashaRows) {
+    dashaPage = pageOpen(
+      L('මුල් අවුරුදු', 'THE EARLY YEARS'),
+      L('ළමා කාලයේ ග්‍රහ කාල', 'Early-Years Planetary Periods'),
+      L('විම්ශෝත්තරී දශා ක්‍රමයට — එක් එක් කාලයේ දෙමාපිය අවධානයට.', 'The Vimshottari dasha timeline — what each period asks of the parents.'))
+      + dashaRows + '</div>';
+  }
+
+  function riteCards(rite) {
+    if (!rite || !rite.results || !rite.results.length) return '';
+    var bestScore = -1;
+    rite.results.forEach(function(r) { if ((r.score || 0) > bestScore) bestScore = r.score || 0; });
+    var out = '';
+    rite.results.forEach(function(r) {
+      var q = babyQuality(r.score || 0, isSi);
+      var isBest = (r.score || 0) === bestScore;
+      var day = (r.localDate || '').slice(8, 10);
+      var monYr = fmtBabyDate(r.localDate, isSi).split(' ').slice(1).join(' ');
+      var why = '';
+      (r.why || []).forEach(function(w) { var t = bi(w); if (t) why += '<span>' + t + '</span>'; });
+      out += '<div class="rite' + (isBest ? ' best' : '') + '">'
+        + '<div class="rite-date"><div class="rite-day">' + escapeHTML(day) + '</div><div class="rite-mon">' + escapeHTML(monYr) + '</div></div>'
+        + '<div class="rite-main"><span class="rite-week">' + (r.weekday ? bi(r.weekday) : '') + (isBest ? ' <span class="rite-best-pill">' + L('හොඳම', 'BEST') + '</span>' : '') + '</span>'
+        + (r.localTime ? '<div class="rite-time">' + L('වේලාව: ', 'Time: ') + escapeHTML(r.localTime) + '</div>' : '')
+        + (why ? '<div class="rite-why">' + why + '</div>' : '') + '</div>'
+        + '<div class="rite-score"><div class="rs-n" style="color:' + q.color + ';">' + (r.score || 0) + '</div><div class="rs-l" style="color:' + q.color + ';">' + q.label + '</div></div>'
+        + '</div>';
+    });
+    return out;
+  }
+  var rites = report.rites || {};
+  var ritesPage = '';
+  var namingCards = riteCards(rites.naming);
+  var feedingCards = riteCards(rites.firstFeeding);
+  if (namingCards || feedingCards) {
+    ritesPage = pageOpen(
+      L('සුබ මොහොත', 'THE AUSPICIOUS DATES'),
+      L('නැකැත් දින', 'Ceremony Dates'),
+      L('බිලිඳාගේ කේන්දරයටම ගැළපූ දින සහ වේලාවන්.', "Dates and times tuned to this baby's own chart."))
+      + (namingCards ? '<div class="wins-cap">' + L('නම් තැබීමේ උත්සවයට', 'NAMING CEREMONY') + '</div>' + namingCards : '')
+      + (feedingCards ? '<div class="wins-cap" style="margin-top:14px;">' + L('ඉඳුල් කට ගෑමට (මාස 4–8)', 'FIRST FEEDING (MONTHS 4–8)') + '</div>' + feedingCards : '')
+      + '</div>';
+  }
+
+  // ═════ LIFE STORY CHAPTERS ═════
+  var storyHTML = '';
+  if (sections) {
+    var chapterNo = 0;
+    BABY_AI_SECTIONS.forEach(function(meta) {
+      var s = sections[meta.key];
+      var text = !s ? '' : (typeof s === 'string' ? s : (s.narrative || s.content || s.text || ''));
+      if (!text) return;
+      chapterNo += 1;
+      storyHTML += '<div class="pg"><div class="ch-head">'
+        + '<div class="ch-ghost">' + pad2(chapterNo) + '</div>'
+        + '<div class="eyebrow" style="color:#F5A8C8;">' + L('ජීවිත කතාව — පරිච්ඡේදය ', 'THE LIFE STORY — CHAPTER ') + pad2(chapterNo) + '</div>'
+        + '<div class="ch-title">' + escapeHTML(isSi ? meta.si : meta.en) + '</div>'
+        + '</div>'
+        + '<div class="ch-body"><div class="prose">' + markdownToHTML(text) + '</div></div>'
+        + '<div class="rule" style="margin:22px 0 0;"><em>✦</em></div>'
+        + '</div>';
+    });
+  }
+
+  // ═════ COLOPHON ═════
+  var endHTML = '<div class="end">'
+    + rptStars(595, 842, 120, 88)
+    + '<div class="end-frame"></div>'
+    + endEmblem
+    + '<div class="end-brand">ග්‍රහචාර</div>'
+    + '<div class="end-motto">' + L('ඔබේ ජීවිතයේ තරු බලන්න', 'Read the stars of your life') + '</div>'
+    + '<div class="end-rule"><em>◆</em></div>'
+    + '<div class="end-feats"><span>' + L('සතිපතා නැකැත්', 'WEEKLY NAKATH') + '</span><i>·</i><span>' + L('ජ්‍යෝතිෂ chat', 'ASTRO CHAT') + '</span><i>·</i><span>' + L('පොරොන්දම් ගැලපීම', 'PORONDAM MATCH') + '</span></div>'
+    + '<div class="end-cta">' + L('යෙදුම බාගන්න', 'DOWNLOAD THE APP') + '</div>'
+    + '<div class="end-url">www.grahachara.com</div>'
+    + '<div class="end-prep">' + (isSi
+      ? babyWord + ' වෙනුවෙන් ' + escapeHTML(genDate) + ' දින සකස් කරන ලදි'
+      : 'Prepared for ' + babyWord.toLowerCase() + ' on ' + escapeHTML(genDate)) + '</div>'
+    + (refNo ? '<div class="end-ref">' + L('වාර්තා අංකය', 'DOCUMENT Nº') + ' ' + refNo + '</div>' : '')
+    + '<div class="end-disc">' + L(
+      'මෙම වාර්තාව සම්ප්‍රදායික ජ්‍යෝතිෂ ගණනයන් මත පදනම් වූ මතක සටහනකි — වෛද්‍ය හෝ නීතිමය උපදෙසක් නොවේ.',
+      'This keepsake is based on traditional astrological calculation — not medical or legal advice.')
+    + '</div></div>';
+
+  return '<!DOCTYPE html><html lang="' + (isSi ? 'si' : 'en') + '"><head>'
+    + '<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>'
+    + '<title>' + L('ග්‍රහචාර — බිලිඳු කේන්දර වාර්තාව', 'Grahachara — Baby Kendara Keepsake') + '</title>'
+    + '<style>' + reportPrintCSS(isSi) + babyPrintCSS(isSi) + '</style></head>'
+    + '<body' + (opts.logoBase64 ? ' style="--logo:url(data:image/png;base64,' + opts.logoBase64 + ')"' : '') + '>'
+    + '<div class="bg">' + rptStars(595, 842, 110, 29) + '</div>'
+    + '<div class="wmk">ග්‍රහචාර</div>'
+    + '<div class="frame"></div>'
+    + '<div class="fc fc-tl"></div><div class="fc fc-tr"></div><div class="fc fc-bl"></div><div class="fc fc-br"></div>'
+    + '<div class="folio-t">' + L('ග්‍රහචාර — බිලිඳු කේන්දර වාර්තාව', 'GRAHACHARA — THE BABY KENDARA') + '</div>'
+    + '<div class="folio-b"><span class="fb-name">' + babyWord + '</span> <b>·</b> GRAHACHARA.COM' + (refNo ? ' <b>·</b> ' + refNo : '') + '</div>'
+    + coverHTML + identityHTML + grahaPage + naturePage + namingPage + doshaPage + dashaPage + ritesPage + storyHTML + endHTML
+    + '</body></html>';
+}
+
+// 'YYYY-MM-DD' → '14 Mar 2026' (mirrors fmtLocalDate in BabyKendara.js)
+var BABY_MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+var BABY_MONTHS_SI = ['ජන', 'පෙබ', 'මාර්', 'අප්‍රේ', 'මැයි', 'ජූනි', 'ජූලි', 'අගෝ', 'සැප්', 'ඔක්', 'නොවැ', 'දෙසැ'];
+function fmtBabyDate(dateStr, isSi) {
+  if (!dateStr) return '';
+  try {
+    var parts = String(dateStr).split('-');
+    var m = parseInt(parts[1], 10) - 1;
+    return parseInt(parts[2], 10) + ' ' + ((isSi ? BABY_MONTHS_SI : BABY_MONTHS_EN)[m] || '') + ' ' + parts[0];
+  } catch (e) { return dateStr; }
+}
+
+module.exports = { generateReportHTML, generatePorondamHTML, generateBabyHTML, loadLogoBase64, SECTION_COLORS };

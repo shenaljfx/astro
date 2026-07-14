@@ -403,7 +403,7 @@ var os = StyleSheet.create({
     letterSpacing: 2, textAlign: 'center', textTransform: 'uppercase',
   },
   subtitle: {
-    fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.35)',
+    fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.55)',
     marginTop: 10, textAlign: 'center', letterSpacing: 0.5, lineHeight: 18,
   },
   cardsRow: { flexDirection: 'row', gap: 14, justifyContent: 'center', alignItems: 'stretch', paddingHorizontal: 16, maxWidth: 400, alignSelf: 'center', width: '100%' },
@@ -425,7 +425,7 @@ var os = StyleSheet.create({
     letterSpacing: 0.8, textAlign: 'center',
   },
   cardDesc: {
-    fontSize: 10, fontWeight: '500', color: 'rgba(255,255,255,0.45)',
+    fontSize: 10, fontWeight: '500', color: 'rgba(255,255,255,0.62)',
     marginTop: 5, textAlign: 'center', lineHeight: 14, paddingHorizontal: 2,
   },
   tapRow: { marginTop: 10 },
@@ -440,7 +440,7 @@ var os = StyleSheet.create({
   },
   hintWrap: { marginTop: 28, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
   hintText: {
-    fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.22)',
+    fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.55)',
     letterSpacing: 2, textTransform: 'uppercase',
   },
 });
@@ -964,7 +964,7 @@ var s = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '800', color: '#FFF1D0', letterSpacing: 0.3 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: '500' },
+  statusText: { fontSize: 11, color: 'rgba(255,255,255,0.62)', fontWeight: '500' },
   birthBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10, borderWidth: 1 },
   birthBadgeText: { fontSize: 10, fontWeight: '700' },
 
@@ -990,7 +990,7 @@ var s = StyleSheet.create({
 
   inputBar: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderTopWidth: 0, backgroundColor: 'rgba(8,5,22,0.92)', overflow: 'hidden' },
   inputBarGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 1.5 },
-  charCount: { alignSelf: 'flex-end', fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.4)', marginBottom: 4, fontVariant: ['tabular-nums'] },
+  charCount: { alignSelf: 'flex-end', fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.62)', marginBottom: 4, fontVariant: ['tabular-nums'] },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   inputFieldWrap: { flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 24, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 4 : 2, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.10)' },
   input: { flex: 1, minHeight: 38, maxHeight: 100, color: '#FFF1D0', fontSize: 15, paddingTop: 9, paddingBottom: 9, includeFontPadding: false, lineHeight: 21 },
@@ -1038,7 +1038,7 @@ var sd = StyleSheet.create({
   panelTitle: { fontSize: 16, fontWeight: '800', color: '#FFE8B0', letterSpacing: 0.3 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
   statusDot: { width: 7, height: 7, borderRadius: 3.5 },
-  statusText: { fontSize: 11, color: 'rgba(255,255,255,0.42)', fontWeight: '500' },
+  statusText: { fontSize: 11, color: 'rgba(255,255,255,0.62)', fontWeight: '500' },
   birthBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 10, paddingVertical: 6,
@@ -1053,7 +1053,7 @@ var sd = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
   },
   modeChipActive: { borderColor: 'transparent' },
-  modeChipText: { fontSize: 11.5, fontWeight: '700', color: 'rgba(255,255,255,0.38)' },
+  modeChipText: { fontSize: 11.5, fontWeight: '700', color: 'rgba(255,255,255,0.62)' },
   separator: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)' },
   limitBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -1095,7 +1095,7 @@ var sd = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginBottom: 1, flexShrink: 0,
   },
   inputHint: {
-    fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 6,
+    fontSize: 10, color: 'rgba(255,255,255,0.55)', marginTop: 6,
     textAlign: 'right', letterSpacing: 0.3,
   },
 });

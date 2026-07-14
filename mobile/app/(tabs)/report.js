@@ -130,6 +130,7 @@ var { width: SCREEN_WIDTH } = Dimensions.get('window');
 // Section icons, gradients & dopamine config
 // ──────────────────────────────────────────
 var SECTION_META = {
+  chartProof:       { colors: ['#FFB800', '#78350F'], gradient: ['#FDE68A', '#FFB800'], icon: 'locate', scoreKey: 'proof' },
   personality:      { colors: ['#3B82F6', '#1E3A8A'], gradient: ['#818CF8', '#3B82F6'], icon: 'person', scoreKey: 'personality' },
   yogaAnalysis:     { colors: ['#9333EA', '#581C87'], gradient: ['#FF8C00', '#9333EA'], icon: 'flash', scoreKey: 'yogas' },
   lifePredictions:  { colors: ['#8B5CF6', '#4C1D95'], gradient: ['#A78BFA', '#8B5CF6'], icon: 'telescope', scoreKey: 'destiny' },
@@ -160,6 +161,7 @@ var SECTION_META = {
 // report actually generates. (Legacy keys personality/mentalHealth/spiritual/
 // timeline25 never arrived from the server and broke the chapter math.)
 var SECTION_KEYS = [
+  'chartProof',
   'yogaAnalysis', 'lifePredictions', 'career', 'marriage', 'marriedLife', 'financial',
   'children', 'familyPortrait', 'health', 'physicalProfile', 'attractionProfile',
   'foreignTravel', 'education', 'luck', 'legal', 'realEstate', 'transits',
@@ -167,6 +169,7 @@ var SECTION_KEYS = [
 ];
 
 var SECTION_TITLES = {
+  chartProof: 'reportChartProof',
   personality: 'reportPersonality',
   yogaAnalysis: 'reportYogas',
   lifePredictions: 'reportLifePredictions',
@@ -495,7 +498,7 @@ function ScoreRing({ score, size, color, delay: delayMs }) {
         opacity: 0.8,
       }} />
       <Text style={{ fontSize: size * 0.28, fontWeight: '900', color: scoreColor }}>{score}</Text>
-      <Text style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)', marginTop: -2 }}>{label}</Text>
+      <Text style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.62)', marginTop: -2 }}>{label}</Text>
     </Animated.View>
   );
 }
@@ -525,7 +528,7 @@ var stb = StyleSheet.create({
   inner: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,184,0,0.12)' },
   icon: { fontSize: 14, marginRight: 6 },
   textWrap: { flexShrink: 1 },
-  label: { fontSize: 9, color: 'rgba(255,214,102,0.45)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  label: { fontSize: 10, color: 'rgba(255,214,102,0.62)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   value: { fontSize: 12, color: '#FFE8B0', fontWeight: '700', marginTop: 1 },
 });
 
@@ -702,7 +705,7 @@ var kfs = StyleSheet.create({
   textInput: { borderWidth: 1, borderColor: 'rgba(255,184,0,0.25)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#FFE8B0', fontSize: 14, backgroundColor: 'rgba(255,184,0,0.05)', marginBottom: 4 },
   btnRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 18 },
   skipBtn: { paddingHorizontal: 16, paddingVertical: 12 },
-  skipText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,232,176,0.5)' },
+  skipText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,232,176,0.68)' },
   goBtn: { flex: 1, borderRadius: 14, overflow: 'hidden' },
   goGrad: { paddingVertical: 14, alignItems: 'center', borderRadius: 14 },
   goText: { fontSize: 15, fontWeight: '800', color: '#1A1200' },
@@ -788,20 +791,20 @@ var n12 = StyleSheet.create({
   inner: { padding: 16 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 15.5, fontWeight: '800', color: '#FFE8B0' },
-  sub: { fontSize: 11, color: 'rgba(255,232,176,0.55)', marginTop: 3, marginBottom: 12 },
+  sub: { fontSize: 11, color: 'rgba(255,232,176,0.68)', marginTop: 3, marginBottom: 12 },
   barsRow: { alignItems: 'flex-end', paddingRight: 6 },
   barCol: { alignItems: 'center', width: 40 },
-  barScore: { fontSize: 9, fontWeight: '700', color: 'rgba(255,232,176,0.65)', marginBottom: 3 },
+  barScore: { fontSize: 10, fontWeight: '700', color: 'rgba(255,232,176,0.65)', marginBottom: 3 },
   barTrack: { width: 14, borderRadius: 7, backgroundColor: 'rgba(255,255,255,0.06)', justifyContent: 'flex-end', overflow: 'hidden' },
   barFill: { width: 14, borderRadius: 7, opacity: 0.9 },
   barEmoji: { fontSize: 12, marginTop: 5 },
-  barLabel: { fontSize: 9, color: 'rgba(255,232,176,0.5)', marginTop: 2, fontWeight: '600' },
+  barLabel: { fontSize: 10, color: 'rgba(255,232,176,0.68)', marginTop: 2, fontWeight: '600' },
   chipsWrap: { marginTop: 14, gap: 8 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,184,0,0.07)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.18)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9 },
   chipCaution: { backgroundColor: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' },
   chipIcon: { fontSize: 16 },
   chipTitle: { fontSize: 12.5, fontWeight: '700', color: '#FFE8B0' },
-  chipSub: { fontSize: 10.5, color: 'rgba(255,232,176,0.5)', marginTop: 1 },
+  chipSub: { fontSize: 10.5, color: 'rgba(255,232,176,0.68)', marginTop: 1 },
 });
 
 // ══════════════════════════════════════════
@@ -892,7 +895,7 @@ var pcc = StyleSheet.create({
   btnYes: { backgroundColor: 'rgba(34,197,94,0.15)', borderColor: 'rgba(34,197,94,0.4)' },
   btnText: { fontSize: 12, fontWeight: '700', color: 'rgba(221,214,254,0.8)' },
   btnTextYes: { fontSize: 12, fontWeight: '800', color: '#86EFAC' },
-  foot: { fontSize: 9.5, color: 'rgba(221,214,254,0.4)', marginTop: 9, textAlign: 'center' },
+  foot: { fontSize: 10.5, color: 'rgba(221,214,254,0.62)', marginTop: 9, textAlign: 'center' },
   correctionInput: { marginTop: 10, borderWidth: 1, borderColor: 'rgba(139,92,246,0.35)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 12.5, color: '#EDE9FE', backgroundColor: 'rgba(139,92,246,0.08)' },
 });
 
@@ -930,7 +933,7 @@ function StrengthBar({ label, value, color, delay: delayMs }) {
 var sbr = StyleSheet.create({
   wrap: { marginBottom: 8 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  label: { fontSize: 11, color: 'rgba(255,214,102,0.55)', fontWeight: '600' },
+  label: { fontSize: 11, color: 'rgba(255,214,102,0.68)', fontWeight: '600' },
   score: { fontSize: 11, fontWeight: '800' },
   track: { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 2, overflow: 'hidden' },
@@ -1242,7 +1245,7 @@ var sc = StyleSheet.create({
     backgroundColor: 'rgba(12,10,18,0.92)', borderWidth: 1, borderColor: 'rgba(218,165,86,0.42)',
     alignItems: 'center', justifyContent: 'center',
   },
-  sectionNumText: { fontSize: 9, fontWeight: '900', color: '#F6C66F' },
+  sectionNumText: { fontSize: 10, fontWeight: '900', color: '#F6C66F' },
   cardBox: { padding: 0, marginLeft: 12, borderColor: 'rgba(255,236,190,0.09)' },
   cardBoxExpanded: { borderColor: 'rgba(218,165,86,0.28)' },
   topGlow: { height: 3, borderTopLeftRadius: 20, borderTopRightRadius: 20, opacity: 0.75 },
@@ -1350,7 +1353,7 @@ var dna = StyleSheet.create({
   orbInner: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   orbScore: { fontSize: 16, fontWeight: '900' },
   orbEmoji: { fontSize: 18 },
-  orbLabel: { fontSize: 9, color: 'rgba(255,214,102,0.50)', fontWeight: '600', marginTop: 4, textAlign: 'center' },
+  orbLabel: { fontSize: 10, color: 'rgba(255,214,102,0.68)', fontWeight: '600', marginTop: 4, textAlign: 'center' },
 });
 
 // ══════════════════════════════════════════
@@ -1390,7 +1393,7 @@ var rpb = StyleSheet.create({
   track: { height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 1.5, overflow: 'hidden' },
   labelWrap: { alignSelf: 'flex-end', marginTop: 3 },
-  labelText: { fontSize: 9, color: 'rgba(255,184,0,0.55)', fontWeight: '700' },
+  labelText: { fontSize: 10, color: 'rgba(255,184,0,0.68)', fontWeight: '700' },
 });
 
 // ══════════════════════════════════════════
@@ -1467,6 +1470,7 @@ var LOADING_STAGES = {
 
 var SECTION_LABELS = {
   en: {
+    chartProof: 'The Proof',
     personality: 'Personality', yogaAnalysis: 'Strength Analysis', lifePredictions: 'Life Predictions',
     career: 'Career', marriage: 'Marriage', marriedLife: 'Married Life', financial: 'Financial',
     children: 'Children', familyPortrait: 'Family', health: 'Health', physicalProfile: 'Physical Profile',
@@ -1476,6 +1480,7 @@ var SECTION_LABELS = {
     timeline25: 'Year Timeline', remedies: 'Remedies',
   },
   si: {
+    chartProof: 'සාක්ෂිය',
     personality: 'පෞද්ගලිකත්වය', yogaAnalysis: 'ශක්ති විශ්ලේෂණය', lifePredictions: 'ජීවිත අනාවැකි',
     career: 'වෘත්තිය', marriage: 'විවාහය', marriedLife: 'විවාහ ජීවිතය', financial: 'මූල්‍ය',
     children: 'දරුවන්', familyPortrait: 'පවුල', health: 'සෞඛ්‍ය', physicalProfile: 'ශාරීරික',
@@ -1661,7 +1666,7 @@ var cl = StyleSheet.create({
   planet3: {},
   textWrap: { alignItems: 'center', marginBottom: 20 },
   stageText: { color: '#FFE8B0', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
-  stageSub: { color: 'rgba(255,214,102,0.50)', fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  stageSub: { color: 'rgba(255,214,102,0.68)', fontSize: 13, textAlign: 'center', lineHeight: 20 },
   sectionNow: { color: '#FBBF24', fontSize: 13, fontWeight: '600', textAlign: 'center', fontStyle: 'italic' },
   personalText: { color: '#FF8C00', fontSize: 14, fontWeight: '600', textAlign: 'center', marginBottom: 24, fontStyle: 'italic' },
   progressRow: { width: '100%', alignItems: 'center' },
@@ -1828,16 +1833,16 @@ var ReadingsSwitcher = React.memo(function ReadingsSwitcher({ active, onSelect, 
 });
 
 var rsw = StyleSheet.create({
-  label: { fontSize: 10.5, fontWeight: '800', letterSpacing: 1.4, color: 'rgba(255,214,102,0.55)', marginBottom: 10 },
+  label: { fontSize: 10.5, fontWeight: '800', letterSpacing: 1.4, color: 'rgba(255,214,102,0.68)', marginBottom: 10 },
   row: { flexDirection: 'row', gap: 9, marginBottom: 20 },
   card: { flex: 1, borderRadius: 16, borderWidth: 1, padding: 11, backgroundColor: 'rgba(255,255,255,0.025)' },
   cardActive: { borderWidth: 1.4 },
   orb: { width: 32, height: 32, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   title: { fontSize: 12, fontWeight: '800', color: 'rgba(255,255,255,0.95)', lineHeight: 15.5, minHeight: 31 },
-  sub: { fontSize: 10.5, color: 'rgba(255,255,255,0.52)', marginTop: 2, lineHeight: 15, minHeight: 30 },
+  sub: { fontSize: 10.5, color: 'rgba(255,255,255,0.68)', marginTop: 2, lineHeight: 15, minHeight: 30 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 7, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: 'transparent' },
   dot: { width: 5, height: 5, borderRadius: 3 },
-  chipText: { fontSize: 9.5, fontWeight: '800', letterSpacing: 0.2 },
+  chipText: { fontSize: 10.5, fontWeight: '800', letterSpacing: 0.2 },
 });
 
 export default function ReportScreen() {
@@ -2934,7 +2939,7 @@ export default function ReportScreen() {
             <Text style={{ color: 'rgba(255,214,102,0.6)', fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 20 }}>
               {error || (reportLang === 'si' ? 'කරුණාකර නැවත උත්සාහ කරන්න' : 'Please try again')}
             </Text>
-            <Text style={{ color: 'rgba(255,214,102,0.35)', fontSize: 11, textAlign: 'center', marginBottom: 20 }}>
+            <Text style={{ color: 'rgba(255,214,102,0.55)', fontSize: 11, textAlign: 'center', marginBottom: 20 }}>
               {reportLang === 'si'
                 ? 'ඔබට නැවත මුදල් ගෙවන්න ඕනේ නැහැ'
                 : 'You will not be charged again'}
@@ -2958,7 +2963,7 @@ export default function ReportScreen() {
               onPress={handleNewReport}
               activeOpacity={0.7}
             >
-              <Text style={{ color: 'rgba(255,214,102,0.4)', fontSize: 12 }}>
+              <Text style={{ color: 'rgba(255,214,102,0.62)', fontSize: 12 }}>
                 {reportLang === 'si' ? 'ආපසු යන්න' : 'Back to form'}
               </Text>
             </TouchableOpacity>
@@ -3360,7 +3365,7 @@ export default function ReportScreen() {
               <Text style={{ color: '#FFE8B0', fontSize: 16, fontWeight: '800', marginTop: 8, textAlign: 'center' }}>
                 {reportLang === 'si' ? 'ඔබේ ජීවිත කතාව සම්පූර්ණයි' : 'Your Life Story is Complete'}
               </Text>
-              <Text style={{ color: 'rgba(255,214,102,0.45)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+              <Text style={{ color: 'rgba(255,214,102,0.62)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
                 {reportLang === 'si' ? 'වෙනත් අයෙකුගේ කතාවක් අනාවරණය කරන්න' : 'Unlock another person\'s story'}
               </Text>
               <SpringPressable style={[s.newReportBtn, { marginTop: 16, paddingHorizontal: 24 }]} onPress={handleNewReport} haptic="heavy">
@@ -3626,10 +3631,10 @@ var s = StyleSheet.create({
   heroTitleWrap: { alignItems: 'center', marginBottom: 16 },
   heroEmoji: { fontSize: 36, marginBottom: 6 },
   title: { fontSize: 24, fontWeight: '900', color: '#FFE8B0', textAlign: 'center', letterSpacing: 0.3, ...textShadow('rgba(255,184,0,0.25)', { width: 0, height: 2 }, 8) },
-  subtitle: { fontSize: 12, color: 'rgba(255,214,102,0.45)', textAlign: 'center', marginTop: 4, marginBottom: 8 },
+  subtitle: { fontSize: 12, color: 'rgba(255,214,102,0.62)', textAlign: 'center', marginTop: 4, marginBottom: 8 },
   heroStatsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
   heroStatChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(255,140,0,0.08)', borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)' },
-  heroStatText: { fontSize: 10, color: 'rgba(255,214,102,0.55)', fontWeight: '600' },
+  heroStatText: { fontSize: 10, color: 'rgba(255,214,102,0.68)', fontWeight: '600' },
 
   // Generated reports list
   generatedPanel: { marginBottom: 12, borderColor: 'rgba(218,165,86,0.18)' },
@@ -3676,9 +3681,9 @@ var s = StyleSheet.create({
   generatedMeta: { color: 'rgba(248,238,216,0.62)', fontSize: 11.5, lineHeight: 16, marginTop: 3 },
   generatedMiniRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 },
   generatedLang: { color: 'rgba(246,198,111,0.64)', fontSize: 10.5, fontWeight: '700' },
-  generatedDot: { color: 'rgba(246,198,111,0.30)', fontSize: 10 },
+  generatedDot: { color: 'rgba(246,198,111,0.55)', fontSize: 10 },
   generatedRightCol: { alignItems: 'flex-end', marginLeft: 10, alignSelf: 'stretch', justifyContent: 'space-between' },
-  generatedTime: { color: 'rgba(248,238,216,0.38)', fontSize: 10.5, fontWeight: '700' },
+  generatedTime: { color: 'rgba(248,238,216,0.62)', fontSize: 10.5, fontWeight: '700' },
   generatedDeleteBtn: { padding: 5, borderRadius: 9, backgroundColor: 'rgba(239,68,68,0.08)' },
 
   // Hero Score Card
@@ -3686,7 +3691,7 @@ var s = StyleSheet.create({
   heroScoreRingOuter: { width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: 'rgba(255,184,0,0.25)', alignItems: 'center', justifyContent: 'center', marginBottom: 10, ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.3, 20) },
   heroScoreRingInner: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
   heroScoreNum: { fontSize: 32, fontWeight: '900', color: '#FFB800', ...textShadow('rgba(255,184,0,0.4)', { width: 0, height: 2 }, 10) },
-  heroScoreLabel: { fontSize: 8, fontWeight: '800', color: 'rgba(255,214,102,0.45)', letterSpacing: 1.5, marginTop: -2 },
+  heroScoreLabel: { fontSize: 9.5, fontWeight: '800', color: 'rgba(255,214,102,0.62)', letterSpacing: 1.5, marginTop: -2 },
   heroScoreDesc: { color: 'rgba(255,214,102,0.65)', fontSize: 13, fontWeight: '600', textAlign: 'center', lineHeight: 18 },
   heroScoreBars: { marginTop: 4 },
   heroBarItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 },
@@ -3698,13 +3703,13 @@ var s = StyleSheet.create({
   // Section divider
   sectionDivider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 12 },
   sectionDividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,184,0,0.12)' },
-  sectionDividerText: { fontSize: 12, color: 'rgba(255,214,102,0.45)', fontWeight: '700' },
+  sectionDividerText: { fontSize: 12, color: 'rgba(255,214,102,0.62)', fontWeight: '700' },
 
   // Form styles
   inputLabel: { color: '#D4B06A', fontSize: 14, fontWeight: '700', marginBottom: 12 },
   inputRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   inputGroup: { flex: 1 },
-  inputHint: { color: 'rgba(255,184,0,0.45)', fontSize: 10, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
+  inputHint: { color: 'rgba(255,184,0,0.62)', fontSize: 10, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
   input: {
     backgroundColor: 'rgba(8,20,12,0.65)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
     color: '#FFE8B0', fontSize: 15, fontWeight: '600', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
@@ -3720,25 +3725,25 @@ var s = StyleSheet.create({
   generateText: { color: '#FFF1D0', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
   errorText: { color: '#F87171', fontSize: 13, flex: 1 },
   aiProgressText: { color: '#FF8C00', fontSize: 14, fontWeight: '700' },
-  aiProgressSub: { color: 'rgba(255,214,102,0.40)', fontSize: 11, marginTop: 4 },
+  aiProgressSub: { color: 'rgba(255,214,102,0.62)', fontSize: 11, marginTop: 4 },
   genderRow: { flexDirection: 'row', gap: 10, marginBottom: 16, marginTop: 6 },
   genderBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(8,20,12,0.4)' },
   genderBtnMaleActive: { borderColor: 'rgba(96,165,250,0.6)', backgroundColor: 'rgba(96,165,250,0.12)' },
   genderBtnFemaleActive: { borderColor: 'rgba(244,114,182,0.6)', backgroundColor: 'rgba(244,114,182,0.12)' },
   genderIcon: { fontSize: 22 },
-  genderText: { color: 'rgba(255,214,102,0.40)', fontSize: 15, fontWeight: '700' },
+  genderText: { color: 'rgba(255,214,102,0.62)', fontSize: 15, fontWeight: '700' },
   genderTextActive: { color: '#FFF1D0' },
   langRow: { flexDirection: 'row', gap: 10, marginBottom: 16, marginTop: 6 },
   langBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(8,20,12,0.4)' },
   langBtnActive: { borderColor: 'rgba(255,140,0,0.6)', backgroundColor: 'rgba(255,140,0,0.15)' },
   langFlag: { fontSize: 20 },
-  langText: { color: 'rgba(255,214,102,0.40)', fontSize: 14, fontWeight: '700' },
+  langText: { color: 'rgba(255,214,102,0.62)', fontSize: 14, fontWeight: '700' },
   langTextActive: { color: '#FF8C00' },
   locationRow: { marginBottom: 16, marginTop: 4 },
   locationScroll: { flexGrow: 0 },
   locationChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(8,20,12,0.4)', marginRight: 8 },
   locationChipActive: { borderColor: 'rgba(255,140,0,0.6)', backgroundColor: 'rgba(255,140,0,0.15)' },
-  locationChipText: { color: 'rgba(255,214,102,0.40)', fontSize: 12, fontWeight: '700' },
+  locationChipText: { color: 'rgba(255,214,102,0.62)', fontSize: 12, fontWeight: '700' },
   locationChipTextActive: { color: '#FF8C00' },
   newReportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginBottom: 12, backgroundColor: 'rgba(255,140,0,0.1)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.25)' },
   newReportText: { color: '#FF8C00', fontSize: 13, fontWeight: '700' },
@@ -3752,11 +3757,11 @@ var s = StyleSheet.create({
   birthGridRow: { flexDirection: 'row', gap: 6, marginTop: 6 },
   birthGridCard: { flex: 1, borderRadius: 14, overflow: 'hidden', padding: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, backgroundColor: 'rgba(0,0,0,0.20)', minHeight: 80, gap: 3 },
   birthGridIcon: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 2 },
-  birthGridLabel: { color: 'rgba(148,163,184,0.80)', fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, textAlign: 'center' },
+  birthGridLabel: { color: 'rgba(148,163,184,0.80)', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, textAlign: 'center' },
   birthGridValue: { color: '#F4E4BC', fontSize: 12, fontWeight: '800', textAlign: 'center' },
   panchangaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   panchangaItem: { alignItems: 'center', flex: 1 },
-  panchangaLabel: { color: '#475569', fontSize: 9, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  panchangaLabel: { color: '#475569', fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   panchangaValue: { color: '#D4B06A', fontSize: 12, fontWeight: '700', marginTop: 2 },
   chartHeader: { alignItems: 'center', marginBottom: 12 },
   chartTitle: { color: '#FFE8B0', fontSize: 16, fontWeight: '800' },

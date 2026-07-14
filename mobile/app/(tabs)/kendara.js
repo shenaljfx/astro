@@ -1373,7 +1373,7 @@ function VargaChartDisplay({ division, birthDateTime, lat, lng, language }) {
   if (vargaError || !vargaData) {
     return (
       <View style={{ alignItems: 'center', paddingVertical: 16 }}>
-        <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>
+        <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12 }}>
           {language === 'si' ? 'විස්තර නැහැ' : 'No data available'}
         </Text>
       </View>
@@ -3076,7 +3076,7 @@ export default function KendaraScreen() {
                 {marakaLoading && !marakaData ? (
                   <View style={[styles.advCard, { alignItems: 'center', paddingVertical: 24 }]}>
                     <CosmicLoader size={28} color="#f87171" />
-                    <Text style={{ color: 'rgba(255,255,255,0.4)', marginTop: 10, fontSize: 13 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.62)', marginTop: 10, fontSize: 13 }}>
                       {language === 'si' ? 'සංවේදී කාල විශ්ලේෂණය කරනවා...' : 'Analyzing sensitive periods...'}
                     </Text>
                   </View>
@@ -3152,7 +3152,7 @@ export default function KendaraScreen() {
                           </View>
                           <View style={[styles.marakaCountBadge, { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }]}>
                             <Text style={[styles.marakaCountNum, { color: 'rgba(255,255,255,0.6)' }]}>{marakaData.totalCount}</Text>
-                            <Text style={[styles.marakaCountLabel, { color: 'rgba(255,255,255,0.35)' }]}>
+                            <Text style={[styles.marakaCountLabel, { color: 'rgba(255,255,255,0.55)' }]}>
                               {language === 'si' ? 'මුළු' : 'Total'}
                             </Text>
                           </View>
@@ -3264,7 +3264,7 @@ export default function KendaraScreen() {
                                     </View>
                                     <View style={styles.marakaPeriodRow}>
                                       <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.25)" />
-                                      <Text style={[styles.marakaPeriodText, { color: 'rgba(255,255,255,0.35)' }]}>
+                                      <Text style={[styles.marakaPeriodText, { color: 'rgba(255,255,255,0.55)' }]}>
                                         {startDate.toLocaleDateString()} — {endDate.toLocaleDateString()}
                                       </Text>
                                       <View style={[styles.marakaDaysLeftBadge, { backgroundColor: 'rgba(245,158,11,0.08)' }]}>
@@ -3319,7 +3319,7 @@ export default function KendaraScreen() {
                         <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 15, marginTop: 8 }}>
                           {language === 'si' ? 'හොඳ කාලයයි' : 'You\'re in a Clear Period'}
                         </Text>
-                        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+                        <Text style={{ color: 'rgba(255,255,255,0.62)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
                           {language === 'si' ? 'ඉදිරියේදී දැනට සංවේදී කාලයක් නැහැ' : 'No sensitive periods ahead — a favorable time'}
                         </Text>
                       </View>
@@ -3474,7 +3474,7 @@ const styles = StyleSheet.create({
   contentDesktop: { paddingTop: 20, paddingHorizontal: 28, maxWidth: 900, alignSelf: 'center', width: '100%' },
   pageTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   pageTitle: { fontSize: 30, fontWeight: '800', color: '#FFB800', marginBottom: 3, ...textShadow('rgba(255,184,0,0.3)', { width: 0, height: 2 }, 8) },
-  pageSubtitle: { fontSize: 13, color: 'rgba(255,214,102,0.50)', fontWeight: '500' },
+  pageSubtitle: { fontSize: 13, color: 'rgba(255,214,102,0.68)', fontWeight: '500' },
   lagnaOrb: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.35)', ...boxShadow('#FF8C00', { width: 0, height: 0 }, 0.5, 10) },
   sinhalaTextFlow: { letterSpacing: 0, textTransform: 'none' },
   premiumHeroWrap: {
@@ -3533,7 +3533,7 @@ const styles = StyleSheet.create({
   },
   heroPortalImage: { width: 128, height: 128 },
   heroPortalName: { color: '#1A1040', fontSize: 18, lineHeight: 22, fontWeight: '900', marginTop: 8, textAlign: 'center', maxWidth: 132 },
-  heroPortalSub: { color: 'rgba(26,16,64,0.72)', fontSize: 9, lineHeight: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8 },
+  heroPortalSub: { color: 'rgba(26,16,64,0.72)', fontSize: 10, lineHeight: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8 },
   heroFloatingChipLeft: {
     position: 'absolute', left: 8, bottom: 32, maxWidth: 112, minHeight: 34, borderRadius: 999,
     flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10,
@@ -3579,7 +3579,7 @@ const styles = StyleSheet.create({
   },
   heroSealImage: { width: 58, height: 58 },
   heroSealText: { color: '#1A1040', fontSize: 14, lineHeight: 17, fontWeight: '900', marginTop: 4, textAlign: 'center' },
-  heroSealSub: { color: 'rgba(26,16,64,0.72)', fontSize: 9, fontWeight: '900', marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.7 },
+  heroSealSub: { color: 'rgba(26,16,64,0.72)', fontSize: 10, fontWeight: '900', marginTop: 1, textTransform: 'uppercase', letterSpacing: 0.7 },
   heroBirthRow: {
     flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'center', maxWidth: '100%',
     marginTop: 14, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
@@ -3592,7 +3592,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 1,
   },
   heroMetricTextWrap: { flex: 1, minWidth: 0 },
-  heroMetricLabel: { color: 'rgba(255,214,102,0.42)', fontSize: 9, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 3 },
+  heroMetricLabel: { color: 'rgba(255,214,102,0.62)', fontSize: 10, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 3 },
   heroMetricValue: { fontSize: 13, lineHeight: 17, fontWeight: '900' },
 
   chartAuraWrap: { alignItems: 'center', marginBottom: 20, paddingVertical: 8, minHeight: Math.min(SCREEN_WIDTH - 40, 380) + 26 },
@@ -3624,14 +3624,14 @@ const styles = StyleSheet.create({
   ritualTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
   ritualIconWrap: { width: 40, height: 40, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   ritualTitleBlock: { flex: 1, minWidth: 0, paddingTop: 1 },
-  ritualEyebrow: { fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
+  ritualEyebrow: { fontSize: 10, lineHeight: 13, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
   ritualTitle: { color: '#FFE8B0', fontSize: 18, lineHeight: 23, fontWeight: '900' },
   ritualStreakBadge: {
     minWidth: 52, minHeight: 45, borderRadius: 15, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8,
     backgroundColor: 'rgba(255,184,0,0.10)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.18)',
   },
   ritualStreakValue: { color: '#FFB800', fontSize: 19, lineHeight: 21, fontWeight: '900' },
-  ritualStreakLabel: { color: 'rgba(255,214,102,0.52)', fontSize: 9, lineHeight: 12, fontWeight: '900', textTransform: 'uppercase' },
+  ritualStreakLabel: { color: 'rgba(255,214,102,0.68)', fontSize: 10, lineHeight: 12, fontWeight: '900', textTransform: 'uppercase' },
   ritualBody: { color: 'rgba(255,244,214,0.64)', fontSize: 12, lineHeight: 20, fontWeight: '600', marginBottom: 13 },
   ritualTaskRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   ritualTaskPill: {
@@ -3639,18 +3639,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,184,0,0.12)', backgroundColor: 'rgba(255,255,255,0.035)',
     paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
   },
-  ritualTaskText: { color: 'rgba(255,214,102,0.48)', fontSize: 10, lineHeight: 14, fontWeight: '900', flexShrink: 1, textAlign: 'center' },
+  ritualTaskText: { color: 'rgba(255,214,102,0.68)', fontSize: 10, lineHeight: 14, fontWeight: '900', flexShrink: 1, textAlign: 'center' },
   ritualDetailBox: { borderRadius: 17, borderWidth: 1, padding: 12, backgroundColor: 'rgba(255,255,255,0.035)' },
   ritualDetailHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 6 },
   ritualDetailLabel: { fontSize: 10, lineHeight: 13, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase', flexShrink: 1 },
-  ritualTotalViews: { color: 'rgba(255,214,102,0.42)', fontSize: 10, lineHeight: 13, fontWeight: '800' },
+  ritualTotalViews: { color: 'rgba(255,214,102,0.62)', fontSize: 10, lineHeight: 13, fontWeight: '800' },
   ritualDetailValue: { color: '#FFE8B0', fontSize: 15, lineHeight: 21, fontWeight: '900', marginBottom: 6 },
   ritualDetailText: { color: 'rgba(255,244,214,0.56)', fontSize: 11, lineHeight: 18, fontWeight: '600' },
 
   insightRailWrap: { marginBottom: 14 },
   insightHeaderRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 10, gap: 12 },
   insightHeaderTextBlock: { flex: 1, minWidth: 0 },
-  insightHeaderKicker: { color: 'rgba(255,184,0,0.50)', fontSize: 10, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase', marginBottom: 2 },
+  insightHeaderKicker: { color: 'rgba(255,184,0,0.68)', fontSize: 10, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase', marginBottom: 2 },
   insightHeaderTitle: { color: '#FFE8B0', fontSize: 18, lineHeight: 23, fontWeight: '900' },
   insightCountPill: {
     borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5,
@@ -3674,7 +3674,7 @@ const styles = StyleSheet.create({
   },
   masteryTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
   masteryLabel: { color: '#FFE8B0', fontSize: 13, lineHeight: 18, fontWeight: '900' },
-  masterySub: { color: 'rgba(255,214,102,0.42)', fontSize: 10, lineHeight: 15, fontWeight: '700', marginTop: 2 },
+  masterySub: { color: 'rgba(255,214,102,0.62)', fontSize: 10, lineHeight: 15, fontWeight: '700', marginTop: 2 },
   masteryPercent: { color: '#FFB800', fontSize: 20, fontWeight: '900' },
   masteryTrack: { height: 7, borderRadius: 999, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.07)', marginBottom: 10 },
   masteryFill: { height: 7, borderRadius: 999, backgroundColor: '#FFB800' },
@@ -3682,7 +3682,7 @@ const styles = StyleSheet.create({
   masteryMilestone: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '48%' },
   masteryDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   masteryDotDone: { backgroundColor: '#FFB800', borderColor: '#FFB800' },
-  masteryMilestoneText: { color: 'rgba(255,214,102,0.36)', fontSize: 10, fontWeight: '800', flexShrink: 1 },
+  masteryMilestoneText: { color: 'rgba(255,214,102,0.62)', fontSize: 10, fontWeight: '800', flexShrink: 1 },
   masteryMilestoneTextDone: { color: 'rgba(255,232,176,0.82)' },
   vaultSectionWrap: { marginBottom: 12 },
   vaultHeader: {
@@ -3695,9 +3695,9 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginTop: 2,
   },
   vaultHeaderText: { flex: 1, minWidth: 0 },
-  vaultEyebrow: { fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase', marginBottom: 4 },
+  vaultEyebrow: { fontSize: 10, lineHeight: 13, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase', marginBottom: 4 },
   vaultTitle: { color: '#FFE8B0', fontSize: 16, lineHeight: 21, fontWeight: '900', marginBottom: 5 },
-  vaultSummary: { color: 'rgba(255,244,214,0.55)', fontSize: 11, lineHeight: 17, fontWeight: '600' },
+  vaultSummary: { color: 'rgba(255,244,214,0.68)', fontSize: 11, lineHeight: 17, fontWeight: '600' },
   vaultActionStack: { alignItems: 'center', gap: 8, marginTop: 1 },
   vaultCountPill: { minWidth: 30, height: 25, borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7 },
   vaultCountText: { fontSize: 11, fontWeight: '900' },
@@ -3706,7 +3706,7 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', height: 300 },
   emptyState: { alignItems: 'center', padding: 40, backgroundColor: 'rgba(255,140,0,0.07)', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,140,0,0.2)' },
   emptyTitle: { color: '#FFB800', fontSize: 18, marginVertical: 16, fontWeight: '700' },
-  emptyText: { color: 'rgba(255,214,102,0.45)', textAlign: 'center', marginBottom: 20, lineHeight: 22 },
+  emptyText: { color: 'rgba(255,214,102,0.62)', textAlign: 'center', marginBottom: 20, lineHeight: 22 },
   actionButton: { backgroundColor: '#FFB800', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20 },
   actionButtonText: { fontWeight: '800', color: '#1A1040' },
   errorText: { color: '#F87171', fontSize: 14 },
@@ -3719,10 +3719,10 @@ const styles = StyleSheet.create({
     ...boxShadow('#FF8C00', { width: 0, height: 2 }, 0.1, 8),
   },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  infoLabel: { color: 'rgba(255,214,102,0.50)', fontSize: 13 },
+  infoLabel: { color: 'rgba(255,214,102,0.68)', fontSize: 13 },
   infoValue: { color: '#FFE8B0', fontWeight: '600', fontSize: 13 },
   cardTitle: { color: '#FFB800', marginBottom: 14, fontWeight: '700', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 },
-  cardIntro: { color: 'rgba(255,214,102,0.52)', fontSize: 12, lineHeight: 19, marginBottom: 14 },
+  cardIntro: { color: 'rgba(255,214,102,0.68)', fontSize: 12, lineHeight: 19, marginBottom: 14 },
   summaryItem: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     paddingVertical: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)',
@@ -3730,7 +3730,7 @@ const styles = StyleSheet.create({
   summaryIcon: {
     width: 32, height: 32, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
-  summaryLabel: { color: 'rgba(255,214,102,0.45)', fontSize: 11, fontWeight: '700', marginBottom: 3 },
+  summaryLabel: { color: 'rgba(255,214,102,0.62)', fontSize: 11, fontWeight: '700', marginBottom: 3 },
   summaryValue: { color: '#FFE8B0', fontSize: 13, lineHeight: 20, fontWeight: '600' },
 
   // Planet Positions — bar style
@@ -3739,7 +3739,7 @@ const styles = StyleSheet.create({
   planetTextWrap: { flex: 1, gap: 5 },
   planetTopLine: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
   planetName: { fontSize: 13, fontWeight: '800', flex: 1, lineHeight: 19 },
-  planetDegree: { color: 'rgba(255,214,102,0.36)', fontSize: 11, fontWeight: '700', marginTop: 2 },
+  planetDegree: { color: 'rgba(255,214,102,0.62)', fontSize: 11, fontWeight: '700', marginTop: 2 },
   planetBarTrack: { height: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden', marginTop: 2 },
   planetBarFill: { height: 4, borderRadius: 2, opacity: 0.7 },
   planetRashi: { color: 'rgba(255,214,102,0.58)', fontSize: 12, fontWeight: '600', lineHeight: 18 },
@@ -3760,18 +3760,18 @@ const styles = StyleSheet.create({
   doshaRow: { flexDirection: 'row', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   doshaDot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
   doshaName: { color: '#FFE8B0', fontSize: 14, fontWeight: '700' },
-  doshaMeta: { color: 'rgba(255,214,102,0.38)', fontSize: 10, lineHeight: 15, fontWeight: '700', marginTop: 4 },
+  doshaMeta: { color: 'rgba(255,214,102,0.62)', fontSize: 10, lineHeight: 15, fontWeight: '700', marginTop: 4 },
   doshaIssueMeaning: { color: 'rgba(255,255,255,0.58)', fontSize: 12, lineHeight: 18, marginTop: 5 },
   doshaGuidanceTitle: { color: '#FBBF24', fontSize: 12, lineHeight: 18, fontWeight: '800', marginTop: 8 },
-  doshaDesc: { color: 'rgba(255,214,102,0.40)', fontSize: 12, lineHeight: 18, marginTop: 3 },
+  doshaDesc: { color: 'rgba(255,214,102,0.62)', fontSize: 12, lineHeight: 18, marginTop: 3 },
   cancelBadge: { backgroundColor: 'rgba(52,211,153,0.15)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(52,211,153,0.3)' },
-  cancelText: { color: '#34D399', fontSize: 9, fontWeight: '800' },
+  cancelText: { color: '#34D399', fontSize: 10, fontWeight: '800' },
   cancelReason: { color: 'rgba(52,211,153,0.6)', fontSize: 11, fontStyle: 'italic', marginTop: 3 },
   cancelInfoBox: { marginTop: 9, padding: 9, borderRadius: 10, backgroundColor: 'rgba(52,211,153,0.08)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.16)' },
   cancelInfoLabel: { color: '#34D399', fontSize: 10, fontWeight: '900', marginBottom: 4 },
   cancelInfoText: { color: 'rgba(209,250,229,0.72)', fontSize: 11, lineHeight: 17, fontWeight: '600' },
   sevBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1 },
-  sevText: { fontSize: 9, fontWeight: '800' },
+  sevText: { fontSize: 10, fontWeight: '800' },
 
   // Yoga styles
   yogaItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
@@ -3779,7 +3779,7 @@ const styles = StyleSheet.create({
   catDot: { width: 8, height: 8, borderRadius: 4 },
   yogaName: { color: '#FFE8B0', fontSize: 14, fontWeight: '700', flex: 1 },
   yogaCat: { color: 'rgba(255,140,0,0.6)', fontSize: 11, fontWeight: '600', marginTop: 3 },
-  yogaDesc: { color: 'rgba(255,214,102,0.40)', fontSize: 12, lineHeight: 18, marginTop: 3 },
+  yogaDesc: { color: 'rgba(255,214,102,0.62)', fontSize: 12, lineHeight: 18, marginTop: 3 },
   yogaPlanets: { color: 'rgba(255,184,0,0.6)', fontSize: 11, marginTop: 4 },
   strBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   strText: { fontSize: 10, fontWeight: '700' },
@@ -3788,58 +3788,58 @@ const styles = StyleSheet.create({
   jaiminiHighlight: { borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.15)', overflow: 'hidden' },
   jaiminiLabel: { color: 'rgba(255,140,0,0.7)', fontSize: 11, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
   jaiminiValue: { color: '#FF8C00', fontSize: 22, fontWeight: '900' },
-  jaiminiSub: { color: 'rgba(255,214,102,0.35)', fontSize: 11, marginTop: 8, lineHeight: 18 },
+  jaiminiSub: { color: 'rgba(255,214,102,0.55)', fontSize: 11, marginTop: 8, lineHeight: 18 },
   jaiminiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   jaiminiMini: { flex: 1, minWidth: 90, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 10, alignItems: 'center' },
-  jmLabel: { color: 'rgba(255,214,102,0.35)', fontSize: 10, fontWeight: '600', marginBottom: 4, textAlign: 'center' },
+  jmLabel: { color: 'rgba(255,214,102,0.55)', fontSize: 10, fontWeight: '600', marginBottom: 4, textAlign: 'center' },
   jmValue: { color: '#FFE8B0', fontSize: 14, fontWeight: '700', textAlign: 'center' },
-  jmDesc: { color: 'rgba(255,214,102,0.30)', fontSize: 10, textAlign: 'center', marginTop: 4 },
+  jmDesc: { color: 'rgba(255,214,102,0.55)', fontSize: 10, textAlign: 'center', marginTop: 4 },
 
   // Shadbala styles
   sbRow: { marginBottom: 14 },
   sbTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   sbPlanet: { fontSize: 14, fontWeight: '800', flex: 1, lineHeight: 18 },
-  sbRupas: { color: 'rgba(255,214,102,0.50)', fontSize: 12, fontWeight: '700', minWidth: 42, textAlign: 'right' },
+  sbRupas: { color: 'rgba(255,214,102,0.68)', fontSize: 12, fontWeight: '700', minWidth: 42, textAlign: 'right' },
   sbBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1 },
   sbBarTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
   sbBarFill: { height: 6, borderRadius: 3 },
-  sbNote: { color: 'rgba(255,255,255,0.54)', fontSize: 11, lineHeight: 17, marginTop: 7 },
+  sbNote: { color: 'rgba(255,255,255,0.68)', fontSize: 11, lineHeight: 17, marginTop: 7 },
 
   // Bhrigu Bindu styles
   bbCircle: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: 'rgba(255,184,0,0.35)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,184,0,0.06)' },
   bbDeg: { color: '#FFB800', fontSize: 16, fontWeight: '800' },
   bbRashi: { color: '#FFE8B0', fontSize: 16, fontWeight: '700' },
-  bbNak: { color: 'rgba(255,214,102,0.40)', fontSize: 12, marginTop: 2 },
-  bbInterp: { color: 'rgba(255,214,102,0.40)', fontSize: 12, lineHeight: 18, marginTop: 12 },
+  bbNak: { color: 'rgba(255,214,102,0.62)', fontSize: 12, marginTop: 2 },
+  bbInterp: { color: 'rgba(255,214,102,0.62)', fontSize: 12, lineHeight: 18, marginTop: 12 },
   bbPersonalNote: { color: 'rgba(255,255,255,0.58)', fontSize: 12, lineHeight: 18, marginTop: 10, fontWeight: '500' },
 
   // Past Life styles
   plRow: { marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   plLabel: { color: 'rgba(167,139,250,0.7)', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   plValue: { color: '#FFE8B0', fontSize: 13, lineHeight: 20 },
-  plIndicator: { color: 'rgba(255,214,102,0.35)', fontSize: 12, lineHeight: 20, paddingLeft: 4 },
+  plIndicator: { color: 'rgba(255,214,102,0.55)', fontSize: 12, lineHeight: 20, paddingLeft: 4 },
 
   // Engine footer
-  engineFooter: { color: 'rgba(255,255,255,0.12)', fontSize: 10, textAlign: 'center', marginTop: 4, marginBottom: 10 },
+  engineFooter: { color: 'rgba(255,255,255,0.55)', fontSize: 10, textAlign: 'center', marginTop: 4, marginBottom: 10 },
 
   // Share pill (chart header) + captured-card watermark
   sharePill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)', backgroundColor: 'rgba(255,184,0,0.08)' },
   sharePillText: { color: '#FFB800', fontSize: 12, fontWeight: '700' },
   chartShotWrap: { backgroundColor: '#0B0B14', borderRadius: 20, paddingTop: 6, paddingBottom: 10 },
-  shareWatermark: { color: 'rgba(255,214,102,0.45)', fontSize: 11, fontWeight: '700', textAlign: 'center', letterSpacing: 0.5, marginTop: 4 },
+  shareWatermark: { color: 'rgba(255,214,102,0.62)', fontSize: 11, fontWeight: '700', textAlign: 'center', letterSpacing: 0.5, marginTop: 4 },
 
   // Contextual next-step CTA cards
   ctaCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16, borderWidth: 1, backgroundColor: 'rgba(20,18,32,0.6)', overflow: 'hidden' },
   ctaIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   ctaTitle: { color: '#F8E7B8', fontSize: 14.5, fontWeight: '800' },
-  ctaSub: { color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 16, marginTop: 2 },
+  ctaSub: { color: 'rgba(255,255,255,0.68)', fontSize: 12, lineHeight: 16, marginTop: 2 },
 
   // "Today's sky" transit strip (daily-return hook)
   transitStrip: { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 13, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(199,210,254,0.22)', backgroundColor: 'rgba(20,22,40,0.55)', overflow: 'hidden', marginBottom: 14 },
   transitIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(199,210,254,0.12)', borderWidth: 1, borderColor: 'rgba(199,210,254,0.28)' },
-  transitEyebrow: { color: 'rgba(199,210,254,0.75)', fontSize: 9.5, fontWeight: '800', letterSpacing: 1.2 },
+  transitEyebrow: { color: 'rgba(199,210,254,0.75)', fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2 },
   transitLine: { color: '#EDEAF6', fontSize: 13.5, fontWeight: '700', marginTop: 2, lineHeight: 18 },
-  transitSub: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2, lineHeight: 16 },
+  transitSub: { color: 'rgba(255,255,255,0.68)', fontSize: 12, marginTop: 2, lineHeight: 16 },
 
   // Free-teaser upgrade card (non-subscribers)
   upgradeCard: { marginTop: 20, padding: 20, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)', backgroundColor: 'rgba(20,15,8,0.7)', overflow: 'hidden' },
@@ -3863,7 +3863,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderTopColor: 'rgba(255,184,0,0.10)', borderRightColor: 'rgba(255,184,0,0.10)', borderBottomColor: 'rgba(255,184,0,0.10)',
   },
   aiExplainBody: { flex: 1, minWidth: 0 },
-  aiExplainLabel: { color: 'rgba(255,184,0,0.68)', fontSize: 9, lineHeight: 12, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
+  aiExplainLabel: { color: 'rgba(255,184,0,0.68)', fontSize: 10, lineHeight: 12, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
   aiExplainText: { color: 'rgba(255,214,102,0.65)', fontSize: 12, lineHeight: 19, fontStyle: 'italic' },
 
   // Loading screen styles
@@ -3879,7 +3879,7 @@ const styles = StyleSheet.create({
   stepText: { fontSize: 14, fontWeight: '500', flex: 1 },
   stepTextDone: { color: 'rgba(52,211,153,0.7)' },
   stepTextActive: { color: '#FFB800', fontWeight: '700' },
-  stepTextPending: { color: 'rgba(255,255,255,0.22)' },
+  stepTextPending: { color: 'rgba(255,255,255,0.55)' },
   loadingBarTrack: { height: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' },
   loadingBarFill: { height: 4, backgroundColor: '#FFB800', borderRadius: 2 },
 
@@ -3889,7 +3889,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   marakaStatusTitle: { fontSize: 16, fontWeight: '800', marginBottom: 2 },
-  marakaStatusDesc: { color: 'rgba(255,255,255,0.5)', fontSize: 12, lineHeight: 18 },
+  marakaStatusDesc: { color: 'rgba(255,255,255,0.68)', fontSize: 12, lineHeight: 18 },
   marakaCountRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
   marakaCountBadge: {
     flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 12,
@@ -3909,10 +3909,10 @@ const styles = StyleSheet.create({
   marakaSevDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
   marakaApalaTitle: { color: '#FFE8B0', fontSize: 14, fontWeight: '700', flexShrink: 1 },
   marakaSevBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1 },
-  marakaSevText: { fontSize: 9, fontWeight: '800' },
-  marakaApalaDesc: { color: 'rgba(255,214,102,0.40)', fontSize: 12, lineHeight: 18, marginTop: 4 },
+  marakaSevText: { fontSize: 10, fontWeight: '800' },
+  marakaApalaDesc: { color: 'rgba(255,214,102,0.62)', fontSize: 12, lineHeight: 18, marginTop: 4 },
   marakaPeriodRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' },
-  marakaPeriodText: { color: 'rgba(255,214,102,0.40)', fontSize: 11, fontWeight: '500' },
+  marakaPeriodText: { color: 'rgba(255,214,102,0.62)', fontSize: 11, fontWeight: '500' },
   marakaDaysLeftBadge: { backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   marakaDaysLeftText: { color: 'rgba(248,113,113,0.8)', fontSize: 10, fontWeight: '700' },
   marakaRemediesBox: {
@@ -3922,8 +3922,8 @@ const styles = StyleSheet.create({
   marakaRemediesTitle: { color: '#10b981', fontSize: 12, fontWeight: '700', marginBottom: 8 },
   marakaRemedyRow: { flexDirection: 'row', gap: 6, marginBottom: 4, paddingLeft: 2 },
   marakaRemedyBullet: { color: 'rgba(16,185,129,0.6)', fontSize: 12, fontWeight: '700' },
-  marakaRemedyText: { color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 18, flex: 1 },
-  marakaTapHint: { color: 'rgba(255,255,255,0.2)', fontSize: 10, marginTop: 6, fontStyle: 'italic' },
+  marakaRemedyText: { color: 'rgba(255,255,255,0.68)', fontSize: 12, lineHeight: 18, flex: 1 },
+  marakaTapHint: { color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 6, fontStyle: 'italic' },
 
   // ── Locked (free-user) teaser styles ──
   lockVaultHeader: {
@@ -3966,7 +3966,7 @@ const styles = StyleSheet.create({
   lockDashaPlanet: { width: 62, fontSize: 12, fontWeight: '800' },
   lockDashaBarTrack: { flex: 1, height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
   lockDashaBarFill: { height: 6, borderRadius: 3 },
-  lockDashaYears: { width: 74, textAlign: 'right', color: 'rgba(255,214,102,0.42)', fontSize: 10, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  lockDashaYears: { width: 74, textAlign: 'right', color: 'rgba(255,214,102,0.62)', fontSize: 10, fontWeight: '600', fontVariant: ['tabular-nums'] },
 
   // Free yoga badge row
   lockYogaRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 12 },
@@ -4010,18 +4010,18 @@ var kj = StyleSheet.create({
   currentDashaDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFB800' },
   currentDashaLabel: { color: 'rgba(255,184,0,0.60)', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
   currentDashaPlanet: { color: '#FFB800', fontSize: 22, fontWeight: '900' },
-  currentDashaSub: { color: 'rgba(255,214,102,0.45)', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  currentDashaSub: { color: 'rgba(255,214,102,0.62)', fontSize: 12, fontWeight: '600', marginTop: 2 },
   currentDashaNote: { color: 'rgba(255,255,255,0.58)', fontSize: 12, lineHeight: 18, marginTop: 8, fontWeight: '500' },
 
   dashaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   dashaRowCurrent: { backgroundColor: 'rgba(255,184,0,0.04)', borderRadius: 10, marginHorizontal: -6, paddingHorizontal: 6 },
   dashaLeft: { width: 56, alignItems: 'flex-end' },
   dashaPlanet: { fontSize: 13, fontWeight: '800' },
-  dashaYears: { color: 'rgba(255,214,102,0.35)', fontSize: 9, fontWeight: '600' },
+  dashaYears: { color: 'rgba(255,214,102,0.55)', fontSize: 10, fontWeight: '600' },
   dashaBarWrap: { flex: 1 },
   dashaBarTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: 3 },
   dashaBarFill: { height: 6, borderRadius: 3 },
-  dashaDate: { color: 'rgba(255,214,102,0.30)', fontSize: 9, fontWeight: '500' },
+  dashaDate: { color: 'rgba(255,214,102,0.55)', fontSize: 10, fontWeight: '500' },
   dashaLive: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFB800' },
 
   // Dosha/Sade Sati
@@ -4030,10 +4030,10 @@ var kj = StyleSheet.create({
     borderWidth: 1.5,
   },
   doshaStatus: { fontSize: 15, fontWeight: '800', marginBottom: 3 },
-  doshaDesc: { color: 'rgba(255,214,102,0.45)', fontSize: 12, lineHeight: 18 },
+  doshaDesc: { color: 'rgba(255,214,102,0.62)', fontSize: 12, lineHeight: 18 },
 
   // Chalit shifts
-  chalitDesc: { color: 'rgba(255,214,102,0.40)', fontSize: 12, lineHeight: 18, marginBottom: 10 },
+  chalitDesc: { color: 'rgba(255,214,102,0.62)', fontSize: 12, lineHeight: 18, marginBottom: 10 },
   chalitRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   chalitDot: { width: 8, height: 8, borderRadius: 4 },
   chalitPlanet: { fontSize: 13, fontWeight: '700', width: 60 },
@@ -4043,9 +4043,9 @@ var kj = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 4,
     borderWidth: 1, borderColor: 'rgba(129,140,248,0.20)',
   },
-  chalitShiftFrom: { color: 'rgba(255,255,255,0.50)', fontSize: 12, fontWeight: '700' },
+  chalitShiftFrom: { color: 'rgba(255,255,255,0.68)', fontSize: 12, fontWeight: '700' },
   chalitShiftTo: { color: '#818CF8', fontSize: 12, fontWeight: '800' },
-  chalitLabel: { color: 'rgba(129,140,248,0.50)', fontSize: 10, fontWeight: '600', flex: 1, textAlign: 'right' },
+  chalitLabel: { color: 'rgba(129,140,248,0.68)', fontSize: 10, fontWeight: '600', flex: 1, textAlign: 'right' },
 
   // Varga picker
   vargaPickerRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
@@ -4055,9 +4055,9 @@ var kj = StyleSheet.create({
     alignItems: 'center', overflow: 'hidden', minWidth: 70,
   },
   vargaPillActive: { borderColor: 'rgba(6,182,212,0.40)' },
-  vargaPillLabel: { color: 'rgba(255,214,102,0.50)', fontSize: 14, fontWeight: '900' },
+  vargaPillLabel: { color: 'rgba(255,214,102,0.68)', fontSize: 14, fontWeight: '900' },
   vargaPillLabelActive: { color: '#06B6D4' },
-  vargaPillName: { color: 'rgba(255,214,102,0.30)', fontSize: 9, fontWeight: '600', marginTop: 2 },
+  vargaPillName: { color: 'rgba(255,214,102,0.55)', fontSize: 10, fontWeight: '600', marginTop: 2 },
   vargaPillNameActive: { color: 'rgba(6,182,212,0.65)' },
 
   // Varga chart display
@@ -4071,7 +4071,7 @@ var kj = StyleSheet.create({
   vargaPlanetRow: { paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)', gap: 5 },
   vargaPlanetTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   vargaPlanetName: { fontSize: 13, fontWeight: '800', lineHeight: 19 },
-  vargaPlanetHint: { color: 'rgba(255,255,255,0.38)', fontSize: 11, lineHeight: 16, marginLeft: 16 },
+  vargaPlanetHint: { color: 'rgba(255,255,255,0.62)', fontSize: 11, lineHeight: 16, marginLeft: 16 },
   vargaPlanetRashi: {
     color: '#06B6D4', fontSize: 11, fontWeight: '800', textAlign: 'right', marginLeft: 8,
     backgroundColor: 'rgba(6,182,212,0.08)', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3,

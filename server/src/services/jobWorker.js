@@ -47,6 +47,12 @@ async function executeAIReportJob(payload, job = {}) {
   const sectionSubset = Array.isArray(payload.sections) && payload.sections.length ? payload.sections : null;
   const sectionTotal = sectionSubset ? sectionSubset.length : REPORT_SECTION_TOTAL;
 
+  // Queue-wait tells us instantly whether a worker was alive when the job was
+  // enqueued — the #1 cause of "AI part always fails" is no worker claiming.
+  const queuedAt = job.createdAt ? new Date(job.createdAt).getTime() : null;
+  const waitMs = queuedAt ? Date.now() - queuedAt : null;
+  console.log(`[JobWorker] ▶ ${payload.reportType === 'baby' ? 'BABY narrative' : 'FULL report'} claimed — report=${reportId} uid=${uid || 'n/a'} sections=${sectionTotal} lang=${language}${waitMs != null ? ` queueWait=${Math.round(waitMs / 1000)}s` : ''} attempt=${job.attempts || 1}/${job.maxAttempts || 2}`);
+
   createReportProgress(reportId, sectionTotal, uid, {
     jobId: job.id || payload.jobId || null,
     stage: payload.recoveryRetry ? 'recovering' : 'engine',
@@ -214,6 +220,7 @@ async function executeAIReportJob(payload, job = {}) {
       catch (e) { console.warn('[JobWorker] Entitlement fulfill failed:', e.message); }
     }
 
+    console.log(`[JobWorker] ✔ ${payload.reportType === 'baby' ? 'BABY narrative' : 'FULL report'} DONE — report=${reportId} saved=${savedReportId} sections=${sectionCount}/${report.totalSections || sectionCount} in ${Math.round(elapsed / 1000)}s${report.failedSections && report.failedSections.length ? ` failedSections=[${report.failedSections.map(f => f.key).join(',')}]` : ''}`);
     return {
       savedReportId,
       elapsedMs: elapsed,
@@ -222,6 +229,8 @@ async function executeAIReportJob(payload, job = {}) {
       failedSections: report.failedSections ? report.failedSections.map(f => f.key) : [],
     };
   } catch (error) {
+    const willRetry = isTemporaryAIProviderError(error);
+    console.error(`[JobWorker] ✖ ${payload.reportType === 'baby' ? 'BABY narrative' : 'FULL report'} FAILED — report=${reportId} code=${error.code || 'n/a'} retrying=${willRetry} error=${error.message}`);
     const existingAfterFailure = await findExistingSavedReport();
     if (existingAfterFailure) {
       return completeWithExistingReport(existingAfterFailure, {
@@ -231,7 +240,7 @@ async function executeAIReportJob(payload, job = {}) {
     }
 
     updateReportProgress(reportId, {
-      stage: isTemporaryAIProviderError(error) ? 'retrying' : 'failed',
+      stage: willRetry ? 'retrying' : 'failed',
       error: error.message || 'Report generation failed',
     });
     if (payload.entitlementId) {

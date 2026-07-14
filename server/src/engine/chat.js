@@ -79,7 +79,23 @@ function buildSlimRawData(sectionKey, data) {
   return Object.keys(out).length > 0 ? out : null;
 }
 
+/**
+ * Minimum sections that must succeed for a report to count as valid — MUST
+ * scale with how many were REQUESTED. A curated subset (Baby Kendara asks for
+ * just 5 sections) can never meet the full report's absolute floor of 10, so
+ * the old `Math.max(10, …)` made every baby narrative fail even when all 5
+ * generated. Full report (≥12 requested): keep the strong ≥10 bar. Smaller
+ * curated subset: require a 60% majority (never more than were requested).
+ */
+function minRequiredSections(totalSections) {
+  if (!totalSections || totalSections < 1) return 1;
+  return totalSections >= 12
+    ? Math.max(10, Math.floor(totalSections * 0.5))
+    : Math.max(1, Math.ceil(totalSections * 0.6));
+}
+
 const REPORT_SECTION_ORDER = [
+  'chartProof',
   'yogaAnalysis',
   'lifePredictions',
   'career',
@@ -1205,6 +1221,7 @@ function buildSectionPrompt(sectionKey, sectionData, birthData, allSections, lan
 
   // Sinhala section titles — used when language === 'si'
   const SINHALA_TITLES = {
+    chartProof: '🎯 සාක්ෂිය — මේවා ඔබේ ජීවිතය එක්ක ගළපලා බලන්න',
     yogaAnalysis: '⚡ ඔයාගේ කේන්දරයේ ශක්තීන් සහ අභියෝග',
     lifePredictions: '🔮 ඔයාගේ ජීවිත ගමන — අතීතය, වර්තමානය සහ අනාගතය',
     career: '💼 රැකියාව සහ මුදල් මාර්ගය',
@@ -1228,6 +1245,76 @@ function buildSectionPrompt(sectionKey, sectionData, birthData, allSections, lan
   };
 
   const SECTION_PROMPTS = {
+    chartProof: {
+      title: '🎯 The Proof — Check This Against Your Life',
+      prompt: `
+╔═══════════════════════════════════════════════════════════════╗
+║  SECTION: CHART PROOF — VERIFICATION-FIRST OPENING            ║
+╚═══════════════════════════════════════════════════════════════╝
+
+This is the FIRST thing the reader sees. Its only job: make them think
+"how did it know that?" BEFORE any prediction. Real astrologers earn trust
+by describing the past first — if the chart can't describe what already
+happened, why believe what comes next? This section is that proof.
+
+WRITE 5-7 SHORT, BOLD, NUMBERED "DARTS". Each dart = one checkable claim
+about their PAST or PRESENT (never the future), stated in 1-3 direct
+sentences, followed by one plain-language line of WHY the chart says so.
+
+━━━ THE DATA ━━━
+- Current age: ${sectionData?.currentAgeYears ?? 'N/A'}
+- Past life-chapter shifts (dasha starts already lived through): ${JSON.stringify(sectionData?.pastPhaseShifts || [])}
+- Body marks (planet-house technical): ${JSON.stringify(sectionData?.bodyMarks || [])}
+- Sibling estimate: ${JSON.stringify(sectionData?.siblings || {})}
+- Born-one-hour-later contrast: ${JSON.stringify(sectionData?.alternateLife || {})}
+- Hidden strengths (vargottama/exalted/stelliums): ${JSON.stringify(sectionData?.secretSuperpower || {})}
+- Moon element: ${sectionData?.moonElement || 'N/A'} | Physical hints: ${JSON.stringify(sectionData?.physicalHints || {})}
+
+━━━ TENSE RULE (absolute) ━━━
+ONLY past and present tense. ZERO future predictions in this section.
+NO hedging words: no "might", "perhaps", "possibly", "may have". State it.
+If a dart's data is missing or empty, SKIP that dart silently — never
+invent, never pad. 5 strong darts beat 7 weak ones.
+
+━━━ DART PLAYBOOK (pick the strongest, ordered by impact) ━━━
+1. LIFE-CHAPTER SHIFTS (use pastPhaseShifts): pick the 2-3 most significant
+   PAST phase changes (ageAtStart between 4 and their current age). For each:
+   "Around age [X] — [year] — the entire tone of your life changed." Then
+   describe the FLAVOUR of the chapter that began, from its ruling planet:
+   Saturn = weight, duty, slow grind that built you · Rahu = restless ambition,
+   unconventional moves, foreign pulls · Jupiter = doors opening, learning,
+   growth · Venus = relationships, comfort, creative bloom · Sun = visibility,
+   authority · Moon = emotional tides, home focus · Mars = drive, conflict,
+   action · Mercury = study, trade, communication · Ketu = detachment, searching.
+   These are the report's strongest darts — a reader can instantly check
+   "did my life change direction at 19?"
+2. BODY MARK (use bodyMarks): name the body AREA of a scar/mark from the
+   planet-house data. Area only — never exact shape or size.
+3. SIBLING PATTERN (use siblings): tight range with elder/younger lean.
+4. THE ONE-HOUR TWIST (use alternateLife, only if changed=true): "If you had
+   been born one hour later, you would be reading a completely different
+   report — [alternateLagna] rising instead of [currentLagna]. Your birth time
+   matters that much; it is why this report can be this specific."
+5. RARITY (use the MEASURED RARITY panel from the context): lead with the
+   rarest measured feature — "fewer than [X]% of charts have this."
+6. SECRET STRENGTH (use secretSuperpower): vargottama/exalted planets or a
+   stellium, framed as "something most charts simply do not have."
+7. INNER TENSION (present tense): from the chart's strongest contradiction,
+   name ONE specific internal tug-of-war they live with — e.g. "you crave
+   closeness and go quiet the moment it arrives." Emotionally precise, not
+   flattering mush.
+
+━━━ CLOSING LINE ━━━
+End with one sentence inviting scorekeeping: count how many of these landed —
+that count is how much weight to give everything that follows. Confidence
+without arrogance.
+
+━━━ HARD BANS ━━━
+- No future predictions, no timing windows, no parent health, no remedies.
+- Never present a KNOWN FACT from the context as a "discovery" — if they told
+  us something, it cannot be a dart.
+- No jargon (the global jargon ban applies — "life chapter", not "dasha").`,
+    },
     marriage: {
       title: '💍 Love & Relationships',
       prompt: `
@@ -3148,6 +3235,7 @@ CONVERGENCE RULES FOR THIS SECTION:
   - NEVER interpret career solely from Sun/Moon house in the native's chart — use the full derived chart.
 • Siblings → 3rd house (younger) + 11th house (elder) + Mars strength + estimatedCount (elder + younger SEPARATELY) + D3 + Bhratrkaraka = sibling portrait.
 • Health claims about parents → ALWAYS use probabilistic language. "Watch for" not "will have."
+• PARENT HEALTH TIMING — HARD HORIZON RULE: never name a calendar year more than 7 years from today for a parent's health. The supplied windows are already near-term filtered; frame them as CARE REMINDERS ("years when extra check-ups and attention are worth it"), never as "will get sick in [year]". A far-future parent-illness date is frightening, unverifiable, and destroys trust — if a window feels distant, describe the parent's constitutional pattern instead and skip the date entirely.
 • Bond claims → ALWAYS hedge negative claims. "There may be phases of complexity" not "difficult relationship."
 • Family karma → Cross-validate: childhood stress indicators + emotional heaviness pattern + marriage patterns = intergenerational karma story.
 
@@ -3811,6 +3899,38 @@ Tag each major claim in your output with an internal confidence tier:
 - ☆☆☆ HINTED (1 weak source): State as possibility. "One pattern in your chart hints at..."
 Never mix confidence levels — if something is ★★★, write it clearly while avoiding guaranteed-event language. If it's ☆☆☆, don't oversell it.
 
+STEP 2E: TENSE-BASED BOLDNESS (overrides tone, not facts)
+The confidence tiers above govern WHAT you claim. This governs HOW you say it:
+- PAST and PRESENT claims (things the reader can check right now — life shifts
+  that already happened, traits, patterns, family facts): state them DIRECTLY,
+  no "may have", no "perhaps". A checkable claim written timidly reads as
+  guessing; written plainly it reads as knowing. This is where "how did it
+  know that?" lives — a hedged sentence can never produce that moment.
+- FUTURE claims: calibrated per the tiers — windows, tendencies, never
+  guaranteed events.
+The report's credibility equation: bold about the verifiable past, honest
+about the uncertain future. Never the reverse.
+
+STEP 2F: THE INNER TENSION (once per section where personality is in play)
+Somewhere in this section, name ONE specific internal tug-of-war this exact
+chart produces — the tension between two placements pulling opposite ways
+("you plan every step and then resent the plan", "you crave being needed and
+feel suffocated when you are"). Emotionally precise, never flattering mush.
+This single sentence is what separates a reading that feels WRITTEN FOR THEM
+from one that feels generated.
+
+STEP 2G: PERSONAL ANCHORS
+Weave the person's NAME naturally into 1-2 sentences of this section (not
+every paragraph — that reads robotic). When discussing any timing, anchor to
+their CURRENT AGE ("you're ${ageContext?.currentAge ?? '[age]'} now, so this window is ${'{X}'} years away"), never
+just abstract years.
+
+STEP 2H: CARRY-THIS CLOSER
+End the section with ONE ultra-specific, do-it-this-week action drawn from
+THIS section's data — concrete enough to act on today ("move money decisions
+to Thursdays this month", "book the check-up you keep postponing before
+March"). One line. Never a platitude like "be patient" or "stay positive".
+
 ═══════════════════════════════════════════════════════════════
   PHASE 2E — ACCURACY ENGINE INPUTS (NEW — must be honoured)
 ═══════════════════════════════════════════════════════════════
@@ -4243,12 +4363,19 @@ FORMAT: Markdown for readability:
       '', '',
       '══ MEASURED RARITY (real base rates — use instead of guessing) ══',
       'These placements are genuinely uncommon for THIS chart. Prevalence is the',
-      'measured share of charts that have the feature. Weave the 1–2 rarest into',
-      'the "psychic moment" naturally — cite the human meaning, not the number as jargon.',
+      'measured share of charts that have the feature. Rarity is the cheapest "wow"',
+      'in the report — a reader who learns "fewer than 1 in 12 charts have this"',
+      'feels singled out, not lectured.',
     ];
     for (const it of insights) {
       lines.push(`  • ${it.text} — ${it.prevalence}% of charts (${it.label})`);
     }
+    lines.push('USAGE RULE: if one of these insights belongs to THIS section\'s life domain,');
+    lines.push('put it in the section\'s opening HOOK — lead with "fewer than X% of charts',
+    );
+    lines.push('have this" and then say what it means for them. Each insight should headline');
+    lines.push('at most ONE section (pick the best-fitting one) — elsewhere mention it only in');
+    lines.push('passing or not at all, so the report never repeats the same rarity line twice.');
     lines.push('Do NOT invent rarity figures beyond these. If none fits this section, skip rarity.');
     lines.push('══════════════════════════════════════════');
     return '\n' + lines.join('\n');
@@ -4766,6 +4893,41 @@ async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612,
   })();
   const dasaPeriods = calculateVimshottariDetailed(moonSidereal, date);
   const panchanga = getPanchanga(date, lat, lng, cleanMarriageOpts);
+
+  // ── CHART PROOF section data (verification-first opening) ──────
+  // Pure recombination of already-computed data: the report's most
+  // CHECKABLE claims (past life-chapter shifts, body marks, sibling
+  // pattern, one-hour-later contrast, hidden strengths), front-loaded
+  // so the reader can verify the chart against their own life BEFORE
+  // any prediction. See SECTION_PROMPTS.chartProof for the write-up rules.
+  sections.chartProof = (() => {
+    const nowTs = Date.now();
+    const bornTs = date.getTime();
+    const yearMs = 365.25 * 86400000;
+    const ageAt = (d) => Math.floor((new Date(d).getTime() - bornTs) / yearMs);
+    const pastPhaseShifts = (dasaPeriods || [])
+      .filter(p => p?.start && new Date(p.start).getTime() <= nowTs)
+      .map(p => ({
+        lord: p.lord,
+        startYear: parseInt(String(p.start).slice(0, 4), 10),
+        ageAtStart: Math.max(0, ageAt(p.start)),
+        stillActive: p.endDate ? new Date(p.endDate).getTime() > nowTs : false,
+      }));
+    const si = sections.surpriseInsights || {};
+    return {
+      currentAgeYears: Math.floor((nowTs - bornTs) / yearMs),
+      pastPhaseShifts,
+      bodyMarks: si.bodyMarks || [],
+      siblings: si.numberOfSiblings || null,
+      alternateLife: si.alternateLife || null,
+      secretSuperpower: si.secretSuperpower || null,
+      handednessIndicator: si.handednessIndicator || false,
+      moonElement: si.moonElement || null,
+      physicalHints: sections.physicalProfile
+        ? { lagnaEnglish: sections.physicalProfile.lagnaEnglish, planetsIn1st: sections.physicalProfile.planetsIn1st }
+        : null,
+    };
+  })();
 
   // ── Advanced Engine (Tiers 1-2-3) ─────────────────────────────
   let advancedData = null;
@@ -5641,7 +5803,7 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
 
   const successCount = Object.keys(narrativeSections).length;
   const totalSections = sectionOrder.length;
-  const MIN_REQUIRED_SECTIONS = Math.max(10, Math.floor(totalSections * 0.5));
+  const MIN_REQUIRED_SECTIONS = minRequiredSections(totalSections);
 
   // ── RETRY: Attempt failed sections sequentially (1 at a time) ──
   if (failedSections.length > 0 && successCount < totalSections) {
@@ -6182,6 +6344,7 @@ module.exports = {
   translateAdvancedForDisplay,
   explainChartSimple,
   REPORT_SECTION_ORDER,
+  minRequiredSections,
   // Progress tracking for report generation
   createReportProgress,
   updateReportProgress,

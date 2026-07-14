@@ -45,6 +45,6 @@ export default function NakathScreen() {
 var sh = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   title: { fontSize: 22, fontWeight: '900', color: '#F5E6C8' },
-  sub: { fontSize: 12.5, color: 'rgba(245,230,200,0.55)', marginTop: 1 },
+  sub: { fontSize: 12.5, color: 'rgba(245,230,200,0.68)', marginTop: 1 },
   orb: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,184,0,0.10)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.28)' },
 });

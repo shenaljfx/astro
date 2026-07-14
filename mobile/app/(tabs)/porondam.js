@@ -694,11 +694,11 @@ var lsStyles = StyleSheet.create({
   signalText: { fontSize: 11, fontWeight: '800' },
   progressRow: { width: '100%', maxWidth: 390, alignItems: 'stretch' },
   progressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 },
-  progressLabel: { color: 'rgba(255,232,176,0.42)', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.2 },
+  progressLabel: { color: 'rgba(255,232,176,0.62)', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.2 },
   progressCount: { color: '#FFB800', fontSize: 11, fontWeight: '900' },
   progressBar: { height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
-  progressHint: { color: 'rgba(255,255,255,0.28)', fontSize: 11, fontWeight: '600', textAlign: 'center', marginTop: 9 },
+  progressHint: { color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: '600', textAlign: 'center', marginTop: 9 },
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -722,7 +722,7 @@ var ns = StyleSheet.create({
   },
   shellHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
   shellIndex: {
-    fontSize: 22, fontWeight: '900', color: 'rgba(232,201,122,0.30)',
+    fontSize: 22, fontWeight: '900', color: 'rgba(232,201,122,0.55)',
     letterSpacing: 0.5, lineHeight: 26, marginTop: 1, fontVariant: ['tabular-nums'],
   },
   shellTitle: { fontSize: 16.5, fontWeight: '800', color: INK.title, letterSpacing: 0.2, lineHeight: 22 },
@@ -757,7 +757,7 @@ var ns = StyleSheet.create({
   },
   arcName: { fontSize: 26, fontWeight: '900', color: INK.title, textAlign: 'center', letterSpacing: 0.2, lineHeight: 33 },
   styleRow: { alignItems: 'center', marginTop: 12 },
-  styleCaption: { fontSize: 9.5, fontWeight: '900', letterSpacing: 1.6, textTransform: 'uppercase', color: 'rgba(255,241,208,0.38)', marginBottom: 3 },
+  styleCaption: { fontSize: 10.5, fontWeight: '900', letterSpacing: 1.6, textTransform: 'uppercase', color: 'rgba(255,241,208,0.62)', marginBottom: 3 },
   styleName: { fontSize: 15, fontWeight: '800', letterSpacing: 0.2 },
   essence: { fontSize: 14.5, lineHeight: 22, color: 'rgba(255,255,255,0.72)', textAlign: 'center', marginTop: 10, paddingHorizontal: 6 },
   countRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18 },
@@ -786,7 +786,7 @@ var ns = StyleSheet.create({
     backgroundColor: 'rgba(245,158,11,0.07)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.22)',
     borderRadius: 12, padding: 12, marginBottom: 11,
   },
-  scSeriousTag: { fontSize: 9.5, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', color: '#F59E0B', marginBottom: 3 },
+  scSeriousTag: { fontSize: 10.5, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', color: '#F59E0B', marginBottom: 3 },
   scPath: { fontSize: 12.5, lineHeight: 18, color: 'rgba(232,201,122,0.78)', marginTop: 6, fontStyle: 'italic' },
 
   // Seven signals
@@ -795,7 +795,7 @@ var ns = StyleSheet.create({
   sigTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   sigName: { fontSize: 14, fontWeight: '800', color: '#FFE8B0' },
   sigTech: { fontSize: 11, color: INK.faint, marginTop: 1.5 },
-  sigWhat: { fontSize: 12, lineHeight: 17.5, color: 'rgba(255,241,208,0.48)', marginTop: 8 },
+  sigWhat: { fontSize: 12, lineHeight: 17.5, color: 'rgba(255,241,208,0.68)', marginTop: 8 },
   sigChip: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
   sigChipText: { fontSize: 10.5, fontWeight: '800' },
   sigScore: { fontSize: 11, fontWeight: '800', color: INK.faint, marginLeft: 8, fontVariant: ['tabular-nums'] },
@@ -824,7 +824,7 @@ var ns = StyleSheet.create({
   histRing: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   histNames: { fontSize: 13.5, fontWeight: '800', color: '#FFE8B0' },
   histVerdict: { fontSize: 11.5, fontWeight: '800', marginTop: 2.5 },
-  histMeta: { fontSize: 10.5, color: 'rgba(255,241,208,0.35)', marginTop: 3 },
+  histMeta: { fontSize: 10.5, color: 'rgba(255,241,208,0.55)', marginTop: 3 },
   histDelete: { padding: 6 },
 });
 
@@ -1362,7 +1362,7 @@ var lx = StyleSheet.create({
   headImg: { width: 36, height: 36 },
   kicker: { fontSize: 10, fontWeight: '900', letterSpacing: 1.8, color: 'rgba(251,191,36,0.85)', textTransform: 'uppercase' },
   title: { fontSize: 16.5, fontWeight: '800', color: '#FFF1D0', marginTop: 3, lineHeight: 22 },
-  sub: { fontSize: 12, color: 'rgba(255,241,208,0.55)', marginTop: 3, lineHeight: 17 },
+  sub: { fontSize: 12, color: 'rgba(255,241,208,0.68)', marginTop: 3, lineHeight: 17 },
   legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   legendChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 4,
@@ -1376,9 +1376,9 @@ var lx = StyleSheet.create({
   cellWrap: { width: '25%', padding: 4 },
   cell: { paddingVertical: 9, paddingHorizontal: 2, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', gap: 5 },
   cellImg: { width: 28, height: 28 },
-  cellName: { fontSize: 9.5, fontWeight: '700', color: 'rgba(255,241,208,0.6)', maxWidth: '96%' },
+  cellName: { fontSize: 10.5, fontWeight: '700', color: 'rgba(255,241,208,0.6)', maxWidth: '96%' },
   sameBadge: { position: 'absolute', top: 3, right: 3, paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 5, zIndex: 2 },
-  sameBadgeText: { fontSize: 7, fontWeight: '900', color: '#1A0F24', letterSpacing: 0.3 },
+  sameBadgeText: { fontSize: 9, fontWeight: '900', color: '#1A0F24', letterSpacing: 0.3 },
   detail: { borderRadius: 16, borderWidth: 1, padding: 14, overflow: 'hidden', marginBottom: 12 },
   detailTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   detailBandChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, borderWidth: 1 },
@@ -1387,12 +1387,12 @@ var lx = StyleSheet.create({
   detailPair: { fontSize: 11.5, fontWeight: '700', color: 'rgba(232,201,122,0.6)', marginTop: 3 },
   detailEssence: { fontSize: 13, lineHeight: 19.5, color: 'rgba(255,255,255,0.78)', marginTop: 9 },
   detailBody: { fontSize: 12.5, lineHeight: 19, color: 'rgba(255,241,208,0.60)', marginTop: 8 },
-  note: { fontSize: 11.5, lineHeight: 17, color: 'rgba(255,241,208,0.42)', textAlign: 'center', fontStyle: 'italic', paddingHorizontal: 6 },
+  note: { fontSize: 11.5, lineHeight: 17, color: 'rgba(255,241,208,0.62)', textAlign: 'center', fontStyle: 'italic', paddingHorizontal: 6 },
   footerWrap: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10,
     paddingTop: 11, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
   },
-  footer: { fontSize: 11.5, color: 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 15 },
+  footer: { fontSize: 11.5, color: 'rgba(255,255,255,0.62)', textAlign: 'center', lineHeight: 15 },
 });
 
 // Labels — simple, everyday language; Sinhala in the warm ඔබ register
@@ -1532,7 +1532,7 @@ function planetLabel(name, si) {
 }
 
 var cd = StyleSheet.create({
-  deepCaption: { fontSize: 10.5, color: 'rgba(255,241,208,0.34)', marginTop: 1.5 },
+  deepCaption: { fontSize: 10.5, color: 'rgba(255,241,208,0.55)', marginTop: 1.5 },
   harmonyNote: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 12, paddingTop: 12,
     borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)',
@@ -1551,8 +1551,8 @@ var cd = StyleSheet.create({
     width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
   weddingDates: { fontSize: 13.5, fontWeight: '800' },
-  weddingReason: { fontSize: 12, color: 'rgba(255,241,208,0.55)', marginTop: 3, lineHeight: 17.5 },
-  weddingMeta: { fontSize: 10.5, color: 'rgba(255,241,208,0.30)', marginTop: 3 },
+  weddingReason: { fontSize: 12, color: 'rgba(255,241,208,0.68)', marginTop: 3, lineHeight: 17.5 },
+  weddingMeta: { fontSize: 10.5, color: 'rgba(255,241,208,0.55)', marginTop: 3 },
   bestChip: {
     backgroundColor: 'rgba(52,211,153,0.12)', paddingHorizontal: 7, paddingVertical: 2,
     borderRadius: 6, borderWidth: 1, borderColor: 'rgba(52,211,153,0.25)',
@@ -1574,7 +1574,7 @@ var cd = StyleSheet.create({
     borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
   },
   readerMetaText: { fontSize: 11, fontWeight: '700', color: 'rgba(255,241,208,0.62)' },
-  readerHint: { fontSize: 11.5, color: 'rgba(255,241,208,0.44)', marginTop: 12, textAlign: 'center', fontStyle: 'italic', lineHeight: 16.5 },
+  readerHint: { fontSize: 11.5, color: 'rgba(255,241,208,0.62)', marginTop: 12, textAlign: 'center', fontStyle: 'italic', lineHeight: 16.5 },
 
   chapter: {
     borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
@@ -1595,7 +1595,7 @@ var cd = StyleSheet.create({
   },
   methodHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   methodTitle: { fontSize: 12.5, fontWeight: '900', color: 'rgba(232,201,122,0.85)', letterSpacing: 0.4 },
-  methodBody: { fontSize: 12.5, lineHeight: 19.5, color: 'rgba(255,241,208,0.55)' },
+  methodBody: { fontSize: 12.5, lineHeight: 19.5, color: 'rgba(255,241,208,0.68)' },
   guidancePanel: {
     flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginTop: 14, paddingTop: 14,
     borderTopWidth: 1, borderTopColor: 'rgba(232,201,122,0.12)',
@@ -1692,7 +1692,7 @@ function AttractionCard({ data, index, delay, language, T, bName, gName }) {
                 <View style={[sty.intimAnimalBubble, { borderColor: bm.color + '50', backgroundColor: bm.color + '10' }]}>
                   <Ionicons name={bm.icon} size={22} color={bm.color} />
                 </View>
-                <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: 8 }}>{bName || T.bride}</Text>
+                <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.62)', fontWeight: '700', marginTop: 8 }}>{bName || T.bride}</Text>
                 <Text style={[cd.natureName, { color: bm.color }]}>{si ? bm.si : brideYoni}</Text>
                 <Text style={sty.intimAnimalDesc}>{si ? bm.trait.si : bm.trait.en}</Text>
               </View>
@@ -1706,7 +1706,7 @@ function AttractionCard({ data, index, delay, language, T, bName, gName }) {
                 <View style={[sty.intimAnimalBubble, { borderColor: gm.color + '50', backgroundColor: gm.color + '10' }]}>
                   <Ionicons name={gm.icon} size={22} color={gm.color} />
                 </View>
-                <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: 8 }}>{gName || T.groom}</Text>
+                <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.62)', fontWeight: '700', marginTop: 8 }}>{gName || T.groom}</Text>
                 <Text style={[cd.natureName, { color: gm.color }]}>{si ? gm.si : groomYoni}</Text>
                 <Text style={sty.intimAnimalDesc}>{si ? gm.trait.si : gm.trait.en}</Text>
               </View>
@@ -1943,12 +1943,12 @@ function WeddingWindowsCard({ data, index, delay, language, T }) {
                   <Text style={[cd.weddingDates, { color: isBest ? '#34D399' : '#FFE8B0' }]}>{w.start}  →  {w.end}</Text>
                   {isBest ? (
                     <View style={cd.bestChip}>
-                      <Text style={{ fontSize: 9, fontWeight: '900', color: '#34D399' }}>{si ? 'හොඳම' : 'BEST'}</Text>
+                      <Text style={{ fontSize: 10, fontWeight: '900', color: '#34D399' }}>{si ? 'හොඳම' : 'BEST'}</Text>
                     </View>
                   ) : null}
                 </View>
               ) : (
-                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{si ? (w.startSi || T.noWindows) : T.noWindows}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.68)', fontSize: 13 }}>{si ? (w.startSi || T.noWindows) : T.noWindows}</Text>
               )}
               <Text style={cd.weddingReason}>{si ? (w.reasonSi || w.reason) : w.reason}</Text>
               {w.durationDays > 0 ? <Text style={cd.weddingMeta}>{w.durationDays} {si ? 'දින' : 'days'}</Text> : null}
@@ -2148,7 +2148,7 @@ function CuriositiesCard({ data, index, delay, language, T, bName, gName }) {
           onPress={function () { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setOpen(true); }}
           activeOpacity={0.7} style={{ paddingVertical: 2 }}
         >
-          <Text style={{ fontSize: 12.5, color: 'rgba(255,241,208,0.45)', lineHeight: 18 }}>
+          <Text style={{ fontSize: 12.5, color: 'rgba(255,241,208,0.62)', lineHeight: 18 }}>
             {si ? 'හදවතේ ආශාවන් සහ පෙර භව සංකේත බලන්න…' : 'Open the heart-wish and past-life symbols…'}
           </Text>
         </TouchableOpacity>
@@ -2293,7 +2293,7 @@ function ReportReader({ report, reportLoading, language, T, brideName, groomName
   } else if (!report) {
     body = (
       <View>
-        <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12.5, fontStyle: 'italic' }}>
+        <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12.5, fontStyle: 'italic' }}>
           {si ? 'ලිඛිත වාර්තාව මේ වෙලාවේ නැහැ — පහත බොත්තමෙන් නොමිලේ ලියාගන්න පුළුවන්.' : 'The written report isn’t here right now — you can have it written below, free.'}
         </Text>
         {onRetry ? (
@@ -2571,7 +2571,7 @@ var teaseSt = StyleSheet.create({
   cta: { alignSelf: 'stretch', marginTop: 24, borderRadius: 15, overflow: 'hidden' },
   ctaGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, paddingVertical: 15 },
   ctaText: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: 0.3 },
-  reassure: { fontSize: 11.5, color: 'rgba(255,255,255,0.45)', marginTop: 12 },
+  reassure: { fontSize: 11.5, color: 'rgba(255,255,255,0.62)', marginTop: 12 },
 });
 
 // ======= MAIN SCREEN =======
@@ -3295,7 +3295,7 @@ export default function PorondamScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: 'rgba(255,255,255,0.95)', fontSize: 13.5, fontWeight: '800' }}>{language === 'si' ? 'තව කෙනෙක් සමඟ ගැළපීම බලන්නද?' : 'Check your vibe with someone else?'}</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11.5, marginTop: 2, lineHeight: 15 }}>{language === 'si' ? 'WhatsApp සබැඳියක් යවන්න — ඔවුන් උපන් විස්තර දැම්මාම ක්ෂණිකව ගැළපීම පෙනේ.' : 'Send a WhatsApp link — they add their details and see the match instantly.'}</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.68)', fontSize: 11.5, marginTop: 2, lineHeight: 15 }}>{language === 'si' ? 'WhatsApp සබැඳියක් යවන්න — ඔවුන් උපන් විස්තර දැම්මාම ක්ෂණිකව ගැළපීම පෙනේ.' : 'Send a WhatsApp link — they add their details and see the match instantly.'}</Text>
                   </View>
                   <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
                 </TouchableOpacity>
@@ -3634,7 +3634,7 @@ var sty = StyleSheet.create({
   validationTitle: { color: '#FECACA', fontSize: 12.5, lineHeight: 17, fontWeight: '900', marginBottom: 2 },
   validationText: { color: 'rgba(254,202,202,0.78)', fontSize: 11.5, lineHeight: 17, fontWeight: '600' },
   fieldTag: { fontSize: 10, fontWeight: '700', color: 'rgba(255,140,0,0.7)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6, marginTop: 4 },
-  timeHint: { fontSize: 11, color: 'rgba(255,255,255,0.28)', marginBottom: 16, fontStyle: 'italic', textAlign: 'center' },
+  timeHint: { fontSize: 11, color: 'rgba(255,255,255,0.55)', marginBottom: 16, fontStyle: 'italic', textAlign: 'center' },
 
   cta: { borderRadius: 16, paddingVertical: 17, alignItems: 'center', overflow: 'hidden', marginBottom: 8, ...boxShadow('#FF8C00', { width: 0, height: 4 }, 0.7, 18) },
   ctaText: { color: '#FFF1D0', fontWeight: '800', fontSize: 16, letterSpacing: 0.8 },
@@ -3656,7 +3656,7 @@ var sty = StyleSheet.create({
   chartCol: { flex: 1, maxWidth: 440 },
   chartCard: { alignItems: 'center', paddingVertical: WIDE ? 20 : 16 },
   chartTitle: { fontSize: 14, fontWeight: '700', color: '#FF8C00', marginBottom: 12, letterSpacing: 0.3 },
-  chartSubLabel: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.55)', marginBottom: 8, textAlign: 'center', letterSpacing: 0.2 },
+  chartSubLabel: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.68)', marginBottom: 8, textAlign: 'center', letterSpacing: 0.2 },
   chartDivider: { width: '70%', height: 1, backgroundColor: 'rgba(255,140,0,0.16)', alignSelf: 'center', marginVertical: 16 },
   heartBridge: { alignItems: 'center', marginVertical: -6, zIndex: 10 },
   heartBridgeWide: { marginVertical: 0, marginHorizontal: -10 },
@@ -3667,7 +3667,7 @@ var sty = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.04)',
   },
   langChipActive: { borderColor: '#C026D3', backgroundColor: 'rgba(192,38,211,0.15)' },
-  langChipText: { color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: '700' },
+  langChipText: { color: 'rgba(255,255,255,0.62)', fontSize: 14, fontWeight: '700' },
   langChipTextActive: { color: '#E879F9' },
   reportLoadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
   reportLoadText: { color: '#FF8C00', fontSize: 13 },
@@ -3688,7 +3688,7 @@ var sty = StyleSheet.create({
   profileDot: { width: 8, height: 8, borderRadius: 4, marginBottom: 4 },
   profileName: { fontSize: 12, fontWeight: '800', color: '#FFE8B0', marginBottom: 2 },
   profileSign: { fontSize: 15, fontWeight: '700', color: 'rgba(255,255,255,0.9)' },
-  profileStar: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
+  profileStar: { fontSize: 11, color: 'rgba(255,255,255,0.68)', marginTop: 2 },
   profileLord: { fontSize: 10, color: 'rgba(255,140,0,0.6)', marginTop: 4 },
 
   // ─── Attraction Chemistry pills ───
@@ -3698,7 +3698,7 @@ var sty = StyleSheet.create({
   deepLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   deepIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   deepTitle: { fontSize: 13, fontWeight: '700', color: '#FFE8B0' },
-  deepDesc: { fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2, lineHeight: 15 },
+  deepDesc: { fontSize: 11, color: 'rgba(255,255,255,0.62)', marginTop: 2, lineHeight: 15 },
   deepBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, marginLeft: 8 },
   deepBadgeText: { fontSize: 11, fontWeight: '900' },
 
@@ -3706,7 +3706,7 @@ var sty = StyleSheet.create({
   elemCard: { flex: 1, alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   elemCircle: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
   elemName: { fontSize: 15, fontWeight: '900' },
-  elemWho: { fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
+  elemWho: { fontSize: 10, color: 'rgba(255,255,255,0.62)', fontWeight: '600' },
   elemMetaphor: { fontSize: 12, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 14, fontStyle: 'italic', lineHeight: 18, paddingHorizontal: 8 },
 
   // ─── Magnetism 5-factor ───
@@ -3720,14 +3720,14 @@ var sty = StyleSheet.create({
   // ─── Soul Blueprint ───
   soulRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' },
   soulIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  soulWho: { fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: '700' },
+  soulWho: { fontSize: 11, color: 'rgba(255,255,255,0.62)', fontWeight: '700' },
   soulDrive: { fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: '600', marginTop: 2 },
   soulPlanet: { fontSize: 10, fontWeight: '900', opacity: 0.7 },
 
   // ─── Past Lives ───
   pastCard: { flex: 1, alignItems: 'center', gap: 6, backgroundColor: 'rgba(192,132,252,0.04)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(192,132,252,0.12)' },
   pastIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  pastWho: { fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '700' },
+  pastWho: { fontSize: 10, color: 'rgba(255,255,255,0.62)', fontWeight: '700' },
   pastArch: { fontSize: 14, fontWeight: '900' },
   pastNarrative: { fontSize: 12, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 14, fontStyle: 'italic', lineHeight: 18 },
 
@@ -3741,7 +3741,7 @@ var sty = StyleSheet.create({
   intimAnimalCardNew: { flex: 1, alignItems: 'center', paddingVertical: 16, paddingHorizontal: 8, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden', position: 'relative' },
   intimAnimalGrad: { position: 'absolute', top: 0, left: 0, right: 0, height: 50, borderTopLeftRadius: 14, borderTopRightRadius: 14 },
   intimAnimalBubble: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
-  intimAnimalDesc: { fontSize: 9, color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 3, lineHeight: 13 },
+  intimAnimalDesc: { fontSize: 10, color: 'rgba(255,255,255,0.62)', textAlign: 'center', marginTop: 3, lineHeight: 13 },
   intimMatchCenter: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   intimMatchRing: { width: 34, height: 34, borderRadius: 17, borderWidth: 2, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.02)' },
   intimNarrativeBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, backgroundColor: 'rgba(255,184,0,0.04)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.10)' },

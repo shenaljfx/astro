@@ -262,14 +262,46 @@ const server = app.listen(PORT, () => {
     console.error('   ⚠️  Notification scheduler failed to start:', err.message);
   }
 
-  if (process.env.START_EMBEDDED_WORKER === 'true') {
+  // Job worker. Without a running worker, every queued AI job (baby narrative,
+  // full report) sits unclaimed forever and the app shows "failed" after the
+  // poll timeout. Three modes:
+  //   • START_EMBEDDED_WORKER=true  → run the loop IN-PROCESS (single-container
+  //     deploys that want it embedded; note: heavy work shares this event loop).
+  //   • dev default                 → FORK a separate worker process, so the
+  //     AI/chart CPU work never blocks the API event loop (fixes the 30s+
+  //     enqueue + crawling progress polls seen with the in-process loop).
+  //   • production default          → OFF; the VM runs a dedicated worker
+  //     container (forking a 2nd Node in a 512MB container would OOM).
+  const workerPref = String(process.env.START_EMBEDDED_WORKER || '').toLowerCase();
+  const isProd = process.env.NODE_ENV === 'production';
+  if (workerPref === 'true') {
     try {
       const { startWorkerLoop } = require('./services/jobWorker');
       startWorkerLoop({ workerId: `api-${process.pid}` });
-      console.log('   ⚙️  Embedded durable worker started');
+      console.log('   ⚙️  Embedded durable worker started (in-process)');
     } catch (err) {
       console.error('   ⚠️  Embedded worker failed to start:', err.message);
     }
+  } else if (!isProd && workerPref !== 'false') {
+    try {
+      const path = require('path');
+      const { fork } = require('child_process');
+      const workerProc = fork(path.join(__dirname, '..', 'scripts', 'worker.js'), [], {
+        env: { ...process.env, WORKER_ID: `dev-fork-${process.pid}`, WORKER_EXIT_IF_ORPHANED: 'true' },
+        stdio: 'inherit',
+      });
+      workerProc.on('exit', (code) => console.warn(`   ⚙️  Dev worker process exited (code ${code}) — AI jobs won't process until restart`));
+      // Don't leave an orphaned worker behind when the API stops.
+      const killWorker = () => { try { workerProc.kill(); } catch (_) {} };
+      process.on('exit', killWorker);
+      process.on('SIGINT', () => { killWorker(); process.exit(0); });
+      process.on('SIGTERM', () => { killWorker(); process.exit(0); });
+      console.log(`   ⚙️  Dev worker forked as separate process (pid ${workerProc.pid}) — no event-loop contention`);
+    } catch (err) {
+      console.error('   ⚠️  Dev worker fork failed:', err.message);
+    }
+  } else {
+    console.log('   ⚙️  Worker OFF (external worker container expected) — AI report jobs need a running worker');
   }
 });
 

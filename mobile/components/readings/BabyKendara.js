@@ -20,7 +20,7 @@
  * No emoji icons — Ionicons only.
  */
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Share } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Share, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -29,6 +29,9 @@ import Animated, {
   withRepeat, withTiming, withSequence, withDelay,
 } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { generateBabyHTML, loadLogoBase64 } from '../../utils/pdfReportGenerator';
 import { DatePickerField, TimePickerField } from '../CosmicDateTimePicker';
 import CitySearchPicker from '../CitySearchPicker';
 import SriLankanChart from '../SriLankanChart';
@@ -703,7 +706,7 @@ function RitesSection({ rites, si, delay }) {
   );
 }
 
-function ReportFooter({ identity, report, si, onShare, onReset }) {
+function ReportFooter({ identity, report, si, onShare, onReset, onDownloadPdf, pdfBusy }) {
   return (
     <Animated.View entering={FadeInDown.delay(650).duration(450)}>
       <TouchableOpacity activeOpacity={0.88} onPress={onShare}>
@@ -712,6 +715,14 @@ function ReportFooter({ identity, report, si, onShare, onReset }) {
           <Text style={st.shareBtnText}>{si ? 'පවුලට බෙදාගන්න' : 'Share with the family'}</Text>
         </LinearGradient>
       </TouchableOpacity>
+      {onDownloadPdf ? (
+        <TouchableOpacity activeOpacity={0.85} onPress={onDownloadPdf} disabled={pdfBusy} style={st.pdfBtn}>
+          {pdfBusy
+            ? <ActivityIndicator size="small" color="#F9A8D4" />
+            : <Ionicons name="document-text-outline" size={15} color="#F9A8D4" />}
+          <Text style={st.pdfBtnText}>{pdfBusy ? (si ? 'PDF සකසමින්...' : 'Preparing PDF...') : (si ? 'PDF වාර්තාව බාගන්න' : 'Download PDF keepsake')}</Text>
+        </TouchableOpacity>
+      ) : null}
       <TouchableOpacity onPress={onReset} activeOpacity={0.8} style={st.resetBtn}>
         <Ionicons name="refresh-outline" size={13} color="rgba(249,198,214,0.7)" />
         <Text style={st.resetBtnText}>{si ? 'වෙනත් බිලිඳෙකුගේ විස්තර බලන්න' : 'Check another baby'}</Text>
@@ -931,18 +942,36 @@ export default function BabyKendara() {
   var [narrProgress, setNarrProgress] = useState({ done: 0, total: 5, current: null, completed: [] });
 
   var mountedRef = useRef(true);
-  // ── Local persistence: a paid keepsake must survive leaving the screen.
-  // We save the pack + AI sections (and a pending reportId so an in-flight
-  // narrative can resume polling after a remount) and restore on mount.
-  var BABY_SAVE_KEY = '@grahachara_baby_kendara_v1';
-  var savedRef = useRef(null);
+  // ── Local persistence: paid keepsakes must survive leaving the screen —
+  // and a family can have more than one baby, so reports live in a LIST.
+  // Entry: { id, savedAt, birthISO, gender, cityLabel, pack, sections,
+  // pendingReportId }. The legacy single-slot key is migrated on mount.
+  var BABY_SAVE_KEY = '@grahachara_baby_kendara_v1'; // legacy single slot
+  var BABY_LIST_KEY = '@grahachara_baby_kendara_list_v1';
+  var MAX_SAVED = 10;
+  var [savedList, setSavedList] = useState([]);
+  var [pdfBusy, setPdfBusy] = useState(false);
+  var savedListRef = useRef([]);
+  var activeIdRef = useRef(null);
+  var savedRef = useRef(null); // the OPEN entry (free retry reads birth/gender off it)
+  var writeList = useCallback(function (list) {
+    savedListRef.current = list;
+    setSavedList(list);
+    AsyncStorage.setItem(BABY_LIST_KEY, JSON.stringify(list)).catch(function () {});
+  }, []);
   var persistBaby = useCallback(function (patch) {
     try {
-      var next = Object.assign({}, savedRef.current || {}, patch, { savedAt: new Date().toISOString() });
+      var list = (savedListRef.current || []).slice();
+      var id = activeIdRef.current;
+      var idx = id ? list.findIndex(function (e) { return e && e.id === id; }) : -1;
+      var base = idx >= 0 ? list[idx] : { id: id || ('bk_' + Date.now()) };
+      var next = Object.assign({}, base, patch, { savedAt: new Date().toISOString() });
+      activeIdRef.current = next.id;
       savedRef.current = next;
-      AsyncStorage.setItem(BABY_SAVE_KEY, JSON.stringify(next)).catch(function () {});
+      if (idx >= 0) list[idx] = next; else list.unshift(next);
+      writeList(list.slice(0, MAX_SAVED));
     } catch (e) { /* never block the report on persistence */ }
-  }, []);
+  }, [writeList]);
 
   var pollRef = useRef(null);
   var stopPoll = useCallback(function () {
@@ -992,7 +1021,13 @@ export default function BabyKendara() {
           return;
         }
         if (p.stage === 'failed') { setNarrStage('failed'); return; }
-        if (attempts >= MAX) { setNarrStage('failed'); return; }
+        if (attempts >= MAX) {
+          // Timed out while still 'queued' = no worker ever claimed the job
+          // (not a generation failure) — keep it retryable, don't cry "failed".
+          if (__DEV__) console.warn('[baby] narrative poll timeout at stage=' + (p.stage || '?') + ' — job never ' + (p.stage === 'queued' ? 'claimed (is a worker running?)' : 'finished'));
+          setNarrStage(p.stage === 'queued' ? 'unavailable' : 'failed');
+          return;
+        }
         pollRef.current = setTimeout(tick, 2500);
       }).catch(function () {
         if (!mountedRef.current) return;
@@ -1017,29 +1052,69 @@ export default function BabyKendara() {
     } else { setNarrStage('unavailable'); }
   }, [pollNarrative, persistBaby]);
 
-  // Restore a previously generated (paid) keepsake on mount — and if the AI
-  // life-story was still generating when the user left, resume polling it.
+  // Open a saved keepsake from the list — no re-billing, it's all stored.
+  // If its AI life-story was still generating when the user left, resume
+  // polling (the job may have finished server-side while we were away).
+  var openSavedEntry = useCallback(function (entry) {
+    if (!entry || !entry.pack) return;
+    stopPoll();
+    activeIdRef.current = entry.id;
+    savedRef.current = entry;
+    setPack(entry.pack);
+    setTease(null); setError(null);
+    if (entry.gender === 'male' || entry.gender === 'female') setGender(entry.gender);
+    if (entry.sections && Object.keys(entry.sections).length) {
+      setNarrSections(entry.sections); setNarrStage('complete');
+    } else if (entry.pendingReportId) {
+      setNarrSections(null); setNarrStage('generating');
+      setNarrProgress({ done: 0, total: 5, current: null, completed: [] });
+      pollNarrative(entry.pendingReportId);
+    } else {
+      setNarrSections(null); setNarrStage('unavailable');
+    }
+  }, [stopPoll, pollNarrative]);
+
+  var deleteSavedEntry = useCallback(function (entry) {
+    Alert.alert(
+      si ? 'වාර්තාව මකන්නද?' : 'Delete this report?',
+      si ? 'මැකූ වාර්තාවක් නැවත ලබාගත නොහැක.' : 'A deleted keepsake cannot be recovered.',
+      [
+        { text: si ? 'එපා' : 'Cancel', style: 'cancel' },
+        {
+          text: si ? 'මකන්න' : 'Delete',
+          style: 'destructive',
+          onPress: function () {
+            var list = (savedListRef.current || []).filter(function (e) { return e && e.id !== entry.id; });
+            writeList(list);
+            if (activeIdRef.current === entry.id) { activeIdRef.current = null; savedRef.current = null; }
+          },
+        },
+      ]
+    );
+  }, [si, writeList]);
+
+  // Restore saved keepsakes on mount: migrate the legacy single-slot save
+  // into the list once, then auto-open the most recent report (matching the
+  // old behaviour, where a paid keepsake greeted you on return).
   useEffect(function () {
-    AsyncStorage.getItem(BABY_SAVE_KEY).then(function (raw) {
-      if (!mountedRef.current || !raw) return;
-      var saved = null;
-      try { saved = JSON.parse(raw); } catch (e) { return; }
-      if (!saved || !saved.pack) return;
-      savedRef.current = saved;
-      setPack(saved.pack);
-      setTease(null);
-      if (saved.gender === 'male' || saved.gender === 'female') setGender(saved.gender);
-      if (saved.sections && Object.keys(saved.sections).length) {
-        setNarrSections(saved.sections); setNarrStage('complete');
-      } else if (saved.pendingReportId) {
-        // Job may have finished server-side while we were away — poll picks
-        // up the cached result immediately if so.
-        setNarrStage('generating');
-        setNarrProgress({ done: 0, total: 5, current: null, completed: [] });
-        pollNarrative(saved.pendingReportId);
-      } else {
-        setNarrStage('unavailable');
+    Promise.all([AsyncStorage.getItem(BABY_LIST_KEY), AsyncStorage.getItem(BABY_SAVE_KEY)]).then(function (vals) {
+      if (!mountedRef.current) return;
+      var list = [];
+      try { list = JSON.parse(vals[0]) || []; } catch (e) { list = []; }
+      if (!Array.isArray(list)) list = [];
+      if (vals[1]) {
+        try {
+          var legacy = JSON.parse(vals[1]);
+          if (legacy && legacy.pack && !list.some(function (e) { return e && e.id === 'bk_legacy'; })) {
+            legacy.id = 'bk_legacy';
+            list.push(legacy); // legacy save predates every list entry
+          }
+        } catch (e) { /* corrupt legacy save — drop it */ }
+        AsyncStorage.removeItem(BABY_SAVE_KEY).catch(function () {});
       }
+      list = list.filter(function (e) { return e && e.pack; }).slice(0, MAX_SAVED);
+      writeList(list);
+      if (list[0]) openSavedEntry(list[0]);
     }).catch(function () {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1080,9 +1155,15 @@ export default function BabyKendara() {
     }
     setPack(apiRes.data);
     setTease(null);
-    // Persist the paid keepsake immediately — losing it on unmount meant a
-    // paying user could never see their report again.
-    persistBaby({ pack: apiRes.data, gender: gender, birthISO: birthISO, sections: null, pendingReportId: null });
+    // Persist the paid keepsake immediately as a NEW list entry — losing it
+    // on unmount meant a paying user could never see their report again.
+    activeIdRef.current = 'bk_' + Date.now();
+    savedRef.current = null;
+    persistBaby({
+      pack: apiRes.data, gender: gender, birthISO: birthISO,
+      cityLabel: (city && (city.name || city.city)) || null,
+      sections: null, pendingReportId: null,
+    });
     handleNarrative(apiRes.data.narrative);
   }, [gender, showPaywall, birthISO, lat, lng, si, handleNarrative]);
 
@@ -1130,13 +1211,74 @@ export default function BabyKendara() {
     try { await Share.share({ message: lines.filter(Boolean).join('\n') }); } catch (e) { /* user dismissed */ }
   }, [pack, si]);
 
+  // Close the open report and return to the form. Saved keepsakes stay in
+  // the list — "check another baby" must never destroy a paid report.
   var onReset = useCallback(function () {
     stopPoll();
     setPack(null); setTease(null); setError(null);
     setNarrSections(null); setNarrStage('idle');
+    activeIdRef.current = null;
     savedRef.current = null;
-    AsyncStorage.removeItem(BABY_SAVE_KEY).catch(function () {});
   }, [stopPoll]);
+
+  // ── PDF keepsake export (Celestial Almanac, rose) ──
+  var onDownloadPdf = useCallback(async function () {
+    if (!pack || pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      var saved = savedRef.current || {};
+      var logoB64 = await loadLogoBase64();
+      var iso = saved.birthISO || birthISO;
+      var html = generateBabyHTML({
+        lang: si ? 'si' : 'en',
+        gender: saved.gender || gender,
+        identity: pack.identity || {},
+        report: pack.report || {},
+        sections: narrSections,
+        birthDate: iso ? iso.slice(0, 10) : '',
+        birthTime: iso ? iso.slice(11, 16) : '',
+        cityLabel: saved.cityLabel || (city && (city.name || city.city)) || null,
+        reportId: saved.id || null,
+        logoBase64: logoB64,
+      });
+      var fileName = 'Grahachara_Baby_Kendara_' + (iso ? iso.slice(0, 10) : 'report') + '.pdf';
+      if (Platform.OS === 'web') {
+        var printWindow = window.open('', '_blank');
+        if (printWindow) { printWindow.document.write(html); printWindow.document.close(); printWindow.print(); }
+      } else {
+        var result;
+        try {
+          result = await Print.printToFileAsync({ html: html, base64: false, width: 595, height: 842 });
+        } catch (printErr) {
+          // Fallback: minimal branded HTML so the family still gets a PDF
+          if (__DEV__) console.warn('[baby] printToFileAsync failed, retrying minimal:', printErr && printErr.message);
+          var fallback = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Baby Kendara</title>'
+            + '<style>body{font-family:sans-serif;padding:24px;color:#222;line-height:1.6;}h1{color:#BE185D;}</style></head><body>'
+            + (logoB64 ? '<img src="data:image/png;base64,' + logoB64 + '" width="56" height="56" style="border-radius:12px;"/>' : '')
+            + '<h1>' + (si ? 'බිලිඳු කේන්දර වාර්තාව' : 'Baby Kendara Report') + '</h1>'
+            + '<p>' + (iso || '') + '</p></body></html>';
+          result = await Print.printToFileAsync({ html: fallback, base64: false, width: 595, height: 842 });
+        }
+        var shareOk = await Sharing.isAvailableAsync();
+        if (shareOk) {
+          await Sharing.shareAsync(result.uri, {
+            mimeType: 'application/pdf',
+            dialogTitle: fileName,
+            ...(Platform.OS === 'ios' ? { UTI: 'com.adobe.pdf' } : {}),
+          });
+        } else {
+          Alert.alert(
+            si ? 'PDF සුරැකිණි' : 'PDF ready',
+            si ? 'PDF ගොනුව සෑදුනා. මෙම උපාංගයේ Share මෙනුව නොමැත — ගොනු යෙදුමෙන් එය සොයාගන්න.' : 'Your PDF was created, but the share sheet is unavailable — find it in your files app.'
+          );
+        }
+      }
+    } catch (e) {
+      Alert.alert(si ? 'දෝෂයකි' : 'Error', si ? 'PDF සැකසීමට අසමත් විය. නැවත උත්සාහ කරන්න.' : 'Failed to generate the PDF. Please try again.');
+    } finally {
+      if (mountedRef.current) setPdfBusy(false);
+    }
+  }, [pack, pdfBusy, narrSections, gender, birthISO, si, city]);
 
   // ── Staged loading screen (paid compose) ──
   if (genLoading) {
@@ -1167,7 +1309,7 @@ export default function BabyKendara() {
         ) : (
           <LegacyPack pack={pack} si={si} />
         )}
-        <ReportFooter identity={identity} report={report} si={si} onShare={onShare} onReset={onReset} />
+        <ReportFooter identity={identity} report={report} si={si} onShare={onShare} onReset={onReset} onDownloadPdf={onDownloadPdf} pdfBusy={pdfBusy} />
       </View>
     );
   }
@@ -1215,6 +1357,46 @@ export default function BabyKendara() {
       </TouchableOpacity>
 
       {error ? <Text style={st.err}>{error}</Text> : null}
+
+      {/* ── Previously saved keepsakes — tap to reopen, no re-billing ── */}
+      {savedList.length > 0 ? (
+        <Animated.View entering={FadeInUp.duration(400)} style={st.savedWrap}>
+          <View style={st.savedHead}>
+            <Ionicons name="bookmarks-outline" size={14} color="#F9D77E" />
+            <Text style={st.savedHeading}>{si ? 'සුරැකි වාර්තා' : 'Saved reports'}</Text>
+            <Text style={st.savedCount}>{savedList.length}</Text>
+          </View>
+          {savedList.map(function (entry) {
+            var eid = entry.pack && entry.pack.identity;
+            var elagna = eid && eid.lagna ? (si ? (eid.lagna.sinhala || eid.lagna.english) : eid.lagna.english) : '';
+            var enak = eid && eid.nakshatra ? (si ? (eid.nakshatra.sinhala || eid.nakshatra.name) : (eid.nakshatra.name || eid.nakshatra.english)) : '';
+            var d = (entry.birthISO || '').slice(0, 10);
+            var tm = (entry.birthISO || '').slice(11, 16);
+            var who = si
+              ? (entry.gender === 'male' ? 'පුතා' : entry.gender === 'female' ? 'දුව' : 'බිලිඳා')
+              : (entry.gender === 'male' ? 'Boy' : entry.gender === 'female' ? 'Girl' : 'Baby');
+            return (
+              <TouchableOpacity key={entry.id} activeOpacity={0.85} onPress={function () { openSavedEntry(entry); }} style={st.savedRow}>
+                <View style={[st.savedIcon, entry.gender === 'male' && st.savedIconMale]}>
+                  <Ionicons name={entry.gender === 'male' ? 'male' : entry.gender === 'female' ? 'female' : 'happy-outline'} size={14} color={entry.gender === 'male' ? '#93C5FD' : '#F9A8D4'} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={st.savedTitle} numberOfLines={1}>
+                    {who + (d ? ' · ' + fmtLocalDate(d, si) : '') + (tm ? ' · ' + fmtTime12(tm, si) : '')}
+                  </Text>
+                  {(elagna || enak) ? (
+                    <Text style={st.savedSub} numberOfLines={1}>{[elagna, enak].filter(Boolean).join(' · ')}</Text>
+                  ) : null}
+                </View>
+                <TouchableOpacity onPress={function () { deleteSavedEntry(entry); }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Ionicons name="trash-outline" size={15} color="rgba(249,198,214,0.45)" />
+                </TouchableOpacity>
+                <Ionicons name="chevron-forward" size={15} color="rgba(249,198,214,0.6)" />
+              </TouchableOpacity>
+            );
+          })}
+        </Animated.View>
+      ) : null}
 
       {tease ? (
         <Animated.View entering={FadeInUp.duration(400)} style={st.resultCard}>
@@ -1270,14 +1452,27 @@ var st = StyleSheet.create({
   // Input + tease (kept from the original look)
   card: { borderRadius: 16, padding: 14, marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(244,114,182,0.16)' },
   label: { fontSize: 13, fontWeight: '800', color: '#F9A8D4', letterSpacing: 0.3 },
-  miniLabel: { fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 4 },
+  miniLabel: { fontSize: 11, color: 'rgba(255,255,255,0.62)', marginBottom: 4 },
   btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 15, borderRadius: 14 },
   btnText: { fontSize: 15, fontWeight: '900', color: '#3A0A25', letterSpacing: 0.3 },
   err: { color: '#FCA5A5', fontSize: 13, textAlign: 'center', marginVertical: 8 },
   resultCard: { borderRadius: 18, padding: 16, marginTop: 4, backgroundColor: 'rgba(244,114,182,0.05)', borderWidth: 1, borderColor: 'rgba(244,114,182,0.2)' },
+  // Saved keepsake list (input screen)
+  savedWrap: { borderRadius: 16, padding: 12, marginBottom: 12, backgroundColor: 'rgba(249,215,126,0.05)', borderWidth: 1, borderColor: 'rgba(249,215,126,0.18)' },
+  savedHead: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 },
+  savedHeading: { flex: 1, fontSize: 12.5, fontWeight: '800', color: '#F9D77E', letterSpacing: 0.3 },
+  savedCount: { fontSize: 10, fontWeight: '800', color: 'rgba(249,215,126,0.85)', borderWidth: 1, borderColor: 'rgba(249,215,126,0.35)', paddingHorizontal: 7, paddingVertical: 1, borderRadius: 99, overflow: 'hidden' },
+  savedRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(244,114,182,0.14)', marginBottom: 7 },
+  savedIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(244,114,182,0.1)', borderWidth: 1, borderColor: 'rgba(244,114,182,0.25)' },
+  savedIconMale: { backgroundColor: 'rgba(147,197,253,0.1)', borderColor: 'rgba(147,197,253,0.28)' },
+  savedTitle: { fontSize: 12.5, fontWeight: '800', color: '#FFF1F8' },
+  savedSub: { fontSize: 10.5, color: 'rgba(249,198,214,0.55)', marginTop: 1 },
+  // PDF keepsake button (report footer)
+  pdfBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 14, marginTop: 10, borderWidth: 1, borderColor: 'rgba(244,114,182,0.4)', backgroundColor: 'rgba(244,114,182,0.07)' },
+  pdfBtnText: { fontSize: 13.5, fontWeight: '800', color: '#F9A8D4', letterSpacing: 0.3 },
   idRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   idCol: { flex: 1, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 6, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)' },
-  idLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: 'rgba(255,255,255,0.45)' },
+  idLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: 'rgba(255,255,255,0.62)' },
   idVal: { fontSize: 16, fontWeight: '900', color: '#FFF1F8', marginTop: 3, textAlign: 'center' },
   teaseHook: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 10, backgroundColor: 'rgba(249,215,126,0.08)', borderWidth: 1, borderColor: 'rgba(249,215,126,0.18)', marginBottom: 12 },
   teaseHookText: { flex: 1, fontSize: 12.5, fontWeight: '700', color: '#FDE9B8' },
@@ -1286,7 +1481,7 @@ var st = StyleSheet.create({
   lockText: { flex: 1, fontSize: 12.5, fontWeight: '700', color: 'rgba(255,255,255,0.82)' },
   unlockCta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, paddingVertical: 13, borderRadius: 12, backgroundColor: '#F472B6' },
   unlockText: { fontSize: 14, fontWeight: '800', color: '#3A0A25', flexShrink: 1, textAlign: 'center' },
-  packNote: { fontSize: 11, color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 10 },
+  packNote: { fontSize: 11, color: 'rgba(255,255,255,0.62)', textAlign: 'center', marginTop: 10 },
 
   // Loader
   loaderWrap: { alignItems: 'center', paddingVertical: 34, paddingHorizontal: 18, borderRadius: 20, backgroundColor: 'rgba(244,114,182,0.045)', borderWidth: 1, borderColor: 'rgba(244,114,182,0.16)' },
@@ -1300,10 +1495,10 @@ var st = StyleSheet.create({
   loaderSub: { fontSize: 12, color: 'rgba(249,198,214,0.6)', textAlign: 'center', lineHeight: 17 },
   loaderList: { width: '100%', borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', paddingVertical: 6, paddingHorizontal: 12, marginBottom: 16 },
   loaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5.5 },
-  loaderRowText: { flex: 1, fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.38)' },
+  loaderRowText: { flex: 1, fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.62)' },
   loaderBarTrack: { width: '86%', height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 9 },
   loaderBarFillWrap: { height: '100%', borderRadius: 3, overflow: 'hidden' },
-  loaderHint: { fontSize: 11, color: 'rgba(249,198,214,0.55)', textAlign: 'center' },
+  loaderHint: { fontSize: 11, color: 'rgba(249,198,214,0.68)', textAlign: 'center' },
 
   // Hero
   hero: { borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(244,114,182,0.3)' },
@@ -1314,7 +1509,7 @@ var st = StyleSheet.create({
   heroIdRow: { flexDirection: 'row', alignItems: 'stretch', marginTop: 14, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.045)', paddingVertical: 12 },
   heroIdCol: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
   heroDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.08)' },
-  heroIdLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, color: 'rgba(255,255,255,0.45)', marginBottom: 3 },
+  heroIdLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: 'rgba(255,255,255,0.62)', marginBottom: 3 },
   heroIdVal: { fontSize: 15, fontWeight: '900', color: '#FFF1F8', textAlign: 'center' },
   heroIdMini: { fontSize: 10, color: 'rgba(249,198,214,0.65)', marginTop: 2 },
   heroChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 12 },
@@ -1326,17 +1521,17 @@ var st = StyleSheet.create({
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   sectionIconBox: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(244,114,182,0.12)', borderWidth: 1, borderColor: 'rgba(244,114,182,0.24)' },
   sectionTitle: { fontSize: 14.5, fontWeight: '900', color: '#F9C6D6' },
-  sectionSub: { fontSize: 11, color: 'rgba(249,198,214,0.55)', marginTop: 1 },
+  sectionSub: { fontSize: 11, color: 'rgba(249,198,214,0.68)', marginTop: 1 },
   bodyText: { fontSize: 13, color: 'rgba(255,255,255,0.82)', lineHeight: 20 },
   miniHeading: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, color: 'rgba(249,198,214,0.75)', marginTop: 10, marginBottom: 7 },
   infoNote: { flexDirection: 'row', gap: 7, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
-  infoNoteText: { flex: 1, fontSize: 11.5, color: 'rgba(255,255,255,0.5)', lineHeight: 16.5 },
+  infoNoteText: { flex: 1, fontSize: 11.5, color: 'rgba(255,255,255,0.68)', lineHeight: 16.5 },
 
   // Planets
   planetRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   planetName: { width: 84, fontSize: 13, fontWeight: '800', color: '#FFF1F8' },
   retroChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(252,165,165,0.14)', marginRight: 6 },
-  retroChipText: { fontSize: 9, fontWeight: '800', color: '#FCA5A5' },
+  retroChipText: { fontSize: 10, fontWeight: '800', color: '#FCA5A5' },
   planetRashi: { flex: 1, fontSize: 12.5, fontWeight: '600', color: 'rgba(255,255,255,0.72)' },
   planetDeg: { fontSize: 12, fontWeight: '700', color: 'rgba(249,215,126,0.85)' },
   d9Divider: { height: 1, backgroundColor: 'rgba(167,139,250,0.2)', marginBottom: 14 },
@@ -1361,12 +1556,12 @@ var st = StyleSheet.create({
   letterHeroText: { fontSize: 34, fontWeight: '900', color: '#3A0A25' },
   letterHeroLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8, color: 'rgba(249,198,214,0.7)' },
   letterHeroRoman: { fontSize: 19, fontWeight: '900', color: '#FFF1F8', marginTop: 2 },
-  letterHeroHint: { fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 3, lineHeight: 15 },
+  letterHeroHint: { fontSize: 11, color: 'rgba(255,255,255,0.68)', marginTop: 3, lineHeight: 15 },
   padaRow: { flexDirection: 'row', gap: 7 },
   padaChip: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.035)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   padaChipActive: { backgroundColor: 'rgba(244,114,182,0.16)', borderColor: 'rgba(244,114,182,0.5)' },
   padaChipLetter: { fontSize: 17, fontWeight: '900', color: 'rgba(255,255,255,0.75)' },
-  padaChipLabel: { fontSize: 9.5, color: 'rgba(255,255,255,0.4)', marginTop: 2 },
+  padaChipLabel: { fontSize: 10.5, color: 'rgba(255,255,255,0.62)', marginTop: 2 },
   padaStar: { position: 'absolute', top: -6, right: -4, width: 16, height: 16, borderRadius: 8, backgroundColor: '#F9D77E', alignItems: 'center', justifyContent: 'center' },
   genderRow: { flexDirection: 'row', gap: 7, marginBottom: 9 },
   genderChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(244,114,182,0.2)' },
@@ -1375,8 +1570,8 @@ var st = StyleSheet.create({
   nameWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   nameChip: { alignItems: 'center', paddingHorizontal: 11, paddingVertical: 7, borderRadius: 12, backgroundColor: 'rgba(249,215,126,0.07)', borderWidth: 1, borderColor: 'rgba(249,215,126,0.2)' },
   nameChipSi: { fontSize: 13.5, fontWeight: '800', color: '#FFF1D0' },
-  nameChipRo: { fontSize: 9.5, color: 'rgba(255,241,208,0.6)', marginTop: 1 },
-  emptyNames: { fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 17 },
+  nameChipRo: { fontSize: 10.5, color: 'rgba(255,241,208,0.6)', marginTop: 1 },
+  emptyNames: { fontSize: 12, color: 'rgba(255,255,255,0.68)', lineHeight: 17 },
 
   // Doshas
   doshaCard: { borderRadius: 14, padding: 12, marginTop: 8, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1 },
@@ -1384,7 +1579,7 @@ var st = StyleSheet.create({
   doshaTitle: { flex: 1, fontSize: 13, fontWeight: '800', color: '#FFF1F8' },
   doshaPill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
   doshaPillText: { fontSize: 11, fontWeight: '900' },
-  doshaMeaning: { fontSize: 11.5, color: 'rgba(255,255,255,0.5)', lineHeight: 16.5, marginTop: 7 },
+  doshaMeaning: { fontSize: 11.5, color: 'rgba(255,255,255,0.68)', lineHeight: 16.5, marginTop: 7 },
   doshaVerdict: { fontSize: 12.5, fontWeight: '600', lineHeight: 18.5, marginTop: 7 },
   severityRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 7, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8, backgroundColor: 'rgba(252,211,77,0.08)' },
   severityText: { flex: 1, fontSize: 11.5, fontWeight: '700', color: '#FDE68A' },
@@ -1416,29 +1611,29 @@ var st = StyleSheet.create({
   dashaNote: { fontSize: 12, color: 'rgba(255,255,255,0.68)', lineHeight: 17.5, marginTop: 4 },
 
   // Rites
-  riteIntro: { fontSize: 11.5, color: 'rgba(255,255,255,0.5)', marginBottom: 7, marginTop: -3 },
+  riteIntro: { fontSize: 11.5, color: 'rgba(255,255,255,0.68)', marginBottom: 7, marginTop: -3 },
   riteCard: { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 11, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', marginBottom: 8 },
   riteCardBest: { backgroundColor: 'rgba(249,215,126,0.06)', borderColor: 'rgba(249,215,126,0.3)' },
   riteDateBox: { width: 52, alignItems: 'center', paddingVertical: 6, borderRadius: 11, backgroundColor: 'rgba(244,114,182,0.1)' },
   riteDay: { fontSize: 19, fontWeight: '900', color: '#FFF1F8', lineHeight: 22 },
-  riteMon: { fontSize: 9.5, fontWeight: '700', color: 'rgba(249,198,214,0.8)', textAlign: 'center' },
+  riteMon: { fontSize: 10.5, fontWeight: '700', color: 'rgba(249,198,214,0.8)', textAlign: 'center' },
   riteWeekday: { fontSize: 13, fontWeight: '800', color: '#FFF1F8' },
   riteBestPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999, backgroundColor: '#F9D77E' },
-  riteBestText: { fontSize: 9, fontWeight: '900', color: '#3A0A25', letterSpacing: 0.5 },
+  riteBestText: { fontSize: 10, fontWeight: '900', color: '#3A0A25', letterSpacing: 0.5 },
   riteTime: { fontSize: 11.5, color: 'rgba(255,255,255,0.62)', marginTop: 2 },
   riteWhyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 5 },
   riteWhyChip: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2.5, borderRadius: 999, backgroundColor: 'rgba(134,239,172,0.08)' },
-  riteWhyText: { fontSize: 9.5, fontWeight: '700', color: 'rgba(187,247,208,0.9)' },
+  riteWhyText: { fontSize: 10.5, fontWeight: '700', color: 'rgba(187,247,208,0.9)' },
   riteScore: { alignItems: 'center', paddingHorizontal: 9, paddingVertical: 6, borderRadius: 11, minWidth: 56 },
   riteScoreNum: { fontSize: 15, fontWeight: '900' },
-  riteScoreLabel: { fontSize: 8.5, fontWeight: '800', marginTop: 1 },
+  riteScoreLabel: { fontSize: 10, fontWeight: '800', marginTop: 1 },
 
   // Footer
   shareBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14, marginTop: 2 },
   shareBtnText: { fontSize: 14.5, fontWeight: '900', color: '#3A0A25' },
   resetBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, marginTop: 4 },
   resetBtnText: { fontSize: 12, fontWeight: '700', color: 'rgba(249,198,214,0.7)' },
-  disclaimer: { fontSize: 10.5, color: 'rgba(255,255,255,0.35)', textAlign: 'center', lineHeight: 15, marginTop: 2, paddingHorizontal: 10 },
+  disclaimer: { fontSize: 10.5, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 15, marginTop: 2, paddingHorizontal: 10 },
 
   // Gender picker (mandatory)
   genderPick: { flexDirection: 'row', gap: 10, marginTop: 2 },
@@ -1458,9 +1653,9 @@ var st = StyleSheet.create({
   narrSub: { fontSize: 11.5, color: 'rgba(249,198,214,0.6)', lineHeight: 16, marginBottom: 12 },
   narrList: { borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', paddingVertical: 5, paddingHorizontal: 11, marginBottom: 12 },
   narrRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 5.5 },
-  narrRowText: { flex: 1, fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.4)' },
+  narrRowText: { flex: 1, fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.62)' },
   narrBarFill: { height: '100%', borderRadius: 3, backgroundColor: '#F472B6' },
-  narrHint: { fontSize: 11, color: 'rgba(249,198,214,0.55)', textAlign: 'center', marginTop: 9 },
+  narrHint: { fontSize: 11, color: 'rgba(249,198,214,0.68)', textAlign: 'center', marginTop: 9 },
   narrRetry: { borderRadius: 18, padding: 18, marginBottom: 14, alignItems: 'center', backgroundColor: 'rgba(244,114,182,0.06)', borderWidth: 1, borderColor: 'rgba(244,114,182,0.22)' },
   narrRetryTitle: { fontSize: 14.5, fontWeight: '900', color: '#FFE1EE', marginTop: 8, textAlign: 'center' },
   narrRetrySub: { fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 17, textAlign: 'center', marginTop: 5 },

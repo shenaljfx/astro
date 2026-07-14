@@ -130,6 +130,45 @@ function filterParentPeriods(periods, birthDate, opts = {}) {
 }
 
 /**
+ * NEAR-TERM filter for PARENT HEALTH windows.
+ *
+ * The plain lifespan cap alone produced absurd report lines: for a native
+ * born 1998 the cap year is 2048, long dasha periods got TRUNCATED to end
+ * exactly at 2048, and the AI wrote "watch your mother's health around 2048"
+ * — a claim that is unverifiable for decades, frightening, and useless.
+ *
+ * Parent-wellness guidance is only meaningful near-term ("years when extra
+ * check-ups help"). This keeps only windows that are active now or start
+ * within `horizonYears` (default 7), and clips the DISPLAYED end to the
+ * horizon so no far-future year can leak into the report text.
+ */
+const PARENT_HEALTH_HORIZON_YEARS = 7;
+
+function filterNearTermParentWindows(periods, birthDate, opts = {}) {
+  const horizonYears = typeof opts.horizonYears === 'number' ? opts.horizonYears : PARENT_HEALTH_HORIZON_YEARS;
+  const now = opts.now instanceof Date ? opts.now : new Date();
+  const currentYear = now.getUTCFullYear();
+  const horizonYear = currentYear + horizonYears;
+
+  // Apply the biological-plausibility cap first, then the near-term horizon.
+  const capped = filterParentPeriods(periods, birthDate, opts);
+  const out = [];
+  for (const item of capped) {
+    if (!item) continue;
+    const r = _extractRange(item);
+    if (!r) { out.push(item); continue; }
+    if (r.endYear < currentYear) continue;        // already over — history, not guidance
+    if (r.startYear > horizonYear) continue;      // starts too far out to be actionable
+    if (r.endYear > horizonYear) {
+      out.push({ ..._capYear(item, horizonYear), ongoingBeyondHorizon: true });
+    } else {
+      out.push(item);
+    }
+  }
+  return out;
+}
+
+/**
  * Pure helper: is a given calendar year plausible for the native (self) to experience?
  */
 function isYearWithinSelfLifespan(year, birthDate, maxAge = MAX_SELF_AGE) {
@@ -150,8 +189,10 @@ function isYearWithinParentLifespan(year, birthDate, maxNativeAge = MAX_PARENT_N
 module.exports = {
   filterSelfPeriods,
   filterParentPeriods,
+  filterNearTermParentWindows,
   isYearWithinSelfLifespan,
   isYearWithinParentLifespan,
   MAX_SELF_AGE,
   MAX_PARENT_NATIVE_AGE,
+  PARENT_HEALTH_HORIZON_YEARS,
 };

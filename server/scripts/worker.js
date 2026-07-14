@@ -23,5 +23,20 @@ if (once) {
     });
 } else {
   console.log(`[Worker] Starting durable job worker ${workerId} for types: ${types.join(', ')}`);
+
+  // When launched as a dev fork of the API (nodemon), the parent may be
+  // force-killed on restart without signalling us. Self-exit if orphaned so
+  // stale workers don't pile up across reloads. Off by default (the prod
+  // worker container's parent is stable init).
+  if (process.env.WORKER_EXIT_IF_ORPHANED === 'true') {
+    const startParent = process.ppid;
+    setInterval(() => {
+      if (process.ppid !== startParent) {
+        console.log('[Worker] Parent process gone — exiting to avoid orphaned worker.');
+        process.exit(0);
+      }
+    }, 3000).unref();
+  }
+
   startWorkerLoop({ workerId, types });
 }

@@ -356,134 +356,222 @@ var PRACTICAL_TONES = {
   start: {
     effectEn: 'The universe is handing you a fresh spark today. Even the smallest first step will magically click into place.',
     effectSi: 'විශ්වයෙන් අද ඔබට අලුත් ආරම්භයක රහස් ගිනිපුපුරක් දෙනවා. පුංචිම පියවරක් තිබ්බත් ඒක හරි ලස්සනට ගැලපෙයි.',
-    dosEn: ['Start that one tiny thing', 'Trust your morning instinct'], dosSi: ['ඔබේ හිතේ තිබ්බ ඒ පුංචි දේ අද පටන්ගන්න', 'උදේම හිතට දැනෙන අදහස විශ්වාස කරන්න'],
-    dontsEn: ['Overpromise everything', 'Scatter this precious energy'], dontsSi: ['ඔක්කොම කරන්නම් කියලා පොරොන්දු වෙන්න එපා', 'අද ලැබෙන විශේෂ ශක්තිය නිකරුණේ නාස්ති කරන්න එපා'],
+    dosEn: ['Start before you feel ready', 'Send the first message yourself', 'Say yes to the new thing', 'Write down the morning idea', 'Take one tiny brave step'],
+    dosSi: ['ලෑස්ති නැතත් අදම පටන්ගන්න', 'පළවෙනි message එක ඔබම යවන්න', 'අලුත් දේට "හා" කියලම දාන්න', 'උදේ හිතට ආපු අදහස ලියාගන්න', 'පුංචි නමුත් නිර්භීත පියවරක් ගන්න'],
+    dontsEn: ['Waiting for perfect timing', '"Tomorrow" as a plan', 'Asking everyone before deciding', 'Old excuses in new outfits', 'Overplanning the first step'],
+    dontsSi: ['හොඳම වෙලාව එනකම් බලා ඉඳීම', '"හෙට කරන්නම්" කියන සැලැස්ම', 'හැමෝගෙන්ම අහලා තීරණ ගැනීම', 'පරණ නිදහසට කරුණු අලුත් ඇඳුමින්', 'පළවෙනි පියවර ගැනම ඕනෑවට වඩා හිතීම'],
+    whisperEn: ['Every constellation began with a single star.', 'The universe adores a brave first step.'],
+    whisperSi: ['හැම තරු මණ්ඩලයක්ම පටන්ගත්තේ එක තරුවකින්.', 'නිර්භීත පළවෙනි පියවරට විශ්වයම උදව් කරනවා.'],
   },
   build: {
     effectEn: 'Today holds a steady, grounding energy. Whatever you build or continue today is getting a secret protective blessing.',
     effectSi: 'හරිම ස්ථාවර, ආරක්ෂිත ශක්තියක් අද දවසේ හැංගිලා තියෙනවා. අද ඔබ එකතු කරන හෝ ගොඩනගන හැමදේකටම රහස් ආශිර්වාදයක් ලැබෙනවා.',
-    dosEn: ['Continue what you love', 'Add a simple brick to your goals'], dosSi: ['ඔබ ආදරය කරන වැඩේ දිගටම කරගෙන යන්න', 'ඔබේ අරමුණ වෙනුවෙන් පුංචි හරි දෙයක් අදත් එකතු කරන්න'],
-    dontsEn: ['Rush for magic results', 'Skip the little loving details'], dontsSi: ['ඉක්මනින් මැජික් ප්‍රතිඵල බලාපොරොත්තු වෙන්න එපා', 'ඔබේ ආදරණීය පුංචි විස්තර මඟහරින්න එපා'],
+    dosEn: ['Water what you planted', 'Lay one brick, perfectly', 'Protect a good habit today', 'Save a little something', 'Finish the boring middle part'],
+    dosSi: ['පටන්ගත්ත දේ අදත් ටිකක් වවන්න', 'එක හොඳ ගඩොලක් අදම එකතු කරන්න', 'ඔබේ හොඳ පුරුද්දක් රැකගන්න', 'පොඩි දෙයක් හරි ඉතුරු කරන්න', 'වැඩේ මැද කම්මැලි කොටසත් කරලා දාන්න'],
+    dontsEn: ['Digging up seeds to check', 'Comparing your day 3 to their year 3', 'Shiny new distractions', 'Skipping the small deposits', 'Quitting at the halfway wall'],
+    dontsSi: ['පැළේ හැදෙනවද කියලා මුල ගලවලා බැලීම', 'ඔබේ මුල අනුන්ගේ අගත් එක්ක සැසඳීම', 'දිලිසෙන අලුත් දේවල් පස්සේ යෑම', 'පොඩි එකතුවීම් නිකම් මඟහැරීම', 'බාගෙදී වැඩේ අතහැරලා දැමීම'],
+    whisperEn: ['Great temples rise one quiet stone at a time.', 'What you repeat today, you become tomorrow.'],
+    whisperSi: ['ලොකුම දාගැබත් හැදුණේ ගලෙන් ගල එකතු වෙලා.', 'අද ඔබ නැවත නැවත කරන දේ තමයි හෙට ඔබ වෙන්නේ.'],
   },
   relationship: {
     effectEn: 'People matter more today. Kind words and cooperation can open doors.',
     effectSi: 'අද දවසේ සබඳතා වලට ලොකු බලයක් තියෙනවා. ආදරණීය වචන වලින් ගොඩක් දේවල් දිනාගන්න පුළුවන් දවසක්.',
-    dosEn: ['Repair a conversation', 'Ask for support'], dosSi: ['තරහ වෙච්ච අය එක්ක කතා කරන්න', 'අවශ්‍ය වෙලාවට උදව් ඉල්ලන්න'],
-    dontsEn: ['Win arguments', 'Take silence personally'], dontsSi: ['වාද කරලා දිනන එකට වැඩිය අනිත් අයව තේරුම් ගන්න', 'අනිත් අයගෙ නිශ්ශබ්දතාවය වරදවා වටහාගන්න එපා'],
+    dosEn: ['Send the appreciation text', 'Call your mother', 'Forgive one small thing', 'Compliment out loud, not silently', 'Make the first repair move'],
+    dosSi: ['ස්තුතිය හිතේ තියන්නේ නැතුව කියලම දාන්න', 'අම්මට කෝල් එකක් දෙන්න', 'එක පුංචි වරදකට සමාව දෙන්න', 'ලස්සන දේ ලස්සනයි කියලා කියලම දාන්න', 'තරහ වෙච්ච කෙනාට ඉස්සෙල්ලා කතා කරන්න'],
+    dontsEn: ['Scorekeeping in love', 'Reading tone into texts', 'The silent treatment', 'Winning arguments, losing people', 'Half-listening while scrolling'],
+    dontsSi: ['ආදරේ ගණන් හදලා බැලීම', 'Message වල නැති තේරුම් හෙවීම', 'නිශ්ශබ්දතාවයෙන් දඬුවම් දීම', 'වාදේ දිනලා කෙනාව අහිමි කරගැනීම', 'Phone එක බලාගෙන බාගෙට ඇහුම්කන් දීම'],
+    whisperEn: ['Planets hold each other with gentle pull, not force.', 'Tonight, let warmth defeat pride.'],
+    whisperSi: ['ග්‍රහයෝ එකට ඉන්නේ බලයෙන් නෙවෙයි, මෘදු ආකර්ෂණයෙන්.', 'අද ආඩම්බරයට වඩා ආදරයට දිනන්න දෙන්න.'],
   },
   learn: {
     effectEn: 'Curiosity is stronger. This is useful for study, planning, messages, and decisions that need facts.',
     effectSi: 'අලුත් දේවල් හොයන්න, ඉගෙනගන්න හිතෙන තියුණු ශක්තියක් අද තියෙනවා. වැදගත් තීරණ ගන්න කලින් කරුණු හොයලා බලන්න හොඳම දවසක්.',
-    dosEn: ['Research before acting', 'Write things down'], dosSi: ['වැඩක් පටන් ගන්න කලින් ටිකක් හොයලා බලන්න', 'මතක තියාගන්න ඕන දේවල් ලියාගන්න'],
-    dontsEn: ['Assume too quickly', 'Skip verification'], dontsSi: ['නොදැන උපකල්පනය කරන්න යන්න එපා', 'හරිද කියලා බලන එක මඟහරින්න එපා'],
+    dosEn: ['Ask the "stupid" question', 'Read ten pages of anything', 'Write it down before it fades', 'Learn one thing outside your field', 'Fact-check before you share'],
+    dosSi: ['ලැජ්ජයි කියලා හිතෙන ප්‍රශ්නෙත් අහන්න', 'මොනවා හරි පිටු දහයක් කියවන්න', 'අමතක වෙන්න කලින් ලියාගන්න', 'ඔබේ ක්ෂේත්‍රයෙන් එළියේ දෙයක් ඉගෙනගන්න', 'Share කරන්න කලින් ඇත්තද කියලා බලන්න'],
+    dontsEn: ['Headline-only opinions', 'Pretending to already know', 'Forwarding before verifying', 'Learning five things at once', 'Mistaking opinions for facts'],
+    dontsSi: ['Headline එක විතරක් කියවලා මත හදාගැනීම', 'දන්නවා වගේ රඟපෑම', 'බලන්නේ නැතුව forward කිරීම', 'එකපාර දේවල් පහක් ඉගෙනගන්න යෑම', 'මතයක් ඇත්තක් කියලා වරදවා ගැනීම'],
+    whisperEn: ['A curious mind is never poor.', 'Today\'s question becomes tomorrow\'s wisdom.'],
+    whisperSi: ['කුතුහලය තියෙන හිත කවදාවත් හිස් වෙන්නේ නෑ.', 'අද අහන ප්‍රශ්නය හෙට ඔබේ ප්‍රඥාව වෙනවා.'],
   },
   clear: {
     effectEn: 'Small blockers may show up so you can remove them. Patience turns friction into progress.',
     effectSi: 'පොඩි පොඩි බාධා මතු වෙන්න පුළුවන්, හැබැයි ඒ ඉස්සරහට යන්න පාර හදාගන්නයි. ඉවසීමෙන් හිටියොත් ඒ බාධාම ජයග්‍රහණයක් වෙයි.',
-    dosEn: ['Fix one problem first', 'Double-check plans'], dosSi: ['කලබල වෙන්නේ නැතුව එක ප්‍රශ්නයක් ඉස්සෙල්ලා විසඳගන්න', 'ඔබේ සැලසුම් දෙපාරක් චෙක් කරන්න'],
-    dontsEn: ['Rush launches', 'React emotionally'], dontsSi: ['අලුත් දේවල් කලබලෙන් පටන්ගන්න එපා', 'ප්‍රශ්න ආවම හැඟීම් වලට වහල් වෙන්න එපා'],
+    dosEn: ['Untangle one knot today', 'Have the five-minute awkward talk', 'Delete, unsubscribe, simplify', 'Fix the thing you step over daily', 'Clear one surface completely'],
+    dosSi: ['එක අවුලක් අද ලෙහලම දාන්න', 'විනාඩි පහේ අපහසු කතාව කරලම දාන්න', 'ඕන නැති දේවල් delete කරලා දාන්න', 'හැමදාම මඟහරින පොඩි වැඩේ කරලම දාන්න', 'එක තැනක් හරි සම්පූර්ණයෙන් පිළිවෙළ කරන්න'],
+    dontsEn: ['Tripping on the same stone twice', 'New projects on old clutter', 'Ignoring the small leak', 'Forcing doors that need keys', 'Pretending the blocker is invisible'],
+    dontsSi: ['එකම ගලේ දෙපාරක් පැකිලීම', 'අවුල උඩින්ම අලුත් වැඩ පටන්ගැනීම', 'පොඩි කාන්දුව නොදැක්කා වගේ ඉඳීම', 'යතුර තියෙද්දී දොර බලෙන් ඇරීම', 'බාධාව පේන්නේ නෑ වගේ ඉඳීම'],
+    whisperEn: ['Storms exist to clear the sky for stars.', 'Move one stone and the river remembers its way.'],
+    whisperSi: ['කුණාටුව එන්නේ තරු වලට අහස පිරිසිදු කරන්න.', 'එක ගලක් අයින් කළාම ගඟට පාර ආයේ මතක් වෙනවා.'],
   },
   heal: {
     effectEn: 'Recovery and care are highlighted. Choose actions that restore your body, home, or peace of mind.',
     effectSi: 'අද දවස වෙන් වෙලා තියෙන්නේ සැනසීම හා සුවය වෙනුවෙන්. හිත් වේදනා, ඇඟේ අමාරුකම් මඟඇරගන්න හිතට සැනසිල්ලක් දෙන දේවල් කරන්න.',
-    dosEn: ['Rest without guilt', 'Handle health basics'], dosSi: ['කිසිම පසුතැවීමක් නැතුව හොඳින් විවේක ගන්න', 'සෞඛ්‍යය ගැන විශේෂයෙන් හිතන්න'],
-    dontsEn: ['Push through exhaustion', 'Ignore discomfort'], dontsSi: ['අමාරුයි කියලා දැනෙනකොටත් බලෙන් වැඩ කරන්න යන්න එපා', 'ඇඟෙන් දෙන සංඥා නොසලකා හරින්න එපා'],
+    dosEn: ['Nap without an alarm', 'Drink water like it\'s medicine', 'Step into actual sunlight', 'Cook something warm for yourself', 'Say no and keep your peace'],
+    dosSi: ['Alarm නැතුව පොඩි නින්දක් යන්න', 'වතුර බෙහෙතක් වගේ බොන්න', 'එළියට බැහැලා හිරු එළිය ටිකක් ගන්න', 'ඔබ වෙනුවෙන්ම රසට මොනවා හරි උයන්න', 'ඕන වෙලාවට "බෑ" කියලා හිත රැකගන්න'],
+    dontsEn: ['Wearing exhaustion as a badge', 'Doomscrolling in bed', 'Skipping meals for deadlines', 'Caffeine as a personality', 'Ignoring what the body whispers'],
+    dontsSi: ['මහන්සිය පදක්කමක් වගේ පැළඳීම', 'ඇඳේ ඉඳන් අනන්තයට scroll කිරීම', 'වැඩ නිසා කෑම වේල මඟහැරීම', 'නින්ද කප්පාදු කරලා වැඩ කිරීම', 'ඇඟ හෙමින් කියන දේ නොඇසීම'],
+    whisperEn: ['Even the moon takes a night off to begin again.', 'Rest is how your light gets repaired.'],
+    whisperSi: ['හඳත් අලුත් වෙන්න අමාවක නිවාඩුව ගන්නවා.', 'විවේකය කියන්නේ ඔබේ එළිය අලුත්වැඩියා වෙන හැටි.'],
   },
   discipline: {
     effectEn: 'Responsibility is the winning path. Slow, clean work is stronger than dramatic moves.',
     effectSi: 'අද ජයග්‍රහණය තියෙන්නේ වගකීම සහ විනය ඇතුලේ. කලබලෙන් ලොකු දේවල් කරනවට වඩා හිමින්, පිළිවෙලට කරන වැඩ වලින් සාර්ථක වෙන්න පුළුවන්.',
-    dosEn: ['Keep promises', 'Finish a duty'], dosSi: ['දුන්නු පොරොන්දු අනිවාර්යයෙන්ම ඉටු කරන්න', 'බාරගත්ත වැඩක් අනිවාර්යයෙන්ම ඉවර කරන්න'],
-    dontsEn: ['Cut corners', 'Delay important chores'], dontsSi: ['ලේසි ක්‍රම හොයන්න ගිහින් වැඩේ අවුල් කරගන්න එපා', 'අත්‍යවශ්‍ය වැඩ කල්දාන්න එපා'],
+    dosEn: ['Do it right when no one watches', 'Keep the tiny promise too', 'Arrive early, twice today', 'Finish what you said you would', 'Do the hardest thing first'],
+    dosSi: ['කවුරුත් නොබලද්දිත් හරියටම කරන්න', 'පුංචිම පොරොන්දුවත් ඉටු කරන්න', 'හැම තැනකටම වෙලාවට කලින් යන්න', 'කරන්නම් කිව්ව දේ ඉවර කරලම දාන්න', 'අමාරුම වැඩේ ඉස්සෙල්ලාම කරන්න'],
+    dontsEn: ['Shortcuts that cost double later', 'Snooze-button negotiations', '"Later" as a lifestyle', 'Half-done and abandoned', 'Rules that apply to others only'],
+    dontsSi: ['පස්සේ දෙගුණයක් වැය වෙන කෙටි පාරවල්', 'Snooze එකත් එක්ක කරන ගිවිසුම්', '"පස්සේ කරන්නම්" ජීවිත විදිහක් කරගැනීම', 'බාගෙට කරලා අතෑරලා දැමීම', 'නීති අනුන්ට විතරක් යෙදවීම'],
+    whisperEn: ['Saturn rewards quietly kept promises.', 'Discipline is remembering what you truly want.'],
+    whisperSi: ['නිහඬව පොරොන්දු රකින අයට සෙනසුරු තෑගි දෙනවා.', 'විනය කියන්නේ ඔබට ඇත්තටම ඕන දේ මතක තියාගැනීම.'],
   },
   action: {
     effectEn: 'Courage and movement are supported. Use the energy for useful action, not conflict.',
     effectSi: 'ඔබේ නිර්භීතකමට විශ්වයෙන් අද ලොකු ශක්තියක් ලැබෙනවා. ඒ ගැම්ම රණ්ඩු ඇතිකරගන්න නෙවෙයි, ජීවිතේ ඉස්සරහට යන්න පාවිච්චි කරන්න.',
-    dosEn: ['Take a measured step', 'Use physical energy well'], dosSi: ['හොඳින් හිතලා ධෛර්යවන්ත පියවරක් ගන්න', 'මහන්සි වෙලා කරන වැඩක් අදම ඉවර කරන්න'],
-    dontsEn: ['Pick fights', 'Make impulsive promises'], dontsSi: ['නොවැදගත් දේවලට ගැටුම් ඇතිකරගන්න එපා', 'ගැම්මට අවාසිදායක පොරොන්දු දෙන්න යන්න එපා'],
+    dosEn: ['Move your body before noon', 'Ask for what you actually want', 'Do the scary thing, smallest version', 'Aim your fire at one goal', 'Take the step you rehearsed'],
+    dosSi: ['දවල් වෙන්න කලින් ඇඟට වැඩක් දෙන්න', 'ඕන දේ කෙළින්ම ඉල්ලන්න', 'බය හිතෙන වැඩේ පොඩිම විදිහට කරලා බලන්න', 'ඔබේ ගින්දර එක ඉලක්කයකට යොමු කරන්න', 'කාලෙකින් හිතපු පියවර අදම ගන්න'],
+    dontsEn: ['Replying while angry', 'Speed without direction', 'Fights you don\'t need', 'Decisions mid-adrenaline', 'Bringing road rage home'],
+    dontsSi: ['තරහෙන්ම reply කිරීම', 'දිශාවක් නැති වේගය', 'ඕන නැති රණ්ඩු තෝරාගැනීම', 'තරහ ගිය ගමන්ම තීරණ ගැනීම', 'පාරේ තරහ ගෙදර ගේන එක'],
+    whisperEn: ['Mars blesses motion that has an aim.', 'Courage is fear that took a breath and moved.'],
+    whisperSi: ['අඟහරු ආශිර්වාද කරන්නේ ඉලක්කයක් තියෙන වේගයට.', 'ධෛර්යය කියන්නේ හුස්මක් අරගෙන ඉස්සරහට ගිය බය.'],
   },
   focus: {
     effectEn: 'Deep work is favored. You may feel intense, so give that intensity a useful target.',
     effectSi: 'එක අරමුණකට හිත එකලස් කරගන්න අද මාරම ලේසියි. ඒ හින්දා හිතේ තියෙන ඒ තදබල ශක්තිය එක වැදගත් අරමුණක් වෙනුවෙන් විතරක් පාවිච්චි කරන්න.',
-    dosEn: ['Protect quiet time', 'Work on one priority'], dosSi: ['පාඩුවේ ඉන්න පුළුවන් වෙලාවක් වෙන්කරගන්න', 'වැදගත්ම එක වැඩක් තෝරගෙන ඒක විතරක් කරන්න'],
-    dontsEn: ['Multitask heavily', 'Overthink every signal'], dontsSi: ['එකපාර වැඩ ගොඩක් කරන්න ගිහින් හිත අවුල් කරගන්න එපා', 'හැම පොඩි දේම ගැන ඕනාවට වඩා හිතන්න එපා'],
+    dosEn: ['One tab, one task, one hour', 'Leave the phone in another room', 'Do deep work before small work', 'Guard your golden hour fiercely', 'Give one thing your whole mind'],
+    dosSi: ['පැයක් එක වැඩකට විතරක් දෙන්න', 'Phone එක වෙන කාමරේක තියලා වැඩ කරන්න', 'ලොකු වැඩේ ඉස්සෙල්ලා කරලා පොඩි ඒවාට යන්න', 'ඔබේ හොඳම පැය රන් වගේ රැකගන්න', 'එක දේකට හිත සම්පූර්ණයෙන්ම දෙන්න'],
+    dontsEn: ['The 47-tab situation', 'Notification whack-a-mole', 'Multitasking (a myth)', '"Just quickly checking" the phone', 'Overanalyzing every signal'],
+    dontsSi: ['Tab 47ක් ඇරගෙන වැඩ කිරීම', 'හැම notification එකකටම පනින එක', 'එකපාර වැඩ දහයක් ඇල්ලීම', '"පොඩ්ඩක් විතරයි" කියලා phone එක ගැනීම', 'හැම පොඩි දේම ඕනෑවට වඩා විග්‍රහ කිරීම'],
+    whisperEn: ['A focused mind bends the whole day around it.', 'Where attention goes, destiny follows.'],
+    whisperSi: ['එකඟ වුණු හිතක් වටේ මුළු දවසම නැමෙනවා.', 'අවධානය යන තැනටම දෛවයත් එනවා.'],
   },
   social: {
     effectEn: 'Teamwork and shared plans are easier. A helpful person may make the day lighter.',
     effectSi: 'අනිත් අයත් එක්ක එකතු වෙලා වැඩ කරන්න අද හරිම ලේසි දවසක්. ඔබට උදව් කරන කෙනෙක් නිසා අද දවස ගොඩක් සැහැල්ලු වෙයි.',
-    dosEn: ['Coordinate early', 'Share credit'], dosSi: ['කලින්ම කතා කරගෙන වැඩ ටික ප්ලෑන් කරගන්න', 'ලැබෙන ගෞරවය අනිත් අයත් එක්ක බෙදාගන්න'],
-    dontsEn: ['Carry everything alone', 'Create mixed messages'], dontsSi: ['ඔක්කොම බර තනියම කරගහගන්න යන්න එපා', 'අනිත් අයට තේරුම්ගන්න අමාරු විදිහට කතා කරන්න එපා'],
+    dosEn: ['Reply to the waiting message', 'Introduce two good people', 'Share the credit loudly', 'Actually show up to the thing', 'Ask "how are you" and mean it'],
+    dosSi: ['බලාගෙන ඉන්න message එකට reply කරන්න', 'හොඳ දෙන්නෙක්ව එකිනෙකාට හඳුන්වලා දෙන්න', 'ගෞරවය හයියෙන්ම බෙදාගන්න', 'පොරොන්දු වුණු තැනට ඇත්තටම යන්න', '"කොහොමද ඉන්නේ" කියලා ඇත්තෙන්ම අහන්න'],
+    dontsEn: ['Group-chat ghosting', 'Carrying the team alone', 'Gossip dressed as concern', 'Keeping score of favors', 'Mixed messages to everyone'],
+    dontsSi: ['Group chat එකේ නොපෙනී ඉඳීම', 'ඔක්කොම බර තනියම ඇදගැනීම', 'සැලකිල්ල වගේ පේන ඕපාදූප', 'උදව් ගණන් හදාගෙන ඉඳීම', 'දෙපැත්තට දෙකක් කීම'],
+    whisperEn: ['Stars are brighter in constellations.', 'Be the reason someone exhales tonight.'],
+    whisperSi: ['තරු වැඩියෙන්ම බබළන්නේ එකතු වුණාම.', 'අද කවුරුහරි සැනසෙන හේතුව ඔබ වෙන්න.'],
   },
   creative: {
     effectEn: 'Design, beauty, and problem-solving get a lift. Make something cleaner or more useful.',
     effectSi: 'නිර්මාණශීලී අදහස් ගලාගෙන එන දවසක්. ප්‍රශ්නයක් ලස්සනට විසඳගන්න හරි, අඩාල වෙලා තිබ්බ වැඩක් ලස්සනට ඉවර කරන්න හරි අද පුළුවන්.',
-    dosEn: ['Polish your work', 'Try a tasteful idea'], dosSi: ['කරන වැඩේට ලස්සන සහ නිර්මාණශීලී බවක් එකතු කරන්න', 'හිතට එන අලුත් අදහසක් අත්හදා බලන්න'],
-    dontsEn: ['Chase perfection', 'Spend for show'], dontsSi: ['සියයට සීයක්ම සම්පූර්ණ වෙන්න ඕන කියලා හිරවෙන්න එපා', 'අනිත් අයට පේන්න අනවශ්‍ය විදිහට වියදම් කරන්න එපා'],
+    dosEn: ['Make something nobody asked for', 'Save the shower idea', 'Add one beautiful detail', 'Rearrange something ordinary', 'Ship it at 80% gorgeous'],
+    dosSi: ['කවුරුත් ඉල්ලපු නැති දෙයක් හදන්න', 'නාන ගමන් ආපු අදහස ලියාගන්න', 'එක ලස්සන විස්තරයක් එකතු කරන්න', 'සාමාන්‍ය දෙයක් අලුත් විදිහකට හදලා බලන්න', 'Perfect නොවුණත් ලස්සනට ඉවර කරන්න'],
+    dontsEn: ['Perfectionism in disguise', 'Comparing drafts to masterpieces', 'Deleting before finishing', 'Spending for show, not joy', 'Waiting for the muse to text first'],
+    dontsSi: ['Perfect වෙනකම්ම බලාගෙන ඉඳීම', 'බාගෙට හදපු දේ ලෝකේ ලොකුම වැඩත් එක්ක සැසඳීම', 'ඉවර වෙන්න කලින්ම delete කිරීම', 'පෙන්නන්න විතරක් කරන වියදම්', 'හිතට එනකම් විතරක් බලාගෙන ඉඳීම'],
+    whisperEn: ['Venus hides masterpieces inside ordinary hours.', 'Beauty is attention made visible.'],
+    whisperSi: ['සාමාන්‍ය පැය ඇතුළේ සිකුරු කලා වැඩ හංගලා තියෙනවා.', 'ලස්සන කියන්නේ ආදරෙන් දුන්න අවධානයමයි.'],
   },
   review: {
     effectEn: 'Hidden issues can become clearer. This is good for honest review and fixing root causes.',
     effectSi: 'මෙච්චර කල් හැංගිලා තිබුණ ප්‍රශ්න සහ ඇත්ත තත්ත්වයන් අද එළියට ඒවි. වැරදි හදාගෙන අලුත් තීරණ වලට යන්න මේක හොඳම වෙලාවක්.',
-    dosEn: ['Look beneath the surface', 'Clean up old mistakes'], dosSi: ['මතුපිටින් පේන දේට වඩා ගැඹුරට හිතලා බලන්න', 'පරණ වැරදි පිළිගන්න, ඒවා හදාගන්න'],
-    dontsEn: ['Blame quickly', 'Start sensitive talks late'], dontsSi: ['විස්තර දැනගන්න කලින් අනිත් අයට බනින්න එපා', 'සංවේදී දේවල් කතාකරන එක කල්දාන්න එපා'],
+    dosEn: ['Reread before you conclude', 'Ask what the lesson was', 'Check the fine print twice', 'Open the folder you avoid', 'Update one old assumption'],
+    dosSi: ['තීරණයට කලින් ආයේ පාරක් කියවන්න', 'මේකෙන් ඉගෙනගත්තේ මොකක්ද කියලා අහන්න', 'පොඩි අකුරු ටික දෙපාරක් බලන්න', 'මඟහරින file එක අද ඇරලා බලන්න', 'පරණ මතයක් අලුත් කරගන්න'],
+    dontsEn: ['Verdicts before evidence', 'Midnight confrontations', 'Sweeping it under, again', 'Shooting the messenger', 'Letting nostalgia edit the facts'],
+    dontsSi: ['සාක්ෂි නැතුව තීන්දු දීම', 'රෑ මැදියමේ සංවේදී කතා ඇරඹීම', 'ආයෙමත් පැදුර යටට දැමීම', 'ඇත්ත කිව්ව කෙනාට බැනීම', 'මතකයට ඇත්ත වෙනස් කරන්න දීම'],
+    whisperEn: ['The past is a teacher, not a home.', 'Truth ages beautifully; excuses do not.'],
+    whisperSi: ['අතීතය ගුරුවරයෙක් — නවාතැනක් නෙවෙයි.', 'ඇත්ත කල් යද්දි ලස්සන වෙනවා; බොරු නෑ.'],
   },
   rest: {
     effectEn: 'The day supports softer pacing. Reflection can be more valuable than pressure.',
     effectSi: 'අද දවස ඉල්ලන්නේම සැහැල්ලුව. බලෙන් වැඩක් ඉවර කරනවට වඩා, නිදහසේ හිතන්න දෙන කාලය අද ඔබට ගොඩක් වටිනවා.',
-    dosEn: ['Pause before choosing', 'Make space for quiet'], dosSi: ['ඕනම දෙයක් තෝරගන්න කලින් පොඩ්ඩක් ඉන්න', 'නිදහසේ හුස්මගන්න පුළුවන් නිහඬ වෙලාවක් හදාගන්න'],
-    dontsEn: ['Overload the schedule', 'Ignore emotional tiredness'], dontsSi: ['කරන්න බැරි තරම් වැඩ ගොඩක් දාගෙන හිරවෙන්න එපා', 'හිතේ තියෙන මහන්සිය ගණන් ගන්නේ නැතුව ඉන්න එපා'],
+    dosEn: ['Cancel one non-essential thing', 'Tea, slowly, no phone', 'Watch the sky do nothing', 'Leave white space in the day', 'Sleep embarrassingly early'],
+    dosSi: ['අත්‍යවශ්‍ය නැති එක දෙයක් cancel කරන්න', 'Phone එක නැතුව තේ එකක් හිමින් බොන්න', 'අහස දිහා නිකම්ම ටිකක් බලාගෙන ඉන්න', 'දවසේ හිස් ඉඩක් ඉතුරු කරගන්න', 'ලැජ්ජ හිතෙන තරම් කලින් නිදාගන්න'],
+    dontsEn: ['Productivity guilt', 'Rest that is secretly scrolling', 'Saying yes on autopilot', 'Heroics nobody asked for', 'Filling every quiet minute'],
+    dontsSi: ['විවේක ගන්නකොට දැනෙන වරදකාරී හැඟීම', 'Scroll කිරීම විවේකයක් කියලා හිතීම', 'නොහිතාම හැමදේටම "හා" කීම', 'කවුරුත් ඉල්ලපු නැති වීරකම්', 'හැම නිහඬ විනාඩියක්ම පිරවීම'],
+    whisperEn: ['The moon rests and no one calls it lazy.', 'Stillness is also a direction.'],
+    whisperSi: ['හඳ විවේක ගද්දි කවුරුත් හඳට කම්මැලියා කියන්නේ නෑ.', 'නිශ්චල වීමත් ගමනක්මයි.'],
   },
   complete: {
     effectEn: 'Finishing energy is strong. Close loops, confirm details, and make the next step clean.',
     effectSi: 'අවසන් කිරීමේ ශක්තිය අද හරිම ප්‍රබලයි. බාගෙට කරපු දේවල් ඉවර කරලා, ඊළඟ පියවරට ලෑස්ති වෙන්න අද පාවිච්චි කරන්න.',
-    dosEn: ['Complete pending work', 'Confirm agreements'], dosSi: ['ගොඩගැහිලා තියෙන වැඩ ටික හිමීට ඉවරයක් කරන්න', 'අනිත් අයත් එක්ක කරගත්ත එකඟවීම් ස්ථිර කරගන්න'],
-    dontsEn: ['Leave loose ends', 'Celebrate before checking'], dontsSi: ['කිසිම වැඩක් බාගෙට කරලා දාලා යන්න එපා', 'ඇත්තටම වැඩේ ඉවරද කියලා බලන්නේ නැතුව සතුටු වෙන්න එපා'],
+    dosEn: ['Close the almost-done loop', 'Send the final version', 'Cross it off with ceremony', 'Thank whoever helped', 'Archive it, then celebrate'],
+    dosSi: ['ළඟටම ඇවිත් තියෙන වැඩේ අදම ඉවර කරන්න', 'Final එක යවලම දාන්න', 'ඉවර වුණු දේ ලිස්ට් එකෙන් කපලා දාන්න', 'උදව් කරපු අයට ස්තුති කරන්න', 'වැඩේ ඉවර කරලා පොඩ්ඩක් සමරන්න'],
+    dontsEn: ['99% done, forever', 'New projects as escape hatches', 'Victory laps before the finish', 'Loose ends kept "for later"', 'Ghosting the last 10%'],
+    dontsSi: ['හැමදාම 99%ට නතර වීම', 'ඉවර නොකරම අලුත් වැඩ පටන්ගැනීම', 'ඉවර වෙන්න කලින් සැමරීම', '"පස්සේ" කියලා ගැට ඉතුරු කිරීම', 'අන්තිම 10% අතහැරලා දැමීම'],
+    whisperEn: ['An ending is a beginning taking its bow.', 'Finish it — your future self is watching.'],
+    whisperSi: ['අවසානයක් කියන්නේ ආචාර කරලා යන ආරම්භයක්.', 'ඉවර කරලම දාන්න — හෙට ඉන්න ඔබ අදට ස්තුති කරයි.'],
   },
   caution: {
     effectEn: 'Timing may feel uneven. Treat it as a signal to slow down and protect important choices.',
     effectSi: 'කාලය ටිකක් අමුතු විදිහට, හිරවෙලා වගේ දැනෙන්න පුළුවන්. ඒක විශ්වයෙන් දෙන සිග්නල් එකක්, ටිකක් හිමින් ගිහින් වැදගත් තීරණ දිහා ආයේ බලන්න කියලා.',
-    dosEn: ['Delay risky starts', 'Check messages twice'], dosSi: ['අවදානම් වැඩ අලුතෙන් පටන් ගන්න එපා කල් දාන්න', 'ඕනම පණිවිඩයක් යවන්න කලින් දෙපාරක් කියවලා බලන්න'],
-    dontsEn: ['Sign under pressure', 'Travel without planning'], dontsSi: ['කවුරුහරි බල කරනවා කියලා ගිවිසුම් වලට අත්සන් කරන්න එපා', 'හරි සැලසුමක් නැතුව හදිසි ගමන් යන්න එපා'],
+    dosEn: ['Sleep on the big decision', 'Read every line before signing', 'Save your work, twice', 'Double-check names and numbers', 'Keep a plan B in your pocket'],
+    dosSi: ['ලොකු තීරණය එක රැයක් තියලා ගන්න', 'අත්සන් කරන්න කලින් හැම පේළියක්ම කියවන්න', 'වැදගත් වැඩ දෙපාරක් save කරන්න', 'නම් සහ ගණන් දෙපාරක් බලන්න', 'Plan B එකක් ළඟම තියාගන්න'],
+    dontsEn: ['Skimming the fine print', 'Signing under pressure', 'Trusting "it\'ll probably be fine"', 'Announcing before it\'s certain', 'Rushed trips without a plan'],
+    dontsSi: ['පොඩි අකුරු නොබලා අත්සන් කිරීම', 'බලපෑමට යටවෙලා තීරණ ගැනීම', '"මොකුත් වෙන එකක් නෑ" කියලා අවදානම් ගැනීම', 'ස්ථිර වෙන්න කලින් ලෝකෙට කීම', 'සැලසුමක් නැති හදිසි ගමන්'],
+    whisperEn: ['Slow is smooth, and smooth is fast.', 'A careful sailor reads the wind twice.'],
+    whisperSi: ['හිමින් යන එකා තමයි දුරම යන්නේ.', 'දක්ෂ නැවියා හුළඟ දෙපාරක් බලනවා.'],
   },
   money: {
     effectEn: 'Trade, budgets, and practical exchanges need attention. Clear value matters.',
     effectSi: 'සල්ලි ගණුදෙනු, වියදම් සහ අයවැය ගැන අද ටිකක් කල්පනාවෙන් ඉන්න ඕන දවසක්. හුවමාරු වෙන දේ වටිනාකම පැහැදිලිද කියලා බලන්න.',
-    dosEn: ['Review costs', 'Make fair deals'], dosSi: ['වියදම් වෙන විදිහ පොඩ්ඩක් කල්පනාවෙන් බලන්න', 'දෙපැත්තටම සාධාරණ වෙන ගණුදෙනු විතරක් කරන්න'],
-    dontsEn: ['Buy from pressure', 'Hide money details'], dontsSi: ['ආසාවට යටවෙලා අනවශ්‍ය විදිහට සල්ලි විසි කරන්න එපා', 'මුදල් සම්බන්ධ විස්තර අනිත් අයගෙන් හංගන්න එපා'],
+    dosEn: ['Know today\'s number exactly', 'Cancel one silent money drain', 'Price your work fairly', 'Write down what you spend', 'Choose deals fair to both sides'],
+    dosSi: ['දවසේ වියදම හරියටම දැනගෙන ඉන්න', 'නොදැනීම සල්ලි කන දෙයක් නවත්තන්න', 'ඔබේ මහන්සියට සාධාරණ මිලක් දාන්න', 'වියදම් ටික ලියලා බලන්න', 'දෙපැත්තටම සාධාරණ ගණුදෙනු තෝරන්න'],
+    dontsEn: ['Retail therapy sessions', 'Money talks while emotional', 'Lending what you can\'t lose', 'Deals too shiny to be true', 'Hiding receipts from yourself'],
+    dontsSi: ['දුක නිවන්න කරන shopping', 'හැඟීම්බර වෙලාවේ සල්ලි කතා', 'නැති වුණොත් අමාරු වෙන ණය දීම', 'ඇත්ත වෙන්න බැරි තරම් ලස්සන deals', 'ඔබෙන්ම වියදම් හංගාගැනීම'],
+    whisperEn: ['Real wealth whispers; it rarely shouts.', 'Count what stays, not what glitters.'],
+    whisperSi: ['ඇත්ත ධනය කතා කරන්නේ හිමිහිට.', 'දිලිසෙන දේ නෙවෙයි, ඉතුරු වෙන දේ ගණන් කරන්න.'],
   },
   travel: {
     effectEn: 'Movement and flexibility are supported. Keep plans light enough to adjust.',
     effectSi: 'ගමන් බිමන් වලට සහ වෙනස්වීම් වලට අද විශ්වයෙන් ලොකු සහායක් ලැබෙනවා. වෙනස් කරන්න පුළුවන් වෙන විදිහට සැලසුම් හදාගන්න එක තමයි වටින්නේ.',
-    dosEn: ['Leave extra time', 'Keep options open'], dosSi: ['ගමන් යද්දි අමතර කාලයක් අරගෙනම යන්න', 'හැමදේකටම වෙනත් විකල්පයක් හිතේ තියාගන්න'],
-    dontsEn: ['Depend on one plan', 'Ignore weather or traffic'], dontsSi: ['එකම සැලසුමකට විතරක් හිරවෙලා ඉන්න එපා', 'කාලගුණය ගැන හිතන්නේ නැතුව එළියට බහින්න එපා'],
+    dosEn: ['Leave twenty minutes early', 'Take the scenic option once', 'Charge everything tonight', 'Confirm before you set out', 'Pack light, decide light'],
+    dosSi: ['විනාඩි විස්සක් කලින් පිටත් වෙන්න', 'ලස්සන පාරෙන් ගෙදර යන්න', 'Phone එක charge කරලම යන්න', 'යන්න කලින් තැන confirm කරගන්න', 'බඩු අඩුවෙන්, හිත සැහැල්ලුවෙන් යන්න'],
+    dontsEn: ['Last-minute everything', 'One-plan itineraries', 'Racing the amber light', 'Ignoring the fuel gauge', 'Arguing with the weather'],
+    dontsSi: ['ඔක්කොම අන්තිම මොහොතට තියාගැනීම', 'විකල්පයක් නැති සැලසුම්', 'කහ එළියේදී වේගය වැඩි කිරීම', 'ටැංකිය හිස් වෙනකම්ම නොබැලීම', 'කාලගුණයත් එක්ක තර්ක කිරීම'],
+    whisperEn: ['The road rewards the unhurried heart.', 'Not every detour is a delay.'],
+    whisperSi: ['පාර ආදරේ කරන්නේ කලබල නැති හිතට.', 'හැම වංගුවක්ම ප්‍රමාදයක් නෙවෙයි.'],
   },
   confidence: {
     effectEn: 'Visibility is supported. Lead with warmth and confidence, not pride.',
     effectSi: 'අද ඔබව අනිත් අයට හොඳට කැපිලා පේනවා. අහංකාරකමෙන් නැතුව, ආදරෙන් සහ විශ්වාසයෙන් යුතුව නායකත්වය ගන්න හොඳම දවසක්.',
-    dosEn: ['Present your idea', 'Act generously'], dosSi: ['ඔබේ හිතේ තියෙන අදහස බය නැතුව ඉදිරිපත් කරන්න', 'අනිත් අය වෙනුවෙන් හොඳ හිතින් මැදිහත් වෙන්න'],
-    dontsEn: ['Dominate others', 'Make it all about you'], dontsSi: ['බලෙන් අනිත් අයව පාලනය කරන්න යන්න එපා', 'හැමදේටම ඔබම විතරයි කියන තැන ඉඳලා කතා කරන්න එපා'],
+    dosEn: ['Take up your full space', 'Speak first in the meeting', 'Wear the good outfit today', 'Sign your idea with your name', 'Stand tall — literally'],
+    dosSi: ['ඔබට හිමි ඉඩ සම්පූර්ණයෙන්ම ගන්න', 'Meeting එකේ ඉස්සෙල්ලාම කතා කරන්න', 'හොඳම ඇඳුම අදම අඳින්න', 'ඔබේ අදහස ඔබේ නමින්ම ඉදිරිපත් කරන්න', 'කොන්ද කෙළින් තියාගෙන ඉන්න'],
+    dontsEn: ['Shrinking to fit small rooms', 'Apologizing for existing', 'Fishing for permission', 'Dimming so others feel bright', 'Wearing borrowed opinions'],
+    dontsSi: ['කාමරේට ගැලපෙන්න ඔබව පොඩි කරගැනීම', 'හැමදේටම "sorry" කීම', 'හැමදේටම අවසර හෙවීම', 'අනුන් බබළන්න ඔබේ එළිය අඩු කිරීම', 'අනුන්ගේ මත ණයට අරගෙන ඇඳීම'],
+    whisperEn: ['The Sun never asks clouds for permission.', 'The sky itself cast you in this role.'],
+    whisperSi: ['ඉර වළාකුළෙන් අවසර ඉල්ලන්නේ නෑ.', 'මේ චරිතයට ඔබව තෝරගත්තේ අහසමයි.'],
   },
   listen: {
     effectEn: 'Listening brings better answers than speaking first. Details arrive through patience.',
     effectSi: 'අද කතා කරනවට වඩා අහගෙන ඉන්න එකෙන් ඔබට ලොකු රහස් පිළිතුරු ටිකක් හොයාගන්න පුළුවන්. ඉවසීමෙන් හිටියොත් ඔක්කොම විස්තර ඔබ ගාවටම එයි.',
-    dosEn: ['Listen fully', 'Ask one good question'], dosSi: ['අනිත් අය කියන දේ සම්පූර්ණයෙන්ම අහගන්න', 'වැදගත්ම එක හොඳ ප්‍රශ්නයක් අහන්න'],
-    dontsEn: ['Interrupt too soon', 'Miss quiet signals'], dontsSi: ['අනිත් අයට කතා කරන්න නොදී පනින්න එපා', 'වචන නැතුව දෙන සිග්නල් මඟහැරගන්න එපා'],
+    dosEn: ['Let the pause finish speaking', 'Remember the small detail they said', 'Ask one more question', 'Hear the words not said', 'Put the phone face-down'],
+    dosSi: ['නිශ්ශබ්දතාවයටත් කතා කරන්න ඉඩ දෙන්න', 'එයාලා කියපු පොඩි විස්තරේ මතක තියාගන්න', 'තව එක ප්‍රශ්නයක් අහලා බලන්න', 'නොකියපු දේවලුත් අහගන්න', 'Phone එක යටිකුරු කරලා තියන්න'],
+    dontsEn: ['Rehearsing replies mid-sentence', 'Interrupting with "actually"', 'Advice nobody ordered', 'Listening only to answer', 'Filling every pause with noise'],
+    dontsSi: ['කෙනා කතා කරද්දිම උත්තරේ හදාගැනීම', 'කතාව මැදට කඩාපැනීම', 'ඉල්ලපු නැති අවවාද දීම', 'උත්තර දෙන්න විතරක් ඇහුම්කන් දීම', 'හැම නිහඬ මොහොතක්ම ශබ්දයෙන් පිරවීම'],
+    whisperEn: ['The quietest person hears the whole sky.', 'Answers ripen inside silence.'],
+    whisperSi: ['නිහඬම කෙනාට තමයි මුළු අහසම ඇහෙන්නේ.', 'උත්තර ඉදෙන්නේ නිශ්ශබ්දතාවය ඇතුළේ.'],
   },
   patience: {
     effectEn: 'Results may be slow but stable. The day rewards maturity and restraint.',
     effectSi: 'ප්‍රතිඵල ලැබෙන්න ටිකක් පරක්කු වෙයි, හැබැයි ලැබෙන දේ ස්ථිරයි. අද දවසේ ජයග්‍රහණය තියෙන්නේ ඉවසීම සහ පරිණතකම ඇතුළේ.',
-    dosEn: ['Choose the long view', 'Stay consistent'], dosSi: ['කෙටි වාසි වලට වඩා දිගුකාලීන වාසි ගැන හිතන්න', 'කරන දේ අතරමඟ නවත්තන්නේ නැතුව දිගටම කරන්න'],
-    dontsEn: ['Force answers', 'Give up too early'], dontsSi: ['උත්තර දෙන්න කියලා කාටවත් බල කරන්න යන්න එපා', 'ප්‍රතිඵල නෑ කියලා ඉක්මනින් අතහැරලා දාන්න එපා'],
+    dosEn: ['Trust the slow cook', 'Do only today\'s part today', 'Water it, then walk away', 'Breathe before the reply', 'Zoom out to the year view'],
+    dosSi: ['හිමින් ඉදෙන දේට ඉඩ දෙන්න', 'අදට අයිති කොටස විතරක් කරන්න', 'වතුර දාලා ඉවසීමෙන් බලන් ඉන්න', 'Reply කරන්න කලින් හුස්මක් ගන්න', 'අවුරුද්දක දුරින් ඉඳලා අද දිහා බලන්න'],
+    dontsEn: ['Refreshing for instant results', 'Deadlines on other people\'s growth', 'Quitting at kilometre 39', 'Force-ripening the fruit', 'Rushing the last chapter'],
+    dontsSi: ['විනාඩියෙන් විනාඩිය ප්‍රතිඵල බැලීම', 'අනුන්ගේ දියුණුවට කාල සීමා දැමීම', 'කිලෝමීටර් 39දී race එක අතහැරීම', 'ගෙඩිය බලෙන් ඉදවන්න යෑම', 'අන්තිම පරිච්ඡේදය කලබලෙන් කියවීම'],
+    whisperEn: ['Saturn\'s rings took ages to become jewelry.', 'Slow fruit is the sweetest.'],
+    whisperSi: ['සෙනසුරුගේ මුදු වලටත් හැදෙන්න කාලය ගියා.', 'හිමින් ඉදුණු ගෙඩිය තමයි පැණි රසම.'],
   },
   steady: {
     effectEn: 'This is a grounded day for normal duties. Simple, reliable action works best.',
     effectSi: 'දෛනික වැඩ ටික කරගෙන යන්න නියම, නිදහස් දවසක්. හරිම සරල විදිහට, විශ්වාසයෙන් වැඩ කරන එක අදට ගොඩක් හොඳයි.',
-    dosEn: ['Keep the basics strong', 'Work steadily'], dosSi: ['ඔබේ මූලික දේවල් හරියටම තියාගන්න', 'කලබලයක් නැතුව පාඩුවේ වැඩ ටික කරන්න'],
-    dontsEn: ['Create drama', 'Change plans without reason'], dontsSi: ['නැති ප්‍රශ්න මවලා ලොකු කරගන්න යන්න එපා', 'හේතුවක් නැතුව එකපාරට සැලසුම් වෙනස් කරන්න එපා'],
+    dosEn: ['Do the usual, unusually well', 'Keep the promise made to yourself', 'Take the same good walk anyway', 'Tidy one small corner', 'Keep the streak alive'],
+    dosSi: ['හැමදාම කරන දේ විශේෂයෙන්ම හොඳට කරන්න', 'ඔබටම දුන්නු පොරොන්දුව රකින්න', 'හැමදාම යන ඇවිදිල්ලට අදත් යන්න', 'පොඩි මුල්ලක් හරි පිළිවෙළ කරන්න', 'ඔබේ streak එක නොකැඩී තියාගන්න'],
+    dontsEn: ['Drama as entertainment', 'Reinventing what already works', 'Plot twists without reason', 'Fixing the unbroken', 'Chaos tourism'],
+    dontsSi: ['නැති නාට්‍ය මවාගැනීම', 'වැඩ කරන දේ ආයේ හදන්න යෑම', 'හේතුවක් නැති එකපාර වෙනස්කම්', 'කැඩිලා නැති දේ හදන්න යෑම', 'අවුල් තියෙන තැන් හොයාගෙන යෑම'],
+    whisperEn: ['Rivers carve canyons by showing up daily.', 'Ordinary days are the spine of destiny.'],
+    whisperSi: ['ගඟ කන්ද කපන්නේ හැමදාම ඒ පාරෙන්ම ගලලා.', 'සාමාන්‍ය දවස් තමයි දෛවයේ කොඳු නාරටිය.'],
   },
   release: {
     effectEn: 'Letting go is supported. Remove clutter, old tension, or a habit that drains you.',
     effectSi: 'අත්හැරීම තමයි අද දවසේ තේමාව. ඔබේ හිතට වද දෙන, ඔබව වෙහෙස කරන දේවල් හරි පුද්ගලයින්ව හරි අතහැරලා දාන්න.',
-    dosEn: ['Clear a space', 'End a stale loop'], dosSi: ['ඔබේ වටපිටාවයි හිතයි පිරිසිදු කරගන්න', 'කිසිම තේරුමක් නැති පුරුද්දකට තිත තියන්න'],
-    dontsEn: ['Hold grudges', 'Restart old conflict'], dontsSi: ['තරහවල් හිතේ තියාගෙන තැවෙන්න එපා', 'ඉවර වෙච්ච පරණ ප්‍රශ්න ආයේ අදින්න යන්න එපා'],
+    dosEn: ['Delete the draft you\'ll never send', 'Unfollow what shrinks you', 'Give away what you never wear', 'Forgive — for your own sleep', 'Exhale the old grudge fully'],
+    dosSi: ['කවදාවත් නොයවන draft එක delete කරන්න', 'ඔබව පොඩි කරන දේවල් unfollow කරන්න', 'අඳින්නේම නැති ඇඳුම් කාට හරි දෙන්න', 'ඔබේ නින්ද වෙනුවෙන් හරි සමාව දෙන්න', 'පරණ තරහ හුස්මත් එක්කම පිට කරන්න'],
+    dontsEn: ['Grudge collections', 'Rereading closed chapters', 'Carrying bricks from old houses', 'Watering dead plants', 'Sunk-cost sentimentality'],
+    dontsSi: ['තරහවල් එකතු කරගෙන ඉඳීම', 'ඉවර වුණු පරිච්ඡේද ආයේ ආයේ කියවීම', 'පරණ ගෙදර ගඩොල් අලුත් ගෙදරට ගෙනියෑම', 'මැරුණු පැළවලට වතුර දැමීම', '"හැබැයි එදා නම්" කතා ආයේ ඇදීම'],
+    whisperEn: ['Even the moon lets go of being full.', 'Empty hands can catch new stars.'],
+    whisperSi: ['හඳත් පුරහඳ අත්හරිනවා — ආයේ අලුත් වෙන්න.', 'හිස් අතකට තමයි අලුත් තරු අහුවෙන්නේ.'],
   },
 };
 
@@ -554,6 +642,19 @@ var PRACTICAL_LABELS = {
   vaara: ['Today\'s Vaara', 'අද දවසේ බලපෑම', 'The main theme'],
 };
 
+// Co-Star-style daily rotation: every tone holds a pool of lines and we surface
+// a small window that advances each SLT day — stable all day (share cards match
+// the screen), fresh again tomorrow. Per-kind offsets stagger the window so two
+// panchanga limbs sharing one tone still contribute different lines.
+var KIND_ROTATION_OFFSET = { tithi: 0, nakshatra: 2, yoga: 4, karana: 1, vaara: 3 };
+function pickDaily(pool, offset, count) {
+  if (!pool || pool.length === 0) return [];
+  var start = (sltDayIndex() + (offset || 0)) % pool.length;
+  var out = [];
+  for (var i = 0; i < Math.min(count, pool.length); i += 1) out.push(pool[(start + i) % pool.length]);
+  return out;
+}
+
 function getPanchangaGuidance(kind, entry, language) {
   var name = getAstroEntryName(entry);
   var guide = PRACTICAL_GUIDES[kind] && PRACTICAL_GUIDES[kind][name];
@@ -566,14 +667,16 @@ function getPanchangaGuidance(kind, entry, language) {
   var meaning = language === 'si'
     ? label + ': ' + title + '. මේ දේවල් අද දවස සාර්ථක කරගන්න ඔබට ගොඩක් උදව් වෙයි.'
     : label + ': ' + String(title).toLowerCase() + '. This is the practical signal for how to use today well.';
+  var offset = KIND_ROTATION_OFFSET[kind] || 0;
   return {
     label: label,
     hint: hint,
     title: title,
     meaning: meaning,
     effect: chooseText(language, tone.effectEn, tone.effectSi),
-    dos: language === 'si' ? tone.dosSi : tone.dosEn,
-    donts: language === 'si' ? tone.dontsSi : tone.dontsEn,
+    dos: pickDaily(language === 'si' ? tone.dosSi : tone.dosEn, offset, 2),
+    donts: pickDaily(language === 'si' ? tone.dontsSi : tone.dontsEn, offset, 2),
+    whisper: pickDaily(language === 'si' ? tone.whisperSi : tone.whisperEn, offset, 1)[0] || '',
   };
 }
 
@@ -951,16 +1054,16 @@ var conv = StyleSheet.create({
   strip: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 12, paddingHorizontal: 2 },
   stripCol: { flex: 1, alignItems: 'center', gap: 4 },
   stripBarWrap: { height: 44, width: '100%', alignItems: 'center', justifyContent: 'flex-end' },
-  stripLabel: { fontSize: 8.5, color: 'rgba(255,255,255,0.4)', fontWeight: '700', fontVariant: ['tabular-nums'], maxWidth: '100%' },
+  stripLabel: { fontSize: 10, color: 'rgba(255,255,255,0.62)', fontWeight: '700', fontVariant: ['tabular-nums'], maxWidth: '100%' },
   stripLabelNow: { color: '#FFD983', fontWeight: '900' },
-  stripRange: { fontSize: 9.5, color: 'rgba(255,255,255,0.42)', textAlign: 'center', marginTop: 6, fontWeight: '600', letterSpacing: 0.3 },
+  stripRange: { fontSize: 10.5, color: 'rgba(255,255,255,0.62)', textAlign: 'center', marginTop: 6, fontWeight: '600', letterSpacing: 0.3 },
   winList: { marginTop: 12 },
   winRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
   winIcon: { width: 26, height: 26, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   winTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   winArea: { fontSize: 13, fontWeight: '800', color: 'rgba(255,255,255,0.9)' },
   winRange: { fontSize: 11.5, fontWeight: '700', flexShrink: 1 },
-  winDriver: { fontSize: 10.5, color: 'rgba(255,255,255,0.45)', marginTop: 1 },
+  winDriver: { fontSize: 10.5, color: 'rgba(255,255,255,0.62)', marginTop: 1 },
   winTier: { fontSize: 11, color: '#E8C56A', fontWeight: '800', letterSpacing: 1 },
   cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, paddingVertical: 11, borderRadius: 12, backgroundColor: '#A78BFA' },
   ctaText: { fontSize: 12.5, fontWeight: '800', color: '#160E28', letterSpacing: 0.2 },
@@ -1019,7 +1122,7 @@ var tools = StyleSheet.create({
   card: { flex: 1, borderRadius: 18, borderWidth: 1, padding: 14 },
   iconWrap: { width: 34, height: 34, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   title: { fontSize: 14, fontWeight: '800', color: 'rgba(255,255,255,0.95)' },
-  sub: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 3, lineHeight: 15, minHeight: 30 },
+  sub: { fontSize: 11, color: 'rgba(255,255,255,0.68)', marginTop: 3, lineHeight: 15, minHeight: 30 },
   footer: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10 },
   open: { fontSize: 11.5, fontWeight: '800', letterSpacing: 0.2 },
 });
@@ -1101,13 +1204,13 @@ var ck = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   domChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, borderWidth: 1 },
   domText: { fontSize: 11, fontWeight: '800' },
-  range: { fontSize: 11.5, fontWeight: '700', color: 'rgba(255,255,255,0.55)' },
+  range: { fontSize: 11.5, fontWeight: '700', color: 'rgba(255,255,255,0.68)' },
   q: { fontSize: 15.5, fontWeight: '800', color: 'rgba(255,255,255,0.95)' },
   claim: { fontSize: 12.5, color: 'rgba(255,255,255,0.6)', marginTop: 5, lineHeight: 17 },
   opts: { flexDirection: 'row', gap: 8, marginTop: 14 },
   opt: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 11, borderRadius: 12, borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.03)' },
   optText: { fontSize: 12.5, fontWeight: '800' },
-  foot: { fontSize: 10.5, color: 'rgba(255,255,255,0.4)', marginTop: 11, textAlign: 'center' },
+  foot: { fontSize: 10.5, color: 'rgba(255,255,255,0.62)', marginTop: 11, textAlign: 'center' },
 });
 
 /**
@@ -2010,7 +2113,7 @@ var skyx = StyleSheet.create({
   shootTail: { width: 46, height: 1.6, borderRadius: 1 },
   shootHead: { width: 2.6, height: 2.6, borderRadius: 1.3, backgroundColor: '#FFFDF2', marginLeft: -1 },
   // hour labels — RN overlay over the dial (never stretched or clipped)
-  hourLbl: { position: 'absolute', width: 64, marginLeft: -32, textAlign: 'center', fontSize: 8, fontWeight: '700', color: 'rgba(255,236,190,0.6)', letterSpacing: 0.3 },
+  hourLbl: { position: 'absolute', width: 64, marginLeft: -32, textAlign: 'center', fontSize: 9.5, fontWeight: '700', color: 'rgba(255,236,190,0.6)', letterSpacing: 0.3 },
   // next-event pill variants (danger styling lives in sky.cdPill*)
   cdPillClamp: { maxWidth: 138, flexShrink: 1 },
   cdGold: { backgroundColor: 'rgba(255,217,131,0.07)', borderColor: 'rgba(255,217,131,0.25)' },
@@ -2030,7 +2133,7 @@ var skyx = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 7, borderRadius: 11,
     backgroundColor: 'rgba(201,210,232,0.05)', borderWidth: 1, borderColor: 'rgba(201,210,232,0.16)',
   },
-  moonLegLabel: { flexShrink: 1, fontSize: 8.5, fontWeight: '800', letterSpacing: 0.7, color: 'rgba(201,210,232,0.7)' },
+  moonLegLabel: { flexShrink: 1, fontSize: 10, fontWeight: '800', letterSpacing: 0.7, color: 'rgba(201,210,232,0.7)' },
   moonLegTime: { flex: 1, textAlign: 'right', fontSize: 11.5, fontWeight: '700', color: '#DDE4F5', fontVariant: ['tabular-nums'] },
   // day navigation strip
   dayStripWrap: { marginTop: 10 },
@@ -2041,7 +2144,7 @@ var skyx = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.035)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   dayPillOn: { backgroundColor: 'rgba(255,217,131,0.10)', borderColor: 'rgba(255,217,131,0.5)' },
-  dayPillWd: { fontSize: 8.5, fontWeight: '800', letterSpacing: 0.5, color: 'rgba(244,238,223,0.5)' },
+  dayPillWd: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5, color: 'rgba(244,238,223,0.68)' },
   dayPillWdOn: { color: 'rgba(255,217,131,0.9)' },
   dayPillNum: { fontSize: 15, fontWeight: '900', color: '#F4EEDF', fontVariant: ['tabular-nums'] },
   dayPillNumOn: { color: '#FFE9A8' },
@@ -2053,10 +2156,12 @@ var skyx = StyleSheet.create({
 //  lists, share cards 2-4x retention, streaks, compatibility loops)
 // ═══════════════════════════════════════════════════════════════════════
 
-// Merge real panchanga guidance into one Do / Don't pack for the day
+// Merge real panchanga guidance into one Do / Don't pack for the day.
+// dos[0] doubles as the "power move"; whisper is the day's closing epigram
+// (taken from the nakshatra tone — the emotional headline of the day).
 function buildDoDontLists(data, language, rahuActive) {
   var kinds = ['nakshatra', 'tithi', 'yoga'];
-  var dos = [], donts = [];
+  var dos = [], donts = [], whisper = '';
   kinds.forEach(function (kind) {
     var entry = data && data.panchanga && data.panchanga[kind];
     if (!entry) return;
@@ -2064,11 +2169,12 @@ function buildDoDontLists(data, language, rahuActive) {
     if (!guide) return;
     (guide.dos || []).forEach(function (item) { if (dos.indexOf(item) === -1) dos.push(item); });
     (guide.donts || []).forEach(function (item) { if (donts.indexOf(item) === -1) donts.push(item); });
+    if (!whisper && guide.whisper) whisper = guide.whisper;
   });
   if (rahuActive) {
-    donts.unshift(language === 'si' ? 'රාහු කාලය තුළ අලුත් වැඩ අරඹන්න එපා' : 'Do not start new ventures during Rahu Kalaya');
+    donts.unshift(language === 'si' ? 'රාහු කාලයේ අලුත් වැඩ පටන්ගැනීම' : 'Starting anything new in Rahu Kalaya');
   }
-  return { dos: dos.slice(0, 3), donts: donts.slice(0, 3) };
+  return { dos: dos.slice(0, 4), donts: donts.slice(0, 3), whisper: whisper };
 }
 
 // Traditional favorable direction by weekday (vaara)
@@ -2520,9 +2626,11 @@ var ViralHero = React.memo(function ViralHero(props) {
   );
 });
 
-/* ── DO & DON'T — the most screenshot-able daily guidance ── */
+/* ── DO & DON'T — power move + rotating Co-Star-style lists + cosmic whisper ── */
 var DoDontCard = React.memo(function DoDontCard({ pack, language }) {
   if (!pack || (pack.dos.length === 0 && pack.donts.length === 0)) return null;
+  var powerMove = pack.dos[0];
+  var listDos = pack.dos.slice(1);
   return (
     <Animated.View entering={FadeInDown.delay(90).springify()}>
       <View style={vr.ddCard}>
@@ -2535,13 +2643,23 @@ var DoDontCard = React.memo(function DoDontCard({ pack, language }) {
             <Text style={vr.ddTitle}>{language === 'si' ? 'අද කරන්න · නොකරන්න' : "Do & Don't Today"}</Text>
           </View>
         </View>
+        {powerMove ? (
+          <Animated.View entering={FadeInUp.delay(140).springify()} style={vr.ddPower}>
+            <LinearGradient colors={['rgba(245,213,122,0.16)', 'rgba(245,213,122,0.03)']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+            <View style={vr.ddPowerIcon}><Ionicons name="flash" size={14} color="#F5D57A" /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={vr.ddPowerLabel}>{language === 'si' ? 'අදම කළ යුතුම දේ' : "TODAY'S POWER MOVE"}</Text>
+              <Text style={vr.ddPowerText}>{powerMove}</Text>
+            </View>
+          </Animated.View>
+        ) : null}
         <View style={vr.ddCols}>
           <View style={vr.ddCol}>
             <View style={vr.ddColHead}>
               <View style={[vr.ddColDot, { backgroundColor: '#86EFAC' }]} />
               <Text style={[vr.ddColTitle, { color: '#86EFAC' }]}>{language === 'si' ? 'කරන්න' : 'DO'}</Text>
             </View>
-            {pack.dos.map(function (item, i) {
+            {listDos.map(function (item, i) {
               return (
                 <Animated.View key={'do' + i} entering={FadeInUp.delay(180 + i * 60).springify()} style={vr.ddItem}>
                   <Ionicons name="checkmark-circle" size={14} color="#86EFAC" style={{ marginTop: 2 }} />
@@ -2566,6 +2684,12 @@ var DoDontCard = React.memo(function DoDontCard({ pack, language }) {
             })}
           </View>
         </View>
+        {pack.whisper ? (
+          <Animated.View entering={FadeInUp.delay(430)} style={vr.ddWhisperWrap}>
+            <Text style={vr.ddWhisperStar}>✦</Text>
+            <Text style={vr.ddWhisper}>{pack.whisper}</Text>
+          </Animated.View>
+        ) : null}
         <View style={vr.innerFrame} pointerEvents="none" />
       </View>
     </Animated.View>
@@ -2664,6 +2788,10 @@ var ShareTodayCard = React.forwardRef(function ShareTodayCard(props, ref) {
           );
         })}
       </View>
+
+      {pack && pack.whisper ? (
+        <Text style={scd.whisper} numberOfLines={2}>✦ {pack.whisper} ✦</Text>
+      ) : null}
 
       <View style={scd.footer}>
         <View style={scd.footerStreak}>
@@ -4329,7 +4457,7 @@ var vr = StyleSheet.create({
   medallionDecor: { position: 'absolute', width: 172, height: 172 },
   medallionCenter: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
   medallionWord: { fontSize: 22, fontWeight: '900', letterSpacing: 0.4, textAlign: 'center', width: '100%', ...textShadow('rgba(232,197,106,0.45)', { width: 0, height: 0 }, 16) },
-  medallionLabel: { fontSize: 8.5, letterSpacing: 2, color: 'rgba(244,238,223,0.52)', fontWeight: '800', marginTop: 3 },
+  medallionLabel: { fontSize: 10, letterSpacing: 2, color: 'rgba(244,238,223,0.68)', fontWeight: '800', marginTop: 3 },
   statusRow: { alignItems: 'center', marginTop: 10, marginBottom: 2 },
   statusChip: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 13, paddingVertical: 6, borderRadius: 999, borderWidth: 1 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
@@ -4344,7 +4472,7 @@ var vr = StyleSheet.create({
     borderRadius: 14, borderWidth: 1, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.025)',
   },
   insightIcon: { width: 26, height: 26, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 1 },
-  insightLabel: { fontSize: 7.5, fontWeight: '800', letterSpacing: 1.1, color: 'rgba(244,238,223,0.42)' },
+  insightLabel: { fontSize: 9.5, fontWeight: '800', letterSpacing: 1.1, color: 'rgba(244,238,223,0.62)' },
   insightValue: { fontSize: 11.5, fontWeight: '800', textAlign: 'center', width: '100%' },
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
   streakPill: {
@@ -4352,7 +4480,7 @@ var vr = StyleSheet.create({
     borderRadius: 14, backgroundColor: 'rgba(255,159,67,0.09)', borderWidth: 1, borderColor: 'rgba(255,159,67,0.28)',
   },
   streakText: { fontSize: 13, fontWeight: '900', color: '#FFB870', fontVariant: ['tabular-nums'] },
-  streakSub: { fontSize: 7.5, letterSpacing: 1, color: 'rgba(255,184,112,0.6)', fontWeight: '800' },
+  streakSub: { fontSize: 9.5, letterSpacing: 1, color: 'rgba(255,184,112,0.6)', fontWeight: '800' },
   shareBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 13, borderRadius: 14, overflow: 'hidden',
@@ -4370,7 +4498,7 @@ var vr = StyleSheet.create({
     width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(232,197,106,0.10)', borderWidth: 1, borderColor: 'rgba(232,197,106,0.25)',
   },
-  ddKicker: { fontSize: 9, fontWeight: '900', letterSpacing: 1.6, color: 'rgba(232,197,106,0.52)' },
+  ddKicker: { fontSize: 10, fontWeight: '900', letterSpacing: 1.6, color: 'rgba(232,197,106,0.68)' },
   ddTitle: { fontSize: 16.5, fontWeight: '800', color: '#F4EEDF', marginTop: 1 },
   ddCols: { flexDirection: 'row', gap: 12 },
   ddCol: { flex: 1, gap: 9 },
@@ -4380,6 +4508,19 @@ var vr = StyleSheet.create({
   ddColTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
   ddItem: { flexDirection: 'row', gap: 7, alignItems: 'flex-start' },
   ddItemText: { flex: 1, fontSize: 12, lineHeight: 17.5, color: 'rgba(244,238,223,0.78)', fontWeight: '600' },
+  ddPower: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, marginBottom: 13,
+    borderRadius: 14, borderWidth: 1, borderColor: 'rgba(245,213,122,0.32)', overflow: 'hidden',
+  },
+  ddPowerIcon: {
+    width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(245,213,122,0.14)', borderWidth: 1, borderColor: 'rgba(245,213,122,0.40)',
+  },
+  ddPowerLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1.3, color: 'rgba(245,213,122,0.75)' },
+  ddPowerText: { fontSize: 13, lineHeight: 18.5, fontWeight: '800', color: '#FBF0D2', marginTop: 1 },
+  ddWhisperWrap: { marginTop: 14, paddingTop: 11, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', alignItems: 'center', gap: 3 },
+  ddWhisperStar: { fontSize: 10, color: 'rgba(232,197,106,0.55)' },
+  ddWhisper: { fontSize: 11.5, lineHeight: 17, color: 'rgba(232,197,106,0.88)', fontWeight: '600', textAlign: 'center', paddingHorizontal: 6 },
   ltCard: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(232,197,106,0.16)', padding: 14, paddingBottom: 11 },
   ltRow: { flexDirection: 'row', gap: 8 },
   ltTile: {
@@ -4387,9 +4528,9 @@ var vr = StyleSheet.create({
     gap: 5, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.02)',
   },
   ltIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  ltLabel: { fontSize: 8, fontWeight: '800', letterSpacing: 1, color: 'rgba(244,238,223,0.45)' },
+  ltLabel: { fontSize: 9.5, fontWeight: '800', letterSpacing: 1, color: 'rgba(244,238,223,0.62)' },
   ltValue: { fontSize: 13.5, fontWeight: '900', textAlign: 'center' },
-  ltNote: { fontSize: 9.5, color: 'rgba(244,238,223,0.35)', textAlign: 'center', marginTop: 9 },
+  ltNote: { fontSize: 10.5, color: 'rgba(244,238,223,0.55)', textAlign: 'center', marginTop: 9 },
 });
 
 var scd = StyleSheet.create({
@@ -4399,14 +4540,14 @@ var scd = StyleSheet.create({
   frame: { position: 'absolute', top: 12, left: 12, right: 12, bottom: 12, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(232,197,106,0.30)' },
   header: { alignItems: 'center', marginBottom: 22 },
   brand: { fontSize: 13, fontWeight: '900', letterSpacing: 4, color: '#E8C56A' },
-  date: { fontSize: 11, color: 'rgba(244,238,223,0.55)', marginTop: 5, fontWeight: '600' },
+  date: { fontSize: 11, color: 'rgba(244,238,223,0.68)', marginTop: 5, fontWeight: '600' },
   scoreRing: { width: 140, height: 140, borderRadius: 70, borderWidth: 3, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
   scoreRingInner: {
     width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(20,12,30,0.75)',
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(232,197,106,0.22)',
   },
   scoreWord: { fontSize: 24, fontWeight: '900', letterSpacing: 0.4, textAlign: 'center', width: '100%' },
-  scoreLbl: { fontSize: 8, letterSpacing: 1.6, color: 'rgba(244,238,223,0.5)', fontWeight: '800', marginTop: 2 },
+  scoreLbl: { fontSize: 9.5, letterSpacing: 1.6, color: 'rgba(244,238,223,0.68)', fontWeight: '800', marginTop: 2 },
   name: { fontSize: 13, fontWeight: '700', color: 'rgba(244,238,223,0.6)', marginBottom: 6 },
   title: { fontSize: 22, lineHeight: 30, fontWeight: '800', color: '#F8F1DD', textAlign: 'center', marginBottom: 20, paddingHorizontal: 4 },
   listBox: {
@@ -4416,6 +4557,7 @@ var scd = StyleSheet.create({
   listRow: { flexDirection: 'row', gap: 9, alignItems: 'flex-start' },
   listMark: { fontSize: 13, fontWeight: '900', marginTop: 1 },
   listText: { flex: 1, fontSize: 12.5, lineHeight: 18, color: 'rgba(244,238,223,0.82)', fontWeight: '600' },
+  whisper: { marginTop: 14, fontSize: 11.5, lineHeight: 17, color: 'rgba(232,197,106,0.9)', fontWeight: '600', textAlign: 'center', paddingHorizontal: 12 },
   footer: { position: 'absolute', bottom: 26, left: 28, right: 28, alignItems: 'center', gap: 7 },
   footerStreak: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   footerStreakText: { fontSize: 12, fontWeight: '800', color: '#FFB870' },
@@ -4433,7 +4575,7 @@ var aur = StyleSheet.create({
   chartWrap: { width: 130, height: 130, position: 'relative' },
   centerOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
   overallWord: { fontSize: 14, fontWeight: '900', letterSpacing: 0.3, textAlign: 'center', width: '100%', ...textShadow('rgba(232,197,106,0.35)', { width: 0, height: 0 }, 12) },
-  overallLbl: { fontSize: 8, letterSpacing: 1.4, color: 'rgba(244,238,223,0.42)', fontWeight: '800', marginTop: 2 },
+  overallLbl: { fontSize: 9.5, letterSpacing: 1.4, color: 'rgba(244,238,223,0.62)', fontWeight: '800', marginTop: 2 },
   legend: { flex: 1, gap: 9 },
   legRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legIcon: { width: 22, height: 22, borderRadius: 7, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
@@ -4441,9 +4583,9 @@ var aur = StyleSheet.create({
   legBarTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.07)', overflow: 'hidden' },
   legBarFill: { height: '100%', borderRadius: 3 },
   legScorePill: { width: 54, borderRadius: 8, borderWidth: 1, paddingHorizontal: 4, paddingVertical: 2.5, alignItems: 'center', justifyContent: 'center' },
-  legScore: { fontSize: 9, fontWeight: '800', letterSpacing: 0.2, textAlign: 'center' },
+  legScore: { fontSize: 10, fontWeight: '800', letterSpacing: 0.2, textAlign: 'center' },
   note: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
-  noteText: { fontSize: 10.5, color: 'rgba(244,238,223,0.4)', flex: 1, lineHeight: 15 },
+  noteText: { fontSize: 10.5, color: 'rgba(244,238,223,0.62)', flex: 1, lineHeight: 15 },
   unlockCta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, paddingVertical: 11, paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#E8C56A' },
   unlockCtaText: { fontSize: 12.5, fontWeight: '800', color: '#2A1707', letterSpacing: 0.2 },
 });
@@ -4457,16 +4599,16 @@ var sky = StyleSheet.create({
   horizonVeil: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '46%' },
   topRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, paddingHorizontal: 18, paddingTop: 16 },
   icBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(232,197,106,0.12)', borderWidth: 1, borderColor: 'rgba(232,197,106,0.3)' },
-  kicker: { fontSize: 9, fontWeight: '900', letterSpacing: 1.8, color: 'rgba(232,197,106,0.55)' },
+  kicker: { fontSize: 10, fontWeight: '900', letterSpacing: 1.8, color: 'rgba(232,197,106,0.68)' },
   title: { fontSize: 16.5, fontWeight: '800', color: '#F8F1DD', letterSpacing: 0.2, ...textShadow('rgba(232,197,106,0.25)', { width: 0, height: 1 }, 8) },
-  sub: { fontSize: 10.5, color: 'rgba(244,238,223,0.5)', marginTop: 2, fontVariant: ['tabular-nums'] },
+  sub: { fontSize: 10.5, color: 'rgba(244,238,223,0.68)', marginTop: 2, fontVariant: ['tabular-nums'] },
   cdPill: {
     alignItems: 'flex-end', backgroundColor: 'rgba(252,165,165,0.07)',
     borderWidth: 1, borderColor: 'rgba(252,165,165,0.20)', borderRadius: 12,
     paddingHorizontal: 10, paddingVertical: 6,
   },
   cdPillActive: { backgroundColor: 'rgba(252,165,165,0.14)', borderColor: 'rgba(252,165,165,0.4)' },
-  cdLabel: { fontSize: 8.5, letterSpacing: 0.8, color: 'rgba(252,165,165,0.7)', fontWeight: '800' },
+  cdLabel: { fontSize: 10, letterSpacing: 0.8, color: 'rgba(252,165,165,0.7)', fontWeight: '800' },
   cdValue: { fontSize: 17, fontWeight: '900', color: '#FCA5A5', marginTop: 1, fontVariant: ['tabular-nums'] },
   arcWrap: { height: 172, marginTop: 2, position: 'relative' },
   nowWrap: { position: 'absolute', width: 140, marginLeft: -70, marginTop: -46, alignItems: 'center' },
@@ -4491,12 +4633,12 @@ var sky = StyleSheet.create({
   legChipGold: { backgroundColor: 'rgba(255,233,168,0.08)', borderColor: 'rgba(255,233,168,0.30)' },
   legChipMuted: { opacity: 0.62 },
   legDot: { width: 8, height: 8, borderRadius: 4 },
-  legChipLabel: { fontSize: 8.5, fontWeight: '800', letterSpacing: 0.7, color: 'rgba(244,238,223,0.5)' },
+  legChipLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.7, color: 'rgba(244,238,223,0.68)' },
   legChipTime: { fontSize: 11.5, fontWeight: '700', color: '#F4EEDF', marginTop: 1, fontVariant: ['tabular-nums'] },
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 15 },
   progressTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.07)', overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
-  progressText: { fontSize: 10, fontWeight: '700', color: 'rgba(244,238,223,0.55)', fontVariant: ['tabular-nums'] },
+  progressText: { fontSize: 10, fontWeight: '700', color: 'rgba(244,238,223,0.68)', fontVariant: ['tabular-nums'] },
 });
 
 var s = StyleSheet.create({
@@ -4524,7 +4666,7 @@ var s = StyleSheet.create({
     backgroundColor: 'rgba(232,197,106,0.10)', borderWidth: 1, borderColor: 'rgba(232,197,106,0.22)',
   },
   chartLinkTitle: { fontSize: 14, fontWeight: '700', color: '#F4EEDF' },
-  chartLinkSub: { fontSize: 11, color: 'rgba(244,238,223,0.5)', marginTop: 2 },
+  chartLinkSub: { fontSize: 11, color: 'rgba(244,238,223,0.68)', marginTop: 2 },
   center: { alignItems: 'center', justifyContent: 'center', paddingTop: 120 },
 
   loadingText: { color: '#FFB800', fontSize: 14, fontStyle: 'italic', letterSpacing: 1, marginTop: 16 },
@@ -4629,7 +4771,7 @@ var s = StyleSheet.create({
   },
   oracleSignalCopy: { flex: 1, minWidth: 0 },
   oracleSignalLabel: {
-    color: 'rgba(255,232,163,0.45)', fontSize: 10, lineHeight: 14,
+    color: 'rgba(255,232,163,0.62)', fontSize: 10, lineHeight: 14,
     fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase',
   },
   oracleSignalValue: {
@@ -4746,7 +4888,7 @@ var s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(218,165,32,0.18)',
   },
 
-  dashHeroLabel: { color: 'rgba(218,165,32,0.50)', fontSize: 10, fontWeight: '800', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 4 },
+  dashHeroLabel: { color: 'rgba(218,165,32,0.68)', fontSize: 10, fontWeight: '800', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 4 },
   dashSignNameLarge: { color: '#F4E4BC', fontSize: 32, fontWeight: '900', letterSpacing: -0.3, lineHeight: 38, ...textShadow('rgba(218,165,32,0.45)', { width: 0, height: 1 }, 14) },
   dashSignNameSub: { color: 'rgba(218,165,32,0.60)', fontSize: 12, fontWeight: '700' },
   nakPill: {
@@ -4756,11 +4898,11 @@ var s = StyleSheet.create({
     backgroundColor: 'rgba(218,165,32,0.04)', gap: 4,
   },
   nakPillRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  nakPillLabel: { color: 'rgba(218,165,32,0.55)', fontSize: 11, fontWeight: '700' },
+  nakPillLabel: { color: 'rgba(218,165,32,0.68)', fontSize: 11, fontWeight: '700' },
   nakPillDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(218,165,32,0.45)' },
   nakPillValue: { color: '#DAA520', fontSize: 14, fontWeight: '800', textAlign: 'center' },
   dashDivider: { height: 1, marginHorizontal: 16, overflow: 'hidden' },
-  dashGridTitle: { color: 'rgba(218,165,32,0.45)', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center', marginTop: 12, marginBottom: -4 },
+  dashGridTitle: { color: 'rgba(218,165,32,0.62)', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center', marginTop: 12, marginBottom: -4 },
   dashGrid: {
     flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10, paddingTop: 16, paddingBottom: 18, gap: 8,
   },
@@ -4773,7 +4915,7 @@ var s = StyleSheet.create({
     width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
   },
   dashCellValue: { color: '#F4E4BC', fontSize: 11, lineHeight: 16, fontWeight: '800', textAlign: 'center', paddingHorizontal: 2 },
-  dashCellLabel: { color: 'rgba(218,165,32,0.40)', fontSize: 10, lineHeight: 14, fontWeight: '700', textAlign: 'center' },
+  dashCellLabel: { color: 'rgba(218,165,32,0.62)', fontSize: 10, lineHeight: 14, fontWeight: '700', textAlign: 'center' },
 
   // ═══ Rahu Kalaya Card ═══
   rahuCard: {
@@ -4834,7 +4976,7 @@ var s = StyleSheet.create({
     marginTop: 10, marginBottom: 8,
   },
   rahuTimeBlock: { flex: 1, alignItems: 'center', paddingVertical: 10 },
-  rahuTimeLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 3, color: 'rgba(218,165,32,0.45)' },
+  rahuTimeLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 3, color: 'rgba(218,165,32,0.62)' },
   rahuTimeValue: { fontSize: 16, fontWeight: '900', letterSpacing: 0.5, color: '#F4E4BC' },
   rahuTimeValueActive: { color: '#FCA5A5' },
   rahuTimeDivider: { width: 1, height: 32, borderRadius: 1 },
@@ -4852,7 +4994,7 @@ var s = StyleSheet.create({
     fontSize: 11,
     lineHeight: 18,
     fontWeight: '400',
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'rgba(255,255,255,0.68)',
     textAlign: 'center',
     letterSpacing: 0,
   },
@@ -4887,7 +5029,7 @@ var s = StyleSheet.create({
     backgroundColor: 'rgba(218,165,32,0.08)',
     borderWidth: 1, borderColor: 'rgba(218,165,32,0.22)',
   },
-  glassIdKicker: { color: 'rgba(218,165,32,0.52)', fontSize: 9, fontWeight: '900', letterSpacing: 1.8, marginBottom: 1 },
+  glassIdKicker: { color: 'rgba(218,165,32,0.68)', fontSize: 10, fontWeight: '900', letterSpacing: 1.8, marginBottom: 1 },
   glassIdTitle: { color: '#F4E4BC', fontSize: 17, lineHeight: 22, fontWeight: '900', letterSpacing: 0.2, ...textShadow('rgba(218,165,32,0.22)', { width: 0, height: 1 }, 6) },
 
   // Lagna Hero
@@ -4913,11 +5055,11 @@ var s = StyleSheet.create({
   },
   lagnaHeroRight: { flex: 1 },
   lagnaHeroLabel: {
-    color: 'rgba(218,165,32,0.50)', fontSize: 11, fontWeight: '700',
+    color: 'rgba(218,165,32,0.68)', fontSize: 11, fontWeight: '700',
     letterSpacing: 1.6, textTransform: 'uppercase', marginBottom: 2,
   },
   lagnaHeroName: { color: '#DAA520', fontSize: 28, lineHeight: 34, fontWeight: '900', letterSpacing: 0, ...textShadow('rgba(218,165,32,0.34)', { width: 0, height: 1 }, 10) },
-  lagnaHeroSub: { color: 'rgba(218,165,32,0.55)', fontSize: 14, fontWeight: '600', marginTop: 2 },
+  lagnaHeroSub: { color: 'rgba(218,165,32,0.68)', fontSize: 14, fontWeight: '600', marginTop: 2 },
   lagnaLordPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 7,
     alignSelf: 'flex-start', backgroundColor: 'rgba(218,165,32,0.06)',
@@ -4939,7 +5081,7 @@ var s = StyleSheet.create({
     borderWidth: 1, marginBottom: 2,
   },
   glassTrioLabel: {
-    color: 'rgba(218,165,32,0.50)', fontSize: 9, fontWeight: '800',
+    color: 'rgba(218,165,32,0.68)', fontSize: 10, fontWeight: '800',
     letterSpacing: 0.8, textTransform: 'uppercase', textAlign: 'center',
   },
   glassTrioValue: { fontSize: 12.5, lineHeight: 16, fontWeight: '900', textAlign: 'center', width: '100%', minHeight: 32 },
@@ -4981,7 +5123,7 @@ var s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     marginBottom: 6, paddingHorizontal: 2,
   },
-  pTapHint: { color: 'rgba(218,165,32,0.30)', fontSize: 11, fontWeight: '500', fontStyle: 'italic' },
+  pTapHint: { color: 'rgba(218,165,32,0.55)', fontSize: 11, fontWeight: '500', fontStyle: 'italic' },
   pRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border, gap: 10,
@@ -4993,7 +5135,7 @@ var s = StyleSheet.create({
   pLabelWrap: { width: 85 },
   pDot: { width: 6, height: 6, borderRadius: 3 },
   pLabel: { fontSize: 14, fontWeight: '700' },
-  pHintText: { fontSize: 10, color: 'rgba(218,165,32,0.30)', fontWeight: '500', marginTop: 1 },
+  pHintText: { fontSize: 10, color: 'rgba(218,165,32,0.55)', fontWeight: '500', marginTop: 1 },
   pValue: { fontSize: 14, color: '#F4E4BC', fontWeight: '700' },
   pSinhala: { fontSize: 14, color: Colors.textMuted, marginTop: 2 },
   pExplainBox: {
@@ -5026,7 +5168,7 @@ var s = StyleSheet.create({
     color: 'rgba(244,228,188,0.64)', fontSize: 12, lineHeight: 18, fontWeight: '600',
   },
   pExplainText: {
-    color: 'rgba(244,228,188,0.55)', fontSize: 14, lineHeight: 22, fontWeight: '500',
+    color: 'rgba(244,228,188,0.68)', fontSize: 14, lineHeight: 22, fontWeight: '500',
     paddingLeft: 8,
   },
 
@@ -5071,10 +5213,10 @@ var s = StyleSheet.create({
   },
   wbTextCol: { flex: 1 },
   wbTitle: { color: '#F4E4BC', fontSize: 14, fontWeight: '800', letterSpacing: 0.2 },
-  wbWeek: { color: 'rgba(218,165,32,0.50)', fontSize: 10, fontWeight: '600', marginTop: 2 },
-  wbSub: { color: 'rgba(218,165,32,0.40)', fontSize: 11, fontWeight: '500', marginTop: 3 },
+  wbWeek: { color: 'rgba(218,165,32,0.68)', fontSize: 10, fontWeight: '600', marginTop: 2 },
+  wbSub: { color: 'rgba(218,165,32,0.62)', fontSize: 11, fontWeight: '500', marginTop: 3 },
   wbTeaser: { marginTop: 3 },
-  wbTeaserText: { color: 'rgba(218,165,32,0.55)', fontSize: 11, fontWeight: '600' },
+  wbTeaserText: { color: 'rgba(218,165,32,0.68)', fontSize: 11, fontWeight: '600' },
   wbArrow: {
     width: 32, height: 32, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
@@ -5095,7 +5237,7 @@ var s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(218,165,32,0.20)',
   },
   wlTitle: { color: '#F4E4BC', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
-  wlWeekLabel: { color: 'rgba(218,165,32,0.45)', fontSize: 11, fontWeight: '600', marginTop: 1 },
+  wlWeekLabel: { color: 'rgba(218,165,32,0.62)', fontSize: 11, fontWeight: '600', marginTop: 1 },
   wlLockTease: { color: 'rgba(244,228,188,0.62)', fontSize: 13, lineHeight: 19, fontWeight: '500', marginTop: 10 },
   wlUnlockCta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, paddingVertical: 11, paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#E8C56A' },
   wlUnlockCtaText: { fontSize: 12.5, fontWeight: '800', color: '#2A1707', letterSpacing: 0.2 },
@@ -5126,7 +5268,7 @@ var s = StyleSheet.create({
   wlCardInfo: { flex: 1 },
   wlNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   wlSignName: { color: '#F4E4BC', fontSize: 16, fontWeight: '800' },
-  wlSignNameSub: { color: 'rgba(218,165,32,0.40)', fontSize: 12, fontWeight: '600', marginTop: 1 },
+  wlSignNameSub: { color: 'rgba(218,165,32,0.62)', fontSize: 12, fontWeight: '600', marginTop: 1 },
   wlYouBadge: {
     backgroundColor: 'rgba(218,165,32,0.15)', borderRadius: 6,
     paddingHorizontal: 6, paddingVertical: 2,
@@ -5156,7 +5298,7 @@ var s = StyleSheet.create({
     paddingVertical: 8, paddingHorizontal: 8, minHeight: 48,
     borderWidth: 1, borderColor: 'rgba(218,165,32,0.10)',
   },
-  wlLordLabel: { color: 'rgba(218,165,32,0.40)', fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
+  wlLordLabel: { color: 'rgba(218,165,32,0.62)', fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
   wlLordValue: { color: '#F4E4BC', fontSize: 11, fontWeight: '800', marginTop: 2, textAlign: 'center' },
   wlOverallBox: {
     backgroundColor: 'rgba(218,165,32,0.04)', borderRadius: 12,
@@ -5176,8 +5318,8 @@ var s = StyleSheet.create({
   wlDetailText: { color: 'rgba(244,228,188,0.65)', fontSize: 14, lineHeight: 22 },
   wlSection: { gap: 4 },
   wlSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  wlSectionTitle: { color: 'rgba(218,165,32,0.55)', fontSize: 11, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
-  wlSectionBody: { color: 'rgba(244,228,188,0.55)', fontSize: 14, lineHeight: 22 },
+  wlSectionTitle: { color: 'rgba(218,165,32,0.68)', fontSize: 11, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
+  wlSectionBody: { color: 'rgba(244,228,188,0.68)', fontSize: 14, lineHeight: 22 },
   wlAdvice: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
     backgroundColor: 'rgba(255,184,0,0.06)', borderRadius: 12,
@@ -5203,7 +5345,7 @@ var s = StyleSheet.create({
     backgroundColor: 'rgba(212,199,255,0.06)',
     borderWidth: 1, borderColor: 'rgba(212,199,255,0.12)',
   },
-  wlLuckyMeta: { color: 'rgba(196,181,253,0.35)', fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3 },
+  wlLuckyMeta: { color: 'rgba(196,181,253,0.55)', fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3 },
   wlLuckyLabel: { color: '#D4C7FF', fontSize: 11, fontWeight: '700' },
 });
 
@@ -5218,13 +5360,13 @@ var mp = StyleSheet.create({
   violetVeil: { position: 'absolute', top: 0, left: 0, right: 0, height: '40%' },
   goldFloor: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '30%' },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 16 },
-  kicker: { fontSize: 9, fontWeight: '900', letterSpacing: 2, color: 'rgba(232,197,106,0.50)' },
+  kicker: { fontSize: 10, fontWeight: '900', letterSpacing: 2, color: 'rgba(232,197,106,0.68)' },
   headerDate: { fontSize: 15, fontWeight: '800', color: '#F4EEDF', marginTop: 2, letterSpacing: 1 },
   poyaBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6,
     borderRadius: 12, backgroundColor: 'rgba(255,233,168,0.10)', borderWidth: 1, borderColor: 'rgba(255,233,168,0.35)',
   },
-  poyaText: { fontSize: 9.5, fontWeight: '900', letterSpacing: 1.2, color: '#FFE9A8' },
+  poyaText: { fontSize: 10.5, fontWeight: '900', letterSpacing: 1.2, color: '#FFE9A8' },
   moonStage: { alignItems: 'center', justifyContent: 'center', height: MOON_RING_SIZE + 10, marginTop: 10 },
   moonHalo: {
     position: 'absolute', width: MOON_SIZE + 84, height: MOON_SIZE + 84, borderRadius: (MOON_SIZE + 84) / 2,
@@ -5243,7 +5385,7 @@ var mp = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5,
     borderRadius: 999, borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.03)',
   },
-  chipText: { fontSize: 9.5, fontWeight: '900', letterSpacing: 0.8, fontVariant: ['tabular-nums'] },
+  chipText: { fontSize: 10.5, fontWeight: '900', letterSpacing: 0.8, fontVariant: ['tabular-nums'] },
   body: { fontSize: 12.5, lineHeight: 19.5, color: 'rgba(244,238,223,0.68)', textAlign: 'center', marginTop: 11 },
   dosRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 7, marginTop: 12 },
   doChip: {
@@ -5254,13 +5396,13 @@ var mp = StyleSheet.create({
   timeline: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4 },
   tlItem: { width: 48, alignItems: 'center', paddingVertical: 7, borderRadius: 14, borderWidth: 1, borderColor: 'transparent' },
   tlItemSelected: { backgroundColor: 'rgba(232,197,106,0.10)', borderColor: 'rgba(232,197,106,0.35)' },
-  tlDayName: { fontSize: 9, fontWeight: '700', color: 'rgba(244,238,223,0.40)' },
+  tlDayName: { fontSize: 10, fontWeight: '700', color: 'rgba(244,238,223,0.62)' },
   tlDayNameActive: { color: '#F5D57A' },
   tlDayNameToday: { color: '#FFE9A8' },
   tlMoonWrap: { marginVertical: 5, alignItems: 'center', justifyContent: 'center' },
   tlMoonWrapActive: {},
   tlMoonGlow: { position: 'absolute', width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(244,228,188,0.12)' },
-  tlDateNum: { fontSize: 10.5, fontWeight: '700', color: 'rgba(244,238,223,0.50)', fontVariant: ['tabular-nums'] },
+  tlDateNum: { fontSize: 10.5, fontWeight: '700', color: 'rgba(244,238,223,0.68)', fontVariant: ['tabular-nums'] },
   tlDateNumActive: { color: '#FFE9A8' },
   tlTodayDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#F5D57A', marginTop: 3 },
   tlKeyPhaseDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,233,168,0.65)', marginTop: 3 },
@@ -5370,7 +5512,7 @@ var cs = StyleSheet.create({
   alertIconDanger: { backgroundColor: 'rgba(239,68,68,0.10)', borderColor: 'rgba(239,68,68,0.25)' },
   alertTitle: { color: 'rgba(52,211,153,0.80)', fontSize: 14, fontWeight: '800' },
   alertTitleDanger: { color: '#FCA5A5' },
-  alertDesc: { color: 'rgba(52,211,153,0.55)', fontSize: 11, fontWeight: '500', marginTop: 1 },
+  alertDesc: { color: 'rgba(52,211,153,0.68)', fontSize: 11, fontWeight: '500', marginTop: 1 },
   alertDescDanger: { color: 'rgba(248,113,113,0.65)' },
   alertDot: { width: 8, height: 8, borderRadius: 4 },
 
@@ -5385,7 +5527,7 @@ var cs = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1,
   },
-  shieldLabel: { color: 'rgba(218,165,32,0.50)', fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
+  shieldLabel: { color: 'rgba(218,165,32,0.68)', fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
   shieldValue: { fontSize: 16, fontWeight: '900', textAlign: 'center' },
   shieldBarTrack: { width: '100%', height: 4, backgroundColor: 'rgba(218,165,32,0.06)', borderRadius: 2, marginTop: 4, overflow: 'hidden' },
   shieldBarFill: { height: 4, borderRadius: 2 },
@@ -5415,5 +5557,5 @@ var cs = StyleSheet.create({
   },
   yogaDot: { width: 8, height: 8, borderRadius: 4 },
   yogaName: { fontSize: 14, fontWeight: '800' },
-  yogaDesc: { color: 'rgba(218,165,32,0.40)', fontSize: 11, lineHeight: 16, marginTop: 2 },
+  yogaDesc: { color: 'rgba(218,165,32,0.62)', fontSize: 11, lineHeight: 16, marginTop: 2 },
 });

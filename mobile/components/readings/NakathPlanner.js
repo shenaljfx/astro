@@ -794,7 +794,7 @@ var st = StyleSheet.create({
   card: { borderRadius: 16, padding: 14, marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.14)' },
   label: { fontSize: 13, fontWeight: '800', color: '#FFD97A', letterSpacing: 0.3 },
   label2: { fontSize: 14, fontWeight: '800', color: '#C4B5FD' },
-  miniLabel: { fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2, marginBottom: 2 },
+  miniLabel: { fontSize: 11, color: 'rgba(255,255,255,0.62)', marginTop: 2, marginBottom: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   actChip: { width: '31%', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   // Selected-chip glow — the color itself comes from the activity's accent
@@ -814,7 +814,7 @@ var st = StyleSheet.create({
   birthRow: { flexDirection: 'row', gap: 10, marginTop: 6 },
   tunedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9, backgroundColor: 'rgba(134,239,172,0.12)', borderWidth: 1, borderColor: 'rgba(134,239,172,0.35)' },
   tunedText: { fontSize: 10, fontWeight: '800', color: '#86EFAC', letterSpacing: 0.2 },
-  helpLine: { fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 9, lineHeight: 16 },
+  helpLine: { fontSize: 11, color: 'rgba(255,255,255,0.62)', marginTop: 9, lineHeight: 16 },
   birthLock: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 10, paddingVertical: 12, paddingHorizontal: 13, borderRadius: 12, backgroundColor: 'rgba(255,214,102,0.07)', borderWidth: 1, borderColor: 'rgba(255,214,102,0.22)' },
   birthLockText: { flex: 1, fontSize: 12.5, fontWeight: '700', color: 'rgba(255,240,208,0.9)' },
   findBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 15, borderRadius: 14 },
@@ -829,7 +829,7 @@ var st = StyleSheet.create({
   qualityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
   qualityPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(134,239,172,0.14)', borderWidth: 1, borderColor: 'rgba(134,239,172,0.4)' },
   qualityText: { fontSize: 12, fontWeight: '800', color: '#86EFAC' },
-  candidates: { flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.5)' },
+  candidates: { flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.68)' },
 
   // Why-this-day (free justification)
   whyWrap: { marginTop: 14, padding: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,214,102,0.14)' },
@@ -837,14 +837,14 @@ var st = StyleSheet.create({
   whyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
   whyChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', maxWidth: '100%' },
   whyChipGood: { borderColor: 'rgba(134,239,172,0.35)', backgroundColor: 'rgba(134,239,172,0.06)' },
-  whyChipLabel: { fontSize: 9.5, fontWeight: '700', color: 'rgba(255,255,255,0.45)', flexShrink: 1 },
+  whyChipLabel: { fontSize: 10.5, fontWeight: '700', color: 'rgba(255,255,255,0.62)', flexShrink: 1 },
   whyChipName: { fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.88)', flexShrink: 1 },
   whyLine: { fontSize: 12, color: 'rgba(255,255,255,0.72)', marginTop: 8, lineHeight: 18 },
   // Plain-language explanation rows (lead content; tech chips follow)
   plainSummary: { fontSize: 12, fontWeight: '700', color: 'rgba(255,240,208,0.9)', marginTop: 7, lineHeight: 17 },
   plainRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
   plainText: { flex: 1, fontSize: 11.5, color: 'rgba(255,255,255,0.7)', lineHeight: 17 },
-  techLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(255,255,255,0.32)', marginTop: 11 },
+  techLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginTop: 11 },
   // Direction-of-the-day block (Disha Shoola)
   dirWrap: { marginTop: 10, padding: 10, borderRadius: 10, backgroundColor: 'rgba(125,211,252,0.05)', borderWidth: 1, borderColor: 'rgba(125,211,252,0.18)' },
   dirTitle: { fontSize: 11.5, fontWeight: '800', letterSpacing: 0.3, color: 'rgba(125,211,252,0.9)' },
@@ -854,7 +854,7 @@ var st = StyleSheet.create({
   twBadge: { width: 34, height: 34, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   twBadgeText: { fontSize: 13, fontWeight: '900' },
   twTime: { fontSize: 14.5, fontWeight: '800', color: '#FFF1D0' },
-  twMeta: { fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 1 },
+  twMeta: { fontSize: 11, color: 'rgba(255,255,255,0.68)', marginTop: 1 },
   bestTag: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(255,184,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.45)' },
   bestTagText: { fontSize: 10, fontWeight: '900', color: '#FFD97A', letterSpacing: 0.3 },
   twIndent: { marginLeft: 52, marginBottom: 8 },
@@ -871,7 +871,7 @@ var st = StyleSheet.create({
   bdDot: { width: 6, height: 6, borderRadius: 3 },
   warnRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   warnText: { flex: 1, fontSize: 10.5, color: 'rgba(252,165,165,0.85)', lineHeight: 15 },
-  tapHint: { fontSize: 10.5, color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginTop: 8 },
+  tapHint: { fontSize: 10.5, color: 'rgba(255,255,255,0.55)', textAlign: 'center', marginTop: 8 },
 
   lockedTime: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, paddingVertical: 11, paddingHorizontal: 13, borderRadius: 12, backgroundColor: 'rgba(255,214,102,0.08)', borderWidth: 1, borderColor: 'rgba(255,214,102,0.25)' },
   lockedTimeText: { flex: 1, fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.8)' },

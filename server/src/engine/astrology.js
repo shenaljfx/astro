@@ -66,7 +66,7 @@ function reportEphemerisFallback(context, err) {
 // libraries as fallback.
 // ---------------------------------------------------------------------------
 const swe = require('@swisseph/node');
-const { filterSelfPeriods, filterParentPeriods } = require('./lifespan');
+const { filterSelfPeriods, filterParentPeriods, filterNearTermParentWindows } = require('./lifespan');
 const { rankParentProfessions } = require('./parentProfession');
 const { detectRegion, regionLabel } = require('./regionDetector');
 const { getDevelopmentalStage, buildSectionGuidance } = require('./infantChartGuard');
@@ -7409,10 +7409,13 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     hasAbandonmentRisk,
     healthRisks: motherHealthRisks,
     kidneyRisk: { high: highKidneyRisk, indicatorCount: kidneyIndicators },
-    healthCrisisWindows: filterParentPeriods(motherAgeCrisisWindows, date),
+    // Near-term filter (not just lifespan cap): parent wellness windows are
+    // only useful as actionable care guidance — far-future dates like "2048"
+    // were leaking into reports via cap-truncated dasha periods.
+    healthCrisisWindows: filterNearTermParentWindows(motherAgeCrisisWindows, date),
     lifestrug: motherStruggles,
     bond: nativeMotherbond,
-    motherHealthPeriods: filterParentPeriods(
+    motherHealthPeriods: filterNearTermParentWindows(
       dasaPeriods
         .filter(dp => dp.lord === lord4Family || dp.lord === 'Moon' || dp.lord === 'Saturn')
         .map(dp => ({
@@ -7606,7 +7609,7 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
     }),
     lord9InDusthan,
     maleficsIn9th: maleficsIn9,
-    fatherEventPeriods: filterParentPeriods(
+    fatherEventPeriods: filterNearTermParentWindows(
       dasaPeriods
         .filter(dp => dp.lord === lord9Family || dp.lord === 'Sun')
         .map(dp => ({
@@ -8293,15 +8296,17 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
           lord4House: lord4FamilyHouse,
         };
 
-        // Mother danger dashas — technical
-        const motherDangerDashas = lifespanFilter(dasaPeriods.filter(d => {
+        // Mother danger dashas — technical. NEAR-TERM parent filter, not the
+        // age-80 self filter: these are about the MOTHER, and only windows
+        // active now / starting within ~7 years are actionable care guidance.
+        const motherDangerDashas = filterNearTermParentWindows(dasaPeriods.filter(d => {
           const isDasha4thLord = d.lord === lord4Family;
           const isDashaMoon = d.lord === 'Moon';
           const isDashaSaturn = d.lord === 'Saturn' && (saturnHouse === 4 || maleficsIn4.includes('Saturn'));
           const is8thFrom4th = d.lord === getHouseLord(11);
           const isMarak = d.lord === getHouseLord(7);
           return isDasha4thLord || isDashaMoon || isDashaSaturn || (lord4InDusthanFamily && (is8thFrom4th || isMarak));
-        })).map(d => {
+        }), date).map(d => {
           let dangerLevel = 'Moderate';
           if ((d.lord === lord4Family && lord4InDusthanFamily) || (d.lord === 'Moon' && moonScore < 45) || (d.lord === 'Saturn' && maleficsIn4.includes('Saturn'))) dangerLevel = 'High';
           else if (d.lord !== lord4Family && d.lord !== 'Moon' && d.lord !== 'Saturn') dangerLevel = 'Watch';
@@ -8328,14 +8333,14 @@ function generateFullReport(birthDate, lat = 6.9271, lng = 79.8612, opts = {}) {
           lord9House: lord9FamilyHouse,
         };
 
-        const fatherDangerDashas = lifespanFilter(dasaPeriods.filter(d => {
+        const fatherDangerDashas = filterNearTermParentWindows(dasaPeriods.filter(d => {
           const isDasha9thLord = d.lord === lord9Family;
           const isDashaSun = d.lord === 'Sun';
           const isDashaSaturn = d.lord === 'Saturn' && (saturnHouse === 9 || maleficsIn9.includes('Saturn'));
           const is8thFrom9th = d.lord === getHouseLord(4);
           const isMarak = d.lord === getHouseLord(3);
           return isDasha9thLord || isDashaSun || isDashaSaturn || (lord9InDusthan && (is8thFrom9th || isMarak));
-        })).map(d => {
+        }), date).map(d => {
           let dangerLevel = 'Moderate';
           if ((d.lord === lord9Family && lord9InDusthan) || (d.lord === 'Sun' && sunScore < 45) || (d.lord === 'Saturn' && maleficsIn9.includes('Saturn'))) dangerLevel = 'High';
           else if (d.lord !== lord9Family && d.lord !== 'Sun' && d.lord !== 'Saturn') dangerLevel = 'Watch';
