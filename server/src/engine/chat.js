@@ -3785,7 +3785,9 @@ Realistic Predictions Window: ${ageContext.currentYear} to ${ageContext.birthYea
 
   // Build person's name context
   const nameStr = userName ? userName : 'this person';
-  const nameGreeting = userName ? `This person's name is **${userName}**.` : '';
+  const nameGreeting = userName
+    ? `This person's name is **${userName}**. NAME CONSISTENCY (hard rule): every mention of the name must be spelled EXACTLY "${userName}" — never transliterate it into another script, never respell, shorten, expand, translate, or add honorifics. One name, one spelling, everywhere. This rule OVERRIDES all language-purity rules: even in a pure-Sinhala report, if the name above is in Latin letters, write it in Latin letters unchanged.`
+    : '';
   const genderContext = userGender ? `This person is **${userGender}**. Use appropriate pronouns (${userGender === 'male' ? 'he/him/his' : 'she/her/hers'}) and gender-relevant context throughout. For marriage sections, describe their future ${userGender === 'male' ? 'wife/partner' : 'husband/partner'}. For career, use culturally appropriate references.` : 'Gender is unknown — use neutral "you/your" language.';
 
   // Build religion context — NO religious recommendations
@@ -4055,7 +4057,7 @@ BANNED SENTENCE PATTERNS:
 - Every date, year, and number MUST come from provided data. ZERO fabrication.
 - If data says "N/A" or is missing → SKIP that topic. Do NOT invent content.
 - For PAST ages: "Your chart indicated [X] energy during [period]" — do NOT invent events.
-- ${userName ? 'Use "' + userName + '" naturally 2-3 times per section.' : 'Address as "you" throughout.'}
+- ${userName ? 'Use "' + userName + '" naturally 2-3 times per section — ALWAYS spelled exactly "' + userName + '", never a variant, nickname, or different transliteration.' : 'Address as "you" throughout.'}
 
 ══════════════════════════════════════════════════════════════
   ANTI-DUPLICATION — SECTION BOUNDARIES
@@ -4824,9 +4826,47 @@ function resolveLocationName(lat, lng) {
  * @param {string} language - 'en', 'si', 'ta', 'singlish'
  * @returns {Object} Full narrative report
  */
+
+/**
+ * Canonicalize the user's name ONCE per report so every section uses the
+ * IDENTICAL form. Without this, each of the 20 independent section calls
+ * renders the name its own way — worst in Sinhala reports, where a
+ * Latin-script name ("Shenal") gets transliterated differently per section
+ * (ශෙනාල් / ෂෙනාල් / ශෙනල්). Rules:
+ *   - first name only (kills full-name/short-name drift)
+ *   - for Sinhala reports, transliterate ONCE via a micro Gemini call and
+ *     reuse the exact spelling everywhere; on any failure fall back to the
+ *     Latin form (consistent, just not localized).
+ */
+async function canonicalizeReportName(userName, language) {
+  const raw = String(userName || '').trim();
+  if (!raw) return null;
+  const firstName = raw.split(/\s+/)[0];
+  if (language !== 'si') return firstName;
+  if (/[඀-෿]/.test(firstName)) return firstName; // already Sinhala script
+  try {
+    const out = await callGemini([
+      { role: 'system', content: 'You transliterate personal first names into Sinhala script. Reply with ONLY the transliterated name in Sinhala letters — no Latin letters, no punctuation, no explanation.' },
+      { role: 'user', content: `Transliterate this first name into Sinhala script: ${firstName}` },
+    ], 512, 0, { thinkingBudget: 0 });
+    // Accept only pure Sinhala output (plus ZWJ used in conjunct letters)
+    const name = String(out?.text || '').trim().split(/\s+/)[0];
+    if (name && /^[඀-෿‍]+$/.test(name)) return name;
+  } catch (e) {
+    console.warn('[AI Report] Name transliteration failed — using Latin form:', e.message);
+  }
+  return firstName;
+}
+
 async function generateAINarrativeReport(birthDate, lat = 6.9271, lng = 79.8612, language = 'en', birthLocation = null, userName = null, userGender = null, userReligion = null, marriageOpts = {}, reportId = null) {
   const tokenTracker = createTokenTracker();
   const { ...cleanMarriageOpts } = marriageOpts;
+
+  // ── ONE canonical display name for the whole report ────────────
+  // Every section call gets the identical form (first name; Sinhala reports
+  // get a single up-front transliteration) so the name can never drift
+  // between sections. See canonicalizeReportName.
+  const displayName = await canonicalizeReportName(userName, language);
 
   // ── Progress tracking ──────────────────────────────────────────
   const progress = (stage, extra = {}) => {
@@ -5727,7 +5767,7 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
     return (async () => {
       if (idx > 0) await new Promise(r => setTimeout(r, Math.min(idx * 300, 2000)));
       return limitConcurrency(async () => {
-      const result = await generateSectionNarrative(key, sectionData, birthData, sections, language, rashiContext, ageContext, userName, userGender, userReligion, {});
+      const result = await generateSectionNarrative(key, sectionData, birthData, sections, language, rashiContext, ageContext, displayName, userGender, userReligion, {});
       _sectionsDone++;
       progress('sections', {
         sectionsDone: _sectionsDone,
@@ -5820,7 +5860,7 @@ Write EXACTLY this JSON format (no markdown, no fences). For each field, derive 
         // Small delay between retries to be gentle on the API
         await new Promise(r => setTimeout(r, 2000));
         console.log(`[AI Report] Retrying section '${failed.key}' (on Flash)...`);
-        const retryResult = await generateSectionNarrative(failed.key, sectionData, birthData, sections, language, rashiContext, ageContext, userName, userGender, userReligion, {}, { forceFlash: true });
+        const retryResult = await generateSectionNarrative(failed.key, sectionData, birthData, sections, language, rashiContext, ageContext, displayName, userGender, userReligion, {}, { forceFlash: true });
 
         if (retryResult && retryResult.narrative) {
           const narrativeLower = retryResult.narrative.toLowerCase().trim();
