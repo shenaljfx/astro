@@ -14,7 +14,7 @@ export function useApi(path, ms = 30000) {
   };
   useEffect(() => {
     setLoading(true); load();
-    timer.current = setInterval(load, ms);
+    if (ms > 0) timer.current = setInterval(load, ms); // ms<=0 → load once, no polling
     return () => clearInterval(timer.current);
   }, [path]);
   return { data, err, loading, reload: load };

@@ -18,6 +18,7 @@ const { getUserCredits, addPurchaseCredit, PRODUCT_CREDIT_TYPES } = require('../
 const { LIMITS: FAIR_USE_LIMITS } = require('../services/fairUse');
 const { getAllActiveTokens, sendToMultiple } = require('../services/notifications');
 const { calculateSubscriptionUnitEconomics } = require('../services/unitEconomics');
+const runtimeConfig = require('../services/runtimeConfig');
 
 const router = express.Router();
 
@@ -383,8 +384,8 @@ router.get('/gemini', async (req, res) => {
   const key = process.env.GEMINI_API_KEY || '';
   let freeTierRPD = { pro: 100, flash: 250, flashLite: 1000 };
   try { if (process.env.GEMINI_FREE_RPD_JSON) freeTierRPD = { ...freeTierRPD, ...JSON.parse(process.env.GEMINI_FREE_RPD_JSON) }; } catch { /* keep defaults */ }
-  const proCallsPerReport = Number(process.env.GEMINI_PRO_CALLS_PER_REPORT || 4);
-  const flashCallsPerReport = Number(process.env.GEMINI_FLASH_CALLS_PER_REPORT || 16);
+  const proCallsPerReport = runtimeConfig.overrideNumber('GEMINI_PRO_CALLS_PER_REPORT') ?? Number(process.env.GEMINI_PRO_CALLS_PER_REPORT || 4);
+  const flashCallsPerReport = runtimeConfig.overrideNumber('GEMINI_FLASH_CALLS_PER_REPORT') ?? Number(process.env.GEMINI_FLASH_CALLS_PER_REPORT || 16);
 
   const live = getStats();
   const reportsToday = live.fullReport?.calls ?? live.fullReport?.count ?? 0;
@@ -458,6 +459,27 @@ router.get('/failed-reports', async (req, res) => {
       })),
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Runtime config (safe, live-editable settings + masked env viewer) ──────
+router.get('/config', (req, res) => {
+  res.json({
+    schema: runtimeConfig.EDITABLE_KEYS,
+    effective: runtimeConfig.effective(),
+    env: runtimeConfig.maskedEnv(),
+    note: 'Secrets are shown masked and are NOT editable here — they stay on the VM. Editable knobs apply live (no restart) via a Firestore override layered over process.env.',
+  });
+});
+
+router.post('/config', async (req, res) => {
+  const patch = req.body && typeof req.body === 'object' ? (req.body.patch || req.body) : {};
+  try {
+    const effective = await runtimeConfig.setOverrides(patch, { by: req.admin.email });
+    writeAudit(req, 'config.update', 'config/runtimeConfig', patch);
+    res.json({ success: true, effective });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 // ─── Audit log ───────────────────────────────────────────────────

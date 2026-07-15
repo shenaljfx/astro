@@ -13,6 +13,7 @@ import Funnel from './pages/Funnel';
 import Controls from './pages/Controls';
 import Audit from './pages/Audit';
 import Fulfillment from './pages/Fulfillment';
+import Config from './pages/Config';
 
 const NAV = [
   ['/', '✦', 'Overview'],
@@ -25,6 +26,7 @@ const NAV = [
   ['/health', '♥', 'Health'],
   ['/funnel', '◇', 'Funnel'],
   ['/controls', '⌘', 'God Controls'],
+  ['/config', '⚙', 'Config & Env'],
   ['/audit', '§', 'Audit Trail'],
 ];
 
@@ -91,6 +93,7 @@ export default function App() {
           <Route path="/health" element={<Health />} />
           <Route path="/funnel" element={<Funnel />} />
           <Route path="/controls" element={<Controls />} />
+          <Route path="/config" element={<Config />} />
           <Route path="/audit" element={<Audit />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

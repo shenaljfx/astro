@@ -46,6 +46,10 @@ initFirebase();
 const { initLogTee } = require('./utils/logTee');
 initLogTee('server');
 
+// Live dashboard-editable operational settings (budget knobs) — cached in memory
+const { startRuntimeConfig } = require('./services/runtimeConfig');
+startRuntimeConfig();
+
 // Security middleware
 const {
   globalLimiter,

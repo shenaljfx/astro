@@ -34,6 +34,9 @@ function getTodayKey() {
 }
 
 function numberEnv(name, fallback = 0) {
+  // Dashboard runtime override wins (live, no restart) — see runtimeConfig.js.
+  const override = require('./runtimeConfig').overrideNumber(name);
+  if (override !== undefined) return override;
   const value = Number(process.env[name]);
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }

@@ -6,6 +6,7 @@ const { initLogTee } = require('../src/utils/logTee');
 
 initFirebase();
 initLogTee('worker'); // mirror logs to LOG_DIR/worker.log for the admin dashboard
+require('../src/services/runtimeConfig').startRuntimeConfig(); // live budget overrides
 
 const once = process.argv.includes('--once');
 const typesArg = process.argv.find(arg => arg.startsWith('--types='));
