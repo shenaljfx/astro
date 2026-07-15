@@ -72,7 +72,8 @@ export default function Users() {
               {p.isSubscribed
                 ? <button className="btn sm danger" onClick={() => setAction({ uid: u.uid, label: 'REVOKE Pro', danger: true, path: `/users/${u.uid}/pro`, body: { action: 'revoke' } })}>Revoke Pro</button>
                 : <button className="btn sm" onClick={() => setAction({ uid: u.uid, label: 'Grant Pro (30 days)', path: `/users/${u.uid}/pro`, body: { action: 'grant', days: 30 } })}>Grant Pro 30d</button>}
-              <button className="btn sm ghost" onClick={() => setAction({ uid: u.uid, label: 'Reconcile subscription from RevenueCat history', path: `/users/${u.uid}/reconcile-subscription`, body: {} })}>↻ Sync from RevenueCat</button>
+              <button className="btn sm" onClick={() => setAction({ uid: u.uid, label: 'Sync LIVE from RevenueCat (authoritative)', path: `/users/${u.uid}/reconcile-revenuecat`, body: {} })}>⚡ Sync live (RevenueCat)</button>
+              <button className="btn sm ghost" onClick={() => setAction({ uid: u.uid, label: 'Reconcile from stored webhook history', path: `/users/${u.uid}/reconcile-subscription`, body: {} })}>↻ Replay history</button>
               <button className="btn sm ghost" onClick={() => setAction({ uid: u.uid, label: 'Reset fair-use counters', path: `/users/${u.uid}/fairuse/reset`, body: {} })}>Reset fair-use</button>
             </div>
           </Section>

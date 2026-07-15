@@ -299,6 +299,39 @@ router.post('/unsubscribe', async (req, res) => {
 });
 
 /**
+ * POST /api/auth/subscription/sync
+ * Self-heal: ask RevenueCat directly whether this user is active and fix the
+ * flag (upgrade-only), then return current status. The app calls this on launch
+ * / when the SDK shows Pro but the server 402s, so a missed webhook never leaves
+ * a paying subscriber stuck. Rate-limited at the /api/auth mount; never throws
+ * to the client so it can't break app launch.
+ */
+router.post('/subscription/sync', async (req, res) => {
+  try {
+    const decoded = extractUser(req);
+    if (!decoded) return res.status(401).json({ error: 'Authentication required' });
+
+    const { reconcileFromRevenueCat } = require('../services/subscriptionReconcile');
+    const result = await reconcileFromRevenueCat(decoded.uid).catch((e) => ({ applied: false, reason: e.message }));
+
+    let isSubscribed = false;
+    let subscription = { status: 'none' };
+    const db = getDb();
+    if (db) {
+      const doc = await db.collection(COLLECTIONS.USERS).doc(decoded.uid).get();
+      if (doc.exists) {
+        isSubscribed = doc.data().isSubscribed === true;
+        subscription = doc.data().subscription || subscription;
+      }
+    }
+    return res.json({ success: true, healed: !!(result && result.applied), isSubscribed, subscription });
+  } catch (e) {
+    console.error('[auth/subscription/sync]', e.message);
+    return res.status(200).json({ success: false, error: 'sync unavailable' }); // never break launch
+  }
+});
+
+/**
  * GET /api/auth/subscription
  * Check current subscription status
  */

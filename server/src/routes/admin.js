@@ -19,7 +19,7 @@ const { LIMITS: FAIR_USE_LIMITS } = require('../services/fairUse');
 const { getAllActiveTokens, sendToMultiple } = require('../services/notifications');
 const { calculateSubscriptionUnitEconomics } = require('../services/unitEconomics');
 const runtimeConfig = require('../services/runtimeConfig');
-const { reconcileUserFromHistory } = require('../services/subscriptionReconcile');
+const { reconcileUserFromHistory, reconcileFromRevenueCat } = require('../services/subscriptionReconcile');
 
 const router = express.Router();
 
@@ -263,6 +263,17 @@ router.post('/users/:uid/reconcile-subscription', async (req, res) => {
   try {
     const result = await reconcileUserFromHistory(req.params.uid);
     writeAudit(req, 'user.reconcileSubscription', req.params.uid,
+      result.applied ? { before: result.before, after: result.after } : { reason: result.reason });
+    res.json({ success: true, ...result });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Authoritative sync straight from RevenueCat (fixes older subscribers whose
+// webhook events were never stored / TTL-expired). Upgrade-only.
+router.post('/users/:uid/reconcile-revenuecat', async (req, res) => {
+  try {
+    const result = await reconcileFromRevenueCat(req.params.uid);
+    writeAudit(req, 'user.reconcileRevenueCat', req.params.uid,
       result.applied ? { before: result.before, after: result.after } : { reason: result.reason });
     res.json({ success: true, ...result });
   } catch (e) { res.status(500).json({ error: e.message }); }

@@ -118,4 +118,67 @@ async function reconcileUserFromHistory(uid) {
   };
 }
 
-module.exports = { computeStateFromEvents, reconcileUserFromHistory };
+/**
+ * Authoritative reconcile: ask RevenueCat directly whether the user is active
+ * right now (independent of stored webhooks) and heal the flag.
+ *
+ * UPGRADE-ONLY by design: if RevenueCat reports active → set isSubscribed=true.
+ * If it reports NOT active (or has no record), we DON'T touch the flag — that
+ * avoids revoking admin-granted Pro / users whose app_user_id differs, and is
+ * safe to call on every app launch. Real revocation stays with the EXPIRATION
+ * webhook and admin Revoke Pro. Fails safe on any API error (no change).
+ */
+async function reconcileFromRevenueCat(uid) {
+  const rc = require('./revenueCatClient');
+  if (!rc.isConfigured()) {
+    return { applied: false, source: 'revenuecat', reason: 'RevenueCat API key not configured on the server (set REVENUECAT_API_KEY).' };
+  }
+  const db = getDb();
+  if (!db) throw new Error('Database unavailable');
+
+  const userRef = db.collection(COLLECTIONS.USERS).doc(uid);
+  const userDoc = await userRef.get();
+  if (!userDoc.exists) return { applied: false, source: 'revenuecat', reason: 'User doc does not exist' };
+  const before = { isSubscribed: userDoc.data().isSubscribed, status: userDoc.data().subscription && userDoc.data().subscription.status };
+
+  let info;
+  try {
+    info = await rc.getSubscriber(uid);
+  } catch (e) {
+    return { applied: false, source: 'revenuecat', reason: `RevenueCat lookup failed: ${e.message}`, before, error: true };
+  }
+
+  if (!info.active) {
+    return {
+      applied: false,
+      source: 'revenuecat',
+      reason: info.found
+        ? 'RevenueCat reports no active entitlement for this user (genuinely not subscribed, or lapsed).'
+        : 'RevenueCat has no record of this app_user_id — purchase was anonymous or under a different ID.',
+      before,
+      rcFound: info.found,
+    };
+  }
+
+  const update = {
+    isSubscribed: true,
+    'subscription.status': 'active',
+    'subscription.reconciledAt': new Date().toISOString(),
+    'subscription.reconciledFrom': 'revenuecatApi',
+  };
+  if (info.product) update['subscription.plan'] = info.product;
+  if (info.store) update['subscription.store'] = info.store;
+  if (info.latestExpiry) update['subscription.expiresAt'] = info.latestExpiry;
+
+  await userRef.update(update);
+  return {
+    applied: true,
+    source: 'revenuecat',
+    before,
+    after: { isSubscribed: true, status: 'active', expiresAt: info.latestExpiry, plan: info.product },
+    entitlements: info.entitlements,
+    changed: !before || before.isSubscribed !== true,
+  };
+}
+
+module.exports = { computeStateFromEvents, reconcileUserFromHistory, reconcileFromRevenueCat };
