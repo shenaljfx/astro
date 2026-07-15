@@ -372,6 +372,94 @@ router.post('/push/broadcast', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── Gemini capacity ─────────────────────────────────────────────
+// Google exposes NO balance API for Gemini keys — this panel instead shows
+// configured models, pricing, free-tier request limits (env-overridable
+// assumptions), live usage, and a coarse "reports left today" estimate.
+const { MODEL_PRICING } = require('../utils/tokenCalculator');
+
+router.get('/gemini', async (req, res) => {
+  const db = getDb();
+  const key = process.env.GEMINI_API_KEY || '';
+  let freeTierRPD = { pro: 100, flash: 250, flashLite: 1000 };
+  try { if (process.env.GEMINI_FREE_RPD_JSON) freeTierRPD = { ...freeTierRPD, ...JSON.parse(process.env.GEMINI_FREE_RPD_JSON) }; } catch { /* keep defaults */ }
+  const proCallsPerReport = Number(process.env.GEMINI_PRO_CALLS_PER_REPORT || 4);
+  const flashCallsPerReport = Number(process.env.GEMINI_FLASH_CALLS_PER_REPORT || 16);
+
+  const live = getStats();
+  const reportsToday = live.fullReport?.calls ?? live.fullReport?.count ?? 0;
+  const proUsed = reportsToday * proCallsPerReport;
+  const flashUsed = reportsToday * flashCallsPerReport
+    + ['chat', 'aiAnalysis', 'chartTranslation', 'chartExplanation', 'porondam'].reduce((s, f) => s + (live[f]?.calls ?? live[f]?.count ?? 0), 0);
+  const freeReportsLeft = Math.max(0, Math.min(
+    Math.floor((freeTierRPD.pro - proUsed) / proCallsPerReport),
+    Math.floor((freeTierRPD.flash - flashUsed) / flashCallsPerReport),
+  ));
+
+  const spendDoc = db ? await db.collection(COLLECTIONS.DAILY_AI_SPEND).doc(getTodayKey()).get().catch(() => null) : null;
+
+  res.json({
+    keyMasked: key ? `${key.slice(0, 10)}…${key.slice(-4)}` : null,
+    billing: {
+      balanceApiExists: false,
+      note: 'Google provides no wallet/balance API for Gemini keys. Authoritative usage & billing live in the consoles below; capacity here is estimated from our own tracking.',
+      links: {
+        aiStudioUsage: 'https://aistudio.google.com/usage',
+        cloudBilling: 'https://console.cloud.google.com/billing',
+        rateLimits: 'https://ai.google.dev/gemini-api/docs/rate-limits',
+      },
+    },
+    modelsInUse: {
+      flash: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      pro: process.env.GEMINI_3_PRO_MODEL || process.env.GEMINI_PRO_MODEL || null,
+    },
+    pricingUSDper1M: MODEL_PRICING,
+    freeTierRPD,
+    assumptions: { proCallsPerReport, flashCallsPerReport },
+    usageToday: { reportsGenerated: reportsToday, estProRequests: proUsed, estFlashRequests: flashUsed },
+    capacity: { freeReportsLeftToday: freeReportsLeft },
+    spendToday: spendDoc && spendDoc.exists ? spendDoc.data() : null,
+    liveByFeature: live,
+  });
+});
+
+// ─── Failed report fulfillment ───────────────────────────────────
+// Failed generations joined with user contact so reports can be produced
+// manually and sent to the customer.
+router.get('/failed-reports', async (req, res) => {
+  const db = needDb(res); if (!db) return;
+  try {
+    const snap = await db.collection(COLLECTIONS.JOBS)
+      .where('status', '==', 'failed').limit(60).get();
+    let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
+      .slice(0, 30);
+    if (req.query.type) items = items.filter((j) => j.type === req.query.type);
+
+    const uids = [...new Set(items.map((j) => j.uid).filter(Boolean))];
+    const contacts = {};
+    await Promise.all(uids.map(async (uid) => {
+      const doc = await db.collection(COLLECTIONS.USERS).doc(uid).get().catch(() => null);
+      if (doc && doc.exists) {
+        const u = doc.data();
+        contacts[uid] = { email: u.email || null, name: u.name || u.displayName || u.fullName || null };
+      }
+    }));
+
+    res.json({
+      failed: items.map((j) => ({
+        id: j.id, type: j.type, uid: j.uid || null,
+        email: contacts[j.uid]?.email || null,
+        name: contacts[j.uid]?.name || null,
+        attempts: j.attempts, maxAttempts: j.maxAttempts,
+        error: j.error && typeof j.error === 'object' ? (j.error.message || JSON.stringify(j.error)) : (j.error || null),
+        failedAt: j.failedAt || j.updatedAt,
+        payload: j.payload || null,
+      })),
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── Audit log ───────────────────────────────────────────────────
 router.get('/audit', async (req, res) => {
   const db = needDb(res); if (!db) return;

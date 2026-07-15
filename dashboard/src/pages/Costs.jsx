@@ -1,9 +1,38 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { useApi, Section, Table, ErrorNote, Loading, Kpi } from '../ui';
+import { useApi, Section, Table, ErrorNote, Loading, Kpi, Badge } from '../ui';
 import { fmtLKR, fmtUSD, ago } from '../api';
 
 const tt = { contentStyle: { background: '#0d0b2e', border: '1px solid rgba(139,122,216,.3)', borderRadius: 10, fontSize: 12 } };
+
+function GeminiPanel() {
+  const { data: g } = useApi('/gemini', 60000);
+  if (!g) return null;
+  const cap = g.capacity || {}; const u = g.usageToday || {};
+  return (
+    <>
+      <div className="grid cols-4" style={{ marginTop: 14 }}>
+        <Kpi label="Free-tier reports left today (est.)" value={cap.freeReportsLeftToday ?? '—'} tone={cap.freeReportsLeftToday === 0 ? 'red' : 'green'} sub={`assumes ${g.assumptions?.proCallsPerReport} pro + ${g.assumptions?.flashCallsPerReport} flash calls/report`} />
+        <Kpi label="Reports generated today" value={u.reportsGenerated ?? 0} />
+        <Kpi label="Est. pro requests used" value={`${u.estProRequests ?? 0} / ${g.freeTierRPD?.pro}`} sub="free-tier RPD" />
+        <Kpi label="Est. flash requests used" value={`${u.estFlashRequests ?? 0} / ${g.freeTierRPD?.flash}`} sub="free-tier RPD" />
+      </div>
+      <Section title={`Gemini key ${g.keyMasked || ''} — models & pricing`}>
+        <p className="muted" style={{ fontSize: 11.5, marginTop: 0 }}>
+          ⚠ {g.billing?.note} <a href={g.billing?.links?.aiStudioUsage} target="_blank" rel="noreferrer">AI Studio usage</a> · <a href={g.billing?.links?.cloudBilling} target="_blank" rel="noreferrer">Cloud billing</a> · <a href={g.billing?.links?.rateLimits} target="_blank" rel="noreferrer">rate limits</a>
+        </p>
+        <Table
+          cols={['Model', 'Role', 'Input $/1M', 'Output $/1M']}
+          rows={Object.entries(g.pricingUSDper1M || {}).map(([id, p]) => [
+            <span className="mono">{id}</span>,
+            id === g.modelsInUse?.pro ? <Badge tone="b-gold">hero/pro</Badge> : id === g.modelsInUse?.flash ? <Badge tone="b-violet">workhorse</Badge> : <span className="muted">available</span>,
+            `$${p.inputPer1M}`, `$${p.outputPer1M}`,
+          ])}
+        />
+      </Section>
+    </>
+  );
+}
 
 export default function Costs() {
   const { data, err, loading } = useApi('/costs?days=45', 60000);
@@ -26,6 +55,8 @@ export default function Costs() {
         <Kpi label="Calls today" value={totals.calls ?? totals.count ?? '—'} />
         <Kpi label="Sub unit economics" value={ue?.marginPct != null ? `${Math.round(ue.marginPct)}%` : '—'} sub={ue ? 'margin per subscriber' : ''} tone="gold" />
       </div>
+
+      <GeminiPanel />
 
       <Section title="Daily spend (LKR)">
         <ResponsiveContainer width="100%" height={220}>

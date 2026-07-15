@@ -12,18 +12,20 @@ import Health from './pages/Health';
 import Funnel from './pages/Funnel';
 import Controls from './pages/Controls';
 import Audit from './pages/Audit';
+import Fulfillment from './pages/Fulfillment';
 
 const NAV = [
   ['/', '✦', 'Overview'],
-  ['/money', '💰', 'Money'],
-  ['/costs', '🔮', 'AI Costs'],
-  ['/jobs', '⚙️', 'Jobs & Workers'],
-  ['/users', '👤', 'Users'],
-  ['/logs', '📜', 'Server Logs'],
-  ['/health', '💚', 'Health'],
-  ['/funnel', '🌀', 'Funnel'],
-  ['/controls', '🕹️', 'God Controls'],
-  ['/audit', '🧾', 'Audit Trail'],
+  ['/money', '◈', 'Money'],
+  ['/costs', '◉', 'AI Costs'],
+  ['/jobs', '⚙', 'Jobs & Workers'],
+  ['/fulfillment', '✉', 'Fulfillment'],
+  ['/users', '☺', 'Users'],
+  ['/logs', '≡', 'Server Logs'],
+  ['/health', '♥', 'Health'],
+  ['/funnel', '◇', 'Funnel'],
+  ['/controls', '⌘', 'God Controls'],
+  ['/audit', '§', 'Audit Trail'],
 ];
 
 export default function App() {
@@ -44,7 +46,7 @@ export default function App() {
     return (
       <div className="login">
         <div className="box card">
-          <div className="orb">🔭</div>
+          <img src="/logo.png" alt="Grahachara" />
           <h1>Grahachara Mission Control</h1>
           <p>{authorized === false
             ? `Signed in as ${user.email} — this account is not authorized. Access denied and logged.`
@@ -63,8 +65,8 @@ export default function App() {
     <div className="shell">
       <aside className={`side ${menu ? 'open' : ''}`}>
         <div className="brand">
-          <span className="logo">🔭</span>
-          <div><div className="name">Grahachara</div><div className="sub">Mission Control</div></div>
+          <img src="/logo.png" alt="" />
+          <div><div className="name">Grahachara</div><div className="sub">Mission·Ctrl</div></div>
         </div>
         {NAV.map(([to, icon, label]) => (
           <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setMenu(false)}>
@@ -83,6 +85,7 @@ export default function App() {
           <Route path="/money" element={<Money />} />
           <Route path="/costs" element={<Costs />} />
           <Route path="/jobs" element={<Jobs />} />
+          <Route path="/fulfillment" element={<Fulfillment />} />
           <Route path="/users" element={<Users />} />
           <Route path="/logs" element={<Logs />} />
           <Route path="/health" element={<Health />} />

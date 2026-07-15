@@ -19,10 +19,18 @@ export default function Overview() {
   }));
   const rev = d.purchases30d || {};
 
+  const healthy = d.aiHealth?.healthy !== false && !d.circuit?.open;
   return (
     <>
-      <h1 className="page-title">God view</h1>
-      <p className="page-sub">Live at {new Date(d.generatedAt || Date.now()).toLocaleTimeString()} · auto-refreshes every 30s</p>
+      <h1 className="page-title">Overview</h1>
+      <p className="page-sub">The whole operation on one screen · refreshes every 30s</p>
+      <div className="statusrail">
+        <span className={`beacon ${healthy ? '' : 'down'}`}><span className="dot" />{healthy ? 'ALL SYSTEMS NOMINAL' : 'ATTENTION REQUIRED'}</span>
+        <span>SLT {new Date(Date.now() + (5.5 * 3600 + new Date().getTimezoneOffset() * 60) * 1000).toLocaleTimeString('en-GB')}</span>
+        <span className="money">{fmtLKR(rev.estRevenueLKR)} <span className="muted">/30d est.</span></span>
+        <span>{fmtNum(d.users?.total)} souls charted</span>
+        <span className={d.jobs?.failed > 0 ? 'red' : ''}>{fmtNum(d.jobs?.failed ?? 0)} failed jobs</span>
+      </div>
       <ErrorNote err={err} />
 
       <div className="grid cols-4">
