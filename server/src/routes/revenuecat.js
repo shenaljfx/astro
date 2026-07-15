@@ -79,6 +79,16 @@ async function claimWebhookEvent(db, eventId, metadata) {
       status: 'received',
       eventType: metadata.eventType || null,
       appUserId: metadata.appUserId || null,
+      // Subscription-relevant fields captured for later replay/reconciliation
+      // (services/subscriptionReconcile.js) when a webhook is missed or arrives
+      // before the user doc exists. `expiresAt` below is the DOC's TTL, so the
+      // subscription expiry is stored separately as subExpiresAt.
+      productId: metadata.productId || null,
+      newProductId: metadata.newProductId || null,
+      store: metadata.store || null,
+      subExpiresAt: metadata.expiresAt || null,
+      purchasedAt: metadata.purchasedAt || null,
+      eventTimestampMs: metadata.eventTimestampMs || Date.now(),
       receivedAt: now,
       updatedAt: now,
       expiresAt: new Date(expiresAtMs).toISOString(),
@@ -151,7 +161,12 @@ router.post('/webhook', verifyWebhook, async (req, res) => {
     }
 
     var revenueCatEventId = buildRevenueCatEventId(event);
-    var claim = await claimWebhookEvent(db, revenueCatEventId, { eventType, appUserId });
+    var claim = await claimWebhookEvent(db, revenueCatEventId, {
+      eventType, appUserId, productId, store,
+      expiresAt: expirationDate, purchasedAt: purchaseDate,
+      newProductId: event.event.new_product_id || null,
+      eventTimestampMs: Number(event.event.event_timestamp_ms || event.event.purchased_at_ms || Date.now()),
+    });
     if (claim.duplicate) {
       console.log('[RevenueCat Webhook] Duplicate event ignored:', revenueCatEventId);
       return res.status(200).json({ success: true, duplicate: true });

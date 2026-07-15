@@ -19,6 +19,7 @@ const { LIMITS: FAIR_USE_LIMITS } = require('../services/fairUse');
 const { getAllActiveTokens, sendToMultiple } = require('../services/notifications');
 const { calculateSubscriptionUnitEconomics } = require('../services/unitEconomics');
 const runtimeConfig = require('../services/runtimeConfig');
+const { reconcileUserFromHistory } = require('../services/subscriptionReconcile');
 
 const router = express.Router();
 
@@ -253,6 +254,17 @@ router.post('/users/:uid/pro', async (req, res) => {
     await db.collection(COLLECTIONS.USERS).doc(req.params.uid).set(update, { merge: true });
     writeAudit(req, `user.pro.${action}`, req.params.uid, { days: days || null });
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Self-heal a wrongly-unsubscribed user by replaying their stored RevenueCat
+// webhook events (fixes missed / user-not-found-at-delivery webhooks).
+router.post('/users/:uid/reconcile-subscription', async (req, res) => {
+  try {
+    const result = await reconcileUserFromHistory(req.params.uid);
+    writeAudit(req, 'user.reconcileSubscription', req.params.uid,
+      result.applied ? { before: result.before, after: result.after } : { reason: result.reason });
+    res.json({ success: true, ...result });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

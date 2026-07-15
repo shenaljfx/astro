@@ -72,6 +72,7 @@ export default function Users() {
               {p.isSubscribed
                 ? <button className="btn sm danger" onClick={() => setAction({ uid: u.uid, label: 'REVOKE Pro', danger: true, path: `/users/${u.uid}/pro`, body: { action: 'revoke' } })}>Revoke Pro</button>
                 : <button className="btn sm" onClick={() => setAction({ uid: u.uid, label: 'Grant Pro (30 days)', path: `/users/${u.uid}/pro`, body: { action: 'grant', days: 30 } })}>Grant Pro 30d</button>}
+              <button className="btn sm ghost" onClick={() => setAction({ uid: u.uid, label: 'Reconcile subscription from RevenueCat history', path: `/users/${u.uid}/reconcile-subscription`, body: {} })}>↻ Sync from RevenueCat</button>
               <button className="btn sm ghost" onClick={() => setAction({ uid: u.uid, label: 'Reset fair-use counters', path: `/users/${u.uid}/fairuse/reset`, body: {} })}>Reset fair-use</button>
             </div>
           </Section>
@@ -83,7 +84,12 @@ export default function Users() {
           title={action.label}
           message={`Target: ${action.uid}. This action is audited.`}
           danger={action.danger}
-          onConfirm={async () => { await api(action.path, { method: 'POST', body: action.body }); refresh(); }}
+          onConfirm={async () => {
+            const r = await api(action.path, { method: 'POST', body: action.body });
+            if (r && r.applied === false) alert('No change: ' + (r.reason || 'nothing to reconcile'));
+            else if (r && r.applied === true) alert(`Reconciled from ${r.eventsFound} event(s) → isSubscribed=${r.after.isSubscribed} (${r.after.status})`);
+            refresh();
+          }}
           onClose={() => setAction(null)}
         />
       )}
