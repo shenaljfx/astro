@@ -50,7 +50,7 @@ export const Table = ({ cols, rows }) => (
   </div>
 );
 
-const TONES = { active: 'b-green', completed: 'b-green', queued: 'b-gold', processing: 'b-violet', failed: 'b-red', cancelled: 'b-muted', expired: 'b-muted' };
+const TONES = { active: 'b-green', complete: 'b-green', completed: 'b-green', queued: 'b-gold', running: 'b-violet', processing: 'b-violet', failed: 'b-red', cancelled: 'b-muted', expired: 'b-muted', stale: 'b-red' };
 export const Badge = ({ children, tone }) => (
   <span className={`badge ${tone || TONES[String(children).toLowerCase()] || 'b-muted'}`}>{String(children)}</span>
 );

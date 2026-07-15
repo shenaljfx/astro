@@ -17,8 +17,8 @@ export default function Jobs() {
 
       <div className="grid cols-4">
         <Kpi label="Queued" value={fmtNum(counts.queued)} tone="gold" />
-        <Kpi label="Processing" value={fmtNum(counts.processing)} tone="violet" />
-        <Kpi label="Completed" value={fmtNum(counts.completed)} tone="green" />
+        <Kpi label="Running" value={fmtNum(counts.running)} tone="violet" />
+        <Kpi label="Complete" value={fmtNum(counts.complete)} tone="green" />
         <Kpi label="Failed" value={fmtNum(counts.failed)} tone={counts.failed > 0 ? 'red' : ''} />
       </div>
 
@@ -27,24 +27,30 @@ export default function Jobs() {
         right={
           <select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All (recent)</option>
-            {['queued', 'processing', 'completed', 'failed', 'cancelled'].map((s) => <option key={s} value={s}>{s}</option>)}
+            {['queued', 'running', 'complete', 'failed', 'cancelled'].map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         }
       >
         <Table
           cols={['Job', 'Type', 'Status', 'Attempts', 'Updated', 'Error', '']}
-          rows={(data?.jobs || []).map((j) => [
-            <span className="mono" title={j.id}>{j.id.slice(0, 26)}…</span>,
-            j.type,
-            <Badge>{j.status}</Badge>,
-            `${j.attempts}/${j.maxAttempts}`,
-            <span title={j.updatedAt}>{ago(j.updatedAt)}</span>,
-            j.error ? <span className="red" title={j.error}>{String(j.error).slice(0, 60)}</span> : '—',
-            <span className="row" style={{ gap: 6 }}>
-              {['failed', 'cancelled'].includes(j.status) && <button className="btn sm" onClick={() => setAction({ type: 'retry', job: j })}>Retry</button>}
-              {['queued', 'processing'].includes(j.status) && <button className="btn sm danger" onClick={() => setAction({ type: 'cancel', job: j })}>Cancel</button>}
-            </span>,
-          ])}
+          rows={(data?.jobs || []).map((j) => {
+            const errText = j.error ? (typeof j.error === 'object' ? (j.error.message || JSON.stringify(j.error)) : String(j.error)) : '';
+            return [
+              <span className="mono" title={j.id}>{j.id.slice(0, 26)}…</span>,
+              j.type,
+              <span className="row" style={{ gap: 4 }}>
+                <Badge>{j.status}</Badge>
+                {j.stale && <Badge tone="b-red">stuck — worker died</Badge>}
+              </span>,
+              `${j.attempts}/${j.maxAttempts}`,
+              <span title={j.updatedAt}>{ago(j.updatedAt)}</span>,
+              errText ? <span className="red" title={errText}>{errText.slice(0, 60)}</span> : '—',
+              <span className="row" style={{ gap: 6 }}>
+                {(['failed', 'cancelled'].includes(j.status) || j.stale) && <button className="btn sm" onClick={() => setAction({ type: 'retry', job: j })}>Retry</button>}
+                {(j.status === 'queued' || (j.status === 'running' && !j.stale)) && <button className="btn sm danger" onClick={() => setAction({ type: 'cancel', job: j })}>Cancel</button>}
+              </span>,
+            ];
+          })}
         />
       </Section>
 

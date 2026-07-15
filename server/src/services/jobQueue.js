@@ -155,6 +155,50 @@ async function failJob(jobId, error, options = {}) {
   });
 }
 
+/**
+ * Recover jobs orphaned in 'running'. A worker that dies mid-job (deploy
+ * restart, OOM, crash) leaves status='running' with an expired lockUntil —
+ * and claimNextJob only scans 'queued', so without this reaper those jobs
+ * hang forever. Requeues when attempts remain, otherwise marks failed.
+ */
+async function reapStaleJobs(limit = 10) {
+  const jobs = getJobsCollection();
+  if (!jobs) return 0;
+  const snap = await jobs.where('status', '==', 'running').limit(limit).get();
+  if (snap.empty) return 0;
+
+  let reaped = 0;
+  for (const doc of snap.docs) {
+    const j = doc.data();
+    if (j.lockUntil && new Date(j.lockUntil).getTime() > Date.now()) continue; // still legitimately locked
+    const outcome = await getDb().runTransaction(async (tx) => {
+      const fresh = await tx.get(doc.ref);
+      if (!fresh.exists) return null;
+      const cur = fresh.data();
+      if (cur.status !== 'running') return null;
+      if (cur.lockUntil && new Date(cur.lockUntil).getTime() > Date.now()) return null;
+      const attempts = cur.attempts || 1;
+      const maxAttempts = cur.maxAttempts || 1;
+      const retryable = attempts < maxAttempts;
+      tx.set(doc.ref, {
+        status: retryable ? 'queued' : 'failed',
+        error: retryable ? null : { message: 'Worker died while processing (stale lock reaped)', reaped: true },
+        lockedBy: null,
+        lockUntil: null,
+        runAfter: new Date().toISOString(),
+        failedAt: retryable ? cur.failedAt || null : new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+      return retryable ? 'queued' : 'failed';
+    });
+    if (outcome) {
+      reaped += 1;
+      console.warn(`[JobQueue] Reaped stale job ${doc.id} → ${outcome}`);
+    }
+  }
+  return reaped;
+}
+
 async function enqueueReportJob(payload, options = {}) {
   return enqueueJob('aiReport', payload, {
     uid: payload.uid,
@@ -181,4 +225,5 @@ module.exports = {
   claimNextJob,
   completeJob,
   failJob,
+  reapStaleJobs,
 };

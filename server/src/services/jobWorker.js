@@ -6,7 +6,7 @@ const { getCachedReport, saveReport } = require('../models/firestore');
 const { fulfillEntitlement, recordEntitlementError } = require('../middleware/entitlements');
 const { trackCost } = require('./costTracker');
 const { notifyAlert } = require('./alerting');
-const { claimNextJob, completeJob, failJob } = require('./jobQueue');
+const { claimNextJob, completeJob, failJob, reapStaleJobs } = require('./jobQueue');
 const { sendWeeklyLagnaPushNotification } = require('./scheduler');
 const firestoreCircuit = require('./firestoreCircuit');
 
@@ -296,6 +296,7 @@ function startWorkerLoop(options = {}) {
   const types = options.types || ['aiReport', 'weeklyLagna'];
   const basePoll = Number(options.pollMs || WORKER_POLL_MS);
   let stopped = false;
+  let lastReapAt = 0;
 
   // Adaptive scheduling state.
   let idleStreak = 0;    // consecutive empty polls → ramp interval up to IDLE_MAX
@@ -331,6 +332,13 @@ function startWorkerLoop(options = {}) {
     }
 
     try {
+      // Recover jobs orphaned by a dead worker (deploy restarts, crashes)
+      // every ~5 minutes — without this they sit in 'running' forever.
+      if (Date.now() - lastReapAt > 5 * 60 * 1000) {
+        lastReapAt = Date.now();
+        await reapStaleJobs().catch((e) => console.warn('[JobWorker] reap failed:', e.message));
+      }
+
       const result = await runWorkerOnce(workerId, types);
       firestoreCircuit.recordSuccess();
       errorStreak = 0;

@@ -57,7 +57,7 @@ router.get('/overview', async (req, res) => {
       safeCount(db.collection(COLLECTIONS.USERS)),
       safeCount(db.collection(COLLECTIONS.USERS).where('isSubscribed', '==', true)),
       safeCount(db.collection(COLLECTIONS.JOBS).where('status', '==', 'queued')),
-      safeCount(db.collection(COLLECTIONS.JOBS).where('status', '==', 'processing')),
+      safeCount(db.collection(COLLECTIONS.JOBS).where('status', '==', 'running')),
       safeCount(db.collection(COLLECTIONS.JOBS).where('status', '==', 'failed')),
       db.collection(COLLECTIONS.DAILY_AI_SPEND).doc(todayKey).get().catch(() => null),
       db.collection('dailyCosts').orderBy('__name__', 'desc').limit(30).get().catch(() => null),
@@ -81,7 +81,7 @@ router.get('/overview', async (req, res) => {
     res.json({
       generatedAt: new Date().toISOString(),
       users: { total: users, subscribers: subs },
-      jobs: { queued, processing, failed },
+      jobs: { queued, running: processing, failed },
       aiToday: getStats(),
       aiSpendToday: spendDoc && spendDoc.exists ? spendDoc.data() : null,
       costHistory: costDocs ? costDocs.docs.map((d) => ({ date: d.id, ...d.data() })).reverse() : [],
@@ -131,7 +131,7 @@ router.get('/purchases', async (req, res) => {
 });
 
 // ─── Jobs ────────────────────────────────────────────────────────
-const JOB_FIELDS = ['type', 'uid', 'status', 'attempts', 'maxAttempts', 'error', 'createdAt', 'updatedAt', 'runAfter', 'lockedBy'];
+const JOB_FIELDS = ['type', 'uid', 'status', 'attempts', 'maxAttempts', 'error', 'createdAt', 'updatedAt', 'runAfter', 'lockedBy', 'lockUntil'];
 
 router.get('/jobs', async (req, res) => {
   const db = needDb(res); if (!db) return;
@@ -142,11 +142,17 @@ router.get('/jobs', async (req, res) => {
     if (status) q = q.where('status', '==', String(status));
     const snap = await q.limit(limit * 2).get();
     const jobs = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
+      .map((d) => {
+        const j = { id: d.id, ...d.data() };
+        // A 'running' job whose lock expired is orphaned (worker died) —
+        // flag it so the dashboard offers Retry until the reaper collects it.
+        j.stale = j.status === 'running' && (!j.lockUntil || new Date(j.lockUntil).getTime() < Date.now());
+        return j;
+      })
       .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
       .slice(0, limit);
     const counts = {};
-    for (const s of ['queued', 'processing', 'completed', 'failed']) {
+    for (const s of ['queued', 'running', 'complete', 'failed']) {
       counts[s] = await safeCount(db.collection(COLLECTIONS.JOBS).where('status', '==', s));
     }
     res.json({ jobs, counts });

@@ -34,7 +34,7 @@ export default function Overview() {
 
       <div className="grid cols-4" style={{ marginTop: 14 }}>
         <Kpi label="Jobs queued" value={fmtNum(d.jobs?.queued)} tone={d.jobs?.queued > 5 ? 'gold' : ''} />
-        <Kpi label="Processing" value={fmtNum(d.jobs?.processing)} />
+        <Kpi label="Running" value={fmtNum(d.jobs?.running)} />
         <Kpi label="Failed" value={fmtNum(d.jobs?.failed)} tone={d.jobs?.failed > 0 ? 'red' : 'green'} />
         <Kpi
           label="AI health"
