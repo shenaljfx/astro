@@ -14,6 +14,7 @@ import Controls from './pages/Controls';
 import Audit from './pages/Audit';
 import Fulfillment from './pages/Fulfillment';
 import Config from './pages/Config';
+import Heatmap from './pages/Heatmap';
 
 const NAV = [
   ['/', '✦', 'Overview'],
@@ -25,6 +26,7 @@ const NAV = [
   ['/logs', '≡', 'Server Logs'],
   ['/health', '♥', 'Health'],
   ['/funnel', '◇', 'Funnel'],
+  ['/heatmap', '◍', 'Behavior Heatmap'],
   ['/controls', '⌘', 'God Controls'],
   ['/config', '⚙', 'Config & Env'],
   ['/audit', '§', 'Audit Trail'],
@@ -92,6 +94,7 @@ export default function App() {
           <Route path="/logs" element={<Logs />} />
           <Route path="/health" element={<Health />} />
           <Route path="/funnel" element={<Funnel />} />
+          <Route path="/heatmap" element={<Heatmap />} />
           <Route path="/controls" element={<Controls />} />
           <Route path="/config" element={<Config />} />
           <Route path="/audit" element={<Audit />} />

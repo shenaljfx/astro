@@ -705,6 +705,18 @@ export var getChatQuota = function() {
 
 // Records a paywall funnel event (shown | purchased | dismissed). Fire-and-
 // forget: swallows all errors so analytics never affects the user flow.
+// Records a batch of screen-view events for the behavior heatmap. Fire-and-
+// forget: swallows all errors so analytics never affects the user flow.
+export var logScreenViews = function(events) {
+  try {
+    if (!events || !events.length) return;
+    return request('/api/analytics/screens', {
+      method: 'POST',
+      body: JSON.stringify({ events: events }),
+    }).catch(function() {});
+  } catch (e) { /* never throw */ }
+};
+
 export var logPaywallEvent = function(event, meta) {
   try {
     return request('/api/analytics/paywall', {
@@ -1041,6 +1053,7 @@ export default {
   getEntitlements: getEntitlements,
   // Analytics
   logPaywallEvent: logPaywallEvent,
+  logScreenViews: logScreenViews,
   // Chat quota
   getChatQuota: getChatQuota,
   // Notifications

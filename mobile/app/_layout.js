@@ -12,6 +12,7 @@ import Animated, {
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { useScreenTracking } from '../utils/screenTracker';
 import { PricingProvider } from '../contexts/PricingContext';
 import ErrorBoundary from '../components/ErrorBoundary';
 import OnboardingScreen from './onboarding';
@@ -351,6 +352,7 @@ function SplashLoadingScreen({ resolved }) {
 function AppGate() {
   var { isLoggedIn, loading, authReady, user } = useAuth();
   var { resolved } = useTheme();
+  useScreenTracking(); // best-effort behavior heatmap instrumentation (non-fatal)
   var [showOnboarding, setShowOnboarding] = useState(null); // null = checking
   var [onboardingPassed, setOnboardingPassed] = useState(false);
   var [splashReady, setSplashReady] = useState(false);

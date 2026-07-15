@@ -389,6 +389,19 @@ router.get('/funnel', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── Behavior heatmap (screen engagement + drop-off) ─────────────
+const { mergeDailyDocs } = require('../services/screenAnalytics');
+
+router.get('/heatmap', async (req, res) => {
+  const db = needDb(res); if (!db) return;
+  const days = Math.min(Number(req.query.days) || 14, 90);
+  try {
+    const snap = await db.collection('screenStats').orderBy('__name__', 'desc').limit(days).get();
+    const merged = mergeDailyDocs(snap.docs.map((d) => d.data()));
+    res.json({ days, daysWithData: snap.size, ...merged });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── Flags + AI kill switch ──────────────────────────────────────
 router.get('/flags', async (req, res) => {
   const db = needDb(res); if (!db) return;
