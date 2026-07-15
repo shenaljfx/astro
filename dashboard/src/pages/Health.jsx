@@ -25,6 +25,10 @@ export default function Health() {
         <Kpi label="Firestore circuit" value={d.circuit?.open ? 'OPEN' : 'CLOSED'} tone={d.circuit?.open ? 'red' : 'green'} sub={d.circuit?.reason || ''} />
       </div>
 
+      <div className="grid cols-4" style={{ marginTop: 14 }}>
+        <Kpi label="Push devices (active tokens)" value={d.pushTokensActive ?? '—'} tone={d.pushTokensActive === 0 ? 'gold' : 'green'} sub={d.pushTokensActive === 0 ? 'broadcasts reach 0 until users enable push' : 'reachable by broadcast'} />
+      </div>
+
       <div className="grid cols-2" style={{ marginTop: 14 }}>
         <Section title="AI health">
           <pre className="mono" style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{JSON.stringify(d.aiHealth || {}, null, 2)}</pre>

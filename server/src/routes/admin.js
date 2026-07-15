@@ -281,9 +281,10 @@ router.get('/reports/recent', async (req, res) => {
 router.get('/health', async (req, res) => {
   const db = needDb(res); if (!db) return;
   try {
-    const [heartbeat, spendDoc] = await Promise.all([
+    const [heartbeat, spendDoc, activePushTokens] = await Promise.all([
       db.collection('system').doc('workerHeartbeat').get().catch(() => null),
       db.collection(COLLECTIONS.DAILY_AI_SPEND).doc(getTodayKey()).get().catch(() => null),
+      safeCount(db.collection('pushTokens').where('active', '==', true)),
     ]);
     res.json({
       server: {
@@ -292,6 +293,7 @@ router.get('/health', async (req, res) => {
         node: process.version,
         pid: process.pid,
       },
+      pushTokensActive: activePushTokens,
       worker: heartbeat && heartbeat.exists ? heartbeat.data() : null,
       aiHealth: getAIHealth(),
       circuit: getCircuitState(),
