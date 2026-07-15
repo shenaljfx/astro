@@ -365,11 +365,19 @@ router.post('/push/broadcast', async (req, res) => {
   if (confirm !== 'SEND') return res.status(400).json({ error: "confirm must be exactly 'SEND'" });
   if (!title || !body) return res.status(400).json({ error: 'title and body required' });
   try {
-    const tokens = await getAllActiveTokens();
+    // getAllActiveTokens returns { uid, pushToken, ... } records; sendToMultiple
+    // expects raw Expo token STRINGS. Extract + dedupe before sending.
+    const records = await getAllActiveTokens();
+    const tokens = [...new Set(
+      records
+        .map((t) => (typeof t === 'string' ? t : t && t.pushToken))
+        .filter((t) => typeof t === 'string' && t.startsWith('Expo'))
+    )];
     if (!tokens.length) return res.status(400).json({ error: 'No active push tokens' });
-    await sendToMultiple(tokens, String(title).slice(0, 120), String(body).slice(0, 400), { type: 'ADMIN_BROADCAST' });
-    writeAudit(req, 'push.broadcast', `${tokens.length} devices`, { title, body });
-    res.json({ success: true, sentTo: tokens.length });
+    const result = await sendToMultiple(tokens, String(title).slice(0, 120), String(body).slice(0, 400), { type: 'ADMIN_BROADCAST' });
+    const sent = result && typeof result.sent === 'number' ? result.sent : tokens.length;
+    writeAudit(req, 'push.broadcast', `${tokens.length} devices`, { title, body, sent });
+    res.json({ success: true, sentTo: sent, tokens: tokens.length });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
