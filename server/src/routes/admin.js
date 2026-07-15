@@ -187,6 +187,37 @@ router.post('/jobs/:id/cancel', async (req, res) => {
 });
 
 // ─── Users ───────────────────────────────────────────────────────
+// Paginated directory of ALL users (newest first). Lean projection for the
+// table; full per-user detail comes from /users/lookup on click.
+router.get('/users', async (req, res) => {
+  const db = needDb(res); if (!db) return;
+  const limit = Math.min(Number(req.query.limit) || 50, 100);
+  const cursor = req.query.cursor || null;
+  try {
+    let q = db.collection(COLLECTIONS.USERS)
+      .select('email', 'displayName', 'photoURL', 'isSubscribed', 'subscription', 'reportCount',
+        'createdAt', 'updatedAt', 'onboardingComplete', 'preferences.language', 'location.name', 'phone')
+      .orderBy('createdAt', 'desc')
+      .limit(limit);
+    if (cursor) q = q.startAfter(cursor);
+    const snap = await q.get();
+    const users = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+    const nextCursor = snap.size === limit && users.length ? users[users.length - 1].createdAt : null;
+
+    // Counts are expensive — only compute on the first page.
+    let counts = null;
+    if (!cursor) {
+      const [total, subscribers, onboarded] = await Promise.all([
+        safeCount(db.collection(COLLECTIONS.USERS)),
+        safeCount(db.collection(COLLECTIONS.USERS).where('isSubscribed', '==', true)),
+        safeCount(db.collection(COLLECTIONS.USERS).where('onboardingComplete', '==', true)),
+      ]);
+      counts = { total, subscribers, onboarded };
+    }
+    res.json({ users, nextCursor, counts });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/users/lookup', async (req, res) => {
   const db = needDb(res); if (!db) return;
   const q = String(req.query.q || '').trim();
