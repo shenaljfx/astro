@@ -47,7 +47,9 @@ jobs:
             ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
             ${{ env.IMAGE }}:latest
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # ignore-error: a flaky GHA-cache export (containerd ingest race on
+          # this big image) must NOT fail the build/deploy — cache is optional.
+          cache-to: type=gha,mode=max,ignore-error=true
 
   deploy:
     name: Deploy to VM
