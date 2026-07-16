@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyAdmin } from '@/lib/verifyAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -6,6 +7,7 @@ const PEXELS_BASE = 'https://api.pexels.com/v1';
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY || '';
 
 export async function GET(request: NextRequest) {
+  if (!(await verifyAdmin(request))) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   if (!PEXELS_API_KEY) {
     return NextResponse.json(
       { error: 'PEXELS_API_KEY not set. Add it to .env.local (free at pexels.com/api)', images: [] },

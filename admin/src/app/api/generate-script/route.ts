@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyAdmin } from '@/lib/verifyAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,7 @@ function repairTruncatedJson(text: string): any {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await verifyAdmin(request))) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   try {
     const { prompt } = await request.json();
     const apiKey = process.env.GEMINI_API_KEY;

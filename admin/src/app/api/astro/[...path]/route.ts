@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyAdmin } from '@/lib/verifyAdmin';
 
 /**
  * Server-side proxy: the studio's browser calls /api/astro/<path>, and this
@@ -12,6 +13,7 @@ export const dynamic = 'force-dynamic';
 const SERVER = process.env.SERVER_INTERNAL_URL || 'http://127.0.0.1:3000';
 
 async function proxy(req: NextRequest, path: string[]) {
+  if (!(await verifyAdmin(req))) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const target = `${SERVER}/${(path || []).join('/')}${req.nextUrl.search || ''}`;
   try {
     const res = await fetch(target, {

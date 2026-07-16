@@ -7,7 +7,10 @@ set -euo pipefail
 
 IMAGE="${IMAGE:-ghcr.io/shenaljfx/grahachara-marketing:latest}"
 NAME="grahachara-marketing"
-ENV_FILE="${ENV_FILE:-$HOME/.env}"
+# Use the script's own dir, NOT $HOME — under `sudo` $HOME is /root and the
+# .env (secrets) lives next to this script in the deploy user's home.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/.env}"
 MEM="${MARKETING_MEM:-256m}"
 
 # Pass ONLY the secrets the studio needs (not the whole server .env).

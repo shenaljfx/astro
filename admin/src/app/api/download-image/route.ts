@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
+import { verifyAdmin } from '@/lib/verifyAdmin';
 import { existsSync } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -40,6 +41,7 @@ function isSafeUrl(raw: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await verifyAdmin(request))) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   try {
     const { url, id } = await request.json();
 

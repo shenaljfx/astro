@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyAdmin } from '@/lib/verifyAdmin';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { readFile, unlink, mkdir, writeFile } from 'fs/promises';
@@ -108,6 +109,7 @@ async function runKokoroTTS(opts: {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await verifyAdmin(request))) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   try {
     const { voice, text, rate, pitch, engine: engineParam } = await request.json();
 

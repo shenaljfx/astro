@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { execFile } from 'child_process';
+import { verifyAdmin } from '@/lib/verifyAdmin';
 import { promisify } from 'util';
 import { mkdir } from 'fs/promises';
 import path from 'path';
@@ -21,6 +22,7 @@ function safeToken(value: unknown, fallback: string): string {
  * avoiding native binary import issues in Next.js webpack.
  */
 export async function POST(request: NextRequest) {
+  if (!(await verifyAdmin(request))) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   try {
     const { compositionId, inputProps, outputFormat = 'mp4' } = await request.json();
 

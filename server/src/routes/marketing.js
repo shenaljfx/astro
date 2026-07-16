@@ -68,7 +68,9 @@ router.get('/today', async (req, res) => {
     const panchanga = getPanchanga(now);
     const nakath = getDailyNakath(now);
     const planets = getAllPlanetPositions(now);
-    const yogas = detectYogas ? detectYogas(planets) : [];
+    // detectYogas(date, lat, lng) takes a Date — NOT the planet array (that
+    // mismatch crashed getLagna with "date.getUTCFullYear is not a function").
+    const yogas = detectYogas ? detectYogas(now) : [];
 
     res.json({
       date: now.toISOString().split('T')[0],
