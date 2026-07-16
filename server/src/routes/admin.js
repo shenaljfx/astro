@@ -418,7 +418,7 @@ router.get('/marketing', async (req, res) => {
   res.json({
     killSwitch,
     hostedUrl: 'https://marketing.grahachara.com',
-    hosted: false, // flip once the studio is deployed
+    hosted: true, // live since 2026-07-16 (Google-gated, memory-capped on the VM)
     dataReady: todayOk,
     dataEndpoints: ['/api/marketing/today', '/api/marketing/sign/:sign', '/api/marketing/compatibility/:a/:b'],
     note: 'Marketing data API is now admin-token gated (was localhost-only) so the hosted studio can reach real calculations.',
