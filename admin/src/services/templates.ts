@@ -1,5 +1,15 @@
-import { TemplateType, CTAType } from './gemini';
 import { VoiceKey } from './tts';
+
+export type TemplateType =
+  | 'daily-horoscope'
+  | 'weekly-lagna'
+  | 'compatibility'
+  | 'auspicious-times'
+  | 'yoga-of-day'
+  | 'educational'
+  | 'app-promo';
+
+export type CTAType = 'follow' | 'download' | 'website' | 'free-chart';
 
 export type VisualTheme = 'cosmic-dark' | 'clean-modern' | 'mystic-gold';
 export type ReelStatus = 'draft' | 'generated' | 'approved' | 'exported';

@@ -19,6 +19,11 @@ const JWKS = createRemoteJWKSet(
 );
 
 export async function verifyAdmin(req: NextRequest): Promise<{ email: string } | null> {
+  // Local-dev-only bypass (pairs with AuthGate's NEXT_PUBLIC_DEV_NO_AUTH).
+  // NODE_ENV is 'production' in every deployed build, so this cannot fire there.
+  if (process.env.NODE_ENV === 'development' && process.env.DEV_NO_AUTH === '1') {
+    return { email: 'dev@localhost' };
+  }
   try {
     const cookieTok = req.cookies.get('mkt_token')?.value;
     const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');

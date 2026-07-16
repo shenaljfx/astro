@@ -43,13 +43,12 @@ export async function POST(request: NextRequest) {
     const durationPart = safeToken(inputProps.duration, '0');
 
     // Output directory
-    const outputDir = path.join(process.cwd(), 'output', new Date().toISOString().split('T')[0]);
+    const dateDir = new Date().toISOString().split('T')[0];
+    const outputDir = path.join(process.cwd(), 'output', dateDir);
     await mkdir(outputDir, { recursive: true });
 
-    const outputFile = path.join(
-      outputDir,
-      `${signPart}_${durationPart}_${Date.now()}.${ext}`
-    );
+    const fileName = `${signPart}_${durationPart}_${Date.now()}.${ext}`;
+    const outputFile = path.join(outputDir, fileName);
 
     // Spawn Remotion render WITHOUT a shell — args are passed as an array so
     // no value can break out into shell metacharacters.
@@ -69,6 +68,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       outputFile,
+      // Browser-downloadable path (served by /api/output, auth-gated).
+      downloadUrl: `/api/output/${dateDir}/${fileName}`,
       stdout,
       message: 'Video rendered successfully',
     });

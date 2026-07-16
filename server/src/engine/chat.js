@@ -13,6 +13,7 @@ const { PROMPT_VERSION, buildPromptRunMetadata, buildSectionGenerationMetadata, 
 const { extractGeminiUsage, createTokenTracker, recordUsage, finalizeTracker, formatCostLog } = require('../utils/tokenCalculator');
 const { createProgressRecord, updateProgressRecord, getProgressRecord, archiveProgressRecord } = require('../services/reportProgressStore');
 const firestoreCircuit = require('../services/firestoreCircuit');
+const { SINHALA_VOICE } = require('./sinhalaVoice');
 
 // ══════════════════════════════════════════════════════════════
 // REPORT PROGRESS TRACKER — allows mobile to poll generation status
@@ -339,7 +340,7 @@ try { classicalTextsEngine = require('./classical-texts'); } catch (e) { console
 function buildSystemPrompt(language = 'en') {
   const languageInstructions = {
     en: 'Respond in English. Use a warm, wise, and empathetic tone. NEVER use Sanskrit/Pali astrology terms — use everyday English only.',
-    si: 'Respond in 100% pure Sinhala (සිංහල). ඉංග්‍රීසි වචන සිංහල අකුරින් ලියන්න එපා. "ලග්නය", "රාශිය", "නක්ෂත්‍ර", "දෝෂ", "යෝග" වගේ ජ්‍යෝතිෂ වචන ලියන්න එපා — සරල සිංහලෙන් කියන්න (උදා: "ඔබේ උපන් තරුව", "ඔබේ චන්ද්‍ර ලකුණ", "ඔබේ ලග්න ලකුණ"). හිතවත් මුත්තා කතා කරනවා වගේ ලියන්න. ⚠️ දෙමළ (Tamil) වචන කිසිසේත් භාවිතා නොකරන්න — "ராசி", "நட்சத்திரம்", "கிரகம்" වැනි දෙමළ වචන තහනම්. 100% සිංහල පමණි.',
+    si: 'Respond in 100% pure Sinhala (සිංහල). ඉංග්‍රීසි වචන සිංහල අකුරින් ලියන්න එපා. "ලග්නය", "රාශිය", "නක්ෂත්‍ර", "දෝෂ", "යෝග" වගේ ජ්‍යෝතිෂ වචන ලියන්න එපා — සරල සිංහලෙන් කියන්න (උදා: "ඔබේ උපන් තරුව", "ඔබේ චන්ද්‍ර ලකුණ", "ඔබේ ලග්න ලකුණ"). ⚠️ දෙමළ (Tamil) වචන කිසිසේත් භාවිතා නොකරන්න — "ராசி", "நட்சத்திரம்", "கிரகம்" වැනි දෙමළ වචන තහනම්.\n\n' + SINHALA_VOICE,
     ta: 'Respond in 100% pure Tamil (தமிழ்). Do NOT use Sanskrit/English astrology terms. Translate everything to simple Tamil that anyone can understand. Write like a wise elder giving caring advice.',
     singlish: 'Respond in Singlish (Sinhala words typed in English characters). This is how young Sri Lankans commonly type. Example: "Oyage upan tharuwata adala graha Mars. Eka hinda oyata leadership tika tiyenawa."',
   };
@@ -3700,7 +3701,7 @@ async function generateSectionNarrative(sectionKey, sectionData, birthData, allS
 
   const langInstructions = {
     en: 'Write in English. Warm, personal, wise tone. Do NOT use ANY Sinhala, Sanskrit, Pali, Hindi, or Tamil words. Everything must be in plain English that anyone can understand.',
-    si: 'ඔබ ලියන සෑම වචනයක්ම, සෑම වාක්‍යයක්ම, සෑම මාතෘකාවක්ම 100% පිරිසිදු සිංහලෙන් ලියන්න. ඉංග්‍රීසි වචනයක්වත් mix කරන්න එපා — "chart", "career", "life", "love", "personality", "power", "energy", "strong", "weak", "confidence", "relationship", "marriage delay", "partner" වැනි ඉංග්‍රීසි වචන සිංහල වාක්‍ය වලට දාන්න එපා. ජ්‍යෝතිෂ්‍ය තාක්ෂණික වචන ("ලග්නය", "රාශිය", "නක්ෂත්‍ර", "දශාව", "දෝෂ", "යෝග") පාවිච්චි කරන්න එපා — ඒ වෙනුවට සාමාන්‍ය සිංහලෙන් කියන්න. 15 හැවිරිදි ළමයෙකුට තේරෙන සරල, උණුසුම් සිංහලෙන් ලියන්න. යාලුවෙක් කතා කරනවා වගේ ලියන්න.',
+    si: 'ඔබ ලියන සෑම වචනයක්ම, සෑම වාක්‍යයක්ම, සෑම මාතෘකාවක්ම 100% පිරිසිදු සිංහලෙන් ලියන්න. ඉංග්‍රීසි වචනයක්වත් mix කරන්න එපා — "chart", "career", "life", "love", "personality", "power", "energy", "strong", "weak", "confidence", "relationship", "marriage delay", "partner" වැනි ඉංග්‍රීසි වචන සිංහල වාක්‍ය වලට දාන්න එපා. ජ්‍යෝතිෂ්‍ය තාක්ෂණික වචන ("ලග්නය", "රාශිය", "නක්ෂත්‍ර", "දශාව", "දෝෂ", "යෝග") පාවිච්චි කරන්න එපා — ඒ වෙනුවට සාමාන්‍ය සිංහලෙන් කියන්න.\n\n' + SINHALA_VOICE,
     ta: 'எல்லாவற்றையும் முழுமையான தமிழில் எழுதுங்கள். ஆங்கிலம் அல்லது சிங்களம் கலக்க வேண்டாம். ஜோதிட சொற்களை பயன்படுத்த வேண்டாம் — அன்றாட தமிழில் விளக்குங்கள். 15 வயது பிள்ளை புரிந்துகொள்ளக்கூடிய எளிய தமிழில் எழுதுங்கள்.',
     singlish: 'Write in Singlish (Sinhala typed in English). Casual, friendly, relatable tone. Do not use astrology terms — describe everything as human experiences.',
   };

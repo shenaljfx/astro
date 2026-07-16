@@ -17,7 +17,9 @@ import { CTAEndCard } from './components/CTAEndCard';
 import { ZodiacIntro } from './components/ZodiacIntro';
 import { INTRO_SECONDS, CTA_SECONDS } from './constants';
 
-export interface ReelProps {
+// A `type` (not interface) so it satisfies Remotion's Record<string, unknown>
+// constraint on Player/Composition generics.
+export type ReelProps = {
   theme: VisualTheme;
   script: {
     hook: string;
@@ -35,7 +37,9 @@ export interface ReelProps {
   showSubtitles: boolean;
   backgroundImages?: BackgroundImage[];
   introVideoPath?: string;
-}
+  /** Voiceover length in seconds — sizes the rendered video (see remotion/index). */
+  audioDuration?: number;
+};
 
 export const ReelComposition: React.FC<ReelProps> = ({
   theme,

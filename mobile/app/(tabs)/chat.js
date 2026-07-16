@@ -860,16 +860,24 @@ export default function ChatScreen() {
           <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.6)" />
         </TouchableOpacity>
         <OraclePortrait theme={theme} size={40} />
-        <View style={{ flex: 1 }}>
-          <Text style={[s.title, { color: sc.sectionTitle }]}>{mode === 'dream' ? t('chatDreamTitle') : t('chatTitle')}</Text>
+        {/* minWidth:0 lets the title/status shrink and truncate instead of
+            forcing the badge off-screen. Long Sinhala names (e.g.
+            'විශ්ව මාර්ගෝපදේශී') otherwise wrapped to two cramped lines. */}
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text
+            style={[s.title, { color: sc.sectionTitle }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >{mode === 'dream' ? t('chatDreamTitle') : t('chatTitle')}</Text>
           <View style={s.statusRow}>
             <View style={[s.statusDot, { backgroundColor: loading ? theme.accent : '#34D399' }]} />
-            <Text style={s.statusText}>{loading ? t('consultingCosmos') : t('askUniverse')}</Text>
+            <Text style={s.statusText} numberOfLines={1}>{loading ? t('consultingCosmos') : t('askUniverse')}</Text>
           </View>
         </View>
         <View style={[s.birthBadge, { backgroundColor: birthDate ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.05)', borderColor: birthDate ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)' }]}>
           <Ionicons name={birthDate ? 'planet' : 'planet-outline'} size={13} color={birthDate ? '#34D399' : 'rgba(255,255,255,0.3)'} />
-          <Text style={[s.birthBadgeText, { color: birthDate ? '#34D399' : 'rgba(255,255,255,0.3)' }]}>
+          <Text style={[s.birthBadgeText, { color: birthDate ? '#34D399' : 'rgba(255,255,255,0.3)' }]} numberOfLines={1}>
             {birthDate ? t('chartLoaded') || 'Chart ✓' : t('noBirthData') || 'No chart'}
           </Text>
         </View>
@@ -958,14 +966,14 @@ export default function ChatScreen() {
 
 // STYLES
 var s = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingBottom: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingBottom: 8 },
   headerHairline: { height: 1, marginBottom: 2 },
-  backBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   title: { fontSize: 18, fontWeight: '800', color: '#FFF1D0', letterSpacing: 0.3 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 11, color: 'rgba(255,255,255,0.62)', fontWeight: '500' },
-  birthBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10, borderWidth: 1 },
+  statusDot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
+  statusText: { flex: 1, fontSize: 11, color: 'rgba(255,255,255,0.62)', fontWeight: '500' },
+  birthBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10, borderWidth: 1, flexShrink: 0 },
   birthBadgeText: { fontSize: 10, fontWeight: '700' },
 
   limitCard: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 18, marginBottom: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
@@ -993,7 +1001,10 @@ var s = StyleSheet.create({
   charCount: { alignSelf: 'flex-end', fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.62)', marginBottom: 4, fontVariant: ['tabular-nums'] },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   inputFieldWrap: { flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 24, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 4 : 2, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.10)' },
-  input: { flex: 1, minHeight: 38, maxHeight: 100, color: '#FFF1D0', fontSize: 15, paddingTop: 9, paddingBottom: 9, includeFontPadding: false, lineHeight: 21 },
+  // NOTE: no `includeFontPadding:false` and no tight `lineHeight` here — both
+  // clip the tops of Sinhala combining marks (ැ ි ්‍ය …) on Android. Let the
+  // platform reserve ascender/descender space, exactly like every other input.
+  input: { flex: 1, minHeight: 40, maxHeight: 100, color: '#FFF1D0', fontSize: 15, paddingTop: 9, paddingBottom: 9 },
   sendBtn: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 1, ...boxShadow('#000', { width: 0, height: 2 }, 0.3, 8) },
 });
 

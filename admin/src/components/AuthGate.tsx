@@ -6,6 +6,11 @@ const ALLOW = (process.env.NEXT_PUBLIC_MARKETING_ADMIN_EMAILS ||
   'shenalsamaranayakejfx@gmail.com,ridmaraveengamage@gmail.com')
   .split(',').map((s) => s.trim().toLowerCase());
 
+// Local-dev-only bypass so the studio can be worked on without Google auth.
+// Double-gated: NODE_ENV is compile-time in Next, so this is dead code in
+// production builds, AND the explicit flag must be set in .env.local.
+const DEV_BYPASS = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEV_NO_AUTH === '1';
+
 // Carry the ID token in a same-origin cookie so every API route can verify it
 // without touching each fetch call. Refreshed below before it expires.
 function setTokenCookie(t: string | null) {
@@ -30,8 +35,14 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     return () => clearInterval(id);
   }, []);
 
+  if (DEV_BYPASS) return <>{children}</>;
+
   if (user === undefined) {
-    return <div style={box}><div style={{ fontSize: 40 }}>🎬</div></div>;
+    return (
+      <div className="grid min-h-screen place-items-center bg-bg">
+        <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-3">✦ opening studio…</span>
+      </div>
+    );
   }
 
   const email = (user?.email || '').toLowerCase();
@@ -39,18 +50,36 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!allowed) {
     return (
-      <div style={box}>
-        <div style={card}>
-          <div style={{ fontSize: 44 }}>🎬</div>
-          <h1 style={{ fontSize: 20, margin: '14px 0 6px' }}>Grahachara Marketing Studio</h1>
-          <p style={{ color: '#94a3b8', fontSize: 13, maxWidth: 320, margin: '0 auto 22px' }}>
+      <div className="relative grid min-h-screen place-items-center overflow-hidden bg-bg px-4">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: 'radial-gradient(640px 420px at 50% 12%, var(--accent-glow), transparent 70%)' }}
+        />
+        <div className="relative w-full max-w-sm rounded-2xl border border-line bg-surface p-8 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Grahachara" width={76} height={76} className="mx-auto mb-4 h-[76px] w-[76px]" />
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-gold">✦ Studio</p>
+          <h1 className="mt-2 font-display text-[26px] font-semibold tracking-[-0.02em] text-ink">Grahachara</h1>
+          <p className="mx-auto mt-3 max-w-[30ch] text-[13px] leading-relaxed text-ink-2">
             {user
               ? `Signed in as ${user.email} — this account isn't authorized.`
               : 'Restricted studio. Sign in with an authorized account.'}
           </p>
-          {user
-            ? <button style={btnGhost} onClick={() => signOutUser()}>Sign out</button>
-            : <button style={btn} onClick={() => signIn().catch((e) => alert(e.message))}>Continue with Google</button>}
+          {user ? (
+            <button
+              onClick={() => signOutUser()}
+              className="mt-6 h-10 w-full rounded-lg border border-line-strong text-[13px] font-medium text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink"
+            >
+              Sign out
+            </button>
+          ) : (
+            <button
+              onClick={() => signIn().catch((e: Error) => alert(e.message))}
+              className="mt-6 h-10 w-full rounded-lg bg-accent text-[13px] font-semibold text-[#0b0918] transition-all hover:brightness-110 active:scale-[0.98]"
+            >
+              Continue with Google
+            </button>
+          )}
         </div>
       </div>
     );
@@ -58,8 +87,3 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
-
-const box: React.CSSProperties = { minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#0a0817', color: '#e8e4ff' };
-const card: React.CSSProperties = { textAlign: 'center', padding: '44px 52px', border: '1px solid rgba(139,92,246,.2)', borderRadius: 16, background: 'rgba(139,92,246,.06)' };
-const btn: React.CSSProperties = { background: '#8b5cf6', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' };
-const btnGhost: React.CSSProperties = { ...btn, background: 'transparent', border: '1px solid rgba(139,92,246,.4)' };

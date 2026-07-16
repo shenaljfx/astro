@@ -109,6 +109,23 @@ router.get('/rashi-daily', (req, res) => {
 });
 
 /**
+ * GET /api/marketing/rashi-period?mode=weekly|monthly[&date=YYYY-MM-DD]
+ * REAL per-sign weekly/monthly packages — day-by-day ephemeris aggregation
+ * (good-day counts, best day/window, Chandrashtama caution dates). No AI.
+ */
+const { getRashiPeriod } = require('../engine/rashiPeriod');
+router.get('/rashi-period', (req, res) => {
+  try {
+    const mode = req.query.mode === 'monthly' ? 'monthly' : 'weekly';
+    const date = req.query.date ? new Date(req.query.date) : new Date();
+    res.json(getRashiPeriod(mode, date));
+  } catch (err) {
+    console.error('Marketing rashi-period error:', err.message);
+    res.status(500).json({ error: 'Failed to compute rashi period' });
+  }
+});
+
+/**
  * GET /api/marketing/sign/:sign
  * Quick daily insight for a specific sign (for reel scripts)
  */
@@ -142,6 +159,50 @@ router.get('/sign/:sign', async (req, res) => {
   }
 });
 
+const COMPAT_ELEMENTS = {
+  Aries: 'fire', Leo: 'fire', Sagittarius: 'fire',
+  Taurus: 'earth', Virgo: 'earth', Capricorn: 'earth',
+  Gemini: 'air', Libra: 'air', Aquarius: 'air',
+  Cancer: 'water', Scorpio: 'water', Pisces: 'water',
+};
+const COMPAT_SIGNS = Object.keys(COMPAT_ELEMENTS);
+
+function computeCompatibility(sign1, sign2) {
+  const el1 = COMPAT_ELEMENTS[sign1] || 'unknown';
+  const el2 = COMPAT_ELEMENTS[sign2] || 'unknown';
+  let score = 50;
+  if (el1 === el2) score = 85;
+  else if ((el1 === 'fire' && el2 === 'air') || (el1 === 'air' && el2 === 'fire')) score = 75;
+  else if ((el1 === 'earth' && el2 === 'water') || (el1 === 'water' && el2 === 'earth')) score = 75;
+  else if ((el1 === 'fire' && el2 === 'water') || (el1 === 'water' && el2 === 'fire')) score = 35;
+  else if ((el1 === 'earth' && el2 === 'air') || (el1 === 'air' && el2 === 'earth')) score = 45;
+  return {
+    sign1, sign2, element1: el1, element2: el2, score,
+    chemistry: score >= 75 ? 'High' : score >= 50 ? 'Moderate' : 'Challenging',
+    description: getCompatibilityDesc(sign1, sign2, score),
+  };
+}
+
+/**
+ * GET /api/marketing/compatibility-matrix
+ * All 78 unique sign pairs in ONE response — so the studio's compatibility
+ * grid costs a single request, not 78 (which trips the global rate limiter).
+ */
+router.get('/compatibility-matrix', (req, res) => {
+  try {
+    const pairs = [];
+    for (let i = 0; i < COMPAT_SIGNS.length; i++) {
+      for (let j = i; j < COMPAT_SIGNS.length; j++) {
+        pairs.push(computeCompatibility(COMPAT_SIGNS[i], COMPAT_SIGNS[j]));
+      }
+    }
+    res.json({ signs: COMPAT_SIGNS, pairs, computedFrom: 'element-harmony — deterministic, no AI' });
+  } catch (err) {
+    console.error('Marketing compatibility-matrix error:', err.message);
+    res.status(500).json({ error: 'Failed to compute compatibility matrix' });
+  }
+});
+
 /**
  * GET /api/marketing/compatibility/:sign1/:sign2
  * Quick compatibility data for teaser reels
@@ -149,33 +210,7 @@ router.get('/sign/:sign', async (req, res) => {
 router.get('/compatibility/:sign1/:sign2', async (req, res) => {
   try {
     const { sign1, sign2 } = req.params;
-    // Basic compatibility based on element harmony
-    const elements = {
-      Aries: 'fire', Leo: 'fire', Sagittarius: 'fire',
-      Taurus: 'earth', Virgo: 'earth', Capricorn: 'earth',
-      Gemini: 'air', Libra: 'air', Aquarius: 'air',
-      Cancer: 'water', Scorpio: 'water', Pisces: 'water',
-    };
-
-    const el1 = elements[sign1] || 'unknown';
-    const el2 = elements[sign2] || 'unknown';
-    
-    let score = 50;
-    if (el1 === el2) score = 85;
-    else if ((el1 === 'fire' && el2 === 'air') || (el1 === 'air' && el2 === 'fire')) score = 75;
-    else if ((el1 === 'earth' && el2 === 'water') || (el1 === 'water' && el2 === 'earth')) score = 75;
-    else if ((el1 === 'fire' && el2 === 'water') || (el1 === 'water' && el2 === 'fire')) score = 35;
-    else if ((el1 === 'earth' && el2 === 'air') || (el1 === 'air' && el2 === 'earth')) score = 45;
-
-    res.json({
-      sign1,
-      sign2,
-      element1: el1,
-      element2: el2,
-      score,
-      chemistry: score >= 75 ? 'High' : score >= 50 ? 'Moderate' : 'Challenging',
-      description: getCompatibilityDesc(sign1, sign2, score),
-    });
+    res.json(computeCompatibility(sign1, sign2));
   } catch (err) {
     console.error('Marketing compatibility error:', err);
     res.status(500).json({ error: 'Failed to get compatibility' });

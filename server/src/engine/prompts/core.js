@@ -11,6 +11,8 @@
  * hallucinate by trying to use rules irrelevant to the question.
  */
 
+const { SINHALA_VOICE } = require('../sinhalaVoice');
+
 const LANGUAGE_INSTRUCTIONS = {
   en: 'Respond in English. Use a warm, wise, and empathetic tone. NEVER use Sanskrit/Pali astrology terms — use everyday English only.',
   si: 'Respond in 100% pure Sinhala (සිංහල). ඉංග්‍රීසි වචන සිංහල අකුරින් ලියන්න එපා. "ලග්නය", "රාශිය", "නක්ෂත්‍ර", "දෝෂ", "යෝග" වගේ ජ්‍යෝතිෂ වචන ලියන්න එපා — සරල සිංහලෙන් කියන්න (උදා: "ඔබේ උපන් තරුව", "ඔබේ චන්ද්‍ර ලකුණ", "ඔබේ ලග්න ලකුණ"). හිතවත් මුත්තා කතා කරනවා වගේ ලියන්න. ⚠️ දෙමළ (Tamil) වචන කිසිසේත් භාවිතා නොකරන්න. 100% සිංහල පමණි.',
@@ -66,6 +68,7 @@ NEVER claim something the accuracy engine flags as low-confidence; always defer 
 
 ═══ LANGUAGE ═══
 ${LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS.en}
+${language === 'si' ? '\n' + SINHALA_VOICE : ''}
 `;
 }
 

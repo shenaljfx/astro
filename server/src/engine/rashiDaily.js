@@ -109,4 +109,4 @@ function getRashiDaily(date = new Date()) {
   };
 }
 
-module.exports = { getRashiDaily, RASHIS };
+module.exports = { getRashiDaily, RASHIS, luckyFor };

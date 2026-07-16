@@ -1,169 +1,98 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import AppShell from '@/components/AppShell';
-import Link from 'next/link';
-import { TEMPLATES, VISUAL_THEMES } from '@/services/templates';
+import { PageHeader, StatusDot, useEngineStatus } from '@/components/ui';
+import SkyHero from '@/components/engine/SkyHero';
+import SkyPanel from '@/components/engine/SkyPanel';
+import KendraPanel from '@/components/engine/KendraPanel';
+import RashiPanel from '@/components/engine/RashiPanel';
+import PorondamPanel from '@/components/engine/PorondamPanel';
+import { Orbit, Compass, Table2, HeartHandshake, LucideIcon } from 'lucide-react';
 
-interface DashboardStats {
-  totalGenerated: number;
-  pendingReview: number;
-  approved: number;
-  exported: number;
-  todayBatch: boolean;
-}
+/**
+ * The engine console — a full mirror of what the astrology engine can compute.
+ * Every number on this page is a real calculation; there is no AI on this
+ * surface by design (the generators are where models get involved).
+ */
+
+/* ── Tabs ───────────────────────────────────────────────────────────────── */
+
+type TabKey = 'sky' | 'kendra' | 'rashi' | 'porondam';
+
+const TABS: Array<{ key: TabKey; label: string; icon: LucideIcon; hint: string }> = [
+  { key: 'sky', label: 'Sky today', icon: Orbit, hint: 'panchanga · planets · windows' },
+  { key: 'kendra', label: 'Kendra', icon: Compass, hint: 'cast a real birth chart' },
+  { key: 'rashi', label: '12-sign board', icon: Table2, hint: 'daily · weekly · monthly' },
+  { key: 'porondam', label: 'Porondam', icon: HeartHandshake, hint: 'compatibility matrix' },
+];
+
+/* ── Page ───────────────────────────────────────────────────────────────── */
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalGenerated: 0,
-    pendingReview: 0,
-    approved: 0,
-    exported: 0,
-    todayBatch: false,
-  });
-  const [serverStatus, setServerStatus] = useState<'online' | 'offline' | 'checking'>('checking');
+  const engine = useEngineStatus(45000);
+  const [today, setToday] = useState<any | null>(null);
+  const [tab, setTab] = useState<TabKey>('sky');
 
   useEffect(() => {
-    checkServer();
-    loadStats();
+    fetch('/api/astro/api/marketing/today', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.panchanga && setToday(d))
+      .catch(() => {});
   }, []);
 
-  async function checkServer() {
-    try {
-      const res = await fetch('/api/astro/api/health');
-      if (res.ok) setServerStatus('online');
-      else setServerStatus('offline');
-    } catch {
-      setServerStatus('offline');
-    }
-  }
-
-  function loadStats() {
-    // Load from localStorage
-    const reels = JSON.parse(localStorage.getItem('grahachara_reels') || '[]');
-    setStats({
-      totalGenerated: reels.length,
-      pendingReview: reels.filter((r: any) => r.status === 'generated').length,
-      approved: reels.filter((r: any) => r.status === 'approved').length,
-      exported: reels.filter((r: any) => r.status === 'exported').length,
-      todayBatch: reels.some((r: any) => r.date === new Date().toISOString().split('T')[0]),
-    });
-  }
-
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const active = TABS.find((t) => t.key === tab)!;
 
   return (
     <AppShell>
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Marketing Studio</h1>
-            <p className="text-gray-400 mt-1">{today}</p>
-          </div>
-          <Link
-            href="/generate"
-            className="px-6 py-3 bg-brand-purple hover:bg-brand-purple/80 text-white font-semibold rounded-xl transition-all hover:scale-105 shadow-lg shadow-brand-purple/25"
-          >
-            ⚡ Generate Today&apos;s Batch
-          </Link>
-        </div>
+      <div className="mx-auto max-w-6xl">
+        <PageHeader
+          eyebrow={todayLabel}
+          title="Engine console"
+          description="Everything the Grahachara engine computes — live sky, real birth charts, the 12-sign board and the compatibility matrix. Pure calculation, no AI."
+          actions={
+            <span className="inline-flex h-8 items-center gap-2 rounded-full border border-line px-3 font-mono text-[11px] text-ink-2">
+              <StatusDot state={engine === 'online' ? 'ok' : engine === 'checking' ? 'idle' : 'danger'} />
+              engine {engine === 'checking' ? '…' : engine}
+            </span>
+          }
+        />
 
-        {/* Server Status */}
-        {serverStatus === 'offline' && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-            <p className="text-red-400 text-sm font-medium">
-              ⚠️ Server offline — Run <code className="bg-red-500/20 px-2 py-0.5 rounded">cd server && npm run dev</code> to start the astrology engine
-            </p>
-          </div>
-        )}
+        <SkyHero today={today} engine={engine} />
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          <StatCard label="Total Generated" value={stats.totalGenerated} icon="🎬" color="purple" />
-          <StatCard label="Pending Review" value={stats.pendingReview} icon="👁️" color="yellow" />
-          <StatCard label="Approved" value={stats.approved} icon="✅" color="green" />
-          <StatCard label="Exported" value={stats.exported} icon="📦" color="blue" />
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-6 mb-8">
-          <div className="bg-cosmic-card border border-cosmic-border rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Quick Generate</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {Object.entries(TEMPLATES).slice(0, 4).map(([key, template]) => (
-                <Link
-                  key={key}
-                  href={`/generate?template=${key}`}
-                  className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
+        {/* Tab bar */}
+        <div className="rise mb-5" style={{ ['--i' as any]: 5 }}>
+          <div className="flex gap-1 overflow-x-auto border-b border-line pb-px">
+            {TABS.map((t) => {
+              const Icon = t.icon;
+              const on = tab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
+                  className={`relative flex shrink-0 items-center gap-2 rounded-t-lg px-3.5 py-2.5 text-[13px] font-medium transition-colors ${
+                    on ? 'text-ink' : 'text-ink-3 hover:text-ink-2'
+                  }`}
                 >
-                  <span className="text-2xl">{template.icon}</span>
-                  <p className="text-sm text-gray-300 mt-1">{template.name}</p>
-                </Link>
-              ))}
-            </div>
+                  <Icon size={15} className={on ? 'text-accent-ink' : ''} />
+                  {t.label}
+                  {on && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent" />}
+                </button>
+              );
+            })}
           </div>
-
-          <div className="bg-cosmic-card border border-cosmic-border rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Visual Themes</h2>
-            <div className="space-y-3">
-              {Object.entries(VISUAL_THEMES).map(([key, theme]) => (
-                <div key={key} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-                  <div className="flex gap-1">
-                    <div className="w-6 h-6 rounded" style={{ backgroundColor: theme.colors.bg, border: '1px solid #333' }} />
-                    <div className="w-6 h-6 rounded" style={{ backgroundColor: theme.colors.accent }} />
-                    <div className="w-6 h-6 rounded" style={{ backgroundColor: theme.colors.secondary }} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-200">{theme.name}</p>
-                    <p className="text-xs text-gray-500">{theme.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <p className="mt-2 font-mono text-[10.5px] text-ink-3">{active.hint}</p>
         </div>
 
-        {/* Recent Activity */}
-        <div className="bg-cosmic-card border border-cosmic-border rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Recent Activity</h2>
-          {stats.totalGenerated === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-4xl mb-3">🎬</p>
-              <p className="text-gray-400">No reels generated yet</p>
-              <p className="text-gray-500 text-sm mt-1">
-                Click &quot;Generate Today&apos;s Batch&quot; to create your first content
-              </p>
-            </div>
-          ) : (
-            <p className="text-gray-400 text-sm">Recent reels will appear here</p>
-          )}
+        {/* Panels */}
+        <div className="rise" style={{ ['--i' as any]: 6 }}>
+          {tab === 'sky' && <SkyPanel />}
+          {tab === 'kendra' && <KendraPanel />}
+          {tab === 'rashi' && <RashiPanel />}
+          {tab === 'porondam' && <PorondamPanel />}
         </div>
       </div>
     </AppShell>
-  );
-}
-
-function StatCard({ label, value, icon, color }: { label: string; value: number; icon: string; color: string }) {
-  const colorClasses: Record<string, string> = {
-    purple: 'border-brand-purple/30 bg-brand-purple/5',
-    yellow: 'border-yellow-500/30 bg-yellow-500/5',
-    green: 'border-green-500/30 bg-green-500/5',
-    blue: 'border-blue-500/30 bg-blue-500/5',
-  };
-
-  return (
-    <div className={`p-5 rounded-xl border ${colorClasses[color]}`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-2xl">{icon}</span>
-        <span className="text-3xl font-bold text-white">{value}</span>
-      </div>
-      <p className="text-sm text-gray-400">{label}</p>
-    </div>
   );
 }

@@ -333,7 +333,12 @@ var dock = StyleSheet.create({
   },
   slot: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   nodeIcon: { height: 26, alignItems: 'center', justifyContent: 'center' },
-  label: { fontSize: 11, lineHeight: 14, fontWeight: '600', marginTop: 4, letterSpacing: 0.3, textAlign: 'center', maxWidth: '98%' },
+  // Sinhala labels stack combining marks above & below the base glyph — a tight
+  // lineHeight clips them (see sinhala-textinput-clipping). Keep ≥1.5× and never
+  // set includeFontPadding:false here. maxWidth:'100%' + adjustsFontSizeToFit
+  // let the long labels (මගපෙන්වීම / පොරොන්දම්) shrink to fit the slot instead
+  // of overflowing.
+  label: { fontSize: 11, lineHeight: 17, fontWeight: '600', marginTop: 3, letterSpacing: 0.2, textAlign: 'center', maxWidth: '100%', paddingHorizontal: 1 },
   labelOn: { fontWeight: '800', letterSpacing: 0.5 },
   // — the sun medallion —
   medWrap: { marginTop: -MEDALLION_LIFT, alignItems: 'center', justifyContent: 'center' },

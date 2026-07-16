@@ -1,8 +1,21 @@
 import { Composition } from 'remotion';
 import { ReelComposition } from './ReelComposition';
+import { calcVideoDuration } from './constants';
 import { CosmicDarkTheme } from './themes/CosmicDark';
 import { CleanModernTheme } from './themes/CleanModern';
 import { MysticGoldTheme } from './themes/MysticGold';
+
+/**
+ * Rendered length follows the actual voiceover: pass `audioDuration` (seconds)
+ * in inputProps and the video is sized to it — same math the studio preview
+ * uses, so exports never truncate the audio.
+ */
+const durationFromProps = ({ props }: { props: { audioDuration?: number } }) => ({
+  durationInFrames: Math.max(
+    150,
+    Math.round(calcVideoDuration(Number(props.audioDuration) || 20) * 30),
+  ),
+});
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -10,7 +23,8 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="ReelShort"
         component={ReelComposition}
-        durationInFrames={900} // 30s at 30fps (3s intro + ~20s content + 4s CTA + buffer)
+        calculateMetadata={durationFromProps}
+        durationInFrames={900} // fallback; overridden by calculateMetadata
         fps={30}
         width={1080}
         height={1920}
@@ -35,7 +49,8 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="ReelLong"
         component={ReelComposition}
-        durationInFrames={2100} // 70s at 30fps (3s intro + ~55s content + 4s CTA + buffer)
+        calculateMetadata={durationFromProps}
+        durationInFrames={2100} // fallback; overridden by calculateMetadata
         fps={30}
         width={1080}
         height={1920}
