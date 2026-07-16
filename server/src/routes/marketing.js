@@ -13,16 +13,28 @@ const {
   getRashi,
   detectYogas,
 } = require('../engine/astrology');
+const crypto = require('crypto');
 const { getDb } = require('../config/firebase');
 const { adminAuth } = require('../middleware/adminAuth');
 
-// Access gate: allow localhost (dev), otherwise require an allowlisted admin
-// (Firebase token) so the hosted marketing studio at marketing.grahachara.com
-// can reach real data — the internet can't.
+function safeEq(a, b) {
+  const ba = Buffer.from(String(a || ''));
+  const bb = Buffer.from(String(b || ''));
+  return ba.length > 0 && ba.length === bb.length && crypto.timingSafeEqual(ba, bb);
+}
+
+// Access gate, in order:
+//   1. Shared secret (X-Marketing-Key) — the hosted studio's server-side proxy
+//      sends this. Robust across Docker's NAT (unlike IP-based localhost checks).
+//   2. Localhost — local dev.
+//   3. Allowlisted admin (Firebase token).
 function marketingGate(req, res, next) {
+  const secret = process.env.MARKETING_API_KEY;
+  if (secret && safeEq(req.headers['x-marketing-key'], secret)) return next();
+
   const ip = req.ip || req.connection.remoteAddress || '';
-  const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip === 'localhost';
-  if (isLocal) return next();
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip === 'localhost') return next();
+
   return adminAuth(req, res, next);
 }
 router.use(marketingGate);

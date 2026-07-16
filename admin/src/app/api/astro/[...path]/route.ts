@@ -16,7 +16,11 @@ async function proxy(req: NextRequest, path: string[]) {
   try {
     const res = await fetch(target, {
       method: req.method,
-      headers: { 'x-forwarded-for': '127.0.0.1', 'content-type': req.headers.get('content-type') || 'application/json' },
+      headers: {
+        'content-type': req.headers.get('content-type') || 'application/json',
+        // Shared secret so the API's marketing gate trusts this server-side call.
+        'x-marketing-key': process.env.MARKETING_API_KEY || '',
+      },
       body: req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.text(),
     });
     const body = await res.text();

@@ -13,6 +13,7 @@ MEM="${MARKETING_MEM:-256m}"
 # Pass ONLY the secrets the studio needs (not the whole server .env).
 GEMINI_API_KEY="$(grep -E '^GEMINI_API_KEY=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)"
 PEXELS_API_KEY="$(grep -E '^PEXELS_API_KEY=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)"
+MARKETING_API_KEY="$(grep -E '^MARKETING_API_KEY=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)"
 
 echo "[marketing] pulling $IMAGE"
 docker pull "$IMAGE"
@@ -29,6 +30,7 @@ docker run -d \
   -e SERVER_INTERNAL_URL=http://127.0.0.1:3000 \
   -e GEMINI_API_KEY="$GEMINI_API_KEY" \
   -e PEXELS_API_KEY="$PEXELS_API_KEY" \
+  -e MARKETING_API_KEY="$MARKETING_API_KEY" \
   --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
   "$IMAGE"
 
