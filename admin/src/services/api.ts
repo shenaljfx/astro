@@ -1,4 +1,7 @@
-const API_BASE = 'http://localhost:3000';
+// Route all astrology-API calls through the studio's own server-side proxy
+// (src/app/api/astro), which reaches the API over VM-localhost. Never call the
+// API host directly from the browser.
+const API_BASE = '/api/astro';
 
 export interface NakathData {
   date: string;

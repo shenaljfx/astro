@@ -30,7 +30,7 @@ export default function DashboardPage() {
 
   async function checkServer() {
     try {
-      const res = await fetch('http://localhost:3000/api/health');
+      const res = await fetch('/api/astro/api/health');
       if (res.ok) setServerStatus('online');
       else setServerStatus('offline');
     } catch {

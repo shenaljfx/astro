@@ -33,7 +33,7 @@ export default function GeneratePage() {
       // 1. Fetch astrology data from server
       let astroData: any;
       try {
-        const res = await fetch('http://localhost:3000/api/marketing/today');
+        const res = await fetch('/api/astro/api/marketing/today');
         astroData = await res.json();
       } catch {
         astroData = { fallback: true, date: new Date().toISOString().split('T')[0] };
