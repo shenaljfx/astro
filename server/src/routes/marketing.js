@@ -92,6 +92,23 @@ router.get('/today', async (req, res) => {
 });
 
 /**
+ * GET /api/marketing/rashi-daily
+ * REAL per-sign daily content for daily posts — computed from the ephemeris
+ * (Chandra gochara + Saturn/Jupiter transits), NOT AI. Ready-to-post quotes
+ * in English + Sinhala for all 12 signs.
+ */
+const { getRashiDaily } = require('../engine/rashiDaily');
+router.get('/rashi-daily', (req, res) => {
+  try {
+    const date = req.query.date ? new Date(req.query.date) : new Date();
+    res.json(getRashiDaily(date));
+  } catch (err) {
+    console.error('Marketing rashi-daily error:', err.message);
+    res.status(500).json({ error: 'Failed to compute rashi daily' });
+  }
+});
+
+/**
  * GET /api/marketing/sign/:sign
  * Quick daily insight for a specific sign (for reel scripts)
  */
