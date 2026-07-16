@@ -13,18 +13,38 @@ const {
   getRashi,
   detectYogas,
 } = require('../engine/astrology');
+const { getDb } = require('../config/firebase');
+const { adminAuth } = require('../middleware/adminAuth');
 
-// Localhost-only guard
-function localhostOnly(req, res, next) {
-  const ip = req.ip || req.connection.remoteAddress;
+// Access gate: allow localhost (dev), otherwise require an allowlisted admin
+// (Firebase token) so the hosted marketing studio at marketing.grahachara.com
+// can reach real data — the internet can't.
+function marketingGate(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress || '';
   const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip === 'localhost';
-  if (!isLocal && process.env.NODE_ENV === 'production') {
-    return res.status(403).json({ error: 'Marketing routes are localhost-only' });
+  if (isLocal) return next();
+  return adminAuth(req, res, next);
+}
+router.use(marketingGate);
+
+// Kill switch (config/adminFlags.marketingKillSwitch) — pause the studio from
+// the admin dashboard. Cached 60s so it adds at most one tiny read/min.
+let mkCache = { on: false, at: 0 };
+async function marketingKilled() {
+  if (Date.now() - mkCache.at < 60 * 1000) return mkCache.on;
+  try {
+    const db = getDb();
+    const doc = db ? await db.collection('config').doc('adminFlags').get() : null;
+    mkCache = { on: !!(doc && doc.exists && doc.data().marketingKillSwitch === true), at: Date.now() };
+  } catch { mkCache.at = Date.now(); }
+  return mkCache.on;
+}
+router.use(async (req, res, next) => {
+  if (await marketingKilled()) {
+    return res.status(503).json({ error: 'Marketing studio is paused by the admin kill switch.', killSwitch: true });
   }
   next();
-}
-
-router.use(localhostOnly);
+});
 
 /**
  * GET /api/marketing/today

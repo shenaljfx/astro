@@ -402,6 +402,29 @@ router.get('/heatmap', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── Marketing studio status ─────────────────────────────────────
+router.get('/marketing', async (req, res) => {
+  const db = getDb();
+  let killSwitch = false;
+  let todayOk = null;
+  if (db) {
+    const d = await db.collection('config').doc('adminFlags').get().catch(() => null);
+    killSwitch = !!(d && d.exists && d.data().marketingKillSwitch === true);
+  }
+  try {
+    const { getPanchanga } = require('../engine/astrology');
+    todayOk = !!getPanchanga(new Date());
+  } catch { todayOk = false; }
+  res.json({
+    killSwitch,
+    hostedUrl: 'https://marketing.grahachara.com',
+    hosted: false, // flip once the studio is deployed
+    dataReady: todayOk,
+    dataEndpoints: ['/api/marketing/today', '/api/marketing/sign/:sign', '/api/marketing/compatibility/:a/:b'],
+    note: 'Marketing data API is now admin-token gated (was localhost-only) so the hosted studio can reach real calculations.',
+  });
+});
+
 // ─── Flags + AI kill switch ──────────────────────────────────────
 router.get('/flags', async (req, res) => {
   const db = needDb(res); if (!db) return;

@@ -37,6 +37,31 @@ export default function Controls() {
         </div>
       </Section>
 
+      <Section title="Marketing Studio">
+        {(() => {
+          const mkill = flags.marketingKillSwitch === true;
+          return (
+            <div className="row spread">
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{mkill ? <span className="red">⛔ Marketing studio PAUSED</span> : <span className="green">✅ Marketing studio active</span>}</div>
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  Kills the reel-generation data feed (<span className="mono">/api/marketing/*</span>). The studio at{' '}
+                  <span className="mono">marketing.grahachara.com</span> is admin-token gated on real calculations — hosting pending.
+                </div>
+              </div>
+              <button className={`btn ${mkill ? '' : 'danger'}`}
+                onClick={() => setConfirm({
+                  title: mkill ? 'Resume marketing studio?' : 'PAUSE marketing studio?',
+                  message: mkill ? 'The studio can pull data and generate reels again.' : 'Marketing data endpoints return 503 until resumed.',
+                  danger: !mkill,
+                  run: async () => { await api('/flags', { method: 'POST', body: { marketingKillSwitch: !mkill } }); reload(); },
+                })}
+              >{mkill ? 'Resume' : 'Pause'}</button>
+            </div>
+          );
+        })()}
+      </Section>
+
       <Section title="Push broadcast — all devices">
         <div className="row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
           <input className="input" placeholder="Title (e.g. අද විශේෂ නකතක්!)" value={pushTitle} onChange={(e) => setPushTitle(e.target.value)} maxLength={120} />
