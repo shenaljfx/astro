@@ -523,6 +523,25 @@ function buildFutureCards(dashaCtx, lang) {
     if (cards.length >= 4) break;
     pushCard(win.adLord, win.start, false);
   }
+
+  // Timelines that run past the standard 120-year Vimshottari cycle (or
+  // otherwise yield no windows) must never render an EMPTY future page —
+  // keep one locked card so the cliffhanger chapter still has substance.
+  if (cards.length === 0) {
+    cards.push({
+      id: 'timeline',
+      icon: 'telescope-outline',
+      color: '#A78BFA',
+      domain: lang === 'si' ? 'ඔබේ කාලරේඛාව' : 'Your Timeline',
+      title: lang === 'si' ? 'ගැඹුරු කියවීමක් ඉල්ලන කේන්දරයක්' : 'A chart that asks for a closer reading',
+      window: lang === 'si' ? 'සම්පූර්ණ කියවීමේදී' : 'In your full reading',
+      tease: lang === 'si'
+        ? 'ඔබේ කාලරේඛාව සාමාන්‍ය දශා චක්‍රයෙන් එහාට ගිහින්. මේ වගේ කේන්දර කියවෙන්නේ සම්පූර්ණ විශ්ලේෂණයකින්.'
+        : 'Your timeline runs beyond the standard dasha cycle. Charts like this are read through the full analysis.',
+      locked: true,
+      guidance: null,
+    });
+  }
   return cards;
 }
 

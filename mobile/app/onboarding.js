@@ -110,6 +110,7 @@ var COPY = {
       'Reading your Vimshottari timeline…',
     ],
     castingDone: 'The reading is complete.',
+    castError: 'We couldn’t reach the sky just now — check your connection and try again.',
     // identity
     identityKicker: 'YOUR READING',
     lagnaLabel: 'LAGNA — RISING SIGN',
@@ -216,6 +217,7 @@ var COPY = {
       'ඔබේ ජීවන කාලරේඛාව කියවමින්…',
     ],
     castingDone: 'කියවීම සම්පූර්ණයි.',
+    castError: 'මේ වෙලාවේ අහසට සම්බන්ධ වෙන්න බැරි වුණා — ජාලය බලලා ආයෙත් උත්සාහ කරන්න.',
     identityKicker: 'ඔබේ කියවීම',
     lagnaLabel: 'ලග්නය',
     nakshatraLabel: 'උපන් නැකත',
@@ -2468,7 +2470,7 @@ function TimeChapter({ lang, initial, onNext, onBack }) {
   );
 }
 
-function PlaceChapter({ lang, initial, onNext, onBack }) {
+function PlaceChapter({ lang, initial, errorNote, onNext, onBack }) {
   var T = COPY[lang] || COPY.en;
   var [city, setCity] = useState(initial || null);
   var [error, setError] = useState('');
@@ -2482,6 +2484,12 @@ function PlaceChapter({ lang, initial, onNext, onBack }) {
     <InputChapterFrame onBack={onBack} T={T}>
       <Animated.View entering={FadeInDown.duration(500)}>
         <ChapterHeading title={T.placeTitle} sub={T.placeSub} />
+        {errorNote ? (
+          <Animated.View entering={FadeInDown.duration(300)} style={[p.errorWrap, { marginBottom: 14 }]}>
+            <Ionicons name="cloud-offline-outline" size={15} color="#FCA5A5" />
+            <Text style={p.errorWrapText}>{errorNote}</Text>
+          </Animated.View>
+        ) : null}
         <View>
           <CitySearchPicker
             selectedCity={city}
@@ -2548,6 +2556,7 @@ function CastingChapter({ lang, birthData, displayName, onDone, onError }) {
 
   useEffect(function () {
     var cancelled = false;
+    var startMs = Date.now();
 
     // fetch the real reveal in parallel with the theatre
     getOnboardingReveal(birthData.dateTime, birthData.lat, birthData.lng, displayName, lang)
@@ -2576,6 +2585,12 @@ function CastingChapter({ lang, birthData, displayName, onDone, onError }) {
       if (idx < lines.length) {
         setLineIdx(idx);
         return;
+      }
+      // theatre finished but no data yet — don't sit here forever while the
+      // API layer grinds through its retry backoff (worst case ~90s): give
+      // up at 25s and surface the failure on the place screen
+      if (!revealRef.current && Date.now() - startMs > 25000) {
+        revealRef.current = { __failed: true };
       }
       // theatre finished — wait for data if it isn't in yet
       if (revealRef.current && !doneRef.current) {
@@ -3290,11 +3305,42 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
   var [birthData, setBirthData] = useState(null);
   var [reveal, setReveal] = useState(null);
   var [rewardData, setRewardData] = useState(null);
+  var [castError, setCastError] = useState(false);
+  // returning users start at signin — no resume check needed for them
+  var [resumeChecked, setResumeChecked] = useState(!!isReturningUser);
   // ref (not state) so `go` closures captured in child effects never go stale
   var transitioningRef = useRef(false);
   var curtain = useSharedValue(0);
   var sweep = useSharedValue(0);
   var T = COPY[lang] || COPY.en;
+
+  // RESUME — the reveal (with name + birth data) is persisted the moment
+  // casting succeeds. If the app was killed mid-funnel (sign-in / paywall
+  // step), fast-forward past the typing instead of restarting at "Select
+  // Language" with everything lost. 48h freshness cap keeps the sign-in
+  // screen's "unsaved readings disappear" promise honest.
+  useEffect(function () {
+    if (isReturningUser) return;
+    var cancelled = false;
+    AsyncStorage.getItem(REVEAL_STORAGE_KEY)
+      .then(function (raw) {
+        if (cancelled || !raw) return;
+        var saved = JSON.parse(raw);
+        var fresh = saved && saved.savedAt && (Date.now() - saved.savedAt) < 48 * 3600 * 1000;
+        if (fresh && saved.reveal && saved.birthData && saved.birthData.dateTime) {
+          var savedLang = saved.language === 'en' ? 'en' : 'si';
+          setLang(savedLang);
+          switchLanguage(savedLang);
+          setDisplayName(saved.displayName || '');
+          setBirthData(saved.birthData);
+          setReveal(saved.reveal);
+          setChapter('identity');
+        }
+      })
+      .catch(function () { /* corrupt cache — start fresh */ })
+      .finally(function () { if (!cancelled) setResumeChecked(true); });
+    return function () { cancelled = true; };
+  }, []);
 
   var go = function (next) {
     if (transitioningRef.current) return;
@@ -3324,7 +3370,8 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
       lng: city.lng,
       locationName: city.name + (city.country ? ', ' + city.country : ''),
       countryCode: city.countryCode || 'LK',
-      timezone: 'Asia/Colombo',
+      // no timezone here — the server resolves the real IANA zone from the
+      // coordinates (a hardcoded Asia/Colombo mis-timed international pushes)
       timeUnknown: !!tp.unknown,
     };
   };
@@ -3342,6 +3389,9 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
   };
 
   var renderChapter = function () {
+    // hold the first paint for the (fast) resume check — prevents a flash
+    // of the language chapter before a resumed session jumps to identity
+    if (!resumeChecked) return null;
     switch (chapter) {
       case 'language':
         return (
@@ -3392,7 +3442,8 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
         );
       case 'place':
         return (
-          <PlaceChapter lang={lang} initial={birthCity} onNext={function (city) {
+          <PlaceChapter lang={lang} initial={birthCity} errorNote={castError ? T.castError : null} onNext={function (city) {
+            setCastError(false);
             setBirthCity(city);
             var bd = buildBirthData(city, timeParts || { hour: '', minute: '', ampm: 'PM', unknown: true });
             setBirthData(bd);
@@ -3404,7 +3455,7 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
           <CastingChapter
             lang={lang} birthData={birthData} displayName={displayName}
             onDone={function (r) { setReveal(r); go('identity'); }}
-            onError={function () { go('place'); }}
+            onError={function () { setCastError(true); go('place'); }}
           />
         );
       case 'identity':
@@ -3443,9 +3494,10 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
   };
 
   // thin narrative progress — only during the input→paywall stretch
+  // (story=10% … paywall=100%)
   var chapterIdx = CHAPTERS.indexOf(chapter);
   var showProgress = !isReturningUser && chapterIdx >= 2 && chapterIdx <= 11;
-  var progress = showProgress ? (chapterIdx - 1) / 11 : 0;
+  var progress = showProgress ? (chapterIdx - 1) / 10 : 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#000000' }}>

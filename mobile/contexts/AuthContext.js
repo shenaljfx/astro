@@ -48,6 +48,9 @@ var AuthContext = createContext(null);
 var STORAGE_TOKEN = 'grahachara_auth_token';
 var STORAGE_USER = 'grahachara_user_profile';
 var STORAGE_ONBOARDING = 'grahachara_onboarding_done';
+// Onboarding profile payload that failed to reach the server (offline at the
+// last step). Flushed on next app launch; local state stays authoritative.
+var STORAGE_PENDING_ONBOARDING = 'grahachara_pending_onboarding';
 var STORAGE_PUSH_REGISTERED = 'grahachara_push_registered_for';
 // Last calendar day (YYYY-MM-DD) the app-open paywall auto-fired. Caps the
 // forced wall at once/day so it doesn't nag on every cold start; contextual
@@ -192,6 +195,26 @@ async function registerPushTokenWithServer(authToken, uid, language) {
     }
   } catch (err) {
     if (__DEV__) console.warn('[Auth] Push register failed (non-fatal):', err && err.message);
+  }
+}
+
+// Retry a queued onboarding-complete payload (saved when the server call
+// failed at the end of the funnel). Safe to call on every launch: no-op when
+// nothing is queued; kept for the next launch when the server is still down.
+async function flushPendingOnboarding() {
+  try {
+    var raw = await AsyncStorage.getItem(STORAGE_PENDING_ONBOARDING);
+    if (!raw) return;
+    var pending = JSON.parse(raw);
+    await apiCompleteOnboarding({
+      displayName: pending.displayName,
+      birthData: pending.birthData,
+      language: pending.language || null,
+    });
+    await AsyncStorage.removeItem(STORAGE_PENDING_ONBOARDING);
+    if (__DEV__) console.log('[Auth] Flushed queued onboarding profile to server');
+  } catch (err) {
+    if (__DEV__) console.warn('[Auth] Queued onboarding flush failed (will retry next launch):', err && err.message);
   }
 }
 
@@ -341,6 +364,11 @@ export function AuthProvider({ children }) {
         setAuthTokenGetter(function() {
           return Promise.resolve(savedToken);
         });
+
+        // Sync any onboarding profile that failed to save last session
+        // (fire-and-forget; runs before profile refresh so the server copy
+        // is current when refreshProfile merges)
+        flushPendingOnboarding();
 
         // Per RevenueCat docs: configure with the UID directly if known at launch.
         // This avoids the anonymous→identified switch that fires the listener
@@ -498,7 +526,7 @@ export function AuthProvider({ children }) {
         // Give screens 2s to persist any in-flight data, then clear auth
         await new Promise(function(r) { setTimeout(r, 2000); });
         await removeStoredAuthToken();
-        await AsyncStorage.multiRemove([STORAGE_USER, STORAGE_ONBOARDING, '@grahachara_auth_expired', REPORTS_CACHE_KEY]);
+        await AsyncStorage.multiRemove([STORAGE_USER, STORAGE_ONBOARDING, STORAGE_PENDING_ONBOARDING, '@grahachara_auth_expired', REPORTS_CACHE_KEY]);
         setToken(null);
         setUser(null);
         setSubscription(null);
@@ -782,40 +810,49 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Complete onboarding with name and birth data
+  // Complete onboarding with name and birth data. Never strands the user:
+  // if the server call fails (offline at the very last step), the payload is
+  // queued and flushed on the next launch while local state proceeds as
+  // complete — previously the failure was swallowed, the funnel exited, and
+  // the profile was silently lost (full funnel replay on next start).
   var completeOnboarding = useCallback(async function(displayName, birthData, language) {
+    var queued = false;
     try {
       await apiCompleteOnboarding({ displayName: displayName, birthData: birthData, language: language || null });
-
-      setUser(function(prev) {
-        var updated = {
-          ...prev,
-          displayName: displayName || prev?.displayName,
-          birthData: birthData || prev?.birthData,
-          onboardingComplete: true,
-        };
-        if (language) {
-          updated.preferences = { ...(prev?.preferences || {}), language: language };
-        }
-        AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
-        return updated;
-      });
-
-      await AsyncStorage.setItem(STORAGE_ONBOARDING, 'true');
-
-      // The onboarding funnel has its own paywall chapter, and the user just
-      // answered it (paid OR soft-declined). Consume today's forced app-open
-      // wall slot so declining "Continue with limited access" doesn't slam a
-      // second full-screen paywall the instant the funnel exits.
-      var wallDay = new Date().toISOString().slice(0, 10);
-      setAutoWallDate(wallDay);
-      AsyncStorage.setItem(STORAGE_AUTOWALL_DATE, wallDay).catch(function() {});
-
-      return { success: true };
+      AsyncStorage.removeItem(STORAGE_PENDING_ONBOARDING).catch(function() {});
     } catch (err) {
-      if (__DEV__) console.error('Complete onboarding error:', err);
-      throw err;
+      if (__DEV__) console.warn('[Auth] Onboarding save failed — queueing for next launch:', err && err.message);
+      queued = true;
+      AsyncStorage.setItem(STORAGE_PENDING_ONBOARDING, JSON.stringify({
+        displayName: displayName, birthData: birthData, language: language || null, savedAt: Date.now(),
+      })).catch(function() {});
     }
+
+    setUser(function(prev) {
+      var updated = {
+        ...prev,
+        displayName: displayName || prev?.displayName,
+        birthData: birthData || prev?.birthData,
+        onboardingComplete: true,
+      };
+      if (language) {
+        updated.preferences = { ...(prev?.preferences || {}), language: language };
+      }
+      AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
+      return updated;
+    });
+
+    await AsyncStorage.setItem(STORAGE_ONBOARDING, 'true');
+
+    // The onboarding funnel has its own paywall chapter, and the user just
+    // answered it (paid OR soft-declined). Consume today's forced app-open
+    // wall slot so declining "Continue with limited access" doesn't slam a
+    // second full-screen paywall the instant the funnel exits.
+    var wallDay = new Date().toISOString().slice(0, 10);
+    setAutoWallDate(wallDay);
+    AsyncStorage.setItem(STORAGE_AUTOWALL_DATE, wallDay).catch(function() {});
+
+    return { success: true, queued: queued };
   }, []);
 
   // Activate subscription — show custom Paywall
@@ -1092,7 +1129,7 @@ export function AuthProvider({ children }) {
 
       // Clear all stored auth data
       await removeStoredAuthToken();
-      await AsyncStorage.multiRemove([STORAGE_USER, STORAGE_ONBOARDING, STORAGE_PUSH_REGISTERED, 'pushToken', REPORTS_CACHE_KEY]);
+      await AsyncStorage.multiRemove([STORAGE_USER, STORAGE_ONBOARDING, STORAGE_PENDING_ONBOARDING, STORAGE_PUSH_REGISTERED, 'pushToken', REPORTS_CACHE_KEY]);
       
       // Clear the API auth token getter
       setAuthTokenGetter(null);
@@ -1106,7 +1143,7 @@ export function AuthProvider({ children }) {
       if (__DEV__) console.error('Sign out error:', err);
       try {
         await removeStoredAuthToken();
-        await AsyncStorage.multiRemove([STORAGE_USER, STORAGE_ONBOARDING, STORAGE_PUSH_REGISTERED, 'pushToken', REPORTS_CACHE_KEY]);
+        await AsyncStorage.multiRemove([STORAGE_USER, STORAGE_ONBOARDING, STORAGE_PENDING_ONBOARDING, STORAGE_PUSH_REGISTERED, 'pushToken', REPORTS_CACHE_KEY]);
       } catch (e) { /* ignore */ }
       // Force clear state even if AsyncStorage fails
       setAuthTokenGetter(null);

@@ -1747,6 +1747,12 @@ router.get('/onboarding-reveal', optionalAuth, aiLimiter, async (req, res) => {
     if (!birthDate || isNaN(birthDate.getTime())) {
       return res.status(400).json({ error: 'Invalid date format.' });
     }
+    // A birth date can't be in the future — a future date yields a degenerate
+    // reveal (no current dasha, no free window). 24h grace absorbs clock skew
+    // and same-day newborns entered in local time.
+    if (birthDate.getTime() > Date.now() + 24 * 60 * 60 * 1000) {
+      return res.status(400).json({ error: 'Birth date cannot be in the future' });
+    }
 
     const lagna = getLagna(birthDate, birthLat, birthLng);
     const moonSidereal = toSidereal(getMoonLongitude(birthDate), birthDate);

@@ -18,6 +18,7 @@ const { getDb, getAuth, COLLECTIONS } = require('../config/firebase');
 const { getPricing } = require('../config/pricing');
 const { INPUT_LIMITS, sanitizeString } = require('../middleware/security');
 const { revokeUserTokens } = require('../services/tokenRevocation');
+const { resolveTimezoneInfo } = require('../services/timezone');
 
 // Google OAuth web client ID — MUST be set via env var; no fallback in production (boot guard enforces this)
 const GOOGLE_WEB_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -434,12 +435,25 @@ router.post('/onboarding-complete', async (req, res) => {
         updates['preferences.language'] = language;
       }
       if (birthData) {
+        const bdLat = birthData.lat || 6.9271;
+        const bdLng = birthData.lng || 79.8612;
+        // No timezone from the client → resolve the real IANA zone from the
+        // birth coordinates. Notification scheduling reads this field, so a
+        // blanket Asia/Colombo default mis-times pushes for international users.
+        let tz = sanitizeString(birthData.timezone, INPUT_LIMITS.timezone);
+        if (!tz) {
+          try {
+            const when = birthData.dateTime ? new Date(birthData.dateTime) : new Date();
+            const tzInfo = await resolveTimezoneInfo(bdLat, bdLng, isNaN(when.getTime()) ? new Date() : when);
+            tz = (tzInfo && tzInfo.zoneName) || null;
+          } catch (tzErr) { /* fall through to SLT default */ }
+        }
         updates.birthData = {
           dateTime: birthData.dateTime,
-          lat: birthData.lat || 6.9271,
-          lng: birthData.lng || 79.8612,
+          lat: bdLat,
+          lng: bdLng,
           locationName: sanitizeString(birthData.locationName, INPUT_LIMITS.locationName) || '',
-          timezone: sanitizeString(birthData.timezone, INPUT_LIMITS.timezone) || 'Asia/Colombo',
+          timezone: tz || 'Asia/Colombo',
         };
       }
       await db.collection(COLLECTIONS.USERS).doc(decoded.uid).update(updates);

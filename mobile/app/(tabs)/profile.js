@@ -480,7 +480,9 @@ function BirthDataForm({ currentData, onSave }) {
     setSaving(true);
     try {
       var dt = year + '-' + pad(month) + '-' + pad(day) + 'T' + pad(hour || 0) + ':' + pad(minute || 0) + ':00';
-      await onSave({ dateTime: dt, lat, lng, locationName: location || 'Colombo', timezone: 'Asia/Colombo' });
+      // timezone intentionally omitted — the server resolves the real IANA
+      // zone from the coordinates
+      await onSave({ dateTime: dt, lat, lng, locationName: location || 'Colombo' });
       Alert.alert(t('saved'), t('savedMsg'));
     } catch (e) {
       var message = e && e.code === 'BIRTH_TIME_EDIT_LIMIT'

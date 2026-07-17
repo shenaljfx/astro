@@ -11,6 +11,7 @@
 const { getDb, COLLECTIONS } = require('../config/firebase');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
+const { resolveTimezoneInfo } = require('../services/timezone');
 const {
   buildFeedbackSummary,
   buildPromptFeedbackRecord,
@@ -281,6 +282,17 @@ async function updateBirthData(uid, birthData, extraUpdates = {}) {
   const db = getDb();
   if (!db) return null;
 
+  // No timezone supplied → resolve the real IANA zone from the coordinates
+  // (notification scheduling reads it; Asia/Colombo is only the last resort).
+  let tz = birthData.timezone || null;
+  if (!tz && birthData.lat !== undefined && birthData.lng !== undefined) {
+    try {
+      const when = birthData.dateTime ? new Date(birthData.dateTime) : new Date();
+      const tzInfo = await resolveTimezoneInfo(birthData.lat, birthData.lng, isNaN(when.getTime()) ? new Date() : when);
+      tz = (tzInfo && tzInfo.zoneName) || null;
+    } catch (tzErr) { /* fall through to SLT default */ }
+  }
+
   await db.collection(COLLECTIONS.USERS).doc(uid).update({
     ...extraUpdates,
     birthData: {
@@ -288,7 +300,7 @@ async function updateBirthData(uid, birthData, extraUpdates = {}) {
       lat: birthData.lat,
       lng: birthData.lng,
       locationName: birthData.locationName || '',
-      timezone: birthData.timezone || 'Asia/Colombo',
+      timezone: tz || 'Asia/Colombo',
     },
     onboardingComplete: true,
     updatedAt: new Date().toISOString(),
