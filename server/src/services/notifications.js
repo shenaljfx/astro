@@ -242,6 +242,10 @@ async function loadActiveRecipients() {
         ...token,
         preferences: prefs,
         birthData: userData.birthData || null,
+        // Carried for the renewal-save flow (services/renewalSave.js) — same
+        // doc read, so this costs nothing extra. May be up to cache-TTL stale;
+        // senders that act on it must re-verify with a fresh read.
+        subscription: userData.subscription || null,
         language: prefs.language || 'si',
         timezone: userData.birthData?.timezone || prefs.timezone || 'Asia/Colombo',
       });
@@ -312,8 +316,12 @@ async function hasNotificationForDate(uid, type, dateKey) {
   }
 }
 
-/** Record that a notification of this type was sent to the user on dateKey. */
-async function markNotificationForDate(uid, type, dateKey) {
+/**
+ * Record that a notification of this type was sent to the user on dateKey.
+ * `ttlMs` overrides the default marker lifetime — flows keyed to a billing
+ * cycle (renewal save) need markers that outlive the 3-day daily default.
+ */
+async function markNotificationForDate(uid, type, dateKey, ttlMs) {
   const db = getDb();
   if (!db) return;
   try {
@@ -322,7 +330,7 @@ async function markNotificationForDate(uid, type, dateKey) {
       type,
       date: dateKey,
       sentAt: new Date().toISOString(),
-      ttlExpireAt: toTtlTimestamp(Date.now() + DEDUPE_TTL_MS),
+      ttlExpireAt: toTtlTimestamp(Date.now() + (Number(ttlMs) > 0 ? Number(ttlMs) : DEDUPE_TTL_MS)),
     }, { merge: true });
   } catch (err) {
     console.error('[Notifications] Dedupe mark error:', err.message);

@@ -21,6 +21,7 @@ const {
   markNotificationForDate,
 } = require('./notifications');
 const { enqueueWeeklyLagnaJob } = require('./jobQueue');
+const { sendRenewalSaveNotifications } = require('./renewalSave');
 const firestoreCircuit = require('./firestoreCircuit');
 const { startLeadership, isLeader } = require('./schedulerLock');
 
@@ -723,6 +724,9 @@ function startScheduler() {
   // ── Daily Curiosity — 7:00 PM in each user's timezone (evening re-engagement) ──
   setInterval(() => runScheduled('Daily curiosity', sendDailyCuriosityNotification), 60 * 1000);
 
+  // ── Renewal save — 10:00 AM in each user's timezone for cancelled-but-active subscribers ──
+  setInterval(() => runScheduled('Renewal save', sendRenewalSaveNotifications), 60 * 1000);
+
   // ── Maraka Apala — 8:00 AM in each user's timezone ──
   setInterval(() => runScheduled('Maraka', checkMarakaApalaForAllUsers), 60 * 1000);
 
@@ -769,6 +773,7 @@ function startScheduler() {
   console.log('[Scheduler]    🌅 Daily affirmation at 8:15 AM (user timezone)');
   console.log('[Scheduler]    🌅 Daily guidance at 8:30 AM (user timezone)');
   console.log('[Scheduler]    🌆 Daily curiosity at 7:00 PM (user timezone)');
+  console.log('[Scheduler]    💾 Renewal save at 10:00 AM (user timezone, cancelled subs)');
   console.log('[Scheduler]    🔮 Weekly Lagna Palapala — Sunday 6:00 AM SLT');
 }
 
