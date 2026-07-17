@@ -802,6 +802,15 @@ export function AuthProvider({ children }) {
       });
 
       await AsyncStorage.setItem(STORAGE_ONBOARDING, 'true');
+
+      // The onboarding funnel has its own paywall chapter, and the user just
+      // answered it (paid OR soft-declined). Consume today's forced app-open
+      // wall slot so declining "Continue with limited access" doesn't slam a
+      // second full-screen paywall the instant the funnel exits.
+      var wallDay = new Date().toISOString().slice(0, 10);
+      setAutoWallDate(wallDay);
+      AsyncStorage.setItem(STORAGE_AUTOWALL_DATE, wallDay).catch(function() {});
+
       return { success: true };
     } catch (err) {
       if (__DEV__) console.error('Complete onboarding error:', err);
@@ -820,12 +829,11 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
-  // Called when purchase succeeds in PaywallScreen
-  var handlePaywallPurchased = useCallback(async function(result) {
-    console.log('[Auth] handlePaywallPurchased — result:', JSON.stringify(result).slice(0, 200));
-    setPaywallVisible(false);
-    var resolver = paywallResolverRef.current;
-    paywallResolverRef.current = null;
+  // Apply a successful store purchase/restore to auth state (subscription +
+  // user flag + storage). Shared by the global PaywallScreen and flows that
+  // purchase directly (onboarding paywall chapter) so entitlement is never
+  // left waiting on the RevenueCat listener side-effect.
+  var applyPurchasedSubscription = useCallback(async function(result) {
     try {
       var activeSub = await getActiveSubscription();
       var sub = buildActiveSubscription(activeSub, result || {});
@@ -835,11 +843,30 @@ export function AuthProvider({ children }) {
         AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
         return updated;
       });
-      if (resolver && resolver.resolve) resolver.resolve({ success: true, subscription: sub });
+      return { success: true, subscription: sub };
     } catch (err) {
-      if (resolver && resolver.resolve) resolver.resolve({ success: true });
+      // Purchase itself succeeded — mark subscribed even if the detail
+      // fetch failed; the customer-info listener / server webhook will
+      // fill in the specifics.
+      setUser(function(prev) {
+        if (!prev) return prev;
+        var updated = { ...prev, isSubscribed: true };
+        AsyncStorage.setItem(STORAGE_USER, JSON.stringify(updated));
+        return updated;
+      });
+      return { success: true };
     }
   }, []);
+
+  // Called when purchase succeeds in PaywallScreen
+  var handlePaywallPurchased = useCallback(async function(result) {
+    console.log('[Auth] handlePaywallPurchased — result:', JSON.stringify(result).slice(0, 200));
+    setPaywallVisible(false);
+    var resolver = paywallResolverRef.current;
+    paywallResolverRef.current = null;
+    var applied = await applyPurchasedSubscription(result);
+    if (resolver && resolver.resolve) resolver.resolve(applied || { success: true });
+  }, [applyPurchasedSubscription]);
 
   // Called when paywall is closed without purchase
   var handlePaywallClose = useCallback(function() {
@@ -1107,6 +1134,7 @@ export function AuthProvider({ children }) {
     signInWithGoogle: signInWithGoogle,
     completeOnboarding: completeOnboarding,
     activateSubscription: activateSubscription,
+    applyPurchasedSubscription: applyPurchasedSubscription,
     cancelSubscription: cancelSubscription,
     checkSubscription: checkSubscription,
     renewSubscription: renewSub,

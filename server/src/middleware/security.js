@@ -39,7 +39,11 @@ const XSS_PATTERNS = [
   /url\s*\(\s*['"]?\s*javascript/gi,
 ];
 
-function sanitizeString(str) {
+// NOTE: this must NOT be named sanitizeString — a second sanitizeString is
+// declared further down (the length-limiting field sanitizer), and duplicate
+// function declarations in one module scope silently shadow this one, which
+// disabled all XSS stripping in sanitizeInputs.
+function stripXss(str) {
   if (typeof str !== 'string') return str;
   let cleaned = str;
   for (const pattern of XSS_PATTERNS) {
@@ -52,14 +56,14 @@ function sanitizeString(str) {
 
 function sanitizeObject(obj) {
   if (obj === null || obj === undefined) return obj;
-  if (typeof obj === 'string') return sanitizeString(obj);
+  if (typeof obj === 'string') return stripXss(obj);
   if (typeof obj !== 'object') return obj;
   if (Array.isArray(obj)) return obj.map(sanitizeObject);
 
   const sanitized = {};
   for (const [key, value] of Object.entries(obj)) {
     // Sanitize keys too (prevent prototype pollution)
-    const safeKey = sanitizeString(key);
+    const safeKey = stripXss(key);
     if (safeKey === '__proto__' || safeKey === 'constructor' || safeKey === 'prototype') continue;
     sanitized[safeKey] = sanitizeObject(value);
   }
@@ -274,7 +278,7 @@ const INPUT_LIMITS = {
 function sanitizeString(value, maxLen) {
   if (value === null || value === undefined) return null;
   if (typeof value !== 'string') return null;
-  return value.slice(0, maxLen).trim() || null;
+  return stripXss(value).slice(0, maxLen).trim() || null;
 }
 
 /**

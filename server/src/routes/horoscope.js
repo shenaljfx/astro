@@ -1755,7 +1755,9 @@ router.get('/onboarding-reveal', optionalAuth, aiLimiter, async (req, res) => {
     const dashaPeriods = calculateVimshottariDetailed(moonSidereal, birthDate);
 
     const reveal = composeReveal({
-      name: name ? sanitizeString(String(name)).slice(0, 40) : null,
+      // sanitizeString returns null for empty/whitespace-only input — never
+      // chain .slice on it (a "  " name used to 500 this endpoint)
+      name: name ? sanitizeString(String(name), 40) : null,
       lagna,
       nakshatra,
       moonRashi,

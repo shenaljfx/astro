@@ -37,7 +37,8 @@ import SpringPressable from '../components/effects/SpringPressable';
 import CosmicLoader from '../components/effects/CosmicLoader';
 import CitySearchPicker from '../components/CitySearchPicker';
 import SriLankanChart from '../components/SriLankanChart';
-import { getOnboardingReveal } from '../services/api';
+import { getOnboardingReveal, logPaywallEvent } from '../services/api';
+import { getOfferings, purchasePackage, purchaseOneTimeProduct, PRODUCT_IDS } from '../services/revenuecat';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -2361,11 +2362,14 @@ function DateChapter({ lang, initial, onNext, onBack }) {
   };
 
   var submit = function () {
+    var maxYear = new Date().getFullYear();
     var y = parseInt(year);
-    if (!year || isNaN(y) || y < 1900 || y > 2026) { setError(T.yearError); return; }
+    if (!year || isNaN(y) || y < 1900 || y > maxYear) { setError(T.yearError.replace('2026', String(maxYear))); return; }
     if (month === null) { setError(T.monthError); return; }
     var d = parseInt(day);
     if (!day || isNaN(d) || d < 1 || d > daysInMonth(month, year)) { setError(T.dayError); return; }
+    // a birth date can't be in the future
+    if (new Date(y, month, d).getTime() > Date.now()) { setError(T.dayError); return; }
     onNext({ year: year, month: month, day: day });
   };
 
@@ -2415,7 +2419,9 @@ function TimeChapter({ lang, initial, onNext, onBack }) {
   var submit = function () {
     var h = parseInt(hour);
     var m = parseInt(minute);
-    if (hour !== '' && (isNaN(h) || h < 1 || h > 12)) { setError(T.timeError); return; }
+    // an empty hour must not silently become 12:00 — it's either a real
+    // time or the explicit "hour is veiled" path below
+    if (hour === '' || isNaN(h) || h < 1 || h > 12) { setError(T.timeError); return; }
     if (minute !== '' && (isNaN(m) || m < 0 || m > 59)) { setError(T.timeError); return; }
     onNext({ hour: hour, minute: minute, ampm: ampm, unknown: false });
   };
@@ -2947,8 +2953,34 @@ function SignInChapter({ lang, isReturningUser, onDone, onBack }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  CHAPTER: PAYWALL — personalized; soft decline appears after a beat
+//  CHAPTER: PAYWALL — personalized; purchases DIRECTLY (no second wall);
+//  soft decline appears after a beat
 // ═══════════════════════════════════════════════════════════════════════
+
+// Find the monthly subscription package across all configured offerings.
+// Mirrors PaywallScreen's matcher so both purchase surfaces stay in sync.
+function findMonthlyPackage(offerings) {
+  if (!offerings) return null;
+  var pools = [];
+  if (offerings.current && offerings.current.availablePackages) {
+    pools.push(offerings.current.availablePackages);
+  }
+  if (offerings.all) {
+    Object.keys(offerings.all).forEach(function (k) {
+      var off = offerings.all[k];
+      if (off && off.availablePackages) pools.push(off.availablePackages);
+    });
+  }
+  var matcher = function (p) {
+    return p.packageType === 'MONTHLY' || p.identifier === '$rc_monthly' ||
+      (p.product && p.product.identifier && p.product.identifier.indexOf('monthly') !== -1);
+  };
+  for (var i = 0; i < pools.length; i++) {
+    var hit = pools[i].find(matcher);
+    if (hit) return hit;
+  }
+  return null;
+}
 
 function PaywallChapter({ lang, displayName, birthData, reveal, onPaid, onDecline }) {
   var T = COPY[lang] || COPY.en;
@@ -2958,16 +2990,54 @@ function PaywallChapter({ lang, displayName, birthData, reveal, onPaid, onDeclin
   var [agreed, setAgreed] = useState(false);
   var [agreementError, setAgreementError] = useState('');
   var [showDecline, setShowDecline] = useState(false);
-  var { activateSubscription, restorePurchases } = useAuth();
-  var { priceAmount, isInternational } = usePricingForBirth(birthData);
+  var [offerings, setOfferings] = useState(null);
+  var [storePriceString, setStorePriceString] = useState(null);
+  var { restorePurchases, isSubscribed, applyPurchasedSubscription } = useAuth();
+  var pricingCtx = usePricingForBirth(birthData);
+  var priceAmount = pricingCtx.priceAmount;
+  var isInternational = pricingCtx.isInternational;
+  var currency = pricingCtx.currency;
+  var syncFromStoreCurrency = pricingCtx.syncFromStoreCurrency;
   var resp = useResponsive();
   var isSmall = resp.isSmall;
 
   useEffect(function () {
     // soft-wall escape appears only after the offer has had its moment
-    var t = setTimeout(function () { setShowDecline(true); }, 4000);
+    var t = setTimeout(function () { setShowDecline(true); }, 2500);
     return function () { clearTimeout(t); };
   }, []);
+
+  // This chapter IS the paywall now (it used to open the global PaywallScreen
+  // on top of itself — a second wall). Log the funnel 'shown' event here.
+  useEffect(function () {
+    logPaywallEvent('shown', { source: 'onboarding', plan: 'monthly', currency: currency });
+  }, []);
+
+  // Pre-load offerings so the tap purchases instantly; sync the store's real
+  // currency, and for international users show the exact store price they
+  // will be charged (LKR users always keep our own LKR pricing).
+  useEffect(function () {
+    var cancelled = false;
+    getOfferings()
+      .then(function (off) {
+        if (cancelled || !off) return;
+        setOfferings(off);
+        var pkg = findMonthlyPackage(off);
+        var prod = pkg && pkg.product;
+        if (prod && prod.priceString) setStorePriceString(prod.priceString);
+        var rcCurrency = prod && (prod.currencyCode || prod.priceCurrencyCode);
+        if (rcCurrency && syncFromStoreCurrency) syncFromStoreCurrency(rcCurrency);
+      })
+      .catch(function () { /* purchase falls back to a fresh fetch */ });
+    return function () { cancelled = true; };
+  }, []);
+
+  // Never pitch a subscription to an account that already has one — covers
+  // re-installs whose entitlement arrives via the RevenueCat listener after
+  // sign-in, and restores that update auth state out-of-band.
+  useEffect(function () {
+    if (isSubscribed) onPaid();
+  }, [isSubscribed]);
 
   var dashaLabel = reveal && reveal.dasha ? reveal.dasha.lordLabel : '';
   var headline = displayName
@@ -2989,15 +3059,32 @@ function PaywallChapter({ lang, displayName, birthData, reveal, onPaid, onDeclin
     return false;
   };
 
+  // Purchase RIGHT HERE — the store's own payment sheet is the only thing
+  // that opens on top of this chapter. (Previously this button opened the
+  // global PaywallScreen: a second, different-looking wall the user had to
+  // buy through again.)
   var handleSub = async function () {
     if (!ensureAgreement()) return;
     setLoading(true); setPayError('');
     try {
-      await activateSubscription();
-      onPaid();
+      var off = offerings;
+      if (!off) {
+        try { off = await getOfferings(); } catch (offErr) { off = null; }
+      }
+      var pkg = findMonthlyPackage(off);
+      var result = pkg
+        ? await purchasePackage(pkg)
+        : await purchaseOneTimeProduct(PRODUCT_IDS.monthly);
+      if (result && (result.isProActive || result.purchased)) {
+        logPaywallEvent('purchased', { source: 'onboarding', plan: 'monthly', currency: currency });
+        await applyPurchasedSubscription(result);
+        onPaid();
+      } else {
+        setPayError(T.payFail);
+      }
     } catch (e) {
       var msg = (e && e.message) || '';
-      if (msg.indexOf('cancelled') === -1 && msg.indexOf('dismiss') === -1) setPayError(T.payFail);
+      if (msg.indexOf('cancelled') === -1 && msg.indexOf('cancel') === -1 && msg.indexOf('dismiss') === -1) setPayError(T.payFail);
     } finally { setLoading(false); }
   };
 
@@ -3006,11 +3093,19 @@ function PaywallChapter({ lang, displayName, birthData, reveal, onPaid, onDeclin
     setRestoring(true); setPayError('');
     try {
       var result = await restorePurchases();
-      if (result && result.isProActive) onPaid();
-      else setPayError(T.restoreNone);
+      if (result && result.isProActive) {
+        logPaywallEvent('purchased', { source: 'onboarding', plan: 'restore', currency: currency });
+        await applyPurchasedSubscription(result);
+        onPaid();
+      } else setPayError(T.restoreNone);
     } catch (e) {
       setPayError(T.restoreFail);
     } finally { setRestoring(false); }
+  };
+
+  var handleDecline = function () {
+    logPaywallEvent('dismissed', { source: 'onboarding', plan: 'monthly', currency: currency });
+    onDecline();
   };
 
   var checkboxBorder = agreed ? '#FF8C00' : agreementError ? '#FCA5A5' : 'rgba(255,255,255,0.3)';
@@ -3056,8 +3151,15 @@ function PaywallChapter({ lang, displayName, birthData, reveal, onPaid, onDeclin
       {/* Price */}
       <Animated.View entering={FadeInUp.delay(150).duration(400)} style={{ alignSelf: 'center', marginBottom: 6, borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.25)' }}>
         <LinearGradient colors={['rgba(255,184,0,0.22)', 'rgba(255,140,0,0.10)']} style={{ flexDirection: 'row', alignItems: 'baseline', paddingVertical: 12, paddingHorizontal: 22, gap: 4 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.5)' }}>{isInternational ? '$' : 'LKR'}</Text>
-          <Text style={{ fontSize: isSmall ? 34 : 40, fontWeight: '900', color: '#FFB800', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12) }}>{priceAmount('subscription')}</Text>
+          {isInternational && storePriceString ? (
+            // international: the store's exact charge price (currency included)
+            <Text style={{ fontSize: isSmall ? 30 : 36, fontWeight: '900', color: '#FFB800', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12) }}>{storePriceString}</Text>
+          ) : (
+            <>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.5)' }}>{isInternational ? '$' : 'LKR'}</Text>
+              <Text style={{ fontSize: isSmall ? 34 : 40, fontWeight: '900', color: '#FFB800', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12) }}>{priceAmount('subscription')}</Text>
+            </>
+          )}
           <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginLeft: 2 }}>{T.perMonth}</Text>
         </LinearGradient>
       </Animated.View>
@@ -3124,8 +3226,8 @@ function PaywallChapter({ lang, displayName, birthData, reveal, onPaid, onDeclin
         </TouchableOpacity>
         {showDecline ? (
           <Animated.View entering={FadeIn.duration(800)}>
-            <TouchableOpacity onPress={onDecline} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 14, right: 14 }}>
-              <Text style={{ color: 'rgba(248,231,184,0.35)', fontSize: 12, fontWeight: '600' }}>{T.softDecline}</Text>
+            <TouchableOpacity onPress={handleDecline} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 14, right: 14 }}>
+              <Text style={{ color: 'rgba(248,231,184,0.6)', fontSize: 13, fontWeight: '600' }}>{T.softDecline}</Text>
             </TouchableOpacity>
           </Animated.View>
         ) : null}
@@ -3176,7 +3278,7 @@ var CHAPTERS = ['language', 'name', 'story', 'date', 'time', 'place', 'casting',
 export default function OnboardingScreen({ onComplete, isReturningUser }) {
   var { language: ctxLang, switchLanguage } = useLanguage();
   var { colors } = useTheme();
-  var { completeOnboarding } = useAuth();
+  var { completeOnboarding, isSubscribed } = useAuth();
   var insets = useSafeAreaInsets();
 
   var [chapter, setChapter] = useState(isReturningUser ? 'signin' : 'language');
@@ -3184,6 +3286,7 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
   var [displayName, setDisplayName] = useState('');
   var [dateParts, setDateParts] = useState(null);
   var [timeParts, setTimeParts] = useState(null);
+  var [birthCity, setBirthCity] = useState(null);
   var [birthData, setBirthData] = useState(null);
   var [reveal, setReveal] = useState(null);
   var [rewardData, setRewardData] = useState(null);
@@ -3226,7 +3329,10 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
     };
   };
 
+  var finishedRef = useRef(false);
   var finishOnboarding = async function () {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
     try {
       await completeOnboarding(displayName, birthData, lang);
     } catch (e) {
@@ -3286,7 +3392,8 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
         );
       case 'place':
         return (
-          <PlaceChapter lang={lang} initial={null} onNext={function (city) {
+          <PlaceChapter lang={lang} initial={birthCity} onNext={function (city) {
+            setBirthCity(city);
             var bd = buildBirthData(city, timeParts || { hour: '', minute: '', ampm: 'PM', unknown: true });
             setBirthData(bd);
             go('casting');
@@ -3312,6 +3419,9 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
             lang={lang} isReturningUser={isReturningUser}
             onDone={function () {
               if (isReturningUser) { if (onComplete) onComplete(); return; }
+              // Already-subscribed accounts (re-installs, restores) must never
+              // be walked into the paywall chapter — close out directly.
+              if (isSubscribed) { finishOnboarding(); return; }
               go('paywall');
             }}
             onBack={isReturningUser ? null : function () { go('future'); }}

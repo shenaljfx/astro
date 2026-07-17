@@ -98,8 +98,11 @@ export default function CitySearchPicker({ selectedCity, onSelect, lang, accentC
     if (compact) setExpanded(false);
   };
 
-  var displayList = results;
-  var showPopularLabel = false;
+  // Idle (no query yet) → offer the popular-cities shortlist so the user can
+  // pick without typing; once they've typed 2+ chars, show live results.
+  var idle = query.trim().length < 2;
+  var displayList = idle ? (compact ? [] : POPULAR_CITIES) : results;
+  var showPopularLabel = !compact && idle;
 
   // ── COMPACT MODE: collapsed = just a pill showing selected city ──
   if (compact && !expanded) {

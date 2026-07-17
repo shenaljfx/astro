@@ -388,7 +388,13 @@ function AppGate() {
       // Logged in and onboarding complete — show main app
       wasLoggedIn.current = true;
       setOnboardingPassed(true);
-      setShowOnboarding(false);
+      setShowOnboarding(function (prev) {
+        // If the funnel is on screen right now (onboardingComplete flips the
+        // moment the paywall chapter resolves), let it play its completion
+        // chapter and call onComplete itself — unmounting it mid-transition
+        // skipped the celebration screen and raced the paywall overlay.
+        return prev === true ? prev : false;
+      });
     }
   }, [isLoggedIn, authReady, onboardingDone]);
 
