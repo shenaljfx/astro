@@ -37,13 +37,11 @@ import SpringPressable from '../components/effects/SpringPressable';
 import CosmicLoader from '../components/effects/CosmicLoader';
 import CitySearchPicker from '../components/CitySearchPicker';
 import SriLankanChart from '../components/SriLankanChart';
-import { getOnboardingReveal, logPaywallEvent } from '../services/api';
-import { getOfferings, purchasePackage, purchaseOneTimeProduct, PRODUCT_IDS } from '../services/revenuecat';
+import { getOnboardingReveal } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import useResponsive from '../hooks/useResponsive';
-import usePricingForBirth from '../hooks/usePricingForBirth';
 import { boxShadow, textShadow } from '../utils/shadow';
 import { ZODIAC_IMAGE_MAP } from '../components/ZodiacIcons';
 import { APP_LOGO_IMAGE } from '../assets/logo-inline';
@@ -2231,22 +2229,29 @@ function StoryChapter({ lang, displayName, onDone }) {
 
   var withName = function (s) { return (s || '').replace('{name}', displayName || ''); };
 
+  var isSi = lang === 'si';
+
   return (
     <TouchableOpacity activeOpacity={1} onPress={advance} style={{ flex: 1 }}>
-      {/* the sage — illustrated, candle-lit, alive */}
-      <Animated.View key={'scene' + beat} entering={FadeIn.duration(900)} exiting={FadeOut.duration(250)} style={{ height: SH * 0.42, marginTop: SH * 0.015 }}>
+      {/* the sage — illustrated, candle-lit, alive. The scene YIELDS height
+          to long copy (Sinhala beats run 2-3x English) instead of pushing
+          the text off-screen. */}
+      <Animated.View key={'scene' + beat} entering={FadeIn.duration(900)} exiting={FadeOut.duration(250)} style={{ height: SH * 0.42, minHeight: SH * 0.16, flexShrink: 1, marginTop: SH * 0.015, overflow: 'hidden' }}>
         <Scene displayName={displayName} />
       </Animated.View>
 
-      <Animated.View key={'text' + beat} entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)} style={{ paddingHorizontal: 30, marginTop: 14 }}>
-        <WordFlow text={withName(beats[beat].big)} style={p.storyBig} baseDelay={250} step={70} />
-        <View style={{ height: 14 }} />
-        <WordFlow text={withName(beats[beat].small)} style={p.storySmallWord} baseDelay={900} step={40} />
+      <Animated.View key={'text' + beat} entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)} style={{ paddingHorizontal: 28, marginTop: 12 }}>
+        <WordFlow text={withName(beats[beat].big)} style={[p.storyBig, isSi && p.storyBigSi]} baseDelay={250} step={70} />
+        <View style={{ height: 12 }} />
+        <WordFlow text={withName(beats[beat].small)} style={[p.storySmallWord, isSi && p.storySmallWordSi]} baseDelay={900} step={40} />
       </Animated.View>
 
-      <View style={{ position: 'absolute', bottom: 40, left: 0, right: 0, alignItems: 'center' }}>
+      {/* footer in NORMAL flow (was position:absolute) — copy can never run
+          beneath the dots or the tap pill again */}
+      <View style={{ flex: 1 }} />
+      <View style={{ alignItems: 'center', paddingTop: 14, paddingBottom: 30 }}>
         {/* beat dots */}
-        <View style={{ flexDirection: 'row', gap: 7, marginBottom: 18 }}>
+        <View style={{ flexDirection: 'row', gap: 7, marginBottom: 16 }}>
           {beats.map(function (_, i) {
             var on = i === beat;
             var dotColor = on ? '#E8C97A' : 'rgba(232,201,122,0.3)';
@@ -2968,290 +2973,6 @@ function SignInChapter({ lang, isReturningUser, onDone, onBack }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  CHAPTER: PAYWALL — personalized; purchases DIRECTLY (no second wall);
-//  soft decline appears after a beat
-// ═══════════════════════════════════════════════════════════════════════
-
-// Find the monthly subscription package across all configured offerings.
-// Mirrors PaywallScreen's matcher so both purchase surfaces stay in sync.
-function findMonthlyPackage(offerings) {
-  if (!offerings) return null;
-  var pools = [];
-  if (offerings.current && offerings.current.availablePackages) {
-    pools.push(offerings.current.availablePackages);
-  }
-  if (offerings.all) {
-    Object.keys(offerings.all).forEach(function (k) {
-      var off = offerings.all[k];
-      if (off && off.availablePackages) pools.push(off.availablePackages);
-    });
-  }
-  var matcher = function (p) {
-    return p.packageType === 'MONTHLY' || p.identifier === '$rc_monthly' ||
-      (p.product && p.product.identifier && p.product.identifier.indexOf('monthly') !== -1);
-  };
-  for (var i = 0; i < pools.length; i++) {
-    var hit = pools[i].find(matcher);
-    if (hit) return hit;
-  }
-  return null;
-}
-
-function PaywallChapter({ lang, displayName, birthData, reveal, onPaid, onDecline }) {
-  var T = COPY[lang] || COPY.en;
-  var [loading, setLoading] = useState(false);
-  var [restoring, setRestoring] = useState(false);
-  var [payError, setPayError] = useState('');
-  var [agreed, setAgreed] = useState(false);
-  var [agreementError, setAgreementError] = useState('');
-  var [showDecline, setShowDecline] = useState(false);
-  var [offerings, setOfferings] = useState(null);
-  var [storePriceString, setStorePriceString] = useState(null);
-  var { restorePurchases, isSubscribed, applyPurchasedSubscription } = useAuth();
-  var pricingCtx = usePricingForBirth(birthData);
-  var priceAmount = pricingCtx.priceAmount;
-  var isInternational = pricingCtx.isInternational;
-  var currency = pricingCtx.currency;
-  var syncFromStoreCurrency = pricingCtx.syncFromStoreCurrency;
-  var resp = useResponsive();
-  var isSmall = resp.isSmall;
-
-  useEffect(function () {
-    // soft-wall escape appears only after the offer has had its moment
-    var t = setTimeout(function () { setShowDecline(true); }, 2500);
-    return function () { clearTimeout(t); };
-  }, []);
-
-  // This chapter IS the paywall now (it used to open the global PaywallScreen
-  // on top of itself — a second wall). Log the funnel 'shown' event here.
-  useEffect(function () {
-    logPaywallEvent('shown', { source: 'onboarding', plan: 'monthly', currency: currency });
-  }, []);
-
-  // Pre-load offerings so the tap purchases instantly; sync the store's real
-  // currency, and for international users show the exact store price they
-  // will be charged (LKR users always keep our own LKR pricing).
-  useEffect(function () {
-    var cancelled = false;
-    getOfferings()
-      .then(function (off) {
-        if (cancelled || !off) return;
-        setOfferings(off);
-        var pkg = findMonthlyPackage(off);
-        var prod = pkg && pkg.product;
-        if (prod && prod.priceString) setStorePriceString(prod.priceString);
-        var rcCurrency = prod && (prod.currencyCode || prod.priceCurrencyCode);
-        if (rcCurrency && syncFromStoreCurrency) syncFromStoreCurrency(rcCurrency);
-      })
-      .catch(function () { /* purchase falls back to a fresh fetch */ });
-    return function () { cancelled = true; };
-  }, []);
-
-  // Never pitch a subscription to an account that already has one — covers
-  // re-installs whose entitlement arrives via the RevenueCat listener after
-  // sign-in, and restores that update auth state out-of-band.
-  useEffect(function () {
-    if (isSubscribed) onPaid();
-  }, [isSubscribed]);
-
-  var dashaLabel = reveal && reveal.dasha ? reveal.dasha.lordLabel : '';
-  var headline = displayName
-    ? T.paywallHeadline.replace('{name}', displayName).replace('{dasha}', dashaLabel)
-    : T.paywallHeadlineNoName.replace('{dasha}', dashaLabel);
-
-  var features = [
-    { icon: 'calendar-outline', text: T.feature1, color: '#FFB800' },
-    { icon: 'planet-outline', text: T.feature2, color: '#FF8C00' },
-    { icon: 'notifications-outline', text: T.feature3, color: '#06D6A0' },
-    { icon: 'chatbubbles-outline', text: T.feature4, color: '#A78BFA' },
-    { icon: 'heart-outline', text: T.feature5, color: '#FF6B9D' },
-  ];
-
-  var ensureAgreement = function () {
-    if (agreed) return true;
-    setPayError('');
-    setAgreementError(T.agreeError);
-    return false;
-  };
-
-  // Purchase RIGHT HERE — the store's own payment sheet is the only thing
-  // that opens on top of this chapter. (Previously this button opened the
-  // global PaywallScreen: a second, different-looking wall the user had to
-  // buy through again.)
-  var handleSub = async function () {
-    if (!ensureAgreement()) return;
-    setLoading(true); setPayError('');
-    try {
-      var off = offerings;
-      if (!off) {
-        try { off = await getOfferings(); } catch (offErr) { off = null; }
-      }
-      var pkg = findMonthlyPackage(off);
-      var result = pkg
-        ? await purchasePackage(pkg)
-        : await purchaseOneTimeProduct(PRODUCT_IDS.monthly);
-      if (result && (result.isProActive || result.purchased)) {
-        logPaywallEvent('purchased', { source: 'onboarding', plan: 'monthly', currency: currency });
-        await applyPurchasedSubscription(result);
-        onPaid();
-      } else {
-        setPayError(T.payFail);
-      }
-    } catch (e) {
-      var msg = (e && e.message) || '';
-      if (msg.indexOf('cancelled') === -1 && msg.indexOf('cancel') === -1 && msg.indexOf('dismiss') === -1) setPayError(T.payFail);
-    } finally { setLoading(false); }
-  };
-
-  var handleRestore = async function () {
-    if (!ensureAgreement()) return;
-    setRestoring(true); setPayError('');
-    try {
-      var result = await restorePurchases();
-      if (result && result.isProActive) {
-        logPaywallEvent('purchased', { source: 'onboarding', plan: 'restore', currency: currency });
-        await applyPurchasedSubscription(result);
-        onPaid();
-      } else setPayError(T.restoreNone);
-    } catch (e) {
-      setPayError(T.restoreFail);
-    } finally { setRestoring(false); }
-  };
-
-  var handleDecline = function () {
-    logPaywallEvent('dismissed', { source: 'onboarding', plan: 'monthly', currency: currency });
-    onDecline();
-  };
-
-  var checkboxBorder = agreed ? '#FF8C00' : agreementError ? '#FCA5A5' : 'rgba(255,255,255,0.3)';
-  var checkboxBg = agreed ? '#FF8C00' : 'rgba(0,0,0,0.2)';
-  // only the still-locked windows belong in the loss-framing list
-  var futureCards = ((reveal && reveal.futureCards) || []).filter(function (c) { return c.locked !== false; });
-
-  return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 22, paddingTop: 6, paddingBottom: 22 }} showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
-      {/* Header */}
-      <Animated.View entering={FadeInDown.duration(450)} style={{ alignItems: 'center', marginBottom: 12 }}>
-        <View style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden', marginBottom: 10, ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.7, 14) }}>
-          <LinearGradient colors={['#FFD700', '#FF8C00']} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="diamond" size={22} color="#FFF1D0" />
-          </LinearGradient>
-        </View>
-        <Text numberOfLines={3} style={{ fontSize: isSmall ? 19 : 22, fontWeight: '800', color: '#FFF8E0', textAlign: 'center', lineHeight: isSmall ? 25 : 29, paddingHorizontal: 2 }}>
-          {headline}
-        </Text>
-        <Text style={{ fontSize: 12, color: 'rgba(255,220,150,0.6)', textAlign: 'center', marginTop: 6, lineHeight: 17, paddingHorizontal: 8 }}>{T.paywallSub}</Text>
-      </Animated.View>
-
-      {/* THEIR real locked windows — the personalized loss-framing */}
-      {futureCards.length ? (
-        <Animated.View entering={FadeInDown.delay(110).duration(400)} style={{ marginBottom: 13, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,184,0,0.16)', backgroundColor: 'rgba(255,184,0,0.04)' }}>
-          <View style={{ paddingVertical: 11, paddingHorizontal: 14 }}>
-            <Text style={{ fontSize: 9, fontWeight: '900', color: '#FFB800', letterSpacing: 1.5, marginBottom: 8 }}>{T.yourWindows}</Text>
-            {futureCards.slice(0, 4).map(function (card) {
-              return (
-                <View key={card.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 }}>
-                  <Ionicons name={card.icon || 'sparkles-outline'} size={14} color={card.color} />
-                  <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.72)', flex: 1 }}>
-                    {card.title} — <Text style={{ color: card.color }}>{card.window}</Text>
-                  </Text>
-                  <Ionicons name="lock-closed" size={10} color="rgba(255,184,0,0.45)" />
-                </View>
-              );
-            })}
-          </View>
-        </Animated.View>
-      ) : null}
-
-      {/* Price */}
-      <Animated.View entering={FadeInUp.delay(150).duration(400)} style={{ alignSelf: 'center', marginBottom: 6, borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.25)' }}>
-        <LinearGradient colors={['rgba(255,184,0,0.22)', 'rgba(255,140,0,0.10)']} style={{ flexDirection: 'row', alignItems: 'baseline', paddingVertical: 12, paddingHorizontal: 22, gap: 4 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          {isInternational && storePriceString ? (
-            // international: the store's exact charge price (currency included)
-            <Text style={{ fontSize: isSmall ? 30 : 36, fontWeight: '900', color: '#FFB800', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12) }}>{storePriceString}</Text>
-          ) : (
-            <>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.5)' }}>{isInternational ? '$' : 'LKR'}</Text>
-              <Text style={{ fontSize: isSmall ? 34 : 40, fontWeight: '900', color: '#FFB800', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 12) }}>{priceAmount('subscription')}</Text>
-            </>
-          )}
-          <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginLeft: 2 }}>{T.perMonth}</Text>
-        </LinearGradient>
-      </Animated.View>
-      <Text style={{ textAlign: 'center', fontSize: 11, color: 'rgba(52,211,153,0.85)', fontWeight: '600', marginBottom: 14 }}>{T.cancelAnytime}</Text>
-
-      {/* Features */}
-      <Animated.View entering={FadeInUp.delay(210).duration(400)} style={{ marginBottom: 14 }}>
-        <Card style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
-          {features.map(function (f, i) {
-            return (
-              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 10, borderBottomWidth: i === features.length - 1 ? 0 : 1, borderBottomColor: 'rgba(255,255,255,0.04)' }}>
-                <Ionicons name="checkmark-circle" size={16} color="#34D399" />
-                <View style={{ width: 26, height: 26, borderRadius: 7, backgroundColor: f.color + '18', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name={f.icon} size={14} color={f.color} />
-                </View>
-                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12.5, flex: 1, lineHeight: 17 }} numberOfLines={2}>{f.text}</Text>
-              </View>
-            );
-          })}
-        </Card>
-      </Animated.View>
-
-      {/* Terms */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap', paddingHorizontal: 8 }}>
-        <TouchableOpacity onPress={function () { setAgreed(!agreed); if (!agreed) setAgreementError(''); }} activeOpacity={0.7} hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}>
-          <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: checkboxBorder, backgroundColor: checkboxBg, alignItems: 'center', justifyContent: 'center' }}>
-            {agreed ? <Ionicons name="checkmark" size={16} color="#FFF" /> : null}
-          </View>
-        </TouchableOpacity>
-        <Text style={{ color: agreementError ? '#FECACA' : 'rgba(255,255,255,0.75)', fontSize: 12, lineHeight: 18, flexShrink: 1 }} onPress={function () { setAgreed(!agreed); if (!agreed) setAgreementError(''); }}>
-          {T.agreePrefix}
-          <Text style={{ color: '#FF8C00', textDecorationLine: 'underline', fontWeight: '600' }} onPress={function () { Linking.openURL('https://grahachara.com/legal/terms.html'); }}>{T.agreeTerms}</Text>
-          {T.agreeSuffix}
-        </Text>
-      </View>
-      {agreementError ? (
-        <Animated.View entering={FadeInDown.duration(220)} style={p.errorWrap}>
-          <Ionicons name="alert-circle-outline" size={14} color="#FCA5A5" />
-          <Text style={p.errorWrapText}>{agreementError}</Text>
-        </Animated.View>
-      ) : null}
-      {payError ? (
-        <Animated.View entering={FadeInDown.duration(300)} style={p.errorWrap}>
-          <Ionicons name="alert-circle" size={14} color="#FF6B6B" />
-          <Text style={p.errorWrapText}>{payError}</Text>
-        </Animated.View>
-      ) : null}
-
-      {/* Risk reversal */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 12, paddingHorizontal: 12 }}>
-        <Ionicons name="shield-checkmark" size={13} color="#34D399" />
-        <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(52,211,153,0.85)', textAlign: 'center', lineHeight: 16 }}>{T.riskReversal}</Text>
-      </View>
-
-      {/* CTA */}
-      <PrimaryButton label={T.payCta} onPress={handleSub} loading={loading} icon="sparkles" />
-
-      {/* Footer: restore + soft decline */}
-      <View style={{ alignItems: 'center', marginTop: 14, gap: 10 }}>
-        <TouchableOpacity onPress={handleRestore} disabled={restoring} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 14, right: 14 }}>
-          <Text style={{ color: 'rgba(255,184,0,0.6)', fontSize: 11, textDecorationLine: 'underline' }}>
-            {restoring ? T.restoring : T.restore}
-          </Text>
-        </TouchableOpacity>
-        {showDecline ? (
-          <Animated.View entering={FadeIn.duration(800)}>
-            <TouchableOpacity onPress={handleDecline} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 14, right: 14 }}>
-              <Text style={{ color: 'rgba(248,231,184,0.6)', fontSize: 13, fontWeight: '600' }}>{T.softDecline}</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        ) : null}
-      </View>
-    </ScrollView>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════
 //  CHAPTER: COMPLETE
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -3288,12 +3009,12 @@ function CompleteChapter({ lang, onDone }) {
 //  MAIN — chapter state machine
 // ═══════════════════════════════════════════════════════════════════════
 
-var CHAPTERS = ['language', 'name', 'story', 'date', 'time', 'place', 'casting', 'identity', 'chart', 'future', 'signin', 'paywall', 'complete'];
+var CHAPTERS = ['language', 'name', 'story', 'date', 'time', 'place', 'casting', 'identity', 'chart', 'future', 'signin', 'complete'];
 
 export default function OnboardingScreen({ onComplete, isReturningUser }) {
   var { language: ctxLang, switchLanguage } = useLanguage();
   var { colors } = useTheme();
-  var { completeOnboarding, isSubscribed } = useAuth();
+  var { completeOnboarding } = useAuth();
   var insets = useSafeAreaInsets();
 
   var [chapter, setChapter] = useState(isReturningUser ? 'signin' : 'language');
@@ -3470,20 +3191,14 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
             lang={lang} isReturningUser={isReturningUser}
             onDone={function () {
               if (isReturningUser) { if (onComplete) onComplete(); return; }
-              // Already-subscribed accounts (re-installs, restores) must never
-              // be walked into the paywall chapter — close out directly.
-              if (isSubscribed) { finishOnboarding(); return; }
-              go('paywall');
+              // No paywall inside onboarding — sign-in completes the funnel
+              // and the user lands in the app. Monetization happens through
+              // the global once-a-day wall and contextual paywalls, which
+              // also sidesteps the "already subscribed" trap that blocked
+              // subscribed re-installers here.
+              finishOnboarding();
             }}
             onBack={isReturningUser ? null : function () { go('future'); }}
-          />
-        );
-      case 'paywall':
-        return (
-          <PaywallChapter
-            lang={lang} displayName={displayName} birthData={birthData} reveal={reveal}
-            onPaid={finishOnboarding}
-            onDecline={finishOnboarding}
           />
         );
       case 'complete':
@@ -3493,11 +3208,11 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
     }
   };
 
-  // thin narrative progress — only during the input→paywall stretch
-  // (story=10% … paywall=100%)
+  // thin narrative progress — only during the input→signin stretch
+  // (story=~11% … signin=100%)
   var chapterIdx = CHAPTERS.indexOf(chapter);
-  var showProgress = !isReturningUser && chapterIdx >= 2 && chapterIdx <= 11;
-  var progress = showProgress ? (chapterIdx - 1) / 10 : 0;
+  var showProgress = !isReturningUser && chapterIdx >= 2 && chapterIdx <= 10;
+  var progress = showProgress ? (chapterIdx - 1) / 9 : 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#000000' }}>
@@ -3585,6 +3300,12 @@ var p = StyleSheet.create({
   storyBig: { fontSize: 28, fontWeight: '900', color: '#EFD9A8', lineHeight: 38, letterSpacing: 0.4, textAlign: 'center', ...textShadow('rgba(232,201,122,0.5)', { width: 0, height: 0 }, 16) },
   storySmall: { fontSize: 15.5, fontWeight: '500', color: 'rgba(248,231,184,0.62)', lineHeight: 25, textAlign: 'center', marginTop: 18, paddingHorizontal: 4 },
   storySmallWord: { fontSize: 15.5, fontWeight: '500', fontStyle: 'italic', color: 'rgba(233,213,166,0.78)', lineHeight: 25 },
+  // Sinhala story copy runs far longer than English AND stacks combining
+  // marks — smaller size but a GENEROUS line-height ratio (never tighten
+  // line-height on Sinhala: it clips the mark tops), and zero letter-spacing
+  // (never letter-space Sinhala).
+  storyBigSi: { fontSize: 22, lineHeight: 34, letterSpacing: 0 },
+  storySmallWordSi: { fontSize: 14, lineHeight: 23 },
   storyBigInk: { fontSize: 28, fontWeight: '900', color: '#2E2312', lineHeight: 38, letterSpacing: 0.3, textAlign: 'center' },
   storySmallInk: { fontSize: 15.5, fontWeight: '600', fontStyle: 'italic', color: 'rgba(46,35,18,0.8)', lineHeight: 25 },
 

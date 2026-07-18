@@ -961,6 +961,25 @@ export default function PaywallScreen({ visible, onClose, onPurchased, source })
     } catch (e) {
       var msg = e && e.message ? e.message : String(e);
       console.error('[Paywall] purchase error:', msg);
+      // Google Play's "You're already subscribed" sheet (subscribed user on a
+      // fresh install, before RevenueCat re-links) surfaces here as an
+      // already-owned error. Recover by restoring the purchase instead of
+      // dead-ending on a payment error — this was trapping paying customers.
+      var alreadyOwned = String(e && e.code) === '6' ||
+        (e && e.userInfo && e.userInfo.readableErrorCode === 'PRODUCT_ALREADY_PURCHASED') ||
+        /already (subscribed|active|own|purchased)/i.test(msg);
+      if (alreadyOwned) {
+        try {
+          var restored = await restorePurchases();
+          if (restored && restored.isProActive) {
+            notifyPurchased(restored, 'restore');
+            setPurchasing(false);
+            return;
+          }
+        } catch (restoreErr) {
+          if (__DEV__) console.warn('[Paywall] auto-restore after already-owned failed:', restoreErr && restoreErr.message);
+        }
+      }
       if (msg.indexOf('cancelled') === -1 && msg.indexOf('cancel') === -1) {
         setError(shared.purchaseFail);
       }
