@@ -58,7 +58,12 @@ var PRODUCT_IDS = {
   baby_kendara: 'baby_kendara',
 };
 
-export { PRODUCT_IDS, ENTITLEMENT_ID };
+// Exposed so AuthContext can scrub mock-era subscription data persisted by
+// earlier QA sessions when the flag is off (stored "Mock Pro" subs otherwise
+// keep resurfacing as trusted state at boot).
+var IS_MOCK_PAYMENTS = MOCK_PAYMENTS;
+
+export { PRODUCT_IDS, ENTITLEMENT_ID, IS_MOCK_PAYMENTS };
 
 var _initialized = false;
 var _configuredUserId = null; // Track which user ID was used for configure
@@ -170,18 +175,31 @@ export async function checkEntitlement() {
 }
 
 /**
- * Robust entitlement check with retry + sync fallback.
- * Retries up to 3 times with exponential backoff, then falls back to
- * syncPurchases() which forces a server-side sync with the store.
- * 
+ * Robust entitlement check with retry + optional sync fallback.
+ * Retries up to 3 times with exponential backoff, then (only when
+ * options.allowSync is true) falls back to syncPurchases() which forces a
+ * server-side sync with the store.
+ *
  * Per RevenueCat docs: restorePurchases() should NOT be called programmatically
  * as it may trigger OS-level sign-in prompts. Use syncPurchases() instead.
- * 
+ *
+ * SECURITY (allowSync): syncPurchases() posts the DEVICE's store receipt to
+ * RevenueCat under the CURRENT app user id. With "transfer" restore behavior
+ * that MOVES the entitlement to whichever account is signed in. Calling it
+ * unconditionally meant any fresh/free account signed in on a subscriber's
+ * device silently became Pro — and stripped Pro from the paying account.
+ * Callers must opt in only when they have independent evidence THIS account
+ * should be subscribed (server isSubscribed flag / stored active sub), where
+ * the sync repairs an out-of-date SDK instead of hijacking another account's
+ * receipt.
+ *
+ * @param {Object} [options] — { allowSync?: boolean } (default false)
  * @returns {boolean}
  */
-export async function checkEntitlementWithRetry() {
+export async function checkEntitlementWithRetry(options) {
   if (MOCK_PAYMENTS) return true;
   if (!Purchases) return false;
+  var allowSync = !!(options && options.allowSync);
 
   var delays = [500, 1500, 3000]; // exponential backoff
   for (var i = 0; i < delays.length; i++) {
@@ -196,6 +214,9 @@ export async function checkEntitlementWithRetry() {
       await new Promise(function(r) { setTimeout(r, delays[i]); });
     }
   }
+
+  // No sync permitted → the account is simply not entitled.
+  if (!allowSync) return false;
 
   // Final fallback: syncPurchases() forces a sync without OS-level prompts
   // (unlike restorePurchases which may show sign-in dialogs)

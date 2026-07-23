@@ -2,7 +2,7 @@
   "expo": {
     "name": "Grahachara",
     "slug": "grahachara",
-    "version": "1.9.10",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "grahachara",
@@ -26,7 +26,7 @@
         "backgroundColor": "#0D0B2E"
       },
       "package": "com.grahachara.app",
-      "versionCode": 99,
+      "versionCode": 100,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "pan",
       "permissions": [
@@ -51,7 +51,12 @@
       "backgroundColor": "#030014"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "sitemap": false
+        }
+      ],
       "expo-location",
       [
         "expo-notifications",
@@ -96,7 +101,8 @@
     },
     "extra": {
       "router": {
-        "origin": false
+        "origin": false,
+        "sitemap": false
       },
       "eas": {
         "projectId": "1a77f887-0ff3-4a43-b4cc-5f48d6d60f74"

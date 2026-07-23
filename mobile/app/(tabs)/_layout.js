@@ -22,21 +22,26 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Colors } from '../../constants/theme';
 import DesktopSidebar from '../../components/DesktopLayout';
 import useIsDesktop from '../../hooks/useIsDesktop';
-import { TAB_ICON_MAP } from '../../components/TabIcons';
 import useNetworkStatus from '../../hooks/useNetworkStatus';
 import useReducedMotion from '../../hooks/useReducedMotion';
 import { APP_LOGO_IMAGE } from '../../assets/logo-inline';
 var { width: SW } = Dimensions.get('window');
 var LOGO = APP_LOGO_IMAGE;
 
+// v3 gilded nav art — Diffui paper-cut cutouts (transparent webp):
+// filigree band woven through the dock glass; the carved sun anchors Today.
+var NAV_BAND = require('../../assets/nav/nav_band.webp');
+var NAV_SUN = require('../../assets/nav/nav_sun.webp');
+
 // 5 visible tabs in orbital nav bar — each page carries its own celestial
-// accent; the gliding halo morphs between them as it travels.
+// accent AND its own carved medallion (Diffui, v3 gilded set): the art IS the
+// icon. The gliding accent glow still travels beneath the living tab.
 var TABS = [
-  { name: 'kendara',  titleKey: 'tabKendara',  label: 'Chart',    color: '#A78BFA' }, // violet — the mystic chart
-  { name: 'report',   titleKey: 'tabReport',   label: 'Starbase', color: '#7DD3FC' }, // sky blue — the observatory
-  { name: 'index',    titleKey: 'tabHome',     label: 'Today',    color: '#FFD983' }, // gold — the sun
-  { name: 'porondam', titleKey: 'tabPorondam', label: 'Match',    color: '#F5A9C7' }, // rose — the union
-  { name: 'chat',     titleKey: 'tabChat',     label: 'Guide',    color: '#86EFAC' }, // jade — the living oracle
+  { name: 'kendara',  titleKey: 'tabKendara',  label: 'Chart',    color: '#A78BFA', art: require('../../assets/nav/nav_kendara.webp') },  // violet — the zodiac wheel
+  { name: 'report',   titleKey: 'tabReport',   label: 'Starbase', color: '#7DD3FC', art: require('../../assets/nav/nav_report.webp') },   // sky — the observatory telescope
+  { name: 'index',    titleKey: 'tabHome',     label: 'Today',    color: '#FFD983', art: require('../../assets/nav/nav_sun.webp') },      // gold — the carved sun
+  { name: 'porondam', titleKey: 'tabPorondam', label: 'Match',    color: '#F5A9C7', art: require('../../assets/nav/nav_porondam.webp') }, // rose — the lotus union
+  { name: 'chat',     titleKey: 'tabChat',     label: 'Guide',    color: '#86EFAC', art: require('../../assets/nav/nav_chat.webp') },     // jade — the guiding light
 ];
 var TAB_ACCENTS = TABS.map(function (tb) { return tb.color; });
 
@@ -44,7 +49,7 @@ var TAB_ACCENTS = TABS.map(function (tb) { return tb.color; });
 var HIDDEN_ROUTES = ['profile', 'nakath', 'baby'];
 
 var CENTER_IDX = 2;
-var DOCK_H = 64;
+var DOCK_H = 68; // fits 38px medallions + Sinhala-safe labels
 var DOCK_MARGIN_X = 14;
 var DOCK_RADIUS = 30;
 var MEDALLION = 56;
@@ -83,11 +88,7 @@ function DockNode({ tabConfig, focused, onPress, label }) {
     };
   });
 
-  var IconComponent = TAB_ICON_MAP[tabConfig.name];
   var accent = tabConfig.color || Colors.luxuryPearl;
-  // Inactive tabs stay secondary but must remain clearly legible — the old
-  // 0.40–0.44 opacity read as "greyed out / disabled". Lifted to ~0.66.
-  var iconColor = focused ? accent : 'rgba(228,214,178,0.62)';
   var labelColor = focused ? accent : 'rgba(230,218,186,0.68)';
 
   return (
@@ -101,7 +102,16 @@ function DockNode({ tabConfig, focused, onPress, label }) {
       hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
     >
       <Animated.View style={[dock.nodeIcon, liftStyle]}>
-        {IconComponent ? <IconComponent size={23} color={iconColor} focused={focused} /> : null}
+        <View style={[
+          dock.nodeMedallion,
+          focused && { borderColor: accent + 'B3', ...boxShadow(accent, { width: 0, height: 2 }, 0.75, 10) },
+        ]}>
+          <Image
+            source={tabConfig.art}
+            style={{ width: 36, height: 36, borderRadius: 18, resizeMode: 'cover', opacity: focused ? 1 : 0.58 }}
+            fadeDuration={0}
+          />
+        </View>
       </Animated.View>
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={[dock.label, { color: labelColor }, focused && dock.labelOn]}>
         {label}
@@ -129,7 +139,6 @@ function CenterMedallion({ focused, onPress, label, reduced }) {
   });
   var pressStyle = useAnimatedStyle(function () { return { transform: [{ scale: press.value }] }; });
 
-  var IconComponent = TAB_ICON_MAP.index;
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -146,13 +155,14 @@ function CenterMedallion({ focused, onPress, label, reduced }) {
     >
       <Animated.View style={[dock.medWrap, pressStyle]}>
         <Animated.View style={[dock.medCorona, coronaStyle]} />
-        <LinearGradient
-          colors={focused ? ['#3A2A55', '#251639', '#150C22'] : ['#241833', '#180F26', '#0E0818']}
-          style={[dock.medallion, focused && dock.medallionOn]}
-          start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
-        >
-          {IconComponent ? <IconComponent size={30} color={focused ? '#FFD983' : 'rgba(244,228,188,0.7)'} focused={focused} /> : null}
-        </LinearGradient>
+        <View style={[dock.medallion, focused && dock.medallionOn]}>
+          {/* the carved sun — the art IS the icon */}
+          <Image
+            source={NAV_SUN}
+            style={{ width: MEDALLION - 4, height: MEDALLION - 4, borderRadius: (MEDALLION - 4) / 2, resizeMode: 'cover', opacity: focused ? 1 : 0.85 }}
+            fadeDuration={0}
+          />
+        </View>
         {/* orbit hairline around the medallion */}
         <View style={[dock.medOrbit, focused && { borderColor: 'rgba(244,228,188,0.55)' }]} pointerEvents="none" />
       </Animated.View>
@@ -257,6 +267,18 @@ function OrbitalNavBar({ state, navigation }) {
             style={StyleSheet.absoluteFill}
             start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
           />
+          {/* gilded filigree band woven through the glass (explicit size +
+              style resizeMode — see fabric image gotchas) */}
+          <Image
+            source={NAV_BAND}
+            style={{ position: 'absolute', top: 0, left: 0, width: dockW, height: DOCK_H, resizeMode: 'cover', opacity: 0.32 }}
+            fadeDuration={0}
+          />
+          {/* label-zone scrim so the filigree never fights the text */}
+          <LinearGradient
+            colors={['rgba(6,4,11,0)', 'rgba(6,4,11,0.6)']}
+            style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 24 }}
+          />
           {/* star dust in the glass */}
           <Svg width="100%" height="100%" style={StyleSheet.absoluteFill} pointerEvents="none">
             {DOCK_STARS.map(function (st, i) {
@@ -332,7 +354,14 @@ var dock = StyleSheet.create({
     paddingBottom: 7,
   },
   slot: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-  nodeIcon: { height: 26, alignItems: 'center', justifyContent: 'center' },
+  nodeIcon: { height: 40, alignItems: 'center', justifyContent: 'center' },
+  nodeMedallion: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: '#12091F',
+    borderWidth: 1, borderColor: 'rgba(214,181,109,0.35)',
+    alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
+  },
   // Sinhala labels stack combining marks above & below the base glyph — a tight
   // lineHeight clips them (see sinhala-textinput-clipping). Keep ≥1.5× and never
   // set includeFontPadding:false here. maxWidth:'100%' + adjustsFontSizeToFit
@@ -345,6 +374,7 @@ var dock = StyleSheet.create({
   medallion: {
     width: MEDALLION, height: MEDALLION, borderRadius: MEDALLION / 2,
     alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#150C22',
     borderWidth: 1.2, borderColor: 'rgba(214,181,109,0.45)',
     ...boxShadow('rgba(214,181,109,0.35)', { width: 0, height: 5 }, 0.9, 16),
     elevation: 14,

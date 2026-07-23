@@ -1,7 +1,8 @@
 // ═══════════════════════════════════════════════════════════════════════
 // ZodiacIcons.js — Fast-loading zodiac sign images
-// Original PNGs resized to 128x128 & embedded as base64 data URIs
-// ~191KB total (vs ~5.5MB original PNGs) — instant load, zero file I/O
+// v3 gilded medallions embedded as 128x128 base64 data URIs (~148KB total)
+// — instant load, zero file I/O. Regenerate the underlying module with:
+//   node scripts/generate-zodiac-assets.js
 //
 // Usage:
 //   <Image source={ZODIAC_IMAGES[0]} style={{ width: 32, height: 32 }} />

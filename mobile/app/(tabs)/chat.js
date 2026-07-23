@@ -39,8 +39,11 @@ var DAILY_LIMIT = 30;
 var LOW_REMAINING = 5;
 var STORAGE_KEY_PREFIX = '@grahachara_chat_usage_';
 
-var ORACLE_COSMIC = require('../../assets/oracle/cosmic-guide.png');
-var ORACLE_DREAM = require('../../assets/oracle/dream-oracle.png');
+// -v2 filenames: the art was re-generated in place once and Metro/dev-client
+// kept serving stale bitmaps/dimensions for the old asset module — new file
+// names guarantee a fresh asset registration.
+var ORACLE_COSMIC = require('../../assets/oracle/cosmic-guide-v2.png');
+var ORACLE_DREAM = require('../../assets/oracle/dream-oracle-v2.png');
 
 // ── Mode themes — the card chosen on the gateway follows the user into the
 // room. Chat = the violet Cosmic Guide; Dream = the amber Dream Oracle.
@@ -291,16 +294,19 @@ function OracleSelection({ onSelect, t }) {
     {
       key: 'chat', image: ORACLE_COSMIC,
       title: t('chatModeChat'), desc: t('chatCosmicDesc'),
-      gradient: ['#6D28D9', '#4C1D95', '#2E1065'],
       glow: '#A78BFA', icon: 'sparkles',
     },
     {
       key: 'dream', image: ORACLE_DREAM,
       title: t('chatModeDream'), desc: t('chatDreamDesc'),
-      gradient: ['#92400E', '#78350F', '#451A03'],
       glow: '#FFB800', icon: 'moon',
     },
   ];
+
+  // Explicit card geometry. The previous flex-stretch layout collapsed on
+  // device into full-height image slivers; fixed 2:3 tarot proportions can't.
+  var cardW = Math.min((Math.min(SW, 420) - 44) / 2, 186);
+  var cardH = Math.round(cardW * 1.5);
 
   return (
     <View style={os.container}>
@@ -329,53 +335,51 @@ function OracleSelection({ onSelect, t }) {
         <Text style={os.subtitle}>{t('chatOracleSub')}</Text>
       </View>
 
-      {/* Card pair — equal sizing, no animation */}
+      {/* Card pair — tarot gateway, art full-bleed with overlaid name */}
       <View style={os.cardsRow}>
         {cards.map(function (card) {
           return (
-            <View key={card.key} style={os.cardOuter}>
-              <SpringPressable onPress={function () { onSelect(card.key); }} haptic="medium" scalePressed={0.93}>
-                <View style={os.card}>
-                  {/* Card image — aspect ratio locked */}
-                  <View style={os.imageWrap}>
-                    <Image
-                      source={card.image}
-                      resizeMode="cover"
-                      style={{ width: '100%', aspectRatio: 2 / 3 }}
-                      fadeDuration={0}
-                    />
-                    <LinearGradient
-                      colors={['rgba(255,255,255,0.15)', 'transparent']}
-                      style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '20%' }}
-                    />
-                    <LinearGradient
-                      colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.85)']}
-                      locations={[0.35, 0.65, 1]}
-                      style={os.vignette}
-                    />
-                  </View>
+            <SpringPressable key={card.key} onPress={function () { onSelect(card.key); }} haptic="medium" scalePressed={0.95}>
+              <View style={[os.card, { width: cardW, height: cardH }, boxShadow(card.glow, { width: 0, height: 12 }, 0.45, 26)]}>
+                {/* Explicit size + style resizeMode: the resizeMode PROP on an
+                    absolute-fill image renders at natural size under Fabric,
+                    showing only the art's top slice. */}
+                <Image
+                  source={card.image}
+                  style={{ position: 'absolute', top: 0, left: 0, width: cardW, height: cardH, resizeMode: 'cover' }}
+                  fadeDuration={0}
+                />
 
-                  {/* Label area — fixed minHeight for equal cards */}
-                  <LinearGradient colors={card.gradient} style={os.labelArea}>
-                    <View style={os.iconRow}>
-                      <View style={[os.iconCircle, { backgroundColor: card.glow + '18' }]}>
-                        <Ionicons name={card.icon} size={14} color={card.glow} />
-                      </View>
-                    </View>
-                    <Text style={[os.cardTitle, { ...textShadow(card.glow + '60', { width: 0, height: 0 }, 12) }]}>{card.title}</Text>
-                    <Text style={os.cardDesc} numberOfLines={2}>{card.desc}</Text>
-                    <View style={os.tapRow}>
-                      <View style={[os.tapPill, { backgroundColor: card.glow + '15', borderColor: card.glow + '25' }]}>
-                        <Ionicons name="arrow-forward" size={11} color={card.glow} />
-                      </View>
-                    </View>
-                  </LinearGradient>
+                {/* candlelight sheen + legibility scrim */}
+                <LinearGradient
+                  colors={['rgba(255,244,214,0.12)', 'transparent']}
+                  style={os.sheen}
+                />
+                <LinearGradient
+                  colors={['transparent', 'rgba(6,3,20,0.45)', 'rgba(6,3,20,0.95)']}
+                  locations={[0.42, 0.68, 1]}
+                  style={StyleSheet.absoluteFillObject}
+                />
 
-                  {/* Border */}
-                  <View style={[os.cardBorder, { borderColor: card.glow + '30' }]} />
+                {/* mode sigil */}
+                <View style={[os.sigil, { borderColor: card.glow + '66' }]}>
+                  <Ionicons name={card.icon} size={13} color={card.glow} />
                 </View>
-              </SpringPressable>
-            </View>
+
+                {/* name + whisper + enter */}
+                <View style={os.cardText}>
+                  <Text style={[os.cardTitle, { ...textShadow(card.glow + '80', { width: 0, height: 0 }, 16) }]}>{card.title}</Text>
+                  <Text style={os.cardDesc} numberOfLines={2}>{card.desc}</Text>
+                  <View style={[os.enterPill, { borderColor: card.glow + '50', backgroundColor: card.glow + '1F' }]}>
+                    <Ionicons name="arrow-forward" size={12} color={card.glow} />
+                  </View>
+                </View>
+
+                {/* double gold frame */}
+                <View style={os.frameOuter} />
+                <View style={os.frameInner} />
+              </View>
+            </SpringPressable>
           );
         })}
       </View>
@@ -406,37 +410,38 @@ var os = StyleSheet.create({
     fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.55)',
     marginTop: 10, textAlign: 'center', letterSpacing: 0.5, lineHeight: 18,
   },
-  cardsRow: { flexDirection: 'row', gap: 14, justifyContent: 'center', alignItems: 'stretch', paddingHorizontal: 16, maxWidth: 400, alignSelf: 'center', width: '100%' },
-  cardOuter: { flex: 1 },
-  card: { flex: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: '#0A0618' },
-  imageWrap: { overflow: 'hidden', borderTopLeftRadius: 18, borderTopRightRadius: 18 },
-  vignette: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '55%' },
-  labelArea: {
-    flex: 1, paddingHorizontal: 10, paddingTop: 10, paddingBottom: 14,
-    alignItems: 'center', justifyContent: 'space-between',
-  },
-  iconRow: { marginBottom: 6 },
-  iconCircle: {
-    width: 28, height: 28, borderRadius: 14,
+  cardsRow: { flexDirection: 'row', gap: 12, justifyContent: 'center', paddingHorizontal: 16 },
+  card: { borderRadius: 22, overflow: 'hidden', backgroundColor: '#0A0618' },
+  sheen: { position: 'absolute', top: 0, left: 0, right: 0, height: '18%' },
+  sigil: {
+    position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: 15,
+    backgroundColor: 'rgba(8,4,22,0.55)', borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
+  },
+  cardText: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    alignItems: 'center', paddingHorizontal: 12, paddingBottom: 14,
   },
   cardTitle: {
-    fontSize: 14, fontWeight: '900', color: '#FFF1D0',
-    letterSpacing: 0.8, textAlign: 'center',
+    fontSize: 16, fontWeight: '900', color: '#FFF6E3',
+    letterSpacing: 0.6, textAlign: 'center',
   },
+  // Sinhala combining marks clip with tight line heights — keep these loose.
   cardDesc: {
-    fontSize: 10, fontWeight: '500', color: 'rgba(255,255,255,0.62)',
-    marginTop: 5, textAlign: 'center', lineHeight: 14, paddingHorizontal: 2,
+    fontSize: 11, fontWeight: '500', color: 'rgba(255,255,255,0.78)',
+    marginTop: 5, textAlign: 'center', lineHeight: 17,
   },
-  tapRow: { marginTop: 10 },
-  tapPill: {
-    width: 28, height: 28, borderRadius: 14,
+  enterPill: {
+    marginTop: 11, width: 32, height: 32, borderRadius: 16, borderWidth: 1.2,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1,
   },
-  cardBorder: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    borderRadius: 18, borderWidth: 1.5,
+  frameOuter: {
+    ...StyleSheet.absoluteFillObject, borderRadius: 22, borderWidth: 1.5,
+    borderColor: 'rgba(232,197,106,0.6)',
+  },
+  frameInner: {
+    position: 'absolute', top: 5, left: 5, right: 5, bottom: 5, borderRadius: 17,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(232,197,106,0.35)',
   },
   hintWrap: { marginTop: 28, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
   hintText: {

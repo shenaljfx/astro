@@ -27,22 +27,24 @@ const LIGHT_VARIANTS = {
   },
 };
 
+// Gilt shadow-box language: deep-indigo glass panels rimmed with a gold
+// hairline, so cards read as lit paper-cut layers floating over the art.
 const DUSK_VARIANTS = {
   hero: {
-    gradient: ['rgba(26,21,10,0.85)', 'rgba(15,11,6,0.90)'],
-    borderColor: 'rgba(218,165,32,0.35)',
-    borderWidth: 1.5,
+    gradient: ['rgba(32,22,62,0.84)', 'rgba(18,12,40,0.9)'],
+    borderColor: 'rgba(232,181,77,0.42)',
+    borderWidth: 1.4,
     shadow: Shadows.softGlow,
   },
   content: {
-    gradient: ['rgba(26,21,10,0.75)', 'rgba(18,16,11,0.80)', 'rgba(14,10,5,0.75)'],
-    borderColor: 'rgba(218,165,32,0.20)',
+    gradient: ['rgba(26,17,50,0.76)', 'rgba(20,13,40,0.8)', 'rgba(15,10,32,0.78)'],
+    borderColor: 'rgba(232,181,77,0.26)',
     borderWidth: 1,
     shadow: Shadows.sm,
   },
   surface: {
-    gradient: ['rgba(20,16,8,0.70)', 'rgba(12,10,6,0.75)'],
-    borderColor: 'rgba(218,165,32,0.12)',
+    gradient: ['rgba(22,15,44,0.7)', 'rgba(14,9,32,0.76)'],
+    borderColor: 'rgba(232,181,77,0.16)',
     borderWidth: 0.5,
     shadow: null,
   },

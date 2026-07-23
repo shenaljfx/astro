@@ -37,6 +37,7 @@ import {
   restorePurchases,
   addCustomerInfoListener,
   ENTITLEMENT_ID,
+  IS_MOCK_PAYMENTS,
 } from '../services/revenuecat';
 import { registerForPushNotifications, cancelDailyGuidanceNotifications } from '../services/notifications';
 import { auth as firebaseAuth, GoogleAuthProvider, signInWithPopup, signInWithCredential } from '../services/firebase';
@@ -82,8 +83,18 @@ function buildActiveSubscription(activeSub, fallback) {
   };
 }
 
+function isMockSubscription(sub) {
+  if (!sub) return false;
+  return sub.store === 'mock' || /^mock/i.test(String(sub.plan || sub.productIdentifier || ''));
+}
+
 function normalizeStoredSubscription(storedSub) {
   if (!storedSub) return null;
+  // QA-era artifact: EXPO_PUBLIC_MOCK_PAYMENTS=true sessions persisted a fake
+  // "Mock Pro" subscription that then kept resurfacing as trusted state (the
+  // profile card said Pro while server-gated screens stayed locked). When the
+  // flag is off, mock subs are never valid.
+  if (!IS_MOCK_PAYMENTS && isMockSubscription(storedSub)) return null;
   if (storedSub.status === 'none' || storedSub.status === 'pending') return null;
   if (storedSub.status === 'active' && storedSub.expiresAt) {
     var expires = new Date(storedSub.expiresAt);
@@ -340,6 +351,16 @@ export function AuthProvider({ children }) {
         // an active subscription (normalization may change 'active' to 'expired'
         // if expiresAt is past, even though the store may have auto-renewed).
         var rawStoredSubscription = userData.subscription ? { ...userData.subscription } : null;
+        // Mock-era data can't vouch for anything real: drop the stored sub AND
+        // the persisted isSubscribed flag it minted, then let
+        // verifySubscriptionInBackground re-derive the truth (RevenueCat +
+        // server). Without this, "trust the stored subscription" below
+        // resurrects Mock Pro forever.
+        if (!IS_MOCK_PAYMENTS && isMockSubscription(rawStoredSubscription)) {
+          rawStoredSubscription = null;
+          userData.subscription = null;
+          userData.isSubscribed = false;
+        }
         userData.subscription = normalizeStoredSubscription(userData.subscription);
         setToken(savedToken);
         setUser(userData);
@@ -436,9 +457,15 @@ export function AuthProvider({ children }) {
         }
       }
 
-      // Step 1b: If logIn result didn't confirm, try retry + sync fallback
+      // Step 1b: If logIn result didn't confirm, retry. The syncPurchases
+      // fallback is only allowed when THIS account has prior evidence of
+      // being subscribed — an unconditional sync transferred the device
+      // owner's entitlement to whatever account was signed in (free accounts
+      // on a subscriber's device silently became Pro).
       if (!isProActive) {
-        isProActive = await checkEntitlementWithRetry();
+        isProActive = await checkEntitlementWithRetry({
+          allowSync: !!(rawStoredSub && rawStoredSub.status === 'active') || userData.isSubscribed === true,
+        });
       }
 
       if (isProActive) {
@@ -685,7 +712,12 @@ export function AuthProvider({ children }) {
                 rcEntitlementActive = true;
               }
               if (!rcEntitlementActive) {
-                rcEntitlementActive = await checkEntitlementWithRetry();
+                // Sync fallback only when the server already marked this
+                // account subscribed (fresh install of a paying user) —
+                // never for arbitrary accounts on a shared device.
+                rcEntitlementActive = await checkEntitlementWithRetry({
+                  allowSync: userData.isSubscribed === true,
+                });
               }
               if (rcEntitlementActive) {
                 var activeSub = await getActiveSubscription();
@@ -766,7 +798,11 @@ export function AuthProvider({ children }) {
             rcEntitlementActive = true;
           }
           if (!rcEntitlementActive) {
-            rcEntitlementActive = await checkEntitlementWithRetry();
+            // Same shared-device guard as the native path: sync only when the
+            // server already says this account is subscribed.
+            rcEntitlementActive = await checkEntitlementWithRetry({
+              allowSync: userData.isSubscribed === true,
+            });
           }
           if (rcEntitlementActive) {
             var activeSub = await getActiveSubscription();
@@ -844,10 +880,11 @@ export function AuthProvider({ children }) {
 
     await AsyncStorage.setItem(STORAGE_ONBOARDING, 'true');
 
-    // The onboarding funnel has its own paywall chapter, and the user just
-    // answered it (paid OR soft-declined). Consume today's forced app-open
-    // wall slot so declining "Continue with limited access" doesn't slam a
-    // second full-screen paywall the instant the funnel exits.
+    // The funnel itself no longer contains a paywall (removed in 405a4bc —
+    // monetization moved to the global daily wall + contextual paywalls).
+    // Still consume today's forced app-open wall slot: a user who has just
+    // finished onboarding shouldn't be met by a full-screen paywall the
+    // instant the funnel exits.
     var wallDay = new Date().toISOString().slice(0, 10);
     setAutoWallDate(wallDay);
     AsyncStorage.setItem(STORAGE_AUTOWALL_DATE, wallDay).catch(function() {});
@@ -940,7 +977,9 @@ export function AuthProvider({ children }) {
 
   var checkSubscription = useCallback(async function() {
     try {
-      var isActive = await checkEntitlementWithRetry();
+      // Explicit user-triggered refresh — allowing the store sync here is a
+      // deliberate restore action, not a silent background transfer.
+      var isActive = await checkEntitlementWithRetry({ allowSync: true });
       var activeSub = isActive ? await getActiveSubscription() : null;
       var sub = isActive ? buildActiveSubscription(activeSub) : null;
       setSubscription(sub);

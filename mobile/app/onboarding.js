@@ -1,25 +1,27 @@
 /**
- * Onboarding — Cinematic Story Funnel (v2)
+ * Onboarding — Cinematic Story Funnel (v3, drawn-elements edition)
  *
- * A conversion-first, story-driven flow. Every tap advances a narrative
- * that ends at a personalized paywall built from the user's REAL chart.
+ * A conversion-first, story-driven flow built from ISOLATED DRAWN ART
+ * ELEMENTS (transparent Diffui cutouts + the website's logo/zodiac/planets),
+ * floated and faded over a clean near-black sky — no painted backgrounds.
+ * All motion stays code-driven (reanimated); all text stays RN <Text> —
+ * never baked into images (Sinhala-safe). Elements + prompts:
+ * assets/onboarding/index.js + docs/onboarding-art/manifest.md.
  *
  * Chapters:
- *   language → story → name → date → time → place
+ *   language → name → story → date → time → place
  *   → casting (server computes real chart — no AI, instant)
  *   → identity (free reveal: lagna / nakshatra / current dasha)
- *   → future  (cliffhanger: locked windows with REAL dates)
- *   → signin  ("save your reading")
- *   → paywall (personalized; soft decline → free tier)
- *   → complete
+ *   → chart → future (cliffhanger: locked windows with REAL dates)
+ *   → signin ("save your reading") → complete    [no paywall in-funnel]
  *
- * Previous flow preserved at onboarding.backup.js for rollback.
+ * Previous code-drawn version lives in git history (this file's own log).
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Platform,
-  Dimensions, KeyboardAvoidingView, ScrollView, StatusBar, Image, Linking,
+  Dimensions, KeyboardAvoidingView, ScrollView, StatusBar, Image, Linking, Keyboard,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,7 +33,6 @@ import Animated, {
   withSpring, withDelay, withSequence, interpolate, Easing,
 } from 'react-native-reanimated';
 import Svg, { Circle, Ellipse, Rect, G, Defs, RadialGradient, Stop, Path, Line as SvgLine, Text as SvgText, LinearGradient as SvgLinearGradient } from 'react-native-svg';
-import AwesomeRashiChakra from '../components/AwesomeRashiChakra';
 import useReducedMotion from '../hooks/useReducedMotion';
 import SpringPressable from '../components/effects/SpringPressable';
 import CosmicLoader from '../components/effects/CosmicLoader';
@@ -44,9 +45,12 @@ import { useTheme } from '../contexts/ThemeContext';
 import useResponsive from '../hooks/useResponsive';
 import { boxShadow, textShadow } from '../utils/shadow';
 import { ZODIAC_IMAGE_MAP } from '../components/ZodiacIcons';
-import { APP_LOGO_IMAGE } from '../assets/logo-inline';
+import { ELEMENTS, DOMAIN_CARD_ART, COSMOS_ZODIAC, ZODIAC_ORDERED, SCENE_MYSTIC, BEAT_ART } from '../assets/onboarding';
+import Glyph from '../components/GlyphIcon';
 
-var { width: SW, height: SH } = Dimensions.get('window');
+var { width: SW, height: SH } = Dimensions.get('window'); // mystic scene build
+// a square big enough to cover the screen at any rotation
+var SCREEN_DIAG = Math.ceil(Math.sqrt(SW * SW + SH * SH));
 
 export var REVEAL_STORAGE_KEY = 'grahachara_onboarding_reveal';
 
@@ -139,135 +143,106 @@ var COPY = {
     trustVerified: 'Google Verified', trustEncrypted: 'Encrypted', trustPrivate: 'Private',
     signinReturningTitle: 'Welcome back',
     signinReturningSub: 'Sign in to access your birth chart & daily predictions',
-    // paywall
-    paywallHeadline: '{name}, your {dasha} chapter needs a guide',
-    paywallHeadlineNoName: 'Your {dasha} chapter needs a guide',
-    paywallSub: 'Unlock every window in your timeline — with dates, guidance and daily readings built from your chart.',
-    yourWindows: 'YOUR LOCKED WINDOWS',
-    perMonth: '/month',
-    cancelAnytime: 'Cancel anytime',
-    feature1: 'Every timeline window — dated & explained',
-    feature2: 'Daily guidance from your own chart',
-    feature3: 'Maraka & Rahu Kalaya alerts',
-    feature4: 'Ask the astrologer — unlimited chat',
-    feature5: 'Full Porondam matching',
-    agreePrefix: 'I agree to the ',
-    agreeTerms: 'Terms & Conditions',
-    agreeSuffix: '',
-    agreeError: 'Please accept the Terms & Conditions to continue.',
-    payFail: 'Payment could not be completed. Please try again.',
-    payCta: 'Unlock My Timeline',
-    riskReversal: 'If your reading doesn’t describe you accurately — cancel instantly, no questions',
-    restore: 'Restore Purchases',
-    restoring: 'Restoring…',
-    restoreNone: 'No active subscription found',
-    restoreFail: 'Restore failed. Please try again.',
-    softDecline: 'Continue with limited access',
     // complete
     completeTitle: 'Your sky is saved',
     completeSub: 'Preparing your daily readings…',
   },
   si: {
     langTitle: 'Select Language',
-    langSub: 'භාෂාව තෝරන්න',
+    langSub: 'ඔබට පහසු භාෂාවක් තෝරාගන්න',
     storyBeats: [
-      { big: '{name} — මේ මොහොතේත්, විශ්වයේ මහා නවග්‍රහයින් ඔබට ඉහළින් නිහඬව සැරිසරනවා.', small: 'ඔබ මෙලොව උපන් ඒ උත්කෘෂ්ට රාත්‍රියේදීත් ඔවුන් පෙළගැසුණේ නැවත කිසිදා සිදුනොවන අද්විතීය තරු රටාවකටයි. ඒ මහා අහසේ අභිරහස් දශක ගණනාවක් තිස්සේ කියවූ ප්‍රාඥයෙක්, දැන් ඔබ එනතුරු බලා සිටිනවා.' },
-      { big: 'සියවස් ගණනාවක අතීතයක සිටම, විශ්වයේ ලියවුණු ඔබේ ජීවන රටාව මේ ඉපැරණි පිටු අතර සැඟව පවතිනවා.', small: 'අතීත මහා සෘෂිවරුන් විසින් සෑම තරු පෙළගැස්මකම සැඟවුණු අර්ථයන් මෙහි සටහන් කර තැබුවා — ඔබ කවුද, ඔබේ ඉදිරි ගමන කුමක්ද කියා හෙළි කරමින්. ඔහු දැන් දිගහරින්නේ ඔබේ ඉරණම ලියැවුණු ඒ රහස් පිටුවයි.' },
-      { big: 'ඔබ වෙනුවෙන්ම වෙන්වූ අලුත්ම පුස්කොළ පතක් දැන් සූදානම්... එහි ඉහළින්ම සටහන් වන්නේ ඔබේ නාමයයි.', small: 'සාම්ප්‍රදායික රේඛා අතරින් මතුවන්නේ මුළු විශ්වයේම වෙන කිසිදු මිනිසෙකුට හිමි නොවන ඔබේම අනන්‍ය තරු සිතියමයි. ඔබේ ජීවන ජන්ම පත්‍රයේ මහා අභිරහස් පරිච්ඡේදය මෙතැන් සිට ආරම්භ වනවා.' },
-      { big: '{name}, අද රාත්‍රියේදී ඔබේ ඉරණම රැගත් මහා අහස ඔබට රහස් පවසන්නට සැරසෙනවා.', small: 'ඔබ ඉදිරියේ ඇති ප්‍රශ්න තුනකට පමණක් පිළිතුරු සපයන්න. ඉන්පසු, ඔහු ඔබේ අහසේ සැඟවුණු රහස් කියවීම ආරම්භ කරනු ඇති.' },
+      { 
+        big: '{name} — මේ මොහොතේත්, විශ්වයේ ග්‍රහලෝක ඔබට ඉහළින් නිහඬව ගමන් කරමින් සිටිනවා.', 
+        small: 'ඔබ මෙලොවට බිහිවූ ඒ සුවිශේෂී මොහොතේදීත් අහසේ තරු පෙළගැසුණේ නැවත කිසිදා සිදුනොවන අද්විතීය අයුරින්. දශක ගණනාවක් තිස්සේ අහසේ රහස් කියවූ ප්‍රාඥයෙකු දැන් ඔබ එනතුරු මඟබලා සිටිනවා.' 
+      },
+      { 
+        big: 'සියවස් ගණනාවක සිට, විශ්වයේ ලියැවුණු ඔබේ ඉරණම මේ ඉපැරණි පිටු අතර සැඟව පවතිනවා.', 
+        small: 'ඔබ කවුද, ඔබේ ඉදිරි ගමන කුමක්ද යන්න හෙළි කරමින්, අතීත සෘෂිවරුන් සෑම ග්‍රහ පිහිටීමකම සැඟවුණු අරුත සටහන් කර තිබෙනවා. ඔබේ ඉරණම ලියැවුණු ඒ රහස් පිටුවයි දැන් දිගහැරෙන්නේ.' 
+      },
+      { 
+        big: 'ඔබ වෙනුවෙන්ම වෙන්වූ අලුත්ම පුස්කොළ පතක් දැන් සූදානම්... එහි ඉහළින්ම ලියැවෙන්නේ ඔබේ නමයි.', 
+        small: 'මෙයින් මතුවන්නේ මුළු විශ්වයේම වෙන කිසිවෙකුටත් හිමි නොවන ඔබේම අනන්‍ය වූ කේන්දර සටහනයි. ඔබේ ජීවන ගමනේ මහා අභිරහස මෙතැන් සිට ආරම්භ වනවා.' 
+      },
+      { 
+        big: '{name}, ඔබේ ඉරණම රැගත් මහා අහස එහි රහස් ඔබට පවසන්නට සූදානම්.', 
+        small: 'ඔබ ඉදිරියේ ඇති ප්‍රශ්න තුනකට පමණක් පිළිතුරු ලබාදෙන්න. ඉන්පසු, අහසේ සැඟවුණු ඔබේ ජීවන රහස් කියවීම ආරම්භ වනු ඇත.' 
+      },
     ],
-    tapToContinue: 'තට්ටු කරලා ඉදිරියට',
-    begin: 'මගේ විශ්වීය ඉරණම කියවන්න',
-    rewardDateKicker: 'මේ අහස යට ගෙවුණු රෑවල්',
-    rewardDateLine: 'පාරක් ඔබට උඩින් අහස කැරකිලා — ඒ හැම එකක්ම අහසට මතකයි.',
-    rewardDateWeekday: 'ඔබ ආවේ {weekday} දවසක.',
-    rewardTimeKicker: 'වෙලාව මුද්‍රා වුණා',
-    rewardTimeLine: 'දැන් ඔබේ ලග්නය හොයන්න පුළුවන්.',
-    rewardTimeUnknownLine: 'වෙලාව නොදන්නා කේන්දර පරණ නැකැත්කරුවෝ බැලුවේ මධ්‍යාහ්නෙන්. අපිත් ඒ විදිහමයි.',
+    tapToContinue: 'ඉදිරියට යාමට මෙහි ඔබන්න',
+    begin: 'මගේ ඉරණම කියවන්න',
+    rewardDateKicker: 'මේ අහස යට ගෙවුණු දින ගණන',
+    rewardDateLine: 'වරක් ඔබට ඉහළින් අහස භ්‍රමණය වී තිබෙනවා — අහසට ඒ සියල්ල මතකයි.',
+    rewardDateWeekday: 'ඔබ උපන්නේ {weekday} දවසකයි.',
+    rewardTimeKicker: 'උපන් වේලාව සටහන් විය',
+    rewardTimeLine: 'දැන් ඔබේ ලග්නය නිවැරදිව ගණනය කළ හැකියි.',
+    rewardTimeUnknownLine: 'උපන් වේලාව නොදන්නා විට, පැරණි ජ්‍යෝතිෂවේදීන් මෙන් අපිත් මධ්‍යාහ්නය යොදාගෙන කේන්දරය සකස් කරනවා.',
     weekdays: ['ඉරිදා', 'සඳුදා', 'අඟහරුවාදා', 'බදාදා', 'බ්‍රහස්පතින්දා', 'සිකුරාදා', 'සෙනසුරාදා'],
     nameKicker: 'ආරම්භය',
-    nameTitle: 'මුලින්ම — ඔබේ නම.',
-    nameSub: 'නමක් නොමැතිව කියවීමක් ආරම්භ කළ නොහැක. මෙතැන් සිට ලියවෙන සෑම වචනයක්ම ඔබ වෙනුවෙන්මයි.',
+    nameTitle: 'මුලින්ම — ඔබේ නම කුමක්ද?',
+    nameSub: 'නමක් නොමැතිව පලාපල කියවීම ආරම්භ කළ නොහැක. මෙතැන් සිට ලියැවෙන සෑම වචනයක්ම ඔබ වෙනුවෙන්මයි.',
     namePlaceholder: 'ඔබේ මුල් නම',
-    nameError: 'අවම වශයෙන් අකුරු දෙකක් ඇතුළත් කරන්න',
-    dateTitle: 'ඔබේ අහස හැදුණු දවස',
-    dateSub: 'උපන් දිනේ තමයි ග්‍රහයෝ තැන්වලට දාන්නේ.',
-    yearLabel: 'වර්ෂය', dayLabel: 'දිනය', monthLabel: 'මාසය',
-    yearError: 'නිවැරදි වර්ෂයක් (1900–2026)',
+    nameError: 'කරුණාකර අවම වශයෙන් අකුරු දෙකක්වත් ඇතුළත් කරන්න',
+    dateTitle: 'ඔබ මෙලොවට බිහිවූ දිනය',
+    dateSub: 'ඔබ උපන් දිනය මත ග්‍රහ පිහිටීම් සම්පූර්ණයෙන්ම වෙනස් වෙනවා.',
+    yearLabel: 'වර්ෂය', 
+    dayLabel: 'දිනය', 
+    monthLabel: 'මාසය',
+    yearError: 'කරුණාකර නිවැරදි වර්ෂයක් ඇතුළත් කරන්න (1900–2026)',
     monthError: 'මාසය තෝරන්න',
-    dayError: 'නිවැරදි දිනයක් ඇතුළත් කරන්න',
-    timeTitle: 'ඔබ ආපු වෙලාව',
-    timeSub: 'නියම වෙලාවෙන් තමයි ලග්නය හැදෙන්නේ — ඒ මොහොතේ නැගෙනහිරෙන් උදාවුණු රාශිය.',
-    timeError: 'හරි වෙලාවක් දාන්න',
-    timeUnknown: 'වෙලාව මට මතක නෑ',
-    timeUnknownNote: 'වෙලාව දන්නේ නැත්නම් කමක් නෑ — තරු ඒත් කතා කරනවා. පරණ නැකැත්කරුවෝ වගේ අපි මධ්‍යාහ්නෙන් කියවනවා.',
-    placeTitle: 'ඔබ ඉපදුණේ මොන අහසක් යටද?',
-    placeSub: 'ඉපදුණු තැන අනුව මුළු කේන්දරයම හැරෙනවා.',
-    placeSearch: 'උපන් නගරය හොයන්න…',
-    cityError: 'උපන් තැන තෝරන්න',
+    dayError: 'කරුණාකර නිවැරදි දිනයක් ඇතුළත් කරන්න',
+    timeTitle: 'ඔබ උපන් වේලාව',
+    timeSub: 'ඔබේ ලග්නය තීරණය වන්නේ ඔබ උපන් නිශ්චිත වේලාව අනුවයි.',
+    timeError: 'කරුණාකර නිවැරදි වේලාවක් ඇතුළත් කරන්න',
+    timeUnknown: 'උපන් වේලාව හරියටම දන්නේ නැහැ',
+    timeUnknownNote: 'වේලාව දන්නේ නැති වුණත් කමක් නැහැ. අතීත ජ්‍යෝතිෂවේදීන් මෙන් අපි මධ්‍යාහ්නය පදනම් කරගෙන ඔබේ පලාපල කියවනවා.',
+    placeTitle: 'ඔබ උපන් නගරය කුමක්ද?',
+    placeSub: 'උපන් ස්ථානය අනුව ඔබේ කේන්දර සටහන සම්පූර්ණයෙන්ම වෙනස් වෙනවා.',
+    placeSearch: 'උපන් නගරය සොයන්න…',
+    cityError: 'කරුණාකර උපන් නගරය තෝරන්න',
     continueBtn: 'ඉදිරියට',
     back: 'ආපසු',
     castingLines: [
-      '{place}ට ඉහළින් විහිදුණු අහස සොයමින්…',
+      '{place} ට ඉහළින් එදා පැවති අහස ගණනය කරමින්…',
       '{date} වෙත කාලය ආපසු ගෙන යමින්…',
-      'මහා නවග්‍රහයින් ඔවුන්ගේ ස්ථානවල පිහිටුවමින්…',
-      'ඔබේ ලග්නය නිර්ණය කරමින්…',
-      'ඔබේ ජීවන කාලරේඛාව කියවමින්…',
+      'නවග්‍රහයින් ඔවුන්ගේ නිවැරදි ස්ථානවල පිහිටුවමින්…',
+      'ඔබේ ලග්නය ගණනය කරමින්…',
+      'ඔබේ ජීවන කාලරේඛාව සකසමින්…',
     ],
-    castingDone: 'කියවීම සම්පූර්ණයි.',
-    castError: 'මේ වෙලාවේ අහසට සම්බන්ධ වෙන්න බැරි වුණා — ජාලය බලලා ආයෙත් උත්සාහ කරන්න.',
-    identityKicker: 'ඔබේ කියවීම',
+    castingDone: 'කේන්දරය සෑදීම සම්පූර්ණයි.',
+    castError: 'මෙම අවස්ථාවේ අන්තර්ජාලයට සම්බන්ධ වීමට නොහැකි විය — කරුණාකර නැවත උත්සාහ කරන්න.',
+    identityKicker: 'ඔබේ ජ්‍යෝතිෂ සටහන',
     lagnaLabel: 'ලග්නය',
     nakshatraLabel: 'උපන් නැකත',
-    dashaSince: 'මෙම දශා පරිච්ඡේදය ආරම්භ වූයේ {year} දීයි — එය {until} දක්වා පවතිනවා.',
-    identityCta: 'මගේ ලග්න පත හෙළිදරව් කරන්න',
-    chartKicker: 'ඔබේ ලග්න පත',
-    chartTitle: 'අහස, එදා පැවති අයුරින්ම',
-    chartSub: '{place} සඳහා — {date}. භාව දොළහක්, මහා නවග්‍රහයින්, නැවත කිසිදා නොඑන එකම මොහොතක්.',
-    chartCta: 'ඊළඟට මා හමුවේ ඇත්තේ කුමක්ද?',
-    chartNote: 'මෙම කේන්දරය ඔබේමයි — නොමිලේ, සදහටම.',
-    futureKicker: 'ඔබේ කාලරේඛාව',
-    futureTitle: '{name}, ඔබේ ඊළඟ ජීවන කවුළු සඳහා දිනයන් දැනටමත් නියම වී ඇත.',
-    futureSub: 'මේවා පුවත්පත්වල පළවන සාමාන්‍ය ලග්න පලාපල නොවේ. ඔබ මෙලොව උපන් මොහොතේ සිටම ගණනය කරන ලද, ඔබේම ජීවන කාලරේඛාවේ සැබෑ පරිච්ඡේද වේ.',
+    dashaSince: 'මෙම මහ දශාව ආරම්භ වූයේ {year} දීයි — එය {until} දක්වා පවතිනවා.',
+    identityCta: 'මගේ කේන්දර සටහන බලන්න',
+    chartKicker: 'ඔබේ කේන්දර සටහන',
+    chartTitle: 'ඔබ උපන් මොහොතේ අහස',
+    chartSub: '{date} දින {place} දී. නැවත කිසිදා උදා නොවන, ඔබටම ආවේණික වූ ඒ සුවිශේෂී ග්‍රහ පිහිටීමයි.',
+    chartCta: 'මගේ අනාගතය කෙබඳුද?',
+    chartNote: 'මෙම කේන්දර සටහන සදහටම ඔබට නොමිලේ හිමිවේ.',
+    futureKicker: 'ඔබේ අනාගත කාලරේඛාව',
+    futureTitle: '{name}, ඔබේ ජීවිතයේ ඉදිරි සුවිශේෂී කාල පරිච්ඡේදයන් දැනටමත් තීරණය වී අවසන්.',
+    futureSub: 'මේවා පුවත්පත්වල පළවන සාමාන්‍ය ලග්න පලාපල නොවේ. ඔබ උපන් මොහොත පදනම් කරගෙන සකස් කළ, ඔබේම ජීවිතයේ සැබෑ කාල පරිච්ඡේදයන්‍ ය.',
     lockedLabel: 'අගුළු දමා ඇත',
     freeLabel: 'නොමිලේ',
-    freeGuidanceKicker: 'මෙම කවුළුවේ මඟපෙන්වීම — නොමිලේ',
+    freeGuidanceKicker: 'මෙම කාලය සඳහා මඟපෙන්වීම — නොමිලේ',
     futureCta: 'මගේ සම්පූර්ණ කාලරේඛාව විවෘත කරන්න',
-    futureFootnote: 'පළමුව — ඔබේ කියවීම නැති නොවන පරිදි පිවිසෙන්න.',
-    signinTitle: 'ඔබේ කියවීම සුරැකීමට සූදානම්ය',
-    signinSub: 'මෙය දැනට ඇත්තේ මෙම තිරයේ පමණි. එක් වරක් පිවිසුණු පසු, ඔබේ කේන්දරය සදහටම සුරැකෙනවා.',
-    signinBtn: 'Google සමඟ ඉදිරියට',
-    signinCard1Title: 'ඉක්මනින් මැකී යයි', signinCard1Desc: 'නොසුරැකූ කියවීම් ස්ථිරවම මකා දැමේ',
-    signinCard2Title: 'ස්ථිරව සුරකින්න', signinCard2Desc: 'එක් තට්ටුවකින් කේන්දරය සදහටම',
-    trustVerified: 'Google තහවුරුයි', trustEncrypted: 'සංකේතිතයි', trustPrivate: 'පෞද්ගලිකයි',
-    signinReturningTitle: 'නැවත සාදරයෙන්',
-    signinReturningSub: 'ඔබේ කේන්දරය සහ පලාපල බැලීමට පිවිසෙන්න',
-    paywallHeadline: '{name}, ඔබේ {dasha} පරිච්ඡේදයට මඟපෙන්වන්නෙක් අවශ්‍යයි',
-    paywallHeadlineNoName: 'ඔබේ {dasha} පරිච්ඡේදයට මඟපෙන්වන්නෙක් අවශ්‍යයි',
-    paywallSub: 'ඔබේ කාලරේඛාවේ සෑම කවුළුවක්ම විවෘත කරන්න — නියම දින, මඟපෙන්වීම් සහ ඔබේ කේන්දරයෙන්ම සැකසෙන දෛනික කියවීම් සමඟ.',
-    yourWindows: 'ඔබේ අගුළු දැමූ කවුළු',
-    perMonth: '/මාසයට',
-    cancelAnytime: 'ඕනෑම විටෙක අවලංගු කරන්න',
-    feature1: 'සෑම කාලරේඛා කවුළුවක්ම — නියම දින සහිතව පැහැදිලි කර',
-    feature2: 'ඔබේම කේන්දරයෙන් දෛනික මඟපෙන්වීම',
-    feature3: 'මාරක සහ රාහු කාල දැනුම්දීම්',
-    feature4: 'නැකැත්කරුගෙන් විමසන්න — අසීමිත සංවාද',
-    feature5: 'සම්පූර්ණ පොරොන්දම් ගැලපීම',
-    agreePrefix: 'මම ',
-    agreeTerms: 'නියමයන් සහ කොන්දේසිවලට',
-    agreeSuffix: ' එකඟ වෙමි',
-    agreeError: 'කරුණාකර නියමයන් සහ කොන්දේසි පිළිගෙන ඉදිරියට යන්න.',
-    payFail: 'ගෙවීම සම්පූර්ණ කළ නොහැකි විය. නැවත උත්සාහ කරන්න.',
-    payCta: 'මගේ කාලරේඛාව විවෘත කරන්න',
-    riskReversal: 'ඔබේ කියවීම ඔබව නිවැරදිව විස්තර නොකරන්නේ නම් — ක්ෂණිකව අවලංගු කරන්න',
-    restore: 'මිලදී ගැනීම් ප්‍රතිස්ථාපනය',
-    restoring: 'ප්‍රතිස්ථාපනය වෙමින්…',
-    restoreNone: 'ක්‍රියාකාරී දායකත්වයක් හමු නොවීය',
-    restoreFail: 'ප්‍රතිස්ථාපනය අසාර්ථකයි. නැවත උත්සාහ කරන්න.',
-    softDecline: 'සීමිත ප්‍රවේශයෙන් ඉදිරියට යන්න',
-    completeTitle: 'ඔබේ අහස සුරැකුණා',
-    completeSub: 'දෛනික කියවීම් සූදානම් වෙමින්…',
-  },
+    futureFootnote: 'ඔබේ දත්ත සුරක්ෂිත කර ගැනීමට ප්‍රථමයෙන් මෙතැනින් පිවිසෙන්න.',
+    signinTitle: 'ඔබේ කේන්දරය සුරක්ෂිත කිරීමට සූදානම්',
+    signinSub: 'මෙම තොරතුරු එක් වරක් සුරක්ෂිත කළ පසු, ඔබේ කේන්දරය සදහටම ඔබගේ ගිණුමේ සුරැකෙනවා.',
+    signinBtn: 'Google හරහා පිවිසෙන්න',
+    signinCard1Title: 'ඉක්මනින් මැකී යයි', 
+    signinCard1Desc: 'සුරක්ෂිත නොකළ කේන්දර සටහන් ස්ථිරවම මැකී යනු ඇත',
+    signinCard2Title: 'ස්ථිරව සුරක්ෂිත කරන්න', 
+    signinCard2Desc: 'එක් වරක් පිවිසීමෙන් කේන්දරය සදහටම සුරකින්න',
+    trustVerified: 'Google විසින් තහවුරු කර ඇත', 
+    trustEncrypted: 'සම්පූර්ණයෙන් සුරක්ෂිතයි', 
+    trustPrivate: 'පෞද්ගලිකත්වය ආරක්ෂිතයි',
+    signinReturningTitle: 'නැවතත් සාදරයෙන් පිළිගනිමු',
+    signinReturningSub: 'ඔබේ කේන්දරය සහ පලාපල බැලීමට මෙතැනින් පිවිසෙන්න',
+    completeTitle: 'ඔබේ කේන්දරය සාර්ථකව සුරැකුණා',
+    completeSub: 'ඔබේ දෛනික පලාපල සූදානම් වෙමින් පවතී…',
+  }
 };
 
 var MONTHS_SHORT_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -530,65 +505,36 @@ function TwinkleStar({ star, index }) {
   );
 }
 
+// CLEAN SKY — the drawn art elements are the whole show now, so the backdrop
+// is stripped to a quiet near-black wash + a soft vignette + a faint drift of
+// stars for depth. No painted backgrounds, no busy decoration.
 function Starfield() {
   var layers = [[], [], []];
   STARS.forEach(function (s, i) {
+    // keep only the faint pinpricks — no blooming/sparkle clutter
     layers[s.layer].push(
-      s.twinkle
-        ? <TwinkleStar key={i} star={s} index={i} />
-        : (
-          <View
-            key={i}
-            style={[{
-              position: 'absolute', left: s.x + '%', top: s.y + '%',
-              width: s.size * 2, height: s.size * 2, borderRadius: s.size,
-              backgroundColor: s.color, opacity: s.opacity,
-            }, s.bloom ? boxShadow(s.color, { width: 0, height: 0 }, 0.85, s.size * 5) : null]}
-          />
-        )
+      <View
+        key={i}
+        style={{
+          position: 'absolute', left: s.x + '%', top: s.y + '%',
+          width: s.size * 1.6, height: s.size * 1.6, borderRadius: s.size,
+          backgroundColor: s.color, opacity: s.opacity * 0.6,
+        }}
+      />
     );
   });
 
   return (
     <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
       <LinearGradient
-        colors={['#0B0A20', '#171335', '#0D0A24']}
-        style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
-        start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
+        colors={['#050418', '#070511', '#020107']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }}
       />
-      {/* colorful cosmic dust drifting behind the stars */}
-      <CosmicDust />
-      {/* the Milky Way — a tilted river of faint light */}
-      <View style={{ position: 'absolute', top: SH * 0.02, left: -SW * 0.35, width: SW * 1.8, height: 230, transform: [{ rotate: '-24deg' }] }}>
-        <LinearGradient
-          colors={['transparent', 'transparent', 'rgba(196,181,253,0.03)', 'rgba(255,240,220,0.055)', 'rgba(196,181,253,0.03)', 'transparent', 'transparent']}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-        />
-        {MILKY_STARS.map(function (m, i) {
-          return <View key={i} style={{ position: 'absolute', left: m.x + '%', top: (18 + m.y * 0.64) + '%', width: m.s * 2, height: m.s * 2, borderRadius: m.s, backgroundColor: '#F6E8C4', opacity: m.o * 0.8 }} />;
-        })}
-      </View>
-      {/* three parallax star depths, each drifting at its own pace */}
-      <DriftLayer range={6} period={26000}>{layers[0]}</DriftLayer>
-      <DriftLayer range={13} period={19000}>{layers[1]}</DriftLayer>
-      <DriftLayer range={22} period={13000}>{layers[2]}</DriftLayer>
-      {/* real star patterns — draw in and sparkle (no labels) */}
-      {CONSTELLATIONS.map(function (c, i) { return <ConstellationPattern key={i} c={c} ci={i} />; })}
-      {/* bright 4-point sparkle stars */}
-      {SPARKLES.map(function (s, i) { return <SparkleStar key={i} s={s} />; })}
-      {/* one brilliant named-star with diffraction spikes */}
-      <FlareStar x={SW * 0.78} y={SH * 0.12} size={26} />
-      {/* distant temple & trees on the horizon, lamps burning */}
-      <TempleSkyline />
-      {/* candle-lit chamber ambience */}
-      <ChamberGlow />
-      {/* rising gold embers */}
-      <EmberField />
-      {/* golden streaks */}
-      <ShootingStar topPct={14} delayMs={2500} travel={SW * 1.3} />
-      <ShootingStar topPct={38} delayMs={12000} travel={SW * 1.2} />
-      <ShootingStar topPct={58} delayMs={7000} travel={SW * 1.15} />
+      {/* faint drifting star depths — barely-there, just for life */}
+      <DriftLayer range={5} period={30000}>{layers[0]}</DriftLayer>
+      <DriftLayer range={10} period={22000}>{layers[1]}</DriftLayer>
+      <DriftLayer range={16} period={16000}>{layers[2]}</DriftLayer>
     </View>
   );
 }
@@ -731,34 +677,6 @@ function DrawStroke({ d, len, delay, duration, stroke, strokeWidth, opacity }) {
   );
 }
 
-// An SVG fill path that "washes in" (fillOpacity ramps) after its stroke draws
-var AInkFill = Animated.createAnimatedComponent(Path);
-function InkFill({ d, fill, delay, to, duration }) {
-  var t = useSharedValue(0);
-  var reduced = useReducedMotion();
-  useEffect(function () {
-    if (reduced) { t.value = 1; return; }
-    t.value = withDelay(delay || 0, withTiming(1, { duration: duration || 1100, easing: Easing.ease }));
-  }, [reduced]);
-  var animatedProps = useAnimatedProps(function () {
-    return { fillOpacity: (to == null ? 1 : to) * t.value };
-  });
-  return <AInkFill d={d} fill={fill} animatedProps={animatedProps} />;
-}
-
-// A fill that "washes in" after the ink strokes have drawn
-function InkWash({ delay, duration, to, children }) {
-  var t = useSharedValue(0);
-  var reduced = useReducedMotion();
-  useEffect(function () {
-    if (reduced) { t.value = 1; return; }
-    t.value = withDelay(delay || 0, withTiming(1, { duration: duration || 1600, easing: Easing.ease }));
-  }, [reduced]);
-  var style = useAnimatedStyle(function () {
-    return { opacity: (to || 1) * t.value };
-  });
-  return <Animated.View style={[StyleSheet.absoluteFill, style]}>{children}</Animated.View>;
-}
 
 // Darkened edges — the candle-lit chamber closes around the screen
 function Vignette() {
@@ -892,19 +810,10 @@ function SigilStar({ cx, cy, r, delay, ink }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  THE SAGE — illustrated astrologer scenes, drawn and lit entirely in code
-//  Filled layered silhouettes + gold rim light + living candle/moon glow.
+//  PAINTED SCENES — Diffui-generated art (assets/onboarding) brought
+//  alive in code: Ken Burns drift, candle flicker, breathing glow.
+//  Motion stays 100% reanimated — the paint itself is static.
 // ═══════════════════════════════════════════════════════════════════════
-
-var SAGE = {
-  robeDark: '#0B1428',
-  robeMid: '#16264A',
-  robeLit: '#2A4076',
-  sash: '#C9A35A',
-  skin: '#D9BC85',
-  beard: '#E5C88F',
-  rim: '#E5C88F',
-};
 
 // Irregular candle-flicker driver — one shared value lights a whole scene
 function useFlicker() {
@@ -924,15 +833,6 @@ function useFlicker() {
   return f;
 }
 
-// Pins children centered on a point in the 360×400 scene space (percent-based,
-// so overlays stay glued to the SVG drawing at any frame size)
-function ScenePin({ x, y, children }) {
-  return (
-    <View style={{ position: 'absolute', left: vx(x), top: vy(y), width: 0, height: 0, alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
-      {children}
-    </View>
-  );
-}
 
 // Scene lighting layer whose brightness follows the flicker value
 function FlickerGlow({ flicker, size, color, base }) {
@@ -946,872 +846,269 @@ function FlickerGlow({ flicker, size, color, base }) {
   );
 }
 
-// Candle flame — teardrop core + halo, dancing with the flicker
-function CandleFlame({ flicker, scale }) {
-  var s = scale || 1;
-  var style = useAnimatedStyle(function () {
-    return {
-      opacity: interpolate(flicker.value, [0.7, 1], [0.75, 1]),
-      transform: [
-        { scaleY: interpolate(flicker.value, [0.7, 1], [0.82, 1.12]) },
-        { scaleX: interpolate(flicker.value, [0.7, 1], [1.06, 0.94]) },
-        { rotate: interpolate(flicker.value, [0.7, 1], [-4, 3]) + 'deg' },
-      ],
-    };
-  });
-  return (
-    <Animated.View style={[{ alignItems: 'center', justifyContent: 'flex-end' }, style]}>
-      <View style={{ width: 12 * s, height: 20 * s, borderRadius: 8 * s, backgroundColor: '#F59E0B', opacity: 0.92 }} />
-      <View style={{ position: 'absolute', bottom: 2 * s, width: 6 * s, height: 11 * s, borderRadius: 4 * s, backgroundColor: '#FFF3C4' }} />
-    </Animated.View>
-  );
-}
-
-// Tiny gold glyph-sparks rising out of a glowing manuscript
-function RisingGlyph({ x, y, delay, drift }) {
-  var t = useSharedValue(0);
+// ── FloatElement — a single drawn art cutout (transparent PNG) shown as art:
+//    fades up, breathes/floats gently, and rests on a soft radial glow that
+//    both lights it and absorbs any cutout fringe. This is the whole visual
+//    vocabulary now — isolated elements, composed and faded. ──
+function FloatElement({
+  source, size, w, h, delay, glow, glowColor, glowScale,
+  floatRange, floatPeriod, rotate, rotatePeriod, opacity, style,
+}) {
   var reduced = useReducedMotion();
+  var appear = useSharedValue(0);
+  var bob = useSharedValue(0);
+  var spin = useSharedValue(0);
   useEffect(function () {
-    if (reduced) return;
-    t.value = withDelay(delay, withRepeat(withTiming(1, { duration: 4200, easing: Easing.out(Easing.quad) }), -1, false));
+    appear.value = withDelay(delay || 0, withTiming(1, { duration: 1100, easing: EASE_EXPO }));
+    if (reduced) { bob.value = 0.5; return; }
+    bob.value = withDelay(delay || 0, withRepeat(withTiming(1, { duration: floatPeriod || 5200, easing: Easing.inOut(Easing.sin) }), -1, true));
+    if (rotate) spin.value = withRepeat(withTiming(1, { duration: rotatePeriod || 60000, easing: Easing.linear }), -1, false);
   }, [reduced]);
-  var style = useAnimatedStyle(function () {
+  var fr = floatRange == null ? 9 : floatRange;
+  var ew = w || size, eh = h || size;
+  var elStyle = useAnimatedStyle(function () {
     return {
-      opacity: interpolate(t.value, [0, 0.15, 0.8, 1], [0, 0.9, 0.35, 0]),
+      opacity: appear.value * (opacity == null ? 1 : opacity),
       transform: [
-        { translateY: interpolate(t.value, [0, 1], [0, -74]) },
-        { translateX: interpolate(t.value, [0, 1], [0, drift]) },
-        { scale: interpolate(t.value, [0, 1], [1, 0.5]) },
+        { translateY: interpolate(bob.value, [0, 1], [fr, -fr]) },
+        { scale: interpolate(appear.value, [0, 1], [0.86, 1]) },
+        { rotate: (rotate ? interpolate(spin.value, [0, 1], [0, 360]) : 0) + 'deg' },
       ],
     };
   });
+  var glowStyle = useAnimatedStyle(function () {
+    return {
+      opacity: appear.value * 0.9,
+      transform: [{ translateY: interpolate(bob.value, [0, 1], [fr, -fr]) }, { scale: interpolate(bob.value, [0, 1], [0.96, 1.05]) }],
+    };
+  });
+  var gsz = (glowScale || 1.5) * Math.max(ew, eh);
   return (
-    <Animated.View style={[{ position: 'absolute', left: x, top: y, width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#FFD666', ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.9, 6) }, style]} />
+    <View pointerEvents="none" style={[{ alignItems: 'center', justifyContent: 'center' }, style]}>
+      {glow !== false ? (
+        <Animated.View style={[{ position: 'absolute', width: gsz, height: gsz }, glowStyle]}>
+          <GlowDisc color={glowColor || '#E8C97A'} size={gsz} innerOpacity={0.32} />
+        </Animated.View>
+      ) : null}
+      <Animated.View style={elStyle}>
+        <Image source={source} style={{ width: ew, height: eh }} resizeMode="contain" fadeDuration={0} />
+      </Animated.View>
+    </View>
   );
 }
 
-// Shared scene frame: fixed 360×400 design space, measured so the overlay
-// box EXACTLY matches the drawn SVG (percent pins stay glued to the art)
-function SceneFrame({ children, svg }) {
-  var [box, setBox] = useState(null);
+// ── PuppetScene — a full layered scene built from separately-generated
+//    papercut cutouts, each parallaxing / breathing on its own timeline for
+//    an immersive "alive" diorama. Motion is 100% code; every layer is a
+//    static painted cutout. ──
+function useLoop(period, reduced, mid) {
+  var v = useSharedValue(0);
+  useEffect(function () {
+    if (reduced) { v.value = mid == null ? 0.5 : mid; return; }
+    v.value = withRepeat(withTiming(1, { duration: period, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, [reduced]);
+  return v;
+}
+
+function PuppetScene({ scene, showMystic }) {
+  var reduced = useReducedMotion();
+  var appear = useSharedValue(0);
+  var bg = useLoop(30000, reduced);
+  var cb = useLoop(24000, reduced);
+  var moon = useLoop(6000, reduced);
+  var ca = useLoop(17000, reduced);
+  var flo = useLoop(6500, reduced);   // the mystic's slow levitation
+  var orb = useLoop(3200, reduced);   // the orb's glow pulse
+  var fg = useLoop(20000, reduced);
+  useEffect(function () { appear.value = withTiming(1, { duration: 1400, easing: EASE_EXPO }); }, []);
+
+  var bgStyle = useAnimatedStyle(function () {
+    return { transform: [{ scale: interpolate(bg.value, [0, 1], [1.06, 1.12]) }, { translateX: interpolate(bg.value, [0, 1], [6, -6]) }, { translateY: interpolate(bg.value, [0, 1], [4, -4]) }] };
+  });
+  var cbStyle = useAnimatedStyle(function () { return { opacity: appear.value * 0.85, transform: [{ translateX: interpolate(cb.value, [0, 1], [-12, 16]) }, { translateY: interpolate(cb.value, [0, 1], [0, -4]) }] }; });
+  var moonStyle = useAnimatedStyle(function () { return { opacity: appear.value, transform: [{ translateY: interpolate(moon.value, [0, 1], [5, -6]) }] }; });
+  var moonGlow = useAnimatedStyle(function () { return { opacity: appear.value * interpolate(moon.value, [0, 1], [0.4, 0.8]) }; });
+  var caStyle = useAnimatedStyle(function () { return { opacity: appear.value * 0.9, transform: [{ translateX: interpolate(ca.value, [0, 1], [14, -14]) }] }; });
+  // the mystic floats — a long, weightless vertical drift (no feet to ground)
+  var mysticStyle = useAnimatedStyle(function () { return { opacity: appear.value, transform: [{ translateY: interpolate(flo.value, [0, 1], [8, -8]) }, { scale: interpolate(appear.value, [0, 1], [0.9, 1]) }] }; });
+  var haloStyle = useAnimatedStyle(function () { return { opacity: appear.value * interpolate(orb.value, [0, 1], [0.5, 0.95]), transform: [{ translateY: interpolate(flo.value, [0, 1], [8, -8]) }, { scale: interpolate(orb.value, [0, 1], [0.94, 1.08]) }] }; });
+  var fgStyle = useAnimatedStyle(function () { return { opacity: appear.value, transform: [{ translateX: interpolate(fg.value, [0, 1], [-6, 6]) }] }; });
+  var mW = SW * 0.66, mAr = 896 / 1088;
+
   return (
-    <View
-      style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end' }}
-      onLayout={function (e) {
-        var l = e.nativeEvent.layout;
-        var bw = Math.min(l.width, l.height * 360 / 400);
-        setBox({ w: bw, h: bw * 400 / 360 });
-      }}
-    >
-      {box ? (
-        <View style={{ width: box.w, height: box.h }}>
-          <Svg width="100%" height="100%" viewBox="0 0 360 400">{svg}</Svg>
-          {children}
+    <View style={{ flex: 1, overflow: 'hidden' }}>
+      {/* minimal deep-space sky, very slow drift */}
+      <Animated.View style={[StyleSheet.absoluteFill, bgStyle]}>
+        <Image source={scene.bg} style={{ width: '100%', height: '100%' }} resizeMode="cover" fadeDuration={0} />
+      </Animated.View>
+      {/* far cloud (slow) */}
+      <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: '13%', left: '-10%', width: SW * 0.46 }, cbStyle]}>
+        <Image source={scene.cloudB} style={{ width: '100%', height: undefined, aspectRatio: 896 / 512 }} resizeMode="contain" fadeDuration={0} />
+      </Animated.View>
+      {/* moon + breathing glow (upper right) */}
+      <View pointerEvents="none" style={{ position: 'absolute', top: '6%', right: '12%', width: SW * 0.26, height: SW * 0.26, alignItems: 'center', justifyContent: 'center' }}>
+        <Animated.View style={[{ position: 'absolute', width: SW * 0.5, height: SW * 0.5 }, moonGlow]}>
+          <GlowDisc color="#F0D89A" size={SW * 0.5} innerOpacity={0.3} />
+        </Animated.View>
+        <Animated.View style={[{ width: SW * 0.26, height: SW * 0.26 }, moonStyle]}>
+          <Image source={scene.moon} style={{ width: '100%', height: '100%' }} resizeMode="contain" fadeDuration={0} />
+        </Animated.View>
+      </View>
+      {/* near cloud (faster) */}
+      <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: '26%', left: '-12%', width: SW * 0.4 }, caStyle]}>
+        <Image source={scene.cloudA} style={{ width: '100%', height: undefined, aspectRatio: 896 / 512 }} resizeMode="contain" fadeDuration={0} />
+      </Animated.View>
+      {/* the floating mystic — hovering centre-screen over a pulsing gold halo.
+          Shown only where it is the hero (story / casting); hidden on the
+          centered branding chapters so nothing sits behind the logo. */}
+      {showMystic !== false ? (
+        <View pointerEvents="none" style={{ position: 'absolute', top: '20%', left: 0, right: 0, alignItems: 'center', justifyContent: 'center' }}>
+          <Animated.View style={[{ position: 'absolute', width: SW * 0.9, height: SW * 0.9 }, haloStyle]}>
+            <GlowDisc color="#E8B75A" size={SW * 0.9} innerOpacity={0.3} />
+          </Animated.View>
+          <Animated.View style={[{ width: mW, height: mW / mAr }, mysticStyle]}>
+            <Image source={scene.mystic} style={{ width: '100%', height: '100%' }} resizeMode="contain" fadeDuration={0} />
+          </Animated.View>
         </View>
       ) : null}
+      {/* rising gold embers — a little living magic */}
+      <EmberField />
+      {/* melt into the funnel darkness at the very top */}
+      <LinearGradient pointerEvents="none" colors={['rgba(3,1,12,0.55)', 'rgba(0,0,0,0)']} locations={[0, 0.2]} style={StyleSheet.absoluteFill} />
     </View>
   );
 }
 
-// px→% helpers for overlaying RN views onto the 360×400 viewBox
-function vx(n) { return (n / 360 * 100) + '%'; }
-function vy(n) { return (n / 400 * 100) + '%'; }
-
-// Drifting cloud wisp — thin, slow, moonlit
-function CloudWisp({ y, w, period, delay, opacity }) {
-  var t = useSharedValue(0);
+// A calm act backdrop — a full-frame shadow-box painting with a slow parallax
+// drift + edge scrims, for the input and reveal acts (no mystic). Content
+// chapters render their UI over this.
+function SceneBg({ src, rotate }) {
   var reduced = useReducedMotion();
-  useEffect(function () {
-    if (reduced) return;
-    t.value = withDelay(delay || 0, withRepeat(withTiming(1, { duration: period, easing: Easing.linear }), -1, false));
-  }, [reduced]);
-  var style = useAnimatedStyle(function () {
-    return {
-      opacity: interpolate(t.value, [0, 0.1, 0.9, 1], [0, opacity, opacity, 0]),
-      transform: [{ translateX: interpolate(t.value, [0, 1], [-w, SW + w]) }],
-    };
+  var appear = useSharedValue(0);
+  var d = useLoop(30000, reduced);
+  var cb = useLoop(26000, reduced);
+  var ca = useLoop(19000, reduced);
+  useEffect(function () { appear.value = withTiming(1, { duration: 900, easing: EASE_EXPO }); }, []);
+  // parallax: the box breathes slowly, the drifting cut clouds move faster in
+  // front of it — the two speeds are what read as real depth on a flat screen.
+  var bgStyle = useAnimatedStyle(function () {
+    return { opacity: appear.value, transform: [{ scale: interpolate(d.value, [0, 1], [1.06, 1.12]) }, { translateX: interpolate(d.value, [0, 1], [4, -4]) }, { translateY: interpolate(d.value, [0, 1], [5, -5]) }] };
   });
-  return (
-    <Animated.View style={[{ position: 'absolute', top: y, left: 0, width: w, height: 14, borderRadius: 8 }, style]}>
-      <LinearGradient colors={['transparent', 'rgba(200,195,220,0.5)', 'rgba(200,195,220,0.28)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, borderRadius: 8 }} />
-    </Animated.View>
-  );
-}
-
-// Firefly — tiny warm spark wandering near the ground
-function Firefly({ x, y, delay }) {
-  var t = useSharedValue(0);
-  var reduced = useReducedMotion();
+  // Pages whose backdrop IS a wheel can turn it — very slowly, like the sky.
+  var rot = useSharedValue(0);
   useEffect(function () {
-    if (reduced) return;
-    t.value = withDelay(delay, withRepeat(withTiming(1, { duration: 5200, easing: Easing.inOut(Easing.sin) }), -1, true));
-  }, [reduced]);
-  var style = useAnimatedStyle(function () {
-    return {
-      opacity: interpolate(t.value, [0, 0.3, 0.5, 0.8, 1], [0, 0.9, 0.2, 0.85, 0]),
-      transform: [
-        { translateX: interpolate(t.value, [0, 1], [0, 26]) },
-        { translateY: interpolate(t.value, [0, 0.5, 1], [0, -16, -6]) },
-      ],
-    };
+    if (reduced || !rotate) return;
+    rot.value = withRepeat(withTiming(1, { duration: 180000, easing: Easing.linear }), -1, false);
+  }, [reduced, rotate]);
+  var rotStyle = useAnimatedStyle(function () {
+    return { transform: [{ rotate: interpolate(rot.value, [0, 1], [0, 360]) + 'deg' }] };
   });
+  var cbStyle = useAnimatedStyle(function () { return { opacity: appear.value * 0.5, transform: [{ translateX: interpolate(cb.value, [0, 1], [-14, 14]) }, { translateY: interpolate(cb.value, [0, 1], [0, -5]) }] }; });
+  var caStyle = useAnimatedStyle(function () { return { opacity: appear.value * 0.55, transform: [{ translateX: interpolate(ca.value, [0, 1], [16, -16]) }] }; });
   return (
-    <ScenePin x={x} y={y}>
-      <Animated.View style={[{ width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: '#D9F99D', ...boxShadow('#BEF264', { width: 0, height: 0 }, 0.9, 6) }, style]} />
-    </ScenePin>
-  );
-}
-
-// ── The crescent moon — smooth ivory crescent bathed in a wide soft
-//    halo, like moonlight diffusing into the night (reference-matched) ──
-function RealisticMoon({ size }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 120 120">
-      <Defs>
-        {/* layered halo — wide and gentle */}
-        <RadialGradient id="cmHaloOuter" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#E9E2C8" stopOpacity="0.34" />
-          <Stop offset="38%" stopColor="#D8D2BC" stopOpacity="0.14" />
-          <Stop offset="72%" stopColor="#C9C4B4" stopOpacity="0.05" />
-          <Stop offset="100%" stopColor="#C9C4B4" stopOpacity="0" />
-        </RadialGradient>
-        <RadialGradient id="cmHaloInner" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#F3EDD6" stopOpacity="0.5" />
-          <Stop offset="60%" stopColor="#EDE6CC" stopOpacity="0.12" />
-          <Stop offset="100%" stopColor="#EDE6CC" stopOpacity="0" />
-        </RadialGradient>
-        {/* near-flat ivory body with the faintest breathing of tone */}
-        <RadialGradient id="cmBody" cx="38%" cy="36%" r="80%">
-          <Stop offset="0%" stopColor="#FAF5DE" />
-          <Stop offset="55%" stopColor="#F3ECD0" />
-          <Stop offset="100%" stopColor="#E4DAB4" />
-        </RadialGradient>
-      </Defs>
-      {/* the wide moonlight halo */}
-      <Circle cx="60" cy="60" r="60" fill="url(#cmHaloOuter)" />
-      <Circle cx="60" cy="60" r="38" fill="url(#cmHaloInner)" />
-      {/* the crescent — fat ivory arc opening to the right, gently tilted */}
-      <G rotation="16" origin="60,60">
-        <Path
-          d="M 66 26 A 36 36 0 1 0 66 94 A 42 42 0 0 1 66 26 Z"
-          fill="url(#cmBody)"
-        />
-        {/* whisper of surface tone, barely there */}
-        <Ellipse cx="40" cy="52" rx="8" ry="6" fill="#D9CFA8" opacity="0.16" />
-        <Ellipse cx="38" cy="72" rx="5.5" ry="4.5" fill="#D9CFA8" opacity="0.12" />
-      </G>
-    </Svg>
-  );
-}
-
-// ── Scene 1: THE WATCHER — engraved astrologer with the armillary staff ──
-//    White monoline on navy: mask face, faceted cloak, medallion chain;
-//    the staff crowned by a LIVING armillary sphere (rings turn, planets
-//    orbit a sun); observatory & temple horizon; astrolabe + hourglass desk.
-
-var INKW = 'rgba(232,206,150,0.95)';
-var INKM = 'rgba(224,198,140,0.65)';
-var INKD = 'rgba(216,190,134,0.42)';
-
-// A slowly rotating monoline spiral galaxy
-function MonoGalaxy({ x, y, size, period }) {
-  var spin = useSharedValue(0);
-  var reduced = useReducedMotion();
-  useEffect(function () {
-    if (reduced) return;
-    spin.value = withRepeat(withTiming(360, { duration: period, easing: Easing.linear }), -1, false);
-  }, [reduced]);
-  var style = useAnimatedStyle(function () {
-    return { transform: [{ rotate: spin.value + 'deg' }] };
-  });
-  return (
-    <ScenePin x={x} y={y}>
-      <Animated.View style={[{ width: size, height: size, flexShrink: 0 }, style]}>
-        <Svg width="100%" height="100%" viewBox="0 0 40 40">
-          <Path d="M20,20 C24,17 28,19 28,23 C28,27 23,29 19,27 C14,25 13,18 17,14 C22,9 31,11 34,18" stroke={INKM} strokeWidth="1" fill="none" strokeLinecap="round" />
-          <Path d="M20,20 C16,23 12,21 12,17 C12,13 17,11 21,13 C26,15 27,22 23,26 C18,31 9,29 6,22" stroke={INKM} strokeWidth="1" fill="none" strokeLinecap="round" />
-          <Circle cx="20" cy="20" r="2" fill="#FFE9B8" opacity="0.9" />
-        </Svg>
+    <View style={StyleSheet.absoluteFill}>
+      <Animated.View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }, bgStyle]}>
+        {rotate ? (
+          // sized to the screen diagonal so no corner ever swings into view
+          <Animated.View style={[{ width: SCREEN_DIAG, height: SCREEN_DIAG }, rotStyle]}>
+            <Image source={src} style={{ width: '100%', height: '100%' }} resizeMode="cover" fadeDuration={0} />
+          </Animated.View>
+        ) : (
+          <Image source={src} style={{ width: '100%', height: '100%' }} resizeMode="cover" fadeDuration={0} />
+        )}
       </Animated.View>
-    </ScenePin>
-  );
-}
-
-// The armillary sphere — rings turning, planets circling the sun
-function ArmillarySphere({ size }) {
-  var ringA = useSharedValue(0);
-  var ringB = useSharedValue(0);
-  var reduced = useReducedMotion();
-  useEffect(function () {
-    if (reduced) return;
-    ringA.value = withRepeat(withTiming(360, { duration: 14000, easing: Easing.linear }), -1, false);
-    ringB.value = withRepeat(withTiming(-360, { duration: 21000, easing: Easing.linear }), -1, false);
-  }, [reduced]);
-  var styleA = useAnimatedStyle(function () {
-    return { transform: [{ rotate: ringA.value + 'deg' }] };
-  });
-  var styleB = useAnimatedStyle(function () {
-    return { transform: [{ rotate: ringB.value + 'deg' }] };
-  });
-  var S = size;
-  return (
-    <View style={{ width: S, height: S, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      {/* stationary meridian + horizon rings */}
-      <Svg width="100%" height="100%" viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
-        <Circle cx="50" cy="50" r="46" stroke={INKW} strokeWidth="1.4" fill="none" />
-        <Ellipse cx="50" cy="50" rx="46" ry="15" stroke={INKM} strokeWidth="1" fill="none" />
-        {/* the sun — rayed core */}
-        <Circle cx="50" cy="50" r="6.5" stroke={INKW} strokeWidth="1.2" fill="none" />
-        <Path d="M50,39 L50,34 M50,66 L50,61 M39,50 L34,50 M66,50 L61,50 M42,42 L38.5,38.5 M58,58 L61.5,61.5 M58,42 L61.5,38.5 M42,58 L38.5,61.5" stroke={INKW} strokeWidth="1" />
-      </Svg>
-      {/* turning rings */}
-      <Animated.View style={[StyleSheet.absoluteFill, styleA]}>
-        <Svg width="100%" height="100%" viewBox="0 0 100 100">
-          <Ellipse cx="50" cy="50" rx="46" ry="24" stroke={INKM} strokeWidth="1" fill="none" transform="rotate(28 50 50)" />
-          <Circle cx="8.9" cy="66" r="3" stroke={INKW} strokeWidth="1" fill="none" />
-        </Svg>
+      {/* drifting cut-paper clouds add a foreground parallax plane */}
+      <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: '9%', left: '-16%', width: SW * 0.4 }, cbStyle]}>
+        <Image source={SCENE_MYSTIC.cloudB} style={{ width: '100%', height: undefined, aspectRatio: 896 / 512 }} resizeMode="contain" fadeDuration={0} />
       </Animated.View>
-      <Animated.View style={[StyleSheet.absoluteFill, styleB]}>
-        <Svg width="100%" height="100%" viewBox="0 0 100 100">
-          <Ellipse cx="50" cy="50" rx="46" ry="30" stroke={INKD} strokeWidth="1" fill="none" transform="rotate(-38 50 50)" />
-          <Circle cx="85" cy="30" r="2.2" fill="#FFE9B8" opacity="0.9" />
-        </Svg>
+      <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: '17%', right: '-18%', width: SW * 0.36 }, caStyle]}>
+        <Image source={SCENE_MYSTIC.cloudA} style={{ width: '100%', height: undefined, aspectRatio: 896 / 512 }} resizeMode="contain" fadeDuration={0} />
       </Animated.View>
-      {/* planets riding invisible orbits around the sun */}
-      <OrbitingSpark color="#FFE9B8" size={4.5} delay={0} cx="50%" cy="50%" rx={S * 0.33} ry={S * 0.12} period={8000} />
-      <OrbitingSpark color="#F2D48E" size={3.5} delay={2200} cx="50%" cy="50%" rx={S * 0.44} ry={S * 0.17} period={12500} />
+      {/* rising gold embers — the same living magic as the story act */}
+      <EmberField />
+      <LinearGradient pointerEvents="none" colors={['rgba(4,2,14,0.5)', 'rgba(0,0,0,0)', 'rgba(3,1,10,0.5)', 'rgba(3,1,9,0.9)']} locations={[0, 0.28, 0.72, 1]} style={StyleSheet.absoluteFill} />
     </View>
   );
 }
 
-// The hourglass — sand trickling grain by grain
-function HourglassSand({ h }) {
-  var t = useSharedValue(0);
-  var reduced = useReducedMotion();
-  useEffect(function () {
-    if (reduced) return;
-    t.value = withRepeat(withTiming(1, { duration: 1400, easing: Easing.in(Easing.quad) }), -1, false);
-  }, [reduced]);
-  var style = useAnimatedStyle(function () {
-    return {
-      opacity: interpolate(t.value, [0, 0.1, 0.9, 1], [0, 0.9, 0.9, 0]),
-      transform: [{ translateY: interpolate(t.value, [0, 1], [0, h]) }],
-    };
-  });
-  return <Animated.View style={[{ width: 1.6, height: 3.4, borderRadius: 1, backgroundColor: '#FFE9B8' }, style]} />;
+// Every story beat is a COMPOSITION of drawn elements over the clean sky —
+// no baked text. All motion is code; art is static.
+function StoryStage({ children }) {
+  return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>{children}</View>;
 }
 
-function SceneWatcher() {
-  var breathe = useSharedValue(0);
-  var eyes = useSharedValue(0);
-  var reduced = useReducedMotion();
-
-  useEffect(function () {
-    if (reduced) { eyes.value = 0.8; return; }
-    breathe.value = withRepeat(withTiming(1, { duration: 4200, easing: Easing.inOut(Easing.sin) }), -1, true);
-    eyes.value = withDelay(2800, withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true));
-  }, [reduced]);
-
-  var sageStyle = useAnimatedStyle(function () {
-    return { transform: [{ rotate: interpolate(breathe.value, [0, 1], [-0.35, 0.35]) + 'deg' }] };
-  });
-  var eyeStyle = useAnimatedStyle(function () {
-    return { opacity: interpolate(eyes.value, [0, 1], [0.55, 1]) };
-  });
-
+// Casting — "your sky gets read": the crystal orb. (The story beats render
+// their own scenes via StoryBeatFocus; this is the one standalone hero left.)
+function StoryBeatOrb() {
   return (
-    <SceneFrame
-      svg={
-        <>
-          {/* dashed celestial arcs sweeping the heavens */}
-          <Path d="M-20,118 Q180,26 380,108" stroke={INKD} strokeWidth="0.9" strokeDasharray="5 7" fill="none" />
-          <Path d="M-20,58 Q150,-14 380,44" stroke={INKD} strokeWidth="0.8" strokeDasharray="4 8" fill="none" />
-
-          {/* monoline crescent moon with craters */}
-          <Path d="M74,38 A 26 26 0 1 0 74,86 A 20 20 0 1 1 74,38 Z" stroke={INKW} strokeWidth="1.3" fill="rgba(244,232,204,0.12)" />
-          <Circle cx="52" cy="56" r="2.6" stroke={INKM} strokeWidth="0.8" fill="none" />
-          <Circle cx="56" cy="70" r="1.7" stroke={INKM} strokeWidth="0.7" fill="none" />
-
-          {/* observatory on its hill, dome slit open to the night */}
-          <Path d="M6,306 Q42,286 88,300 L88,330 L6,330 Z" stroke={INKM} strokeWidth="1" fill="none" />
-          <Path d="M28,296 L28,288 L64,288 L64,296 M30,288 C30,268 62,268 62,288 M44,268 L50,262" stroke={INKW} strokeWidth="1.1" fill="none" />
-          {/* temple spires on the far right ridge */}
-          <Path d="M300,330 L300,322 L336,322 L336,330 M304,322 C304,306 332,306 332,322 M318,306 L318,296 M314,301 L322,301" stroke={INKM} strokeWidth="1" fill="none" />
-          <Path d="M344,330 L344,318 M340,318 L348,318 L344,308 Z" stroke={INKD} strokeWidth="1" fill="none" />
-          <Circle cx="318" cy="293" r="1.3" fill="#FFE9B8" opacity="0.85" />
-
-          {/* in-scene constellation, engraved */}
-          <Path d="M262,166 L282,150 L306,158 L322,142" stroke={INKD} strokeWidth="0.8" fill="none" />
-          <Circle cx="262" cy="166" r="1.8" fill="#FFE9B8" opacity="0.9" />
-          <Circle cx="282" cy="150" r="2.2" fill="#FFE9B8" opacity="0.95" />
-          <Circle cx="306" cy="158" r="1.6" fill="#FFE9B8" opacity="0.85" />
-          <Circle cx="322" cy="142" r="2" fill="#FFE9B8" opacity="0.9" />
-
-          {/* THE STONE PARAPET he stands upon */}
-          <Path d="M16,336 L344,336" stroke={INKW} strokeWidth="1.3" fill="none" />
-          <Path d="M20,336 L20,394 M344,336 L340,394" stroke={INKD} strokeWidth="1" fill="none" />
-          <Path d="M20,354 L342,354 M20,374 L341,374" stroke={INKD} strokeWidth="0.9" fill="none" />
-          <Path d="M78,336 L78,354 M140,336 L140,354 M202,336 L202,354 M264,336 L264,354 M326,336 L326,354" stroke={INKD} strokeWidth="0.9" />
-          <Path d="M48,354 L48,374 M110,354 L110,374 M172,354 L172,374 M234,354 L234,374 M296,354 L296,374" stroke={INKD} strokeWidth="0.9" />
-          <Path d="M78,374 L78,394 M140,374 L140,394 M202,374 L202,394 M264,374 L264,394" stroke={INKD} strokeWidth="0.9" />
-
-          {/* HIS DESK — astrolabe and hourglass upon it */}
-          <Path d="M262,282 L350,274 L350,282 L262,290 Z M268,290 L268,336 M344,282 L344,330 M268,312 L344,306" stroke={INKM} strokeWidth="1.1" fill="none" />
-          {/* astrolabe disc on a stand */}
-          <Circle cx="290" cy="252" r="19" stroke={INKW} strokeWidth="1.2" fill="none" />
-          <Circle cx="290" cy="252" r="12" stroke={INKM} strokeWidth="0.9" fill="none" />
-          <Path d="M290,233 L290,271 M271,252 L309,252 M290,252 L301,241" stroke={INKM} strokeWidth="0.8" />
-          <Circle cx="290" cy="252" r="2" fill="#FFE9B8" opacity="0.9" />
-          <Path d="M282,271 L280,283 M298,271 L300,283" stroke={INKM} strokeWidth="1" />
-          {/* hourglass frame */}
-          <Path d="M322,240 L342,240 M322,276 L342,276 M324,240 C324,252 330,256 332,258 C334,256 340,252 340,240 M324,276 C324,264 330,260 332,258 C334,260 340,264 340,276" stroke={INKW} strokeWidth="1.1" fill="none" />
-          <Path d="M327,272 L337,272 L332,264 Z" fill="rgba(255,255,255,0.5)" />
-          <Path d="M328,243 L336,243 L332,248 Z" fill="rgba(255,255,255,0.35)" />
-        </>
-      }
-    >
-      {/* spiral galaxies wheeling slowly */}
-      <MonoGalaxy x={318} y={64} size={SW * 0.11} period={40000} />
-      <MonoGalaxy x={36} y={166} size={SW * 0.085} period={52000} />
-
-      {/* THE ASTROLOGER — engraved, breathing, holding the heavens */}
-      <Animated.View style={[StyleSheet.absoluteFill, sageStyle]}>
-        <Svg width="100%" height="100%" viewBox="0 0 360 400">
-          {/* cloak silhouette — grand sweep to the parapet */}
-          <InkFill d="M170,178 C142,186 124,206 116,236 C106,272 96,306 88,336 L252,336 C246,306 238,272 230,236 C222,206 200,186 170,178 Z" fill="#101F3E" delay={900} to={0.55} />
-          <DrawStroke d="M170,178 C142,186 124,206 116,236 C106,272 96,306 88,336" len={230} delay={800} duration={1300} stroke={INKW} strokeWidth={1.4} />
-          <DrawStroke d="M170,178 C200,186 222,206 230,236 C238,272 246,306 252,336" len={230} delay={800} duration={1300} stroke={INKW} strokeWidth={1.4} />
-          <DrawStroke d="M88,336 L252,336" len={170} delay={2000} duration={600} stroke={INKM} strokeWidth={1} />
-          {/* faceted fold lines of the cloak */}
-          <DrawStroke d="M140,214 L158,248 L142,286 L160,322" len={150} delay={2300} duration={900} stroke={INKD} strokeWidth={0.9} />
-          <DrawStroke d="M200,214 L184,250 L198,288 L182,322" len={150} delay={2450} duration={900} stroke={INKD} strokeWidth={0.9} />
-          <DrawStroke d="M170,190 L170,224 M162,238 L178,238" len={60} delay={2600} duration={500} stroke={INKD} strokeWidth={0.8} />
-          {/* the hood — peaked, framing the mask */}
-          <DrawStroke d="M170,118 C152,122 142,138 143,158 C144,172 152,182 162,186" len={110} delay={300} duration={900} stroke={INKW} strokeWidth={1.3} />
-          <DrawStroke d="M170,118 C188,122 198,138 197,158 C196,172 188,182 178,186" len={110} delay={300} duration={900} stroke={INKW} strokeWidth={1.3} />
-          <DrawStroke d="M162,186 C165,190 175,190 178,186" len={22} delay={1100} duration={400} stroke={INKW} strokeWidth={1.1} />
-          {/* the mask face within */}
-          <DrawStroke d="M170,142 C178,142 183,151 182,163 C181,173 176,179 170,179 C164,179 159,173 158,163 C157,151 162,142 170,142 Z" len={120} delay={1300} duration={900} stroke={INKW} strokeWidth={1.1} />
-          <Path d="M161,159 C163,156 167,156 168,159 C167,161 163,161 161,159 Z" fill="#F5A83D" opacity="0.95" />
-          <Path d="M172,159 C174,156 178,156 179,159 C178,161 174,161 172,159 Z" fill="#F5A83D" opacity="0.95" />
-          {/* medallion chain at the collar */}
-          <DrawStroke d="M156,196 C162,203 178,203 184,196" len={38} delay={2100} duration={500} stroke={INKM} strokeWidth={1} />
-          <Circle cx="163" cy="205" r="2.6" stroke={INKW} strokeWidth="1" fill="none" />
-          <Circle cx="170" cy="208" r="3.2" stroke={INKW} strokeWidth="1" fill="none" />
-          <Circle cx="177" cy="205" r="2.6" stroke={INKW} strokeWidth="1" fill="none" />
-          {/* raised arm gripping the staff */}
-          <DrawStroke d="M196,206 C210,196 222,180 228,160" len={72} delay={1600} duration={800} stroke={INKW} strokeWidth={1.3} />
-          <DrawStroke d="M202,220 C216,208 228,190 236,168" len={80} delay={1700} duration={800} stroke={INKM} strokeWidth={1} />
-          <Circle cx="231" cy="156" r="5" stroke={INKW} strokeWidth="1.2" fill="none" />
-          {/* the staff — from the sphere down to the stones */}
-          <DrawStroke d="M234,118 L226,336" len={225} delay={1900} duration={1100} stroke={INKW} strokeWidth={1.6} />
-          <DrawStroke d="M229,170 C232,169 235,169 237,171" len={12} delay={2700} duration={300} stroke={INKM} strokeWidth={0.9} />
-        </Svg>
-
-        {/* glowing mask eyes */}
-        <ScenePin x={164.5} y={159}>
-          <Animated.View style={[{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#F5A83D', ...boxShadow('#E8842D', { width: 0, height: 0 }, 1, 7) }, eyeStyle]} />
-        </ScenePin>
-        <ScenePin x={175.5} y={159}>
-          <Animated.View style={[{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#F5A83D', ...boxShadow('#E8842D', { width: 0, height: 0 }, 1, 7) }, eyeStyle]} />
-        </ScenePin>
-      </Animated.View>
-
-      {/* THE ARMILLARY SPHERE crowning the staff — the living heavens */}
-      <ScenePin x={234} y={80}>
-        <GlowDisc color="#E0C992" size={SW * 0.3} innerOpacity={0.22} />
-      </ScenePin>
-      <ScenePin x={234} y={80}>
-        <ArmillarySphere size={SW * 0.24} />
-      </ScenePin>
-      {/* pennant at the sphere's crown */}
-      <ScenePin x={236} y={26}>
-        <Svg width={22} height={20} viewBox="0 0 22 20" style={{ flexShrink: 0 }}>
-          <Path d="M4,20 L4,2 M4,2 L18,6 L4,10" stroke="rgba(232,240,255,0.9)" strokeWidth="1.3" fill="none" strokeLinejoin="round" />
-        </Svg>
-      </ScenePin>
-
-      {/* hourglass sand, falling grain by grain */}
-      <ScenePin x={332} y={252}>
-        <HourglassSand h={SW * 0.028} />
-      </ScenePin>
-
-      {/* thin night clouds */}
-      <CloudWisp y={44} w={150} period={30000} delay={0} opacity={0.35} />
-      <CloudWisp y={100} w={110} period={40000} delay={11000} opacity={0.25} />
-    </SceneFrame>
+    <StoryStage>
+      <FloatElement source={ELEMENTS.orb} w={SW * 0.62} glowColor="#B39CE8" glowScale={1.35} delay={150} floatPeriod={5400} floatRange={6} />
+    </StoryStage>
   );
 }
 
-// ── Scene 2: THE SHRINE OF THE GLOBE — seen from behind, inside the arch,
-//    he studies the turning heavens. Gold line work under a full moon.
-
-var GLD = 'rgba(224,201,146,0.92)';
-var GLDm = 'rgba(218,196,146,0.6)';
-var GLDd = 'rgba(210,190,146,0.38)';
-
-function SceneReader() {
-  var flicker = useFlicker();
-  var breathe = useSharedValue(0);
-  var moonPulse = useSharedValue(0);
-  var reduced = useReducedMotion();
-
-  useEffect(function () {
-    if (reduced) { moonPulse.value = 0.6; return; }
-    breathe.value = withRepeat(withTiming(1, { duration: 4600, easing: Easing.inOut(Easing.sin) }), -1, true);
-    moonPulse.value = withRepeat(withTiming(1, { duration: 5200, easing: Easing.inOut(Easing.sin) }), -1, true);
-  }, [reduced]);
-
-  var figStyle = useAnimatedStyle(function () {
-    return { transform: [{ scale: interpolate(breathe.value, [0, 1], [1, 1.006]) }] };
-  });
-  var moonStyle = useAnimatedStyle(function () {
-    return { opacity: interpolate(moonPulse.value, [0, 1], [0.7, 1]) };
-  });
-
-  return (
-    <SceneFrame
-      svg={
-        <>
-          {/* flowing flourish swirls in the night */}
-          <Path d="M18,60 C48,44 60,74 40,86 C24,95 10,82 20,68 M40,86 C64,104 58,138 34,146" stroke={GLDd} strokeWidth="0.9" fill="none" />
-          <Path d="M342,150 C316,140 312,112 334,104 C350,98 360,112 350,124 M334,104 C316,88 322,58 344,52" stroke={GLDd} strokeWidth="0.9" fill="none" />
-
-          {/* THE ARCH — pillars, arc, finial */}
-          <Path d="M96,336 L96,180 C96,120 264,120 264,180 L264,336" stroke={GLD} strokeWidth="1.6" fill="none" />
-          <Path d="M106,336 L106,184 C106,130 254,130 254,184 L254,336" stroke={GLDm} strokeWidth="0.9" fill="none" />
-          <Path d="M92,336 L92,172 M100,336 L100,176 M260,336 L260,176 M268,336 L268,172" stroke={GLDd} strokeWidth="0.8" fill="none" />
-          {/* capital details on the pillars */}
-          <Path d="M88,208 L112,208 M88,214 L112,214 M248,208 L272,208 M248,214 L272,214" stroke={GLDm} strokeWidth="0.9" />
-          {/* finial crown */}
-          <Path d="M180,130 L180,104 M172,116 L188,116 M176,110 L184,110" stroke={GLD} strokeWidth="1.1" />
-          <Circle cx="180" cy="100" r="2.4" stroke={GLD} strokeWidth="1" fill="none" />
-          <Circle cx="180" cy="94" r="1.2" fill="#F4E8CC" opacity="0.95" />
-
-          {/* THE PEDESTAL — ornate base the arch rests upon */}
-          <Path d="M64,336 L296,336 M58,346 L302,346 M64,358 L296,358 M72,372 L288,372" stroke={GLD} strokeWidth="1.2" fill="none" />
-          <Path d="M64,336 L58,346 M296,336 L302,346 M58,346 L64,358 M302,346 L296,358 M64,358 L72,372 M296,358 L288,372" stroke={GLDm} strokeWidth="0.9" />
-          {/* diamond frieze along the base */}
-          <Path d="M110,352 L116,348 L122,352 L116,356 Z M150,352 L156,348 L162,352 L156,356 Z M190,352 L196,348 L202,352 L196,356 Z M230,352 L236,348 L242,352 L236,356 Z" stroke={GLDm} strokeWidth="0.8" fill="none" />
-
-          {/* THE ASTROLOGER — from behind, studying the globe */}
-          <InkFill d="M180,214 C160,218 148,236 144,262 C140,288 142,312 146,330 L214,330 C218,312 220,288 216,262 C212,236 200,218 180,214 Z" fill="#101F3E" delay={900} to={0.5} />
-          <DrawStroke d="M180,214 C160,218 148,236 144,262 C140,288 142,312 146,330" len={140} delay={800} duration={1100} stroke={GLD} strokeWidth={1.3} />
-          <DrawStroke d="M180,214 C200,218 212,236 216,262 C220,288 218,312 214,330" len={140} delay={800} duration={1100} stroke={GLD} strokeWidth={1.3} />
-          <DrawStroke d="M146,330 L214,330" len={72} delay={1800} duration={500} stroke={GLDm} strokeWidth={1} />
-          {/* back fold lines of the robe */}
-          <DrawStroke d="M166,232 C164,262 164,296 168,326" len={100} delay={2000} duration={800} stroke={GLDd} strokeWidth={0.8} />
-          <DrawStroke d="M194,232 C196,262 196,296 192,326" len={100} delay={2150} duration={800} stroke={GLDd} strokeWidth={0.8} />
-          {/* head from behind + hair bun */}
-          <Circle cx="180" cy="196" r="15" stroke={GLD} strokeWidth="1.2" fill="rgba(16,31,62,0.7)" />
-          <Circle cx="180" cy="180" r="6" stroke={GLD} strokeWidth="1.1" fill="none" />
-          <Path d="M170,188 C174,184 186,184 190,188" stroke={GLDm} strokeWidth="0.8" fill="none" />
-          {/* shoulders line */}
-          <DrawStroke d="M158,222 C168,216 192,216 202,222" len={50} delay={1500} duration={500} stroke={GLDm} strokeWidth={1} />
-
-          {/* the globe's stand — column + tripod feet */}
-          <Path d="M180,300 L180,318 M168,330 L180,318 L192,330 M172,318 L188,318" stroke={GLD} strokeWidth="1.1" fill="none" />
-
-          {/* SHELVES on the right wall — scroll rings */}
-          <Path d="M292,150 L348,150 M292,196 L348,196" stroke={GLDm} strokeWidth="1.1" />
-          <Circle cx="304" cy="142" r="6.5" stroke={GLDm} strokeWidth="1" fill="none" />
-          <Circle cx="322" cy="142" r="6.5" stroke={GLD} strokeWidth="1" fill="none" />
-          <Circle cx="340" cy="142" r="6.5" stroke={GLDm} strokeWidth="1" fill="none" />
-          <Circle cx="310" cy="188" r="6.5" stroke={GLD} strokeWidth="1" fill="none" />
-          <Circle cx="330" cy="188" r="6.5" stroke={GLDm} strokeWidth="1" fill="none" />
-          <Circle cx="304" cy="142" r="2" stroke={GLDd} strokeWidth="0.7" fill="none" />
-          <Circle cx="322" cy="142" r="2" stroke={GLDd} strokeWidth="0.7" fill="none" />
-          <Circle cx="340" cy="142" r="2" stroke={GLDd} strokeWidth="0.7" fill="none" />
-          <Circle cx="310" cy="188" r="2" stroke={GLDd} strokeWidth="0.7" fill="none" />
-          <Circle cx="330" cy="188" r="2" stroke={GLDd} strokeWidth="0.7" fill="none" />
-
-          {/* book stack + candle stand on the right */}
-          <Path d="M296,318 L344,314 L344,322 L296,326 Z M300,310 L340,307 L340,314 L300,318 Z M304,303 L336,300 L336,307 L304,310 Z" stroke={GLDm} strokeWidth="0.9" fill="rgba(16,31,62,0.5)" />
-          <Path d="M318,258 L326,258 L324,300 L320,300 Z M312,300 L332,300 L330,306 L314,306 Z" stroke={GLD} strokeWidth="1" fill="none" />
-
-          {/* small shrine tree at the left of the pedestal */}
-          <Path d="M52,336 C51,322 55,310 53,300 M53,300 C58,295 66,293 72,295 M53,300 C48,293 41,291 34,292 M53,300 C57,303 62,307 64,313" stroke={GLDd} strokeWidth="1" fill="none" strokeLinecap="round" />
-        </>
-      }
-    >
-      {/* THE FULL MOON — luminous over the shrine */}
-      <ScenePin x={180} y={44}>
-        <GlowDisc color="#EEE6C8" size={SW * 0.3} innerOpacity={0.3} />
-      </ScenePin>
-      <ScenePin x={180} y={44}>
-        <Animated.View style={[{ width: SW * 0.15, height: SW * 0.15, flexShrink: 0 }, moonStyle]}>
-          <Svg width="100%" height="100%" viewBox="0 0 60 60">
-            <Circle cx="30" cy="30" r="26" stroke="#F1E8CC" strokeWidth="1.3" fill="rgba(241,232,204,0.16)" />
-            <Circle cx="22" cy="24" r="4.5" stroke="rgba(241,232,204,0.6)" strokeWidth="0.8" fill="none" />
-            <Circle cx="38" cy="34" r="3" stroke="rgba(241,232,204,0.55)" strokeWidth="0.7" fill="none" />
-            <Circle cx="27" cy="40" r="2.2" stroke="rgba(241,232,204,0.5)" strokeWidth="0.7" fill="none" />
-            <Path d="M12,18 C18,10 30,6 40,10" stroke="rgba(241,232,204,0.45)" strokeWidth="0.7" fill="none" />
-          </Svg>
-        </Animated.View>
-      </ScenePin>
-
-      {/* spiral galaxies drifting by */}
-      <MonoGalaxy x={40} y={210} size={SW * 0.1} period={46000} />
-      <MonoGalaxy x={330} y={64} size={SW * 0.085} period={58000} />
-
-      {/* the celestial globe — the heavens turning before him */}
-      <ScenePin x={180} y={268}>
-        <GlowDisc color="#E0C992" size={SW * 0.22} innerOpacity={0.24} />
-      </ScenePin>
-      <Animated.View style={[StyleSheet.absoluteFill, figStyle, { pointerEvents: 'none' }]}>
-        <ScenePin x={180} y={268}>
-          <ArmillarySphere size={SW * 0.17} />
-        </ScenePin>
-      </Animated.View>
-
-      {/* candlelight breathing at the right */}
-      <ScenePin x={322} y={278}>
-        <FlickerGlow flicker={flicker} size={SW * 0.3} color="#F59E0B" base={0.4} />
-      </ScenePin>
-      <ScenePin x={322} y={248}>
-        <CandleFlame flicker={flicker} scale={0.9} />
-      </ScenePin>
-
-      {/* sparks rising off the globe */}
-      <RisingGlyph x={vx(170)} y={vy(252)} delay={1800} drift={-8} />
-      <RisingGlyph x={vx(192)} y={vy(256)} delay={3300} drift={10} />
-    </SceneFrame>
-  );
-}
-
-// ── Scene 4: THE KEEPER OF THE SPHERE — flowing gold-line mystic cradling
-//    a golden ringed planet; constellations bound to him on either side.
-//    `reading` = casting mode: the orb quickens, the chart forms around it.
-function SceneOrb({ reading, progress }) {
-  var orbPulse = useSharedValue(0);
-  var eyes = useSharedValue(0);
-  var sway = useSharedValue(0);
-  var reduced = useReducedMotion();
-  var p = progress || 0;
-
-  useEffect(function () {
-    if (reduced) { orbPulse.value = 0.5; eyes.value = 0.85; return; }
-    orbPulse.value = withRepeat(
-      withTiming(1, { duration: reading ? 620 : 3200, easing: Easing.inOut(Easing.sin) }), -1, true);
-    eyes.value = withDelay(2200, withRepeat(withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.sin) }), -1, true));
-    sway.value = withRepeat(withTiming(1, { duration: 7800, easing: Easing.inOut(Easing.sin) }), -1, true);
-  }, [reduced, reading]);
-
-  var orbGlowStyle = useAnimatedStyle(function () {
-    return {
-      opacity: interpolate(orbPulse.value, [0, 1], reading ? [0.6, 1] : [0.4, 0.85]),
-      transform: [{ scale: interpolate(orbPulse.value, [0, 1], reading ? [0.95, 1.28] : [0.95, 1.1]) }],
-    };
-  });
-  var eyeStyle = useAnimatedStyle(function () {
-    return { opacity: interpolate(eyes.value, [0, 1], [0.6, 1]) };
-  });
-  var swayStyle = useAnimatedStyle(function () {
-    return { transform: [{ rotate: interpolate(sway.value, [0, 1], [-0.5, 0.5]) + 'deg' }] };
-  });
-
-  return (
-    <SceneFrame
-      svg={
-        <>
-          {/* the great orbit — a dashed ellipse sweeping behind him */}
-          <Ellipse cx="180" cy="216" rx="168" ry="118" stroke={INKD} strokeWidth="0.9" strokeDasharray="5 8" fill="none" transform="rotate(-14 180 216)" />
-          <Ellipse cx="180" cy="230" rx="150" ry="96" stroke={INKD} strokeWidth="0.7" strokeDasharray="3 9" fill="none" transform="rotate(9 180 230)" opacity="0.7" />
-
-          {/* constellations bound to his left */}
-          <Path d="M28,150 L58,128 L92,142 L112,116 M92,142 L86,180 L58,204 M58,204 L84,232" stroke={INKD} strokeWidth="0.9" fill="none" />
-          <Circle cx="28" cy="150" r="2.4" fill="#FFE9B8" opacity="0.95" />
-          <Circle cx="58" cy="128" r="3" fill="#FFE9B8" opacity="1" />
-          <Circle cx="92" cy="142" r="2.2" fill="#FFE9B8" opacity="0.9" />
-          <Circle cx="112" cy="116" r="2.6" fill="#FFE9B8" opacity="0.95" />
-          <Circle cx="86" cy="180" r="2" fill="#FFE9B8" opacity="0.85" />
-          <Circle cx="58" cy="204" r="2.6" fill="#FFE9B8" opacity="0.95" />
-          <Circle cx="84" cy="232" r="2" fill="#FFE9B8" opacity="0.85" />
-
-          {/* and to his right */}
-          <Path d="M330,132 L302,150 L316,184 M302,150 L272,140 M316,184 L296,216 L318,244" stroke={INKD} strokeWidth="0.9" fill="none" />
-          <Circle cx="330" cy="132" r="2.8" fill="#FFE9B8" opacity="1" />
-          <Circle cx="302" cy="150" r="2.2" fill="#FFE9B8" opacity="0.9" />
-          <Circle cx="272" cy="140" r="2" fill="#FFE9B8" opacity="0.85" />
-          <Circle cx="316" cy="184" r="2.6" fill="#FFE9B8" opacity="0.95" />
-          <Circle cx="296" cy="216" r="2" fill="#FFE9B8" opacity="0.85" />
-          <Circle cx="318" cy="244" r="2.4" fill="#FFE9B8" opacity="0.9" />
-
-          {/* four-point sparks */}
-          <Path d="M126,84 L127.6,90 L134,92 L127.6,94 L126,100 L124.4,94 L118,92 L124.4,90 Z" fill="#FFE9B8" opacity="0.7" />
-          <Path d="M258,86 L259.4,91 L264,92.4 L259.4,94 L258,99 L256.6,94 L252,92.4 L256.6,91 Z" fill="#FFE9B8" opacity="0.6" />
-        </>
-      }
-    >
-      {/* gentle sway wraps him */}
-      <Animated.View style={[StyleSheet.absoluteFill, swayStyle]}>
-        <Svg width="100%" height="100%" viewBox="0 0 360 400">
-          {/* the hood — tall, peaked, draped */}
-          <InkFill d="M180,96 C158,104 146,126 148,152 C149,170 158,184 170,190 L190,190 C202,184 211,170 212,152 C214,126 202,104 180,96 Z" fill="#171335" delay={800} to={0.5} />
-          <DrawStroke d="M180,96 C158,104 146,126 148,152 C149,170 158,184 170,190" len={140} delay={300} duration={1000} stroke={INKW} strokeWidth={1.4} />
-          <DrawStroke d="M180,96 C202,104 214,126 212,152 C211,170 202,184 190,190" len={140} delay={300} duration={1000} stroke={INKW} strokeWidth={1.4} />
-          {/* inner hood edge framing the void */}
-          <Path d="M165,152 C165,130 172,118 180,116 C188,118 195,130 195,152 C195,166 189,175 180,177 C171,175 165,166 165,152 Z" fill="#0A0718" opacity="0.95" />
-          <DrawStroke d="M165,152 C165,130 172,118 180,116 C188,118 195,130 195,152 C195,166 189,175 180,177 C171,175 165,166 165,152 Z" len={170} delay={900} duration={900} stroke={INKM} strokeWidth={1} />
-
-          {/* THE FLOWING ROBE — strands streaming to the night */}
-          <DrawStroke d="M166,188 C140,226 118,282 100,352 C94,374 88,388 82,396" len={250} delay={1300} duration={1400} stroke={INKW} strokeWidth={1.3} />
-          <DrawStroke d="M194,188 C220,226 242,282 260,352 C266,374 272,388 278,396" len={250} delay={1300} duration={1400} stroke={INKW} strokeWidth={1.3} />
-          <DrawStroke d="M170,194 C152,240 138,300 130,368 C127,384 123,394 118,400" len={220} delay={1500} duration={1300} stroke={INKM} strokeWidth={1} />
-          <DrawStroke d="M190,194 C208,240 222,300 230,368 C233,384 237,394 242,400" len={220} delay={1500} duration={1300} stroke={INKM} strokeWidth={1} />
-          <DrawStroke d="M175,200 C165,256 158,320 156,384" len={190} delay={1700} duration={1200} stroke={INKD} strokeWidth={0.9} />
-          <DrawStroke d="M185,200 C195,256 202,320 204,384" len={190} delay={1700} duration={1200} stroke={INKD} strokeWidth={0.9} />
-          {/* wind-caught wisps at the hem */}
-          <DrawStroke d="M100,352 C84,368 62,378 40,380" len={70} delay={2600} duration={700} stroke={INKD} strokeWidth={0.8} />
-          <DrawStroke d="M260,352 C276,368 298,378 320,380" len={70} delay={2700} duration={700} stroke={INKD} strokeWidth={0.8} />
-          <DrawStroke d="M130,368 C118,380 102,388 86,390" len={52} delay={2800} duration={600} stroke={INKD} strokeWidth={0.7} />
-          <DrawStroke d="M230,368 C242,380 258,388 274,390" len={52} delay={2900} duration={600} stroke={INKD} strokeWidth={0.7} />
-
-          {/* shoulders + arms cradling the sphere */}
-          <DrawStroke d="M166,188 C158,208 152,232 152,252 C152,274 162,290 172,296" len={130} delay={1900} duration={900} stroke={INKW} strokeWidth={1.2} />
-          <DrawStroke d="M194,188 C202,208 208,232 208,252 C208,274 198,290 188,296" len={130} delay={1900} duration={900} stroke={INKW} strokeWidth={1.2} />
-          {/* cupped hands beneath */}
-          <DrawStroke d="M162,308 C168,318 192,318 198,308" len={48} delay={2400} duration={500} stroke={INKW} strokeWidth={1.2} />
-          <DrawStroke d="M166,312 C171,318 189,318 194,312" len={36} delay={2550} duration={450} stroke={INKM} strokeWidth={0.9} />
-        </Svg>
-
-        {/* amber eyes within the void */}
-        <ScenePin x={172.5} y={148}>
-          <Animated.View style={[{ width: 7, height: 4.5, borderRadius: 2.5, backgroundColor: '#F5A83D', ...boxShadow('#E8842D', { width: 0, height: 0 }, 1, 8) }, eyeStyle]} />
-        </ScenePin>
-        <ScenePin x={187.5} y={148}>
-          <Animated.View style={[{ width: 7, height: 4.5, borderRadius: 2.5, backgroundColor: '#F5A83D', ...boxShadow('#E8842D', { width: 0, height: 0 }, 1, 8) }, eyeStyle]} />
-        </ScenePin>
-      </Animated.View>
-
-      {/* THE GOLDEN SPHERE — a ringed world resting in his hands */}
-      <ScenePin x={180} y={290}>
-        <Animated.View style={orbGlowStyle}>
-          <GlowDisc color="#E8C060" size={SW * 0.36} innerOpacity={0.5} />
-        </Animated.View>
-      </ScenePin>
-      <ScenePin x={180} y={290}>
-        <View style={{ width: SW * 0.24, height: SW * 0.24, flexShrink: 0 }}>
-          <Svg width="100%" height="100%" viewBox="0 0 100 100">
-            <Defs>
-              <RadialGradient id="planetG" cx="38%" cy="32%" r="75%">
-                <Stop offset="0%" stopColor="#FFF2CE" />
-                <Stop offset="45%" stopColor="#F0CE86" />
-                <Stop offset="100%" stopColor="#B98A3A" />
-              </RadialGradient>
-            </Defs>
-            <Circle cx="50" cy="50" r="27" fill="url(#planetG)" />
-            <Circle cx="50" cy="50" r="27" stroke={INKW} strokeWidth="1" fill="none" opacity="0.8" />
-            {/* craters */}
-            <Circle cx="42" cy="42" r="4.5" fill="rgba(150,110,50,0.35)" />
-            <Circle cx="58" cy="56" r="3.2" fill="rgba(150,110,50,0.3)" />
-            <Circle cx="46" cy="62" r="2.2" fill="rgba(150,110,50,0.28)" />
-            {/* the ring */}
-            <Ellipse cx="50" cy="50" rx="42" ry="11" stroke={INKW} strokeWidth="1.2" fill="none" transform="rotate(-16 50 50)" opacity="0.9" />
-            <Ellipse cx="50" cy="50" rx="36" ry="8.5" stroke={INKM} strokeWidth="0.8" fill="none" transform="rotate(-16 50 50)" opacity="0.7" />
-            {/* chart forms around the sphere while he reads */}
-            {reading ? (
-              <>
-                {p >= 1 ? <Circle cx="50" cy="50" r="34" stroke={INKM} strokeWidth="0.9" fill="none" /> : null}
-                {p >= 2 ? <Circle cx="50" cy="50" r="42" stroke={INKD} strokeWidth="0.8" fill="none" /> : null}
-                {p >= 3 ? <Path d="M50,8 L50,16 M50,84 L50,92 M8,50 L16,50 M84,50 L92,50" stroke={INKM} strokeWidth="1" /> : null}
-                {p >= 4 ? (
-                  <>
-                    <Circle cx="50" cy="9" r="2" fill="#F5A83D" />
-                    <Circle cx="91" cy="50" r="2" fill="#F5A83D" />
-                    <Circle cx="50" cy="91" r="2" fill="#F5A83D" />
-                    <Circle cx="9" cy="50" r="2" fill="#F5A83D" />
-                  </>
-                ) : null}
-              </>
-            ) : null}
-          </Svg>
+// ── Per-beat story SCENE — each beat is its own composition, its hero matching
+//    that beat's words, floating over the shared shadow-box sky. ──
+var MYSTIC_AR = 896 / 1088; // hero_mystic aspect (w/h)
+function StoryBeatFocus({ beat, displayName }) {
+  // Beat 1 — "nine planets move above you / the mystic has watched that sky":
+  //          the mystic gazes up amid drifting navagraha
+  if (beat === 0) {
+    var mW0 = SW * 0.58;
+    return (
+      <View key="b0" pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <FloatElement source={BEAT_ART.planetGold} size={SW * 0.16} glowColor="#E8B54D" delay={400} floatPeriod={6200} floatRange={7} style={{ position: 'absolute', left: '8%', top: '8%' }} />
+        <FloatElement source={BEAT_ART.planetTeal} size={SW * 0.11} glowColor="#1E7F8E" delay={750} floatPeriod={7600} floatRange={5} style={{ position: 'absolute', right: '13%', top: '5%' }} />
+        <FloatElement source={BEAT_ART.planetGold} size={SW * 0.12} glowColor="#C2477E" delay={1050} floatPeriod={5600} floatRange={8} style={{ position: 'absolute', right: '17%', top: '35%' }} />
+        <View style={{ position: 'absolute', top: '18%', left: 0, right: 0, alignItems: 'center' }}>
+          <FloatElement source={SCENE_MYSTIC.mystic} w={mW0} h={mW0 / MYSTIC_AR} glowColor="#E8B75A" glowScale={1.25} delay={200} floatPeriod={6600} floatRange={7} />
         </View>
-      </ScenePin>
-      {/* small moons riding the ring */}
-      <OrbitingSpark color="#FFE9B8" size={5} delay={0} cx={vx(180)} cy={vy(290)} rx={SW * 0.115} ry={SW * 0.028} period={7000} />
-      <OrbitingSpark color="#F2D48E" size={3.5} delay={2600} cx={vx(180)} cy={vy(290)} rx={SW * 0.14} ry={SW * 0.04} period={11000} />
-
-      {/* while reading: ripples of insight */}
-      {reading ? (
-        <ScenePin x={180} y={290}>
-          <PulseRing size={SW * 0.26} delay={0} period={2100} color="rgba(232,201,122,0.7)" />
-          <PulseRing size={SW * 0.26} delay={1050} period={2100} color="rgba(245,168,61,0.55)" />
-        </ScenePin>
-      ) : (
-        <ScenePin x={180} y={290}>
-          <PulseRing size={SW * 0.26} delay={1400} period={3600} color="rgba(232,201,122,0.5)" />
-        </ScenePin>
-      )}
-      {/* sparks rising off the sphere */}
-      <RisingGlyph x={vx(170)} y={vy(276)} delay={2400} drift={-10} />
-      <RisingGlyph x={vx(192)} y={vy(280)} delay={3800} drift={12} />
-    </SceneFrame>
-  );
-}
-
-// Elliptical orbiting spark used above the casting desk
-function OrbitingSpark({ color, size, delay, cx, cy, rx, ry, period }) {
-  var t = useSharedValue(0);
-  var reduced = useReducedMotion();
-  useEffect(function () {
-    if (reduced) return;
-    t.value = withDelay(delay, withRepeat(withTiming(1, { duration: period, easing: Easing.linear }), -1, false));
-  }, [reduced]);
-  var style = useAnimatedStyle(function () {
-    var a = t.value * Math.PI * 2;
-    return {
-      opacity: 0.45 + 0.45 * Math.abs(Math.sin(a)),
-      transform: [
-        { translateX: Math.cos(a) * rx },
-        { translateY: Math.sin(a) * ry },
-      ],
-    };
-  });
+      </View>
+    );
+  }
+  // Beat 2 — "his books have carried your pattern for centuries": the almanac
+  if (beat === 1) {
+    var bkW = SW * 0.68;
+    return (
+      <View key="b1" pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <FloatElement source={BEAT_ART.planetGold} size={SW * 0.1} glowColor="#E8B54D" delay={700} floatPeriod={7200} floatRange={6} style={{ position: 'absolute', right: '14%', top: '10%' }} />
+        <View style={{ position: 'absolute', top: '26%', left: 0, right: 0, alignItems: 'center' }}>
+          <FloatElement source={BEAT_ART.books} w={bkW} h={bkW * (720 / 900)} glowColor="#E8A33D" glowScale={1.25} delay={200} floatPeriod={6000} floatRange={6} />
+        </View>
+      </View>
+    );
+  }
+  // Beat 3 — "a fresh leaf, it carries your name": the named ola leaf + sigil
+  if (beat === 2) {
+    var leafW = SW * 0.74;
+    return (
+      <View key="b2" pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <View style={{ position: 'absolute', top: '9%', left: 0, right: 0, alignItems: 'center' }}>
+          <SigilConstellation name={displayName} width={SW * 0.32} height={SW * 0.24} delay={1400} />
+        </View>
+        <View style={{ position: 'absolute', top: '32%', left: 0, right: 0, alignItems: 'center', justifyContent: 'center' }}>
+          <FloatElement source={BEAT_ART.leaf} w={leafW} h={leafW * (560 / 1024)} glowColor="#F0C878" glowScale={1.1} delay={200} floatPeriod={6400} floatRange={4} />
+          {/* name inscribed along the blank parchment strip */}
+          <Animated.Text entering={FadeIn.delay(1000).duration(1400)} numberOfLines={1} adjustsFontSizeToFit style={{ position: 'absolute', maxWidth: leafW * 0.6, fontSize: 24, fontStyle: 'italic', fontWeight: '700', color: '#5A3A12', letterSpacing: 1.5, opacity: 0.92 }}>
+            {displayName}
+          </Animated.Text>
+        </View>
+      </View>
+    );
+  }
+  // Beat 4 — "tonight your sky gets read": the mystic reads, the great wheel turns
+  var mW3 = SW * 0.56;
   return (
-    <View style={{ position: 'absolute', left: cx, top: cy }}>
-      <Animated.View style={[{ width: size, height: size, borderRadius: size / 2, backgroundColor: color, ...boxShadow(color, { width: 0, height: 0 }, 0.85, 8) }, style]} />
+    <View key="b3" pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <View style={{ position: 'absolute', top: '12%', left: 0, right: 0, alignItems: 'center' }}>
+        <GreatWheel size={SW * 0.88} opacity={0.26} />
+      </View>
+      <View style={{ position: 'absolute', top: '20%', left: 0, right: 0, alignItems: 'center' }}>
+        <FloatElement source={SCENE_MYSTIC.mystic} w={mW3} h={mW3 / MYSTIC_AR} glowColor="#E8B75A" glowScale={1.3} delay={200} floatPeriod={6200} floatRange={6} />
+      </View>
     </View>
   );
 }
-
-// Expanding pulse ring — energy rippling out of a point
-function PulseRing({ size, delay, period, color }) {
-  var t = useSharedValue(0);
-  var reduced = useReducedMotion();
-  useEffect(function () {
-    if (reduced) return;
-    t.value = withDelay(delay || 0, withRepeat(withTiming(1, { duration: period || 2600, easing: Easing.out(Easing.quad) }), -1, false));
-  }, [reduced]);
-  var style = useAnimatedStyle(function () {
-    return {
-      opacity: interpolate(t.value, [0, 0.15, 1], [0, 0.55, 0]),
-      transform: [{ scale: interpolate(t.value, [0, 1], [0.35, 1.6]) }],
-    };
-  });
-  return (
-    <Animated.View style={[{ position: 'absolute', width: size, height: size, borderRadius: size / 2, borderWidth: 1.2, borderColor: color || 'rgba(255,214,102,0.8)' }, style]} />
-  );
-}
-
-// ── Scene 3: THE LEAF — the codex page itself. The whole world turns to
-//    parchment: dark-ink etching of the bound ola manuscript, the user's
-//    name engraved upon it, candle burning, quill resting.
-
-var PINK = 'rgba(224,201,146,0.92)'; // gold ink on the night
-var PINKm = 'rgba(218,196,146,0.6)';
-var PINKd = 'rgba(210,190,146,0.38)';
-
-function SceneLeaf({ displayName }) {
-  var flicker = useFlicker();
-  var write = useSharedValue(0);
-  var nameIn = useSharedValue(0);
-  var reduced = useReducedMotion();
-
-  useEffect(function () {
-    if (reduced) { write.value = 1; nameIn.value = 1; return; }
-    write.value = withDelay(700, withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.quad) }));
-    nameIn.value = withDelay(800, withTiming(1, { duration: 2100, easing: Easing.inOut(Easing.quad) }));
-  }, [reduced]);
-
-  var sparkStyle = useAnimatedStyle(function () {
-    return {
-      opacity: interpolate(write.value, [0, 0.05, 0.92, 1], [0, 1, 1, 0]),
-      transform: [{ translateX: interpolate(write.value, [0, 1], [-58, 58]) }],
-    };
-  });
-  var nameStyle = useAnimatedStyle(function () {
-    return { opacity: interpolate(nameIn.value, [0, 0.15, 1], [0, 0.25, 1]) };
-  });
-
-  return (
-    <SceneFrame
-      svg={
-        <>
-          {/* constellation inked at the top of the page */}
-          <Path d="M52,52 L86,38 L120,50 L148,34 M120,50 L134,74" stroke={PINKd} strokeWidth="0.9" fill="none" />
-          <Circle cx="52" cy="52" r="2" fill={PINK} opacity="0.7" />
-          <Circle cx="86" cy="38" r="2.6" fill={PINK} opacity="0.8" />
-          <Circle cx="120" cy="50" r="2.2" fill={PINK} opacity="0.75" />
-          <Circle cx="148" cy="34" r="2.4" fill={PINK} opacity="0.8" />
-          <Circle cx="134" cy="74" r="1.8" fill={PINK} opacity="0.65" />
-          {/* scattered ink stars + a four-point spark */}
-          <Circle cx="250" cy="44" r="1.6" fill={PINK} opacity="0.6" />
-          <Circle cx="292" cy="66" r="1.3" fill={PINK} opacity="0.5" />
-          <Circle cx="216" cy="30" r="1.4" fill={PINK} opacity="0.55" />
-          <Path d="M312,36 L313.6,42 L320,44 L313.6,46 L312,52 L310.4,46 L304,44 L310.4,42 Z" fill={PINK} opacity="0.55" />
-
-          {/* THE DESK — surface line + carved frieze border */}
-          <Path d="M18,300 L342,300" stroke={PINK} strokeWidth="1.6" />
-          <Path d="M18,308 L342,308 M18,330 L342,330" stroke={PINKm} strokeWidth="1" />
-          {/* S-scroll frieze between the lines */}
-          <Path d="M34,319 C40,312 48,312 52,319 C56,326 64,326 70,319 M70,319 C76,312 84,312 88,319 C92,326 100,326 106,319 M106,319 C112,312 120,312 124,319 C128,326 136,326 142,319 M142,319 C148,312 156,312 160,319 C164,326 172,326 178,319 M178,319 C184,312 192,312 196,319 C200,326 208,326 214,319 M214,319 C220,312 228,312 232,319 C236,326 244,326 250,319 M250,319 C256,312 264,312 268,319 C272,326 280,326 286,319 M286,319 C292,312 300,312 304,319 C308,326 316,326 322,319" stroke={PINKd} strokeWidth="0.9" fill="none" />
-
-          {/* THE BOUND MANUSCRIPT — stacked ola leaves, tied with cord */}
-          <Path d="M96,262 C150,250 226,248 276,258 L278,272 C226,262 150,264 98,276 Z" stroke={PINK} strokeWidth="1.2" fill="rgba(16,31,62,0.6)" />
-          <Path d="M100,252 C152,241 224,239 272,248 L276,258 C226,248 150,250 96,262 Z" stroke={PINK} strokeWidth="1.2" fill="rgba(16,31,62,0.55)" />
-          <Path d="M106,243 C154,233 220,231 266,239 L272,248 C224,239 152,241 100,252 Z" stroke={PINK} strokeWidth="1.2" fill="rgba(16,31,62,0.5)" />
-          <Path d="M112,234 C156,225 216,224 260,231 L266,239 C220,231 154,233 106,243 Z" stroke={PINK} strokeWidth="1.3" fill="rgba(16,31,62,0.45)" />
-          {/* leaf edge ticks */}
-          <Path d="M104,258 L104,270 M270,252 L272,266" stroke={PINKd} strokeWidth="0.8" />
-          {/* binding cords + knots */}
-          <Path d="M140,224 L136,278 M232,222 L238,272" stroke={PINK} strokeWidth="1.4" />
-          <Circle cx="138" cy="250" r="3.4" stroke={PINK} strokeWidth="1.1" fill="none" />
-          <Circle cx="235" cy="246" r="3.4" stroke={PINK} strokeWidth="1.1" fill="none" />
-
-          {/* the quill — feather curve + nib, resting beside the book */}
-          <Path d="M292,286 C304,272 320,262 336,258 C326,270 314,282 300,290 Z" stroke={PINK} strokeWidth="1.1" fill="rgba(16,31,62,0.6)" />
-          <Path d="M300,284 C310,274 320,267 330,262" stroke={PINKd} strokeWidth="0.7" fill="none" />
-          <Path d="M292,286 L284,294" stroke={PINK} strokeWidth="1.4" strokeLinecap="round" />
-          {/* inkpot */}
-          <Path d="M330,286 C330,280 346,280 346,286 L344,298 L332,298 Z M334,280 L342,280" stroke={PINK} strokeWidth="1.1" fill="rgba(16,31,62,0.6)" />
-
-          {/* candle on its holder, left */}
-          <Path d="M56,246 L66,246 L64,292 L58,292 Z" stroke={PINK} strokeWidth="1.1" fill="rgba(16,31,62,0.55)" />
-          <Path d="M46,292 L76,292 L72,300 L50,300 Z M40,296 C40,290 48,290 48,296" stroke={PINK} strokeWidth="1.1" fill="none" />
-          <Path d="M61,246 L61,240" stroke={PINK} strokeWidth="1" />
-        </>
-      }
-    >
-      {/* candle flame — the one living color on the page */}
-      <ScenePin x={61} y={232}>
-        <CandleFlame flicker={flicker} scale={0.85} />
-      </ScenePin>
-      <ScenePin x={61} y={250}>
-        <FlickerGlow flicker={flicker} size={SW * 0.2} color="#E8A33D" base={0.3} />
-      </ScenePin>
-
-      {/* THEIR NAME — engraved across the top leaf */}
-      <ScenePin x={186} y={237}>
-        <Animated.View style={[{ width: SW * 0.44, height: 40, flexShrink: 0, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '-3deg' }] }, nameStyle]}>
-          <Text
-            numberOfLines={1}
-            style={{
-              fontSize: 21, fontWeight: '800', color: '#E8C97A',
-              letterSpacing: 5, textAlign: 'center', textTransform: 'uppercase',
-              ...textShadow('rgba(255,214,102,0.55)', { width: 0, height: 0 }, 10),
-            }}
-          >
-            {displayName || '—'}
-          </Text>
-        </Animated.View>
-      </ScenePin>
-      {/* the inscribing spark — a burning point of ink */}
-      <ScenePin x={186} y={237}>
-        <Animated.View style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFD666', ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.9, 8) }, sparkStyle]} />
-      </ScenePin>
-
-      {/* their personal sigil — inked in the page's upper corner */}
-      <ScenePin x={286} y={116}>
-        <View style={{ width: SW * 0.3, height: SW * 0.24, flexShrink: 0 }}>
-          <SigilConstellation name={displayName} width="100%" height="100%" delay={1500} />
-        </View>
-      </ScenePin>
-    </SceneFrame>
-  );
-}
-
-var STORY_SCENES = [SceneWatcher, SceneReader, SceneLeaf, SceneOrb];
 
 // ── Reward burst — 10 gold sparks exploding radially ──
 function RewardBurst() {
@@ -1869,7 +1166,7 @@ function RewardMoment({ reward, onDone }) {
         <Animated.View style={[{ alignItems: 'center' }, sealStyle]}>
           {reward.icon ? (
             <View style={{ width: 66, height: 66, borderRadius: 33, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,184,0,0.1)', borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.4)', marginBottom: 18, ...boxShadow('#FFB800', { width: 0, height: 0 }, 0.6, 20) }}>
-              <Ionicons name={reward.icon} size={30} color="#FFD666" />
+              <Glyph name={reward.icon} size={30} color="#FFD666" />
             </View>
           ) : null}
           {reward.big ? (
@@ -2049,7 +1346,7 @@ function PrimaryButton({ label, onPress, loading, disabled, icon }) {
           />
           {loading ? <CosmicLoader size={24} color="#2A1707" /> : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              {icon ? <Ionicons name={icon} size={17} color="#2A1707" /> : null}
+              {icon ? <Glyph name={icon} size={17} color="#2A1707" /> : null}
               <Text style={p.btnText}>{label}</Text>
             </View>
           )}
@@ -2070,7 +1367,8 @@ function GhostButton({ label, onPress }) {
 function Card({ children, style }) {
   return (
     <View style={[p.card, style]}>
-      <LinearGradient colors={['rgba(255,255,255,0.035)', 'rgba(255,255,255,0.008)']} style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      {/* gilt sheen — a warm gold highlight rakes the top edge of the panel */}
+      <LinearGradient colors={['rgba(246,213,132,0.1)', 'rgba(246,213,132,0.02)', 'transparent']} locations={[0, 0.35, 1]} style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
       {children}
     </View>
   );
@@ -2120,9 +1418,13 @@ function LanguageChapter({ onSelect }) {
     <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 26 }}>
       <Animated.View entering={FadeInDown.duration(700)} style={{ alignItems: 'center', marginBottom: 40 }}>
         <View style={{ width: 184, height: 184, alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+          {/* drawn astrological wheel element, slowly turning behind the mark */}
+          <Animated.View style={[{ position: 'absolute', width: SW * 0.62, height: SW * 0.62, opacity: 0.5 }, ringStyle]}>
+            <Image source={ELEMENTS.wheel} style={{ width: '100%', height: '100%' }} resizeMode="contain" fadeDuration={0} />
+          </Animated.View>
           {/* breathing golden halo */}
           <Animated.View style={[{ position: 'absolute', width: 184, height: 184 }, glowStyle]}>
-            <GlowDisc color="#FFB800" size={184} innerOpacity={0.42} />
+            <GlowDisc color="#FFB800" size={184} innerOpacity={0.3} />
           </Animated.View>
           {/* rotating gilded ring — twelve houses marked in gold */}
           <Animated.View style={[{ position: 'absolute', width: 164, height: 164 }, ringStyle]}>
@@ -2145,8 +1447,10 @@ function LanguageChapter({ onSelect }) {
               <Circle cx="67" cy="67" r="64" stroke="rgba(167,139,250,0.28)" strokeWidth="1" strokeDasharray="2 7" fill="none" />
             </Svg>
           </Animated.View>
-          {/* the logo */}
-          <Image source={APP_LOGO_IMAGE} style={{ width: 90, height: 90, borderRadius: 45 }} resizeMode="contain" />
+          {/* the website emblem, faded up */}
+          <Animated.View entering={FadeIn.delay(200).duration(1000)}>
+            <Image source={ELEMENTS.logo} style={{ width: 104, height: 104 }} resizeMode="contain" fadeDuration={0} />
+          </Animated.View>
         </View>
         <Text style={{ fontSize: 30, fontWeight: '900', color: '#FFB800', letterSpacing: 0.5, ...textShadow('rgba(255,184,0,0.45)', { width: 0, height: 0 }, 14) }}>Grahachara</Text>
         <Text style={{ fontSize: 14, color: 'rgba(248,231,184,0.55)', marginTop: 6 }}>ග්‍රහචාර</Text>
@@ -2163,13 +1467,13 @@ function LanguageChapter({ onSelect }) {
             <SpringPressable onPress={function () { onSelect(opt.code); }} haptic="medium" scalePressed={0.97} style={{ marginBottom: 12, borderRadius: 18, overflow: 'hidden' }}>
               <View style={[p.langRow, { borderColor: opt.color + '26' }]}>
                 <View style={[p.langIcon, { backgroundColor: opt.color + '14', borderColor: opt.color + '35' }]}>
-                  <Ionicons name={opt.icon} size={22} color={opt.color} />
+                  <Glyph name={opt.icon} size={22} color={opt.color} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 19, fontWeight: '800', color: '#FFF1D0' }}>{opt.label}</Text>
                   <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>{opt.sub}</Text>
                 </View>
-                <Ionicons name="chevron-forward-circle" size={26} color={opt.color + '90'} />
+                <Glyph name="chevron-forward-circle" size={26} color={opt.color + '90'} />
               </View>
             </SpringPressable>
           </Animated.View>
@@ -2209,7 +1513,6 @@ function StoryChapter({ lang, displayName, onDone }) {
   var [beat, setBeat] = useState(0);
   var beats = T.storyBeats;
   var isLast = beat === beats.length - 1;
-  var Scene = STORY_SCENES[beat] || SceneWatcher;
 
   // Gentle horizontal nudge on the "tap to continue" chevron — invites the tap.
   var reduced = useReducedMotion();
@@ -2231,52 +1534,56 @@ function StoryChapter({ lang, displayName, onDone }) {
 
   var isSi = lang === 'si';
 
+  // The scene now fills the whole screen (rendered as the funnel backdrop).
+  // Here we only overlay the copy + controls, anchored to the bottom over a
+  // legibility scrim so text always reads against the moving art.
   return (
-    <TouchableOpacity activeOpacity={1} onPress={advance} style={{ flex: 1 }}>
-      {/* the sage — illustrated, candle-lit, alive. The scene YIELDS height
-          to long copy (Sinhala beats run 2-3x English) instead of pushing
-          the text off-screen. */}
-      <Animated.View key={'scene' + beat} entering={FadeIn.duration(900)} exiting={FadeOut.duration(250)} style={{ height: SH * 0.42, minHeight: SH * 0.16, flexShrink: 1, marginTop: SH * 0.015, overflow: 'hidden' }}>
-        <Scene displayName={displayName} />
+    <TouchableOpacity activeOpacity={1} onPress={advance} style={{ flex: 1, justifyContent: 'flex-end' }}>
+      {/* per-beat imagery over the mystic scene, matching the words */}
+      <Animated.View key={'focus' + beat} entering={FadeIn.duration(700)} exiting={FadeOut.duration(250)} style={StyleSheet.absoluteFill} pointerEvents="none">
+        <StoryBeatFocus beat={beat} displayName={displayName} />
       </Animated.View>
+      <LinearGradient
+        pointerEvents="none"
+        colors={['transparent', 'rgba(3,1,12,0.35)', 'rgba(2,1,9,0.86)', 'rgba(2,1,8,0.97)']}
+        locations={[0, 0.32, 0.68, 1]}
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: SH * 0.6 }}
+      />
+      <View style={{ paddingHorizontal: 28, paddingBottom: 26 }}>
+        <Animated.View key={'text' + beat} entering={FadeIn.duration(420)} exiting={FadeOut.duration(200)}>
+          <WordFlow text={withName(beats[beat].big)} style={[p.storyBig, isSi && p.storyBigSi]} baseDelay={250} step={70} />
+          <View style={{ height: 12 }} />
+          <WordFlow text={withName(beats[beat].small)} style={[p.storySmallWord, isSi && p.storySmallWordSi]} baseDelay={900} step={40} />
+        </Animated.View>
 
-      <Animated.View key={'text' + beat} entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)} style={{ paddingHorizontal: 28, marginTop: 12 }}>
-        <WordFlow text={withName(beats[beat].big)} style={[p.storyBig, isSi && p.storyBigSi]} baseDelay={250} step={70} />
-        <View style={{ height: 12 }} />
-        <WordFlow text={withName(beats[beat].small)} style={[p.storySmallWord, isSi && p.storySmallWordSi]} baseDelay={900} step={40} />
-      </Animated.View>
-
-      {/* footer in NORMAL flow (was position:absolute) — copy can never run
-          beneath the dots or the tap pill again */}
-      <View style={{ flex: 1 }} />
-      <View style={{ alignItems: 'center', paddingTop: 14, paddingBottom: 30 }}>
-        {/* beat dots */}
-        <View style={{ flexDirection: 'row', gap: 7, marginBottom: 16 }}>
-          {beats.map(function (_, i) {
-            var on = i === beat;
-            var dotColor = on ? '#E8C97A' : 'rgba(232,201,122,0.3)';
-            return <View key={i} style={{ width: on ? 20 : 6, height: 6, borderRadius: 3, backgroundColor: dotColor }} />;
-          })}
+        <View style={{ alignItems: 'center', marginTop: 22 }}>
+          <View style={{ flexDirection: 'row', gap: 7, marginBottom: 16 }}>
+            {beats.map(function (_, i) {
+              var on = i === beat;
+              var dotColor = on ? '#E8C97A' : 'rgba(232,201,122,0.3)';
+              return <View key={i} style={{ width: on ? 20 : 6, height: 6, borderRadius: 3, backgroundColor: dotColor }} />;
+            })}
+          </View>
+          {isLast ? (
+            <Animated.View entering={FadeInUp.delay(2600).duration(600)} style={{ width: '78%' }}>
+              <PrimaryButton label={T.begin} onPress={onDone} icon="sparkles" />
+            </Animated.View>
+          ) : (
+            <Animated.View entering={FadeInUp.delay(1600).duration(700)}>
+              <View style={p.tapPill}>
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.012)']}
+                  style={[StyleSheet.absoluteFill, { borderRadius: 999, pointerEvents: 'none' }]}
+                  start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+                />
+                <Text style={p.tapPillText}>{T.tapToContinue}</Text>
+                <Animated.View style={chevronNudge}>
+                  <Glyph name="chevron-forward" size={15} color="#E8C97A" />
+                </Animated.View>
+              </View>
+            </Animated.View>
+          )}
         </View>
-        {isLast ? (
-          <Animated.View entering={FadeInUp.delay(2600).duration(600)} style={{ width: '78%' }}>
-            <PrimaryButton label={T.begin} onPress={onDone} icon="sparkles" />
-          </Animated.View>
-        ) : (
-          <Animated.View entering={FadeInUp.delay(1600).duration(700)}>
-            <View style={p.tapPill}>
-              <LinearGradient
-                colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.012)']}
-                style={[StyleSheet.absoluteFill, { borderRadius: 999, pointerEvents: 'none' }]}
-                start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-              />
-              <Text style={p.tapPillText}>{T.tapToContinue}</Text>
-              <Animated.View style={chevronNudge}>
-                <Ionicons name="chevron-forward" size={15} color="#E8C97A" />
-              </Animated.View>
-            </View>
-          </Animated.View>
-        )}
       </View>
     </TouchableOpacity>
   );
@@ -2286,9 +1593,20 @@ function StoryChapter({ lang, displayName, onDone }) {
 //  INPUT CHAPTERS — one question per screen
 // ═══════════════════════════════════════════════════════════════════════
 
+// Android runs softwareKeyboardLayoutMode:"pan" (project convention — KAV is
+// iOS-only), so the window slides up and the number-pad has no Done key. The
+// generous bottom padding keeps the CTA reachable after the pan, and dragging
+// the sheet dismisses the keyboard.
 function InputChapterFrame({ children, onBack, T }) {
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 26, paddingVertical: 24 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 26, paddingTop: 24, paddingBottom: Platform.OS === 'android' ? 96 : 32 }}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      showsVerticalScrollIndicator={false}
+      bounces={false}
+    >
       {children}
       {onBack ? <GhostButton label={T.back} onPress={onBack} /> : null}
     </ScrollView>
@@ -2312,9 +1630,9 @@ function NameChapter({ lang, initial, onNext, onBack }) {
         {/* Ornamental overline — flanked gold hairlines echo the constellations above */}
         <View style={p.ornamentRow}>
           <LinearGradient colors={['transparent', 'rgba(232,201,122,0.55)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={p.ornamentLine} />
-          <Ionicons name="star" size={8} color="#E8C97A" style={{ marginHorizontal: 9 }} />
+          <Glyph name="star" size={8} color="#E8C97A" style={{ marginHorizontal: 9 }} />
           <Text style={[p.kickerOrn, lang === 'si' ? { letterSpacing: 0.5 } : null]}>{T.nameKicker}</Text>
-          <Ionicons name="star" size={8} color="#E8C97A" style={{ marginHorizontal: 9 }} />
+          <Glyph name="star" size={8} color="#E8C97A" style={{ marginHorizontal: 9 }} />
           <LinearGradient colors={['rgba(232,201,122,0.55)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={p.ornamentLine} />
         </View>
         <ChapterHeading title={T.nameTitle} sub={T.nameSub} />
@@ -2325,7 +1643,7 @@ function NameChapter({ lang, initial, onNext, onBack }) {
             style={[StyleSheet.absoluteFill, { borderRadius: 16, pointerEvents: 'none' }]}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
-          <Ionicons name="sparkles" size={17} color={focused ? '#F0D488' : 'rgba(217,164,65,0.55)'} style={{ marginRight: 12 }} />
+          <Glyph name="sparkles" size={17} color={focused ? '#F0D488' : 'rgba(217,164,65,0.55)'} style={{ marginRight: 12 }} />
           <TextInput
             style={p.nameInput}
             placeholder={T.namePlaceholder}
@@ -2343,7 +1661,7 @@ function NameChapter({ lang, initial, onNext, onBack }) {
         </View>
         {error ? (
           <View style={p.errorRow}>
-            <Ionicons name="alert-circle" size={14} color="#FCA5A5" />
+            <Glyph name="alert-circle" size={14} color="#FCA5A5" />
             <Text style={p.errorInline}>{error}</Text>
           </View>
         ) : null}
@@ -2362,6 +1680,7 @@ function DateChapter({ lang, initial, onNext, onBack }) {
   var [month, setMonth] = useState(initial ? initial.month : null);
   var [day, setDay] = useState(initial ? initial.day : '');
   var [error, setError] = useState('');
+  var yearRef = useRef(null);
 
   var daysInMonth = function (m, y) {
     if (m === null || !y) return 31;
@@ -2380,39 +1699,152 @@ function DateChapter({ lang, initial, onNext, onBack }) {
     onNext({ year: year, month: month, day: day });
   };
 
+  var complete = !!day && month !== null && year.length === 4;
+
   return (
     <InputChapterFrame onBack={onBack} T={T}>
       <Animated.View entering={FadeInDown.duration(500)}>
         <ChapterHeading title={T.dateTitle} sub={T.dateSub} />
-        <Card>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <View style={{ flex: 1.4 }}>
-              <Text style={p.inputLabel}>{T.yearLabel}</Text>
-              <TextInput style={p.input} placeholder="1995" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" maxLength={4} value={year} onChangeText={function (t) { setYear(t.replace(/[^0-9]/g, '')); setError(''); }} selectionColor="#D9A441" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={p.inputLabel}>{T.dayLabel}</Text>
-              <TextInput style={p.input} placeholder="14" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" maxLength={2} value={day} onChangeText={function (t) { setDay(t.replace(/[^0-9]/g, '')); setError(''); }} selectionColor="#D9A441" />
-            </View>
-          </View>
-          <Text style={[p.inputLabel, { marginTop: 16 }]}>{T.monthLabel}</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+
+        {/* the signature: an engraved gold plaque that fills in live */}
+        <DatePlaque day={day} month={month} year={year} months={months} complete={complete} />
+
+        {/* month — twelve raised gilt tiles */}
+        <Animated.View entering={FadeInUp.delay(120).duration(500)}>
+          <Text style={p.fieldLabel}>{T.monthLabel}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
             {months.map(function (m, i) {
               var sel = month === i;
               return (
-                <TouchableOpacity key={i} onPress={function () { setMonth(i); setError(''); }} activeOpacity={0.75} style={[p.monthChip, sel && p.monthChipSel]}>
-                  <Text style={[p.monthText, sel && p.monthTextSel]}>{m}</Text>
-                </TouchableOpacity>
+                <SpringPressable
+                  key={i}
+                  onPress={function () { setMonth(i); setError(''); }}
+                  haptic="light" scalePressed={0.93}
+                  style={{ width: '22.5%', borderRadius: 13, overflow: 'hidden' }}
+                >
+                  <View style={[p.monthTile, sel && p.monthTileSel]}>
+                    <LinearGradient
+                      colors={sel ? ['rgba(246,213,132,0.34)', 'rgba(232,181,77,0.12)'] : ['rgba(246,213,132,0.07)', 'transparent']}
+                      style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+                      start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+                    />
+                    <Text style={[p.monthTileText, sel && p.monthTileTextSel]}>{m}</Text>
+                  </View>
+                </SpringPressable>
               );
             })}
           </View>
-          {error ? <Text style={p.error}>{error}</Text> : null}
-        </Card>
-        <View style={{ marginTop: 22 }}>
-          <PrimaryButton label={T.continueBtn} onPress={submit} icon="arrow-forward" />
-        </View>
+        </Animated.View>
+
+        {/* day + year — big engraved numerals. On Android the number-pad has no
+            Done key, so we hop day→year at 2 digits and drop the keyboard once
+            the year is complete: the CTA is never left trapped behind it. */}
+        <Animated.View entering={FadeInUp.delay(220).duration(500)} style={{ flexDirection: 'row', gap: 12 }}>
+          <GiltField
+            label={T.dayLabel} placeholder="14" maxLength={2} flex={1}
+            value={day}
+            onChangeText={function (t) {
+              var v = t.replace(/[^0-9]/g, '');
+              setDay(v); setError('');
+              if (v.length === 2 && yearRef.current) yearRef.current.focus();
+            }}
+          />
+          <GiltField
+            inputRef={yearRef}
+            label={T.yearLabel} placeholder="1995" maxLength={4} flex={1.5}
+            value={year}
+            onChangeText={function (t) {
+              var v = t.replace(/[^0-9]/g, '');
+              setYear(v); setError('');
+              if (v.length === 4) Keyboard.dismiss();
+            }}
+          />
+        </Animated.View>
+
+        {error ? (
+          <Animated.View entering={FadeIn.duration(250)} style={p.errorRow}>
+            <Glyph name="alert-circle" size={14} color="#FCA5A5" />
+            <Text style={p.errorInline}>{error}</Text>
+          </Animated.View>
+        ) : null}
+
+        <Animated.View entering={FadeInUp.delay(320).duration(500)} style={{ marginTop: 24 }}>
+          <PrimaryButton label={T.continueBtn} onPress={submit} icon="arrow-forward" disabled={!complete} />
+        </Animated.View>
       </Animated.View>
     </InputChapterFrame>
+  );
+}
+
+// ── The date plaque — a raised gilt panel that engraves the chosen date as it
+//    is assembled, so the answer is always visible and the page feels alive. ──
+function DatePlaque({ day, month, year, months, complete }) {
+  var reduced = useReducedMotion();
+  var t = useLoop(5200, reduced);
+  var lit = useSharedValue(0);
+  useEffect(function () {
+    lit.value = withTiming(complete ? 1 : 0, { duration: 600, easing: EASE_EXPO });
+  }, [complete]);
+  var floatStyle = useAnimatedStyle(function () {
+    return { transform: [{ translateY: interpolate(t.value, [0, 1], [2.5, -2.5]) }] };
+  });
+  var glowStyle = useAnimatedStyle(function () {
+    return { opacity: lit.value * interpolate(t.value, [0, 1], [0.45, 0.8]) };
+  });
+  return (
+    <Animated.View style={[{ alignItems: 'center', marginBottom: 22 }, floatStyle]}>
+      <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: SW * 0.78, height: SW * 0.78, top: -SW * 0.24 }, glowStyle]}>
+        <GlowDisc color="#E8B54D" size={SW * 0.78} innerOpacity={0.26} />
+      </Animated.View>
+      <View style={p.plaque}>
+        <LinearGradient
+          colors={['rgba(246,213,132,0.16)', 'rgba(246,213,132,0.04)', 'transparent']}
+          locations={[0, 0.42, 1]}
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+          start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+          <Text style={[p.plaqueNum, !day && p.plaqueDim]}>{day || '––'}</Text>
+          <Text style={p.plaqueSep}>·</Text>
+          <Text style={[p.plaqueMon, month === null && p.plaqueDim]}>{month === null ? '–––' : months[month]}</Text>
+          <Text style={p.plaqueSep}>·</Text>
+          <Text style={[p.plaqueNum, !year && p.plaqueDim]}>{year || '––––'}</Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+// ── A premium numeric field: gilt glass, gold hairline that ignites on focus,
+//    big centred engraved numerals. ──
+function GiltField({ label, value, onChangeText, placeholder, maxLength, flex, inputRef }) {
+  var [focused, setFocused] = useState(false);
+  return (
+    <View style={{ flex: flex || 1 }}>
+      <Text style={p.fieldLabel}>{label}</Text>
+      <View style={[p.giltField, focused && p.giltFieldFocus]}>
+        <LinearGradient
+          colors={['rgba(246,213,132,0.1)', 'transparent']}
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+          start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+        />
+        <TextInput
+          ref={inputRef}
+          style={p.giltInput}
+          placeholder={placeholder}
+          placeholderTextColor="rgba(242,231,201,0.22)"
+          keyboardType="number-pad"
+          maxLength={maxLength}
+          value={value}
+          onChangeText={onChangeText}
+          onFocus={function () { setFocused(true); }}
+          onBlur={function () { setFocused(false); }}
+          returnKeyType="done"
+          onSubmitEditing={function () { Keyboard.dismiss(); }}
+          selectionColor="#E8B54D"
+        />
+      </View>
+    </View>
   );
 }
 
@@ -2422,6 +1854,7 @@ function TimeChapter({ lang, initial, onNext, onBack }) {
   var [minute, setMinute] = useState(initial ? initial.minute : '');
   var [ampm, setAmpm] = useState(initial ? initial.ampm : 'AM');
   var [error, setError] = useState('');
+  var minuteRef = useRef(null);
 
   var submit = function () {
     var h = parseInt(hour);
@@ -2437,41 +1870,119 @@ function TimeChapter({ lang, initial, onNext, onBack }) {
     onNext({ hour: '', minute: '', ampm: 'PM', unknown: true });
   };
 
+  var hv = parseInt(hour);
+  var complete = hour !== '' && !isNaN(hv) && hv >= 1 && hv <= 12;
+
   return (
     <InputChapterFrame onBack={onBack} T={T}>
       <Animated.View entering={FadeInDown.duration(500)}>
         <ChapterHeading title={T.timeTitle} sub={T.timeSub} />
-        <Card>
-          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-end' }}>
-            <View style={{ flex: 1 }}>
-              <Text style={p.inputLabel}>{lang === 'si' ? 'පැය' : 'HOUR'}</Text>
-              <TextInput style={p.input} placeholder="8" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" maxLength={2} value={hour} onChangeText={function (t) { setHour(t.replace(/[^0-9]/g, '')); setError(''); }} selectionColor="#D9A441" />
-            </View>
-            <Text style={{ color: 'rgba(248,231,184,0.5)', fontSize: 26, fontWeight: '800', paddingBottom: 10 }}>:</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={p.inputLabel}>{lang === 'si' ? 'මිනිත්තු' : 'MINUTE'}</Text>
-              <TextInput style={p.input} placeholder="30" placeholderTextColor="rgba(255,255,255,0.2)" keyboardType="number-pad" maxLength={2} value={minute} onChangeText={function (t) { setMinute(t.replace(/[^0-9]/g, '')); setError(''); }} selectionColor="#D9A441" />
-            </View>
-          </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 18 }}>
-            {['AM', 'PM'].map(function (v) {
-              var sel = ampm === v;
-              return (
-                <TouchableOpacity key={v} onPress={function () { setAmpm(v); }} activeOpacity={0.8} style={[p.ampmBtn, sel && p.ampmSel]}>
-                  <Text style={[p.ampmText, sel && p.ampmTextSel]}>{v}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          {error ? <Text style={p.error}>{error}</Text> : null}
-        </Card>
-        <View style={{ marginTop: 22 }}>
-          <PrimaryButton label={T.continueBtn} onPress={submit} icon="arrow-forward" />
-        </View>
+
+        {/* the hour, engraved live on its own gold plaque */}
+        <TimePlaque hour={hour} minute={minute} ampm={ampm} complete={complete} />
+
+        {/* hour : minute — big engraved numerals, keyboard-aware */}
+        <Animated.View entering={FadeInUp.delay(120).duration(500)} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-end' }}>
+          <GiltField
+            label={lang === 'si' ? 'පැය' : 'HOUR'} placeholder="08" maxLength={2} flex={1}
+            value={hour}
+            onChangeText={function (t) {
+              var v = t.replace(/[^0-9]/g, '');
+              setHour(v); setError('');
+              if (v.length === 2 && minuteRef.current) minuteRef.current.focus();
+            }}
+          />
+          <Text style={p.timeColon}>:</Text>
+          <GiltField
+            inputRef={minuteRef}
+            label={lang === 'si' ? 'මිනිත්තු' : 'MINUTE'} placeholder="30" maxLength={2} flex={1}
+            value={minute}
+            onChangeText={function (t) {
+              var v = t.replace(/[^0-9]/g, '');
+              setMinute(v); setError('');
+              if (v.length === 2) Keyboard.dismiss();
+            }}
+          />
+        </Animated.View>
+
+        {/* AM / PM — sun and moon tiles */}
+        <Animated.View entering={FadeInUp.delay(220).duration(500)} style={{ flexDirection: 'row', gap: 12, marginTop: 18 }}>
+          {['AM', 'PM'].map(function (v) {
+            var sel = ampm === v;
+            return (
+              <SpringPressable
+                key={v}
+                onPress={function () { setAmpm(v); Keyboard.dismiss(); }}
+                haptic="light" scalePressed={0.95}
+                style={{ flex: 1, borderRadius: 14, overflow: 'hidden' }}
+              >
+                <View style={[p.ampmTile, sel && p.ampmTileSel]}>
+                  <LinearGradient
+                    colors={sel ? ['rgba(246,213,132,0.32)', 'rgba(232,181,77,0.1)'] : ['rgba(246,213,132,0.06)', 'transparent']}
+                    style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+                    start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+                  />
+                  <Glyph name={v === 'AM' ? 'sunny-outline' : 'moon-outline'} size={18} color={sel ? '#F9E6B4' : 'rgba(242,231,201,0.45)'} />
+                  <Text style={[p.ampmTileText, sel && p.ampmTileTextSel]}>{v}</Text>
+                </View>
+              </SpringPressable>
+            );
+          })}
+        </Animated.View>
+
+        {error ? (
+          <Animated.View entering={FadeIn.duration(250)} style={p.errorRow}>
+            <Glyph name="alert-circle" size={14} color="#FCA5A5" />
+            <Text style={p.errorInline}>{error}</Text>
+          </Animated.View>
+        ) : null}
+
+        <Animated.View entering={FadeInUp.delay(320).duration(500)} style={{ marginTop: 24 }}>
+          <PrimaryButton label={T.continueBtn} onPress={submit} icon="arrow-forward" disabled={!complete} />
+        </Animated.View>
         <GhostButton label={T.timeUnknown} onPress={skipUnknown} />
         <Text style={p.hint}>{T.timeUnknownNote}</Text>
       </Animated.View>
     </InputChapterFrame>
+  );
+}
+
+// ── The hour plaque — the chosen time engraved in gold, filling in live. ──
+function TimePlaque({ hour, minute, ampm, complete }) {
+  var reduced = useReducedMotion();
+  var t = useLoop(5200, reduced);
+  var lit = useSharedValue(0);
+  useEffect(function () {
+    lit.value = withTiming(complete ? 1 : 0, { duration: 600, easing: EASE_EXPO });
+  }, [complete]);
+  var floatStyle = useAnimatedStyle(function () {
+    return { transform: [{ translateY: interpolate(t.value, [0, 1], [2.5, -2.5]) }] };
+  });
+  var glowStyle = useAnimatedStyle(function () {
+    return { opacity: lit.value * interpolate(t.value, [0, 1], [0.45, 0.8]) };
+  });
+  var hh = hour ? (hour.length === 1 ? '0' + hour : hour) : '––';
+  var mm = minute ? (minute.length === 1 ? '0' + minute : minute) : '00';
+  return (
+    <Animated.View style={[{ alignItems: 'center', marginBottom: 22 }, floatStyle]}>
+      <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: SW * 0.78, height: SW * 0.78, top: -SW * 0.24 }, glowStyle]}>
+        <GlowDisc color="#E8B54D" size={SW * 0.78} innerOpacity={0.26} />
+      </Animated.View>
+      <View style={p.plaque}>
+        <LinearGradient
+          colors={['rgba(246,213,132,0.16)', 'rgba(246,213,132,0.04)', 'transparent']}
+          locations={[0, 0.42, 1]}
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+          start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+          <Text style={[p.plaqueNum, !hour && p.plaqueDim]}>{hh}</Text>
+          <Text style={p.plaqueSep}>:</Text>
+          <Text style={[p.plaqueNum, !minute && p.plaqueDim]}>{mm}</Text>
+          <Text style={[p.plaqueMon, { fontSize: 19, marginLeft: 4 }]}>{ampm}</Text>
+        </View>
+      </View>
+    </Animated.View>
   );
 }
 
@@ -2491,7 +2002,7 @@ function PlaceChapter({ lang, initial, errorNote, onNext, onBack }) {
         <ChapterHeading title={T.placeTitle} sub={T.placeSub} />
         {errorNote ? (
           <Animated.View entering={FadeInDown.duration(300)} style={[p.errorWrap, { marginBottom: 14 }]}>
-            <Ionicons name="cloud-offline-outline" size={15} color="#FCA5A5" />
+            <Glyph name="cloud-offline-outline" size={15} color="#FCA5A5" />
             <Text style={p.errorWrapText}>{errorNote}</Text>
           </Animated.View>
         ) : null}
@@ -2507,7 +2018,7 @@ function PlaceChapter({ lang, initial, errorNote, onNext, onBack }) {
         </View>
         {city ? (
           <Animated.View entering={FadeInDown.duration(300)} style={p.cityBadge}>
-            <Ionicons name="location" size={16} color="#34D399" />
+            <Glyph name="location" size={16} color="#34D399" />
             <Text style={p.cityBadgeText}>{city.name}{city.country ? ', ' + city.country : ''}</Text>
             <Text style={p.cityBadgeCoords}>{city.lat.toFixed(2)}°, {city.lng.toFixed(2)}°</Text>
           </Animated.View>
@@ -2618,9 +2129,12 @@ function CastingChapter({ lang, birthData, displayName, onDone, onError }) {
       <View style={{ position: 'absolute', top: SH * 0.02, left: SW / 2 - SW * 0.7, pointerEvents: 'none' }}>
         <GreatWheel size={SW * 1.4} opacity={0.14} />
       </View>
-      {/* the orb-keeper reads THEIR sky — the chart forms around the orb */}
-      <View style={{ height: SH * 0.44, marginBottom: 18 }}>
-        <SceneOrb reading progress={lineIdx} />
+      {/* the crystal orb reads THEIR sky — drawn element with a breathing core */}
+      <View style={{ height: SH * 0.44, marginBottom: 18, alignItems: 'center', justifyContent: 'center' }}>
+        <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: 0, height: 0, alignItems: 'center', justifyContent: 'center' }, coreStyle]}>
+          <GlowDisc color="#B39CE8" size={SW * 0.7} innerOpacity={0.4} />
+        </Animated.View>
+        <StoryBeatOrb />
       </View>
       <View style={{ paddingHorizontal: 34, alignItems: 'center' }}>
         <Animated.Text key={lineIdx} entering={FadeInUp.duration(420)} style={{ color: 'rgba(248,231,184,0.85)', fontSize: 16, fontWeight: '600', textAlign: 'center', lineHeight: 24 }}>
@@ -2644,8 +2158,7 @@ var RASHI_TO_ZODIAC_INDEX = { Mesha: 0, Vrishabha: 1, Mithuna: 2, Kataka: 3, Sim
 
 function IdentityChapter({ lang, reveal, onNext }) {
   var T = COPY[lang] || COPY.en;
-  var zodiacImg = ZODIAC_IMAGE_MAP ? ZODIAC_IMAGE_MAP[reveal.lagna.english] : null;
-  var lagnaIndex = RASHI_TO_ZODIAC_INDEX[reveal.lagna.name] || 0;
+  var zodiacImg = COSMOS_ZODIAC[reveal.lagna.english] || (ZODIAC_IMAGE_MAP ? ZODIAC_IMAGE_MAP[reveal.lagna.english] : null);
   var CARD_COLORS = { lagna: '#FFB800', nakshatra: '#A78BFA', moon: '#67E8F9', dasha: '#34D399' };
   var CARD_ICONS = { lagna: 'sunny-outline', nakshatra: 'star-outline', moon: 'moon-outline', dasha: 'hourglass-outline' };
 
@@ -2670,7 +2183,6 @@ function IdentityChapter({ lang, reveal, onNext }) {
     ? T.dashaSince.replace('{year}', reveal.dasha.sinceYear).replace('{until}', reveal.dasha.until || '')
     : null;
 
-  var wheelSize = Math.min(SW * 0.78, 300);
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
@@ -2679,21 +2191,17 @@ function IdentityChapter({ lang, reveal, onNext }) {
         <Text style={[p.sub, { marginTop: 2, fontSize: 14.5, color: 'rgba(248,231,184,0.8)' }]}>{reveal.greeting}</Text>
       </Animated.View>
 
-      {/* Lagna hero — the wheel locked on their sign */}
-      <View style={{ alignItems: 'center', marginTop: 14, marginBottom: 20 }}>
-        <View style={{ width: wheelSize, height: wheelSize, alignItems: 'center', justifyContent: 'center' }}>
-          {/* the astrolabe behind, their sign lit */}
-          <Animated.View entering={FadeIn.delay(150).duration(900)} style={{ position: 'absolute', opacity: 0.85 }}>
-            <AwesomeRashiChakra size={wheelSize} activeSignIndex={lagnaIndex} variant="astrolabe" showSolarOrbit={false} />
-          </Animated.View>
+      {/* Lagna hero — the sign medallion alone, seated inside the great zodiac
+          ring painted into this page's backdrop. No spinning wheel, no frame:
+          the medallion is its own gold-ringed hero. */}
+      <View style={{ alignItems: 'center', marginTop: SH * 0.07, marginBottom: 22 }}>
+        <View style={{ width: 132, height: 132, alignItems: 'center', justifyContent: 'center' }}>
           {/* landing flash */}
-          <Animated.View style={[{ position: 'absolute', width: 130, height: 130, borderRadius: 65, borderWidth: 2, borderColor: '#FFD666', backgroundColor: 'rgba(255,214,102,0.12)' }, flashStyle]} />
-          {/* their sign, punched in */}
+          <Animated.View style={[{ position: 'absolute', width: 118, height: 118, borderRadius: 59, borderWidth: 2, borderColor: '#FFD666', backgroundColor: 'rgba(255,214,102,0.12)' }, flashStyle]} />
           <Animated.View style={[p.lagnaOrb, lockStyle]}>
-            <LinearGradient colors={['rgba(255,184,0,0.16)', 'rgba(147,51,234,0.10)', 'rgba(6,4,9,0.92)']} style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
             {zodiacImg
-              ? <Image source={zodiacImg} style={{ width: 74, height: 74, borderRadius: 37 }} resizeMode="contain" />
-              : <Ionicons name="planet" size={54} color="#FFD666" />}
+              ? <Image source={zodiacImg} style={{ width: 112, height: 112 }} resizeMode="contain" />
+              : <Glyph name="planet" size={48} color="#FFD666" />}
           </Animated.View>
         </View>
         <Text style={{ marginTop: 14, fontSize: 11, fontWeight: '900', color: 'rgba(248,231,184,0.45)', letterSpacing: 2.2 }}>{T.lagnaLabel}</Text>
@@ -2704,7 +2212,7 @@ function IdentityChapter({ lang, reveal, onNext }) {
           {lang === 'si' ? reveal.lagna.english : reveal.lagna.sinhala} · {reveal.lagna.degree}°
         </Text>
         <View style={p.nakBadge}>
-          <Ionicons name="star" size={12} color="#C4B5FD" />
+          <Glyph name="star" size={12} color="#C4B5FD" />
           <Text style={{ color: '#C4B5FD', fontSize: 12.5, fontWeight: '700' }}>
             {T.nakshatraLabel}: {lang === 'si' ? reveal.nakshatra.sinhala : reveal.nakshatra.name} · {lang === 'si' ? 'පාද ' : 'Pada '}{reveal.nakshatra.pada}
           </Text>
@@ -2719,7 +2227,7 @@ function IdentityChapter({ lang, reveal, onNext }) {
             <Card style={{ marginBottom: 12, borderColor: color + '22' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 8 }}>
                 <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: color + '16', borderWidth: 1, borderColor: color + '38', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name={CARD_ICONS[item.kind] || 'sparkles-outline'} size={15} color={color} />
+                  <Glyph name={CARD_ICONS[item.kind] || 'sparkles-outline'} size={15} color={color} />
                 </View>
                 <Text style={{ flex: 1, fontSize: 15, fontWeight: '800', color: '#FFF1D0' }}>{item.title}</Text>
               </View>
@@ -2775,7 +2283,7 @@ function ChartChapter({ lang, reveal, birthData, onNext }) {
       </Animated.View>
 
       <Animated.View entering={FadeIn.delay(1100).duration(700)} style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 14, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 14, backgroundColor: 'rgba(52,211,153,0.07)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.2)' }}>
-        <Ionicons name="gift-outline" size={14} color="#34D399" />
+        <Glyph name="gift-outline" size={14} color="#34D399" />
         <Text style={{ color: '#6EE7B7', fontSize: 12, fontWeight: '700' }}>{T.chartNote}</Text>
       </Animated.View>
 
@@ -2826,28 +2334,34 @@ function FutureChapter({ lang, reveal, displayName, onNext }) {
             <View style={[p.futureCard, { borderColor: card.color + (isFree ? '55' : '30') }]}>
               <LinearGradient colors={[card.color + (isFree ? '16' : '0E'), 'rgba(255,255,255,0.01)']} style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: card.color + '16', borderWidth: 1, borderColor: card.color + '40', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name={card.icon || 'sparkles-outline'} size={18} color={card.color} />
-                </View>
+                {DOMAIN_CARD_ART[card.id] ? (
+                  <View style={{ width: 46, height: 46, alignItems: 'center', justifyContent: 'center' }}>
+                    <Image source={DOMAIN_CARD_ART[card.id]} style={{ width: 46, height: 46, opacity: isFree ? 1 : 0.55 }} resizeMode="contain" />
+                  </View>
+                ) : (
+                  <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: card.color + '16', borderWidth: 1, borderColor: card.color + '40', alignItems: 'center', justifyContent: 'center' }}>
+                    <Glyph name={card.icon || 'sparkles-outline'} size={18} color={card.color} />
+                  </View>
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 10.5, fontWeight: '900', color: card.color, letterSpacing: 1.4, textTransform: 'uppercase' }}>{card.domain}</Text>
                   <Text style={{ fontSize: 16, fontWeight: '800', color: '#FFF1D0', marginTop: 2 }}>{card.title}</Text>
                 </View>
                 {isFree ? (
                   <View style={[p.lockPill, { backgroundColor: 'rgba(52,211,153,0.10)', borderColor: 'rgba(52,211,153,0.35)' }]}>
-                    <Ionicons name="lock-open" size={10} color="#6EE7B7" />
+                    <Glyph name="lock-open" size={10} color="#6EE7B7" />
                     <Text style={{ fontSize: 8.5, fontWeight: '900', color: '#6EE7B7', letterSpacing: 1 }}>{T.freeLabel}</Text>
                   </View>
                 ) : (
                   <View style={p.lockPill}>
-                    <Ionicons name="lock-closed" size={10} color="rgba(255,214,102,0.9)" />
+                    <Glyph name="lock-closed" size={10} color="rgba(255,214,102,0.9)" />
                     <Text style={{ fontSize: 8.5, fontWeight: '900', color: 'rgba(255,214,102,0.9)', letterSpacing: 1 }}>{T.lockedLabel}</Text>
                   </View>
                 )}
               </View>
               {/* THE REAL DATE — the hook stays visible */}
               <View style={[p.windowPill, { borderColor: card.color + '45', backgroundColor: card.color + '10' }]}>
-                <Ionicons name="calendar-outline" size={13} color={card.color} />
+                <Glyph name="calendar-outline" size={13} color={card.color} />
                 <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFF6DC' }}>{card.window}</Text>
               </View>
               {isFree ? (
@@ -2912,9 +2426,11 @@ function SignInChapter({ lang, isReturningUser, onDone, onBack }) {
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 26, paddingVertical: 24 }} showsVerticalScrollIndicator={false} bounces={false}>
       <Animated.View entering={FadeInDown.duration(600)} style={{ alignItems: 'center', marginBottom: 22 }}>
+        {/* the golden gateway — drawn element, faded up behind the mark */}
+        {/* this page's backdrop IS the gateway, so no second arch behind the
+            emblem — it just doubled up and crowded the logo */}
         <View style={p.signinOrb}>
-          <LinearGradient colors={['rgba(147,51,234,0.12)', 'rgba(255,184,0,0.08)', 'rgba(13,11,46,0.9)']} style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-          <Image source={APP_LOGO_IMAGE} style={{ width: 52, height: 52 }} resizeMode="contain" />
+          <Image source={ELEMENTS.logo} style={{ width: 76, height: 76 }} resizeMode="contain" fadeDuration={0} />
         </View>
         <Text style={[p.title, { marginTop: 16 }]}>{title}</Text>
         <Text style={p.sub}>{subtitle}</Text>
@@ -2927,7 +2443,7 @@ function SignInChapter({ lang, isReturningUser, onDone, onBack }) {
               <View style={p.valueCard}>
                 <LinearGradient colors={['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.01)']} style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                 <View style={[p.valueCardIcon, { backgroundColor: card.color + '14', borderColor: card.color + '30' }]}>
-                  <Ionicons name={card.icon} size={18} color={card.color} />
+                  <Glyph name={card.icon} size={18} color={card.color} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFF1D0' }}>{card.title}</Text>
@@ -2941,7 +2457,7 @@ function SignInChapter({ lang, isReturningUser, onDone, onBack }) {
 
       {error ? (
         <Animated.View entering={FadeInDown.duration(300)} style={p.errorWrap}>
-          <Ionicons name="alert-circle" size={15} color="#FF6B6B" />
+          <Glyph name="alert-circle" size={15} color="#FF6B6B" />
           <Text style={p.errorWrapText}>{error}</Text>
         </Animated.View>
       ) : null}
@@ -2953,18 +2469,18 @@ function SignInChapter({ lang, isReturningUser, onDone, onBack }) {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <View style={p.googleLogoWrap}><Text style={{ fontSize: 14, fontWeight: '900', color: '#4285F4' }}>G</Text></View>
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3, flex: 1 }}>{T.signinBtn}</Text>
-              <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.8)" />
+              <Glyph name="arrow-forward" size={16} color="rgba(255,255,255,0.8)" />
             </View>
           )}
         </View>
       </SpringPressable>
 
       <View style={p.trustRow}>
-        <View style={p.trustItem}><Ionicons name="shield-checkmark" size={13} color="#34D399" /><Text style={p.trustText}>{T.trustVerified}</Text></View>
+        <View style={p.trustItem}><Glyph name="shield-checkmark" size={13} color="#34D399" /><Text style={p.trustText}>{T.trustVerified}</Text></View>
         <View style={p.trustDot} />
-        <View style={p.trustItem}><Ionicons name="lock-closed" size={12} color="#A78BFA" /><Text style={p.trustText}>{T.trustEncrypted}</Text></View>
+        <View style={p.trustItem}><Glyph name="lock-closed" size={12} color="#A78BFA" /><Text style={p.trustText}>{T.trustEncrypted}</Text></View>
         <View style={p.trustDot} />
-        <View style={p.trustItem}><Ionicons name="eye-off" size={12} color="#FFB800" /><Text style={p.trustText}>{T.trustPrivate}</Text></View>
+        <View style={p.trustItem}><Glyph name="eye-off" size={12} color="#FFB800" /><Text style={p.trustText}>{T.trustPrivate}</Text></View>
       </View>
 
       {onBack ? <GhostButton label={T.back} onPress={onBack} /> : null}
@@ -2992,8 +2508,12 @@ function CompleteChapter({ lang, onDone }) {
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 }}>
+      {/* radiant drawn seal blooming behind the sparkle */}
+      <View pointerEvents="none" style={{ position: 'absolute', width: SW * 0.95, height: SW * 0.95, alignItems: 'center', justifyContent: 'center' }}>
+        <FloatElement source={ELEMENTS.seal} w={SW * 0.9} glow={false} delay={0} floatRange={3} floatPeriod={6000} opacity={0.92} />
+      </View>
       <Animated.View style={[{ width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(217,164,65,0.10)', borderWidth: 1, borderColor: 'rgba(217,164,65,0.32)' }, sealStyle]}>
-        <Ionicons name="sparkles" size={40} color="#FFD666" />
+        <Glyph name="sparkles" size={40} color="#FFD666" />
       </Animated.View>
       <Animated.Text entering={FadeInUp.delay(250).duration(500)} style={{ fontSize: 26, fontWeight: '900', color: '#FFB800', marginTop: 20, textAlign: 'center', ...textShadow('rgba(255,184,0,0.5)', { width: 0, height: 0 }, 16) }}>
         {T.completeTitle}
@@ -3214,10 +2734,51 @@ export default function OnboardingScreen({ onComplete, isReturningUser }) {
   var showProgress = !isReturningUser && chapterIdx >= 2 && chapterIdx <= 10;
   var progress = showProgress ? (chapterIdx - 1) / 9 : 0;
 
+  // Three painted acts, each its own shadow-box backdrop:
+  //   I  the mystic shrine (language → story), II the arch (date → casting),
+  //   III the zodiac ring (identity → complete). Story runs the live parallax
+  //   scene; the rest sit on a calmer parallax backdrop so content stays legible.
+  var ACT_OF = {
+    language: 1, name: 1, story: 1,
+    date: 2, time: 2, place: 2, casting: 2,
+    identity: 3, chart: 3, future: 3, signin: 3, complete: 3,
+  };
+  // Every chapter has its own dedicated backdrop; only the story runs the live
+  // parallax scene (its per-beat heroes need the animated sky).
+  var CHAPTER_BG = {
+    language: SCENE_MYSTIC.bgLanguage,
+    name: SCENE_MYSTIC.bgName,
+    date: SCENE_MYSTIC.bgDate,
+    time: SCENE_MYSTIC.bgTime,
+    place: SCENE_MYSTIC.bgPlace,
+    casting: SCENE_MYSTIC.bgCasting,
+    identity: SCENE_MYSTIC.bgReveal,
+    chart: SCENE_MYSTIC.bgChart,
+    future: SCENE_MYSTIC.bgFuture,
+    signin: SCENE_MYSTIC.bgSignin,
+    complete: SCENE_MYSTIC.bgComplete,
+  };
+  var act = ACT_OF[chapter] || 1;
+  var centeredContent = chapter !== 'story';
+
   return (
     <View style={{ flex: 1, backgroundColor: '#000000' }}>
       <StatusBar barStyle={colors.statusBarStyle} translucent backgroundColor="transparent" />
-      <Starfield />
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        {chapter === 'story' ? (
+          <PuppetScene scene={SCENE_MYSTIC} showMystic={false} />
+        ) : (
+          <SceneBg
+            src={CHAPTER_BG[chapter] || (act === 2 ? SCENE_MYSTIC.bgInput : SCENE_MYSTIC.bgReveal)}
+            rotate={chapter === 'identity'}
+          />
+        )}
+        {/* centered-content chapters dim the busy backdrop for legibility;
+            the story overlays its own bottom scrim instead */}
+        {centeredContent ? (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(4,2,14,0.52)' }]} />
+        ) : null}
+      </View>
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: 'transparent', overflow: 'hidden' }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -3268,17 +2829,19 @@ var p = StyleSheet.create({
   errorWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(239,68,68,0.20)' },
   errorWrapText: { color: '#FCA5A5', fontSize: 12, fontWeight: '600', flex: 1 },
 
-  card: { backgroundColor: 'rgba(16,11,7,0.72)', borderRadius: 18, padding: 18, borderWidth: 1, borderColor: 'rgba(217,164,65,0.14)', overflow: 'hidden', ...boxShadow('rgba(0,0,0,0.45)', { width: 0, height: 10 }, 0.9, 18) },
-  input: { backgroundColor: 'rgba(7,5,3,0.58)', borderRadius: 14, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 15 : 13, color: '#F8E7B8', fontSize: 16, fontWeight: '600', borderWidth: 1, borderColor: 'rgba(217,164,65,0.16)' },
-  inputLabel: { color: 'rgba(248,231,184,0.45)', fontSize: 10.5, fontWeight: '800', marginBottom: 8, letterSpacing: 1.4, textTransform: 'uppercase' },
+  // ── Gilt shadow-box language: deep-indigo glass panels rimmed with a gold
+  //    hairline and lifted on a soft gold+black glow, so every card reads as a
+  //    lit paper-cut layer floating over the backdrop. ──
+  card: { backgroundColor: 'rgba(22,15,44,0.66)', borderRadius: 20, padding: 18, borderWidth: 1, borderColor: 'rgba(232,181,77,0.32)', overflow: 'hidden', ...boxShadow('rgba(0,0,0,0.5)', { width: 0, height: 12 }, 0.9, 24) },
+  input: { backgroundColor: 'rgba(16,11,34,0.6)', borderRadius: 14, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 15 : 13, color: '#F4EAD0', fontSize: 16, fontWeight: '700', borderWidth: 1.2, borderColor: 'rgba(232,181,77,0.34)', textAlign: 'center', letterSpacing: 1 },
+  inputLabel: { color: 'rgba(240,214,150,0.62)', fontSize: 10.5, fontWeight: '800', marginBottom: 8, letterSpacing: 1.6, textTransform: 'uppercase', textAlign: 'center' },
 
-  // Premium single-line name field — hero of the name chapter.
-  // Cosmic-glass tint (cool indigo, translucent) so it reads as part of the
-  // starfield rather than a warm brown box; gold hairline that ignites on focus.
-  nameField: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(18,17,42,0.55)', borderRadius: 16, paddingHorizontal: 18, paddingVertical: Platform.OS === 'ios' ? 18 : 16, borderWidth: 1.5, borderColor: 'rgba(217,164,65,0.22)', overflow: 'hidden', ...boxShadow('rgba(0,0,0,0.45)', { width: 0, height: 10 }, 0.7, 18) },
-  nameFieldFocus: { backgroundColor: 'rgba(26,24,56,0.62)', borderColor: 'rgba(232,201,122,0.75)', ...boxShadow('rgba(217,164,65,0.5)', { width: 0, height: 0 }, 0.95, 22) },
+  // Premium single-line name field — hero of the name chapter. Indigo glass
+  // with a gold hairline that ignites on focus.
+  nameField: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(22,15,44,0.6)', borderRadius: 16, paddingHorizontal: 18, paddingVertical: Platform.OS === 'ios' ? 18 : 16, borderWidth: 1.5, borderColor: 'rgba(232,181,77,0.3)', overflow: 'hidden', ...boxShadow('rgba(0,0,0,0.45)', { width: 0, height: 10 }, 0.7, 20) },
+  nameFieldFocus: { backgroundColor: 'rgba(30,22,58,0.66)', borderColor: 'rgba(246,213,132,0.8)', ...boxShadow('rgba(232,181,77,0.5)', { width: 0, height: 0 }, 0.95, 24) },
   nameFieldError: { borderColor: 'rgba(239,68,68,0.55)' },
-  nameInput: { flex: 1, color: '#F8E7B8', fontSize: 17, fontWeight: '600', letterSpacing: 0.3, padding: 0, margin: 0 },
+  nameInput: { flex: 1, color: '#F4EAD0', fontSize: 17, fontWeight: '700', letterSpacing: 0.3, padding: 0, margin: 0 },
   errorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12 },
   errorInline: { color: '#FCA5A5', fontSize: 12.5, fontWeight: '600' },
   // Flanked-hairline overline — premium editorial kicker
@@ -3294,7 +2857,7 @@ var p = StyleSheet.create({
   btnGrad: { paddingVertical: 15, minHeight: 54, alignItems: 'center', justifyContent: 'center', borderRadius: 16, paddingHorizontal: 18, borderWidth: 1, borderColor: 'rgba(255,240,184,0.36)' },
   btnText: { fontSize: 15.5, fontWeight: '900', color: '#2A1707', letterSpacing: 0.5, textAlign: 'center' },
 
-  langRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 17, paddingHorizontal: 18, borderRadius: 18, borderWidth: 1, backgroundColor: 'rgba(14,10,22,0.66)' },
+  langRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 17, paddingHorizontal: 18, borderRadius: 18, borderWidth: 1, backgroundColor: 'rgba(22,15,44,0.62)', ...boxShadow('rgba(0,0,0,0.4)', { width: 0, height: 8 }, 0.7, 16) },
   langIcon: { width: 46, height: 46, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 
   storyBig: { fontSize: 28, fontWeight: '900', color: '#EFD9A8', lineHeight: 38, letterSpacing: 0.4, textAlign: 'center', ...textShadow('rgba(232,201,122,0.5)', { width: 0, height: 0 }, 16) },
@@ -3309,31 +2872,53 @@ var p = StyleSheet.create({
   storyBigInk: { fontSize: 28, fontWeight: '900', color: '#2E2312', lineHeight: 38, letterSpacing: 0.3, textAlign: 'center' },
   storySmallInk: { fontSize: 15.5, fontWeight: '600', fontStyle: 'italic', color: 'rgba(46,35,18,0.8)', lineHeight: 25 },
 
-  monthChip: { width: '22.6%', paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  monthChipSel: { backgroundColor: 'rgba(255,184,0,0.15)', borderColor: '#FFB800' },
-  monthText: { color: 'rgba(255,255,255,0.5)', fontSize: 12.5, fontWeight: '600' },
-  monthTextSel: { color: '#FFD666', fontWeight: '800' },
+  // ── Date page: engraved plaque, raised month tiles, gilt numeral fields ──
+  plaque: { minWidth: '82%', paddingVertical: 16, paddingHorizontal: 22, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(14,9,30,0.78)', borderWidth: 1.2, borderColor: 'rgba(232,181,77,0.45)', overflow: 'hidden', ...boxShadow('rgba(0,0,0,0.55)', { width: 0, height: 12 }, 0.9, 22) },
+  plaqueNum: { fontSize: 30, fontWeight: '900', color: '#F6D584', letterSpacing: 1.5, ...textShadow('rgba(232,181,77,0.5)', { width: 0, height: 0 }, 16) },
+  plaqueMon: { fontSize: 25, fontWeight: '800', color: '#F6D584', letterSpacing: 1.2, textTransform: 'uppercase', ...textShadow('rgba(232,181,77,0.45)', { width: 0, height: 0 }, 14) },
+  plaqueSep: { fontSize: 22, fontWeight: '700', color: 'rgba(232,181,77,0.45)' },
+  plaqueDim: { color: 'rgba(242,231,201,0.24)', textShadowColor: 'transparent' },
 
-  ampmBtn: { paddingHorizontal: 32, paddingVertical: 13, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  ampmSel: { backgroundColor: 'rgba(6,182,212,0.15)', borderColor: '#06B6D4' },
-  ampmText: { color: 'rgba(255,255,255,0.5)', fontSize: 16, fontWeight: '700' },
-  ampmTextSel: { color: '#67E8F9' },
+  fieldLabel: { color: 'rgba(240,214,150,0.66)', fontSize: 10.5, fontWeight: '800', marginBottom: 8, letterSpacing: 1.8, textTransform: 'uppercase', textAlign: 'center' },
+  monthTile: { paddingVertical: 12, borderRadius: 13, backgroundColor: 'rgba(30,22,54,0.6)', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,181,77,0.2)', overflow: 'hidden' },
+  monthTileSel: { borderColor: '#F6D584', borderWidth: 1.4, backgroundColor: 'rgba(232,181,77,0.16)', ...boxShadow('rgba(232,181,77,0.55)', { width: 0, height: 0 }, 0.9, 14) },
+  monthTileText: { color: 'rgba(242,231,201,0.62)', fontSize: 12.5, fontWeight: '700', letterSpacing: 0.3 },
+  monthTileTextSel: { color: '#F9E6B4', fontWeight: '900' },
+  giltField: { borderRadius: 14, backgroundColor: 'rgba(16,11,34,0.66)', borderWidth: 1.3, borderColor: 'rgba(232,181,77,0.3)', overflow: 'hidden', ...boxShadow('rgba(0,0,0,0.45)', { width: 0, height: 8 }, 0.7, 16) },
+  giltFieldFocus: { borderColor: 'rgba(246,213,132,0.85)', backgroundColor: 'rgba(26,18,50,0.72)', ...boxShadow('rgba(232,181,77,0.5)', { width: 0, height: 0 }, 0.95, 20) },
+  giltInput: { paddingVertical: Platform.OS === 'ios' ? 16 : 13, paddingHorizontal: 12, color: '#F6D584', fontSize: 24, fontWeight: '900', letterSpacing: 2.5, textAlign: 'center' },
+  timeColon: { color: 'rgba(232,181,77,0.55)', fontSize: 26, fontWeight: '900', paddingBottom: 14 },
+  ampmTile: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14, backgroundColor: 'rgba(30,22,54,0.6)', borderWidth: 1, borderColor: 'rgba(232,181,77,0.2)', overflow: 'hidden' },
+  ampmTileSel: { borderColor: '#F6D584', borderWidth: 1.4, backgroundColor: 'rgba(232,181,77,0.16)', ...boxShadow('rgba(232,181,77,0.5)', { width: 0, height: 0 }, 0.9, 14) },
+  ampmTileText: { color: 'rgba(242,231,201,0.6)', fontSize: 15, fontWeight: '800', letterSpacing: 1.5 },
+  ampmTileTextSel: { color: '#F9E6B4', fontWeight: '900' },
 
-  cityBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, marginTop: 12, backgroundColor: 'rgba(52,211,153,0.08)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.2)' },
-  cityBadgeText: { color: '#6EE7B7', fontSize: 14, fontWeight: '600', flex: 1 },
-  cityBadgeCoords: { color: 'rgba(255,255,255,0.35)', fontSize: 11 },
+  monthChip: { width: '22.6%', paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(30,22,54,0.55)', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,181,77,0.18)' },
+  monthChipSel: { backgroundColor: 'rgba(232,181,77,0.2)', borderColor: '#E8B54D', ...boxShadow('rgba(232,181,77,0.4)', { width: 0, height: 0 }, 0.8, 12) },
+  monthText: { color: 'rgba(242,231,201,0.6)', fontSize: 12.5, fontWeight: '700' },
+  monthTextSel: { color: '#F6D584', fontWeight: '800' },
 
-  lagnaOrb: { width: 104, height: 104, borderRadius: 52, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 2, borderColor: 'rgba(255,184,0,0.28)', ...boxShadow('rgba(255,184,0,0.35)', { width: 0, height: 0 }, 0.7, 26) },
+  ampmBtn: { paddingHorizontal: 32, paddingVertical: 13, borderRadius: 14, backgroundColor: 'rgba(30,22,54,0.55)', borderWidth: 1, borderColor: 'rgba(232,181,77,0.18)' },
+  ampmSel: { backgroundColor: 'rgba(30,127,142,0.24)', borderColor: '#3FB6C6', ...boxShadow('rgba(63,182,198,0.4)', { width: 0, height: 0 }, 0.8, 12) },
+  ampmText: { color: 'rgba(242,231,201,0.6)', fontSize: 16, fontWeight: '700' },
+  ampmTextSel: { color: '#8CE0EC' },
+
+  cityBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, marginTop: 12, backgroundColor: 'rgba(30,127,142,0.14)', borderWidth: 1, borderColor: 'rgba(63,182,198,0.35)' },
+  cityBadgeText: { color: '#8CE0EC', fontSize: 14, fontWeight: '700', flex: 1 },
+  cityBadgeCoords: { color: 'rgba(242,231,201,0.4)', fontSize: 11 },
+
+  lagnaOrb: { width: 148, height: 148, alignItems: 'center', justifyContent: 'center', ...boxShadow('rgba(232,181,77,0.5)', { width: 0, height: 0 }, 0.7, 30) },
   nakBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 12, paddingVertical: 7, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(167,139,250,0.09)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.25)' },
 
-  futureCard: { borderRadius: 18, borderWidth: 1, padding: 16, marginBottom: 12, backgroundColor: 'rgba(13,9,18,0.68)', overflow: 'hidden' },
-  lockPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8, backgroundColor: 'rgba(255,184,0,0.08)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.22)' },
+  futureCard: { borderRadius: 18, borderWidth: 1, padding: 16, marginBottom: 12, backgroundColor: 'rgba(20,13,40,0.72)', overflow: 'hidden', ...boxShadow('rgba(0,0,0,0.45)', { width: 0, height: 10 }, 0.8, 18) },
+  lockPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8, backgroundColor: 'rgba(232,181,77,0.1)', borderWidth: 1, borderColor: 'rgba(232,181,77,0.28)' },
   windowPill: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start', marginTop: 12, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 11, borderWidth: 1 },
 
-  signinOrb: { width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,184,0,0.2)', overflow: 'hidden', ...boxShadow('rgba(147,51,234,0.3)', { width: 0, height: 0 }, 0.6, 24) },
-  valueCard: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
+  // no disc, no ring — just the emblem with a soft warm halo behind it
+  signinOrb: { width: 88, height: 88, alignItems: 'center', justifyContent: 'center', ...boxShadow('rgba(232,181,77,0.45)', { width: 0, height: 0 }, 0.55, 26) },
+  valueCard: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(232,181,77,0.22)', backgroundColor: 'rgba(22,15,44,0.55)', overflow: 'hidden', ...boxShadow('rgba(0,0,0,0.4)', { width: 0, height: 8 }, 0.6, 14) },
   valueCardIcon: { width: 40, height: 40, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  googleBtn: { backgroundColor: 'rgba(255,255,255,0.08)', paddingVertical: 17, paddingHorizontal: 22, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)' },
+  googleBtn: { backgroundColor: 'rgba(255,252,246,0.12)', paddingVertical: 17, paddingHorizontal: 22, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(246,213,132,0.45)', ...boxShadow('rgba(232,181,77,0.3)', { width: 0, height: 0 }, 0.6, 18) },
   googleLogoWrap: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', ...boxShadow('rgba(0,0,0,0.2)', { width: 0, height: 1 }, 0.8, 4) },
   trustRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16 },
   trustItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },

@@ -1255,8 +1255,11 @@ var s = StyleSheet.create({
   heroName:  { fontSize: 27, fontWeight: '900', color: '#FFF6DF', textAlign: 'center', letterSpacing: 0.6, flexShrink: 1, ...textShadow('rgba(232,197,106,0.45)', { width: 0, height: 2 }, 14) },
   nameRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 6, maxWidth: '90%' },
   namePencil:{ width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(232,197,106,0.12)', borderWidth: 1, borderColor: 'rgba(232,197,106,0.35)' },
-  nameEditRow:{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, width: '100%', paddingHorizontal: 4 },
-  nameInput: { flex: 1, backgroundColor: 'rgba(255,255,255,0.09)', borderRadius: 14, paddingVertical: 11, paddingHorizontal: 14, color: '#FFF6DF', fontSize: 18, fontWeight: '800', textAlign: 'center', borderWidth: 1, borderColor: 'rgba(232,197,106,0.4)' },
+  nameEditRow:{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, alignSelf: 'stretch' },
+  // minWidth:0 lets the input shrink below its content/placeholder width — without
+  // it flexbox keeps min-width:auto and the save/cancel buttons get pushed off
+  // the card's right edge.
+  nameInput: { flex: 1, minWidth: 0, backgroundColor: 'rgba(255,255,255,0.09)', borderRadius: 14, paddingVertical: 11, paddingHorizontal: 14, color: '#FFF6DF', fontSize: 18, fontWeight: '800', textAlign: 'center', borderWidth: 1, borderColor: 'rgba(232,197,106,0.4)' },
   nameSaveBtn:{ width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   nameCancelBtn:{ width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(248,113,113,0.3)', backgroundColor: 'rgba(248,113,113,0.08)' },
   phonePill: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 18, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(232,197,106,0.22)' },

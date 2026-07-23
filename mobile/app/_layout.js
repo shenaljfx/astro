@@ -26,8 +26,10 @@ import {
   getNotificationNavigationTarget,
   clearBadge,
 } from '../services/notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { APP_LOGO_IMAGE } from '../assets/logo-inline';
 import { ZODIAC_IMAGES } from '../components/ZodiacIcons';
+import { ZODIAC_ORDERED, ELEMENTS } from '../assets/onboarding';
 
 // Suppress known harmless warnings from third-party libs on web
 // - "Unexpected text node" comes from react-native-gesture-handler's GestureDetector on web
@@ -76,24 +78,55 @@ var ZODIAC_ORBIT_COLORS = [
   '#EC4899', '#DC2626', '#818CF8', '#64748B', '#06B6D4', '#14B8A6',
 ];
 
+// A jianzhi zodiac medallion carried around the wheel. The medallion is its
+// own gold-ringed disc, so it needs no frame — and it counter-rotates so the
+// sign always reads upright as the ring turns.
 function SplashZodiacIcon({ index, total, radius, rotation }) {
   var baseAngle = (2 * Math.PI / total) * index;
   var aStyle = useAnimatedStyle(function() {
     var angle = baseAngle + rotation.value;
     var x = Math.cos(angle) * radius;
     var y = Math.sin(angle) * radius;
-    var osc = interpolate(Math.sin(rotation.value * 2 + index), [-1, 1], [0.5, 1]);
+    // signs nearest the viewer (lower arc) sit slightly larger and brighter
+    var depth = interpolate(Math.sin(angle), [-1, 1], [0.82, 1.12]);
     return {
-      transform: [{ translateX: x }, { translateY: y }, { scale: interpolate(osc, [0.5, 1], [0.8, 1.05]) }],
-      opacity: osc,
+      transform: [{ translateX: x }, { translateY: y }, { scale: depth }],
+      opacity: interpolate(Math.sin(angle), [-1, 1], [0.55, 1]),
     };
   });
   return (
-    <Animated.View style={[{ position: 'absolute', width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }, aStyle]}>
-      <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,184,0,0.08)', borderWidth: 1, borderColor: 'rgba(255,184,0,0.15)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        <Image source={ZODIAC_IMAGES[index]} style={{ width: 22, height: 22 }} resizeMode="contain" />
-      </View>
+    <Animated.View style={[{ position: 'absolute', width: 46, height: 46, alignItems: 'center', justifyContent: 'center' }, aStyle]}>
+      <Image source={ZODIAC_ORDERED[index]} style={{ width: 46, height: 46 }} resizeMode="contain" />
     </Animated.View>
+  );
+}
+
+// ── Rising gold embers — the same living magic as the onboarding ──
+var SPLASH_EMBERS = (function () {
+  var arr = [];
+  for (var i = 0; i < 10; i++) {
+    arr.push({ x: 6 + Math.random() * 88, size: 2 + Math.random() * 2.6, rise: 120 + Math.random() * 180, period: 7000 + Math.random() * 6000, delay: Math.random() * 6000, sway: 10 + Math.random() * 20 });
+  }
+  return arr;
+})();
+
+function SplashEmber({ e }) {
+  var t = useSharedValue(0);
+  useEffect(function () {
+    t.value = withDelay(e.delay, withRepeat(withTiming(1, { duration: e.period, easing: Easing.linear }), -1, false));
+    return function () { cancelAnimation(t); };
+  }, []);
+  var style = useAnimatedStyle(function () {
+    return {
+      opacity: interpolate(t.value, [0, 0.12, 0.7, 1], [0, 0.8, 0.35, 0]),
+      transform: [
+        { translateY: interpolate(t.value, [0, 1], [0, -e.rise]) },
+        { translateX: interpolate(t.value, [0, 0.5, 1], [0, e.sway, -e.sway * 0.4]) },
+      ],
+    };
+  });
+  return (
+    <Animated.View style={[{ position: 'absolute', left: e.x + '%', bottom: '8%', width: e.size, height: e.size, borderRadius: e.size / 2, backgroundColor: '#F2D48E' }, style]} />
   );
 }
 
@@ -254,7 +287,11 @@ function SplashLoadingScreen({ resolved }) {
     };
   });
 
-  var wheelRadius = 105;
+  var logoBreath = useAnimatedStyle(function() {
+    return { transform: [{ scale: interpolate(ringPulse.value, [0, 1], [0.97, 1.04]) }] };
+  });
+
+  var wheelRadius = 132;
 
   return (
     <View style={{ flex: 1, backgroundColor: bgColor }}>
@@ -268,17 +305,15 @@ function SplashLoadingScreen({ resolved }) {
         end={{ x: 0.5, y: 1 }}
       />
 
-      {/* Atmospheric nebula blobs */}
-      {isDark ? (
-        <>
-          <Animated.View style={[{ position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(147,51,234,0.05)', top: '10%', right: -100 }, nebula1Style]} />
-          <Animated.View style={[{ position: 'absolute', width: 250, height: 250, borderRadius: 125, backgroundColor: 'rgba(255,140,0,0.04)', bottom: '15%', left: -80 }, nebula2Style]} />
-          <Animated.View style={[{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(66,133,244,0.03)', top: '40%', left: '55%' }, nebula1Style]} />
-        </>
-      ) : null}
-
       {/* Star field — matching website WebGL starfield */}
       {isDark ? <StarField /> : null}
+
+      {/* rising gold embers */}
+      {isDark ? (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          {SPLASH_EMBERS.map(function (e, i) { return <SplashEmber key={i} e={e} />; })}
+        </View>
+      ) : null}
 
       <View style={gs.splashContent}>
         {/* ── Zodiac orbit ring ── */}
@@ -293,21 +328,21 @@ function SplashLoadingScreen({ resolved }) {
           })}
 
           {/* Pulsing outer ring */}
-          <Animated.View style={[{ position: 'absolute', width: 140, height: 140, borderRadius: 70, borderWidth: 1, borderColor: 'rgba(255,184,0,0.2)' }, ringPulseStyle]} />
+          <Animated.View style={[{ position: 'absolute', width: 178, height: 178, borderRadius: 89, borderWidth: 1, borderColor: 'rgba(232,181,77,0.28)' }, ringPulseStyle]} />
 
           {/* Inner ring */}
-          <View style={{ position: 'absolute', width: 116, height: 116, borderRadius: 58, borderWidth: 1.5, borderColor: 'rgba(255,184,0,0.15)' }} />
+          <View style={{ position: 'absolute', width: 132, height: 132, borderRadius: 66, borderWidth: 1, borderColor: 'rgba(232,181,77,0.16)' }} />
 
-          {/* Glow behind logo */}
+          {/* Glow behind the emblem */}
           <Animated.View style={[gs.logoGlow, {
-            backgroundColor: isDark ? 'rgba(255,184,0,0.12)' : 'rgba(107,70,193,0.12)',
+            backgroundColor: isDark ? 'rgba(232,181,77,0.16)' : 'rgba(107,70,193,0.12)',
           }, glowStyle]} />
 
-          {/* Logo */}
-          <Animated.View entering={FadeIn.duration(800)} style={gs.logoWrap}>
+          {/* The emblem, breathing with its own halo */}
+          <Animated.View entering={FadeIn.duration(1000)} style={[gs.logoWrap, logoBreath]}>
             <Image
-              source={APP_LOGO_IMAGE}
-              style={gs.logo}
+              source={isDark ? ELEMENTS.logo : APP_LOGO_IMAGE}
+              style={{ width: 96, height: 96 }}
               resizeMode="contain"
             />
           </Animated.View>
@@ -348,6 +383,11 @@ function SplashLoadingScreen({ resolved }) {
     </View>
   );
 }
+
+// Last notification response id we already navigated for. Persisted because
+// expo-notifications hands back the SAME last-tapped response on every process
+// start — see the cold-start replay guard in AppGate.
+var HANDLED_NOTIFICATION_KEY = 'grahachara_last_handled_notification';
 
 function AppGate() {
   var { isLoggedIn, loading, authReady, user } = useAuth();
@@ -408,7 +448,9 @@ function AppGate() {
       lastNotificationId.current = notificationId || String(Date.now());
 
       var target = getNotificationNavigationTarget(notification);
-      var pathname = target.screen || '(tabs)/index';
+      // Targets are URL paths ('/', '/report', ...) — group/index segments
+      // like '(tabs)/index' are not valid hrefs and hit the not-found screen.
+      var pathname = target.screen || '/';
       if (pathname.charAt(0) !== '/') pathname = '/' + pathname;
 
       try {
@@ -427,12 +469,25 @@ function AppGate() {
     clearBadge().catch(function() {});
 
     var responseSub = addNotificationResponseListener(function(response) {
+      var freshId = response?.notification?.request?.identifier;
+      if (freshId) AsyncStorage.setItem(HANDLED_NOTIFICATION_KEY, freshId).catch(function() {});
       openFromNotification(response?.notification);
       clearBadge().catch(function() {});
     });
 
+    // Cold-start replay guard: expo-notifications persists the LAST tapped
+    // notification and returns it on EVERY process start (launcher, Play
+    // Store "Open" button, crash restart). Only navigate the first time we
+    // see a given response id — otherwise every cold start replays a stale
+    // notification tap and yanks the user off the Home screen.
     getLastNotificationResponse().then(function(response) {
-      openFromNotification(response?.notification);
+      var lastId = response?.notification?.request?.identifier;
+      if (!lastId) return;
+      AsyncStorage.getItem(HANDLED_NOTIFICATION_KEY).then(function(handledId) {
+        if (handledId === lastId) return;
+        AsyncStorage.setItem(HANDLED_NOTIFICATION_KEY, lastId).catch(function() {});
+        openFromNotification(response.notification);
+      }).catch(function() {});
     });
 
     return function() {
@@ -479,21 +534,21 @@ var gs = StyleSheet.create({
     paddingBottom: 40,
   },
   orbArea: {
-    width: 260,
-    height: 260,
+    width: 330,
+    height: 330,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 32,
+    marginBottom: 28,
   },
   logoGlow: {
     position: 'absolute',
-    width: 130,
-    height: 130,
-    borderRadius: 65,
+    width: 168,
+    height: 168,
+    borderRadius: 84,
   },
   logoWrap: {
-    width: 92,
-    height: 92,
+    width: 104,
+    height: 104,
     borderRadius: 46,
     overflow: 'hidden',
     alignItems: 'center',

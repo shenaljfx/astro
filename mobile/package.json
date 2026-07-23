@@ -4,8 +4,8 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "dependencies": {
@@ -61,6 +61,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
+    "babel-plugin-transform-remove-console": "^6.9.4",
     "sharp": "^0.34.5"
   },
   "overrides": {

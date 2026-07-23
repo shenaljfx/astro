@@ -217,7 +217,15 @@ function SolarOrbitBody({ bodySize, kind }) {
 // COMPONENT
 // ═══════════════════════════════════════════════════════
 
-function AwesomeRashiChakra({ size = 320, activeSignIndex, variant = 'classic', showSolarOrbit = true }) {
+/**
+ * zodiacImages  — optional override for the twelve sign images (Aries→Pisces).
+ *                 Accepts require()'d sources or {uri} objects.
+ * showCenterSign — set false when the caller draws its own centre medallion,
+ *                 so the wheel's built-in centre image doesn't sit behind it.
+ */
+function AwesomeRashiChakra({ size = 320, activeSignIndex, variant = 'classic', showSolarOrbit = true, zodiacImages, showCenterSign = true }) {
+  var IMGS = zodiacImages || ZODIAC_IMAGES;
+  var hrefOf = function (entry) { return entry && entry.uri ? entry.uri : entry; };
   var cx = size / 2;
   var cy = size / 2;
   var reduced = useReducedMotion();
@@ -481,7 +489,7 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex, variant = 'classic', 
                     y={imageY - imageSize / 2}
                     width={imageSize}
                     height={imageSize}
-                    href={ZODIAC_IMAGES[signIndex].uri}
+                    href={hrefOf(IMGS[signIndex])}
                     opacity={isActive ? 0.98 : 0.38}
                   />
                 </G>
@@ -528,7 +536,7 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex, variant = 'classic', 
               y={cy - astCenterImage / 2}
               width={astCenterImage}
               height={astCenterImage}
-              href={ZODIAC_IMAGES[activeIndex].uri}
+              href={hrefOf(IMGS[activeIndex])}
               opacity={0.96}
             />
             <Circle cx={cx} cy={cy} r={astCore * 1.12} fill="none" stroke="rgba(255,232,163,0.22)" strokeWidth="0.55" />
@@ -801,7 +809,7 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex, variant = 'classic', 
                     y={gy - imgSize / 2}
                     width={imgSize}
                     height={imgSize}
-                    href={ZODIAC_IMAGES[i].uri}
+                    href={hrefOf(IMGS[i])}
                     opacity={0.95}
                   />
                 </G>
@@ -899,7 +907,7 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex, variant = 'classic', 
           <Circle cx={cx} cy={cy} r={Rcenter * 0.38} fill="#FFF8E1" opacity={0.45} />
 
           {/* Active zodiac sign in center — large prominent image */}
-          {activeSignIndex != null && ZODIAC_IMAGES[activeSignIndex] && (() => {
+          {showCenterSign && activeSignIndex != null && IMGS[activeSignIndex] && (() => {
             var imgR = Rorbit * 0.88;
             return (
               <G>
@@ -914,7 +922,7 @@ function AwesomeRashiChakra({ size = 320, activeSignIndex, variant = 'classic', 
                   y={cy - imgR}
                   width={imgR * 2}
                   height={imgR * 2}
-                  href={ZODIAC_IMAGES[activeSignIndex].uri}
+                  href={hrefOf(IMGS[activeSignIndex])}
                   opacity={0.92}
                 />
                 {/* Subtle inner vignette ring */}

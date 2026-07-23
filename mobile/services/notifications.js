@@ -277,21 +277,24 @@ export function getNotificationNavigationTarget(notification) {
   var data = notification?.request?.content?.data || {};
   var type = data.type;
 
+  // screen values are expo-router URL paths. Group and index segments
+  // ('(tabs)/index') are NOT part of the URL — pushing one matches no route
+  // and lands on the Unmatched Route screen.
   switch (type) {
     case 'DAILY_GUIDANCE':
     case 'DAILY_GUIDANCE_LOCAL':
     case 'DAILY_PALAPA':
-      return { screen: '(tabs)/index', params: { tab: 'palapa' } };
+      return { screen: '/', params: { tab: 'palapa' } };
     case 'WEEKLY_LAGNA':
-      return { screen: '(tabs)/index', params: { tab: 'weekly' } };
+      return { screen: '/', params: { tab: 'weekly' } };
     case 'RAHU_KALAYA':
-      return { screen: '(tabs)/index', params: { tab: 'rahuKalaya' } };
+      return { screen: '/', params: { tab: 'rahuKalaya' } };
     case 'MARAKA_APALA':
-      return { screen: '(tabs)/report', params: { section: 'marakaApala' } };
+      return { screen: '/report', params: { section: 'marakaApala' } };
     case 'TRANSIT_ALERT':
-      return { screen: '(tabs)/kendara', params: { section: 'transits' } };
+      return { screen: '/kendara', params: { section: 'transits' } };
     default:
-      return { screen: '(tabs)/index' };
+      return { screen: '/' };
   }
 }
 

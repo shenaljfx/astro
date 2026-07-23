@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
-import Svg, { Line, Rect } from 'react-native-svg';
+import Svg, { Line, Rect, Path, Defs, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ZODIAC_IMAGES } from './ZodiacIcons';
+import { ZODIAC_ORDERED } from '../assets/onboarding';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -58,10 +60,14 @@ const PLANET_INFO = {
 
 function SriLankanChart({ rashiChart, lagnaRashiId, language, chartSize: customSize }) {
   const chartSize = customSize || Math.min(SCREEN_WIDTH - 40, 360);
-  const cellW = chartSize / 3;
-  const cellH = chartSize / 3;
-  const borderColor = 'rgba(251,191,36,0.7)';
-  const lineColor = 'rgba(251,191,36,0.5)';
+  // The frame lives in a padding ring OUTSIDE the grid, so ornament never
+  // covers a house number or a planet. The grid keeps the full inner square.
+  const pad = Math.round(chartSize * 0.055);
+  const gridSize = chartSize - pad * 2;
+  const cellW = gridSize / 3;
+  const cellH = gridSize / 3;
+  const borderColor = 'rgba(246,213,132,0.85)';
+  const lineColor = 'rgba(232,181,77,0.42)';
   const isSmall = chartSize < 240;
 
   // Map house number to rashi ID based on Lagna
@@ -218,17 +224,54 @@ function SriLankanChart({ rashiChart, lagnaRashiId, language, chartSize: customS
     ? (RASHI_SI[lagnaRashiId] || '')
     : (RASHI_EN[lagnaRashiId] || '');
 
+  // corner bracket, drawn in the frame ring (never over the grid)
+  const bracket = (x, y, sx, sy) => {
+    const L = pad * 1.15, o = pad * 0.42;
+    return 'M' + (x + sx * (o + L)) + ',' + (y + sy * o) +
+      ' L' + (x + sx * o) + ',' + (y + sy * o) +
+      ' L' + (x + sx * o) + ',' + (y + sy * (o + L));
+  };
+
   return (
     <View style={[styles.chartBox, { width: chartSize, height: chartSize }]}>
+      {/* a calm indigo ground with a soft centre lift — nothing that competes
+          with the data sitting on top of it */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['#1A1140', '#120B30', '#0C0722']}
+        locations={[0, 0.5, 1]}
+        style={[StyleSheet.absoluteFill, { borderRadius: 6 }]}
+        start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }}
+      />
       <Svg style={StyleSheet.absoluteFill} width={chartSize} height={chartSize}>
-        <Rect x={1} y={1} width={chartSize - 2} height={chartSize - 2}
-          stroke={borderColor} strokeWidth={2} fill="none" />
-        <Line x1={cellW} y1={0} x2={cellW} y2={chartSize} stroke={borderColor} strokeWidth={1} />
-        <Line x1={cellW * 2} y1={0} x2={cellW * 2} y2={chartSize} stroke={borderColor} strokeWidth={1} />
-        <Line x1={0} y1={cellH} x2={chartSize} y2={cellH} stroke={borderColor} strokeWidth={1} />
-        <Line x1={0} y1={cellH * 2} x2={chartSize} y2={cellH * 2} stroke={borderColor} strokeWidth={1} />
+        <Defs>
+          <SvgLinearGradient id="chartRule" x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0" stopColor="#F6D584" stopOpacity="0.95" />
+            <Stop offset="0.5" stopColor="#E8B54D" stopOpacity="0.6" />
+            <Stop offset="1" stopColor="#F6D584" stopOpacity="0.95" />
+          </SvgLinearGradient>
+        </Defs>
+
+        {/* outer engraved rule + the grid's own border, with the ring between */}
+        <Rect x={1.5} y={1.5} width={chartSize - 3} height={chartSize - 3}
+          stroke="url(#chartRule)" strokeWidth={1.5} fill="none" rx={6} />
+        <Rect x={pad} y={pad} width={gridSize} height={gridSize}
+          stroke="url(#chartRule)" strokeWidth={1.3} fill="none" />
+
+        {/* gold brackets tucked into the ring corners */}
+        {[[0, 0, 1, 1], [chartSize, 0, -1, 1], [chartSize, chartSize, -1, -1], [0, chartSize, 1, -1]].map((c, i) => (
+          <Path key={'br' + i} d={bracket(c[0], c[1], c[2], c[3])}
+            stroke="rgba(246,213,132,0.75)" strokeWidth={1.4} fill="none" strokeLinecap="round" />
+        ))}
+
+        {/* the twelve-house grid */}
+        <Line x1={pad + cellW} y1={pad} x2={pad + cellW} y2={pad + gridSize} stroke={lineColor} strokeWidth={1} />
+        <Line x1={pad + cellW * 2} y1={pad} x2={pad + cellW * 2} y2={pad + gridSize} stroke={lineColor} strokeWidth={1} />
+        <Line x1={pad} y1={pad + cellH} x2={pad + gridSize} y2={pad + cellH} stroke={lineColor} strokeWidth={1} />
+        <Line x1={pad} y1={pad + cellH * 2} x2={pad + gridSize} y2={pad + cellH * 2} stroke={lineColor} strokeWidth={1} />
       </Svg>
 
+      <View style={{ position: 'absolute', left: pad, top: pad, width: gridSize, height: gridSize }}>
       {/* Row 1: Houses 2/3 | 1 | 12/11 */}
       <View style={styles.row}>
         {renderTopLeft()}
@@ -240,28 +283,16 @@ function SriLankanChart({ rashiChart, lagnaRashiId, language, chartSize: customS
       <View style={styles.row}>
         {renderEdge(4)}
         <View style={[styles.cell, styles.centerCell, { width: cellW, height: cellH }]}>
-          {ZODIAC_IMAGES[lagnaRashiId - 1] && (
-            <Image
-              source={ZODIAC_IMAGES[lagnaRashiId - 1]}
-              style={{
-                width: cellW * 0.48,
-                height: cellW * 0.48,
-                opacity: 0.18,
-                position: 'absolute',
-              }}
-              resizeMode="contain"
-            />
-          )}
           <Text style={[styles.centerTitle, isSmall && { fontSize: 8 }]}>
             {language === 'si' ? '\u0DBB\u0DCF\u0DC1\u0DD2 \u0D9A\u0DDA\u0DB1\u0DCA\u0DAF\u0DCA\u200D\u0DBB\u0DBA' : 'Birth Chart'}
           </Text>
-          {ZODIAC_IMAGES[lagnaRashiId - 1] && (
+          {(ZODIAC_ORDERED[lagnaRashiId - 1] || ZODIAC_IMAGES[lagnaRashiId - 1]) && (
             <Image
-              source={ZODIAC_IMAGES[lagnaRashiId - 1]}
+              source={ZODIAC_ORDERED[lagnaRashiId - 1] || ZODIAC_IMAGES[lagnaRashiId - 1]}
               style={{
-                width: isSmall ? 28 : 38,
-                height: isSmall ? 28 : 38,
-                marginVertical: 2,
+                width: isSmall ? 40 : 56,
+                height: isSmall ? 40 : 56,
+                marginVertical: 3,
               }}
               resizeMode="contain"
             />
@@ -279,6 +310,7 @@ function SriLankanChart({ rashiChart, lagnaRashiId, language, chartSize: customS
         {renderBottomLeft()}
         {renderEdge(7)}
         {renderBottomRight()}
+      </View>
       </View>
     </View>
   );
@@ -301,9 +333,15 @@ function formatDegreeDot(deg) {
 
 const styles = StyleSheet.create({
   chartBox: {
-    backgroundColor: 'rgba(10,3,25,0.95)',
+    backgroundColor: 'rgba(14,8,32,0.96)',
     alignSelf: 'center',
     position: 'relative',
+    borderRadius: 4,
+    shadowColor: 'rgba(232,181,77,0.45)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.75,
+    shadowRadius: 26,
+    elevation: 12,
   },
   row: { flexDirection: 'row' },
   cell: {
@@ -315,15 +353,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   centerTitle: {
-    fontSize: 11,
-    color: 'rgba(251,191,36,0.7)',
-    fontWeight: '700',
-    marginBottom: 2,
+    fontSize: 9.5,
+    color: 'rgba(240,214,150,0.7)',
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    marginBottom: 1,
   },
   centerLagna: {
-    fontSize: 16,
-    color: '#fbbf24',
-    fontWeight: 'bold',
+    fontSize: 17,
+    color: '#F6D584',
+    fontWeight: '900',
+    letterSpacing: 0.4,
+    textShadowColor: 'rgba(232,181,77,0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
   },
   centerSub: {
     fontSize: 10,
@@ -334,18 +378,21 @@ const styles = StyleSheet.create({
   rashiNumLabel: {
     position: 'absolute',
     fontSize: 10,
-    color: 'rgba(251,191,36,0.6)',
-    fontWeight: '700',
+    color: 'rgba(246,213,132,0.72)',
+    fontWeight: '800',
     zIndex: 10,
   },
   rashiNumLabelSmall: {
     fontSize: 8,
   },
   planetLine: {
-    fontSize: 9,
-    fontWeight: '700',
-    lineHeight: 13,
+    fontSize: 10,
+    fontWeight: '800',
+    lineHeight: 14,
     textAlign: 'left',
+    textShadowColor: 'rgba(0,0,0,0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   planetLineSmall: {
     fontSize: 7,

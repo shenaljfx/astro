@@ -16,3 +16,7 @@ Thumbs.db
 *.apk
 *.aab
 *.ipa
+
+# Native projects are generated (CNG) — expo prebuild / expo run:android
+/android
+/ios
